@@ -46,3 +46,6 @@ app-example
 .env
 .env.local
 .env*.local
+
+# Claude Code local settings
+.claude/
