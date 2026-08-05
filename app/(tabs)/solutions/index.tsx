@@ -1,13 +1,13 @@
 import { useRouter } from 'expo-router';
-import { CaretRight, CrownSimple } from 'phosphor-react-native';
+import { CaretRight, CrownSimple, MagnifyingGlass } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FilterChip } from '@/components/nocturne/filter-chip';
 import { IconTile } from '@/components/nocturne/icon-tile';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
-import { em, fonts, layout, withAlpha } from '@/constants/theme';
+import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
 import { useSolutions } from '@/hooks/use-solutions';
 import { useTheme } from '@/hooks/use-theme';
 import { solutionDefs, solutionFilters } from '@/lib/fixtures';
@@ -17,13 +17,14 @@ export default function SolutionsScreen() {
   const { active, toggle, activeCount, planTotal } = useSolutions();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  // The design draws the category chips without behavior; filtering the
-  // marketplace by category is an app-side extension of the obvious intent.
   const [category, setCategory] = useState('All');
+  /** Index of the solution pending removal (design rmIdx). */
+  const [removeIndex, setRemoveIndex] = useState<number | null>(null);
 
   const visible = solutionDefs
     .map((sol, index) => ({ sol, index }))
     .filter(({ sol }) => category === 'All' || sol.cat === category);
+  const removeSolution = removeIndex == null ? null : solutionDefs[removeIndex];
 
   return (
     <ScrollView
@@ -81,7 +82,11 @@ export default function SolutionsScreen() {
                 </Text>
               </View>
               <Pressable
-                onPress={() => toggle(i)}
+                onPress={() =>
+                  added
+                    ? setRemoveIndex(i)
+                    : router.push({ pathname: '/(tabs)/solutions/setup', params: { index: String(i) } })
+                }
                 style={({ pressed }) => [
                   styles.addBtn,
                   { borderColor: added ? palette.neutral[700] : palette.accent },
@@ -99,7 +104,60 @@ export default function SolutionsScreen() {
             </SurfaceCard>
           );
         })}
+        {visible.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <MagnifyingGlass size={34} color={palette.neutral[600]} />
+            <Text style={[styles.emptyText, { color: palette.neutral[500] }]}>
+              No {category} solutions yet — more are on the way.
+            </Text>
+          </View>
+        ) : null}
       </View>
+
+      <Modal
+        visible={removeIndex != null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRemoveIndex(null)}>
+        <View style={[styles.overlay, { backgroundColor: status.overlay }]}>
+          <View
+            style={[
+              styles.dialog,
+              { backgroundColor: palette.surface, borderColor: palette.neutral[800] },
+            ]}>
+            <Text style={[styles.dialogTitle, { color: palette.text }]}>
+              Remove {removeSolution?.name}?
+            </Text>
+            <Text style={[styles.dialogBody, { color: palette.neutral[400] }]}>
+              Workflows built on it pause immediately. ${removeSolution?.price}/mo comes off your
+              next invoice (Sep 1). Its QuickBooks connection stays on your workspace.
+            </Text>
+            <View style={styles.dialogActions}>
+              <Pressable
+                onPress={() => setRemoveIndex(null)}
+                style={({ pressed }) => [
+                  styles.dialogBtn,
+                  { borderColor: palette.neutral[700] },
+                  pressed && { backgroundColor: withAlpha(palette.text, 0.06) },
+                ]}>
+                <Text style={[styles.dialogBtnLabel, { color: palette.text }]}>Keep it</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  if (removeIndex != null) toggle(removeIndex);
+                  setRemoveIndex(null);
+                }}
+                style={({ pressed }) => [
+                  styles.dialogBtn,
+                  { borderColor: status.err },
+                  pressed && { backgroundColor: status.errCalloutBg },
+                ]}>
+                <Text style={[styles.dialogBtnLabel, { color: status.err }]}>Remove</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -180,5 +238,54 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  emptyWrap: {
+    paddingVertical: 48,
+    alignItems: 'center',
+    gap: 10,
+  },
+  emptyText: {
+    fontFamily: fonts.regular,
+    fontSize: 13.5,
+    textAlign: 'center',
+  },
+  overlay: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 28,
+  },
+  dialog: {
+    alignSelf: 'stretch',
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 20,
+    gap: 10,
+  },
+  dialogTitle: {
+    fontFamily: fonts.medium,
+    fontSize: 16,
+  },
+  dialogBody: {
+    fontFamily: fonts.regular,
+    fontSize: 13.5,
+    lineHeight: 13.5 * 1.5,
+  },
+  dialogActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 6,
+  },
+  dialogBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dialogBtnLabel: {
+    fontFamily: fonts.medium,
+    fontSize: 14,
   },
 });

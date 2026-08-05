@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import { FlowArrow, HandPalm } from 'phosphor-react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { FlowArrow } from 'phosphor-react-native';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,15 +12,22 @@ import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { em, fonts, layout, status } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { runDetail, type RunTimelineItem } from '@/lib/fixtures';
+import { runDetails, runFields, type RunTimelineItem, type RunVariant } from '@/lib/fixtures';
+
+const TIMELINE_ICON_COLOR = {
+  ok: status.ok,
+  warn: status.warnText,
+  err: status.err,
+  pending: undefined,
+} as const;
 
 function TimelineRow({ item, divider }: { item: RunTimelineItem; divider: boolean }) {
   const { palette } = useTheme();
-  const iconColor =
-    item.tone === 'ok' ? status.ok : item.tone === 'warn' ? status.warnText : palette.neutral[500];
+  const iconColor = TIMELINE_ICON_COLOR[item.tone] ?? palette.neutral[500];
   const IconCmp = item.icon;
   return (
-    <View style={[styles.timelineRow, divider && { borderBottomWidth: 1, borderBottomColor: palette.divider }]}>
+    <View
+      style={[styles.timelineRow, divider && { borderBottomWidth: 1, borderBottomColor: palette.divider }]}>
       <IconCmp size={19} color={iconColor} style={styles.timelineIcon} />
       <View style={styles.timelineBody}>
         <Text
@@ -49,6 +56,9 @@ export default function RunDetailScreen() {
   const { palette } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { variant } = useLocalSearchParams<{ variant?: RunVariant }>();
+  const run = runDetails[variant ?? 'held'] ?? runDetails.held;
+  const isHeld = run.status === 'Held';
 
   return (
     <ScrollView
@@ -61,14 +71,14 @@ export default function RunDetailScreen() {
       <View style={styles.header}>
         <BackCircle onPress={() => router.back()} />
         <View style={styles.headerText}>
-          <Text style={[styles.title, { color: palette.text }]}>{runDetail.title}</Text>
-          <Text style={[styles.subtitle, { color: palette.neutral[400] }]}>{runDetail.sub}</Text>
+          <Text style={[styles.title, { color: palette.text }]}>{run.title}</Text>
+          <Text style={[styles.subtitle, { color: palette.neutral[400] }]}>{run.sub}</Text>
         </View>
-        <StatusPill label={runDetail.status} />
+        <StatusPill label={run.status} />
       </View>
 
       <View style={styles.statsRow}>
-        {runDetail.stats.map((s) => (
+        {run.stats.map((s) => (
           <StatCard key={s.label} value={s.value} label={s.label} size="sm" />
         ))}
       </View>
@@ -76,43 +86,51 @@ export default function RunDetailScreen() {
       <View>
         <SectionLabel>TIMELINE</SectionLabel>
         <SurfaceCard style={styles.sectionCard}>
-          {runDetail.timeline.map((item, i) => (
-            <TimelineRow key={item.title} item={item} divider={i < runDetail.timeline.length - 1} />
+          {run.timeline.map((item, i) => (
+            <TimelineRow key={item.title} item={item} divider={i < run.timeline.length - 1} />
           ))}
         </SurfaceCard>
       </View>
 
-      <View>
-        <SectionLabel>EXTRACTED FIELDS</SectionLabel>
-        <SurfaceCard style={styles.sectionCard}>
-          {runDetail.fields.map((f, i) => (
-            <View
-              key={f.key}
-              style={[
-                styles.fieldRow,
-                i < runDetail.fields.length - 1 && {
-                  borderBottomWidth: 1,
-                  borderBottomColor: palette.divider,
-                },
-              ]}>
-              <Text style={[styles.fieldKey, { color: palette.neutral[400] }]}>{f.key}</Text>
-              <Text style={[styles.fieldValue, { color: palette.text }]}>{f.value}</Text>
-            </View>
-          ))}
-        </SurfaceCard>
-      </View>
+      {run.fields ? (
+        <View>
+          <SectionLabel>EXTRACTED FIELDS</SectionLabel>
+          <SurfaceCard style={styles.sectionCard}>
+            {runFields.map((f, i) => (
+              <View
+                key={f.key}
+                style={[
+                  styles.fieldRow,
+                  i < runFields.length - 1 && {
+                    borderBottomWidth: 1,
+                    borderBottomColor: palette.divider,
+                  },
+                ]}>
+                <Text style={[styles.fieldKey, { color: palette.neutral[400] }]}>{f.key}</Text>
+                <Text style={[styles.fieldValue, { color: palette.text }]}>{f.value}</Text>
+              </View>
+            ))}
+          </SurfaceCard>
+        </View>
+      ) : null}
 
       <View style={styles.actions}>
-        <PillButton
-          label="Review & approve"
-          variant="primary"
-          height={46}
-          fontSize={14}
-          icon={HandPalm}
-          iconSize={16}
-          style={styles.actionBtn}
-          onPress={() => router.push('/(tabs)/activity/approvals')}
-        />
+        {run.action ? (
+          <PillButton
+            label={run.action.label}
+            variant="primary"
+            height={46}
+            fontSize={14}
+            icon={run.action.icon}
+            iconSize={16}
+            style={styles.actionBtn}
+            // Held → Approvals; Failed → the design wires Retry back to the
+            // run screen itself (prototype), so it stays visual here.
+            onPress={
+              isHeld ? () => router.push('/(tabs)/activity/approvals') : undefined
+            }
+          />
+        ) : null}
         <PillButton
           label="View workflow"
           variant="secondary"

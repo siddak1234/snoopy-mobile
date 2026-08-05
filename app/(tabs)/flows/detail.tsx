@@ -10,9 +10,10 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { StatCard } from '@/components/nocturne/stat-card';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { StepCard } from '@/components/nocturne/step-card';
-import { em, fonts, layout } from '@/constants/theme';
+import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { em, fonts, layout, status } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { detailStats, steps } from '@/lib/fixtures';
+import { detailConnections, detailStats, steps } from '@/lib/fixtures';
 
 /** Workflow detail — design `sDetail` block in Screen.dc.html. */
 export default function WorkflowDetailScreen() {
@@ -41,8 +42,42 @@ export default function WorkflowDetailScreen() {
 
       <View style={styles.statsRow}>
         {detailStats.map((s) => (
-          <StatCard key={s.label} value={s.value} label={s.label} size="sm" />
+          <StatCard
+            key={s.label}
+            value={s.value}
+            label={s.label}
+            size="sm"
+            valueColor={s.tone === 'ok' ? status.ok : s.tone === 'err' ? status.err : undefined}
+          />
         ))}
+      </View>
+
+      <View>
+        <SectionLabel>CONNECTIONS</SectionLabel>
+        <SurfaceCard style={styles.connectionsCard}>
+          {detailConnections.map((c, i) => {
+            const IconCmp = c.icon;
+            return (
+              <View
+                key={c.name}
+                style={[
+                  styles.connectionRow,
+                  i < detailConnections.length - 1 && {
+                    borderBottomWidth: 1,
+                    borderBottomColor: palette.divider,
+                  },
+                ]}>
+                <IconCmp size={20} color={palette.accentRamp[300]} />
+                <View style={styles.connectionBody}>
+                  <Text style={[styles.connectionName, { color: palette.text }]}>{c.name}</Text>
+                  <Text style={[styles.connectionSub, { color: palette.neutral[400] }]}>
+                    {c.sub}
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
+        </SurfaceCard>
       </View>
 
       <View>
@@ -114,6 +149,28 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     gap: 10,
+  },
+  connectionsCard: {
+    marginTop: 9,
+    overflow: 'hidden',
+  },
+  connectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  connectionBody: {
+    flex: 1,
+  },
+  connectionName: {
+    fontFamily: fonts.medium,
+    fontSize: 14,
+  },
+  connectionSub: {
+    fontFamily: fonts.regular,
+    fontSize: 12,
   },
   pipeline: {
     marginTop: 10,

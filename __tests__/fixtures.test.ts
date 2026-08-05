@@ -12,7 +12,8 @@ import {
   onboardingPhases,
   PLAN_BASE_PRICE,
   recentRuns,
-  runDetail,
+  runDetails,
+  runFields,
   solutionDefs,
   solutionFilters,
   steps,
@@ -37,7 +38,7 @@ describe('fixture data — byte-exact to the design prototype', () => {
 
   it('keeps typographic characters intact (·, →, —, ✓, …)', () => {
     expect(flows[0].desc).toBe('AP inbox → QuickBooks');
-    expect(flows[0].runs).toBe('1,284 runs · 99.1% success');
+    expect(flows[0].runs).toBe('1,284 runs · 1,272 ok · 12 failed');
     expect(activityToday[1].desc).toBe('Run #4820 · held for review — amount mismatch');
     expect(activityYesterday[0].desc).toBe('Run #52 · failed — Sheets auth expired');
     expect(approvalDoneText.approved).toBe('Approved ✓ — agent resuming');
@@ -77,14 +78,6 @@ describe('fixture data — byte-exact to the design prototype', () => {
     expect(flows.map((f) => f.status)).toEqual(['Live', 'Live', 'Paused', 'Draft']);
   });
 
-  it('keeps colored home stats per the updated design', () => {
-    expect(homeStats).toEqual([
-      { value: '128', label: 'Runs today', tone: 'text' },
-      { value: '124', label: 'Success', tone: 'ok' },
-      { value: '4', label: 'Failed', tone: 'err' },
-    ]);
-  });
-
   it('keeps the solutions marketplace pricing (design solDefs)', () => {
     expect(solutionDefs.map((s) => s.price)).toEqual([39, 29, 19, 19, 49, 9]);
     expect(defaultActiveSolutions).toEqual([0, 1, 2]);
@@ -93,17 +86,36 @@ describe('fixture data — byte-exact to the design prototype', () => {
     expect(solutionDefs[0].desc).toBe('AP inbox to ledger, exceptions held for you');
   });
 
-  it('keeps the run-detail fixture verbatim', () => {
-    expect(runDetail.title).toBe('Run #4820');
-    expect(runDetail.sub).toBe('Invoice triage · today, 9:41 AM');
-    expect(runDetail.status).toBe('Held');
-    expect(runDetail.timeline.map((t) => t.tone)).toEqual(['ok', 'ok', 'warn', 'pending']);
-    expect(runDetail.timeline[3].time).toBeUndefined();
-    expect(runDetail.fields.map((f) => f.value)).toEqual([
+  it('keeps the three run-detail variants verbatim (design runDefs)', () => {
+    expect(runDetails.held.title).toBe('Run #4820');
+    expect(runDetails.held.status).toBe('Held');
+    expect(runDetails.held.timeline.map((t) => t.tone)).toEqual(['ok', 'ok', 'warn', 'pending']);
+    expect(runDetails.held.action?.label).toBe('Review & approve');
+
+    expect(runDetails.success.title).toBe('Run #4821');
+    expect(runDetails.success.sub).toBe('Invoice triage · today, 9:52 AM');
+    expect(runDetails.success.timeline[3].sub).toBe('Bill #10412 created, PDF attached');
+    expect(runDetails.success.action).toBeUndefined();
+
+    expect(runDetails.failed.title).toBe('Run #52');
+    expect(runDetails.failed.fields).toBe(false);
+    expect(runDetails.failed.timeline[1].sub).toBe(
+      'Auth token revoked — reconnect Google Sheets',
+    );
+    expect(runDetails.failed.action?.label).toBe('Retry run');
+
+    expect(runFields.map((f) => f.value)).toEqual([
       'Beacon Supply Co',
       '$12,480.00',
       '#8841',
       'Sep 3, 2026',
     ]);
+  });
+
+  it('keeps the updated run-count strings and colored stats', () => {
+    expect(flows[0].runs).toBe('1,284 runs · 1,272 ok · 12 failed');
+    expect(homeStats.map((s) => s.label)).toEqual(['Runs today', 'Successes', 'Failures']);
+    expect(detailStats.map((s) => s.tone)).toEqual(['text', 'ok', 'err']);
+    expect(recentRuns.map((r) => r.runVariant)).toEqual(['success', 'held', 'success', 'success']);
   });
 });
