@@ -98,6 +98,12 @@ export const status = {
   warnCalloutBg: 'rgba(245,158,11,0.08)',
   warnCalloutBorder: 'rgba(245,158,11,0.25)',
   err: '#f87171',
+  errBg: 'rgba(248,113,113,0.1)',
+  errBorder: 'rgba(248,113,113,0.35)',
+  errCalloutBg: 'rgba(248,113,113,0.08)',
+  errCalloutBorder: 'rgba(248,113,113,0.3)',
+  /** Dialog backdrop (design: rgba(12,13,22,.62) + blur). */
+  overlay: 'rgba(12,13,22,0.62)',
   /** Toggle knob + its drop shadow (the design's only pure white + black). */
   knob: '#ffffff',
   knobShadow: 'rgba(0,0,0,0.3)',

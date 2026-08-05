@@ -25,6 +25,7 @@ import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { em, fonts, layout, status } from '@/constants/theme';
 import { useSolutions } from '@/hooks/use-solutions';
 import { useTheme, type ThemeMode } from '@/hooks/use-theme';
+import { settingsConnections } from '@/lib/fixtures';
 
 function SettingsRow({
   icon: IconCmp,
@@ -126,6 +127,34 @@ export default function SettingsScreen() {
             sub="Keep this device logged in"
             right={<NocToggle value={staySignedIn} onChange={setStaySignedIn} />}
           />
+        </SurfaceCard>
+      </View>
+
+      <View>
+        <SectionLabel>CONNECTIONS</SectionLabel>
+        <SurfaceCard style={styles.sectionCard}>
+          {settingsConnections.map((c, i) => (
+            <SettingsRow
+              key={c.name}
+              icon={c.icon}
+              title={c.name}
+              sub={c.sub}
+              divider={i < settingsConnections.length - 1}
+              onPress={() => {}}
+              right={
+                c.connected ? (
+                  <View style={styles.connectedRight}>
+                    <View style={[styles.greenDot, { backgroundColor: status.ok }]} />
+                    <CaretRight size={15} color={palette.neutral[500]} />
+                  </View>
+                ) : (
+                  <Text style={[styles.connectLink, { color: palette.accentRamp[300] }]}>
+                    Connect
+                  </Text>
+                )
+              }
+            />
+          ))}
         </SurfaceCard>
       </View>
 
@@ -294,6 +323,20 @@ const styles = StyleSheet.create({
   planTotal: {
     fontFamily: fonts.medium,
     fontSize: 14,
+  },
+  connectedRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  greenDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 99,
+  },
+  connectLink: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
   },
   membersCount: {
     fontFamily: fonts.regular,

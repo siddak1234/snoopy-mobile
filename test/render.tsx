@@ -22,4 +22,4 @@ export function renderWithProviders(ui: React.ReactElement) {
   );
 }
 
-export { mockRouter } from '@/test/mocks/expo-router';
+export { mockRouter, setMockParams } from '@/test/mocks/expo-router';

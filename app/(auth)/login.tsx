@@ -7,9 +7,9 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { UserFocus } from 'phosphor-react-native';
+import { UserFocus, WarningCircle } from 'phosphor-react-native';
 
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { BrandMark } from '@/components/nocturne/brand-mark';
@@ -18,13 +18,16 @@ import { OAuthButton } from '@/components/nocturne/oauth-button';
 import { OrDivider } from '@/components/nocturne/or-divider';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { TextField } from '@/components/nocturne/text-field';
-import { em, fonts, layout } from '@/constants/theme';
+import { em, fonts, layout, status } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { palette } = useTheme();
+  // Demo/dev entry into the designed error state until real auth exists:
+  // /(auth)/login?state=error
+  const { state } = useLocalSearchParams<{ state?: 'error' }>();
 
   const [email, setEmail] = useState('alex@acme.co');
   const [password, setPassword] = useState('automate88');
@@ -49,6 +52,15 @@ export default function LoginScreen() {
         <Text style={[styles.subtitle, { color: palette.neutral[400] }]}>
           Welcome back to your workspace.
         </Text>
+
+        {state === 'error' ? (
+          <View style={styles.errorCallout}>
+            <WarningCircle size={16} color={status.err} style={styles.errorIcon} />
+            <Text style={styles.errorText}>
+              That password didn&apos;t match. Try again, or reset it below.
+            </Text>
+          </View>
+        ) : null}
 
         <View style={styles.form}>
           <TextField
@@ -126,6 +138,28 @@ const styles = StyleSheet.create({
   form: {
     marginTop: 26,
     gap: 14,
+  },
+  errorCallout: {
+    marginTop: 16,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 9,
+    backgroundColor: status.errCalloutBg,
+    borderWidth: 1,
+    borderColor: status.errCalloutBorder,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  errorIcon: {
+    marginTop: 1,
+  },
+  errorText: {
+    flex: 1,
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    lineHeight: 13 * 1.45,
+    color: status.err,
   },
   rememberRow: {
     flexDirection: 'row',

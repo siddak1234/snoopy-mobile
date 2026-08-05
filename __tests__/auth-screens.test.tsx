@@ -5,7 +5,7 @@ import LoginScreen from '@/app/(auth)/login';
 import OnboardingScreen from '@/app/(auth)/onboarding';
 import SignupScreen from '@/app/(auth)/signup';
 import WelcomeScreen from '@/app/(auth)/welcome';
-import { mockRouter, renderWithProviders } from '@/test/render';
+import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
 
 describe('Welcome', () => {
   it('shows the design headline and kicker', async () => {
@@ -82,3 +82,15 @@ describe('Onboarding tour', () => {
   });
 });
 
+describe('Log in error state (design loginErr)', () => {
+  it('shows the designed error callout', async () => {
+    setMockParams({ state: 'error' });
+    const { getByText } = await renderWithProviders(<LoginScreen />);
+    expect(getByText("That password didn't match. Try again, or reset it below.")).toBeTruthy();
+  });
+
+  it('hides the callout by default', async () => {
+    const { queryByText } = await renderWithProviders(<LoginScreen />);
+    expect(queryByText("That password didn't match. Try again, or reset it below.")).toBeNull();
+  });
+});

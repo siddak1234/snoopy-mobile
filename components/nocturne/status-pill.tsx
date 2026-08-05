@@ -5,14 +5,16 @@ import { fonts, status, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { FlowStatus } from '@/lib/fixtures';
 
-/** Status pill (Live / Paused / Draft workflows, Held runs), colors from the
- *  design's pills map in Screen.dc.html. */
-export function StatusPill({ label }: { label: FlowStatus | 'Held' }) {
+/** Status pill (Live / Paused / Draft workflows; Held / Success / Failed
+ *  runs), colors from the design's pills + runDefs maps in Screen.dc.html. */
+export function StatusPill({ label }: { label: FlowStatus | 'Held' | 'Success' | 'Failed' }) {
   const { palette } = useTheme();
   const tones = {
     Live: { color: status.ok, bg: status.okBg, border: status.okBorder },
+    Success: { color: status.ok, bg: status.okBg, border: status.okBorder },
     Paused: { color: status.warnText, bg: status.warnBg, border: status.warnBorder },
     Held: { color: status.warnText, bg: status.warnBg, border: status.warnBorder },
+    Failed: { color: status.err, bg: status.errBg, border: status.errBorder },
     Draft: {
       color: palette.neutral[400],
       bg: withAlpha(palette.neutral[500], 0.12),
