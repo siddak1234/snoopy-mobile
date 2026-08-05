@@ -9,18 +9,19 @@ import {
   Gear,
   House,
   Pulse,
-  PlusCircle,
+  Storefront,
   type Icon,
 } from 'phosphor-react-native';
 
 import { fonts, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-/** Route → tab config, in the design's order. */
+/** Route → tab config, in the design's order (Builder moved under Flows;
+ *  the Solutions marketplace took its tab slot). */
 const TABS: Record<string, { label: string; icon: Icon }> = {
-  index: { label: 'Home', icon: House },
+  '(home)': { label: 'Home', icon: House },
   flows: { label: 'Flows', icon: FlowArrow },
-  builder: { label: 'Build', icon: PlusCircle },
+  solutions: { label: 'Solutions', icon: Storefront },
   activity: { label: 'Activity', icon: Pulse },
   settings: { label: 'Settings', icon: Gear },
 };

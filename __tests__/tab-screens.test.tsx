@@ -4,12 +4,14 @@ import { fireEvent } from '@testing-library/react-native';
 
 import ActivityScreen from '@/app/(tabs)/activity/index';
 import ApprovalsScreen from '@/app/(tabs)/activity/approvals';
-import BuilderScreen from '@/app/(tabs)/builder';
+import BuilderScreen from '@/app/(tabs)/flows/builder';
 import FlowsScreen from '@/app/(tabs)/flows/index';
 import TemplatesScreen from '@/app/(tabs)/flows/templates';
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
-import HomeScreen from '@/app/(tabs)/index';
+import HomeScreen from '@/app/(tabs)/(home)/index';
+import RunDetailScreen from '@/app/(tabs)/(home)/run';
 import SettingsScreen from '@/app/(tabs)/settings';
+import SolutionsScreen from '@/app/(tabs)/solutions';
 import { nocturneDark, nocturneLight } from '@/constants/theme';
 import { mockRouter, renderWithProviders } from '@/test/render';
 
@@ -19,8 +21,10 @@ describe('Home dashboard', () => {
     expect(getByText('Welcome back, Alex')).toBeTruthy();
     expect(getByText('Your agents ran 128 tasks while you were away.')).toBeTruthy();
     expect(getByText('128')).toBeTruthy();
-    expect(getByText('98.2%')).toBeTruthy();
-    expect(getByText('6.4h')).toBeTruthy();
+    expect(getByText('124')).toBeTruthy();
+    expect(getByText('4')).toBeTruthy();
+    expect(getByText('Success')).toBeTruthy();
+    expect(getByText('Failed')).toBeTruthy();
     expect(getByText('3 items need your review')).toBeTruthy();
     expect(getByText('#4821 · posted to QuickBooks')).toBeTruthy();
   });
@@ -29,12 +33,75 @@ describe('Home dashboard', () => {
     const { getByText } = await renderWithProviders(<HomeScreen />);
     await fireEvent.press(getByText('3 items need your review'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity/approvals');
-    await fireEvent.press(getByText('New workflow'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/builder');
+    await fireEvent.press(getByText('Add a solution'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/solutions');
     await fireEvent.press(getByText('Templates'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/templates');
     await fireEvent.press(getByText('See all'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity');
+  });
+
+  it('opens Run detail from a recent-run row', async () => {
+    const { getByText } = await renderWithProviders(<HomeScreen />);
+    await fireEvent.press(getByText('#4821 · posted to QuickBooks'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/(home)/run');
+  });
+});
+
+describe('Solutions marketplace', () => {
+  it('lists the six solutions with prices and the live plan total', async () => {
+    const { getByText, getAllByText } = await renderWithProviders(<SolutionsScreen />);
+    expect(getByText('Growth plan · $186/mo')).toBeTruthy();
+    expect(getByText('3 active · manage in Settings')).toBeTruthy();
+    expect(getByText('Weekly KPI digest')).toBeTruthy();
+    expect(getByText('Finance · $39/mo')).toBeTruthy();
+    expect(getByText('Ops · $9/mo')).toBeTruthy();
+    expect(getAllByText('Added ✓')).toHaveLength(3);
+    expect(getAllByText('Add')).toHaveLength(3);
+  });
+
+  it('adding and removing solutions recomputes the plan total (design solOn math)', async () => {
+    const { getByText, getAllByText } = await renderWithProviders(<SolutionsScreen />);
+    // Add the first not-added solution (Weekly KPI digest, $19): $186 → $205.
+    await fireEvent.press(getAllByText('Add')[0]);
+    expect(getByText('Growth plan · $205/mo')).toBeTruthy();
+    expect(getByText('4 active · manage in Settings')).toBeTruthy();
+    // Remove the first added one (Invoice triage, $39): $205 → $166.
+    await fireEvent.press(getAllByText('Added ✓')[0]);
+    expect(getByText('Growth plan · $166/mo')).toBeTruthy();
+  });
+
+  it('opens Settings from the plan banner', async () => {
+    const { getByText } = await renderWithProviders(<SolutionsScreen />);
+    await fireEvent.press(getByText('3 active · manage in Settings'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings');
+  });
+});
+
+describe('Run detail', () => {
+  it('shows the held run with timeline and extracted fields', async () => {
+    const { getByText } = await renderWithProviders(<RunDetailScreen />);
+    expect(getByText('Run #4820')).toBeTruthy();
+    expect(getByText('Invoice triage · today, 9:41 AM')).toBeTruthy();
+    expect(getByText('Held')).toBeTruthy();
+    expect(getByText('38s')).toBeTruthy();
+    expect(getByText('3 / 4')).toBeTruthy();
+    expect(getByText('87%')).toBeTruthy();
+    expect(getByText('Held for review')).toBeTruthy();
+    expect(getByText('Waiting on your approval')).toBeTruthy();
+    expect(getByText('9:41:40')).toBeTruthy();
+    expect(getByText('Beacon Supply Co')).toBeTruthy();
+    expect(getByText('$12,480.00')).toBeTruthy();
+    expect(getByText('#8841')).toBeTruthy();
+    expect(getByText('Sep 3, 2026')).toBeTruthy();
+  });
+
+  it('routes to approvals and the workflow detail', async () => {
+    const { getByText } = await renderWithProviders(<RunDetailScreen />);
+    await fireEvent.press(getByText('Review & approve'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity/approvals');
+    await fireEvent.press(getByText('View workflow'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/detail');
   });
 });
 
@@ -54,7 +121,7 @@ describe('Workflows', () => {
     await fireEvent.press(getByText('Invoice triage'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/detail');
     await fireEvent.press(getByText('New'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/builder');
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/builder');
     await fireEvent.press(getByText('Templates'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/templates');
   });
@@ -75,7 +142,7 @@ describe('Workflow detail', () => {
   it('routes Edit in Builder and back', async () => {
     const { getByText, root } = await renderWithProviders(<WorkflowDetailScreen />);
     await fireEvent.press(getByText('Edit in Builder'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/builder');
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/builder');
     expect(root).toBeTruthy();
   });
 });
@@ -144,7 +211,7 @@ describe('Templates', () => {
     }
     expect(getAllByText('Use →')).toHaveLength(6);
     await fireEvent.press(getByText('Email triage'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/builder');
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/builder');
   });
 });
 
@@ -156,6 +223,18 @@ describe('Settings & security', () => {
     expect(getByText('Face ID unlock')).toBeTruthy();
     expect(getByText('1 passkey · iPhone')).toBeTruthy();
     expect(getByText('Autom8x for iOS · v1.0.0')).toBeTruthy();
+  });
+
+  it('shows plan & billing with the derived totals and opens Solutions', async () => {
+    const { getByText } = await renderWithProviders(<SettingsScreen />);
+    expect(getByText('Growth plan')).toBeTruthy();
+    expect(getByText('$99/mo base · renews Sep 1')).toBeTruthy();
+    expect(getByText('$186/mo')).toBeTruthy();
+    expect(getByText('3 active · $87/mo')).toBeTruthy();
+    expect(getByText('Visa ···· 4242')).toBeTruthy();
+    expect(getByText('Last: Aug 1 · $186')).toBeTruthy();
+    await fireEvent.press(getByText('Manage solutions'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/solutions');
   });
 
   it('switches the live theme from the appearance control', async () => {

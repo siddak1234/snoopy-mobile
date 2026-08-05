@@ -7,7 +7,7 @@ import { NocturneTabBar } from '@/components/nocturne/tab-bar';
 import { nocturneDark } from '@/constants/theme';
 import { renderWithProviders } from '@/test/render';
 
-const ROUTES = ['index', 'flows', 'builder', 'activity', 'settings'];
+const ROUTES = ['(home)', 'flows', 'solutions', 'activity', 'settings'];
 
 function makeProps(activeIndex = 0) {
   const navigation = {
@@ -31,7 +31,7 @@ describe('NocturneTabBar', () => {
   it('renders the five design tabs in order', async () => {
     const { props } = makeProps();
     const { getByText } = await renderWithProviders(<NocturneTabBar {...props} />);
-    for (const label of ['Home', 'Flows', 'Build', 'Activity', 'Settings']) {
+    for (const label of ['Home', 'Flows', 'Solutions', 'Activity', 'Settings']) {
       expect(getByText(label)).toBeTruthy();
     }
   });

@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Bell, CaretRight, HandPalm, Plus, SquaresFour } from 'phosphor-react-native';
+import { Bell, CaretRight, HandPalm, SquaresFour, Storefront } from 'phosphor-react-native';
 
 import { AvatarBadge } from '@/components/nocturne/avatar-badge';
 import { BrandMark } from '@/components/nocturne/brand-mark';
@@ -79,7 +79,12 @@ export default function HomeScreen() {
       {/* Stats */}
       <View style={styles.statsRow}>
         {homeStats.map((s) => (
-          <StatCard key={s.label} value={s.value} label={s.label} />
+          <StatCard
+            key={s.label}
+            value={s.value}
+            label={s.label}
+            valueColor={s.tone === 'ok' ? status.ok : s.tone === 'err' ? status.err : undefined}
+          />
         ))}
       </View>
 
@@ -114,13 +119,13 @@ export default function HomeScreen() {
       {/* Quick actions */}
       <View style={styles.actionsRow}>
         <PillButton
-          label="New workflow"
+          label="Add a solution"
           variant="primary"
           height={46}
           fontSize={14}
-          icon={Plus}
+          icon={Storefront}
           iconSize={16}
-          onPress={() => router.push('/(tabs)/builder')}
+          onPress={() => router.push('/(tabs)/solutions')}
           style={{ flex: 1 }}
         />
         <PillButton
@@ -152,9 +157,14 @@ export default function HomeScreen() {
         </View>
         <SurfaceCard level="sm" style={styles.runsCard}>
           {recentRuns.map((r, i) => (
-            <View
+            <Pressable
               key={i}
-              style={[styles.runRow, { borderBottomColor: palette.divider }]}>
+              onPress={() => router.push('/(tabs)/(home)/run')}
+              style={({ pressed }) => [
+                styles.runRow,
+                { borderBottomColor: palette.divider },
+                pressed && { backgroundColor: withAlpha(palette.text, 0.04) },
+              ]}>
               <View
                 style={[
                   styles.runDot,
@@ -183,7 +193,7 @@ export default function HomeScreen() {
                 }}>
                 {r.time}
               </Text>
-            </View>
+            </Pressable>
           ))}
         </SurfaceCard>
       </View>

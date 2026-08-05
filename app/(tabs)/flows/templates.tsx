@@ -39,7 +39,7 @@ export default function TemplatesScreen() {
         {templates.map((t) => (
           <SurfaceCard
             key={t.name}
-            onPress={() => router.push('/(tabs)/builder')}
+            onPress={() => router.push('/(tabs)/flows/builder')}
             style={[styles.card, { width: cardWidth }]}>
             <IconTile icon={t.icon} size={38} iconSize={19} borderRadius={11} bordered />
             <Text style={[styles.cardName, { color: palette.text }]}>{t.name}</Text>

@@ -74,7 +74,7 @@ export default function LoginScreen() {
             </View>
             <Text style={[styles.forgot, { color: palette.accentRamp[300] }]}>Forgot?</Text>
           </View>
-          <PillButton label="Log In" onPress={() => router.replace('/(tabs)')} />
+          <PillButton label="Log In" onPress={() => router.replace('/(tabs)/(home)')} />
           <PillButton
             label="Unlock with Face ID"
             variant="accent-ghost"

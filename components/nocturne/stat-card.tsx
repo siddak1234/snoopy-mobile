@@ -10,10 +10,12 @@ type Props = {
   label: string;
   /** Home uses 20px values with tighter padding than the 18px detail cards. */
   size?: 'md' | 'sm';
+  /** Home stats tint their values (ok/err); defaults to the text color. */
+  valueColor?: string;
 };
 
 /** Equal-width stat tile (Home dashboard row, Workflow-detail row). */
-export function StatCard({ value, label, size = 'md' }: Props) {
+export function StatCard({ value, label, size = 'md', valueColor }: Props) {
   const { palette } = useTheme();
   const md = size === 'md';
   return (
@@ -23,7 +25,7 @@ export function StatCard({ value, label, size = 'md' }: Props) {
           fontFamily: fonts.medium,
           fontSize: md ? 20 : 18,
           letterSpacing: md ? em(-0.01, 20) : 0,
-          color: palette.text,
+          color: valueColor ?? palette.text,
         }}>
         {value}
       </Text>

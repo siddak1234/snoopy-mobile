@@ -8,6 +8,7 @@ import {
   Camera,
   ChartLine,
   CheckCircle,
+  CircleDashed,
   EnvelopeOpen,
   EnvelopeSimple,
   GitBranch,
@@ -117,10 +118,10 @@ export const templateFilters = ['All', 'Finance', 'Ops', 'Sales', 'Reporting'];
 
 export const activityFilters = ['All', 'Success', 'Needs review', 'Failed'];
 
-export const homeStats = [
-  { value: '128', label: 'Runs today' },
-  { value: '98.2%', label: 'Success' },
-  { value: '6.4h', label: 'Time saved' },
+export const homeStats: { value: string; label: string; tone: 'text' | 'ok' | 'err' }[] = [
+  { value: '128', label: 'Runs today', tone: 'text' },
+  { value: '124', label: 'Success', tone: 'ok' },
+  { value: '4', label: 'Failed', tone: 'err' },
 ];
 
 type RunItem = {
@@ -148,6 +149,64 @@ type OnboardingPhase = {
   kicker: string;
   title: string;
   sub: string;
+};
+
+/** Solutions marketplace (design: solDefs). Prices are monthly USD numbers so
+ *  the plan total can be derived live; the Growth plan base is $99. */
+export const PLAN_BASE_PRICE = 99;
+
+export type SolutionDef = {
+  icon: Icon;
+  name: string;
+  desc: string;
+  cat: string;
+  price: number;
+};
+
+export const solutionDefs: SolutionDef[] = [
+  { icon: Receipt, name: 'Invoice triage', desc: 'AP inbox to ledger, exceptions held for you', cat: 'Finance', price: 39 },
+  { icon: EnvelopeSimple, name: 'Email triage', desc: 'Route, draft and escalate support mail', cat: 'Ops', price: 29 },
+  { icon: Camera, name: 'Receipt OCR', desc: 'Snap receipts into expense entries', cat: 'Finance', price: 19 },
+  { icon: ChartLine, name: 'Weekly KPI digest', desc: 'Metrics to Slack every Monday morning', cat: 'Reporting', price: 19 },
+  { icon: UserPlus, name: 'Lead enrichment', desc: 'Enrich, score and route new leads', cat: 'Sales', price: 49 },
+  { icon: BellRinging, name: 'Slack alerts', desc: 'Threshold alerts from any data source', cat: 'Ops', price: 9 },
+];
+
+/** Design default: the first three solutions are on the plan (solOn 0,1,2). */
+export const defaultActiveSolutions = [0, 1, 2];
+
+export const solutionFilters = ['All', 'Finance', 'Ops', 'Sales', 'Reporting'];
+
+/** Run detail (design `sRun`: the held Invoice-triage run the prototype shows). */
+export type RunTimelineItem = {
+  icon: Icon;
+  tone: 'ok' | 'warn' | 'pending';
+  title: string;
+  sub: string;
+  time?: string;
+};
+
+export const runDetail = {
+  title: 'Run #4820',
+  sub: 'Invoice triage · today, 9:41 AM',
+  status: 'Held' as const,
+  stats: [
+    { value: '38s', label: 'Duration' },
+    { value: '3 / 4', label: 'Steps done' },
+    { value: '87%', label: 'Confidence' },
+  ],
+  timeline: [
+    { icon: CheckCircle, tone: 'ok', title: 'New email received', sub: 'Gmail · ap@acme.co', time: '9:41:02' },
+    { icon: CheckCircle, tone: 'ok', title: 'Fields extracted', sub: 'Vendor, amount, PO, due date', time: '9:41:19' },
+    { icon: HandPalm, tone: 'warn', title: 'Held for review', sub: 'Amount differs from PO $11,900', time: '9:41:40' },
+    { icon: CircleDashed, tone: 'pending', title: 'Post to QuickBooks', sub: 'Waiting on your approval' },
+  ] satisfies RunTimelineItem[],
+  fields: [
+    { key: 'Vendor', value: 'Beacon Supply Co' },
+    { key: 'Amount', value: '$12,480.00' },
+    { key: 'PO', value: '#8841' },
+    { key: 'Due date', value: 'Sep 3, 2026' },
+  ],
 };
 
 export const onboardingPhases: OnboardingPhase[] = [
