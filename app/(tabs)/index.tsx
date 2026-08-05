@@ -1,98 +1,265 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Bell, CaretRight, HandPalm, Plus, SquaresFour } from 'phosphor-react-native';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { AvatarBadge } from '@/components/nocturne/avatar-badge';
+import { BrandMark } from '@/components/nocturne/brand-mark';
+import { IconTile } from '@/components/nocturne/icon-tile';
+import { PillButton } from '@/components/nocturne/pill-button';
+import { SectionLabel } from '@/components/nocturne/section-label';
+import { StatCard } from '@/components/nocturne/stat-card';
+import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+import { homeStats, recentRuns } from '@/lib/fixtures';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { palette } = useTheme();
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  return (
+    <ScrollView
+      style={{ flex: 1, backgroundColor: palette.bg }}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) },
+      ]}
+      showsVerticalScrollIndicator={false}>
+      {/* Header */}
+      <View style={styles.headerRow}>
+        <BrandMark height={17} />
+        <View style={styles.headerActions}>
+          <Pressable
+            onPress={() => router.push('/(tabs)/activity')}
+            style={({ pressed }) => [
+              styles.bellButton,
+              { borderColor: palette.neutral[800] },
+              pressed && { backgroundColor: withAlpha(palette.text, 0.07) },
+            ]}>
+            <Bell size={19} color={palette.neutral[300]} weight="regular" />
+            <View style={[styles.bellDot, { backgroundColor: palette.accent }]} />
+          </Pressable>
+          <Pressable
+            onPress={() => router.push('/(tabs)/settings')}
+            style={({ pressed }) => pressed && { opacity: 0.85 }}>
+            <AvatarBadge initials="AK" />
+          </Pressable>
+        </View>
+      </View>
+
+      {/* Greeting */}
+      <View>
+        <SectionLabel track={0.26} color={palette.accentRamp[300]}>
+          AUTOMATION × AI
+        </SectionLabel>
+        <Text
+          style={{
+            marginTop: 8,
+            fontFamily: fonts.medium,
+            fontSize: 26,
+            letterSpacing: em(-0.015, 26),
+            color: palette.text,
+          }}>
+          Welcome back, Alex
+        </Text>
+        <Text
+          style={{
+            marginTop: 5,
+            fontFamily: fonts.regular,
+            fontSize: 13.5,
+            color: palette.neutral[400],
+          }}>
+          Your agents ran 128 tasks while you were away.
+        </Text>
+      </View>
+
+      {/* Stats */}
+      <View style={styles.statsRow}>
+        {homeStats.map((s) => (
+          <StatCard key={s.label} value={s.value} label={s.label} />
+        ))}
+      </View>
+
+      {/* Approvals banner */}
+      <Pressable
+        onPress={() => router.push('/(tabs)/activity/approvals')}
+        style={({ pressed }) => [
+          styles.approvalsBanner,
+          {
+            borderColor: palette.accentRamp[700],
+            backgroundColor: withAlpha(palette.accent, pressed ? 0.15 : 0.09),
+          },
+        ]}>
+        <IconTile icon={HandPalm} size={40} iconSize={21} borderRadius={12} tint={0.16} />
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontFamily: fonts.medium, fontSize: 14.5, color: palette.text }}>
+            3 items need your review
+          </Text>
+          <Text
+            style={{
+              marginTop: 2,
+              fontFamily: fonts.regular,
+              fontSize: 12,
+              color: palette.neutral[400],
+            }}>
+            Exceptions your agents held for judgment
+          </Text>
+        </View>
+        <CaretRight size={16} color={palette.neutral[500]} weight="regular" />
+      </Pressable>
+
+      {/* Quick actions */}
+      <View style={styles.actionsRow}>
+        <PillButton
+          label="New workflow"
+          variant="primary"
+          height={46}
+          fontSize={14}
+          icon={Plus}
+          iconSize={16}
+          onPress={() => router.push('/(tabs)/builder')}
+          style={{ flex: 1 }}
+        />
+        <PillButton
+          label="Templates"
+          variant="secondary"
+          height={46}
+          fontSize={14}
+          icon={SquaresFour}
+          iconSize={16}
+          onPress={() => router.push('/(tabs)/flows/templates')}
+          style={{ flex: 1 }}
+        />
+      </View>
+
+      {/* Recent runs */}
+      <View>
+        <View style={styles.sectionHeader}>
+          <SectionLabel>RECENT RUNS</SectionLabel>
+          <Text
+            onPress={() => router.push('/(tabs)/activity')}
+            suppressHighlighting
+            style={{
+              fontFamily: fonts.regular,
+              fontSize: 12.5,
+              color: palette.accentRamp[300],
+            }}>
+            See all
+          </Text>
+        </View>
+        <SurfaceCard level="sm" style={styles.runsCard}>
+          {recentRuns.map((r, i) => (
+            <View
+              key={i}
+              style={[styles.runRow, { borderBottomColor: palette.divider }]}>
+              <View
+                style={[
+                  styles.runDot,
+                  { backgroundColor: r.tone === 'ok' ? status.ok : status.warnText },
+                ]}
+              />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={{ fontFamily: fonts.medium, fontSize: 14, color: palette.text }}>
+                  {r.name}
+                </Text>
+                <Text
+                  style={{
+                    marginTop: 1,
+                    fontFamily: fonts.regular,
+                    fontSize: 12,
+                    color: palette.neutral[400],
+                  }}>
+                  {r.meta}
+                </Text>
+              </View>
+              <Text
+                style={{
+                  fontFamily: fonts.regular,
+                  fontSize: 11.5,
+                  color: palette.neutral[500],
+                }}>
+                {r.time}
+              </Text>
+            </View>
+          ))}
+        </SurfaceCard>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  content: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    gap: 18,
+  },
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
+  bellButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bellDot: {
     position: 'absolute',
+    top: 8,
+    right: 9,
+    width: 7,
+    height: 7,
+    borderRadius: 99,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  approvalsBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 13,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 15,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+  },
+  runsCard: {
+    marginTop: 10,
+    overflow: 'hidden',
+  },
+  runRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+  },
+  runDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 99,
   },
 });

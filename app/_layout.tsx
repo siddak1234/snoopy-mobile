@@ -1,24 +1,90 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  useFonts,
+} from '@expo-google-fonts/inter';
+import {
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider,
+  type Theme,
+} from '@react-navigation/native';
 import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import 'react-native-reanimated';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { fonts, nocturneDark, nocturneLight } from '@/constants/theme';
+import { NocturneThemeProvider, useTheme } from '@/hooks/use-theme';
 
 export const unstable_settings = {
-  anchor: '(tabs)',
+  anchor: 'index',
 };
 
+SplashScreen.preventAutoHideAsync();
+
+const navDark: Theme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    primary: nocturneDark.accent,
+    background: nocturneDark.bg,
+    card: nocturneDark.surface,
+    text: nocturneDark.text,
+    border: nocturneDark.divider,
+  },
+  fonts: {
+    ...DarkTheme.fonts,
+    regular: { fontFamily: fonts.regular, fontWeight: '400' },
+    medium: { fontFamily: fonts.medium, fontWeight: '500' },
+  },
+};
+
+const navLight: Theme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: nocturneLight.accent,
+    background: nocturneLight.bg,
+    card: nocturneLight.surface,
+    text: nocturneLight.text,
+    border: nocturneLight.divider,
+  },
+  fonts: navDark.fonts,
+};
+
+function RootNavigator() {
+  const { palette } = useTheme();
+  return (
+    <ThemeProvider value={palette.scheme === 'dark' ? navDark : navLight}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: palette.bg },
+        }}>
+        <Stack.Screen name="index" options={{ animation: 'fade' }} />
+        <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
+        <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+      </Stack>
+      <StatusBar style={palette.scheme === 'dark' ? 'light' : 'dark'} />
+    </ThemeProvider>
+  );
+}
+
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const [loaded] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold });
+
+  useEffect(() => {
+    if (loaded) SplashScreen.hideAsync();
+  }, [loaded]);
+
+  if (!loaded) return null;
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <NocturneThemeProvider>
+      <RootNavigator />
+    </NocturneThemeProvider>
   );
 }
