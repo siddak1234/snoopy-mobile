@@ -49,3 +49,6 @@ app-example
 
 # Claude Code local settings
 .claude/
+
+# test coverage output
+coverage/
