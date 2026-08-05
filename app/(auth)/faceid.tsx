@@ -52,7 +52,7 @@ export default function FaceIdScreen() {
   const goHome = useCallback(() => {
     if (navigatedRef.current) return;
     navigatedRef.current = true;
-    router.replace('/(tabs)');
+    router.replace('/(tabs)/(home)');
   }, [router]);
 
   // Prototype behavior: attempt real Face ID only when biometrics are

@@ -54,7 +54,7 @@ export default function OnboardingScreen() {
     if (phase < lastPhase) {
       setPhase((p) => p + 1);
     } else {
-      router.replace('/(tabs)');
+      router.replace('/(tabs)/(home)');
     }
   };
 
@@ -70,7 +70,7 @@ export default function OnboardingScreen() {
       <GlowBackground cx="50%" cy="20%" r="52%" />
 
       <View style={styles.skipRow}>
-        <Pressable onPress={() => router.replace('/(tabs)')} style={styles.skipHit}>
+        <Pressable onPress={() => router.replace('/(tabs)/(home)')} style={styles.skipHit}>
           <Text style={[styles.skipLabel, { color: palette.neutral[400] }]}>Skip</Text>
         </Pressable>
       </View>

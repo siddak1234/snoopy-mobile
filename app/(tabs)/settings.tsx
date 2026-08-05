@@ -4,8 +4,12 @@ import {
   Buildings,
   CaretRight,
   ClockClockwise,
+  CreditCard,
+  CrownSimple,
   Key,
+  Receipt,
   SignOut,
+  Storefront,
   UserFocus,
   Users,
   type Icon,
@@ -19,6 +23,7 @@ import { NocToggle } from '@/components/nocturne/noc-toggle';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { em, fonts, layout, status } from '@/constants/theme';
+import { useSolutions } from '@/hooks/use-solutions';
 import { useTheme, type ThemeMode } from '@/hooks/use-theme';
 
 function SettingsRow({
@@ -69,6 +74,7 @@ const APPEARANCE: { label: string; mode: ThemeMode }[] = [
 
 export default function SettingsScreen() {
   const { palette, mode, setMode } = useTheme();
+  const { activeCount, solutionsTotal, planTotal } = useSolutions();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [faceId, setFaceId] = useState(true);
@@ -119,6 +125,46 @@ export default function SettingsScreen() {
             title="Stay signed in"
             sub="Keep this device logged in"
             right={<NocToggle value={staySignedIn} onChange={setStaySignedIn} />}
+          />
+        </SurfaceCard>
+      </View>
+
+      <View>
+        <SectionLabel>PLAN &amp; BILLING</SectionLabel>
+        <SurfaceCard style={styles.sectionCard}>
+          <SettingsRow
+            icon={CrownSimple}
+            title="Growth plan"
+            sub="$99/mo base · renews Sep 1"
+            divider
+            right={
+              <Text style={[styles.planTotal, { color: palette.accentRamp[300] }]}>
+                {planTotal}/mo
+              </Text>
+            }
+          />
+          <SettingsRow
+            icon={Storefront}
+            title="Manage solutions"
+            sub={`${activeCount} active · ${solutionsTotal}/mo`}
+            divider
+            onPress={() => router.push('/(tabs)/solutions')}
+            right={<CaretRight size={15} color={palette.neutral[500]} />}
+          />
+          <SettingsRow
+            icon={CreditCard}
+            title="Payment method"
+            sub="Visa ···· 4242"
+            divider
+            onPress={() => {}}
+            right={<CaretRight size={15} color={palette.neutral[500]} />}
+          />
+          <SettingsRow
+            icon={Receipt}
+            title="Invoices"
+            sub={`Last: Aug 1 · ${planTotal}`}
+            onPress={() => {}}
+            right={<CaretRight size={15} color={palette.neutral[500]} />}
           />
         </SurfaceCard>
       </View>
@@ -244,6 +290,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  planTotal: {
+    fontFamily: fonts.medium,
+    fontSize: 14,
   },
   membersCount: {
     fontFamily: fonts.regular,

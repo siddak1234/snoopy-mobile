@@ -77,7 +77,7 @@ export default function WorkflowDetailScreen() {
           icon={PencilSimple}
           iconSize={16}
           style={styles.actionBtn}
-          onPress={() => router.push('/(tabs)/builder')}
+          onPress={() => router.push('/(tabs)/flows/builder')}
         />
       </View>
     </ScrollView>

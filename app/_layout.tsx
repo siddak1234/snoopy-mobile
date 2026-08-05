@@ -17,6 +17,7 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { fonts, nocturneDark, nocturneLight } from '@/constants/theme';
+import { SolutionsProvider } from '@/hooks/use-solutions';
 import { NocturneThemeProvider, useTheme } from '@/hooks/use-theme';
 
 export const unstable_settings = {
@@ -84,7 +85,9 @@ export default function RootLayout() {
 
   return (
     <NocturneThemeProvider>
-      <RootNavigator />
+      <SolutionsProvider>
+        <RootNavigator />
+      </SolutionsProvider>
     </NocturneThemeProvider>
   );
 }

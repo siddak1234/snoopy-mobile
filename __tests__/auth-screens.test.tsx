@@ -37,7 +37,7 @@ describe('Log in', () => {
   it('routes Log In → tabs, Face ID → faceid, Sign up → signup', async () => {
     const { getByText } = await renderWithProviders(<LoginScreen />);
     await fireEvent.press(getByText('Log In'));
-    expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)');
+    expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)/(home)');
     await fireEvent.press(getByText('Unlock with Face ID'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(auth)/faceid');
     await fireEvent.press(getByText('Sign up'));
@@ -72,13 +72,13 @@ describe('Onboarding tour', () => {
     expect(getByText('YOUR TEAM, UNBURDENED')).toBeTruthy();
     expect(queryByText('Next')).toBeNull();
     await fireEvent.press(getByText('Get started'));
-    expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)');
+    expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)/(home)');
   });
 
   it('Skip enters the app immediately', async () => {
     const { getByText } = await renderWithProviders(<OnboardingScreen />);
     await fireEvent.press(getByText('Skip'));
-    expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)');
+    expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)/(home)');
   });
 });
 

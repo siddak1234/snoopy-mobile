@@ -5,11 +5,16 @@ import {
   approvalDoneText,
   approvals,
   builderPalette,
+  defaultActiveSolutions,
   detailStats,
   flows,
   homeStats,
   onboardingPhases,
+  PLAN_BASE_PRICE,
   recentRuns,
+  runDetail,
+  solutionDefs,
+  solutionFilters,
   steps,
   templateFilters,
   templates,
@@ -70,5 +75,35 @@ describe('fixture data — byte-exact to the design prototype', () => {
 
   it('keeps flow statuses matching the pills map', () => {
     expect(flows.map((f) => f.status)).toEqual(['Live', 'Live', 'Paused', 'Draft']);
+  });
+
+  it('keeps colored home stats per the updated design', () => {
+    expect(homeStats).toEqual([
+      { value: '128', label: 'Runs today', tone: 'text' },
+      { value: '124', label: 'Success', tone: 'ok' },
+      { value: '4', label: 'Failed', tone: 'err' },
+    ]);
+  });
+
+  it('keeps the solutions marketplace pricing (design solDefs)', () => {
+    expect(solutionDefs.map((s) => s.price)).toEqual([39, 29, 19, 19, 49, 9]);
+    expect(defaultActiveSolutions).toEqual([0, 1, 2]);
+    expect(PLAN_BASE_PRICE).toBe(99);
+    expect(solutionFilters).toEqual(['All', 'Finance', 'Ops', 'Sales', 'Reporting']);
+    expect(solutionDefs[0].desc).toBe('AP inbox to ledger, exceptions held for you');
+  });
+
+  it('keeps the run-detail fixture verbatim', () => {
+    expect(runDetail.title).toBe('Run #4820');
+    expect(runDetail.sub).toBe('Invoice triage · today, 9:41 AM');
+    expect(runDetail.status).toBe('Held');
+    expect(runDetail.timeline.map((t) => t.tone)).toEqual(['ok', 'ok', 'warn', 'pending']);
+    expect(runDetail.timeline[3].time).toBeUndefined();
+    expect(runDetail.fields.map((f) => f.value)).toEqual([
+      'Beacon Supply Co',
+      '$12,480.00',
+      '#8841',
+      'Sep 3, 2026',
+    ]);
   });
 });

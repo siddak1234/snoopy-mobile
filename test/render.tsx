@@ -2,6 +2,7 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { SolutionsProvider } from '@/hooks/use-solutions';
 import { NocturneThemeProvider } from '@/hooks/use-theme';
 
 /** iPhone 16 Pro metrics — the design canvas device (402×874, 59pt notch). */
@@ -14,7 +15,9 @@ const initialMetrics = {
 export function renderWithProviders(ui: React.ReactElement) {
   return render(
     <SafeAreaProvider initialMetrics={initialMetrics}>
-      <NocturneThemeProvider>{ui}</NocturneThemeProvider>
+      <NocturneThemeProvider>
+        <SolutionsProvider>{ui}</SolutionsProvider>
+      </NocturneThemeProvider>
     </SafeAreaProvider>,
   );
 }

@@ -27,7 +27,7 @@ describe('Face ID unlock', () => {
     act(() => {
       jest.advanceTimersByTime(2100);
     });
-    expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)');
+    expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)/(home)');
     expect(mockRouter.replace).toHaveBeenCalledTimes(1);
   });
 });
