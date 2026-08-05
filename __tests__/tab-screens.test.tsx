@@ -76,6 +76,27 @@ describe('Solutions marketplace', () => {
     await fireEvent.press(getByText('3 active · manage in Settings'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings');
   });
+
+  it('filters the marketplace by category', async () => {
+    const { getByText, queryByText } = await renderWithProviders(<SolutionsScreen />);
+    await fireEvent.press(getByText('Finance'));
+    expect(getByText('Invoice triage')).toBeTruthy();
+    expect(getByText('Receipt OCR')).toBeTruthy();
+    expect(queryByText('Email triage')).toBeNull();
+    expect(queryByText('Slack alerts')).toBeNull();
+    await fireEvent.press(getByText('Ops'));
+    expect(getByText('Email triage')).toBeTruthy();
+    expect(queryByText('Invoice triage')).toBeNull();
+  });
+
+  it('toggles the correct solution from a filtered list', async () => {
+    const { getByText, getAllByText } = await renderWithProviders(<SolutionsScreen />);
+    await fireEvent.press(getByText('Finance'));
+    // Finance shows Invoice triage ($39, added) and Receipt OCR ($19, added).
+    await fireEvent.press(getAllByText('Added ✓')[0]);
+    // Removing Invoice triage: $186 − $39 = $147.
+    expect(getByText('Growth plan · $147/mo')).toBeTruthy();
+  });
 });
 
 describe('Run detail', () => {
@@ -172,6 +193,25 @@ describe('Activity', () => {
     const { getByText } = await renderWithProviders(<ActivityScreen />);
     await fireEvent.press(getByText('Needs review'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity/approvals');
+  });
+
+  it('filters to successes only', async () => {
+    const { getByText, queryByText } = await renderWithProviders(<ActivityScreen />);
+    await fireEvent.press(getByText('Success'));
+    expect(getByText('32 emails routed · 3 escalated')).toBeTruthy();
+    expect(queryByText('Run #52 · failed — Sheets auth expired')).toBeNull();
+    expect(queryByText('Run #4820 · held for review — amount mismatch')).toBeNull();
+  });
+
+  it('filters to failures and hides the empty TODAY section', async () => {
+    const { getByText, queryByText } = await renderWithProviders(<ActivityScreen />);
+    await fireEvent.press(getByText('Failed'));
+    expect(getByText('Run #52 · failed — Sheets auth expired')).toBeTruthy();
+    expect(queryByText('TODAY')).toBeNull();
+    expect(getByText('YESTERDAY')).toBeTruthy();
+    await fireEvent.press(getByText('All'));
+    expect(getByText('TODAY')).toBeTruthy();
+    expect(getByText('Run #911 · 4 receipts captured')).toBeTruthy();
   });
 });
 

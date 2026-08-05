@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { CaretRight, CrownSimple } from 'phosphor-react-native';
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -17,6 +17,13 @@ export default function SolutionsScreen() {
   const { active, toggle, activeCount, planTotal } = useSolutions();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  // The design draws the category chips without behavior; filtering the
+  // marketplace by category is an app-side extension of the obvious intent.
+  const [category, setCategory] = useState('All');
+
+  const visible = solutionDefs
+    .map((sol, index) => ({ sol, index }))
+    .filter(({ sol }) => category === 'All' || sol.cat === category);
 
   return (
     <ScrollView
@@ -56,12 +63,12 @@ export default function SolutionsScreen() {
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
         {solutionFilters.map((f) => (
-          <FilterChip key={f} label={f} active={f === 'All'} />
+          <FilterChip key={f} label={f} active={f === category} onPress={() => setCategory(f)} />
         ))}
       </ScrollView>
 
       <View style={styles.list}>
-        {solutionDefs.map((sol, i) => {
+        {visible.map(({ sol, index: i }) => {
           const added = !!active[i];
           return (
             <SurfaceCard key={sol.name} style={styles.card}>

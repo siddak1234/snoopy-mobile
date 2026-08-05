@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -45,10 +45,23 @@ function ActivitySection({ label, items }: { label: string; items: ActivityItem[
   );
 }
 
+/** The design draws these chips but wires only "Needs review" (→ Approvals);
+ *  Success/Failed filtering is an app-side extension of the obvious intent. */
+type ActivityFilter = 'All' | 'Success' | 'Failed';
+
+const matchesFilter = (item: ActivityItem, filter: ActivityFilter) =>
+  filter === 'All' ||
+  (filter === 'Success' && item.tone === 'ok') ||
+  (filter === 'Failed' && item.tone === 'err');
+
 export default function ActivityScreen() {
   const { palette } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [filter, setFilter] = useState<ActivityFilter>('All');
+
+  const today = activityToday.filter((i) => matchesFilter(i, filter));
+  const yesterday = activityYesterday.filter((i) => matchesFilter(i, filter));
 
   return (
     <ScrollView
@@ -64,15 +77,17 @@ export default function ActivityScreen() {
           <FilterChip
             key={f}
             label={f}
-            active={f === 'All'}
+            active={f === filter}
             onPress={
-              f === 'Needs review' ? () => router.push('/(tabs)/activity/approvals') : undefined
+              f === 'Needs review'
+                ? () => router.push('/(tabs)/activity/approvals')
+                : () => setFilter(f as ActivityFilter)
             }
           />
         ))}
       </View>
-      <ActivitySection label="TODAY" items={activityToday} />
-      <ActivitySection label="YESTERDAY" items={activityYesterday} />
+      {today.length > 0 ? <ActivitySection label="TODAY" items={today} /> : null}
+      {yesterday.length > 0 ? <ActivitySection label="YESTERDAY" items={yesterday} /> : null}
     </ScrollView>
   );
 }
