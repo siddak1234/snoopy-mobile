@@ -1,0 +1,374 @@
+import { useRouter } from 'expo-router';
+import {
+  Bell,
+  Buildings,
+  CaretRight,
+  ClockClockwise,
+  CreditCard,
+  CrownSimple,
+  Key,
+  Receipt,
+  SignOut,
+  Storefront,
+  UserFocus,
+  Users,
+  type Icon,
+} from 'phosphor-react-native';
+import React, { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { AvatarBadge } from '@/components/nocturne/avatar-badge';
+import { NocToggle } from '@/components/nocturne/noc-toggle';
+import { SectionLabel } from '@/components/nocturne/section-label';
+import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { em, fonts, layout, status } from '@/constants/theme';
+import { useSolutions } from '@/hooks/use-solutions';
+import { useTheme, type ThemeMode } from '@/hooks/use-theme';
+import { settingsConnections } from '@/lib/fixtures';
+
+function SettingsRow({
+  icon: IconCmp,
+  title,
+  sub,
+  right,
+  divider = false,
+  onPress,
+}: {
+  icon: Icon;
+  title: string;
+  sub?: string;
+  right: React.ReactNode;
+  divider?: boolean;
+  onPress?: () => void;
+}) {
+  const { palette } = useTheme();
+  const body = (
+    <>
+      <IconCmp size={20} color={palette.accentRamp[300]} />
+      <View style={styles.rowBody}>
+        <Text style={[styles.rowTitle, { color: palette.text }]}>{title}</Text>
+        {sub ? <Text style={[styles.rowSub, { color: palette.neutral[400] }]}>{sub}</Text> : null}
+      </View>
+      {right}
+    </>
+  );
+  const rowStyle = [
+    styles.row,
+    divider && { borderBottomWidth: 1, borderBottomColor: palette.divider },
+  ];
+  if (onPress) {
+    return (
+      <Pressable onPress={onPress} style={({ pressed }) => [rowStyle, pressed && { opacity: 0.7 }]}>
+        {body}
+      </Pressable>
+    );
+  }
+  return <View style={rowStyle}>{body}</View>;
+}
+
+const APPEARANCE: { label: string; mode: ThemeMode }[] = [
+  { label: 'Dark', mode: 'dark' },
+  { label: 'Light', mode: 'light' },
+  { label: 'Auto', mode: 'auto' },
+];
+
+export default function SettingsScreen() {
+  const { palette, mode, setMode } = useTheme();
+  const { activeCount, solutionsTotal, planTotal } = useSolutions();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const [faceId, setFaceId] = useState(true);
+  const [staySignedIn, setStaySignedIn] = useState(true);
+  const [notifications, setNotifications] = useState(true);
+
+  return (
+    <ScrollView
+      style={{ backgroundColor: palette.bg }}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) },
+      ]}
+      showsVerticalScrollIndicator={false}>
+      <Text style={[styles.h1, { color: palette.text }]}>Settings</Text>
+
+      <SurfaceCard style={styles.profileCard}>
+        <AvatarBadge initials="AK" size={48} fontSize={16} />
+        <View style={styles.rowBody}>
+          <Text style={[styles.profileName, { color: palette.text }]}>Alex Kim</Text>
+          <Text style={[styles.profileSub, { color: palette.neutral[400] }]}>
+            alex@acme.co · Acme Operations
+          </Text>
+        </View>
+        <CaretRight size={16} color={palette.neutral[500]} />
+      </SurfaceCard>
+
+      <View>
+        <SectionLabel>SECURITY</SectionLabel>
+        <SurfaceCard style={styles.sectionCard}>
+          <SettingsRow
+            icon={UserFocus}
+            title="Face ID unlock"
+            sub="Require Face ID when opening"
+            divider
+            right={<NocToggle value={faceId} onChange={setFaceId} />}
+          />
+          <SettingsRow
+            icon={Key}
+            title="Passkeys"
+            sub="1 passkey · iPhone"
+            divider
+            onPress={() => {}}
+            right={<CaretRight size={15} color={palette.neutral[500]} />}
+          />
+          <SettingsRow
+            icon={ClockClockwise}
+            title="Stay signed in"
+            sub="Keep this device logged in"
+            right={<NocToggle value={staySignedIn} onChange={setStaySignedIn} />}
+          />
+        </SurfaceCard>
+      </View>
+
+      <View>
+        <SectionLabel>CONNECTIONS</SectionLabel>
+        <SurfaceCard style={styles.sectionCard}>
+          {settingsConnections.map((c, i) => (
+            <SettingsRow
+              key={c.name}
+              icon={c.icon}
+              title={c.name}
+              sub={c.sub}
+              divider={i < settingsConnections.length - 1}
+              onPress={() => {}}
+              right={
+                c.connected ? (
+                  <View style={styles.connectedRight}>
+                    <View style={[styles.greenDot, { backgroundColor: status.ok }]} />
+                    <CaretRight size={15} color={palette.neutral[500]} />
+                  </View>
+                ) : (
+                  <Text style={[styles.connectLink, { color: palette.accentRamp[300] }]}>
+                    Connect
+                  </Text>
+                )
+              }
+            />
+          ))}
+        </SurfaceCard>
+      </View>
+
+      <View>
+        <SectionLabel>PLAN &amp; BILLING</SectionLabel>
+        <SurfaceCard style={styles.sectionCard}>
+          <SettingsRow
+            icon={CrownSimple}
+            title="Growth plan"
+            sub="$99/mo base · renews Sep 1"
+            divider
+            right={
+              <Text style={[styles.planTotal, { color: palette.accentRamp[300] }]}>
+                {planTotal}/mo
+              </Text>
+            }
+          />
+          <SettingsRow
+            icon={Storefront}
+            title="Manage solutions"
+            sub={`${activeCount} active · ${solutionsTotal}/mo`}
+            divider
+            onPress={() => router.push('/(tabs)/solutions')}
+            right={<CaretRight size={15} color={palette.neutral[500]} />}
+          />
+          <SettingsRow
+            icon={CreditCard}
+            title="Payment method"
+            sub="Visa ···· 4242"
+            divider
+            onPress={() => {}}
+            right={<CaretRight size={15} color={palette.neutral[500]} />}
+          />
+          <SettingsRow
+            icon={Receipt}
+            title="Invoices"
+            sub={`Last: Aug 1 · ${planTotal}`}
+            onPress={() => {}}
+            right={<CaretRight size={15} color={palette.neutral[500]} />}
+          />
+        </SurfaceCard>
+      </View>
+
+      <View>
+        <SectionLabel>WORKSPACE</SectionLabel>
+        <SurfaceCard style={styles.sectionCard}>
+          <SettingsRow
+            icon={Buildings}
+            title="Acme Operations"
+            divider
+            onPress={() => {}}
+            right={<CaretRight size={15} color={palette.neutral[500]} />}
+          />
+          <SettingsRow
+            icon={Users}
+            title="Members"
+            divider
+            onPress={() => {}}
+            right={
+              <View style={styles.membersRight}>
+                <Text style={[styles.membersCount, { color: palette.neutral[500] }]}>12</Text>
+                <CaretRight size={15} color={palette.neutral[500]} />
+              </View>
+            }
+          />
+          <SettingsRow
+            icon={Bell}
+            title="Notifications"
+            right={<NocToggle value={notifications} onChange={setNotifications} />}
+          />
+        </SurfaceCard>
+      </View>
+
+      <View>
+        <SectionLabel>APPEARANCE</SectionLabel>
+        <SurfaceCard style={styles.segCard}>
+          {APPEARANCE.map((opt) => {
+            const active = mode === opt.mode;
+            return (
+              <Pressable
+                key={opt.mode}
+                onPress={() => setMode(opt.mode)}
+                style={[
+                  styles.segOpt,
+                  active && { borderWidth: 1, borderColor: palette.accent },
+                ]}>
+                <Text
+                  style={{
+                    fontFamily: active ? fonts.medium : fonts.regular,
+                    fontSize: 13,
+                    color: active ? palette.accent : palette.neutral[400],
+                  }}>
+                  {opt.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </SurfaceCard>
+      </View>
+
+      <SurfaceCard onPress={() => router.replace('/(auth)/welcome')} style={styles.signOutCard}>
+        <SignOut size={20} color={status.err} />
+        <Text style={[styles.signOutLabel, { color: status.err }]}>Sign out</Text>
+      </SurfaceCard>
+
+      <Text style={[styles.version, { color: palette.neutral[600] }]}>
+        Autom8x for iOS · v1.0.0
+      </Text>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  content: {
+    paddingHorizontal: layout.screenX,
+    paddingBottom: 20,
+    gap: 16,
+  },
+  h1: {
+    fontFamily: fonts.medium,
+    fontSize: 26,
+    letterSpacing: em(-0.015, 26),
+  },
+  profileCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 13,
+    padding: layout.cardPad,
+  },
+  profileName: {
+    fontFamily: fonts.medium,
+    fontSize: 15.5,
+  },
+  profileSub: {
+    marginTop: 1,
+    fontFamily: fonts.regular,
+    fontSize: 12.5,
+  },
+  sectionCard: {
+    marginTop: 9,
+    overflow: 'hidden',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 13,
+    paddingHorizontal: layout.rowPadH,
+  },
+  rowBody: {
+    flex: 1,
+  },
+  rowTitle: {
+    fontFamily: fonts.medium,
+    fontSize: 14,
+  },
+  rowSub: {
+    fontFamily: fonts.regular,
+    fontSize: 12,
+  },
+  membersRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  planTotal: {
+    fontFamily: fonts.medium,
+    fontSize: 14,
+  },
+  connectedRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  greenDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 99,
+  },
+  connectLink: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
+  },
+  membersCount: {
+    fontFamily: fonts.regular,
+    fontSize: 12.5,
+  },
+  segCard: {
+    marginTop: 9,
+    flexDirection: 'row',
+    gap: 4,
+    padding: 6,
+  },
+  segOpt: {
+    flex: 1,
+    height: 34,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signOutCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 13,
+    paddingHorizontal: layout.rowPadH,
+  },
+  signOutLabel: {
+    fontFamily: fonts.medium,
+    fontSize: 14,
+  },
+  version: {
+    textAlign: 'center',
+    fontFamily: fonts.regular,
+    fontSize: 11,
+  },
+});
