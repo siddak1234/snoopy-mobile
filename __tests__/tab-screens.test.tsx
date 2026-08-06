@@ -13,6 +13,8 @@ import RunDetailScreen from '@/app/(tabs)/(home)/run';
 import SettingsScreen from '@/app/(tabs)/settings';
 import SetupScreen from '@/app/(tabs)/solutions/setup';
 import SolutionsScreen from '@/app/(tabs)/solutions/index';
+import ConfigureScreen from '@/app/(tabs)/flows/configure';
+import NotificationsScreen from '@/app/(tabs)/(home)/notifications';
 import { nocturneDark, nocturneLight } from '@/constants/theme';
 import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
 
@@ -162,11 +164,29 @@ describe('Workflows', () => {
   it('opens detail from a card, builder from New, templates from Templates', async () => {
     const { getByText } = await renderWithProviders(<FlowsScreen />);
     await fireEvent.press(getByText('Invoice triage'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/detail');
+    expect(mockRouter.push).toHaveBeenCalledWith({
+      pathname: '/(tabs)/flows/detail',
+      params: { flow: 'invoice' },
+    });
     await fireEvent.press(getByText('New'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/builder');
     await fireEvent.press(getByText('Templates'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/templates');
+  });
+});
+
+describe('Workflows search (design v4)', () => {
+  it('filters the list by query and shows the no-match state', async () => {
+    const { getByPlaceholderText, getByText, queryByText } = await renderWithProviders(
+      <FlowsScreen />,
+    );
+    await fireEvent.changeText(getByPlaceholderText('Search workflows'), 'invoice');
+    expect(getByText('Invoice triage')).toBeTruthy();
+    expect(queryByText('Email triage')).toBeNull();
+    await fireEvent.changeText(getByPlaceholderText('Search workflows'), 'zzz');
+    expect(getByText('No workflows match "zzz".')).toBeTruthy();
+    await fireEvent.changeText(getByPlaceholderText('Search workflows'), '');
+    expect(getByText('Email triage')).toBeTruthy();
   });
 });
 
@@ -176,6 +196,7 @@ describe('Workflow detail', () => {
     expect(getByText('1,284')).toBeTruthy();
     expect(getByText('1,272')).toBeTruthy();
     expect(getByText('12')).toBeTruthy();
+    expect(getByText('Invoice triage')).toBeTruthy();
     expect(getByText('New email in AP inbox')).toBeTruthy();
     expect(getByText('Extract invoice fields')).toBeTruthy();
     expect(getByText('Classify & GL-code')).toBeTruthy();
@@ -187,6 +208,40 @@ describe('Workflow detail', () => {
     await fireEvent.press(getByText('Edit in Builder'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/builder');
     expect(root).toBeTruthy();
+  });
+
+  it('renders each workflow identity with its own content (design flowDefs)', async () => {
+    setMockParams({ flow: 'kpi' });
+    const { getByText, queryByText } = await renderWithProviders(<WorkflowDetailScreen />);
+    expect(getByText('Weekly KPI report')).toBeTruthy();
+    expect(getByText('Sheets → Slack digest')).toBeTruthy();
+    expect(getByText('Paused')).toBeTruthy();
+    expect(getByText('Google Sheets')).toBeTruthy();
+    expect(getByText('Auth expired — tap to reconnect')).toBeTruthy();
+    expect(getByText('Every Monday, 9:00 AM')).toBeTruthy();
+    expect(queryByText('New email in AP inbox')).toBeNull();
+  });
+
+  it('shows a Draft with em-dash stats and a Publish action', async () => {
+    setMockParams({ flow: 'lead' });
+    const { getByText, getAllByText } = await renderWithProviders(<WorkflowDetailScreen />);
+    expect(getByText('Lead enrichment')).toBeTruthy();
+    expect(getByText('Draft')).toBeTruthy();
+    expect(getAllByText('—').length).toBeGreaterThanOrEqual(3);
+    expect(getByText('HubSpot')).toBeTruthy();
+    expect(getByText('Publish')).toBeTruthy();
+  });
+
+  it('toggles Live → Paused and back (design dToggle)', async () => {
+    setMockParams({ flow: 'invoice' });
+    const { getByText } = await renderWithProviders(<WorkflowDetailScreen />);
+    expect(getByText('Live')).toBeTruthy();
+    expect(getByText('Pause')).toBeTruthy();
+    await fireEvent.press(getByText('Pause'));
+    expect(getByText('Paused')).toBeTruthy();
+    expect(getByText('Resume')).toBeTruthy();
+    await fireEvent.press(getByText('Resume'));
+    expect(getByText('Live')).toBeTruthy();
   });
 });
 
@@ -254,6 +309,18 @@ describe('Approvals inbox', () => {
     expect(queryAllByText('Approve')).toHaveLength(1);
   });
 
+  it('decrements the pending count and shows the all-caught-up banner', async () => {
+    const { getAllByText, getByText, queryByText } = await renderWithProviders(<ApprovalsScreen />);
+    expect(getByText('3')).toBeTruthy();
+    await fireEvent.press(getAllByText('Approve')[0]);
+    expect(getByText('2')).toBeTruthy();
+    expect(queryByText('All caught up — decisions synced to your workflows.')).toBeNull();
+    await fireEvent.press(getAllByText('Approve')[0]);
+    await fireEvent.press(getAllByText('Reject')[0]);
+    expect(getByText('0')).toBeTruthy();
+    expect(getByText('All caught up — decisions synced to your workflows.')).toBeTruthy();
+  });
+
   it('shows the review reasons verbatim', async () => {
     const { getByText } = await renderWithProviders(<ApprovalsScreen />);
     expect(getByText('Invoice #4821 · Beacon Supply Co')).toBeTruthy();
@@ -276,7 +343,69 @@ describe('Templates', () => {
     }
     expect(getAllByText('Use →')).toHaveLength(6);
     await fireEvent.press(getByText('Email triage'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/configure');
+  });
+});
+
+describe('Templates filtering (design v4)', () => {
+  it('filters templates by category', async () => {
+    const { getAllByText, getByText, queryByText } = await renderWithProviders(<TemplatesScreen />);
+    // "Finance" is both a chip and a card label — the chip is the first match.
+    await fireEvent.press(getAllByText('Finance')[0]);
+    expect(getByText('Invoice capture')).toBeTruthy();
+    expect(getByText('Receipt OCR')).toBeTruthy();
+    expect(queryByText('Email triage')).toBeNull();
+    await fireEvent.press(getAllByText('Sales')[0]);
+    expect(getByText('Lead enrichment')).toBeTruthy();
+    expect(queryByText('Invoice capture')).toBeNull();
+  });
+});
+
+describe('New from template (design sConfigure)', () => {
+  it('shows the template summary, name and preloaded steps', async () => {
+    const { getByText, getByDisplayValue } = await renderWithProviders(<ConfigureScreen />);
+    expect(getByText('New from template')).toBeTruthy();
+    expect(getByText('Finance · 4 steps · used by 2,100 teams')).toBeTruthy();
+    expect(getByDisplayValue('Invoice capture — AP')).toBeTruthy();
+    expect(getByText('REQUIRED CONNECTION')).toBeTruthy();
+    expect(getByText('STEPS PRELOADED IN BUILDER')).toBeTruthy();
+    expect(getByText('Steps land preloaded — edit anything before it goes live.')).toBeTruthy();
+  });
+
+  it('connects QuickBooks and opens the Builder', async () => {
+    const { getByText } = await renderWithProviders(<ConfigureScreen />);
+    expect(getByText('Required · sign in with OAuth once')).toBeTruthy();
+    await fireEvent.press(getByText('Connect'));
+    expect(getByText('Connected ✓')).toBeTruthy();
+    await fireEvent.press(getByText('Create & open in Builder'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/builder');
+  });
+});
+
+describe('Notifications inbox (design sNotifs)', () => {
+  it('shows the push-priming card and dismisses it', async () => {
+    const { getByText, queryByText } = await renderWithProviders(<NotificationsScreen />);
+    expect(getByText('Know the moment something needs you')).toBeTruthy();
+    expect(
+      getByText(
+        'Push alerts for held runs and failures — nothing else. You can change this anytime in Settings.',
+      ),
+    ).toBeTruthy();
+    await fireEvent.press(getByText('Not now'));
+    expect(queryByText('Know the moment something needs you')).toBeNull();
+  });
+
+  it('lists notifications and opens their targets', async () => {
+    const { getByText } = await renderWithProviders(<NotificationsScreen />);
+    expect(getByText('Run held for review')).toBeTruthy();
+    expect(getByText('Invoice paid')).toBeTruthy();
+    await fireEvent.press(getByText('Run failed'));
+    expect(mockRouter.push).toHaveBeenCalledWith({
+      pathname: '/(tabs)/(home)/run',
+      params: { variant: 'failed' },
+    });
+    await fireEvent.press(getByText('Digest posted'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity');
   });
 });
 

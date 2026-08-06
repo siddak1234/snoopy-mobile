@@ -84,7 +84,12 @@ export default function LoginScreen() {
                 Stay logged in
               </Text>
             </View>
-            <Text style={[styles.forgot, { color: palette.accentRamp[300] }]}>Forgot?</Text>
+            <Text
+              onPress={() => router.push('/(auth)/reset')}
+              suppressHighlighting
+              style={[styles.forgot, { color: palette.accentRamp[300] }]}>
+              Forgot?
+            </Text>
           </View>
           <PillButton label="Log In" onPress={() => router.replace('/(tabs)/(home)')} />
           <PillButton

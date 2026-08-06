@@ -172,7 +172,9 @@ export default function HomeScreen() {
         <BrandMark height={17} />
         <View style={styles.headerActions}>
           <Pressable
-            onPress={() => router.push('/(tabs)/activity')}
+            onPress={() => router.push('/(tabs)/(home)/notifications')}
+            accessibilityRole="button"
+            accessibilityLabel="Notifications"
             style={({ pressed }) => [
               styles.bellButton,
               { borderColor: palette.neutral[800] },
@@ -183,6 +185,8 @@ export default function HomeScreen() {
           </Pressable>
           <Pressable
             onPress={() => router.push('/(tabs)/settings')}
+            accessibilityRole="button"
+            accessibilityLabel="Account and settings"
             style={({ pressed }) => pressed && { opacity: 0.85 }}>
             <AvatarBadge initials="AK" />
           </Pressable>

@@ -15,6 +15,7 @@ export default function FlowsLayout() {
       <Stack.Screen name="index" />
       <Stack.Screen name="detail" />
       <Stack.Screen name="templates" />
+      <Stack.Screen name="configure" />
       <Stack.Screen name="builder" />
     </Stack>
   );

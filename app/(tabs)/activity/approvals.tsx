@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Warning } from 'phosphor-react-native';
+import { CheckCircle, Warning } from 'phosphor-react-native';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -68,6 +68,9 @@ export default function ApprovalsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [decisions, setDecisions] = useState<Record<number, Decision>>({});
+  const decided = Object.keys(decisions).length;
+  const pending = approvals.length - decided;
+  const allDone = decided === approvals.length;
 
   return (
     <ScrollView
@@ -81,9 +84,17 @@ export default function ApprovalsScreen() {
         <BackCircle onPress={() => router.back()} />
         <Text style={[styles.h1, { color: palette.text }]}>Needs review</Text>
         <View style={[styles.badge, { backgroundColor: withAlpha(palette.accent, 0.16) }]}>
-          <Text style={[styles.badgeLabel, { color: palette.accentRamp[200] }]}>3</Text>
+          <Text style={[styles.badgeLabel, { color: palette.accentRamp[200] }]}>{pending}</Text>
         </View>
       </View>
+      {allDone ? (
+        <View style={styles.allDone}>
+          <CheckCircle size={18} color={status.ok} />
+          <Text style={[styles.allDoneText, { color: status.ok }]}>
+            All caught up — decisions synced to your workflows.
+          </Text>
+        </View>
+      ) : null}
       {approvals.map((item, i) => (
         <ApprovalCard
           key={i}
@@ -124,6 +135,24 @@ const styles = StyleSheet.create({
   badgeLabel: {
     fontFamily: fonts.semibold,
     fontSize: 12,
+  },
+  allDone: {
+    marginTop: 8,
+    marginHorizontal: layout.screenX,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: status.okBannerBorder,
+    backgroundColor: status.okBannerBg,
+  },
+  allDoneText: {
+    fontFamily: fonts.medium,
+    fontSize: 13.5,
   },
   card: {
     marginHorizontal: layout.screenX,

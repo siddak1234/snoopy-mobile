@@ -10,6 +10,7 @@ import {
   ChartLine,
   CheckCircle,
   CircleDashed,
+  CrownSimple,
   EnvelopeOpen,
   EnvelopeSimple,
   GitBranch,
@@ -19,6 +20,7 @@ import {
   Receipt,
   SlackLogo,
   Sparkle,
+  Table,
   Timer,
   Tray,
   UserPlus,
@@ -29,20 +31,34 @@ import {
 
 export type FlowStatus = 'Live' | 'Paused' | 'Draft';
 
-type Flow = {
+/** Stable identity for each workflow (design `flow` prop enum). */
+export type FlowKey = 'invoice' | 'email' | 'kpi' | 'lead';
+
+export const flowKeys: FlowKey[] = ['invoice', 'email', 'kpi', 'lead'];
+
+export type FlowConnection = {
+  icon: Icon;
+  name: string;
+  sub: string;
+  /** Connection tone (design conns[].sc): ok, warn (needs reconnect), neutral. */
+  tone: 'ok' | 'warn' | 'neutral';
+  status: string;
+};
+
+export type FlowDef = {
   icon: Icon;
   name: string;
   desc: string;
   status: FlowStatus;
+  /** List-row summary line (design runsTxt). */
   runs: string;
+  /** Detail stat tiles (design runs / okN / failN — em dash on a Draft). */
+  runCount: string;
+  okCount: string;
+  failCount: string;
+  connections: FlowConnection[];
+  steps: PipelineStep[];
 };
-
-export const flows: Flow[] = [
-  { icon: Receipt, name: 'Invoice triage', desc: 'AP inbox → QuickBooks', status: 'Live', runs: '1,284 runs · 1,272 ok · 12 failed' },
-  { icon: EnvelopeSimple, name: 'Email triage', desc: 'Support inbox routing', status: 'Live', runs: '3,412 runs · 3,357 ok · 55 failed' },
-  { icon: ChartLine, name: 'Weekly KPI report', desc: 'Sheets → Slack digest', status: 'Paused', runs: '52 runs · 52 ok · 0 failed' },
-  { icon: UserPlus, name: 'Lead enrichment', desc: 'CRM enrich + score', status: 'Draft', runs: 'Not yet published' },
-];
 
 export type PipelineStep = {
   icon: Icon;
@@ -52,12 +68,90 @@ export type PipelineStep = {
   more: boolean;
 };
 
-export const steps: PipelineStep[] = [
-  { icon: EnvelopeOpen, kicker: 'TRIGGER', title: 'New email in AP inbox', desc: 'Gmail · ap@acme.co', more: true },
-  { icon: Sparkle, kicker: 'AI STEP', title: 'Extract invoice fields', desc: 'Vendor, amount, PO, due date', more: true },
-  { icon: GitBranch, kicker: 'AI STEP', title: 'Classify & GL-code', desc: 'Confidence < 95% → human review', more: true },
-  { icon: PlugsConnected, kicker: 'ACTION', title: 'Post to QuickBooks', desc: 'Draft bill, attach PDF', more: false },
-];
+/** Per-workflow content (design flowDefs) — each list card opens its own detail. */
+export const flowDefs: Record<FlowKey, FlowDef> = {
+  invoice: {
+    icon: Receipt,
+    name: 'Invoice triage',
+    desc: 'AP inbox → QuickBooks',
+    status: 'Live',
+    runs: '1,284 runs · 1,272 ok · 12 failed',
+    runCount: '1,284',
+    okCount: '1,272',
+    failCount: '12',
+    connections: [
+      { icon: PlugsConnected, name: 'QuickBooks Online', sub: 'acme-books · linked via OAuth', tone: 'ok', status: 'Connected' },
+      { icon: EnvelopeSimple, name: 'Gmail', sub: 'ap@acme.co · shared across workspace', tone: 'ok', status: 'Connected' },
+    ],
+    steps: [
+      { icon: EnvelopeOpen, kicker: 'TRIGGER', title: 'New email in AP inbox', desc: 'Gmail · ap@acme.co', more: true },
+      { icon: Sparkle, kicker: 'AI STEP', title: 'Extract invoice fields', desc: 'Vendor, amount, PO, due date', more: true },
+      { icon: GitBranch, kicker: 'AI STEP', title: 'Classify & GL-code', desc: 'Low confidence → human review', more: true },
+      { icon: PlugsConnected, kicker: 'ACTION', title: 'Post to QuickBooks', desc: 'Draft bill, attach PDF', more: false },
+    ],
+  },
+  email: {
+    icon: EnvelopeSimple,
+    name: 'Email triage',
+    desc: 'Support inbox routing',
+    status: 'Live',
+    runs: '3,412 runs · 3,357 ok · 55 failed',
+    runCount: '3,412',
+    okCount: '3,357',
+    failCount: '55',
+    connections: [
+      { icon: EnvelopeSimple, name: 'Gmail', sub: 'support@acme.co · shared across workspace', tone: 'ok', status: 'Connected' },
+    ],
+    steps: [
+      { icon: EnvelopeOpen, kicker: 'TRIGGER', title: 'New support email', desc: 'Gmail · support@acme.co', more: true },
+      { icon: Sparkle, kicker: 'AI STEP', title: 'Classify intent & urgency', desc: 'Billing, bug, refund, other', more: true },
+      { icon: GitBranch, kicker: 'BRANCH', title: 'Escalate if urgent', desc: 'Urgent → on-call channel', more: true },
+      { icon: PlugsConnected, kicker: 'ACTION', title: 'Route & draft reply', desc: 'Assign queue, propose response', more: false },
+    ],
+  },
+  kpi: {
+    icon: ChartLine,
+    name: 'Weekly KPI report',
+    desc: 'Sheets → Slack digest',
+    status: 'Paused',
+    runs: '52 runs · 51 ok · 1 failed',
+    runCount: '52',
+    okCount: '51',
+    failCount: '1',
+    connections: [
+      { icon: Table, name: 'Google Sheets', sub: 'Auth expired — tap to reconnect', tone: 'warn', status: 'Reconnect' },
+      { icon: SlackLogo, name: 'Slack', sub: '#leadership · shared across workspace', tone: 'ok', status: 'Connected' },
+    ],
+    steps: [
+      { icon: Timer, kicker: 'TRIGGER', title: 'Every Monday, 9:00 AM', desc: 'Schedule', more: true },
+      { icon: Table, kicker: 'ACTION', title: 'Pull metrics from Sheets', desc: 'Revenue, churn, pipeline tabs', more: true },
+      { icon: Sparkle, kicker: 'AI STEP', title: 'Write the digest', desc: 'Summary with week-over-week deltas', more: true },
+      { icon: SlackLogo, kicker: 'ACTION', title: 'Post to Slack', desc: '#leadership', more: false },
+    ],
+  },
+  lead: {
+    icon: UserPlus,
+    name: 'Lead enrichment',
+    desc: 'CRM enrich + score',
+    status: 'Draft',
+    runs: 'Not yet published',
+    runCount: '—',
+    okCount: '—',
+    failCount: '—',
+    connections: [
+      { icon: PlugsConnected, name: 'HubSpot', sub: 'Required before publishing', tone: 'neutral', status: 'Not connected' },
+    ],
+    steps: [
+      { icon: Lightning, kicker: 'TRIGGER', title: 'New lead in CRM', desc: 'HubSpot · all pipelines', more: true },
+      { icon: Sparkle, kicker: 'AI STEP', title: 'Enrich company & contact', desc: 'Firmographics, role, intent', more: true },
+      { icon: Sparkle, kicker: 'AI STEP', title: 'Score the lead', desc: '0–100 with reasons', more: true },
+      { icon: PlugsConnected, kicker: 'ACTION', title: 'Route to owner', desc: 'Round-robin by territory', more: false },
+    ],
+  },
+};
+
+/** Builder canvas steps (design `steps`, unchanged). */
+export const steps: PipelineStep[] = flowDefs.invoice.steps;
 
 export const builderPalette: { icon: Icon; name: string }[] = [
   { icon: Lightning, name: 'Trigger' },
@@ -141,12 +235,6 @@ export const recentRuns: RunItem[] = [
   { name: 'Receipt OCR', meta: '#911 · 4 receipts captured', time: '3h', tone: 'ok', runVariant: 'success' },
 ];
 
-export const detailStats: { value: string; label: string; tone: 'text' | 'ok' | 'err' }[] = [
-  { value: '1,284', label: 'Runs', tone: 'text' },
-  { value: '1,272', label: 'Successes', tone: 'ok' },
-  { value: '12', label: 'Failures', tone: 'err' },
-];
-
 type OnboardingPhase = {
   icon: Icon;
   kicker: string;
@@ -181,7 +269,7 @@ export const defaultActiveSolutions = [0, 1, 2];
 export const solutionFilters = ['All', 'Finance', 'Ops', 'Sales', 'Reporting'];
 
 /** Run detail variants (design `runDefs`: held / success / failed). */
-export type RunVariant = 'held' | 'success' | 'failed';
+export type RunVariant = 'held' | 'success' | 'failed' | 'retried';
 
 export type RunTimelineItem = {
   icon: Icon;
@@ -239,6 +327,23 @@ export const runDetails: Record<RunVariant, RunDetail> = {
     ],
     fields: true,
   },
+  retried: {
+    title: 'Run #52',
+    sub: 'Weekly KPI report · retried just now',
+    status: 'Success',
+    stats: [
+      { value: '26s', label: 'Duration' },
+      { value: '4 / 4', label: 'Steps done' },
+      { value: '—', label: 'Confidence' },
+    ],
+    timeline: [
+      { icon: CheckCircle, tone: 'ok', title: 'Manual retry started', sub: 'By you · just now', time: 'now' },
+      { icon: CheckCircle, tone: 'ok', title: 'Sheets reconnected & fetched', sub: 'Revenue, churn, pipeline tabs', time: '+8s' },
+      { icon: CheckCircle, tone: 'ok', title: 'Digest built', sub: 'Week-over-week deltas included', time: '+19s' },
+      { icon: CheckCircle, tone: 'ok', title: 'Posted to Slack', sub: '#leadership', time: '+26s' },
+    ],
+    fields: false,
+  },
   failed: {
     title: 'Run #52',
     sub: 'Weekly KPI report · yesterday, 9:12 AM',
@@ -267,12 +372,6 @@ export const runFields = [
   { key: 'Due date', value: 'Sep 3, 2026' },
 ];
 
-/** Workflow detail CONNECTIONS card (design sDetail addition). */
-export const detailConnections = [
-  { icon: PlugsConnected, name: 'QuickBooks Online', sub: 'acme-books · linked via OAuth' },
-  { icon: EnvelopeSimple, name: 'Gmail', sub: 'ap@acme.co · shared across workspace' },
-];
-
 /** Settings CONNECTIONS card (design sSettings addition). */
 export const settingsConnections: {
   icon: Icon;
@@ -290,3 +389,39 @@ export const onboardingPhases: OnboardingPhase[] = [
   { icon: Sparkle, kicker: 'AUTOMATION × AI', title: 'Every repetitive task, done by an agent.', sub: 'Extraction, classification, routing, posting. On their own.' },
   { icon: UsersThree, kicker: 'YOUR TEAM, UNBURDENED', title: 'Your team reviews. The agents run.', sub: 'Review points where judgment matters. Everything else just happens.' },
 ];
+
+/** Notifications inbox (design `notifs`). `dot: true` = unread. */
+export type NotificationItem = {
+  icon: Icon;
+  tone: 'ok' | 'warn' | 'err' | 'accent';
+  unread: boolean;
+  title: string;
+  desc: string;
+  time: string;
+  /** Where the row navigates (design n.open). */
+  target: 'run' | 'activity' | 'settings';
+  runVariant?: RunVariant;
+};
+
+export const notifications: NotificationItem[] = [
+  { icon: HandPalm, tone: 'warn', unread: true, title: 'Run held for review', desc: 'Invoice triage · amount differs from PO $11,900', time: '12m', target: 'run', runVariant: 'held' },
+  { icon: XCircle, tone: 'err', unread: true, title: 'Run failed', desc: 'Weekly KPI report · Sheets auth expired', time: '1d', target: 'run', runVariant: 'failed' },
+  { icon: CheckCircle, tone: 'ok', unread: false, title: 'Digest posted', desc: 'Weekly KPI report · #leadership', time: '1d', target: 'activity' },
+  { icon: CheckCircle, tone: 'ok', unread: false, title: 'Bill created', desc: 'Invoice triage · QuickBooks bill #10398', time: '2d', target: 'activity' },
+  { icon: CrownSimple, tone: 'accent', unread: false, title: 'Invoice paid', desc: 'Growth plan · $166 on Aug 1', time: '4d', target: 'settings' },
+];
+
+/** "New from template" configure screen (design sConfigure). */
+export const templateConfigure = {
+  icon: Receipt,
+  name: 'Invoice capture',
+  meta: 'Finance · 4 steps · used by 2,100 teams',
+  defaultName: 'Invoice capture — AP',
+  connection: { icon: PlugsConnected, name: 'QuickBooks Online' },
+  steps: [
+    { icon: EnvelopeOpen, title: 'New email in AP inbox', kicker: 'TRIGGER' },
+    { icon: Sparkle, title: 'Extract invoice fields', kicker: 'AI STEP' },
+    { icon: PlugsConnected, title: 'Post to QuickBooks', kicker: 'ACTION' },
+  ],
+  footnote: 'Steps land preloaded — edit anything before it goes live.',
+};

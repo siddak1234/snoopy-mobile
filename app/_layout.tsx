@@ -19,6 +19,7 @@ import 'react-native-reanimated';
 import { fonts, nocturneDark, nocturneLight } from '@/constants/theme';
 import { SolutionsProvider } from '@/hooks/use-solutions';
 import { NocturneThemeProvider, useTheme } from '@/hooks/use-theme';
+import { WorkflowsProvider } from '@/hooks/use-workflows';
 
 export const unstable_settings = {
   anchor: 'index',
@@ -86,7 +87,9 @@ export default function RootLayout() {
   return (
     <NocturneThemeProvider>
       <SolutionsProvider>
-        <RootNavigator />
+        <WorkflowsProvider>
+          <RootNavigator />
+        </WorkflowsProvider>
       </SolutionsProvider>
     </NocturneThemeProvider>
   );

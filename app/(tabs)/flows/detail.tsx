@@ -1,8 +1,8 @@
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Pause, PencilSimple, Play, RocketLaunch } from 'phosphor-react-native';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Pause, PencilSimple } from 'phosphor-react-native';
 
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
@@ -13,13 +13,28 @@ import { StepCard } from '@/components/nocturne/step-card';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { em, fonts, layout, status } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { detailConnections, detailStats, steps } from '@/lib/fixtures';
+import { statusAction, useWorkflows } from '@/hooks/use-workflows';
+import { flowDefs, type FlowKey } from '@/lib/fixtures';
 
-/** Workflow detail — design `sDetail` block in Screen.dc.html. */
+const ACTION_ICON = { pause: Pause, play: Play, rocket: RocketLaunch } as const;
+
+/** Workflow detail — one screen per workflow identity (design `flow` prop). */
 export default function WorkflowDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { palette } = useTheme();
+  const { status: statusOf, toggle } = useWorkflows();
+  const { flow } = useLocalSearchParams<{ flow?: FlowKey }>();
+  const key: FlowKey = flow && flowDefs[flow] ? flow : 'invoice';
+  const def = flowDefs[key];
+  const current = statusOf(key);
+  const action = statusAction(current);
+  const ActionIcon = ACTION_ICON[action.icon];
+  // Draft flows show em dashes, which stay neutral rather than ok/err.
+  const dash = (v: string) => v === '—';
+
+  const connectionTone = (tone: 'ok' | 'warn' | 'neutral') =>
+    tone === 'ok' ? status.ok : tone === 'warn' ? status.warnText : palette.neutral[500];
 
   return (
     <ScrollView
@@ -32,37 +47,39 @@ export default function WorkflowDetailScreen() {
       <View style={styles.headerRow}>
         <BackCircle onPress={() => router.back()} />
         <View style={styles.headerText}>
-          <Text style={[styles.title, { color: palette.text }]}>Invoice triage</Text>
-          <Text style={[styles.subtitle, { color: palette.neutral[400] }]}>
-            AP inbox → QuickBooks
-          </Text>
+          <Text style={[styles.title, { color: palette.text }]}>{def.name}</Text>
+          <Text style={[styles.subtitle, { color: palette.neutral[400] }]}>{def.desc}</Text>
         </View>
-        <StatusPill label="Live" />
+        <StatusPill label={current} />
       </View>
 
       <View style={styles.statsRow}>
-        {detailStats.map((s) => (
-          <StatCard
-            key={s.label}
-            value={s.value}
-            label={s.label}
-            size="sm"
-            valueColor={s.tone === 'ok' ? status.ok : s.tone === 'err' ? status.err : undefined}
-          />
-        ))}
+        <StatCard value={def.runCount} label="Runs" size="sm" />
+        <StatCard
+          value={def.okCount}
+          label="Successes"
+          size="sm"
+          valueColor={dash(def.okCount) ? palette.neutral[500] : status.ok}
+        />
+        <StatCard
+          value={def.failCount}
+          label="Failures"
+          size="sm"
+          valueColor={dash(def.failCount) ? palette.neutral[500] : status.err}
+        />
       </View>
 
       <View>
         <SectionLabel>CONNECTIONS</SectionLabel>
         <SurfaceCard style={styles.connectionsCard}>
-          {detailConnections.map((c, i) => {
+          {def.connections.map((c, i) => {
             const IconCmp = c.icon;
             return (
               <View
                 key={c.name}
                 style={[
                   styles.connectionRow,
-                  i < detailConnections.length - 1 && {
+                  i < def.connections.length - 1 && {
                     borderBottomWidth: 1,
                     borderBottomColor: palette.divider,
                   },
@@ -74,6 +91,9 @@ export default function WorkflowDetailScreen() {
                     {c.sub}
                   </Text>
                 </View>
+                <Text style={[styles.connectionStatus, { color: connectionTone(c.tone) }]}>
+                  {c.status}
+                </Text>
               </View>
             );
           })}
@@ -83,7 +103,7 @@ export default function WorkflowDetailScreen() {
       <View>
         <SectionLabel>PIPELINE</SectionLabel>
         <View style={styles.pipeline}>
-          {steps.map((st) => (
+          {def.steps.map((st) => (
             <View key={st.title}>
               <StepCard step={st} />
               {st.more ? (
@@ -96,13 +116,14 @@ export default function WorkflowDetailScreen() {
 
       <View style={styles.actions}>
         <PillButton
-          label="Pause"
+          label={action.label}
           variant="secondary"
           height={46}
           fontSize={14}
-          icon={Pause}
+          icon={ActionIcon}
           iconSize={16}
           style={styles.actionBtn}
+          onPress={() => toggle(key)}
         />
         <PillButton
           label="Edit in Builder"
@@ -163,12 +184,17 @@ const styles = StyleSheet.create({
   },
   connectionBody: {
     flex: 1,
+    minWidth: 0,
   },
   connectionName: {
     fontFamily: fonts.medium,
     fontSize: 14,
   },
   connectionSub: {
+    fontFamily: fonts.regular,
+    fontSize: 12,
+  },
+  connectionStatus: {
     fontFamily: fonts.regular,
     fontSize: 12,
   },
