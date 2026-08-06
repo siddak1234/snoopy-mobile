@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/nocturne-1d3ab0c3-78c3-45d3-861d-d532b28481ba/styles.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>
+body{margin:0;background:transparent}
+*{scrollbar-width:none;-ms-overflow-style:none}
+*::-webkit-scrollbar{display:none}
+a{color:var(--color-accent-300)}a:hover{color:var(--color-accent)}
+@keyframes a8xPulse{0%{transform:scale(1);opacity:.5}75%{transform:scale(2);opacity:0}100%{opacity:0}}
+@keyframes a8xUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes a8xScan{0%,100%{transform:translateY(-20px);opacity:.2}50%{transform:translateY(20px);opacity:1}}
+@keyframes a8xGlow{0%,100%{opacity:.45}50%{opacity:1}}
+@keyframes a8xFlow{to{stroke-dashoffset:-16}}
+@keyframes a8xSkel{0%,100%{opacity:.45}50%{opacity:1}}
+.thm-light{--color-bg:#f5f5f8;--color-surface:#ffffff;--color-text:#20222f;--color-divider:#dcdde6;--color-neutral-300:#535770;--color-neutral-400:#666a82;--color-neutral-500:#7c8095;--color-neutral-600:#5d617a;--color-neutral-700:#c9cbdb;--color-neutral-800:#dfe0ea;--color-neutral-900:#ebecf2;--color-accent:#6a5cc4;--color-accent-200:#453a91;--color-accent-300:#5548ab;--color-accent-400:#5d50b5;--color-accent-700:#c3bcec;--color-accent-800:#dcd8f4;--color-accent-900:#e9e6f8;--shadow-sm:0 1px 3px rgba(30,30,60,.12);--shadow-md:0 6px 18px rgba(30,30,60,.14)}
+.thm-light .brand{filter:invert(.87)}
+</style>
+</helmet>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{isDark}}" hint-size="402px,874px">
+<div class="scrroot {{rootCls}}" style="height:100%;min-height:874px;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body,Inter,system-ui);display:flex;flex-direction:column;position:relative;overflow:hidden">
+
+<sc-if value="{{sSplash}}" hint-placeholder-val="{{false}}">
+<div onClick="{{gWelcome}}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;cursor:pointer;background:radial-gradient(circle at 50% 40%, var(--color-accent-900) 0%, transparent 58%), var(--color-bg)">
+<div style="position:relative;display:flex;align-items:center;justify-content:center;width:240px;height:160px">
+<div style="position:absolute;width:150px;height:150px;border-radius:999px;border:1px solid var(--color-accent-700);animation:a8xPulse 2.8s ease-out infinite"></div>
+<div style="position:absolute;width:150px;height:150px;border-radius:999px;border:1px solid var(--color-accent-700);animation:a8xPulse 2.8s ease-out 1.4s infinite"></div>
+<img class="brand" src="assets/a8x-mark.png" alt="A8X" style="width:196px;height:auto;position:relative">
+</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:12px;animation:a8xUp .9s ease .25s both">
+<div style="width:72px;height:1px;background:linear-gradient(90deg,transparent,var(--color-accent),transparent)"></div>
+<div style="font-size:12px;letter-spacing:.36em;color:var(--color-neutral-400);padding-left:.36em">AUTOMATION × AI</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{sWelcome}}" hint-placeholder-val="{{false}}">
+<div style="flex:1;display:flex;flex-direction:column;padding:120px 28px 56px;background:radial-gradient(circle at 50% -10%, var(--color-accent-900) 0%, transparent 50%), var(--color-bg)">
+<img class="brand" src="assets/a8x-mark.png" alt="A8X" style="width:118px;height:auto;animation:a8xUp .7s ease both">
+<div style="margin-top:10px;font-size:11.5px;letter-spacing:.3em;color:var(--color-neutral-400);animation:a8xUp .7s ease .08s both">AUTOMATION × AI</div>
+<h1 style="margin:40px 0 0;font-size:32px;line-height:1.14;letter-spacing:-.015em;font-weight:500;animation:a8xUp .7s ease .16s both">Every repetitive task, done by an agent.</h1>
+<p style="margin:16px 0 0;font-size:15.5px;line-height:1.55;color:var(--color-neutral-400);max-width:30ch;animation:a8xUp .7s ease .24s both">Repetitive work becomes agentic workflows — secure, scalable, autonomous.</p>
+<div style="flex:1"></div>
+<div style="display:flex;flex-direction:column;gap:10px;animation:a8xUp .7s ease .32s both">
+<div onClick="{{gSignup}}" style="height:52px;border-radius:999px;border:1px solid var(--color-accent);color:var(--color-accent);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-accent) 12%,transparent)">Get started</div>
+<div onClick="{{gLogin}}" style="height:52px;border-radius:999px;color:var(--color-text);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-text) 7%,transparent)">Log in</div>
+<p style="margin:10px 0 0;text-align:center;font-size:11.5px;color:var(--color-neutral-600)">For businesses, solopreneurs and enterprises.</p>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{sLogin}}" hint-placeholder-val="{{false}}">
+<div style="flex:1;display:flex;flex-direction:column;padding:78px 24px 40px;overflow:auto">
+<div onClick="{{gWelcome}}" style="width:36px;height:36px;border-radius:999px;border:1px solid var(--color-neutral-800);display:flex;align-items:center;justify-content:center;color:var(--color-neutral-400);cursor:pointer"><i class="ph ph-caret-left" style="font-size:17px"></i></div>
+<img class="brand" src="assets/a8x-mark.png" alt="A8X" style="width:86px;height:auto;margin-top:26px">
+<h1 style="margin:14px 0 0;font-size:28px;font-weight:500;letter-spacing:-.015em">Log in</h1>
+<p style="margin:6px 0 0;font-size:14px;color:var(--color-neutral-400)">Welcome back to your workspace.</p>
+<sc-if value="{{loginErr}}" hint-placeholder-val="{{false}}">
+<div style="margin-top:16px;display:flex;gap:9px;align-items:flex-start;font-size:13px;line-height:1.45;color:#f87171;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);border-radius:10px;padding:10px 12px"><i class="ph ph-warning-circle" style="font-size:16px;margin-top:1px;flex:none"></i><span>That password didn't match. Try again, or reset it below.</span></div>
+</sc-if>
+<div style="display:flex;flex-direction:column;gap:14px;margin-top:26px">
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:var(--color-neutral-400)">Email</span>
+<div style="height:50px;border-radius:12px;border:1px solid var(--color-neutral-700);background:color-mix(in srgb,var(--color-surface) 72%,transparent);display:flex;align-items:center;padding:0 14px;font-size:15px">alex@acme.co</div></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:var(--color-neutral-400)">Password</span>
+<div style="height:50px;border-radius:12px;border:1px solid var(--color-neutral-700);background:color-mix(in srgb,var(--color-surface) 72%,transparent);display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:15px"><span style="letter-spacing:.28em">••••••••••</span><i class="ph ph-eye" style="font-size:18px;color:var(--color-neutral-500)"></i></div></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:2px 2px 0">
+<div style="display:flex;align-items:center;gap:10px"><div onClick="{{toggleRem}}" style="width:46px;height:28px;border-radius:999px;background:{{remBg}};position:relative;transition:background .2s;cursor:pointer;flex:none"><div style="position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:999px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transform:translateX({{remX}});transition:transform .2s"></div></div><span style="font-size:13.5px;color:var(--color-neutral-300)">Stay logged in</span></div>
+<a href="#" onClick="{{gReset}}" style="font-size:13px;text-decoration:none">Forgot?</a>
+</div>
+<div onClick="{{gHome}}" style="height:52px;border-radius:999px;border:1px solid var(--color-accent);color:var(--color-accent);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-accent) 12%,transparent)">Log In</div>
+<div onClick="{{gFaceid}}" style="height:48px;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:9px;color:var(--color-accent-300);font-size:15px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-accent) 8%,transparent)"><i class="ph ph-user-focus" style="font-size:21px"></i>Unlock with Face ID</div>
+</div>
+<div style="display:flex;align-items:center;gap:12px;margin:18px 0"><div style="flex:1;height:1px;background:var(--color-neutral-800)"></div><span style="font-size:12.5px;color:var(--color-neutral-500)">or</span><div style="flex:1;height:1px;background:var(--color-neutral-800)"></div></div>
+<div style="display:flex;flex-direction:column;gap:9px">
+<div style="height:48px;border-radius:12px;border:1px solid var(--color-neutral-700);display:flex;align-items:center;justify-content:center;gap:9px;font-size:14.5px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-text) 6%,transparent)"><svg width="17" height="17" viewBox="0 0 384 512" fill="currentColor" style="margin-top:-2px"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.7-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"></path></svg>Continue with Apple</div>
+<div style="height:48px;border-radius:12px;border:1px solid var(--color-neutral-700);display:flex;align-items:center;justify-content:center;gap:9px;font-size:14.5px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-text) 6%,transparent)"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27 3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10 5.35 0 9.25-3.67 9.25-9.09 0-1.15-.15-1.81-.15-1.81z"></path></svg>Continue with Google</div>
+<div style="height:48px;border-radius:12px;border:1px solid var(--color-neutral-700);display:flex;align-items:center;justify-content:center;gap:9px;font-size:14.5px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-text) 6%,transparent)"><svg width="16" height="16" viewBox="0 0 21 21" fill="currentColor"><rect x="0" y="0" width="10" height="10"></rect><rect x="11" y="0" width="10" height="10"></rect><rect x="0" y="11" width="10" height="10"></rect><rect x="11" y="11" width="10" height="10"></rect></svg>Continue with Microsoft</div>
+</div>
+<p style="margin:20px 0 0;text-align:center;font-size:13.5px;color:var(--color-neutral-400)">New here? <a href="#" onClick="{{gSignup}}" style="font-weight:500">Sign up</a></p>
+</div>
+</sc-if>
+
+<sc-if value="{{sSignup}}" hint-placeholder-val="{{false}}">
+<div style="flex:1;display:flex;flex-direction:column;padding:78px 24px 40px;overflow:auto">
+<div onClick="{{gWelcome}}" style="width:36px;height:36px;border-radius:999px;border:1px solid var(--color-neutral-800);display:flex;align-items:center;justify-content:center;color:var(--color-neutral-400);cursor:pointer"><i class="ph ph-caret-left" style="font-size:17px"></i></div>
+<img class="brand" src="assets/a8x-mark.png" alt="A8X" style="width:86px;height:auto;margin-top:26px">
+<h1 style="margin:14px 0 0;font-size:28px;font-weight:500;letter-spacing:-.015em">Create your account</h1>
+<p style="margin:6px 0 0;font-size:14px;color:var(--color-neutral-400)">Start automating in minutes.</p>
+<div style="display:flex;flex-direction:column;gap:14px;margin-top:26px">
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:var(--color-neutral-400)">Full name</span>
+<div style="height:50px;border-radius:12px;border:1px solid var(--color-neutral-700);background:color-mix(in srgb,var(--color-surface) 72%,transparent);display:flex;align-items:center;padding:0 14px;font-size:15px;color:var(--color-neutral-500)">Alex Kim</div></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:var(--color-neutral-400)">Work email</span>
+<div style="height:50px;border-radius:12px;border:1px solid var(--color-neutral-700);background:color-mix(in srgb,var(--color-surface) 72%,transparent);display:flex;align-items:center;padding:0 14px;font-size:15px;color:var(--color-neutral-500)">you@company.com</div></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:var(--color-neutral-400)">Password</span>
+<div style="height:50px;border-radius:12px;border:1px solid var(--color-neutral-700);background:color-mix(in srgb,var(--color-surface) 72%,transparent);display:flex;align-items:center;padding:0 14px;font-size:15px;color:var(--color-neutral-500)">8+ characters</div></div>
+<div onClick="{{gOnboard}}" style="height:52px;border-radius:999px;border:1px solid var(--color-accent);color:var(--color-accent);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-accent) 12%,transparent)">Create account</div>
+</div>
+<div style="display:flex;align-items:center;gap:12px;margin:18px 0"><div style="flex:1;height:1px;background:var(--color-neutral-800)"></div><span style="font-size:12.5px;color:var(--color-neutral-500)">or</span><div style="flex:1;height:1px;background:var(--color-neutral-800)"></div></div>
+<div style="display:flex;flex-direction:column;gap:9px">
+<div style="height:48px;border-radius:12px;border:1px solid var(--color-neutral-700);display:flex;align-items:center;justify-content:center;gap:9px;font-size:14.5px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-text) 6%,transparent)"><svg width="17" height="17" viewBox="0 0 384 512" fill="currentColor" style="margin-top:-2px"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.7-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"></path></svg>Sign up with Apple</div>
+<div style="height:48px;border-radius:12px;border:1px solid var(--color-neutral-700);display:flex;align-items:center;justify-content:center;gap:9px;font-size:14.5px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-text) 6%,transparent)"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27 3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10 5.35 0 9.25-3.67 9.25-9.09 0-1.15-.15-1.81-.15-1.81z"></path></svg>Sign up with Google</div>
+<div style="height:48px;border-radius:12px;border:1px solid var(--color-neutral-700);display:flex;align-items:center;justify-content:center;gap:9px;font-size:14.5px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-text) 6%,transparent)"><svg width="16" height="16" viewBox="0 0 21 21" fill="currentColor"><rect x="0" y="0" width="10" height="10"></rect><rect x="11" y="0" width="10" height="10"></rect><rect x="0" y="11" width="10" height="10"></rect><rect x="11" y="11" width="10" height="10"></rect></svg>Sign up with Microsoft</div>
+</div>
+<p style="margin:18px 0 0;text-align:center;font-size:11.5px;line-height:1.5;color:var(--color-neutral-600)">By continuing you agree to the Terms of Service<br>and Privacy Policy. Have an account? <a href="#" onClick="{{gLogin}}">Log in</a></p>
+</div>
+</sc-if>
+
+<sc-if value="{{sReset}}" hint-placeholder-val="{{false}}">
+<div style="flex:1;display:flex;flex-direction:column;padding:78px 24px 40px">
+<div onClick="{{gLogin}}" style="width:36px;height:36px;border-radius:999px;border:1px solid var(--color-neutral-800);display:flex;align-items:center;justify-content:center;color:var(--color-neutral-400);cursor:pointer"><i class="ph ph-caret-left" style="font-size:17px"></i></div>
+<img class="brand" src="assets/a8x-mark.png" alt="A8X" style="width:86px;height:auto;margin-top:26px">
+<h1 style="margin:14px 0 0;font-size:28px;font-weight:500;letter-spacing:-.015em">Reset password</h1>
+<sc-if value="{{rNotSent}}" hint-placeholder-val="{{true}}">
+<p style="margin:6px 0 0;font-size:14px;line-height:1.5;color:var(--color-neutral-400)">Enter your email and we'll send a reset link.</p>
+<div style="display:flex;flex-direction:column;gap:14px;margin-top:26px">
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:var(--color-neutral-400)">Email</span>
+<div style="height:50px;border-radius:12px;border:1px solid var(--color-neutral-700);background:color-mix(in srgb,var(--color-surface) 72%,transparent);display:flex;align-items:center;padding:0 14px;font-size:15px">alex@acme.co</div></div>
+<div onClick="{{sendReset}}" style="height:52px;border-radius:999px;border:1px solid var(--color-accent);color:var(--color-accent);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-accent) 12%,transparent)">Send reset link</div>
+</div>
+</sc-if>
+<sc-if value="{{rSent}}" hint-placeholder-val="{{false}}">
+<div style="margin-top:32px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:30px 20px;border-radius:16px;border:1px solid var(--color-accent-700);background:color-mix(in srgb,var(--color-accent) 8%,transparent)">
+<i class="ph ph-paper-plane-tilt" style="font-size:38px;color:var(--color-accent-300)"></i>
+<div style="font-size:17px;font-weight:500">Link sent</div>
+<div style="font-size:13.5px;line-height:1.55;color:var(--color-neutral-400)">Check alex@acme.co — the link expires in 30 minutes. Nothing arriving? Check spam or resend.</div>
+<div onClick="{{gLogin}}" style="margin-top:4px;height:44px;padding:0 24px;border-radius:999px;border:1px solid var(--color-accent);color:var(--color-accent);display:flex;align-items:center;font-size:14px;font-weight:500;cursor:pointer">Back to log in</div>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{sOnboard}}" hint-placeholder-val="{{false}}">
+<div style="flex:1;display:flex;flex-direction:column;padding:82px 28px 52px;background:radial-gradient(circle at 50% 20%, var(--color-accent-900) 0%, transparent 52%), var(--color-bg)">
+<div style="display:flex;justify-content:flex-end"><span onClick="{{gHome}}" style="font-size:14px;color:var(--color-neutral-400);cursor:pointer;padding:6px 10px">Skip</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;text-align:center">
+<div style="width:104px;height:104px;border-radius:32px;border:1px solid var(--color-accent-700);background:color-mix(in srgb,var(--color-accent) 10%,transparent);display:flex;align-items:center;justify-content:center;color:var(--color-accent-300)"><i class="ph {{obIcon}}" style="font-size:48px"></i></div>
+<div style="font-size:11px;letter-spacing:.28em;color:var(--color-accent-300)">{{obK}}</div>
+<h2 style="margin:0;font-size:27px;line-height:1.2;font-weight:500;letter-spacing:-.015em;max-width:22ch">{{obT}}</h2>
+<p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-neutral-400);max-width:30ch">{{obS}}</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:22px;align-items:center">
+<div style="display:flex;gap:7px">
+<sc-for list="{{obDots}}" as="d" hint-placeholder-count="3"><div style="width:{{d.w}};height:6px;border-radius:999px;background:{{d.bg}};transition:all .25s"></div></sc-for>
+</div>
+<div onClick="{{nextOb}}" style="height:52px;width:100%;border-radius:999px;border:1px solid var(--color-accent);color:var(--color-accent);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-accent) 12%,transparent)">{{obBtn}}</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{sFaceid}}" hint-placeholder-val="{{false}}">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;background:radial-gradient(circle at 50% 45%, var(--color-accent-900) 0%, transparent 55%), var(--color-bg)">
+<div style="position:relative;width:96px;height:96px;border-radius:26px;border:1.5px solid var(--color-accent);display:flex;align-items:center;justify-content:center;overflow:hidden;animation:a8xGlow 2s ease infinite;box-shadow:0 0 44px color-mix(in srgb,var(--color-accent) 35%,transparent)">
+<svg width="52" height="52" viewBox="0 0 52 52" fill="none"><path d="M4 14V9a5 5 0 015-5h5M38 4h5a5 5 0 015 5v5M48 38v5a5 5 0 01-5 5h-5M14 48H9a5 5 0 01-5-5v-5" stroke="var(--color-accent)" stroke-width="3" stroke-linecap="round"></path><circle cx="18" cy="21" r="2.4" fill="var(--color-accent)"></circle><circle cx="34" cy="21" r="2.4" fill="var(--color-accent)"></circle><path d="M26 21v8h-3M18 34c2.2 2.4 5 3.6 8 3.6s5.8-1.2 8-3.6" stroke="var(--color-accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<div style="position:absolute;left:10px;right:10px;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,var(--color-accent-300),transparent);animation:a8xScan 1.6s ease-in-out infinite"></div>
+</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+<div style="font-size:19px;font-weight:500">Face ID</div>
+<div style="font-size:13.5px;color:var(--color-neutral-400)">Unlocking your workspace…</div>
+</div>
+<img class="brand" src="assets/a8x-mark.png" alt="A8X" style="width:64px;height:auto;opacity:.5;position:absolute;bottom:64px"></div>
+</sc-if>
+
+<sc-if value="{{isApp}}" hint-placeholder-val="{{false}}">
+<div style="flex:1;display:flex;flex-direction:column;min-height:0">
+<div style="flex:1;overflow:auto;min-height:0;display:flex;flex-direction:column">
+
+<sc-if value="{{sHome}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;padding:74px 20px 20px;gap:18px">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<img class="brand" src="assets/a8x-mark.png" alt="A8X" style="height:17px;width:auto">
+<div style="display:flex;align-items:center;gap:10px">
+<div onClick="{{gNotifs}}" style="width:38px;height:38px;border-radius:999px;border:1px solid var(--color-neutral-800);display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer"><i class="ph ph-bell" style="font-size:19px;color:var(--color-neutral-300)"></i><div style="position:absolute;top:8px;right:9px;width:7px;height:7px;border-radius:99px;background:var(--color-accent)"></div></div>
+<div onClick="{{gSettings}}" style="width:38px;height:38px;border-radius:999px;background:color-mix(in srgb,var(--color-accent) 16%,transparent);border:1px solid var(--color-accent-800);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--color-accent-200);cursor:pointer">AK</div>
+</div></div>
+<div>
+<div style="font-size:11px;letter-spacing:.26em;color:var(--color-accent-300)">AUTOMATION × AI</div>
+<h1 style="margin:8px 0 0;font-size:26px;font-weight:500;letter-spacing:-.015em">Welcome back, Alex</h1>
+<p style="margin:5px 0 0;font-size:13.5px;color:var(--color-neutral-400)">Your agents ran 128 tasks while you were away.</p>
+</div>
+<div style="display:flex;gap:10px">
+<sc-for list="{{stats}}" as="s" hint-placeholder-count="3">
+<div style="flex:1;background:var(--color-surface);border-radius:14px;padding:13px 14px;box-shadow:var(--shadow-sm)">
+<div style="font-size:20px;font-weight:500;letter-spacing:-.01em;color:{{s.c}}">{{s.v}}</div>
+<div style="margin-top:3px;font-size:11px;color:var(--color-neutral-400)">{{s.l}}</div>
+</div></sc-for>
+</div>
+<div onClick="{{gApprovals}}" style="display:flex;align-items:center;gap:13px;border:1px solid var(--color-accent-700);background:color-mix(in srgb,var(--color-accent) 9%,transparent);border-radius:14px;padding:14px 15px;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-accent) 15%,transparent)">
+<div style="width:40px;height:40px;border-radius:12px;background:color-mix(in srgb,var(--color-accent) 16%,transparent);display:flex;align-items:center;justify-content:center;color:var(--color-accent-300)"><i class="ph ph-hand-palm" style="font-size:21px"></i></div>
+<div style="flex:1"><div style="font-size:14.5px;font-weight:500">3 items need your review</div><div style="font-size:12px;color:var(--color-neutral-400);margin-top:2px">Exceptions your agents held for judgment</div></div>
+<i class="ph ph-caret-right" style="font-size:16px;color:var(--color-neutral-500)"></i>
+</div>
+<div style="display:flex;gap:10px">
+<div onClick="{{gSolutions}}" style="flex:1;height:46px;border-radius:999px;border:1px solid var(--color-accent);color:var(--color-accent);display:flex;align-items:center;justify-content:center;gap:7px;font-size:14px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-accent) 12%,transparent)"><i class="ph ph-storefront" style="font-size:16px"></i>Add a solution</div>
+<div onClick="{{gTemplates}}" style="flex:1;height:46px;border-radius:999px;border:1px solid var(--color-neutral-700);color:var(--color-text);display:flex;align-items:center;justify-content:center;gap:7px;font-size:14px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-text) 6%,transparent)"><i class="ph ph-squares-four" style="font-size:16px"></i>Templates</div>
+</div>
+<div>
+<div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:11px;letter-spacing:.14em;color:var(--color-neutral-400)">RECENT RUNS</span><span onClick="{{gActivity}}" style="font-size:12.5px;color:var(--color-accent-300);cursor:pointer">See all</span></div>
+<div style="margin-top:10px;background:var(--color-surface);border-radius:14px;box-shadow:var(--shadow-sm);overflow:hidden">
+<sc-for list="{{runs}}" as="r" hint-placeholder-count="4">
+<div onClick="{{r.open}}" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--color-divider);cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-text) 4%,transparent)">
+<div style="width:8px;height:8px;border-radius:99px;background:{{r.c}};flex:none"></div>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">{{r.name}}</div><div style="font-size:12px;color:var(--color-neutral-400);margin-top:1px">{{r.meta}}</div></div>
+<span style="font-size:11.5px;color:var(--color-neutral-500)">{{r.time}}</span>
+</div></sc-for>
+</div></div>
+</div>
+</sc-if>
+
+<sc-if value="{{sHomeLoad}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;padding:74px 20px 20px;gap:18px">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<img class="brand" src="assets/a8x-mark.png" alt="A8X" style="height:17px;width:auto">
+<div style="display:flex;gap:10px"><div style="width:38px;height:38px;border-radius:999px;background:var(--color-neutral-900);animation:a8xSkel 1.4s ease infinite"></div><div style="width:38px;height:38px;border-radius:999px;background:var(--color-neutral-900);animation:a8xSkel 1.4s ease infinite"></div></div></div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="width:96px;height:10px;border-radius:6px;background:var(--color-neutral-900);animation:a8xSkel 1.4s ease infinite"></div>
+<div style="width:214px;height:22px;border-radius:8px;background:var(--color-neutral-900);animation:a8xSkel 1.4s ease .1s infinite"></div>
+<div style="width:164px;height:12px;border-radius:6px;background:var(--color-neutral-900);animation:a8xSkel 1.4s ease .2s infinite"></div>
+</div>
+<div style="display:flex;gap:10px">
+<div style="flex:1;height:64px;border-radius:14px;background:var(--color-neutral-900);animation:a8xSkel 1.4s ease infinite"></div>
+<div style="flex:1;height:64px;border-radius:14px;background:var(--color-neutral-900);animation:a8xSkel 1.4s ease .12s infinite"></div>
+<div style="flex:1;height:64px;border-radius:14px;background:var(--color-neutral-900);animation:a8xSkel 1.4s ease .24s infinite"></div>
+</div>
+<div style="height:68px;border-radius:14px;background:var(--color-neutral-900);animation:a8xSkel 1.4s ease .3s infinite"></div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="height:58px;border-radius:14px;background:var(--color-neutral-900);animation:a8xSkel 1.4s ease .36s infinite"></div>
+<div style="height:58px;border-radius:14px;background:var(--color-neutral-900);animation:a8xSkel 1.4s ease .48s infinite"></div>
+<div style="height:58px;border-radius:14px;background:var(--color-neutral-900);animation:a8xSkel 1.4s ease .6s infinite"></div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{sHomeEmpty}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;padding:74px 20px 20px;flex:1">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<img class="brand" src="assets/a8x-mark.png" alt="A8X" style="height:17px;width:auto">
+<div style="display:flex;align-items:center;gap:10px">
+<div style="width:38px;height:38px;border-radius:999px;border:1px solid var(--color-neutral-800);display:flex;align-items:center;justify-content:center"><i class="ph ph-bell" style="font-size:19px;color:var(--color-neutral-300)"></i></div>
+<div style="width:38px;height:38px;border-radius:999px;background:color-mix(in srgb,var(--color-accent) 16%,transparent);border:1px solid var(--color-accent-800);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--color-accent-200)">AK</div>
+</div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:0 14px">
+<div style="width:88px;height:88px;border-radius:26px;border:1px solid var(--color-accent-700);background:color-mix(in srgb,var(--color-accent) 10%,transparent);display:flex;align-items:center;justify-content:center;color:var(--color-accent-300)"><i class="ph ph-sparkle" style="font-size:40px"></i></div>
+<h2 style="margin:8px 0 0;font-size:22px;font-weight:500;letter-spacing:-.015em">Nothing automated. Yet.</h2>
+<p style="margin:0;font-size:14px;line-height:1.55;color:var(--color-neutral-400);max-width:28ch">Add a prebuilt solution and your first agent is running in minutes — no building required.</p>
+<div onClick="{{gSolutions}}" style="margin-top:8px;height:48px;width:100%;border-radius:999px;border:1px solid var(--color-accent);color:var(--color-accent);display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-accent) 12%,transparent)"><i class="ph ph-storefront" style="font-size:18px"></i>Browse solutions</div>
+<div onClick="{{gOnboard}}" style="height:44px;width:100%;border-radius:999px;color:var(--color-neutral-300);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-text) 6%,transparent)">See how it works</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{sHomeErr}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;padding:74px 20px 20px;flex:1">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<img class="brand" src="assets/a8x-mark.png" alt="A8X" style="height:17px;width:auto">
+<div style="width:38px;height:38px;border-radius:999px;background:color-mix(in srgb,var(--color-accent) 16%,transparent);border:1px solid var(--color-accent-800);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--color-accent-200)">AK</div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:0 20px">
+<div style="width:80px;height:80px;border-radius:24px;border:1px solid var(--color-neutral-800);display:flex;align-items:center;justify-content:center;color:var(--color-neutral-500)"><i class="ph ph-wifi-slash" style="font-size:36px"></i></div>
+<h2 style="margin:8px 0 0;font-size:20px;font-weight:500;letter-spacing:-.01em">Can't reach Autom8x</h2>
+<p style="margin:0;font-size:13.5px;line-height:1.55;color:var(--color-neutral-400);max-width:28ch">Check your connection. Your agents keep running in the cloud and will sync when you're back.</p>
+<div style="margin-top:8px;height:44px;padding:0 26px;border-radius:999px;border:1px solid var(--color-accent);color:var(--color-accent);display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-accent) 12%,transparent)"><i class="ph ph-arrow-clockwise" style="font-size:16px"></i>Retry</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{sFlows}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;padding:74px 20px 20px;gap:16px">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<h1 style="margin:0;font-size:26px;font-weight:500;letter-spacing:-.015em">Workflows</h1>
+<div style="display:flex;gap:8px">
+<div onClick="{{gTemplates}}" style="height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--color-neutral-700);display:flex;align-items:center;font-size:13px;font-weight:500;cursor:pointer">Templates</div>
+<div onClick="{{gBuilder}}" style="height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--color-accent);color:var(--color-accent);display:flex;align-items:center;gap:5px;font-size:13px;font-weight:500;cursor:pointer"><i class="ph ph-plus" style="font-size:14px"></i>New</div>
+</div></div>
+<div style="height:44px;border-radius:12px;border:1px solid var(--color-neutral-800);background:color-mix(in srgb,var(--color-surface) 60%,transparent);display:flex;align-items:center;gap:9px;padding:0 13px">
+<i class="ph ph-magnifying-glass" style="font-size:17px;color:var(--color-neutral-500)"></i>
+<input value="{{q}}" onChange="{{setQ}}" placeholder="Search workflows" style="flex:1;background:transparent;border:none;outline:none;color:var(--color-text);font-size:14px;font-family:inherit;min-width:0">
+</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{flows}}" as="f" hint-placeholder-count="4">
+<div onClick="{{f.open}}" style="background:var(--color-surface);border-radius:14px;padding:15px;box-shadow:var(--shadow-sm);display:flex;align-items:center;gap:13px;cursor:pointer" style-hover="box-shadow:var(--shadow-md)">
+<div style="width:42px;height:42px;border-radius:12px;background:color-mix(in srgb,var(--color-accent) 10%,transparent);border:1px solid var(--color-accent-800);display:flex;align-items:center;justify-content:center;color:var(--color-accent-300);flex:none"><i class="ph {{f.icon}}" style="font-size:21px"></i></div>
+<div style="flex:1;min-width:0">
+<div style="font-size:15px;font-weight:500">{{f.name}}</div>
+<div style="font-size:12.5px;color:var(--color-neutral-400);margin-top:2px">{{f.desc}}</div>
+<div style="font-size:11.5px;color:var(--color-neutral-500);margin-top:4px">{{f.runs}}</div>
+</div>
+<span style="font-size:11px;font-weight:500;padding:4px 10px;border-radius:999px;color:{{f.pc}};background:{{f.pbg}};border:1px solid {{f.pbd}}">{{f.status}}</span>
+</div></sc-for>
+<sc-if value="{{flowsEmpty}}" hint-placeholder-val="{{false}}">
+<div style="padding:48px 0;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
+<i class="ph ph-magnifying-glass" style="font-size:34px;color:var(--color-neutral-600)"></i>
+<span style="font-size:13.5px;color:var(--color-neutral-500)">No workflows match "{{q}}".</span>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{sDetail}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;padding:74px 20px 20px;gap:16px">
+<div style="display:flex;align-items:center;gap:12px">
+<div onClick="{{gFlows}}" style="width:36px;height:36px;border-radius:999px;border:1px solid var(--color-neutral-800);display:flex;align-items:center;justify-content:center;color:var(--color-neutral-400);cursor:pointer"><i class="ph ph-caret-left" style="font-size:17px"></i></div>
+<div style="flex:1"><h1 style="margin:0;font-size:21px;font-weight:500;letter-spacing:-.01em">{{dTitle}}</h1><div style="font-size:12px;color:var(--color-neutral-400);margin-top:1px">{{dSub}}</div></div>
+<span style="font-size:11px;font-weight:500;padding:4px 10px;border-radius:999px;color:{{dPc}};background:{{dPbg}};border:1px solid {{dPbd}}">{{dPill}}</span>
+</div>
+<div style="display:flex;gap:10px">
+<div style="flex:1;background:var(--color-surface);border-radius:14px;padding:12px 13px;box-shadow:var(--shadow-sm)"><div style="font-size:18px;font-weight:500">{{dRuns}}</div><div style="font-size:11px;color:var(--color-neutral-400);margin-top:2px">Runs</div></div>
+<div style="flex:1;background:var(--color-surface);border-radius:14px;padding:12px 13px;box-shadow:var(--shadow-sm)"><div style="font-size:18px;font-weight:500;color:{{dOkC}}">{{dOk}}</div><div style="font-size:11px;color:var(--color-neutral-400);margin-top:2px">Successes</div></div>
+<div style="flex:1;background:var(--color-surface);border-radius:14px;padding:12px 13px;box-shadow:var(--shadow-sm)"><div style="font-size:18px;font-weight:500;color:{{dFailC}}">{{dFail}}</div><div style="font-size:11px;color:var(--color-neutral-400);margin-top:2px">Failures</div></div>
+</div>
+<div><span style="font-size:11px;letter-spacing:.14em;color:var(--color-neutral-400)">CONNECTIONS</span>
+<div style="margin-top:9px;background:var(--color-surface);border-radius:14px;box-shadow:var(--shadow-sm);overflow:hidden">
+<sc-for list="{{dConns}}" as="cn" hint-placeholder-count="2">
+<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--color-divider)"><i class="ph {{cn.icon}}" style="font-size:20px;color:var(--color-accent-300)"></i><div style="flex:1"><div style="font-size:14px;font-weight:500">{{cn.n}}</div><div style="font-size:12px;color:var(--color-neutral-400)">{{cn.d}}</div></div><span style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:500;color:{{cn.sc}}"><span style="width:7px;height:7px;border-radius:99px;background:{{cn.sc}}"></span>{{cn.st}}</span></div>
+</sc-for>
+</div></div>
+<div>
+<span style="font-size:11px;letter-spacing:.14em;color:var(--color-neutral-400)">PIPELINE</span>
+<div style="margin-top:10px;display:flex;flex-direction:column">
+<sc-for list="{{dSteps}}" as="st" hint-placeholder-count="4">
+<div style="display:flex;flex-direction:column">
+<div style="display:flex;align-items:center;gap:12px;background:var(--color-surface);border-radius:14px;padding:13px 14px;box-shadow:var(--shadow-sm)">
+<div style="width:38px;height:38px;border-radius:11px;background:color-mix(in srgb,var(--color-accent) 10%,transparent);display:flex;align-items:center;justify-content:center;color:var(--color-accent-300);flex:none"><i class="ph {{st.icon}}" style="font-size:19px"></i></div>
+<div style="flex:1;min-width:0"><div style="font-size:10px;letter-spacing:.16em;color:var(--color-accent-300)">{{st.k}}</div><div style="font-size:14px;font-weight:500;margin-top:2px">{{st.t}}</div><div style="font-size:12px;color:var(--color-neutral-400);margin-top:1px">{{st.d}}</div></div>
+</div>
+<sc-if value="{{st.more}}" hint-placeholder-val="{{false}}"><div style="height:20px;margin-left:32px;border-left:1.5px dashed var(--color-accent-700)"></div></sc-if>
+</div></sc-for>
+</div></div>
+<div style="display:flex;gap:10px">
+<div onClick="{{dToggle}}" style="flex:1;height:46px;border-radius:999px;border:1px solid var(--color-neutral-700);display:flex;align-items:center;justify-content:center;gap:7px;font-size:14px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-text) 6%,transparent)"><i class="ph {{dBtnIcon}}" style="font-size:16px"></i>{{dBtn}}</div>
+<div onClick="{{gBuilder}}" style="flex:1;height:46px;border-radius:999px;border:1px solid var(--color-accent);color:var(--color-accent);display:flex;align-items:center;justify-content:center;gap:7px;font-size:14px;font-weight:500;cursor:pointer"><i class="ph ph-pencil-simple" style="font-size:16px"></i>Edit in Builder</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{sSolutions}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;padding:74px 20px 20px;gap:14px">
+<div><h1 style="margin:0;font-size:26px;font-weight:500;letter-spacing:-.015em">Solutions</h1>
+<p style="margin:5px 0 0;font-size:13.5px;color:var(--color-neutral-400)">Prebuilt automations, proven at scale. Add one to your plan and it's live in minutes.</p></div>
+<div onClick="{{gSettings}}" style="display:flex;align-items:center;gap:12px;border:1px solid var(--color-accent-700);background:color-mix(in srgb,var(--color-accent) 9%,transparent);border-radius:14px;padding:13px 15px;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-accent) 15%,transparent)">
+<i class="ph ph-crown-simple" style="font-size:20px;color:var(--color-accent-300)"></i>
+<div style="flex:1"><div style="font-size:14px;font-weight:500">Growth plan · {{planTotal}}/mo</div><div style="font-size:12px;color:var(--color-neutral-400);margin-top:1px">{{activeCount}} active · manage in Settings</div></div>
+<i class="ph ph-caret-right" style="font-size:15px;color:var(--color-neutral-500)"></i></div>
+<div style="display:flex;gap:8px;overflow:auto">
+<sc-for list="{{solChips}}" as="ch" hint-placeholder-count="5">
+<div onClick="{{ch.click}}" style="flex:none;height:32px;padding:0 13px;border-radius:999px;border:1px solid {{ch.bc}};color:{{ch.fc}};display:flex;align-items:center;font-size:12.5px;font-weight:500;cursor:pointer">{{ch.label}}</div>
+</sc-for>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{sols}}" as="sol" hint-placeholder-count="5">
+<div style="background:var(--color-surface);border-radius:14px;padding:15px;box-shadow:var(--shadow-sm);display:flex;align-items:center;gap:13px">
+<div style="width:42px;height:42px;border-radius:12px;background:color-mix(in srgb,var(--color-accent) 10%,transparent);border:1px solid var(--color-accent-800);display:flex;align-items:center;justify-content:center;color:var(--color-accent-300);flex:none"><i class="ph {{sol.icon}}" style="font-size:21px"></i></div>
+<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:500">{{sol.name}}</div><div style="font-size:12.5px;color:var(--color-neutral-400);margin-top:2px">{{sol.desc}}</div><div style="font-size:11.5px;color:var(--color-neutral-500);margin-top:4px">{{sol.cat}} · {{sol.price}}/mo</div></div>
+<div onClick="{{sol.toggle}}" style="height:34px;padding:0 14px;border-radius:999px;border:1px solid {{sol.bc}};color:{{sol.fc}};display:flex;align-items:center;font-size:13px;font-weight:500;cursor:pointer;flex:none" style-hover="background:color-mix(in srgb,var(--color-accent) 10%,transparent)">{{sol.btn}}</div>
+</div></sc-for>
+<sc-if value="{{solsEmpty}}" hint-placeholder-val="{{false}}">
+<div style="padding:48px 0;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
+<i class="ph ph-magnifying-glass" style="font-size:34px;color:var(--color-neutral-600)"></i>
+<span style="font-size:13.5px;color:var(--color-neutral-500)">No {{solCatLabel}} solutions yet — more are on the way.</span>
+</div>
+</sc-if>
+</div>
+<sc-if value="{{rmOpen}}" hint-placeholder-val="{{false}}">
+<div style="position:absolute;inset:0;background:rgba(12,13,22,.62);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:28px;z-index:5">
+<div style="background:var(--color-surface);border:1px solid var(--color-neutral-800);border-radius:16px;padding:20px;box-shadow:var(--shadow-md);display:flex;flex-direction:column;gap:10px;width:100%">
+<div style="font-size:16px;font-weight:500">Remove {{rmName}}?</div>
+<div style="font-size:13.5px;line-height:1.5;color:var(--color-neutral-400)">Workflows built on it pause immediately. {{rmPrice}}/mo comes off your next invoice (Sep 1). Its QuickBooks connection stays on your workspace.</div>
+<div style="display:flex;gap:10px;margin-top:6px">
+<div onClick="{{rmCancel}}" style="flex:1;height:44px;border-radius:999px;border:1px solid var(--color-neutral-700);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-text) 6%,transparent)">Keep it</div>
+<div onClick="{{rmConfirm}}" style="flex:1;height:44px;border-radius:999px;border:1px solid #f87171;color:#f87171;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:500;cursor:pointer" style-hover="background:rgba(248,113,113,.1)">Remove</div>
+</div></div></div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{sSetup}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;padding:74px 20px 20px;gap:14px">
+<div style="display:flex;align-items:center;gap:12px">
+<div onClick="{{gSolutions}}" style="width:36px;height:36px;border-radius:999px;border:1px solid var(--color-neutral-800);display:flex;align-items:center;justify-content:center;color:var(--color-neutral-400);cursor:pointer"><i class="ph ph-caret-left" style="font-size:17px"></i></div>
+<div style="flex:1"><h1 style="margin:0;font-size:21px;font-weight:500;letter-spacing:-.01em">Set up Invoice triage</h1><div style="font-size:12px;color:var(--color-neutral-400);margin-top:1px">One-time setup · about 2 minutes</div></div>
+</div>
+<div><span style="font-size:11px;letter-spacing:.14em;color:var(--color-neutral-400)">1 · CONNECTIONS</span>
+<div style="margin-top:9px;background:var(--color-surface);border-radius:14px;box-shadow:var(--shadow-sm);overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--color-divider)">
+<i class="ph ph-plugs-connected" style="font-size:20px;color:var(--color-accent-300)"></i>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">QuickBooks Online</div><div style="font-size:12px;color:{{qbSubC}};margin-top:1px">{{qbSub}}</div></div>
+<div onClick="{{connectQb}}" style="height:32px;padding:0 13px;border-radius:999px;border:1px solid {{qbBc}};color:{{qbFc}};display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:500;cursor:pointer;flex:none" style-hover="background:color-mix(in srgb,var(--color-accent) 10%,transparent)">{{qbBtn}}</div>
+</div>
+<div style="display:flex;align-items:center;gap:12px;padding:13px 14px">
+<i class="ph ph-envelope-simple" style="font-size:20px;color:var(--color-accent-300)"></i>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">Gmail</div><div style="font-size:12px;color:var(--color-neutral-400);margin-top:1px">ap@acme.co · already connected</div></div>
+<span style="display:flex;align-items:center;gap:5px;font-size:12px;color:#34d399;flex:none"><span style="width:7px;height:7px;border-radius:99px;background:#34d399"></span>Connected</span>
+</div>
+</div>
+<p style="margin:8px 2px 0;font-size:11.5px;line-height:1.5;color:var(--color-neutral-500)">You sign in once with OAuth. A8X stays securely linked, and every future solution reuses the connection — no reconnecting.</p></div>
+<div><span style="font-size:11px;letter-spacing:.14em;color:var(--color-neutral-400)">2 · SOURCE</span>
+<div style="margin-top:9px;background:var(--color-surface);border-radius:14px;box-shadow:var(--shadow-sm);overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;padding:13px 14px;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-text) 4%,transparent)">
+<i class="ph ph-tray" style="font-size:20px;color:var(--color-accent-300)"></i>
+<div style="flex:1"><div style="font-size:14px;font-weight:500">Watch inbox</div><div style="font-size:12px;color:var(--color-neutral-400);margin-top:1px">ap@acme.co · label “AP-Invoices”</div></div>
+<i class="ph ph-caret-right" style="font-size:15px;color:var(--color-neutral-500)"></i>
+</div></div></div>
+<div><span style="font-size:11px;letter-spacing:.14em;color:var(--color-neutral-400)">3 · REVIEW RULES</span>
+<div style="margin-top:9px;background:var(--color-surface);border-radius:14px;box-shadow:var(--shadow-sm);overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--color-divider)">
+<i class="ph ph-hand-palm" style="font-size:20px;color:var(--color-accent-300)"></i>
+<div style="flex:1"><div style="font-size:14px;font-weight:500">Hold when amount differs from PO</div><div style="font-size:12px;color:var(--color-neutral-400);margin-top:1px">Agent pauses and asks you</div></div>
+<div onClick="{{toggleR1}}" style="width:46px;height:28px;border-radius:999px;background:{{r1Bg}};position:relative;transition:background .2s;cursor:pointer;flex:none"><div style="position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:999px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transform:translateX({{r1X}});transition:transform .2s"></div></div>
+</div>
+<div style="display:flex;align-items:center;gap:12px;padding:13px 14px">
+<i class="ph ph-currency-dollar" style="font-size:20px;color:var(--color-accent-300)"></i>
+<div style="flex:1"><div style="font-size:14px;font-weight:500">Hold above $500</div><div style="font-size:12px;color:var(--color-neutral-400);margin-top:1px">Threshold is editable anytime</div></div>
+<div onClick="{{toggleR2}}" style="width:46px;height:28px;border-radius:999px;background:{{r2Bg}};position:relative;transition:background .2s;cursor:pointer;flex:none"><div style="position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:999px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transform:translateX({{r2X}});transition:transform .2s"></div></div>
+</div>
+</div></div>
+<div><span style="font-size:11px;letter-spacing:.14em;color:var(--color-neutral-400)">4 · NOTIFICATIONS</span>
+<div style="margin-top:9px;background:var(--color-surface);border-radius:14px;box-shadow:var(--shadow-sm);overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;padding:13px 14px;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-text) 4%,transparent)">
+<i class="ph ph-bell-ringing" style="font-size:20px;color:var(--color-accent-300)"></i>
+<div style="flex:1"><div style="font-size:14px;font-weight:500">Slack · #finance</div><div style="font-size:12px;color:var(--color-neutral-400);margin-top:1px">Notify on holds and failures</div></div>
+<i class="ph ph-caret-right" style="font-size:15px;color:var(--color-neutral-500)"></i>
+</div></div></div>
+<div onClick="{{activate}}" style="height:52px;border-radius:999px;border:1px solid {{actBc}};color:{{actFc}};display:flex;align-items:center;justify-content:center;gap:8px;font-size:16px;font-weight:500;cursor:pointer;transition:all .2s" style-hover="background:color-mix(in srgb,var(--color-accent) 12%,transparent)"><i class="ph ph-lightning" style="font-size:18px"></i>{{actLabel}}</div>
+</div>
+</sc-if>
+
+<sc-if value="{{sRun}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;padding:74px 20px 20px;gap:14px">
+<div style="display:flex;align-items:center;gap:12px">
+<div onClick="{{gHome}}" style="width:36px;height:36px;border-radius:999px;border:1px solid var(--color-neutral-800);display:flex;align-items:center;justify-content:center;color:var(--color-neutral-400);cursor:pointer"><i class="ph ph-caret-left" style="font-size:17px"></i></div>
+<div style="flex:1"><h1 style="margin:0;font-size:21px;font-weight:500;letter-spacing:-.01em">{{runTitle}}</h1><div style="font-size:12px;color:var(--color-neutral-400);margin-top:1px">{{runSub}}</div></div>
+<span style="font-size:11px;font-weight:500;padding:4px 10px;border-radius:999px;color:{{runPc}};background:{{runPbg}};border:1px solid {{runPbd}}">{{runPill}}</span>
+</div>
+<div style="display:flex;gap:10px">
+<sc-for list="{{runStats}}" as="s" hint-placeholder-count="3">
+<div style="flex:1;background:var(--color-surface);border-radius:14px;padding:12px 13px;box-shadow:var(--shadow-sm)"><div style="font-size:18px;font-weight:500">{{s.v}}</div><div style="font-size:11px;color:var(--color-neutral-400);margin-top:2px">{{s.l}}</div></div>
+</sc-for>
+</div>
+<div><span style="font-size:11px;letter-spacing:.14em;color:var(--color-neutral-400)">TIMELINE</span>
+<div style="margin-top:9px;background:var(--color-surface);border-radius:14px;box-shadow:var(--shadow-sm);overflow:hidden">
+<sc-for list="{{runTl}}" as="t" hint-placeholder-count="4">
+<div style="display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-bottom:1px solid var(--color-divider)"><i class="ph {{t.icon}}" style="font-size:19px;color:{{t.c}};margin-top:1px"></i><div style="flex:1"><div style="font-size:14px;font-weight:500;color:{{t.tc}}">{{t.t}}</div><div style="font-size:12.5px;color:var(--color-neutral-400);margin-top:1px">{{t.d}}</div></div><span style="font-size:11.5px;color:var(--color-neutral-500)">{{t.time}}</span></div>
+</sc-for>
+</div></div>
+<sc-if value="{{runFields}}" hint-placeholder-val="{{true}}">
+<div><span style="font-size:11px;letter-spacing:.14em;color:var(--color-neutral-400)">EXTRACTED FIELDS</span>
+<div style="margin-top:9px;background:var(--color-surface);border-radius:14px;box-shadow:var(--shadow-sm);overflow:hidden">
+<div style="display:flex;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--color-divider);font-size:13.5px"><span style="color:var(--color-neutral-400)">Vendor</span><span style="font-weight:500">Beacon Supply Co</span></div>
+<div style="display:flex;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--color-divider);font-size:13.5px"><span style="color:var(--color-neutral-400)">Amount</span><span style="font-weight:500">$12,480.00</span></div>
+<div style="display:flex;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--color-divider);font-size:13.5px"><span style="color:var(--color-neutral-400)">PO</span><span style="font-weight:500">#8841</span></div>
+<div style="display:flex;justify-content:space-between;padding:11px 14px;font-size:13.5px"><span style="color:var(--color-neutral-400)">Due date</span><span style="font-weight:500">Sep 3, 2026</span></div>
+</div></div>
+</sc-if>
+<div style="display:flex;gap:10px">
+<sc-if value="{{runA1}}" hint-placeholder-val="{{false}}">
+<div onClick="{{runA1Go}}" style="flex:1;height:46px;border-radius:999px;border:1px solid var(--color-accent);color:var(--color-accent);display:flex;align-items:center;justify-content:center;gap:7px;font-size:14px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-accent) 12%,transparent)"><i class="ph {{runA1Icon}}" style="font-size:16px"></i>{{runA1}}</div>
+</sc-if>
+<div onClick="{{gDetail}}" style="flex:1;height:46px;border-radius:999px;border:1px solid var(--color-neutral-700);display:flex;align-items:center;justify-content:center;gap:7px;font-size:14px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-text) 6%,transparent)"><i class="ph ph-flow-arrow" style="font-size:16px"></i>View workflow</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{sBuilder}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;flex:1;min-height:0">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:74px 20px 12px">
+<h1 style="margin:0;font-size:26px;font-weight:500;letter-spacing:-.015em">Builder</h1>
+<div style="display:flex;gap:8px">
+<div style="height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--color-neutral-700);display:flex;align-items:center;font-size:13px;font-weight:500;cursor:pointer">Test run</div>
+<div style="height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--color-accent);color:var(--color-accent);display:flex;align-items:center;font-size:13px;font-weight:500;cursor:pointer">Save</div>
+</div></div>
+<div style="flex:1;overflow:auto;padding:12px 20px 16px;background-image:radial-gradient(var(--color-neutral-800) 1px, transparent 1px);background-size:18px 18px">
+<div style="display:flex;flex-direction:column">
+<sc-for list="{{steps}}" as="st" hint-placeholder-count="4">
+<div style="display:flex;flex-direction:column">
+<div style="display:flex;align-items:center;gap:12px;background:var(--color-surface);border:1px solid var(--color-neutral-800);border-radius:14px;padding:13px 14px;box-shadow:var(--shadow-sm)">
+<div style="width:38px;height:38px;border-radius:11px;background:color-mix(in srgb,var(--color-accent) 10%,transparent);display:flex;align-items:center;justify-content:center;color:var(--color-accent-300);flex:none"><i class="ph {{st.icon}}" style="font-size:19px"></i></div>
+<div style="flex:1;min-width:0"><div style="font-size:10px;letter-spacing:.16em;color:var(--color-accent-300)">{{st.k}}</div><div style="font-size:14px;font-weight:500;margin-top:2px">{{st.t}}</div><div style="font-size:12px;color:var(--color-neutral-400);margin-top:1px">{{st.d}}</div></div>
+<i class="ph ph-dots-six-vertical" style="font-size:17px;color:var(--color-neutral-600)"></i>
+</div>
+<sc-if value="{{st.more}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;align-items:center;gap:0;padding:4px 0">
+<div style="height:12px;border-left:1.5px dashed var(--color-accent-700)"></div>
+<div style="width:26px;height:26px;border-radius:99px;border:1px solid var(--color-accent-700);background:var(--color-bg);display:flex;align-items:center;justify-content:center;color:var(--color-accent-300);cursor:pointer"><i class="ph ph-plus" style="font-size:14px"></i></div>
+<div style="height:12px;border-left:1.5px dashed var(--color-accent-700)"></div>
+</div></sc-if>
+</div></sc-for>
+</div>
+</div>
+<div style="padding:10px 20px 14px;border-top:1px solid var(--color-divider)">
+<div style="font-size:10.5px;letter-spacing:.14em;color:var(--color-neutral-400);margin-bottom:8px">ADD A STEP</div>
+<div style="display:flex;gap:8px;overflow:auto">
+<sc-for list="{{palette}}" as="p" hint-placeholder-count="5">
+<div style="flex:none;display:flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--color-neutral-700);font-size:12.5px;font-weight:500;color:var(--color-neutral-300);cursor:pointer"><i class="ph {{p.icon}}" style="font-size:15px;color:var(--color-accent-300)"></i>{{p.name}}</div>
+</sc-for>
+</div></div>
+</div>
+</sc-if>
+
+<sc-if value="{{sActivity}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;padding:74px 20px 20px;gap:14px">
+<h1 style="margin:0;font-size:26px;font-weight:500;letter-spacing:-.015em">Activity</h1>
+<div style="display:flex;gap:8px">
+<sc-for list="{{actChips}}" as="ch" hint-placeholder-count="4">
+<div onClick="{{ch.click}}" style="height:32px;padding:0 13px;border-radius:999px;border:1px solid {{ch.bc}};color:{{ch.fc}};display:flex;align-items:center;font-size:12.5px;font-weight:500;cursor:pointer">{{ch.label}}</div>
+</sc-for>
+</div>
+<sc-if value="{{todayHas}}" hint-placeholder-val="{{true}}">
+<div><span style="font-size:11px;letter-spacing:.14em;color:var(--color-neutral-400)">TODAY</span>
+<div style="margin-top:9px;background:var(--color-surface);border-radius:14px;box-shadow:var(--shadow-sm);overflow:hidden">
+<sc-for list="{{actToday}}" as="a" hint-placeholder-count="4">
+<div style="display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-bottom:1px solid var(--color-divider)">
+<i class="ph {{a.icon}}" style="font-size:19px;color:{{a.c}};margin-top:1px"></i>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">{{a.t}}</div><div style="font-size:12.5px;color:var(--color-neutral-400);margin-top:1px">{{a.d}}</div></div>
+<span style="font-size:11.5px;color:var(--color-neutral-500)">{{a.time}}</span>
+</div></sc-for>
+</div></div>
+</sc-if>
+<sc-if value="{{yestHas}}" hint-placeholder-val="{{true}}">
+<div><span style="font-size:11px;letter-spacing:.14em;color:var(--color-neutral-400)">YESTERDAY</span>
+<div style="margin-top:9px;background:var(--color-surface);border-radius:14px;box-shadow:var(--shadow-sm);overflow:hidden">
+<sc-for list="{{actYest}}" as="a" hint-placeholder-count="3">
+<div style="display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-bottom:1px solid var(--color-divider)">
+<i class="ph {{a.icon}}" style="font-size:19px;color:{{a.c}};margin-top:1px"></i>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">{{a.t}}</div><div style="font-size:12.5px;color:var(--color-neutral-400);margin-top:1px">{{a.d}}</div></div>
+<span style="font-size:11.5px;color:var(--color-neutral-500)">{{a.time}}</span>
+</div></sc-for>
+</div></div>
+</sc-if>
+<sc-if value="{{actEmpty}}" hint-placeholder-val="{{false}}">
+<div style="padding:56px 0;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
+<i class="ph ph-check-circle" style="font-size:38px;color:var(--color-neutral-600)"></i>
+<span style="font-size:13.5px;color:var(--color-neutral-500)">No {{actEmptyLabel}} runs in the last two days.</span>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{sApprovals}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;padding:74px 0 20px">
+<div style="display:flex;align-items:center;gap:12px;padding:0 20px 16px">
+<div onClick="{{gHome}}" style="width:36px;height:36px;border-radius:999px;border:1px solid var(--color-neutral-800);display:flex;align-items:center;justify-content:center;color:var(--color-neutral-400);cursor:pointer"><i class="ph ph-caret-left" style="font-size:17px"></i></div>
+<h1 style="margin:0;font-size:22px;font-weight:500;letter-spacing:-.01em;flex:1">Needs review</h1>
+<span style="font-size:12px;font-weight:600;min-width:26px;height:26px;padding:0 8px;border-radius:999px;background:color-mix(in srgb,var(--color-accent) 16%,transparent);color:var(--color-accent-200);display:flex;align-items:center;justify-content:center">{{apprCount}}</span>
+</div>
+<sc-for list="{{apprItems}}" as="a" hint-placeholder-count="3">
+<div style="background:var(--color-surface);border-radius:14px;padding:15px;display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow-sm);margin:0 20px 12px">
+<div style="display:flex;justify-content:space-between;align-items:center">
+<span style="font-size:10.5px;letter-spacing:.14em;color:var(--color-accent-300)">{{a.wf}}</span>
+<span style="font-size:11.5px;color:var(--color-neutral-500)">{{a.time}}</span></div>
+<div style="font-size:15px;font-weight:500">{{a.title}}</div>
+<div style="font-size:13px;line-height:1.45;color:#fbbf24;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:9px 12px;display:flex;gap:8px;align-items:flex-start"><i class="ph ph-warning" style="font-size:16px;margin-top:1px;flex:none"></i><span>{{a.why}}</span></div>
+<sc-if value="{{a.done}}" hint-placeholder-val="{{false}}"><div style="font-size:13.5px;font-weight:500;color:var(--color-accent-300);padding:4px 2px">{{a.done}}</div></sc-if>
+<sc-if value="{{a.open}}" hint-placeholder-val="{{true}}">
+<div style="display:flex;gap:10px">
+<div onClick="{{a.approve}}" style="flex:1;border:1px solid var(--color-accent);color:var(--color-accent);border-radius:999px;padding:10px 0;text-align:center;font-size:14px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-accent) 12%,transparent)">Approve</div>
+<div onClick="{{a.reject}}" style="flex:1;border:1px solid var(--color-neutral-700);color:var(--color-neutral-300);border-radius:999px;padding:10px 0;text-align:center;font-size:14px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-text) 6%,transparent)">Reject</div>
+</div></sc-if>
+</div></sc-for>
+<sc-if value="{{apprAllDone}}" hint-placeholder-val="{{false}}">
+<div style="margin:8px 20px 0;display:flex;align-items:center;gap:10px;justify-content:center;padding:14px;border-radius:14px;border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.07);color:#34d399;font-size:13.5px;font-weight:500"><i class="ph ph-check-circle" style="font-size:18px"></i>All caught up — decisions synced to your workflows.</div>
+</sc-if>
+<sc-if value="{{apprEmpty}}" hint-placeholder-val="{{false}}">
+<div style="padding:70px 32px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center">
+<i class="ph ph-check-circle" style="font-size:44px;color:#34d399"></i>
+<div style="font-size:17px;font-weight:500">All clear</div>
+<div style="font-size:13.5px;line-height:1.5;color:var(--color-neutral-400);max-width:26ch">Nothing needs your review. Your agents will hold anything that needs judgment.</div>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{sTemplates}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;padding:74px 20px 20px;gap:14px">
+<div style="display:flex;align-items:center;gap:12px">
+<div onClick="{{gFlows}}" style="width:36px;height:36px;border-radius:999px;border:1px solid var(--color-neutral-800);display:flex;align-items:center;justify-content:center;color:var(--color-neutral-400);cursor:pointer"><i class="ph ph-caret-left" style="font-size:17px"></i></div>
+<h1 style="margin:0;font-size:22px;font-weight:500;letter-spacing:-.01em">Templates</h1>
+</div>
+<div style="display:flex;gap:8px;overflow:auto">
+<sc-for list="{{tplChips}}" as="ch" hint-placeholder-count="5">
+<div onClick="{{ch.click}}" style="flex:none;height:32px;padding:0 13px;border-radius:999px;border:1px solid {{ch.bc}};color:{{ch.fc}};display:flex;align-items:center;font-size:12.5px;font-weight:500;cursor:pointer">{{ch.label}}</div>
+</sc-for>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+<sc-for list="{{templates}}" as="t" hint-placeholder-count="6">
+<div onClick="{{gConfigure}}" style="background:var(--color-surface);border-radius:14px;padding:14px;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:9px;cursor:pointer" style-hover="box-shadow:var(--shadow-md)">
+<div style="width:38px;height:38px;border-radius:11px;background:color-mix(in srgb,var(--color-accent) 10%,transparent);border:1px solid var(--color-accent-800);display:flex;align-items:center;justify-content:center;color:var(--color-accent-300)"><i class="ph {{t.icon}}" style="font-size:19px"></i></div>
+<div style="font-size:14px;font-weight:500;line-height:1.25">{{t.name}}</div>
+<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;color:var(--color-neutral-500)">{{t.cat}}</span><span style="font-size:12px;font-weight:500;color:var(--color-accent-300)">Use →</span></div>
+</div></sc-for>
+</div>
+<sc-if value="{{tplEmpty}}" hint-placeholder-val="{{false}}">
+<div style="padding:48px 0;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
+<i class="ph ph-squares-four" style="font-size:34px;color:var(--color-neutral-600)"></i>
+<span style="font-size:13.5px;color:var(--color-neutral-500)">No {{tplCatLabel}} templates yet.</span>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{sConfigure}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;padding:74px 20px 20px;gap:14px">
+<div style="display:flex;align-items:center;gap:12px">
+<div onClick="{{gTemplates}}" style="width:36px;height:36px;border-radius:999px;border:1px solid var(--color-neutral-800);display:flex;align-items:center;justify-content:center;color:var(--color-neutral-400);cursor:pointer"><i class="ph ph-caret-left" style="font-size:17px"></i></div>
+<h1 style="margin:0;font-size:22px;font-weight:500;letter-spacing:-.01em">New from template</h1>
+</div>
+<div style="background:var(--color-surface);border-radius:14px;padding:15px;box-shadow:var(--shadow-sm);display:flex;align-items:center;gap:13px">
+<div style="width:42px;height:42px;border-radius:12px;background:color-mix(in srgb,var(--color-accent) 10%,transparent);border:1px solid var(--color-accent-800);display:flex;align-items:center;justify-content:center;color:var(--color-accent-300)"><i class="ph ph-receipt" style="font-size:21px"></i></div>
+<div style="flex:1"><div style="font-size:15px;font-weight:500">Invoice capture</div><div style="font-size:12.5px;color:var(--color-neutral-400);margin-top:2px">Finance · 4 steps · used by 2,100 teams</div></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:var(--color-neutral-400)">Workflow name</span>
+<div style="height:50px;border-radius:12px;border:1px solid var(--color-neutral-700);background:color-mix(in srgb,var(--color-surface) 72%,transparent);display:flex;align-items:center;padding:0 14px;font-size:15px">Invoice capture — AP</div></div>
+<div><span style="font-size:11px;letter-spacing:.14em;color:var(--color-neutral-400)">REQUIRED CONNECTION</span>
+<div style="margin-top:9px;background:var(--color-surface);border-radius:14px;box-shadow:var(--shadow-sm);padding:13px 14px;display:flex;align-items:center;gap:12px">
+<i class="ph ph-plugs-connected" style="font-size:20px;color:var(--color-accent-300)"></i>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">QuickBooks Online</div><div style="font-size:12px;color:{{qbSubC}};margin-top:1px">{{qbSub}}</div></div>
+<div onClick="{{connectQb}}" style="height:32px;padding:0 13px;border-radius:999px;border:1px solid {{qbBc}};color:{{qbFc}};display:flex;align-items:center;font-size:12.5px;font-weight:500;cursor:pointer;flex:none">{{qbBtn}}</div>
+</div></div>
+<div><span style="font-size:11px;letter-spacing:.14em;color:var(--color-neutral-400)">STEPS PRELOADED IN BUILDER</span>
+<div style="margin-top:9px;background:var(--color-surface);border-radius:14px;box-shadow:var(--shadow-sm);overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--color-divider)"><i class="ph ph-envelope-open" style="font-size:19px;color:var(--color-accent-300)"></i><div style="flex:1"><div style="font-size:13.5px;font-weight:500">New email in AP inbox</div></div><span style="font-size:10.5px;letter-spacing:.14em;color:var(--color-neutral-500)">TRIGGER</span></div>
+<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--color-divider)"><i class="ph ph-sparkle" style="font-size:19px;color:var(--color-accent-300)"></i><div style="flex:1"><div style="font-size:13.5px;font-weight:500">Extract invoice fields</div></div><span style="font-size:10.5px;letter-spacing:.14em;color:var(--color-neutral-500)">AI STEP</span></div>
+<div style="display:flex;align-items:center;gap:12px;padding:12px 14px"><i class="ph ph-plugs-connected" style="font-size:19px;color:var(--color-accent-300)"></i><div style="flex:1"><div style="font-size:13.5px;font-weight:500">Post to QuickBooks</div></div><span style="font-size:10.5px;letter-spacing:.14em;color:var(--color-neutral-500)">ACTION</span></div>
+</div></div>
+<div onClick="{{gBuilder}}" style="height:52px;border-radius:999px;border:1px solid var(--color-accent);color:var(--color-accent);display:flex;align-items:center;justify-content:center;gap:8px;font-size:16px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-accent) 12%,transparent)"><i class="ph ph-pencil-simple" style="font-size:17px"></i>Create &amp; open in Builder</div>
+<p style="margin:0;text-align:center;font-size:11.5px;color:var(--color-neutral-600)">Steps land preloaded — edit anything before it goes live.</p>
+</div>
+</sc-if>
+
+<sc-if value="{{sNotifs}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;padding:74px 20px 20px;gap:14px">
+<div style="display:flex;align-items:center;gap:12px">
+<div onClick="{{gHome}}" style="width:36px;height:36px;border-radius:999px;border:1px solid var(--color-neutral-800);display:flex;align-items:center;justify-content:center;color:var(--color-neutral-400);cursor:pointer"><i class="ph ph-caret-left" style="font-size:17px"></i></div>
+<h1 style="margin:0;font-size:22px;font-weight:500;letter-spacing:-.01em;flex:1">Notifications</h1>
+<span style="font-size:12.5px;color:var(--color-accent-300);cursor:pointer">Mark all read</span>
+</div>
+<sc-if value="{{pushAsk}}" hint-placeholder-val="{{false}}">
+<div style="border:1px solid var(--color-accent-700);background:color-mix(in srgb,var(--color-accent) 9%,transparent);border-radius:14px;padding:15px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;gap:11px"><i class="ph ph-bell-ringing" style="font-size:21px;color:var(--color-accent-300)"></i><div style="font-size:14.5px;font-weight:500">Know the moment something needs you</div></div>
+<div style="font-size:13px;line-height:1.5;color:var(--color-neutral-400)">Push alerts for held runs and failures — nothing else. You can change this anytime in Settings.</div>
+<div style="display:flex;gap:10px">
+<div onClick="{{allowPush}}" style="flex:1;height:42px;border-radius:999px;border:1px solid var(--color-accent);color:var(--color-accent);display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-accent) 12%,transparent)">Allow notifications</div>
+<div onClick="{{allowPush}}" style="flex:1;height:42px;border-radius:999px;color:var(--color-neutral-300);display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-text) 6%,transparent)">Not now</div>
+</div></div>
+</sc-if>
+<div style="background:var(--color-surface);border-radius:14px;box-shadow:var(--shadow-sm);overflow:hidden">
+<sc-for list="{{notifs}}" as="n" hint-placeholder-count="5">
+<div onClick="{{n.open}}" style="display:flex;align-items:flex-start;gap:12px;padding:13px 14px;border-bottom:1px solid var(--color-divider);cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-text) 4%,transparent)">
+<div style="width:7px;height:7px;border-radius:99px;background:{{n.dot}};margin-top:6px;flex:none"></div>
+<i class="ph {{n.icon}}" style="font-size:19px;color:{{n.c}};margin-top:1px"></i>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">{{n.t}}</div><div style="font-size:12.5px;color:var(--color-neutral-400);margin-top:1px">{{n.d}}</div></div>
+<span style="font-size:11.5px;color:var(--color-neutral-500)">{{n.time}}</span>
+</div></sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{sSettings}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;padding:74px 20px 20px;gap:16px">
+<h1 style="margin:0;font-size:26px;font-weight:500;letter-spacing:-.015em">Settings</h1>
+<div style="background:var(--color-surface);border-radius:14px;padding:15px;box-shadow:var(--shadow-sm);display:flex;align-items:center;gap:13px">
+<div style="width:48px;height:48px;border-radius:999px;background:color-mix(in srgb,var(--color-accent) 16%,transparent);border:1px solid var(--color-accent-800);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:var(--color-accent-200)">AK</div>
+<div style="flex:1"><div style="font-size:15.5px;font-weight:500">Alex Kim</div><div style="font-size:12.5px;color:var(--color-neutral-400);margin-top:1px">alex@acme.co · Acme Operations</div></div>
+<i class="ph ph-caret-right" style="font-size:16px;color:var(--color-neutral-500)"></i>
+</div>
+<div><span style="font-size:11px;letter-spacing:.14em;color:var(--color-neutral-400)">SECURITY</span>
+<div style="margin-top:9px;background:var(--color-surface);border-radius:14px;box-shadow:var(--shadow-sm);overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--color-divider)">
+<i class="ph ph-user-focus" style="font-size:20px;color:var(--color-accent-300)"></i>
+<div style="flex:1"><div style="font-size:14px;font-weight:500">Face ID unlock</div><div style="font-size:12px;color:var(--color-neutral-400)">Require Face ID when opening</div></div>
+<div onClick="{{toggleFid}}" style="width:46px;height:28px;border-radius:999px;background:{{fidBg}};position:relative;transition:background .2s;cursor:pointer;flex:none"><div style="position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:999px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transform:translateX({{fidX}});transition:transform .2s"></div></div>
+</div>
+<div style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--color-divider);cursor:pointer">
+<i class="ph ph-key" style="font-size:20px;color:var(--color-accent-300)"></i>
+<div style="flex:1"><div style="font-size:14px;font-weight:500">Passkeys</div><div style="font-size:12px;color:var(--color-neutral-400)">1 passkey · iPhone</div></div>
+<i class="ph ph-caret-right" style="font-size:15px;color:var(--color-neutral-500)"></i>
+</div>
+<div style="display:flex;align-items:center;gap:12px;padding:13px 14px">
+<i class="ph ph-clock-clockwise" style="font-size:20px;color:var(--color-accent-300)"></i>
+<div style="flex:1"><div style="font-size:14px;font-weight:500">Stay signed in</div><div style="font-size:12px;color:var(--color-neutral-400)">Keep this device logged in</div></div>
+<div onClick="{{toggleRem}}" style="width:46px;height:28px;border-radius:999px;background:{{remBg}};position:relative;transition:background .2s;cursor:pointer;flex:none"><div style="position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:999px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transform:translateX({{remX}});transition:transform .2s"></div></div>
+</div>
+</div></div>
+<div><span style="font-size:11px;letter-spacing:.14em;color:var(--color-neutral-400)">CONNECTIONS</span>
+<div style="margin-top:9px;background:var(--color-surface);border-radius:14px;box-shadow:var(--shadow-sm);overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--color-divider);cursor:pointer">
+<i class="ph ph-envelope-simple" style="font-size:20px;color:var(--color-accent-300)"></i>
+<div style="flex:1"><div style="font-size:14px;font-weight:500">Gmail</div><div style="font-size:12px;color:var(--color-neutral-400)">Connected · used by 2 solutions</div></div>
+<span style="width:7px;height:7px;border-radius:99px;background:#34d399"></span>
+<i class="ph ph-caret-right" style="font-size:15px;color:var(--color-neutral-500)"></i></div>
+<div style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--color-divider);cursor:pointer">
+<i class="ph ph-plugs-connected" style="font-size:20px;color:var(--color-accent-300)"></i>
+<div style="flex:1"><div style="font-size:14px;font-weight:500">QuickBooks Online</div><div style="font-size:12px;color:var(--color-neutral-400)">Connected · used by 1 solution</div></div>
+<span style="width:7px;height:7px;border-radius:99px;background:#34d399"></span>
+<i class="ph ph-caret-right" style="font-size:15px;color:var(--color-neutral-500)"></i></div>
+<div style="display:flex;align-items:center;gap:12px;padding:13px 14px;cursor:pointer">
+<i class="ph ph-slack-logo" style="font-size:20px;color:var(--color-accent-300)"></i>
+<div style="flex:1"><div style="font-size:14px;font-weight:500">Slack</div><div style="font-size:12px;color:var(--color-neutral-400)">Not connected</div></div>
+<span style="font-size:13px;font-weight:500;color:var(--color-accent-300)">Connect</span></div>
+</div></div>
+<div><span style="font-size:11px;letter-spacing:.14em;color:var(--color-neutral-400)">PLAN &amp; BILLING</span>
+<div style="margin-top:9px;background:var(--color-surface);border-radius:14px;box-shadow:var(--shadow-sm);overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--color-divider)">
+<i class="ph ph-crown-simple" style="font-size:20px;color:var(--color-accent-300)"></i>
+<div style="flex:1"><div style="font-size:14px;font-weight:500">Growth plan</div><div style="font-size:12px;color:var(--color-neutral-400)">$99/mo base · renews Sep 1</div></div>
+<span style="font-size:14px;font-weight:500;color:var(--color-accent-300)">{{planTotal}}/mo</span></div>
+<div onClick="{{gSolutions}}" style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--color-divider);cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-text) 4%,transparent)">
+<i class="ph ph-storefront" style="font-size:20px;color:var(--color-accent-300)"></i>
+<div style="flex:1"><div style="font-size:14px;font-weight:500">Manage solutions</div><div style="font-size:12px;color:var(--color-neutral-400)">{{activeCount}} active · {{solTotal}}/mo</div></div>
+<i class="ph ph-caret-right" style="font-size:15px;color:var(--color-neutral-500)"></i></div>
+<div style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--color-divider);cursor:pointer">
+<i class="ph ph-credit-card" style="font-size:20px;color:var(--color-accent-300)"></i>
+<div style="flex:1"><div style="font-size:14px;font-weight:500">Payment method</div><div style="font-size:12px;color:var(--color-neutral-400)">Visa ···· 4242</div></div>
+<i class="ph ph-caret-right" style="font-size:15px;color:var(--color-neutral-500)"></i></div>
+<div style="display:flex;align-items:center;gap:12px;padding:13px 14px;cursor:pointer">
+<i class="ph ph-receipt" style="font-size:20px;color:var(--color-accent-300)"></i>
+<div style="flex:1"><div style="font-size:14px;font-weight:500">Invoices</div><div style="font-size:12px;color:var(--color-neutral-400)">Last: Aug 1 · {{planTotal}}</div></div>
+<i class="ph ph-caret-right" style="font-size:15px;color:var(--color-neutral-500)"></i></div>
+</div></div>
+<div><span style="font-size:11px;letter-spacing:.14em;color:var(--color-neutral-400)">WORKSPACE</span>
+<div style="margin-top:9px;background:var(--color-surface);border-radius:14px;box-shadow:var(--shadow-sm);overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--color-divider);cursor:pointer">
+<i class="ph ph-buildings" style="font-size:20px;color:var(--color-accent-300)"></i>
+<div style="flex:1;font-size:14px;font-weight:500">Acme Operations</div>
+<i class="ph ph-caret-right" style="font-size:15px;color:var(--color-neutral-500)"></i></div>
+<div style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--color-divider);cursor:pointer">
+<i class="ph ph-users" style="font-size:20px;color:var(--color-accent-300)"></i>
+<div style="flex:1;font-size:14px;font-weight:500">Members</div>
+<span style="font-size:12.5px;color:var(--color-neutral-500)">12</span>
+<i class="ph ph-caret-right" style="font-size:15px;color:var(--color-neutral-500)"></i></div>
+<div style="display:flex;align-items:center;gap:12px;padding:13px 14px">
+<i class="ph ph-bell" style="font-size:20px;color:var(--color-accent-300)"></i>
+<div style="flex:1;font-size:14px;font-weight:500">Notifications</div>
+<div onClick="{{toggleNtf}}" style="width:46px;height:28px;border-radius:999px;background:{{ntfBg}};position:relative;transition:background .2s;cursor:pointer;flex:none"><div style="position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:999px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transform:translateX({{ntfX}});transition:transform .2s"></div></div>
+</div>
+</div></div>
+<div><span style="font-size:11px;letter-spacing:.14em;color:var(--color-neutral-400)">APPEARANCE</span>
+<div style="margin-top:9px;background:var(--color-surface);border-radius:14px;box-shadow:var(--shadow-sm);padding:6px;display:flex;gap:4px">
+<span style="flex:1;height:34px;border-radius:9px;border:1px solid var(--color-accent);color:var(--color-accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500">Dark</span>
+<span style="flex:1;height:34px;border-radius:9px;color:var(--color-neutral-400);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer">Light</span>
+<span style="flex:1;height:34px;border-radius:9px;color:var(--color-neutral-400);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer">Auto</span>
+</div></div>
+<div onClick="{{gWelcome}}" style="background:var(--color-surface);border-radius:14px;box-shadow:var(--shadow-sm);padding:13px 14px;display:flex;align-items:center;gap:12px;cursor:pointer">
+<i class="ph ph-sign-out" style="font-size:20px;color:#f87171"></i>
+<span style="font-size:14px;font-weight:500;color:#f87171">Sign out</span>
+</div>
+<p style="margin:0;text-align:center;font-size:11px;color:var(--color-neutral-600)">Autom8x for iOS · v1.0.0</p>
+</div>
+</sc-if>
+
+</div>
+<div style="flex:none;display:flex;align-items:flex-start;padding:6px 8px 22px;border-top:1px solid var(--color-divider);background:color-mix(in srgb,var(--color-bg) 88%,transparent);backdrop-filter:blur(14px)">
+<div onClick="{{gHome}}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0;cursor:pointer;color:{{cHome}}"><i class="ph ph-house" style="font-size:22px"></i><span style="font-size:10px;font-weight:500">Home</span></div>
+<div onClick="{{gFlows}}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0;cursor:pointer;color:{{cFlows}}"><i class="ph ph-flow-arrow" style="font-size:22px"></i><span style="font-size:10px;font-weight:500">Flows</span></div>
+<div onClick="{{gSolutions}}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0;cursor:pointer;color:{{cSolutions}}"><i class="ph ph-storefront" style="font-size:22px"></i><span style="font-size:10px;font-weight:500">Solutions</span></div>
+<div onClick="{{gActivity}}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0;cursor:pointer;color:{{cActivity}}"><i class="ph ph-pulse" style="font-size:22px"></i><span style="font-size:10px;font-weight:500">Activity</span></div>
+<div onClick="{{gSettings}}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0;cursor:pointer;color:{{cSettings}}"><i class="ph ph-gear" style="font-size:22px"></i><span style="font-size:10px;font-weight:500">Settings</span></div>
+</div>
+</div>
+</sc-if>
+
+</div>
+</x-import>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:440,&quot;height&quot;:910},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;home&quot;,&quot;options&quot;:[&quot;splash&quot;,&quot;welcome&quot;,&quot;login&quot;,&quot;signup&quot;,&quot;reset&quot;,&quot;onboarding&quot;,&quot;faceid&quot;,&quot;home&quot;,&quot;notifications&quot;,&quot;run&quot;,&quot;flows&quot;,&quot;detail&quot;,&quot;builder&quot;,&quot;configure&quot;,&quot;solutions&quot;,&quot;setup&quot;,&quot;activity&quot;,&quot;approvals&quot;,&quot;templates&quot;,&quot;settings&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Screen&quot;},&quot;variant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;default&quot;,&quot;options&quot;:[&quot;default&quot;,&quot;loading&quot;,&quot;empty&quot;,&quot;error&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Screen&quot;},&quot;run&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;held&quot;,&quot;options&quot;:[&quot;held&quot;,&quot;success&quot;,&quot;failed&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Screen&quot;},&quot;flow&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;invoice&quot;,&quot;options&quot;:[&quot;invoice&quot;,&quot;email&quot;,&quot;kpi&quot;,&quot;lead&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Screen&quot;},&quot;light&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Screen&quot;},&quot;onNav&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(screen: string) =&gt; void&quot;}}">
+class Component extends DCLogic {
+  state = { rem: true, fid: true, ntf: true, ob: 0, apr: {}, solOn: { 0: true, 1: true, 2: true }, qb: false, r1: true, r2: true, actF: 'All', solCat: 'All', rmIdx: null, selFlow: 0, flowSt: {}, q: '', tplCat: 'All', rty: 0, rSent: false, pushAsk: true };
+  componentDidUpdate(prev) {
+    if (this.props.screen === 'faceid' && prev.screen !== 'faceid' && this.props.onNav) {
+      clearTimeout(this._t);
+      this._t = setTimeout(() => { if (this.props.onNav) this.props.onNav('home'); }, 2100);
+    }
+  }
+  componentWillUnmount() { clearTimeout(this._t); clearTimeout(this._t2); }
+  go(s) { return () => { if (this.props.onNav) this.props.onNav(s); }; }
+  renderVals() {
+    const scr = this.props.screen || 'home';
+    const light = this.props.light === true || this.props.light === 'true';
+    const variant = this.props.variant || 'default';
+    const runV = this.props.run || 'held';
+    const ok = '#34d399', warn = '#fbbf24', err = '#f87171';
+    const appScreens = ['home','flows','detail','builder','activity','approvals','templates','settings','solutions','run','setup','notifications','configure'];
+    const isApp = appScreens.indexOf(scr) >= 0;
+    const tabOf = { home:'home', run:'home', notifications:'home', flows:'flows', detail:'flows', templates:'flows', builder:'flows', configure:'flows', solutions:'solutions', setup:'solutions', activity:'activity', approvals:'activity', settings:'settings' }[scr];
+    const tc = t => tabOf === t ? 'var(--color-accent)' : 'var(--color-neutral-500)';
+    const tog = on => ({ bg: on ? 'var(--color-accent)' : 'var(--color-neutral-800)', x: on ? '18px' : '0px' });
+    const pills = { Live: [ok,'rgba(52,211,153,.1)','rgba(52,211,153,.35)'], Paused: [warn,'rgba(245,158,11,.1)','rgba(245,158,11,.35)'], Draft: ['var(--color-neutral-400)','color-mix(in srgb,var(--color-neutral-500) 12%,transparent)','var(--color-neutral-700)'] };
+    const okC = ok, neu = 'var(--color-neutral-500)';
+    const flowDefs = [
+      { icon:'ph-receipt', name:'Invoice triage', desc:'AP inbox \u2192 QuickBooks', status:'Live', runsTxt:'1,284 runs \u00b7 1,272 ok \u00b7 12 failed', runs:'1,284', okN:'1,272', failN:'12',
+        conns:[ {icon:'ph-plugs-connected', n:'QuickBooks Online', d:'acme-books \u00b7 linked via OAuth', sc:okC, st:'Connected'}, {icon:'ph-envelope-simple', n:'Gmail', d:'ap@acme.co \u00b7 shared across workspace', sc:okC, st:'Connected'} ],
+        steps:[ {icon:'ph-envelope-open',k:'TRIGGER',t:'New email in AP inbox',d:'Gmail \u00b7 ap@acme.co',more:true}, {icon:'ph-sparkle',k:'AI STEP',t:'Extract invoice fields',d:'Vendor, amount, PO, due date',more:true}, {icon:'ph-git-branch',k:'AI STEP',t:'Classify & GL-code',d:'Low confidence \u2192 human review',more:true}, {icon:'ph-plugs-connected',k:'ACTION',t:'Post to QuickBooks',d:'Draft bill, attach PDF',more:false} ] },
+      { icon:'ph-envelope-simple', name:'Email triage', desc:'Support inbox routing', status:'Live', runsTxt:'3,412 runs \u00b7 3,357 ok \u00b7 55 failed', runs:'3,412', okN:'3,357', failN:'55',
+        conns:[ {icon:'ph-envelope-simple', n:'Gmail', d:'support@acme.co \u00b7 shared across workspace', sc:okC, st:'Connected'} ],
+        steps:[ {icon:'ph-envelope-open',k:'TRIGGER',t:'New support email',d:'Gmail \u00b7 support@acme.co',more:true}, {icon:'ph-sparkle',k:'AI STEP',t:'Classify intent & urgency',d:'Billing, bug, refund, other',more:true}, {icon:'ph-git-branch',k:'BRANCH',t:'Escalate if urgent',d:'Urgent \u2192 on-call channel',more:true}, {icon:'ph-plugs-connected',k:'ACTION',t:'Route & draft reply',d:'Assign queue, propose response',more:false} ] },
+      { icon:'ph-chart-line', name:'Weekly KPI report', desc:'Sheets \u2192 Slack digest', status:'Paused', runsTxt:'52 runs \u00b7 51 ok \u00b7 1 failed', runs:'52', okN:'51', failN:'1',
+        conns:[ {icon:'ph-table', n:'Google Sheets', d:'Auth expired \u2014 tap to reconnect', sc:warn, st:'Reconnect'}, {icon:'ph-slack-logo', n:'Slack', d:'#leadership \u00b7 shared across workspace', sc:okC, st:'Connected'} ],
+        steps:[ {icon:'ph-timer',k:'TRIGGER',t:'Every Monday, 9:00 AM',d:'Schedule',more:true}, {icon:'ph-table',k:'ACTION',t:'Pull metrics from Sheets',d:'Revenue, churn, pipeline tabs',more:true}, {icon:'ph-sparkle',k:'AI STEP',t:'Write the digest',d:'Summary with week-over-week deltas',more:true}, {icon:'ph-slack-logo',k:'ACTION',t:'Post to Slack',d:'#leadership',more:false} ] },
+      { icon:'ph-user-plus', name:'Lead enrichment', desc:'CRM enrich + score', status:'Draft', runsTxt:'Not yet published', runs:'\u2014', okN:'\u2014', failN:'\u2014',
+        conns:[ {icon:'ph-plugs-connected', n:'HubSpot', d:'Required before publishing', sc:neu, st:'Not connected'} ],
+        steps:[ {icon:'ph-lightning',k:'TRIGGER',t:'New lead in CRM',d:'HubSpot \u00b7 all pipelines',more:true}, {icon:'ph-sparkle',k:'AI STEP',t:'Enrich company & contact',d:'Firmographics, role, intent',more:true}, {icon:'ph-sparkle',k:'AI STEP',t:'Score the lead',d:'0\u2013100 with reasons',more:true}, {icon:'ph-plugs-connected',k:'ACTION',t:'Route to owner',d:'Round-robin by territory',more:false} ] },
+    ];
+    const fSt = i => this.state.flowSt[i] || flowDefs[i].status;
+    const q = (this.state.q || '').toLowerCase();
+    const flows = flowDefs.map((d, i) => { const st = fSt(i); const p = pills[st]; return { icon:d.icon, name:d.name, desc:d.desc, status:st, runs:d.runsTxt, pc:p[0], pbg:p[1], pbd:p[2], open: () => { this.setState({ selFlow: i }); if (this.props.onNav) this.props.onNav('detail'); } }; }).filter(f => f.name.toLowerCase().indexOf(q) >= 0);
+    const flowKey = ({ invoice:0, email:1, kpi:2, lead:3 })[this.props.flow];
+    const fi = flowKey != null ? flowKey : this.state.selFlow;
+    const fd = flowDefs[fi], fst = fSt(fi), fp = pills[fst];
+    const steps = [
+      { icon:'ph-envelope-open', k:'TRIGGER', t:'New email in AP inbox', d:'Gmail \u00b7 ap@acme.co', more:true },
+      { icon:'ph-sparkle', k:'AI STEP', t:'Extract invoice fields', d:'Vendor, amount, PO, due date', more:true },
+      { icon:'ph-git-branch', k:'AI STEP', t:'Classify & GL-code', d:'Confidence < 95% \u2192 human review', more:true },
+      { icon:'ph-plugs-connected', k:'ACTION', t:'Post to QuickBooks', d:'Draft bill, attach PDF', more:false },
+    ];
+    const palette = [
+      { icon:'ph-lightning', name:'Trigger' }, { icon:'ph-sparkle', name:'AI step' },
+      { icon:'ph-git-branch', name:'Branch' }, { icon:'ph-plugs-connected', name:'Action' },
+      { icon:'ph-hand-palm', name:'Human review' }, { icon:'ph-timer', name:'Delay' },
+    ];
+    const actF = this.state.actF;
+    const actTodayAll = [
+      { icon:'ph-check-circle', c:ok, s:'ok', t:'Invoice triage', d:'Run #4821 \u00b7 posted to QuickBooks', time:'2m' },
+      { icon:'ph-hand-palm', c:warn, s:'warn', t:'Invoice triage', d:'Run #4820 \u00b7 held for review \u2014 amount mismatch', time:'12m' },
+      { icon:'ph-check-circle', c:ok, s:'ok', t:'Email triage', d:'32 emails routed \u00b7 3 escalated', time:'1h' },
+      { icon:'ph-check-circle', c:ok, s:'ok', t:'Receipt OCR', d:'Run #911 \u00b7 4 receipts captured', time:'3h' },
+    ];
+    const actYestAll = [
+      { icon:'ph-x-circle', c:err, s:'err', t:'Weekly KPI report', d:'Run #52 \u00b7 failed \u2014 Sheets auth expired', time:'9:12' },
+      { icon:'ph-check-circle', c:ok, s:'ok', t:'Invoice triage', d:'18 invoices processed \u00b7 1 exception', time:'8:30' },
+      { icon:'ph-check-circle', c:ok, s:'ok', t:'Email triage', d:'201 emails routed', time:'8:00' },
+    ];
+    const actMatch = a => actF === 'All' || (actF === 'Success' && a.s === 'ok') || (actF === 'Needs review' && a.s === 'warn') || (actF === 'Failed' && a.s === 'err');
+    const actToday = actTodayAll.filter(actMatch), actYest = actYestAll.filter(actMatch);
+    const actChips = ['All','Success','Needs review','Failed'].map(l => ({
+      label: l,
+      bc: actF === l ? 'var(--color-accent)' : 'var(--color-neutral-800)',
+      fc: actF === l ? 'var(--color-accent)' : 'var(--color-neutral-400)',
+      click: () => this.setState({ actF: l }),
+    }));
+    const apprData = [
+      { wf:'INVOICE TRIAGE', title:'Invoice #4821 \u00b7 Beacon Supply Co', why:'Amount $12,480 differs from PO $11,900. Agent paused before posting.', time:'12m ago' },
+      { wf:'REFUND FLOW', title:'Refund $840 \u00b7 Order 10293', why:'Above the $500 auto-approve threshold.', time:'1h ago' },
+      { wf:'VENDOR ONBOARDING', title:'New vendor: Northwind Ltd', why:'No W-9 on file \u2014 needs confirmation before setup.', time:'3h ago' },
+    ];
+    const apr = this.state.apr;
+    const apprItems = variant === 'empty' ? [] : apprData.map((a, i) => Object.assign({}, a, {
+      done: apr[i] || '', open: !apr[i],
+      approve: () => this.setState(s => ({ apr: Object.assign({}, s.apr, { [i]: 'Approved \u2713 \u2014 agent resuming' }) })),
+      reject: () => this.setState(s => ({ apr: Object.assign({}, s.apr, { [i]: 'Rejected \u2014 sent back to sender' }) })),
+    }));
+    const templatesAll = [
+      { icon:'ph-envelope-simple', name:'Email triage', cat:'Ops' },
+      { icon:'ph-receipt', name:'Invoice capture', cat:'Finance' },
+      { icon:'ph-chart-line', name:'Weekly report digest', cat:'Reporting' },
+      { icon:'ph-user-plus', name:'Lead enrichment', cat:'Sales' },
+      { icon:'ph-camera', name:'Receipt OCR', cat:'Finance' },
+      { icon:'ph-bell-ringing', name:'Slack alerts', cat:'Ops' },
+    ];
+    const templates = templatesAll.filter(t => this.state.tplCat === 'All' || t.cat === this.state.tplCat);
+    const solDefs = [
+      { icon:'ph-receipt', name:'Invoice triage', desc:'AP inbox to ledger, exceptions held for you', cat:'Finance', p:39 },
+      { icon:'ph-envelope-simple', name:'Email triage', desc:'Route, draft and escalate support mail', cat:'Ops', p:29 },
+      { icon:'ph-camera', name:'Receipt OCR', desc:'Snap receipts into expense entries', cat:'Finance', p:19 },
+      { icon:'ph-chart-line', name:'Weekly KPI digest', desc:'Metrics to Slack every Monday morning', cat:'Reporting', p:19 },
+      { icon:'ph-user-plus', name:'Lead enrichment', desc:'Enrich, score and route new leads', cat:'Sales', p:49 },
+      { icon:'ph-bell-ringing', name:'Slack alerts', desc:'Threshold alerts from any data source', cat:'Ops', p:9 },
+    ];
+    const solOn = this.state.solOn;
+    const solCat = this.state.solCat;
+    const solsAll = solDefs.map((d, i) => Object.assign({}, d, {
+      price: '$' + d.p,
+      btn: solOn[i] ? 'Added \u2713' : 'Add',
+      bc: solOn[i] ? 'var(--color-neutral-700)' : 'var(--color-accent)',
+      fc: solOn[i] ? 'var(--color-neutral-400)' : 'var(--color-accent)',
+      toggle: () => {
+        if (!solOn[i]) { if (this.props.onNav) this.props.onNav('setup'); }
+        else this.setState({ rmIdx: i });
+      },
+    }));
+    const sols = solsAll.filter(d => solCat === 'All' || d.cat === solCat);
+    const solChips = ['All','Finance','Ops','Sales','Reporting'].map(l => ({
+      label: l,
+      bc: solCat === l ? 'var(--color-accent)' : 'var(--color-neutral-800)',
+      fc: solCat === l ? 'var(--color-accent)' : 'var(--color-neutral-400)',
+      click: () => this.setState({ solCat: l }),
+    }));
+    const rmIdx = this.state.rmIdx;
+    const rmSol = rmIdx == null ? null : solDefs[rmIdx];
+    const runDefs = {
+      held: { title:'Run #4820', sub:'Invoice triage \u00b7 today, 9:41 AM', pill:'Held', pc:warn, pbg:'rgba(245,158,11,.1)', pbd:'rgba(245,158,11,.35)', fields:true,
+        a1:'Review & approve', a1i:'ph-hand-palm', a1g:this.go('approvals'),
+        stats:[{v:'38s',l:'Duration'},{v:'3 / 4',l:'Steps done'},{v:'87%',l:'Confidence'}],
+        tl:[
+          { icon:'ph-check-circle', c:ok, tc:'var(--color-text)', t:'New email received', d:'Gmail \u00b7 ap@acme.co', time:'9:41:02' },
+          { icon:'ph-check-circle', c:ok, tc:'var(--color-text)', t:'Fields extracted', d:'Vendor, amount, PO, due date', time:'9:41:19' },
+          { icon:'ph-hand-palm', c:warn, tc:'var(--color-text)', t:'Held for review', d:'Amount differs from PO $11,900', time:'9:41:40' },
+          { icon:'ph-circle-dashed', c:'var(--color-neutral-500)', tc:'var(--color-neutral-400)', t:'Post to QuickBooks', d:'Waiting on your approval', time:'' },
+        ] },
+      success: { title:'Run #4821', sub:'Invoice triage \u00b7 today, 9:52 AM', pill:'Success', pc:ok, pbg:'rgba(52,211,153,.1)', pbd:'rgba(52,211,153,.35)', fields:true,
+        a1:'', a1i:'', a1g:null,
+        stats:[{v:'42s',l:'Duration'},{v:'4 / 4',l:'Steps done'},{v:'98%',l:'Confidence'}],
+        tl:[
+          { icon:'ph-check-circle', c:ok, tc:'var(--color-text)', t:'New email received', d:'Gmail \u00b7 ap@acme.co', time:'9:52:01' },
+          { icon:'ph-check-circle', c:ok, tc:'var(--color-text)', t:'Fields extracted', d:'Vendor, amount, PO, due date', time:'9:52:16' },
+          { icon:'ph-check-circle', c:ok, tc:'var(--color-text)', t:'Classified & GL-coded', d:'6200 \u00b7 Office supplies', time:'9:52:28' },
+          { icon:'ph-check-circle', c:ok, tc:'var(--color-text)', t:'Posted to QuickBooks', d:'Bill #10412 created, PDF attached', time:'9:52:43' },
+        ] },
+      retried: { title:'Run #52', sub:'Weekly KPI report \u00b7 retried just now', pill:'Success', pc:ok, pbg:'rgba(52,211,153,.1)', pbd:'rgba(52,211,153,.35)', fields:false,
+        a1:'', a1i:'', a1g:null,
+        stats:[{v:'26s',l:'Duration'},{v:'4 / 4',l:'Steps done'},{v:'\u2014',l:'Confidence'}],
+        tl:[
+          { icon:'ph-check-circle', c:ok, tc:'var(--color-text)', t:'Manual retry started', d:'By you \u00b7 just now', time:'now' },
+          { icon:'ph-check-circle', c:ok, tc:'var(--color-text)', t:'Sheets reconnected & fetched', d:'Revenue, churn, pipeline tabs', time:'+8s' },
+          { icon:'ph-check-circle', c:ok, tc:'var(--color-text)', t:'Digest built', d:'Week-over-week deltas included', time:'+19s' },
+          { icon:'ph-check-circle', c:ok, tc:'var(--color-text)', t:'Posted to Slack', d:'#leadership', time:'+26s' },
+        ] },
+      failed: { title:'Run #52', sub:'Weekly KPI report \u00b7 yesterday, 9:12 AM', pill:'Failed', pc:err, pbg:'rgba(248,113,113,.1)', pbd:'rgba(248,113,113,.35)', fields:false,
+        a1: this.state.rty === 1 ? 'Retrying\u2026' : 'Retry run', a1i: this.state.rty === 1 ? 'ph-circle-notch' : 'ph-arrow-clockwise',
+        a1g: () => { if (this.state.rty === 0) { this.setState({ rty: 1 }); this._t2 = setTimeout(() => this.setState({ rty: 2 }), 1600); } },
+        stats:[{v:'12s',l:'Duration'},{v:'1 / 4',l:'Steps done'},{v:'\u2014',l:'Confidence'}],
+        tl:[
+          { icon:'ph-check-circle', c:ok, tc:'var(--color-text)', t:'Scheduled trigger fired', d:'Every Monday \u00b7 9:12 AM', time:'9:12:00' },
+          { icon:'ph-x-circle', c:err, tc:'var(--color-text)', t:'Sheets connection failed', d:'Auth token revoked \u2014 reconnect Google Sheets', time:'9:12:12' },
+          { icon:'ph-circle-dashed', c:'var(--color-neutral-500)', tc:'var(--color-neutral-400)', t:'Build digest', d:'Skipped', time:'' },
+          { icon:'ph-circle-dashed', c:'var(--color-neutral-500)', tc:'var(--color-neutral-400)', t:'Post to Slack', d:'Skipped', time:'' },
+        ] },
+    };
+    const rEff = (runV === 'failed' && this.state.rty === 2) ? 'retried' : runV;
+    const rv = runDefs[rEff] || runDefs.held;
+    const tplCat = this.state.tplCat;
+    const tplChips = ['All','Finance','Ops','Sales','Reporting'].map(l => ({
+      label: l,
+      bc: tplCat === l ? 'var(--color-accent)' : 'var(--color-neutral-800)',
+      fc: tplCat === l ? 'var(--color-accent)' : 'var(--color-neutral-400)',
+      click: () => this.setState({ tplCat: l }),
+    }));
+    const notifs = [
+      { icon:'ph-hand-palm', c:warn, dot:'var(--color-accent)', t:'Run held for review', d:'Invoice triage \u00b7 amount differs from PO $11,900', time:'12m', open: this.go('approvals') },
+      { icon:'ph-x-circle', c:err, dot:'var(--color-accent)', t:'Run failed', d:'Weekly KPI report \u00b7 Sheets auth expired', time:'1d', open: this.go('run') },
+      { icon:'ph-check-circle', c:ok, dot:'transparent', t:'Digest posted', d:'Weekly KPI report \u00b7 #leadership', time:'1d', open: this.go('activity') },
+      { icon:'ph-check-circle', c:ok, dot:'transparent', t:'Bill created', d:'Invoice triage \u00b7 QuickBooks bill #10398', time:'2d', open: this.go('activity') },
+      { icon:'ph-crown-simple', c:'var(--color-accent-300)', dot:'transparent', t:'Invoice paid', d:'Growth plan \u00b7 $166 on Aug 1', time:'4d', open: this.go('settings') },
+    ];
+    const solSum = solDefs.reduce((a, d, i) => a + (solOn[i] ? d.p : 0), 0);
+    const activeN = solDefs.filter((d, i) => solOn[i]).length;
+    const obPhases = [
+      { icon:'ph-tray', k:'THE MANUAL GRIND', t:'Inboxes, invoices, intake forms. All day. Every day.', s:"Document work eats whole teams. It doesn't have to." },
+      { icon:'ph-sparkle', k:'AUTOMATION \u00d7 AI', t:'Every repetitive task, done by an agent.', s:'Extraction, classification, routing, posting. On their own.' },
+      { icon:'ph-users-three', k:'YOUR TEAM, UNBURDENED', t:'Your team reviews. The agents run.', s:'Review points where judgment matters. Everything else just happens.' },
+    ];
+    const ob = this.state.ob, ph = obPhases[ob];
+    const rem = tog(this.state.rem), fid = tog(this.state.fid), ntf = tog(this.state.ntf);
+    return {
+      isDark: !light, rootCls: light ? 'thm-light' : '',
+      sSplash: scr==='splash', sWelcome: scr==='welcome', sLogin: scr==='login', sSignup: scr==='signup',
+      sOnboard: scr==='onboarding', sFaceid: scr==='faceid', isApp,
+      sHome: scr==='home' && variant==='default', sHomeLoad: scr==='home' && variant==='loading', sHomeEmpty: scr==='home' && variant==='empty', sHomeErr: scr==='home' && variant==='error',
+      loginErr: scr==='login' && variant==='error',
+      sFlows: scr==='flows', sDetail: scr==='detail', sBuilder: scr==='builder',
+      sActivity: scr==='activity', sApprovals: scr==='approvals', sTemplates: scr==='templates', sSettings: scr==='settings',
+      gWelcome: this.go('welcome'), gLogin: this.go('login'), gSignup: this.go('signup'),
+      gOnboard: this.go('onboarding'), gFaceid: this.go('faceid'), gHome: this.go('home'),
+      gFlows: this.go('flows'), gDetail: this.go('detail'), gBuilder: this.go('builder'),
+      gActivity: this.go('activity'), gApprovals: this.go('approvals'), gTemplates: this.go('templates'), gSettings: this.go('settings'),
+      gSolutions: this.go('solutions'), gRun: this.go('run'), gSetup: this.go('setup'),
+      sSolutions: scr==='solutions', sRun: scr==='run', sSetup: scr==='setup',
+      runTitle: rv.title, runSub: rv.sub, runPill: rv.pill, runPc: rv.pc, runPbg: rv.pbg, runPbd: rv.pbd,
+      runStats: rv.stats, runTl: rv.tl, runFields: rv.fields, runA1: rv.a1 || false, runA1Icon: rv.a1i, runA1Go: rv.a1g,
+      actChips, todayHas: actToday.length > 0, yestHas: actYest.length > 0,
+      actEmpty: actToday.length === 0 && actYest.length === 0,
+      actEmptyLabel: ({ 'Success':'successful', 'Needs review':'held', 'Failed':'failed' })[actF] || '',
+      apprEmpty: variant === 'empty',
+      apprCount: variant === 'empty' ? '0' : String(3 - Object.keys(apr).length),
+      apprAllDone: variant !== 'empty' && Object.keys(apr).length === 3,
+      solChips, solsEmpty: sols.length === 0, solCatLabel: solCat,
+      rmOpen: rmIdx != null, rmName: rmSol ? rmSol.name : '', rmPrice: rmSol ? '$' + rmSol.p : '',
+      rmCancel: () => this.setState({ rmIdx: null }),
+      rmConfirm: () => this.setState(s => ({ rmIdx: null, solOn: Object.assign({}, s.solOn, { [s.rmIdx]: false }) })),
+      sReset: scr==='reset', sNotifs: scr==='notifications', sConfigure: scr==='configure',
+      gReset: this.go('reset'), gNotifs: this.go('notifications'), gConfigure: this.go('configure'),
+      rSent: this.state.rSent, rNotSent: !this.state.rSent,
+      sendReset: () => this.setState({ rSent: true }),
+      pushAsk: this.state.pushAsk, allowPush: () => this.setState({ pushAsk: false }), notifs,
+      dTitle: fd.name, dSub: fd.desc, dPill: fst, dPc: fp[0], dPbg: fp[1], dPbd: fp[2],
+      dRuns: fd.runs, dOk: fd.okN, dFail: fd.failN,
+      dOkC: fd.okN === '\u2014' ? 'var(--color-neutral-500)' : ok,
+      dFailC: fd.failN === '\u2014' ? 'var(--color-neutral-500)' : err,
+      dConns: fd.conns, dSteps: fd.steps,
+      dBtn: fst === 'Live' ? 'Pause' : fst === 'Paused' ? 'Resume' : 'Publish',
+      dBtnIcon: fst === 'Live' ? 'ph-pause' : fst === 'Paused' ? 'ph-play' : 'ph-rocket-launch',
+      dToggle: () => this.setState(s => ({ flowSt: Object.assign({}, s.flowSt, { [fi]: fst === 'Live' ? 'Paused' : 'Live' }) })),
+      q: this.state.q, setQ: (e) => this.setState({ q: e.target.value }), flowsEmpty: flows.length === 0,
+      tplChips, tplEmpty: templates.length === 0, tplCatLabel: tplCat,
+      qbSub: this.state.qb ? 'acme-books · linked via OAuth' : 'Required · sign in with OAuth once',
+      qbSubC: this.state.qb ? '#34d399' : '#fbbf24',
+      qbBtn: this.state.qb ? 'Connected \u2713' : 'Connect',
+      qbBc: this.state.qb ? 'var(--color-neutral-700)' : 'var(--color-accent)',
+      qbFc: this.state.qb ? '#34d399' : 'var(--color-accent)',
+      connectQb: () => this.setState({ qb: true }),
+      actLabel: this.state.qb ? 'Activate solution' : 'Connect QuickBooks to activate',
+      actBc: this.state.qb ? 'var(--color-accent)' : 'var(--color-neutral-800)',
+      actFc: this.state.qb ? 'var(--color-accent)' : 'var(--color-neutral-500)',
+      activate: () => { if (this.state.qb && this.props.onNav) this.props.onNav('detail'); },
+      toggleR1: () => this.setState(s => ({ r1: !s.r1 })),
+      toggleR2: () => this.setState(s => ({ r2: !s.r2 })),
+      r1Bg: this.state.r1 ? 'var(--color-accent)' : 'var(--color-neutral-800)', r1X: this.state.r1 ? '18px' : '0px',
+      r2Bg: this.state.r2 ? 'var(--color-accent)' : 'var(--color-neutral-800)', r2X: this.state.r2 ? '18px' : '0px',
+      sols, planTotal: '$' + (99 + solSum), solTotal: '$' + solSum, activeCount: String(activeN),
+      cHome: tc('home'), cFlows: tc('flows'), cSolutions: tc('solutions'), cActivity: tc('activity'), cSettings: tc('settings'),
+      stats: [ { v:'128', l:'Runs today', c:'var(--color-text)' }, { v:'124', l:'Successes', c:ok }, { v:'4', l:'Failures', c:err } ],
+      runs: [
+        { name:'Invoice triage', meta:'#4821 \u00b7 posted to QuickBooks', time:'2m', c:ok, open: this.go('run') },
+        { name:'Invoice triage', meta:'#4820 \u00b7 held for review', time:'12m', c:warn, open: this.go('run') },
+        { name:'Email triage', meta:'32 routed \u00b7 3 escalated', time:'1h', c:ok, open: this.go('run') },
+        { name:'Receipt OCR', meta:'#911 \u00b7 4 receipts captured', time:'3h', c:ok, open: this.go('run') },
+      ],
+      flows, steps, palette, actToday, actYest, apprItems, templates,
+      obIcon: ph.icon, obK: ph.k, obT: ph.t, obS: ph.s,
+      obBtn: ob < 2 ? 'Next' : 'Get started',
+      obDots: obPhases.map((_, i) => ({ w: i===ob ? '22px' : '6px', bg: i===ob ? 'var(--color-accent)' : 'var(--color-neutral-700)' })),
+      nextOb: () => { if (this.state.ob < 2) this.setState(s => ({ ob: s.ob + 1 })); else if (this.props.onNav) this.props.onNav('home'); },
+      toggleRem: () => this.setState(s => ({ rem: !s.rem })),
+      toggleFid: () => this.setState(s => ({ fid: !s.fid })),
+      toggleNtf: () => this.setState(s => ({ ntf: !s.ntf })),
+      remBg: rem.bg, remX: rem.x, fidBg: fid.bg, fidX: fid.x, ntfBg: ntf.bg, ntfX: ntf.x,
+    };
+  }
+}
+</script>
+</body>
+</html>
