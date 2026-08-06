@@ -9,8 +9,19 @@ The audit is based on the current source and tests in this repository. Evidence
 is listed for every open item so design decisions can be made before the
 behavior is implemented.
 
-Last audited against commit `41b2bc7` (design v4 sync). Gates at that commit:
-109 tests passing across 11 suites, `tsc --noEmit` clean, ESLint clean.
+Last audited against commit `c80c61d` (design source parity and auth/connection
+contract audit). Gates at this audit: 109 tests passing across 11 suites,
+`tsc --noEmit` clean, and ESLint clean. The Face ID test still emits the
+existing asynchronous `act()` warning.
+
+## Contract documents
+
+- [`DESIGN-CONTRACT.md`](DESIGN-CONTRACT.md) is the canonical draft for login,
+  session, and workspace-connection behavior.
+- `design-source/autom8x-ios-app-design/` is the imported visual source and is
+  not the location for application or integration contracts.
+- This document remains the backlog and ownership record; it links to the
+  contract rather than duplicating it.
 
 ## Current prototype boundary
 
@@ -120,6 +131,8 @@ are listed again in item form below with their evidence.
 
 1. **Authentication and session states** — _owner: Claude Design_
 
+   Contract: [`DESIGN-CONTRACT.md#login-contract`](DESIGN-CONTRACT.md#login-contract).
+
    Login routes directly to Home without validation or a session
    (`app/(auth)/login.tsx:94`); Signup routes to onboarding regardless of field
    contents (`app/(auth)/signup.tsx:75`). The error callout is only reachable
@@ -221,6 +234,8 @@ are listed again in item form below with their evidence.
    confirmation.
 
 9. **Connections, workspace, and billing destinations** — _owner: Claude Design_
+
+   Contract: [`DESIGN-CONTRACT.md#workspace-connection-contract`](DESIGN-CONTRACT.md#workspace-connection-contract).
 
    **Six rows use empty handlers** — Passkeys, connections, Payment method,
    Invoices, Acme Operations, and Members: `app/(tabs)/settings.tsx:121, 143,

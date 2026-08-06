@@ -40,3 +40,8 @@ Tokens, screens, and copy come from the Claude Design project; the brand
 assets originate in the `snoopy` web repo (`public/a8x-mark.png`). Keep
 `constants/theme.ts` in step with the design system's `styles.css` when the
 design evolves — the theme test suite pins the token values.
+
+- `design-source/autom8x-ios-app-design/` — imported visual/design-system snapshot.
+- `DESIGN-CONTRACT.md` — draft behavior and integration contracts; unresolved
+  decisions are marked explicitly.
+- `DESIGN-GAPS.md` — evidence-backed design backlog and implementation order.

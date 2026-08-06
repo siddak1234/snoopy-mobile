@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/nocturne-1d3ab0c3-78c3-45d3-861d-d532b28481ba/styles.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<style>
+body{margin:0}
+a{color:#5548ab;text-decoration:none}a:hover{color:#6a5cc4}
+</style>
+</helmet>
+
+<section data-screen-label="Clickable prototype" style="padding:56px 56px 40px;border-bottom:1px solid rgba(0,0,0,.1);font-family:var(--font-body,Inter,system-ui);color:#20222f">
+<div style="display:flex;align-items:baseline;gap:14px;margin-bottom:6px">
+<h2 style="margin:0;font-size:20px;font-weight:500;letter-spacing:-.01em">Clickable prototype</h2>
+<span style="font-size:12.5px;color:#5d617a">splash auto-advances → tap through login → Face ID → the app. Tab bar, approvals and toggles are live.</span>
+</div>
+<div style="display:flex;gap:36px;align-items:flex-start;flex-wrap:wrap;margin-top:22px">
+<dc-import name="Screen" screen="{{cur}}" on-nav="{{nav}}" hint-size="402px,874px" style="width:402px;height:874px;flex:none"></dc-import>
+<div style="display:flex;flex-direction:column;gap:14px;max-width:280px;padding-top:8px">
+<div style="font-size:11px;letter-spacing:.2em;color:#5548ab">FLOW MAP</div>
+<div style="font-size:13.5px;line-height:1.75;color:#5d617a">
+Splash → Welcome<br>
+Get started → Sign up → Onboarding tour → Home<br>
+Log in → Face ID unlock → Home<br>
+Home → Approvals, Solutions, run detail, Activity<br>
+Recent runs → tap a run → Run detail<br>
+Solutions → Add → one-time setup:<br>
+&nbsp;&nbsp;connect via OAuth (stays linked), source,<br>
+&nbsp;&nbsp;review rules, notifications → Activate<br>
+Flows → Workflow detail → Builder (edit)<br>
+Settings → Plan &amp; billing, Face ID, passkeys
+</div>
+<div onClick="{{restart}}" style="align-self:flex-start;height:38px;padding:0 18px;border-radius:999px;border:1px solid #6a5cc4;color:#6a5cc4;display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-accent) 12%,transparent)"><i class="ph ph-arrow-counter-clockwise" style="font-size:15px"></i>Restart flow</div>
+</div>
+</div>
+</section>
+
+<section data-screen-label="Identity and destinations" style="padding:48px 56px 40px;border-bottom:1px solid rgba(0,0,0,.1);font-family:var(--font-body,Inter,system-ui);color:#20222f">
+<h2 style="margin:0 0 6px;font-size:20px;font-weight:500;letter-spacing:-.01em">Identity, lifecycle &amp; destinations</h2>
+<p style="margin:0 0 22px;font-size:12.5px;color:#5d617a">Each workflow now carries its own detail (status, connections, pipeline); Pause/Resume/Publish, live approval counts, run retry, search and template filters are wired. New destinations: password reset, notifications inbox, template configure.</p>
+<div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start">
+<div data-screen-label="Detail paused" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">D1 · Workflow detail — Paused + reconnect</span><dc-import name="Screen" screen="detail" flow="kpi" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+<div data-screen-label="Detail draft" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">D2 · Workflow detail — Draft</span><dc-import name="Screen" screen="detail" flow="lead" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+<div data-screen-label="Template configure" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">D3 · Template → configure → Builder</span><dc-import name="Screen" screen="configure" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+<div data-screen-label="Notifications" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">D4 · Notifications + permission priming</span><dc-import name="Screen" screen="notifications" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+<div data-screen-label="Password reset" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">D5 · Password reset</span><dc-import name="Screen" screen="reset" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+</div>
+</section>
+
+<section data-screen-label="Setup and states" style="padding:48px 56px 40px;border-bottom:1px solid rgba(0,0,0,.1);font-family:var(--font-body,Inter,system-ui);color:#20222f">
+<h2 style="margin:0 0 6px;font-size:20px;font-weight:500;letter-spacing:-.01em">Setup, states &amp; variants</h2>
+<p style="margin:0 0 22px;font-size:12.5px;color:#5d617a">Loading, empty, error and per-run states — plus the one-time solution setup with OAuth connections.</p>
+<div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start">
+<div data-screen-label="Solution setup" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">S1 · Solution setup (OAuth)</span><dc-import name="Screen" screen="setup" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+<div data-screen-label="Run success" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">S2 · Run detail — success</span><dc-import name="Screen" screen="run" run="success" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+<div data-screen-label="Run failed" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">S3 · Run detail — failed</span><dc-import name="Screen" screen="run" run="failed" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+<div data-screen-label="Home loading" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">S4 · Home — loading</span><dc-import name="Screen" screen="home" variant="loading" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+<div data-screen-label="Home first run" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">S5 · Home — first run (empty)</span><dc-import name="Screen" screen="home" variant="empty" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+<div data-screen-label="Home offline" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">S6 · Home — offline</span><dc-import name="Screen" screen="home" variant="error" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+<div data-screen-label="Login error" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">S7 · Log in — wrong password</span><dc-import name="Screen" screen="login" variant="error" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+<div data-screen-label="Approvals empty" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">S8 · Approvals — all clear</span><dc-import name="Screen" screen="approvals" variant="empty" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+</div>
+</section>
+
+<section data-screen-label="Auth and lifecycle" style="padding:48px 56px 40px;border-bottom:1px solid rgba(0,0,0,.1);font-family:var(--font-body,Inter,system-ui);color:#20222f">
+<h2 style="margin:0 0 22px;font-size:20px;font-weight:500;letter-spacing:-.01em">Auth &amp; lifecycle</h2>
+<div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start">
+<div data-screen-label="Splash" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">01 · Splash</span><dc-import name="Screen" screen="splash" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+<div data-screen-label="Welcome" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">02 · Welcome</span><dc-import name="Screen" screen="welcome" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+<div data-screen-label="Login" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">03 · Log in</span><dc-import name="Screen" screen="login" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+<div data-screen-label="Sign up" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">04 · Sign up</span><dc-import name="Screen" screen="signup" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+<div data-screen-label="Onboarding" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">05 · Onboarding tour</span><dc-import name="Screen" screen="onboarding" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+<div data-screen-label="Face ID" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">06 · Face ID unlock</span><dc-import name="Screen" screen="faceid" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+</div>
+</section>
+
+<section data-screen-label="Core app" style="padding:48px 56px 40px;border-bottom:1px solid rgba(0,0,0,.1);font-family:var(--font-body,Inter,system-ui);color:#20222f">
+<h2 style="margin:0 0 22px;font-size:20px;font-weight:500;letter-spacing:-.01em">Core app</h2>
+<div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start">
+<div data-screen-label="Home" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">07 · Home dashboard</span><dc-import name="Screen" screen="home" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+<div data-screen-label="Workflows" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">08 · Workflows</span><dc-import name="Screen" screen="flows" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+<div data-screen-label="Workflow detail" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">09 · Workflow detail</span><dc-import name="Screen" screen="detail" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+<div data-screen-label="Solutions" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">10 · Solutions marketplace</span><dc-import name="Screen" screen="solutions" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+<div data-screen-label="Solution setup" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">11 · Solution setup (one-time)</span><dc-import name="Screen" screen="setup" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+<div data-screen-label="Run detail" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">12 · Run detail</span><dc-import name="Screen" screen="run" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+<div data-screen-label="Builder" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">13 · Builder (edit a flow)</span><dc-import name="Screen" screen="builder" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+<div data-screen-label="Activity" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">14 · Activity</span><dc-import name="Screen" screen="activity" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+<div data-screen-label="Approvals" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">15 · Approvals inbox</span><dc-import name="Screen" screen="approvals" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+<div data-screen-label="Templates" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">16 · Templates</span><dc-import name="Screen" screen="templates" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+<div data-screen-label="Settings" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">17 · Settings &amp; security</span><dc-import name="Screen" screen="settings" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+</div>
+</section>
+
+<section data-screen-label="Light mode" style="padding:48px 56px 64px;font-family:var(--font-body,Inter,system-ui);color:#20222f">
+<h2 style="margin:0 0 22px;font-size:20px;font-weight:500;letter-spacing:-.01em">Light mode</h2>
+<div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start">
+<div data-screen-label="Home light" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">18 · Home (light)</span><dc-import name="Screen" screen="home" light="{{lt}}" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+<div data-screen-label="Login light" style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;color:#5d617a">19 · Log in (light)</span><dc-import name="Screen" screen="login" light="{{lt}}" hint-size="402px,874px" style="width:402px;height:874px"></dc-import></div>
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;splashDelay&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:2400,&quot;min&quot;:500,&quot;max&quot;:8000,&quot;step&quot;:100,&quot;unit&quot;:&quot;ms&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Prototype&quot;}}">
+class Component extends DCLogic {
+  state = { cur: 'splash' };
+  componentDidMount() {
+    this._arm();
+  }
+  _arm() {
+    clearTimeout(this._t);
+    const delay = Number(this.props.splashDelay) || 2400;
+    this._t = setTimeout(() => { if (this.state.cur === 'splash') this.setState({ cur: 'welcome' }); }, delay);
+  }
+  componentWillUnmount() { clearTimeout(this._t); }
+  renderVals() {
+    return {
+      cur: this.state.cur,
+      lt: true,
+      nav: (s) => this.setState({ cur: s }),
+      restart: () => { this.setState({ cur: 'splash' }); this._arm(); },
+    };
+  }
+}
+</script>
+</body>
+</html>
