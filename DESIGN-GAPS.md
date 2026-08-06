@@ -61,11 +61,64 @@ the prototype and covered by tests.
   `app/(tabs)/(home)/notifications.tsx`.
 - **Password reset** flow, reached from Login's Forgot? link: `app/(auth)/reset.tsx`.
 
+## Ownership routing — who takes each item
+
+Every open item is routed to one of two places. "Claude Design" means the item
+is blocked until the design defines it. "Engineering" means the decision is
+already made and only implementation remains — this is the tech-debt column.
+"New surfaces" counts screens or sheets that do not exist in the design today;
+items with 0 are new *states* on screens that already exist.
+
+| # | Item | Owner | New surfaces |
+| --- | --- | --- | --- |
+| 1 | Authentication and session states | Claude Design | 0 |
+| 2 | Loading/empty/error outside Home | Claude Design | 0 |
+| 3 | Entity identity — remaining cases | Claude Design + Engineering | 0 |
+| 4 | Prototype persistence boundary | **Engineering** | 0 |
+| 5 | Builder editing model | Claude Design | ~3 |
+| 6 | Solution activation and removal consequences | Claude Design | 0 |
+| 7 | Notification depth | Claude Design | 1 |
+| 8 | Account and security destinations | Claude Design | ~2 |
+| 9 | Connections, workspace, billing destinations | Claude Design | ~5 |
+| 10 | Responsive and accessibility behavior | Claude Design + Engineering | 0 |
+| 11 | Reduced-motion and light-mode coverage | Claude Design + Engineering | 0 |
+
+Roughly **11 new surfaces** total, concentrated in Builder (5) and the account
+and billing destinations (8, 9). Everything else is states, dialogs, and
+variants on existing screens.
+
+Notes on the three split items:
+
+- **Item 3** — the plumbing (passing a template or solution id through a route)
+  is engineering. The content is design: the wizard was only ever drawn for
+  Invoice triage, so there is nothing to render for the other five solutions.
+  Defining one data-driven pattern unblocks all twelve screens without drawing
+  them individually, which is how `flowDefs` already serves four workflows from
+  one detail screen.
+- **Item 10** — accessible names and `supportsTablet` are engineering; the
+  Dynamic Type and iPad layout policies are design decisions.
+- **Item 11** — the Reduce Motion implementation is engineering once the design
+  confirms "static alternative" means holding the end state; the light/Auto
+  visual review is design.
+
+## Engineering tech debt — no design input needed
+
+These four can proceed immediately and in parallel with any design work. They
+are listed again in item form below with their evidence.
+
+1. **Persistence boundary** (item 4) — pick what survives relaunch and wire the
+   three providers to storage. Zero storage references exist today.
+2. **Accessibility names and roles** (item 10) — only five files declare them.
+3. **Reduce Motion** (item 11) — zero `AccessibilityInfo` references; four
+   animated surfaces loop unconditionally.
+4. **`supportsTablet: false`** (item 10) — one line in `app.json:12`, unless an
+   iPad layout is planned.
+
 ## Open gaps
 
 ### P0 — define the state and entity contract before wiring behavior
 
-1. **Authentication and session states**
+1. **Authentication and session states** — _owner: Claude Design_
 
    Login routes directly to Home without validation or a session
    (`app/(auth)/login.tsx:94`); Signup routes to onboarding regardless of field
@@ -80,7 +133,7 @@ the prototype and covered by tests.
    authenticated/unauthenticated route boundary. Every tab route is currently
    reachable without signing in.
 
-2. **Loading, empty, and error coverage outside Home**
+2. **Loading, empty, and error coverage outside Home** — _owner: Claude Design_
 
    Home is the only screen with loading, empty, and error states. Filtered-empty
    states exist on Flows, Activity, and Solutions. **Workflow detail, run
@@ -90,7 +143,7 @@ the prototype and covered by tests.
    Design states needed: initial loading, failed load, offline/retry, and failed
    action per screen. Each state should identify its retry or next action.
 
-3. **Entity identity — remaining cases**
+3. **Entity identity — remaining cases** — _owner: Claude Design + Engineering_
 
    Workflow identity is resolved. Three navigations still target hardcoded
    destinations regardless of the entity acted on:
@@ -106,7 +159,7 @@ the prototype and covered by tests.
    Design states needed: per-solution setup content, per-template configure
    content, and the run → parent-workflow relationship.
 
-4. **Prototype persistence boundary**
+4. **Prototype persistence boundary** — _owner: Engineering_
 
    Theme mode, active solutions, workflow status, approval decisions, setup
    toggles, and settings toggles are React state only. A repository-wide search
@@ -120,7 +173,7 @@ the prototype and covered by tests.
 
 ### P1 — core workflow creation and operation
 
-5. **Builder editing model — the largest remaining gap**
+5. **Builder editing model — the largest remaining gap** — _owner: Claude Design_
 
    The builder renders fixture steps, palette chips, plus connectors, drag
    handles, Save, and Test run. The file contains **zero `onPress` handlers**:
@@ -130,7 +183,7 @@ the prototype and covered by tests.
    deletion, reorder interaction, branch representation, unsaved-change state,
    save feedback, validation, and the Test run result/loading/error states.
 
-6. **Solution activation and removal consequences**
+6. **Solution activation and removal consequences** — _owner: Claude Design_
 
    Removal has a confirmation dialog, but it only toggles the solution in the
    shared local map — no dependent-workflow pausing and no billing confirmation
@@ -142,7 +195,7 @@ the prototype and covered by tests.
    treatment, connection failure, entitlement pending/success/failure,
    dependent-workflow consequences, and removal success/failure.
 
-7. **Notification depth**
+7. **Notification depth** — _owner: Claude Design_
 
    The inbox exists, but "Mark all read" is local-only, there is no unread badge
    contract with the Home bell, no notification detail, and no empty state. Both
@@ -156,7 +209,7 @@ the prototype and covered by tests.
 
 ### P2 — account, workspace, and billing destinations
 
-8. **Account and security destinations**
+8. **Account and security destinations** — _owner: Claude Design_
 
    The profile card has no handler (`app/(tabs)/settings.tsx:95`). Face ID, Stay
    signed in, and sign-out are local prototype controls; Face ID unlock attempts
@@ -167,7 +220,7 @@ the prototype and covered by tests.
    success/failure/cancel/unavailable, signed-in-device state, and sign-out
    confirmation.
 
-9. **Connections, workspace, and billing destinations**
+9. **Connections, workspace, and billing destinations** — _owner: Claude Design_
 
    **Six rows use empty handlers** — Passkeys, connections, Payment method,
    Invoices, Acme Operations, and Members: `app/(tabs)/settings.tsx:121, 143,
@@ -180,7 +233,7 @@ the prototype and covered by tests.
 
 ### P3 — platform and quality decisions
 
-10. **Responsive and accessibility behavior**
+10. **Responsive and accessibility behavior** — _owner: Claude Design + Engineering_
 
     The design is measured on a 402×874 canvas. `app.json:12` still declares
     `supportsTablet: true` with no iPad layout, and there are no documented
@@ -193,7 +246,7 @@ the prototype and covered by tests.
     layout policy (or dropping tablet support), accessible names/roles for every
     control, and minimum touch-target behavior.
 
-11. **Reduced-motion and light-mode coverage**
+11. **Reduced-motion and light-mode coverage** — _owner: Claude Design + Engineering_
 
     Splash, Face ID, onboarding, and skeleton screens run Reanimated loops with
     **zero** `AccessibilityInfo` / reduce-motion references anywhere in the
@@ -203,16 +256,6 @@ the prototype and covered by tests.
 
     Design decisions needed: static alternatives under Reduce Motion and visual
     approval of every screen in Light and Auto modes.
-
-## Work that needs no further design
-
-These are implementation decisions rather than design questions and can proceed
-independently of the backlog above:
-
-- Respect Reduce Motion in the four animated surfaces (item 11).
-- Add accessible names and roles to the remaining controls (item 10).
-- Choose and wire a persistence boundary for the three providers (item 4).
-- Set `supportsTablet: false` unless an iPad layout is planned (item 10).
 
 ## Proposed implementation order
 
