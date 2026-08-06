@@ -6,24 +6,26 @@ import {
   approvals,
   builderPalette,
   defaultActiveSolutions,
-  detailStats,
-  flows,
+  flowDefs,
+  flowKeys,
   homeStats,
   onboardingPhases,
   PLAN_BASE_PRICE,
+  notifications,
   recentRuns,
   runDetails,
   runFields,
   solutionDefs,
   solutionFilters,
   steps,
+  templateConfigure,
   templateFilters,
   templates,
 } from '@/lib/fixtures';
 
 describe('fixture data — byte-exact to the design prototype', () => {
   it('has the design cardinalities', () => {
-    expect(flows).toHaveLength(4);
+    expect(flowKeys).toHaveLength(4);
     expect(steps).toHaveLength(4);
     expect(builderPalette).toHaveLength(6);
     expect(activityToday).toHaveLength(4);
@@ -32,13 +34,12 @@ describe('fixture data — byte-exact to the design prototype', () => {
     expect(templates).toHaveLength(6);
     expect(homeStats).toHaveLength(3);
     expect(recentRuns).toHaveLength(4);
-    expect(detailStats).toHaveLength(3);
     expect(onboardingPhases).toHaveLength(3);
   });
 
   it('keeps typographic characters intact (·, →, —, ✓, …)', () => {
-    expect(flows[0].desc).toBe('AP inbox → QuickBooks');
-    expect(flows[0].runs).toBe('1,284 runs · 1,272 ok · 12 failed');
+    expect(flowDefs.invoice.desc).toBe('AP inbox → QuickBooks');
+    expect(flowDefs.invoice.runs).toBe('1,284 runs · 1,272 ok · 12 failed');
     expect(activityToday[1].desc).toBe('Run #4820 · held for review — amount mismatch');
     expect(activityYesterday[0].desc).toBe('Run #52 · failed — Sheets auth expired');
     expect(approvalDoneText.approved).toBe('Approved ✓ — agent resuming');
@@ -64,9 +65,9 @@ describe('fixture data — byte-exact to the design prototype', () => {
   });
 
   it('keeps pipeline steps and their kinds', () => {
-    expect(steps.map((s) => s.kicker)).toEqual(['TRIGGER', 'AI STEP', 'AI STEP', 'ACTION']);
-    expect(steps[2].desc).toBe('Confidence < 95% → human review');
-    expect(steps.map((s) => s.more)).toEqual([true, true, true, false]);
+    expect(steps.map((st) => st.kicker)).toEqual(['TRIGGER', 'AI STEP', 'AI STEP', 'ACTION']);
+    expect(steps[2].desc).toBe('Low confidence → human review');
+    expect(steps.map((st) => st.more)).toEqual([true, true, true, false]);
   });
 
   it('keeps filter chips in design order', () => {
@@ -75,11 +76,11 @@ describe('fixture data — byte-exact to the design prototype', () => {
   });
 
   it('keeps flow statuses matching the pills map', () => {
-    expect(flows.map((f) => f.status)).toEqual(['Live', 'Live', 'Paused', 'Draft']);
+    expect(flowKeys.map((k) => flowDefs[k].status)).toEqual(['Live', 'Live', 'Paused', 'Draft']);
   });
 
   it('keeps the solutions marketplace pricing (design solDefs)', () => {
-    expect(solutionDefs.map((s) => s.price)).toEqual([39, 29, 19, 19, 49, 9]);
+    expect(solutionDefs.map((sd) => sd.price)).toEqual([39, 29, 19, 19, 49, 9]);
     expect(defaultActiveSolutions).toEqual([0, 1, 2]);
     expect(PLAN_BASE_PRICE).toBe(99);
     expect(solutionFilters).toEqual(['All', 'Finance', 'Ops', 'Sales', 'Reporting']);
@@ -112,10 +113,52 @@ describe('fixture data — byte-exact to the design prototype', () => {
     ]);
   });
 
-  it('keeps the updated run-count strings and colored stats', () => {
-    expect(flows[0].runs).toBe('1,284 runs · 1,272 ok · 12 failed');
-    expect(homeStats.map((s) => s.label)).toEqual(['Runs today', 'Successes', 'Failures']);
-    expect(detailStats.map((s) => s.tone)).toEqual(['text', 'ok', 'err']);
+  it('keeps the updated run-count strings and per-flow stats', () => {
+    expect(flowDefs.invoice.runs).toBe('1,284 runs · 1,272 ok · 12 failed');
+    expect(flowDefs.kpi.runs).toBe('52 runs · 51 ok · 1 failed');
+    expect(homeStats.map((hs) => hs.label)).toEqual(['Runs today', 'Successes', 'Failures']);
     expect(recentRuns.map((r) => r.runVariant)).toEqual(['success', 'held', 'success', 'success']);
+  });
+
+  it('carries per-workflow connections, steps and counts (design flowDefs)', () => {
+    expect(flowKeys).toEqual(['invoice', 'email', 'kpi', 'lead']);
+    expect(flowDefs.email.steps.map((st) => st.kicker)).toEqual([
+      'TRIGGER',
+      'AI STEP',
+      'BRANCH',
+      'ACTION',
+    ]);
+    expect(flowDefs.kpi.connections[0]).toMatchObject({
+      name: 'Google Sheets',
+      sub: 'Auth expired — tap to reconnect',
+      tone: 'warn',
+      status: 'Reconnect',
+    });
+    expect(flowDefs.lead.runCount).toBe('—');
+    expect(flowDefs.lead.connections[0].name).toBe('HubSpot');
+    expect(flowDefs.invoice.steps[2].desc).toBe('Low confidence → human review');
+  });
+
+  it('carries the retried run variant, notifications and configure copy (v4)', () => {
+    expect(runDetails.retried.title).toBe('Run #52');
+    expect(runDetails.retried.status).toBe('Success');
+    expect(runDetails.retried.sub).toBe('Weekly KPI report · retried just now');
+    expect(runDetails.retried.timeline.map((t) => t.title)).toEqual([
+      'Manual retry started',
+      'Sheets reconnected & fetched',
+      'Digest built',
+      'Posted to Slack',
+    ]);
+    expect(runDetails.retried.fields).toBe(false);
+
+    expect(notifications).toHaveLength(5);
+    expect(notifications.filter((n) => n.unread)).toHaveLength(2);
+    expect(notifications[0].desc).toBe('Invoice triage · amount differs from PO $11,900');
+
+    expect(templateConfigure.defaultName).toBe('Invoice capture — AP');
+    expect(templateConfigure.meta).toBe('Finance · 4 steps · used by 2,100 teams');
+    expect(templateConfigure.footnote).toBe(
+      'Steps land preloaded — edit anything before it goes live.',
+    );
   });
 });

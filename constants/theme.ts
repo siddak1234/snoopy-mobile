@@ -92,6 +92,9 @@ export const status = {
   ok: '#34d399',
   okBg: 'rgba(52,211,153,0.1)',
   okBorder: 'rgba(52,211,153,0.35)',
+  /** "All caught up" banner (design apprAllDone). */
+  okBannerBg: 'rgba(52,211,153,0.07)',
+  okBannerBorder: 'rgba(52,211,153,0.3)',
   warnText: '#fbbf24',
   warnBg: 'rgba(245,158,11,0.1)',
   warnBorder: 'rgba(245,158,11,0.35)',

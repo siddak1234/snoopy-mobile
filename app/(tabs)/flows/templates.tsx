@@ -1,7 +1,9 @@
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { SquaresFour } from 'phosphor-react-native';
 
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { FilterChip } from '@/components/nocturne/filter-chip';
@@ -17,6 +19,9 @@ export default function TemplatesScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const cardWidth = (width - layout.screenX * 2 - 10) / 2;
+  const [category, setCategory] = useState('All');
+
+  const visible = templates.filter((t) => category === 'All' || t.cat === category);
 
   return (
     <ScrollView
@@ -32,14 +37,14 @@ export default function TemplatesScreen() {
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
         {templateFilters.map((f) => (
-          <FilterChip key={f} label={f} active={f === 'All'} />
+          <FilterChip key={f} label={f} active={f === category} onPress={() => setCategory(f)} />
         ))}
       </ScrollView>
       <View style={styles.grid}>
-        {templates.map((t) => (
+        {visible.map((t) => (
           <SurfaceCard
             key={t.name}
-            onPress={() => router.push('/(tabs)/flows/builder')}
+            onPress={() => router.push('/(tabs)/flows/configure')}
             style={[styles.card, { width: cardWidth }]}>
             <IconTile icon={t.icon} size={38} iconSize={19} borderRadius={11} bordered />
             <Text style={[styles.cardName, { color: palette.text }]}>{t.name}</Text>
@@ -50,6 +55,14 @@ export default function TemplatesScreen() {
           </SurfaceCard>
         ))}
       </View>
+      {visible.length === 0 ? (
+        <View style={styles.emptyWrap}>
+          <SquaresFour size={34} color={palette.neutral[600]} />
+          <Text style={[styles.emptyText, { color: palette.neutral[500] }]}>
+            No {category} templates yet.
+          </Text>
+        </View>
+      ) : null}
     </ScrollView>
   );
 }
@@ -100,5 +113,15 @@ const styles = StyleSheet.create({
   cardUse: {
     fontFamily: fonts.medium,
     fontSize: 12,
+  },
+  emptyWrap: {
+    paddingVertical: 48,
+    alignItems: 'center',
+    gap: 10,
+  },
+  emptyText: {
+    fontFamily: fonts.regular,
+    fontSize: 13.5,
+    textAlign: 'center',
   },
 });

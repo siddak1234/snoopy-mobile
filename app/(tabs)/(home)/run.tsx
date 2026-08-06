@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { FlowArrow } from 'phosphor-react-native';
-import React from 'react';
+import { CircleNotch, FlowArrow } from 'phosphor-react-native';
+import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -57,8 +57,23 @@ export default function RunDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { variant } = useLocalSearchParams<{ variant?: RunVariant }>();
-  const run = runDetails[variant ?? 'held'] ?? runDetails.held;
+  // Retry (design `rty`): idle → retrying (1600ms) → the retried run.
+  const [retry, setRetry] = useState<'idle' | 'running' | 'done'>('idle');
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+
+  const requested = variant ?? 'held';
+  const effective: RunVariant =
+    requested === 'failed' && retry === 'done' ? 'retried' : requested;
+  const run = runDetails[effective] ?? runDetails.held;
   const isHeld = run.status === 'Held';
+  const isRetrying = retry === 'running';
+
+  const startRetry = () => {
+    if (retry !== 'idle') return;
+    setRetry('running');
+    timer.current = setTimeout(() => setRetry('done'), 1600);
+  };
 
   return (
     <ScrollView
@@ -117,18 +132,14 @@ export default function RunDetailScreen() {
       <View style={styles.actions}>
         {run.action ? (
           <PillButton
-            label={run.action.label}
+            label={isRetrying ? 'Retrying…' : run.action.label}
             variant="primary"
             height={46}
             fontSize={14}
-            icon={run.action.icon}
+            icon={isRetrying ? CircleNotch : run.action.icon}
             iconSize={16}
             style={styles.actionBtn}
-            // Held → Approvals; Failed → the design wires Retry back to the
-            // run screen itself (prototype), so it stays visual here.
-            onPress={
-              isHeld ? () => router.push('/(tabs)/activity/approvals') : undefined
-            }
+            onPress={isHeld ? () => router.push('/(tabs)/activity/approvals') : startRetry}
           />
         ) : null}
         <PillButton
