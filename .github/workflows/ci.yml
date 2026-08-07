@@ -57,3 +57,22 @@ jobs:
       # a new one fails, and removing one without updating the allowlist fails.
       # Story S7.3 drives the pinned count to zero.
       - run: npm run audit:credentials
+      - name: No salvaged client data
+        run: |
+          # `_salvage/` lives in the workspace folder, outside every repository. It
+          # holds the recovered n8n workflows and the legacy database archive: real
+          # customer email addresses, vendor names, and dollar amounts. This
+          # repository is public and git history is permanent, so deleting such a
+          # file in a later commit does not remove it — the only workable control is
+          # to never let it land.
+          if git ls-files | grep -i '_salvage'; then
+            echo "FAIL: a _salvage path is tracked in this repository."
+            exit 1
+          fi
+          # Excludes .github/workflows: this file necessarily names the identifiers
+          # it searches for.
+          if git grep -Iln -iE 'gideontoal|clarossolutions' -- . ':(exclude).github/workflows/*'; then
+            echo "FAIL: a real client identifier appears in tracked content."
+            exit 1
+          fi
+          echo "No salvaged client data: PASS"
