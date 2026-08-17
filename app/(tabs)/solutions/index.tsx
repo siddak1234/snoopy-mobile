@@ -8,23 +8,63 @@ import { FilterChip } from '@/components/nocturne/filter-chip';
 import { IconTile } from '@/components/nocturne/icon-tile';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
+import { ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
+import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useSolutions } from '@/hooks/use-solutions';
+import { errorTitleFor } from '@/lib/content/screen-states';
+import { readCatalog } from '@/lib/platform/catalog';
+import { toSolutions, type SolutionView } from '@/lib/view/catalog';
 import { useTheme } from '@/hooks/use-theme';
-import { solutionDefs, solutionFilters } from '@/lib/fixtures';
+import { defaultActiveSolutions, solutionDefs, solutionFilters } from '@/lib/fixtures';
 
 export default function SolutionsScreen() {
   const { palette } = useTheme();
-  const { active, toggle, activeCount, planTotal } = useSolutions();
+  const { isActive, toggle, totals } = useSolutions();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [category, setCategory] = useState('All');
-  /** Index of the solution pending removal (design rmIdx). */
-  const [removeIndex, setRemoveIndex] = useState<number | null>(null);
+  /** The solution pending removal, by templateId (design rmIdx). */
+  const [removeId, setRemoveId] = useState<string | null>(null);
 
-  const visible = solutionDefs
-    .map((sol, index) => ({ sol, index }))
-    .filter(({ sol }) => category === 'All' || sol.cat === category);
-  const removeSolution = removeIndex == null ? null : solutionDefs[removeIndex];
+  /**
+   * The marketplace, from the catalog.
+   *
+   * `subscribed` is the server's own answer to Add-versus-Added, and the filter
+   * chips come from `categories`, which the contract says a client must render
+   * rather than invent. Identity is the templateId throughout — the array
+   * position this screen used to key on cannot survive contact with a real
+   * catalog.
+   */
+  const catalog = useWorkspaceResource(readCatalog);
+  const solutions: SolutionView[] =
+    catalog.status === 'ready'
+      ? toSolutions(catalog.data)
+      : solutionDefs.map((sol, i) => ({
+          ...sol,
+          templateId: sol.name,
+          subscribed: defaultActiveSolutions.includes(i),
+        }));
+  const chips =
+    catalog.status === 'ready' ? catalog.data.categories : solutionFilters;
+
+  const visible = solutions.filter((sol) => category === 'All' || sol.cat === category);
+  const removeSolution = removeId == null ? null : solutions.find((s) => s.templateId === removeId);
+  const { activeCount, planTotal } = totals(solutions);
+
+  // Below every hook: these return early.
+  if (catalog.status === 'loading') return <ScreenLoading topInset={insets.top} />;
+  if (catalog.status === 'offline') {
+    return <ScreenOffline onRetry={catalog.reload} topInset={insets.top} />;
+  }
+  if (catalog.status === 'error') {
+    return (
+      <ScreenError
+        title={errorTitleFor('solutions')}
+        onRetry={catalog.reload}
+        topInset={insets.top}
+      />
+    );
+  }
 
   return (
     <ScrollView
@@ -63,14 +103,14 @@ export default function SolutionsScreen() {
       </Pressable>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
-        {solutionFilters.map((f) => (
+        {chips.map((f) => (
           <FilterChip key={f} label={f} active={f === category} onPress={() => setCategory(f)} />
         ))}
       </ScrollView>
 
       <View style={styles.list}>
-        {visible.map(({ sol, index: i }) => {
-          const added = !!active[i];
+        {visible.map((sol) => {
+          const added = isActive(sol.templateId, sol.subscribed);
           return (
             <SurfaceCard key={sol.name} style={styles.card}>
               <IconTile icon={sol.icon} size={42} iconSize={21} borderRadius={12} bordered />
@@ -84,8 +124,8 @@ export default function SolutionsScreen() {
               <Pressable
                 onPress={() =>
                   added
-                    ? setRemoveIndex(i)
-                    : router.push({ pathname: '/(tabs)/solutions/setup', params: { index: String(i) } })
+                    ? setRemoveId(sol.templateId)
+                    : router.push({ pathname: '/(tabs)/solutions/setup', params: { template: sol.templateId, index: String(solutions.indexOf(sol)) } })
                 }
                 style={({ pressed }) => [
                   styles.addBtn,
@@ -115,10 +155,10 @@ export default function SolutionsScreen() {
       </View>
 
       <Modal
-        visible={removeIndex != null}
+        visible={removeId != null}
         transparent
         animationType="fade"
-        onRequestClose={() => setRemoveIndex(null)}>
+        onRequestClose={() => setRemoveId(null)}>
         <View style={[styles.overlay, { backgroundColor: status.overlay }]}>
           <View
             style={[
@@ -134,7 +174,7 @@ export default function SolutionsScreen() {
             </Text>
             <View style={styles.dialogActions}>
               <Pressable
-                onPress={() => setRemoveIndex(null)}
+                onPress={() => setRemoveId(null)}
                 style={({ pressed }) => [
                   styles.dialogBtn,
                   { borderColor: palette.neutral[700] },
@@ -144,8 +184,8 @@ export default function SolutionsScreen() {
               </Pressable>
               <Pressable
                 onPress={() => {
-                  if (removeIndex != null) toggle(removeIndex);
-                  setRemoveIndex(null);
+                  if (removeSolution) toggle(removeSolution.templateId, removeSolution.subscribed);
+                  setRemoveId(null);
                 }}
                 style={({ pressed }) => [
                   styles.dialogBtn,

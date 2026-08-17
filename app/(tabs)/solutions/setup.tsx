@@ -20,25 +20,76 @@ import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
 import { useSolutions } from '@/hooks/use-solutions';
 import { useTheme } from '@/hooks/use-theme';
 import { solutionDefs } from '@/lib/fixtures';
+import { ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
+import { useWorkspaceResource } from '@/hooks/use-resource';
+import { errorTitleFor } from '@/lib/content/screen-states';
+import { readCatalog } from '@/lib/platform/catalog';
+import { PlatformNotConfiguredError } from '@/lib/platform/problem';
+import { iconFor } from '@/lib/view/icon-registry';
 
 /** One-time solution setup (design `sSetup`). The design's fixture walks
  *  through Invoice triage; the header names whichever solution was added. */
 export default function SetupScreen() {
   const { palette } = useTheme();
-  const { active, toggle } = useSolutions();
+  const { isActive, toggle } = useSolutions();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { index } = useLocalSearchParams<{ index?: string }>();
-  const solIndex = Number(index ?? 0);
-  const solution = solutionDefs[solIndex] ?? solutionDefs[0];
+  /**
+   * The solution being set up, by templateId.
+   *
+   * `index` was the fixture's array position, which is why every solution used to
+   * open the same content — DESIGN-GAPS item 3's first case. Identity is the
+   * catalog's own templateId now.
+   *
+   * The four sections are still the prototype's fixed rows. Generating them from
+   * `setup[]` — four sections × four control kinds, which is what the design
+   * delivered on 2026-08-17 and what BUILD-PLAN §2.2 sized the closed unions for
+   * — is the remaining work on this screen, tracked in DESIGN-CONTRACT.md.
+   */
+  const { template, index } = useLocalSearchParams<{ template?: string; index?: string }>();
+  const catalog = useWorkspaceResource(
+    (workspaceId) => {
+      if (!template) throw new PlatformNotConfiguredError();
+      return readCatalog(workspaceId);
+    },
+    [template],
+  );
+  const entry =
+    catalog.status === 'ready'
+      ? catalog.data.automations.find((a) => a.templateId === template)
+      : undefined;
+  const solution = entry
+    ? { icon: iconFor(entry.icon), name: entry.name, desc: entry.description, cat: entry.category, price: entry.monthlyPriceUsd }
+    : (solutionDefs[Number(index ?? 0)] ?? solutionDefs[0]);
+  const templateId = entry?.templateId ?? solution.name;
 
   const [qbConnected, setQbConnected] = useState(false);
   const [holdOnMismatch, setHoldOnMismatch] = useState(true);
   const [holdAboveLimit, setHoldAboveLimit] = useState(true);
 
+  // Below every hook: these return early.
+  if (template) {
+    if (catalog.status === 'loading') return <ScreenLoading topInset={insets.top} />;
+    if (catalog.status === 'offline') {
+      return <ScreenOffline onRetry={catalog.reload} onBack={() => router.back()} topInset={insets.top} />;
+    }
+    if (catalog.status === 'error') {
+      return (
+        <ScreenError
+          title={errorTitleFor('setup')}
+          onRetry={catalog.reload}
+          onBack={() => router.back()}
+          topInset={insets.top}
+        />
+      );
+    }
+  }
+
   const activate = () => {
     if (!qbConnected) return;
-    if (!active[solIndex]) toggle(solIndex);
+    if (!isActive(templateId, entry?.subscribed ?? false)) {
+      toggle(templateId, entry?.subscribed ?? false);
+    }
     router.push('/(tabs)/flows/detail');
   };
 
