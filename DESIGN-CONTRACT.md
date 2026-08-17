@@ -80,6 +80,49 @@ gone; what remains open is recorded plainly rather than left implied.
   `associatedDomains` and Android `intentFilters` from that one configured
   redirect URI. The scheme remains for ordinary deep links.
 
+## Fixture ↔ contract reconciliation — the Round 6 card's question, settled
+
+The Round 6 card asks it directly: *"do the 427 lines of `lib/fixtures.ts` match
+the real wire shapes, or an invented shape that will fight the API? Answer it
+before writing the client, not during."* Round 6 answered it for the four screens
+`lib/view` serves. This is the rest, read off the three published OpenAPI
+documents.
+
+**The answer is mostly reassuring.** Where the platform publishes a shape, the
+fixtures match it closely — the differences are the ones `lib/view` already
+absorbs (icon *names* rather than components, ISO instants rather than
+`'2m'`, numbers rather than `'1,284'`, array index rather than identity). Two
+alignments are better than expected: `Connection.usedByCount` is exactly the
+design's *"used by 2 solutions"*, and `AutomationCatalogEntry` carries
+`name`/`description`/`category`/`icon`/`monthlyPriceUsd`/`subscribed`, which is
+the entire Solutions and Templates card. A run's automation name is a **catalog
+join by design** — the runs list says so in its own description — so that is
+intended client work, not a gap.
+
+**What no published shape supplies.** Each is a backend ask, not a mobile task:
+
+| Missing from the public contract | Blocks |
+| --- | --- |
+| **`manifest.pipeline` — published nowhere.** The word occurs once across all three specs, inside an error description. `AutomationCatalogEntry` publishes `setup[]` but no pipeline. | **BUILD-PLAN 8.7** (`builder.tsx` renders `manifest.pipeline`), flow-detail steps, `templateConfigure` steps, run detail's *"Steps done 3 / 4"* denominator, and the human title of each run-timeline row |
+| A human-readable run number (`#4821`). `Run` has `id` (uuid) and `requestId`. | run detail title, activity rows, notifications, approval headlines |
+| A run result summary / output. `grep output` matches nothing; `RunStep.summary` exists only inside `RunDetail`. | Home recent runs, activity rows, run detail's extracted-fields card |
+| Run aggregates per subscription (`1,284 runs · 1,272 ok · 12 failed`). | flows list rows, flow detail's three stat tiles |
+| A confidence score. | run detail stat tile |
+| `Approval` has `reason` (the *why*) but no title/subject. | the approval card's headline |
+| Any notifications route. | the notifications screen entirely |
+| A `homeStats` source, at any shape. | Home's stats row |
+| Billing/plan operations — §12.1 #46, BUILD-PLAN 8.3. | plan totals, Settings PLAN & BILLING, `PLAN_BASE_PRICE` |
+| `usedByTeams` (*"used by 2,100 teams"*). | `templateConfigure` meta line |
+| `ConnectionProvider` publishes no `icon`, though `AutomationCatalogEntry` does. | connection rows resolve an icon by `providerId` instead — an inconsistency worth closing |
+
+**One correction to the audit's split.** Settings connections was recorded as
+blocked by §12.1 #62. More precisely: **reading** connections is a plain
+authenticated GET and is wireable today — `Connection` plus
+`GET /v1/connections/providers` supplies name, account label, status and
+`usedByCount`, and the providers list is what supplies the design's *"Slack ·
+Not connected"* row, since the connections list omits providers with no
+connection. Only the **Connect action** is blocked by #62.
+
 ## Standards boundary
 
 The recommended native-app authorization boundary is:
