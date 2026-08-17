@@ -151,6 +151,64 @@ and names every blocker, so no one has to rediscover the question.
   `associatedDomains` and Android `intentFilters` from that one configured
   redirect URI. The scheme remains for ordinary deep links.
 
+## Round 6.6 answered the reconciliation — what changed, and two findings
+
+Re-verified 2026-08-17 against the **regenerated** types, not against the round
+notes. `verify:platform-contracts` was failing ("Generated platform types were
+stale") and the committed types carried none of 6.6's publications, so every
+shape below was untyped until they were regenerated.
+
+**Published, and confirmed present in the generated output:**
+
+| Was missing | Now |
+| --- | --- |
+| `manifest.pipeline` — the ask that changed scope | `AutomationCatalogEntry.pipeline: AutomationDeclaredStep[]`, `{id, kicker, title, description}` in manifest order. **BUILD-PLAN 8.7 is deliverable.** |
+| A run's result line | `Run.failureReason?` (failed) and `Run.resultSummary?` (succeeded), on list **and** detail — one request, no timeline fetch |
+| Run aggregates | `GET /v1/workspaces/{id}/run-stats?since=` → `RunStats {since?, workspace, subscriptions}`, **unwrapped**; counts are the seven run statuses |
+| `ConnectionProvider.icon` | Required. It exists to delete this repo's private `providerId → icon` map |
+| Native connections | `POST /v1/connections/native/complete {code}` + `authorize`'s `returnTo`. §12.1 #62 is closed |
+
+**Refused with a named substitute** — seven rows, none of them a licence to
+invent a local shape: run output → render `resultSummary`/`failureReason`; run
+number → `requestId`, with the caveat below; approval title → a three-hop join
+(`subscriptionId` → subscriptions → `templateId` → that entry's `pipeline` →
+`find(s => s.id === stepId).title`), because `Approval` carries no `templateId`;
+notifications → compose from approvals (`status=pending` passed **explicitly**,
+since the param is `required: false` and omitting it returns every status) plus
+the filtered runs list; confidence → per-automation output, unpublished;
+`homeStats` → `run-stats?since=<local midnight>`; `usedByTeams` → static copy,
+while `Connection.usedByCount` is published and within-tenant.
+
+**FINDING 1 — the three specs disagree about the session credential.** Read off
+the specs, not inferred:
+
+| Document | `security:` | Cookie name |
+| --- | --- | --- |
+| `docs/openapi.yaml` | `websiteSession`, `bearerAuth` | `__Host-autom8x-access` |
+| `docs/openapi/automations.yaml` | `sessionCookie` | `session` |
+| `docs/openapi/connections.yaml` | `sessionCookie` | `sb-access-token` |
+
+Three names for one session, and **only the Edge index declares `bearerAuth`** —
+the scheme a native client actually uses. It does not break this app, and the
+reason is worth stating so nobody "fixes" it wrongly: `openapi-typescript` emits
+**types only** — zero runtime code in the generated output — so no runtime client
+is built from those `security:` blocks. Bearer injection lives in
+`lib/platform/client.ts`, the single site `audit:platform` permits to call
+`fetch`. But anyone generating a *runtime* client from the fragments would get no
+bearer auth at all, and the fragments do not document that bearer is accepted on
+their paths. For the next backend round.
+
+**FINDING 2 — §12.1 #67 misstates a bound.** The row says `resultSummary` and
+`failureReason` are both "bounded at 200". `automations.yaml` says `failureReason`
+is `maxLength: 500` (line 797) and `resultSummary` is `200` (line 815). A client
+sizing both at 200 truncates a failure reason by 300 characters.
+
+**Counts, recounted here because three documents drift:** `app/` holds 27 `.tsx`
+= 7 `_layout.tsx` + **20 screen routes**, so "27 screens" in the card, BUILD-PLAN
+8.5 and manifest §14 is really 20. **13 of the 20 routes** import `lib/fixtures`
+(8.5 says 14); 15 files total, the other two being hooks. `lib/fixtures.ts` is
+**410 lines**, not the card's 427.
+
 ## Fixture ↔ contract reconciliation — the Round 6 card's question, settled
 
 The Round 6 card asks it directly: *"do the 427 lines of `lib/fixtures.ts` match
