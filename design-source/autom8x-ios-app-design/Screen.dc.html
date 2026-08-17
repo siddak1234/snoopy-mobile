@@ -174,6 +174,54 @@ a{color:var(--color-accent-300)}a:hover{color:var(--color-accent)}
 <div style="flex:1;display:flex;flex-direction:column;min-height:0">
 <div style="flex:1;overflow:auto;min-height:0;display:flex;flex-direction:column">
 
+<sc-if value="{{gLoad}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;padding:74px 20px 20px;gap:16px">
+<div style="display:flex;align-items:center;gap:12px">
+<div style="width:36px;height:36px;border-radius:999px;background:var(--color-neutral-900);animation:a8xSkel 1.4s ease infinite"></div>
+<div style="display:flex;flex-direction:column;gap:7px"><div style="width:148px;height:18px;border-radius:8px;background:var(--color-neutral-900);animation:a8xSkel 1.4s ease infinite"></div><div style="width:104px;height:11px;border-radius:6px;background:var(--color-neutral-900);animation:a8xSkel 1.4s ease .1s infinite"></div></div>
+</div>
+<sc-if value="{{gLoadTiles}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;gap:10px">
+<div style="flex:1;height:62px;border-radius:14px;background:var(--color-neutral-900);animation:a8xSkel 1.4s ease infinite"></div>
+<div style="flex:1;height:62px;border-radius:14px;background:var(--color-neutral-900);animation:a8xSkel 1.4s ease .12s infinite"></div>
+<div style="flex:1;height:62px;border-radius:14px;background:var(--color-neutral-900);animation:a8xSkel 1.4s ease .24s infinite"></div>
+</div>
+</sc-if>
+<div style="width:88px;height:10px;border-radius:6px;background:var(--color-neutral-900);animation:a8xSkel 1.4s ease .3s infinite"></div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="height:64px;border-radius:14px;background:var(--color-neutral-900);animation:a8xSkel 1.4s ease .36s infinite"></div>
+<div style="height:64px;border-radius:14px;background:var(--color-neutral-900);animation:a8xSkel 1.4s ease .48s infinite"></div>
+<div style="height:64px;border-radius:14px;background:var(--color-neutral-900);animation:a8xSkel 1.4s ease .6s infinite"></div>
+<div style="height:64px;border-radius:14px;background:var(--color-neutral-900);animation:a8xSkel 1.4s ease .72s infinite"></div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{gErr}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;padding:74px 20px 20px;flex:1">
+<div onClick="{{gBackGo}}" style="width:36px;height:36px;border-radius:999px;border:1px solid var(--color-neutral-800);display:flex;align-items:center;justify-content:center;color:var(--color-neutral-400);cursor:pointer"><i class="ph ph-caret-left" style="font-size:17px"></i></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:0 20px">
+<div style="width:80px;height:80px;border-radius:24px;border:1px solid var(--color-neutral-800);display:flex;align-items:center;justify-content:center;color:var(--color-neutral-500)"><i class="ph ph-warning-circle" style="font-size:36px"></i></div>
+<h2 style="margin:8px 0 0;font-size:20px;font-weight:500;letter-spacing:-.01em">{{gErrTitle}}</h2>
+<p style="margin:0;font-size:13.5px;line-height:1.55;color:var(--color-neutral-400);max-width:28ch">Nothing was lost — it's safe in the cloud. Retry now or come back in a moment.</p>
+<div style="margin-top:8px;height:44px;padding:0 26px;border-radius:999px;border:1px solid var(--color-accent);color:var(--color-accent);display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-accent) 12%,transparent)"><i class="ph ph-arrow-clockwise" style="font-size:16px"></i>Retry</div>
+<div onClick="{{gBackGo}}" style="height:40px;padding:0 20px;border-radius:999px;color:var(--color-neutral-300);display:flex;align-items:center;font-size:13.5px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-text) 6%,transparent)">Go back</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{gOff}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;padding:74px 20px 20px;flex:1">
+<div onClick="{{gBackGo}}" style="width:36px;height:36px;border-radius:999px;border:1px solid var(--color-neutral-800);display:flex;align-items:center;justify-content:center;color:var(--color-neutral-400);cursor:pointer"><i class="ph ph-caret-left" style="font-size:17px"></i></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:0 20px">
+<div style="width:80px;height:80px;border-radius:24px;border:1px solid var(--color-neutral-800);display:flex;align-items:center;justify-content:center;color:var(--color-neutral-500)"><i class="ph ph-wifi-slash" style="font-size:36px"></i></div>
+<h2 style="margin:8px 0 0;font-size:20px;font-weight:500;letter-spacing:-.01em">You're offline</h2>
+<p style="margin:0;font-size:13.5px;line-height:1.55;color:var(--color-neutral-400);max-width:28ch">Your agents keep running in the cloud. This screen will sync as soon as you're back.</p>
+<div style="margin-top:8px;height:44px;padding:0 26px;border-radius:999px;border:1px solid var(--color-accent);color:var(--color-accent);display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-accent) 12%,transparent)"><i class="ph ph-arrow-clockwise" style="font-size:16px"></i>Retry</div>
+</div>
+</div>
+</sc-if>
+
 <sc-if value="{{sHome}}" hint-placeholder-val="{{false}}">
 <div style="display:flex;flex-direction:column;padding:74px 20px 20px;gap:18px">
 <div style="display:flex;align-items:center;justify-content:space-between">
@@ -395,6 +443,12 @@ a{color:var(--color-accent-300)}a:hover{color:var(--color-accent)}
 <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">QuickBooks Online</div><div style="font-size:12px;color:{{qbSubC}};margin-top:1px">{{qbSub}}</div></div>
 <div onClick="{{connectQb}}" style="height:32px;padding:0 13px;border-radius:999px;border:1px solid {{qbBc}};color:{{qbFc}};display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:500;cursor:pointer;flex:none" style-hover="background:color-mix(in srgb,var(--color-accent) 10%,transparent)">{{qbBtn}}</div>
 </div>
+<sc-if value="{{setupFail}}" hint-placeholder-val="{{false}}">
+<div style="margin:0 14px 13px;display:flex;flex-direction:column;gap:9px;font-size:12.5px;line-height:1.45;color:#f87171;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);border-radius:10px;padding:10px 12px">
+<div style="display:flex;gap:8px;align-items:flex-start"><i class="ph ph-warning-circle" style="font-size:15px;margin-top:1px;flex:none"></i><span>QuickBooks didn't finish connecting — nothing was linked and the solution wasn't activated.</span></div>
+<div style="align-self:flex-start;height:30px;padding:0 13px;border-radius:999px;border:1px solid #f87171;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;cursor:pointer" style-hover="background:rgba(248,113,113,.1)"><i class="ph ph-arrow-clockwise" style="font-size:13px"></i>Try again</div>
+</div>
+</sc-if>
 <div style="display:flex;align-items:center;gap:12px;padding:13px 14px">
 <i class="ph ph-envelope-simple" style="font-size:20px;color:var(--color-accent-300)"></i>
 <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">Gmail</div><div style="font-size:12px;color:var(--color-neutral-400);margin-top:1px">ap@acme.co · already connected</div></div>
@@ -551,6 +605,12 @@ a{color:var(--color-accent-300)}a:hover{color:var(--color-accent)}
 <h1 style="margin:0;font-size:22px;font-weight:500;letter-spacing:-.01em;flex:1">Needs review</h1>
 <span style="font-size:12px;font-weight:600;min-width:26px;height:26px;padding:0 8px;border-radius:999px;background:color-mix(in srgb,var(--color-accent) 16%,transparent);color:var(--color-accent-200);display:flex;align-items:center;justify-content:center">{{apprCount}}</span>
 </div>
+<sc-if value="{{apprFail}}" hint-placeholder-val="{{false}}">
+<div style="margin:0 20px 12px;display:flex;flex-direction:column;gap:9px;font-size:13px;line-height:1.45;color:#f87171;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);border-radius:12px;padding:11px 13px">
+<div style="display:flex;gap:8px;align-items:flex-start"><i class="ph ph-warning-circle" style="font-size:16px;margin-top:1px;flex:none"></i><span>Your decision on Invoice #4821 didn't sync — the run is still held, nothing was posted.</span></div>
+<div style="align-self:flex-start;height:32px;padding:0 14px;border-radius:999px;border:1px solid #f87171;display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;cursor:pointer" style-hover="background:rgba(248,113,113,.1)"><i class="ph ph-arrow-clockwise" style="font-size:14px"></i>Retry decision</div>
+</div>
+</sc-if>
 <sc-for list="{{apprItems}}" as="a" hint-placeholder-count="3">
 <div style="background:var(--color-surface);border-radius:14px;padding:15px;display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow-sm);margin:0 20px 12px">
 <div style="display:flex;justify-content:space-between;align-items:center">
@@ -651,6 +711,14 @@ a{color:var(--color-accent-300)}a:hover{color:var(--color-accent)}
 <div onClick="{{allowPush}}" style="flex:1;height:42px;border-radius:999px;color:var(--color-neutral-300);display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-text) 6%,transparent)">Not now</div>
 </div></div>
 </sc-if>
+<sc-if value="{{notifsEmpty}}" hint-placeholder-val="{{false}}">
+<div style="padding:70px 32px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center">
+<i class="ph ph-bell-slash" style="font-size:44px;color:var(--color-neutral-600)"></i>
+<div style="font-size:17px;font-weight:500">Quiet, as designed</div>
+<div style="font-size:13.5px;line-height:1.5;color:var(--color-neutral-400);max-width:26ch">We only notify you for held runs and failures. Nothing needs you right now.</div>
+</div>
+</sc-if>
+<sc-if value="{{notifsHas}}" hint-placeholder-val="{{true}}">
 <div style="background:var(--color-surface);border-radius:14px;box-shadow:var(--shadow-sm);overflow:hidden">
 <sc-for list="{{notifs}}" as="n" hint-placeholder-count="5">
 <div onClick="{{n.open}}" style="display:flex;align-items:flex-start;gap:12px;padding:13px 14px;border-bottom:1px solid var(--color-divider);cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-text) 4%,transparent)">
@@ -660,6 +728,7 @@ a{color:var(--color-accent-300)}a:hover{color:var(--color-accent)}
 <span style="font-size:11.5px;color:var(--color-neutral-500)">{{n.time}}</span>
 </div></sc-for>
 </div>
+</sc-if>
 </div>
 </sc-if>
 
@@ -770,7 +839,7 @@ a{color:var(--color-accent-300)}a:hover{color:var(--color-accent)}
 </div>
 </x-import>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:440,&quot;height&quot;:910},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;home&quot;,&quot;options&quot;:[&quot;splash&quot;,&quot;welcome&quot;,&quot;login&quot;,&quot;signup&quot;,&quot;reset&quot;,&quot;onboarding&quot;,&quot;faceid&quot;,&quot;home&quot;,&quot;notifications&quot;,&quot;run&quot;,&quot;flows&quot;,&quot;detail&quot;,&quot;builder&quot;,&quot;configure&quot;,&quot;solutions&quot;,&quot;setup&quot;,&quot;activity&quot;,&quot;approvals&quot;,&quot;templates&quot;,&quot;settings&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Screen&quot;},&quot;variant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;default&quot;,&quot;options&quot;:[&quot;default&quot;,&quot;loading&quot;,&quot;empty&quot;,&quot;error&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Screen&quot;},&quot;run&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;held&quot;,&quot;options&quot;:[&quot;held&quot;,&quot;success&quot;,&quot;failed&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Screen&quot;},&quot;flow&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;invoice&quot;,&quot;options&quot;:[&quot;invoice&quot;,&quot;email&quot;,&quot;kpi&quot;,&quot;lead&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Screen&quot;},&quot;light&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Screen&quot;},&quot;onNav&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(screen: string) =&gt; void&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:440,&quot;height&quot;:910},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;home&quot;,&quot;options&quot;:[&quot;splash&quot;,&quot;welcome&quot;,&quot;login&quot;,&quot;signup&quot;,&quot;reset&quot;,&quot;onboarding&quot;,&quot;faceid&quot;,&quot;home&quot;,&quot;notifications&quot;,&quot;run&quot;,&quot;flows&quot;,&quot;detail&quot;,&quot;builder&quot;,&quot;configure&quot;,&quot;solutions&quot;,&quot;setup&quot;,&quot;activity&quot;,&quot;approvals&quot;,&quot;templates&quot;,&quot;settings&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Screen&quot;},&quot;variant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;default&quot;,&quot;options&quot;:[&quot;default&quot;,&quot;loading&quot;,&quot;empty&quot;,&quot;error&quot;,&quot;offline&quot;,&quot;actionfail&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Screen&quot;},&quot;run&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;held&quot;,&quot;options&quot;:[&quot;held&quot;,&quot;success&quot;,&quot;failed&quot;,&quot;running&quot;,&quot;pending&quot;,&quot;cancelled&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Screen&quot;},&quot;flow&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;invoice&quot;,&quot;options&quot;:[&quot;invoice&quot;,&quot;email&quot;,&quot;kpi&quot;,&quot;lead&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Screen&quot;},&quot;light&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Screen&quot;},&quot;onNav&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(screen: string) =&gt; void&quot;}}">
 class Component extends DCLogic {
   state = { rem: true, fid: true, ntf: true, ob: 0, apr: {}, solOn: { 0: true, 1: true, 2: true }, qb: false, r1: true, r2: true, actF: 'All', solCat: 'All', rmIdx: null, selFlow: 0, flowSt: {}, q: '', tplCat: 'All', rty: 0, rSent: false, pushAsk: true };
   componentDidUpdate(prev) {
@@ -791,6 +860,10 @@ class Component extends DCLogic {
     const isApp = appScreens.indexOf(scr) >= 0;
     const tabOf = { home:'home', run:'home', notifications:'home', flows:'flows', detail:'flows', templates:'flows', builder:'flows', configure:'flows', solutions:'solutions', setup:'solutions', activity:'activity', approvals:'activity', settings:'settings' }[scr];
     const tc = t => tabOf === t ? 'var(--color-accent)' : 'var(--color-neutral-500)';
+    const gLoad = isApp && scr !== 'home' && variant === 'loading';
+    const gErr = isApp && scr !== 'home' && variant === 'error';
+    const gOff = isApp && scr !== 'home' && variant === 'offline';
+    const show = !(gLoad || gErr || gOff);
     const tog = on => ({ bg: on ? 'var(--color-accent)' : 'var(--color-neutral-800)', x: on ? '18px' : '0px' });
     const pills = { Live: [ok,'rgba(52,211,153,.1)','rgba(52,211,153,.35)'], Paused: [warn,'rgba(245,158,11,.1)','rgba(245,158,11,.35)'], Draft: ['var(--color-neutral-400)','color-mix(in srgb,var(--color-neutral-500) 12%,transparent)','var(--color-neutral-700)'] };
     const okC = ok, neu = 'var(--color-neutral-500)';
@@ -933,6 +1006,33 @@ class Component extends DCLogic {
           { icon:'ph-circle-dashed', c:'var(--color-neutral-500)', tc:'var(--color-neutral-400)', t:'Post to Slack', d:'Skipped', time:'' },
         ] },
     };
+    runDefs.running = { title:'Run #4823', sub:'Invoice triage \u00b7 started 14s ago', pill:'Running', pc:'var(--color-accent-300)', pbg:'color-mix(in srgb,var(--color-accent) 12%,transparent)', pbd:'var(--color-accent-700)', fields:false,
+      a1:'', a1i:'', a1g:null,
+      stats:[{v:'14s',l:'Elapsed'},{v:'2 / 4',l:'Steps done'},{v:'\u2014',l:'Confidence'}],
+      tl:[
+        { icon:'ph-check-circle', c:ok, tc:'var(--color-text)', t:'New email received', d:'Gmail \u00b7 ap@acme.co', time:'0:01' },
+        { icon:'ph-check-circle', c:ok, tc:'var(--color-text)', t:'Fields extracted', d:'Vendor, amount, PO, due date', time:'0:09' },
+        { icon:'ph-circle-notch', c:'var(--color-accent-300)', tc:'var(--color-text)', t:'Classifying & GL-coding', d:'In progress\u2026', time:'now' },
+        { icon:'ph-circle-dashed', c:'var(--color-neutral-500)', tc:'var(--color-neutral-400)', t:'Post to QuickBooks', d:'Up next', time:'' },
+      ] };
+    runDefs.pending = { title:'Run #4824', sub:'Invoice triage \u00b7 queued just now', pill:'Queued', pc:'var(--color-neutral-400)', pbg:'color-mix(in srgb,var(--color-neutral-500) 12%,transparent)', pbd:'var(--color-neutral-700)', fields:false,
+      a1:'', a1i:'', a1g:null,
+      stats:[{v:'\u2014',l:'Elapsed'},{v:'0 / 4',l:'Steps done'},{v:'\u2014',l:'Confidence'}],
+      tl:[
+        { icon:'ph-clock', c:'var(--color-neutral-400)', tc:'var(--color-text)', t:'Waiting for a worker', d:'Starts automatically \u2014 usually under a minute', time:'now' },
+        { icon:'ph-circle-dashed', c:'var(--color-neutral-500)', tc:'var(--color-neutral-400)', t:'Extract invoice fields', d:'Queued', time:'' },
+        { icon:'ph-circle-dashed', c:'var(--color-neutral-500)', tc:'var(--color-neutral-400)', t:'Classify & GL-code', d:'Queued', time:'' },
+        { icon:'ph-circle-dashed', c:'var(--color-neutral-500)', tc:'var(--color-neutral-400)', t:'Post to QuickBooks', d:'Queued', time:'' },
+      ] };
+    runDefs.cancelled = { title:'Run #4809', sub:'Invoice triage \u00b7 yesterday, 4:18 PM', pill:'Cancelled', pc:'var(--color-neutral-400)', pbg:'color-mix(in srgb,var(--color-neutral-500) 12%,transparent)', pbd:'var(--color-neutral-700)', fields:false,
+      a1:'Run again', a1i:'ph-arrow-clockwise', a1g:this.go('run'),
+      stats:[{v:'21s',l:'Duration'},{v:'2 / 4',l:'Steps done'},{v:'\u2014',l:'Confidence'}],
+      tl:[
+        { icon:'ph-check-circle', c:ok, tc:'var(--color-text)', t:'New email received', d:'Gmail \u00b7 ap@acme.co', time:'4:18:02' },
+        { icon:'ph-check-circle', c:ok, tc:'var(--color-text)', t:'Fields extracted', d:'Vendor, amount, PO, due date', time:'4:18:14' },
+        { icon:'ph-x-circle', c:'var(--color-neutral-400)', tc:'var(--color-text)', t:'Cancelled by you', d:'Stopped before posting \u2014 nothing was written', time:'4:18:23' },
+        { icon:'ph-circle-dashed', c:'var(--color-neutral-500)', tc:'var(--color-neutral-400)', t:'Post to QuickBooks', d:'Skipped', time:'' },
+      ] };
     const rEff = (runV === 'failed' && this.state.rty === 2) ? 'retried' : runV;
     const rv = runDefs[rEff] || runDefs.held;
     const tplCat = this.state.tplCat;
@@ -963,15 +1063,22 @@ class Component extends DCLogic {
       sSplash: scr==='splash', sWelcome: scr==='welcome', sLogin: scr==='login', sSignup: scr==='signup',
       sOnboard: scr==='onboarding', sFaceid: scr==='faceid', isApp,
       sHome: scr==='home' && variant==='default', sHomeLoad: scr==='home' && variant==='loading', sHomeEmpty: scr==='home' && variant==='empty', sHomeErr: scr==='home' && variant==='error',
+      gLoad, gErr, gOff, gLoadTiles: scr==='run' || scr==='detail',
+      gErrTitle: ({ run:"Couldn't load this run", detail:"Couldn't load this workflow", approvals:"Couldn't load approvals", notifications:"Couldn't load notifications", settings:"Couldn't load settings", flows:"Couldn't load your workflows", activity:"Couldn't load activity", solutions:"Couldn't load solutions", templates:"Couldn't load templates", setup:"Couldn't load this setup", configure:"Couldn't load this template", builder:"Couldn't load this workflow" })[scr] || "Couldn't load this",
+      gBackGo: this.go(({ run:'home', notifications:'home', detail:'flows', templates:'flows', configure:'flows', builder:'flows', setup:'solutions', approvals:'activity' })[scr] || 'home'),
+      apprFail: scr==='approvals' && variant==='actionfail',
+      setupFail: scr==='setup' && variant==='actionfail',
+      notifsEmpty: scr==='notifications' && variant==='empty',
+      notifsHas: !(scr==='notifications' && variant==='empty'),
       loginErr: scr==='login' && variant==='error',
-      sFlows: scr==='flows', sDetail: scr==='detail', sBuilder: scr==='builder',
-      sActivity: scr==='activity', sApprovals: scr==='approvals', sTemplates: scr==='templates', sSettings: scr==='settings',
+      sFlows: scr==='flows' && show, sDetail: scr==='detail' && show, sBuilder: scr==='builder' && show,
+      sActivity: scr==='activity' && show, sApprovals: scr==='approvals' && show, sTemplates: scr==='templates' && show, sSettings: scr==='settings' && show,
       gWelcome: this.go('welcome'), gLogin: this.go('login'), gSignup: this.go('signup'),
       gOnboard: this.go('onboarding'), gFaceid: this.go('faceid'), gHome: this.go('home'),
       gFlows: this.go('flows'), gDetail: this.go('detail'), gBuilder: this.go('builder'),
       gActivity: this.go('activity'), gApprovals: this.go('approvals'), gTemplates: this.go('templates'), gSettings: this.go('settings'),
       gSolutions: this.go('solutions'), gRun: this.go('run'), gSetup: this.go('setup'),
-      sSolutions: scr==='solutions', sRun: scr==='run', sSetup: scr==='setup',
+      sSolutions: scr==='solutions' && show, sRun: scr==='run' && show, sSetup: scr==='setup' && show,
       runTitle: rv.title, runSub: rv.sub, runPill: rv.pill, runPc: rv.pc, runPbg: rv.pbg, runPbd: rv.pbd,
       runStats: rv.stats, runTl: rv.tl, runFields: rv.fields, runA1: rv.a1 || false, runA1Icon: rv.a1i, runA1Go: rv.a1g,
       actChips, todayHas: actToday.length > 0, yestHas: actYest.length > 0,
@@ -984,7 +1091,7 @@ class Component extends DCLogic {
       rmOpen: rmIdx != null, rmName: rmSol ? rmSol.name : '', rmPrice: rmSol ? '$' + rmSol.p : '',
       rmCancel: () => this.setState({ rmIdx: null }),
       rmConfirm: () => this.setState(s => ({ rmIdx: null, solOn: Object.assign({}, s.solOn, { [s.rmIdx]: false }) })),
-      sReset: scr==='reset', sNotifs: scr==='notifications', sConfigure: scr==='configure',
+      sReset: scr==='reset', sNotifs: scr==='notifications' && show, sConfigure: scr==='configure' && show,
       gReset: this.go('reset'), gNotifs: this.go('notifications'), gConfigure: this.go('configure'),
       rSent: this.state.rSent, rNotSent: !this.state.rSent,
       sendReset: () => this.setState({ rSent: true }),
