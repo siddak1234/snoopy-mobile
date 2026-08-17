@@ -28,18 +28,25 @@ const sourceRoots = ["app", "components", "hooks", "lib"];
  * Delete a row when its screen is wired; never add one.
  */
 const knownFixtureReaders = new Map([
-  // Blocked on the public contract — no published shape supplies these.
-  ["app/(tabs)/(home)/index.tsx", "no homeStats source; no run summary or run number"],
-  ["app/(tabs)/(home)/run.tsx", "no run number, confidence, or run output; steps need manifest.pipeline"],
-  ["app/(tabs)/(home)/notifications.tsx", "no notifications route exists at any shape"],
-  ["app/(tabs)/activity/index.tsx", "no run number and no run result summary"],
-  ["app/(tabs)/activity/approvals.tsx", "Approval publishes `reason` but no title"],
-  ["app/(tabs)/flows/index.tsx", "no run aggregates (runs/ok/failed per subscription)"],
-  ["app/(tabs)/flows/detail.tsx", "no run aggregates; steps need manifest.pipeline"],
-  ["app/(tabs)/flows/builder.tsx", "manifest.pipeline is published nowhere — BUILD-PLAN 8.7"],
-  ["app/(tabs)/flows/configure.tsx", "manifest.pipeline; no usedByTeams"],
-  ["hooks/use-workflows.tsx", "workflow status overrides ride on the fixture flow keys"],
-  ["hooks/use-solutions.tsx", "PLAN_BASE_PRICE is billing — §12.1 #46 / BUILD-PLAN 8.3"],
+  // MOBILE WORK. Every shape these need is published as of Round 6.6, or the
+  // round filed a refusal naming what to render instead. None waits on the
+  // backend; each is implementation in this repo.
+  ["app/(tabs)/(home)/index.tsx", "MOBILE — tiles wired; recentRuns needs run-detail navigation"],
+  ["app/(tabs)/(home)/run.tsx", "MOBILE — RunDetail + resultSummary/failureReason; step titles from pipeline"],
+  ["app/(tabs)/(home)/notifications.tsx", "MOBILE — compose from approvals(status=pending) + runs; §12.1 #71"],
+  ["app/(tabs)/activity/index.tsx", "MOBILE — runs list + resultSummary/failureReason"],
+  ["app/(tabs)/activity/approvals.tsx", "MOBILE — title is the three-hop join, §12.1 #70"],
+  ["app/(tabs)/flows/index.tsx", "MOBILE — aggregates from run-stats subscriptions[]"],
+  ["app/(tabs)/flows/detail.tsx", "MOBILE — run-stats + catalog pipeline"],
+  ["app/(tabs)/flows/builder.tsx", "MOBILE — 8.7 wired; needs a caller that can name a template"],
+  ["app/(tabs)/flows/configure.tsx", "MOBILE — catalog pipeline; usedByTeams is static copy per §12.1 #74"],
+  ["hooks/use-workflows.tsx", "MOBILE — subscription status; identity refactor off the fixture flow keys"],
+
+  // GENUINELY BLOCKED, and not by anything a backend contract round can fix.
+  // BUILD-PLAN 8.3 is "no longer gated on a decision" — §12.1 #46 was ratified
+  // 2026-08-17 — but it waits on a payment provider account, which ADR-0016 puts
+  // in ROUND 7. So the $99 plan base has no wire source until then, by design.
+  ["hooks/use-solutions.tsx", "BLOCKED — PLAN_BASE_PRICE needs BUILD-PLAN 8.3, which waits on Round 7's provider account"],
 
   // Wired to the platform. The import survives ONLY on the `unconfigured`
   // branch, which is the one state where fixtures are still correct — there is
@@ -55,8 +62,8 @@ const knownFixtureReaders = new Map([
   // leave the toggle acting on the wrong row — worse than the fixture. The
   // refactor is app-wide (SolutionsProvider is mounted at the root) and cannot
   // remove this import anyway, because PLAN_BASE_PRICE has no wire source.
-  ["app/(tabs)/solutions/index.tsx", "catalog OK; use-solutions is index-keyed + PLAN_BASE_PRICE is billing"],
-  ["app/(tabs)/solutions/setup.tsx", "same index identity, plus DESIGN-GAPS item 3 (content is QuickBooks-specific for every solution)"],
+  ["app/(tabs)/solutions/index.tsx", "BLOCKED on the same plan total; the cards themselves are catalog-ready"],
+  ["app/(tabs)/solutions/setup.tsx", "MOBILE — design item 3 delivered 2026-08-17; build the generated form from setup[]"],
 ]);
 
 /** `from '@/lib/fixtures'`, `from '../lib/fixtures'`, and friends. */
