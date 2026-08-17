@@ -29,7 +29,6 @@ import { useSession } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
 import { useTheme, type ThemeMode } from '@/hooks/use-theme';
 import { SIGN_OUT_FAILED, SIGN_OUT_RETRY, errorTitleFor } from '@/lib/content/screen-states';
-import { defaultActiveSolutions, settingsConnections, solutionDefs } from '@/lib/fixtures';
 import { readCatalog, readConnectionProviders, readConnections } from '@/lib/platform/catalog';
 import { toConnectionRows, toSolutions, type ConnectionView } from '@/lib/view/catalog';
 
@@ -112,19 +111,12 @@ export default function SettingsScreen() {
   });
 
   // The plan totals need the priced catalog; the provider holds only overrides.
-  const pricedSolutions =
-    connections.status === 'ready'
-      ? connections.data.solutions
-      : solutionDefs.map((sol, i) => ({
-          ...sol,
-          templateId: sol.name,
-          subscribed: defaultActiveSolutions.includes(i),
-        }));
+  const pricedSolutions = connections.status === 'ready' ? connections.data.solutions : [];
   const { activeCount, solutionsTotal, planTotal } = totals(pricedSolutions);
 
   // As with Templates, the fixture survives only for the unconfigured build.
   const connectionRows: ConnectionView[] =
-    connections.status === 'ready' ? connections.data.rows : settingsConnections;
+    connections.status === 'ready' ? connections.data.rows : [];
 
   /**
    * Sign out for real, and honour the one answer the contract added for us.
@@ -153,7 +145,7 @@ export default function SettingsScreen() {
   if (connections.status === 'offline') {
     return <ScreenOffline onRetry={connections.reload} topInset={insets.top} />;
   }
-  if (connections.status === 'error') {
+  if (connections.status === 'error' || connections.status === 'unconfigured') {
     return (
       <ScreenError
         title={errorTitleFor('settings')}

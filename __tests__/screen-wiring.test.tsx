@@ -103,12 +103,11 @@ describe('Templates, wired to the catalog', () => {
     expect(screen.getByText(errorTitleFor('templates'))).toBeTruthy();
   });
 
-  it('keeps the prototype browsable when the build has no backend', async () => {
-    // The unconfigured case is why the fixture import still exists. If this ever
-    // fails, the design prototype has stopped being browsable without a backend
-    // — which is a decision, not a bug fix. See DESIGN-CONTRACT.md.
+  it('shows the designed failure state when the build has no backend', async () => {
+    // Owner decision 2026-08-17: no prototype fallback. A build with no backend
+    // genuinely could not load this, and the screen now says so.
     await renderWithProviders(<TemplatesScreen />, unconfigured);
-    expect(await screen.findByText('Invoice capture')).toBeTruthy();
+    expect(await screen.findByTestId('screen-error')).toBeTruthy();
     expect(platformJson).not.toHaveBeenCalled();
   });
 });
@@ -170,9 +169,9 @@ describe('Settings CONNECTIONS, wired to the platform', () => {
     expect(screen.getByText(errorTitleFor('settings'))).toBeTruthy();
   });
 
-  it('keeps the prototype rows when the build has no backend', async () => {
+  it('shows the designed failure state when the build has no backend', async () => {
     await renderWithProviders(<SettingsScreen />, unconfigured);
-    expect(await screen.findByText('QuickBooks Online')).toBeTruthy();
+    expect(await screen.findByTestId('screen-error')).toBeTruthy();
     expect(platformJson).not.toHaveBeenCalled();
   });
 });

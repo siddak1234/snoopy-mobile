@@ -20,7 +20,6 @@ import {
   START_FROM_TEMPLATE_LABEL,
   errorTitleFor,
 } from '@/lib/content/screen-states';
-import { flowDefs, flowKeys } from '@/lib/fixtures';
 import { readCatalog } from '@/lib/platform/catalog';
 import { readRunStats, readSubscriptions } from '@/lib/platform/runs';
 import { toFlows, type FlowView } from '@/lib/view/catalog';
@@ -52,9 +51,7 @@ export default function FlowsScreen() {
   });
 
   const live: FlowView[] | null = flows.status === 'ready' ? flows.data : null;
-  const source: FlowView[] =
-    live ??
-    flowKeys.map((key) => ({ ...flowDefs[key], key, templateId: key, connections: flowDefs[key].connections, steps: flowDefs[key].steps }));
+  const source: FlowView[] = live ?? [];
 
   const q = query.trim().toLowerCase();
   const visible = source.filter((def) => {
@@ -66,7 +63,7 @@ export default function FlowsScreen() {
   if (flows.status === 'offline') {
     return <ScreenOffline onRetry={flows.reload} topInset={insets.top} />;
   }
-  if (flows.status === 'error') {
+  if (flows.status === 'error' || flows.status === 'unconfigured') {
     return (
       <ScreenError title={errorTitleFor('flows')} onRetry={flows.reload} topInset={insets.top} />
     );

@@ -4,7 +4,11 @@ import { fireEvent, screen } from '@testing-library/react-native';
 import SettingsScreen from '@/app/(tabs)/settings';
 import type { SessionContextValue } from '@/hooks/use-session';
 import { SIGN_OUT_FAILED } from '@/lib/content/screen-states';
+import { routePlatform } from '@/test/platform';
 import { mockRouter, renderWithProviders } from '@/test/render';
+
+jest.mock('@/lib/platform/client', () => ({ platformJson: jest.fn() }));
+const { platformJson } = jest.requireMock('@/lib/platform/client');
 
 /**
  * Sign-out honours the one answer the platform added so a client could tell.
@@ -19,13 +23,24 @@ import { mockRouter, renderWithProviders } from '@/test/render';
  * and never called `signOut()` at all, so the contract's whole point was unused.
  */
 
+beforeEach(() => {
+  platformJson.mockReset();
+  routePlatform(platformJson);
+});
+
+// Settings now reads the platform, so the screen only renders with a session.
+// Before the fixtures were deleted an unconfigured session was enough.
 function sessionWith(signOut: SessionContextValue['signOut']): SessionContextValue {
   return {
-    status: 'unconfigured',
+    status: 'signed-in',
+    session: {
+      user: { userId: 'u1', email: 'alex@acme.co', activeWorkspaceId: '00000000-0000-4000-8000-000000000001' },
+      workspaces: [{ id: '00000000-0000-4000-8000-000000000001', name: 'Acme', role: 'owner' }],
+    },
     refresh: () => {},
     signIn: async () => ({ status: 'unconfigured', message: 'no backend in tests' }),
     signOut,
-  };
+  } as unknown as SessionContextValue;
 }
 
 describe('Settings sign-out', () => {
@@ -33,7 +48,7 @@ describe('Settings sign-out', () => {
     const signOut = jest.fn(async () => ({ revoked: true }));
     await renderWithProviders(<SettingsScreen />, sessionWith(signOut));
 
-    await fireEvent.press(screen.getByText('Sign out'));
+    await fireEvent.press(await screen.findByText('Sign out'));
 
     expect(signOut).toHaveBeenCalled();
     expect(mockRouter.replace).toHaveBeenCalledWith('/(auth)/welcome');
@@ -44,7 +59,7 @@ describe('Settings sign-out', () => {
     const signOut = jest.fn(async () => ({ revoked: false }));
     await renderWithProviders(<SettingsScreen />, sessionWith(signOut));
 
-    await fireEvent.press(screen.getByText('Sign out'));
+    await fireEvent.press(await screen.findByText('Sign out'));
 
     // The person is still signed in on this device, and the screen says both
     // halves of that: what did not happen, and that nothing was cleared.
@@ -60,7 +75,7 @@ describe('Settings sign-out', () => {
       .mockResolvedValueOnce({ revoked: true });
     await renderWithProviders(<SettingsScreen />, sessionWith(signOut));
 
-    await fireEvent.press(screen.getByText('Sign out'));
+    await fireEvent.press(await screen.findByText('Sign out'));
     expect(screen.getByTestId('action-failure')).toBeTruthy();
 
     await fireEvent.press(screen.getByText('Retry sign out'));

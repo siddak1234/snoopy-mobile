@@ -104,3 +104,47 @@ export const NOTIFICATIONS_EMPTY_BODY =
 export const SIGN_OUT_FAILED =
   "Sign-out didn't complete — this session couldn't be revoked, so you're still signed in on this device. Nothing was cleared.";
 export const SIGN_OUT_RETRY = 'Retry sign out';
+
+/**
+ * Design-owned chrome that was living in `lib/fixtures.ts`.
+ *
+ * These are not stand-ins for server data and never were — they are the design's
+ * own vocabulary and copy, which is why they survive the 2026-08-17 decision to
+ * delete the prototype fallbacks. The distinction that matters: a fixture
+ * *pretends to be* a workspace's data, and these describe the interface itself.
+ * `PLAN_BASE_PRICE` is deliberately NOT moved here — a price is a business fact
+ * the platform should own, and relocating it would satisfy the gate's wording
+ * while defeating its purpose.
+ */
+
+/** Activity's four filter chips, over the closed run-status enum. */
+export const ACTIVITY_FILTERS = ['All', 'Success', 'Needs review', 'Failed'] as const;
+
+/** A row in the activity list, after mapping. */
+export type ActivityItem = {
+  icon: import('phosphor-react-native').Icon;
+  tone: 'ok' | 'warn' | 'err';
+  title: string;
+  desc: string;
+  time: string;
+};
+
+/** The builder's "ADD A STEP" dock. Design chrome; DESIGN-GAPS item 5 owns its behaviour. */
+export const BUILDER_PALETTE_NAMES = [
+  'Trigger',
+  'AI step',
+  'Branch',
+  'Action',
+  'Human review',
+  'Delay',
+] as const;
+
+/** Configure's closing line — the design's words about how setup works. */
+export const CONFIGURE_FOOTNOTE =
+  'Steps land preloaded — edit anything before it goes live.';
+
+/** The approvals card's confirmation copy. */
+export const APPROVAL_DONE_TEXT = {
+  approved: 'Approved ✓ — agent resuming',
+  rejected: 'Rejected — sent back to sender',
+} as const;

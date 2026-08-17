@@ -17,12 +17,7 @@ import {
   BROWSE_SOLUTIONS_LABEL,
   errorTitleFor,
 } from '@/lib/content/screen-states';
-import {
-  activityFilters,
-  activityToday,
-  activityYesterday,
-  type ActivityItem,
-} from '@/lib/fixtures';
+import { ACTIVITY_FILTERS, type ActivityItem } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
 import { readRuns } from '@/lib/platform/runs';
 import { catalogIndex, runIcon, splitByDay, toRunRow } from '@/lib/view/runs';
@@ -111,8 +106,8 @@ export default function ActivityScreen() {
   });
 
   const live = activity.status === 'ready' ? activity.data : null;
-  const sourceToday = live ? live.today : activityToday;
-  const sourceYesterday = live ? live.yesterday : activityYesterday;
+  const sourceToday = live ? live.today : [];
+  const sourceYesterday = live ? live.yesterday : [];
 
   const today = sourceToday.filter((i) => matchesFilter(i, filter));
   const yesterday = sourceYesterday.filter((i) => matchesFilter(i, filter));
@@ -124,7 +119,7 @@ export default function ActivityScreen() {
   if (activity.status === 'offline') {
     return <ScreenOffline onRetry={activity.reload} topInset={insets.top} />;
   }
-  if (activity.status === 'error') {
+  if (activity.status === 'error' || activity.status === 'unconfigured') {
     return (
       <ScreenError
         title={errorTitleFor('activity')}
@@ -158,7 +153,7 @@ export default function ActivityScreen() {
       showsVerticalScrollIndicator={false}>
       <Text style={[styles.h1, { color: palette.text }]}>Activity</Text>
       <View style={styles.filters}>
-        {activityFilters.map((f) => (
+        {ACTIVITY_FILTERS.map((f) => (
           <FilterChip
             key={f}
             label={f}

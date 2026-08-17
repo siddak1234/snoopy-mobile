@@ -12,8 +12,7 @@ import { ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-s
 import { em, fonts, layout, radius } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useTheme } from '@/hooks/use-theme';
-import { errorTitleFor } from '@/lib/content/screen-states';
-import { builderPalette, steps } from '@/lib/fixtures';
+import { BUILDER_PALETTE_NAMES, errorTitleFor } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
 import { PlatformNotConfiguredError } from '@/lib/platform/problem';
 import { toPipelineSteps } from '@/lib/view/pipeline';
@@ -65,7 +64,7 @@ export default function BuilderScreen() {
     catalog.status === 'ready'
       ? catalog.data.automations.find((a) => a.templateId === template)?.pipeline
       : undefined;
-  const canvasSteps = declared ? toPipelineSteps(declared) : steps;
+  const canvasSteps = declared ? toPipelineSteps(declared) : [];
 
   if (template) {
     if (catalog.status === 'loading') return <ScreenLoading topInset={insets.top} />;
@@ -169,18 +168,17 @@ export default function BuilderScreen() {
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.dockChips}>
-          {builderPalette.map((item) => {
-            const ChipIcon = item.icon;
+          {BUILDER_PALETTE_NAMES.map((item) => {
             return (
-              <View key={item.name} style={[styles.chip, { borderColor: palette.neutral[700] }]}>
-                <ChipIcon size={15} color={palette.accentRamp[300]} weight="regular" />
+              <View key={item} style={[styles.chip, { borderColor: palette.neutral[700] }]}>
+                <Plus size={15} color={palette.accentRamp[300]} weight="regular" />
                 <Text
                   style={{
                     fontFamily: fonts.medium,
                     fontSize: 12.5,
                     color: palette.neutral[300],
                   }}>
-                  {item.name}
+                  {item}
                 </Text>
               </View>
             );

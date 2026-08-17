@@ -103,18 +103,20 @@ describe('Home stats row', () => {
     expect(screen.queryByText('128')).toBeNull();
   });
 
-  it('keeps the prototype tiles when the build has no backend', async () => {
+  it('shows the designed error state when the build has no backend', async () => {
+    // Owner decision 2026-08-17: an unconfigured build no longer invents tiles.
+    // Home owns its own error state (sHomeErr), so that is what it shows.
     await renderWithProviders(<HomeScreen />);
-    expect(await screen.findByText('128')).toBeTruthy();
+    expect(await screen.findByText("Can't reach Autom8x")).toBeTruthy();
     expect(platformJson).not.toHaveBeenCalled();
   });
 
-  it('keeps the screen usable when the read fails — Home owns its own error state', async () => {
+  it('uses its OWN error state on failure, not the shared one', async () => {
     platformJson.mockRejectedValue(new Error('boom'));
     await renderWithProviders(<HomeScreen />, signedIn);
-    // Home is not replaced by the shared error screen: it has bespoke states and
-    // the tiles fall back, so the rest of the dashboard stays readable.
-    expect(await screen.findByText('Welcome back, Alex')).toBeTruthy();
+    // Home keeps sHomeErr rather than the shared ScreenError — the design gives
+    // it bespoke states and the frozen-UI rule says to use them.
+    expect(await screen.findByText("Can't reach Autom8x")).toBeTruthy();
     expect(screen.queryByTestId('screen-error')).toBeNull();
   });
 });
