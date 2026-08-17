@@ -75,7 +75,9 @@ describe('Home dashboard', () => {
 describe('Solutions marketplace', () => {
   it('lists the six solutions with prices and the live plan total', async () => {
     const { getByText, getAllByText, queryByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
-    expect(getByText('Growth plan · $186/mo')).toBeTruthy();
+    // No plan base: entitlements.plans has no price column and only `free` is
+    // seeded, so the total is the solutions total. Backend answer, 2026-08-17.
+    expect(getByText('Growth plan · $87/mo')).toBeTruthy();
     expect(getByText('3 active · manage in Settings')).toBeTruthy();
     expect(getAllByText('Weekly KPI digest').length).toBeGreaterThan(0);
     expect(getAllByText('Finance · $39/mo').length).toBeGreaterThan(0);
@@ -107,10 +109,13 @@ describe('Solutions marketplace', () => {
     ).toBeTruthy();
     await fireEvent.press(getByText('Keep it'));
     expect(queryByText('Remove Invoice triage?')).toBeNull();
-    expect(getByText('Growth plan · $186/mo')).toBeTruthy();
+    // No plan base: entitlements.plans has no price column and only `free` is
+    // seeded, so the total is the solutions total. Backend answer, 2026-08-17.
+    expect(getByText('Growth plan · $87/mo')).toBeTruthy();
     await fireEvent.press(getAllByText('Added ✓')[0]);
     await fireEvent.press(getByText('Remove'));
-    expect(getByText('Growth plan · $147/mo')).toBeTruthy();
+    // $87 − $39 with the base gone.
+    expect(getByText('Growth plan · $48/mo')).toBeTruthy();
     expect(getByText('2 active · manage in Settings')).toBeTruthy();
   });
 
@@ -139,7 +144,8 @@ describe('Solutions marketplace', () => {
     await fireEvent.press(getAllByText('Added ✓')[0]);
     await fireEvent.press(getByText('Remove'));
     // Removing Invoice triage: $186 − $39 = $147.
-    expect(getByText('Growth plan · $147/mo')).toBeTruthy();
+    // $87 − $39 with the base gone.
+    expect(getByText('Growth plan · $48/mo')).toBeTruthy();
   });
 });
 
@@ -464,11 +470,14 @@ describe('Settings & security', () => {
   it('shows plan & billing with the derived totals and opens Solutions', async () => {
     const { getByText, getAllByText, queryByText } = await renderWithProviders(<SettingsScreen />, signedInSession);
     expect(getByText('Growth plan')).toBeTruthy();
-    expect(getByText('$99/mo base · renews Sep 1')).toBeTruthy();
-    expect(getByText('$186/mo')).toBeTruthy();
+    // The "$99/mo base" is gone: no plan has a price, so the client stated one
+    // the platform never published.
+    expect(getByText('Renews Sep 1')).toBeTruthy();
+    // No plan base — the total is the solutions total (see Solutions above).
+    expect(getByText('$87/mo')).toBeTruthy();
     expect(getByText('3 active · $87/mo')).toBeTruthy();
     expect(getByText('Visa ···· 4242')).toBeTruthy();
-    expect(getByText('Last: Aug 1 · $186')).toBeTruthy();
+    expect(getByText('Last: Aug 1 · $87')).toBeTruthy();
     await fireEvent.press(getByText('Manage solutions'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/solutions');
   });

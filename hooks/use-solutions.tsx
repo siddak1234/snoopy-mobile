@@ -1,7 +1,5 @@
 import React, { createContext, useContext, useMemo, useState } from 'react';
 
-import { PLAN_BASE_PRICE } from '@/lib/fixtures';
-
 /** One priced solution, however the screen sourced it. */
 export type PricedSolution = { templateId: string; price: number; subscribed: boolean };
 
@@ -33,11 +31,19 @@ const SolutionsContext = createContext<SolutionsContextValue | null>(null);
  * is what lets one hook serve a screen reading the live catalog and a screen
  * reading the prototype without it needing to know which.
  *
- * `PLAN_BASE_PRICE` is the one thing still imported from the fixtures, and it is
- * the reason this file cannot leave the ledger. The $99 plan base has no wire
- * source: BUILD-PLAN 8.3 records §12.1 #46 as ratified but says 8.3 "waits on
- * that account" — a payment provider account, which ADR-0016 places in Round 7.
- * So this is sequencing, not a missing endpoint.
+ * **There is no plan base, and that is the answer rather than a gap.** This file
+ * used to add a $99 `PLAN_BASE_PRICE` from the fixtures, recorded as waiting on
+ * Round 7's payment provider account. The backend answered on 2026-08-17 that the
+ * reason was wrong twice over: publishing a price needs no provider account —
+ * `AutomationCatalogEntry.monthlyPriceUsd` is already required and already
+ * published — and, more to the point, there is no plan to price.
+ * `entitlements.plans` has no price column at all, only a nullable
+ * `provider_price_id` pointer, and only `free` is seeded, with none. The plan a
+ * real workspace is on has a base of **$0**.
+ *
+ * So the total is the solutions total, and no local constant stands in for the
+ * missing one. Inventing a `$99` here would be exactly the shape the round
+ * forbids a client to invent: a price the platform has not stated.
  */
 export function SolutionsProvider({ children }: { children: React.ReactNode }) {
   const [overrides, setOverrides] = useState<Record<string, boolean>>({});
@@ -55,7 +61,8 @@ export function SolutionsProvider({ children }: { children: React.ReactNode }) {
         return {
           activeCount: active.length,
           solutionsTotal: `$${sum}`,
-          planTotal: `$${PLAN_BASE_PRICE + sum}`,
+          // No base term. See the note above: there is no plan to price.
+          planTotal: `$${sum}`,
         };
       },
     };

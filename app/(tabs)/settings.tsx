@@ -237,7 +237,12 @@ export default function SettingsScreen() {
           <SettingsRow
             icon={CrownSimple}
             title="Growth plan"
-            sub="$99/mo base · renews Sep 1"
+            // No plan base to state. `entitlements.plans` has no price column
+            // and only `free` is seeded, so a "$99/mo base" was this client
+            // asserting a price the platform has never published. The row keeps
+            // the plan's own total, which IS sourced — from each solution's
+            // `monthlyPriceUsd`.
+            sub="Renews Sep 1"
             divider
             right={
               <Text style={[styles.planTotal, { color: palette.accentRamp[300] }]}>
