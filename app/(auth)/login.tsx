@@ -19,7 +19,12 @@ import { OrDivider } from '@/components/nocturne/or-divider';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { TextField } from '@/components/nocturne/text-field';
 import { em, fonts, layout, status } from '@/constants/theme';
+import { useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
+import type { LoginProvider } from '@/lib/platform/native-auth';
+
+/** The prototype's designed error copy, still reachable via `?state=error`. */
+const DEMO_ERROR = "That password didn't match. Try again, or reset it below.";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -29,9 +34,29 @@ export default function LoginScreen() {
   // /(auth)/login?state=error
   const { state } = useLocalSearchParams<{ state?: 'error' }>();
 
-  const [email, setEmail] = useState('alex@acme.co');
-  const [password, setPassword] = useState('automate88');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [stayLoggedIn, setStayLoggedIn] = useState(true);
+  const [signInError, setSignInError] = useState<string | null>(null);
+  const { signIn } = useSession();
+
+  /**
+   * Sign in through the system browser (ADR-0017).
+   *
+   * A cancelled sheet clears the callout rather than reporting anything — the
+   * person closed it on purpose. Only a real refusal is worth a message, and it
+   * renders in the callout the design already draws.
+   */
+  const startSignIn = async (provider: LoginProvider) => {
+    setSignInError(null);
+    const outcome = await signIn(provider);
+    if (outcome.status === 'signed-in') {
+      router.replace('/(tabs)/(home)');
+      return;
+    }
+    if (outcome.status === 'cancelled') return;
+    setSignInError(outcome.message);
+  };
 
   return (
     <KeyboardAvoidingView
@@ -53,11 +78,11 @@ export default function LoginScreen() {
           Welcome back to your workspace.
         </Text>
 
-        {state === 'error' ? (
+        {signInError ?? (state === 'error' ? DEMO_ERROR : null) ? (
           <View style={styles.errorCallout}>
             <WarningCircle size={16} color={status.err} style={styles.errorIcon} />
             <Text style={styles.errorText}>
-              That password didn&apos;t match. Try again, or reset it below.
+              {signInError ?? DEMO_ERROR}
             </Text>
           </View>
         ) : null}
@@ -107,9 +132,21 @@ export default function LoginScreen() {
         <OrDivider />
 
         <View style={styles.oauthColumn}>
-          <OAuthButton provider="apple" label="Continue with Apple" />
-          <OAuthButton provider="google" label="Continue with Google" />
-          <OAuthButton provider="microsoft" label="Continue with Microsoft" />
+          <OAuthButton
+            provider="apple"
+            label="Continue with Apple"
+            onPress={() => startSignIn('apple')}
+          />
+          <OAuthButton
+            provider="google"
+            label="Continue with Google"
+            onPress={() => startSignIn('google')}
+          />
+          <OAuthButton
+            provider="microsoft"
+            label="Continue with Microsoft"
+            onPress={() => startSignIn('microsoft')}
+          />
         </View>
 
         <Text style={[styles.switchLine, { color: palette.neutral[400] }]}>

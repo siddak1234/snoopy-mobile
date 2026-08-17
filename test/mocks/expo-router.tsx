@@ -25,10 +25,33 @@ beforeEach(() => {
   setMockParams({});
 });
 
+/** Records where a route guard sent the user, without a navigator to run it. */
+export const mockRedirect = jest.fn();
+
+export function Redirect({ href }: { href: string }) {
+  mockRedirect(href);
+  return null;
+}
+
+/**
+ * Navigator stand-ins.
+ *
+ * `Screen` is a declaration, not a rendered view: the real navigators read it as
+ * configuration and render the matching route themselves. Rendering nothing is
+ * therefore the faithful stand-in — a layout under test is asserted on the
+ * routes it declares and the guards it applies, not on a child screen it never
+ * draws itself.
+ */
+function Screen(_props: { name: string; options?: unknown }) {
+  return null;
+}
+
 export function Stack({ children }: { children?: React.ReactNode }) {
   return <>{children}</>;
 }
+Stack.Screen = Screen;
 
 export function Tabs({ children }: { children?: React.ReactNode }) {
   return <>{children}</>;
 }
+Tabs.Screen = Screen;
