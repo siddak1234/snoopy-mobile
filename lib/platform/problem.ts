@@ -21,6 +21,27 @@ export class PlatformError extends Error {
 }
 
 /**
+ * Thrown when the request never reached the platform at all.
+ *
+ * A subclass rather than a flag, and a subclass of `PlatformError` rather than a
+ * sibling, so that `error.status === 502` keeps working everywhere it already
+ * does — notably the refresh and sign-out paths, where a 502 must preserve the
+ * session rather than clear it.
+ *
+ * The distinction earns its place because the design draws two different
+ * screens: a failed *load* ("Couldn't load this run", with Retry and Go back)
+ * and being *offline* ("You're offline… this screen will sync as soon as you're
+ * back"). Only the transport layer knows which happened, and it was previously
+ * flattening both into one 502.
+ */
+export class PlatformUnreachableError extends PlatformError {
+  constructor(message = 'The platform is unreachable') {
+    super(message, 502);
+    this.name = 'PlatformUnreachableError';
+  }
+}
+
+/**
  * Thrown when the app has no backend origin configured.
  *
  * Distinct from a failed request on purpose: an unconfigured client renders an
