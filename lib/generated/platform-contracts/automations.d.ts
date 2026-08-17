@@ -89,6 +89,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/run-stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How many runs, and how they ended.
+         * @description The counts both clients draw — a flow row's "1,284 runs · 1,272 ok · 12 failed", and a dashboard's stats tiles — as one read rather than one per subscription.
+         *     The window is the caller's: omit `since` for every run this workspace has, or pass an instant for "today". Two questions, one route, because they differ only in the bound. Every status the enum names is returned and the client sums what it wants; the platform does not decide which outcomes count as "ok".
+         *     Only subscriptions with at least one run in the window appear. A subscription absent from `subscriptions` has no runs, which is not the same as a subscription that does not exist — the subscriptions list is what answers that.
+         */
+        get: operations["readRunStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/runs/{runId}": {
         parameters: {
             query?: never;
@@ -243,6 +265,22 @@ export interface components {
             available: boolean;
             /** @description Customer-facing manifest setup fields, in manifest order. A field's `key` is the identity written to subscription `config[key]`. On PATCH the server rejects undeclared keys and values with the wrong control type; a required field may be omitted only when it declares a default. */
             setup: components["schemas"]["AutomationSetupField"][];
+            /**
+             * @description What this automation promises to do, in manifest order — the pinned manifest's own display contract, published for the same reason `setup` is. **Display and integrity, never an execution plan**: the platform does not run these steps, it refuses any reported step that is not one of them. The first is always the trigger.
+             *     A client joins `RunStep.stepId` or `Approval.stepId` to `id` here for a human title, which is why neither carries one of its own, and counts these to get run detail's "steps done 3 / 4" denominator.
+             */
+            pipeline: components["schemas"]["AutomationDeclaredStep"][];
+        };
+        AutomationDeclaredStep: {
+            /** @description Stable within a manifest version. What a reported `RunStep.stepId` and an `Approval.stepId` name; unique across the pipeline, or a reported step would be ambiguous. */
+            id: string;
+            /**
+             * @description The row's label. Exactly the first step is `TRIGGER` — enforced at registration, so a client may rely on it rather than checking.
+             * @enum {string}
+             */
+            kicker: "TRIGGER" | "AI STEP" | "ACTION";
+            title: string;
+            description: string;
         };
         AutomationSetupField: {
             /** @enum {string} */
@@ -304,6 +342,17 @@ export interface components {
              */
             rootRunId: string;
             requestId: string;
+            /**
+             * @description Why this run failed, in the automation's words. Present only when `status` is `failed`, enforced by the row's own CHECK.
+             *     On the LIST shape deliberately: a failed run that can only say "failed" forces every client to fetch the whole timeline for a sentence the run row already held.
+             *     **500, where `resultSummary` is 200**, and the difference is history rather than design: this column has allowed 500 since the runs baseline and the callback has never bounded it, so 500 is what a client can actually receive. Narrowing it is a change to what the platform refuses from automations already running, which is not this round's to make — filed as §12.1 #75. `resultSummary` is new, so its 200 is enforced at the schema, the route and the column alike.
+             */
+            failureReason?: string;
+            /**
+             * @description One line about what this run did. Present only when `status` is `succeeded`, and only when the automation supplied one — it is optional, and a run without one renders as its status.
+             *     **Not the automation's output.** The structured result is validated against the manifest's `outputSchema` and is not published at any shape; this is the sentence the automation wrote about it, under the same rule as a step summary — never the payload itself.
+             */
+            resultSummary?: string;
             /** Format: date-time */
             startedAt?: string;
             /** Format: date-time */
@@ -312,6 +361,38 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+        };
+        /** @description One count per value of `RunStatus`, plus their sum. Every status is present and zero rather than omitted, so a client renders a figure without deciding what a missing key meant. */
+        RunStatusCounts: {
+            total: number;
+            pending: number;
+            running: number;
+            held: number;
+            succeeded: number;
+            failed: number;
+            cancelled: number;
+        };
+        RunStats: {
+            /**
+             * Format: date-time
+             * @description Echoed when the request bounded the window. Absent means all time.
+             */
+            since?: string;
+            workspace: components["schemas"]["RunStatusCounts"];
+            /** @description Busiest first, then by id — a stable order across two reads. */
+            subscriptions: components["schemas"]["RunSubscriptionCounts"][];
+        };
+        /** @description One subscription's counts. Spelled out rather than composed with `allOf` over `RunStatusCounts`: that base closes itself with `additionalProperties: false`, and a closed schema in an `allOf` rejects every sibling branch's properties — so the composition would have matched no response at all and a validating client would have refused all of them. */
+        RunSubscriptionCounts: {
+            /** Format: uuid */
+            subscriptionId: string;
+            total: number;
+            pending: number;
+            running: number;
+            held: number;
+            succeeded: number;
+            failed: number;
+            cancelled: number;
         };
         RunStep: {
             /** Format: uuid */
@@ -638,6 +719,35 @@ export interface operations {
             404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
+        };
+    };
+    readRunStats: {
+        parameters: {
+            query?: {
+                /** @description Count only runs created at or after this instant. A value that is not an ISO-8601 instant is refused rather than ignored: silently widening "today" to "ever" would render a plausible wrong number. */
+                since?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Must be a workspace the session names, or the answer is 404. */
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Counts for the workspace and for each subscription with runs. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunStats"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
         };
     };
     readRun: {

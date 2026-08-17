@@ -89,6 +89,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/connections/native/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * A native client trades its sealed callback for a connection.
+         * @description The second half of the split callback (BUILD-PLAN 7.7.6, §12.1 #62).
+         *     A native client's system browser holds no platform session, so `/v1/connections/callback` cannot complete its flow — it has no actor to compare against the person who began the attempt. Instead the callback seals the provider's parameters and redirects to the app's claimed HTTPS URL, and the app posts the sealed value here **with its bearer token**.
+         *     **This is where the flow finally has an actor, so this is where the attempt is claimed** — for the first time, exactly once. A replayed `code` therefore fails twice over: the attempt is no longer claimable, and the provider's authorization code inside it is spent (RFC 6749 §4.1.2).
+         *     Answers JSON rather than a redirect: the caller here is the app on a POST, not a browser mid-navigation. Every unusable code — forged, tampered, expired, or naming a consumed attempt — is one 401 with no detail that would tell them apart.
+         */
+        post: operations["completeNativeConnectionAuthorization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/connections/authorize": {
         parameters: {
             query?: never;
@@ -153,6 +176,11 @@ export interface components {
             displayName: string;
             /** @description What connecting this account lets automations do, in a person's words. */
             description: string;
+            /**
+             * @description An icon name the clients resolve. Never an asset URL — the same rule and the same vocabulary as `AutomationCatalogEntry.icon`.
+             *     Required, so a reviewed provider file stays the whole of what adding a provider takes. Without it a client has to keep its own map from `providerId` to an icon, and a new vendor stops being a data-file change.
+             */
+            icon: string;
             /** @description Every scope the reviewed spec declares. An authorization may request a subset of these and never anything outside them. Empty for an `api-key` provider — scopes are granted, not pasted. */
             scopes: string[];
             /**
@@ -376,6 +404,38 @@ export interface operations {
             };
         };
     };
+    completeNativeConnectionAuthorization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description The sealed value the callback redirect carried. Opaque, and bound to a key the app never holds — it carries the provider's authorization code, never a provider token. */
+                    code: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The connection, as the list read returns it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        connection: components["schemas"]["Connection"];
+                    };
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
     beginConnectionAuthorization: {
         parameters: {
             query?: never;
@@ -392,6 +452,12 @@ export interface operations {
                     providerId: string;
                     /** @description Bounded so the advertised maximum fits inside the route's 8 KiB body limit — a documented maximum the server refuses is worse than a smaller one it honours. Real provider scopes are far below this: Google's longest is around 50 characters. */
                     scopes?: string[];
+                    /**
+                     * Format: uri
+                     * @description **Native clients only** (BUILD-PLAN 7.7.6). An app-claimed HTTPS URL from `NATIVE_APP_REDIRECT_URIS`, exact-matched. Its presence is what makes this a native flow: the callback then hands the app a sealed value to complete instead of finishing at the website.
+                     *     Omit it for the browser flow, which is unchanged. A value not on the allowlist is refused with 400 and is **not echoed back** — reflecting a rejected redirect target is how a refusal becomes a reflection gadget.
+                     */
+                    returnTo?: string;
                 };
             };
         };

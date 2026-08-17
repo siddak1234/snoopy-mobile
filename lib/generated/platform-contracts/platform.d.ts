@@ -592,6 +592,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspaces/{workspaceId}/run-stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Run counts for this workspace, per subscription and rolled up. The full shape is in `openapi/automations.yaml`. */
+        get: operations["readRunStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/runs/{runId}": {
         parameters: {
             query?: never;
@@ -2677,6 +2694,28 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description The created run. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    readRunStats: {
+        parameters: {
+            query?: {
+                since?: string;
+            };
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Counts for the workspace and each subscription with runs. */
             200: {
                 headers: {
                     [name: string]: unknown;
