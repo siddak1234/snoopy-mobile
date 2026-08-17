@@ -22,9 +22,12 @@ import { AvatarBadge } from '@/components/nocturne/avatar-badge';
 import { NocToggle } from '@/components/nocturne/noc-toggle';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { ActionFailure } from '@/components/screen-state';
 import { em, fonts, layout, status } from '@/constants/theme';
+import { useSession } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
 import { useTheme, type ThemeMode } from '@/hooks/use-theme';
+import { SIGN_OUT_FAILED, SIGN_OUT_RETRY } from '@/lib/content/screen-states';
 import { settingsConnections } from '@/lib/fixtures';
 
 function SettingsRow({
@@ -81,6 +84,27 @@ export default function SettingsScreen() {
   const [faceId, setFaceId] = useState(true);
   const [staySignedIn, setStaySignedIn] = useState(true);
   const [notifications, setNotifications] = useState(true);
+  const [signOutFailed, setSignOutFailed] = useState(false);
+  const { signOut } = useSession();
+
+  /**
+   * Sign out for real, and honour the one answer the contract added for us.
+   *
+   * ADR-0017 §4 makes `POST /v1/auth/logout` answer **502** rather than 204 when
+   * revocation fails, precisely so a client can tell. The session is still live
+   * upstream at that point, so `signOut()` deliberately leaves the enclave
+   * intact — and this screen must not navigate away claiming a sign-out that did
+   * not happen. It says so inline instead and offers the action again.
+   */
+  const handleSignOut = async () => {
+    const { revoked } = await signOut();
+    if (!revoked) {
+      setSignOutFailed(true);
+      return;
+    }
+    setSignOutFailed(false);
+    router.replace('/(auth)/welcome');
+  };
 
   return (
     <ScrollView
@@ -255,7 +279,15 @@ export default function SettingsScreen() {
         </SurfaceCard>
       </View>
 
-      <SurfaceCard onPress={() => router.replace('/(auth)/welcome')} style={styles.signOutCard}>
+      {signOutFailed ? (
+        <ActionFailure
+          message={SIGN_OUT_FAILED}
+          retryLabel={SIGN_OUT_RETRY}
+          onRetry={handleSignOut}
+        />
+      ) : null}
+
+      <SurfaceCard onPress={handleSignOut} style={styles.signOutCard}>
         <SignOut size={20} color={status.err} />
         <Text style={[styles.signOutLabel, { color: status.err }]}>Sign out</Text>
       </SurfaceCard>
