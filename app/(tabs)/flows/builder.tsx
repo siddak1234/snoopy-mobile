@@ -1,3 +1,4 @@
+import { useLocalSearchParams } from 'expo-router';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,9 +8,15 @@ import { DotsSixVertical, Plus } from 'phosphor-react-native';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { StepCard } from '@/components/nocturne/step-card';
+import { ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { em, fonts, layout, radius } from '@/constants/theme';
+import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useTheme } from '@/hooks/use-theme';
+import { errorTitleFor } from '@/lib/content/screen-states';
 import { builderPalette, steps } from '@/lib/fixtures';
+import { readCatalog } from '@/lib/platform/catalog';
+import { PlatformNotConfiguredError } from '@/lib/platform/problem';
+import { toPipelineSteps } from '@/lib/view/pipeline';
 
 /** Dashed connector stem between step cards (CSS: 12px, 1.5px dashed accent-700). */
 function ConnectorStem({ color }: { color: string }) {
@@ -23,6 +30,58 @@ function ConnectorStem({ color }: { color: string }) {
 export default function BuilderScreen() {
   const { palette } = useTheme();
   const insets = useSafeAreaInsets();
+
+  /**
+   * BUILD-PLAN 8.7 — the canvas renders `manifest.pipeline`.
+   *
+   * Round 6.6 published it as `AutomationCatalogEntry.pipeline`, which is what
+   * makes this item deliverable at all; before that the word appeared nowhere in
+   * the three specs except one error description.
+   *
+   * `template` is optional, and that is a gap rather than a convenience: all
+   * three call sites — `flows/index.tsx:60`, `flows/configure.tsx:117`,
+   * `flows/detail.tsx:136` — push here with no argument, and the design's own
+   * `gBuilder` carries none either. So the builder cannot yet say WHICH
+   * automation it is editing. DESIGN-GAPS item 3 listed setup, configure,
+   * templates and run detail; it did not list the builder, and this is the same
+   * defect. Filed in DESIGN-CONTRACT.md. Until a call site can name a template —
+   * which needs 8.6's flow detail wired first — the prototype's steps stand in.
+   */
+  const { template } = useLocalSearchParams<{ template?: string }>();
+
+  // No template means there is nothing to look up, so no request is made. The
+  // read refuses rather than the hook being called conditionally — hooks cannot
+  // be — and `unconfigured` is already this codebase's word for "no request to
+  // make; show the prototype", which is exactly the situation.
+  const catalog = useWorkspaceResource(
+    (workspaceId) => {
+      if (!template) throw new PlatformNotConfiguredError();
+      return readCatalog(workspaceId);
+    },
+    [template],
+  );
+
+  const declared =
+    catalog.status === 'ready'
+      ? catalog.data.automations.find((a) => a.templateId === template)?.pipeline
+      : undefined;
+  const canvasSteps = declared ? toPipelineSteps(declared) : steps;
+
+  if (template) {
+    if (catalog.status === 'loading') return <ScreenLoading topInset={insets.top} />;
+    if (catalog.status === 'offline') {
+      return <ScreenOffline onRetry={catalog.reload} topInset={insets.top} />;
+    }
+    if (catalog.status === 'error') {
+      return (
+        <ScreenError
+          title={errorTitleFor('builder')}
+          onRetry={catalog.reload}
+          topInset={insets.top}
+        />
+      );
+    }
+  }
 
   return (
     <View style={[styles.root, { backgroundColor: palette.bg }]}>
@@ -73,7 +132,7 @@ export default function BuilderScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.canvasContent}>
           <View style={styles.pipeline}>
-            {steps.map((step, i) => (
+            {canvasSteps.map((step, i) => (
               <View key={i} style={styles.pipeline}>
                 <StepCard
                   step={step}
