@@ -146,7 +146,29 @@ are listed again in item form below with their evidence.
    authenticated/unauthenticated route boundary. Every tab route is currently
    reachable without signing in.
 
-2. **Loading, empty, and error coverage outside Home** — _owner: Claude Design_
+2. **Loading, empty, and error coverage outside Home** — ✅ **DELIVERED**
+   2026-08-17, in two passes — _owner was: Claude Design_
+
+   The design generalised rather than drawing twelve bespoke sets: `gLoad`,
+   `gErr` and `gOff` derive for every app screen except Home, with a
+   `gLoadTiles` skeleton for run and workflow detail. The `variant` enum gained
+   `offline` and `actionfail`; `run` gained `running`, `pending` and
+   `cancelled`. A second pass added the first-run empties this repo found
+   missing (`fFirstEmpty`, `actFirstEmpty` — the old copy assumed a search
+   query), sign-out failure (`soFail`), and the remaining action failures
+   (`dActFail`, `solFail`, `runFail`). 42 → 58 state ids, no token and no
+   component added.
+
+   **The intent question is ratified:** `gErr`/`gOff` are *load* states. A
+   failed action on data that already loaded is **always inline** — a callout
+   naming what did not happen, with the data left on screen.
+
+   Implemented in `components/screen-state.tsx` and `hooks/use-resource.tsx`;
+   the status vocabulary in `lib/view/status.ts`. Screens still on fixtures are
+   waiting on published contract shapes, not on design — see
+   `scripts/audit-fixtures.mjs`, where each remaining file names its blocker.
+
+   _Original finding, kept for the record:_
 
    Home is the only screen with loading, empty, and error states. Filtered-empty
    states exist on Flows, Activity, and Solutions. **Workflow detail, run
