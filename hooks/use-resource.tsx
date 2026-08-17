@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { activeWorkspaceId, useSession } from '@/hooks/use-session';
 import {
   PlatformError,
   PlatformNotConfiguredError,
@@ -53,7 +54,14 @@ export function useResource<T>(read: () => Promise<T>, deps: unknown[] = []): Re
     let cancelled = false;
     setState({ status: 'loading' });
 
-    readRef()
+    // `Promise.resolve().then(...)` rather than `readRef()` directly: a reader
+    // that throws SYNCHRONOUSLY would otherwise escape the chain entirely and
+    // surface as a render error instead of a state. `useWorkspaceResource` does
+    // exactly that when no workspace has resolved, and it is the normal case in
+    // an unconfigured build — so this is the difference between the prototype
+    // rendering and the screen crashing.
+    Promise.resolve()
+      .then(() => readRef())
       .then((data) => {
         if (!cancelled) setState({ status: 'ready', data });
       })
@@ -79,4 +87,31 @@ export function useResource<T>(read: () => Promise<T>, deps: unknown[] = []): Re
   }, [readRef, attempt]);
 
   return { ...state, reload };
+}
+
+/**
+ * A read scoped to the workspace whose data the screens show.
+ *
+ * Every product path is workspace-scoped — the workspace is in the URL because
+ * it is the thing being authorized — so four screens would otherwise repeat the
+ * same three lines of session plumbing.
+ *
+ * With no resolvable workspace the read never fires and the state is
+ * `unconfigured` rather than an error. That is the correct reading of the
+ * situation and not a shortcut: a build with no backend, or a session that has
+ * not resolved, has not *failed* to load anything. Screens treat it as "show the
+ * prototype content", which is what keeps the design browsable without a backend.
+ */
+export function useWorkspaceResource<T>(
+  read: (workspaceId: string) => Promise<T>,
+  deps: unknown[] = [],
+): Resource<T> {
+  const session = useSession();
+  const workspaceId = activeWorkspaceId(session);
+
+  return useResource<T>(() => {
+    if (!workspaceId) throw new PlatformNotConfiguredError();
+    return read(workspaceId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId, ...deps]);
 }
