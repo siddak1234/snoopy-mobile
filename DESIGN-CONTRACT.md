@@ -179,6 +179,35 @@ the filtered runs list; confidence → per-automation output, unpublished;
 `homeStats` → `run-stats?since=<local midnight>`; `usedByTeams` → static copy,
 while `Connection.usedByCount` is published and within-tenant.
 
+**FINDING 3 — the `kicker` enum cannot express a step the design draws.**
+`AutomationDeclaredStep.kicker` is closed at `[TRIGGER, AI STEP, ACTION]`, and
+BUILD-PLAN §2.2 justifies closing it with *"Three row styles in the design."*
+That justification is factually wrong. `design-source/…/Screen.dc.html` — the
+authoritative design source, not the fixtures — contains `k:'BRANCH'`, and the
+builder's own palette offers Branch, Delay and Human review. So an automation
+whose manifest declares a branch step **cannot be drawn as the design draws it**;
+a client must either drop the step or coerce it to `ACTION`, and both are wrong.
+`lib/view/pipeline.ts` renders an unrecognised kicker rather than throwing, which
+keeps the canvas alive but does not make it right.
+
+**FINDING 4 — `AutomationDeclaredStep` publishes no icon, and a kicker cannot
+substitute.** `AutomationCatalogEntry` carries a required `icon`; a declared step
+does not. The design draws a glyph per step according to what the step *does* — an
+envelope for a mail trigger, a clock for a scheduled one, a table for a Sheets
+read — and three kickers cannot carry that many distinctions. The map in
+`lib/view/pipeline.ts` is the closest faithful render available and is documented
+as lossy. Either publish a step icon, or accept that every trigger looks alike.
+
+**FINDING 5 — the builder has no identity, and item 3 did not list it.** All
+three call sites (`flows/index.tsx:60`, `flows/configure.tsx:117`,
+`flows/detail.tsx:136`) push to the builder with no argument, and the design's own
+`gBuilder` carries none either, so the screen cannot say which automation it is
+editing. DESIGN-GAPS item 3 named solution setup, template configure and run
+detail; the builder is the same defect and was missed. `builder.tsx` now accepts
+an optional `template`, which makes 8.7 real for any caller that can name one —
+and no caller can until flow detail is wired, because detail is still keyed by the
+fixture's `FlowKey`.
+
 **FINDING 1 — the three specs disagree about the session credential.** Read off
 the specs, not inferred:
 
