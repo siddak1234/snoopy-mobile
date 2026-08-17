@@ -78,3 +78,18 @@ export function readSubscriptions(workspaceId: string): Promise<{ subscriptions:
     `/v1/workspaces/${workspaceId}/subscriptions`,
   );
 }
+
+export type RunDetail = components['schemas']['RunDetail'];
+
+/**
+ * One run, with its timeline.
+ *
+ * The response is `{run, steps, events}`. `steps` is the human timeline a screen
+ * renders; `events` is the platform's own record of state transitions and is not
+ * what the design draws. §12.1 #67 notes that neither carries the run's output —
+ * terminal event payloads are `{}` — so there is no path to a structured result
+ * and `resultSummary`/`failureReason` on the run itself are the whole of it.
+ */
+export function readRun(workspaceId: string, runId: string): Promise<RunDetail> {
+  return platformJson<RunDetail>(`/v1/workspaces/${workspaceId}/runs/${runId}`);
+}

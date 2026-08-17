@@ -13,6 +13,15 @@ import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { em, fonts, layout, status } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { runDetails, runFields, type RunTimelineItem, type RunVariant } from '@/lib/fixtures';
+import { ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
+import { useWorkspaceResource } from '@/hooks/use-resource';
+import { errorTitleFor } from '@/lib/content/screen-states';
+import { readCatalog } from '@/lib/platform/catalog';
+import { readRun } from '@/lib/platform/runs';
+import { PlatformNotConfiguredError } from '@/lib/platform/problem';
+import { clockTime, duration } from '@/lib/view/format';
+import { statusLabel } from '@/lib/view/status';
+import { metaFor, runLabel, toRunStats, toTimeline } from '@/lib/view/runs';
 
 const TIMELINE_ICON_COLOR = {
   ok: status.ok,
@@ -56,7 +65,7 @@ export default function RunDetailScreen() {
   const { palette } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { variant } = useLocalSearchParams<{ variant?: RunVariant }>();
+  const { variant, runId } = useLocalSearchParams<{ variant?: RunVariant; runId?: string }>();
   // Retry (design `rty`): idle → retrying (1600ms) → the retried run.
   const [retry, setRetry] = useState<'idle' | 'running' | 'done'>('idle');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -65,7 +74,54 @@ export default function RunDetailScreen() {
   const requested = variant ?? 'held';
   const effective: RunVariant =
     requested === 'failed' && retry === 'done' ? 'retried' : requested;
-  const run = runDetails[effective] ?? runDetails.held;
+  /**
+   * One run, plus the catalog for its name and the step titles.
+   *
+   * `RunStep` carries a `stepId` the spec guarantees the pinned manifest
+   * declares, so the human title comes from that manifest's `pipeline` — the
+   * intended join, not a workaround.
+   *
+   * Two tiles the design draws have no source and are refused rather than
+   * invented: **confidence** lives in the run's output (§12.1 #73a) and the
+   * extracted-fields card needs that same output (§12.1 #67), which no published
+   * shape carries — terminal event payloads are `{}`. Confidence renders the
+   * design's own em dash; the fields card is omitted, exactly as the design
+   * already omits it on a failed run.
+   */
+  const detail = useWorkspaceResource(
+    async (workspaceId) => {
+      if (!runId) throw new PlatformNotConfiguredError();
+      const [run, catalog] = await Promise.all([
+        readRun(workspaceId, runId),
+        readCatalog(workspaceId),
+      ]);
+      const entry = catalog.automations.find((a) => a.templateId === run.run.templateId);
+      return { detail: run, entry };
+    },
+    [runId],
+  );
+
+  const liveRun = detail.status === 'ready' ? detail.data : null;
+  const run = liveRun
+    ? {
+        title: runLabel(liveRun.detail.run),
+        sub: `${liveRun.entry?.name ?? liveRun.detail.run.templateId} · ${metaFor(liveRun.detail.run)}`,
+        status: statusLabel(liveRun.detail.run.status) as (typeof runDetails)['held']['status'],
+        stats: toRunStats(
+          liveRun.detail.steps.length,
+          liveRun.entry?.pipeline?.length ?? 0,
+          duration(liveRun.detail.run.startedAt, liveRun.detail.run.endedAt),
+        ),
+        timeline: toTimeline(
+          liveRun.detail.steps,
+          liveRun.entry?.pipeline,
+          clockTime,
+        ) as RunTimelineItem[],
+        // No published run output, so no extracted-fields card.
+        fields: false,
+        action: runDetails[effective]?.action,
+      }
+    : (runDetails[effective] ?? runDetails.held);
   const isHeld = run.status === 'Held';
   const isRetrying = retry === 'running';
 
@@ -74,6 +130,25 @@ export default function RunDetailScreen() {
     setRetry('running');
     timer.current = setTimeout(() => setRetry('done'), 1600);
   };
+
+  // Below every hook: these return early. Only a named run fetches; without a
+  // runId there is nothing to look up and the prototype's variants stand in.
+  if (runId) {
+    if (detail.status === 'loading') return <ScreenLoading tiles topInset={insets.top} />;
+    if (detail.status === 'offline') {
+      return <ScreenOffline onRetry={detail.reload} onBack={() => router.back()} topInset={insets.top} />;
+    }
+    if (detail.status === 'error') {
+      return (
+        <ScreenError
+          title={errorTitleFor('run')}
+          onRetry={detail.reload}
+          onBack={() => router.back()}
+          topInset={insets.top}
+        />
+      );
+    }
+  }
 
   return (
     <ScrollView

@@ -141,6 +141,8 @@ export function toStatTiles(counts: RunStatusCounts): StatTileView[] {
 /** A workflow row, in the shape `flowDefs` had. */
 export type FlowView = {
   key: string;
+  /** The catalog identity, so a screen can name the automation to another. */
+  templateId: string;
   icon: Icon;
   name: string;
   desc: string;
@@ -200,6 +202,7 @@ export function toFlows(
     const isDraft = sub.status === 'draft';
     return {
       key: sub.id,
+      templateId: sub.templateId,
       icon: iconFor(entry?.icon),
       name: sub.name ?? entry?.name ?? sub.templateId,
       desc: entry?.description ?? '',
