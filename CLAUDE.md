@@ -1,13 +1,19 @@
 # snoopy-mobile — read before doing anything
 
 The Expo native client for **Autom8x** — one of four independent repositories.
-**Round 6 is open, and the client half of it has landed.** The 20 screen routes
-and 18 Nocturne components now sit on a real data path: types generated from the
-backend's public OpenAPI, a single transport facade, native sign-in per ADR-0017,
-and session tokens in the OS secure enclave. What has *not* converted is screen
-data — 15 files still import `lib/fixtures.ts`, each blocked on something named
-in `DESIGN-GAPS.md` or the backend's §12.1 register — and login cannot complete
-on a device until a domain is claimed.
+**Round 6 is open and substantially delivered.** The 20 screen routes (not 27 —
+that figure counts the 7 `_layout.tsx` files) and 18 Nocturne components run on
+the published API: types generated from the backend's OpenAPI, one transport
+facade, native sign-in per ADR-0017, tokens in the OS secure enclave, and every
+fetching screen wired to real reads with the designed loading/error/offline
+states. 14 files still import `lib/fixtures.ts` and **13 of them only on the
+`unconfigured` branch** — the one state where a fixture is still correct, because
+there is no backend to disagree with. `npm run audit:fixtures` names each.
+
+Round 7 owns what remains outward-facing: its entry rule is explicit that
+"everything above ran under local Compose with no cloud account", so a claimed
+domain, a deployed environment and a payment provider account are **not** Round 6
+work.
 
 ## Start here, every session
 
@@ -53,6 +59,9 @@ Then read `AUTOM8X-ROUND-PLAYBOOK.md` §4 (the Round 6 card) and this repo's
 Zero imports of `lib/fixtures` outside tests · zero pinned demo credentials ·
 Nocturne components unchanged under visual diff · `eas.json` builds · both
 clients drive the same journey against the same endpoints.
+
+Recount before quoting: `app/` holds 27 `.tsx` = 7 layouts + **20 routes**, and
+`lib/fixtures.ts` is **410 lines**, not the card's 427.
 
 Four of those five are now commands rather than prose: `audit:fixtures` (a
 ratchet that may shrink and never grow, each remaining file naming its blocker),

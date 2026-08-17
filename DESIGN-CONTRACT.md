@@ -62,6 +62,15 @@ gone; what remains open is recorded plainly rather than left implied.
   `PlatformUnreachableError` makes "offline" distinguishable from "the platform
   refused" — two different screens in the design, previously one 502.
 
+**RESOLVED 2026-08-17 — the Solutions screens are wired.** The identity refactor
+below was done: `hooks/use-solutions.tsx` keys by `templateId` and holds only the
+overrides, taking the priced list and each solution's server-side `subscribed`
+from the caller. `hooks/use-workflows.tsx` had the same defect and was refactored
+the same way, off `FlowKey` onto the subscription id. What remains in
+`use-solutions` is `PLAN_BASE_PRICE` alone, which is Round 7 sequencing.
+
+_Original finding, kept because it explains why both screens sat still so long:_
+
 **The two Solutions screens are not cleanly wireable, and the reason is identity
 rather than the contract.** Found 2026-08-17 while wiring, and it corrects an
 earlier reading of this repo's own reconciliation, which listed both as
@@ -207,6 +216,16 @@ detail; the builder is the same defect and was missed. `builder.tsx` now accepts
 an optional `template`, which makes 8.7 real for any caller that can name one —
 and no caller can until flow detail is wired, because detail is still keyed by the
 fixture's `FlowKey`.
+
+**FINDING 7 — `resource-picker` cannot say what it enumerates.**
+`AutomationSetupField` is `{section, key, title, description, control,
+defaultValue?, required, notifies?}`. `resource-picker` is one of the four
+permitted controls, but nothing in the field names a resource type or an options
+source, so a client cannot tell a Gmail label from a Sheets range — the design
+carries that distinction only as human copy in the row's subtitle.
+`components/setup-field.tsx` renders the configured value and opens nothing.
+Either publish a resource type or an options endpoint, or drop the value from the
+closed union.
 
 **FINDING 6 — an automation's required providers are not published, so a
 workflow's connections card cannot be drawn.** The design's workflow detail lists
