@@ -16,7 +16,7 @@ export default function ResetPasswordScreen() {
   const { palette } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [email, setEmail] = useState('alex@acme.co');
+  const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
 
   return (

@@ -1,10 +1,17 @@
 /**
  * Fails when a credential-shaped default appears in an app screen.
  *
- * The prototype ships hardcoded demo credentials in the auth screens. Story S7.3
- * removes them and makes login create a real session. Until then the exact known
- * occurrences are pinned below, so the set can only shrink — a new one fails the
- * build, and removing a pinned one must also remove it from the allowlist.
+ * The prototype shipped hardcoded demo credentials in the auth screens. Story
+ * S7.3 (`snoopy-backend/docs/platform/TRANSFORMATION-PLAN.md`) removes them and
+ * makes login create a real session; Gate 8 requires this audit to report zero.
+ *
+ * The credential half is **done** — the allowlist below is empty and the ratchet
+ * now holds it at zero. The session half is not, and cannot be here: the Edge
+ * publishes no operation that issues a session to a native client, and ADR-0008
+ * requires a separate tested native contract before the prototype is wired.
+ *
+ * The set can only shrink: a new occurrence fails the build, and removing a
+ * pinned one must also remove it from the allowlist.
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { extname, join, relative } from "node:path";
@@ -12,12 +19,8 @@ import { extname, join, relative } from "node:path";
 const root = process.cwd();
 const sourceRoots = ["app", "components", "hooks", "lib"];
 
-/** Exact occurrences that exist today, tracked by story S7.3. */
-const knownDemoCredentials = new Set([
-  "app/(auth)/login.tsx:32",
-  "app/(auth)/login.tsx:33",
-  "app/(auth)/reset.tsx:19",
-]);
+/** Empty, and it stays empty. Adding a row here needs a reason in review. */
+const knownDemoCredentials = new Set();
 
 const CREDENTIAL_NAME = /password|passwd|secret|token|apikey|api_key|credential/i;
 const EMAIL_LITERAL = /['"][^'"\s]+@[^'"\s]+\.[A-Za-z]{2,}['"]/;
@@ -74,7 +77,7 @@ if (failures.length > 0) {
 }
 
 console.log(
-  `Credential audit passed. Pinned prototype demo credentials: ${knownDemoCredentials.size} (story S7.3 drives this to 0).`,
+  `Credential audit passed. Pinned prototype demo credentials: ${knownDemoCredentials.size}.`,
 );
 
 function walk(path) {
