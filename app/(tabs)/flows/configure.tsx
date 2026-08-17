@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +12,13 @@ import { TextField } from '@/components/nocturne/text-field';
 import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { templateConfigure } from '@/lib/fixtures';
+import { ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
+import { useWorkspaceResource } from '@/hooks/use-resource';
+import { errorTitleFor } from '@/lib/content/screen-states';
+import { readCatalog } from '@/lib/platform/catalog';
+import { PlatformNotConfiguredError } from '@/lib/platform/problem';
+import { iconFor } from '@/lib/view/icon-registry';
+import { toPipelineSteps } from '@/lib/view/pipeline';
 
 /** Template → Builder handoff (design `sConfigure`). */
 export default function ConfigureTemplateScreen() {
@@ -20,7 +27,61 @@ export default function ConfigureTemplateScreen() {
   const insets = useSafeAreaInsets();
   const [name, setName] = useState(templateConfigure.defaultName);
   const [connected, setConnected] = useState(false);
-  const ConnectionIcon = templateConfigure.connection.icon;
+
+  /**
+   * The template being configured.
+   *
+   * `template` is a templateId; without one there is nothing to look up and the
+   * prototype's Invoice-capture content stands in, which is what item 3 called
+   * out — every template used to open the same screen.
+   *
+   * The meta line drops "used by 2,100 teams": §12.1 #74 refuses it as a
+   * cross-tenant fact the platform does not hold, and names static copy the
+   * design owns as the substitute. Rendering a real-looking number the platform
+   * never sent is precisely what that refusal forbids, so it is simply absent.
+   */
+  const { template } = useLocalSearchParams<{ template?: string }>();
+  const catalog = useWorkspaceResource(
+    (workspaceId) => {
+      if (!template) throw new PlatformNotConfiguredError();
+      return readCatalog(workspaceId);
+    },
+    [template],
+  );
+  const entry =
+    catalog.status === 'ready'
+      ? catalog.data.automations.find((a) => a.templateId === template)
+      : undefined;
+
+  const view = entry
+    ? {
+        icon: iconFor(entry.icon),
+        name: entry.name,
+        meta: `${entry.category} · ${entry.pipeline?.length ?? 0} steps`,
+        steps: toPipelineSteps(entry.pipeline),
+        connection: templateConfigure.connection,
+        footnote: templateConfigure.footnote,
+      }
+    : templateConfigure;
+  const ConnectionIcon = view.connection.icon;
+
+  // Below every hook: these return early.
+  if (template) {
+    if (catalog.status === 'loading') return <ScreenLoading topInset={insets.top} />;
+    if (catalog.status === 'offline') {
+      return <ScreenOffline onRetry={catalog.reload} onBack={() => router.back()} topInset={insets.top} />;
+    }
+    if (catalog.status === 'error') {
+      return (
+        <ScreenError
+          title={errorTitleFor('configure')}
+          onRetry={catalog.reload}
+          onBack={() => router.back()}
+          topInset={insets.top}
+        />
+      );
+    }
+  }
 
   return (
     <ScrollView
@@ -36,13 +97,13 @@ export default function ConfigureTemplateScreen() {
       </View>
 
       <SurfaceCard style={styles.summary}>
-        <IconTile icon={templateConfigure.icon} size={42} iconSize={21} borderRadius={12} bordered />
+        <IconTile icon={view.icon} size={42} iconSize={21} borderRadius={12} bordered />
         <View style={styles.summaryBody}>
           <Text style={[styles.summaryName, { color: palette.text }]}>
-            {templateConfigure.name}
+            {view.name}
           </Text>
           <Text style={[styles.summaryMeta, { color: palette.neutral[400] }]}>
-            {templateConfigure.meta}
+            {view.meta}
           </Text>
         </View>
       </SurfaceCard>
@@ -55,7 +116,7 @@ export default function ConfigureTemplateScreen() {
           <ConnectionIcon size={20} color={palette.accentRamp[300]} />
           <View style={styles.connectionBody}>
             <Text style={[styles.connectionName, { color: palette.text }]}>
-              {templateConfigure.connection.name}
+              {view.connection.name}
             </Text>
             <Text
               style={[
@@ -87,14 +148,14 @@ export default function ConfigureTemplateScreen() {
       <View>
         <SectionLabel>STEPS PRELOADED IN BUILDER</SectionLabel>
         <SurfaceCard style={styles.stepsCard}>
-          {templateConfigure.steps.map((step, i) => {
+          {view.steps.map((step, i) => {
             const StepIcon = step.icon;
             return (
               <View
                 key={step.title}
                 style={[
                   styles.stepRow,
-                  i < templateConfigure.steps.length - 1 && {
+                  i < view.steps.length - 1 && {
                     borderBottomWidth: 1,
                     borderBottomColor: palette.divider,
                   },
@@ -117,7 +178,7 @@ export default function ConfigureTemplateScreen() {
         onPress={() => router.push('/(tabs)/flows/builder')}
       />
       <Text style={[styles.footnote, { color: palette.neutral[600] }]}>
-        {templateConfigure.footnote}
+        {view.footnote}
       </Text>
     </ScrollView>
   );

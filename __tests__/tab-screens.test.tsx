@@ -349,7 +349,13 @@ describe('Templates', () => {
     }
     expect(getAllByText('Use →')).toHaveLength(6);
     await fireEvent.press(getByText('Email triage'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/configure');
+    // Each card opens ITS template, not always Invoice capture — DESIGN-GAPS
+    // item 3. Unconfigured stands the name in for a templateId the prototype
+    // never had.
+    expect(mockRouter.push).toHaveBeenCalledWith({
+      pathname: '/(tabs)/flows/configure',
+      params: { template: 'Email triage' },
+    });
   });
 });
 
