@@ -54,7 +54,7 @@ export default function FlowsScreen() {
   const live: FlowView[] | null = flows.status === 'ready' ? flows.data : null;
   const source: FlowView[] =
     live ??
-    flowKeys.map((key) => ({ ...flowDefs[key], key, steps: flowDefs[key].steps }));
+    flowKeys.map((key) => ({ ...flowDefs[key], key, templateId: key, connections: flowDefs[key].connections, steps: flowDefs[key].steps }));
 
   const q = query.trim().toLowerCase();
   const visible = source.filter((def) => {

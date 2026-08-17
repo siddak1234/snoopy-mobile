@@ -31,14 +31,14 @@ const knownFixtureReaders = new Map([
   // MOBILE WORK. Every shape these need is published as of Round 6.6, or the
   // round filed a refusal naming what to render instead. None waits on the
   // backend; each is implementation in this repo.
-  ["app/(tabs)/(home)/index.tsx", "MOBILE — tiles wired; recentRuns needs run detail"],
-  ["app/(tabs)/(home)/run.tsx", "MOBILE — RunDetail + resultSummary/failureReason; step titles from pipeline"],
+  ["app/(tabs)/(home)/index.tsx", "wired — unconfigured fallback only"],
+  ["app/(tabs)/(home)/run.tsx", "wired — unconfigured fallback only"],
   ["app/(tabs)/(home)/notifications.tsx", "wired — unconfigured fallback only"],
   ["app/(tabs)/activity/index.tsx", "wired — unconfigured fallback only"],
   ["app/(tabs)/activity/approvals.tsx", "wired — unconfigured fallback only"],
   ["app/(tabs)/flows/index.tsx", "wired — unconfigured fallback only"],
   ["app/(tabs)/flows/detail.tsx", "wired — unconfigured fallback only"],
-  ["app/(tabs)/flows/builder.tsx", "MOBILE — 8.7 wired; needs a caller that can name a template"],
+  ["app/(tabs)/flows/builder.tsx", "wired — unconfigured fallback only; flow detail now names the template"],
   ["app/(tabs)/flows/configure.tsx", "MOBILE — catalog pipeline; usedByTeams is static copy per §12.1 #74"],
 
   // GENUINELY BLOCKED, and not by anything a backend contract round can fix.

@@ -58,7 +58,13 @@ export default function WorkflowDetailScreen() {
       ? (flows.data.find((f) => f.key === flow) ?? flows.data[0])
       : undefined;
   const def: FlowView =
-    live ?? { ...flowDefs[fixtureKey], key: fixtureKey, steps: flowDefs[fixtureKey].steps };
+    live ?? {
+      ...flowDefs[fixtureKey],
+      key: fixtureKey,
+      templateId: fixtureKey,
+      connections: flowDefs[fixtureKey].connections,
+      steps: flowDefs[fixtureKey].steps,
+    };
   const key = def.key;
   const current = statusOf(key, def.status as FlowStatus);
   const action = statusAction(current);
@@ -182,7 +188,14 @@ export default function WorkflowDetailScreen() {
           icon={PencilSimple}
           iconSize={16}
           style={styles.actionBtn}
-          onPress={() => router.push('/(tabs)/flows/builder')}
+          onPress={() =>
+            // Names the template so the builder can draw THIS workflow's
+            // manifest.pipeline — DESIGN-CONTRACT finding 5, now with a caller.
+            router.push({
+              pathname: '/(tabs)/flows/builder',
+              params: live ? { template: live.templateId } : {},
+            })
+          }
         />
       </View>
     </ScrollView>

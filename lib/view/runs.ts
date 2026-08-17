@@ -251,3 +251,85 @@ function rank(relative: string): number {
   if (relative.endsWith('d')) return value * 60 * 24;
   return Number.MAX_SAFE_INTEGER;
 }
+
+/** A run-detail timeline row, in the shape `RunTimelineItem` had. */
+export type TimelineRowView = {
+  icon: Icon;
+  tone: 'ok' | 'warn' | 'err' | 'pending';
+  title: string;
+  sub: string;
+  time?: string;
+};
+
+/**
+ * The run timeline: reported steps, titled from the manifest.
+ *
+ * `RunStep` carries a `stepId` and a one-line `summary`, and the spec is explicit
+ * that `stepId` is "always a step the pinned manifest declares". So the human
+ * title comes from that manifest's `pipeline` — the join is the intended one, not
+ * a workaround — and `summary` is the second line.
+ *
+ * Steps the manifest declares but the run never reported are drawn as pending,
+ * which is how the design shows a held run's remaining work ("Post to QuickBooks
+ * · Waiting on your approval"). Without that, a held run would look complete.
+ */
+export function toTimeline(
+  steps: {
+    stepId: string;
+    outcome: 'ok' | 'held' | 'failed';
+    summary: string;
+    heldReason?: string;
+    occurredAt: string;
+  }[],
+  declared: { id: string; title: string; description: string }[] | undefined,
+  clock: (iso: string) => string,
+): TimelineRowView[] {
+  const reported = new Map(steps.map((s) => [s.stepId, s]));
+  const titles = new Map((declared ?? []).map((d) => [d.id, d]));
+
+  const rows: TimelineRowView[] = steps.map((step) => ({
+    icon: OUTCOME_ICON[step.outcome],
+    tone: step.outcome === 'ok' ? 'ok' : step.outcome === 'held' ? 'warn' : 'err',
+    title: titles.get(step.stepId)?.title ?? step.stepId,
+    sub: step.heldReason ?? step.summary,
+    time: clock(step.occurredAt),
+  }));
+
+  const remaining = (declared ?? [])
+    .filter((d) => !reported.has(d.id))
+    .map<TimelineRowView>((d) => ({
+      icon: CircleDashed,
+      tone: 'pending',
+      title: d.title,
+      sub: d.description,
+    }));
+
+  return [...rows, ...remaining];
+}
+
+const OUTCOME_ICON: Record<'ok' | 'held' | 'failed', Icon> = {
+  ok: CheckCircle,
+  held: HandPalm,
+  failed: XCircle,
+};
+
+/**
+ * The run-detail stat tiles.
+ *
+ * Two of the three are derivable and the third is not. **Confidence is refused**
+ * — §12.1 #73a places it in that run's output, which no published shape carries —
+ * so it renders the design's own em dash, which the design already draws for runs
+ * that have no confidence to report. `Steps done` is reported-versus-declared,
+ * which is why the manifest pipeline is needed here too.
+ */
+export function toRunStats(
+  reportedSteps: number,
+  declaredSteps: number,
+  durationText: string,
+): { value: string; label: string }[] {
+  return [
+    { value: durationText, label: 'Duration' },
+    { value: declaredSteps > 0 ? `${reportedSteps} / ${declaredSteps}` : EMPTY, label: 'Steps done' },
+    { value: EMPTY, label: 'Confidence' },
+  ];
+}

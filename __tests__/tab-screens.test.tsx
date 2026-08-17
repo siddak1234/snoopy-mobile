@@ -206,7 +206,13 @@ describe('Workflow detail', () => {
   it('routes Edit in Builder and back', async () => {
     const { getByText, root } = await renderWithProviders(<WorkflowDetailScreen />);
     await fireEvent.press(getByText('Edit in Builder'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/builder');
+    // The builder is told WHICH workflow to draw. Unconfigured has no live
+    // subscription, so params are empty and the builder falls back to the
+    // prototype's steps; a configured build passes the templateId.
+    expect(mockRouter.push).toHaveBeenCalledWith({
+      pathname: '/(tabs)/flows/builder',
+      params: {},
+    });
     expect(root).toBeTruthy();
   });
 

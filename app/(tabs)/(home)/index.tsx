@@ -25,8 +25,10 @@ import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useTheme } from '@/hooks/use-theme';
 import { homeStats, recentRuns } from '@/lib/fixtures';
-import { localMidnight, readRunStats } from '@/lib/platform/runs';
+import { readCatalog } from '@/lib/platform/catalog';
+import { localMidnight, readRunStats, readRuns } from '@/lib/platform/runs';
 import { toStatTiles, type StatTileView } from '@/lib/view/catalog';
+import { catalogIndex, toRunRows } from '@/lib/view/runs';
 
 type HomeState = 'default' | 'loading' | 'empty' | 'error';
 
@@ -177,6 +179,33 @@ export default function HomeScreen() {
   const tiles: StatTileView[] =
     stats.status === 'ready' ? toStatTiles(stats.data.workspace) : homeStats;
 
+  /**
+   * Recent runs — now that a run's result line and a run detail both exist.
+   *
+   * This was the last thing on Home with no source: §12.1 #67 refuses run output,
+   * and Round 6.6 published `resultSummary`/`failureReason` on the run itself as
+   * the substitute, so the row's second line no longer needs a per-run detail
+   * fetch. The name is the catalog join the runs list documents as intended.
+   *
+   * The design draws four rows.
+   */
+  const recent = useWorkspaceResource(async (workspaceId) => {
+    const [runs, catalog] = await Promise.all([readRuns(workspaceId), readCatalog(workspaceId)]);
+    return toRunRows(runs.runs.slice(0, 4), catalogIndex(catalog.automations));
+  });
+  const runRows =
+    recent.status === 'ready'
+      ? recent.data
+      : recentRuns.map((r) => ({
+          runId: '',
+          name: r.name,
+          meta: r.meta,
+          time: r.time,
+          tone: r.tone as 'ok' | 'warn',
+          status: 'Success' as const,
+          runVariant: r.runVariant,
+        }));
+
   if (state === 'loading') return <HomeLoading paddingTop={paddingTop} />;
   if (state === 'empty') return <HomeEmpty paddingTop={paddingTop} />;
   if (state === 'error') return <HomeError paddingTop={paddingTop} />;
@@ -321,13 +350,15 @@ export default function HomeScreen() {
           </Text>
         </View>
         <SurfaceCard level="sm" style={styles.runsCard}>
-          {recentRuns.map((r, i) => (
+          {runRows.map((r, i) => (
             <Pressable
               key={i}
               onPress={() =>
                 router.push({
                   pathname: '/(tabs)/(home)/run',
-                  params: { variant: r.runVariant },
+                  params: r.runId
+                    ? { runId: r.runId }
+                    : { variant: (r as { runVariant?: string }).runVariant },
                 })
               }
               style={({ pressed }) => [
