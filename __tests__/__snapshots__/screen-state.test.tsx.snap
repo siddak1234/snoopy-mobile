@@ -151,6 +151,547 @@ exports[`screen states — dark palette ActionFailure renders unchanged 1`] = `
 </RNCSafeAreaProvider>
 `;
 
+exports[`screen states — dark palette ScreenEmpty/no-action renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "flex": 1,
+          "gap": 16,
+          "paddingBottom": 20,
+          "paddingHorizontal": 20,
+        },
+        {
+          "backgroundColor": "#161826",
+          "paddingTop": 15,
+        },
+      ]
+    }
+    testID="screen-empty"
+  >
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "gap": 14,
+          "justifyContent": "center",
+          "paddingHorizontal": 20,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 26,
+              "borderWidth": 1,
+              "height": 88,
+              "justifyContent": "center",
+              "width": 88,
+            },
+            {
+              "backgroundColor": "rgba(145,132,217,0.1)",
+              "borderColor": "#5d5294",
+            },
+          ]
+        }
+      >
+        <RNSVGSvgView
+          align="xMidYMid"
+          bbHeight={40}
+          bbWidth={40}
+          className="flow-arrow-undefined__svg-icon-phosphor"
+          color="#000"
+          fill="currentColor"
+          focusable={false}
+          height={40}
+          meetOrSlice={0}
+          minX={0}
+          minY={0}
+          style={
+            [
+              {
+                "backgroundColor": "transparent",
+                "borderWidth": 0,
+              },
+              [
+                undefined,
+                undefined,
+                {},
+              ],
+              {
+                "flex": 0,
+                "height": 40,
+                "width": 40,
+              },
+            ]
+          }
+          testID="phosphor-react-native-flow-arrow-undefined"
+          vbHeight={256}
+          vbWidth={256}
+          width={40}
+        >
+          <RNSVGGroup
+            fill={
+              {
+                "type": 2,
+              }
+            }
+            propList={
+              [
+                "fill",
+              ]
+            }
+          >
+            <RNSVGGroup
+              fill={
+                {
+                  "payload": 4278190080,
+                  "type": 0,
+                }
+              }
+              propList={
+                [
+                  "fill",
+                ]
+              }
+            >
+              <RNSVGPath
+                d="m245.66 74.34-32-32a8 8 0 0 0-11.32 11.32L220.69 72H208c-49.33 0-61.05 28.12-71.38 52.92-9.38 22.51-16.92 40.59-49.48 42.84a40 40 0 1 0 .1 16c43.26-2.65 54.34-29.15 64.14-52.69C161.41 107 169.33 88 208 88h12.69l-18.35 18.34a8 8 0 0 0 11.32 11.32l32-32a8 8 0 0 0 0-11.32M48 200a24 24 0 1 1 24-24 24 24 0 0 1-24 24"
+                fill={
+                  {
+                    "payload": 4278190080,
+                    "type": 0,
+                  }
+                }
+              />
+            </RNSVGGroup>
+          </RNSVGGroup>
+        </RNSVGSvgView>
+      </View>
+      <Text
+        style={
+          [
+            {
+              "fontFamily": "Inter_500Medium",
+              "fontSize": 22,
+              "letterSpacing": -0.32999999999999996,
+              "marginTop": 8,
+              "textAlign": "center",
+            },
+            {
+              "color": "#e9e9ed",
+            },
+          ]
+        }
+      >
+        Quiet, as designed
+      </Text>
+      <Text
+        style={
+          [
+            {
+              "fontFamily": "Inter_400Regular",
+              "fontSize": 13.5,
+              "lineHeight": 20.925,
+              "maxWidth": 224,
+              "textAlign": "center",
+            },
+            {
+              "color": "#b2b6ca",
+            },
+          ]
+        }
+      >
+        We only notify you for held runs and failures. Nothing needs you right now.
+      </Text>
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`screen states — dark palette ScreenEmpty/two-actions renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "flex": 1,
+          "gap": 16,
+          "paddingBottom": 20,
+          "paddingHorizontal": 20,
+        },
+        {
+          "backgroundColor": "#161826",
+          "paddingTop": 15,
+        },
+      ]
+    }
+    testID="screen-empty"
+  >
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "gap": 14,
+          "justifyContent": "center",
+          "paddingHorizontal": 20,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 26,
+              "borderWidth": 1,
+              "height": 88,
+              "justifyContent": "center",
+              "width": 88,
+            },
+            {
+              "backgroundColor": "rgba(145,132,217,0.1)",
+              "borderColor": "#5d5294",
+            },
+          ]
+        }
+      >
+        <RNSVGSvgView
+          align="xMidYMid"
+          bbHeight={40}
+          bbWidth={40}
+          className="flow-arrow-undefined__svg-icon-phosphor"
+          color="#000"
+          fill="currentColor"
+          focusable={false}
+          height={40}
+          meetOrSlice={0}
+          minX={0}
+          minY={0}
+          style={
+            [
+              {
+                "backgroundColor": "transparent",
+                "borderWidth": 0,
+              },
+              [
+                undefined,
+                undefined,
+                {},
+              ],
+              {
+                "flex": 0,
+                "height": 40,
+                "width": 40,
+              },
+            ]
+          }
+          testID="phosphor-react-native-flow-arrow-undefined"
+          vbHeight={256}
+          vbWidth={256}
+          width={40}
+        >
+          <RNSVGGroup
+            fill={
+              {
+                "type": 2,
+              }
+            }
+            propList={
+              [
+                "fill",
+              ]
+            }
+          >
+            <RNSVGGroup
+              fill={
+                {
+                  "payload": 4278190080,
+                  "type": 0,
+                }
+              }
+              propList={
+                [
+                  "fill",
+                ]
+              }
+            >
+              <RNSVGPath
+                d="m245.66 74.34-32-32a8 8 0 0 0-11.32 11.32L220.69 72H208c-49.33 0-61.05 28.12-71.38 52.92-9.38 22.51-16.92 40.59-49.48 42.84a40 40 0 1 0 .1 16c43.26-2.65 54.34-29.15 64.14-52.69C161.41 107 169.33 88 208 88h12.69l-18.35 18.34a8 8 0 0 0 11.32 11.32l32-32a8 8 0 0 0 0-11.32M48 200a24 24 0 1 1 24-24 24 24 0 0 1-24 24"
+                fill={
+                  {
+                    "payload": 4278190080,
+                    "type": 0,
+                  }
+                }
+              />
+            </RNSVGGroup>
+          </RNSVGGroup>
+        </RNSVGSvgView>
+      </View>
+      <Text
+        style={
+          [
+            {
+              "fontFamily": "Inter_500Medium",
+              "fontSize": 22,
+              "letterSpacing": -0.32999999999999996,
+              "marginTop": 8,
+              "textAlign": "center",
+            },
+            {
+              "color": "#e9e9ed",
+            },
+          ]
+        }
+      >
+        No workflows yet
+      </Text>
+      <Text
+        style={
+          [
+            {
+              "fontFamily": "Inter_400Regular",
+              "fontSize": 13.5,
+              "lineHeight": 20.925,
+              "maxWidth": 224,
+              "textAlign": "center",
+            },
+            {
+              "color": "#b2b6ca",
+            },
+          ]
+        }
+      >
+        Add a prebuilt solution or start from a template — your first workflow can be live in minutes.
+      </Text>
+      <View
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        onBlur={[Function]}
+        onClick={[Function]}
+        onFocus={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          [
+            {
+              "alignItems": "center",
+              "backgroundColor": "transparent",
+              "borderColor": "#9184d9",
+              "borderRadius": 999,
+              "borderWidth": 1,
+              "flexDirection": "row",
+              "gap": 7,
+              "height": 48,
+              "justifyContent": "center",
+              "paddingHorizontal": 18,
+            },
+            {
+              "alignSelf": "stretch",
+              "marginTop": 8,
+            },
+          ]
+        }
+      >
+        <RNSVGSvgView
+          align="xMidYMid"
+          bbHeight={18}
+          bbWidth={18}
+          className="storefront-regular__svg-icon-phosphor"
+          color="#9184d9"
+          fill="currentColor"
+          focusable={false}
+          height={18}
+          meetOrSlice={0}
+          minX={0}
+          minY={0}
+          style={
+            [
+              {
+                "backgroundColor": "transparent",
+                "borderWidth": 0,
+              },
+              [
+                undefined,
+                undefined,
+                {},
+              ],
+              {
+                "flex": 0,
+                "height": 18,
+                "width": 18,
+              },
+            ]
+          }
+          testID="phosphor-react-native-storefront-regular"
+          vbHeight={256}
+          vbWidth={256}
+          width={18}
+        >
+          <RNSVGGroup
+            fill={
+              {
+                "type": 2,
+              }
+            }
+            propList={
+              [
+                "fill",
+              ]
+            }
+          >
+            <RNSVGGroup
+              fill={
+                {
+                  "payload": 4287726809,
+                  "type": 0,
+                }
+              }
+              propList={
+                [
+                  "fill",
+                ]
+              }
+            >
+              <RNSVGPath
+                d="M232 96a7.9 7.9 0 0 0-.3-2.2l-14.35-50.2A16.07 16.07 0 0 0 202 32H54a16.07 16.07 0 0 0-15.35 11.6L24.31 93.8A7.9 7.9 0 0 0 24 96v16a40 40 0 0 0 16 32v72a8 8 0 0 0 8 8h160a8 8 0 0 0 8-8v-72a40 40 0 0 0 16-32zM54 48h148l11.42 40H42.61Zm50 56h48v8a24 24 0 0 1-48 0Zm-16 0v8a24 24 0 0 1-35.12 21.26 7.9 7.9 0 0 0-1.82-1.06A24 24 0 0 1 40 112v-8Zm112 104H56v-56.8a40.6 40.6 0 0 0 8 .8 40 40 0 0 0 32-16 40 40 0 0 0 64 0 40 40 0 0 0 32 16 40.6 40.6 0 0 0 8-.8Zm4.93-75.8a8 8 0 0 0-1.8 1.05A24 24 0 0 1 168 112v-8h48v8a24 24 0 0 1-11.07 20.2"
+                fill={
+                  {
+                    "payload": 4278190080,
+                    "type": 0,
+                  }
+                }
+              />
+            </RNSVGGroup>
+          </RNSVGGroup>
+        </RNSVGSvgView>
+        <Text
+          style={
+            {
+              "color": "#9184d9",
+              "fontFamily": "Inter_500Medium",
+              "fontSize": 14,
+            }
+          }
+        >
+          Browse solutions
+        </Text>
+      </View>
+      <View
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        onBlur={[Function]}
+        onClick={[Function]}
+        onFocus={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          [
+            {
+              "alignItems": "center",
+              "backgroundColor": "transparent",
+              "borderColor": "transparent",
+              "borderRadius": 999,
+              "borderWidth": 0,
+              "flexDirection": "row",
+              "gap": 7,
+              "height": 44,
+              "justifyContent": "center",
+              "paddingHorizontal": 18,
+            },
+            {
+              "alignSelf": "stretch",
+            },
+          ]
+        }
+      >
+        <Text
+          style={
+            {
+              "color": "#e9e9ed",
+              "fontFamily": "Inter_500Medium",
+              "fontSize": 14.5,
+            }
+          }
+        >
+          Start from a template
+        </Text>
+      </View>
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
 exports[`screen states — dark palette ScreenError renders unchanged 1`] = `
 <RNCSafeAreaProvider
   onInsetsChange={[Function]}
@@ -2125,6 +2666,547 @@ exports[`screen states — light palette ActionFailure renders unchanged 1`] = `
       >
         Retry removal
       </Text>
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`screen states — light palette ScreenEmpty/no-action renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "flex": 1,
+          "gap": 16,
+          "paddingBottom": 20,
+          "paddingHorizontal": 20,
+        },
+        {
+          "backgroundColor": "#f5f5f8",
+          "paddingTop": 15,
+        },
+      ]
+    }
+    testID="screen-empty"
+  >
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "gap": 14,
+          "justifyContent": "center",
+          "paddingHorizontal": 20,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 26,
+              "borderWidth": 1,
+              "height": 88,
+              "justifyContent": "center",
+              "width": 88,
+            },
+            {
+              "backgroundColor": "rgba(106,92,196,0.1)",
+              "borderColor": "#c3bcec",
+            },
+          ]
+        }
+      >
+        <RNSVGSvgView
+          align="xMidYMid"
+          bbHeight={40}
+          bbWidth={40}
+          className="flow-arrow-undefined__svg-icon-phosphor"
+          color="#000"
+          fill="currentColor"
+          focusable={false}
+          height={40}
+          meetOrSlice={0}
+          minX={0}
+          minY={0}
+          style={
+            [
+              {
+                "backgroundColor": "transparent",
+                "borderWidth": 0,
+              },
+              [
+                undefined,
+                undefined,
+                {},
+              ],
+              {
+                "flex": 0,
+                "height": 40,
+                "width": 40,
+              },
+            ]
+          }
+          testID="phosphor-react-native-flow-arrow-undefined"
+          vbHeight={256}
+          vbWidth={256}
+          width={40}
+        >
+          <RNSVGGroup
+            fill={
+              {
+                "type": 2,
+              }
+            }
+            propList={
+              [
+                "fill",
+              ]
+            }
+          >
+            <RNSVGGroup
+              fill={
+                {
+                  "payload": 4278190080,
+                  "type": 0,
+                }
+              }
+              propList={
+                [
+                  "fill",
+                ]
+              }
+            >
+              <RNSVGPath
+                d="m245.66 74.34-32-32a8 8 0 0 0-11.32 11.32L220.69 72H208c-49.33 0-61.05 28.12-71.38 52.92-9.38 22.51-16.92 40.59-49.48 42.84a40 40 0 1 0 .1 16c43.26-2.65 54.34-29.15 64.14-52.69C161.41 107 169.33 88 208 88h12.69l-18.35 18.34a8 8 0 0 0 11.32 11.32l32-32a8 8 0 0 0 0-11.32M48 200a24 24 0 1 1 24-24 24 24 0 0 1-24 24"
+                fill={
+                  {
+                    "payload": 4278190080,
+                    "type": 0,
+                  }
+                }
+              />
+            </RNSVGGroup>
+          </RNSVGGroup>
+        </RNSVGSvgView>
+      </View>
+      <Text
+        style={
+          [
+            {
+              "fontFamily": "Inter_500Medium",
+              "fontSize": 22,
+              "letterSpacing": -0.32999999999999996,
+              "marginTop": 8,
+              "textAlign": "center",
+            },
+            {
+              "color": "#20222f",
+            },
+          ]
+        }
+      >
+        Quiet, as designed
+      </Text>
+      <Text
+        style={
+          [
+            {
+              "fontFamily": "Inter_400Regular",
+              "fontSize": 13.5,
+              "lineHeight": 20.925,
+              "maxWidth": 224,
+              "textAlign": "center",
+            },
+            {
+              "color": "#666a82",
+            },
+          ]
+        }
+      >
+        We only notify you for held runs and failures. Nothing needs you right now.
+      </Text>
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`screen states — light palette ScreenEmpty/two-actions renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "flex": 1,
+          "gap": 16,
+          "paddingBottom": 20,
+          "paddingHorizontal": 20,
+        },
+        {
+          "backgroundColor": "#f5f5f8",
+          "paddingTop": 15,
+        },
+      ]
+    }
+    testID="screen-empty"
+  >
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "gap": 14,
+          "justifyContent": "center",
+          "paddingHorizontal": 20,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 26,
+              "borderWidth": 1,
+              "height": 88,
+              "justifyContent": "center",
+              "width": 88,
+            },
+            {
+              "backgroundColor": "rgba(106,92,196,0.1)",
+              "borderColor": "#c3bcec",
+            },
+          ]
+        }
+      >
+        <RNSVGSvgView
+          align="xMidYMid"
+          bbHeight={40}
+          bbWidth={40}
+          className="flow-arrow-undefined__svg-icon-phosphor"
+          color="#000"
+          fill="currentColor"
+          focusable={false}
+          height={40}
+          meetOrSlice={0}
+          minX={0}
+          minY={0}
+          style={
+            [
+              {
+                "backgroundColor": "transparent",
+                "borderWidth": 0,
+              },
+              [
+                undefined,
+                undefined,
+                {},
+              ],
+              {
+                "flex": 0,
+                "height": 40,
+                "width": 40,
+              },
+            ]
+          }
+          testID="phosphor-react-native-flow-arrow-undefined"
+          vbHeight={256}
+          vbWidth={256}
+          width={40}
+        >
+          <RNSVGGroup
+            fill={
+              {
+                "type": 2,
+              }
+            }
+            propList={
+              [
+                "fill",
+              ]
+            }
+          >
+            <RNSVGGroup
+              fill={
+                {
+                  "payload": 4278190080,
+                  "type": 0,
+                }
+              }
+              propList={
+                [
+                  "fill",
+                ]
+              }
+            >
+              <RNSVGPath
+                d="m245.66 74.34-32-32a8 8 0 0 0-11.32 11.32L220.69 72H208c-49.33 0-61.05 28.12-71.38 52.92-9.38 22.51-16.92 40.59-49.48 42.84a40 40 0 1 0 .1 16c43.26-2.65 54.34-29.15 64.14-52.69C161.41 107 169.33 88 208 88h12.69l-18.35 18.34a8 8 0 0 0 11.32 11.32l32-32a8 8 0 0 0 0-11.32M48 200a24 24 0 1 1 24-24 24 24 0 0 1-24 24"
+                fill={
+                  {
+                    "payload": 4278190080,
+                    "type": 0,
+                  }
+                }
+              />
+            </RNSVGGroup>
+          </RNSVGGroup>
+        </RNSVGSvgView>
+      </View>
+      <Text
+        style={
+          [
+            {
+              "fontFamily": "Inter_500Medium",
+              "fontSize": 22,
+              "letterSpacing": -0.32999999999999996,
+              "marginTop": 8,
+              "textAlign": "center",
+            },
+            {
+              "color": "#20222f",
+            },
+          ]
+        }
+      >
+        No workflows yet
+      </Text>
+      <Text
+        style={
+          [
+            {
+              "fontFamily": "Inter_400Regular",
+              "fontSize": 13.5,
+              "lineHeight": 20.925,
+              "maxWidth": 224,
+              "textAlign": "center",
+            },
+            {
+              "color": "#666a82",
+            },
+          ]
+        }
+      >
+        Add a prebuilt solution or start from a template — your first workflow can be live in minutes.
+      </Text>
+      <View
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        onBlur={[Function]}
+        onClick={[Function]}
+        onFocus={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          [
+            {
+              "alignItems": "center",
+              "backgroundColor": "transparent",
+              "borderColor": "#6a5cc4",
+              "borderRadius": 999,
+              "borderWidth": 1,
+              "flexDirection": "row",
+              "gap": 7,
+              "height": 48,
+              "justifyContent": "center",
+              "paddingHorizontal": 18,
+            },
+            {
+              "alignSelf": "stretch",
+              "marginTop": 8,
+            },
+          ]
+        }
+      >
+        <RNSVGSvgView
+          align="xMidYMid"
+          bbHeight={18}
+          bbWidth={18}
+          className="storefront-regular__svg-icon-phosphor"
+          color="#6a5cc4"
+          fill="currentColor"
+          focusable={false}
+          height={18}
+          meetOrSlice={0}
+          minX={0}
+          minY={0}
+          style={
+            [
+              {
+                "backgroundColor": "transparent",
+                "borderWidth": 0,
+              },
+              [
+                undefined,
+                undefined,
+                {},
+              ],
+              {
+                "flex": 0,
+                "height": 18,
+                "width": 18,
+              },
+            ]
+          }
+          testID="phosphor-react-native-storefront-regular"
+          vbHeight={256}
+          vbWidth={256}
+          width={18}
+        >
+          <RNSVGGroup
+            fill={
+              {
+                "type": 2,
+              }
+            }
+            propList={
+              [
+                "fill",
+              ]
+            }
+          >
+            <RNSVGGroup
+              fill={
+                {
+                  "payload": 4285160644,
+                  "type": 0,
+                }
+              }
+              propList={
+                [
+                  "fill",
+                ]
+              }
+            >
+              <RNSVGPath
+                d="M232 96a7.9 7.9 0 0 0-.3-2.2l-14.35-50.2A16.07 16.07 0 0 0 202 32H54a16.07 16.07 0 0 0-15.35 11.6L24.31 93.8A7.9 7.9 0 0 0 24 96v16a40 40 0 0 0 16 32v72a8 8 0 0 0 8 8h160a8 8 0 0 0 8-8v-72a40 40 0 0 0 16-32zM54 48h148l11.42 40H42.61Zm50 56h48v8a24 24 0 0 1-48 0Zm-16 0v8a24 24 0 0 1-35.12 21.26 7.9 7.9 0 0 0-1.82-1.06A24 24 0 0 1 40 112v-8Zm112 104H56v-56.8a40.6 40.6 0 0 0 8 .8 40 40 0 0 0 32-16 40 40 0 0 0 64 0 40 40 0 0 0 32 16 40.6 40.6 0 0 0 8-.8Zm4.93-75.8a8 8 0 0 0-1.8 1.05A24 24 0 0 1 168 112v-8h48v8a24 24 0 0 1-11.07 20.2"
+                fill={
+                  {
+                    "payload": 4278190080,
+                    "type": 0,
+                  }
+                }
+              />
+            </RNSVGGroup>
+          </RNSVGGroup>
+        </RNSVGSvgView>
+        <Text
+          style={
+            {
+              "color": "#6a5cc4",
+              "fontFamily": "Inter_500Medium",
+              "fontSize": 14,
+            }
+          }
+        >
+          Browse solutions
+        </Text>
+      </View>
+      <View
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        onBlur={[Function]}
+        onClick={[Function]}
+        onFocus={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          [
+            {
+              "alignItems": "center",
+              "backgroundColor": "transparent",
+              "borderColor": "transparent",
+              "borderRadius": 999,
+              "borderWidth": 0,
+              "flexDirection": "row",
+              "gap": 7,
+              "height": 44,
+              "justifyContent": "center",
+              "paddingHorizontal": 18,
+            },
+            {
+              "alignSelf": "stretch",
+            },
+          ]
+        }
+      >
+        <Text
+          style={
+            {
+              "color": "#20222f",
+              "fontFamily": "Inter_500Medium",
+              "fontSize": 14.5,
+            }
+          }
+        >
+          Start from a template
+        </Text>
+      </View>
     </View>
   </View>
 </RNCSafeAreaProvider>

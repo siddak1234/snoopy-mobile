@@ -1,11 +1,26 @@
 import React from 'react';
 import { fireEvent } from '@testing-library/react-native';
 
-import { ActionFailure, ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
+import { FlowArrow, Storefront } from 'phosphor-react-native';
+
 import {
+  ActionFailure,
+  ScreenEmpty,
+  ScreenError,
+  ScreenLoading,
+  ScreenOffline,
+} from '@/components/screen-state';
+import {
+  ACTIVITY_EMPTY_BODY,
+  BROWSE_SOLUTIONS_LABEL,
   ERROR_BODY,
   FALLBACK_ERROR_TITLE,
+  FLOWS_EMPTY_BODY,
+  FLOWS_EMPTY_TITLE,
+  NOTIFICATIONS_EMPTY_BODY,
+  NOTIFICATIONS_EMPTY_TITLE,
   OFFLINE_TITLE,
+  START_FROM_TEMPLATE_LABEL,
   errorTitleFor,
 } from '@/lib/content/screen-states';
 import { renderWithProviders } from '@/test/render';
@@ -31,6 +46,28 @@ const CASES = [
       <ActionFailure
         message="Email triage wasn't removed — it's still active and your plan total is unchanged."
         retryLabel="Retry removal"
+      />
+    ),
+  },
+  {
+    name: 'ScreenEmpty/two-actions',
+    element: (
+      <ScreenEmpty
+        icon={<FlowArrow size={40} />}
+        title={FLOWS_EMPTY_TITLE}
+        body={FLOWS_EMPTY_BODY}
+        action={{ label: BROWSE_SOLUTIONS_LABEL, icon: Storefront }}
+        secondaryAction={{ label: START_FROM_TEMPLATE_LABEL }}
+      />
+    ),
+  },
+  {
+    name: 'ScreenEmpty/no-action',
+    element: (
+      <ScreenEmpty
+        icon={<FlowArrow size={40} />}
+        title={NOTIFICATIONS_EMPTY_TITLE}
+        body={NOTIFICATIONS_EMPTY_BODY}
       />
     ),
   },
@@ -93,5 +130,60 @@ describe('the failure states', () => {
     expect(getByText(/didn't sync/)).toBeTruthy();
     await fireEvent.press(getByText('Retry decision'));
     expect(onRetry).toHaveBeenCalled();
+  });
+});
+
+describe('the first-run empties — invitations, not apologies', () => {
+  it('offers somewhere to go, and calls both actions', async () => {
+    const onBrowse = jest.fn();
+    const onTemplate = jest.fn();
+    const { getByText, getByTestId } = await renderWithProviders(
+      <ScreenEmpty
+        icon={<FlowArrow size={40} />}
+        title={FLOWS_EMPTY_TITLE}
+        body={FLOWS_EMPTY_BODY}
+        action={{ label: BROWSE_SOLUTIONS_LABEL, icon: Storefront, onPress: onBrowse }}
+        secondaryAction={{ label: START_FROM_TEMPLATE_LABEL, onPress: onTemplate }}
+      />,
+    );
+
+    expect(getByTestId('screen-empty')).toBeTruthy();
+    expect(getByText(FLOWS_EMPTY_TITLE)).toBeTruthy();
+    await fireEvent.press(getByText(BROWSE_SOLUTIONS_LABEL));
+    await fireEvent.press(getByText(START_FROM_TEMPLATE_LABEL));
+    expect(onBrowse).toHaveBeenCalled();
+    expect(onTemplate).toHaveBeenCalled();
+  });
+
+  it('does not assume a filter, which is what the old copy got wrong', async () => {
+    // Flows used to read `No workflows match "{{q}}"` and Activity `No … runs in
+    // the last two days`. Both are nonsense for a workspace that simply has none,
+    // and that is the gap this state was designed to close.
+    const { getByText, queryByText } = await renderWithProviders(
+      <ScreenEmpty icon={<FlowArrow size={40} />} title={FLOWS_EMPTY_TITLE} body={FLOWS_EMPTY_BODY} />,
+    );
+    expect(getByText(FLOWS_EMPTY_BODY)).toBeTruthy();
+    expect(queryByText(/match/)).toBeNull();
+    expect(queryByText(/last two days/)).toBeNull();
+  });
+
+  it('carries no action when an empty inbox is the rule working', async () => {
+    const { getByText, queryByText } = await renderWithProviders(
+      <ScreenEmpty
+        icon={<FlowArrow size={40} />}
+        title={NOTIFICATIONS_EMPTY_TITLE}
+        body={NOTIFICATIONS_EMPTY_BODY}
+      />,
+    );
+    expect(getByText(NOTIFICATIONS_EMPTY_TITLE)).toBeTruthy();
+    expect(getByText(NOTIFICATIONS_EMPTY_BODY)).toBeTruthy();
+    expect(queryByText(BROWSE_SOLUTIONS_LABEL)).toBeNull();
+  });
+
+  it('keeps Activity’s own words rather than reusing Flows’', async () => {
+    const { getByText } = await renderWithProviders(
+      <ScreenEmpty icon={<FlowArrow size={40} />} title="No activity yet" body={ACTIVITY_EMPTY_BODY} />,
+    );
+    expect(getByText(ACTIVITY_EMPTY_BODY)).toBeTruthy();
   });
 });
