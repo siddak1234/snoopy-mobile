@@ -6,9 +6,9 @@ that figure counts the 7 `_layout.tsx` files) and 18 Nocturne components run on
 the published API: types generated from the backend's OpenAPI, one transport
 facade, native sign-in per ADR-0017, tokens in the OS secure enclave, and every
 fetching screen wired to real reads with the designed loading/error/offline
-states. 14 files still import `lib/fixtures.ts` and **13 of them only on the
-`unconfigured` branch** — the one state where a fixture is still correct, because
-there is no backend to disagree with. `npm run audit:fixtures` names each.
+states. **No file imports `lib/fixtures.ts` any more** — `npm run audit:fixtures` reports
+0, which is Gate 8's first line met. A build with no backend renders the designed
+empty and error states rather than inventing data.
 
 Round 7 owns what remains outward-facing: its entry rule is explicit that
 "everything above ran under local Compose with no cloud account", so a claimed

@@ -196,8 +196,14 @@ authoritative design source, not the fixtures — contains `k:'BRANCH'`, and the
 builder's own palette offers Branch, Delay and Human review. So an automation
 whose manifest declares a branch step **cannot be drawn as the design draws it**;
 a client must either drop the step or coerce it to `ACTION`, and both are wrong.
-`lib/view/pipeline.ts` renders an unrecognised kicker rather than throwing, which
-keeps the canvas alive but does not make it right.
+**Sharpened by the backend, 2026-08-17: this is an authoring ceiling, not a
+rendering bug, and it is latent.** `manifest-validation.ts:519` refuses any kicker
+outside `KICKERS` at registration, so a manifest declaring `BRANCH` is rejected at
+load and nothing with a branch can reach the catalog. No client will ever receive
+one. The cost is therefore paid by whoever tries to author a branching automation,
+not by a screen. `lib/view/pipeline.ts` still renders an unrecognised kicker
+rather than throwing, which is the right defensive posture for a closed union
+that may widen, but the defect to fix is upstream of the client.
 
 **FINDING 4 — `AutomationDeclaredStep` publishes no icon, and a kicker cannot
 substitute.** `AutomationCatalogEntry` carries a required `icon`; a declared step
@@ -228,25 +234,35 @@ therefore absent rather than faked, and `__tests__/run-retry.test.tsx` was delet
 because it tested behaviour that cannot exist. Either publish a retry operation,
 or record that a failed run is terminal from a client's point of view.
 
-**FINDING 8 — a plan's base price is not published, and it may not need Round 7.**
-`hooks/use-solutions.tsx` imports `PLAN_BASE_PRICE` ($99) and nothing else from
-the fixtures; it is the single remaining non-fallback fixture import and
-therefore the one thing standing between this repo and a zero count. Searched
-rather than assumed: the public surface carries no plan, price, tier or
-entitlement READ — only `/v1/billing/webhooks`, which is the provider's callback,
-and an `EntitlementsWorkspaceExportSection`.
+**FINDING 8 — RESOLVED 2026-08-17 by the backend. There is no plan to price.**
+Asked whether a plan's base price could be read without Round 7's provider
+account. The answer corrected the question twice over.
 
-The ledger recorded this as waiting on Round 7, quoting BUILD-PLAN 8.3's "it
-waits on that account". That is right for 8.3 — a billing PAGE needs checkout,
-portal and subscription management, which need a payment provider. **It is not
-obviously right for reading a plan's base price.** §12.1 #46 describes plan
-values as "operator data, so changing them is an INSERT rather than a
-deployment", and the free plan's limits were ratified without any provider
-account existing. A read that returns what a plan costs charges nobody.
+Publishing a price never needed a provider account — `monthlyPriceUsd` is already
+a **required** field on every `AutomationCatalogEntry`, sourced from
+`manifest.pricing.monthlyPriceUsd`. So this ledger's long-quoted "waits on that
+account" was the wrong reason and should stop being repeated.
 
-If that read were published, gate line 1 could reach zero without Round 7. If it
-genuinely cannot be separated from 8.3, that is worth recording explicitly,
-because it decides whether Round 6's first gate line is achievable at all.
+The real reason is that **no plan has a price**. `entitlements.plans` has no
+price column — only a nullable `provider_price_id`, a pointer used in one inbound
+webhook lookup — and only `free` is seeded, with none. Verified here rather than
+taken on trust: `apps/entitlements/migrations/0001_entitlements_baseline.sql:79`
+and its seed at :272. The plan a real workspace is on has a base of **$0**.
+
+So `planTotal` is the solutions total, and `hooks/use-solutions.tsx` no longer
+adds a base term. **No local constant replaced it** — inventing a `$99` would be
+precisely the drift the round forbids, a price the platform has not stated. Two
+places had to change, and the second is the one a gate would have missed:
+`settings.tsx` also carried a hardcoded `"$99/mo base · renews Sep 1"` as literal
+UI copy, which `audit:fixtures` cannot see because it is not an import.
+
+That was the last fixture import. **`audit:fixtures` reports 0.**
+
+**FINDING 10 — `Subscription` publishes no plan reference at all.** No id, name
+or tier. Moot while only `free` exists, and precisely why it matters later: the
+moment a paid plan ships, a client has no way to say which plan a workspace is
+on, so a plan read is needed regardless of pricing. Filed by the backend's own
+suggestion while answering finding 8.
 
 **FINDING 7 — `resource-picker` cannot say what it enumerates.**
 `AutomationSetupField` is `{section, key, title, description, control,

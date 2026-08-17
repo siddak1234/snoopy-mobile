@@ -28,22 +28,13 @@ const sourceRoots = ["app", "components", "hooks", "lib"];
  * Delete a row when its screen is wired; never add one.
  */
 const knownFixtureReaders = new Map([
-  // ONE remaining, and it is not a prototype fallback. The owner decided on
-  // 2026-08-17 to delete every `unconfigured` fixture path: a build with no
-  // backend now renders the designed empty and error states rather than
-  // pretending to hold invoices. Thirteen rows left this ledger in that change.
+  // EMPTY, and that is the exit gate met. Every screen reads the platform; the
+  // prototype fallbacks went with the owner's 2026-08-17 decision, and the last
+  // entry — `PLAN_BASE_PRICE` in hooks/use-solutions.tsx — went when the backend
+  // answered finding 8 on the same day: there is no plan to price. No local
+  // constant replaced it, because the number is not this client's to state.
   //
-  // What is left is a VALUE, not a screen. `PLAN_BASE_PRICE` is the $99 plan
-  // base, and nothing publishes it — the public surface carries no plan, price,
-  // tier or entitlement read at all. DESIGN-CONTRACT.md finding 8 asks whether it
-  // can be published without Round 7's payment provider account; until that is
-  // answered this line cannot reach zero.
-  //
-  // It was deliberately NOT relocated to lib/content/ as "static copy". That
-  // would satisfy this gate's wording while defeating its purpose: a price is a
-  // business fact the platform should own, unlike the design chrome that did move
-  // there (filter vocabularies, the builder palette, fixed copy).
-  ["hooks/use-solutions.tsx", "BLOCKED — PLAN_BASE_PRICE; DESIGN-CONTRACT finding 8"],
+  // A row may only be added with a reason in review. The gate is zero.
 ]);
 
 /** `from '@/lib/fixtures'`, `from '../lib/fixtures'`, and friends. */
