@@ -70,6 +70,19 @@ describe('useResource', () => {
     ).toBe('unconfigured');
   });
 
+  it('catches a SYNCHRONOUS throw rather than letting it crash the render', async () => {
+    // Regression: `useWorkspaceResource` throws synchronously when no workspace
+    // has resolved, which is the normal case in an unconfigured build. Before
+    // the read was wrapped, that escaped the promise chain and surfaced as a
+    // render error — every wired screen crashed instead of showing the
+    // prototype. The async cases below did not catch it, because an async throw
+    // is already a rejected promise.
+    const syncThrow = (() => {
+      throw new PlatformNotConfiguredError();
+    }) as unknown as () => Promise<string>;
+    expect(await stateFor(syncThrow)).toBe('unconfigured');
+  });
+
   it('treats a non-platform throw as an error rather than crashing the screen', async () => {
     expect(
       await stateFor(async () => {
