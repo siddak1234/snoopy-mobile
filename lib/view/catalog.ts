@@ -6,10 +6,11 @@ import type {
   Connection,
   ConnectionProvider,
 } from '@/lib/platform/catalog';
-import type { RunStatusCounts } from '@/lib/platform/runs';
-import { count } from './format';
+import type { RunStatusCounts, RunSubscriptionCounts, Subscription } from '@/lib/platform/runs';
+import { EMPTY, count } from './format';
+import { toPipelineSteps, type PipelineStep } from './pipeline';
 import { iconFor } from './icon-registry';
-import { statusLabel } from './status';
+import { statusLabel, type StatusPillLabel } from './status';
 
 /**
  * Catalog and connection wire shapes, mapped to what the screens already draw.
@@ -135,4 +136,89 @@ export function toStatTiles(counts: RunStatusCounts): StatTileView[] {
     { value: count(counts.succeeded), label: 'Successes', tone: 'ok' },
     { value: count(counts.failed), label: 'Failures', tone: 'err' },
   ];
+}
+
+/** A workflow row, in the shape `flowDefs` had. */
+export type FlowView = {
+  key: string;
+  icon: Icon;
+  name: string;
+  desc: string;
+  status: StatusPillLabel;
+  runs: string;
+  runCount: string;
+  okCount: string;
+  failCount: string;
+  steps: PipelineStep[];
+  /**
+   * The workflow's connection rows.
+   *
+   * **Incomplete against a live workspace, and the reason is the contract.** No
+   * published shape names the providers an automation *uses*: the catalog entry
+   * has no providers field, and `Subscription.unmetConnections` lists only those
+   * still to connect. So a live row set can show what is missing and cannot show
+   * what is already satisfied — the design draws both. Filed in
+   * DESIGN-CONTRACT.md rather than filled in by guessing at a provider set.
+   */
+  connections: FlowConnectionView[];
+};
+
+export type FlowConnectionView = {
+  icon: Icon;
+  name: string;
+  sub: string;
+  tone: 'ok' | 'warn' | 'neutral';
+  status: string;
+};
+
+/**
+ * A workspace's workflows: subscriptions, joined to the catalog and their counts.
+ *
+ * Three sources, and each is the only one that can answer its part.
+ * `Subscription` gives identity and status; the catalog gives the name,
+ * description, icon and the declared `pipeline`; `run-stats` gives the run
+ * totals the design's summary line and stat tiles draw.
+ *
+ * A subscription **absent from `run-stats.subscriptions` has no runs in the
+ * window**, which is not the same as not existing — the endpoint returns only
+ * those with at least one. So a missing entry means zeroes, and a Draft
+ * subscription (which has never run) correctly shows the design's em dash rather
+ * than "0".
+ */
+export function toFlows(
+  subscriptions: Subscription[],
+  catalog: CatalogEntry[],
+  perSubscription: RunSubscriptionCounts[],
+  providers?: Map<string, ConnectionProvider>,
+): FlowView[] {
+  const entries = new Map(catalog.map((e) => [e.templateId, e]));
+  const counts = new Map(perSubscription.map((c) => [c.subscriptionId, c]));
+
+  return subscriptions.map((sub) => {
+    const entry = entries.get(sub.templateId);
+    const c = counts.get(sub.id);
+    const isDraft = sub.status === 'draft';
+    return {
+      key: sub.id,
+      icon: iconFor(entry?.icon),
+      name: sub.name ?? entry?.name ?? sub.templateId,
+      desc: entry?.description ?? '',
+      status: statusLabel(sub.status) as StatusPillLabel,
+      // A Draft has never run, and the design writes that as words, not zeroes.
+      runs: isDraft
+        ? 'Not yet published'
+        : `${count(c?.total ?? 0)} runs · ${count(c?.succeeded ?? 0)} ok · ${count(c?.failed ?? 0)} failed`,
+      runCount: isDraft ? EMPTY : count(c?.total ?? 0),
+      okCount: isDraft ? EMPTY : count(c?.succeeded ?? 0),
+      failCount: isDraft ? EMPTY : count(c?.failed ?? 0),
+      steps: toPipelineSteps(entry?.pipeline),
+      connections: sub.unmetConnections.map((providerId) => ({
+        icon: iconFor(providerId),
+        name: providers?.get(providerId)?.displayName ?? providerId,
+        sub: 'Required before publishing',
+        tone: 'neutral' as const,
+        status: 'Not connected',
+      })),
+    };
+  });
 }

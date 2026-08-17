@@ -13,8 +13,14 @@ import { StepCard } from '@/components/nocturne/step-card';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { em, fonts, layout, status } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { statusAction, useWorkflows } from '@/hooks/use-workflows';
+import { ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
+import { useWorkspaceResource } from '@/hooks/use-resource';
+import { statusAction, useWorkflows, type FlowStatus } from '@/hooks/use-workflows';
+import { errorTitleFor } from '@/lib/content/screen-states';
 import { flowDefs, type FlowKey } from '@/lib/fixtures';
+import { readCatalog } from '@/lib/platform/catalog';
+import { readRunStats, readSubscriptions } from '@/lib/platform/runs';
+import { toFlows, type FlowView } from '@/lib/view/catalog';
 
 const ACTION_ICON = { pause: Pause, play: Play, rocket: RocketLaunch } as const;
 
@@ -24,12 +30,55 @@ export default function WorkflowDetailScreen() {
   const insets = useSafeAreaInsets();
   const { palette } = useTheme();
   const { status: statusOf, toggle } = useWorkflows();
-  const { flow } = useLocalSearchParams<{ flow?: FlowKey }>();
-  const key: FlowKey = flow && flowDefs[flow] ? flow : 'invoice';
-  const def = flowDefs[key];
-  const current = statusOf(key);
+  const { flow } = useLocalSearchParams<{ flow?: string }>();
+
+  /**
+   * This workflow, by subscription id.
+   *
+   * `flow` used to be one of four `FlowKey`s baked into the prototype; it is now
+   * a subscription id, which is the identity the platform uses and the only one
+   * that can name a workspace's actual workflows. The three reads are the same
+   * join the list makes — subscription for status, catalog for name and
+   * `pipeline`, `run-stats` for the counters.
+   */
+  const flows = useWorkspaceResource(async (workspaceId) => {
+    const [subs, catalog, stats] = await Promise.all([
+      readSubscriptions(workspaceId),
+      readCatalog(workspaceId),
+      readRunStats(workspaceId),
+    ]);
+    return toFlows(subs.subscriptions, catalog.automations, stats.subscriptions);
+  });
+
+  const fixtureKey: FlowKey = flow && (flowDefs as Record<string, unknown>)[flow]
+    ? (flow as FlowKey)
+    : 'invoice';
+  const live: FlowView | undefined =
+    flows.status === 'ready'
+      ? (flows.data.find((f) => f.key === flow) ?? flows.data[0])
+      : undefined;
+  const def: FlowView =
+    live ?? { ...flowDefs[fixtureKey], key: fixtureKey, steps: flowDefs[fixtureKey].steps };
+  const key = def.key;
+  const current = statusOf(key, def.status as FlowStatus);
   const action = statusAction(current);
   const ActionIcon = ACTION_ICON[action.icon];
+
+  // Below every hook on purpose — these return early.
+  if (flows.status === 'loading') return <ScreenLoading tiles topInset={insets.top} />;
+  if (flows.status === 'offline') {
+    return <ScreenOffline onRetry={flows.reload} onBack={() => router.back()} topInset={insets.top} />;
+  }
+  if (flows.status === 'error') {
+    return (
+      <ScreenError
+        title={errorTitleFor('detail')}
+        onRetry={flows.reload}
+        onBack={() => router.back()}
+        topInset={insets.top}
+      />
+    );
+  }
   // Draft flows show em dashes, which stay neutral rather than ok/err.
   const dash = (v: string) => v === '—';
 
@@ -123,7 +172,7 @@ export default function WorkflowDetailScreen() {
           icon={ActionIcon}
           iconSize={16}
           style={styles.actionBtn}
-          onPress={() => toggle(key)}
+          onPress={() => toggle(key, def.status as FlowStatus)}
         />
         <PillButton
           label="Edit in Builder"

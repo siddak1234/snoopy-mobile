@@ -31,16 +31,15 @@ const knownFixtureReaders = new Map([
   // MOBILE WORK. Every shape these need is published as of Round 6.6, or the
   // round filed a refusal naming what to render instead. None waits on the
   // backend; each is implementation in this repo.
-  ["app/(tabs)/(home)/index.tsx", "MOBILE — tiles wired; recentRuns needs run-detail navigation"],
+  ["app/(tabs)/(home)/index.tsx", "MOBILE — tiles wired; recentRuns needs run detail"],
   ["app/(tabs)/(home)/run.tsx", "MOBILE — RunDetail + resultSummary/failureReason; step titles from pipeline"],
-  ["app/(tabs)/(home)/notifications.tsx", "MOBILE — compose from approvals(status=pending) + runs; §12.1 #71"],
-  ["app/(tabs)/activity/index.tsx", "MOBILE — runs list + resultSummary/failureReason"],
-  ["app/(tabs)/activity/approvals.tsx", "MOBILE — title is the three-hop join, §12.1 #70"],
-  ["app/(tabs)/flows/index.tsx", "MOBILE — aggregates from run-stats subscriptions[]"],
-  ["app/(tabs)/flows/detail.tsx", "MOBILE — run-stats + catalog pipeline"],
+  ["app/(tabs)/(home)/notifications.tsx", "wired — unconfigured fallback only"],
+  ["app/(tabs)/activity/index.tsx", "wired — unconfigured fallback only"],
+  ["app/(tabs)/activity/approvals.tsx", "wired — unconfigured fallback only"],
+  ["app/(tabs)/flows/index.tsx", "wired — unconfigured fallback only"],
+  ["app/(tabs)/flows/detail.tsx", "wired — unconfigured fallback only"],
   ["app/(tabs)/flows/builder.tsx", "MOBILE — 8.7 wired; needs a caller that can name a template"],
   ["app/(tabs)/flows/configure.tsx", "MOBILE — catalog pipeline; usedByTeams is static copy per §12.1 #74"],
-  ["hooks/use-workflows.tsx", "MOBILE — subscription status; identity refactor off the fixture flow keys"],
 
   // GENUINELY BLOCKED, and not by anything a backend contract round can fix.
   // BUILD-PLAN 8.3 is "no longer gated on a decision" — §12.1 #46 was ratified

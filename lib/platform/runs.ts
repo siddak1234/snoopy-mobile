@@ -11,6 +11,7 @@ import { platformJson } from './client';
 
 export type RunStats = components['schemas']['RunStats'];
 export type RunStatusCounts = components['schemas']['RunStatusCounts'];
+export type RunSubscriptionCounts = components['schemas']['RunSubscriptionCounts'];
 export type Run = components['schemas']['Run'];
 
 /**
