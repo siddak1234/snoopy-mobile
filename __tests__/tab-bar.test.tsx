@@ -1,31 +1,11 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { fireEvent } from '@testing-library/react-native';
-import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
 import { NocturneTabBar } from '@/components/nocturne/tab-bar';
 import { nocturneDark } from '@/constants/theme';
 import { renderWithProviders } from '@/test/render';
-
-const ROUTES = ['(home)', 'flows', 'solutions', 'activity', 'settings'];
-
-function makeProps(activeIndex = 0) {
-  const navigation = {
-    emit: jest.fn(() => ({ defaultPrevented: false })),
-    navigate: jest.fn(),
-  };
-  const props = {
-    state: {
-      index: activeIndex,
-      routes: ROUTES.map((name) => ({ key: `${name}-key`, name })),
-    },
-    descriptors: Object.fromEntries(
-      ROUTES.map((name) => [`${name}-key`, { options: {} }]),
-    ),
-    navigation,
-  } as unknown as BottomTabBarProps;
-  return { props, navigation };
-}
+import { makeTabBarProps as makeProps } from '@/test/tab-bar-props';
 
 describe('NocturneTabBar', () => {
   it('renders the five design tabs in order', async () => {

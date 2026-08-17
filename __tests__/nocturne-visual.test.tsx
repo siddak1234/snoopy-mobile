@@ -18,10 +18,12 @@ import { StatCard } from '@/components/nocturne/stat-card';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { StepCard } from '@/components/nocturne/step-card';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { NocturneTabBar } from '@/components/nocturne/tab-bar';
 import { TextField } from '@/components/nocturne/text-field';
 import type { ThemeMode } from '@/hooks/use-theme';
 import type { PipelineStep } from '@/lib/view/pipeline';
 import { renderWithProviders } from '@/test/render';
+import { makeTabBarProps } from '@/test/tab-bar-props';
 
 /**
  * Visual regression for the Nocturne set.
@@ -42,9 +44,13 @@ import { renderWithProviders } from '@/test/render';
  * overrides only part of the ramp and deliberately inherits the rest, so a token
  * removed from one end can go unnoticed in dark.
  *
- * `tab-bar` is exercised by `tab-bar.test.tsx` against real navigation props
- * rather than snapshotted here; constructing a convincing `BottomTabBarProps`
- * would assert more about the fake than about the component.
+ * `tab-bar` is snapshotted here too, sharing the navigation fake `tab-bar.test.tsx`
+ * already depends on. That suite asserts label *colour* and press behaviour, which
+ * left spacing and type scale — two of the three properties the gate names —
+ * unchecked on the one component that frames every screen. An earlier note here
+ * gave "constructing a convincing `BottomTabBarProps` would assert more about the
+ * fake than about the component" as the reason to leave it out; the fake already
+ * existed and was already trusted, so excluding it bought nothing.
  */
 
 const PIPELINE_STEP: PipelineStep = {
@@ -69,7 +75,9 @@ const CASES: { name: string; element: React.ReactElement }[] = [
   { name: 'OAuthButton', element: <OAuthButton provider="google" label="Continue with Google" /> },
   { name: 'OrDivider', element: <OrDivider /> },
   { name: 'PillButton/primary', element: <PillButton label="Log In" variant="primary" /> },
+  { name: 'PillButton/secondary', element: <PillButton label="Templates" variant="secondary" /> },
   { name: 'PillButton/accent-ghost', element: <PillButton label="Unlock" variant="accent-ghost" /> },
+  { name: 'PillButton/plain', element: <PillButton label="See how it works" variant="plain" /> },
   { name: 'SectionLabel', element: <SectionLabel>Recent runs</SectionLabel> },
   { name: 'Skeleton', element: <Skeleton width={214} height={22} /> },
   { name: 'StatCard', element: <StatCard value="1,284" label="Runs today" /> },
@@ -96,6 +104,7 @@ const CASES: { name: string; element: React.ReactElement }[] = [
     name: 'TextField/secure',
     element: <TextField label="Password" value="secret" onChangeText={() => {}} secure />,
   },
+  { name: 'TabBar', element: <NocturneTabBar {...makeTabBarProps(0).props} /> },
 ];
 
 describe.each<ThemeMode>(['dark', 'light'])('Nocturne set — %s palette', (mode) => {
