@@ -6,6 +6,8 @@ import type {
   Connection,
   ConnectionProvider,
 } from '@/lib/platform/catalog';
+import type { RunStatusCounts } from '@/lib/platform/runs';
+import { count } from './format';
 import { iconFor } from './icon-registry';
 import { statusLabel } from './status';
 
@@ -112,4 +114,25 @@ function connectionSubtitle(connection: Connection | undefined): string {
   const used = connection.usedByCount;
   if (typeof used !== 'number' || used < 1) return state;
   return `${state} · used by ${used} ${used === 1 ? 'solution' : 'solutions'}`;
+}
+
+/** A Home stat tile, in the shape `homeStats` had. */
+export type StatTileView = { value: string; label: string; tone: 'text' | 'ok' | 'err' };
+
+/**
+ * The three tiles Home draws, from `run-stats`' workspace counts.
+ *
+ * §12.1 #73b names these three of the seven statuses and no others: `total` is
+ * "Runs today", `succeeded` is "Successes", `failed` is "Failures". The other
+ * four — pending, running, held, cancelled — are deliberately not shown; adding a
+ * fourth tile would be a design change, and the UI is frozen.
+ *
+ * `count()` rather than `String()` so 1284 reads "1,284" as the design draws it.
+ */
+export function toStatTiles(counts: RunStatusCounts): StatTileView[] {
+  return [
+    { value: count(counts.total), label: 'Runs today', tone: 'text' },
+    { value: count(counts.succeeded), label: 'Successes', tone: 'ok' },
+    { value: count(counts.failed), label: 'Failures', tone: 'err' },
+  ];
 }

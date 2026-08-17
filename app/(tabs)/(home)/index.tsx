@@ -22,8 +22,11 @@ import { Skeleton } from '@/components/nocturne/skeleton';
 import { StatCard } from '@/components/nocturne/stat-card';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
+import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useTheme } from '@/hooks/use-theme';
 import { homeStats, recentRuns } from '@/lib/fixtures';
+import { localMidnight, readRunStats } from '@/lib/platform/runs';
+import { toStatTiles, type StatTileView } from '@/lib/view/catalog';
 
 type HomeState = 'default' | 'loading' | 'empty' | 'error';
 
@@ -155,6 +158,25 @@ export default function HomeScreen() {
   const { state } = useLocalSearchParams<{ state?: HomeState }>();
   const paddingTop = insets.top + (layout.designTop.app - layout.statusArea);
 
+  /**
+   * The three stat tiles, from `run-stats` windowed to this morning.
+   *
+   * §12.1 #73b: `homeStats` is not published as such, and the substitute it names
+   * is `run-stats?since=<local midnight>` reading `total`, `succeeded`, `failed`.
+   * Windowed locally because "Runs today" is a local idea — Auckland and Los
+   * Angeles do not share a midnight — and `localMidnight()` is the one place that
+   * converts that boundary to the UTC instant the API wants.
+   *
+   * Home keeps its own bespoke loading and error states rather than the shared
+   * ones, so this does not gate the screen: `unconfigured` and any failure fall
+   * through to the prototype's tiles, which is what keeps the design browsable.
+   */
+  const stats = useWorkspaceResource((workspaceId) =>
+    readRunStats(workspaceId, localMidnight()),
+  );
+  const tiles: StatTileView[] =
+    stats.status === 'ready' ? toStatTiles(stats.data.workspace) : homeStats;
+
   if (state === 'loading') return <HomeLoading paddingTop={paddingTop} />;
   if (state === 'empty') return <HomeEmpty paddingTop={paddingTop} />;
   if (state === 'error') return <HomeError paddingTop={paddingTop} />;
@@ -221,7 +243,7 @@ export default function HomeScreen() {
 
       {/* Stats */}
       <View style={styles.statsRow}>
-        {homeStats.map((s) => (
+        {tiles.map((s) => (
           <StatCard
             key={s.label}
             value={s.value}
