@@ -52,11 +52,14 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # The prototype ships a hardcoded demo email and plaintext password in the
-      # auth screens. The occurrences are pinned so the set can only shrink:
-      # a new one fails, and removing one without updating the allowlist fails.
-      # Story S7.3 drives the pinned count to zero.
+      # The prototype shipped a hardcoded demo email and plaintext password in
+      # the auth screens. They are gone and the allowlist is empty; the ratchet
+      # now holds the count at zero, and a new occurrence fails the build.
       - run: npm run audit:credentials
+      # Colour belongs in constants/theme.ts. The design system ships an oxlint
+      # adherence config saying so, but nothing runs it — `expo lint` does not.
+      # This is the gate that makes the rule real.
+      - run: npm run audit:tokens
       - name: No salvaged client data
         run: |
           # `_salvage/` lives in the workspace folder, outside every repository. It

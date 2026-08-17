@@ -15,7 +15,7 @@ import { IconTile } from '@/components/nocturne/icon-tile';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { em, fonts, layout } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { onboardingPhases } from '@/lib/fixtures';
+import { onboardingPhases } from '@/lib/content/onboarding';
 
 /** Design: dot 6×6 neutral-700; active 22px wide accent; transition all .25s. */
 function Dot({ active }: { active: boolean }) {

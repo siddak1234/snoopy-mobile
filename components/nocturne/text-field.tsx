@@ -48,6 +48,10 @@ export function TextField({
           paddingHorizontal: 14,
         }}>
         <TextInput
+          // The visible label is a sibling `Text`, so the input has no
+          // accessible name of its own. Naming it here is what lets a screen
+          // reader announce the field, and costs nothing visually.
+          accessibilityLabel={label}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
