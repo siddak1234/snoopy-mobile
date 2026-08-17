@@ -29,9 +29,9 @@ import { useSession } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
 import { useTheme, type ThemeMode } from '@/hooks/use-theme';
 import { SIGN_OUT_FAILED, SIGN_OUT_RETRY, errorTitleFor } from '@/lib/content/screen-states';
-import { settingsConnections } from '@/lib/fixtures';
-import { readConnectionProviders, readConnections } from '@/lib/platform/catalog';
-import { toConnectionRows, type ConnectionView } from '@/lib/view/catalog';
+import { defaultActiveSolutions, settingsConnections, solutionDefs } from '@/lib/fixtures';
+import { readCatalog, readConnectionProviders, readConnections } from '@/lib/platform/catalog';
+import { toConnectionRows, toSolutions, type ConnectionView } from '@/lib/view/catalog';
 
 function SettingsRow({
   icon: IconCmp,
@@ -81,7 +81,7 @@ const APPEARANCE: { label: string; mode: ThemeMode }[] = [
 
 export default function SettingsScreen() {
   const { palette, mode, setMode } = useTheme();
-  const { activeCount, solutionsTotal, planTotal } = useSolutions();
+  const { totals } = useSolutions();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [faceId, setFaceId] = useState(true);
@@ -100,16 +100,31 @@ export default function SettingsScreen() {
    * which ones exist.
    */
   const connections = useWorkspaceResource(async (workspaceId) => {
-    const [providers, held] = await Promise.all([
+    const [providers, held, catalog] = await Promise.all([
       readConnectionProviders(),
       readConnections(workspaceId),
+      readCatalog(workspaceId),
     ]);
-    return toConnectionRows(providers.providers, held.connections);
+    return {
+      rows: toConnectionRows(providers.providers, held.connections),
+      solutions: toSolutions(catalog),
+    };
   });
+
+  // The plan totals need the priced catalog; the provider holds only overrides.
+  const pricedSolutions =
+    connections.status === 'ready'
+      ? connections.data.solutions
+      : solutionDefs.map((sol, i) => ({
+          ...sol,
+          templateId: sol.name,
+          subscribed: defaultActiveSolutions.includes(i),
+        }));
+  const { activeCount, solutionsTotal, planTotal } = totals(pricedSolutions);
 
   // As with Templates, the fixture survives only for the unconfigured build.
   const connectionRows: ConnectionView[] =
-    connections.status === 'ready' ? connections.data : settingsConnections;
+    connections.status === 'ready' ? connections.data.rows : settingsConnections;
 
   /**
    * Sign out for real, and honour the one answer the contract added for us.

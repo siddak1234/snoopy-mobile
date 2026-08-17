@@ -61,8 +61,8 @@ const knownFixtureReaders = new Map([
   // leave the toggle acting on the wrong row — worse than the fixture. The
   // refactor is app-wide (SolutionsProvider is mounted at the root) and cannot
   // remove this import anyway, because PLAN_BASE_PRICE has no wire source.
-  ["app/(tabs)/solutions/index.tsx", "BLOCKED on the same plan total; the cards themselves are catalog-ready"],
-  ["app/(tabs)/solutions/setup.tsx", "MOBILE — design item 3 delivered 2026-08-17; build the generated form from setup[]"],
+  ["app/(tabs)/solutions/index.tsx", "wired — unconfigured fallback only"],
+  ["app/(tabs)/solutions/setup.tsx", "MOBILE — identity wired; sections still fixed rows, not generated from setup[]"],
 ]);
 
 /** `from '@/lib/fixtures'`, `from '../lib/fixtures'`, and friends. */

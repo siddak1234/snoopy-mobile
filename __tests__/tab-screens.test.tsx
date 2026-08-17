@@ -72,7 +72,9 @@ describe('Solutions marketplace', () => {
     await fireEvent.press(getAllByText('Add')[0]);
     expect(mockRouter.push).toHaveBeenCalledWith({
       pathname: '/(tabs)/solutions/setup',
-      params: { index: '3' },
+      // Carries BOTH: templateId is the real identity, and index keeps the
+      // prototype path working while an unconfigured build has no catalog.
+      params: { index: '3', template: 'Weekly KPI digest' },
     });
   });
 
