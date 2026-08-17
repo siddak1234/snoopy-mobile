@@ -42,7 +42,9 @@ Then read `AUTOM8X-ROUND-PLAYBOOK.md` §4 (the Round 6 card) and this repo's
    `status-pill`, `stat-card`, `surface-card`, `pill-button`, `text-field`, …).
 5. **No hand-written `fetch`.** Round 6 introduces a client generated from the
    backend's `docs/openapi/*.yaml`. A hand-written call is a gate failure.
+   Enforced by `npm run audit:platform`, not by review.
 6. **Tokens go in `expo-secure-store`** — never AsyncStorage, never a log line.
+   Also enforced by `npm run audit:platform`.
 7. **Never edit another repository.** Something that looks like a backend bug is
    a finding to record, not a fix to make here.
 
@@ -51,3 +53,10 @@ Then read `AUTOM8X-ROUND-PLAYBOOK.md` §4 (the Round 6 card) and this repo's
 Zero imports of `lib/fixtures` outside tests · zero pinned demo credentials ·
 Nocturne components unchanged under visual diff · `eas.json` builds · both
 clients drive the same journey against the same endpoints.
+
+Four of those five are now commands rather than prose: `audit:fixtures` (a
+ratchet that may shrink and never grow, each remaining file naming its blocker),
+`audit:credentials`, `audit:platform`, and `npx jest nocturne-visual`. The visual
+harness is proven able to fail on colour, spacing **and** type scale — if you
+change it, re-prove that, because a snapshot suite that cannot fail asserts
+nothing.

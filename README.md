@@ -19,6 +19,8 @@ npm run lint                        # eslint
 npx tsc --noEmit                    # typecheck (typed routes regenerate on expo start)
 npm run audit:credentials           # no credential-shaped defaults in app screens
 npm run audit:tokens                # no colour literals outside constants/theme.ts
+npm run audit:fixtures              # lib/fixtures readers may shrink, never grow
+npm run audit:platform              # one fetch, no AsyncStorage, no logging
 npm run verify:platform-contracts   # generated types match the backend's OpenAPI
 ```
 
@@ -92,6 +94,14 @@ signed-out → the route guard, and 503 → sign-in unavailable.
 - `lib/platform/` — the only path to the network. One `platformJson()` facade,
   the origin parser, RFC 9457 problem handling, and the secure token store.
   A hand-written `fetch` anywhere else is a gate failure.
+- `components/screen-state.tsx` — the data states every fetching screen shares
+  (`gLoad`/`gErr`/`gOff` in the design) plus the inline action-failure callout.
+  App-level compositions of the Nocturne set, deliberately outside
+  `components/nocturne/`: they add no new primitive, so the frozen eighteen are
+  untouched.
+- `hooks/use-resource.tsx` — one read, in the four states the design draws.
+  `offline` (the request never landed) and `error` (the platform refused) are
+  different screens, so they are different states.
 - `lib/view/` — wire values to the strings the design draws: the status
   vocabulary map, the formatters, and the icon-name registry.
 - `lib/fixtures.ts` — prototype data, byte-exact to the design. Being replaced

@@ -42,6 +42,26 @@ gone; what remains open is recorded plainly rather than left implied.
 - Every network call goes through one generated-client facade:
   `lib/platform/client.ts`.
 
+**Settled 2026-08-17, when the design delivered DESIGN-GAPS item 2:**
+
+- **Sign-out now honours the contract.** The card called
+  `router.replace('/(auth)/welcome')` and never called `signOut()`, so ADR-0017
+  §4's deliberate 502 — returned instead of 204 so a client can tell that
+  revocation failed and its tokens are still live upstream — went unused. The
+  screen now stays put on a 502 and renders the design's `soFail` callout;
+  `__tests__/sign-out.test.tsx` pins that a failed revocation must **not**
+  navigate.
+- **The run status vocabulary is complete.** `lib/view/status.ts` carried
+  `pending`/`running` as neutral with a comment recording the pill treatment as
+  an open question for design. Answered: `running` takes the accent, being the
+  one run state a person watches; `pending` and `cancelled` share Draft's
+  neutral; and `pending` renders as **Queued**, a mapping rather than a
+  capitalisation.
+- **Every fetching screen has a data-state vocabulary**
+  (`components/screen-state.tsx`, `hooks/use-resource.tsx`), and
+  `PlatformUnreachableError` makes "offline" distinguishable from "the platform
+  refused" — two different screens in the design, previously one 502.
+
 **Still open, and each blocked on something named:**
 
 - The password **Log In** button still navigates without authenticating
