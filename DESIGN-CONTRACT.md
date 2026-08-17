@@ -217,6 +217,26 @@ an optional `template`, which makes 8.7 real for any caller that can name one �
 and no caller can until flow detail is wired, because detail is still keyed by the
 fixture's `FlowKey`.
 
+**FINDING 8 — a plan's base price is not published, and it may not need Round 7.**
+`hooks/use-solutions.tsx` imports `PLAN_BASE_PRICE` ($99) and nothing else from
+the fixtures; it is the single remaining non-fallback fixture import and
+therefore the one thing standing between this repo and a zero count. Searched
+rather than assumed: the public surface carries no plan, price, tier or
+entitlement READ — only `/v1/billing/webhooks`, which is the provider's callback,
+and an `EntitlementsWorkspaceExportSection`.
+
+The ledger recorded this as waiting on Round 7, quoting BUILD-PLAN 8.3's "it
+waits on that account". That is right for 8.3 — a billing PAGE needs checkout,
+portal and subscription management, which need a payment provider. **It is not
+obviously right for reading a plan's base price.** §12.1 #46 describes plan
+values as "operator data, so changing them is an INSERT rather than a
+deployment", and the free plan's limits were ratified without any provider
+account existing. A read that returns what a plan costs charges nobody.
+
+If that read were published, gate line 1 could reach zero without Round 7. If it
+genuinely cannot be separated from 8.3, that is worth recording explicitly,
+because it decides whether Round 6's first gate line is achievable at all.
+
 **FINDING 7 — `resource-picker` cannot say what it enumerates.**
 `AutomationSetupField` is `{section, key, title, description, control,
 defaultValue?, required, notifies?}`. `resource-picker` is one of the four
