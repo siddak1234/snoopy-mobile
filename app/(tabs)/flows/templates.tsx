@@ -79,7 +79,13 @@ export default function TemplatesScreen() {
         {visible.map((t) => (
           <SurfaceCard
             key={t.templateId}
-            onPress={() => router.push('/(tabs)/flows/configure')}
+            onPress={() =>
+              // Each card opens ITS template — DESIGN-GAPS item 3's second case.
+              router.push({
+                pathname: '/(tabs)/flows/configure',
+                params: { template: t.templateId },
+              })
+            }
             style={[styles.card, { width: cardWidth }]}>
             <IconTile icon={t.icon} size={38} iconSize={19} borderRadius={11} bordered />
             <Text style={[styles.cardName, { color: palette.text }]}>{t.name}</Text>

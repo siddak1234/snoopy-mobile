@@ -39,7 +39,7 @@ const knownFixtureReaders = new Map([
   ["app/(tabs)/flows/index.tsx", "wired — unconfigured fallback only"],
   ["app/(tabs)/flows/detail.tsx", "wired — unconfigured fallback only"],
   ["app/(tabs)/flows/builder.tsx", "wired — unconfigured fallback only; flow detail now names the template"],
-  ["app/(tabs)/flows/configure.tsx", "MOBILE — catalog pipeline; usedByTeams is static copy per §12.1 #74"],
+  ["app/(tabs)/flows/configure.tsx", "wired — unconfigured fallback only"],
 
   // GENUINELY BLOCKED, and not by anything a backend contract round can fix.
   // BUILD-PLAN 8.3 is "no longer gated on a decision" — §12.1 #46 was ratified
