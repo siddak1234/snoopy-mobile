@@ -10,6 +10,8 @@
     "test": "jest",
     "typecheck": "tsc --noEmit",
     "audit:credentials": "node scripts/audit-credentials.mjs",
+    "audit:fixtures": "node scripts/audit-fixtures.mjs",
+    "audit:platform": "node scripts/audit-platform.mjs",
     "audit:tokens": "node scripts/audit-tokens.mjs",
     "generate:platform-contracts": "node scripts/generate-platform-contracts.mjs",
     "verify:platform-contracts": "node scripts/verify-platform-contracts.mjs"

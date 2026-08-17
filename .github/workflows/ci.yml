@@ -60,6 +60,15 @@ jobs:
       # adherence config saying so, but nothing runs it — `expo lint` does not.
       # This is the gate that makes the rule real.
       - run: npm run audit:tokens
+      # Gate 8's first mobile line is "0 imports of lib/fixtures outside tests".
+      # It was re-derived by hand with git grep in every audit; this is the
+      # ratchet. The set may shrink and may never grow, and a file that stops
+      # reading fixtures must leave the ledger in the same commit.
+      - run: npm run audit:fixtures
+      # Three more gate lines that were manual greps: one hand-written fetch
+      # would fork the transport, one AsyncStorage import would break the
+      # invariant ADR-0017 amended, and one console call could log a token.
+      - run: npm run audit:platform
       - name: No salvaged client data
         run: |
           # `_salvage/` lives in the workspace folder, outside every repository. It
