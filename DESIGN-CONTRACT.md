@@ -59,6 +59,21 @@ gone; what remains open is recorded plainly rather than left implied.
   `/v1/connections/callback` authenticates before it reads, and a native login
   deliberately mints no session cookie — SYSTEM-MANIFEST §12.1 #62, with the
   working design in BUILD-PLAN 7.6.6.
+- **Home's recent-runs list is not wireable, and the reason is the contract, not
+  the design.** Home is the one screen with designed loading, empty, and error
+  states, and `GET /v1/workspaces/{workspaceId}/runs` is published — so this
+  looked like the one fixture replacement Round 6 could finish. It is not. The
+  published `Run` carries no display name (`automations.yaml`: "No display name
+  here") and no result summary; `grep output` over the public automations spec
+  matches nothing. The design's row draws both — `Invoice triage` and
+  `#4821 · posted to QuickBooks`. The first needs a catalog join; the second has
+  no source on the list shape at all, since `RunStep.summary` exists only inside
+  `RunDetail`, so four rows would cost four extra requests and still render a
+  step line rather than a run result. Tapping a row navigates by `runVariant`, a
+  four-value fixture key into `runDetails`, so a real run has no destination
+  until run detail is wired — and run detail is DESIGN-GAPS item 2, owner Claude
+  Design. `homeStats` has no endpoint at any shape. Recorded as a finding for the
+  backend register; not a fix to make here.
 - The app declares the `snoopymobile` scheme (`app.json`), which ADR-0017
   **rejects for login** — any app can register a custom scheme. Login returns
   through an app-claimed HTTPS URL instead, and `app.config.js` derives the iOS
