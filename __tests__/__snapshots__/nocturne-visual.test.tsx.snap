@@ -1483,6 +1483,45 @@ exports[`Nocturne set — dark palette StatCard renders unchanged 1`] = `
 </RNCSafeAreaProvider>
 `;
 
+exports[`Nocturne set — dark palette StatusPill/Cancelled renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "backgroundColor": "rgba(147,151,171,0.12)",
+        "borderColor": "#595d6c",
+        "borderRadius": 999,
+        "borderWidth": 1,
+        "paddingHorizontal": 10,
+        "paddingVertical": 4,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#b2b6ca",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 11,
+        }
+      }
+    >
+      Cancelled
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
 exports[`Nocturne set — dark palette StatusPill/Draft renders unchanged 1`] = `
 <RNCSafeAreaProvider
   onInsetsChange={[Function]}
@@ -1673,6 +1712,84 @@ exports[`Nocturne set — dark palette StatusPill/Paused renders unchanged 1`] =
       }
     >
       Paused
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — dark palette StatusPill/Queued renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "backgroundColor": "rgba(147,151,171,0.12)",
+        "borderColor": "#595d6c",
+        "borderRadius": 999,
+        "borderWidth": 1,
+        "paddingHorizontal": 10,
+        "paddingVertical": 4,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#b2b6ca",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 11,
+        }
+      }
+    >
+      Queued
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — dark palette StatusPill/Running renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "backgroundColor": "rgba(145,132,217,0.12)",
+        "borderColor": "#5d5294",
+        "borderRadius": 999,
+        "borderWidth": 1,
+        "paddingHorizontal": 10,
+        "paddingVertical": 4,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#d2cefd",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 11,
+        }
+      }
+    >
+      Running
     </Text>
   </View>
 </RNCSafeAreaProvider>
@@ -4348,6 +4465,45 @@ exports[`Nocturne set — light palette StatCard renders unchanged 1`] = `
 </RNCSafeAreaProvider>
 `;
 
+exports[`Nocturne set — light palette StatusPill/Cancelled renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "backgroundColor": "rgba(124,128,149,0.12)",
+        "borderColor": "#c9cbdb",
+        "borderRadius": 999,
+        "borderWidth": 1,
+        "paddingHorizontal": 10,
+        "paddingVertical": 4,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#666a82",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 11,
+        }
+      }
+    >
+      Cancelled
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
 exports[`Nocturne set — light palette StatusPill/Draft renders unchanged 1`] = `
 <RNCSafeAreaProvider
   onInsetsChange={[Function]}
@@ -4538,6 +4694,84 @@ exports[`Nocturne set — light palette StatusPill/Paused renders unchanged 1`] 
       }
     >
       Paused
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette StatusPill/Queued renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "backgroundColor": "rgba(124,128,149,0.12)",
+        "borderColor": "#c9cbdb",
+        "borderRadius": 999,
+        "borderWidth": 1,
+        "paddingHorizontal": 10,
+        "paddingVertical": 4,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#666a82",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 11,
+        }
+      }
+    >
+      Queued
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette StatusPill/Running renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "backgroundColor": "rgba(106,92,196,0.12)",
+        "borderColor": "#c3bcec",
+        "borderRadius": 999,
+        "borderWidth": 1,
+        "paddingHorizontal": 10,
+        "paddingVertical": 4,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#5548ab",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 11,
+        }
+      }
+    >
+      Running
     </Text>
   </View>
 </RNCSafeAreaProvider>

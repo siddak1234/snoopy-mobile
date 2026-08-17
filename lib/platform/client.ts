@@ -2,6 +2,7 @@ import { backendApiOrigin } from './origin';
 import {
   PlatformError,
   PlatformNotConfiguredError,
+  PlatformUnreachableError,
   fallbackProblemTitle,
   publicProblem,
 } from './problem';
@@ -75,8 +76,10 @@ export async function platformJson<T>(path: string, request: PlatformRequest = {
       });
     } catch {
       // A DNS failure, a refused connection, and a timeout are the same thing
-      // to a caller: the platform did not answer.
-      throw new PlatformError('The platform is unreachable', 502);
+      // to a caller: the platform did not answer. It is still a 502, so every
+      // `status === 502` rule holds, but the type says the request never landed
+      // — which is how a screen tells "offline" from "the server refused".
+      throw new PlatformUnreachableError();
     }
 
     const payload: unknown =

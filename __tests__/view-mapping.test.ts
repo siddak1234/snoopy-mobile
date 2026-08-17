@@ -28,6 +28,14 @@ describe('statusLabel — the design pills, from the server vocabulary', () => {
     expect(statusLabel('failed')).toBe('Failed');
   });
 
+  it('renders `pending` as `Queued`, the design\'s word for a run not yet started', () => {
+    // Capitalising the server's word here would redefine the vocabulary rather
+    // than map it, which is exactly what Gate 8 forbids.
+    expect(statusLabel('pending')).toBe('Queued');
+    expect(statusLabel('running')).toBe('Running');
+    expect(statusLabel('cancelled')).toBe('Cancelled');
+  });
+
   it('spaces hyphenated connection statuses', () => {
     expect(statusLabel('reauthorization-required')).toBe('Reauthorization required');
   });
@@ -55,6 +63,11 @@ describe('statusTone', () => {
     expect(statusTone('draft')).toBe('neutral');
     expect(statusTone('cancelled')).toBe('neutral');
     expect(statusTone('expired')).toBe('neutral');
+    expect(statusTone('pending')).toBe('neutral');
+  });
+
+  it('gives `running` the accent — the one run state a person watches', () => {
+    expect(statusTone('running')).toBe('accent');
   });
 
   it('is case-insensitive, so the design `Live` and the server `live` agree', () => {

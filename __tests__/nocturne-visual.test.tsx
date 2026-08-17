@@ -23,6 +23,7 @@ import { TextField } from '@/components/nocturne/text-field';
 import type { ThemeMode } from '@/hooks/use-theme';
 import type { PipelineStep } from '@/lib/view/pipeline';
 import { renderWithProviders } from '@/test/render';
+import { stabilizeAnimated } from '@/test/stabilize';
 import { makeTabBarProps } from '@/test/tab-bar-props';
 
 /**
@@ -87,6 +88,9 @@ const CASES: { name: string; element: React.ReactElement }[] = [
   { name: 'StatusPill/Success', element: <StatusPill label="Success" /> },
   { name: 'StatusPill/Held', element: <StatusPill label="Held" /> },
   { name: 'StatusPill/Failed', element: <StatusPill label="Failed" /> },
+  { name: 'StatusPill/Running', element: <StatusPill label="Running" /> },
+  { name: 'StatusPill/Queued', element: <StatusPill label="Queued" /> },
+  { name: 'StatusPill/Cancelled', element: <StatusPill label="Cancelled" /> },
   { name: 'StepCard', element: <StepCard step={PIPELINE_STEP} /> },
   {
     name: 'SurfaceCard',
@@ -110,6 +114,8 @@ const CASES: { name: string; element: React.ReactElement }[] = [
 describe.each<ThemeMode>(['dark', 'light'])('Nocturne set — %s palette', (mode) => {
   it.each(CASES.map((c) => [c.name, c.element] as const))('%s renders unchanged', async (_name, element) => {
     const { toJSON } = await renderWithProviders(element, undefined, mode);
-    expect(toJSON()).toMatchSnapshot();
+    // `stabilizeAnimated` rounds sampled animation values and nothing else, so
+    // Skeleton's pulse cannot make this gate fail at random. See test/stabilize.ts.
+    expect(stabilizeAnimated(toJSON())).toMatchSnapshot();
   });
 });

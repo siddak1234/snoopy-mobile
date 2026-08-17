@@ -20,8 +20,16 @@
  * the gate forbids, so origin is described by `runOriginLabel` instead.
  */
 
-/** The four pill treatments the Nocturne design already draws. */
-export type StatusTone = 'ok' | 'warn' | 'err' | 'neutral';
+/**
+ * The pill treatments the Nocturne design draws.
+ *
+ * `accent` is the fifth, added when the design answered the open question this
+ * file used to record: `running` is the one run state a person sits and watches,
+ * so it earns the accent rather than sharing neutral with everything unfinished.
+ * It introduces no token — accent-300 on accent 12% inside an accent-700 border,
+ * all of which the sheet already had.
+ */
+export type StatusTone = 'ok' | 'warn' | 'err' | 'neutral' | 'accent';
 
 /**
  * A workflow's status, in the design's words.
@@ -39,7 +47,14 @@ export type FlowStatus = 'Live' | 'Paused' | 'Draft';
  * `Succeeded`: the pill keeps the design's word and `statusLabel` maps the
  * server's onto it.
  */
-export type StatusPillLabel = FlowStatus | 'Held' | 'Success' | 'Failed';
+export type StatusPillLabel =
+  | FlowStatus
+  | 'Held'
+  | 'Success'
+  | 'Failed'
+  | 'Running'
+  | 'Queued'
+  | 'Cancelled';
 
 const STATUS_TONE: Record<string, StatusTone> = {
   // Subscription — what the design calls a workflow's status.
@@ -51,12 +66,13 @@ const STATUS_TONE: Record<string, StatusTone> = {
   succeeded: 'ok',
   failed: 'err',
   held: 'warn',
-  // `pending` and `running` never appeared in the prototype, which only drew
-  // terminal and held runs. They take the neutral treatment rather than a new
-  // colour: introducing a fifth pill appearance is a design decision, and the
-  // UI is frozen. Recorded for the design session as an open question.
+  // These three never appeared in the prototype, which drew only terminal and
+  // held runs, so this file once carried them as neutral and recorded the
+  // treatment as an open question for the design session. It was answered:
+  // `running` takes the accent — it is the one state a person watches — while
+  // `pending` and `cancelled` share Draft's neutral. No token was added.
+  running: 'accent',
   pending: 'neutral',
-  running: 'neutral',
   cancelled: 'neutral',
 
   // Approval.
@@ -83,6 +99,10 @@ const STATUS_TONE: Record<string, StatusTone> = {
  */
 const DISPLAY_OVERRIDES: Record<string, string> = {
   succeeded: 'Success',
+  // The design draws a queued run as **Queued**, not "Pending". A client that
+  // capitalised the server's word would be redefining the vocabulary rather
+  // than mapping it, which is the thing Gate 8 names.
+  pending: 'Queued',
 };
 
 export function statusTone(status: string | null | undefined): StatusTone {

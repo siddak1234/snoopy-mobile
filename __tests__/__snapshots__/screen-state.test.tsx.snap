@@ -1,0 +1,3959 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`screen states — dark palette ActionFailure renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    accessibilityRole="alert"
+    style={
+      [
+        {
+          "alignItems": "flex-start",
+          "borderRadius": 14,
+          "borderWidth": 1,
+          "flexDirection": "row",
+          "gap": 10,
+          "paddingHorizontal": 14,
+          "paddingVertical": 12,
+        },
+        {
+          "backgroundColor": "rgba(248,113,113,0.1)",
+          "borderColor": "rgba(248,113,113,0.35)",
+        },
+      ]
+    }
+    testID="action-failure"
+  >
+    <RNSVGSvgView
+      align="xMidYMid"
+      bbHeight={18}
+      bbWidth={18}
+      className="warning-circle-undefined__svg-icon-phosphor"
+      color="#f87171"
+      fill="currentColor"
+      focusable={false}
+      height={18}
+      meetOrSlice={0}
+      minX={0}
+      minY={0}
+      style={
+        [
+          {
+            "backgroundColor": "transparent",
+            "borderWidth": 0,
+          },
+          [
+            undefined,
+            undefined,
+            {},
+          ],
+          {
+            "flex": 0,
+            "height": 18,
+            "width": 18,
+          },
+        ]
+      }
+      testID="phosphor-react-native-warning-circle-undefined"
+      vbHeight={256}
+      vbWidth={256}
+      width={18}
+    >
+      <RNSVGGroup
+        fill={
+          {
+            "type": 2,
+          }
+        }
+        propList={
+          [
+            "fill",
+          ]
+        }
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4294472049,
+              "type": 0,
+            }
+          }
+          propList={
+            [
+              "fill",
+            ]
+          }
+        >
+          <RNSVGPath
+            d="M128 24a104 104 0 1 0 104 104A104.11 104.11 0 0 0 128 24m0 192a88 88 0 1 1 88-88 88.1 88.1 0 0 1-88 88m-8-80V80a8 8 0 0 1 16 0v56a8 8 0 0 1-16 0m20 36a12 12 0 1 1-12-12 12 12 0 0 1 12 12"
+            fill={
+              {
+                "payload": 4278190080,
+                "type": 0,
+              }
+            }
+          />
+        </RNSVGGroup>
+      </RNSVGGroup>
+    </RNSVGSvgView>
+    <View
+      style={
+        {
+          "flex": 1,
+          "gap": 6,
+        }
+      }
+    >
+      <Text
+        style={
+          [
+            {
+              "fontFamily": "Inter_400Regular",
+              "fontSize": 13,
+              "lineHeight": 19.5,
+            },
+            {
+              "color": "#e9e9ed",
+            },
+          ]
+        }
+      >
+        Email triage wasn't removed — it's still active and your plan total is unchanged.
+      </Text>
+      <Text
+        accessibilityRole="button"
+        style={
+          [
+            {
+              "fontFamily": "Inter_500Medium",
+              "fontSize": 13,
+            },
+            {
+              "color": "#f87171",
+            },
+          ]
+        }
+        suppressHighlighting={true}
+      >
+        Retry removal
+      </Text>
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`screen states — dark palette ScreenError renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "flex": 1,
+          "gap": 16,
+          "paddingBottom": 20,
+          "paddingHorizontal": 20,
+        },
+        {
+          "backgroundColor": "#161826",
+          "paddingTop": 15,
+        },
+      ]
+    }
+    testID="screen-error"
+  >
+    <View
+      accessibilityLabel="Back"
+      accessibilityRole="button"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": undefined,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      hitSlop={8}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderColor": "#3f424d",
+          "borderRadius": 999,
+          "borderWidth": 1,
+          "height": 36,
+          "justifyContent": "center",
+          "width": 36,
+        }
+      }
+    >
+      <RNSVGSvgView
+        align="xMidYMid"
+        bbHeight={17}
+        bbWidth={17}
+        className="caret-left-undefined__svg-icon-phosphor"
+        color="#b2b6ca"
+        fill="currentColor"
+        focusable={false}
+        height={17}
+        meetOrSlice={0}
+        minX={0}
+        minY={0}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            [
+              undefined,
+              undefined,
+              {},
+            ],
+            {
+              "flex": 0,
+              "height": 17,
+              "width": 17,
+            },
+          ]
+        }
+        testID="phosphor-react-native-caret-left-undefined"
+        vbHeight={256}
+        vbWidth={256}
+        width={17}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "type": 2,
+            }
+          }
+          propList={
+            [
+              "fill",
+            ]
+          }
+        >
+          <RNSVGGroup
+            fill={
+              {
+                "payload": 4289902282,
+                "type": 0,
+              }
+            }
+            propList={
+              [
+                "fill",
+              ]
+            }
+          >
+            <RNSVGPath
+              d="M165.66 202.34a8 8 0 0 1-11.32 11.32l-80-80a8 8 0 0 1 0-11.32l80-80a8 8 0 0 1 11.32 11.32L91.31 128Z"
+              fill={
+                {
+                  "payload": 4278190080,
+                  "type": 0,
+                }
+              }
+            />
+          </RNSVGGroup>
+        </RNSVGGroup>
+      </RNSVGSvgView>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "gap": 14,
+          "justifyContent": "center",
+          "paddingHorizontal": 20,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 24,
+              "borderWidth": 1,
+              "height": 80,
+              "justifyContent": "center",
+              "width": 80,
+            },
+            {
+              "borderColor": "#3f424d",
+            },
+          ]
+        }
+      >
+        <RNSVGSvgView
+          align="xMidYMid"
+          bbHeight={36}
+          bbWidth={36}
+          className="warning-circle-undefined__svg-icon-phosphor"
+          color="#9397ab"
+          fill="currentColor"
+          focusable={false}
+          height={36}
+          meetOrSlice={0}
+          minX={0}
+          minY={0}
+          style={
+            [
+              {
+                "backgroundColor": "transparent",
+                "borderWidth": 0,
+              },
+              [
+                undefined,
+                undefined,
+                {},
+              ],
+              {
+                "flex": 0,
+                "height": 36,
+                "width": 36,
+              },
+            ]
+          }
+          testID="phosphor-react-native-warning-circle-undefined"
+          vbHeight={256}
+          vbWidth={256}
+          width={36}
+        >
+          <RNSVGGroup
+            fill={
+              {
+                "type": 2,
+              }
+            }
+            propList={
+              [
+                "fill",
+              ]
+            }
+          >
+            <RNSVGGroup
+              fill={
+                {
+                  "payload": 4287862699,
+                  "type": 0,
+                }
+              }
+              propList={
+                [
+                  "fill",
+                ]
+              }
+            >
+              <RNSVGPath
+                d="M128 24a104 104 0 1 0 104 104A104.11 104.11 0 0 0 128 24m0 192a88 88 0 1 1 88-88 88.1 88.1 0 0 1-88 88m-8-80V80a8 8 0 0 1 16 0v56a8 8 0 0 1-16 0m20 36a12 12 0 1 1-12-12 12 12 0 0 1 12 12"
+                fill={
+                  {
+                    "payload": 4278190080,
+                    "type": 0,
+                  }
+                }
+              />
+            </RNSVGGroup>
+          </RNSVGGroup>
+        </RNSVGSvgView>
+      </View>
+      <Text
+        style={
+          [
+            {
+              "fontFamily": "Inter_500Medium",
+              "fontSize": 20,
+              "letterSpacing": -0.2,
+              "marginTop": 8,
+              "textAlign": "center",
+            },
+            {
+              "color": "#e9e9ed",
+            },
+          ]
+        }
+      >
+        Couldn't load this run
+      </Text>
+      <Text
+        style={
+          [
+            {
+              "fontFamily": "Inter_400Regular",
+              "fontSize": 13.5,
+              "lineHeight": 20.925,
+              "maxWidth": 224,
+              "textAlign": "center",
+            },
+            {
+              "color": "#b2b6ca",
+            },
+          ]
+        }
+      >
+        Nothing was lost — it's safe in the cloud. Retry now or come back in a moment.
+      </Text>
+      <View
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        onBlur={[Function]}
+        onClick={[Function]}
+        onFocus={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          [
+            {
+              "alignItems": "center",
+              "backgroundColor": "transparent",
+              "borderColor": "#9184d9",
+              "borderRadius": 999,
+              "borderWidth": 1,
+              "flexDirection": "row",
+              "gap": 8,
+              "height": 44,
+              "justifyContent": "center",
+              "paddingHorizontal": 18,
+            },
+            {
+              "marginTop": 8,
+              "paddingHorizontal": 26,
+            },
+          ]
+        }
+      >
+        <RNSVGSvgView
+          align="xMidYMid"
+          bbHeight={16}
+          bbWidth={16}
+          className="arrow-clockwise-regular__svg-icon-phosphor"
+          color="#9184d9"
+          fill="currentColor"
+          focusable={false}
+          height={16}
+          meetOrSlice={0}
+          minX={0}
+          minY={0}
+          style={
+            [
+              {
+                "backgroundColor": "transparent",
+                "borderWidth": 0,
+              },
+              [
+                undefined,
+                undefined,
+                {},
+              ],
+              {
+                "flex": 0,
+                "height": 16,
+                "width": 16,
+              },
+            ]
+          }
+          testID="phosphor-react-native-arrow-clockwise-regular"
+          vbHeight={256}
+          vbWidth={256}
+          width={16}
+        >
+          <RNSVGGroup
+            fill={
+              {
+                "type": 2,
+              }
+            }
+            propList={
+              [
+                "fill",
+              ]
+            }
+          >
+            <RNSVGGroup
+              fill={
+                {
+                  "payload": 4287726809,
+                  "type": 0,
+                }
+              }
+              propList={
+                [
+                  "fill",
+                ]
+              }
+            >
+              <RNSVGPath
+                d="M240 56v48a8 8 0 0 1-8 8h-48a8 8 0 0 1 0-16h27.4l-26.59-24.36-.25-.24a80 80 0 1 0-1.67 114.78 8 8 0 0 1 11 11.63A95.44 95.44 0 0 1 128 224h-1.32a96 96 0 1 1 69.07-164L224 85.8V56a8 8 0 1 1 16 0"
+                fill={
+                  {
+                    "payload": 4278190080,
+                    "type": 0,
+                  }
+                }
+              />
+            </RNSVGGroup>
+          </RNSVGGroup>
+        </RNSVGSvgView>
+        <Text
+          style={
+            {
+              "color": "#9184d9",
+              "fontFamily": "Inter_500Medium",
+              "fontSize": 14,
+            }
+          }
+        >
+          Retry
+        </Text>
+      </View>
+      <View
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        onBlur={[Function]}
+        onClick={[Function]}
+        onFocus={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          [
+            {
+              "alignItems": "center",
+              "backgroundColor": "transparent",
+              "borderColor": "transparent",
+              "borderRadius": 999,
+              "borderWidth": 0,
+              "flexDirection": "row",
+              "gap": 7,
+              "height": 40,
+              "justifyContent": "center",
+              "paddingHorizontal": 18,
+            },
+            undefined,
+          ]
+        }
+      >
+        <Text
+          style={
+            {
+              "color": "#e9e9ed",
+              "fontFamily": "Inter_500Medium",
+              "fontSize": 13.5,
+            }
+          }
+        >
+          Go back
+        </Text>
+      </View>
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`screen states — dark palette ScreenLoading renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "flex": 1,
+          "gap": 16,
+          "paddingBottom": 20,
+          "paddingHorizontal": 20,
+        },
+        {
+          "backgroundColor": "#161826",
+          "paddingTop": 15,
+        },
+      ]
+    }
+    testID="screen-loading"
+  >
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "gap": 12,
+        }
+      }
+    >
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "opacity": 0.45,
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#292b31",
+              "borderRadius": 999,
+              "height": 36,
+              "width": 36,
+            },
+            false,
+          ]
+        }
+        nativeID="0"
+        style={
+          [
+            {
+              "backgroundColor": "#292b31",
+              "borderRadius": 999,
+              "height": 36,
+              "width": 36,
+            },
+            false,
+            {
+              "opacity": 0.45,
+            },
+          ]
+        }
+      />
+      <View
+        style={
+          {
+            "gap": 7,
+          }
+        }
+      >
+        <View
+          collapsable={false}
+          jestAnimatedProps={
+            {
+              "value": {},
+            }
+          }
+          jestAnimatedStyle={
+            {
+              "value": {
+                "opacity": 0.45,
+              },
+            }
+          }
+          jestInlineStyle={
+            [
+              {
+                "backgroundColor": "#292b31",
+                "borderRadius": 8,
+                "height": 18,
+                "width": 148,
+              },
+              false,
+            ]
+          }
+          nativeID="1"
+          style={
+            [
+              {
+                "backgroundColor": "#292b31",
+                "borderRadius": 8,
+                "height": 18,
+                "width": 148,
+              },
+              false,
+              {
+                "opacity": 0.45,
+              },
+            ]
+          }
+        />
+        <View
+          collapsable={false}
+          jestAnimatedProps={
+            {
+              "value": {},
+            }
+          }
+          jestAnimatedStyle={
+            {
+              "value": {
+                "opacity": 0.45,
+              },
+            }
+          }
+          jestInlineStyle={
+            [
+              {
+                "backgroundColor": "#292b31",
+                "borderRadius": 6,
+                "height": 12,
+                "width": 96,
+              },
+              false,
+            ]
+          }
+          nativeID="2"
+          style={
+            [
+              {
+                "backgroundColor": "#292b31",
+                "borderRadius": 6,
+                "height": 12,
+                "width": 96,
+              },
+              false,
+              {
+                "opacity": 0.45,
+              },
+            ]
+          }
+        />
+      </View>
+    </View>
+    <View
+      collapsable={false}
+      jestAnimatedProps={
+        {
+          "value": {},
+        }
+      }
+      jestAnimatedStyle={
+        {
+          "value": {
+            "opacity": 0.45,
+          },
+        }
+      }
+      jestInlineStyle={
+        [
+          {
+            "backgroundColor": "#292b31",
+            "borderRadius": 6,
+            "height": 10,
+            "width": 88,
+          },
+          false,
+        ]
+      }
+      nativeID="3"
+      style={
+        [
+          {
+            "backgroundColor": "#292b31",
+            "borderRadius": 6,
+            "height": 10,
+            "width": 88,
+          },
+          false,
+          {
+            "opacity": 0.45,
+          },
+        ]
+      }
+    />
+    <View
+      style={
+        {
+          "gap": 8,
+        }
+      }
+    >
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "opacity": 0.45,
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#292b31",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+          ]
+        }
+        nativeID="4"
+        style={
+          [
+            {
+              "backgroundColor": "#292b31",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+            {
+              "opacity": 0.45,
+            },
+          ]
+        }
+      />
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "opacity": 0.45,
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#292b31",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+          ]
+        }
+        nativeID="5"
+        style={
+          [
+            {
+              "backgroundColor": "#292b31",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+            {
+              "opacity": 0.45,
+            },
+          ]
+        }
+      />
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "opacity": 0.45,
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#292b31",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+          ]
+        }
+        nativeID="6"
+        style={
+          [
+            {
+              "backgroundColor": "#292b31",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+            {
+              "opacity": 0.45,
+            },
+          ]
+        }
+      />
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "opacity": 0.45,
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#292b31",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+          ]
+        }
+        nativeID="7"
+        style={
+          [
+            {
+              "backgroundColor": "#292b31",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+            {
+              "opacity": 0.45,
+            },
+          ]
+        }
+      />
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`screen states — dark palette ScreenLoading/tiles renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "flex": 1,
+          "gap": 16,
+          "paddingBottom": 20,
+          "paddingHorizontal": 20,
+        },
+        {
+          "backgroundColor": "#161826",
+          "paddingTop": 15,
+        },
+      ]
+    }
+    testID="screen-loading"
+  >
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "gap": 12,
+        }
+      }
+    >
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "opacity": 0.45,
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#292b31",
+              "borderRadius": 999,
+              "height": 36,
+              "width": 36,
+            },
+            false,
+          ]
+        }
+        nativeID="8"
+        style={
+          [
+            {
+              "backgroundColor": "#292b31",
+              "borderRadius": 999,
+              "height": 36,
+              "width": 36,
+            },
+            false,
+            {
+              "opacity": 0.45,
+            },
+          ]
+        }
+      />
+      <View
+        style={
+          {
+            "gap": 7,
+          }
+        }
+      >
+        <View
+          collapsable={false}
+          jestAnimatedProps={
+            {
+              "value": {},
+            }
+          }
+          jestAnimatedStyle={
+            {
+              "value": {
+                "opacity": 0.45,
+              },
+            }
+          }
+          jestInlineStyle={
+            [
+              {
+                "backgroundColor": "#292b31",
+                "borderRadius": 8,
+                "height": 18,
+                "width": 148,
+              },
+              false,
+            ]
+          }
+          nativeID="9"
+          style={
+            [
+              {
+                "backgroundColor": "#292b31",
+                "borderRadius": 8,
+                "height": 18,
+                "width": 148,
+              },
+              false,
+              {
+                "opacity": 0.45,
+              },
+            ]
+          }
+        />
+        <View
+          collapsable={false}
+          jestAnimatedProps={
+            {
+              "value": {},
+            }
+          }
+          jestAnimatedStyle={
+            {
+              "value": {
+                "opacity": 0.45,
+              },
+            }
+          }
+          jestInlineStyle={
+            [
+              {
+                "backgroundColor": "#292b31",
+                "borderRadius": 6,
+                "height": 12,
+                "width": 96,
+              },
+              false,
+            ]
+          }
+          nativeID="10"
+          style={
+            [
+              {
+                "backgroundColor": "#292b31",
+                "borderRadius": 6,
+                "height": 12,
+                "width": 96,
+              },
+              false,
+              {
+                "opacity": 0.45,
+              },
+            ]
+          }
+        />
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "flexDirection": "row",
+          "gap": 10,
+        }
+      }
+    >
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "opacity": 0.45,
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#292b31",
+              "borderRadius": 14,
+              "height": 62,
+              "width": undefined,
+            },
+            {
+              "flex": 1,
+            },
+          ]
+        }
+        nativeID="11"
+        style={
+          [
+            {
+              "backgroundColor": "#292b31",
+              "borderRadius": 14,
+              "height": 62,
+              "width": undefined,
+            },
+            {
+              "flex": 1,
+            },
+            {
+              "opacity": 0.45,
+            },
+          ]
+        }
+      />
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "opacity": 0.45,
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#292b31",
+              "borderRadius": 14,
+              "height": 62,
+              "width": undefined,
+            },
+            {
+              "flex": 1,
+            },
+          ]
+        }
+        nativeID="12"
+        style={
+          [
+            {
+              "backgroundColor": "#292b31",
+              "borderRadius": 14,
+              "height": 62,
+              "width": undefined,
+            },
+            {
+              "flex": 1,
+            },
+            {
+              "opacity": 0.45,
+            },
+          ]
+        }
+      />
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "opacity": 0.45,
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#292b31",
+              "borderRadius": 14,
+              "height": 62,
+              "width": undefined,
+            },
+            {
+              "flex": 1,
+            },
+          ]
+        }
+        nativeID="13"
+        style={
+          [
+            {
+              "backgroundColor": "#292b31",
+              "borderRadius": 14,
+              "height": 62,
+              "width": undefined,
+            },
+            {
+              "flex": 1,
+            },
+            {
+              "opacity": 0.45,
+            },
+          ]
+        }
+      />
+    </View>
+    <View
+      collapsable={false}
+      jestAnimatedProps={
+        {
+          "value": {},
+        }
+      }
+      jestAnimatedStyle={
+        {
+          "value": {
+            "opacity": 0.45,
+          },
+        }
+      }
+      jestInlineStyle={
+        [
+          {
+            "backgroundColor": "#292b31",
+            "borderRadius": 6,
+            "height": 10,
+            "width": 88,
+          },
+          false,
+        ]
+      }
+      nativeID="14"
+      style={
+        [
+          {
+            "backgroundColor": "#292b31",
+            "borderRadius": 6,
+            "height": 10,
+            "width": 88,
+          },
+          false,
+          {
+            "opacity": 0.45,
+          },
+        ]
+      }
+    />
+    <View
+      style={
+        {
+          "gap": 8,
+        }
+      }
+    >
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "opacity": 0.45,
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#292b31",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+          ]
+        }
+        nativeID="15"
+        style={
+          [
+            {
+              "backgroundColor": "#292b31",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+            {
+              "opacity": 0.45,
+            },
+          ]
+        }
+      />
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "opacity": 0.45,
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#292b31",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+          ]
+        }
+        nativeID="16"
+        style={
+          [
+            {
+              "backgroundColor": "#292b31",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+            {
+              "opacity": 0.45,
+            },
+          ]
+        }
+      />
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "opacity": 0.45,
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#292b31",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+          ]
+        }
+        nativeID="17"
+        style={
+          [
+            {
+              "backgroundColor": "#292b31",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+            {
+              "opacity": 0.45,
+            },
+          ]
+        }
+      />
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "opacity": 0.45,
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#292b31",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+          ]
+        }
+        nativeID="18"
+        style={
+          [
+            {
+              "backgroundColor": "#292b31",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+            {
+              "opacity": 0.45,
+            },
+          ]
+        }
+      />
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`screen states — dark palette ScreenOffline renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "flex": 1,
+          "gap": 16,
+          "paddingBottom": 20,
+          "paddingHorizontal": 20,
+        },
+        {
+          "backgroundColor": "#161826",
+          "paddingTop": 15,
+        },
+      ]
+    }
+    testID="screen-offline"
+  >
+    <View
+      accessibilityLabel="Back"
+      accessibilityRole="button"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": undefined,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      hitSlop={8}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderColor": "#3f424d",
+          "borderRadius": 999,
+          "borderWidth": 1,
+          "height": 36,
+          "justifyContent": "center",
+          "width": 36,
+        }
+      }
+    >
+      <RNSVGSvgView
+        align="xMidYMid"
+        bbHeight={17}
+        bbWidth={17}
+        className="caret-left-undefined__svg-icon-phosphor"
+        color="#b2b6ca"
+        fill="currentColor"
+        focusable={false}
+        height={17}
+        meetOrSlice={0}
+        minX={0}
+        minY={0}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            [
+              undefined,
+              undefined,
+              {},
+            ],
+            {
+              "flex": 0,
+              "height": 17,
+              "width": 17,
+            },
+          ]
+        }
+        testID="phosphor-react-native-caret-left-undefined"
+        vbHeight={256}
+        vbWidth={256}
+        width={17}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "type": 2,
+            }
+          }
+          propList={
+            [
+              "fill",
+            ]
+          }
+        >
+          <RNSVGGroup
+            fill={
+              {
+                "payload": 4289902282,
+                "type": 0,
+              }
+            }
+            propList={
+              [
+                "fill",
+              ]
+            }
+          >
+            <RNSVGPath
+              d="M165.66 202.34a8 8 0 0 1-11.32 11.32l-80-80a8 8 0 0 1 0-11.32l80-80a8 8 0 0 1 11.32 11.32L91.31 128Z"
+              fill={
+                {
+                  "payload": 4278190080,
+                  "type": 0,
+                }
+              }
+            />
+          </RNSVGGroup>
+        </RNSVGGroup>
+      </RNSVGSvgView>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "gap": 14,
+          "justifyContent": "center",
+          "paddingHorizontal": 20,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 24,
+              "borderWidth": 1,
+              "height": 80,
+              "justifyContent": "center",
+              "width": 80,
+            },
+            {
+              "borderColor": "#3f424d",
+            },
+          ]
+        }
+      >
+        <RNSVGSvgView
+          align="xMidYMid"
+          bbHeight={36}
+          bbWidth={36}
+          className="wifi-slash-undefined__svg-icon-phosphor"
+          color="#9397ab"
+          fill="currentColor"
+          focusable={false}
+          height={36}
+          meetOrSlice={0}
+          minX={0}
+          minY={0}
+          style={
+            [
+              {
+                "backgroundColor": "transparent",
+                "borderWidth": 0,
+              },
+              [
+                undefined,
+                undefined,
+                {},
+              ],
+              {
+                "flex": 0,
+                "height": 36,
+                "width": 36,
+              },
+            ]
+          }
+          testID="phosphor-react-native-wifi-slash-undefined"
+          vbHeight={256}
+          vbWidth={256}
+          width={36}
+        >
+          <RNSVGGroup
+            fill={
+              {
+                "type": 2,
+              }
+            }
+            propList={
+              [
+                "fill",
+              ]
+            }
+          >
+            <RNSVGGroup
+              fill={
+                {
+                  "payload": 4287862699,
+                  "type": 0,
+                }
+              }
+              propList={
+                [
+                  "fill",
+                ]
+              }
+            >
+              <RNSVGPath
+                d="M213.92 210.62a8 8 0 1 1-11.84 10.76l-52-57.15a60 60 0 0 0-57.41 7.24 8 8 0 1 1-9.42-12.93A75.43 75.43 0 0 1 128 144c1.28 0 2.55 0 3.82.1l-26.92-29.61A108 108 0 0 0 61 135.31 8 8 0 0 1 49.73 134 8 8 0 0 1 51 122.77a124.3 124.3 0 0 1 41.71-21.66L69.37 75.4a155.4 155.4 0 0 0-40.29 24A8 8 0 0 1 18.92 87 171.9 171.9 0 0 1 58 62.86L42.08 45.38a8 8 0 1 1 11.84-10.76ZM128 192a12 12 0 1 0 12 12 12 12 0 0 0-12-12M237.08 87A172.3 172.3 0 0 0 106 49.4a8 8 0 1 0 2 15.87A158 158 0 0 1 128 64a156.25 156.25 0 0 1 98.92 35.37A8 8 0 0 0 237.08 87M195 135.31a8 8 0 0 0 11.24-1.3 8 8 0 0 0-1.3-11.24 124.25 124.25 0 0 0-51.73-24.2 8 8 0 1 0-3.21 15.67 108.1 108.1 0 0 1 45 21.07"
+                fill={
+                  {
+                    "payload": 4278190080,
+                    "type": 0,
+                  }
+                }
+              />
+            </RNSVGGroup>
+          </RNSVGGroup>
+        </RNSVGSvgView>
+      </View>
+      <Text
+        style={
+          [
+            {
+              "fontFamily": "Inter_500Medium",
+              "fontSize": 20,
+              "letterSpacing": -0.2,
+              "marginTop": 8,
+              "textAlign": "center",
+            },
+            {
+              "color": "#e9e9ed",
+            },
+          ]
+        }
+      >
+        You're offline
+      </Text>
+      <Text
+        style={
+          [
+            {
+              "fontFamily": "Inter_400Regular",
+              "fontSize": 13.5,
+              "lineHeight": 20.925,
+              "maxWidth": 224,
+              "textAlign": "center",
+            },
+            {
+              "color": "#b2b6ca",
+            },
+          ]
+        }
+      >
+        Your agents keep running in the cloud. This screen will sync as soon as you're back.
+      </Text>
+      <View
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        onBlur={[Function]}
+        onClick={[Function]}
+        onFocus={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          [
+            {
+              "alignItems": "center",
+              "backgroundColor": "transparent",
+              "borderColor": "#9184d9",
+              "borderRadius": 999,
+              "borderWidth": 1,
+              "flexDirection": "row",
+              "gap": 8,
+              "height": 44,
+              "justifyContent": "center",
+              "paddingHorizontal": 18,
+            },
+            {
+              "marginTop": 8,
+              "paddingHorizontal": 26,
+            },
+          ]
+        }
+      >
+        <RNSVGSvgView
+          align="xMidYMid"
+          bbHeight={16}
+          bbWidth={16}
+          className="arrow-clockwise-regular__svg-icon-phosphor"
+          color="#9184d9"
+          fill="currentColor"
+          focusable={false}
+          height={16}
+          meetOrSlice={0}
+          minX={0}
+          minY={0}
+          style={
+            [
+              {
+                "backgroundColor": "transparent",
+                "borderWidth": 0,
+              },
+              [
+                undefined,
+                undefined,
+                {},
+              ],
+              {
+                "flex": 0,
+                "height": 16,
+                "width": 16,
+              },
+            ]
+          }
+          testID="phosphor-react-native-arrow-clockwise-regular"
+          vbHeight={256}
+          vbWidth={256}
+          width={16}
+        >
+          <RNSVGGroup
+            fill={
+              {
+                "type": 2,
+              }
+            }
+            propList={
+              [
+                "fill",
+              ]
+            }
+          >
+            <RNSVGGroup
+              fill={
+                {
+                  "payload": 4287726809,
+                  "type": 0,
+                }
+              }
+              propList={
+                [
+                  "fill",
+                ]
+              }
+            >
+              <RNSVGPath
+                d="M240 56v48a8 8 0 0 1-8 8h-48a8 8 0 0 1 0-16h27.4l-26.59-24.36-.25-.24a80 80 0 1 0-1.67 114.78 8 8 0 0 1 11 11.63A95.44 95.44 0 0 1 128 224h-1.32a96 96 0 1 1 69.07-164L224 85.8V56a8 8 0 1 1 16 0"
+                fill={
+                  {
+                    "payload": 4278190080,
+                    "type": 0,
+                  }
+                }
+              />
+            </RNSVGGroup>
+          </RNSVGGroup>
+        </RNSVGSvgView>
+        <Text
+          style={
+            {
+              "color": "#9184d9",
+              "fontFamily": "Inter_500Medium",
+              "fontSize": 14,
+            }
+          }
+        >
+          Retry
+        </Text>
+      </View>
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`screen states — light palette ActionFailure renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    accessibilityRole="alert"
+    style={
+      [
+        {
+          "alignItems": "flex-start",
+          "borderRadius": 14,
+          "borderWidth": 1,
+          "flexDirection": "row",
+          "gap": 10,
+          "paddingHorizontal": 14,
+          "paddingVertical": 12,
+        },
+        {
+          "backgroundColor": "rgba(248,113,113,0.1)",
+          "borderColor": "rgba(248,113,113,0.35)",
+        },
+      ]
+    }
+    testID="action-failure"
+  >
+    <RNSVGSvgView
+      align="xMidYMid"
+      bbHeight={18}
+      bbWidth={18}
+      className="warning-circle-undefined__svg-icon-phosphor"
+      color="#f87171"
+      fill="currentColor"
+      focusable={false}
+      height={18}
+      meetOrSlice={0}
+      minX={0}
+      minY={0}
+      style={
+        [
+          {
+            "backgroundColor": "transparent",
+            "borderWidth": 0,
+          },
+          [
+            undefined,
+            undefined,
+            {},
+          ],
+          {
+            "flex": 0,
+            "height": 18,
+            "width": 18,
+          },
+        ]
+      }
+      testID="phosphor-react-native-warning-circle-undefined"
+      vbHeight={256}
+      vbWidth={256}
+      width={18}
+    >
+      <RNSVGGroup
+        fill={
+          {
+            "type": 2,
+          }
+        }
+        propList={
+          [
+            "fill",
+          ]
+        }
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4294472049,
+              "type": 0,
+            }
+          }
+          propList={
+            [
+              "fill",
+            ]
+          }
+        >
+          <RNSVGPath
+            d="M128 24a104 104 0 1 0 104 104A104.11 104.11 0 0 0 128 24m0 192a88 88 0 1 1 88-88 88.1 88.1 0 0 1-88 88m-8-80V80a8 8 0 0 1 16 0v56a8 8 0 0 1-16 0m20 36a12 12 0 1 1-12-12 12 12 0 0 1 12 12"
+            fill={
+              {
+                "payload": 4278190080,
+                "type": 0,
+              }
+            }
+          />
+        </RNSVGGroup>
+      </RNSVGGroup>
+    </RNSVGSvgView>
+    <View
+      style={
+        {
+          "flex": 1,
+          "gap": 6,
+        }
+      }
+    >
+      <Text
+        style={
+          [
+            {
+              "fontFamily": "Inter_400Regular",
+              "fontSize": 13,
+              "lineHeight": 19.5,
+            },
+            {
+              "color": "#20222f",
+            },
+          ]
+        }
+      >
+        Email triage wasn't removed — it's still active and your plan total is unchanged.
+      </Text>
+      <Text
+        accessibilityRole="button"
+        style={
+          [
+            {
+              "fontFamily": "Inter_500Medium",
+              "fontSize": 13,
+            },
+            {
+              "color": "#f87171",
+            },
+          ]
+        }
+        suppressHighlighting={true}
+      >
+        Retry removal
+      </Text>
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`screen states — light palette ScreenError renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "flex": 1,
+          "gap": 16,
+          "paddingBottom": 20,
+          "paddingHorizontal": 20,
+        },
+        {
+          "backgroundColor": "#f5f5f8",
+          "paddingTop": 15,
+        },
+      ]
+    }
+    testID="screen-error"
+  >
+    <View
+      accessibilityLabel="Back"
+      accessibilityRole="button"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": undefined,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      hitSlop={8}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderColor": "#dfe0ea",
+          "borderRadius": 999,
+          "borderWidth": 1,
+          "height": 36,
+          "justifyContent": "center",
+          "width": 36,
+        }
+      }
+    >
+      <RNSVGSvgView
+        align="xMidYMid"
+        bbHeight={17}
+        bbWidth={17}
+        className="caret-left-undefined__svg-icon-phosphor"
+        color="#666a82"
+        fill="currentColor"
+        focusable={false}
+        height={17}
+        meetOrSlice={0}
+        minX={0}
+        minY={0}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            [
+              undefined,
+              undefined,
+              {},
+            ],
+            {
+              "flex": 0,
+              "height": 17,
+              "width": 17,
+            },
+          ]
+        }
+        testID="phosphor-react-native-caret-left-undefined"
+        vbHeight={256}
+        vbWidth={256}
+        width={17}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "type": 2,
+            }
+          }
+          propList={
+            [
+              "fill",
+            ]
+          }
+        >
+          <RNSVGGroup
+            fill={
+              {
+                "payload": 4284902018,
+                "type": 0,
+              }
+            }
+            propList={
+              [
+                "fill",
+              ]
+            }
+          >
+            <RNSVGPath
+              d="M165.66 202.34a8 8 0 0 1-11.32 11.32l-80-80a8 8 0 0 1 0-11.32l80-80a8 8 0 0 1 11.32 11.32L91.31 128Z"
+              fill={
+                {
+                  "payload": 4278190080,
+                  "type": 0,
+                }
+              }
+            />
+          </RNSVGGroup>
+        </RNSVGGroup>
+      </RNSVGSvgView>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "gap": 14,
+          "justifyContent": "center",
+          "paddingHorizontal": 20,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 24,
+              "borderWidth": 1,
+              "height": 80,
+              "justifyContent": "center",
+              "width": 80,
+            },
+            {
+              "borderColor": "#dfe0ea",
+            },
+          ]
+        }
+      >
+        <RNSVGSvgView
+          align="xMidYMid"
+          bbHeight={36}
+          bbWidth={36}
+          className="warning-circle-undefined__svg-icon-phosphor"
+          color="#7c8095"
+          fill="currentColor"
+          focusable={false}
+          height={36}
+          meetOrSlice={0}
+          minX={0}
+          minY={0}
+          style={
+            [
+              {
+                "backgroundColor": "transparent",
+                "borderWidth": 0,
+              },
+              [
+                undefined,
+                undefined,
+                {},
+              ],
+              {
+                "flex": 0,
+                "height": 36,
+                "width": 36,
+              },
+            ]
+          }
+          testID="phosphor-react-native-warning-circle-undefined"
+          vbHeight={256}
+          vbWidth={256}
+          width={36}
+        >
+          <RNSVGGroup
+            fill={
+              {
+                "type": 2,
+              }
+            }
+            propList={
+              [
+                "fill",
+              ]
+            }
+          >
+            <RNSVGGroup
+              fill={
+                {
+                  "payload": 4286349461,
+                  "type": 0,
+                }
+              }
+              propList={
+                [
+                  "fill",
+                ]
+              }
+            >
+              <RNSVGPath
+                d="M128 24a104 104 0 1 0 104 104A104.11 104.11 0 0 0 128 24m0 192a88 88 0 1 1 88-88 88.1 88.1 0 0 1-88 88m-8-80V80a8 8 0 0 1 16 0v56a8 8 0 0 1-16 0m20 36a12 12 0 1 1-12-12 12 12 0 0 1 12 12"
+                fill={
+                  {
+                    "payload": 4278190080,
+                    "type": 0,
+                  }
+                }
+              />
+            </RNSVGGroup>
+          </RNSVGGroup>
+        </RNSVGSvgView>
+      </View>
+      <Text
+        style={
+          [
+            {
+              "fontFamily": "Inter_500Medium",
+              "fontSize": 20,
+              "letterSpacing": -0.2,
+              "marginTop": 8,
+              "textAlign": "center",
+            },
+            {
+              "color": "#20222f",
+            },
+          ]
+        }
+      >
+        Couldn't load this run
+      </Text>
+      <Text
+        style={
+          [
+            {
+              "fontFamily": "Inter_400Regular",
+              "fontSize": 13.5,
+              "lineHeight": 20.925,
+              "maxWidth": 224,
+              "textAlign": "center",
+            },
+            {
+              "color": "#666a82",
+            },
+          ]
+        }
+      >
+        Nothing was lost — it's safe in the cloud. Retry now or come back in a moment.
+      </Text>
+      <View
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        onBlur={[Function]}
+        onClick={[Function]}
+        onFocus={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          [
+            {
+              "alignItems": "center",
+              "backgroundColor": "transparent",
+              "borderColor": "#6a5cc4",
+              "borderRadius": 999,
+              "borderWidth": 1,
+              "flexDirection": "row",
+              "gap": 8,
+              "height": 44,
+              "justifyContent": "center",
+              "paddingHorizontal": 18,
+            },
+            {
+              "marginTop": 8,
+              "paddingHorizontal": 26,
+            },
+          ]
+        }
+      >
+        <RNSVGSvgView
+          align="xMidYMid"
+          bbHeight={16}
+          bbWidth={16}
+          className="arrow-clockwise-regular__svg-icon-phosphor"
+          color="#6a5cc4"
+          fill="currentColor"
+          focusable={false}
+          height={16}
+          meetOrSlice={0}
+          minX={0}
+          minY={0}
+          style={
+            [
+              {
+                "backgroundColor": "transparent",
+                "borderWidth": 0,
+              },
+              [
+                undefined,
+                undefined,
+                {},
+              ],
+              {
+                "flex": 0,
+                "height": 16,
+                "width": 16,
+              },
+            ]
+          }
+          testID="phosphor-react-native-arrow-clockwise-regular"
+          vbHeight={256}
+          vbWidth={256}
+          width={16}
+        >
+          <RNSVGGroup
+            fill={
+              {
+                "type": 2,
+              }
+            }
+            propList={
+              [
+                "fill",
+              ]
+            }
+          >
+            <RNSVGGroup
+              fill={
+                {
+                  "payload": 4285160644,
+                  "type": 0,
+                }
+              }
+              propList={
+                [
+                  "fill",
+                ]
+              }
+            >
+              <RNSVGPath
+                d="M240 56v48a8 8 0 0 1-8 8h-48a8 8 0 0 1 0-16h27.4l-26.59-24.36-.25-.24a80 80 0 1 0-1.67 114.78 8 8 0 0 1 11 11.63A95.44 95.44 0 0 1 128 224h-1.32a96 96 0 1 1 69.07-164L224 85.8V56a8 8 0 1 1 16 0"
+                fill={
+                  {
+                    "payload": 4278190080,
+                    "type": 0,
+                  }
+                }
+              />
+            </RNSVGGroup>
+          </RNSVGGroup>
+        </RNSVGSvgView>
+        <Text
+          style={
+            {
+              "color": "#6a5cc4",
+              "fontFamily": "Inter_500Medium",
+              "fontSize": 14,
+            }
+          }
+        >
+          Retry
+        </Text>
+      </View>
+      <View
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        onBlur={[Function]}
+        onClick={[Function]}
+        onFocus={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          [
+            {
+              "alignItems": "center",
+              "backgroundColor": "transparent",
+              "borderColor": "transparent",
+              "borderRadius": 999,
+              "borderWidth": 0,
+              "flexDirection": "row",
+              "gap": 7,
+              "height": 40,
+              "justifyContent": "center",
+              "paddingHorizontal": 18,
+            },
+            undefined,
+          ]
+        }
+      >
+        <Text
+          style={
+            {
+              "color": "#20222f",
+              "fontFamily": "Inter_500Medium",
+              "fontSize": 13.5,
+            }
+          }
+        >
+          Go back
+        </Text>
+      </View>
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`screen states — light palette ScreenLoading renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "flex": 1,
+          "gap": 16,
+          "paddingBottom": 20,
+          "paddingHorizontal": 20,
+        },
+        {
+          "backgroundColor": "#f5f5f8",
+          "paddingTop": 15,
+        },
+      ]
+    }
+    testID="screen-loading"
+  >
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "gap": 12,
+        }
+      }
+    >
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "opacity": 0.45,
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#ebecf2",
+              "borderRadius": 999,
+              "height": 36,
+              "width": 36,
+            },
+            false,
+          ]
+        }
+        nativeID="19"
+        style={
+          [
+            {
+              "backgroundColor": "#ebecf2",
+              "borderRadius": 999,
+              "height": 36,
+              "width": 36,
+            },
+            false,
+            {
+              "opacity": 0.45,
+            },
+          ]
+        }
+      />
+      <View
+        style={
+          {
+            "gap": 7,
+          }
+        }
+      >
+        <View
+          collapsable={false}
+          jestAnimatedProps={
+            {
+              "value": {},
+            }
+          }
+          jestAnimatedStyle={
+            {
+              "value": {
+                "opacity": 0.45,
+              },
+            }
+          }
+          jestInlineStyle={
+            [
+              {
+                "backgroundColor": "#ebecf2",
+                "borderRadius": 8,
+                "height": 18,
+                "width": 148,
+              },
+              false,
+            ]
+          }
+          nativeID="20"
+          style={
+            [
+              {
+                "backgroundColor": "#ebecf2",
+                "borderRadius": 8,
+                "height": 18,
+                "width": 148,
+              },
+              false,
+              {
+                "opacity": 0.45,
+              },
+            ]
+          }
+        />
+        <View
+          collapsable={false}
+          jestAnimatedProps={
+            {
+              "value": {},
+            }
+          }
+          jestAnimatedStyle={
+            {
+              "value": {
+                "opacity": 0.45,
+              },
+            }
+          }
+          jestInlineStyle={
+            [
+              {
+                "backgroundColor": "#ebecf2",
+                "borderRadius": 6,
+                "height": 12,
+                "width": 96,
+              },
+              false,
+            ]
+          }
+          nativeID="21"
+          style={
+            [
+              {
+                "backgroundColor": "#ebecf2",
+                "borderRadius": 6,
+                "height": 12,
+                "width": 96,
+              },
+              false,
+              {
+                "opacity": 0.45,
+              },
+            ]
+          }
+        />
+      </View>
+    </View>
+    <View
+      collapsable={false}
+      jestAnimatedProps={
+        {
+          "value": {},
+        }
+      }
+      jestAnimatedStyle={
+        {
+          "value": {
+            "opacity": 0.45,
+          },
+        }
+      }
+      jestInlineStyle={
+        [
+          {
+            "backgroundColor": "#ebecf2",
+            "borderRadius": 6,
+            "height": 10,
+            "width": 88,
+          },
+          false,
+        ]
+      }
+      nativeID="22"
+      style={
+        [
+          {
+            "backgroundColor": "#ebecf2",
+            "borderRadius": 6,
+            "height": 10,
+            "width": 88,
+          },
+          false,
+          {
+            "opacity": 0.45,
+          },
+        ]
+      }
+    />
+    <View
+      style={
+        {
+          "gap": 8,
+        }
+      }
+    >
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "opacity": 0.45,
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#ebecf2",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+          ]
+        }
+        nativeID="23"
+        style={
+          [
+            {
+              "backgroundColor": "#ebecf2",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+            {
+              "opacity": 0.45,
+            },
+          ]
+        }
+      />
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "opacity": 0.45,
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#ebecf2",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+          ]
+        }
+        nativeID="24"
+        style={
+          [
+            {
+              "backgroundColor": "#ebecf2",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+            {
+              "opacity": 0.45,
+            },
+          ]
+        }
+      />
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "opacity": 0.45,
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#ebecf2",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+          ]
+        }
+        nativeID="25"
+        style={
+          [
+            {
+              "backgroundColor": "#ebecf2",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+            {
+              "opacity": 0.45,
+            },
+          ]
+        }
+      />
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "opacity": 0.45,
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#ebecf2",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+          ]
+        }
+        nativeID="26"
+        style={
+          [
+            {
+              "backgroundColor": "#ebecf2",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+            {
+              "opacity": 0.45,
+            },
+          ]
+        }
+      />
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`screen states — light palette ScreenLoading/tiles renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "flex": 1,
+          "gap": 16,
+          "paddingBottom": 20,
+          "paddingHorizontal": 20,
+        },
+        {
+          "backgroundColor": "#f5f5f8",
+          "paddingTop": 15,
+        },
+      ]
+    }
+    testID="screen-loading"
+  >
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "gap": 12,
+        }
+      }
+    >
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "opacity": 0.45,
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#ebecf2",
+              "borderRadius": 999,
+              "height": 36,
+              "width": 36,
+            },
+            false,
+          ]
+        }
+        nativeID="27"
+        style={
+          [
+            {
+              "backgroundColor": "#ebecf2",
+              "borderRadius": 999,
+              "height": 36,
+              "width": 36,
+            },
+            false,
+            {
+              "opacity": 0.45,
+            },
+          ]
+        }
+      />
+      <View
+        style={
+          {
+            "gap": 7,
+          }
+        }
+      >
+        <View
+          collapsable={false}
+          jestAnimatedProps={
+            {
+              "value": {},
+            }
+          }
+          jestAnimatedStyle={
+            {
+              "value": {
+                "opacity": 0.45,
+              },
+            }
+          }
+          jestInlineStyle={
+            [
+              {
+                "backgroundColor": "#ebecf2",
+                "borderRadius": 8,
+                "height": 18,
+                "width": 148,
+              },
+              false,
+            ]
+          }
+          nativeID="28"
+          style={
+            [
+              {
+                "backgroundColor": "#ebecf2",
+                "borderRadius": 8,
+                "height": 18,
+                "width": 148,
+              },
+              false,
+              {
+                "opacity": 0.45,
+              },
+            ]
+          }
+        />
+        <View
+          collapsable={false}
+          jestAnimatedProps={
+            {
+              "value": {},
+            }
+          }
+          jestAnimatedStyle={
+            {
+              "value": {
+                "opacity": 0.45,
+              },
+            }
+          }
+          jestInlineStyle={
+            [
+              {
+                "backgroundColor": "#ebecf2",
+                "borderRadius": 6,
+                "height": 12,
+                "width": 96,
+              },
+              false,
+            ]
+          }
+          nativeID="29"
+          style={
+            [
+              {
+                "backgroundColor": "#ebecf2",
+                "borderRadius": 6,
+                "height": 12,
+                "width": 96,
+              },
+              false,
+              {
+                "opacity": 0.45,
+              },
+            ]
+          }
+        />
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "flexDirection": "row",
+          "gap": 10,
+        }
+      }
+    >
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "opacity": 0.45,
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#ebecf2",
+              "borderRadius": 14,
+              "height": 62,
+              "width": undefined,
+            },
+            {
+              "flex": 1,
+            },
+          ]
+        }
+        nativeID="30"
+        style={
+          [
+            {
+              "backgroundColor": "#ebecf2",
+              "borderRadius": 14,
+              "height": 62,
+              "width": undefined,
+            },
+            {
+              "flex": 1,
+            },
+            {
+              "opacity": 0.45,
+            },
+          ]
+        }
+      />
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "opacity": 0.45,
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#ebecf2",
+              "borderRadius": 14,
+              "height": 62,
+              "width": undefined,
+            },
+            {
+              "flex": 1,
+            },
+          ]
+        }
+        nativeID="31"
+        style={
+          [
+            {
+              "backgroundColor": "#ebecf2",
+              "borderRadius": 14,
+              "height": 62,
+              "width": undefined,
+            },
+            {
+              "flex": 1,
+            },
+            {
+              "opacity": 0.45,
+            },
+          ]
+        }
+      />
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "opacity": 0.45,
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#ebecf2",
+              "borderRadius": 14,
+              "height": 62,
+              "width": undefined,
+            },
+            {
+              "flex": 1,
+            },
+          ]
+        }
+        nativeID="32"
+        style={
+          [
+            {
+              "backgroundColor": "#ebecf2",
+              "borderRadius": 14,
+              "height": 62,
+              "width": undefined,
+            },
+            {
+              "flex": 1,
+            },
+            {
+              "opacity": 0.45,
+            },
+          ]
+        }
+      />
+    </View>
+    <View
+      collapsable={false}
+      jestAnimatedProps={
+        {
+          "value": {},
+        }
+      }
+      jestAnimatedStyle={
+        {
+          "value": {
+            "opacity": 0.45,
+          },
+        }
+      }
+      jestInlineStyle={
+        [
+          {
+            "backgroundColor": "#ebecf2",
+            "borderRadius": 6,
+            "height": 10,
+            "width": 88,
+          },
+          false,
+        ]
+      }
+      nativeID="33"
+      style={
+        [
+          {
+            "backgroundColor": "#ebecf2",
+            "borderRadius": 6,
+            "height": 10,
+            "width": 88,
+          },
+          false,
+          {
+            "opacity": 0.45,
+          },
+        ]
+      }
+    />
+    <View
+      style={
+        {
+          "gap": 8,
+        }
+      }
+    >
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "opacity": 0.45,
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#ebecf2",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+          ]
+        }
+        nativeID="34"
+        style={
+          [
+            {
+              "backgroundColor": "#ebecf2",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+            {
+              "opacity": 0.45,
+            },
+          ]
+        }
+      />
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "opacity": 0.45,
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#ebecf2",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+          ]
+        }
+        nativeID="35"
+        style={
+          [
+            {
+              "backgroundColor": "#ebecf2",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+            {
+              "opacity": 0.45,
+            },
+          ]
+        }
+      />
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "opacity": 0.45,
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#ebecf2",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+          ]
+        }
+        nativeID="36"
+        style={
+          [
+            {
+              "backgroundColor": "#ebecf2",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+            {
+              "opacity": 0.45,
+            },
+          ]
+        }
+      />
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "opacity": 0.45,
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#ebecf2",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+          ]
+        }
+        nativeID="37"
+        style={
+          [
+            {
+              "backgroundColor": "#ebecf2",
+              "borderRadius": 14,
+              "height": 64,
+              "width": undefined,
+            },
+            false,
+            {
+              "opacity": 0.45,
+            },
+          ]
+        }
+      />
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`screen states — light palette ScreenOffline renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "flex": 1,
+          "gap": 16,
+          "paddingBottom": 20,
+          "paddingHorizontal": 20,
+        },
+        {
+          "backgroundColor": "#f5f5f8",
+          "paddingTop": 15,
+        },
+      ]
+    }
+    testID="screen-offline"
+  >
+    <View
+      accessibilityLabel="Back"
+      accessibilityRole="button"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": undefined,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      hitSlop={8}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderColor": "#dfe0ea",
+          "borderRadius": 999,
+          "borderWidth": 1,
+          "height": 36,
+          "justifyContent": "center",
+          "width": 36,
+        }
+      }
+    >
+      <RNSVGSvgView
+        align="xMidYMid"
+        bbHeight={17}
+        bbWidth={17}
+        className="caret-left-undefined__svg-icon-phosphor"
+        color="#666a82"
+        fill="currentColor"
+        focusable={false}
+        height={17}
+        meetOrSlice={0}
+        minX={0}
+        minY={0}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            [
+              undefined,
+              undefined,
+              {},
+            ],
+            {
+              "flex": 0,
+              "height": 17,
+              "width": 17,
+            },
+          ]
+        }
+        testID="phosphor-react-native-caret-left-undefined"
+        vbHeight={256}
+        vbWidth={256}
+        width={17}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "type": 2,
+            }
+          }
+          propList={
+            [
+              "fill",
+            ]
+          }
+        >
+          <RNSVGGroup
+            fill={
+              {
+                "payload": 4284902018,
+                "type": 0,
+              }
+            }
+            propList={
+              [
+                "fill",
+              ]
+            }
+          >
+            <RNSVGPath
+              d="M165.66 202.34a8 8 0 0 1-11.32 11.32l-80-80a8 8 0 0 1 0-11.32l80-80a8 8 0 0 1 11.32 11.32L91.31 128Z"
+              fill={
+                {
+                  "payload": 4278190080,
+                  "type": 0,
+                }
+              }
+            />
+          </RNSVGGroup>
+        </RNSVGGroup>
+      </RNSVGSvgView>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "gap": 14,
+          "justifyContent": "center",
+          "paddingHorizontal": 20,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 24,
+              "borderWidth": 1,
+              "height": 80,
+              "justifyContent": "center",
+              "width": 80,
+            },
+            {
+              "borderColor": "#dfe0ea",
+            },
+          ]
+        }
+      >
+        <RNSVGSvgView
+          align="xMidYMid"
+          bbHeight={36}
+          bbWidth={36}
+          className="wifi-slash-undefined__svg-icon-phosphor"
+          color="#7c8095"
+          fill="currentColor"
+          focusable={false}
+          height={36}
+          meetOrSlice={0}
+          minX={0}
+          minY={0}
+          style={
+            [
+              {
+                "backgroundColor": "transparent",
+                "borderWidth": 0,
+              },
+              [
+                undefined,
+                undefined,
+                {},
+              ],
+              {
+                "flex": 0,
+                "height": 36,
+                "width": 36,
+              },
+            ]
+          }
+          testID="phosphor-react-native-wifi-slash-undefined"
+          vbHeight={256}
+          vbWidth={256}
+          width={36}
+        >
+          <RNSVGGroup
+            fill={
+              {
+                "type": 2,
+              }
+            }
+            propList={
+              [
+                "fill",
+              ]
+            }
+          >
+            <RNSVGGroup
+              fill={
+                {
+                  "payload": 4286349461,
+                  "type": 0,
+                }
+              }
+              propList={
+                [
+                  "fill",
+                ]
+              }
+            >
+              <RNSVGPath
+                d="M213.92 210.62a8 8 0 1 1-11.84 10.76l-52-57.15a60 60 0 0 0-57.41 7.24 8 8 0 1 1-9.42-12.93A75.43 75.43 0 0 1 128 144c1.28 0 2.55 0 3.82.1l-26.92-29.61A108 108 0 0 0 61 135.31 8 8 0 0 1 49.73 134 8 8 0 0 1 51 122.77a124.3 124.3 0 0 1 41.71-21.66L69.37 75.4a155.4 155.4 0 0 0-40.29 24A8 8 0 0 1 18.92 87 171.9 171.9 0 0 1 58 62.86L42.08 45.38a8 8 0 1 1 11.84-10.76ZM128 192a12 12 0 1 0 12 12 12 12 0 0 0-12-12M237.08 87A172.3 172.3 0 0 0 106 49.4a8 8 0 1 0 2 15.87A158 158 0 0 1 128 64a156.25 156.25 0 0 1 98.92 35.37A8 8 0 0 0 237.08 87M195 135.31a8 8 0 0 0 11.24-1.3 8 8 0 0 0-1.3-11.24 124.25 124.25 0 0 0-51.73-24.2 8 8 0 1 0-3.21 15.67 108.1 108.1 0 0 1 45 21.07"
+                fill={
+                  {
+                    "payload": 4278190080,
+                    "type": 0,
+                  }
+                }
+              />
+            </RNSVGGroup>
+          </RNSVGGroup>
+        </RNSVGSvgView>
+      </View>
+      <Text
+        style={
+          [
+            {
+              "fontFamily": "Inter_500Medium",
+              "fontSize": 20,
+              "letterSpacing": -0.2,
+              "marginTop": 8,
+              "textAlign": "center",
+            },
+            {
+              "color": "#20222f",
+            },
+          ]
+        }
+      >
+        You're offline
+      </Text>
+      <Text
+        style={
+          [
+            {
+              "fontFamily": "Inter_400Regular",
+              "fontSize": 13.5,
+              "lineHeight": 20.925,
+              "maxWidth": 224,
+              "textAlign": "center",
+            },
+            {
+              "color": "#666a82",
+            },
+          ]
+        }
+      >
+        Your agents keep running in the cloud. This screen will sync as soon as you're back.
+      </Text>
+      <View
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        onBlur={[Function]}
+        onClick={[Function]}
+        onFocus={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          [
+            {
+              "alignItems": "center",
+              "backgroundColor": "transparent",
+              "borderColor": "#6a5cc4",
+              "borderRadius": 999,
+              "borderWidth": 1,
+              "flexDirection": "row",
+              "gap": 8,
+              "height": 44,
+              "justifyContent": "center",
+              "paddingHorizontal": 18,
+            },
+            {
+              "marginTop": 8,
+              "paddingHorizontal": 26,
+            },
+          ]
+        }
+      >
+        <RNSVGSvgView
+          align="xMidYMid"
+          bbHeight={16}
+          bbWidth={16}
+          className="arrow-clockwise-regular__svg-icon-phosphor"
+          color="#6a5cc4"
+          fill="currentColor"
+          focusable={false}
+          height={16}
+          meetOrSlice={0}
+          minX={0}
+          minY={0}
+          style={
+            [
+              {
+                "backgroundColor": "transparent",
+                "borderWidth": 0,
+              },
+              [
+                undefined,
+                undefined,
+                {},
+              ],
+              {
+                "flex": 0,
+                "height": 16,
+                "width": 16,
+              },
+            ]
+          }
+          testID="phosphor-react-native-arrow-clockwise-regular"
+          vbHeight={256}
+          vbWidth={256}
+          width={16}
+        >
+          <RNSVGGroup
+            fill={
+              {
+                "type": 2,
+              }
+            }
+            propList={
+              [
+                "fill",
+              ]
+            }
+          >
+            <RNSVGGroup
+              fill={
+                {
+                  "payload": 4285160644,
+                  "type": 0,
+                }
+              }
+              propList={
+                [
+                  "fill",
+                ]
+              }
+            >
+              <RNSVGPath
+                d="M240 56v48a8 8 0 0 1-8 8h-48a8 8 0 0 1 0-16h27.4l-26.59-24.36-.25-.24a80 80 0 1 0-1.67 114.78 8 8 0 0 1 11 11.63A95.44 95.44 0 0 1 128 224h-1.32a96 96 0 1 1 69.07-164L224 85.8V56a8 8 0 1 1 16 0"
+                fill={
+                  {
+                    "payload": 4278190080,
+                    "type": 0,
+                  }
+                }
+              />
+            </RNSVGGroup>
+          </RNSVGGroup>
+        </RNSVGSvgView>
+        <Text
+          style={
+            {
+              "color": "#6a5cc4",
+              "fontFamily": "Inter_500Medium",
+              "fontSize": 14,
+            }
+          }
+        >
+          Retry
+        </Text>
+      </View>
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
