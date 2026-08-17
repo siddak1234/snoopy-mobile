@@ -18,23 +18,62 @@ npm test                            # jest (jest-expo + @testing-library/react-n
 npm run lint                        # eslint
 npx tsc --noEmit                    # typecheck (typed routes regenerate on expo start)
 npm run audit:credentials           # no credential-shaped defaults in app screens
+npm run audit:tokens                # no colour literals outside constants/theme.ts
 npm run verify:platform-contracts   # generated types match the backend's OpenAPI
 ```
 
+`__tests__/nocturne-visual.test.tsx` snapshots all 18 Nocturne components in both
+palettes. React Native styles resolve into the rendered tree, so a changed
+colour, padding, radius or font moves a snapshot — which is how the "components
+unchanged" rule is checked rather than merely reviewed. Update them with
+`npx jest -u` only when a visual change is intended.
+
 ## Backend
 
-The app talks to one service — the Edge — and learns its location from a single
-value, injected by `app.config.js` and read through `lib/platform/origin.ts`:
+The app talks to one service — the Edge — and learns everything it needs from
+two values, injected by `app.config.js` and never read from `process.env` in
+application source:
 
 ```bash
 EXPO_PUBLIC_BACKEND_API_ORIGIN=http://localhost:8080   # iOS simulator, local Compose
 EXPO_PUBLIC_BACKEND_API_ORIGIN=http://10.0.2.2:8080    # Android emulator
+
+# Where login returns. Must be an app-claimed HTTPS URL — ADR-0017 rejects
+# custom schemes — and must match an entry in the Edge's NATIVE_APP_REDIRECT_URIS
+# exactly, because that comparison is by string.
+EXPO_PUBLIC_NATIVE_REDIRECT_URI=https://app.example.com/auth/native/callback
 ```
 
-Unset is a legitimate state: screens render an honest "unavailable" rather than
-the app inventing a default. Bring the stack up from `snoopy-backend` with
-`docker compose up -d`; `/health/ready` reporting `not-ready` locally is correct,
-because identity and object storage are unconfigured there.
+Unset is a legitimate state for both: screens render an honest "unavailable" and
+sign-in refuses, rather than the app inventing a default or falling back to a
+custom scheme any other app could register.
+
+`app.config.js` derives the iOS `associatedDomains` and the Android
+`intentFilters` from the redirect URI, so the claimed host is stated once. The
+domain must also serve the matching `apple-app-site-association` and
+`assetlinks.json`, or the OS will not hand the callback to the app.
+
+## Signing in, locally
+
+Bring the stack up from `snoopy-backend` with `docker compose up -d`. Two things
+are correct-but-surprising there:
+
+- `/health/ready` reports `not-ready`, because identity and object storage are
+  unconfigured locally.
+- the three `/v1/auth/native/*` routes answer **503 `NOT_CONFIGURED`** with
+  `details.component: native_app_redirect_uris`, because `NATIVE_APP_REDIRECT_URIS`
+  is absent from `compose.yml`. The app treats that as "sign-in is not available
+  yet" rather than as a failure.
+
+A complete sign-in therefore cannot be driven against the default local stack:
+it needs that allowlist set, the Supabase identity group configured, and a real
+claimed domain. What *is* observable locally is every refusal path — 401 →
+signed-out → the route guard, and 503 → sign-in unavailable.
+
+> `SYSTEM-MANIFEST` §12.1 #64 warns that a running Compose stack starves the
+> test suite — that applies to **`snoopy-backend`'s** suite, whose files each
+> compile an embedded Postgres. This repo's tests use no database, and the full
+> suite was verified green with the stack running. No need to stop it here.
 
 ## Structure
 

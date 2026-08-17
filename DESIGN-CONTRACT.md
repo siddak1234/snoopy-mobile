@@ -22,20 +22,48 @@ contract is not an assertion that the backend or provider integrations exist.
 
 ## Verified current boundary
 
-- The app has an Expo Router auth stack and a five-tab app shell, but no session
-  provider or protected-route decision is implemented: `app/_layout.tsx`.
-- Login sends the user directly to the Home route without validation or a
-  session: `app/(auth)/login.tsx:94`.
-- Apple, Google, and Microsoft buttons render without handlers:
-  `app/(auth)/login.tsx:109-112`.
-- Face ID attempts local authentication but currently navigates Home after a
-  timer regardless of the result: `app/(auth)/faceid.tsx:52-79`.
-- There are no API, OAuth, auth-session, secure-storage, or database modules in
-  the dependency/source tree. Prototype state is held in React state and
-  fixtures.
-- Connections are currently represented by fixture data and local booleans:
-  `lib/fixtures.ts:375-380`, `app/(tabs)/solutions/setup.tsx:38-43`.
-- The app already declares the `snoopymobile` URL scheme in `app.json:8`.
+Re-verified during Round 6, after ADR-0017 published the native session
+contract. The prototype boundary this document was written against is largely
+gone; what remains open is recorded plainly rather than left implied.
+
+**Settled since the draft:**
+
+- A session provider and a route-level auth boundary exist: `hooks/use-session.tsx`
+  and `app/(tabs)/_layout.tsx`. The guard closes on a real 401 alone — an
+  unconfigured or unreachable backend is not an authentication failure, and
+  locking the prototype out of its own screens would destroy the asset the round
+  exists to preserve.
+- Apple, Google, and Microsoft buttons open the system browser at
+  `/v1/auth/native/{provider}/start` and complete through
+  `POST /v1/auth/native/token`: `lib/platform/native-auth.ts`.
+- Tokens live in `expo-secure-store` only, `WHEN_UNLOCKED_THIS_DEVICE_ONLY`, per
+  ADR-0017's amendment to invariant 1: `lib/platform/session-store.ts`.
+- The demo credentials are gone; `npm run audit:credentials` reports 0.
+- Every network call goes through one generated-client facade:
+  `lib/platform/client.ts`.
+
+**Still open, and each blocked on something named:**
+
+- The password **Log In** button still navigates without authenticating
+  (`app/(auth)/login.tsx`). ADR-0008 disables password login entirely, so this
+  control has no contract behind it. The route guard now bounces it in a
+  configured build, but the control itself is a design decision — DESIGN-GAPS
+  item 1, owner Claude Design.
+- Face ID still navigates Home on a timer regardless of the result
+  (`app/(auth)/faceid.tsx`). It gates nothing today, and gating it needs the
+  designed biometric failure/cancel/unavailable/lockout states this document
+  lists below, which do not exist yet.
+- Connections remain fixture data and local booleans (`lib/fixtures.ts`,
+  `app/(tabs)/solutions/setup.tsx`). Blocked by the backend, not by this repo:
+  a native client cannot complete a provider connection because
+  `/v1/connections/callback` authenticates before it reads, and a native login
+  deliberately mints no session cookie — SYSTEM-MANIFEST §12.1 #62, with the
+  working design in BUILD-PLAN 7.6.6.
+- The app declares the `snoopymobile` scheme (`app.json`), which ADR-0017
+  **rejects for login** — any app can register a custom scheme. Login returns
+  through an app-claimed HTTPS URL instead, and `app.config.js` derives the iOS
+  `associatedDomains` and Android `intentFilters` from that one configured
+  redirect URI. The scheme remains for ordinary deep links.
 
 ## Standards boundary
 
@@ -259,16 +287,21 @@ must not assume every provider has the same expiry or revoke semantics.
 
 ## Decisions required before implementation
 
+Four of these were answered by backend decisions rather than by this document,
+which is the right outcome: the platform owns the contract and the client
+consumes it. They are marked here so a reader stops treating a settled question
+as open.
+
 | ID | Decision | Current status |
 | --- | --- | --- |
-| D1 | Supported login methods and provider ownership | Decision required |
-| D2 | “Stay logged in” persistence and sign-out behavior | Decision required |
-| D3 | Workspace selection after login | Decision required |
-| D4 | Stable provider registry and minimum scopes per solution | Decision required |
-| D5 | Whether connections are workspace-owned, user-owned, or both | Decision required |
+| D1 | Supported login methods and provider ownership | ✅ **Settled** — ADR-0008: OAuth-only through Google, Microsoft, Apple; password, magic-link and reset are disabled in the product contract. The app renders the provider list the Edge publishes at `GET /v1/auth/providers` |
+| D2 | “Stay logged in” persistence and sign-out behavior | ✅ **Settled** — ADR-0017: the refresh token persists in the secure enclave and is renewed at `POST /v1/auth/native/refresh`; sign-out sends it to `POST /v1/auth/logout`, scope `local`, and a failed revocation keeps the local copy rather than stranding a live session. The **“Stay logged in” toggle** on the login screen has no contract behind it and is still design's call |
+| D3 | Workspace selection after login | ✅ **Settled** — the session names `activeWorkspaceId`; the client prefers it and falls back to the first membership (`activeWorkspaceId`, `hooks/use-session.tsx`), never taking it from a form field. What is *not* settled is the UI for switching |
+| D4 | Stable provider registry and minimum scopes per solution | Decision required — the Edge publishes `GET /v1/connections/providers`, but the screens are blocked by §12.1 #62 |
+| D5 | Whether connections are workspace-owned, user-owned, or both | ✅ **Settled** — workspace-owned: one live connection per `(workspace, provider)`, enforced by unique index, with `usedByCount` tracking sharing |
 | D6 | Reconnect identity: preserve or replace connection ID | Decision required |
 | D7 | Workflow consequences when a connection is removed or revoked | Decision required |
-| D8 | Backend callback versus app callback ownership | Decision required |
+| D8 | Backend callback versus app callback ownership | ✅ **Settled** — ADR-0017: the backend remains the OAuth client and keeps the provider's single allowlist entry. The app owns only its own PKCE pair, and login returns to an app-claimed HTTPS URL; custom schemes are rejected |
 | D9 | Account selection when a provider has multiple workspaces/accounts | Decision required |
 
 ## Implementation placement after ratification

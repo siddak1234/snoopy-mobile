@@ -1,0 +1,4085 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Nocturne set — dark palette AvatarBadge renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "alignItems": "center",
+        "backgroundColor": "rgba(145,132,217,0.16)",
+        "borderColor": "#423a6a",
+        "borderRadius": 999,
+        "borderWidth": 1,
+        "height": 38,
+        "justifyContent": "center",
+        "width": 38,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#e7e5fe",
+          "fontFamily": "Inter_600SemiBold",
+          "fontSize": 13,
+        }
+      }
+    >
+      DW
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — dark palette BackCircle renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    accessibilityLabel="Back"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": undefined,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    hitSlop={8}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      {
+        "alignItems": "center",
+        "backgroundColor": "transparent",
+        "borderColor": "#3f424d",
+        "borderRadius": 999,
+        "borderWidth": 1,
+        "height": 36,
+        "justifyContent": "center",
+        "width": 36,
+      }
+    }
+  >
+    <RNSVGSvgView
+      align="xMidYMid"
+      bbHeight={17}
+      bbWidth={17}
+      className="caret-left-undefined__svg-icon-phosphor"
+      color="#b2b6ca"
+      fill="currentColor"
+      focusable={false}
+      height={17}
+      meetOrSlice={0}
+      minX={0}
+      minY={0}
+      style={
+        [
+          {
+            "backgroundColor": "transparent",
+            "borderWidth": 0,
+          },
+          [
+            undefined,
+            undefined,
+            {},
+          ],
+          {
+            "flex": 0,
+            "height": 17,
+            "width": 17,
+          },
+        ]
+      }
+      testID="phosphor-react-native-caret-left-undefined"
+      vbHeight={256}
+      vbWidth={256}
+      width={17}
+    >
+      <RNSVGGroup
+        fill={
+          {
+            "type": 2,
+          }
+        }
+        propList={
+          [
+            "fill",
+          ]
+        }
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4289902282,
+              "type": 0,
+            }
+          }
+          propList={
+            [
+              "fill",
+            ]
+          }
+        >
+          <RNSVGPath
+            d="M165.66 202.34a8 8 0 0 1-11.32 11.32l-80-80a8 8 0 0 1 0-11.32l80-80a8 8 0 0 1 11.32 11.32L91.31 128Z"
+            fill={
+              {
+                "payload": 4278190080,
+                "type": 0,
+              }
+            }
+          />
+        </RNSVGGroup>
+      </RNSVGGroup>
+    </RNSVGSvgView>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — dark palette BrandMark renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <Image
+    resizeMode="contain"
+    source={
+      {
+        "testUri": "../../../assets/images/a8x-mark.png",
+      }
+    }
+    style={
+      [
+        {
+          "height": 41.99666666666667,
+          "opacity": 1,
+          "tintColor": undefined,
+          "width": 86,
+        },
+        undefined,
+      ]
+    }
+  />
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — dark palette FilterChip/active renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": undefined,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      {
+        "alignItems": "center",
+        "backgroundColor": "transparent",
+        "borderColor": "#9184d9",
+        "borderRadius": 999,
+        "borderWidth": 1,
+        "height": 32,
+        "justifyContent": "center",
+        "paddingHorizontal": 13,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#9184d9",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 12.5,
+        }
+      }
+    >
+      Finance
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — dark palette FilterChip/inactive renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": undefined,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      {
+        "alignItems": "center",
+        "backgroundColor": "transparent",
+        "borderColor": "#3f424d",
+        "borderRadius": 999,
+        "borderWidth": 1,
+        "height": 32,
+        "justifyContent": "center",
+        "paddingHorizontal": 13,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#b2b6ca",
+          "fontFamily": "Inter_400Regular",
+          "fontSize": 12.5,
+        }
+      }
+    >
+      Finance
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — dark palette GlowBackground renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <RNSVGSvgView
+    bbHeight="100%"
+    bbWidth="100%"
+    focusable={false}
+    pointerEvents="none"
+    style={
+      [
+        {
+          "backgroundColor": "transparent",
+          "borderWidth": 0,
+        },
+        {
+          "bottom": 0,
+          "left": 0,
+          "position": "absolute",
+          "right": 0,
+          "top": 0,
+        },
+        {
+          "flex": 0,
+          "height": "100%",
+          "width": "100%",
+        },
+      ]
+    }
+  >
+    <RNSVGGroup
+      fill={
+        {
+          "payload": 4278190080,
+          "type": 0,
+        }
+      }
+    >
+      <RNSVGDefs>
+        <RNSVGRadialGradient
+          cx="50%"
+          cy="40%"
+          fx="50%"
+          fy="40%"
+          gradient={
+            [
+              0,
+              -13949119,
+              1,
+              2828097,
+            ]
+          }
+          gradientTransform={null}
+          gradientUnits={0}
+          name="glow"
+          rx="58%"
+          ry="58%"
+        />
+      </RNSVGDefs>
+      <RNSVGRect
+        fill={
+          {
+            "brushRef": "glow",
+            "type": 1,
+          }
+        }
+        height="100%"
+        propList={
+          [
+            "fill",
+          ]
+        }
+        width="100%"
+        x="0"
+        y="0"
+      />
+    </RNSVGGroup>
+  </RNSVGSvgView>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — dark palette IconTile renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(145,132,217,0.1)",
+          "borderRadius": 11,
+          "height": 38,
+          "justifyContent": "center",
+          "width": 38,
+        },
+        false,
+        undefined,
+      ]
+    }
+  >
+    <RNSVGSvgView
+      align="xMidYMid"
+      bbHeight={19}
+      bbWidth={19}
+      className="receipt-regular__svg-icon-phosphor"
+      color="#d2cefd"
+      fill="currentColor"
+      focusable={false}
+      height={19}
+      meetOrSlice={0}
+      minX={0}
+      minY={0}
+      style={
+        [
+          {
+            "backgroundColor": "transparent",
+            "borderWidth": 0,
+          },
+          [
+            undefined,
+            undefined,
+            {},
+          ],
+          {
+            "flex": 0,
+            "height": 19,
+            "width": 19,
+          },
+        ]
+      }
+      testID="phosphor-react-native-receipt-regular"
+      vbHeight={256}
+      vbWidth={256}
+      width={19}
+    >
+      <RNSVGGroup
+        fill={
+          {
+            "type": 2,
+          }
+        }
+        propList={
+          [
+            "fill",
+          ]
+        }
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4292005629,
+              "type": 0,
+            }
+          }
+          propList={
+            [
+              "fill",
+            ]
+          }
+        >
+          <RNSVGPath
+            d="M72 104a8 8 0 0 1 8-8h96a8 8 0 0 1 0 16H80a8 8 0 0 1-8-8m8 40h96a8 8 0 0 0 0-16H80a8 8 0 0 0 0 16m152-88v152a8 8 0 0 1-11.58 7.15L192 200.94l-28.42 14.21a8 8 0 0 1-7.16 0L128 200.94l-28.42 14.21a8 8 0 0 1-7.16 0L64 200.94l-28.42 14.21A8 8 0 0 1 24 208V56a16 16 0 0 1 16-16h176a16 16 0 0 1 16 16m-16 0H40v139.06l20.42-10.22a8 8 0 0 1 7.16 0L96 199.06l28.42-14.22a8 8 0 0 1 7.16 0L160 199.06l28.42-14.22a8 8 0 0 1 7.16 0L216 195.06Z"
+            fill={
+              {
+                "payload": 4278190080,
+                "type": 0,
+              }
+            }
+          />
+        </RNSVGGroup>
+      </RNSVGGroup>
+    </RNSVGSvgView>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — dark palette NocToggle/off renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    accessibilityRole="switch"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": false,
+        "disabled": undefined,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    hitSlop={6}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+  >
+    <View
+      collapsable={false}
+      jestAnimatedProps={
+        {
+          "value": {},
+        }
+      }
+      jestAnimatedStyle={
+        {
+          "value": {
+            "backgroundColor": "rgba(63, 66, 77, 1)",
+          },
+        }
+      }
+      jestInlineStyle={
+        [
+          {
+            "borderRadius": 999,
+            "height": 28,
+            "justifyContent": "center",
+            "width": 46,
+          },
+        ]
+      }
+      nativeID="2"
+      style={
+        [
+          {
+            "borderRadius": 999,
+            "height": 28,
+            "justifyContent": "center",
+            "width": 46,
+          },
+          {
+            "backgroundColor": "rgba(63, 66, 77, 1)",
+          },
+        ]
+      }
+    >
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "transform": [
+                {
+                  "translateX": 0,
+                },
+              ],
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#ffffff",
+              "borderRadius": 999,
+              "elevation": 2,
+              "height": 24,
+              "marginLeft": 2,
+              "shadowColor": "#000000",
+              "shadowOffset": {
+                "height": 1,
+                "width": 0,
+              },
+              "shadowOpacity": 0.3,
+              "shadowRadius": 3,
+              "width": 24,
+            },
+          ]
+        }
+        nativeID="3"
+        style={
+          [
+            {
+              "backgroundColor": "#ffffff",
+              "borderRadius": 999,
+              "elevation": 2,
+              "height": 24,
+              "marginLeft": 2,
+              "shadowColor": "#000000",
+              "shadowOffset": {
+                "height": 1,
+                "width": 0,
+              },
+              "shadowOpacity": 0.3,
+              "shadowRadius": 3,
+              "width": 24,
+            },
+            {
+              "transform": [
+                {
+                  "translateX": 0,
+                },
+              ],
+            },
+          ]
+        }
+      />
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — dark palette NocToggle/on renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    accessibilityRole="switch"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": true,
+        "disabled": undefined,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    hitSlop={6}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+  >
+    <View
+      collapsable={false}
+      jestAnimatedProps={
+        {
+          "value": {},
+        }
+      }
+      jestAnimatedStyle={
+        {
+          "value": {
+            "backgroundColor": "rgba(145, 132, 217, 1)",
+          },
+        }
+      }
+      jestInlineStyle={
+        [
+          {
+            "borderRadius": 999,
+            "height": 28,
+            "justifyContent": "center",
+            "width": 46,
+          },
+        ]
+      }
+      nativeID="0"
+      style={
+        [
+          {
+            "borderRadius": 999,
+            "height": 28,
+            "justifyContent": "center",
+            "width": 46,
+          },
+          {
+            "backgroundColor": "rgba(145, 132, 217, 1)",
+          },
+        ]
+      }
+    >
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "transform": [
+                {
+                  "translateX": 18,
+                },
+              ],
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#ffffff",
+              "borderRadius": 999,
+              "elevation": 2,
+              "height": 24,
+              "marginLeft": 2,
+              "shadowColor": "#000000",
+              "shadowOffset": {
+                "height": 1,
+                "width": 0,
+              },
+              "shadowOpacity": 0.3,
+              "shadowRadius": 3,
+              "width": 24,
+            },
+          ]
+        }
+        nativeID="1"
+        style={
+          [
+            {
+              "backgroundColor": "#ffffff",
+              "borderRadius": 999,
+              "elevation": 2,
+              "height": 24,
+              "marginLeft": 2,
+              "shadowColor": "#000000",
+              "shadowOffset": {
+                "height": 1,
+                "width": 0,
+              },
+              "shadowOpacity": 0.3,
+              "shadowRadius": 3,
+              "width": 24,
+            },
+            {
+              "transform": [
+                {
+                  "translateX": 18,
+                },
+              ],
+            },
+          ]
+        }
+      />
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — dark palette OAuthButton renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": undefined,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      {
+        "alignItems": "center",
+        "backgroundColor": "transparent",
+        "borderColor": "#595d6c",
+        "borderRadius": 12,
+        "borderWidth": 1,
+        "flexDirection": "row",
+        "gap": 9,
+        "height": 48,
+        "justifyContent": "center",
+      }
+    }
+  >
+    <RNSVGSvgView
+      align="xMidYMid"
+      bbHeight={17}
+      bbWidth={17}
+      focusable={false}
+      height={17}
+      meetOrSlice={0}
+      minX={0}
+      minY={0}
+      style={
+        [
+          {
+            "backgroundColor": "transparent",
+            "borderWidth": 0,
+          },
+          {
+            "flex": 0,
+            "height": 17,
+            "width": 17,
+          },
+        ]
+      }
+      vbHeight={24}
+      vbWidth={24}
+      width={17}
+    >
+      <RNSVGGroup
+        fill={
+          {
+            "payload": 4278190080,
+            "type": 0,
+          }
+        }
+      >
+        <RNSVGPath
+          d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27 3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10 5.35 0 9.25-3.67 9.25-9.09 0-1.15-.15-1.81-.15-1.81z"
+          fill={
+            {
+              "payload": 4293519853,
+              "type": 0,
+            }
+          }
+          propList={
+            [
+              "fill",
+            ]
+          }
+        />
+      </RNSVGGroup>
+    </RNSVGSvgView>
+    <Text
+      style={
+        {
+          "color": "#e9e9ed",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 14.5,
+        }
+      }
+    >
+      Continue with Google
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — dark palette OrDivider renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "alignItems": "center",
+        "flexDirection": "row",
+        "gap": 12,
+        "marginVertical": 18,
+      }
+    }
+  >
+    <View
+      style={
+        [
+          {
+            "flex": 1,
+            "height": 1,
+          },
+          {
+            "backgroundColor": "#3f424d",
+          },
+        ]
+      }
+    />
+    <Text
+      style={
+        [
+          {
+            "fontFamily": "Inter_400Regular",
+            "fontSize": 12.5,
+          },
+          {
+            "color": "#9397ab",
+          },
+        ]
+      }
+    >
+      or
+    </Text>
+    <View
+      style={
+        [
+          {
+            "flex": 1,
+            "height": 1,
+          },
+          {
+            "backgroundColor": "#3f424d",
+          },
+        ]
+      }
+    />
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — dark palette PillButton/accent-ghost renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": undefined,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderColor": "transparent",
+          "borderRadius": 999,
+          "borderWidth": 0,
+          "flexDirection": "row",
+          "gap": 7,
+          "height": 52,
+          "justifyContent": "center",
+          "paddingHorizontal": 18,
+        },
+        undefined,
+      ]
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#d2cefd",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 16,
+        }
+      }
+    >
+      Unlock
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — dark palette PillButton/primary renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": undefined,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderColor": "#9184d9",
+          "borderRadius": 999,
+          "borderWidth": 1,
+          "flexDirection": "row",
+          "gap": 7,
+          "height": 52,
+          "justifyContent": "center",
+          "paddingHorizontal": 18,
+        },
+        undefined,
+      ]
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#9184d9",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 16,
+        }
+      }
+    >
+      Log In
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — dark palette SectionLabel renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <Text
+    style={
+      [
+        {
+          "color": "#b2b6ca",
+          "fontFamily": "Inter_400Regular",
+          "fontSize": 11,
+          "letterSpacing": 1.54,
+        },
+        undefined,
+      ]
+    }
+  >
+    Recent runs
+  </Text>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — dark palette Skeleton renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    collapsable={false}
+    jestAnimatedProps={
+      {
+        "value": {},
+      }
+    }
+    jestAnimatedStyle={
+      {
+        "value": {
+          "opacity": 0.45,
+        },
+      }
+    }
+    jestInlineStyle={
+      [
+        {
+          "backgroundColor": "#292b31",
+          "borderRadius": 6,
+          "height": 22,
+          "width": 214,
+        },
+        false,
+      ]
+    }
+    nativeID="4"
+    style={
+      [
+        {
+          "backgroundColor": "#292b31",
+          "borderRadius": 6,
+          "height": 22,
+          "width": 214,
+        },
+        false,
+        {
+          "opacity": 0.45,
+        },
+      ]
+    }
+  />
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — dark palette StatCard renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "backgroundColor": "#232532",
+          "borderRadius": 14,
+        },
+        {
+          "borderColor": "#3f424d",
+          "borderWidth": 1,
+        },
+        {
+          "flex": 1,
+          "paddingHorizontal": 14,
+          "paddingVertical": 13,
+        },
+      ]
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#e9e9ed",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 20,
+          "letterSpacing": -0.2,
+        }
+      }
+    >
+      1,284
+    </Text>
+    <Text
+      style={
+        {
+          "color": "#b2b6ca",
+          "fontFamily": "Inter_400Regular",
+          "fontSize": 11,
+          "marginTop": 3,
+        }
+      }
+    >
+      Runs today
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — dark palette StatusPill/Draft renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "backgroundColor": "rgba(147,151,171,0.12)",
+        "borderColor": "#595d6c",
+        "borderRadius": 999,
+        "borderWidth": 1,
+        "paddingHorizontal": 10,
+        "paddingVertical": 4,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#b2b6ca",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 11,
+        }
+      }
+    >
+      Draft
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — dark palette StatusPill/Failed renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "backgroundColor": "rgba(248,113,113,0.1)",
+        "borderColor": "rgba(248,113,113,0.35)",
+        "borderRadius": 999,
+        "borderWidth": 1,
+        "paddingHorizontal": 10,
+        "paddingVertical": 4,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#f87171",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 11,
+        }
+      }
+    >
+      Failed
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — dark palette StatusPill/Held renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "backgroundColor": "rgba(245,158,11,0.1)",
+        "borderColor": "rgba(245,158,11,0.35)",
+        "borderRadius": 999,
+        "borderWidth": 1,
+        "paddingHorizontal": 10,
+        "paddingVertical": 4,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#fbbf24",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 11,
+        }
+      }
+    >
+      Held
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — dark palette StatusPill/Live renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "backgroundColor": "rgba(52,211,153,0.1)",
+        "borderColor": "rgba(52,211,153,0.35)",
+        "borderRadius": 999,
+        "borderWidth": 1,
+        "paddingHorizontal": 10,
+        "paddingVertical": 4,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#34d399",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 11,
+        }
+      }
+    >
+      Live
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — dark palette StatusPill/Paused renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "backgroundColor": "rgba(245,158,11,0.1)",
+        "borderColor": "rgba(245,158,11,0.35)",
+        "borderRadius": 999,
+        "borderWidth": 1,
+        "paddingHorizontal": 10,
+        "paddingVertical": 4,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#fbbf24",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 11,
+        }
+      }
+    >
+      Paused
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — dark palette StatusPill/Success renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "backgroundColor": "rgba(52,211,153,0.1)",
+        "borderColor": "rgba(52,211,153,0.35)",
+        "borderRadius": 999,
+        "borderWidth": 1,
+        "paddingHorizontal": 10,
+        "paddingVertical": 4,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#34d399",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 11,
+        }
+      }
+    >
+      Success
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — dark palette StepCard renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "backgroundColor": "#232532",
+          "borderRadius": 14,
+        },
+        {
+          "borderColor": "#3f424d",
+          "borderWidth": 1,
+        },
+        [
+          {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 12,
+            "paddingHorizontal": 14,
+            "paddingVertical": 13,
+          },
+          false,
+        ],
+      ]
+    }
+  >
+    <View
+      style={
+        [
+          {
+            "alignItems": "center",
+            "backgroundColor": "rgba(145,132,217,0.1)",
+            "borderRadius": 11,
+            "height": 38,
+            "justifyContent": "center",
+            "width": 38,
+          },
+          false,
+          undefined,
+        ]
+      }
+    >
+      <RNSVGSvgView
+        align="xMidYMid"
+        bbHeight={19}
+        bbWidth={19}
+        className="receipt-regular__svg-icon-phosphor"
+        color="#d2cefd"
+        fill="currentColor"
+        focusable={false}
+        height={19}
+        meetOrSlice={0}
+        minX={0}
+        minY={0}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            [
+              undefined,
+              undefined,
+              {},
+            ],
+            {
+              "flex": 0,
+              "height": 19,
+              "width": 19,
+            },
+          ]
+        }
+        testID="phosphor-react-native-receipt-regular"
+        vbHeight={256}
+        vbWidth={256}
+        width={19}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "type": 2,
+            }
+          }
+          propList={
+            [
+              "fill",
+            ]
+          }
+        >
+          <RNSVGGroup
+            fill={
+              {
+                "payload": 4292005629,
+                "type": 0,
+              }
+            }
+            propList={
+              [
+                "fill",
+              ]
+            }
+          >
+            <RNSVGPath
+              d="M72 104a8 8 0 0 1 8-8h96a8 8 0 0 1 0 16H80a8 8 0 0 1-8-8m8 40h96a8 8 0 0 0 0-16H80a8 8 0 0 0 0 16m152-88v152a8 8 0 0 1-11.58 7.15L192 200.94l-28.42 14.21a8 8 0 0 1-7.16 0L128 200.94l-28.42 14.21a8 8 0 0 1-7.16 0L64 200.94l-28.42 14.21A8 8 0 0 1 24 208V56a16 16 0 0 1 16-16h176a16 16 0 0 1 16 16m-16 0H40v139.06l20.42-10.22a8 8 0 0 1 7.16 0L96 199.06l28.42-14.22a8 8 0 0 1 7.16 0L160 199.06l28.42-14.22a8 8 0 0 1 7.16 0L216 195.06Z"
+              fill={
+                {
+                  "payload": 4278190080,
+                  "type": 0,
+                }
+              }
+            />
+          </RNSVGGroup>
+        </RNSVGGroup>
+      </RNSVGSvgView>
+    </View>
+    <View
+      style={
+        {
+          "flex": 1,
+          "minWidth": 0,
+        }
+      }
+    >
+      <Text
+        style={
+          [
+            {
+              "color": "#d2cefd",
+              "fontFamily": "Inter_400Regular",
+              "fontSize": 10,
+              "letterSpacing": 1.6,
+            },
+            undefined,
+          ]
+        }
+      >
+        TRIGGER
+      </Text>
+      <Text
+        style={
+          [
+            {
+              "fontFamily": "Inter_500Medium",
+              "fontSize": 14,
+              "marginTop": 2,
+            },
+            {
+              "color": "#e9e9ed",
+            },
+          ]
+        }
+      >
+        New email in AP inbox
+      </Text>
+      <Text
+        style={
+          [
+            {
+              "fontFamily": "Inter_400Regular",
+              "fontSize": 12,
+              "marginTop": 1,
+            },
+            {
+              "color": "#b2b6ca",
+            },
+          ]
+        }
+      >
+        Gmail · ap@acme.co
+      </Text>
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — dark palette SurfaceCard renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "backgroundColor": "#232532",
+          "borderRadius": 14,
+        },
+        {
+          "borderColor": "#3f424d",
+          "borderWidth": 1,
+        },
+        undefined,
+      ]
+    }
+  >
+    <Text>
+      Body
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — dark palette TextField renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "gap": 6,
+        },
+        undefined,
+      ]
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#b2b6ca",
+          "fontFamily": "Inter_400Regular",
+          "fontSize": 12.5,
+        }
+      }
+    >
+      Email
+    </Text>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(35,37,50,0.72)",
+          "borderColor": "#595d6c",
+          "borderRadius": 12,
+          "borderWidth": 1,
+          "flexDirection": "row",
+          "height": 50,
+          "paddingHorizontal": 14,
+        }
+      }
+    >
+      <TextInput
+        accessibilityLabel="Email"
+        autoCapitalize="none"
+        onChangeText={[Function]}
+        placeholderTextColor="#9397ab"
+        secureTextEntry={false}
+        selectionColor="#9184d9"
+        style={
+          {
+            "color": "#e9e9ed",
+            "flex": 1,
+            "fontFamily": "Inter_400Regular",
+            "fontSize": 15,
+            "paddingVertical": 0,
+          }
+        }
+        value="dana@northwind.example"
+      />
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — dark palette TextField/secure renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "gap": 6,
+        },
+        undefined,
+      ]
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#b2b6ca",
+          "fontFamily": "Inter_400Regular",
+          "fontSize": 12.5,
+        }
+      }
+    >
+      Password
+    </Text>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(35,37,50,0.72)",
+          "borderColor": "#595d6c",
+          "borderRadius": 12,
+          "borderWidth": 1,
+          "flexDirection": "row",
+          "height": 50,
+          "paddingHorizontal": 14,
+        }
+      }
+    >
+      <TextInput
+        accessibilityLabel="Password"
+        autoCapitalize="none"
+        onChangeText={[Function]}
+        placeholderTextColor="#9397ab"
+        secureTextEntry={true}
+        selectionColor="#9184d9"
+        style={
+          {
+            "color": "#e9e9ed",
+            "flex": 1,
+            "fontFamily": "Inter_400Regular",
+            "fontSize": 15,
+            "paddingVertical": 0,
+          }
+        }
+        value="secret"
+      />
+      <View
+        accessibilityLabel="Show password"
+        accessibilityRole="button"
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        hitSlop={8}
+        onBlur={[Function]}
+        onClick={[Function]}
+        onFocus={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+      >
+        <RNSVGSvgView
+          align="xMidYMid"
+          bbHeight={18}
+          bbWidth={18}
+          className="eye-undefined__svg-icon-phosphor"
+          color="#9397ab"
+          fill="currentColor"
+          focusable={false}
+          height={18}
+          meetOrSlice={0}
+          minX={0}
+          minY={0}
+          style={
+            [
+              {
+                "backgroundColor": "transparent",
+                "borderWidth": 0,
+              },
+              [
+                undefined,
+                undefined,
+                {},
+              ],
+              {
+                "flex": 0,
+                "height": 18,
+                "width": 18,
+              },
+            ]
+          }
+          testID="phosphor-react-native-eye-undefined"
+          vbHeight={256}
+          vbWidth={256}
+          width={18}
+        >
+          <RNSVGGroup
+            fill={
+              {
+                "type": 2,
+              }
+            }
+            propList={
+              [
+                "fill",
+              ]
+            }
+          >
+            <RNSVGGroup
+              fill={
+                {
+                  "payload": 4287862699,
+                  "type": 0,
+                }
+              }
+              propList={
+                [
+                  "fill",
+                ]
+              }
+            >
+              <RNSVGPath
+                d="M247.31 124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57 61.26 162.88 48 128 48S61.43 61.26 36.34 86.35C17.51 105.18 9 124 8.69 124.76a8 8 0 0 0 0 6.5c.35.79 8.82 19.57 27.65 38.4C61.43 194.74 93.12 208 128 208s66.57-13.26 91.66-38.34c18.83-18.83 27.3-37.61 27.65-38.4a8 8 0 0 0 0-6.5M128 192c-30.78 0-57.67-11.19-79.93-33.25A133.5 133.5 0 0 1 25 128a133.3 133.3 0 0 1 23.07-30.75C70.33 75.19 97.22 64 128 64s57.67 11.19 79.93 33.25A133.5 133.5 0 0 1 231.05 128c-7.21 13.46-38.62 64-103.05 64m0-112a48 48 0 1 0 48 48 48.05 48.05 0 0 0-48-48m0 80a32 32 0 1 1 32-32 32 32 0 0 1-32 32"
+                fill={
+                  {
+                    "payload": 4278190080,
+                    "type": 0,
+                  }
+                }
+              />
+            </RNSVGGroup>
+          </RNSVGGroup>
+        </RNSVGSvgView>
+      </View>
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette AvatarBadge renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "alignItems": "center",
+        "backgroundColor": "rgba(106,92,196,0.16)",
+        "borderColor": "#dcd8f4",
+        "borderRadius": 999,
+        "borderWidth": 1,
+        "height": 38,
+        "justifyContent": "center",
+        "width": 38,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#453a91",
+          "fontFamily": "Inter_600SemiBold",
+          "fontSize": 13,
+        }
+      }
+    >
+      DW
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette BackCircle renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    accessibilityLabel="Back"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": undefined,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    hitSlop={8}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      {
+        "alignItems": "center",
+        "backgroundColor": "transparent",
+        "borderColor": "#dfe0ea",
+        "borderRadius": 999,
+        "borderWidth": 1,
+        "height": 36,
+        "justifyContent": "center",
+        "width": 36,
+      }
+    }
+  >
+    <RNSVGSvgView
+      align="xMidYMid"
+      bbHeight={17}
+      bbWidth={17}
+      className="caret-left-undefined__svg-icon-phosphor"
+      color="#666a82"
+      fill="currentColor"
+      focusable={false}
+      height={17}
+      meetOrSlice={0}
+      minX={0}
+      minY={0}
+      style={
+        [
+          {
+            "backgroundColor": "transparent",
+            "borderWidth": 0,
+          },
+          [
+            undefined,
+            undefined,
+            {},
+          ],
+          {
+            "flex": 0,
+            "height": 17,
+            "width": 17,
+          },
+        ]
+      }
+      testID="phosphor-react-native-caret-left-undefined"
+      vbHeight={256}
+      vbWidth={256}
+      width={17}
+    >
+      <RNSVGGroup
+        fill={
+          {
+            "type": 2,
+          }
+        }
+        propList={
+          [
+            "fill",
+          ]
+        }
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4284902018,
+              "type": 0,
+            }
+          }
+          propList={
+            [
+              "fill",
+            ]
+          }
+        >
+          <RNSVGPath
+            d="M165.66 202.34a8 8 0 0 1-11.32 11.32l-80-80a8 8 0 0 1 0-11.32l80-80a8 8 0 0 1 11.32 11.32L91.31 128Z"
+            fill={
+              {
+                "payload": 4278190080,
+                "type": 0,
+              }
+            }
+          />
+        </RNSVGGroup>
+      </RNSVGGroup>
+    </RNSVGSvgView>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette BrandMark renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <Image
+    resizeMode="contain"
+    source={
+      {
+        "testUri": "../../../assets/images/a8x-mark.png",
+      }
+    }
+    style={
+      [
+        {
+          "height": 41.99666666666667,
+          "opacity": 1,
+          "tintColor": "#383838",
+          "width": 86,
+        },
+        undefined,
+      ]
+    }
+  />
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette FilterChip/active renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": undefined,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      {
+        "alignItems": "center",
+        "backgroundColor": "transparent",
+        "borderColor": "#6a5cc4",
+        "borderRadius": 999,
+        "borderWidth": 1,
+        "height": 32,
+        "justifyContent": "center",
+        "paddingHorizontal": 13,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#6a5cc4",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 12.5,
+        }
+      }
+    >
+      Finance
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette FilterChip/inactive renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": undefined,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      {
+        "alignItems": "center",
+        "backgroundColor": "transparent",
+        "borderColor": "#dfe0ea",
+        "borderRadius": 999,
+        "borderWidth": 1,
+        "height": 32,
+        "justifyContent": "center",
+        "paddingHorizontal": 13,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#666a82",
+          "fontFamily": "Inter_400Regular",
+          "fontSize": 12.5,
+        }
+      }
+    >
+      Finance
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette GlowBackground renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <RNSVGSvgView
+    bbHeight="100%"
+    bbWidth="100%"
+    focusable={false}
+    pointerEvents="none"
+    style={
+      [
+        {
+          "backgroundColor": "transparent",
+          "borderWidth": 0,
+        },
+        {
+          "bottom": 0,
+          "left": 0,
+          "position": "absolute",
+          "right": 0,
+          "top": 0,
+        },
+        {
+          "flex": 0,
+          "height": "100%",
+          "width": "100%",
+        },
+      ]
+    }
+  >
+    <RNSVGGroup
+      fill={
+        {
+          "payload": 4278190080,
+          "type": 0,
+        }
+      }
+    >
+      <RNSVGDefs>
+        <RNSVGRadialGradient
+          cx="50%"
+          cy="40%"
+          fx="50%"
+          fy="40%"
+          gradient={
+            [
+              0,
+              -1448200,
+              1,
+              15329016,
+            ]
+          }
+          gradientTransform={null}
+          gradientUnits={0}
+          name="glow"
+          rx="58%"
+          ry="58%"
+        />
+      </RNSVGDefs>
+      <RNSVGRect
+        fill={
+          {
+            "brushRef": "glow",
+            "type": 1,
+          }
+        }
+        height="100%"
+        propList={
+          [
+            "fill",
+          ]
+        }
+        width="100%"
+        x="0"
+        y="0"
+      />
+    </RNSVGGroup>
+  </RNSVGSvgView>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette IconTile renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(106,92,196,0.1)",
+          "borderRadius": 11,
+          "height": 38,
+          "justifyContent": "center",
+          "width": 38,
+        },
+        false,
+        undefined,
+      ]
+    }
+  >
+    <RNSVGSvgView
+      align="xMidYMid"
+      bbHeight={19}
+      bbWidth={19}
+      className="receipt-regular__svg-icon-phosphor"
+      color="#5548ab"
+      fill="currentColor"
+      focusable={false}
+      height={19}
+      meetOrSlice={0}
+      minX={0}
+      minY={0}
+      style={
+        [
+          {
+            "backgroundColor": "transparent",
+            "borderWidth": 0,
+          },
+          [
+            undefined,
+            undefined,
+            {},
+          ],
+          {
+            "flex": 0,
+            "height": 19,
+            "width": 19,
+          },
+        ]
+      }
+      testID="phosphor-react-native-receipt-regular"
+      vbHeight={256}
+      vbWidth={256}
+      width={19}
+    >
+      <RNSVGGroup
+        fill={
+          {
+            "type": 2,
+          }
+        }
+        propList={
+          [
+            "fill",
+          ]
+        }
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4283779243,
+              "type": 0,
+            }
+          }
+          propList={
+            [
+              "fill",
+            ]
+          }
+        >
+          <RNSVGPath
+            d="M72 104a8 8 0 0 1 8-8h96a8 8 0 0 1 0 16H80a8 8 0 0 1-8-8m8 40h96a8 8 0 0 0 0-16H80a8 8 0 0 0 0 16m152-88v152a8 8 0 0 1-11.58 7.15L192 200.94l-28.42 14.21a8 8 0 0 1-7.16 0L128 200.94l-28.42 14.21a8 8 0 0 1-7.16 0L64 200.94l-28.42 14.21A8 8 0 0 1 24 208V56a16 16 0 0 1 16-16h176a16 16 0 0 1 16 16m-16 0H40v139.06l20.42-10.22a8 8 0 0 1 7.16 0L96 199.06l28.42-14.22a8 8 0 0 1 7.16 0L160 199.06l28.42-14.22a8 8 0 0 1 7.16 0L216 195.06Z"
+            fill={
+              {
+                "payload": 4278190080,
+                "type": 0,
+              }
+            }
+          />
+        </RNSVGGroup>
+      </RNSVGGroup>
+    </RNSVGSvgView>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette NocToggle/off renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    accessibilityRole="switch"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": false,
+        "disabled": undefined,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    hitSlop={6}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+  >
+    <View
+      collapsable={false}
+      jestAnimatedProps={
+        {
+          "value": {},
+        }
+      }
+      jestAnimatedStyle={
+        {
+          "value": {
+            "backgroundColor": "rgba(223, 224, 234, 1)",
+          },
+        }
+      }
+      jestInlineStyle={
+        [
+          {
+            "borderRadius": 999,
+            "height": 28,
+            "justifyContent": "center",
+            "width": 46,
+          },
+        ]
+      }
+      nativeID="7"
+      style={
+        [
+          {
+            "borderRadius": 999,
+            "height": 28,
+            "justifyContent": "center",
+            "width": 46,
+          },
+          {
+            "backgroundColor": "rgba(223, 224, 234, 1)",
+          },
+        ]
+      }
+    >
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "transform": [
+                {
+                  "translateX": 0,
+                },
+              ],
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#ffffff",
+              "borderRadius": 999,
+              "elevation": 2,
+              "height": 24,
+              "marginLeft": 2,
+              "shadowColor": "#000000",
+              "shadowOffset": {
+                "height": 1,
+                "width": 0,
+              },
+              "shadowOpacity": 0.3,
+              "shadowRadius": 3,
+              "width": 24,
+            },
+          ]
+        }
+        nativeID="8"
+        style={
+          [
+            {
+              "backgroundColor": "#ffffff",
+              "borderRadius": 999,
+              "elevation": 2,
+              "height": 24,
+              "marginLeft": 2,
+              "shadowColor": "#000000",
+              "shadowOffset": {
+                "height": 1,
+                "width": 0,
+              },
+              "shadowOpacity": 0.3,
+              "shadowRadius": 3,
+              "width": 24,
+            },
+            {
+              "transform": [
+                {
+                  "translateX": 0,
+                },
+              ],
+            },
+          ]
+        }
+      />
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette NocToggle/on renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    accessibilityRole="switch"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": true,
+        "disabled": undefined,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    hitSlop={6}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+  >
+    <View
+      collapsable={false}
+      jestAnimatedProps={
+        {
+          "value": {},
+        }
+      }
+      jestAnimatedStyle={
+        {
+          "value": {
+            "backgroundColor": "rgba(106, 92, 196, 1)",
+          },
+        }
+      }
+      jestInlineStyle={
+        [
+          {
+            "borderRadius": 999,
+            "height": 28,
+            "justifyContent": "center",
+            "width": 46,
+          },
+        ]
+      }
+      nativeID="5"
+      style={
+        [
+          {
+            "borderRadius": 999,
+            "height": 28,
+            "justifyContent": "center",
+            "width": 46,
+          },
+          {
+            "backgroundColor": "rgba(106, 92, 196, 1)",
+          },
+        ]
+      }
+    >
+      <View
+        collapsable={false}
+        jestAnimatedProps={
+          {
+            "value": {},
+          }
+        }
+        jestAnimatedStyle={
+          {
+            "value": {
+              "transform": [
+                {
+                  "translateX": 18,
+                },
+              ],
+            },
+          }
+        }
+        jestInlineStyle={
+          [
+            {
+              "backgroundColor": "#ffffff",
+              "borderRadius": 999,
+              "elevation": 2,
+              "height": 24,
+              "marginLeft": 2,
+              "shadowColor": "#000000",
+              "shadowOffset": {
+                "height": 1,
+                "width": 0,
+              },
+              "shadowOpacity": 0.3,
+              "shadowRadius": 3,
+              "width": 24,
+            },
+          ]
+        }
+        nativeID="6"
+        style={
+          [
+            {
+              "backgroundColor": "#ffffff",
+              "borderRadius": 999,
+              "elevation": 2,
+              "height": 24,
+              "marginLeft": 2,
+              "shadowColor": "#000000",
+              "shadowOffset": {
+                "height": 1,
+                "width": 0,
+              },
+              "shadowOpacity": 0.3,
+              "shadowRadius": 3,
+              "width": 24,
+            },
+            {
+              "transform": [
+                {
+                  "translateX": 18,
+                },
+              ],
+            },
+          ]
+        }
+      />
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette OAuthButton renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": undefined,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      {
+        "alignItems": "center",
+        "backgroundColor": "transparent",
+        "borderColor": "#c9cbdb",
+        "borderRadius": 12,
+        "borderWidth": 1,
+        "flexDirection": "row",
+        "gap": 9,
+        "height": 48,
+        "justifyContent": "center",
+      }
+    }
+  >
+    <RNSVGSvgView
+      align="xMidYMid"
+      bbHeight={17}
+      bbWidth={17}
+      focusable={false}
+      height={17}
+      meetOrSlice={0}
+      minX={0}
+      minY={0}
+      style={
+        [
+          {
+            "backgroundColor": "transparent",
+            "borderWidth": 0,
+          },
+          {
+            "flex": 0,
+            "height": 17,
+            "width": 17,
+          },
+        ]
+      }
+      vbHeight={24}
+      vbWidth={24}
+      width={17}
+    >
+      <RNSVGGroup
+        fill={
+          {
+            "payload": 4278190080,
+            "type": 0,
+          }
+        }
+      >
+        <RNSVGPath
+          d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27 3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10 5.35 0 9.25-3.67 9.25-9.09 0-1.15-.15-1.81-.15-1.81z"
+          fill={
+            {
+              "payload": 4280295983,
+              "type": 0,
+            }
+          }
+          propList={
+            [
+              "fill",
+            ]
+          }
+        />
+      </RNSVGGroup>
+    </RNSVGSvgView>
+    <Text
+      style={
+        {
+          "color": "#20222f",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 14.5,
+        }
+      }
+    >
+      Continue with Google
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette OrDivider renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "alignItems": "center",
+        "flexDirection": "row",
+        "gap": 12,
+        "marginVertical": 18,
+      }
+    }
+  >
+    <View
+      style={
+        [
+          {
+            "flex": 1,
+            "height": 1,
+          },
+          {
+            "backgroundColor": "#dfe0ea",
+          },
+        ]
+      }
+    />
+    <Text
+      style={
+        [
+          {
+            "fontFamily": "Inter_400Regular",
+            "fontSize": 12.5,
+          },
+          {
+            "color": "#7c8095",
+          },
+        ]
+      }
+    >
+      or
+    </Text>
+    <View
+      style={
+        [
+          {
+            "flex": 1,
+            "height": 1,
+          },
+          {
+            "backgroundColor": "#dfe0ea",
+          },
+        ]
+      }
+    />
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette PillButton/accent-ghost renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": undefined,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderColor": "transparent",
+          "borderRadius": 999,
+          "borderWidth": 0,
+          "flexDirection": "row",
+          "gap": 7,
+          "height": 52,
+          "justifyContent": "center",
+          "paddingHorizontal": 18,
+        },
+        undefined,
+      ]
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#5548ab",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 16,
+        }
+      }
+    >
+      Unlock
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette PillButton/primary renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": undefined,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderColor": "#6a5cc4",
+          "borderRadius": 999,
+          "borderWidth": 1,
+          "flexDirection": "row",
+          "gap": 7,
+          "height": 52,
+          "justifyContent": "center",
+          "paddingHorizontal": 18,
+        },
+        undefined,
+      ]
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#6a5cc4",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 16,
+        }
+      }
+    >
+      Log In
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette SectionLabel renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <Text
+    style={
+      [
+        {
+          "color": "#666a82",
+          "fontFamily": "Inter_400Regular",
+          "fontSize": 11,
+          "letterSpacing": 1.54,
+        },
+        undefined,
+      ]
+    }
+  >
+    Recent runs
+  </Text>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette Skeleton renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    collapsable={false}
+    jestAnimatedProps={
+      {
+        "value": {},
+      }
+    }
+    jestAnimatedStyle={
+      {
+        "value": {
+          "opacity": 0.45,
+        },
+      }
+    }
+    jestInlineStyle={
+      [
+        {
+          "backgroundColor": "#ebecf2",
+          "borderRadius": 6,
+          "height": 22,
+          "width": 214,
+        },
+        false,
+      ]
+    }
+    nativeID="9"
+    style={
+      [
+        {
+          "backgroundColor": "#ebecf2",
+          "borderRadius": 6,
+          "height": 22,
+          "width": 214,
+        },
+        false,
+        {
+          "opacity": 0.45,
+        },
+      ]
+    }
+  />
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette StatCard renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "backgroundColor": "#ffffff",
+          "borderRadius": 14,
+        },
+        {
+          "elevation": 1,
+          "shadowColor": "#1e1e3c",
+          "shadowOffset": {
+            "height": 1,
+            "width": 0,
+          },
+          "shadowOpacity": 0.12,
+          "shadowRadius": 1.5,
+        },
+        {
+          "flex": 1,
+          "paddingHorizontal": 14,
+          "paddingVertical": 13,
+        },
+      ]
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#20222f",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 20,
+          "letterSpacing": -0.2,
+        }
+      }
+    >
+      1,284
+    </Text>
+    <Text
+      style={
+        {
+          "color": "#666a82",
+          "fontFamily": "Inter_400Regular",
+          "fontSize": 11,
+          "marginTop": 3,
+        }
+      }
+    >
+      Runs today
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette StatusPill/Draft renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "backgroundColor": "rgba(124,128,149,0.12)",
+        "borderColor": "#c9cbdb",
+        "borderRadius": 999,
+        "borderWidth": 1,
+        "paddingHorizontal": 10,
+        "paddingVertical": 4,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#666a82",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 11,
+        }
+      }
+    >
+      Draft
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette StatusPill/Failed renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "backgroundColor": "rgba(248,113,113,0.1)",
+        "borderColor": "rgba(248,113,113,0.35)",
+        "borderRadius": 999,
+        "borderWidth": 1,
+        "paddingHorizontal": 10,
+        "paddingVertical": 4,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#f87171",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 11,
+        }
+      }
+    >
+      Failed
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette StatusPill/Held renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "backgroundColor": "rgba(245,158,11,0.1)",
+        "borderColor": "rgba(245,158,11,0.35)",
+        "borderRadius": 999,
+        "borderWidth": 1,
+        "paddingHorizontal": 10,
+        "paddingVertical": 4,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#fbbf24",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 11,
+        }
+      }
+    >
+      Held
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette StatusPill/Live renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "backgroundColor": "rgba(52,211,153,0.1)",
+        "borderColor": "rgba(52,211,153,0.35)",
+        "borderRadius": 999,
+        "borderWidth": 1,
+        "paddingHorizontal": 10,
+        "paddingVertical": 4,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#34d399",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 11,
+        }
+      }
+    >
+      Live
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette StatusPill/Paused renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "backgroundColor": "rgba(245,158,11,0.1)",
+        "borderColor": "rgba(245,158,11,0.35)",
+        "borderRadius": 999,
+        "borderWidth": 1,
+        "paddingHorizontal": 10,
+        "paddingVertical": 4,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#fbbf24",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 11,
+        }
+      }
+    >
+      Paused
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette StatusPill/Success renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "backgroundColor": "rgba(52,211,153,0.1)",
+        "borderColor": "rgba(52,211,153,0.35)",
+        "borderRadius": 999,
+        "borderWidth": 1,
+        "paddingHorizontal": 10,
+        "paddingVertical": 4,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#34d399",
+          "fontFamily": "Inter_500Medium",
+          "fontSize": 11,
+        }
+      }
+    >
+      Success
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette StepCard renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "backgroundColor": "#ffffff",
+          "borderRadius": 14,
+        },
+        {
+          "elevation": 1,
+          "shadowColor": "#1e1e3c",
+          "shadowOffset": {
+            "height": 1,
+            "width": 0,
+          },
+          "shadowOpacity": 0.12,
+          "shadowRadius": 1.5,
+        },
+        [
+          {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 12,
+            "paddingHorizontal": 14,
+            "paddingVertical": 13,
+          },
+          false,
+        ],
+      ]
+    }
+  >
+    <View
+      style={
+        [
+          {
+            "alignItems": "center",
+            "backgroundColor": "rgba(106,92,196,0.1)",
+            "borderRadius": 11,
+            "height": 38,
+            "justifyContent": "center",
+            "width": 38,
+          },
+          false,
+          undefined,
+        ]
+      }
+    >
+      <RNSVGSvgView
+        align="xMidYMid"
+        bbHeight={19}
+        bbWidth={19}
+        className="receipt-regular__svg-icon-phosphor"
+        color="#5548ab"
+        fill="currentColor"
+        focusable={false}
+        height={19}
+        meetOrSlice={0}
+        minX={0}
+        minY={0}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            [
+              undefined,
+              undefined,
+              {},
+            ],
+            {
+              "flex": 0,
+              "height": 19,
+              "width": 19,
+            },
+          ]
+        }
+        testID="phosphor-react-native-receipt-regular"
+        vbHeight={256}
+        vbWidth={256}
+        width={19}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "type": 2,
+            }
+          }
+          propList={
+            [
+              "fill",
+            ]
+          }
+        >
+          <RNSVGGroup
+            fill={
+              {
+                "payload": 4283779243,
+                "type": 0,
+              }
+            }
+            propList={
+              [
+                "fill",
+              ]
+            }
+          >
+            <RNSVGPath
+              d="M72 104a8 8 0 0 1 8-8h96a8 8 0 0 1 0 16H80a8 8 0 0 1-8-8m8 40h96a8 8 0 0 0 0-16H80a8 8 0 0 0 0 16m152-88v152a8 8 0 0 1-11.58 7.15L192 200.94l-28.42 14.21a8 8 0 0 1-7.16 0L128 200.94l-28.42 14.21a8 8 0 0 1-7.16 0L64 200.94l-28.42 14.21A8 8 0 0 1 24 208V56a16 16 0 0 1 16-16h176a16 16 0 0 1 16 16m-16 0H40v139.06l20.42-10.22a8 8 0 0 1 7.16 0L96 199.06l28.42-14.22a8 8 0 0 1 7.16 0L160 199.06l28.42-14.22a8 8 0 0 1 7.16 0L216 195.06Z"
+              fill={
+                {
+                  "payload": 4278190080,
+                  "type": 0,
+                }
+              }
+            />
+          </RNSVGGroup>
+        </RNSVGGroup>
+      </RNSVGSvgView>
+    </View>
+    <View
+      style={
+        {
+          "flex": 1,
+          "minWidth": 0,
+        }
+      }
+    >
+      <Text
+        style={
+          [
+            {
+              "color": "#5548ab",
+              "fontFamily": "Inter_400Regular",
+              "fontSize": 10,
+              "letterSpacing": 1.6,
+            },
+            undefined,
+          ]
+        }
+      >
+        TRIGGER
+      </Text>
+      <Text
+        style={
+          [
+            {
+              "fontFamily": "Inter_500Medium",
+              "fontSize": 14,
+              "marginTop": 2,
+            },
+            {
+              "color": "#20222f",
+            },
+          ]
+        }
+      >
+        New email in AP inbox
+      </Text>
+      <Text
+        style={
+          [
+            {
+              "fontFamily": "Inter_400Regular",
+              "fontSize": 12,
+              "marginTop": 1,
+            },
+            {
+              "color": "#666a82",
+            },
+          ]
+        }
+      >
+        Gmail · ap@acme.co
+      </Text>
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette SurfaceCard renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "backgroundColor": "#ffffff",
+          "borderRadius": 14,
+        },
+        {
+          "elevation": 1,
+          "shadowColor": "#1e1e3c",
+          "shadowOffset": {
+            "height": 1,
+            "width": 0,
+          },
+          "shadowOpacity": 0.12,
+          "shadowRadius": 1.5,
+        },
+        undefined,
+      ]
+    }
+  >
+    <Text>
+      Body
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette TextField renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "gap": 6,
+        },
+        undefined,
+      ]
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#666a82",
+          "fontFamily": "Inter_400Regular",
+          "fontSize": 12.5,
+        }
+      }
+    >
+      Email
+    </Text>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(255,255,255,0.72)",
+          "borderColor": "#c9cbdb",
+          "borderRadius": 12,
+          "borderWidth": 1,
+          "flexDirection": "row",
+          "height": 50,
+          "paddingHorizontal": 14,
+        }
+      }
+    >
+      <TextInput
+        accessibilityLabel="Email"
+        autoCapitalize="none"
+        onChangeText={[Function]}
+        placeholderTextColor="#7c8095"
+        secureTextEntry={false}
+        selectionColor="#6a5cc4"
+        style={
+          {
+            "color": "#20222f",
+            "flex": 1,
+            "fontFamily": "Inter_400Regular",
+            "fontSize": 15,
+            "paddingVertical": 0,
+          }
+        }
+        value="dana@northwind.example"
+      />
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Nocturne set — light palette TextField/secure renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "gap": 6,
+        },
+        undefined,
+      ]
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#666a82",
+          "fontFamily": "Inter_400Regular",
+          "fontSize": 12.5,
+        }
+      }
+    >
+      Password
+    </Text>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(255,255,255,0.72)",
+          "borderColor": "#c9cbdb",
+          "borderRadius": 12,
+          "borderWidth": 1,
+          "flexDirection": "row",
+          "height": 50,
+          "paddingHorizontal": 14,
+        }
+      }
+    >
+      <TextInput
+        accessibilityLabel="Password"
+        autoCapitalize="none"
+        onChangeText={[Function]}
+        placeholderTextColor="#7c8095"
+        secureTextEntry={true}
+        selectionColor="#6a5cc4"
+        style={
+          {
+            "color": "#20222f",
+            "flex": 1,
+            "fontFamily": "Inter_400Regular",
+            "fontSize": 15,
+            "paddingVertical": 0,
+          }
+        }
+        value="secret"
+      />
+      <View
+        accessibilityLabel="Show password"
+        accessibilityRole="button"
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        hitSlop={8}
+        onBlur={[Function]}
+        onClick={[Function]}
+        onFocus={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+      >
+        <RNSVGSvgView
+          align="xMidYMid"
+          bbHeight={18}
+          bbWidth={18}
+          className="eye-undefined__svg-icon-phosphor"
+          color="#7c8095"
+          fill="currentColor"
+          focusable={false}
+          height={18}
+          meetOrSlice={0}
+          minX={0}
+          minY={0}
+          style={
+            [
+              {
+                "backgroundColor": "transparent",
+                "borderWidth": 0,
+              },
+              [
+                undefined,
+                undefined,
+                {},
+              ],
+              {
+                "flex": 0,
+                "height": 18,
+                "width": 18,
+              },
+            ]
+          }
+          testID="phosphor-react-native-eye-undefined"
+          vbHeight={256}
+          vbWidth={256}
+          width={18}
+        >
+          <RNSVGGroup
+            fill={
+              {
+                "type": 2,
+              }
+            }
+            propList={
+              [
+                "fill",
+              ]
+            }
+          >
+            <RNSVGGroup
+              fill={
+                {
+                  "payload": 4286349461,
+                  "type": 0,
+                }
+              }
+              propList={
+                [
+                  "fill",
+                ]
+              }
+            >
+              <RNSVGPath
+                d="M247.31 124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57 61.26 162.88 48 128 48S61.43 61.26 36.34 86.35C17.51 105.18 9 124 8.69 124.76a8 8 0 0 0 0 6.5c.35.79 8.82 19.57 27.65 38.4C61.43 194.74 93.12 208 128 208s66.57-13.26 91.66-38.34c18.83-18.83 27.3-37.61 27.65-38.4a8 8 0 0 0 0-6.5M128 192c-30.78 0-57.67-11.19-79.93-33.25A133.5 133.5 0 0 1 25 128a133.3 133.3 0 0 1 23.07-30.75C70.33 75.19 97.22 64 128 64s57.67 11.19 79.93 33.25A133.5 133.5 0 0 1 231.05 128c-7.21 13.46-38.62 64-103.05 64m0-112a48 48 0 1 0 48 48 48.05 48.05 0 0 0-48-48m0 80a32 32 0 1 1 32-32 32 32 0 0 1-32 32"
+                fill={
+                  {
+                    "payload": 4278190080,
+                    "type": 0,
+                  }
+                }
+              />
+            </RNSVGGroup>
+          </RNSVGGroup>
+        </RNSVGSvgView>
+      </View>
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;

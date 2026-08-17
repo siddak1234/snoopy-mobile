@@ -4,7 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { SessionContext, type SessionContextValue } from '@/hooks/use-session';
 import { SolutionsProvider } from '@/hooks/use-solutions';
-import { NocturneThemeProvider } from '@/hooks/use-theme';
+import { NocturneThemeProvider, type ThemeMode } from '@/hooks/use-theme';
 import { WorkflowsProvider } from '@/hooks/use-workflows';
 
 /** iPhone 16 Pro metrics — the design canvas device (402×874, 59pt notch). */
@@ -33,10 +33,11 @@ const defaultSession: SessionContextValue = {
 export function renderWithProviders(
   ui: React.ReactElement,
   session: SessionContextValue = defaultSession,
+  themeMode: ThemeMode = 'dark',
 ) {
   return render(
     <SafeAreaProvider initialMetrics={initialMetrics}>
-      <NocturneThemeProvider>
+      <NocturneThemeProvider initialMode={themeMode}>
         <SessionContext.Provider value={session}>
           <SolutionsProvider>
             <WorkflowsProvider>{ui}</WorkflowsProvider>
