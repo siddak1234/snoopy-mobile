@@ -22,13 +22,16 @@ import { AvatarBadge } from '@/components/nocturne/avatar-badge';
 import { NocToggle } from '@/components/nocturne/noc-toggle';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
-import { ActionFailure } from '@/components/screen-state';
+import { ActionFailure, ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { em, fonts, layout, status } from '@/constants/theme';
+import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useSession } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
 import { useTheme, type ThemeMode } from '@/hooks/use-theme';
-import { SIGN_OUT_FAILED, SIGN_OUT_RETRY } from '@/lib/content/screen-states';
+import { SIGN_OUT_FAILED, SIGN_OUT_RETRY, errorTitleFor } from '@/lib/content/screen-states';
 import { settingsConnections } from '@/lib/fixtures';
+import { readConnectionProviders, readConnections } from '@/lib/platform/catalog';
+import { toConnectionRows, type ConnectionView } from '@/lib/view/catalog';
 
 function SettingsRow({
   icon: IconCmp,
@@ -88,6 +91,27 @@ export default function SettingsScreen() {
   const { signOut } = useSession();
 
   /**
+   * The CONNECTIONS card needs both reads.
+   *
+   * Driven by the provider list rather than the connection list: the connections
+   * read omits a provider with no connection at all, and the design draws
+   * exactly that row ("Slack · Not connected"). Both are plain authenticated
+   * GETs — §12.1 #62 blocks *completing* a connection on native, not reading
+   * which ones exist.
+   */
+  const connections = useWorkspaceResource(async (workspaceId) => {
+    const [providers, held] = await Promise.all([
+      readConnectionProviders(),
+      readConnections(workspaceId),
+    ]);
+    return toConnectionRows(providers.providers, held.connections);
+  });
+
+  // As with Templates, the fixture survives only for the unconfigured build.
+  const connectionRows: ConnectionView[] =
+    connections.status === 'ready' ? connections.data : settingsConnections;
+
+  /**
    * Sign out for real, and honour the one answer the contract added for us.
    *
    * ADR-0017 §4 makes `POST /v1/auth/logout` answer **502** rather than 204 when
@@ -105,6 +129,24 @@ export default function SettingsScreen() {
     setSignOutFailed(false);
     router.replace('/(auth)/welcome');
   };
+
+  // The design applies gLoad/gErr/gOff to every screen but Home, Settings
+  // included, so a failed read replaces the screen rather than stranding a
+  // half-populated one. `unconfigured` is not among them: it falls through to
+  // the prototype content below.
+  if (connections.status === 'loading') return <ScreenLoading topInset={insets.top} />;
+  if (connections.status === 'offline') {
+    return <ScreenOffline onRetry={connections.reload} topInset={insets.top} />;
+  }
+  if (connections.status === 'error') {
+    return (
+      <ScreenError
+        title={errorTitleFor('settings')}
+        onRetry={connections.reload}
+        topInset={insets.top}
+      />
+    );
+  }
 
   return (
     <ScrollView
@@ -157,13 +199,13 @@ export default function SettingsScreen() {
       <View>
         <SectionLabel>CONNECTIONS</SectionLabel>
         <SurfaceCard style={styles.sectionCard}>
-          {settingsConnections.map((c, i) => (
+          {connectionRows.map((c, i) => (
             <SettingsRow
               key={c.name}
               icon={c.icon}
               title={c.name}
               sub={c.sub}
-              divider={i < settingsConnections.length - 1}
+              divider={i < connectionRows.length - 1}
               onPress={() => {}}
               right={
                 c.connected ? (

@@ -684,7 +684,7 @@ exports[`screen states — dark palette ScreenLoading renders unchanged 1`] = `
         jestAnimatedStyle={
           {
             "value": {
-              "opacity": 0.45,
+              "opacity": "<animated>",
             },
           }
         }
@@ -732,7 +732,7 @@ exports[`screen states — dark palette ScreenLoading renders unchanged 1`] = `
           jestAnimatedStyle={
             {
               "value": {
-                "opacity": 0.45,
+                "opacity": "<animated>",
               },
             }
           }
@@ -773,7 +773,7 @@ exports[`screen states — dark palette ScreenLoading renders unchanged 1`] = `
           jestAnimatedStyle={
             {
               "value": {
-                "opacity": 0.45,
+                "opacity": "<animated>",
               },
             }
           }
@@ -816,7 +816,7 @@ exports[`screen states — dark palette ScreenLoading renders unchanged 1`] = `
       jestAnimatedStyle={
         {
           "value": {
-            "opacity": 0.45,
+            "opacity": "<animated>",
           },
         }
       }
@@ -864,7 +864,7 @@ exports[`screen states — dark palette ScreenLoading renders unchanged 1`] = `
         jestAnimatedStyle={
           {
             "value": {
-              "opacity": 0.45,
+              "opacity": "<animated>",
             },
           }
         }
@@ -905,7 +905,7 @@ exports[`screen states — dark palette ScreenLoading renders unchanged 1`] = `
         jestAnimatedStyle={
           {
             "value": {
-              "opacity": 0.45,
+              "opacity": "<animated>",
             },
           }
         }
@@ -946,7 +946,7 @@ exports[`screen states — dark palette ScreenLoading renders unchanged 1`] = `
         jestAnimatedStyle={
           {
             "value": {
-              "opacity": 0.45,
+              "opacity": "<animated>",
             },
           }
         }
@@ -987,7 +987,7 @@ exports[`screen states — dark palette ScreenLoading renders unchanged 1`] = `
         jestAnimatedStyle={
           {
             "value": {
-              "opacity": 0.45,
+              "opacity": "<animated>",
             },
           }
         }
@@ -1071,7 +1071,7 @@ exports[`screen states — dark palette ScreenLoading/tiles renders unchanged 1`
         jestAnimatedStyle={
           {
             "value": {
-              "opacity": 0.45,
+              "opacity": "<animated>",
             },
           }
         }
@@ -1119,7 +1119,7 @@ exports[`screen states — dark palette ScreenLoading/tiles renders unchanged 1`
           jestAnimatedStyle={
             {
               "value": {
-                "opacity": 0.45,
+                "opacity": "<animated>",
               },
             }
           }
@@ -1160,7 +1160,7 @@ exports[`screen states — dark palette ScreenLoading/tiles renders unchanged 1`
           jestAnimatedStyle={
             {
               "value": {
-                "opacity": 0.45,
+                "opacity": "<animated>",
               },
             }
           }
@@ -1211,7 +1211,7 @@ exports[`screen states — dark palette ScreenLoading/tiles renders unchanged 1`
         jestAnimatedStyle={
           {
             "value": {
-              "opacity": 0.45,
+              "opacity": "<animated>",
             },
           }
         }
@@ -1256,7 +1256,7 @@ exports[`screen states — dark palette ScreenLoading/tiles renders unchanged 1`
         jestAnimatedStyle={
           {
             "value": {
-              "opacity": 0.45,
+              "opacity": "<animated>",
             },
           }
         }
@@ -1301,7 +1301,7 @@ exports[`screen states — dark palette ScreenLoading/tiles renders unchanged 1`
         jestAnimatedStyle={
           {
             "value": {
-              "opacity": 0.45,
+              "opacity": "<animated>",
             },
           }
         }
@@ -1347,7 +1347,7 @@ exports[`screen states — dark palette ScreenLoading/tiles renders unchanged 1`
       jestAnimatedStyle={
         {
           "value": {
-            "opacity": 0.45,
+            "opacity": "<animated>",
           },
         }
       }
@@ -1395,7 +1395,7 @@ exports[`screen states — dark palette ScreenLoading/tiles renders unchanged 1`
         jestAnimatedStyle={
           {
             "value": {
-              "opacity": 0.45,
+              "opacity": "<animated>",
             },
           }
         }
@@ -1436,7 +1436,7 @@ exports[`screen states — dark palette ScreenLoading/tiles renders unchanged 1`
         jestAnimatedStyle={
           {
             "value": {
-              "opacity": 0.45,
+              "opacity": "<animated>",
             },
           }
         }
@@ -1477,7 +1477,7 @@ exports[`screen states — dark palette ScreenLoading/tiles renders unchanged 1`
         jestAnimatedStyle={
           {
             "value": {
-              "opacity": 0.45,
+              "opacity": "<animated>",
             },
           }
         }
@@ -1518,7 +1518,7 @@ exports[`screen states — dark palette ScreenLoading/tiles renders unchanged 1`
         jestAnimatedStyle={
           {
             "value": {
-              "opacity": 0.45,
+              "opacity": "<animated>",
             },
           }
         }
@@ -2663,7 +2663,7 @@ exports[`screen states — light palette ScreenLoading renders unchanged 1`] = `
         jestAnimatedStyle={
           {
             "value": {
-              "opacity": 0.45,
+              "opacity": "<animated>",
             },
           }
         }
@@ -2711,7 +2711,7 @@ exports[`screen states — light palette ScreenLoading renders unchanged 1`] = `
           jestAnimatedStyle={
             {
               "value": {
-                "opacity": 0.45,
+                "opacity": "<animated>",
               },
             }
           }
@@ -2752,7 +2752,7 @@ exports[`screen states — light palette ScreenLoading renders unchanged 1`] = `
           jestAnimatedStyle={
             {
               "value": {
-                "opacity": 0.45,
+                "opacity": "<animated>",
               },
             }
           }
@@ -2795,7 +2795,7 @@ exports[`screen states — light palette ScreenLoading renders unchanged 1`] = `
       jestAnimatedStyle={
         {
           "value": {
-            "opacity": 0.45,
+            "opacity": "<animated>",
           },
         }
       }
@@ -2843,7 +2843,7 @@ exports[`screen states — light palette ScreenLoading renders unchanged 1`] = `
         jestAnimatedStyle={
           {
             "value": {
-              "opacity": 0.45,
+              "opacity": "<animated>",
             },
           }
         }
@@ -2884,7 +2884,7 @@ exports[`screen states — light palette ScreenLoading renders unchanged 1`] = `
         jestAnimatedStyle={
           {
             "value": {
-              "opacity": 0.45,
+              "opacity": "<animated>",
             },
           }
         }
@@ -2925,7 +2925,7 @@ exports[`screen states — light palette ScreenLoading renders unchanged 1`] = `
         jestAnimatedStyle={
           {
             "value": {
-              "opacity": 0.45,
+              "opacity": "<animated>",
             },
           }
         }
@@ -2966,7 +2966,7 @@ exports[`screen states — light palette ScreenLoading renders unchanged 1`] = `
         jestAnimatedStyle={
           {
             "value": {
-              "opacity": 0.45,
+              "opacity": "<animated>",
             },
           }
         }
@@ -3050,7 +3050,7 @@ exports[`screen states — light palette ScreenLoading/tiles renders unchanged 1
         jestAnimatedStyle={
           {
             "value": {
-              "opacity": 0.45,
+              "opacity": "<animated>",
             },
           }
         }
@@ -3098,7 +3098,7 @@ exports[`screen states — light palette ScreenLoading/tiles renders unchanged 1
           jestAnimatedStyle={
             {
               "value": {
-                "opacity": 0.45,
+                "opacity": "<animated>",
               },
             }
           }
@@ -3139,7 +3139,7 @@ exports[`screen states — light palette ScreenLoading/tiles renders unchanged 1
           jestAnimatedStyle={
             {
               "value": {
-                "opacity": 0.45,
+                "opacity": "<animated>",
               },
             }
           }
@@ -3190,7 +3190,7 @@ exports[`screen states — light palette ScreenLoading/tiles renders unchanged 1
         jestAnimatedStyle={
           {
             "value": {
-              "opacity": 0.45,
+              "opacity": "<animated>",
             },
           }
         }
@@ -3235,7 +3235,7 @@ exports[`screen states — light palette ScreenLoading/tiles renders unchanged 1
         jestAnimatedStyle={
           {
             "value": {
-              "opacity": 0.45,
+              "opacity": "<animated>",
             },
           }
         }
@@ -3280,7 +3280,7 @@ exports[`screen states — light palette ScreenLoading/tiles renders unchanged 1
         jestAnimatedStyle={
           {
             "value": {
-              "opacity": 0.45,
+              "opacity": "<animated>",
             },
           }
         }
@@ -3326,7 +3326,7 @@ exports[`screen states — light palette ScreenLoading/tiles renders unchanged 1
       jestAnimatedStyle={
         {
           "value": {
-            "opacity": 0.45,
+            "opacity": "<animated>",
           },
         }
       }
@@ -3374,7 +3374,7 @@ exports[`screen states — light palette ScreenLoading/tiles renders unchanged 1
         jestAnimatedStyle={
           {
             "value": {
-              "opacity": 0.45,
+              "opacity": "<animated>",
             },
           }
         }
@@ -3415,7 +3415,7 @@ exports[`screen states — light palette ScreenLoading/tiles renders unchanged 1
         jestAnimatedStyle={
           {
             "value": {
-              "opacity": 0.45,
+              "opacity": "<animated>",
             },
           }
         }
@@ -3456,7 +3456,7 @@ exports[`screen states — light palette ScreenLoading/tiles renders unchanged 1
         jestAnimatedStyle={
           {
             "value": {
-              "opacity": 0.45,
+              "opacity": "<animated>",
             },
           }
         }
@@ -3497,7 +3497,7 @@ exports[`screen states — light palette ScreenLoading/tiles renders unchanged 1
         jestAnimatedStyle={
           {
             "value": {
-              "opacity": 0.45,
+              "opacity": "<animated>",
             },
           }
         }

@@ -2,6 +2,7 @@ import React from 'react';
 import { screen } from '@testing-library/react-native';
 
 import TemplatesScreen from '@/app/(tabs)/flows/templates';
+import SettingsScreen from '@/app/(tabs)/settings';
 import type { SessionContextValue } from '@/hooks/use-session';
 import { errorTitleFor } from '@/lib/content/screen-states';
 import { PlatformError, PlatformUnreachableError } from '@/lib/platform/problem';
@@ -108,6 +109,67 @@ describe('Templates, wired to the catalog', () => {
     // — which is a decision, not a bug fix. See DESIGN-CONTRACT.md.
     await renderWithProviders(<TemplatesScreen />, unconfigured);
     expect(await screen.findByText('Invoice capture')).toBeTruthy();
+    expect(platformJson).not.toHaveBeenCalled();
+  });
+});
+
+describe('Settings CONNECTIONS, wired to the platform', () => {
+  const PROVIDERS = {
+    providers: [
+      { providerId: 'gmail', displayName: 'Gmail', description: '', scopes: [], authType: 'oauth2' },
+      { providerId: 'slack', displayName: 'Slack', description: '', scopes: [], authType: 'oauth2' },
+    ],
+  };
+  const CONNECTIONS = {
+    connections: [
+      {
+        id: 'c1',
+        providerId: 'gmail',
+        workspaceId: WORKSPACE,
+        externalAccount: { id: 'a1', displayName: 'ap@acme.co' },
+        status: 'connected',
+        requiredScopes: [],
+        grantedScopes: [],
+        usedByCount: 2,
+      },
+    ],
+  };
+
+  function routeReads() {
+    platformJson.mockImplementation((path: string) =>
+      path === '/v1/connections/providers'
+        ? Promise.resolve(PROVIDERS)
+        : Promise.resolve(CONNECTIONS),
+    );
+  }
+
+  it('renders usedByCount as the design words it, and pluralises', async () => {
+    routeReads();
+    await renderWithProviders(<SettingsScreen />, signedIn);
+    // `usedByCount` is the one field no single service can answer, and it is
+    // exactly the design's "used by 2 solutions" — so nothing is invented here.
+    expect(await screen.findByText('Connected · used by 2 solutions')).toBeTruthy();
+  });
+
+  it('shows a provider with no connection at all, which the connections read omits', async () => {
+    routeReads();
+    await renderWithProviders(<SettingsScreen />, signedIn);
+    // Driven by the provider list for this reason: Slack has no connection row,
+    // and the design still draws it as "Not connected".
+    expect(await screen.findByText('Slack')).toBeTruthy();
+    expect(screen.getByText('Not connected')).toBeTruthy();
+  });
+
+  it('replaces the screen when the read fails, per the design', async () => {
+    platformJson.mockRejectedValue(new PlatformError('Service Unavailable', 503));
+    await renderWithProviders(<SettingsScreen />, signedIn);
+    expect(await screen.findByTestId('screen-error')).toBeTruthy();
+    expect(screen.getByText(errorTitleFor('settings'))).toBeTruthy();
+  });
+
+  it('keeps the prototype rows when the build has no backend', async () => {
+    await renderWithProviders(<SettingsScreen />, unconfigured);
+    expect(await screen.findByText('QuickBooks Online')).toBeTruthy();
     expect(platformJson).not.toHaveBeenCalled();
   });
 });

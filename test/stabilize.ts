@@ -35,14 +35,34 @@ const PRECISION = 100; // 2 decimal places
 /** Keys whose subtree holds a sampled animation value rather than authored style. */
 const ANIMATED_KEYS = ['jestAnimatedStyle', 'jestAnimatedProps'];
 
-function roundDeep(value: unknown): unknown {
+/**
+ * The one animated property that genuinely travels, and so cannot be pinned.
+ *
+ * Rounding was tried first and was not enough. It removes sub-frame drift
+ * (0.45000422… → 0.45) but a *whole* frame moves the value far further: the
+ * pulse eases 0.45→1 over 700ms, so ~80ms of scheduler delay reads 0.46, which
+ * survives rounding and fails the snapshot. That is exactly what happened when
+ * the suite grew to 23 files and the extra parallel load slowed each render.
+ *
+ * So the sampled phase is replaced outright. Nothing is lost that this gate
+ * asserts: Skeleton's colour, width, height and radius live in the ordinary
+ * `style`/`jestInlineStyle` and are still compared exactly, and the pulse itself
+ * is motion — which Gate 8 does not name and DESIGN-GAPS item 11 tracks
+ * separately as undesigned. `NocToggle` is untouched by this: its animated
+ * values are a colour (a string) and a knob position that never travels.
+ */
+const SAMPLED = new Set(['opacity']);
+const SAMPLED_MARKER = '<animated>';
+
+function roundDeep(value: unknown, key?: string): unknown {
   if (typeof value === 'number') {
+    if (key && SAMPLED.has(key)) return SAMPLED_MARKER;
     return Number.isFinite(value) ? Math.round(value * PRECISION) / PRECISION : value;
   }
-  if (Array.isArray(value)) return value.map(roundDeep);
+  if (Array.isArray(value)) return value.map((v) => roundDeep(v));
   if (value && typeof value === 'object') {
     return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, roundDeep(v)]),
+      Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, roundDeep(v, k)]),
     );
   }
   // Strings — including every animated colour — pass through untouched.
