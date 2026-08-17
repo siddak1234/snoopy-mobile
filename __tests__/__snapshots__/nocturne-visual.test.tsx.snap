@@ -1390,7 +1390,7 @@ exports[`Nocturne set — dark palette Skeleton renders unchanged 1`] = `
     jestAnimatedStyle={
       {
         "value": {
-          "opacity": 0.45,
+          "opacity": "<animated>",
         },
       }
     }
@@ -4366,7 +4366,7 @@ exports[`Nocturne set — light palette Skeleton renders unchanged 1`] = `
     jestAnimatedStyle={
       {
         "value": {
-          "opacity": 0.45,
+          "opacity": "<animated>",
         },
       }
     }
