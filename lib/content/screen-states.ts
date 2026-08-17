@@ -63,3 +63,16 @@ export const OFFLINE_BODY =
 
 export const RETRY_LABEL = 'Retry';
 export const BACK_LABEL = 'Go back';
+
+/**
+ * `soFail` — sign-out could not revoke the session.
+ *
+ * The wording is load-bearing rather than decorative. ADR-0017 §4 has the Edge
+ * answer 502 instead of 204 when revocation fails, so that a device does not
+ * delete a keychain entry for a session that is still live upstream. The screen
+ * therefore has to say two true things at once: the sign-out did not happen,
+ * and nothing local was thrown away.
+ */
+export const SIGN_OUT_FAILED =
+  "Sign-out didn't complete — this session couldn't be revoked, so you're still signed in on this device. Nothing was cleared.";
+export const SIGN_OUT_RETRY = 'Retry sign out';
