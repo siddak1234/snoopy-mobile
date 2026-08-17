@@ -26,6 +26,7 @@ import { errorTitleFor } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
 import { PlatformNotConfiguredError } from '@/lib/platform/problem';
 import { iconFor } from '@/lib/view/icon-registry';
+import { SECTION_LABEL, SetupFieldRow, bySection } from '@/components/setup-field';
 
 /** One-time solution setup (design `sSetup`). The design's fixture walks
  *  through Invoice triage; the header names whichever solution was added. */
@@ -63,6 +64,8 @@ export default function SetupScreen() {
     : (solutionDefs[Number(index ?? 0)] ?? solutionDefs[0]);
   const templateId = entry?.templateId ?? solution.name;
 
+  /** Config values the person has changed, by the field's `key`. */
+  const [config, setConfig] = useState<Record<string, unknown>>({});
   const [qbConnected, setQbConnected] = useState(false);
   const [holdOnMismatch, setHoldOnMismatch] = useState(true);
   const [holdAboveLimit, setHoldAboveLimit] = useState(true);
@@ -110,6 +113,33 @@ export default function SetupScreen() {
           </Text>
         </View>
       </View>
+
+      {/*
+        Generated from `manifest.setup[]` when a live manifest resolved, and the
+        prototype's fixed rows otherwise. BUILD-PLAN 4.5.3 requires exactly this —
+        "Rows are generated from that array, not hard-coded" — and §2.2 closes
+        both unions at four precisely so four widgets and four headings suffice
+        for every automation that will ever ship.
+      */}
+      {entry ? (
+        bySection(entry.setup).map(({ section, fields }) => (
+          <View key={section}>
+            <SectionLabel>{SECTION_LABEL[section]}</SectionLabel>
+            <SurfaceCard style={styles.sectionCard}>
+              {fields.map((f, i) => (
+                <SetupFieldRow
+                  key={f.key}
+                  field={f}
+                  value={config[f.key] ?? f.defaultValue}
+                  onChange={(next) => setConfig((prev) => ({ ...prev, [f.key]: next }))}
+                  divider={i < fields.length - 1}
+                />
+              ))}
+            </SurfaceCard>
+          </View>
+        ))
+      ) : (
+        <>
 
       <View>
         <SectionLabel>1 · CONNECTIONS</SectionLabel>
@@ -224,6 +254,8 @@ export default function SetupScreen() {
           </Pressable>
         </SurfaceCard>
       </View>
+        </>
+      )}
 
       <Pressable
         onPress={activate}

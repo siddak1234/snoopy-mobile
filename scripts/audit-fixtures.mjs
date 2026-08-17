@@ -62,7 +62,7 @@ const knownFixtureReaders = new Map([
   // refactor is app-wide (SolutionsProvider is mounted at the root) and cannot
   // remove this import anyway, because PLAN_BASE_PRICE has no wire source.
   ["app/(tabs)/solutions/index.tsx", "wired — unconfigured fallback only"],
-  ["app/(tabs)/solutions/setup.tsx", "MOBILE — identity wired; sections still fixed rows, not generated from setup[]"],
+  ["app/(tabs)/solutions/setup.tsx", "wired — unconfigured fallback only"],
 ]);
 
 /** `from '@/lib/fixtures'`, `from '../lib/fixtures'`, and friends. */
