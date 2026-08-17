@@ -65,6 +65,34 @@ export const RETRY_LABEL = 'Retry';
 export const BACK_LABEL = 'Go back';
 
 /**
+ * The first-run empties.
+ *
+ * These are not the filtered-empty lines the screens already had. Flows read
+ * *"No workflows match {{q}}"* and Activity *"No … runs in the last two days"* —
+ * both assume a search or a filter, so a workspace that simply has nothing yet
+ * got copy that made no sense. The design added a genuine first-run state for
+ * each, in Home's grammar: an invitation with somewhere to go, never a dead end.
+ */
+export const FLOWS_EMPTY_TITLE = 'No workflows yet';
+export const FLOWS_EMPTY_BODY =
+  'Add a prebuilt solution or start from a template — your first workflow can be live in minutes.';
+export const ACTIVITY_EMPTY_TITLE = 'No activity yet';
+export const ACTIVITY_EMPTY_BODY = 'Every run lands here the moment your first agent goes live.';
+export const BROWSE_SOLUTIONS_LABEL = 'Browse solutions';
+export const START_FROM_TEMPLATE_LABEL = 'Start from a template';
+
+/**
+ * `notifsEmpty` — and note it is not an apology.
+ *
+ * The design's words explain the product's own rule rather than treating silence
+ * as absence: notifications exist for held runs and failures, so an empty inbox
+ * is the system working. It carries no action for the same reason.
+ */
+export const NOTIFICATIONS_EMPTY_TITLE = 'Quiet, as designed';
+export const NOTIFICATIONS_EMPTY_BODY =
+  'We only notify you for held runs and failures. Nothing needs you right now.';
+
+/**
  * `soFail` — sign-out could not revoke the session.
  *
  * The wording is load-bearing rather than decorative. ADR-0017 §4 has the Edge

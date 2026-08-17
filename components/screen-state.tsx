@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { ArrowClockwise, WarningCircle, WifiSlash } from 'phosphor-react-native';
+import { ArrowClockwise, WarningCircle, WifiSlash, type Icon } from 'phosphor-react-native';
 
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
@@ -194,6 +194,71 @@ export function ScreenOffline({
 }
 
 /**
+ * A first-run empty — an invitation, not an apology.
+ *
+ * Home's `sHomeEmpty` set this grammar and the design reused it for Flows and
+ * Activity: an accent-tinted hero, a headline, one sentence, and somewhere to go.
+ * The hero is deliberately the accent treatment rather than the neutral one the
+ * failure states use — nothing has gone wrong here, so it must not look like it
+ * has. `action` is optional because the notifications empty state has none: an
+ * empty inbox is the product's own rule working, not something to fix.
+ */
+export function ScreenEmpty({
+  icon,
+  title,
+  body,
+  action,
+  secondaryAction,
+  topInset = 0,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  body: string;
+  action?: { label: string; icon?: Icon; onPress?: () => void };
+  secondaryAction?: { label: string; onPress?: () => void };
+  topInset?: number;
+}) {
+  const { palette } = useTheme();
+  return (
+    <View
+      testID="screen-empty"
+      style={[styles.root, { paddingTop: topInset + DESIGN_TOP, backgroundColor: palette.bg }]}>
+      <View style={styles.center}>
+        <View
+          style={[
+            styles.emptyHero,
+            { borderColor: palette.accentRamp[700], backgroundColor: withAlpha(palette.accent, 0.1) },
+          ]}>
+          {icon}
+        </View>
+        <Text style={[styles.emptyTitle, { color: palette.text }]}>{title}</Text>
+        <Text style={[styles.body, { color: palette.neutral[400] }]}>{body}</Text>
+        {action ? (
+          <PillButton
+            label={action.label}
+            variant="primary"
+            height={48}
+            {...(action.icon ? { icon: action.icon, iconSize: 18 } : {})}
+            onPress={action.onPress}
+            style={styles.emptyCta}
+          />
+        ) : null}
+        {secondaryAction ? (
+          <PillButton
+            label={secondaryAction.label}
+            variant="plain"
+            height={44}
+            fontSize={14.5}
+            onPress={secondaryAction.onPress}
+            style={styles.emptySecondary}
+          />
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+/**
  * The inline action-failure callout — one grammar for every failed action.
  *
  * The design ratified this boundary: a failed *action* on data that already
@@ -276,6 +341,23 @@ const styles = StyleSheet.create({
     maxWidth: 224,
   },
   retry: { marginTop: 8, paddingHorizontal: 26 },
+  emptyHero: {
+    width: 88,
+    height: 88,
+    borderRadius: 26,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyTitle: {
+    marginTop: 8,
+    fontFamily: fonts.medium,
+    fontSize: 22,
+    letterSpacing: em(-0.015, 22),
+    textAlign: 'center',
+  },
+  emptyCta: { marginTop: 8, alignSelf: 'stretch' },
+  emptySecondary: { alignSelf: 'stretch' },
   callout: {
     flexDirection: 'row',
     alignItems: 'flex-start',
