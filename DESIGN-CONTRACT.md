@@ -208,6 +208,18 @@ an optional `template`, which makes 8.7 real for any caller that can name one �
 and no caller can until flow detail is wired, because detail is still keyed by the
 fixture's `FlowKey`.
 
+**FINDING 6 — an automation's required providers are not published, so a
+workflow's connections card cannot be drawn.** The design's workflow detail lists
+every account the automation uses, connected ones included ("QuickBooks Online ·
+Connected", "Google Sheets · Auth expired"). Nothing publishes that set:
+`AutomationCatalogEntry` is `{templateId, version, name, description, category,
+icon, monthlyPriceUsd, subscribed, available, setup, pipeline}` with no providers
+field, and `Subscription.unmetConnections` lists **only what is still missing**.
+`Connection.usedByCount` gives a number and not the identities, so there is no
+reverse lookup either. A live workspace can therefore show what is unconnected
+and cannot show what is satisfied — half the card. `lib/view/catalog.ts` renders
+the unmet rows and says so rather than inventing a provider set.
+
 **FINDING 1 — the three specs disagree about the session credential.** Read off
 the specs, not inferred:
 
