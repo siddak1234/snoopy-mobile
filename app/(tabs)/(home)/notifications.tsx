@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { BellRinging } from 'phosphor-react-native';
+import { BellRinging, CheckCircle, CrownSimple, HandPalm, XCircle } from 'phosphor-react-native';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,17 +10,98 @@ import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { notifications, type NotificationItem } from '@/lib/fixtures';
+import { readCatalog } from '@/lib/platform/catalog';
+import { readApprovals, readRuns, readSubscriptions } from '@/lib/platform/runs';
+import { catalogIndex, composeNotifications, subscriptionIndex } from '@/lib/view/runs';
+import { useWorkspaceResource } from '@/hooks/use-resource';
+import { ScreenEmpty, ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
+import {
+  NOTIFICATIONS_EMPTY_BODY,
+  NOTIFICATIONS_EMPTY_TITLE,
+  errorTitleFor,
+} from '@/lib/content/screen-states';
 
 /** Notifications inbox (design `sNotifs`) with the push-priming card. */
+/** Tone → glyph, so a composed row draws what the design draws for that kind. */
+const NOTIFICATION_ICON = {
+  ok: CheckCircle,
+  warn: HandPalm,
+  err: XCircle,
+  accent: CrownSimple,
+} as const;
+
 export default function NotificationsScreen() {
   const { palette } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+
+  /**
+   * There is no notifications route, so the inbox is composed.
+   *
+   * §12.1 #71 refuses one and names the composition: held runs awaiting a
+   * decision, plus failed runs. That is exactly what the product notifies on,
+   * and the design's own empty state says so — "We only notify you for held runs
+   * and failures."
+   *
+   * It cannot remember what was already seen: read state is an unbuilt
+   * subsystem, so every row reports itself unread. Keeping a local read flag
+   * would make two devices disagree about the same inbox, which is worse than
+   * the honest limitation.
+   */
+  const inbox = useWorkspaceResource(async (workspaceId) => {
+    const [approvals, runs, subs, catalog] = await Promise.all([
+      readApprovals(workspaceId, 'pending'),
+      readRuns(workspaceId),
+      readSubscriptions(workspaceId),
+      readCatalog(workspaceId),
+    ]);
+    return composeNotifications(
+      approvals.approvals,
+      runs.runs.filter((r) => r.status === 'failed'),
+      subscriptionIndex(subs.subscriptions),
+      catalogIndex(catalog.automations),
+    );
+  });
+
+  const items: NotificationItem[] =
+    inbox.status === 'ready'
+      ? inbox.data.map((n) => ({ ...n, icon: NOTIFICATION_ICON[n.tone] }))
+      : notifications;
+
   // The design's priming card is dismiss-only on both buttons; a real iOS
   // permission request needs expo-notifications, which is not installed.
   const [askPush, setAskPush] = useState(true);
   const [allRead, setAllRead] = useState(false);
 
+  // Every hook is above this line on purpose: the guards below return early, and
+  // a hook called after them would run on some renders and not others.
+
+  if (inbox.status === 'loading') return <ScreenLoading topInset={insets.top} />;
+  if (inbox.status === 'offline') {
+    return <ScreenOffline onRetry={inbox.reload} onBack={() => router.back()} topInset={insets.top} />;
+  }
+  if (inbox.status === 'error') {
+    return (
+      <ScreenError
+        title={errorTitleFor('notifications')}
+        onRetry={inbox.reload}
+        onBack={() => router.back()}
+        topInset={insets.top}
+      />
+    );
+  }
+  if (inbox.status === 'ready' && items.length === 0) {
+    // Not an apology: an empty inbox is the product's rule working, which is why
+    // the design gives this state no action.
+    return (
+      <ScreenEmpty
+        icon={<BellRinging size={40} />}
+        title={NOTIFICATIONS_EMPTY_TITLE}
+        body={NOTIFICATIONS_EMPTY_BODY}
+        topInset={insets.top}
+      />
+    );
+  }
   const toneColor = (tone: NotificationItem['tone']) =>
     tone === 'ok'
       ? status.ok
@@ -103,7 +184,7 @@ export default function NotificationsScreen() {
       ) : null}
 
       <SurfaceCard style={styles.list}>
-        {notifications.map((item, i) => {
+        {items.map((item, i) => {
           const IconCmp = item.icon;
           const unread = item.unread && !allRead;
           return (
@@ -112,7 +193,7 @@ export default function NotificationsScreen() {
               onPress={() => open(item)}
               style={({ pressed }) => [
                 styles.row,
-                i < notifications.length - 1 && {
+                i < items.length - 1 && {
                   borderBottomWidth: 1,
                   borderBottomColor: palette.divider,
                 },

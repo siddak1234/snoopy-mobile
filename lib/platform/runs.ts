@@ -50,3 +50,30 @@ export function readRuns(workspaceId: string, subscriptionId?: string): Promise<
 export function localMidnight(now: Date = new Date()): Date {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
 }
+
+export type Approval = components['schemas']['Approval'];
+export type Subscription = components['schemas']['Subscription'];
+
+/**
+ * Approvals awaiting a decision.
+ *
+ * `status` is passed EXPLICITLY and that is load-bearing. The parameter is
+ * `required: false`, and omitting it returns approvals of **every** status —
+ * approved, rejected and expired included — despite the operation summary
+ * reading "awaiting a decision". A caller that wants the inbox must say so.
+ */
+export function readApprovals(
+  workspaceId: string,
+  status: Approval['status'] = 'pending',
+): Promise<{ approvals: Approval[] }> {
+  return platformJson<{ approvals: Approval[] }>(
+    `/v1/workspaces/${workspaceId}/approvals?status=${encodeURIComponent(status)}`,
+  );
+}
+
+/** The workspace's subscriptions — the middle hop of the approval-title join. */
+export function readSubscriptions(workspaceId: string): Promise<{ subscriptions: Subscription[] }> {
+  return platformJson<{ subscriptions: Subscription[] }>(
+    `/v1/workspaces/${workspaceId}/subscriptions`,
+  );
+}

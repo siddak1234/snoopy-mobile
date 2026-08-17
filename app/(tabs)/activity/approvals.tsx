@@ -6,9 +6,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
+import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useTheme } from '@/hooks/use-theme';
+import { errorTitleFor } from '@/lib/content/screen-states';
 import { approvalDoneText, approvals, type ApprovalItem } from '@/lib/fixtures';
+import { readCatalog } from '@/lib/platform/catalog';
+import { readApprovals, readSubscriptions } from '@/lib/platform/runs';
+import { relativeTimeAgo } from '@/lib/view/format';
+import { approvalTitle, approvalWorkflowLabel, catalogIndex, subscriptionIndex } from '@/lib/view/runs';
 
 type Decision = 'approved' | 'rejected';
 
@@ -68,9 +75,56 @@ export default function ApprovalsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [decisions, setDecisions] = useState<Record<number, Decision>>({});
+
+  /**
+   * The inbox, and the three-hop join its headline needs.
+   *
+   * `status=pending` is passed explicitly: the parameter is `required: false`
+   * and omitting it returns approvals of every status, so the summary's
+   * "awaiting a decision" is a description of intent rather than of the default.
+   *
+   * Three reads because §12.1 #70 refuses an approval title and the substitute
+   * is a join `Approval` cannot start on its own — it carries no `templateId`.
+   * subscriptionId → subscriptions → templateId → catalog entry → its pipeline →
+   * the step whose id matches. `reason` is always present and is the line a
+   * person actually decides on, so a missing hop degrades the headline and never
+   * blanks the card.
+   */
+  const inbox = useWorkspaceResource(async (workspaceId) => {
+    const [pendingApprovals, subs, catalog] = await Promise.all([
+      readApprovals(workspaceId, 'pending'),
+      readSubscriptions(workspaceId),
+      readCatalog(workspaceId),
+    ]);
+    const subIndex = subscriptionIndex(subs.subscriptions);
+    const catIndex = catalogIndex(catalog.automations);
+    return pendingApprovals.approvals.map<ApprovalItem>((a) => ({
+      workflow: approvalWorkflowLabel(a, subIndex, catIndex),
+      title: approvalTitle(a, subIndex, catIndex),
+      why: a.reason,
+      time: relativeTimeAgo(a.createdAt),
+    }));
+  });
+
+  const items = inbox.status === 'ready' ? inbox.data : approvals;
   const decided = Object.keys(decisions).length;
-  const pending = approvals.length - decided;
-  const allDone = decided === approvals.length;
+  const pending = items.length - decided;
+  const allDone = decided === items.length;
+
+  if (inbox.status === 'loading') return <ScreenLoading topInset={insets.top} />;
+  if (inbox.status === 'offline') {
+    return <ScreenOffline onRetry={inbox.reload} onBack={() => router.back()} topInset={insets.top} />;
+  }
+  if (inbox.status === 'error') {
+    return (
+      <ScreenError
+        title={errorTitleFor('approvals')}
+        onRetry={inbox.reload}
+        onBack={() => router.back()}
+        topInset={insets.top}
+      />
+    );
+  }
 
   return (
     <ScrollView
@@ -95,7 +149,7 @@ export default function ApprovalsScreen() {
           </Text>
         </View>
       ) : null}
-      {approvals.map((item, i) => (
+      {items.map((item, i) => (
         <ApprovalCard
           key={i}
           item={item}

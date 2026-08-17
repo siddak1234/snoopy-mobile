@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { CheckCircle } from 'phosphor-react-native';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -6,14 +7,25 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FilterChip } from '@/components/nocturne/filter-chip';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { ScreenEmpty, ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { em, fonts, layout, status } from '@/constants/theme';
+import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useTheme } from '@/hooks/use-theme';
+import {
+  ACTIVITY_EMPTY_BODY,
+  ACTIVITY_EMPTY_TITLE,
+  BROWSE_SOLUTIONS_LABEL,
+  errorTitleFor,
+} from '@/lib/content/screen-states';
 import {
   activityFilters,
   activityToday,
   activityYesterday,
   type ActivityItem,
 } from '@/lib/fixtures';
+import { readCatalog } from '@/lib/platform/catalog';
+import { readRuns } from '@/lib/platform/runs';
+import { catalogIndex, runIcon, splitByDay, toRunRow } from '@/lib/view/runs';
 
 const toneColor = { ok: status.ok, warn: status.warnText, err: status.err } as const;
 
@@ -67,11 +79,74 @@ const matchesFilter = (item: ActivityItem, filter: ActivityFilter) =>
 export default function ActivityScreen() {
   const { palette } = useTheme();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [filter, setFilter] = useState<ActivityFilter>('All');
 
-  const today = activityToday.filter((i) => matchesFilter(i, filter));
-  const yesterday = activityYesterday.filter((i) => matchesFilter(i, filter));
+  /**
+   * The runs list, joined to the catalog for a display name.
+   *
+   * Two reads because `Run` publishes `templateId` and no name — the runs list's
+   * own description calls that join intended client work, so it is not a gap.
+   * The second line comes from `resultSummary` or `failureReason`, which is
+   * §12.1 #67's named substitute for the run output it refuses.
+   *
+   * Grouping is local-day, not UTC: "Today" and "Yesterday" are the design's two
+   * sections and a person's own midnight decides them.
+   */
+  const activity = useWorkspaceResource(async (workspaceId) => {
+    const [runs, catalog] = await Promise.all([readRuns(workspaceId), readCatalog(workspaceId)]);
+    const index = catalogIndex(catalog.automations);
+    const grouped = splitByDay(runs.runs);
+    const toRow = (run: (typeof runs.runs)[number]): ActivityItem => {
+      const row = toRunRow(run, index);
+      return {
+        icon: runIcon(run.status),
+        tone: row.tone === 'accent' || row.tone === 'neutral' ? 'warn' : row.tone,
+        title: row.name,
+        desc: row.meta,
+        time: row.time,
+      };
+    };
+    return { today: grouped.today.map(toRow), yesterday: grouped.yesterday.map(toRow) };
+  });
+
+  const live = activity.status === 'ready' ? activity.data : null;
+  const sourceToday = live ? live.today : activityToday;
+  const sourceYesterday = live ? live.yesterday : activityYesterday;
+
+  const today = sourceToday.filter((i) => matchesFilter(i, filter));
+  const yesterday = sourceYesterday.filter((i) => matchesFilter(i, filter));
   const isEmpty = today.length === 0 && yesterday.length === 0;
+  /** Nothing at all, as opposed to nothing matching a filter. */
+  const hasNoRuns = live !== null && live.today.length === 0 && live.yesterday.length === 0;
+
+  if (activity.status === 'loading') return <ScreenLoading topInset={insets.top} />;
+  if (activity.status === 'offline') {
+    return <ScreenOffline onRetry={activity.reload} topInset={insets.top} />;
+  }
+  if (activity.status === 'error') {
+    return (
+      <ScreenError
+        title={errorTitleFor('activity')}
+        onRetry={activity.reload}
+        topInset={insets.top}
+      />
+    );
+  }
+  if (hasNoRuns) {
+    // The first-run empty, distinct from the filtered one below: the old copy
+    // read "No … runs in the last two days", which assumes a filter and reads as
+    // nonsense for a workspace that has never run anything.
+    return (
+      <ScreenEmpty
+        icon={<CheckCircle size={40} color={status.ok} />}
+        title={ACTIVITY_EMPTY_TITLE}
+        body={ACTIVITY_EMPTY_BODY}
+        action={{ label: BROWSE_SOLUTIONS_LABEL, onPress: () => router.push('/(tabs)/solutions') }}
+        topInset={insets.top}
+      />
+    );
+  }
 
   return (
     <ScrollView
