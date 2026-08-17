@@ -107,9 +107,18 @@ export const status = {
   errCalloutBorder: 'rgba(248,113,113,0.3)',
   /** Dialog backdrop (design: rgba(12,13,22,.62) + blur). */
   overlay: 'rgba(12,13,22,0.62)',
-  /** Toggle knob + its drop shadow (the design's only pure white + black). */
+  /**
+   * Toggle knob + its drop shadow (the design's only pure white + black).
+   *
+   * The design writes the shadow as a single `rgba(0,0,0,.3)`. React Native
+   * cannot consume that form: `shadowOpacity` is iOS-only, and Android tints its
+   * elevation shadow with the colour's own alpha, so a combined value dims the
+   * Android shadow. The one design value is therefore carried as a colour and an
+   * alpha, which recombine to exactly `rgba(0,0,0,.3)` on iOS.
+   */
   knob: '#ffffff',
-  knobShadow: 'rgba(0,0,0,0.3)',
+  knobShadowColor: '#000000',
+  knobShadowOpacity: 0.3,
 } as const;
 
 /** Inter, loaded via @expo-google-fonts/inter (design: --font-heading/body,

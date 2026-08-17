@@ -22,14 +22,18 @@ import {
   Sparkle,
   Table,
   Timer,
-  Tray,
   UserPlus,
-  UsersThree,
   XCircle,
   type Icon,
 } from 'phosphor-react-native';
 
-export type FlowStatus = 'Live' | 'Paused' | 'Draft';
+// The view models these fixtures populate are owned by `lib/view`, so the
+// components that render them do not depend on this module. Re-exported here
+// because the prototype's screens still import them from one place.
+import type { PipelineStep } from '@/lib/view/pipeline';
+import type { FlowStatus } from '@/lib/view/status';
+
+export type { FlowStatus, PipelineStep };
 
 /** Stable identity for each workflow (design `flow` prop enum). */
 export type FlowKey = 'invoice' | 'email' | 'kpi' | 'lead';
@@ -58,14 +62,6 @@ export type FlowDef = {
   failCount: string;
   connections: FlowConnection[];
   steps: PipelineStep[];
-};
-
-export type PipelineStep = {
-  icon: Icon;
-  kicker: string;
-  title: string;
-  desc: string;
-  more: boolean;
 };
 
 /** Per-workflow content (design flowDefs) — each list card opens its own detail. */
@@ -235,13 +231,6 @@ export const recentRuns: RunItem[] = [
   { name: 'Receipt OCR', meta: '#911 · 4 receipts captured', time: '3h', tone: 'ok', runVariant: 'success' },
 ];
 
-type OnboardingPhase = {
-  icon: Icon;
-  kicker: string;
-  title: string;
-  sub: string;
-};
-
 /** Solutions marketplace (design: solDefs). Prices are monthly USD numbers so
  *  the plan total can be derived live; the Growth plan base is $99. */
 export const PLAN_BASE_PRICE = 99;
@@ -382,12 +371,6 @@ export const settingsConnections: {
   { icon: EnvelopeSimple, name: 'Gmail', sub: 'Connected · used by 2 solutions', connected: true },
   { icon: PlugsConnected, name: 'QuickBooks Online', sub: 'Connected · used by 1 solution', connected: true },
   { icon: SlackLogo, name: 'Slack', sub: 'Not connected', connected: false },
-];
-
-export const onboardingPhases: OnboardingPhase[] = [
-  { icon: Tray, kicker: 'THE MANUAL GRIND', title: 'Inboxes, invoices, intake forms. All day. Every day.', sub: "Document work eats whole teams. It doesn't have to." },
-  { icon: Sparkle, kicker: 'AUTOMATION × AI', title: 'Every repetitive task, done by an agent.', sub: 'Extraction, classification, routing, posting. On their own.' },
-  { icon: UsersThree, kicker: 'YOUR TEAM, UNBURDENED', title: 'Your team reviews. The agents run.', sub: 'Review points where judgment matters. Everything else just happens.' },
 ];
 
 /** Notifications inbox (design `notifs`). `dot: true` = unread. */

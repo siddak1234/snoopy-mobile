@@ -1,3 +1,4 @@
+import { onboardingPhases } from '@/lib/content/onboarding';
 import {
   activityFilters,
   activityToday,
@@ -9,7 +10,6 @@ import {
   flowDefs,
   flowKeys,
   homeStats,
-  onboardingPhases,
   PLAN_BASE_PRICE,
   notifications,
   recentRuns,

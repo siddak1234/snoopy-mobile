@@ -3,11 +3,11 @@ import { Text, View } from 'react-native';
 
 import { fonts, status, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import type { FlowStatus } from '@/lib/fixtures';
+import type { StatusPillLabel } from '@/lib/view/status';
 
 /** Status pill (Live / Paused / Draft workflows; Held / Success / Failed
  *  runs), colors from the design's pills + runDefs maps in Screen.dc.html. */
-export function StatusPill({ label }: { label: FlowStatus | 'Held' | 'Success' | 'Failed' }) {
+export function StatusPill({ label }: { label: StatusPillLabel }) {
   const { palette } = useTheme();
   const tones = {
     Live: { color: status.ok, bg: status.okBg, border: status.okBorder },
