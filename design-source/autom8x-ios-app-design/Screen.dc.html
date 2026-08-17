@@ -328,6 +328,16 @@ a{color:var(--color-accent-300)}a:hover{color:var(--color-accent)}
 <div onClick="{{gTemplates}}" style="height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--color-neutral-700);display:flex;align-items:center;font-size:13px;font-weight:500;cursor:pointer">Templates</div>
 <div onClick="{{gBuilder}}" style="height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--color-accent);color:var(--color-accent);display:flex;align-items:center;gap:5px;font-size:13px;font-weight:500;cursor:pointer"><i class="ph ph-plus" style="font-size:14px"></i>New</div>
 </div></div>
+<sc-if value="{{fFirstEmpty}}" hint-placeholder-val="{{false}}">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:64px 14px">
+<div style="width:88px;height:88px;border-radius:26px;border:1px solid var(--color-accent-700);background:color-mix(in srgb,var(--color-accent) 10%,transparent);display:flex;align-items:center;justify-content:center;color:var(--color-accent-300)"><i class="ph ph-flow-arrow" style="font-size:40px"></i></div>
+<h2 style="margin:8px 0 0;font-size:22px;font-weight:500;letter-spacing:-.015em">No workflows yet</h2>
+<p style="margin:0;font-size:14px;line-height:1.55;color:var(--color-neutral-400);max-width:28ch">Add a prebuilt solution or start from a template — your first workflow can be live in minutes.</p>
+<div onClick="{{gSolutions}}" style="margin-top:8px;height:48px;width:100%;border-radius:999px;border:1px solid var(--color-accent);color:var(--color-accent);display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-accent) 12%,transparent)"><i class="ph ph-storefront" style="font-size:18px"></i>Browse solutions</div>
+<div onClick="{{gTemplates}}" style="height:44px;width:100%;border-radius:999px;color:var(--color-neutral-300);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-text) 6%,transparent)">Start from a template</div>
+</div>
+</sc-if>
+<sc-if value="{{fHas}}" hint-placeholder-val="{{true}}">
 <div style="height:44px;border-radius:12px;border:1px solid var(--color-neutral-800);background:color-mix(in srgb,var(--color-surface) 60%,transparent);display:flex;align-items:center;gap:9px;padding:0 13px">
 <i class="ph ph-magnifying-glass" style="font-size:17px;color:var(--color-neutral-500)"></i>
 <input value="{{q}}" onChange="{{setQ}}" placeholder="Search workflows" style="flex:1;background:transparent;border:none;outline:none;color:var(--color-text);font-size:14px;font-family:inherit;min-width:0">
@@ -350,6 +360,7 @@ a{color:var(--color-accent-300)}a:hover{color:var(--color-accent)}
 </div>
 </sc-if>
 </div>
+</sc-if>
 </div>
 </sc-if>
 
@@ -365,6 +376,12 @@ a{color:var(--color-accent-300)}a:hover{color:var(--color-accent)}
 <div style="flex:1;background:var(--color-surface);border-radius:14px;padding:12px 13px;box-shadow:var(--shadow-sm)"><div style="font-size:18px;font-weight:500;color:{{dOkC}}">{{dOk}}</div><div style="font-size:11px;color:var(--color-neutral-400);margin-top:2px">Successes</div></div>
 <div style="flex:1;background:var(--color-surface);border-radius:14px;padding:12px 13px;box-shadow:var(--shadow-sm)"><div style="font-size:18px;font-weight:500;color:{{dFailC}}">{{dFail}}</div><div style="font-size:11px;color:var(--color-neutral-400);margin-top:2px">Failures</div></div>
 </div>
+<sc-if value="{{dActFail}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;gap:9px;font-size:13px;line-height:1.45;color:#f87171;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);border-radius:12px;padding:11px 13px">
+<div style="display:flex;gap:8px;align-items:flex-start"><i class="ph ph-warning-circle" style="font-size:16px;margin-top:1px;flex:none"></i><span>{{dFailMsg}}</span></div>
+<div style="align-self:flex-start;height:32px;padding:0 14px;border-radius:999px;border:1px solid #f87171;display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;cursor:pointer" style-hover="background:rgba(248,113,113,.1)"><i class="ph ph-arrow-clockwise" style="font-size:14px"></i>Retry</div>
+</div>
+</sc-if>
 <div><span style="font-size:11px;letter-spacing:.14em;color:var(--color-neutral-400)">CONNECTIONS</span>
 <div style="margin-top:9px;background:var(--color-surface);border-radius:14px;box-shadow:var(--shadow-sm);overflow:hidden">
 <sc-for list="{{dConns}}" as="cn" hint-placeholder-count="2">
@@ -398,6 +415,12 @@ a{color:var(--color-accent-300)}a:hover{color:var(--color-accent)}
 <i class="ph ph-crown-simple" style="font-size:20px;color:var(--color-accent-300)"></i>
 <div style="flex:1"><div style="font-size:14px;font-weight:500">Growth plan · {{planTotal}}/mo</div><div style="font-size:12px;color:var(--color-neutral-400);margin-top:1px">{{activeCount}} active · manage in Settings</div></div>
 <i class="ph ph-caret-right" style="font-size:15px;color:var(--color-neutral-500)"></i></div>
+<sc-if value="{{solFail}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;gap:9px;font-size:13px;line-height:1.45;color:#f87171;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);border-radius:12px;padding:11px 13px">
+<div style="display:flex;gap:8px;align-items:flex-start"><i class="ph ph-warning-circle" style="font-size:16px;margin-top:1px;flex:none"></i><span>Email triage wasn't removed — it's still active and your plan total is unchanged.</span></div>
+<div style="align-self:flex-start;height:32px;padding:0 14px;border-radius:999px;border:1px solid #f87171;display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;cursor:pointer" style-hover="background:rgba(248,113,113,.1)"><i class="ph ph-arrow-clockwise" style="font-size:14px"></i>Retry removal</div>
+</div>
+</sc-if>
 <div style="display:flex;gap:8px;overflow:auto">
 <sc-for list="{{solChips}}" as="ch" hint-placeholder-count="5">
 <div onClick="{{ch.click}}" style="flex:none;height:32px;padding:0 13px;border-radius:999px;border:1px solid {{ch.bc}};color:{{ch.fc}};display:flex;align-items:center;font-size:12.5px;font-weight:500;cursor:pointer">{{ch.label}}</div>
@@ -514,6 +537,12 @@ a{color:var(--color-accent-300)}a:hover{color:var(--color-accent)}
 <div style="display:flex;justify-content:space-between;padding:11px 14px;font-size:13.5px"><span style="color:var(--color-neutral-400)">Due date</span><span style="font-weight:500">Sep 3, 2026</span></div>
 </div></div>
 </sc-if>
+<sc-if value="{{runFail}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;gap:9px;font-size:13px;line-height:1.45;color:#f87171;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);border-radius:12px;padding:11px 13px">
+<div style="display:flex;gap:8px;align-items:flex-start"><i class="ph ph-warning-circle" style="font-size:16px;margin-top:1px;flex:none"></i><span>The retry didn't start — this run is still failed and nothing ran.</span></div>
+<div style="align-self:flex-start;height:32px;padding:0 14px;border-radius:999px;border:1px solid #f87171;display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;cursor:pointer" style-hover="background:rgba(248,113,113,.1)"><i class="ph ph-arrow-clockwise" style="font-size:14px"></i>Try again</div>
+</div>
+</sc-if>
 <div style="display:flex;gap:10px">
 <sc-if value="{{runA1}}" hint-placeholder-val="{{false}}">
 <div onClick="{{runA1Go}}" style="flex:1;height:46px;border-radius:999px;border:1px solid var(--color-accent);color:var(--color-accent);display:flex;align-items:center;justify-content:center;gap:7px;font-size:14px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-accent) 12%,transparent)"><i class="ph {{runA1Icon}}" style="font-size:16px"></i>{{runA1}}</div>
@@ -562,6 +591,15 @@ a{color:var(--color-accent-300)}a:hover{color:var(--color-accent)}
 <sc-if value="{{sActivity}}" hint-placeholder-val="{{false}}">
 <div style="display:flex;flex-direction:column;padding:74px 20px 20px;gap:14px">
 <h1 style="margin:0;font-size:26px;font-weight:500;letter-spacing:-.015em">Activity</h1>
+<sc-if value="{{actFirstEmpty}}" hint-placeholder-val="{{false}}">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:64px 14px">
+<div style="width:88px;height:88px;border-radius:26px;border:1px solid var(--color-accent-700);background:color-mix(in srgb,var(--color-accent) 10%,transparent);display:flex;align-items:center;justify-content:center;color:var(--color-accent-300)"><i class="ph ph-pulse" style="font-size:40px"></i></div>
+<h2 style="margin:8px 0 0;font-size:22px;font-weight:500;letter-spacing:-.015em">No activity yet</h2>
+<p style="margin:0;font-size:14px;line-height:1.55;color:var(--color-neutral-400);max-width:28ch">Every run lands here the moment your first agent goes live.</p>
+<div onClick="{{gSolutions}}" style="margin-top:8px;height:48px;width:100%;border-radius:999px;border:1px solid var(--color-accent);color:var(--color-accent);display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:500;cursor:pointer" style-hover="background:color-mix(in srgb,var(--color-accent) 12%,transparent)"><i class="ph ph-storefront" style="font-size:18px"></i>Browse solutions</div>
+</div>
+</sc-if>
+<sc-if value="{{actHas}}" hint-placeholder-val="{{true}}">
 <div style="display:flex;gap:8px">
 <sc-for list="{{actChips}}" as="ch" hint-placeholder-count="4">
 <div onClick="{{ch.click}}" style="height:32px;padding:0 13px;border-radius:999px;border:1px solid {{ch.bc}};color:{{ch.fc}};display:flex;align-items:center;font-size:12.5px;font-weight:500;cursor:pointer">{{ch.label}}</div>
@@ -594,6 +632,7 @@ a{color:var(--color-accent-300)}a:hover{color:var(--color-accent)}
 <i class="ph ph-check-circle" style="font-size:38px;color:var(--color-neutral-600)"></i>
 <span style="font-size:13.5px;color:var(--color-neutral-500)">No {{actEmptyLabel}} runs in the last two days.</span>
 </div>
+</sc-if>
 </sc-if>
 </div>
 </sc-if>
@@ -735,6 +774,12 @@ a{color:var(--color-accent-300)}a:hover{color:var(--color-accent)}
 <sc-if value="{{sSettings}}" hint-placeholder-val="{{false}}">
 <div style="display:flex;flex-direction:column;padding:74px 20px 20px;gap:16px">
 <h1 style="margin:0;font-size:26px;font-weight:500;letter-spacing:-.015em">Settings</h1>
+<sc-if value="{{soFail}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;gap:9px;font-size:13px;line-height:1.45;color:#f87171;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);border-radius:12px;padding:11px 13px">
+<div style="display:flex;gap:8px;align-items:flex-start"><i class="ph ph-warning-circle" style="font-size:16px;margin-top:1px;flex:none"></i><span>Sign-out didn't complete — this session couldn't be revoked, so you're still signed in on this device. Nothing was cleared.</span></div>
+<div style="align-self:flex-start;height:32px;padding:0 14px;border-radius:999px;border:1px solid #f87171;display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;cursor:pointer" style-hover="background:rgba(248,113,113,.1)"><i class="ph ph-arrow-clockwise" style="font-size:14px"></i>Retry sign out</div>
+</div>
+</sc-if>
 <div style="background:var(--color-surface);border-radius:14px;padding:15px;box-shadow:var(--shadow-sm);display:flex;align-items:center;gap:13px">
 <div style="width:48px;height:48px;border-radius:999px;background:color-mix(in srgb,var(--color-accent) 16%,transparent);border:1px solid var(--color-accent-800);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:var(--color-accent-200)">AK</div>
 <div style="flex:1"><div style="font-size:15.5px;font-weight:500">Alex Kim</div><div style="font-size:12.5px;color:var(--color-neutral-400);margin-top:1px">alex@acme.co · Acme Operations</div></div>
@@ -1067,6 +1112,15 @@ class Component extends DCLogic {
       gErrTitle: ({ run:"Couldn't load this run", detail:"Couldn't load this workflow", approvals:"Couldn't load approvals", notifications:"Couldn't load notifications", settings:"Couldn't load settings", flows:"Couldn't load your workflows", activity:"Couldn't load activity", solutions:"Couldn't load solutions", templates:"Couldn't load templates", setup:"Couldn't load this setup", configure:"Couldn't load this template", builder:"Couldn't load this workflow" })[scr] || "Couldn't load this",
       gBackGo: this.go(({ run:'home', notifications:'home', detail:'flows', templates:'flows', configure:'flows', builder:'flows', setup:'solutions', approvals:'activity' })[scr] || 'home'),
       apprFail: scr==='approvals' && variant==='actionfail',
+      fFirstEmpty: scr==='flows' && variant==='empty',
+      fHas: !(scr==='flows' && variant==='empty'),
+      actFirstEmpty: scr==='activity' && variant==='empty',
+      actHas: !(scr==='activity' && variant==='empty'),
+      soFail: scr==='settings' && variant==='actionfail',
+      dActFail: scr==='detail' && variant==='actionfail',
+      dFailMsg: fst === 'Paused' ? ("Couldn't resume " + fd.name + " — it's still Paused and no runs are starting.") : ("Couldn't pause " + fd.name + " — it's still " + fst + " and runs continue."),
+      solFail: scr==='solutions' && variant==='actionfail',
+      runFail: scr==='run' && variant==='actionfail',
       setupFail: scr==='setup' && variant==='actionfail',
       notifsEmpty: scr==='notifications' && variant==='empty',
       notifsHas: !(scr==='notifications' && variant==='empty'),
