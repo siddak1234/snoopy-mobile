@@ -28,41 +28,22 @@ const sourceRoots = ["app", "components", "hooks", "lib"];
  * Delete a row when its screen is wired; never add one.
  */
 const knownFixtureReaders = new Map([
-  // MOBILE WORK. Every shape these need is published as of Round 6.6, or the
-  // round filed a refusal naming what to render instead. None waits on the
-  // backend; each is implementation in this repo.
-  ["app/(tabs)/(home)/index.tsx", "wired — unconfigured fallback only"],
-  ["app/(tabs)/(home)/run.tsx", "wired — unconfigured fallback only"],
-  ["app/(tabs)/(home)/notifications.tsx", "wired — unconfigured fallback only"],
-  ["app/(tabs)/activity/index.tsx", "wired — unconfigured fallback only"],
-  ["app/(tabs)/activity/approvals.tsx", "wired — unconfigured fallback only"],
-  ["app/(tabs)/flows/index.tsx", "wired — unconfigured fallback only"],
-  ["app/(tabs)/flows/detail.tsx", "wired — unconfigured fallback only"],
-  ["app/(tabs)/flows/builder.tsx", "wired — unconfigured fallback only; flow detail now names the template"],
-  ["app/(tabs)/flows/configure.tsx", "wired — unconfigured fallback only"],
-
-  // GENUINELY BLOCKED, and not by anything a backend contract round can fix.
-  // BUILD-PLAN 8.3 is "no longer gated on a decision" — §12.1 #46 was ratified
-  // 2026-08-17 — but it waits on a payment provider account, which ADR-0016 puts
-  // in ROUND 7. So the $99 plan base has no wire source until then, by design.
-  ["hooks/use-solutions.tsx", "BLOCKED — PLAN_BASE_PRICE needs BUILD-PLAN 8.3, which waits on Round 7's provider account"],
-
-  // Wired to the platform. The import survives ONLY on the `unconfigured`
-  // branch, which is the one state where fixtures are still correct — there is
-  // no backend to disagree with. Deleting these is the whole of the change once
-  // the browsability question in DESIGN-CONTRACT.md is answered.
-  ["app/(tabs)/flows/templates.tsx", "wired — unconfigured fallback only"],
-  ["app/(tabs)/settings.tsx", "wired — unconfigured fallback only"],
-
-  // Contract is published, but the screens are not cleanly wireable yet. Both
-  // carry array-INDEX identity: `useSolutions` keys `active`/`toggle` by the
-  // fixture's position, and setup reads `solutionDefs[index]` from a route
-  // param. Wiring the cards to the catalog without an identity refactor would
-  // leave the toggle acting on the wrong row — worse than the fixture. The
-  // refactor is app-wide (SolutionsProvider is mounted at the root) and cannot
-  // remove this import anyway, because PLAN_BASE_PRICE has no wire source.
-  ["app/(tabs)/solutions/index.tsx", "wired — unconfigured fallback only"],
-  ["app/(tabs)/solutions/setup.tsx", "wired — unconfigured fallback only"],
+  // ONE remaining, and it is not a prototype fallback. The owner decided on
+  // 2026-08-17 to delete every `unconfigured` fixture path: a build with no
+  // backend now renders the designed empty and error states rather than
+  // pretending to hold invoices. Thirteen rows left this ledger in that change.
+  //
+  // What is left is a VALUE, not a screen. `PLAN_BASE_PRICE` is the $99 plan
+  // base, and nothing publishes it — the public surface carries no plan, price,
+  // tier or entitlement read at all. DESIGN-CONTRACT.md finding 8 asks whether it
+  // can be published without Round 7's payment provider account; until that is
+  // answered this line cannot reach zero.
+  //
+  // It was deliberately NOT relocated to lib/content/ as "static copy". That
+  // would satisfy this gate's wording while defeating its purpose: a price is a
+  // business fact the platform should own, unlike the design chrome that did move
+  // there (filter vocabularies, the builder palette, fixed copy).
+  ["hooks/use-solutions.tsx", "BLOCKED — PLAN_BASE_PRICE; DESIGN-CONTRACT finding 8"],
 ]);
 
 /** `from '@/lib/fixtures'`, `from '../lib/fixtures'`, and friends. */

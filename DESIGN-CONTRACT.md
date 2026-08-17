@@ -217,6 +217,17 @@ an optional `template`, which makes 8.7 real for any caller that can name one �
 and no caller can until flow detail is wired, because detail is still keyed by the
 fixture's `FlowKey`.
 
+**FINDING 9 — a client cannot express a retry.** The design draws "Retry run" on
+a failed run, and the prototype simulated it (1600ms, then swap to a `retried`
+fixture). That theatre is gone with the fixtures, and no honest replacement
+exists: `POST /v1/workspaces/{id}/runs` accepts `{subscriptionId, input}` and
+`RunOrigin` is **not client-settable**, so the most a client can do is start an
+unrelated new run and call it a retry — which would break the `rootRunId`
+continuation chain that both clients are supposed to group by. The action is
+therefore absent rather than faked, and `__tests__/run-retry.test.tsx` was deleted
+because it tested behaviour that cannot exist. Either publish a retry operation,
+or record that a failed run is terminal from a client's point of view.
+
 **FINDING 8 — a plan's base price is not published, and it may not need Round 7.**
 `hooks/use-solutions.tsx` imports `PLAN_BASE_PRICE` ($99) and nothing else from
 the fixtures; it is the single remaining non-fallback fixture import and

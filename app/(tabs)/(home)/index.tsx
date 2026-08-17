@@ -24,7 +24,6 @@ import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useTheme } from '@/hooks/use-theme';
-import { homeStats, recentRuns } from '@/lib/fixtures';
 import { readCatalog } from '@/lib/platform/catalog';
 import { localMidnight, readRunStats, readRuns } from '@/lib/platform/runs';
 import { toStatTiles, type StatTileView } from '@/lib/view/catalog';
@@ -176,8 +175,8 @@ export default function HomeScreen() {
   const stats = useWorkspaceResource((workspaceId) =>
     readRunStats(workspaceId, localMidnight()),
   );
-  const tiles: StatTileView[] =
-    stats.status === 'ready' ? toStatTiles(stats.data.workspace) : homeStats;
+  const tiles: StatTileView[] | null =
+    stats.status === 'ready' ? toStatTiles(stats.data.workspace) : null;
 
   /**
    * Recent runs — now that a run's result line and a run detail both exist.
@@ -193,18 +192,11 @@ export default function HomeScreen() {
     const [runs, catalog] = await Promise.all([readRuns(workspaceId), readCatalog(workspaceId)]);
     return toRunRows(runs.runs.slice(0, 4), catalogIndex(catalog.automations));
   });
-  const runRows =
-    recent.status === 'ready'
-      ? recent.data
-      : recentRuns.map((r) => ({
-          runId: '',
-          name: r.name,
-          meta: r.meta,
-          time: r.time,
-          tone: r.tone as 'ok' | 'warn',
-          status: 'Success' as const,
-          runVariant: r.runVariant,
-        }));
+  const runRows = recent.status === 'ready' ? recent.data : [];
+
+  // Home keeps its bespoke states. With no tiles the dashboard has nothing true
+  // to say, so it shows the design's own sHomeErr rather than an empty frame.
+  if (!tiles) return <HomeError paddingTop={paddingTop} />;
 
   if (state === 'loading') return <HomeLoading paddingTop={paddingTop} />;
   if (state === 'empty') return <HomeEmpty paddingTop={paddingTop} />;

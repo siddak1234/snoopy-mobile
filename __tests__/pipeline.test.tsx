@@ -111,11 +111,11 @@ describe('Builder canvas', () => {
     expect(screen.queryByText('New email in AP inbox')).toBeNull();
   });
 
-  it('falls back to the prototype when no template is named', async () => {
-    // All three call sites push here with no argument today — the builder cannot
-    // say which automation it is editing. Recorded as a finding, not invented.
+  it('draws an empty canvas when no template is named, and fetches nothing', async () => {
+    // The prototype's steps are gone (owner decision, 2026-08-17). With no
+    // template there is nothing to look up, so no request is made either.
     await renderWithProviders(<BuilderScreen />, signedIn);
-    expect(await screen.findByText('New email in AP inbox')).toBeTruthy();
+    expect(screen.queryByText('New email in AP inbox')).toBeNull();
     expect(platformJson).not.toHaveBeenCalled();
   });
 });

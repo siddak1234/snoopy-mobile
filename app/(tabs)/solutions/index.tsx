@@ -15,7 +15,6 @@ import { errorTitleFor } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
 import { toSolutions, type SolutionView } from '@/lib/view/catalog';
 import { useTheme } from '@/hooks/use-theme';
-import { defaultActiveSolutions, solutionDefs, solutionFilters } from '@/lib/fixtures';
 
 export default function SolutionsScreen() {
   const { palette } = useTheme();
@@ -39,13 +38,9 @@ export default function SolutionsScreen() {
   const solutions: SolutionView[] =
     catalog.status === 'ready'
       ? toSolutions(catalog.data)
-      : solutionDefs.map((sol, i) => ({
-          ...sol,
-          templateId: sol.name,
-          subscribed: defaultActiveSolutions.includes(i),
-        }));
+      : [];
   const chips =
-    catalog.status === 'ready' ? catalog.data.categories : solutionFilters;
+    catalog.status === 'ready' ? catalog.data.categories : [];
 
   const visible = solutions.filter((sol) => category === 'All' || sol.cat === category);
   const removeSolution = removeId == null ? null : solutions.find((s) => s.templateId === removeId);
@@ -56,7 +51,7 @@ export default function SolutionsScreen() {
   if (catalog.status === 'offline') {
     return <ScreenOffline onRetry={catalog.reload} topInset={insets.top} />;
   }
-  if (catalog.status === 'error') {
+  if (catalog.status === 'error' || catalog.status === 'unconfigured') {
     return (
       <ScreenError
         title={errorTitleFor('solutions')}

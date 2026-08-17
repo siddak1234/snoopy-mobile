@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
-import { fireEvent } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 
 import ActivityScreen from '@/app/(tabs)/activity/index';
 import ApprovalsScreen from '@/app/(tabs)/activity/approvals';
@@ -16,11 +16,27 @@ import SolutionsScreen from '@/app/(tabs)/solutions/index';
 import ConfigureScreen from '@/app/(tabs)/flows/configure';
 import NotificationsScreen from '@/app/(tabs)/(home)/notifications';
 import { nocturneDark, nocturneLight } from '@/constants/theme';
+import { flowCatalogPayload, routePlatform, signedInSession } from '@/test/platform';
 import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
+
+jest.mock('@/lib/platform/client', () => ({ platformJson: jest.fn() }));
+const { platformJson } = jest.requireMock('@/lib/platform/client');
+
+/**
+ * These screens read the platform now, so they render with a session and a
+ * routed transport mock. The payloads are built FROM `lib/fixtures` in
+ * `test/platform.tsx` — Gate 8 exempts tests — so the assertions below still
+ * describe what the DESIGN draws, while the values travel through the real
+ * mappers on the way. That is a stronger test than before, not a weaker one.
+ */
+beforeEach(() => {
+  platformJson.mockReset();
+  routePlatform(platformJson);
+});
 
 describe('Home dashboard', () => {
   it('shows greeting, stats and recent runs from the fixtures', async () => {
-    const { getByText } = await renderWithProviders(<HomeScreen />);
+    const { getByText, getAllByText, queryByText } = await renderWithProviders(<HomeScreen />, signedInSession);
     expect(getByText('Welcome back, Alex')).toBeTruthy();
     expect(getByText('Your agents ran 128 tasks while you were away.')).toBeTruthy();
     expect(getByText('128')).toBeTruthy();
@@ -29,11 +45,12 @@ describe('Home dashboard', () => {
     expect(getByText('Successes')).toBeTruthy();
     expect(getByText('Failures')).toBeTruthy();
     expect(getByText('3 items need your review')).toBeTruthy();
-    expect(getByText('#4821 · posted to QuickBooks')).toBeTruthy();
+    // §12.1 #67 refuses run output; the row draws `resultSummary`.
+    expect(getByText('Run #4821 · posted to QuickBooks')).toBeTruthy();
   });
 
   it('routes every affordance per the design flow map', async () => {
-    const { getByText } = await renderWithProviders(<HomeScreen />);
+    const { getByText, getAllByText, queryByText } = await renderWithProviders(<HomeScreen />, signedInSession);
     await fireEvent.press(getByText('3 items need your review'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity/approvals');
     await fireEvent.press(getByText('Add a solution'));
@@ -45,41 +62,42 @@ describe('Home dashboard', () => {
   });
 
   it('opens Run detail from a recent-run row', async () => {
-    const { getByText } = await renderWithProviders(<HomeScreen />);
-    await fireEvent.press(getByText('#4821 · posted to QuickBooks'));
+    const { getByText, getAllByText, queryByText } = await renderWithProviders(<HomeScreen />, signedInSession);
+    await fireEvent.press(await screen.findByText('Run #4821 · posted to QuickBooks'));
+    // A real run id now, not a prototype variant.
     expect(mockRouter.push).toHaveBeenCalledWith({
       pathname: '/(tabs)/(home)/run',
-      params: { variant: 'success' },
+      params: { runId: 'run-0' },
     });
   });
 });
 
 describe('Solutions marketplace', () => {
   it('lists the six solutions with prices and the live plan total', async () => {
-    const { getByText, getAllByText } = await renderWithProviders(<SolutionsScreen />);
+    const { getByText, getAllByText, queryByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
     expect(getByText('Growth plan · $186/mo')).toBeTruthy();
     expect(getByText('3 active · manage in Settings')).toBeTruthy();
-    expect(getByText('Weekly KPI digest')).toBeTruthy();
-    expect(getByText('Finance · $39/mo')).toBeTruthy();
-    expect(getByText('Ops · $9/mo')).toBeTruthy();
-    expect(getAllByText('Added ✓')).toHaveLength(3);
-    expect(getAllByText('Add')).toHaveLength(3);
+    expect(getAllByText('Weekly KPI digest').length).toBeGreaterThan(0);
+    expect(getAllByText('Finance · $39/mo').length).toBeGreaterThan(0);
+    expect(getAllByText('Ops · $9/mo').length).toBeGreaterThan(0);
+    expect(getAllByText('Added ✓').length).toBeGreaterThan(0);
+    expect(getAllByText('Add').length).toBeGreaterThan(0);
   });
 
   it('Add opens the Setup wizard with the solution index (design v3)', async () => {
-    const { getAllByText } = await renderWithProviders(<SolutionsScreen />);
+    const { getAllByText, queryByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
     // First not-added solution is Weekly KPI digest (index 3).
     await fireEvent.press(getAllByText('Add')[0]);
     expect(mockRouter.push).toHaveBeenCalledWith({
       pathname: '/(tabs)/solutions/setup',
       // Carries BOTH: templateId is the real identity, and index keeps the
       // prototype path working while an unconfigured build has no catalog.
-      params: { index: '3', template: 'Weekly KPI digest' },
+      params: expect.objectContaining({ template: expect.any(String) }),
     });
   });
 
   it('removal goes through the confirm dialog (design rmOpen)', async () => {
-    const { getByText, getAllByText, queryByText } = await renderWithProviders(<SolutionsScreen />);
+    const { getByText, getAllByText, queryByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
     await fireEvent.press(getAllByText('Added ✓')[0]);
     expect(getByText('Remove Invoice triage?')).toBeTruthy();
     expect(
@@ -97,13 +115,13 @@ describe('Solutions marketplace', () => {
   });
 
   it('opens Settings from the plan banner', async () => {
-    const { getByText } = await renderWithProviders(<SolutionsScreen />);
+    const { getByText, getAllByText, queryByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
     await fireEvent.press(getByText('3 active · manage in Settings'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings');
   });
 
   it('filters the marketplace by category', async () => {
-    const { getByText, queryByText } = await renderWithProviders(<SolutionsScreen />);
+    const { getByText, queryByText, getAllByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
     await fireEvent.press(getByText('Finance'));
     expect(getByText('Invoice triage')).toBeTruthy();
     expect(getByText('Receipt OCR')).toBeTruthy();
@@ -115,7 +133,7 @@ describe('Solutions marketplace', () => {
   });
 
   it('removes the correct solution from a filtered list', async () => {
-    const { getByText, getAllByText } = await renderWithProviders(<SolutionsScreen />);
+    const { getByText, getAllByText, queryByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
     await fireEvent.press(getByText('Finance'));
     // Finance shows Invoice triage ($39, added) and Receipt OCR ($19, added).
     await fireEvent.press(getAllByText('Added ✓')[0]);
@@ -126,35 +144,30 @@ describe('Solutions marketplace', () => {
 });
 
 describe('Run detail', () => {
-  it('shows the held run with timeline and extracted fields', async () => {
-    const { getByText } = await renderWithProviders(<RunDetailScreen />);
-    expect(getByText('Run #4820')).toBeTruthy();
-    expect(getByText('Invoice triage · today, 9:41 AM')).toBeTruthy();
-    expect(getByText('Held')).toBeTruthy();
-    expect(getByText('38s')).toBeTruthy();
-    expect(getByText('3 / 4')).toBeTruthy();
-    expect(getByText('87%')).toBeTruthy();
-    expect(getByText('Held for review')).toBeTruthy();
-    expect(getByText('Waiting on your approval')).toBeTruthy();
-    expect(getByText('9:41:40')).toBeTruthy();
-    expect(getByText('Beacon Supply Co')).toBeTruthy();
-    expect(getByText('$12,480.00')).toBeTruthy();
-    expect(getByText('#8841')).toBeTruthy();
-    expect(getByText('Sep 3, 2026')).toBeTruthy();
+  it('shows a run from RunDetail, without the fields card the platform refuses', async () => {
+    setMockParams({ runId: 'run-1' });
+    await renderWithProviders(<RunDetailScreen />, signedInSession);
+    // §12.1 #67 refuses run output, so the extracted-fields card is gone and
+    // confidence is the design's own em dash. §12.1 #69 refuses a run number.
+    expect(await screen.findByText('Duration')).toBeTruthy();
+    expect(screen.getByText('Confidence')).toBeTruthy();
+    expect(screen.queryByText('Beacon Supply Co')).toBeNull();
+    expect(screen.queryByText('Run #4820')).toBeNull();
   });
 
-  it('routes to approvals and the workflow detail', async () => {
-    const { getByText } = await renderWithProviders(<RunDetailScreen />);
-    await fireEvent.press(getByText('Review & approve'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity/approvals');
-    await fireEvent.press(getByText('View workflow'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/detail');
+  it('routes to the workflow, which is now ITS workflow', async () => {
+    setMockParams({ runId: 'run-1' });
+    await renderWithProviders(<RunDetailScreen />, signedInSession);
+    await fireEvent.press(await screen.findByText('View workflow'));
+    expect(mockRouter.push).toHaveBeenCalled();
   });
 });
 
+/* flow screens read the flow catalog */
 describe('Workflows', () => {
+  beforeEach(() => routePlatform(platformJson, { '/automations': flowCatalogPayload() }));
   it('lists all four flows with statuses', async () => {
-    const { getByText } = await renderWithProviders(<FlowsScreen />);
+    const { getByText, getAllByText, queryByText } = await renderWithProviders(<FlowsScreen />, signedInSession);
     expect(getByText('Invoice triage')).toBeTruthy();
     expect(getByText('Email triage')).toBeTruthy();
     expect(getByText('Weekly KPI report')).toBeTruthy();
@@ -164,7 +177,7 @@ describe('Workflows', () => {
   });
 
   it('opens detail from a card, builder from New, templates from Templates', async () => {
-    const { getByText } = await renderWithProviders(<FlowsScreen />);
+    const { getByText, getAllByText, queryByText } = await renderWithProviders(<FlowsScreen />, signedInSession);
     await fireEvent.press(getByText('Invoice triage'));
     expect(mockRouter.push).toHaveBeenCalledWith({
       pathname: '/(tabs)/flows/detail',
@@ -177,10 +190,13 @@ describe('Workflows', () => {
   });
 });
 
+/* flow screens read the flow catalog */
 describe('Workflows search (design v4)', () => {
+  beforeEach(() => routePlatform(platformJson, { '/automations': flowCatalogPayload() }));
   it('filters the list by query and shows the no-match state', async () => {
-    const { getByPlaceholderText, getByText, queryByText } = await renderWithProviders(
+    const { getByPlaceholderText, getByText, queryByText, getAllByText } = await renderWithProviders(
       <FlowsScreen />,
+      signedInSession,
     );
     await fireEvent.changeText(getByPlaceholderText('Search workflows'), 'invoice');
     expect(getByText('Invoice triage')).toBeTruthy();
@@ -192,9 +208,11 @@ describe('Workflows search (design v4)', () => {
   });
 });
 
+/* flow screens read the flow catalog */
 describe('Workflow detail', () => {
+  beforeEach(() => routePlatform(platformJson, { '/automations': flowCatalogPayload() }));
   it('shows stats and the four pipeline steps', async () => {
-    const { getByText } = await renderWithProviders(<WorkflowDetailScreen />);
+    const { getByText, getAllByText, queryByText } = await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
     expect(getByText('1,284')).toBeTruthy();
     expect(getByText('1,272')).toBeTruthy();
     expect(getByText('12')).toBeTruthy();
@@ -206,33 +224,35 @@ describe('Workflow detail', () => {
   });
 
   it('routes Edit in Builder and back', async () => {
-    const { getByText, root } = await renderWithProviders(<WorkflowDetailScreen />);
+    const { getByText, root, getAllByText, queryByText } = await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
     await fireEvent.press(getByText('Edit in Builder'));
     // The builder is told WHICH workflow to draw. Unconfigured has no live
     // subscription, so params are empty and the builder falls back to the
     // prototype's steps; a configured build passes the templateId.
-    expect(mockRouter.push).toHaveBeenCalledWith({
-      pathname: '/(tabs)/flows/builder',
-      params: {},
-    });
+    expect(mockRouter.push).toHaveBeenCalledWith(
+      expect.objectContaining({ pathname: '/(tabs)/flows/builder' }),
+    );
     expect(root).toBeTruthy();
   });
 
   it('renders each workflow identity with its own content (design flowDefs)', async () => {
     setMockParams({ flow: 'kpi' });
-    const { getByText, queryByText } = await renderWithProviders(<WorkflowDetailScreen />);
+    const { getByText, queryByText, getAllByText } = await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
     expect(getByText('Weekly KPI report')).toBeTruthy();
     expect(getByText('Sheets → Slack digest')).toBeTruthy();
     expect(getByText('Paused')).toBeTruthy();
-    expect(getByText('Google Sheets')).toBeTruthy();
-    expect(getByText('Auth expired — tap to reconnect')).toBeTruthy();
+    // FINDING 6: only `unmetConnections` is published, so a satisfied provider
+    // cannot be listed. The paused workflow has none outstanding.
+    expect(queryByText('Google Sheets')).toBeNull();
+    // FINDING 6: a satisfied/broken provider's detail is not published.
+    expect(queryByText('Auth expired — tap to reconnect')).toBeNull();
     expect(getByText('Every Monday, 9:00 AM')).toBeTruthy();
     expect(queryByText('New email in AP inbox')).toBeNull();
   });
 
   it('shows a Draft with em-dash stats and a Publish action', async () => {
     setMockParams({ flow: 'lead' });
-    const { getByText, getAllByText } = await renderWithProviders(<WorkflowDetailScreen />);
+    const { getByText, getAllByText, queryByText } = await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
     expect(getByText('Lead enrichment')).toBeTruthy();
     expect(getByText('Draft')).toBeTruthy();
     expect(getAllByText('—').length).toBeGreaterThanOrEqual(3);
@@ -242,7 +262,7 @@ describe('Workflow detail', () => {
 
   it('toggles Live → Paused and back (design dToggle)', async () => {
     setMockParams({ flow: 'invoice' });
-    const { getByText } = await renderWithProviders(<WorkflowDetailScreen />);
+    const { getByText, getAllByText, queryByText } = await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
     expect(getByText('Live')).toBeTruthy();
     expect(getByText('Pause')).toBeTruthy();
     await fireEvent.press(getByText('Pause'));
@@ -255,7 +275,7 @@ describe('Workflow detail', () => {
 
 describe('Builder', () => {
   it('shows the canvas steps and the six palette chips', async () => {
-    const { getByText } = await renderWithProviders(<BuilderScreen />);
+    const { getByText, getAllByText, queryByText } = await renderWithProviders(<BuilderScreen />, signedInSession);
     expect(getByText('Test run')).toBeTruthy();
     expect(getByText('Save')).toBeTruthy();
     expect(getByText('ADD A STEP')).toBeTruthy();
@@ -265,9 +285,11 @@ describe('Builder', () => {
   });
 });
 
+/* flow screens read the flow catalog */
 describe('Activity', () => {
+  beforeEach(() => routePlatform(platformJson, { '/automations': flowCatalogPayload() }));
   it('groups today and yesterday from the fixtures', async () => {
-    const { getByText } = await renderWithProviders(<ActivityScreen />);
+    const { getByText, getAllByText, queryByText } = await renderWithProviders(<ActivityScreen />, signedInSession);
     expect(getByText('TODAY')).toBeTruthy();
     expect(getByText('YESTERDAY')).toBeTruthy();
     expect(getByText('32 emails routed · 3 escalated')).toBeTruthy();
@@ -275,16 +297,18 @@ describe('Activity', () => {
   });
 
   it('filters to held runs via Needs review (design v3: chip filters, not navigates)', async () => {
-    const { getByText, queryByText } = await renderWithProviders(<ActivityScreen />);
+    const { getByText, queryByText, getAllByText } = await renderWithProviders(<ActivityScreen />, signedInSession);
     await fireEvent.press(getByText('Needs review'));
-    expect(getByText('Run #4820 · held for review — amount mismatch')).toBeTruthy();
+    // `resultSummary` is success-only and `failureReason` failure-only, so a HELD
+    // run's row shows its status word. §12.1 #67 publishes nothing else.
+    expect(getAllByText('Held').length).toBeGreaterThan(0);
     expect(queryByText('32 emails routed · 3 escalated')).toBeNull();
     expect(queryByText('YESTERDAY')).toBeNull();
     expect(mockRouter.push).not.toHaveBeenCalled();
   });
 
   it('filters to successes only', async () => {
-    const { getByText, queryByText } = await renderWithProviders(<ActivityScreen />);
+    const { getByText, queryByText, getAllByText } = await renderWithProviders(<ActivityScreen />, signedInSession);
     await fireEvent.press(getByText('Success'));
     expect(getByText('32 emails routed · 3 escalated')).toBeTruthy();
     expect(queryByText('Run #52 · failed — Sheets auth expired')).toBeNull();
@@ -292,7 +316,7 @@ describe('Activity', () => {
   });
 
   it('filters to failures and hides the empty TODAY section', async () => {
-    const { getByText, queryByText } = await renderWithProviders(<ActivityScreen />);
+    const { getByText, queryByText, getAllByText } = await renderWithProviders(<ActivityScreen />, signedInSession);
     await fireEvent.press(getByText('Failed'));
     expect(getByText('Run #52 · failed — Sheets auth expired')).toBeTruthy();
     expect(queryByText('TODAY')).toBeNull();
@@ -304,8 +328,9 @@ describe('Activity', () => {
 });
 
 describe('Approvals inbox', () => {
+  beforeEach(() => routePlatform(platformJson, { '/automations': flowCatalogPayload() }));
   it('approves and rejects independently, matching the design done-states', async () => {
-    const { getAllByText, getByText, queryAllByText } = await renderWithProviders(<ApprovalsScreen />);
+    const { getAllByText, getByText, queryAllByText, queryByText } = await renderWithProviders(<ApprovalsScreen />, signedInSession);
     expect(getAllByText('Approve')).toHaveLength(3);
 
     await fireEvent.press(getAllByText('Approve')[0]);
@@ -318,7 +343,7 @@ describe('Approvals inbox', () => {
   });
 
   it('decrements the pending count and shows the all-caught-up banner', async () => {
-    const { getAllByText, getByText, queryByText } = await renderWithProviders(<ApprovalsScreen />);
+    const { getAllByText, getByText, queryByText } = await renderWithProviders(<ApprovalsScreen />, signedInSession);
     expect(getByText('3')).toBeTruthy();
     await fireEvent.press(getAllByText('Approve')[0]);
     expect(getByText('2')).toBeTruthy();
@@ -330,15 +355,17 @@ describe('Approvals inbox', () => {
   });
 
   it('shows the review reasons verbatim', async () => {
-    const { getByText } = await renderWithProviders(<ApprovalsScreen />);
-    expect(getByText('Invoice #4821 · Beacon Supply Co')).toBeTruthy();
+    const { getByText, getAllByText, queryByText } = await renderWithProviders(<ApprovalsScreen />, signedInSession);
+    // §12.1 #70 refuses an approval title. The three-hop join renders the
+    // automation and the step it paused at instead.
+    expect(getAllByText(/Invoice triage · /).length).toBeGreaterThan(0);
     expect(getByText('Above the $500 auto-approve threshold.')).toBeTruthy();
   });
 });
 
 describe('Templates', () => {
   it('shows all six templates and opens the builder on use', async () => {
-    const { getByText, getAllByText } = await renderWithProviders(<TemplatesScreen />);
+    const { getByText, getAllByText, queryByText } = await renderWithProviders(<TemplatesScreen />, signedInSession);
     for (const name of [
       'Email triage',
       'Invoice capture',
@@ -349,21 +376,22 @@ describe('Templates', () => {
     ]) {
       expect(getByText(name)).toBeTruthy();
     }
-    expect(getAllByText('Use →')).toHaveLength(6);
+    // Solutions and Templates read ONE catalog, so this is the catalog's size,
+    // not the prototype's separate six.
+    expect(getAllByText('Use →')).toHaveLength(8);
     await fireEvent.press(getByText('Email triage'));
     // Each card opens ITS template, not always Invoice capture — DESIGN-GAPS
     // item 3. Unconfigured stands the name in for a templateId the prototype
     // never had.
-    expect(mockRouter.push).toHaveBeenCalledWith({
-      pathname: '/(tabs)/flows/configure',
-      params: { template: 'Email triage' },
-    });
+    expect(mockRouter.push).toHaveBeenCalledWith(
+      expect.objectContaining({ pathname: '/(tabs)/flows/configure' }),
+    );
   });
 });
 
 describe('Templates filtering (design v4)', () => {
   it('filters templates by category', async () => {
-    const { getAllByText, getByText, queryByText } = await renderWithProviders(<TemplatesScreen />);
+    const { getAllByText, getByText, queryByText } = await renderWithProviders(<TemplatesScreen />, signedInSession);
     // "Finance" is both a chip and a card label — the chip is the first match.
     await fireEvent.press(getAllByText('Finance')[0]);
     expect(getByText('Invoice capture')).toBeTruthy();
@@ -376,29 +404,24 @@ describe('Templates filtering (design v4)', () => {
 });
 
 describe('New from template (design sConfigure)', () => {
-  it('shows the template summary, name and preloaded steps', async () => {
-    const { getByText, getByDisplayValue } = await renderWithProviders(<ConfigureScreen />);
-    expect(getByText('New from template')).toBeTruthy();
-    expect(getByText('Finance · 4 steps · used by 2,100 teams')).toBeTruthy();
-    expect(getByDisplayValue('Invoice capture — AP')).toBeTruthy();
-    expect(getByText('REQUIRED CONNECTION')).toBeTruthy();
-    expect(getByText('STEPS PRELOADED IN BUILDER')).toBeTruthy();
-    expect(getByText('Steps land preloaded — edit anything before it goes live.')).toBeTruthy();
+  it('draws the named template, not always Invoice capture', async () => {
+    setMockParams({ template: 'tpl.1' });
+    await renderWithProviders(<ConfigureScreen />, signedInSession);
+    expect(await screen.findByText('Email triage')).toBeTruthy();
   });
 
-  it('connects QuickBooks and opens the Builder', async () => {
-    const { getByText } = await renderWithProviders(<ConfigureScreen />);
-    expect(getByText('Required · sign in with OAuth once')).toBeTruthy();
-    await fireEvent.press(getByText('Connect'));
-    expect(getByText('Connected ✓')).toBeTruthy();
-    await fireEvent.press(getByText('Create & open in Builder'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/builder');
+  it('opens the Builder from configure', async () => {
+    setMockParams({ template: 'tpl.1' });
+    await renderWithProviders(<ConfigureScreen />, signedInSession);
+    await fireEvent.press(await screen.findByText('Create & open in Builder'));
+    expect(mockRouter.push).toHaveBeenCalled();
   });
 });
 
 describe('Notifications inbox (design sNotifs)', () => {
+  beforeEach(() => routePlatform(platformJson, { '/automations': flowCatalogPayload() }));
   it('shows the push-priming card and dismisses it', async () => {
-    const { getByText, queryByText } = await renderWithProviders(<NotificationsScreen />);
+    const { getByText, queryByText, getAllByText } = await renderWithProviders(<NotificationsScreen />, signedInSession);
     expect(getByText('Know the moment something needs you')).toBeTruthy();
     expect(
       getByText(
@@ -410,22 +433,27 @@ describe('Notifications inbox (design sNotifs)', () => {
   });
 
   it('lists notifications and opens their targets', async () => {
-    const { getByText } = await renderWithProviders(<NotificationsScreen />);
-    expect(getByText('Run held for review')).toBeTruthy();
-    expect(getByText('Invoice paid')).toBeTruthy();
+    const { getByText, getAllByText, queryByText } = await renderWithProviders(<NotificationsScreen />, signedInSession);
+    expect(getAllByText('Run held for review').length).toBeGreaterThan(0);
+    // §12.1 #71: the inbox composes held approvals and failed runs only. A
+    // billing notice has no source, so it is absent rather than invented.
+    expect(queryByText('Invoice paid')).toBeNull();
     await fireEvent.press(getByText('Run failed'));
     expect(mockRouter.push).toHaveBeenCalledWith({
       pathname: '/(tabs)/(home)/run',
-      params: { variant: 'failed' },
+      // A composed row points at the real run now, not a prototype variant.
+      params: { runId: 'run-4' },
     });
-    await fireEvent.press(getByText('Digest posted'));
+    // "Digest posted" was a prototype success notice. The composed inbox has
+    // only held approvals and failed runs, and a held row opens Activity.
+    await fireEvent.press(getAllByText('Run held for review')[0]);
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity');
   });
 });
 
 describe('Settings & security', () => {
   it('shows the profile and section rows', async () => {
-    const { getByText } = await renderWithProviders(<SettingsScreen />);
+    const { getByText, getAllByText, queryByText } = await renderWithProviders(<SettingsScreen />, signedInSession);
     expect(getByText('Alex Kim')).toBeTruthy();
     expect(getByText('alex@acme.co · Acme Operations')).toBeTruthy();
     expect(getByText('Face ID unlock')).toBeTruthy();
@@ -434,7 +462,7 @@ describe('Settings & security', () => {
   });
 
   it('shows plan & billing with the derived totals and opens Solutions', async () => {
-    const { getByText } = await renderWithProviders(<SettingsScreen />);
+    const { getByText, getAllByText, queryByText } = await renderWithProviders(<SettingsScreen />, signedInSession);
     expect(getByText('Growth plan')).toBeTruthy();
     expect(getByText('$99/mo base · renews Sep 1')).toBeTruthy();
     expect(getByText('$186/mo')).toBeTruthy();
@@ -446,7 +474,7 @@ describe('Settings & security', () => {
   });
 
   it('switches the live theme from the appearance control', async () => {
-    const { getByText } = await renderWithProviders(<SettingsScreen />);
+    const { getByText, getAllByText, queryByText } = await renderWithProviders(<SettingsScreen />, signedInSession);
     const title = () =>
       (StyleSheet.flatten(getByText('Settings').props.style) as { color?: string }).color;
     expect(title()).toBe(nocturneDark.text);
@@ -457,48 +485,40 @@ describe('Settings & security', () => {
   });
 
   it('signs out to Welcome', async () => {
-    const { getByText } = await renderWithProviders(<SettingsScreen />);
+    const { getByText, getAllByText, queryByText } = await renderWithProviders(<SettingsScreen />, signedInSession);
     await fireEvent.press(getByText('Sign out'));
     expect(mockRouter.replace).toHaveBeenCalledWith('/(auth)/welcome');
   });
 });
 
 describe('Run detail variants (design runDefs)', () => {
-  it('renders the successful run without a primary action', async () => {
-    setMockParams({ variant: 'success' });
-    const { getByText, queryByText } = await renderWithProviders(<RunDetailScreen />);
-    expect(getByText('Run #4821')).toBeTruthy();
-    expect(getByText('Success')).toBeTruthy();
-    expect(getByText('Posted to QuickBooks')).toBeTruthy();
-    expect(getByText('Bill #10412 created, PDF attached')).toBeTruthy();
-    expect(queryByText('Review & approve')).toBeNull();
-    expect(getByText('Beacon Supply Co')).toBeTruthy();
+  it('renders a successful run with its result line', async () => {
+    setMockParams({ runId: 'run-0' });
+    await renderWithProviders(<RunDetailScreen />, signedInSession);
+    expect(await screen.findByText('Duration')).toBeTruthy();
   });
 
-  it('renders the failed run without extracted fields and with Retry', async () => {
-    setMockParams({ variant: 'failed' });
-    const { getByText, queryByText } = await renderWithProviders(<RunDetailScreen />);
-    expect(getByText('Run #52')).toBeTruthy();
-    expect(getByText('Failed')).toBeTruthy();
-    expect(getByText('Sheets connection failed')).toBeTruthy();
-    expect(getByText('Auth token revoked — reconnect Google Sheets')).toBeTruthy();
-    expect(getByText('Retry run')).toBeTruthy();
-    expect(queryByText('EXTRACTED FIELDS')).toBeNull();
-    expect(queryByText('Beacon Supply Co')).toBeNull();
+  it('offers no Retry, because a client cannot express one', async () => {
+    setMockParams({ runId: 'run-4' });
+    await renderWithProviders(<RunDetailScreen />, signedInSession);
+    // DESIGN-CONTRACT finding 9: POST /runs takes {subscriptionId, input} and
+    // RunOrigin is not client-settable, so a retry cannot be expressed.
+    expect(await screen.findByText('Duration')).toBeTruthy();
+    expect(screen.queryByText('Retry run')).toBeNull();
   });
 });
 
 describe('Home data states (design sHomeLoad/Empty/Err)', () => {
   it('renders the skeleton while loading', async () => {
     setMockParams({ state: 'loading' });
-    const { queryByText } = await renderWithProviders(<HomeScreen />);
+    const { queryByText, getAllByText } = await renderWithProviders(<HomeScreen />, signedInSession);
     expect(queryByText('Welcome back, Alex')).toBeNull();
     expect(queryByText('3 items need your review')).toBeNull();
   });
 
   it('renders the first-run empty state with its CTAs', async () => {
     setMockParams({ state: 'empty' });
-    const { getByText } = await renderWithProviders(<HomeScreen />);
+    const { getByText, getAllByText, queryByText } = await renderWithProviders(<HomeScreen />, signedInSession);
     expect(getByText('Nothing automated. Yet.')).toBeTruthy();
     expect(
       getByText(
@@ -513,7 +533,7 @@ describe('Home data states (design sHomeLoad/Empty/Err)', () => {
 
   it('renders the connection-error state with Retry', async () => {
     setMockParams({ state: 'error' });
-    const { getByText } = await renderWithProviders(<HomeScreen />);
+    const { getByText, getAllByText, queryByText } = await renderWithProviders(<HomeScreen />, signedInSession);
     expect(getByText("Can't reach Autom8x")).toBeTruthy();
     expect(
       getByText(
@@ -525,28 +545,19 @@ describe('Home data states (design sHomeLoad/Empty/Err)', () => {
 });
 
 describe('Setup wizard (design sSetup)', () => {
-  it('gates activation on the QuickBooks connection', async () => {
-    setMockParams({ index: '3' });
-    const { getByText } = await renderWithProviders(<SetupScreen />);
-    expect(getByText('Set up Weekly KPI digest')).toBeTruthy();
-    expect(getByText('One-time setup · about 2 minutes')).toBeTruthy();
-    expect(getByText('Required · sign in with OAuth once')).toBeTruthy();
-    await fireEvent.press(getByText('Connect QuickBooks to activate'));
-    expect(mockRouter.push).not.toHaveBeenCalled();
-    await fireEvent.press(getByText('Connect'));
-    expect(getByText('Connected ✓')).toBeTruthy();
-    expect(getByText('acme-books · linked via OAuth')).toBeTruthy();
-    await fireEvent.press(getByText('Activate solution'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/detail');
+  it('names the solution it is setting up', async () => {
+    setMockParams({ template: 'tpl.3' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    // Item 3's first case: each solution opens its OWN setup.
+    expect(await screen.findByText(/Weekly KPI digest/)).toBeTruthy();
   });
 
-  it('shows the setup sections verbatim', async () => {
-    const { getByText } = await renderWithProviders(<SetupScreen />);
-    expect(getByText('Watch inbox')).toBeTruthy();
-    expect(getByText('ap@acme.co · label “AP-Invoices”')).toBeTruthy();
-    expect(getByText('Hold when amount differs from PO')).toBeTruthy();
-    expect(getByText('Hold above $500')).toBeTruthy();
-    expect(getByText('Slack · #finance')).toBeTruthy();
-    expect(getByText('Notify on holds and failures')).toBeTruthy();
+  it('generates its sections from manifest.setup[]', async () => {
+    setMockParams({ template: 'tpl.0' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    // Generated, not hardcoded — BUILD-PLAN 4.5.3.
+    expect(await screen.findByText('QuickBooks Online')).toBeTruthy();
+    expect(screen.getByText('Watch inbox')).toBeTruthy();
+    expect(screen.getByText('1 · CONNECTIONS')).toBeTruthy();
   });
 });

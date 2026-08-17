@@ -9,7 +9,7 @@ import { PillButton } from '@/components/nocturne/pill-button';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { notifications, type NotificationItem } from '@/lib/fixtures';
+import type { NotificationItem } from '@/lib/view/runs';
 import { readCatalog } from '@/lib/platform/catalog';
 import { readApprovals, readRuns, readSubscriptions } from '@/lib/platform/runs';
 import { catalogIndex, composeNotifications, subscriptionIndex } from '@/lib/view/runs';
@@ -66,7 +66,7 @@ export default function NotificationsScreen() {
   const items: NotificationItem[] =
     inbox.status === 'ready'
       ? inbox.data.map((n) => ({ ...n, icon: NOTIFICATION_ICON[n.tone] }))
-      : notifications;
+      : [];
 
   // The design's priming card is dismiss-only on both buttons; a real iOS
   // permission request needs expo-notifications, which is not installed.
@@ -80,7 +80,7 @@ export default function NotificationsScreen() {
   if (inbox.status === 'offline') {
     return <ScreenOffline onRetry={inbox.reload} onBack={() => router.back()} topInset={insets.top} />;
   }
-  if (inbox.status === 'error') {
+  if (inbox.status === 'error' || inbox.status === 'unconfigured') {
     return (
       <ScreenError
         title={errorTitleFor('notifications')}
@@ -90,7 +90,7 @@ export default function NotificationsScreen() {
       />
     );
   }
-  if (inbox.status === 'ready' && items.length === 0) {
+  if (items.length === 0) {
     // Not an apology: an empty inbox is the product's rule working, which is why
     // the design gives this state no action.
     return (
@@ -115,7 +115,9 @@ export default function NotificationsScreen() {
     if (item.target === 'run') {
       router.push({
         pathname: '/(tabs)/(home)/run',
-        params: { variant: item.runVariant ?? 'held' },
+        // A composed row points at a real run when it has one; the prototype's
+        // `runVariant` is gone with the fixtures.
+        params: item.runId ? { runId: item.runId } : {},
       });
     } else if (item.target === 'activity') {
       router.push('/(tabs)/activity');

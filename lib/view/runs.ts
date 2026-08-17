@@ -202,6 +202,21 @@ export function approvalWorkflowLabel(
  * Inventing local read state would make the app disagree with itself across
  * devices, which is worse than the honest limitation.
  */
+/** An approvals-inbox card, after the three-hop join. */
+export type ApprovalItem = { workflow: string; title: string; why: string; time: string };
+
+export type NotificationItem = {
+  icon: Icon;
+  /** Present when the row came from a run, so it can open that run. */
+  runId?: string;
+  tone: 'ok' | 'warn' | 'err' | 'accent';
+  unread: boolean;
+  title: string;
+  desc: string;
+  time: string;
+  target: 'run' | 'activity' | 'settings';
+};
+
 export function composeNotifications(
   approvals: { subscriptionId: string; stepId: string; reason: string; createdAt: string }[],
   failedRuns: Run[],
@@ -232,6 +247,7 @@ export function composeNotifications(
     desc: `${nameFor(run, catalog)} · ${metaFor(run)}`,
     time: relativeTime(run.createdAt, now),
     target: 'run' as const,
+    runId: run.id,
   }));
 
   // Newest first across both sources; the two reads are each newest-first on

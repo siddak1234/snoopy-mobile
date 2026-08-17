@@ -17,8 +17,7 @@ import { ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-s
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { statusAction, useWorkflows, type FlowStatus } from '@/hooks/use-workflows';
 import { errorTitleFor } from '@/lib/content/screen-states';
-import { flowDefs, type FlowKey } from '@/lib/fixtures';
-import { readCatalog } from '@/lib/platform/catalog';
+import { readCatalog, readConnectionProviders } from '@/lib/platform/catalog';
 import { readRunStats, readSubscriptions } from '@/lib/platform/runs';
 import { toFlows, type FlowView } from '@/lib/view/catalog';
 
@@ -42,31 +41,27 @@ export default function WorkflowDetailScreen() {
    * `pipeline`, `run-stats` for the counters.
    */
   const flows = useWorkspaceResource(async (workspaceId) => {
-    const [subs, catalog, stats] = await Promise.all([
+    const [subs, catalog, stats, providers] = await Promise.all([
       readSubscriptions(workspaceId),
       readCatalog(workspaceId),
       readRunStats(workspaceId),
+      readConnectionProviders(),
     ]);
-    return toFlows(subs.subscriptions, catalog.automations, stats.subscriptions);
+    return toFlows(
+      subs.subscriptions,
+      catalog.automations,
+      stats.subscriptions,
+      new Map(providers.providers.map((p) => [p.providerId, p])),
+    );
   });
 
-  const fixtureKey: FlowKey = flow && (flowDefs as Record<string, unknown>)[flow]
-    ? (flow as FlowKey)
-    : 'invoice';
   const live: FlowView | undefined =
     flows.status === 'ready'
       ? (flows.data.find((f) => f.key === flow) ?? flows.data[0])
       : undefined;
-  const def: FlowView =
-    live ?? {
-      ...flowDefs[fixtureKey],
-      key: fixtureKey,
-      templateId: fixtureKey,
-      connections: flowDefs[fixtureKey].connections,
-      steps: flowDefs[fixtureKey].steps,
-    };
-  const key = def.key;
-  const current = statusOf(key, def.status as FlowStatus);
+  const def = live;
+  const key = def?.key ?? '';
+  const current = statusOf(key, (def?.status ?? 'Draft') as FlowStatus);
   const action = statusAction(current);
   const ActionIcon = ACTION_ICON[action.icon];
 
@@ -75,7 +70,7 @@ export default function WorkflowDetailScreen() {
   if (flows.status === 'offline') {
     return <ScreenOffline onRetry={flows.reload} onBack={() => router.back()} topInset={insets.top} />;
   }
-  if (flows.status === 'error') {
+  if (!def || flows.status === 'error' || flows.status === 'unconfigured') {
     return (
       <ScreenError
         title={errorTitleFor('detail')}

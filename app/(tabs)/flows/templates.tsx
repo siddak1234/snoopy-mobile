@@ -14,7 +14,6 @@ import { em, fonts, layout } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useTheme } from '@/hooks/use-theme';
 import { errorTitleFor } from '@/lib/content/screen-states';
-import { templateFilters, templates } from '@/lib/fixtures';
 import { readCatalog } from '@/lib/platform/catalog';
 import { toCategories, toTemplates, type TemplateView } from '@/lib/view/catalog';
 
@@ -28,24 +27,17 @@ export default function TemplatesScreen() {
 
   const catalog = useWorkspaceResource(readCatalog);
 
-  // `unconfigured` keeps the prototype's own content on screen. That is the one
-  // state where fixtures are still correct — there is no backend to disagree
-  // with — and it is why the fixture import survives here for now. Whether it
-  // survives at all is an owner decision recorded in DESIGN-CONTRACT.md, and
-  // deleting these two fallbacks is the whole of the change when it is made.
-  const items: TemplateView[] =
-    catalog.status === 'ready'
-      ? toTemplates(catalog.data)
-      : // The prototype had no stable identity — it keyed by array position — so
-        // the name stands in for one here. Live entries carry a real templateId.
-        templates.map((t) => ({ ...t, templateId: t.name }));
-  const filters = catalog.status === 'ready' ? toCategories(catalog.data) : templateFilters;
+  const items: TemplateView[] = catalog.status === 'ready' ? toTemplates(catalog.data) : [];
+  const filters = catalog.status === 'ready' ? toCategories(catalog.data) : [];
 
   if (catalog.status === 'loading') return <ScreenLoading topInset={insets.top} />;
   if (catalog.status === 'offline') {
     return <ScreenOffline onRetry={catalog.reload} onBack={() => router.back()} topInset={insets.top} />;
   }
-  if (catalog.status === 'error') {
+  // `unconfigured` is drawn as a failed load, decided by the owner 2026-08-17.
+  // A build with no backend genuinely could not load this, and saying so is
+  // honest where showing invented invoices was not.
+  if (catalog.status === 'error' || catalog.status === 'unconfigured') {
     return (
       <ScreenError
         title={errorTitleFor('templates')}

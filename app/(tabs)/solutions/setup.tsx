@@ -19,7 +19,6 @@ import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
 import { useSolutions } from '@/hooks/use-solutions';
 import { useTheme } from '@/hooks/use-theme';
-import { solutionDefs } from '@/lib/fixtures';
 import { ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { errorTitleFor } from '@/lib/content/screen-states';
@@ -47,7 +46,7 @@ export default function SetupScreen() {
    * delivered on 2026-08-17 and what BUILD-PLAN §2.2 sized the closed unions for
    * — is the remaining work on this screen, tracked in DESIGN-CONTRACT.md.
    */
-  const { template, index } = useLocalSearchParams<{ template?: string; index?: string }>();
+  const { template } = useLocalSearchParams<{ template?: string }>();
   const catalog = useWorkspaceResource(
     (workspaceId) => {
       if (!template) throw new PlatformNotConfiguredError();
@@ -61,8 +60,8 @@ export default function SetupScreen() {
       : undefined;
   const solution = entry
     ? { icon: iconFor(entry.icon), name: entry.name, desc: entry.description, cat: entry.category, price: entry.monthlyPriceUsd }
-    : (solutionDefs[Number(index ?? 0)] ?? solutionDefs[0]);
-  const templateId = entry?.templateId ?? solution.name;
+    : null;
+  const templateId = entry?.templateId ?? '';
 
   /** Config values the person has changed, by the field's `key`. */
   const [config, setConfig] = useState<Record<string, unknown>>({});
@@ -71,6 +70,16 @@ export default function SetupScreen() {
   const [holdAboveLimit, setHoldAboveLimit] = useState(true);
 
   // Below every hook: these return early.
+  if (!solution) {
+    return (
+      <ScreenError
+        title={errorTitleFor('setup')}
+        onRetry={catalog.reload}
+        onBack={() => router.back()}
+        topInset={insets.top}
+      />
+    );
+  }
   if (template) {
     if (catalog.status === 'loading') return <ScreenLoading topInset={insets.top} />;
     if (catalog.status === 'offline') {

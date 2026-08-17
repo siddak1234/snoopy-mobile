@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { PlugsConnected } from 'phosphor-react-native';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,10 +12,9 @@ import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { TextField } from '@/components/nocturne/text-field';
 import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { templateConfigure } from '@/lib/fixtures';
 import { ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { useWorkspaceResource } from '@/hooks/use-resource';
-import { errorTitleFor } from '@/lib/content/screen-states';
+import { CONFIGURE_FOOTNOTE, errorTitleFor } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
 import { PlatformNotConfiguredError } from '@/lib/platform/problem';
 import { iconFor } from '@/lib/view/icon-registry';
@@ -25,7 +25,7 @@ export default function ConfigureTemplateScreen() {
   const { palette } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [name, setName] = useState(templateConfigure.defaultName);
+  const [name, setName] = useState('');
   const [connected, setConnected] = useState(false);
 
   /**
@@ -59,13 +59,25 @@ export default function ConfigureTemplateScreen() {
         name: entry.name,
         meta: `${entry.category} · ${entry.pipeline?.length ?? 0} steps`,
         steps: toPipelineSteps(entry.pipeline),
-        connection: templateConfigure.connection,
-        footnote: templateConfigure.footnote,
+        connection: entry.setup.find((f) => f.section === 'connections') ?? null,
+        footnote: CONFIGURE_FOOTNOTE,
       }
-    : templateConfigure;
-  const ConnectionIcon = view.connection.icon;
+    : null;
+  const ConnectionIcon = PlugsConnected;
 
-  // Below every hook: these return early.
+  // Below every hook: these return early. Without a resolved template there is
+  // nothing to configure — the prototype's Invoice-capture stand-in is gone by
+  // the owner's 2026-08-17 decision.
+  if (!view) {
+    return (
+      <ScreenError
+        title={errorTitleFor('configure')}
+        onRetry={catalog.reload}
+        onBack={() => router.back()}
+        topInset={insets.top}
+      />
+    );
+  }
   if (template) {
     if (catalog.status === 'loading') return <ScreenLoading topInset={insets.top} />;
     if (catalog.status === 'offline') {
@@ -116,7 +128,7 @@ export default function ConfigureTemplateScreen() {
           <ConnectionIcon size={20} color={palette.accentRamp[300]} />
           <View style={styles.connectionBody}>
             <Text style={[styles.connectionName, { color: palette.text }]}>
-              {view.connection.name}
+              {view.connection?.title ?? 'No connection required'}
             </Text>
             <Text
               style={[
