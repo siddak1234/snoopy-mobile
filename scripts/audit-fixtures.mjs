@@ -41,11 +41,22 @@ const knownFixtureReaders = new Map([
   ["hooks/use-workflows.tsx", "workflow status overrides ride on the fixture flow keys"],
   ["hooks/use-solutions.tsx", "PLAN_BASE_PRICE is billing — §12.1 #46 / BUILD-PLAN 8.3"],
 
-  // Wireable, and next in line rather than blocked.
-  ["app/(tabs)/solutions/index.tsx", "wireable — AutomationCatalogEntry"],
-  ["app/(tabs)/solutions/setup.tsx", "wireable — catalog + setup[]; entity identity is DESIGN-GAPS item 3"],
-  ["app/(tabs)/flows/templates.tsx", "wireable — AutomationCatalogEntry"],
-  ["app/(tabs)/settings.tsx", "wireable — Connection + /v1/connections/providers"],
+  // Wired to the platform. The import survives ONLY on the `unconfigured`
+  // branch, which is the one state where fixtures are still correct — there is
+  // no backend to disagree with. Deleting these is the whole of the change once
+  // the browsability question in DESIGN-CONTRACT.md is answered.
+  ["app/(tabs)/flows/templates.tsx", "wired — unconfigured fallback only"],
+  ["app/(tabs)/settings.tsx", "wired — unconfigured fallback only"],
+
+  // Contract is published, but the screens are not cleanly wireable yet. Both
+  // carry array-INDEX identity: `useSolutions` keys `active`/`toggle` by the
+  // fixture's position, and setup reads `solutionDefs[index]` from a route
+  // param. Wiring the cards to the catalog without an identity refactor would
+  // leave the toggle acting on the wrong row — worse than the fixture. The
+  // refactor is app-wide (SolutionsProvider is mounted at the root) and cannot
+  // remove this import anyway, because PLAN_BASE_PRICE has no wire source.
+  ["app/(tabs)/solutions/index.tsx", "catalog OK; use-solutions is index-keyed + PLAN_BASE_PRICE is billing"],
+  ["app/(tabs)/solutions/setup.tsx", "same index identity, plus DESIGN-GAPS item 3 (content is QuickBooks-specific for every solution)"],
 ]);
 
 /** `from '@/lib/fixtures'`, `from '../lib/fixtures'`, and friends. */

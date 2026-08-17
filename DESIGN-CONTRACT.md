@@ -62,6 +62,27 @@ gone; what remains open is recorded plainly rather than left implied.
   `PlatformUnreachableError` makes "offline" distinguishable from "the platform
   refused" — two different screens in the design, previously one 502.
 
+**The two Solutions screens are not cleanly wireable, and the reason is identity
+rather than the contract.** Found 2026-08-17 while wiring, and it corrects an
+earlier reading of this repo's own reconciliation, which listed both as
+"wireable" on the strength of the published shapes alone.
+
+`AutomationCatalogEntry` does supply everything the marketplace card draws. What
+blocks the wiring is that both screens carry **array-index identity**:
+`hooks/use-solutions.tsx` keys `active` and `toggle` by the fixture's position,
+and `app/(tabs)/solutions/setup.tsx` reads `solutionDefs[index]` from a route
+param. Rendering catalog entries against an index-keyed toggle would act on the
+wrong row — strictly worse than the fixture it replaced, and the exact class of
+defect the round exists to remove.
+
+An identity refactor is the right fix and is not small: `SolutionsProvider` is
+mounted at the app root, so it is shared state. Two things also survive it —
+`PLAN_BASE_PRICE` has no wire source at all (billing, §12.1 #46 / BUILD-PLAN
+8.3), so the fixture import stays in the hook regardless; and setup's
+connection/source/rules content is QuickBooks/Gmail-specific for every solution,
+which is DESIGN-GAPS item 3 and still open. So this waits on a billing contract
+and a design answer, not on effort here.
+
 **Open and needing an owner decision — the exit gate and the browsability rule
 contradict each other.** Found 2026-08-17 while preparing to wire the first
 screens, and recorded rather than settled unilaterally, because it changes what
