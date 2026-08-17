@@ -62,6 +62,36 @@ gone; what remains open is recorded plainly rather than left implied.
   `PlatformUnreachableError` makes "offline" distinguishable from "the platform
   refused" — two different screens in the design, previously one 502.
 
+**Open and needing an owner decision — the exit gate and the browsability rule
+contradict each other.** Found 2026-08-17 while preparing to wire the first
+screens, and recorded rather than settled unilaterally, because it changes what
+Round 6 delivers.
+
+Two commitments in this repository cannot both hold:
+
+- Gate 8: **"0 imports of `lib/fixtures` outside tests."**
+- `hooks/use-session.tsx` and `app/(tabs)/_layout.tsx`: an `unconfigured` build
+  — no backend origin at all — is "the design prototype's normal state, and it
+  must stay browsable: the UI is the asset this round exists to preserve."
+
+Today the screens are browsable when unconfigured precisely *because* they read
+fixtures. Delete the fixture imports and an unconfigured build renders the
+designed empty and error states instead of the prototype — which is coherent,
+but it ends the browsability the guard was written to protect. Three ways out,
+none of which a session should pick on its own:
+
+1. **Accept it.** Fixtures reach zero; an unconfigured build shows designed
+   empty states. The prototype stops being browsable without a backend, and the
+   design source in `design-source/` becomes the only place to see it.
+2. **Keep a prototype path.** Fixtures survive behind an `unconfigured`-only
+   branch. Honest, but the gate line can never read zero, so it would have to be
+   reworded rather than met.
+3. **Separate the concepts.** A seeded demo mode distinct from `lib/fixtures`.
+   A new concept, and so a decision rather than a refactor.
+
+Until this is answered, `scripts/audit-fixtures.mjs` holds the count where it is
+and names every blocker, so no one has to rediscover the question.
+
 **Still open, and each blocked on something named:**
 
 - The password **Log In** button still navigates without authenticating
