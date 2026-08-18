@@ -13,7 +13,7 @@ import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { em, fonts, layout, status } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { TimelineRowView as RunTimelineItem } from '@/lib/view/runs';
-import { ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
+import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { errorTitleFor } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
@@ -129,7 +129,19 @@ export default function RunDetailScreen() {
   if (detail.status === 'offline') {
     return <ScreenOffline onRetry={detail.reload} onBack={() => router.back()} topInset={insets.top} />;
   }
-  if (detail.status === 'error' || detail.status === 'unconfigured' || !run) {
+  // An unconfigured build or an unresolved workspace cannot succeed on a
+  // retry, so it does not get a Retry. A refused identity and a platform
+  // refusal both can — a stale read is the common case — so they keep one.
+  if (detail.status === 'unconfigured') {
+    return (
+      <ScreenUnavailable
+        title={errorTitleFor('run')}
+        onBack={() => router.back()}
+        topInset={insets.top}
+      />
+    );
+  }
+  if (detail.status === 'error' || !run) {
     return (
       <ScreenError
         title={errorTitleFor('run')}

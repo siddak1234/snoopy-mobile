@@ -18,7 +18,7 @@ recorded as NOT OBSERVED, not as a PASS.
 | Line | Result | Evidence |
 | --- | --- | --- |
 | `npm ci` | PASS | exit 0, 1109 packages |
-| `npm run verify` | PASS | exit 0 — 33 suites / 401 tests / 78 snapshots |
+| `npm run verify` | PASS | exit 0 — **32 suites / 397 tests / 78 snapshots**. (The audit itself first ran 33/401; deleting `lib/fixtures.ts` took `__tests__/fixtures.test.ts` — which only asserted that data against itself — with it, and the repairs added suites of their own.) |
 | `npm run audit:dependencies` | PASS | exit 0; 22 production advisories (12 high, 10 moderate, **0 critical**) |
 | `npm run export:ios` / `:android` | PASS | exit 0 each, 11.1 MB `.hbc` per platform |
 | 0 runtime `lib/fixtures` imports | PASS | the gate reports 0, **and the shipped Hermes bundle contains none of the fixture-only strings** (`Beacon Supply Co`, `4821`, `Invoice triage`, `ap@acme.co`, `solutionDefs`) while control strings are present |
@@ -71,30 +71,65 @@ a test that fails against the previous code.
    flake could appear in exactly one of the two places. Both now use it, and both
    pass `--ci` so a missing snapshot fails instead of being written.
 
+## Closed after the audit, in the same round
+
+The audit's own "still open" list was worked down rather than carried forward:
+
+- **`lib/fixtures.ts` is gone.** 410 lines of prototype data sat in a runtime
+  root with zero runtime importers, and the fixture gate passed because the
+  script exempted that one path *by name* — the rule held by exemption rather
+  than by the tree. The eight symbols the suites actually use moved to
+  `test/design-data.ts`; the other eleven exports had a single consumer,
+  `__tests__/fixtures.test.ts`, which asserted the data against itself. The gate
+  now fails on prototype fixture data merely **existing** in a runtime root, so
+  the count cannot drift back.
+- **`unconfigured` is its own state.** `components/screen-state.tsx` gains
+  `ScreenUnavailable`, and the eight workspace-scoped screens no longer fold it
+  into a load error whose Retry can never succeed.
+- **Login and Signup show a pending state** while the provider policy resolves,
+  and neither draws an "or" divider above an empty provider column.
+- **Approvals has a real empty state**, and its "all caught up — decisions
+  synced" line now fires only when this person actually decided something.
+- **The `space` scale is deleted** — zero product call sites; its only reference
+  was a test pinning its own value.
+- **The gate blind spots are closed** and pinned by
+  `__tests__/audit-gates.test.js`: a hex hoisted to a const, a template-literal
+  hex, a `const DEMO_PASSWORD`, a credential in an object literal, an aliased
+  `globalThis.fetch`, a fixture import from a `.js` file, and the fixtures
+  module existing at all. Two counter-cases assert the credential gate does
+  **not** fire on a keychain key name or a UI label, because a gate that cries
+  wolf earns an allowlist and then gets ignored.
+- **`eas.json` no longer describes capabilities that do not exist.** Both
+  `channel` keys were inert (`expo-updates` is not installed and `app.json` has
+  no `updates`/`runtimeVersion`), and `submit.production` was an empty object
+  that read as configured-and-ready. Both are gone, with the reasons recorded in
+  the file rather than in a commit message nobody re-reads.
+
 ## Still open, recorded rather than fixed
 
 - **Home's failure state is one state, not three.** The design (`Screen.dc.html`,
   `sHomeErr`) draws a single connectivity-worded failure for Home, so a platform
   refusal and an unresolved workspace both read "Check your connection". The
   client is faithful to the design; splitting it is a design decision, not a
-  client one. `DESIGN-CONTRACT.md` now states the carve-out instead of claiming
+  client one. `DESIGN-CONTRACT.md` states the carve-out instead of claiming
   uniformity.
-- **`unconfigured` renders as a retryable load error** on workspace-scoped
-  screens. Honest for an unconfigured build; misleading for a session that
-  resolved with no workspace.
-- **Login and Signup have no loading state** while the provider policy resolves.
-- **Approvals has no empty state**, and shows its "all done" wording to a person
-  who had nothing to review.
 - **The appearance preference is not persisted**; Settings → Appearance returns
-  to Dark on every cold launch.
-- **The `space` scale in `constants/theme.ts` has zero references.**
-- **Gate blind spots.** The audits are line-local regexes: a hex hoisted to a
-  const and used on a colour prop, a `const DEMO_PASSWORD = '…'`, an aliased
-  `const send = globalThis.fetch`, and a fixture import from a `.js` file all
-  pass today. They catch every direct form; they are not a parser.
+  to Dark on every cold launch. No published contract covers it and the design
+  does not say it should survive a launch, so it is recorded rather than decided
+  here.
+- **`eas.json` cannot build until an EAS project is linked.**
+  `appVersionSource: "remote"` requires one and there is no `extra.eas.projectId`
+  anywhere, so no profile builds non-interactively. That needs an account, which
+  is Round 7's to provision.
 - **A stray, orphaned 4-object pack from May 4 is unreadable**, so `git fsck` is
   noisy and `git gc` should be avoided. Nothing reachable from `HEAD`, `main`,
   `round-6-client` or `origin/main` is affected — verified object-by-object.
+- **This checkout sits under iCloud Drive**, which created 21 empty
+  `node_modules/@types/* 2` conflict directories mid-session. TypeScript treats
+  every directory under `@types/` as an implicit type library, so `tsc` failed
+  on all 21 until they were removed. It affects this machine, not CI, which
+  installs fresh on Linux — but it will recur here, and it is the same iCloud
+  conflict-copy failure the master plan's §2.1 item 15 screens the repos for.
 
 ## Live environment, re-probed
 

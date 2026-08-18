@@ -7,7 +7,7 @@ import {
   flowKeys,
   solutionDefs,
   templates,
-} from '@/lib/fixtures';
+} from '@/test/design-data';
 
 /**
  * A signed-in session and platform payloads built FROM the fixtures.

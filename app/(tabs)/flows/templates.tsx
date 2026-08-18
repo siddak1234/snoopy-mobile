@@ -9,7 +9,7 @@ import { BackCircle } from '@/components/nocturne/back-circle';
 import { FilterChip } from '@/components/nocturne/filter-chip';
 import { IconTile } from '@/components/nocturne/icon-tile';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
-import { ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
+import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { em, fonts, layout } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useTheme } from '@/hooks/use-theme';
@@ -37,7 +37,16 @@ export default function TemplatesScreen() {
   // `unconfigured` is drawn as a failed load, decided by the owner 2026-08-17.
   // A build with no backend genuinely could not load this, and saying so is
   // honest where showing invented invoices was not.
-  if (catalog.status === 'error' || catalog.status === 'unconfigured') {
+  if (catalog.status === 'unconfigured') {
+    return (
+      <ScreenUnavailable
+        title={errorTitleFor('templates')}
+        onBack={() => router.back()}
+        topInset={insets.top}
+      />
+    );
+  }
+  if (catalog.status === 'error') {
     return (
       <ScreenError
         title={errorTitleFor('templates')}

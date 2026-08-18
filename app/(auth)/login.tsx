@@ -15,10 +15,11 @@ import { BackCircle } from '@/components/nocturne/back-circle';
 import { BrandMark } from '@/components/nocturne/brand-mark';
 import { NocToggle } from '@/components/nocturne/noc-toggle';
 import { OAuthButton } from '@/components/nocturne/oauth-button';
+import { Skeleton } from '@/components/nocturne/skeleton';
 import { OrDivider } from '@/components/nocturne/or-divider';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { TextField } from '@/components/nocturne/text-field';
-import { em, fonts, layout, status } from '@/constants/theme';
+import { em, fonts, layout, radius, status } from '@/constants/theme';
 import { useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { useResource } from '@/hooks/use-resource';
@@ -48,8 +49,14 @@ export default function LoginScreen() {
       ? 'The platform is offline. Identity providers could not be loaded.'
       : providerPolicy.status === 'error' || providerPolicy.status === 'unconfigured'
         ? 'Identity providers are not available for this build.'
-        : null;
+        : providerPolicy.status === 'ready' && providerPolicy.data.providers.length === 0
+          ? 'This deployment has no identity provider enabled.'
+          : null;
   const visibleError = signInError ?? providerError;
+  // The provider read is a request, so it has a pending state. Without one the
+  // only OAuth-capable half of the screen is simply missing while it resolves,
+  // which reads as a broken build rather than as a screen still loading.
+  const providersLoading = providerPolicy.status === 'loading';
 
   const manualLoginUnavailable = () => {
     setSignInError('Password login is not available. Continue with an identity provider below.');
@@ -156,9 +163,14 @@ export default function LoginScreen() {
             the build is unconfigured there is nothing to separate, and an "or"
             with nothing under it reads as a missing control rather than as the
             honest refusal already shown in the callout above. */}
-        {enabledProviders.length > 0 ? <OrDivider /> : null}
+        {enabledProviders.length > 0 || providersLoading ? <OrDivider /> : null}
 
         <View style={styles.oauthColumn}>
+          {providersLoading
+            ? [0, 1, 2].map((row) => (
+                <Skeleton key={row} height={52} borderRadius={radius.pill} delay={row * 120} />
+              ))
+            : null}
           {enabledProviders.map(({ id, label }) => (
             <OAuthButton
               key={id}

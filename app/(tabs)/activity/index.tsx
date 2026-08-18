@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FilterChip } from '@/components/nocturne/filter-chip';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
-import { ScreenEmpty, ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
+import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { em, fonts, layout, status } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useTheme } from '@/hooks/use-theme';
@@ -138,7 +138,15 @@ export default function ActivityScreen() {
   if (activity.status === 'offline') {
     return <ScreenOffline onRetry={activity.reload} topInset={insets.top} />;
   }
-  if (activity.status === 'error' || activity.status === 'unconfigured') {
+  if (activity.status === 'unconfigured') {
+    return (
+      <ScreenUnavailable
+        title={errorTitleFor('activity')}
+        topInset={insets.top}
+      />
+    );
+  }
+  if (activity.status === 'error') {
     return (
       <ScreenError
         title={errorTitleFor('activity')}

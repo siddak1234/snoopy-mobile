@@ -13,7 +13,7 @@ import { StepCard } from '@/components/nocturne/step-card';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { em, fonts, layout, status } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { ActionFailure, ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
+import { ActionFailure, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { activeWorkspaceId, useSession } from '@/hooks/use-session';
 import { statusAction, useWorkflows, type FlowStatus } from '@/hooks/use-workflows';
@@ -94,7 +94,19 @@ export default function WorkflowDetailScreen() {
   if (flows.status === 'offline') {
     return <ScreenOffline onRetry={flows.reload} onBack={() => router.back()} topInset={insets.top} />;
   }
-  if (!def || flows.status === 'error' || flows.status === 'unconfigured') {
+  // An unconfigured build or an unresolved workspace cannot succeed on a
+  // retry, so it does not get a Retry. A refused identity and a platform
+  // refusal both can — a stale read is the common case — so they keep one.
+  if (flows.status === 'unconfigured') {
+    return (
+      <ScreenUnavailable
+        title={errorTitleFor('detail')}
+        onBack={() => router.back()}
+        topInset={insets.top}
+      />
+    );
+  }
+  if (!def || flows.status === 'error') {
     return (
       <ScreenError
         title={errorTitleFor('detail')}

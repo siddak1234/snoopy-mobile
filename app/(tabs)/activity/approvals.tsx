@@ -6,12 +6,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
-import { ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
+import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { activeWorkspaceId, useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
-import { APPROVAL_DONE_TEXT as approvalDoneText, errorTitleFor } from '@/lib/content/screen-states';
+import {
+  APPROVALS_EMPTY_BODY,
+  APPROVALS_EMPTY_TITLE,
+  APPROVAL_DONE_TEXT as approvalDoneText,
+  errorTitleFor,
+} from '@/lib/content/screen-states';
 import type { ApprovalItem } from '@/lib/view/runs';
 import { readCatalog } from '@/lib/platform/catalog';
 import { decideApproval } from '@/lib/platform/automations';
@@ -125,7 +130,9 @@ export default function ApprovalsScreen() {
   const items = inbox.status === 'ready' ? inbox.data : [];
   const decided = Object.keys(decisions).length;
   const pending = items.length - decided;
-  const allDone = decided === items.length;
+  // `decided > 0` is the difference between "you cleared the queue" and "the
+  // queue was already empty"; only the first is a synchronisation.
+  const allDone = decided > 0 && decided === items.length;
 
   const submitDecision = async (approvalId: string, decision: Decision) => {
     if (!workspaceId || busy[approvalId]) return;
@@ -158,12 +165,33 @@ export default function ApprovalsScreen() {
   if (inbox.status === 'offline') {
     return <ScreenOffline onRetry={inbox.reload} onBack={() => router.back()} topInset={insets.top} />;
   }
-  if (inbox.status === 'error' || inbox.status === 'unconfigured') {
+  if (inbox.status === 'unconfigured') {
+    return (
+      <ScreenUnavailable
+        title={errorTitleFor('approvals')}
+        onBack={() => router.back()}
+        topInset={insets.top}
+      />
+    );
+  }
+  if (inbox.status === 'error') {
     return (
       <ScreenError
         title={errorTitleFor('approvals')}
         onRetry={inbox.reload}
         onBack={() => router.back()}
+        topInset={insets.top}
+      />
+    );
+  }
+  // Arriving with an empty queue is not "all caught up" — nothing was decided.
+  if (items.length === 0) {
+    return (
+      <ScreenEmpty
+        icon={<CheckCircle size={40} />}
+        title={APPROVALS_EMPTY_TITLE}
+        body={APPROVALS_EMPTY_BODY}
+        secondaryAction={{ label: 'Go back', onPress: () => router.back() }}
         topInset={insets.top}
       />
     );

@@ -35,6 +35,18 @@ const RULES = [
     detail: `requests must be expressed through the schema-typed clients in ${TRANSPORT}`,
   },
   {
+    // `const send = globalThis.fetch` then `send(url)` never writes `fetch(`,
+    // so the call-shape rule above cannot see it. Binding the primitive is the
+    // step that matters — what the alias is called afterwards is arbitrary — so
+    // the capture is what gets refused.
+    name: "aliased network primitive",
+    roots: RUNTIME_ROOTS,
+    pattern:
+      /(?:\bconst|\blet|\bvar)\s+[A-Za-z0-9_$]+\s*(?::[^=]+)?=\s*(?:globalThis|window|global|self)?\.?(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*[;,)\]]|\[\s*['"`](?:fet|fetc)/,
+    allow: () => false,
+    detail: `a bound reference to a network primitive is still that primitive; use ${TRANSPORT}`,
+  },
+  {
     name: "alternate network library",
     roots: RUNTIME_ROOTS,
     pattern: /from\s+['"](?:axios|expo\/fetch|cross-fetch|node-fetch)['"]|require\s*\(\s*['"](?:axios|expo\/fetch|cross-fetch|node-fetch)['"]\s*\)/,

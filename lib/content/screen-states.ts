@@ -61,6 +61,18 @@ export const OFFLINE_TITLE = "You're offline";
 export const OFFLINE_BODY =
   "Your agents keep running in the cloud. This screen will sync as soon as you're back.";
 
+/**
+ * What an unconfigured build or an unresolved workspace says.
+ *
+ * Deliberately offers nothing to retry. `ERROR_BODY` promises "Retry now or
+ * come back in a moment", which is true of a platform that refused and false of
+ * a build with no backend origin — a second attempt runs the same impossible
+ * request. Naming the two conditions is what lets a person tell whether to wait
+ * or to go and fix something.
+ */
+export const UNAVAILABLE_BODY =
+  'This build has no workspace to read from yet. Sign in again, or check that the app is pointed at your Autom8x workspace.';
+
 export const RETRY_LABEL = 'Retry';
 export const BACK_LABEL = 'Go back';
 
@@ -98,6 +110,20 @@ export const START_FROM_TEMPLATE_LABEL = 'Start from a template';
  * as absence: notifications exist for held runs and failures, so an empty inbox
  * is the system working. It carries no action for the same reason.
  */
+/**
+ * Approvals distinguishes "you decided everything" from "there was nothing".
+ *
+ * The screen had one line — "All caught up — decisions synced to your
+ * workflows" — and showed it whenever nothing was pending, including to a
+ * person who arrived with an empty queue and decided nothing. Claiming a
+ * synchronisation that never happened is the same class of untruth as a
+ * fabricated count; the design splits `apprEmpty` from `apprAllDone` for
+ * exactly this reason.
+ */
+export const APPROVALS_EMPTY_TITLE = 'Nothing needs review';
+export const APPROVALS_EMPTY_BODY =
+  'When an agent pauses for a human decision, it waits for you here.';
+
 export const NOTIFICATIONS_EMPTY_TITLE = 'Quiet, as designed';
 export const NOTIFICATIONS_EMPTY_BODY =
   'We only notify you for held runs and failures. Nothing needs you right now.';

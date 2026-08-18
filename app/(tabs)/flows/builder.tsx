@@ -8,7 +8,7 @@ import { DotsSixVertical, FlowArrow, Plus } from 'phosphor-react-native';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { StepCard } from '@/components/nocturne/step-card';
-import { ScreenEmpty, ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
+import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { em, fonts, layout, radius } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useTheme } from '@/hooks/use-theme';
@@ -80,7 +80,15 @@ export default function BuilderScreen() {
   if (catalog.status === 'offline') {
     return <ScreenOffline onRetry={catalog.reload} topInset={insets.top} />;
   }
-  if (catalog.status === 'error' || catalog.status === 'unconfigured') {
+  if (catalog.status === 'unconfigured') {
+    return (
+      <ScreenUnavailable
+        title={errorTitleFor('builder')}
+        topInset={insets.top}
+      />
+    );
+  }
+  if (catalog.status === 'error') {
     return (
       <ScreenError
         title={errorTitleFor('builder')}

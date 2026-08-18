@@ -39,8 +39,11 @@ The individual architecture gates are:
 
 - `audit:credentials`: no pinned demo credentials.
 - `audit:tokens`: no raw colour literals outside the theme.
-- `audit:fixtures`: zero runtime imports of `lib/fixtures`, including static,
-  dynamic, alias, side-effect, and CommonJS forms.
+- `audit:fixtures`: zero prototype fixture data inside the runtime roots — both
+  zero imports (static, dynamic, alias, side-effect and CommonJS forms, in every
+  extension Metro resolves) and zero occurrences of the module itself. Design
+  data that the suites need lives in `test/design-data.ts`, where nothing under
+  `app/`, `components/`, `constants/`, `hooks/` or `lib/` can reach it.
 - `audit:platform`: no raw network primitive, alternate network library,
   AsyncStorage, runtime console call, or `openapi-fetch` import outside the
   transport boundary.

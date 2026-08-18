@@ -13,10 +13,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { BrandMark } from '@/components/nocturne/brand-mark';
 import { OAuthButton } from '@/components/nocturne/oauth-button';
+import { Skeleton } from '@/components/nocturne/skeleton';
 import { OrDivider } from '@/components/nocturne/or-divider';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { TextField } from '@/components/nocturne/text-field';
-import { em, fonts, layout } from '@/constants/theme';
+import { em, fonts, layout, radius } from '@/constants/theme';
 import { useResource } from '@/hooks/use-resource';
 import { useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
@@ -115,12 +116,19 @@ export default function SignupScreen() {
           </Text>
         ) : null}
 
-        {/* See login.tsx: no divider above an empty provider column. */}
-        {providerPolicy.status === 'ready' && providerPolicy.data.providers.length > 0 ? (
+        {/* See login.tsx: no divider above an empty provider column, and a
+            pending state while the provider read resolves. */}
+        {(providerPolicy.status === 'ready' && providerPolicy.data.providers.length > 0) ||
+        providerPolicy.status === 'loading' ? (
           <OrDivider />
         ) : null}
 
         <View style={styles.oauthColumn}>
+          {providerPolicy.status === 'loading'
+            ? [0, 1, 2].map((row) => (
+                <Skeleton key={row} height={52} borderRadius={radius.pill} delay={row * 120} />
+              ))
+            : null}
           {providerPolicy.status === 'ready'
             ? providerPolicy.data.providers.map(({ id, label }) => (
                 <OAuthButton

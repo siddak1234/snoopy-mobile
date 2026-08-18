@@ -37,20 +37,36 @@ const knownFixtureReaders = new Map([
   // A row may only be added with a reason in review. The gate is zero.
 ]);
 
+/**
+ * The module itself may not exist inside a runtime root.
+ *
+ * This is stronger than counting importers and it is why the count can now
+ * never drift: while `lib/fixtures.ts` existed, the gate passed because this
+ * script exempted that one path by name, so the rule was upheld by an exemption
+ * rather than by the tree. The prototype data moved to `test/design-data.ts`,
+ * where it is test data and nothing in `app/`, `components/`, `constants/`,
+ * `hooks/` or `lib/` can reach it without an import the walker below sees.
+ */
+const FORBIDDEN_MODULE = /(^|\/)fixtures\.(?:[cm]?[jt]sx?)$/;
+
 /** Static, side-effect, dynamic and CommonJS module specifiers. */
 const MODULE_SPECIFIER = /(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|\bimport\s*)['"]([^'"]+)['"]/g;
+
+/** Every extension Metro will resolve — a `.js` file imports exactly as well as a `.ts` one. */
+const MODULE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"];
 
 function walk(dir) {
   const out = [];
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) out.push(...walk(full));
-    else if ([".ts", ".tsx"].includes(extname(full))) out.push(full);
+    else if (MODULE_EXTENSIONS.includes(extname(full))) out.push(full);
   }
   return out;
 }
 
 const found = new Set();
+const present = new Set();
 
 function importsFixtures(file, source) {
   const withoutComments = source
@@ -75,7 +91,10 @@ function importsFixtures(file, source) {
 for (const dir of sourceRoots) {
   for (const file of walk(join(root, dir))) {
     const path = relative(root, file).split("\\").join("/");
-    if (path === "lib/fixtures.ts") continue; // the module itself, not a reader
+    if (FORBIDDEN_MODULE.test(path)) {
+      present.add(path);
+      continue; // the module itself, not a reader
+    }
     if (importsFixtures(file, readFileSync(file, "utf8"))) found.add(path);
   }
 }
@@ -86,6 +105,11 @@ for (const path of found) {
   if (!knownFixtureReaders.has(path)) {
     failures.push(`${path}: new import of lib/fixtures — the exit gate is zero, so this may not grow`);
   }
+}
+for (const path of present) {
+  failures.push(
+    `${path}: prototype fixture data may not live in a runtime root — it belongs under test/`,
+  );
 }
 for (const path of knownFixtureReaders.keys()) {
   if (!found.has(path)) {
@@ -100,5 +124,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  `Fixture audit passed. Files still reading lib/fixtures: ${found.size} (exit gate: 0).`,
+  `Fixture audit passed. Prototype fixture modules in runtime roots: ${present.size}; files reading one: ${found.size} (exit gate: 0).`,
 );
