@@ -20,7 +20,7 @@ recorded as NOT OBSERVED, not as a PASS.
 | `npm ci` | PASS | exit 0, 1109 packages |
 | `npm run verify` | PASS | exit 0 — **32 suites / 397 tests / 78 snapshots**. (The audit itself first ran 33/401; deleting `lib/fixtures.ts` took `__tests__/fixtures.test.ts` — which only asserted that data against itself — with it, and the repairs added suites of their own.) |
 | `npm run audit:dependencies` | PASS | exit 0; 22 production advisories (12 high, 10 moderate, **0 critical**) |
-| `npm run export:ios` / `:android` | PASS | exit 0 each, 11.1 MB `.hbc` per platform |
+| `npm run export:ios` / `:android` | PASS | exit 0 each, ~11.1 MB `.hbc` per platform. Re-run after the repairs with the output redirected out of the iCloud-synced tree — the gate's own `dist/` could not complete while iCloud wrote conflict copies into it (see below). The fresh iOS bundle was grepped in **both ASCII and UTF-16**: all ten fixture-only strings absent, every new string present. Hermes stores non-ASCII strings as UTF-16, so an ASCII-only grep would have missed anything containing `·` or `—`. |
 | 0 runtime `lib/fixtures` imports | PASS | the gate reports 0, **and the shipped Hermes bundle contains none of the fixture-only strings** (`Beacon Supply Co`, `4821`, `Invoice triage`, `ap@acme.co`, `solutionDefs`) while control strings are present |
 | `audit:credentials` | PASS | allowlist empty |
 | Nocturne visual unchanged | PASS | 78 snapshots unchanged across the repair; the gate was proved to bite — a one-digit accent change fails 10 snapshots, +1pt padding 8, +1pt radius 6, a font-family change 14 |
@@ -124,12 +124,29 @@ The audit's own "still open" list was worked down rather than carried forward:
 - **A stray, orphaned 4-object pack from May 4 is unreadable**, so `git fsck` is
   noisy and `git gc` should be avoided. Nothing reachable from `HEAD`, `main`,
   `round-6-client` or `origin/main` is affected — verified object-by-object.
-- **This checkout sits under iCloud Drive**, which created 21 empty
-  `node_modules/@types/* 2` conflict directories mid-session. TypeScript treats
-  every directory under `@types/` as an implicit type library, so `tsc` failed
-  on all 21 until they were removed. It affects this machine, not CI, which
-  installs fresh on Linux — but it will recur here, and it is the same iCloud
-  conflict-copy failure the master plan's §2.1 item 15 screens the repos for.
+- **This checkout sits under iCloud Drive, and it is not a cosmetic problem.**
+  iCloud creates numbered conflict copies inside the tree while tools write to
+  it. Measured on 2026-08-18: **6,159** such copies under
+  `snoopy-mobile/node_modules`, 21 of them empty `@types/* 2` directories —
+  and TypeScript treats every directory under `@types/` as an implicit type
+  library, so `tsc` failed outright on all 21 until they were removed. The
+  performance cost is the larger half: with the copies present `tsc --noEmit`
+  used **4.5 s of CPU spread over 9 min 47 s of wall clock at 1% CPU**; with
+  them removed, **3.0 s wall at 162% CPU**. One test suite reported 578 s that
+  runs in 4.1 s clean. `expo export` could not finish at all while writing into
+  the synced `dist/`, where iCloud had produced `_expo 3`, `assets 2` and
+  `metadata 2.json`; redirecting the same command to a non-synced output
+  directory completed both platforms with exit 0.
+
+  **No tracked file in any of the four repositories is affected** — verified by
+  `git ls-files` across all four. The damage is confined to ignored build and
+  dependency trees, plus two untracked strays in the sibling web repo
+  (`snoopy/compose 2.yml`, `snoopy/test/session-contract.test 2.mjs`), which a
+  `snoopy` session should clear.
+
+  This is the same iCloud conflict-copy failure the master plan's §2.1 item 15
+  screens the repositories for. It will recur here, and Round 7's container
+  builds will meet it on a volume that is already 95% full.
 
 ## Live environment, re-probed
 
