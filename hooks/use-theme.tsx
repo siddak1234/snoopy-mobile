@@ -21,10 +21,21 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 /** The design's appearance control defaults to Dark (Settings → Appearance),
- *  with Light and Auto selectable. */
-export function NocturneThemeProvider({ children }: { children: React.ReactNode }) {
+ *  with Light and Auto selectable.
+ *
+ *  `initialMode` exists so a caller can mount straight into an appearance
+ *  rather than mounting dark and switching. The visual-regression suite needs
+ *  that to capture both palettes; the app never passes it, so the default is
+ *  unchanged. */
+export function NocturneThemeProvider({
+  children,
+  initialMode = 'dark',
+}: {
+  children: React.ReactNode;
+  initialMode?: ThemeMode;
+}) {
   const system = useColorScheme();
-  const [mode, setMode] = useState<ThemeMode>('dark');
+  const [mode, setMode] = useState<ThemeMode>(initialMode);
 
   const value = useMemo(() => {
     const resolved = mode === 'auto' ? (system === 'light' ? 'light' : 'dark') : mode;

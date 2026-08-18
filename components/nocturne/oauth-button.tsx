@@ -43,14 +43,17 @@ type Props = {
   provider: OAuthProvider;
   label: string;
   onPress?: () => void;
+  disabled?: boolean;
 };
 
 /** 48px OAuth row button: radius 12, neutral-700 ring, 14.5px medium label. */
-export function OAuthButton({ provider, label, onPress }: Props) {
+export function OAuthButton({ provider, label, onPress, disabled = false }: Props) {
   const { palette } = useTheme();
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled || undefined}
+      accessibilityState={disabled ? { disabled: true } : undefined}
       style={({ pressed }) => ({
         height: 48,
         borderRadius: radius.input,
@@ -60,7 +63,8 @@ export function OAuthButton({ provider, label, onPress }: Props) {
         alignItems: 'center',
         justifyContent: 'center',
         gap: 9,
-        backgroundColor: pressed ? withAlpha(palette.text, 0.06) : 'transparent',
+        backgroundColor: pressed && !disabled ? withAlpha(palette.text, 0.06) : 'transparent',
+        ...(disabled ? { opacity: 0.5 } : {}),
       })}>
       <ProviderGlyph provider={provider} color={palette.text} />
       <Text style={{ fontFamily: fonts.medium, fontSize: 14.5, color: palette.text }}>{label}</Text>

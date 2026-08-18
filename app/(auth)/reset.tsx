@@ -11,12 +11,12 @@ import { TextField } from '@/components/nocturne/text-field';
 import { em, fonts, layout, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-/** Password reset (design `sReset`): form → "Link sent" confirmation. */
+/** Password reset handoff for an OAuth-only platform. */
 export default function ResetPasswordScreen() {
   const { palette } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [email, setEmail] = useState('alex@acme.co');
+  const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
 
   return (
@@ -46,10 +46,10 @@ export default function ResetPasswordScreen() {
               },
             ]}>
             <PaperPlaneTilt size={38} color={palette.accentRamp[300]} />
-            <Text style={[styles.sentTitle, { color: palette.text }]}>Link sent</Text>
+            <Text style={[styles.sentTitle, { color: palette.text }]}>Reset with your provider</Text>
             <Text style={[styles.sentBody, { color: palette.neutral[400] }]}>
-              Check {email} — the link expires in 30 minutes. Nothing arriving? Check spam or
-              resend.
+              Autom8x does not issue a password or reset link. Reset access with the Apple,
+              Google, or Microsoft account you use to sign in.
             </Text>
             <PillButton
               label="Back to log in"
@@ -63,7 +63,7 @@ export default function ResetPasswordScreen() {
         ) : (
           <>
             <Text style={[styles.subtitle, { color: palette.neutral[400] }]}>
-              Enter your email and we&apos;ll send a reset link.
+              Autom8x sign-in is managed by your identity provider.
             </Text>
             <View style={styles.form}>
               <TextField
@@ -73,7 +73,7 @@ export default function ResetPasswordScreen() {
                 keyboardType="email-address"
                 autoComplete="email"
               />
-              <PillButton label="Send reset link" onPress={() => setSent(true)} />
+              <PillButton label="View reset options" onPress={() => setSent(true)} />
             </View>
           </>
         )}

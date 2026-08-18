@@ -17,6 +17,7 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { fonts, nocturneDark, nocturneLight } from '@/constants/theme';
+import { SessionProvider } from '@/hooks/use-session';
 import { SolutionsProvider } from '@/hooks/use-solutions';
 import { NocturneThemeProvider, useTheme } from '@/hooks/use-theme';
 import { WorkflowsProvider } from '@/hooks/use-workflows';
@@ -86,11 +87,13 @@ export default function RootLayout() {
 
   return (
     <NocturneThemeProvider>
-      <SolutionsProvider>
-        <WorkflowsProvider>
-          <RootNavigator />
-        </WorkflowsProvider>
-      </SolutionsProvider>
+      <SessionProvider>
+        <SolutionsProvider>
+          <WorkflowsProvider>
+            <RootNavigator />
+          </WorkflowsProvider>
+        </SolutionsProvider>
+      </SessionProvider>
     </NocturneThemeProvider>
   );
 }

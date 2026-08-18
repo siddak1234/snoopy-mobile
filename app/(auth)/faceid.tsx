@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import * as LocalAuthentication from 'expo-local-authentication';
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
@@ -14,8 +14,11 @@ import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from 'react-nativ
 
 import { BrandMark } from '@/components/nocturne/brand-mark';
 import { GlowBackground } from '@/components/nocturne/glow-background';
+import { PillButton } from '@/components/nocturne/pill-button';
 import { fonts, radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useSession } from '@/hooks/use-session';
+import { readSession } from '@/lib/platform/session-store';
 
 /** CSS `ease` / `ease-in-out` used by a8xGlow / a8xScan. */
 const easeCss = Easing.bezier(0.25, 0.1, 0.25, 1);
@@ -47,36 +50,41 @@ function FaceGlyph({ color }: { color: string }) {
 export default function FaceIdScreen() {
   const { palette } = useTheme();
   const router = useRouter();
-  const navigatedRef = useRef(false);
+  const session = useSession();
+  const [message, setMessage] = useState('Unlocking your workspace…');
 
-  const goHome = useCallback(() => {
-    if (navigatedRef.current) return;
-    navigatedRef.current = true;
-    router.replace('/(tabs)/(home)');
-  }, [router]);
-
-  // Prototype behavior: attempt real Face ID only when biometrics are
-  // actually enrolled (otherwise iOS falls back to the system passcode
-  // sheet, which blocks the app); the design auto-advances after ~2100ms
-  // regardless.
+  // Biometrics unlock an existing enclave-held session; they never mint one.
+  // Every refusal remains on the auth side of the route boundary.
   useEffect(() => {
-    const t = setTimeout(goHome, 2100);
+    let cancelled = false;
     (async () => {
       try {
+        const stored = await readSession();
+        if (!stored || session.status !== 'signed-in') {
+          if (!cancelled) setMessage('Sign in with your identity provider first.');
+          return;
+        }
         const hasHardware = await LocalAuthentication.hasHardwareAsync();
         const enrolled = hasHardware && (await LocalAuthentication.isEnrolledAsync());
-        if (enrolled) {
-          await LocalAuthentication.authenticateAsync({
-            promptMessage: 'Unlock your workspace',
-            disableDeviceFallback: true,
-          });
+        if (!enrolled) {
+          if (!cancelled) setMessage('Face ID is not available on this device.');
+          return;
         }
+        const result = await LocalAuthentication.authenticateAsync({
+          promptMessage: 'Unlock your workspace',
+          disableDeviceFallback: true,
+        });
+        if (cancelled) return;
+        if (result.success) router.replace('/(tabs)/(home)');
+        else setMessage('Face ID did not unlock this workspace.');
       } catch {
-        // fall through to the timer
+        if (!cancelled) setMessage('Face ID did not unlock this workspace.');
       }
     })();
-    return () => clearTimeout(t);
-  }, [goHome]);
+    return () => {
+      cancelled = true;
+    };
+  }, [router, session.status]);
 
   // a8xGlow: opacity .45 → 1 → .45, 2s ease infinite.
   const glow = useSharedValue(0);
@@ -124,9 +132,18 @@ export default function FaceIdScreen() {
       <View style={styles.textGroup}>
         <Text style={[styles.title, { color: palette.text }]}>Face ID</Text>
         <Text style={[styles.sub, { color: palette.neutral[400] }]}>
-          Unlocking your workspace…
+          {message}
         </Text>
       </View>
+      {message !== 'Unlocking your workspace…' ? (
+        <PillButton
+          label="Use identity provider"
+          height={44}
+          fontSize={14}
+          onPress={() => router.replace('/(auth)/login')}
+          style={styles.fallback}
+        />
+      ) : null}
       <View style={styles.brand}>
         <BrandMark width={64} opacity={0.5} />
       </View>
@@ -164,6 +181,9 @@ const styles = StyleSheet.create({
   textGroup: {
     alignItems: 'center',
     gap: 8,
+  },
+  fallback: {
+    minWidth: 210,
   },
   title: {
     fontFamily: fonts.medium,

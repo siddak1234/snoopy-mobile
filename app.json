@@ -37,7 +37,16 @@
           }
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "17.4"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

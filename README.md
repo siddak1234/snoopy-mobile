@@ -1,47 +1,124 @@
-# Autom8x for iOS (snoopy-mobile)
+# Autom8x Mobile (`snoopy-mobile`)
 
-The Autom8x mobile app — automation × AI workflows on the phone — implementing
-the **Nocturne** design system from the Claude Design project
-"Autom8x.ai iOS App Design". Expo SDK 54, expo-router, TypeScript strict.
+The Expo SDK 54 native client for Autom8x. It implements the frozen Nocturne
+design on iOS and Android and consumes only the Edge's published OpenAPI
+surface.
 
-## Run
-
-```bash
-npm install
-npm run ios        # or: npm start, then press i
-```
-
-## Test & checks
+## Local run
 
 ```bash
-npm test           # jest (jest-expo + @testing-library/react-native v14)
-npm run lint       # eslint
-npx tsc --noEmit   # typecheck (typed routes regenerate on expo start)
+npm ci
+EXPO_PUBLIC_BACKEND_API_ORIGIN=http://localhost:8080 npm run ios
 ```
 
-## Structure
+Use `http://10.0.2.2:8080` for the Android emulator. Native login additionally
+requires an app-claimed HTTPS callback:
 
-- `app/` — expo-router tree: auth stack (splash → welcome → login/signup →
-  onboarding → Face ID) and the 5-tab shell (Home, Flows, Build, Activity,
-  Settings). Workflow detail + Templates live in the Flows stack and the
-  Approvals inbox in the Activity stack, so tab highlighting matches the
-  design's tab map.
-- `constants/theme.ts` — the Nocturne token sheet (single source of truth:
-  no raw hex or ad-hoc fonts anywhere else; dark + light palettes).
-- `components/nocturne/` — the reusable component vocabulary (pill buttons,
-  cards, toggles, tab bar, glows, …).
-- `lib/fixtures.ts` — prototype data, byte-exact to the design.
-- `test/`, `__tests__/` — test helpers and suites. Timer-driven screens keep
-  one fake-timer scenario per file (see comments in those suites).
+```bash
+EXPO_PUBLIC_NATIVE_REDIRECT_URI=https://app.example.com/auth/native/callback
+```
 
-## Design source
+The callback must exactly match the Edge's `NATIVE_APP_REDIRECT_URIS` entry.
+`app.config.js` derives the iOS associated domain and Android verified app link
+from this value. It rejects custom schemes, malformed origins, insecure release
+origins, and preview/production builds missing either release value.
+The iOS deployment target is 17.4 because that is the first version whose
+`ASWebAuthenticationSession` can match an HTTPS callback by associated host and
+path; no supported build can fall back to scheme-only matching.
 
-Tokens, screens, and copy come from the Claude Design project; the brand
-assets originate in the `snoopy` web repo (`public/a8x-mark.png`). Keep
-`constants/theme.ts` in step with the design system's `styles.css` when the
-design evolves — the theme test suite pins the token values.
+## Verification
 
-- `design-source/autom8x-ios-app-design/` — imported visual/design-system snapshot.
-- `DESIGN-CONTRACT.md` — draft behavior and integration contracts; unresolved
-  decisions are marked explicitly.
-- `DESIGN-GAPS.md` — evidence-backed design backlog and implementation order.
+```bash
+npm run verify                    # lint, types, all architecture gates, contracts, tests
+npm run audit:dependencies        # critical production dependency gate
+npm run export:ios                # production JS/native asset bundle
+npm run export:android
+```
+
+The individual architecture gates are:
+
+- `audit:credentials`: no pinned demo credentials.
+- `audit:tokens`: no raw colour literals outside the theme.
+- `audit:fixtures`: zero prototype fixture data inside the runtime roots — both
+  zero imports (static, dynamic, alias, side-effect and CommonJS forms, in every
+  extension Metro resolves) and zero occurrences of the module itself. Design
+  data that the suites need lives in `test/design-data.ts`, where nothing under
+  `app/`, `components/`, `constants/`, `hooks/` or `lib/` can reach it.
+- `audit:platform`: no raw network primitive, alternate network library,
+  AsyncStorage, runtime console call, or `openapi-fetch` import outside the
+  transport boundary.
+- `verify:platform-contracts`: regenerate from the sibling backend checkout,
+  when present, and reject a generated declaration diff.
+
+The gate suites include negative tests that inject forbidden source and prove
+the audits fail. `__tests__/nocturne-visual.test.tsx` snapshots all 18 Nocturne
+components in dark and light palettes. Do not update those snapshots unless a
+visual change is explicitly authorized.
+
+CI runs lint, typecheck, Jest, all architecture/dependency gates, contract
+verification, and both platform exports. Preview and production EAS values are
+supplied by the build environment; they are intentionally not committed to
+`eas.json`.
+
+## Runtime architecture
+
+- `lib/generated/platform-contracts/` is generated from the Edge, automations,
+  and connections OpenAPI documents. Do not hand-edit it.
+- `lib/platform/client.ts` is the sole runtime transport boundary. It uses
+  `openapi-fetch`, attaches the current bearer token through middleware,
+  applies a timeout and `no-store`, and maps RFC problem responses.
+- `lib/platform/*.ts` exposes typed reads and mutations. Screens do not call a
+  network primitive.
+- `lib/platform/session-store.ts` stores access/refresh credentials only in
+  `expo-secure-store` with `WHEN_UNLOCKED_THIS_DEVICE_ONLY`.
+- `hooks/use-session.tsx` resolves `/v1/session` before routing. Protected tabs
+  fail closed unless that response positively establishes `signed-in`. A 401
+  clears the local credential; an outage does not.
+- `lib/platform/native-auth.ts` implements ADR-0017's backend-mediated sealed
+  handoff. `expo-web-browser.openAuthSessionAsync` opens the external system
+  user-agent; the app owns only its device PKCE pair and never receives provider
+  tokens. `expo-auth-session` is deliberately not used because its
+  `AuthRequest` models an app-owned OAuth authorization request with a required
+  client ID, while this app is not the OAuth client.
+- `hooks/use-resource.tsx` and `components/screen-state.tsx` provide explicit
+  loading, offline, platform-error, and empty states.
+- `lib/view/` performs the published wire-to-Nocturne mapping and owns no
+  workspace truth.
+
+## Local platform observation
+
+On 2026-08-18 the sibling Compose stack was running, but public readiness was
+HTTP 503: identity, connections, and object storage were not configured.
+`/v1/session` returned 401, and a schema-valid native Google start returned 503
+naming `native_app_redirect_uris`. Therefore an authenticated live journey was
+not observable against that environment. The client renders those refusals and
+does not substitute fixtures or bypass the guard.
+
+An exact copy of this checkout produced an iOS Release build with **zero errors
+and zero warnings from the app target**. The build emits ~2,700 warnings in
+total, every one of them from third-party headers under `ios/Pods/` (React
+Native and Expo), and none from any file in this repository. The earlier
+"zero errors or warnings" wording overstated that and is corrected here.
+That build was installed and launched as
+`ai.autom8x.snoopy` on the iPhone 16 Pro / iOS 18.6 simulator, where the real
+onboarding screen was observed. The copy used a path without spaces because the
+current Expo/React Native CocoaPods scripts split the checkout path at the
+space in `Business Infra`; the direct build from this checkout therefore fails
+before app code runs. No source or generated native file was patched to hide
+that upstream limitation. Both platform exports passed, but an Android native
+launch remains unobserved because this host has neither `adb` nor `emulator`;
+an EAS cloud build also remains unobserved.
+
+That observation is not a claim about a future environment. Recheck it during
+the fresh Round 6 audit.
+
+## Scope and handoff
+
+Round 6's current contract and screen-to-operation map are in
+[`DESIGN-CONTRACT.md`](DESIGN-CONTRACT.md). The evidence still required from a
+fresh audit session, plus deliberate non-Round-6 gaps, is in
+[`DESIGN-GAPS.md`](DESIGN-GAPS.md).
+
+The governing master plan and round playbook live in the sibling private
+`snoopy-backend` repository. This repository may read them and must never edit
+that repository during a mobile session.
