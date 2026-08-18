@@ -40,7 +40,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm test -- --ci --watchAll=false
+      # `--runInBand` matches what `npm run verify` does locally. Without it CI
+      # ran the suite in a different concurrency mode from every Gate 8 run, so
+      # a flake could appear in exactly one of the two places and neither would
+      # reproduce the other. `--ci` makes a missing snapshot a failure instead of
+      # writing one, which is what keeps the visual gate a gate.
+      - run: npm test -- --ci --watchAll=false --runInBand
 
   gates:
     name: Architecture gates
@@ -69,6 +74,13 @@ jobs:
       # would fork the transport, one AsyncStorage import would break the
       # invariant ADR-0017 amended, and one console call could log a token.
       - run: npm run audit:platform
+      # Fail the build on critical advisories. High-severity findings that only
+      # Expo 57 resolves remain a documented SDK migration rather than a forced
+      # major upgrade inside Round 6.
+      - run: npm run audit:dependencies
+      # Regenerates from the sibling backend checkout when it is available. The
+      # committed declarations still compile in this standalone public checkout.
+      - run: npm run verify:platform-contracts
       - name: No salvaged client data
         run: |
           # `_salvage/` lives in the workspace folder, outside every repository. It
@@ -88,3 +100,16 @@ jobs:
             exit 1
           fi
           echo "No salvaged client data: PASS"
+
+  export:
+    name: Native bundle export
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run export:ios
+      - run: npm run export:android

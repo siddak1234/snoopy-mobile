@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+
+import { overrideScopeKey, useSession } from '@/hooks/use-session';
 
 /** One priced solution, however the screen sourced it. */
 export type PricedSolution = { templateId: string; price: number; subscribed: boolean };
@@ -28,8 +30,8 @@ const SolutionsContext = createContext<SolutionsContextValue | null>(null);
  *
  * The provider deliberately holds **only the overrides** and takes both the
  * price list and each solution's server-side `subscribed` from the caller. That
- * is what lets one hook serve a screen reading the live catalog and a screen
- * reading the prototype without it needing to know which.
+ * lets the marketplace and Settings share a successful mutation immediately
+ * without making this provider a second catalog.
  *
  * **There is no plan base, and that is the answer rather than a gap.** This file
  * used to add a $99 `PLAN_BASE_PRICE` from the fixtures, recorded as waiting on
@@ -47,6 +49,21 @@ const SolutionsContext = createContext<SolutionsContextValue | null>(null);
  */
 export function SolutionsProvider({ children }: { children: React.ReactNode }) {
   const [overrides, setOverrides] = useState<Record<string, boolean>>({});
+
+  /**
+   * An override belongs to one person in one workspace, and to nothing else.
+   *
+   * This provider is mounted above the route tree, so it survives sign-out:
+   * without this, the overrides one account accumulated would still be layered
+   * over the next account's catalog in the same app process, and a workspace
+   * switch would apply one tenant's local state to another's templateIds. The
+   * scope key changes on sign-out, sign-in, and workspace switch alike, so one
+   * effect covers all three.
+   */
+  const scope = overrideScopeKey(useSession());
+  useEffect(() => {
+    setOverrides({});
+  }, [scope]);
 
   const value = useMemo<SolutionsContextValue>(() => {
     const isActive = (templateId: string, fallback: boolean) =>

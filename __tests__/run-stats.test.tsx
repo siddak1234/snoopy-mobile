@@ -5,10 +5,14 @@ import HomeScreen from '@/app/(tabs)/(home)/index';
 import type { SessionContextValue } from '@/hooks/use-session';
 import { localMidnight, readRunStats } from '@/lib/platform/runs';
 import { toStatTiles } from '@/lib/view/catalog';
+import { routePlatform } from '@/test/platform';
 import { renderWithProviders } from '@/test/render';
 
-jest.mock('@/lib/platform/client', () => ({ platformJson: jest.fn() }));
-const { platformJson } = jest.requireMock('@/lib/platform/client');
+jest.mock('@/lib/platform/client', () => ({
+  platformOperation: jest.fn(),
+  newIdempotencyKey: jest.fn(() => 'test-intent'),
+}));
+const { platformOperation } = jest.requireMock('@/lib/platform/client');
 
 /**
  * `run-stats`, and Home's three tiles.
@@ -42,21 +46,27 @@ const COUNTS = {
   cancelled: 1,
 };
 
-beforeEach(() => platformJson.mockReset());
+beforeEach(() => platformOperation.mockReset());
 
 describe('readRunStats — the query the spec is strict about', () => {
   it('omits `since` entirely when there is no window, because ?since= is a 400', () => {
-    platformJson.mockResolvedValue({ workspace: COUNTS, subscriptions: [] });
+    routePlatform(platformOperation, {
+      '/run-stats': { workspace: COUNTS, subscriptions: [] },
+    });
     readRunStats(WORKSPACE);
-    expect(platformJson).toHaveBeenCalledWith(`/v1/workspaces/${WORKSPACE}/run-stats`);
+    expect(platformOperation).toHaveBeenCalledWith(
+      `/v1/workspaces/${WORKSPACE}/run-stats`,
+      expect.any(Function),
+    );
   });
 
   it('sends an ISO instant when windowed', () => {
-    platformJson.mockResolvedValue({ workspace: COUNTS, subscriptions: [] });
+    platformOperation.mockResolvedValue({ workspace: COUNTS, subscriptions: [] });
     const since = new Date(Date.UTC(2026, 7, 17, 4, 0, 0));
     readRunStats(WORKSPACE, since);
-    expect(platformJson).toHaveBeenCalledWith(
+    expect(platformOperation).toHaveBeenCalledWith(
       `/v1/workspaces/${WORKSPACE}/run-stats?since=${encodeURIComponent(since.toISOString())}`,
+      expect.any(Function),
     );
   });
 });
@@ -94,7 +104,9 @@ describe('toStatTiles', () => {
 
 describe('Home stats row', () => {
   it('renders the platform’s counts, not the prototype’s', async () => {
-    platformJson.mockResolvedValue({ workspace: COUNTS, subscriptions: [] });
+    routePlatform(platformOperation, {
+      '/run-stats': { workspace: COUNTS, subscriptions: [] },
+    });
     await renderWithProviders(<HomeScreen />, signedIn);
 
     expect(await screen.findByText('1,284')).toBeTruthy();
@@ -108,11 +120,11 @@ describe('Home stats row', () => {
     // Home owns its own error state (sHomeErr), so that is what it shows.
     await renderWithProviders(<HomeScreen />);
     expect(await screen.findByText("Can't reach Autom8x")).toBeTruthy();
-    expect(platformJson).not.toHaveBeenCalled();
+    expect(platformOperation).not.toHaveBeenCalled();
   });
 
   it('uses its OWN error state on failure, not the shared one', async () => {
-    platformJson.mockRejectedValue(new Error('boom'));
+    platformOperation.mockRejectedValue(new Error('boom'));
     await renderWithProviders(<HomeScreen />, signedIn);
     // Home keeps sHomeErr rather than the shared ScreenError — the design gives
     // it bespoke states and the frozen-UI rule says to use them.

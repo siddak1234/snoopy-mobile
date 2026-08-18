@@ -22,10 +22,9 @@ import {
  *   design shows "You're offline", because nothing is wrong with the platform.
  * - `error` is a platform that answered and refused. The design names the thing
  *   that failed to load and offers Retry.
- * - `unconfigured` is a build with no backend origin at all. That is the design
- *   prototype's normal state, and it must stay browsable rather than showing a
- *   failure — the UI is the asset this round exists to preserve, so screens fall
- *   back to their prototype content instead of locking.
+ * - `unconfigured` means no request can be made: the build has no backend or a
+ *   workspace-scoped read has no resolved workspace. Screens render a refusal;
+ *   they never substitute prototype data.
  * - `401` is not handled here. It is the session's business, and
  *   `hooks/use-session.tsx` owns the route guard that answers it.
  */
@@ -57,9 +56,8 @@ export function useResource<T>(read: () => Promise<T>, deps: unknown[] = []): Re
     // `Promise.resolve().then(...)` rather than `readRef()` directly: a reader
     // that throws SYNCHRONOUSLY would otherwise escape the chain entirely and
     // surface as a render error instead of a state. `useWorkspaceResource` does
-    // exactly that when no workspace has resolved, and it is the normal case in
-    // an unconfigured build — so this is the difference between the prototype
-    // rendering and the screen crashing.
+    // exactly that when no workspace has resolved. Converting it to a state is
+    // the difference between a controlled refusal and a render crash.
     Promise.resolve()
       .then(() => readRef())
       .then((data) => {
@@ -97,10 +95,9 @@ export function useResource<T>(read: () => Promise<T>, deps: unknown[] = []): Re
  * same three lines of session plumbing.
  *
  * With no resolvable workspace the read never fires and the state is
- * `unconfigured` rather than an error. That is the correct reading of the
- * situation and not a shortcut: a build with no backend, or a session that has
- * not resolved, has not *failed* to load anything. Screens treat it as "show the
- * prototype content", which is what keeps the design browsable without a backend.
+ * `unconfigured` rather than an error. That is not permission to render a
+ * fallback workspace: the protected layout fails closed while session state is
+ * unresolved, and direct screen renders show the controlled error treatment.
  */
 export function useWorkspaceResource<T>(
   read: (workspaceId: string) => Promise<T>,

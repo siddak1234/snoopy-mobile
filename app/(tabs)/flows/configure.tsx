@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { PlugsConnected } from 'phosphor-react-native';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -14,8 +14,11 @@ import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { useWorkspaceResource } from '@/hooks/use-resource';
-import { CONFIGURE_FOOTNOTE, errorTitleFor } from '@/lib/content/screen-states';
+import { activeWorkspaceId, useSession } from '@/hooks/use-session';
+import { CONFIGURE_FOOTNOTE, UNAVAILABLE_NOTE, errorTitleFor } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
+import { createSubscription } from '@/lib/platform/automations';
+import { newIdempotencyKey } from '@/lib/platform/client';
 import { PlatformNotConfiguredError } from '@/lib/platform/problem';
 import { iconFor } from '@/lib/view/icon-registry';
 import { toPipelineSteps } from '@/lib/view/pipeline';
@@ -25,15 +28,19 @@ export default function ConfigureTemplateScreen() {
   const { palette } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const session = useSession();
+  const workspaceId = activeWorkspaceId(session);
   const [name, setName] = useState('');
-  const [connected, setConnected] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const createKey = useRef(newIdempotencyKey('subscribe'));
+  const creating = useRef(false);
 
   /**
    * The template being configured.
    *
-   * `template` is a templateId; without one there is nothing to look up and the
-   * prototype's Invoice-capture content stands in, which is what item 3 called
-   * out — every template used to open the same screen.
+   * `template` is a templateId. Without one there is nothing to look up, so the
+   * screen refuses instead of substituting a default template.
    *
    * The meta line drops "used by 2,100 teams": §12.1 #74 refuses it as a
    * cross-tenant fact the platform does not hold, and names static copy the
@@ -65,10 +72,21 @@ export default function ConfigureTemplateScreen() {
     : null;
   const ConnectionIcon = PlugsConnected;
 
+  const changeName = (next: string) => {
+    setName(next);
+    // An idempotency key represents one exact intent/body. Preserve it for a
+    // retry, but replace it if the person changes that intent.
+    createKey.current = newIdempotencyKey('subscribe');
+  };
+
   // Below every hook: these return early. Without a resolved template there is
   // nothing to configure — the prototype's Invoice-capture stand-in is gone by
   // the owner's 2026-08-17 decision.
-  if (!view) {
+  if (catalog.status === 'loading') return <ScreenLoading topInset={insets.top} />;
+  if (catalog.status === 'offline') {
+    return <ScreenOffline onRetry={catalog.reload} onBack={() => router.back()} topInset={insets.top} />;
+  }
+  if (catalog.status !== 'ready' || !view || !entry || !workspaceId) {
     return (
       <ScreenError
         title={errorTitleFor('configure')}
@@ -78,22 +96,40 @@ export default function ConfigureTemplateScreen() {
       />
     );
   }
-  if (template) {
-    if (catalog.status === 'loading') return <ScreenLoading topInset={insets.top} />;
-    if (catalog.status === 'offline') {
-      return <ScreenOffline onRetry={catalog.reload} onBack={() => router.back()} topInset={insets.top} />;
+  const createDraft = async () => {
+    if (creating.current) return;
+    // A probe said this automation is not answering. The web client refuses the
+    // same action for the same reason rather than creating a subscription whose
+    // first run cannot succeed.
+    if (!entry.available) {
+      setActionError(UNAVAILABLE_NOTE);
+      return;
     }
-    if (catalog.status === 'error') {
-      return (
-        <ScreenError
-          title={errorTitleFor('configure')}
-          onRetry={catalog.reload}
-          onBack={() => router.back()}
-          topInset={insets.top}
-        />
+    creating.current = true;
+    setBusy(true);
+    setActionError(null);
+    try {
+      await createSubscription(
+        workspaceId,
+        {
+          templateId: entry.templateId,
+          templateVersion: entry.version,
+          ...(name.trim() ? { name: name.trim() } : {}),
+        },
+        createKey.current,
       );
+      // The intent is spent. Without a fresh key a second create replays the
+      // first subscription's stored response instead of creating anything —
+      // the key is the identity of one intent, not of this screen.
+      createKey.current = newIdempotencyKey('subscribe');
+      router.push({ pathname: '/(tabs)/flows/builder', params: { template: entry.templateId } });
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'The workflow could not be created.');
+    } finally {
+      creating.current = false;
+      setBusy(false);
     }
-  }
+  };
 
   return (
     <ScrollView
@@ -120,7 +156,7 @@ export default function ConfigureTemplateScreen() {
         </View>
       </SurfaceCard>
 
-      <TextField label="Workflow name" value={name} onChangeText={setName} />
+      <TextField label="Workflow name" value={name} onChangeText={changeName} />
 
       <View>
         <SectionLabel>REQUIRED CONNECTION</SectionLabel>
@@ -133,25 +169,25 @@ export default function ConfigureTemplateScreen() {
             <Text
               style={[
                 styles.connectionSub,
-                { color: connected ? status.ok : status.warnText },
+                { color: palette.neutral[400] },
               ]}>
-              {connected ? 'acme-books · linked via OAuth' : 'Required · sign in with OAuth once'}
+              {view.connection?.description ?? 'Connections are managed for the workspace'}
             </Text>
           </View>
           <Pressable
-            onPress={() => setConnected(true)}
+            onPress={() => router.push('/(tabs)/settings')}
             style={({ pressed }) => [
               styles.connectBtn,
-              { borderColor: connected ? palette.neutral[700] : palette.accent },
-              pressed && !connected && { backgroundColor: withAlpha(palette.accent, 0.1) },
+              { borderColor: palette.accent },
+              pressed && { backgroundColor: withAlpha(palette.accent, 0.1) },
             ]}>
             <Text
               style={{
                 fontFamily: fonts.medium,
                 fontSize: 12.5,
-                color: connected ? status.ok : palette.accent,
+                color: palette.accent,
               }}>
-              {connected ? 'Connected ✓' : 'Connect'}
+              Settings
             </Text>
           </Pressable>
         </SurfaceCard>
@@ -164,7 +200,7 @@ export default function ConfigureTemplateScreen() {
             const StepIcon = step.icon;
             return (
               <View
-                key={step.title}
+                key={step.id}
                 style={[
                   styles.stepRow,
                   i < view.steps.length - 1 && {
@@ -183,11 +219,14 @@ export default function ConfigureTemplateScreen() {
         </SurfaceCard>
       </View>
 
+      {actionError ? <Text style={[styles.footnote, { color: status.err }]}>{actionError}</Text> : null}
+
       <PillButton
-        label="Create & open in Builder"
+        label={busy ? 'Creating…' : 'Create & open in Builder'}
         variant="primary"
         gap={8}
-        onPress={() => router.push('/(tabs)/flows/builder')}
+        onPress={createDraft}
+        disabled={busy}
       />
       <Text style={[styles.footnote, { color: palette.neutral[600] }]}>
         {view.footnote}

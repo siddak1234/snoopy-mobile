@@ -23,7 +23,10 @@ jest.mock('expo-constants', () => ({
 }));
 
 jest.mock('expo-web-browser', () => ({ openAuthSessionAsync: jest.fn() }));
-jest.mock('@/lib/platform/client', () => ({ platformJson: jest.fn() }));
+jest.mock('@/lib/platform/client', () => ({
+  platformOperation: jest.fn(),
+  newIdempotencyKey: jest.fn(() => 'test-intent'),
+}));
 jest.mock('@/lib/platform/session-store', () => ({
   readSession: jest.fn(),
   writeSession: jest.fn(),
@@ -31,13 +34,18 @@ jest.mock('@/lib/platform/session-store', () => ({
 }));
 
 const { openAuthSessionAsync } = jest.requireMock('expo-web-browser');
-const { platformJson } = jest.requireMock('@/lib/platform/client');
+const { platformOperation } = jest.requireMock('@/lib/platform/client');
 const { readSession, writeSession, clearSession } = jest.requireMock(
   '@/lib/platform/session-store',
 );
 
 // Imported after the mocks so the module under test binds to them.
-const { refreshSession, signInWithProvider, signOut } = require('@/lib/platform/native-auth');
+const {
+  matchesNativeCallback,
+  refreshSession,
+  signInWithProvider,
+  signOut,
+} = require('@/lib/platform/native-auth');
 
 const LIVE_SESSION = {
   accessToken: 'access-1',
@@ -46,7 +54,7 @@ const LIVE_SESSION = {
 };
 
 beforeEach(() => {
-  [openAuthSessionAsync, platformJson, readSession, writeSession, clearSession].forEach((m) =>
+  [openAuthSessionAsync, platformOperation, readSession, writeSession, clearSession].forEach((m) =>
     m.mockReset(),
   );
 });
@@ -78,6 +86,28 @@ describe('PKCE', () => {
 });
 
 describe('signInWithProvider', () => {
+  it('accepts only the configured HTTPS origin and path before reading a code', () => {
+    const configured = 'https://app.example.test/auth/native/callback';
+    expect(
+      matchesNativeCallback(new URL(`${configured}?code=sealed`), configured),
+    ).toBe(true);
+    expect(
+      matchesNativeCallback(
+        new URL('https://other.example.test/auth/native/callback?code=sealed'),
+        configured,
+      ),
+    ).toBe(false);
+    expect(
+      matchesNativeCallback(
+        new URL('https://app.example.test/auth/native/other?code=sealed'),
+        configured,
+      ),
+    ).toBe(false);
+    expect(
+      matchesNativeCallback(new URL(`${configured}#code=sealed`), configured),
+    ).toBe(false);
+  });
+
   it('refuses rather than falling back to a custom scheme when unconfigured', async () => {
     // expo-auth-session's makeRedirectUri() would hand back `snoopymobile://`.
     // ADR-0008 rejects custom schemes because any app can register one, so the
@@ -105,7 +135,7 @@ describe('signInWithProvider', () => {
       type: 'success',
       url: 'https://app.example.test/auth/native/callback?code=sealed-code',
     });
-    platformJson.mockResolvedValue({
+    platformOperation.mockResolvedValue({
       tokenType: 'Bearer',
       accessToken: 'a',
       refreshToken: 'r',
@@ -121,8 +151,11 @@ describe('signInWithProvider', () => {
     // The verifier is the secret half. It must not be in the URL.
     expect(openAuthSessionAsync.mock.calls[0][0]).not.toContain('code_verifier');
 
-    const [path, request] = platformJson.mock.calls[0];
+    const [path, execute] = platformOperation.mock.calls[0];
     expect(path).toBe('/v1/auth/native/token');
+    const post = jest.fn().mockResolvedValue({ data: {}, response: { ok: true } });
+    await execute({ platform: { POST: post } }, new AbortController().signal);
+    const request = post.mock.calls[0][1];
     expect(request.body.code).toBe('sealed-code');
     expect(request.body.codeVerifier).toMatch(/^[A-Za-z0-9\-_]{43,128}$/);
   });
@@ -132,7 +165,7 @@ describe('signInWithProvider', () => {
       type: 'success',
       url: 'https://app.example.test/auth/native/callback?code=c',
     });
-    platformJson.mockResolvedValue({
+    platformOperation.mockResolvedValue({
       tokenType: 'Bearer',
       accessToken: 'a',
       refreshToken: 'r',
@@ -150,7 +183,7 @@ describe('signInWithProvider', () => {
   it('treats a dismissed browser sheet as a cancellation, not a failure', async () => {
     openAuthSessionAsync.mockResolvedValue({ type: 'dismiss' });
     await expect(signInWithProvider('google')).resolves.toEqual({ status: 'cancelled' });
-    expect(platformJson).not.toHaveBeenCalled();
+    expect(platformOperation).not.toHaveBeenCalled();
   });
 
   it('never renders a reason the callback supplied verbatim', async () => {
@@ -163,12 +196,25 @@ describe('signInWithProvider', () => {
     expect((outcome as { message: string }).message).toBe('Sign-in could not be completed.');
   });
 
+  it('refuses a successful-looking callback from any other address', async () => {
+    openAuthSessionAsync.mockResolvedValue({
+      type: 'success',
+      url: 'https://attacker.example/auth/native/callback?code=sealed-code',
+    });
+
+    await expect(signInWithProvider('google')).resolves.toEqual({
+      status: 'failed',
+      message: 'Sign-in returned to an unexpected address.',
+    });
+    expect(platformOperation).not.toHaveBeenCalled();
+  });
+
   it('reports an unconfigured deployment distinctly from a failure', async () => {
     openAuthSessionAsync.mockResolvedValue({
       type: 'success',
       url: 'https://app.example.test/auth/native/callback?code=c',
     });
-    platformJson.mockRejectedValue(new PlatformError('Not configured', 503, 'NOT_CONFIGURED'));
+    platformOperation.mockRejectedValue(new PlatformError('Not configured', 503, 'NOT_CONFIGURED'));
     await expect(signInWithProvider('google')).resolves.toMatchObject({ status: 'unconfigured' });
   });
 });
@@ -176,9 +222,9 @@ describe('signInWithProvider', () => {
 describe('refreshSession — the split that matters', () => {
   it('discards the session on 401, because the credential is dead', async () => {
     readSession.mockResolvedValue(LIVE_SESSION);
-    platformJson.mockRejectedValue(new PlatformError('dead', 401, 'UNAUTHENTICATED'));
+    platformOperation.mockRejectedValue(new PlatformError('dead', 401, 'UNAUTHENTICATED'));
 
-    await expect(refreshSession()).resolves.toBe(false);
+    await expect(refreshSession()).resolves.toEqual({ status: 'signed-out' });
     expect(clearSession).toHaveBeenCalled();
   });
 
@@ -186,35 +232,44 @@ describe('refreshSession — the split that matters', () => {
     // Treating this as a dead credential would sign out every user who opened
     // the app during a provider outage.
     readSession.mockResolvedValue(LIVE_SESSION);
-    platformJson.mockRejectedValue(new PlatformError('The platform is unreachable', 502));
+    platformOperation.mockRejectedValue(new PlatformError('The platform is unreachable', 502));
 
-    await expect(refreshSession()).resolves.toBe(true);
+    await expect(refreshSession()).resolves.toEqual({
+      status: 'unavailable',
+      message: 'The platform is unreachable',
+    });
     expect(clearSession).not.toHaveBeenCalled();
   });
 
   it('keeps the session when the deployment is unconfigured', async () => {
     readSession.mockResolvedValue(LIVE_SESSION);
-    platformJson.mockRejectedValue(new PlatformError('not configured', 503));
+    platformOperation.mockRejectedValue(new PlatformError('not configured', 503));
 
-    await expect(refreshSession()).resolves.toBe(true);
+    await expect(refreshSession()).resolves.toEqual({
+      status: 'unavailable',
+      message: 'not configured',
+    });
     expect(clearSession).not.toHaveBeenCalled();
   });
 
   it('does nothing when there is no stored session', async () => {
     readSession.mockResolvedValue(null);
-    await expect(refreshSession()).resolves.toBe(false);
-    expect(platformJson).not.toHaveBeenCalled();
+    await expect(refreshSession()).resolves.toEqual({ status: 'signed-out' });
+    expect(platformOperation).not.toHaveBeenCalled();
   });
 });
 
 describe('signOut', () => {
   it('sends the refresh token, because that is what revokes upstream', async () => {
     readSession.mockResolvedValue(LIVE_SESSION);
-    platformJson.mockResolvedValue(null);
+    platformOperation.mockResolvedValue(null);
 
     await expect(signOut()).resolves.toEqual({ revoked: true });
-    expect(platformJson.mock.calls[0][0]).toBe('/v1/auth/logout');
-    expect(platformJson.mock.calls[0][1].body).toEqual({ refreshToken: 'refresh-1' });
+    expect(platformOperation.mock.calls[0][0]).toBe('/v1/auth/logout');
+    const execute = platformOperation.mock.calls[0][1];
+    const post = jest.fn().mockResolvedValue({ data: null, response: { ok: true } });
+    await execute({ platform: { POST: post } }, new AbortController().signal);
+    expect(post.mock.calls[0][1].body).toEqual({ refreshToken: 'refresh-1' });
     expect(clearSession).toHaveBeenCalled();
   });
 
@@ -223,7 +278,7 @@ describe('signOut', () => {
     // would strand a session nobody can reach — which is why the contract
     // answers 502 rather than 204.
     readSession.mockResolvedValue(LIVE_SESSION);
-    platformJson.mockRejectedValue(new PlatformError('revocation failed', 502));
+    platformOperation.mockRejectedValue(new PlatformError('revocation failed', 502));
 
     await expect(signOut()).resolves.toEqual({ revoked: false });
     expect(clearSession).not.toHaveBeenCalled();
@@ -231,9 +286,34 @@ describe('signOut', () => {
 
   it('still clears locally when the server says the token is already dead', async () => {
     readSession.mockResolvedValue(LIVE_SESSION);
-    platformJson.mockRejectedValue(new PlatformError('dead', 401));
+    platformOperation.mockRejectedValue(new PlatformError('dead', 401));
 
     await expect(signOut()).resolves.toEqual({ revoked: true });
     expect(clearSession).toHaveBeenCalled();
+  });
+
+  it('keeps the credential on every answer that is not terminal about this token', async () => {
+    // 400 and 401 are the platform reading the token and refusing it — the
+    // device's copy is spent either way. A 500 or a 503 is the platform never
+    // getting to say, so clearing would delete the keychain entry for a session
+    // that is still live upstream. The contract's rule is "clear locally only
+    // on a terminal/successful answer", and 5xx is not terminal.
+    for (const status of [500, 503]) {
+      clearSession.mockClear();
+      readSession.mockResolvedValue(LIVE_SESSION);
+      platformOperation.mockRejectedValue(new PlatformError('upstream', status));
+
+      await expect(signOut()).resolves.toEqual({ revoked: false });
+      expect(clearSession).not.toHaveBeenCalled();
+    }
+  });
+
+  it('keeps the credential when the platform was never reached at all', async () => {
+    clearSession.mockClear();
+    readSession.mockResolvedValue(LIVE_SESSION);
+    platformOperation.mockRejectedValue(new Error('socket closed'));
+
+    await expect(signOut()).resolves.toEqual({ revoked: false });
+    expect(clearSession).not.toHaveBeenCalled();
   });
 });

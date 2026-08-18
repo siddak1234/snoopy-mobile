@@ -8,15 +8,17 @@ import { errorTitleFor } from '@/lib/content/screen-states';
 import { PlatformError, PlatformUnreachableError } from '@/lib/platform/problem';
 import { renderWithProviders } from '@/test/render';
 
-jest.mock('@/lib/platform/client', () => ({ platformJson: jest.fn() }));
-const { platformJson } = jest.requireMock('@/lib/platform/client');
+jest.mock('@/lib/platform/client', () => ({
+  platformOperation: jest.fn(),
+  newIdempotencyKey: jest.fn(() => 'test-intent'),
+}));
+const { platformOperation } = jest.requireMock('@/lib/platform/client');
 
 /**
  * A screen reading the platform, in each state the design draws.
  *
  * Templates is the first screen wired, and it is the pattern the rest follow:
- * one workspace-scoped read, the three shared states, and the prototype's own
- * content left in place for an unconfigured build. Each case below is a
+ * one workspace-scoped read and the shared refusal states. Each case below is a
  * different screen in `Screen.dc.html`, which is why they are asserted
  * separately rather than as "not ready".
  */
@@ -59,11 +61,11 @@ const CATALOG = {
   categories: ['All', 'Finance'],
 };
 
-beforeEach(() => platformJson.mockReset());
+beforeEach(() => platformOperation.mockReset());
 
 describe('Templates, wired to the catalog', () => {
   it('renders the platform’s automations and its own category vocabulary', async () => {
-    platformJson.mockResolvedValue(CATALOG);
+    platformOperation.mockResolvedValue(CATALOG);
     await renderWithProviders(<TemplatesScreen />, signedIn);
 
     // The server's name, not the fixture's — and the fixture's six are gone.
@@ -77,27 +79,30 @@ describe('Templates, wired to the catalog', () => {
   });
 
   it('requests the workspace-scoped catalog path', async () => {
-    platformJson.mockResolvedValue(CATALOG);
+    platformOperation.mockResolvedValue(CATALOG);
     await renderWithProviders(<TemplatesScreen />, signedIn);
     await screen.findByText('Ledger reconcile');
 
-    expect(platformJson).toHaveBeenCalledWith(`/v1/workspaces/${WORKSPACE}/automations`);
+    expect(platformOperation).toHaveBeenCalledWith(
+      `/v1/workspaces/${WORKSPACE}/automations`,
+      expect.any(Function),
+    );
   });
 
   it('shows the loading skeleton while the read is in flight', async () => {
-    platformJson.mockImplementation(() => new Promise(() => {}));
+    platformOperation.mockImplementation(() => new Promise(() => {}));
     await renderWithProviders(<TemplatesScreen />, signedIn);
     expect(screen.getByTestId('screen-loading')).toBeTruthy();
   });
 
   it('shows the offline state when the request never landed', async () => {
-    platformJson.mockRejectedValue(new PlatformUnreachableError());
+    platformOperation.mockRejectedValue(new PlatformUnreachableError());
     await renderWithProviders(<TemplatesScreen />, signedIn);
     expect(await screen.findByTestId('screen-offline')).toBeTruthy();
   });
 
   it('names what failed when the platform refused', async () => {
-    platformJson.mockRejectedValue(new PlatformError('Service Unavailable', 503));
+    platformOperation.mockRejectedValue(new PlatformError('Service Unavailable', 503));
     await renderWithProviders(<TemplatesScreen />, signedIn);
     expect(await screen.findByTestId('screen-error')).toBeTruthy();
     expect(screen.getByText(errorTitleFor('templates'))).toBeTruthy();
@@ -108,7 +113,7 @@ describe('Templates, wired to the catalog', () => {
     // genuinely could not load this, and the screen now says so.
     await renderWithProviders(<TemplatesScreen />, unconfigured);
     expect(await screen.findByTestId('screen-error')).toBeTruthy();
-    expect(platformJson).not.toHaveBeenCalled();
+    expect(platformOperation).not.toHaveBeenCalled();
   });
 });
 
@@ -138,7 +143,7 @@ describe('Settings CONNECTIONS, wired to the platform', () => {
   // last for the plan totals) — so the mock routes by path rather than answering
   // everything with one body.
   function routeReads() {
-    platformJson.mockImplementation((path: string) => {
+    platformOperation.mockImplementation((path: string) => {
       if (path === '/v1/connections/providers') return Promise.resolve(PROVIDERS);
       if (path.endsWith('/automations')) return Promise.resolve(CATALOG);
       return Promise.resolve(CONNECTIONS);
@@ -163,7 +168,7 @@ describe('Settings CONNECTIONS, wired to the platform', () => {
   });
 
   it('replaces the screen when the read fails, per the design', async () => {
-    platformJson.mockRejectedValue(new PlatformError('Service Unavailable', 503));
+    platformOperation.mockRejectedValue(new PlatformError('Service Unavailable', 503));
     await renderWithProviders(<SettingsScreen />, signedIn);
     expect(await screen.findByTestId('screen-error')).toBeTruthy();
     expect(screen.getByText(errorTitleFor('settings'))).toBeTruthy();
@@ -172,6 +177,6 @@ describe('Settings CONNECTIONS, wired to the platform', () => {
   it('shows the designed failure state when the build has no backend', async () => {
     await renderWithProviders(<SettingsScreen />, unconfigured);
     expect(await screen.findByTestId('screen-error')).toBeTruthy();
-    expect(platformJson).not.toHaveBeenCalled();
+    expect(platformOperation).not.toHaveBeenCalled();
   });
 });

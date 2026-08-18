@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
+import { overrideScopeKey, useSession } from '@/hooks/use-session';
 import type { FlowStatus } from '@/lib/view/status';
 
 export type { FlowStatus };
@@ -36,6 +37,14 @@ const WorkflowsContext = createContext<WorkflowsContextValue | null>(null);
  */
 export function WorkflowsProvider({ children }: { children: React.ReactNode }) {
   const [overrides, setOverrides] = useState<Record<string, FlowStatus>>({});
+
+  // Subscription ids are workspace-scoped and this provider outlives a
+  // sign-out, so the overrides are cleared whenever the person or the workspace
+  // changes. See `overrideScopeKey` in hooks/use-session.tsx.
+  const scope = overrideScopeKey(useSession());
+  useEffect(() => {
+    setOverrides({});
+  }, [scope]);
 
   const value = useMemo<WorkflowsContextValue>(() => {
     const status = (key: string, fallback: FlowStatus) => overrides[key] ?? fallback;

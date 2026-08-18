@@ -180,6 +180,7 @@ describe('composeNotifications — §12.1 #71', () => {
     const rows = composeNotifications(
       [
         {
+          id: 'a1',
           subscriptionId: 's1',
           stepId: 'extract',
           reason: 'Amount differs from PO',
@@ -205,7 +206,7 @@ describe('composeNotifications — §12.1 #71', () => {
 
   it('reports every row unread, because read state is an unbuilt subsystem', () => {
     const rows = composeNotifications(
-      [{ subscriptionId: 's1', stepId: 'extract', reason: 'r', createdAt: '2026-08-17T11:00:00Z' }],
+      [{ id: 'a1', subscriptionId: 's1', stepId: 'extract', reason: 'r', createdAt: '2026-08-17T11:00:00Z' }],
       [],
       subs,
       catalog,
@@ -216,7 +217,7 @@ describe('composeNotifications — §12.1 #71', () => {
 
   it('orders newest first across both sources', () => {
     const rows = composeNotifications(
-      [{ subscriptionId: 's1', stepId: 'extract', reason: 'r', createdAt: '2026-08-16T12:00:00Z' }],
+      [{ id: 'a1', subscriptionId: 's1', stepId: 'extract', reason: 'r', createdAt: '2026-08-16T12:00:00Z' }],
       [
         {
           id: 'r1',

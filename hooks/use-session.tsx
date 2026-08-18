@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import type { components } from '@/lib/generated/platform-contracts/platform';
-import { platformJson } from '@/lib/platform/client';
+import { readCurrentSession } from '@/lib/platform/auth';
 import {
   refreshSession,
   signInWithProvider,
@@ -10,27 +10,21 @@ import {
   type LoginProvider,
 } from '@/lib/platform/native-auth';
 import { PlatformError, PlatformNotConfiguredError } from '@/lib/platform/problem';
-import { readSession } from '@/lib/platform/session-store';
+import { onSessionEnded } from '@/lib/platform/session-recovery';
+import { clearSession, readSession } from '@/lib/platform/session-store';
 
 /**
  * Who is signed in, and whether the app is allowed past the auth stack.
  *
  * The placement and the state names come from `DESIGN-CONTRACT.md`, which
- * specifies `hooks/use-session.tsx` and an `AuthState` of
- * `restoring | signed-out | submitting | signed-in | error`. `submitting`
- * belongs to a sign-in attempt and has nothing to submit yet — the Edge
- * publishes no operation that issues a session to a native client — so it is
- * absent rather than stubbed. `error` is split in two, because the difference
- * decides whether the guard fires:
+ * owns restoration, positive identity, and the two failure classes that decide
+ * whether the guard fires. Provider submission remains local to the auth form,
+ * because it disables that form without changing the last resolved session.
  *
- * - `unconfigured` — no backend origin at all. This is the design prototype's
- *   normal state, and it must stay browsable: the UI is the asset this round
- *   exists to preserve, and locking it behind a session that cannot be obtained
- *   would destroy it. Not an authentication failure, so the guard stays open.
- * - `unavailable` — a configured backend did not answer. Also not an
- *   authentication failure; screens that have a designed error state show it.
- *
- * Only `signed-out` — an actual 401 from a reachable Edge — closes the guard.
+ * `unconfigured` and `unavailable` are distinct so the auth screens can explain
+ * whether this build lacks configuration or the platform is temporarily down.
+ * Neither state is permission to enter the protected tab tree: the route guard
+ * fails closed until the platform has positively resolved `signed-in`.
  */
 
 type SessionResponse = components['schemas']['SessionResponse'];
@@ -77,16 +71,25 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         // clears the enclave on a dead credential and keeps it on an outage.
         const stored = await readSession();
         if (stored && stored.expiresAt <= Date.now() + EXPIRY_SKEW_MS) {
-          await refreshSession();
+          const outcome = await refreshSession();
+          if (outcome.status === 'signed-out') {
+            if (!cancelled) setState({ status: 'signed-out' });
+            return;
+          }
+          if (outcome.status === 'unavailable') {
+            if (!cancelled) setState({ status: 'unavailable', message: outcome.message });
+            return;
+          }
         }
 
-        const session = await platformJson<SessionResponse>('/v1/session');
+        const session = await readCurrentSession();
         if (!cancelled) setState({ status: 'signed-in', session });
       } catch (error) {
         if (cancelled) return;
         if (error instanceof PlatformNotConfiguredError) {
           setState({ status: 'unconfigured' });
         } else if (error instanceof PlatformError && error.status === 401) {
+          await clearSession();
           setState({ status: 'signed-out' });
         } else {
           setState({
@@ -102,15 +105,40 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     };
   }, [attempt]);
 
+  /**
+   * The transport proved the credential dead and cleared the enclave.
+   *
+   * Without this the guard would keep rendering the protected tree from the
+   * last resolved session while every read 401s — signed-in in the UI and
+   * signed-out on the platform. Moving to `signed-out` is what makes the
+   * layout's fail-closed rule apply to a session that expired mid-use, not
+   * only to one that was already gone at launch.
+   */
+  useEffect(() => onSessionEnded(() => setState({ status: 'signed-out' })), []);
+
   const signIn = useCallback(
     async (provider: LoginProvider) => {
       const outcome = await signInWithProvider(provider);
-      // Only a completed sign-in changes what the app knows; a cancelled sheet
-      // leaves the previous state exactly as it was.
-      if (outcome.status === 'signed-in') refresh();
+      if (outcome.status === 'signed-in') {
+        try {
+          // Resolve the protected projection before returning success. Routing
+          // first would race the fail-closed tab guard and bounce a valid login.
+          const session = await readCurrentSession();
+          setState({ status: 'signed-in', session });
+        } catch (error) {
+          if (error instanceof PlatformError && error.status === 401) {
+            await clearSession();
+            setState({ status: 'signed-out' });
+          }
+          return {
+            status: 'failed' as const,
+            message: error instanceof Error ? error.message : 'Sign-in could not be completed.',
+          };
+        }
+      }
       return outcome;
     },
-    [refresh],
+    [],
   );
 
   const signOut = useCallback(async () => {
@@ -146,4 +174,20 @@ export function useSession(): SessionContextValue {
 export function activeWorkspaceId(state: SessionState): string | null {
   if (state.status !== 'signed-in') return null;
   return state.session.user.activeWorkspaceId ?? state.session.workspaces[0]?.id ?? null;
+}
+
+/**
+ * The scope any client-held override belongs to: this person, in this workspace.
+ *
+ * `hooks/use-solutions.tsx` and `hooks/use-workflows.tsx` layer local overrides
+ * on top of server truth, and both providers are mounted above the route tree
+ * so they outlive a sign-out. Keying their reset on this string means one
+ * expression decides all three boundaries — signed out, a different account,
+ * and a workspace switch — instead of three effects that can disagree.
+ * Signed-out deliberately collapses to a single constant, so any two
+ * signed-out periods are the same scope and clear the same way.
+ */
+export function overrideScopeKey(state: SessionState): string {
+  if (state.status !== 'signed-in') return 'signed-out';
+  return `${state.session.user.userId}:${activeWorkspaceId(state) ?? 'no-workspace'}`;
 }

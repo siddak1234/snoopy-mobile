@@ -7,8 +7,11 @@ import { SIGN_OUT_FAILED } from '@/lib/content/screen-states';
 import { routePlatform } from '@/test/platform';
 import { mockRouter, renderWithProviders } from '@/test/render';
 
-jest.mock('@/lib/platform/client', () => ({ platformJson: jest.fn() }));
-const { platformJson } = jest.requireMock('@/lib/platform/client');
+jest.mock('@/lib/platform/client', () => ({
+  platformOperation: jest.fn(),
+  newIdempotencyKey: jest.fn(() => 'test-intent'),
+}));
+const { platformOperation } = jest.requireMock('@/lib/platform/client');
 
 /**
  * Sign-out honours the one answer the platform added so a client could tell.
@@ -24,8 +27,8 @@ const { platformJson } = jest.requireMock('@/lib/platform/client');
  */
 
 beforeEach(() => {
-  platformJson.mockReset();
-  routePlatform(platformJson);
+  platformOperation.mockReset();
+  routePlatform(platformOperation);
 });
 
 // Settings now reads the platform, so the screen only renders with a session.

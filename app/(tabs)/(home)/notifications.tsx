@@ -21,7 +21,7 @@ import {
   errorTitleFor,
 } from '@/lib/content/screen-states';
 
-/** Notifications inbox (design `sNotifs`) with the push-priming card. */
+/** Notifications inbox (design `sNotifs`) with an in-app-only notice. */
 /** Tone → glyph, so a composed row draws what the design draws for that kind. */
 const NOTIFICATION_ICON = {
   ok: CheckCircle,
@@ -68,8 +68,9 @@ export default function NotificationsScreen() {
       ? inbox.data.map((n) => ({ ...n, icon: NOTIFICATION_ICON[n.tone] }))
       : [];
 
-  // The design's priming card is dismiss-only on both buttons; a real iOS
-  // permission request needs expo-notifications, which is not installed.
+  // The platform publishes an in-app composition, not a device-push contract.
+  // This card says that plainly and is dismiss-only; it never imitates an OS
+  // permission grant.
   const [askPush, setAskPush] = useState(true);
   const [allRead, setAllRead] = useState(false);
 
@@ -161,12 +162,12 @@ export default function NotificationsScreen() {
             </Text>
           </View>
           <Text style={[styles.pushBody, { color: palette.neutral[400] }]}>
-            Push alerts for held runs and failures — nothing else. You can change this anytime in
-            Settings.
+            This build shows held runs and failures in this in-app inbox. Device push delivery is
+            not configured.
           </Text>
           <View style={styles.pushActions}>
             <PillButton
-              label="Allow notifications"
+              label="Got it"
               variant="primary"
               height={42}
               fontSize={13.5}
@@ -174,7 +175,7 @@ export default function NotificationsScreen() {
               style={styles.pushBtn}
             />
             <PillButton
-              label="Not now"
+              label="Dismiss"
               variant="plain"
               height={42}
               fontSize={13.5}
@@ -191,7 +192,7 @@ export default function NotificationsScreen() {
           const unread = item.unread && !allRead;
           return (
             <Pressable
-              key={item.title}
+              key={item.id}
               onPress={() => open(item)}
               style={({ pressed }) => [
                 styles.row,

@@ -17,6 +17,8 @@ import { BrandMark } from '@/components/nocturne/brand-mark';
 import { GlowBackground } from '@/components/nocturne/glow-background';
 import { em, fonts } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useSession } from '@/hooks/use-session';
+import { readFaceIdEnabled } from '@/lib/platform/session-store';
 
 /** CSS `ease-out` (a8xPulse timing). */
 const easeOut = Easing.out(Easing.ease);
@@ -32,19 +34,32 @@ const PULSE_RING2_DELAY_MS = 1400;
 export default function SplashScreen() {
   const { palette } = useTheme();
   const router = useRouter();
+  const session = useSession();
   const navigatedRef = useRef(false);
+  const mountedAtRef = useRef(Date.now());
 
-  const goWelcome = useCallback(() => {
+  const leaveSplash = useCallback(async () => {
     if (navigatedRef.current) return;
+    if (session.status === 'restoring') return;
     navigatedRef.current = true;
+    if (session.status === 'signed-in') {
+      router.replace(
+        (await readFaceIdEnabled()) ? '/(auth)/faceid' : '/(tabs)/(home)',
+      );
+      return;
+    }
     router.replace('/(auth)/welcome');
-  }, [router]);
+  }, [router, session.status]);
 
-  // Auto-advance after 2400ms (tap advances immediately).
+  // Auto-advance 2400ms after mount, but never before session restoration has
+  // resolved. The remaining time is scheduled rather than restarting the full
+  // delay when `restoring` changes.
   useEffect(() => {
-    const t = setTimeout(goWelcome, 2400);
+    if (session.status === 'restoring') return;
+    const elapsed = Date.now() - mountedAtRef.current;
+    const t = setTimeout(leaveSplash, Math.max(0, 2400 - elapsed));
     return () => clearTimeout(t);
-  }, [goWelcome]);
+  }, [leaveSplash, session.status]);
 
   // Pulse ring progress: 0→1 over the active phase, held at 1 while
   // invisible, then snapped back to 0 and repeated.
@@ -100,7 +115,7 @@ export default function SplashScreen() {
   }));
 
   return (
-    <Pressable onPress={goWelcome} style={[styles.root, { backgroundColor: palette.bg }]}>
+    <Pressable onPress={leaveSplash} style={[styles.root, { backgroundColor: palette.bg }]}>
       <GlowBackground cx="50%" cy="40%" r="58%" />
       <View style={styles.markWrap}>
         <Animated.View

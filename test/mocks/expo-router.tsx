@@ -10,6 +10,8 @@ export const mockRouter = {
 
 export const useRouter = () => mockRouter;
 
+export const useFocusEffect = (effect: React.EffectCallback) => React.useEffect(effect, [effect]);
+
 /** Route params for useLocalSearchParams — set via setMockParams before
  *  rendering; reset automatically between tests. */
 const mockParams: Record<string, string> = {};

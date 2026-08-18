@@ -11,7 +11,7 @@ import { mockRedirect, renderWithProviders } from '@/test/render';
  * `DESIGN-CONTRACT.md` requires it at the route/layout level, and requires that
  * nothing reaches a protected route before `signed-in`. What makes this worth
  * its own suite is that only one of the four non-authenticated states is an
- * authentication failure; the other three must not lock the prototype out.
+ * authentication failure; every non-authenticated state must still fail closed.
  */
 
 function withSession(state: SessionState): SessionContextValue {
@@ -55,20 +55,17 @@ describe('tab route guard', () => {
     expect(mockRedirect).not.toHaveBeenCalled();
   });
 
-  it('does not lock out the design prototype when no backend is configured', async () => {
-    // The UI is the asset this round exists to preserve. An unconfigured build
-    // has no session to obtain and no data to protect, so the guard stays open.
+  it('fails closed when no backend is configured', async () => {
     await renderWithProviders(<TabLayout />, withSession({ status: 'unconfigured' }));
-    expect(mockRedirect).not.toHaveBeenCalled();
+    expect(mockRedirect).toHaveBeenCalledWith('/(auth)/welcome');
   });
 
-  it('does not treat an unreachable backend as a sign-out', async () => {
-    // Being unable to ask is not being told no; screens show their error state.
+  it('does not expose protected routes while the backend is unreachable', async () => {
     await renderWithProviders(
       <TabLayout />,
       withSession({ status: 'unavailable', message: 'The platform is unreachable' }),
     );
-    expect(mockRedirect).not.toHaveBeenCalled();
+    expect(mockRedirect).toHaveBeenCalledWith('/(auth)/welcome');
   });
 
   it('does not flash a redirect while the session is still restoring', async () => {

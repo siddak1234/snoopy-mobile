@@ -12,23 +12,23 @@ describe('Password reset (design sReset)', () => {
     expect(mockRouter.push).toHaveBeenCalledWith('/(auth)/reset');
   });
 
-  it('sends the link and shows the confirmation', async () => {
+  it('truthfully hands password recovery back to the identity provider', async () => {
     const { getByText, getByLabelText, queryByText } =
       await renderWithProviders(<ResetPasswordScreen />);
-    expect(getByText("Enter your email and we'll send a reset link.")).toBeTruthy();
+    expect(getByText('Autom8x sign-in is managed by your identity provider.')).toBeTruthy();
 
     // The field starts empty — the prototype's pinned demo address is gone, so
     // the address under test has to be entered like a person would.
     await fireEvent.changeText(getByLabelText('Email'), 'dana@northwind.example');
-    await fireEvent.press(getByText('Send reset link'));
+    await fireEvent.press(getByText('View reset options'));
 
-    expect(getByText('Link sent')).toBeTruthy();
+    expect(getByText('Reset with your provider')).toBeTruthy();
     expect(
       getByText(
-        'Check dana@northwind.example — the link expires in 30 minutes. Nothing arriving? Check spam or resend.',
+        'Autom8x does not issue a password or reset link. Reset access with the Apple, Google, or Microsoft account you use to sign in.',
       ),
     ).toBeTruthy();
-    expect(queryByText("Enter your email and we'll send a reset link.")).toBeNull();
+    expect(queryByText('Autom8x sign-in is managed by your identity provider.')).toBeNull();
 
     await fireEvent.press(getByText('Back to log in'));
     expect(mockRouter.replace).toHaveBeenCalledWith('/(auth)/login');

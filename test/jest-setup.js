@@ -27,6 +27,7 @@ jest.mock('expo-crypto', () => {
     CryptoEncoding: { HEX: 'hex', BASE64: 'base64' },
     getRandomBytesAsync: async (byteCount) =>
       Uint8Array.from(nodeCrypto.randomBytes(byteCount)),
+    randomUUID: () => nodeCrypto.randomUUID(),
     digestStringAsync: async (_algorithm, data, options) =>
       nodeCrypto
         .createHash('sha256')

@@ -18,10 +18,10 @@
  * wording: `lib/fixtures.ts` is prototype data, and a fixture test may read it.
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { extname, join, relative } from "node:path";
+import { dirname, extname, join, relative, resolve } from "node:path";
 
 const root = process.cwd();
-const sourceRoots = ["app", "components", "hooks", "lib"];
+const sourceRoots = ["app", "components", "constants", "hooks", "lib"];
 
 /**
  * Files still reading the prototype fixtures, and the named reason each does.
@@ -37,8 +37,8 @@ const knownFixtureReaders = new Map([
   // A row may only be added with a reason in review. The gate is zero.
 ]);
 
-/** `from '@/lib/fixtures'`, `from '../lib/fixtures'`, and friends. */
-const FIXTURE_IMPORT = /from\s+['"][^'"]*lib\/fixtures['"]/;
+/** Static, side-effect, dynamic and CommonJS module specifiers. */
+const MODULE_SPECIFIER = /(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|\bimport\s*)['"]([^'"]+)['"]/g;
 
 function walk(dir) {
   const out = [];
@@ -52,11 +52,31 @@ function walk(dir) {
 
 const found = new Set();
 
+function importsFixtures(file, source) {
+  const withoutComments = source
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+  for (const match of withoutComments.matchAll(MODULE_SPECIFIER)) {
+    const specifier = match[1];
+    let target;
+    if (specifier.startsWith("@/")) target = resolve(root, specifier.slice(2));
+    else if (specifier.startsWith(".")) target = resolve(dirname(file), specifier);
+    else if (specifier === "lib/fixtures" || specifier.startsWith("lib/fixtures.")) {
+      target = resolve(root, specifier);
+    } else continue;
+    const path = relative(root, target)
+      .split("\\").join("/")
+      .replace(/\.(?:[cm]?[jt]sx?)$/, "");
+    if (path === "lib/fixtures") return true;
+  }
+  return false;
+}
+
 for (const dir of sourceRoots) {
   for (const file of walk(join(root, dir))) {
     const path = relative(root, file).split("\\").join("/");
     if (path === "lib/fixtures.ts") continue; // the module itself, not a reader
-    if (FIXTURE_IMPORT.test(readFileSync(file, "utf8"))) found.add(path);
+    if (importsFixtures(file, readFileSync(file, "utf8"))) found.add(path);
   }
 }
 

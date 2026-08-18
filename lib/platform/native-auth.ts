@@ -2,10 +2,11 @@ import Constants from 'expo-constants';
 import * as WebBrowser from 'expo-web-browser';
 
 import type { components } from '@/lib/generated/platform-contracts/platform';
-import { platformJson } from './client';
+import { platformOperation } from './client';
 import { backendApiOrigin } from './origin';
 import { createPkcePair } from './pkce';
 import { PlatformError, PlatformNotConfiguredError } from './problem';
+import { notifySessionEnded, setSessionRecovery } from './session-recovery';
 import { clearSession, readSession, writeSession, type StoredSession } from './session-store';
 
 /**
@@ -82,6 +83,9 @@ export async function signInWithProvider(provider: LoginProvider): Promise<Login
   }
 
   const returned = new URL(result.url);
+  if (!matchesNativeCallback(returned, redirectUri)) {
+    return { status: 'failed', message: 'Sign-in returned to an unexpected address.' };
+  }
   const failure = returned.searchParams.get('status');
   if (failure === 'error') {
     return { status: 'failed', message: describeCallbackError(returned.searchParams.get('reason')) };
@@ -90,10 +94,14 @@ export async function signInWithProvider(provider: LoginProvider): Promise<Login
   if (!code) return { status: 'failed', message: 'Sign-in did not complete.' };
 
   try {
-    const session = await platformJson<NativeSession>('/v1/auth/native/token', {
-      method: 'POST',
-      body: { code, codeVerifier },
-    });
+    const session = await platformOperation<NativeSession>(
+      '/v1/auth/native/token',
+      ({ platform }, signal) =>
+        platform.POST('/v1/auth/native/token', {
+          body: { code, codeVerifier },
+          signal,
+        }),
+    );
     await writeSession(toStoredSession(session));
     return { status: 'signed-in' };
   } catch (error) {
@@ -102,31 +110,80 @@ export async function signInWithProvider(provider: LoginProvider): Promise<Login
 }
 
 /**
+ * The browser session already matches the claimed host/path on iOS 17.4+, but
+ * the application checks the complete callback again before accepting a code.
+ * Android's Custom Tab path completes through Linking, and this makes the same
+ * exact-string policy hold on both platforms.
+ */
+export function matchesNativeCallback(returned: URL, configured: string): boolean {
+  const expected = new URL(configured);
+  return (
+    returned.protocol === expected.protocol &&
+    returned.username === '' &&
+    returned.password === '' &&
+    returned.host === expected.host &&
+    returned.pathname === expected.pathname &&
+    returned.hash === ''
+  );
+}
+
+/**
  * Renew the session, or report that it is gone.
  *
- * Returns `true` when a usable session remains. The 401/502 split is the whole
- * point: the contract says a client that treats an outage as a dead credential
- * "signs out every user who happened to open the app during it", so only 401
- * clears the enclave.
+ * The explicit outcome prevents the caller from treating two different kinds
+ * of preservation as the same thing: a successful refresh may continue to
+ * `/v1/session`, while an outage keeps the enclave entry but must stop before
+ * sending its now-expired access token. Only 401 clears the enclave.
  */
-export async function refreshSession(): Promise<boolean> {
+export type RefreshOutcome =
+  | { status: 'refreshed' }
+  | { status: 'signed-out' }
+  | { status: 'unavailable'; message: string };
+
+/**
+ * Teach the transport how to renew, without letting it import this module.
+ *
+ * Registered at load rather than by a caller: `hooks/use-session.tsx` imports
+ * this module and the root layout mounts that provider, so the slot is filled
+ * before any screen can issue a request. `recoverSession()` answers `false`
+ * when it is not, which rethrows the original 401 — the fail-closed direction.
+ *
+ * The boolean is deliberately narrow. Only `refreshed` is a renewal; `unavailable`
+ * is an outage and must NOT be reported as a renewal, or the transport would
+ * retry with the same expired token and turn one 401 into two.
+ */
+setSessionRecovery(async () => {
+  const outcome = await refreshSession();
+  if (outcome.status === 'signed-out') notifySessionEnded();
+  return outcome.status === 'refreshed';
+});
+
+export async function refreshSession(): Promise<RefreshOutcome> {
   const stored = await readSession();
-  if (!stored) return false;
+  if (!stored) return { status: 'signed-out' };
 
   try {
-    const session = await platformJson<NativeSession>('/v1/auth/native/refresh', {
-      method: 'POST',
-      body: { refreshToken: stored.refreshToken },
-    });
+    const session = await platformOperation<NativeSession>(
+      '/v1/auth/native/refresh',
+      ({ platform }, signal) =>
+        platform.POST('/v1/auth/native/refresh', {
+          body: { refreshToken: stored.refreshToken },
+          signal,
+        }),
+    );
     await writeSession(toStoredSession(session));
-    return true;
+    return { status: 'refreshed' };
   } catch (error) {
     if (error instanceof PlatformError && error.status === 401) {
       await clearSession();
-      return false;
+      return { status: 'signed-out' };
     }
-    // Unreachable, 502, 503 — the credential may well still be good. Keep it.
-    return true;
+    // Unreachable, 502, 503 — the credential may well still be good. Keep it,
+    // but do not immediately try the expired access token against `/v1/session`.
+    return {
+      status: 'unavailable',
+      message: error instanceof Error ? error.message : 'The platform could not be reached.',
+    };
   }
 }
 
@@ -143,16 +200,25 @@ export async function signOut(): Promise<{ revoked: boolean }> {
   if (!stored) return { revoked: true };
 
   try {
-    await platformJson<null>('/v1/auth/logout', {
-      method: 'POST',
-      body: { refreshToken: stored.refreshToken },
-    });
+    await platformOperation<null>('/v1/auth/logout', ({ platform }, signal) =>
+      platform.POST('/v1/auth/logout', {
+        body: { refreshToken: stored.refreshToken },
+        signal,
+      }),
+    );
   } catch (error) {
-    if (error instanceof PlatformError && error.status === 502) {
-      return { revoked: false };
-    }
-    // 400/401 mean the server will not or need not revoke it; either way this
-    // device's copy is spent, so fall through and clear.
+    // Only 400 and 401 are terminal answers about THIS token: the server has
+    // read it and will not or need not revoke it, so the device's copy is spent
+    // and clearing it strands nothing. Every other refusal — 502 unreachable,
+    // 500, 503, a timeout — means the platform never got to say, and the
+    // contract's rule is "clear locally only on a terminal/successful answer".
+    // Clearing on those would delete the keychain entry for a session that is
+    // still live upstream, which is precisely what ADR-0017 §4 answers 502 to
+    // prevent; the difference is only visible to someone whose sign-out landed
+    // during an outage, which is exactly when it matters.
+    const terminal =
+      error instanceof PlatformError && (error.status === 400 || error.status === 401);
+    if (!terminal) return { revoked: false };
   }
   await clearSession();
   return { revoked: true };

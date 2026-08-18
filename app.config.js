@@ -41,6 +41,9 @@ function nativeLinkConfig(redirectUri) {
   if (url.protocol !== 'https:') {
     throw new Error('EXPO_PUBLIC_NATIVE_REDIRECT_URI must be HTTPS — ADR-0017 rejects custom schemes');
   }
+  if (url.username || url.password || url.search || url.hash || url.port) {
+    throw new Error('EXPO_PUBLIC_NATIVE_REDIRECT_URI must be a plain HTTPS app-link URL');
+  }
 
   return {
     ios: { associatedDomains: [`applinks:${url.host}`] },
@@ -59,9 +62,38 @@ function nativeLinkConfig(redirectUri) {
   };
 }
 
+function validateBackendOrigin(value, releaseBuild) {
+  if (!value) return null;
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error('EXPO_PUBLIC_BACKEND_API_ORIGIN must be an absolute URL');
+  }
+  if (!['http:', 'https:'].includes(url.protocol)) {
+    throw new Error('EXPO_PUBLIC_BACKEND_API_ORIGIN must use HTTP or HTTPS');
+  }
+  if (url.username || url.password || url.search || url.hash || url.pathname !== '/') {
+    throw new Error('EXPO_PUBLIC_BACKEND_API_ORIGIN must contain only an origin');
+  }
+  if (releaseBuild && url.protocol !== 'https:') {
+    throw new Error('EXPO_PUBLIC_BACKEND_API_ORIGIN must use HTTPS for preview and production');
+  }
+  return url.origin;
+}
+
 export default ({ config }) => {
-  const backendApiOrigin = process.env.EXPO_PUBLIC_BACKEND_API_ORIGIN ?? null;
+  const releaseBuild = ['preview', 'production'].includes(process.env.EAS_BUILD_PROFILE ?? '');
+  const backendApiOrigin = validateBackendOrigin(
+    process.env.EXPO_PUBLIC_BACKEND_API_ORIGIN ?? null,
+    releaseBuild,
+  );
   const nativeRedirectUri = process.env.EXPO_PUBLIC_NATIVE_REDIRECT_URI ?? null;
+  if (releaseBuild && (!backendApiOrigin || !nativeRedirectUri)) {
+    throw new Error(
+      'Preview and production builds require EXPO_PUBLIC_BACKEND_API_ORIGIN and EXPO_PUBLIC_NATIVE_REDIRECT_URI',
+    );
+  }
   const links = nativeLinkConfig(nativeRedirectUri);
 
   return {

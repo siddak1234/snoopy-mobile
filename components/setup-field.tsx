@@ -1,6 +1,6 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { CaretRight, HandPalm, Sliders, Tray } from 'phosphor-react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { HandPalm, Sliders, Tray } from 'phosphor-react-native';
 
 import { NocToggle } from '@/components/nocturne/noc-toggle';
 import { fonts } from '@/constants/theme';
@@ -60,6 +60,18 @@ export function bySection(fields: SetupField[]): { section: SetupSection; fields
   })).filter((group) => group.fields.length > 0);
 }
 
+/** Mirrors the catalog service's required-config predicate exactly. */
+export function missingRequiredSetupFields(
+  fields: SetupField[],
+  values: Record<string, unknown>,
+): SetupField[] {
+  return fields.filter((field) => {
+    if (!field.required || field.defaultValue !== undefined) return false;
+    const value = values[field.key];
+    return value === undefined || value === null || value === '';
+  });
+}
+
 export function SetupFieldRow({
   field,
   value,
@@ -73,6 +85,33 @@ export function SetupFieldRow({
 }) {
   const { palette } = useTheme();
   const Glyph = CONTROL_ICON[field.control];
+  const externalValue =
+    typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+  const [draft, setDraft] = useState(externalValue);
+  const lastEmitted = useRef<unknown>(value);
+
+  // Preserve intermediate numeric input such as `12.` while still accepting a
+  // new server value when the subscription is reloaded after connecting.
+  useEffect(() => {
+    if (Object.is(value, lastEmitted.current)) return;
+    lastEmitted.current = value;
+    setDraft(externalValue);
+  }, [externalValue, value]);
+
+  const changeText = (next: string) => {
+    setDraft(next);
+    if (field.control === 'money') {
+      const normalized = next.trim();
+      const numeric = normalized === '' ? undefined : Number(normalized);
+      if (numeric === undefined || Number.isFinite(numeric)) {
+        lastEmitted.current = numeric;
+        onChange(numeric);
+      }
+      return;
+    }
+    lastEmitted.current = next;
+    onChange(next);
+  };
 
   const body = (
     <>
@@ -84,13 +123,26 @@ export function SetupFieldRow({
       {field.control === 'toggle' ? (
         <NocToggle value={value === true} onChange={(next) => onChange(next)} />
       ) : (
-        <View style={styles.valueSide}>
-          {typeof value === 'string' || typeof value === 'number' ? (
-            <Text style={[styles.rowValue, { color: palette.neutral[300] }]}>
-              {field.control === 'money' ? `$${value}` : String(value)}
-            </Text>
+        <View
+          style={[
+            styles.inputWrap,
+            { borderColor: palette.neutral[700], backgroundColor: palette.bg },
+          ]}>
+          {field.control === 'money' ? (
+            <Text style={[styles.currency, { color: palette.neutral[400] }]}>$</Text>
           ) : null}
-          <CaretRight size={15} color={palette.neutral[500]} />
+          <TextInput
+            accessibilityLabel={field.title}
+            value={draft}
+            onChangeText={changeText}
+            placeholder={field.required ? 'Required' : 'Optional'}
+            placeholderTextColor={palette.neutral[500]}
+            keyboardType={field.control === 'money' ? 'decimal-pad' : 'default'}
+            autoCapitalize="none"
+            autoCorrect={false}
+            selectionColor={palette.accent}
+            style={[styles.input, { color: palette.text }]}
+          />
         </View>
       )}
     </>
@@ -101,13 +153,10 @@ export function SetupFieldRow({
     divider && { borderBottomWidth: 1, borderBottomColor: palette.divider },
   ];
 
-  // A toggle is operated in place; the other three open something, so they are
-  // pressable rows. `resource-picker` has nowhere to go yet — nothing in the
-  // field says what it enumerates, which is filed in DESIGN-CONTRACT.md.
-  if (field.control === 'toggle') return <View style={rowStyle}>{body}</View>;
-  return (
-    <Pressable style={({ pressed }) => [rowStyle, pressed && { opacity: 0.7 }]}>{body}</Pressable>
-  );
+  // The public contract has no resource-list operation or resource kind. Match
+  // the completed web client: accept its opaque string value in a text input
+  // instead of inventing a provider-specific picker.
+  return <View style={rowStyle}>{body}</View>;
 }
 
 const styles = StyleSheet.create({
@@ -118,9 +167,25 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     paddingHorizontal: 14,
   },
-  rowBody: { flex: 1, gap: 2 },
+  rowBody: { flex: 1, minWidth: 0, gap: 2 },
   rowTitle: { fontFamily: fonts.medium, fontSize: 14 },
   rowSub: { fontFamily: fonts.regular, fontSize: 12 },
-  valueSide: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  rowValue: { fontFamily: fonts.regular, fontSize: 12.5 },
+  inputWrap: {
+    width: 112,
+    minHeight: 38,
+    borderWidth: 1,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+  },
+  currency: { fontFamily: fonts.regular, fontSize: 13 },
+  input: {
+    flex: 1,
+    minWidth: 0,
+    paddingVertical: 7,
+    paddingHorizontal: 2,
+    fontFamily: fonts.regular,
+    fontSize: 12.5,
+  },
 });

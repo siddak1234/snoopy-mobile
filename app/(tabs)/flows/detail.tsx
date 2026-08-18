@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pause, PencilSimple, Play, RocketLaunch } from 'phosphor-react-native';
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -13,11 +13,14 @@ import { StepCard } from '@/components/nocturne/step-card';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { em, fonts, layout, status } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
+import { ActionFailure, ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { useWorkspaceResource } from '@/hooks/use-resource';
+import { activeWorkspaceId, useSession } from '@/hooks/use-session';
 import { statusAction, useWorkflows, type FlowStatus } from '@/hooks/use-workflows';
 import { errorTitleFor } from '@/lib/content/screen-states';
 import { readCatalog, readConnectionProviders } from '@/lib/platform/catalog';
+import { updateSubscription } from '@/lib/platform/automations';
+import { newIdempotencyKey } from '@/lib/platform/client';
 import { readRunStats, readSubscriptions } from '@/lib/platform/runs';
 import { toFlows, type FlowView } from '@/lib/view/catalog';
 
@@ -29,7 +32,12 @@ export default function WorkflowDetailScreen() {
   const insets = useSafeAreaInsets();
   const { palette } = useTheme();
   const { status: statusOf, toggle } = useWorkflows();
+  const session = useSession();
+  const workspaceId = activeWorkspaceId(session);
   const { flow } = useLocalSearchParams<{ flow?: string }>();
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const actionKey = useRef(newIdempotencyKey('status'));
 
   /**
    * This workflow, by subscription id.
@@ -57,13 +65,29 @@ export default function WorkflowDetailScreen() {
 
   const live: FlowView | undefined =
     flows.status === 'ready'
-      ? (flows.data.find((f) => f.key === flow) ?? flows.data[0])
+      ? flows.data.find((f) => f.key === flow)
       : undefined;
   const def = live;
   const key = def?.key ?? '';
   const current = statusOf(key, (def?.status ?? 'Draft') as FlowStatus);
   const action = statusAction(current);
   const ActionIcon = ACTION_ICON[action.icon];
+
+  const changeStatus = async () => {
+    if (!workspaceId || !def || busy) return;
+    setBusy(true);
+    setActionError(null);
+    try {
+      const target = current === 'Live' ? 'paused' : 'live';
+      await updateSubscription(workspaceId, def.key, { status: target }, actionKey.current);
+      toggle(def.key, def.status as FlowStatus);
+      actionKey.current = newIdempotencyKey('status');
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'The workflow status was not changed.');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   // Below every hook on purpose — these return early.
   if (flows.status === 'loading') return <ScreenLoading tiles topInset={insets.top} />;
@@ -126,7 +150,7 @@ export default function WorkflowDetailScreen() {
             const IconCmp = c.icon;
             return (
               <View
-                key={c.name}
+                key={c.id}
                 style={[
                   styles.connectionRow,
                   i < def.connections.length - 1 && {
@@ -154,7 +178,7 @@ export default function WorkflowDetailScreen() {
         <SectionLabel>PIPELINE</SectionLabel>
         <View style={styles.pipeline}>
           {def.steps.map((st) => (
-            <View key={st.title}>
+            <View key={st.id}>
               <StepCard step={st} />
               {st.more ? (
                 <View style={[styles.connector, { borderColor: palette.accentRamp[700] }]} />
@@ -164,16 +188,19 @@ export default function WorkflowDetailScreen() {
         </View>
       </View>
 
+      {actionError ? (
+        <ActionFailure message={actionError} retryLabel="Try again" onRetry={changeStatus} />
+      ) : null}
       <View style={styles.actions}>
         <PillButton
-          label={action.label}
+          label={busy ? 'Saving…' : action.label}
           variant="secondary"
           height={46}
           fontSize={14}
           icon={ActionIcon}
           iconSize={16}
           style={styles.actionBtn}
-          onPress={() => toggle(key, def.status as FlowStatus)}
+          onPress={changeStatus}
         />
         <PillButton
           label="Edit in Builder"
@@ -185,7 +212,7 @@ export default function WorkflowDetailScreen() {
           style={styles.actionBtn}
           onPress={() =>
             // Names the template so the builder can draw THIS workflow's
-            // manifest.pipeline — DESIGN-CONTRACT finding 5, now with a caller.
+            // Names the exact catalog identity whose manifest.pipeline is drawn.
             router.push({
               pathname: '/(tabs)/flows/builder',
               params: live ? { template: live.templateId } : {},

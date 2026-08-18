@@ -10,6 +10,8 @@ import type { components } from '@/lib/generated/platform-contracts/automations'
  * `icon` is a resolved component and the copy is presentational.
  */
 export type PipelineStep = {
+  /** Stable manifest-step identity; required by the published schema. */
+  id: string;
   icon: Icon;
   kicker: string;
   title: string;
@@ -58,6 +60,7 @@ const FALLBACK_ICON: Icon = GitBranch;
 
 export function toPipelineStep(step: DeclaredStep, isLast: boolean): PipelineStep {
   return {
+    id: step.id,
     icon: KICKER_ICON[step.kicker] ?? FALLBACK_ICON,
     kicker: step.kicker,
     title: step.title,
