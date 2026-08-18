@@ -34,6 +34,22 @@ const COLOR_PROPERTY =
 const HEX_LITERAL = /['"]#[0-9a-fA-F]{3,8}['"]/;
 const FUNCTIONAL_COLOR = /['"](?:rgba?|hsla?)\(/;
 
+/**
+ * A six- or eight-digit hex is a colour wherever it appears.
+ *
+ * The same-line colour-property rule below exists because a three- or
+ * four-digit literal is ambiguous — `'#8841'` was a purchase-order number in
+ * the prototype. Six and eight digits are not ambiguous, and requiring the
+ * property on the same line let the obvious evasion through: hoist the literal
+ * to a `const` on its own line, then use the const on the colour prop. That is
+ * how a colour actually escapes a token sheet in practice, so it is checked
+ * unconditionally.
+ */
+const UNAMBIGUOUS_HEX = /['"]#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})['"]/;
+
+/** A hex assembled in a template literal, which no plain string match sees. */
+const TEMPLATE_HEX = /`#\$\{|`#[0-9a-fA-F]*\$\{/;
+
 const findings = [];
 
 for (const dir of sourceRoots) {
@@ -46,7 +62,9 @@ for (const dir of sourceRoots) {
       .forEach((line, index) => {
         const hasHex = HEX_LITERAL.test(line) && COLOR_PROPERTY.test(line);
         const hasFunctional = FUNCTIONAL_COLOR.test(line);
-        if (hasHex || hasFunctional) {
+        const hasUnambiguous = UNAMBIGUOUS_HEX.test(line);
+        const hasTemplate = TEMPLATE_HEX.test(line);
+        if (hasHex || hasFunctional || hasUnambiguous || hasTemplate) {
           findings.push({ location: `${path}:${index + 1}`, line: line.trim() });
         }
       });

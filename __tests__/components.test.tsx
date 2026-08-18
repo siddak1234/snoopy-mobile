@@ -16,7 +16,7 @@ import { StatusPill } from '@/components/nocturne/status-pill';
 import { StepCard } from '@/components/nocturne/step-card';
 import { TextField } from '@/components/nocturne/text-field';
 import { nocturneDark, status } from '@/constants/theme';
-import { steps } from '@/lib/fixtures';
+import { steps } from '@/test/design-data';
 import { renderWithProviders } from '@/test/render';
 
 const textColor = (node: { props: { style?: unknown } }) =>

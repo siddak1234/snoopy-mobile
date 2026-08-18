@@ -112,7 +112,10 @@ describe('Templates, wired to the catalog', () => {
     // Owner decision 2026-08-17: no prototype fallback. A build with no backend
     // genuinely could not load this, and the screen now says so.
     await renderWithProviders(<TemplatesScreen />, unconfigured);
-    expect(await screen.findByTestId('screen-error')).toBeTruthy();
+    expect(await screen.findByTestId('screen-unavailable')).toBeTruthy();
+    // Not `screen-error`: that state offers Retry, and an unconfigured build
+    // cannot succeed on a second attempt. The two must stay distinguishable.
+    expect(screen.queryByTestId('screen-error')).toBeNull();
     expect(platformOperation).not.toHaveBeenCalled();
   });
 });
@@ -176,7 +179,10 @@ describe('Settings CONNECTIONS, wired to the platform', () => {
 
   it('shows the designed failure state when the build has no backend', async () => {
     await renderWithProviders(<SettingsScreen />, unconfigured);
-    expect(await screen.findByTestId('screen-error')).toBeTruthy();
+    expect(await screen.findByTestId('screen-unavailable')).toBeTruthy();
+    // Not `screen-error`: that state offers Retry, and an unconfigured build
+    // cannot succeed on a second attempt. The two must stay distinguishable.
+    expect(screen.queryByTestId('screen-error')).toBeNull();
     expect(platformOperation).not.toHaveBeenCalled();
   });
 });

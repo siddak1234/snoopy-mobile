@@ -14,7 +14,7 @@ import { readCatalog } from '@/lib/platform/catalog';
 import { readApprovals, readRuns, readSubscriptions } from '@/lib/platform/runs';
 import { catalogIndex, composeNotifications, subscriptionIndex } from '@/lib/view/runs';
 import { useWorkspaceResource } from '@/hooks/use-resource';
-import { ScreenEmpty, ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
+import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import {
   NOTIFICATIONS_EMPTY_BODY,
   NOTIFICATIONS_EMPTY_TITLE,
@@ -81,7 +81,16 @@ export default function NotificationsScreen() {
   if (inbox.status === 'offline') {
     return <ScreenOffline onRetry={inbox.reload} onBack={() => router.back()} topInset={insets.top} />;
   }
-  if (inbox.status === 'error' || inbox.status === 'unconfigured') {
+  if (inbox.status === 'unconfigured') {
+    return (
+      <ScreenUnavailable
+        title={errorTitleFor('notifications')}
+        onBack={() => router.back()}
+        topInset={insets.top}
+      />
+    );
+  }
+  if (inbox.status === 'error') {
     return (
       <ScreenError
         title={errorTitleFor('notifications')}

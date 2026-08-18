@@ -93,13 +93,23 @@ the first server-supplied membership. A route/form value never selects tenancy.
 | Notifications | pending approvals plus failed runs; explicitly an in-app composition |
 | Settings | session/workspace, catalog totals, provider registry, and workspace connections |
 
-Every fetching surface has loading, offline, platform-error, and applicable
-empty behavior, **with one carve-out the design owns**: Home draws a single
-combined failure state (`sHomeErr`), so a platform refusal and an unresolved
-workspace both render its connectivity wording. That is the design's own
-`Screen.dc.html`, not a client shortcut, and it is recorded here rather than
+Every fetching surface has loading, offline, platform-error, **unavailable**, and
+applicable empty behavior, **with one carve-out the design owns**: Home draws a
+single combined failure state (`sHomeErr`), so a platform refusal and an
+unresolved workspace both render its connectivity wording. That is the design's
+own `Screen.dc.html`, not a client shortcut, and it is recorded here rather than
 asserted away — the sentence used to claim uniformity the code never had.
 Resource errors never reveal raw upstream bodies.
+
+`unavailable` is separate from `error` because Retry distinguishes them. A
+`PlatformNotConfiguredError` — no backend origin, or no workspace resolved —
+cannot succeed on a second attempt, so offering "Retry now or come back in a
+moment" invites a person to press a button that can never work.
+`ScreenUnavailable` says what is actually wrong and offers no retry.
+
+An empty queue is not an accomplishment. Approvals renders a first-run empty
+state when nothing is pending, and keeps its "all caught up — decisions synced"
+line for the case it describes: this person decided something.
 
 `AutomationCatalogEntry.available` is reachability evidence and is rendered, not
 dropped: an automation that failed its probe says so and its Add / Activate /

@@ -8,7 +8,7 @@ import { FilterChip } from '@/components/nocturne/filter-chip';
 import { IconTile } from '@/components/nocturne/icon-tile';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
-import { ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
+import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { activeWorkspaceId, useSession } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
@@ -98,7 +98,15 @@ export default function SolutionsScreen() {
   if (catalog.status === 'offline') {
     return <ScreenOffline onRetry={catalog.reload} topInset={insets.top} />;
   }
-  if (catalog.status === 'error' || catalog.status === 'unconfigured') {
+  if (catalog.status === 'unconfigured') {
+    return (
+      <ScreenUnavailable
+        title={errorTitleFor('solutions')}
+        topInset={insets.top}
+      />
+    );
+  }
+  if (catalog.status === 'error') {
     return (
       <ScreenError
         title={errorTitleFor('solutions')}

@@ -143,11 +143,6 @@ export const radius = {
   pill: 999,
 } as const;
 
-/** DS spacing scale (0.70× density — compact on purpose). */
-export const space = {
-  s1: 2.8, s2: 5.6, s3: 8.4, s4: 11.2, s6: 16.8, s8: 22.4,
-} as const;
-
 /** Recurring screen-layout metrics measured from Screen.dc.html. The design
  *  canvas is 402×874 (iPhone 16 Pro pt grid) and bakes a ~59pt status area
  *  into its fixed top paddings; live screens use safe-area insets instead:

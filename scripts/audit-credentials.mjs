@@ -23,6 +23,12 @@ const sourceRoots = ["app", "components", "hooks", "lib"];
 const knownDemoCredentials = new Set();
 
 const CREDENTIAL_NAME = /password|passwd|secret|token|apikey|api_key|credential/i;
+
+/** Names a slot rather than a secret: a storage key, a label, a discriminator. */
+const SLOT_NAME = /(?:key|name|type|label|id|placeholder|hint)$/i;
+
+/** No spaces and long enough to be a real value rather than prose or a word. */
+const SECRET_SHAPED = /^\S{6,}$/;
 const EMAIL_LITERAL = /['"][^'"\s]+@[^'"\s]+\.[A-Za-z]{2,}['"]/;
 
 const findings = [];
@@ -30,6 +36,9 @@ const findings = [];
 for (const dir of sourceRoots) {
   for (const file of walk(join(root, dir))) {
     const path = relative(root, file);
+    // Generated OpenAPI declarations describe the platform's own vocabulary
+    // (`tokenType: "Bearer"`); they are regenerated, never authored.
+    if (path.split("\\").join("/").startsWith("lib/generated/")) continue;
     const lines = readFileSync(file, "utf8").split("\n");
 
     lines.forEach((line, index) => {
@@ -47,7 +56,33 @@ for (const dir of sourceRoots) {
         CREDENTIAL_NAME.test(destructured[1]) &&
         /useState\s*(<[^>]*>)?\s*\(\s*['"][^'"]+['"]\s*\)/.test(line);
 
-      if (emailDefault || namedDefault) {
+      // const DEMO_PASSWORD = 'hunter2' — a credential-named binding holding a
+      // literal, with no useState anywhere near it. The original rule only knew
+      // the shape the prototype happened to use, so the plainest way to pin a
+      // secret in source walked straight past it.
+      //
+      // Two exclusions keep this from crying wolf, which is the failure mode
+      // that gets a gate an allowlist and then gets it ignored:
+      //   - a name ending in Key/Name/Type/Label/Id names a slot, not a secret.
+      //     `ACCESS_TOKEN_KEY = 'autom8x.access-token'` is a keychain key.
+      //   - a value containing a space is prose. 'Show password' is a button.
+      const bareBinding =
+        /\b(?:const|let|var)\s+([A-Za-z0-9_]+)\s*(?::[^=]+)?=\s*['"]([^'"]+)['"]/.exec(line);
+      const bareNamed =
+        bareBinding !== null &&
+        CREDENTIAL_NAME.test(bareBinding[1]) &&
+        !SLOT_NAME.test(bareBinding[1]) &&
+        SECRET_SHAPED.test(bareBinding[2]);
+
+      // { token: 'eyJhbGciOi…' } — the same thing one nesting level in.
+      const property = /\b([A-Za-z0-9_]+)\s*:\s*['"]([^'"]+)['"]/.exec(line);
+      const propertyLiteral =
+        property !== null &&
+        CREDENTIAL_NAME.test(property[1]) &&
+        !SLOT_NAME.test(property[1]) &&
+        SECRET_SHAPED.test(property[2]);
+
+      if (emailDefault || namedDefault || bareNamed || propertyLiteral) {
         findings.push({ location, line: line.trim() });
       }
     });

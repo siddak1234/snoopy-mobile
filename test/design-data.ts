@@ -1,16 +1,27 @@
 /**
- * Prototype fixture data, verbatim from the design's screen logic
- * (Screen.dc.html — DCLogic renderVals). The design is a clickable prototype
- * over this data; keep strings byte-identical to the design.
+ * Design-prototype data, owned by the test tree.
+ *
+ * These arrays are byte-identical to the design's own screen logic
+ * (`design-source/.../Screen.dc.html`, DCLogic renderVals), and that is exactly
+ * why the suites want them: a payload shaped from this data proves the wire→view
+ * mapping renders the design's own strings.
+ *
+ * It lives under `test/` rather than `lib/` because that is what it is. While it
+ * sat in `lib/fixtures.ts` the "zero runtime fixture imports" gate was satisfied
+ * by a script exemption naming that path; from here the rule holds by
+ * construction — there is no prototype data inside the runtime roots to import.
+ * Round 6 wired every screen to the platform, so nothing but a test reads this.
+ *
+ * Trimmed to the eight symbols the suites actually use. The other eleven exports
+ * had exactly one consumer, `__tests__/fixtures.test.ts`, which existed only to
+ * assert this data against itself; the Nocturne snapshots pin the rendered
+ * design, which is the check that was doing real work.
  */
 import {
-  ArrowClockwise,
   BellRinging,
   Camera,
   ChartLine,
   CheckCircle,
-  CircleDashed,
-  CrownSimple,
   EnvelopeOpen,
   EnvelopeSimple,
   GitBranch,
@@ -149,15 +160,6 @@ export const flowDefs: Record<FlowKey, FlowDef> = {
 /** Builder canvas steps (design `steps`, unchanged). */
 export const steps: PipelineStep[] = flowDefs.invoice.steps;
 
-export const builderPalette: { icon: Icon; name: string }[] = [
-  { icon: Lightning, name: 'Trigger' },
-  { icon: Sparkle, name: 'AI step' },
-  { icon: GitBranch, name: 'Branch' },
-  { icon: PlugsConnected, name: 'Action' },
-  { icon: HandPalm, name: 'Human review' },
-  { icon: Timer, name: 'Delay' },
-];
-
 export type ActivityItem = {
   icon: Icon;
   tone: 'ok' | 'warn' | 'err';
@@ -192,11 +194,6 @@ export const approvals: ApprovalItem[] = [
   { workflow: 'VENDOR ONBOARDING', title: 'New vendor: Northwind Ltd', why: 'No W-9 on file — needs confirmation before setup.', time: '3h ago' },
 ];
 
-export const approvalDoneText = {
-  approved: 'Approved ✓ — agent resuming',
-  rejected: 'Rejected — sent back to sender',
-} as const;
-
 export const templates: { icon: Icon; name: string; cat: string }[] = [
   { icon: EnvelopeSimple, name: 'Email triage', cat: 'Ops' },
   { icon: Receipt, name: 'Invoice capture', cat: 'Finance' },
@@ -206,35 +203,8 @@ export const templates: { icon: Icon; name: string; cat: string }[] = [
   { icon: BellRinging, name: 'Slack alerts', cat: 'Ops' },
 ];
 
-export const templateFilters = ['All', 'Finance', 'Ops', 'Sales', 'Reporting'];
-
-export const activityFilters = ['All', 'Success', 'Needs review', 'Failed'];
-
-export const homeStats: { value: string; label: string; tone: 'text' | 'ok' | 'err' }[] = [
-  { value: '128', label: 'Runs today', tone: 'text' },
-  { value: '124', label: 'Successes', tone: 'ok' },
-  { value: '4', label: 'Failures', tone: 'err' },
-];
-
-type RunItem = {
-  name: string;
-  meta: string;
-  time: string;
-  tone: 'ok' | 'warn';
-  runVariant: RunVariant;
-};
-
-export const recentRuns: RunItem[] = [
-  { name: 'Invoice triage', meta: '#4821 · posted to QuickBooks', time: '2m', tone: 'ok', runVariant: 'success' },
-  { name: 'Invoice triage', meta: '#4820 · held for review', time: '12m', tone: 'warn', runVariant: 'held' },
-  { name: 'Email triage', meta: '32 routed · 3 escalated', time: '1h', tone: 'ok', runVariant: 'success' },
-  { name: 'Receipt OCR', meta: '#911 · 4 receipts captured', time: '3h', tone: 'ok', runVariant: 'success' },
-];
-
 /** Solutions marketplace (design: solDefs). Prices are monthly USD numbers so
  *  the plan total can be derived live; the Growth plan base is $99. */
-export const PLAN_BASE_PRICE = 99;
-
 export type SolutionDef = {
   icon: Icon;
   name: string;
@@ -251,160 +221,3 @@ export const solutionDefs: SolutionDef[] = [
   { icon: UserPlus, name: 'Lead enrichment', desc: 'Enrich, score and route new leads', cat: 'Sales', price: 49 },
   { icon: BellRinging, name: 'Slack alerts', desc: 'Threshold alerts from any data source', cat: 'Ops', price: 9 },
 ];
-
-/** Design default: the first three solutions are on the plan (solOn 0,1,2). */
-export const defaultActiveSolutions = [0, 1, 2];
-
-export const solutionFilters = ['All', 'Finance', 'Ops', 'Sales', 'Reporting'];
-
-/** Run detail variants (design `runDefs`: held / success / failed). */
-export type RunVariant = 'held' | 'success' | 'failed' | 'retried';
-
-export type RunTimelineItem = {
-  icon: Icon;
-  tone: 'ok' | 'warn' | 'err' | 'pending';
-  title: string;
-  sub: string;
-  time?: string;
-};
-
-export type RunDetail = {
-  title: string;
-  sub: string;
-  status: 'Held' | 'Success' | 'Failed';
-  stats: { value: string; label: string }[];
-  timeline: RunTimelineItem[];
-  /** The extracted-fields card is omitted on failed runs (design runFields). */
-  fields: boolean;
-  /** Primary action; absent on successful runs (design runA1). */
-  action?: { label: string; icon: Icon };
-};
-
-export const runDetails: Record<RunVariant, RunDetail> = {
-  held: {
-    title: 'Run #4820',
-    sub: 'Invoice triage · today, 9:41 AM',
-    status: 'Held',
-    stats: [
-      { value: '38s', label: 'Duration' },
-      { value: '3 / 4', label: 'Steps done' },
-      { value: '87%', label: 'Confidence' },
-    ],
-    timeline: [
-      { icon: CheckCircle, tone: 'ok', title: 'New email received', sub: 'Gmail · ap@acme.co', time: '9:41:02' },
-      { icon: CheckCircle, tone: 'ok', title: 'Fields extracted', sub: 'Vendor, amount, PO, due date', time: '9:41:19' },
-      { icon: HandPalm, tone: 'warn', title: 'Held for review', sub: 'Amount differs from PO $11,900', time: '9:41:40' },
-      { icon: CircleDashed, tone: 'pending', title: 'Post to QuickBooks', sub: 'Waiting on your approval' },
-    ],
-    fields: true,
-    action: { label: 'Review & approve', icon: HandPalm },
-  },
-  success: {
-    title: 'Run #4821',
-    sub: 'Invoice triage · today, 9:52 AM',
-    status: 'Success',
-    stats: [
-      { value: '42s', label: 'Duration' },
-      { value: '4 / 4', label: 'Steps done' },
-      { value: '98%', label: 'Confidence' },
-    ],
-    timeline: [
-      { icon: CheckCircle, tone: 'ok', title: 'New email received', sub: 'Gmail · ap@acme.co', time: '9:52:01' },
-      { icon: CheckCircle, tone: 'ok', title: 'Fields extracted', sub: 'Vendor, amount, PO, due date', time: '9:52:16' },
-      { icon: CheckCircle, tone: 'ok', title: 'Classified & GL-coded', sub: '6200 · Office supplies', time: '9:52:28' },
-      { icon: CheckCircle, tone: 'ok', title: 'Posted to QuickBooks', sub: 'Bill #10412 created, PDF attached', time: '9:52:43' },
-    ],
-    fields: true,
-  },
-  retried: {
-    title: 'Run #52',
-    sub: 'Weekly KPI report · retried just now',
-    status: 'Success',
-    stats: [
-      { value: '26s', label: 'Duration' },
-      { value: '4 / 4', label: 'Steps done' },
-      { value: '—', label: 'Confidence' },
-    ],
-    timeline: [
-      { icon: CheckCircle, tone: 'ok', title: 'Manual retry started', sub: 'By you · just now', time: 'now' },
-      { icon: CheckCircle, tone: 'ok', title: 'Sheets reconnected & fetched', sub: 'Revenue, churn, pipeline tabs', time: '+8s' },
-      { icon: CheckCircle, tone: 'ok', title: 'Digest built', sub: 'Week-over-week deltas included', time: '+19s' },
-      { icon: CheckCircle, tone: 'ok', title: 'Posted to Slack', sub: '#leadership', time: '+26s' },
-    ],
-    fields: false,
-  },
-  failed: {
-    title: 'Run #52',
-    sub: 'Weekly KPI report · yesterday, 9:12 AM',
-    status: 'Failed',
-    stats: [
-      { value: '12s', label: 'Duration' },
-      { value: '1 / 4', label: 'Steps done' },
-      { value: '—', label: 'Confidence' },
-    ],
-    timeline: [
-      { icon: CheckCircle, tone: 'ok', title: 'Scheduled trigger fired', sub: 'Every Monday · 9:12 AM', time: '9:12:00' },
-      { icon: XCircle, tone: 'err', title: 'Sheets connection failed', sub: 'Auth token revoked — reconnect Google Sheets', time: '9:12:12' },
-      { icon: CircleDashed, tone: 'pending', title: 'Build digest', sub: 'Skipped' },
-      { icon: CircleDashed, tone: 'pending', title: 'Post to Slack', sub: 'Skipped' },
-    ],
-    fields: false,
-    action: { label: 'Retry run', icon: ArrowClockwise },
-  },
-};
-
-/** Extracted fields shown for the invoice runs (design: identical card). */
-export const runFields = [
-  { key: 'Vendor', value: 'Beacon Supply Co' },
-  { key: 'Amount', value: '$12,480.00' },
-  { key: 'PO', value: '#8841' },
-  { key: 'Due date', value: 'Sep 3, 2026' },
-];
-
-/** Settings CONNECTIONS card (design sSettings addition). */
-export const settingsConnections: {
-  icon: Icon;
-  name: string;
-  sub: string;
-  connected: boolean;
-}[] = [
-  { icon: EnvelopeSimple, name: 'Gmail', sub: 'Connected · used by 2 solutions', connected: true },
-  { icon: PlugsConnected, name: 'QuickBooks Online', sub: 'Connected · used by 1 solution', connected: true },
-  { icon: SlackLogo, name: 'Slack', sub: 'Not connected', connected: false },
-];
-
-/** Notifications inbox (design `notifs`). `dot: true` = unread. */
-export type NotificationItem = {
-  icon: Icon;
-  tone: 'ok' | 'warn' | 'err' | 'accent';
-  unread: boolean;
-  title: string;
-  desc: string;
-  time: string;
-  /** Where the row navigates (design n.open). */
-  target: 'run' | 'activity' | 'settings';
-  runVariant?: RunVariant;
-};
-
-export const notifications: NotificationItem[] = [
-  { icon: HandPalm, tone: 'warn', unread: true, title: 'Run held for review', desc: 'Invoice triage · amount differs from PO $11,900', time: '12m', target: 'run', runVariant: 'held' },
-  { icon: XCircle, tone: 'err', unread: true, title: 'Run failed', desc: 'Weekly KPI report · Sheets auth expired', time: '1d', target: 'run', runVariant: 'failed' },
-  { icon: CheckCircle, tone: 'ok', unread: false, title: 'Digest posted', desc: 'Weekly KPI report · #leadership', time: '1d', target: 'activity' },
-  { icon: CheckCircle, tone: 'ok', unread: false, title: 'Bill created', desc: 'Invoice triage · QuickBooks bill #10398', time: '2d', target: 'activity' },
-  { icon: CrownSimple, tone: 'accent', unread: false, title: 'Invoice paid', desc: 'Growth plan · $166 on Aug 1', time: '4d', target: 'settings' },
-];
-
-/** "New from template" configure screen (design sConfigure). */
-export const templateConfigure = {
-  icon: Receipt,
-  name: 'Invoice capture',
-  meta: 'Finance · 4 steps · used by 2,100 teams',
-  defaultName: 'Invoice capture — AP',
-  connection: { icon: PlugsConnected, name: 'QuickBooks Online' },
-  steps: [
-    { icon: EnvelopeOpen, title: 'New email in AP inbox', kicker: 'TRIGGER' },
-    { icon: Sparkle, title: 'Extract invoice fields', kicker: 'AI STEP' },
-    { icon: PlugsConnected, title: 'Post to QuickBooks', kicker: 'ACTION' },
-  ],
-  footnote: 'Steps land preloaded — edit anything before it goes live.',
-};

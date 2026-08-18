@@ -5,7 +5,6 @@ import {
   nocturneDark,
   nocturneLight,
   radius,
-  space,
   status,
   withAlpha,
 } from '@/constants/theme';
@@ -99,9 +98,8 @@ describe('elevation — ring on dark, ink shadow on light', () => {
 });
 
 describe('scales', () => {
-  it('keeps the DS radius and 0.7× spacing scales', () => {
+  it('keeps the DS radius scale', () => {
     expect(radius).toMatchObject({ sm: 4, md: 8, lg: 14, pill: 999 });
-    expect(space).toEqual({ s1: 2.8, s2: 5.6, s3: 8.4, s4: 11.2, s6: 16.8, s8: 22.4 });
   });
 
   it('loads Inter at the three design weights', () => {

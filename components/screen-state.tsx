@@ -10,6 +10,7 @@ import { useTheme } from '@/hooks/use-theme';
 import {
   BACK_LABEL,
   ERROR_BODY,
+  UNAVAILABLE_BODY,
   OFFLINE_BODY,
   OFFLINE_TITLE,
   RETRY_LABEL,
@@ -157,6 +158,39 @@ export function ScreenError({
       title={title}
       body={ERROR_BODY}
       onRetry={onRetry}
+      onBack={onBack}
+      backLabel={BACK_LABEL}
+      topInset={topInset}
+    />
+  );
+}
+
+/**
+ * The build or the session cannot make this request at all.
+ *
+ * Distinct from `gErr` because Retry is a lie here. A `PlatformNotConfiguredError`
+ * means either no backend origin is configured or no workspace has resolved —
+ * neither of which a second attempt changes, so offering "Retry now or come
+ * back in a moment" invites a person to press a button that can never succeed.
+ * The design has no fourth failure hero, so this reuses `gErr`'s treatment and
+ * changes only what it says and what it offers.
+ */
+export function ScreenUnavailable({
+  title,
+  onBack,
+  topInset = 0,
+}: {
+  title: string;
+  onBack?: () => void;
+  topInset?: number;
+}) {
+  const { palette } = useTheme();
+  return (
+    <FailureBody
+      testID="screen-unavailable"
+      icon={<WarningCircle size={36} color={palette.neutral[500]} />}
+      title={title}
+      body={UNAVAILABLE_BODY}
       onBack={onBack}
       backLabel={BACK_LABEL}
       topInset={topInset}

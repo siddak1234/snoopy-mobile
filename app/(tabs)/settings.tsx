@@ -23,7 +23,7 @@ import { NocToggle } from '@/components/nocturne/noc-toggle';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { TextField } from '@/components/nocturne/text-field';
-import { ActionFailure, ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
+import { ActionFailure, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { em, fonts, layout, status } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useSession } from '@/hooks/use-session';
@@ -256,7 +256,15 @@ export default function SettingsScreen() {
   if (connections.status === 'offline') {
     return <ScreenOffline onRetry={connections.reload} topInset={insets.top} />;
   }
-  if (connections.status === 'error' || connections.status === 'unconfigured') {
+  if (connections.status === 'unconfigured') {
+    return (
+      <ScreenUnavailable
+        title={errorTitleFor('settings')}
+        topInset={insets.top}
+      />
+    );
+  }
+  if (connections.status === 'error') {
     return (
       <ScreenError
         title={errorTitleFor('settings')}
