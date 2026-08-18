@@ -12,7 +12,15 @@ import { useTheme } from '@/hooks/use-theme';
 
 /** 46×28 pill toggle from the design: white 24px knob travelling 18px,
  *  track neutral-800 → accent, 200ms. */
-export function NocToggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
+export function NocToggle({
+  value,
+  onChange,
+  disabled = false,
+}: {
+  value: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+}) {
   const { palette } = useTheme();
   const progress = useSharedValue(value ? 1 : 0);
 
@@ -30,9 +38,11 @@ export function NocToggle({ value, onChange }: { value: boolean; onChange: (v: b
   return (
     <Pressable
       onPress={() => onChange(!value)}
+      disabled={disabled || undefined}
       hitSlop={6}
       accessibilityRole="switch"
-      accessibilityState={{ checked: value }}>
+      accessibilityState={disabled ? { checked: value, disabled: true } : { checked: value }}
+      style={disabled ? { opacity: 0.55 } : undefined}>
       <Animated.View
         style={[{ width: 46, height: 28, borderRadius: 999, justifyContent: 'center' }, trackStyle]}>
         <Animated.View

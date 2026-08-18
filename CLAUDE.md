@@ -1,71 +1,61 @@
-# snoopy-mobile — read before doing anything
+# `snoopy-mobile` — session instructions
 
-The Expo native client for **Autom8x** — one of four independent repositories.
-**Round 6 is open and substantially delivered.** The 20 screen routes (not 27 —
-that figure counts the 7 `_layout.tsx` files) and 18 Nocturne components run on
-the published API: types generated from the backend's OpenAPI, one transport
-facade, native sign-in per ADR-0017, tokens in the OS secure enclave, and every
-fetching screen wired to real reads with the designed loading/error/offline
-states. **No file imports `lib/fixtures.ts` any more** — `npm run audit:fixtures` reports
-0, which is Gate 8's first line met. A build with no backend renders the designed
-empty and error states rather than inventing data.
+This is the one open repository for Round 6. The implementation has reached the
+fresh-audit boundary; **Round 6 is not closed until a separate session that wrote
+none of the implementation reruns Gate 8 and records the result.**
 
-Round 7 owns what remains outward-facing: its entry rule is explicit that
-"everything above ran under local Compose with no cloud account", so a claimed
-domain, a deployed environment and a payment provider account are **not** Round 6
-work.
+## Start every session
 
-## Start here, every session
+Read `../snoopy-backend/docs/platform/AUTOM8X-MASTER-PLAN.md` §0, then the Round
+6 card in `AUTOM8X-ROUND-PLAYBOOK.md`, then this repository's
+`DESIGN-CONTRACT.md` and `DESIGN-GAPS.md`. The sibling governance repository is
+read-only from a mobile session.
 
-**Read `../snoopy-backend/docs/platform/AUTOM8X-MASTER-PLAN.md` §0 STATUS
-first.** That block states the current round and the open repository. The
-governance documents live in the private `snoopy-backend` repository — this repo
-**reads** them and never edits them.
+If the master plan no longer names `snoopy-mobile` as the open repository, stop.
 
-> That path is outside this working directory. Run `/add-dir ../snoopy-backend`
-> at the start of the session (or launch with `--add-dir`) so the read succeeds
-> without a prompt. **Read access only** — editing anything in that repo from a
-> mobile session breaks the one-repo rule.
+## Non-negotiable rules
 
-**If §0 STATUS does not name `snoopy-mobile` as the open repository, you are in
-the wrong repo.** Say so and stop. Rounds 0–5 are backend and web work; touching
-mobile early is exactly the cross-repo drift the round structure exists to
-prevent.
+1. Work only in this repository. A backend issue is a finding, not permission to
+   edit the sibling repository.
+2. Preserve the frozen Nocturne UI. The 18 components are snapshot-pinned in
+   both palettes. Disabled support may not change their default render.
+3. Use theme tokens; no raw hex or ad-hoc font families outside
+   `constants/theme.ts`.
+4. Do not duplicate a Nocturne primitive.
+5. Runtime network access goes through `lib/platform/client.ts` and generated
+   `openapi-fetch` clients only. No raw `fetch`, property/global fetch,
+   XMLHttpRequest, WebSocket, EventSource, axios, or alternate client.
+6. Credentials live only in `expo-secure-store`, this-device-only. Never put a
+   token in AsyncStorage, a URL, route params, logs, fixtures, or analytics.
+7. Never invent a field or workflow absent from the published contract. Follow
+   the refusal map in `DESIGN-CONTRACT.md`.
 
-Then read `AUTOM8X-ROUND-PLAYBOOK.md` §4 (the Round 6 card) and this repo's
-`DESIGN-CONTRACT.md` and `DESIGN-GAPS.md`.
+## Round 6 scope and one documented variance
 
-## Rules
+Scope is BUILD-PLAN 8.5–8.7: generated client, secure native session and guarded
+routes; real screen reads/mutations; read-only Builder rendering
+`manifest.pipeline`; `eas.json` and build pipeline.
 
-1. **One repository per session.** Work only here.
-2. **The UI/UX is frozen and is the asset.** Screens change what they *read
-   from*, never how they look. Colour, spacing, and type scale must survive a
-   visual diff.
-3. **No raw hex, no ad-hoc font families** outside `constants/theme.ts`. Those
-   tokens are translated 1:1 from the web app's `globals.css` — one design
-   source, two platform encodings.
-4. **No new component that duplicates one in the Nocturne set** (18 exist:
-   `status-pill`, `stat-card`, `surface-card`, `pill-button`, `text-field`, …).
-5. **No hand-written `fetch`.** Round 6 introduces a client generated from the
-   backend's `docs/openapi/*.yaml`. A hand-written call is a gate failure.
-   Enforced by `npm run audit:platform`, not by review.
-6. **Tokens go in `expo-secure-store`** — never AsyncStorage, never a log line.
-   Also enforced by `npm run audit:platform`.
-7. **Never edit another repository.** Something that looks like a backend bug is
-   a finding to record, not a fix to make here.
+The playbook names `expo-auth-session`. ADR-0017 subsequently made the backend,
+not the app, the OAuth client. Expo documents `AuthRequest` as an OAuth §4.1.1
+request requiring a client ID; applying it here would invent an app OAuth
+client. The implementation therefore uses the lower-level Expo system auth
+session, `expo-web-browser.openAuthSessionAsync`, and retains device-generated
+PKCE for the sealed handoff. This variance is explicit and must be judged by the
+fresh auditor, not hidden by an unused dependency.
 
-## Round 6 exit gate, for orientation
+## Gate 8 commands
 
-Zero imports of `lib/fixtures` outside tests · zero pinned demo credentials ·
-Nocturne components unchanged under visual diff · `eas.json` builds · both
-clients drive the same journey against the same endpoints.
+```bash
+npm ci
+npm run verify
+npm run audit:dependencies
+npm run export:ios
+npm run export:android
+git status --short
+```
 
-Recount before quoting: `app/` holds 27 `.tsx` = 7 layouts + **20 routes**, and
-`lib/fixtures.ts` is **410 lines**, not the card's 427.
-
-Four of those five are now commands rather than prose: `audit:fixtures` (a
-ratchet that may shrink and never grow, each remaining file naming its blocker),
-`audit:credentials`, `audit:platform`, and `npx jest nocturne-visual`. The visual
-harness is proven able to fail on colour, spacing **and** type scale — if you
-change it, re-prove that, because a snapshot suite that cannot fail asserts
-nothing.
+The fresh audit must also inspect the simulator, exercise reachable refusal and
+auth states, compare the §1 endpoint journey with the web client, validate EAS
+configuration, and report any live journey that external configuration makes
+NOT OBSERVED. It must not convert NOT OBSERVED into PASS.

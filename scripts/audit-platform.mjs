@@ -6,10 +6,9 @@
  * a rule nothing runs is documentation, and an auditor who forgets one grep
  * reports a pass that was never tested.
  *
- *   1. **One path to the network.** Round 6 introduced a client generated from
- *      the backend's OpenAPI documents, behind one `platformJson()` facade. A
- *      hand-written `fetch` anywhere else is a gate failure — it is how two
- *      clients start answering the same refusal with different words.
+ *   1. **One path to the network.** Round 6 uses `openapi-fetch` behind one
+ *      schema-typed module. No repository file may call a raw network primitive;
+ *      even the facade delegates its request construction to the generated client.
  *   2. **Tokens live in the secure enclave.** ADR-0017 amended invariant 1 to
  *      permit a native client holding its own session tokens *only* in
  *      Keychain/Keystore. `AsyncStorage` is plain, world-readable app storage,
@@ -24,20 +23,34 @@ import { extname, join, relative } from "node:path";
 
 const root = process.cwd();
 
-/** The single module permitted to call `fetch`. */
 const TRANSPORT = "lib/platform/client.ts";
+const RUNTIME_ROOTS = ["app", "components", "constants", "hooks", "lib"];
 
 const RULES = [
   {
-    name: "hand-written fetch",
-    roots: ["app", "components", "hooks", "lib"],
-    pattern: /\bfetch\s*\(/,
+    name: "raw network primitive",
+    roots: RUNTIME_ROOTS,
+    pattern: /(?:\bfetch|\.fetch|\[['"]fetch['"]\])\s*\(|\b(?:XMLHttpRequest|WebSocket|EventSource)\s*\(|\baxios\s*(?:\.|\()/,
+    allow: () => false,
+    detail: `requests must be expressed through the schema-typed clients in ${TRANSPORT}`,
+  },
+  {
+    name: "alternate network library",
+    roots: RUNTIME_ROOTS,
+    pattern: /from\s+['"](?:axios|expo\/fetch|cross-fetch|node-fetch)['"]|require\s*\(\s*['"](?:axios|expo\/fetch|cross-fetch|node-fetch)['"]\s*\)/,
+    allow: () => false,
+    detail: `only openapi-fetch in ${TRANSPORT} is an approved runtime transport`,
+  },
+  {
+    name: "openapi-fetch outside the transport",
+    roots: RUNTIME_ROOTS,
+    pattern: /from\s+['"]openapi-fetch['"]|require\s*\(\s*['"]openapi-fetch['"]\s*\)/,
     allow: (path) => path === TRANSPORT,
-    detail: `only ${TRANSPORT} may call fetch — everything else goes through platformJson()`,
+    detail: `only ${TRANSPORT} owns generated-client middleware and error mapping`,
   },
   {
     name: "AsyncStorage",
-    roots: ["app", "components", "hooks", "lib"],
+    roots: RUNTIME_ROOTS,
     // Matches an import or a member access, not the word inside a comment
     // explaining that it must never be used.
     pattern: /from\s+['"][^'"]*async-storage['"]|\bAsyncStorage\s*\./,
@@ -46,7 +59,7 @@ const RULES = [
   },
   {
     name: "console",
-    roots: ["lib/platform", "hooks"],
+    roots: RUNTIME_ROOTS,
     pattern: /\bconsole\s*\.\s*[a-z]+\s*\(/,
     allow: () => false,
     detail: "a session token must never reach a log line",
@@ -64,7 +77,7 @@ function walk(dir) {
   for (const entry of entries) {
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) out.push(...walk(full));
-    else if ([".ts", ".tsx"].includes(extname(full))) out.push(full);
+    else if ([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"].includes(extname(full))) out.push(full);
   }
   return out;
 }
@@ -98,5 +111,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  "Platform audit passed. One transport, tokens in the enclave, no logging in lib/platform or hooks.",
+  "Platform audit passed. Schema-typed transport only, tokens in the enclave, no runtime logging.",
 );

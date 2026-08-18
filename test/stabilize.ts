@@ -47,8 +47,8 @@ const ANIMATED_KEYS = ['jestAnimatedStyle', 'jestAnimatedProps'];
  * So the sampled phase is replaced outright. Nothing is lost that this gate
  * asserts: Skeleton's colour, width, height and radius live in the ordinary
  * `style`/`jestInlineStyle` and are still compared exactly, and the pulse itself
- * is motion — which Gate 8 does not name and DESIGN-GAPS item 11 tracks
- * separately as undesigned. `NocToggle` is untouched by this: its animated
+ * is motion — which Gate 8 does not name and DESIGN-GAPS records separately as
+ * an additional design decision. `NocToggle` is untouched by this: its animated
  * values are a colour (a string) and a knob position that never travels.
  */
 const SAMPLED = new Set(['opacity']);

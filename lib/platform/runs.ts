@@ -1,5 +1,5 @@
 import type { components } from '@/lib/generated/platform-contracts/automations';
-import { platformJson } from './client';
+import { platformOperation } from './client';
 
 /**
  * Run reads, including the aggregates Round 6.6 published.
@@ -30,14 +30,30 @@ export type Run = components['schemas']['Run'];
  *   that window — it does not fail to exist.
  */
 export function readRunStats(workspaceId: string, since?: Date): Promise<RunStats> {
-  const query = since ? `?since=${encodeURIComponent(since.toISOString())}` : '';
-  return platformJson<RunStats>(`/v1/workspaces/${workspaceId}/run-stats${query}`);
+  const sinceValue = since?.toISOString();
+  const query = sinceValue ? `?since=${encodeURIComponent(sinceValue)}` : '';
+  return platformOperation(
+    `/v1/workspaces/${workspaceId}/run-stats${query}`,
+    ({ automations }, signal) =>
+      automations.GET('/v1/workspaces/{workspaceId}/run-stats', {
+        params: { path: { workspaceId }, query: sinceValue ? { since: sinceValue } : {} },
+        signal,
+      }),
+  );
 }
 
 /** Runs for a workspace, newest first, optionally one subscription's. */
 export function readRuns(workspaceId: string, subscriptionId?: string): Promise<{ runs: Run[] }> {
   const query = subscriptionId ? `?subscriptionId=${encodeURIComponent(subscriptionId)}` : '';
-  return platformJson<{ runs: Run[] }>(`/v1/workspaces/${workspaceId}/runs${query}`);
+  return platformOperation(`/v1/workspaces/${workspaceId}/runs${query}`, ({ automations }, signal) =>
+    automations.GET('/v1/workspaces/{workspaceId}/runs', {
+      params: {
+        path: { workspaceId },
+        query: subscriptionId ? { subscriptionId } : {},
+      },
+      signal,
+    }),
+  );
 }
 
 /**
@@ -67,15 +83,25 @@ export function readApprovals(
   workspaceId: string,
   status: Approval['status'] = 'pending',
 ): Promise<{ approvals: Approval[] }> {
-  return platformJson<{ approvals: Approval[] }>(
+  return platformOperation(
     `/v1/workspaces/${workspaceId}/approvals?status=${encodeURIComponent(status)}`,
+    ({ automations }, signal) =>
+      automations.GET('/v1/workspaces/{workspaceId}/approvals', {
+        params: { path: { workspaceId }, query: { status } },
+        signal,
+      }),
   );
 }
 
 /** The workspace's subscriptions — the middle hop of the approval-title join. */
 export function readSubscriptions(workspaceId: string): Promise<{ subscriptions: Subscription[] }> {
-  return platformJson<{ subscriptions: Subscription[] }>(
+  return platformOperation(
     `/v1/workspaces/${workspaceId}/subscriptions`,
+    ({ automations }, signal) =>
+      automations.GET('/v1/workspaces/{workspaceId}/subscriptions', {
+        params: { path: { workspaceId } },
+        signal,
+      }),
   );
 }
 
@@ -91,5 +117,10 @@ export type RunDetail = components['schemas']['RunDetail'];
  * and `resultSummary`/`failureReason` on the run itself are the whole of it.
  */
 export function readRun(workspaceId: string, runId: string): Promise<RunDetail> {
-  return platformJson<RunDetail>(`/v1/workspaces/${workspaceId}/runs/${runId}`);
+  return platformOperation(`/v1/workspaces/${workspaceId}/runs/${runId}`, ({ automations }, signal) =>
+    automations.GET('/v1/workspaces/{workspaceId}/runs/{runId}', {
+      params: { path: { workspaceId, runId } },
+      signal,
+    }),
+  );
 }

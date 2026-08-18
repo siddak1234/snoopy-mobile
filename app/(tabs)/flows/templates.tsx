@@ -72,7 +72,7 @@ export default function TemplatesScreen() {
           <SurfaceCard
             key={t.templateId}
             onPress={() =>
-              // Each card opens ITS template — DESIGN-GAPS item 3's second case.
+              // Each card opens its own stable catalog identity.
               router.push({
                 pathname: '/(tabs)/flows/configure',
                 params: { template: t.templateId },

@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { CheckCircle, Warning } from 'phosphor-react-native';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -9,10 +9,13 @@ import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
+import { activeWorkspaceId, useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { APPROVAL_DONE_TEXT as approvalDoneText, errorTitleFor } from '@/lib/content/screen-states';
 import type { ApprovalItem } from '@/lib/view/runs';
 import { readCatalog } from '@/lib/platform/catalog';
+import { decideApproval } from '@/lib/platform/automations';
+import { newIdempotencyKey } from '@/lib/platform/client';
 import { readApprovals, readSubscriptions } from '@/lib/platform/runs';
 import { relativeTimeAgo } from '@/lib/view/format';
 import { approvalTitle, approvalWorkflowLabel, catalogIndex, subscriptionIndex } from '@/lib/view/runs';
@@ -22,10 +25,14 @@ type Decision = 'approved' | 'rejected';
 function ApprovalCard({
   item,
   decision,
+  busy,
+  error,
   onDecide,
 }: {
   item: ApprovalItem;
   decision: Decision | undefined;
+  busy: boolean;
+  error?: string;
   onDecide: (d: Decision) => void;
 }) {
   const { palette } = useTheme();
@@ -47,6 +54,7 @@ function ApprovalCard({
       ) : (
         <View style={styles.actions}>
           <Pressable
+            disabled={busy}
             onPress={() => onDecide('approved')}
             style={({ pressed }) => [
               styles.actionBtn,
@@ -56,6 +64,7 @@ function ApprovalCard({
             <Text style={[styles.actionLabel, { color: palette.accent }]}>Approve</Text>
           </Pressable>
           <Pressable
+            disabled={busy}
             onPress={() => onDecide('rejected')}
             style={({ pressed }) => [
               styles.actionBtn,
@@ -66,6 +75,7 @@ function ApprovalCard({
           </Pressable>
         </View>
       )}
+      {error ? <Text style={[styles.doneNote, { color: status.err }]}>{error}</Text> : null}
     </SurfaceCard>
   );
 }
@@ -74,7 +84,12 @@ export default function ApprovalsScreen() {
   const { palette } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [decisions, setDecisions] = useState<Record<number, Decision>>({});
+  const session = useSession();
+  const workspaceId = activeWorkspaceId(session);
+  const [decisions, setDecisions] = useState<Record<string, Decision>>({});
+  const [busy, setBusy] = useState<Record<string, boolean>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const intentKeys = useRef<Record<string, { decision: Decision; key: string }>>({});
 
   /**
    * The inbox, and the three-hop join its headline needs.
@@ -99,6 +114,7 @@ export default function ApprovalsScreen() {
     const subIndex = subscriptionIndex(subs.subscriptions);
     const catIndex = catalogIndex(catalog.automations);
     return pendingApprovals.approvals.map<ApprovalItem>((a) => ({
+      id: a.id,
       workflow: approvalWorkflowLabel(a, subIndex, catIndex),
       title: approvalTitle(a, subIndex, catIndex),
       why: a.reason,
@@ -110,6 +126,33 @@ export default function ApprovalsScreen() {
   const decided = Object.keys(decisions).length;
   const pending = items.length - decided;
   const allDone = decided === items.length;
+
+  const submitDecision = async (approvalId: string, decision: Decision) => {
+    if (!workspaceId || busy[approvalId]) return;
+    const previousIntent = intentKeys.current[approvalId];
+    const intent = previousIntent?.decision === decision
+      ? previousIntent
+      : { decision, key: newIdempotencyKey('decision') };
+    intentKeys.current[approvalId] = intent;
+    setBusy((previous) => ({ ...previous, [approvalId]: true }));
+    setErrors((previous) => {
+      const next = { ...previous };
+      delete next[approvalId];
+      return next;
+    });
+    try {
+      await decideApproval(workspaceId, approvalId, decision, intent.key);
+      setDecisions((previous) => ({ ...previous, [approvalId]: decision }));
+      delete intentKeys.current[approvalId];
+    } catch (error) {
+      setErrors((previous) => ({
+        ...previous,
+        [approvalId]: error instanceof Error ? error.message : 'The decision was not saved.',
+      }));
+    } finally {
+      setBusy((previous) => ({ ...previous, [approvalId]: false }));
+    }
+  };
 
   if (inbox.status === 'loading') return <ScreenLoading topInset={insets.top} />;
   if (inbox.status === 'offline') {
@@ -149,12 +192,14 @@ export default function ApprovalsScreen() {
           </Text>
         </View>
       ) : null}
-      {items.map((item, i) => (
+      {items.map((item) => (
         <ApprovalCard
-          key={i}
+          key={item.id}
           item={item}
-          decision={decisions[i]}
-          onDecide={(d) => setDecisions((prev) => ({ ...prev, [i]: d }))}
+          decision={decisions[item.id]}
+          busy={busy[item.id] ?? false}
+          error={errors[item.id]}
+          onDecide={(decision) => submitDecision(item.id, decision)}
         />
       ))}
     </ScrollView>

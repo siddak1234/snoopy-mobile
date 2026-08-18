@@ -15,7 +15,7 @@ import { renderWithProviders } from '@/test/render';
  *
  * The design draws a different screen for each: "You're offline" when nothing
  * reached the platform, "Couldn't load X" when the platform refused, and the
- * prototype's own content when the build simply has no backend. Collapsing any
+ * a controlled refusal when the build simply has no backend. Collapsing any
  * pair would put the wrong words in front of a person.
  */
 
@@ -62,7 +62,7 @@ describe('useResource', () => {
     ).toBe('error');
   });
 
-  it('reports UNCONFIGURED rather than a failure, so the prototype stays browsable', async () => {
+  it('reports UNCONFIGURED rather than inventing a backend failure', async () => {
     expect(
       await stateFor(async () => {
         throw new PlatformNotConfiguredError();
@@ -75,7 +75,7 @@ describe('useResource', () => {
     // has resolved, which is the normal case in an unconfigured build. Before
     // the read was wrapped, that escaped the promise chain and surfaced as a
     // render error — every wired screen crashed instead of showing the
-    // prototype. The async cases below did not catch it, because an async throw
+    // controlled state. The async cases below did not catch it, because an async throw
     // is already a rejected promise.
     const syncThrow = (() => {
       throw new PlatformNotConfiguredError();

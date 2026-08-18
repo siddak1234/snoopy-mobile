@@ -55,6 +55,7 @@ import { makeTabBarProps } from '@/test/tab-bar-props';
  */
 
 const PIPELINE_STEP: PipelineStep = {
+  id: 'visual-step',
   icon: Receipt,
   kicker: 'TRIGGER',
   title: 'New email in AP inbox',

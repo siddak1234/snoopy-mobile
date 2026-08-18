@@ -23,6 +23,7 @@ import * as SecureStore from 'expo-secure-store';
 const ACCESS_TOKEN_KEY = 'autom8x.access-token';
 const REFRESH_TOKEN_KEY = 'autom8x.refresh-token';
 const EXPIRES_AT_KEY = 'autom8x.access-expires-at';
+const FACE_ID_ENABLED_KEY = 'autom8x.face-id-enabled';
 
 const OPTIONS: SecureStore.SecureStoreOptions = {
   keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
@@ -86,4 +87,17 @@ export async function clearSession(): Promise<void> {
       }
     }),
   );
+}
+
+/** Device-local preference; it contains no identity or credential material. */
+export async function readFaceIdEnabled(): Promise<boolean> {
+  try {
+    return (await SecureStore.getItemAsync(FACE_ID_ENABLED_KEY, OPTIONS)) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export async function writeFaceIdEnabled(enabled: boolean): Promise<void> {
+  await SecureStore.setItemAsync(FACE_ID_ENABLED_KEY, String(enabled), OPTIONS);
 }

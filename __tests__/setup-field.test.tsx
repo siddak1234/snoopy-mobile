@@ -1,7 +1,12 @@
 import React from 'react';
 import { fireEvent, screen } from '@testing-library/react-native';
 
-import { SetupFieldRow, bySection, type SetupField } from '@/components/setup-field';
+import {
+  SetupFieldRow,
+  bySection,
+  missingRequiredSetupFields,
+  type SetupField,
+} from '@/components/setup-field';
 import { renderWithProviders } from '@/test/render';
 
 /**
@@ -62,6 +67,24 @@ describe('bySection', () => {
   });
 });
 
+describe('required setup validation', () => {
+  it('matches the catalog service rule without rejecting false or zero', () => {
+    const fields = [
+      field({ key: 'missing', title: 'Missing', required: true }),
+      field({ key: 'empty', title: 'Empty', required: true }),
+      field({ key: 'false', title: 'False', required: true }),
+      field({ key: 'zero', title: 'Zero', required: true }),
+      field({ key: 'defaulted', title: 'Defaulted', required: true, defaultValue: 'server-default' }),
+      field({ key: 'optional', title: 'Optional', required: false }),
+    ];
+
+    expect(
+      missingRequiredSetupFields(fields, { empty: '', false: false, zero: 0 })
+        .map((item) => item.key),
+    ).toEqual(['missing', 'empty']);
+  });
+});
+
 describe('SetupFieldRow — every control the union permits', () => {
   it('renders a toggle and reports the change', async () => {
     const onChange = jest.fn();
@@ -73,50 +96,62 @@ describe('SetupFieldRow — every control the union permits', () => {
     expect(onChange).toHaveBeenCalledWith(true);
   });
 
-  it('renders money with the currency the design draws', async () => {
+  it('renders money as an editable number and reports a number', async () => {
+    const onChange = jest.fn();
     await renderWithProviders(
       <SetupFieldRow
         field={field({ control: 'money', title: 'Auto-approve under' })}
         value={500}
-        onChange={() => {}}
+        onChange={onChange}
         divider={false}
       />,
     );
-    expect(screen.getByText('$500')).toBeTruthy();
+    const input = screen.getByLabelText('Auto-approve under');
+    expect(input.props.value).toBe('500');
+    fireEvent.changeText(input, '625.50');
+    expect(onChange).toHaveBeenCalledWith(625.5);
   });
 
-  it('renders text as its value', async () => {
+  it('renders text as an editable value', async () => {
+    const onChange = jest.fn();
     await renderWithProviders(
       <SetupFieldRow
         field={field({ control: 'text', title: 'Ledger account' })}
         value="6200 · Office supplies"
-        onChange={() => {}}
+        onChange={onChange}
         divider={false}
       />,
     );
-    expect(screen.getByText('6200 · Office supplies')).toBeTruthy();
+    const input = screen.getByLabelText('Ledger account');
+    expect(input.props.value).toBe('6200 · Office supplies');
+    fireEvent.changeText(input, '6300 · Travel');
+    expect(onChange).toHaveBeenCalledWith('6300 · Travel');
   });
 
-  it('renders a resource-picker’s current value even though it cannot enumerate', async () => {
+  it('edits a resource-picker as the opaque string the public contract permits', async () => {
     // Nothing in AutomationSetupField says WHAT a picker lists — no options and
     // no resource type. Filed in DESIGN-CONTRACT.md; the row still shows what is
     // configured rather than rendering blank.
+    const onChange = jest.fn();
     await renderWithProviders(
       <SetupFieldRow
         field={field({ control: 'resource-picker', title: 'Watch inbox' })}
         value="AP-Invoices"
-        onChange={() => {}}
+        onChange={onChange}
         divider={false}
       />,
     );
-    expect(screen.getByText('AP-Invoices')).toBeTruthy();
+    const input = screen.getByLabelText('Watch inbox');
+    expect(input.props.value).toBe('AP-Invoices');
+    fireEvent.changeText(input, 'Receipts');
+    expect(onChange).toHaveBeenCalledWith('Receipts');
   });
 
   it('renders a field with no configured value without crashing', async () => {
     await renderWithProviders(
       <SetupFieldRow field={field({ control: 'text' })} value={undefined} onChange={() => {}} divider={false} />,
     );
-    expect(screen.getByText('Hold on mismatch')).toBeTruthy();
+    expect(screen.getByLabelText('Hold on mismatch').props.value).toBe('');
   });
 
   it('always shows the manifest’s own description as the second line', async () => {

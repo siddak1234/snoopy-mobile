@@ -203,9 +203,10 @@ export function approvalWorkflowLabel(
  * devices, which is worse than the honest limitation.
  */
 /** An approvals-inbox card, after the three-hop join. */
-export type ApprovalItem = { workflow: string; title: string; why: string; time: string };
+export type ApprovalItem = { id: string; workflow: string; title: string; why: string; time: string };
 
 export type NotificationItem = {
+  id: string;
   icon: Icon;
   /** Present when the row came from a run, so it can open that run. */
   runId?: string;
@@ -218,12 +219,13 @@ export type NotificationItem = {
 };
 
 export function composeNotifications(
-  approvals: { subscriptionId: string; stepId: string; reason: string; createdAt: string }[],
+  approvals: { id: string; subscriptionId: string; stepId: string; reason: string; createdAt: string }[],
   failedRuns: Run[],
   subscriptions: Map<string, { templateId: string }>,
   catalog: Map<string, CatalogEntry>,
   now: number = Date.now(),
 ): {
+  id: string;
   tone: 'ok' | 'warn' | 'err' | 'accent';
   unread: boolean;
   title: string;
@@ -232,6 +234,7 @@ export function composeNotifications(
   target: 'run' | 'activity' | 'settings';
 }[] {
   const held = approvals.map((a) => ({
+    id: `approval:${a.id}`,
     tone: 'warn' as const,
     unread: true,
     title: 'Run held for review',
@@ -241,6 +244,7 @@ export function composeNotifications(
   }));
 
   const failed = failedRuns.map((run) => ({
+    id: `run:${run.id}`,
     tone: 'err' as const,
     unread: true,
     title: 'Run failed',
@@ -270,6 +274,7 @@ function rank(relative: string): number {
 
 /** A run-detail timeline row, in the shape `RunTimelineItem` had. */
 export type TimelineRowView = {
+  id: string;
   icon: Icon;
   tone: 'ok' | 'warn' | 'err' | 'pending';
   title: string;
@@ -304,6 +309,7 @@ export function toTimeline(
   const titles = new Map((declared ?? []).map((d) => [d.id, d]));
 
   const rows: TimelineRowView[] = steps.map((step) => ({
+    id: `reported:${step.stepId}`,
     icon: OUTCOME_ICON[step.outcome],
     tone: step.outcome === 'ok' ? 'ok' : step.outcome === 'held' ? 'warn' : 'err',
     title: titles.get(step.stepId)?.title ?? step.stepId,
@@ -314,6 +320,7 @@ export function toTimeline(
   const remaining = (declared ?? [])
     .filter((d) => !reported.has(d.id))
     .map<TimelineRowView>((d) => ({
+      id: `pending:${d.id}`,
       icon: CircleDashed,
       tone: 'pending',
       title: d.title,

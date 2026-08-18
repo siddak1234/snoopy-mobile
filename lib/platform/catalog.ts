@@ -1,6 +1,6 @@
 import type { components as automations } from '@/lib/generated/platform-contracts/automations';
 import type { components as connections } from '@/lib/generated/platform-contracts/connections';
-import { platformJson } from './client';
+import { platformOperation } from './client';
 
 /**
  * The reads the marketplace, template and connection screens are built on.
@@ -25,12 +25,22 @@ export type ConnectionProvider = connections['schemas']['ConnectionProvider'];
  * hardcoded list.
  */
 export function readCatalog(workspaceId: string): Promise<CatalogResponse> {
-  return platformJson<CatalogResponse>(`/v1/workspaces/${workspaceId}/automations`);
+  return platformOperation(`/v1/workspaces/${workspaceId}/automations`, ({ automations }, signal) =>
+    automations.GET('/v1/workspaces/{workspaceId}/automations', {
+      params: { path: { workspaceId } },
+      signal,
+    }),
+  );
 }
 
 /** Every connection the workspace holds, live or broken. */
 export function readConnections(workspaceId: string): Promise<{ connections: Connection[] }> {
-  return platformJson<{ connections: Connection[] }>(`/v1/workspaces/${workspaceId}/connections`);
+  return platformOperation(`/v1/workspaces/${workspaceId}/connections`, ({ connections }, signal) =>
+    connections.GET('/v1/workspaces/{workspaceId}/connections', {
+      params: { path: { workspaceId } },
+      signal,
+    }),
+  );
 }
 
 /**
@@ -41,5 +51,7 @@ export function readConnections(workspaceId: string): Promise<{ connections: Con
  * "Slack · Not connected" row has no source without this.
  */
 export function readConnectionProviders(): Promise<{ providers: ConnectionProvider[] }> {
-  return platformJson<{ providers: ConnectionProvider[] }>('/v1/connections/providers');
+  return platformOperation('/v1/connections/providers', ({ connections }, signal) =>
+    connections.GET('/v1/connections/providers', { signal }),
+  );
 }

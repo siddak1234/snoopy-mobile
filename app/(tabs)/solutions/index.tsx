@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { CaretRight, CrownSimple, MagnifyingGlass } from 'phosphor-react-native';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,9 +10,13 @@ import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
 import { ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { useWorkspaceResource } from '@/hooks/use-resource';
+import { activeWorkspaceId, useSession } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
-import { errorTitleFor } from '@/lib/content/screen-states';
+import { UNAVAILABLE_NOTE, errorTitleFor } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
+import { updateSubscription } from '@/lib/platform/automations';
+import { newIdempotencyKey } from '@/lib/platform/client';
+import { readSubscriptions } from '@/lib/platform/runs';
 import { toSolutions, type SolutionView } from '@/lib/view/catalog';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -21,9 +25,14 @@ export default function SolutionsScreen() {
   const { isActive, toggle, totals } = useSolutions();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const session = useSession();
+  const workspaceId = activeWorkspaceId(session);
   const [category, setCategory] = useState('All');
   /** The solution pending removal, by templateId (design rmIdx). */
   const [removeId, setRemoveId] = useState<string | null>(null);
+  const [pauseError, setPauseError] = useState<string | null>(null);
+  const [pausing, setPausing] = useState(false);
+  const pauseKeys = useRef<Record<string, string>>({});
 
   /**
    * The marketplace, from the catalog.
@@ -34,17 +43,55 @@ export default function SolutionsScreen() {
    * position this screen used to key on cannot survive contact with a real
    * catalog.
    */
-  const catalog = useWorkspaceResource(readCatalog);
+  const catalog = useWorkspaceResource(async (id) => {
+    const [catalogResponse, subscriptions] = await Promise.all([
+      readCatalog(id),
+      readSubscriptions(id),
+    ]);
+    return { catalog: catalogResponse, subscriptions: subscriptions.subscriptions };
+  });
   const solutions: SolutionView[] =
     catalog.status === 'ready'
-      ? toSolutions(catalog.data)
+      ? toSolutions(catalog.data.catalog)
       : [];
   const chips =
-    catalog.status === 'ready' ? catalog.data.categories : [];
+    catalog.status === 'ready' ? catalog.data.catalog.categories : [];
 
   const visible = solutions.filter((sol) => category === 'All' || sol.cat === category);
   const removeSolution = removeId == null ? null : solutions.find((s) => s.templateId === removeId);
   const { activeCount, planTotal } = totals(solutions);
+
+  const pauseSolution = async () => {
+    if (!removeSolution || !workspaceId || catalog.status !== 'ready') return;
+    setPausing(true);
+    setPauseError(null);
+    try {
+      const matching = catalog.data.subscriptions.filter(
+        (subscription) => subscription.templateId === removeSolution.templateId,
+      );
+      if (matching.length === 0) {
+        setPauseError('No matching workflow was found. Refresh before trying again.');
+        return;
+      }
+      await Promise.all(
+        matching.map((subscription) =>
+          updateSubscription(
+            workspaceId,
+            subscription.id,
+            { status: 'paused' },
+            (pauseKeys.current[subscription.id] ??= newIdempotencyKey('pause')),
+          ),
+        ),
+      );
+      for (const subscription of matching) delete pauseKeys.current[subscription.id];
+      toggle(removeSolution.templateId, removeSolution.subscribed);
+      setRemoveId(null);
+    } catch (error) {
+      setPauseError(error instanceof Error ? error.message : 'The workflows were not paused.');
+    } finally {
+      setPausing(false);
+    }
+  };
 
   // Below every hook: these return early.
   if (catalog.status === 'loading') return <ScreenLoading topInset={insets.top} />;
@@ -72,7 +119,7 @@ export default function SolutionsScreen() {
       <View>
         <Text style={[styles.h1, { color: palette.text }]}>Solutions</Text>
         <Text style={[styles.sub, { color: palette.neutral[400] }]}>
-          Prebuilt automations, proven at scale. Add one to your plan and it&apos;s live in minutes.
+          Prebuilt automations, proven at scale. Add one to your workspace and configure it in minutes.
         </Text>
       </View>
 
@@ -88,7 +135,7 @@ export default function SolutionsScreen() {
         <CrownSimple size={20} color={palette.accentRamp[300]} />
         <View style={styles.planBody}>
           <Text style={[styles.planTitle, { color: palette.text }]}>
-            Growth plan · {planTotal}/mo
+            Solutions · {planTotal}/mo
           </Text>
           <Text style={[styles.planSub, { color: palette.neutral[400] }]}>
             {activeCount} active · manage in Settings
@@ -107,7 +154,7 @@ export default function SolutionsScreen() {
         {visible.map((sol) => {
           const added = isActive(sol.templateId, sol.subscribed);
           return (
-            <SurfaceCard key={sol.name} style={styles.card}>
+            <SurfaceCard key={sol.templateId} style={styles.card}>
               <IconTile icon={sol.icon} size={42} iconSize={21} borderRadius={12} bordered />
               <View style={styles.cardBody}>
                 <Text style={[styles.cardName, { color: palette.text }]}>{sol.name}</Text>
@@ -115,23 +162,33 @@ export default function SolutionsScreen() {
                 <Text style={[styles.cardMeta, { color: palette.neutral[500] }]}>
                   {sol.cat} · ${sol.price}/mo
                 </Text>
+                {/* The platform probed this automation and it did not answer.
+                    Saying so beats an Add button that fails at the first run —
+                    the same line the web client renders. */}
+                {!sol.available ? (
+                  <Text style={[styles.cardMeta, { color: status.warnText }]}>
+                    {UNAVAILABLE_NOTE}
+                  </Text>
+                ) : null}
               </View>
               <Pressable
+                disabled={!added && !sol.available}
+                accessibilityState={{ disabled: !added && !sol.available }}
                 onPress={() =>
                   added
                     ? setRemoveId(sol.templateId)
-                    : router.push({ pathname: '/(tabs)/solutions/setup', params: { template: sol.templateId, index: String(solutions.indexOf(sol)) } })
+                    : router.push({ pathname: '/(tabs)/solutions/setup', params: { template: sol.templateId } })
                 }
                 style={({ pressed }) => [
                   styles.addBtn,
-                  { borderColor: added ? palette.neutral[700] : palette.accent },
+                  { borderColor: added || !sol.available ? palette.neutral[700] : palette.accent },
                   pressed && { backgroundColor: withAlpha(palette.accent, 0.1) },
                 ]}>
                 <Text
                   style={{
                     fontFamily: fonts.medium,
                     fontSize: 13,
-                    color: added ? palette.neutral[400] : palette.accent,
+                    color: added || !sol.available ? palette.neutral[400] : palette.accent,
                   }}>
                   {added ? 'Added ✓' : 'Add'}
                 </Text>
@@ -161,11 +218,10 @@ export default function SolutionsScreen() {
               { backgroundColor: palette.surface, borderColor: palette.neutral[800] },
             ]}>
             <Text style={[styles.dialogTitle, { color: palette.text }]}>
-              Remove {removeSolution?.name}?
+              Pause {removeSolution?.name}?
             </Text>
             <Text style={[styles.dialogBody, { color: palette.neutral[400] }]}>
-              Workflows built on it pause immediately. ${removeSolution?.price}/mo comes off your
-              next invoice (Sep 1). Its QuickBooks connection stays on your workspace.
+              Every workflow built on it will be paused. Workspace connections remain available.
             </Text>
             <View style={styles.dialogActions}>
               <Pressable
@@ -178,18 +234,21 @@ export default function SolutionsScreen() {
                 <Text style={[styles.dialogBtnLabel, { color: palette.text }]}>Keep it</Text>
               </Pressable>
               <Pressable
-                onPress={() => {
-                  if (removeSolution) toggle(removeSolution.templateId, removeSolution.subscribed);
-                  setRemoveId(null);
-                }}
+                disabled={pausing}
+                onPress={pauseSolution}
                 style={({ pressed }) => [
                   styles.dialogBtn,
                   { borderColor: status.err },
                   pressed && { backgroundColor: status.errCalloutBg },
                 ]}>
-                <Text style={[styles.dialogBtnLabel, { color: status.err }]}>Remove</Text>
+                <Text style={[styles.dialogBtnLabel, { color: status.err }]}>
+                  {pausing ? 'Pausing…' : 'Pause'}
+                </Text>
               </Pressable>
             </View>
+            {pauseError ? (
+              <Text style={[styles.dialogBody, { color: status.err }]}>{pauseError}</Text>
+            ) : null}
           </View>
         </View>
       </Modal>

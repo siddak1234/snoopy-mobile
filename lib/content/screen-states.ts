@@ -65,6 +65,16 @@ export const RETRY_LABEL = 'Retry';
 export const BACK_LABEL = 'Go back';
 
 /**
+ * What an unreachable automation says, in one sentence.
+ *
+ * `AutomationCatalogEntry.available` is "evidence from a reachability probe,
+ * never an assumption". The completed web client refuses Add and Go live on it
+ * and prints this line; the mobile client says the same thing so the two
+ * clients refuse the same journey for the same reason.
+ */
+export const UNAVAILABLE_NOTE = 'Not responding — it cannot run yet.';
+
+/**
  * The first-run empties.
  *
  * These are not the filtered-empty lines the screens already had. Flows read
@@ -122,14 +132,27 @@ export const ACTIVITY_FILTERS = ['All', 'Success', 'Needs review', 'Failed'] as 
 
 /** A row in the activity list, after mapping. */
 export type ActivityItem = {
+  /** Stable run identity; list position is not identity. */
+  id: string;
   icon: import('phosphor-react-native').Icon;
-  tone: 'ok' | 'warn' | 'err';
+  /**
+   * The run's own published status, carried verbatim.
+   *
+   * Filtering keys off this rather than off `tone`, because a tone is a
+   * treatment shared by several statuses and is therefore not an identity.
+   * Keying the chips off tone made "Needs review" — which the design defines as
+   * the *held* queue — also list `running`, `pending` and `cancelled` runs,
+   * which is the redefinition Gate 8 forbids.
+   */
+  status: string;
+  /** The full published tone; never narrowed, so no status borrows another's colour. */
+  tone: import('@/lib/view/status').StatusTone;
   title: string;
   desc: string;
   time: string;
 };
 
-/** The builder's "ADD A STEP" dock. Design chrome; DESIGN-GAPS item 5 owns its behaviour. */
+/** Builder palette chrome. Authoring is deliberately outside read-only Round 6. */
 export const BUILDER_PALETTE_NAMES = [
   'Trigger',
   'AI step',

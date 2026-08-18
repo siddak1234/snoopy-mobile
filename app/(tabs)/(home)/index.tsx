@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowClockwise,
@@ -23,13 +23,12 @@ import { StatCard } from '@/components/nocturne/stat-card';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
+import { useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { readCatalog } from '@/lib/platform/catalog';
-import { localMidnight, readRunStats, readRuns } from '@/lib/platform/runs';
+import { localMidnight, readApprovals, readRunStats, readRuns } from '@/lib/platform/runs';
 import { toStatTiles, type StatTileView } from '@/lib/view/catalog';
 import { catalogIndex, toRunRows } from '@/lib/view/runs';
-
-type HomeState = 'default' | 'loading' | 'empty' | 'error';
 
 /** Skeleton layout while the dashboard loads (design sHomeLoad). */
 function HomeLoading({ paddingTop }: { paddingTop: number }) {
@@ -63,7 +62,7 @@ function HomeLoading({ paddingTop }: { paddingTop: number }) {
 }
 
 /** First-run empty dashboard (design sHomeEmpty). */
-function HomeEmpty({ paddingTop }: { paddingTop: number }) {
+function HomeEmpty({ paddingTop, initials }: { paddingTop: number; initials: string }) {
   const { palette } = useTheme();
   const router = useRouter();
   return (
@@ -74,7 +73,7 @@ function HomeEmpty({ paddingTop }: { paddingTop: number }) {
           <View style={[styles.bellButton, { borderColor: palette.neutral[800] }]}>
             <Bell size={19} color={palette.neutral[300]} weight="regular" />
           </View>
-          <AvatarBadge initials="AK" />
+          <AvatarBadge initials={initials} />
         </View>
       </View>
       <View style={styles.stateCenter}>
@@ -116,14 +115,21 @@ function HomeEmpty({ paddingTop }: { paddingTop: number }) {
 }
 
 /** Connection-failure state (design sHomeErr). */
-function HomeError({ paddingTop }: { paddingTop: number }) {
+function HomeError({
+  paddingTop,
+  initials,
+  onRetry,
+}: {
+  paddingTop: number;
+  initials: string;
+  onRetry: () => void;
+}) {
   const { palette } = useTheme();
-  const router = useRouter();
   return (
     <View style={[styles.stateRoot, { paddingTop, backgroundColor: palette.bg }]}>
       <View style={styles.headerRow}>
         <BrandMark height={17} />
-        <AvatarBadge initials="AK" />
+        <AvatarBadge initials={initials} />
       </View>
       <View style={styles.stateCenter}>
         <View style={[styles.errorHero, { borderColor: palette.neutral[800] }]}>
@@ -142,7 +148,7 @@ function HomeError({ paddingTop }: { paddingTop: number }) {
           icon={ArrowClockwise}
           iconSize={16}
           gap={8}
-          onPress={() => router.setParams({ state: undefined })}
+          onPress={onRetry}
           style={styles.retryBtn}
         />
       </View>
@@ -154,10 +160,23 @@ export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { palette } = useTheme();
-  // Demo/dev entry into the designed data states until the API exists:
-  // /(tabs)/(home)?state=loading|empty|error
-  const { state } = useLocalSearchParams<{ state?: HomeState }>();
+  const session = useSession();
   const paddingTop = insets.top + (layout.designTop.app - layout.statusArea);
+
+  const currentSession = session.status === 'signed-in' ? session.session : null;
+  const identity = currentSession?.user.displayName?.trim() || currentSession?.user.email || 'Account';
+  const firstNameSource = currentSession?.user.displayName?.trim().split(/\s+/u)[0]
+    || currentSession?.user.email.split('@')[0]
+    || 'there';
+  const firstName = firstNameSource === 'there'
+    ? firstNameSource
+    : `${firstNameSource.charAt(0).toUpperCase()}${firstNameSource.slice(1)}`;
+  const initials = identity
+    .split(/\s+|@/u)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('') || 'A';
 
   /**
    * The three stat tiles, from `run-stats` windowed to this morning.
@@ -169,38 +188,37 @@ export default function HomeScreen() {
    * converts that boundary to the UTC instant the API wants.
    *
    * Home keeps its own bespoke loading and error states rather than the shared
-   * ones, so this does not gate the screen: `unconfigured` and any failure fall
-   * through to the prototype's tiles, which is what keeps the design browsable.
+   * ones. The four reads resolve atomically so no partial dashboard can combine
+   * fresh counts with stale or absent activity.
    */
-  const stats = useWorkspaceResource((workspaceId) =>
-    readRunStats(workspaceId, localMidnight()),
-  );
-  const tiles: StatTileView[] | null =
-    stats.status === 'ready' ? toStatTiles(stats.data.workspace) : null;
-
-  /**
-   * Recent runs — now that a run's result line and a run detail both exist.
-   *
-   * This was the last thing on Home with no source: §12.1 #67 refuses run output,
-   * and Round 6.6 published `resultSummary`/`failureReason` on the run itself as
-   * the substitute, so the row's second line no longer needs a per-run detail
-   * fetch. The name is the catalog join the runs list documents as intended.
-   *
-   * The design draws four rows.
-   */
-  const recent = useWorkspaceResource(async (workspaceId) => {
-    const [runs, catalog] = await Promise.all([readRuns(workspaceId), readCatalog(workspaceId)]);
-    return toRunRows(runs.runs.slice(0, 4), catalogIndex(catalog.automations));
+  const dashboard = useWorkspaceResource(async (workspaceId) => {
+    const [stats, runs, catalog, approvals] = await Promise.all([
+      readRunStats(workspaceId, localMidnight()),
+      readRuns(workspaceId),
+      readCatalog(workspaceId),
+      readApprovals(workspaceId),
+    ]);
+    return {
+      stats,
+      recentRuns: toRunRows(runs.runs.slice(0, 4), catalogIndex(catalog.automations)),
+      approvalCount: approvals.approvals.length,
+      hasAttention:
+        approvals.approvals.length > 0 || runs.runs.some((run) => run.status === 'failed'),
+      hasSubscriptions: catalog.automations.some((automation) => automation.subscribed),
+    };
   });
-  const runRows = recent.status === 'ready' ? recent.data : [];
 
-  // Home keeps its bespoke states. With no tiles the dashboard has nothing true
-  // to say, so it shows the design's own sHomeErr rather than an empty frame.
-  if (!tiles) return <HomeError paddingTop={paddingTop} />;
+  if (dashboard.status === 'loading') return <HomeLoading paddingTop={paddingTop} />;
+  if (dashboard.status !== 'ready') {
+    return <HomeError paddingTop={paddingTop} initials={initials} onRetry={dashboard.reload} />;
+  }
+  if (!dashboard.data.hasSubscriptions) {
+    return <HomeEmpty paddingTop={paddingTop} initials={initials} />;
+  }
 
-  if (state === 'loading') return <HomeLoading paddingTop={paddingTop} />;
-  if (state === 'empty') return <HomeEmpty paddingTop={paddingTop} />;
-  if (state === 'error') return <HomeError paddingTop={paddingTop} />;
+  const tiles: StatTileView[] = toStatTiles(dashboard.data.stats.workspace);
+  const runRows = dashboard.data.recentRuns;
+  const approvalCount = dashboard.data.approvalCount;
 
   return (
     <ScrollView
@@ -224,14 +242,16 @@ export default function HomeScreen() {
               pressed && { backgroundColor: withAlpha(palette.text, 0.07) },
             ]}>
             <Bell size={19} color={palette.neutral[300]} weight="regular" />
-            <View style={[styles.bellDot, { backgroundColor: palette.accent }]} />
+            {dashboard.data.hasAttention ? (
+              <View style={[styles.bellDot, { backgroundColor: palette.accent }]} />
+            ) : null}
           </Pressable>
           <Pressable
             onPress={() => router.push('/(tabs)/settings')}
             accessibilityRole="button"
             accessibilityLabel="Account and settings"
             style={({ pressed }) => pressed && { opacity: 0.85 }}>
-            <AvatarBadge initials="AK" />
+            <AvatarBadge initials={initials} />
           </Pressable>
         </View>
       </View>
@@ -249,7 +269,7 @@ export default function HomeScreen() {
             letterSpacing: em(-0.015, 26),
             color: palette.text,
           }}>
-          Welcome back, Alex
+          Welcome back, {firstName}
         </Text>
         <Text
           style={{
@@ -258,7 +278,7 @@ export default function HomeScreen() {
             fontSize: 13.5,
             color: palette.neutral[400],
           }}>
-          Your agents ran 128 tasks while you were away.
+          Your agents ran {dashboard.data.stats.workspace.total.toLocaleString()} tasks today.
         </Text>
       </View>
 
@@ -287,7 +307,7 @@ export default function HomeScreen() {
         <IconTile icon={HandPalm} size={40} iconSize={21} borderRadius={12} tint={0.16} />
         <View style={{ flex: 1 }}>
           <Text style={{ fontFamily: fonts.medium, fontSize: 14.5, color: palette.text }}>
-            3 items need your review
+            {approvalCount} {approvalCount === 1 ? 'item needs' : 'items need'} your review
           </Text>
           <Text
             style={{
@@ -342,15 +362,13 @@ export default function HomeScreen() {
           </Text>
         </View>
         <SurfaceCard level="sm" style={styles.runsCard}>
-          {runRows.map((r, i) => (
+          {runRows.map((r) => (
             <Pressable
-              key={i}
+              key={r.runId}
               onPress={() =>
                 router.push({
                   pathname: '/(tabs)/(home)/run',
-                  params: r.runId
-                    ? { runId: r.runId }
-                    : { variant: (r as { runVariant?: string }).runVariant },
+                  params: { runId: r.runId },
                 })
               }
               style={({ pressed }) => [

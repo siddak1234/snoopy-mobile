@@ -18,9 +18,9 @@ const initialMetrics = {
  *
  * The real provider resolves its state from a request; letting every suite make
  * one would trade a deterministic render for an async state update in fifteen
- * files. Suites that care about the session state say so; the rest get
- * `unconfigured`, which is the design prototype's normal state and leaves the
- * route guard open.
+ * files. Suites that care about the session state say so; direct component
+ * suites otherwise get `unconfigured`. Route-guard suites mount the real layout
+ * separately and prove that state fails closed.
  */
 const defaultSession: SessionContextValue = {
   status: 'unconfigured',

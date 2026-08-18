@@ -121,12 +121,15 @@ export default function RunDetailScreen() {
         // No published run output, so no extracted-fields card.
         fields: false,
         action: undefined,
+        subscriptionId: liveRun.detail.run.subscriptionId,
       }
     : null;
 
-  // Below every hook: these return early. Only a named run fetches; without a
-  // runId there is nothing to look up and the prototype's variants stand in.
-  if (!run) {
+  if (detail.status === 'loading') return <ScreenLoading tiles topInset={insets.top} />;
+  if (detail.status === 'offline') {
+    return <ScreenOffline onRetry={detail.reload} onBack={() => router.back()} topInset={insets.top} />;
+  }
+  if (detail.status === 'error' || detail.status === 'unconfigured' || !run) {
     return (
       <ScreenError
         title={errorTitleFor('run')}
@@ -135,22 +138,6 @@ export default function RunDetailScreen() {
         topInset={insets.top}
       />
     );
-  }
-  if (runId) {
-    if (detail.status === 'loading') return <ScreenLoading tiles topInset={insets.top} />;
-    if (detail.status === 'offline') {
-      return <ScreenOffline onRetry={detail.reload} onBack={() => router.back()} topInset={insets.top} />;
-    }
-    if (detail.status === 'error') {
-      return (
-        <ScreenError
-          title={errorTitleFor('run')}
-          onRetry={detail.reload}
-          onBack={() => router.back()}
-          topInset={insets.top}
-        />
-      );
-    }
   }
 
   return (
@@ -180,7 +167,7 @@ export default function RunDetailScreen() {
         <SectionLabel>TIMELINE</SectionLabel>
         <SurfaceCard style={styles.sectionCard}>
           {run.timeline.map((item, i) => (
-            <TimelineRow key={item.title} item={item} divider={i < run.timeline.length - 1} />
+            <TimelineRow key={item.id} item={item} divider={i < run.timeline.length - 1} />
           ))}
         </SurfaceCard>
       </View>
@@ -194,7 +181,12 @@ export default function RunDetailScreen() {
           icon={FlowArrow}
           iconSize={16}
           style={styles.actionBtn}
-          onPress={() => router.push('/(tabs)/flows/detail')}
+          onPress={() =>
+            router.push({
+              pathname: '/(tabs)/flows/detail',
+              params: { flow: run.subscriptionId },
+            })
+          }
         />
       </View>
     </ScrollView>

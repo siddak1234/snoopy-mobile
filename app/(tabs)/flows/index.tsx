@@ -118,7 +118,7 @@ export default function FlowsScreen() {
             iconSize={14}
             gap={5}
             style={styles.headerPill}
-            onPress={() => router.push('/(tabs)/flows/builder')}
+            onPress={() => router.push('/(tabs)/flows/templates')}
           />
         </View>
       </View>

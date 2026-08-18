@@ -255,20 +255,40 @@ export function providersPayload() {
 }
 
 /**
- * Route a mocked `platformJson` by path.
+ * Route a mocked `platformOperation` by path.
  *
  * Screens make several reads in parallel, so answering every path with one body
  * silently feeds a screen the wrong shape — a mistake that already cost one
  * debugging pass. Routing keeps each read honest.
  */
-export function routePlatform(platformJson: jest.Mock, overrides: Record<string, unknown> = {}) {
-  platformJson.mockImplementation((path: string) => {
+export function routePlatform(platformOperation: jest.Mock, overrides: Record<string, unknown> = {}) {
+  platformOperation.mockImplementation((path: string) => {
     for (const [fragment, body] of Object.entries(overrides)) {
       if (path.includes(fragment)) return Promise.resolve(body);
     }
     if (path.includes('/automations')) return Promise.resolve(catalogPayload());
-    if (path.includes('/subscriptions')) return Promise.resolve(subscriptionsPayload());
+    if (path === '/v1/auth/providers') {
+      return Promise.resolve({
+        providers: [
+          { id: 'apple', label: 'Apple' },
+          { id: 'google', label: 'Google' },
+          { id: 'microsoft', label: 'Microsoft' },
+        ],
+        passwordLoginEnabled: false,
+        magicLinkLoginEnabled: false,
+      });
+    }
+    if (/\/subscriptions\/[^/?]+$/.test(path)) {
+      return Promise.resolve({ subscription: subscriptionsPayload().subscriptions[0] });
+    }
+    if (path.includes('/subscriptions')) {
+      const rows = subscriptionsPayload().subscriptions;
+      return Promise.resolve({ subscriptions: rows, subscription: rows[0] });
+    }
     if (path.includes('/run-stats')) return Promise.resolve(runStatsPayload());
+    if (path.includes('/decision')) {
+      return Promise.resolve({ approval: approvalsPayload().approvals[0] });
+    }
     if (path.includes('/approvals')) return Promise.resolve(approvalsPayload());
     // Order matters: /runs/{id} is a different shape from /runs.
     const detail = /\/runs\/([^/?]+)$/.exec(path);

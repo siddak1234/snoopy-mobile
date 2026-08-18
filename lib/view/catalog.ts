@@ -32,15 +32,43 @@ export type SolutionView = {
   price: number;
   /** Drives Add versus Added — the fixtures tracked this by array index. */
   subscribed: boolean;
+  /**
+   * Evidence from the platform's reachability probe, never an assumption.
+   *
+   * `AutomationCatalogEntry.available` is a required published field and the
+   * completed web client gates both Add and Go live on it
+   * (`snoopy/app/account/automations/AutomationActions.tsx:92,116`). Dropping it
+   * here would let the two clients offer different actions against the same
+   * Edge, which is the divergence Gate 8's "both clients drive the §1 scenario"
+   * line forbids.
+   */
+  available: boolean;
   /** Stable identity, which array-index fixtures could not express. */
   templateId: string;
 };
 
 /** A template card, in the shape `templates` had. */
-export type TemplateView = { icon: Icon; name: string; cat: string; templateId: string };
+export type TemplateView = {
+  icon: Icon;
+  name: string;
+  cat: string;
+  templateId: string;
+  /** See `SolutionView.available` — the same probe, the same refusal. */
+  available: boolean;
+};
 
 /** A Settings connection row, in the shape `settingsConnections` had. */
-export type ConnectionView = { icon: Icon; name: string; sub: string; connected: boolean };
+export type ConnectionView = {
+  provider: ConnectionProvider;
+  providerId: string;
+  connectionId?: string;
+  authType: ConnectionProvider['authType'];
+  credentialFields: NonNullable<ConnectionProvider['credentialFields']>;
+  icon: Icon;
+  name: string;
+  sub: string;
+  connected: boolean;
+};
 
 export function toSolution(entry: CatalogEntry): SolutionView {
   return {
@@ -50,6 +78,7 @@ export function toSolution(entry: CatalogEntry): SolutionView {
     cat: entry.category,
     price: entry.monthlyPriceUsd,
     subscribed: entry.subscribed,
+    available: entry.available,
     templateId: entry.templateId,
   };
 }
@@ -60,6 +89,7 @@ export function toTemplate(entry: CatalogEntry): TemplateView {
     name: entry.name,
     cat: entry.category,
     templateId: entry.templateId,
+    available: entry.available,
   };
 }
 
@@ -100,7 +130,12 @@ export function toConnectionRows(
   return providers.map((provider) => {
     const connection = byProvider.get(provider.providerId);
     return {
-      icon: iconFor(provider.providerId),
+      provider,
+      providerId: provider.providerId,
+      ...(connection ? { connectionId: connection.id } : {}),
+      authType: provider.authType,
+      credentialFields: provider.credentialFields ?? [],
+      icon: iconFor(provider.icon),
       name: provider.displayName,
       sub: connectionSubtitle(connection),
       connected: connection?.status === 'connected',
@@ -166,6 +201,8 @@ export type FlowView = {
 };
 
 export type FlowConnectionView = {
+  /** Stable provider identity from `unmetConnections`. */
+  id: string;
   icon: Icon;
   name: string;
   sub: string;
@@ -216,6 +253,7 @@ export function toFlows(
       failCount: isDraft ? EMPTY : count(c?.failed ?? 0),
       steps: toPipelineSteps(entry?.pipeline),
       connections: sub.unmetConnections.map((providerId) => ({
+        id: providerId,
         icon: iconFor(providerId),
         name: providers?.get(providerId)?.displayName ?? providerId,
         sub: 'Required before publishing',

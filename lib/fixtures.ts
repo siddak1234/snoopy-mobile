@@ -80,10 +80,10 @@ export const flowDefs: Record<FlowKey, FlowDef> = {
       { icon: EnvelopeSimple, name: 'Gmail', sub: 'ap@acme.co · shared across workspace', tone: 'ok', status: 'Connected' },
     ],
     steps: [
-      { icon: EnvelopeOpen, kicker: 'TRIGGER', title: 'New email in AP inbox', desc: 'Gmail · ap@acme.co', more: true },
-      { icon: Sparkle, kicker: 'AI STEP', title: 'Extract invoice fields', desc: 'Vendor, amount, PO, due date', more: true },
-      { icon: GitBranch, kicker: 'AI STEP', title: 'Classify & GL-code', desc: 'Low confidence → human review', more: true },
-      { icon: PlugsConnected, kicker: 'ACTION', title: 'Post to QuickBooks', desc: 'Draft bill, attach PDF', more: false },
+      { id: 'invoice-trigger', icon: EnvelopeOpen, kicker: 'TRIGGER', title: 'New email in AP inbox', desc: 'Gmail · ap@acme.co', more: true },
+      { id: 'invoice-extract', icon: Sparkle, kicker: 'AI STEP', title: 'Extract invoice fields', desc: 'Vendor, amount, PO, due date', more: true },
+      { id: 'invoice-classify', icon: GitBranch, kicker: 'AI STEP', title: 'Classify & GL-code', desc: 'Low confidence → human review', more: true },
+      { id: 'invoice-post', icon: PlugsConnected, kicker: 'ACTION', title: 'Post to QuickBooks', desc: 'Draft bill, attach PDF', more: false },
     ],
   },
   email: {
@@ -99,10 +99,10 @@ export const flowDefs: Record<FlowKey, FlowDef> = {
       { icon: EnvelopeSimple, name: 'Gmail', sub: 'support@acme.co · shared across workspace', tone: 'ok', status: 'Connected' },
     ],
     steps: [
-      { icon: EnvelopeOpen, kicker: 'TRIGGER', title: 'New support email', desc: 'Gmail · support@acme.co', more: true },
-      { icon: Sparkle, kicker: 'AI STEP', title: 'Classify intent & urgency', desc: 'Billing, bug, refund, other', more: true },
-      { icon: GitBranch, kicker: 'BRANCH', title: 'Escalate if urgent', desc: 'Urgent → on-call channel', more: true },
-      { icon: PlugsConnected, kicker: 'ACTION', title: 'Route & draft reply', desc: 'Assign queue, propose response', more: false },
+      { id: 'email-trigger', icon: EnvelopeOpen, kicker: 'TRIGGER', title: 'New support email', desc: 'Gmail · support@acme.co', more: true },
+      { id: 'email-classify', icon: Sparkle, kicker: 'AI STEP', title: 'Classify intent & urgency', desc: 'Billing, bug, refund, other', more: true },
+      { id: 'email-escalate', icon: GitBranch, kicker: 'BRANCH', title: 'Escalate if urgent', desc: 'Urgent → on-call channel', more: true },
+      { id: 'email-route', icon: PlugsConnected, kicker: 'ACTION', title: 'Route & draft reply', desc: 'Assign queue, propose response', more: false },
     ],
   },
   kpi: {
@@ -119,10 +119,10 @@ export const flowDefs: Record<FlowKey, FlowDef> = {
       { icon: SlackLogo, name: 'Slack', sub: '#leadership · shared across workspace', tone: 'ok', status: 'Connected' },
     ],
     steps: [
-      { icon: Timer, kicker: 'TRIGGER', title: 'Every Monday, 9:00 AM', desc: 'Schedule', more: true },
-      { icon: Table, kicker: 'ACTION', title: 'Pull metrics from Sheets', desc: 'Revenue, churn, pipeline tabs', more: true },
-      { icon: Sparkle, kicker: 'AI STEP', title: 'Write the digest', desc: 'Summary with week-over-week deltas', more: true },
-      { icon: SlackLogo, kicker: 'ACTION', title: 'Post to Slack', desc: '#leadership', more: false },
+      { id: 'kpi-trigger', icon: Timer, kicker: 'TRIGGER', title: 'Every Monday, 9:00 AM', desc: 'Schedule', more: true },
+      { id: 'kpi-pull', icon: Table, kicker: 'ACTION', title: 'Pull metrics from Sheets', desc: 'Revenue, churn, pipeline tabs', more: true },
+      { id: 'kpi-write', icon: Sparkle, kicker: 'AI STEP', title: 'Write the digest', desc: 'Summary with week-over-week deltas', more: true },
+      { id: 'kpi-post', icon: SlackLogo, kicker: 'ACTION', title: 'Post to Slack', desc: '#leadership', more: false },
     ],
   },
   lead: {
@@ -138,10 +138,10 @@ export const flowDefs: Record<FlowKey, FlowDef> = {
       { icon: PlugsConnected, name: 'HubSpot', sub: 'Required before publishing', tone: 'neutral', status: 'Not connected' },
     ],
     steps: [
-      { icon: Lightning, kicker: 'TRIGGER', title: 'New lead in CRM', desc: 'HubSpot · all pipelines', more: true },
-      { icon: Sparkle, kicker: 'AI STEP', title: 'Enrich company & contact', desc: 'Firmographics, role, intent', more: true },
-      { icon: Sparkle, kicker: 'AI STEP', title: 'Score the lead', desc: '0–100 with reasons', more: true },
-      { icon: PlugsConnected, kicker: 'ACTION', title: 'Route to owner', desc: 'Round-robin by territory', more: false },
+      { id: 'lead-trigger', icon: Lightning, kicker: 'TRIGGER', title: 'New lead in CRM', desc: 'HubSpot · all pipelines', more: true },
+      { id: 'lead-enrich', icon: Sparkle, kicker: 'AI STEP', title: 'Enrich company & contact', desc: 'Firmographics, role, intent', more: true },
+      { id: 'lead-score', icon: Sparkle, kicker: 'AI STEP', title: 'Score the lead', desc: '0–100 with reasons', more: true },
+      { id: 'lead-route', icon: PlugsConnected, kicker: 'ACTION', title: 'Route to owner', desc: 'Round-robin by territory', more: false },
     ],
   },
 };

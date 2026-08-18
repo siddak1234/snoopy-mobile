@@ -6,8 +6,11 @@ import type { SessionContextValue } from '@/hooks/use-session';
 import { toPipelineStep, toPipelineSteps, type DeclaredStep } from '@/lib/view/pipeline';
 import { renderWithProviders, setMockParams } from '@/test/render';
 
-jest.mock('@/lib/platform/client', () => ({ platformJson: jest.fn() }));
-const { platformJson } = jest.requireMock('@/lib/platform/client');
+jest.mock('@/lib/platform/client', () => ({
+  platformOperation: jest.fn(),
+  newIdempotencyKey: jest.fn(() => 'test-intent'),
+}));
+const { platformOperation } = jest.requireMock('@/lib/platform/client');
 
 /**
  * BUILD-PLAN 8.7 — the builder renders `manifest.pipeline`.
@@ -57,7 +60,7 @@ const CATALOG = {
 };
 
 afterEach(() => setMockParams({}));
-beforeEach(() => platformJson.mockReset());
+beforeEach(() => platformOperation.mockReset());
 
 describe('toPipelineSteps', () => {
   it('keeps manifest order and maps description onto the design’s desc line', () => {
@@ -101,7 +104,7 @@ describe('toPipelineSteps', () => {
 
 describe('Builder canvas', () => {
   it('renders the named template’s declared steps', async () => {
-    platformJson.mockResolvedValue(CATALOG);
+    platformOperation.mockResolvedValue(CATALOG);
     setMockParams({ template: 'acme.reconcile' });
     await renderWithProviders(<BuilderScreen />, signedIn);
 
@@ -111,11 +114,20 @@ describe('Builder canvas', () => {
     expect(screen.queryByText('New email in AP inbox')).toBeNull();
   });
 
-  it('draws an empty canvas when no template is named, and fetches nothing', async () => {
-    // The prototype's steps are gone (owner decision, 2026-08-17). With no
-    // template there is nothing to look up, so no request is made either.
+  it('refuses an identity-free canvas and routes to the template selector', async () => {
     await renderWithProviders(<BuilderScreen />, signedIn);
+    expect(screen.getByText('Choose a template')).toBeTruthy();
+    expect(screen.getByText('Browse templates')).toBeTruthy();
     expect(screen.queryByText('New email in AP inbox')).toBeNull();
-    expect(platformJson).not.toHaveBeenCalled();
+    expect(platformOperation).not.toHaveBeenCalled();
+  });
+
+  it('refuses a template that is not in the published catalog', async () => {
+    platformOperation.mockResolvedValue(CATALOG);
+    setMockParams({ template: 'missing.template' });
+    await renderWithProviders(<BuilderScreen />, signedIn);
+
+    expect(await screen.findByText('Template unavailable')).toBeTruthy();
+    expect(screen.queryByText('New row in the ledger')).toBeNull();
   });
 });

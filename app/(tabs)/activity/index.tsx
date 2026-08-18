@@ -22,11 +22,19 @@ import { readCatalog } from '@/lib/platform/catalog';
 import { readRuns } from '@/lib/platform/runs';
 import { catalogIndex, runIcon, splitByDay, toRunRow } from '@/lib/view/runs';
 
-const toneColor = { ok: status.ok, warn: status.warnText, err: status.err } as const;
-
 function ActivityRow({ item }: { item: ActivityItem }) {
   const { palette } = useTheme();
   const IconCmp = item.icon;
+  // The same five treatments the Nocturne StatusPill uses, so a run's row and
+  // its pill agree. `accent` is the watched state and `neutral` is Draft's
+  // treatment, exactly as `components/nocturne/status-pill.tsx` spells them.
+  const toneColor: Record<ActivityItem['tone'], string> = {
+    ok: status.ok,
+    warn: status.warnText,
+    err: status.err,
+    accent: palette.accentRamp[300],
+    neutral: palette.neutral[400],
+  };
   return (
     <View style={[styles.row, { borderBottomColor: palette.divider }]}>
       <IconCmp size={19} color={toneColor[item.tone]} style={styles.rowIcon} />
@@ -44,8 +52,8 @@ function ActivitySection({ label, items }: { label: string; items: ActivityItem[
     <View>
       <SectionLabel>{label}</SectionLabel>
       <SurfaceCard style={styles.sectionCard}>
-        {items.map((item, i) => (
-          <ActivityRow key={i} item={item} />
+        {items.map((item) => (
+          <ActivityRow key={item.id} item={item} />
         ))}
       </SurfaceCard>
     </View>
@@ -56,10 +64,18 @@ function ActivitySection({ label, items }: { label: string; items: ActivityItem[
  *  "Needs review" filter held runs instead of navigating). */
 type ActivityFilter = 'All' | 'Success' | 'Needs review' | 'Failed';
 
-const FILTER_TONE: Record<Exclude<ActivityFilter, 'All'>, ActivityItem['tone']> = {
-  Success: 'ok',
-  'Needs review': 'warn',
-  Failed: 'err',
+/**
+ * Chip → the published run status it selects.
+ *
+ * Keyed on `RunStatus`, not on tone. A tone is a shared treatment: `warn` is
+ * worn by `held` *and*, before this, by anything the row could not colour. The
+ * design's "Needs review" is the held queue — a human decision list — so it
+ * must select `held` and nothing else.
+ */
+const FILTER_STATUS: Record<Exclude<ActivityFilter, 'All'>, string> = {
+  Success: 'succeeded',
+  'Needs review': 'held',
+  Failed: 'failed',
 };
 
 const EMPTY_LABEL: Record<Exclude<ActivityFilter, 'All'>, string> = {
@@ -69,7 +85,7 @@ const EMPTY_LABEL: Record<Exclude<ActivityFilter, 'All'>, string> = {
 };
 
 const matchesFilter = (item: ActivityItem, filter: ActivityFilter) =>
-  filter === 'All' || item.tone === FILTER_TONE[filter];
+  filter === 'All' || item.status === FILTER_STATUS[filter];
 
 export default function ActivityScreen() {
   const { palette } = useTheme();
@@ -95,8 +111,11 @@ export default function ActivityScreen() {
     const toRow = (run: (typeof runs.runs)[number]): ActivityItem => {
       const row = toRunRow(run, index);
       return {
+        id: run.id,
         icon: runIcon(run.status),
-        tone: row.tone === 'accent' || row.tone === 'neutral' ? 'warn' : row.tone,
+        // Carried verbatim: the chips select on this, never on the tone.
+        status: run.status,
+        tone: row.tone,
         title: row.name,
         desc: row.meta,
         time: row.time,
