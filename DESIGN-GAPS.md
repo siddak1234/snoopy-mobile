@@ -13,6 +13,18 @@ observed directly. Two gate lines failed on inspection and were repaired; the
 authenticated §1 journey remains unobservable in this environment and is
 recorded as NOT OBSERVED, not as a PASS.
 
+**Second fresh audit, 2026-08-18.** A further session that wrote none of this
+code re-ran every line above from scratch and did not inherit any PASS from this
+file. It reproduced every headline number (1109 packages; 32 / 397 / 78; 12 high
+/ 10 moderate / 0 critical; 21 operations; 12 SecureStore call sites; 21 non-ASCII
+fixture strings absent from both shipped bundles in **both** encodings), proved
+the visual gate and 26 of 30 injected architecture violations bite, and pushed
+the branch so **CI ran green against a Round 6 commit for the first time**. It
+found three things this file had wrong, each corrected in place below and none
+of them a failed gate line: repair #5 has no test behind it, four gate blind
+spots are open, and the "0 unreachable objects" figure was vacuous. It also
+found the four tracked files this file called unreadable are readable again.
+
 ## What the audit ran, and what it saw
 
 | Line | Result | Evidence |
@@ -37,8 +49,11 @@ recorded as NOT OBSERVED, not as a PASS.
 
 ## What the audit found, and what was repaired
 
-Each of these failed a line this repository asserts, and each is now covered by
-a test that fails against the previous code.
+Each of these failed a line this repository asserts. Six of the seven are
+covered by a test that fails against the previous code — **verified by a second
+fresh audit on 2026-08-18, which reverted each repair in an isolated copy and
+watched the suite go red.** The seventh, #5, is **not** covered; see the
+correction under it.
 
 1. **`AutomationCatalogEntry.available` was dropped.** The published probe result
    never reached a view, so mobile offered Add and Activate for automations the
@@ -64,6 +79,18 @@ a test that fails against the previous code.
    never re-minted after a success (a second create replayed the first), and
    `solutions/setup` reused one key across bodies computed from different
    sources (an inescapable 409). Both re-mint on the boundary that changed.
+
+   **Correction, 2026-08-18 (second fresh audit).** This repair alone has no
+   test behind it. Deleting every `Key.current = newIdempotencyKey(...)` re-mint
+   from `app/(tabs)/flows/configure.tsx` and `app/(tabs)/solutions/setup.tsx`
+   leaves the whole suite green — 32 suites / 397 tests / 78 snapshots. The
+   idempotency assertions in `__tests__/platform-mutations.test.ts` only check
+   that the transport forwards the key it is handed (`'intent-1'`, `'intent-2'`);
+   nothing exercises the screen-level re-mint, which is where the defect lived
+   and where the fix went. The fix is real in source and correct on inspection;
+   the claim that a test held it was not. Filed as a manifest §12.2 row rather
+   than repaired here, because writing the missing test is implementation work
+   and this was an audit.
 6. **Sign-out cleared the credential on non-terminal failures.** A 500 or 503
    deleted the keychain entry for a session still live upstream. Only 400 and
    401 clear now.
@@ -107,6 +134,36 @@ The audit's own "still open" list was worked down rather than carried forward:
 
 ## Still open, recorded rather than fixed
 
+- **Four gate blind spots remain, found by the second fresh audit on
+  2026-08-18.** They are *latent, not live*: no tracked `.js`/`.jsx` file exists
+  in any runtime root, and `constants/` contains only `theme.ts`, so nothing
+  evades a gate today. But the ratchets do not cover what they claim to, and a
+  future commit walks straight through them. Proved by injection in an isolated
+  copy — 26 of 30 violations caught, these 4 missed:
+
+  | Gate | Blind spot | Why |
+  | --- | --- | --- |
+  | `audit:tokens` | a hex in `constants/` outside `theme.ts` | `sourceRoots` is `app, components, hooks, lib` — `constants` is absent |
+  | `audit:tokens` | a hex in any `.js`/`.jsx` runtime file | its `walk()` accepts only `.ts`/`.tsx` |
+  | `audit:credentials` | a `const DEMO_PASSWORD` in `constants/` | same missing root |
+  | `audit:credentials` | a `const DEMO_PASSWORD` in a `.js` file | same extension filter |
+
+  The asymmetry is the tell: `audit:fixtures` and `audit:platform` *do* scan
+  `constants/` and *do* accept `.js`, and the previous round deliberately closed
+  "a fixture import from a `.js` file". The same fix was never carried across to
+  the other two scripts. Two counter-cases were also re-proved: the credential
+  gate correctly does **not** fire on `ACCESS_TOKEN_KEY = 'autom8x.access-token'`
+  or on a `'Show password'` label.
+
+- **`npm ci` is not idempotent in this checkout.** Run against an existing
+  `node_modules`, it fails `ENOTEMPTY … rmdir node_modules/@react-native/
+  debugger-frontend/dist` (exit 254). `rm -rf node_modules && npm ci` then
+  succeeds, exit 0, 1109 packages in 18 s. This is the iCloud tree, not the
+  lockfile — but Gate 8's first command does not pass from a dirty tree without
+  a manual clean, and that belongs in the record rather than in a rerun nobody
+  saw fail.
+
+
 - **Home's failure state is one state, not three.** The design (`Screen.dc.html`,
   `sHomeErr`) draws a single connectivity-worded failure for Home, so a platform
   refusal and an unresolved workspace both read "Check your connection". The
@@ -121,9 +178,16 @@ The audit's own "still open" list was worked down rather than carried forward:
   `appVersionSource: "remote"` requires one and there is no `extra.eas.projectId`
   anywhere, so no profile builds non-interactively. That needs an account, which
   is Round 7's to provision.
-- **A stray, orphaned 4-object pack from May 4 is unreadable**, so `git fsck` is
-  noisy and `git gc` should be avoided. Nothing reachable from `HEAD`, `main`,
-  `round-6-client` or `origin/main` is affected — verified object-by-object.
+- **A stray 4-object pack from May 4 was *evicted*, not corrupt.** The earlier
+  record called it unreadable and reported "0 unreachable objects from HEAD";
+  that number was **vacuous** — `git rev-list --objects HEAD` was itself failing
+  (`error reading from .git/objects/pack/pack-5e2474d2….pack: Operation timed
+  out`) and its empty output was counted as a zero. The pack is an iCloud
+  dataless stub; `brctl download` materialised it on the first attempt, after
+  which the same command returns **862 objects with no error**, and `HEAD`,
+  `main` and `round-6-client` are each fully traversable (50 / 15 / 50 commits).
+  `git fsck` still times out against the evicted object store, so `git gc`
+  remains a bad idea here — but the object store is intact, not damaged.
 - **This checkout sits under iCloud Drive, and it is not a cosmetic problem.**
   iCloud creates numbered conflict copies inside the tree while tools write to
   it. Measured on 2026-08-18: **6,159** such copies under
@@ -136,7 +200,21 @@ The audit's own "still open" list was worked down rather than carried forward:
   runs in 4.1 s clean. `expo export` could not finish at all while writing into
   the synced `dist/`, where iCloud had produced `_expo 3`, `assets 2` and
   `metadata 2.json`; redirecting the same command to a non-synced output
-  directory completed both platforms with exit 0.
+  directory completed both platforms with exit 0. **Re-measured 2026-08-18 by the
+  second fresh audit: with the conflict copies cleared, the gate commands run
+  unmodified into the synced `dist/` and both exit 0** — iOS 13 s, Android 11 s,
+  ~11.1 MB `.hbc` each; `tsc` is 3 s and the full suite 21 s. So the failure is a
+  function of accumulated conflict copies, not a standing property of the path:
+  the honest statement is that it recurs, not that it always holds.
+
+  The four tracked files this record listed as unreadable in the working tree —
+  two Android icon PNGs, `Autom8x iOS App.dc.html` and a `_ds/*/styles.css` —
+  **are all readable again as of 2026-08-18**, materialised by iCloud without any
+  `git checkout --`. The governance documents went the other way and had to be
+  forced: `AUTOM8X-MASTER-PLAN.md` and `AUTOM8X-ROUND-PLAYBOOK.md` were both
+  unreadable at the start of the second audit and took **24 `brctl download`
+  attempts** to materialise. Eviction here is bidirectional and unpredictable,
+  which is the operational point.
 
   **No tracked file in any of the four repositories is affected** — verified by
   `git ls-files` across all four. The damage is confined to ignored build and
@@ -204,9 +282,16 @@ inside Round 6. The CI gate fails on critical advisories; there are none.
 
 ## What must still happen before Round 6 closes
 
-1. Push `round-6-client` and let CI run. **It never has** — the branch has no
-   upstream and no `origin/round-6-client` exists, so no Round 6 commit has ever
-   been through the gates job.
+1. ~~Push `round-6-client` and let CI run.~~ ✅ **Done 2026-08-18 by the second
+   fresh audit.** `origin/round-6-client` exists and tracks. Pushing alone did
+   **not** run CI: `.github/workflows/ci.yml` triggers on `pull_request` and
+   `push: [main]` only, and there is no `workflow_dispatch`, so a PR was the one
+   mechanism that could satisfy this line — PR #5. **CI is green on run
+   `32187060170`, all five jobs**: Lint 39 s, Typecheck 39 s, Architecture gates
+   40 s, Test 1 m 33 s, Native bundle export 2 m 4 s. The Test job reproduces the
+   local counts exactly — 32 suites / 397 tests / 78 snapshots — on an Ubuntu
+   runner with no iCloud, which is what makes those counts a property of the code
+   rather than of this laptop. All four architecture gates report their zero.
 2. Close the round in the governing master plan. That file lives in the sibling
    `snoopy-backend` repository, which a mobile session may read and must never
    edit; it belongs to a separately authorized backend/governance session.
