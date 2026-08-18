@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -13,20 +13,55 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { BrandMark } from '@/components/nocturne/brand-mark';
 import { OAuthButton } from '@/components/nocturne/oauth-button';
+import { Skeleton } from '@/components/nocturne/skeleton';
 import { OrDivider } from '@/components/nocturne/or-divider';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { TextField } from '@/components/nocturne/text-field';
-import { em, fonts, layout } from '@/constants/theme';
+import { em, fonts, layout, radius } from '@/constants/theme';
+import { useResource } from '@/hooks/use-resource';
+import { useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
+import { readLoginProviders } from '@/lib/platform/auth';
+import type { LoginProvider } from '@/lib/platform/native-auth';
 
 export default function SignupScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { palette } = useTheme();
+  const { signIn } = useSession();
+  const providerPolicy = useResource(readLoginProviders, []);
+  const [message, setMessage] = useState<string | null>(null);
+  const [busyProvider, setBusyProvider] = useState<LoginProvider | null>(null);
+  const signInInFlight = useRef(false);
+  const providerError =
+    providerPolicy.status === 'offline'
+      ? 'The platform is offline. Identity providers could not be loaded.'
+      : providerPolicy.status === 'error' || providerPolicy.status === 'unconfigured'
+        ? 'Identity providers are not available for this build.'
+        : null;
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  const manualSignupUnavailable = () => {
+    setMessage('Accounts are created through Apple, Google, or Microsoft.');
+  };
+
+  const startSignUp = async (provider: LoginProvider) => {
+    if (signInInFlight.current) return;
+    signInInFlight.current = true;
+    setMessage(null);
+    setBusyProvider(provider);
+    try {
+      const outcome = await signIn(provider);
+      if (outcome.status === 'signed-in') router.push('/(auth)/onboarding');
+      else if (outcome.status !== 'cancelled') setMessage(outcome.message);
+    } finally {
+      signInInFlight.current = false;
+      setBusyProvider(null);
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -72,15 +107,39 @@ export default function SignupScreen() {
             secure
             autoComplete="new-password"
           />
-          <PillButton label="Create account" onPress={() => router.push('/(auth)/onboarding')} />
+          <PillButton label="Create account" onPress={manualSignupUnavailable} />
         </View>
 
-        <OrDivider />
+        {message ?? providerError ? (
+          <Text style={[styles.message, { color: palette.neutral[400] }]}>
+            {message ?? providerError}
+          </Text>
+        ) : null}
+
+        {/* See login.tsx: no divider above an empty provider column, and a
+            pending state while the provider read resolves. */}
+        {(providerPolicy.status === 'ready' && providerPolicy.data.providers.length > 0) ||
+        providerPolicy.status === 'loading' ? (
+          <OrDivider />
+        ) : null}
 
         <View style={styles.oauthColumn}>
-          <OAuthButton provider="apple" label="Sign up with Apple" />
-          <OAuthButton provider="google" label="Sign up with Google" />
-          <OAuthButton provider="microsoft" label="Sign up with Microsoft" />
+          {providerPolicy.status === 'loading'
+            ? [0, 1, 2].map((row) => (
+                <Skeleton key={row} height={52} borderRadius={radius.pill} delay={row * 120} />
+              ))
+            : null}
+          {providerPolicy.status === 'ready'
+            ? providerPolicy.data.providers.map(({ id, label }) => (
+                <OAuthButton
+                  key={id}
+                  provider={id}
+                  label={`Sign up with ${label}`}
+                  disabled={busyProvider !== null}
+                  onPress={() => startSignUp(id)}
+                />
+              ))
+            : null}
         </View>
 
         <Text style={[styles.legal, { color: palette.neutral[600] }]}>
@@ -117,6 +176,12 @@ const styles = StyleSheet.create({
   },
   oauthColumn: {
     gap: 9,
+  },
+  message: {
+    marginTop: 12,
+    textAlign: 'center',
+    fontFamily: fonts.regular,
+    fontSize: 12.5,
   },
   legal: {
     marginTop: 18,

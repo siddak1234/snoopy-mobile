@@ -6,7 +6,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { IconTile } from '@/components/nocturne/icon-tile';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
-import type { PipelineStep } from '@/lib/fixtures';
+import type { PipelineStep } from '@/lib/view/pipeline';
 
 type Props = {
   step: PipelineStep;

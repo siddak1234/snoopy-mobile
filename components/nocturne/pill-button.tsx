@@ -18,6 +18,7 @@ export type PillButtonVariant =
 type Props = {
   label: string;
   onPress?: () => void;
+  disabled?: boolean;
   variant?: PillButtonVariant;
   height?: number;
   fontSize?: number;
@@ -31,6 +32,7 @@ type Props = {
 export function PillButton({
   label,
   onPress,
+  disabled = false,
   variant = 'primary',
   height = 52,
   fontSize,
@@ -56,6 +58,8 @@ export function PillButton({
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled || undefined}
+      accessibilityState={disabled ? { disabled: true } : undefined}
       style={({ pressed }) => [
         {
           height,
@@ -67,7 +71,8 @@ export function PillButton({
           justifyContent: 'center',
           gap,
           paddingHorizontal: 18,
-          backgroundColor: pressed ? pressedBg : 'transparent',
+          backgroundColor: pressed && !disabled ? pressedBg : 'transparent',
+          ...(disabled ? { opacity: 0.5 } : {}),
         },
         style,
       ]}>

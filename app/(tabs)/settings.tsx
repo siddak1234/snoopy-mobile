@@ -1,31 +1,44 @@
 import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
+import * as LocalAuthentication from 'expo-local-authentication';
 import {
   Bell,
   Buildings,
   CaretRight,
   ClockClockwise,
-  CreditCard,
   CrownSimple,
   Key,
-  Receipt,
   SignOut,
   Storefront,
   UserFocus,
   Users,
   type Icon,
 } from 'phosphor-react-native';
-import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AvatarBadge } from '@/components/nocturne/avatar-badge';
 import { NocToggle } from '@/components/nocturne/noc-toggle';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { TextField } from '@/components/nocturne/text-field';
+import { ActionFailure, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { em, fonts, layout, status } from '@/constants/theme';
+import { useWorkspaceResource } from '@/hooks/use-resource';
+import { useSession } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
 import { useTheme, type ThemeMode } from '@/hooks/use-theme';
-import { settingsConnections } from '@/lib/fixtures';
+import { SIGN_OUT_FAILED, SIGN_OUT_RETRY, errorTitleFor } from '@/lib/content/screen-states';
+import { readCatalog, readConnectionProviders, readConnections } from '@/lib/platform/catalog';
+import {
+  connectOAuthProvider,
+  connectProviderWithKey,
+  disconnectConnection,
+} from '@/lib/platform/connections';
+import { newIdempotencyKey } from '@/lib/platform/client';
+import { readFaceIdEnabled, writeFaceIdEnabled } from '@/lib/platform/session-store';
+import { toConnectionRows, toSolutions, type ConnectionView } from '@/lib/view/catalog';
 
 function SettingsRow({
   icon: IconCmp,
@@ -75,12 +88,191 @@ const APPEARANCE: { label: string; mode: ThemeMode }[] = [
 
 export default function SettingsScreen() {
   const { palette, mode, setMode } = useTheme();
-  const { activeCount, solutionsTotal, planTotal } = useSolutions();
+  const { totals } = useSolutions();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [faceId, setFaceId] = useState(true);
-  const [staySignedIn, setStaySignedIn] = useState(true);
-  const [notifications, setNotifications] = useState(true);
+  const [faceId, setFaceId] = useState(false);
+  const [faceIdError, setFaceIdError] = useState<string | null>(null);
+  const [signOutFailed, setSignOutFailed] = useState(false);
+  const session = useSession();
+  const { signOut } = session;
+  const [selectedConnection, setSelectedConnection] = useState<ConnectionView | null>(null);
+  const [credentials, setCredentials] = useState<Record<string, string>>({});
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [connectionBusy, setConnectionBusy] = useState(false);
+  const credentialKey = useRef(newIdempotencyKey('connection'));
+  const platformName = Platform.OS === 'ios' ? 'iOS' : Platform.OS === 'android' ? 'Android' : 'native';
+  const appVersion = Constants.expoConfig?.version ?? '—';
+
+  useEffect(() => {
+    let cancelled = false;
+    readFaceIdEnabled().then((enabled) => {
+      if (!cancelled) setFaceId(enabled);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const changeFaceId = async (enabled: boolean) => {
+    setFaceIdError(null);
+    try {
+      if (enabled) {
+        const hasHardware = await LocalAuthentication.hasHardwareAsync();
+        const enrolled = hasHardware && (await LocalAuthentication.isEnrolledAsync());
+        if (!enrolled) {
+          setFaceIdError('Face ID is not available or enrolled on this device.');
+          return;
+        }
+        const result = await LocalAuthentication.authenticateAsync({
+          promptMessage: 'Enable Face ID unlock',
+          disableDeviceFallback: true,
+        });
+        if (!result.success) {
+          setFaceIdError('Face ID unlock was not enabled.');
+          return;
+        }
+      }
+      await writeFaceIdEnabled(enabled);
+      setFaceId(enabled);
+    } catch {
+      setFaceIdError('Face ID preference could not be saved on this device.');
+    }
+  };
+
+  /**
+   * The CONNECTIONS card needs both reads.
+   *
+   * Driven by the provider list rather than the connection list: the connections
+   * read omits a provider with no connection at all, and the design draws
+   * exactly that row ("Slack · Not connected"). The native authorize/complete
+   * operations published in Round 6.6 also back the connection action below.
+   */
+  const connections = useWorkspaceResource(async (workspaceId) => {
+    const [providers, held, catalog] = await Promise.all([
+      readConnectionProviders(),
+      readConnections(workspaceId),
+      readCatalog(workspaceId),
+    ]);
+    return {
+      rows: toConnectionRows(providers.providers, held.connections),
+      solutions: toSolutions(catalog),
+    };
+  });
+
+  // The plan totals need the priced catalog; the provider holds only overrides.
+  const pricedSolutions = connections.status === 'ready' ? connections.data.solutions : [];
+  const { activeCount, solutionsTotal, planTotal } = totals(pricedSolutions);
+
+  const connectionRows: ConnectionView[] =
+    connections.status === 'ready' ? connections.data.rows : [];
+
+  const currentSession = session.status === 'signed-in' ? session.session : null;
+  const activeWorkspace = currentSession?.workspaces.find(
+    (workspace) => workspace.id === currentSession.user.activeWorkspaceId,
+  ) ?? currentSession?.workspaces[0];
+  const displayName = currentSession?.user.displayName?.trim() || currentSession?.user.email || 'Account';
+  const initials = displayName
+    .split(/\s+|@/u)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('') || 'A';
+
+  const closeConnectionDialog = () => {
+    setSelectedConnection(null);
+    setCredentials({});
+    setConnectionError(null);
+    credentialKey.current = newIdempotencyKey('connection');
+  };
+
+  const updateCredential = (name: string, value: string) => {
+    setCredentials((previous) => ({ ...previous, [name]: value }));
+    credentialKey.current = newIdempotencyKey('connection');
+  };
+
+  const applyConnectionAction = async () => {
+    if (!selectedConnection || !activeWorkspace || connectionBusy) return;
+    setConnectionBusy(true);
+    setConnectionError(null);
+    try {
+      if (selectedConnection.connected && selectedConnection.connectionId) {
+        await disconnectConnection(activeWorkspace.id, selectedConnection.connectionId);
+      } else if (selectedConnection.authType === 'oauth2') {
+        const outcome = await connectOAuthProvider(activeWorkspace.id, selectedConnection.provider);
+        if (outcome.status === 'cancelled') return;
+        if (outcome.status === 'failed') {
+          setConnectionError(outcome.message);
+          return;
+        }
+      } else {
+        const values = Object.fromEntries(
+          selectedConnection.credentialFields.map((field) => [field.name, credentials[field.name]?.trim() ?? '']),
+        );
+        if (Object.values(values).some((value) => !value)) {
+          setConnectionError('Complete every credential field before connecting.');
+          return;
+        }
+        await connectProviderWithKey(
+          activeWorkspace.id,
+          selectedConnection.providerId,
+          values,
+          credentialKey.current,
+        );
+      }
+      closeConnectionDialog();
+      connections.reload();
+    } catch (error) {
+      setConnectionError(error instanceof Error ? error.message : 'The connection was not changed.');
+    } finally {
+      setConnectionBusy(false);
+    }
+  };
+
+  /**
+   * Sign out for real, and honour the one answer the contract added for us.
+   *
+   * ADR-0017 §4 makes `POST /v1/auth/logout` answer **502** rather than 204 when
+   * revocation fails, precisely so a client can tell. The session is still live
+   * upstream at that point, so `signOut()` deliberately leaves the enclave
+   * intact — and this screen must not navigate away claiming a sign-out that did
+   * not happen. It says so inline instead and offers the action again.
+   */
+  const handleSignOut = async () => {
+    const { revoked } = await signOut();
+    if (!revoked) {
+      setSignOutFailed(true);
+      return;
+    }
+    setSignOutFailed(false);
+    router.replace('/(auth)/welcome');
+  };
+
+  // The design applies gLoad/gErr/gOff to every screen but Home, Settings
+  // included, so a failed read replaces the screen rather than stranding a
+  // half-populated one. An unconfigured build is also a refusal; it does not
+  // receive invented profile or connection rows.
+  if (connections.status === 'loading') return <ScreenLoading topInset={insets.top} />;
+  if (connections.status === 'offline') {
+    return <ScreenOffline onRetry={connections.reload} topInset={insets.top} />;
+  }
+  if (connections.status === 'unconfigured') {
+    return (
+      <ScreenUnavailable
+        title={errorTitleFor('settings')}
+        topInset={insets.top}
+      />
+    );
+  }
+  if (connections.status === 'error') {
+    return (
+      <ScreenError
+        title={errorTitleFor('settings')}
+        onRetry={connections.reload}
+        topInset={insets.top}
+      />
+    );
+  }
 
   return (
     <ScrollView
@@ -93,11 +285,11 @@ export default function SettingsScreen() {
       <Text style={[styles.h1, { color: palette.text }]}>Settings</Text>
 
       <SurfaceCard style={styles.profileCard}>
-        <AvatarBadge initials="AK" size={48} fontSize={16} />
+        <AvatarBadge initials={initials} size={48} fontSize={16} />
         <View style={styles.rowBody}>
-          <Text style={[styles.profileName, { color: palette.text }]}>Alex Kim</Text>
+          <Text style={[styles.profileName, { color: palette.text }]}>{displayName}</Text>
           <Text style={[styles.profileSub, { color: palette.neutral[400] }]}>
-            alex@acme.co · Acme Operations
+            {[currentSession?.user.email, activeWorkspace?.name].filter(Boolean).join(' · ')}
           </Text>
         </View>
         <CaretRight size={16} color={palette.neutral[500]} />
@@ -111,36 +303,41 @@ export default function SettingsScreen() {
             title="Face ID unlock"
             sub="Require Face ID when opening"
             divider
-            right={<NocToggle value={faceId} onChange={setFaceId} />}
+            right={<NocToggle value={faceId} onChange={changeFaceId} />}
           />
           <SettingsRow
             icon={Key}
             title="Passkeys"
-            sub="1 passkey · iPhone"
+            sub="Managed by your identity provider"
             divider
-            onPress={() => {}}
-            right={<CaretRight size={15} color={palette.neutral[500]} />}
+            right={<Text style={[styles.membersCount, { color: palette.neutral[500] }]}>External</Text>}
           />
           <SettingsRow
             icon={ClockClockwise}
             title="Stay signed in"
-            sub="Keep this device logged in"
-            right={<NocToggle value={staySignedIn} onChange={setStaySignedIn} />}
+            sub="Session stored in this device's secure enclave"
+            right={<Text style={[styles.membersCount, { color: status.ok }]}>On</Text>}
           />
         </SurfaceCard>
+        {faceIdError ? (
+          <ActionFailure message={faceIdError} retryLabel="Try again" onRetry={() => changeFaceId(true)} />
+        ) : null}
       </View>
 
       <View>
         <SectionLabel>CONNECTIONS</SectionLabel>
         <SurfaceCard style={styles.sectionCard}>
-          {settingsConnections.map((c, i) => (
+          {connectionRows.map((c, i) => (
             <SettingsRow
-              key={c.name}
+              key={c.providerId}
               icon={c.icon}
               title={c.name}
               sub={c.sub}
-              divider={i < settingsConnections.length - 1}
-              onPress={() => {}}
+              divider={i < connectionRows.length - 1}
+              onPress={() => {
+                setSelectedConnection(c);
+                setConnectionError(null);
+              }}
               right={
                 c.connected ? (
                   <View style={styles.connectedRight}>
@@ -163,8 +360,8 @@ export default function SettingsScreen() {
         <SurfaceCard style={styles.sectionCard}>
           <SettingsRow
             icon={CrownSimple}
-            title="Growth plan"
-            sub="$99/mo base · renews Sep 1"
+            title="Solutions total"
+            sub={`${activeCount} active from the published catalog`}
             divider
             right={
               <Text style={[styles.planTotal, { color: palette.accentRamp[300] }]}>
@@ -180,21 +377,6 @@ export default function SettingsScreen() {
             onPress={() => router.push('/(tabs)/solutions')}
             right={<CaretRight size={15} color={palette.neutral[500]} />}
           />
-          <SettingsRow
-            icon={CreditCard}
-            title="Payment method"
-            sub="Visa ···· 4242"
-            divider
-            onPress={() => {}}
-            right={<CaretRight size={15} color={palette.neutral[500]} />}
-          />
-          <SettingsRow
-            icon={Receipt}
-            title="Invoices"
-            sub={`Last: Aug 1 · ${planTotal}`}
-            onPress={() => {}}
-            right={<CaretRight size={15} color={palette.neutral[500]} />}
-          />
         </SurfaceCard>
       </View>
 
@@ -203,27 +385,27 @@ export default function SettingsScreen() {
         <SurfaceCard style={styles.sectionCard}>
           <SettingsRow
             icon={Buildings}
-            title="Acme Operations"
+            title={activeWorkspace?.name ?? 'Workspace'}
             divider
-            onPress={() => {}}
-            right={<CaretRight size={15} color={palette.neutral[500]} />}
+            right={<Text style={[styles.membersCount, { color: palette.neutral[500] }]}>{activeWorkspace?.type ?? ''}</Text>}
           />
           <SettingsRow
             icon={Users}
-            title="Members"
+            title="Your role"
             divider
-            onPress={() => {}}
             right={
               <View style={styles.membersRight}>
-                <Text style={[styles.membersCount, { color: palette.neutral[500] }]}>12</Text>
-                <CaretRight size={15} color={palette.neutral[500]} />
+                <Text style={[styles.membersCount, { color: palette.neutral[500] }]}>
+                  {activeWorkspace?.role ?? '—'}
+                </Text>
               </View>
             }
           />
           <SettingsRow
             icon={Bell}
             title="Notifications"
-            right={<NocToggle value={notifications} onChange={setNotifications} />}
+            sub="In-app inbox from approvals and failed runs"
+            right={<Text style={[styles.membersCount, { color: palette.neutral[500] }]}>In app</Text>}
           />
         </SurfaceCard>
       </View>
@@ -255,14 +437,85 @@ export default function SettingsScreen() {
         </SurfaceCard>
       </View>
 
-      <SurfaceCard onPress={() => router.replace('/(auth)/welcome')} style={styles.signOutCard}>
+      {signOutFailed ? (
+        <ActionFailure
+          message={SIGN_OUT_FAILED}
+          retryLabel={SIGN_OUT_RETRY}
+          onRetry={handleSignOut}
+        />
+      ) : null}
+
+      <SurfaceCard onPress={handleSignOut} style={styles.signOutCard}>
         <SignOut size={20} color={status.err} />
         <Text style={[styles.signOutLabel, { color: status.err }]}>Sign out</Text>
       </SurfaceCard>
 
       <Text style={[styles.version, { color: palette.neutral[600] }]}>
-        Autom8x for iOS · v1.0.0
+        Autom8x for {platformName} · v{appVersion}
       </Text>
+
+      <Modal
+        visible={selectedConnection !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={closeConnectionDialog}>
+        <View style={[styles.overlay, { backgroundColor: status.overlay }]}>
+          <View style={[styles.dialog, { backgroundColor: palette.surface, borderColor: palette.neutral[800] }]}>
+            <Text style={[styles.dialogTitle, { color: palette.text }]}>
+              {selectedConnection?.connected ? 'Disconnect' : 'Connect'} {selectedConnection?.name}
+            </Text>
+            <Text style={[styles.dialogBody, { color: palette.neutral[400] }]}>
+              {selectedConnection?.connected
+                ? selectedConnection.sub
+                : selectedConnection?.provider.description}
+            </Text>
+
+            {selectedConnection?.authType === 'api-key' && !selectedConnection.connected
+              ? selectedConnection.credentialFields.map((field) => (
+                  <TextField
+                    key={field.name}
+                    label={field.label}
+                    value={credentials[field.name] ?? ''}
+                    onChangeText={(value) => updateCredential(field.name, value)}
+                    secure={field.secret}
+                    placeholder={field.help}
+                  />
+                ))
+              : null}
+
+            {connectionError ? (
+              <Text style={[styles.dialogBody, { color: status.err }]}>{connectionError}</Text>
+            ) : null}
+
+            <View style={styles.dialogActions}>
+              <Pressable
+                onPress={closeConnectionDialog}
+                style={[styles.dialogButton, { borderColor: palette.neutral[700] }]}>
+                <Text style={[styles.dialogButtonLabel, { color: palette.text }]}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                disabled={connectionBusy}
+                onPress={applyConnectionAction}
+                style={[
+                  styles.dialogButton,
+                  { borderColor: selectedConnection?.connected ? status.err : palette.accent },
+                ]}>
+                <Text
+                  style={[
+                    styles.dialogButtonLabel,
+                    { color: selectedConnection?.connected ? status.err : palette.accent },
+                  ]}>
+                  {connectionBusy
+                    ? 'Working…'
+                    : selectedConnection?.connected
+                      ? 'Disconnect'
+                      : 'Connect'}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -370,5 +623,42 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontFamily: fonts.regular,
     fontSize: 11,
+  },
+  overlay: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: layout.screenX,
+  },
+  dialog: {
+    gap: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 18,
+    padding: 20,
+  },
+  dialogTitle: {
+    fontFamily: fonts.medium,
+    fontSize: 18,
+  },
+  dialogBody: {
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  dialogActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  dialogButton: {
+    minWidth: 96,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  dialogButtonLabel: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
   },
 });

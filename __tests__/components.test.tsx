@@ -16,7 +16,7 @@ import { StatusPill } from '@/components/nocturne/status-pill';
 import { StepCard } from '@/components/nocturne/step-card';
 import { TextField } from '@/components/nocturne/text-field';
 import { nocturneDark, status } from '@/constants/theme';
-import { steps } from '@/lib/fixtures';
+import { steps } from '@/test/design-data';
 import { renderWithProviders } from '@/test/render';
 
 const textColor = (node: { props: { style?: unknown } }) =>
@@ -43,6 +43,17 @@ describe('PillButton', () => {
     );
     expect(textColor(getByText('Unlock with Face ID'))).toBe(nocturneDark.accentRamp[300]);
   });
+
+  it('does not fire and exposes disabled semantics when the operation is unavailable', async () => {
+    const onPress = jest.fn();
+    const { getByText } = await renderWithProviders(
+      <PillButton label="Unavailable" onPress={onPress} disabled />,
+    );
+    const button = getByText('Unavailable').parent;
+    expect(button?.props.accessibilityState).toEqual({ disabled: true });
+    await fireEvent.press(getByText('Unavailable'));
+    expect(onPress).not.toHaveBeenCalled();
+  });
 });
 
 describe('NocToggle', () => {
@@ -52,9 +63,21 @@ describe('NocToggle', () => {
       <NocToggle value={true} onChange={onChange} />,
     );
     const toggle = getByRole('switch');
-    expect(toggle.props.accessibilityState).toEqual({ checked: true });
+    expect(toggle.props.accessibilityState).toMatchObject({ checked: true });
+    expect(toggle.props.accessibilityState.disabled).not.toBe(true);
     await fireEvent.press(toggle);
     expect(onChange).toHaveBeenCalledWith(false);
+  });
+
+  it('can render a non-interactive persisted policy without implying a toggle', async () => {
+    const onChange = jest.fn();
+    const { getByRole } = await renderWithProviders(
+      <NocToggle value onChange={onChange} disabled />,
+    );
+    const toggle = getByRole('switch');
+    expect(toggle.props.accessibilityState).toMatchObject({ checked: true, disabled: true });
+    await fireEvent.press(toggle);
+    expect(onChange).not.toHaveBeenCalled();
   });
 });
 
@@ -124,6 +147,15 @@ describe('small components', () => {
     );
     await fireEvent.press(getByText('Continue with Apple'));
     expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('OAuthButton cannot start a duplicate disabled attempt', async () => {
+    const onPress = jest.fn();
+    const { getByText } = await renderWithProviders(
+      <OAuthButton provider="google" label="Continuing with Google" onPress={onPress} disabled />,
+    );
+    await fireEvent.press(getByText('Continuing with Google'));
+    expect(onPress).not.toHaveBeenCalled();
   });
 
   it('BackCircle is a labelled button and fires onPress', async () => {

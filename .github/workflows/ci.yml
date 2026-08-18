@@ -40,7 +40,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm test -- --ci --watchAll=false
+      # `--runInBand` matches what `npm run verify` does locally. Without it CI
+      # ran the suite in a different concurrency mode from every Gate 8 run, so
+      # a flake could appear in exactly one of the two places and neither would
+      # reproduce the other. `--ci` makes a missing snapshot a failure instead of
+      # writing one, which is what keeps the visual gate a gate.
+      - run: npm test -- --ci --watchAll=false --runInBand
 
   gates:
     name: Architecture gates
@@ -52,11 +57,30 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # The prototype ships a hardcoded demo email and plaintext password in the
-      # auth screens. The occurrences are pinned so the set can only shrink:
-      # a new one fails, and removing one without updating the allowlist fails.
-      # Story S7.3 drives the pinned count to zero.
+      # The prototype shipped a hardcoded demo email and plaintext password in
+      # the auth screens. They are gone and the allowlist is empty; the ratchet
+      # now holds the count at zero, and a new occurrence fails the build.
       - run: npm run audit:credentials
+      # Colour belongs in constants/theme.ts. The design system ships an oxlint
+      # adherence config saying so, but nothing runs it — `expo lint` does not.
+      # This is the gate that makes the rule real.
+      - run: npm run audit:tokens
+      # Gate 8's first mobile line is "0 imports of lib/fixtures outside tests".
+      # It was re-derived by hand with git grep in every audit; this is the
+      # ratchet. The set may shrink and may never grow, and a file that stops
+      # reading fixtures must leave the ledger in the same commit.
+      - run: npm run audit:fixtures
+      # Three more gate lines that were manual greps: one hand-written fetch
+      # would fork the transport, one AsyncStorage import would break the
+      # invariant ADR-0017 amended, and one console call could log a token.
+      - run: npm run audit:platform
+      # Fail the build on critical advisories. High-severity findings that only
+      # Expo 57 resolves remain a documented SDK migration rather than a forced
+      # major upgrade inside Round 6.
+      - run: npm run audit:dependencies
+      # Regenerates from the sibling backend checkout when it is available. The
+      # committed declarations still compile in this standalone public checkout.
+      - run: npm run verify:platform-contracts
       - name: No salvaged client data
         run: |
           # `_salvage/` lives in the workspace folder, outside every repository. It
@@ -76,3 +100,16 @@ jobs:
             exit 1
           fi
           echo "No salvaged client data: PASS"
+
+  export:
+    name: Native bundle export
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run export:ios
+      - run: npm run export:android

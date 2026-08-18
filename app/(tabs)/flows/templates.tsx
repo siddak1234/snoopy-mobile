@@ -9,9 +9,13 @@ import { BackCircle } from '@/components/nocturne/back-circle';
 import { FilterChip } from '@/components/nocturne/filter-chip';
 import { IconTile } from '@/components/nocturne/icon-tile';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { em, fonts, layout } from '@/constants/theme';
+import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useTheme } from '@/hooks/use-theme';
-import { templateFilters, templates } from '@/lib/fixtures';
+import { errorTitleFor } from '@/lib/content/screen-states';
+import { readCatalog } from '@/lib/platform/catalog';
+import { toCategories, toTemplates, type TemplateView } from '@/lib/view/catalog';
 
 export default function TemplatesScreen() {
   const { palette } = useTheme();
@@ -21,7 +25,39 @@ export default function TemplatesScreen() {
   const cardWidth = (width - layout.screenX * 2 - 10) / 2;
   const [category, setCategory] = useState('All');
 
-  const visible = templates.filter((t) => category === 'All' || t.cat === category);
+  const catalog = useWorkspaceResource(readCatalog);
+
+  const items: TemplateView[] = catalog.status === 'ready' ? toTemplates(catalog.data) : [];
+  const filters = catalog.status === 'ready' ? toCategories(catalog.data) : [];
+
+  if (catalog.status === 'loading') return <ScreenLoading topInset={insets.top} />;
+  if (catalog.status === 'offline') {
+    return <ScreenOffline onRetry={catalog.reload} onBack={() => router.back()} topInset={insets.top} />;
+  }
+  // `unconfigured` is drawn as a failed load, decided by the owner 2026-08-17.
+  // A build with no backend genuinely could not load this, and saying so is
+  // honest where showing invented invoices was not.
+  if (catalog.status === 'unconfigured') {
+    return (
+      <ScreenUnavailable
+        title={errorTitleFor('templates')}
+        onBack={() => router.back()}
+        topInset={insets.top}
+      />
+    );
+  }
+  if (catalog.status === 'error') {
+    return (
+      <ScreenError
+        title={errorTitleFor('templates')}
+        onRetry={catalog.reload}
+        onBack={() => router.back()}
+        topInset={insets.top}
+      />
+    );
+  }
+
+  const visible = items.filter((t) => category === 'All' || t.cat === category);
 
   return (
     <ScrollView
@@ -36,15 +72,21 @@ export default function TemplatesScreen() {
         <Text style={[styles.h1, { color: palette.text }]}>Templates</Text>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
-        {templateFilters.map((f) => (
+        {filters.map((f) => (
           <FilterChip key={f} label={f} active={f === category} onPress={() => setCategory(f)} />
         ))}
       </ScrollView>
       <View style={styles.grid}>
         {visible.map((t) => (
           <SurfaceCard
-            key={t.name}
-            onPress={() => router.push('/(tabs)/flows/configure')}
+            key={t.templateId}
+            onPress={() =>
+              // Each card opens its own stable catalog identity.
+              router.push({
+                pathname: '/(tabs)/flows/configure',
+                params: { template: t.templateId },
+              })
+            }
             style={[styles.card, { width: cardWidth }]}>
             <IconTile icon={t.icon} size={38} iconSize={19} borderRadius={11} bordered />
             <Text style={[styles.cardName, { color: palette.text }]}>{t.name}</Text>

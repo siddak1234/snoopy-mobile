@@ -1,286 +1,202 @@
-# Autom8x design contracts
+# Round 6 mobile contract
 
-Status: **Draft — not ratified**
+Verified against the sibling master plan, Round 6 playbook, BUILD-PLAN 8.5–8.7,
+ADR-0017, and the regenerated platform/automations/connections declarations on
+2026-08-17. The published API owns business truth. This file records how the
+client consumes it; it does not extend it.
 
-Last verified against commit: `c80c61d3a77e6a41ff00284496402b7e4fceaaff`
+## Completion state
 
-Primary visual source: `design-source/autom8x-ios-app-design/Screen.dc.html`
-Implementation evidence: current files under `app/`, `components/`, `hooks/`, and `lib/`
+The implementing session has completed the Round 6 code and local verification.
+This is **ready for a fresh audit**, not a declaration that Gate 8 is closed.
+`DESIGN-GAPS.md` is the audit handoff and lists the externally unobservable
+evidence separately from code completion.
 
-This document records behavior that must be agreed before implementation. It
-separates verified repository behavior from proposed contracts. A proposed
-contract is not an assertion that the backend or provider integrations exist.
+## Transport and credential boundary
 
-## Document ownership
+- Three generated OpenAPI clients are created only in
+  `lib/platform/client.ts` with `openapi-fetch`.
+- Every operation is typed by its generated path and body. The facade supplies
+  bearer middleware, `Cache-Control: no-store`, abort timeout, response parsing,
+  and RFC problem mapping.
+- Runtime source is forbidden from using raw/indirect fetch, XMLHttpRequest,
+  WebSocket, EventSource, axios-like clients, or importing `openapi-fetch`
+  elsewhere.
+- Access and refresh tokens are stored as separate SecureStore values with
+  `WHEN_UNLOCKED_THIS_DEVICE_ONLY`; no backup, URL, log, or AsyncStorage copy is
+  permitted.
 
-| Artifact | Responsibility | Editing rule |
-| --- | --- | --- |
-| `design-source/autom8x-ios-app-design/` | Imported visual/design-system export | Keep as an unmodified source snapshot; do not add application contracts here |
-| `DESIGN-CONTRACT.md` | Ratified product, state, route, and integration contracts | Add decisions here once agreed; mark unresolved items explicitly |
-| `DESIGN-GAPS.md` | Open backlog, ownership, evidence, and implementation order | Link to this document instead of duplicating contract details |
-| `README.md` | Repository entry point | Link to the canonical design artifacts only |
+## Authentication and session
 
-## Verified current boundary
+The app is not a Google/Microsoft/Apple OAuth client. For a provider login it:
 
-- The app has an Expo Router auth stack and a five-tab app shell, but no session
-  provider or protected-route decision is implemented: `app/_layout.tsx`.
-- Login sends the user directly to the Home route without validation or a
-  session: `app/(auth)/login.tsx:94`.
-- Apple, Google, and Microsoft buttons render without handlers:
-  `app/(auth)/login.tsx:109-112`.
-- Face ID attempts local authentication but currently navigates Home after a
-  timer regardless of the result: `app/(auth)/faceid.tsx:52-79`.
-- There are no API, OAuth, auth-session, secure-storage, or database modules in
-  the dependency/source tree. Prototype state is held in React state and
-  fixtures.
-- Connections are currently represented by fixture data and local booleans:
-  `lib/fixtures.ts:375-380`, `app/(tabs)/solutions/setup.tsx:38-43`.
-- The app already declares the `snoopymobile` URL scheme in `app.json:8`.
+1. generates a device PKCE verifier/challenge;
+2. opens the system authentication session at
+   `/v1/auth/native/{provider}/start` with the exact claimed HTTPS return URI;
+3. receives only the backend's sealed, one-use code in that URI;
+4. exchanges the code and device verifier at `/v1/auth/native/token`;
+5. stores only the Autom8x session returned by the Edge;
+6. resolves `/v1/session` before entering protected routes.
 
-## Standards boundary
+Refresh uses `/v1/auth/native/refresh`, at two moments: at launch when the
+stored expiry is within the skew, and from the transport when any non-credential
+request answers 401. The second is what keeps a session that expires *while the
+app is open* from dead-ending every screen; it renews once, retries the request
+once, and gives up rather than looping. Renewal is single-flight, so a screen
+mounting parallel reads produces one refresh and not three racing ones. The
+three credential routes are exempt by name — retrying `/v1/auth/native/refresh`
+after a refresh would ask a dead token to renew itself.
 
-The recommended native-app authorization boundary is:
+Only 401 proves a credential dead and clears it; 502/503/unreachable preserve
+it. When renewal does prove it dead the transport announces it, and the session
+moves to `signed-out` so the route guard fails closed on a session that expired
+mid-use, not only on one that was already gone at launch.
 
-- OAuth authorization-code flow through an external user-agent.
-- PKCE for every public native client authorization request.
-- `state` to correlate the request and callback.
-- OpenID Connect for identity login where the provider supports it, with ID
-  token validation performed by the trusted authentication service.
-- No client secret embedded in the native bundle.
-- No provider access or refresh token exposed in UI state or route parameters.
+Logout sends the refresh token to `/v1/auth/logout`. Only 400 and 401 are
+terminal answers about that token — the platform read it and will not or need
+not revoke it — and only those clear the local copy. Every other outcome (502,
+500, 503, a timeout, an unreachable platform) leaves the credential in place and
+the UI signed in, because the platform never got to say and deleting the entry
+would strand a session that is still live upstream.
 
-References:
+`expo-web-browser.openAuthSessionAsync` is the correct system user-agent for
+this custom handoff. `expo-auth-session.AuthRequest` is not used: it models an
+app-owned OAuth authorization request and requires a client ID. Adding one
+would contradict ADR-0017. The minimum iOS deployment is 17.4, the first
+version where `ASWebAuthenticationSession.Callback.https(host:path:)` performs
+the exact associated-domain match ADR-0017 requires; the installed Expo module
+uses that API at this floor. The login screen's “Stay logged in” control is a
+disabled-on policy display because persistence is fixed by ADR-0017; it does
+not pretend to offer an uncontracted session-only mode.
 
-- [RFC 8252 — OAuth 2.0 for Native Apps](https://datatracker.ietf.org/doc/html/rfc8252)
-- [RFC 7636 — Proof Key for Code Exchange](https://datatracker.ietf.org/doc/html/rfc7636)
-- [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0-18.html)
-- [Expo AuthSession](https://docs.expo.dev/versions/latest/sdk/auth-session/)
-- [Expo Router authentication](https://docs.expo.dev/router/advanced/authentication/)
-- [Expo SecureStore](https://docs.expo.dev/versions/v55.0.0/sdk/securestore/)
+Session states are `restoring`, `signed-in`, `signed-out`, `unconfigured`, and
+`unavailable`. The tab layout admits only `signed-in`; every other state fails
+closed to the auth entry. On launch, an enabled Face ID preference gates an
+existing session through `expo-local-authentication`. Biometrics never create a
+session and no timer counts as success.
 
-## Login contract
+The active workspace is `session.user.activeWorkspaceId`, falling back only to
+the first server-supplied membership. A route/form value never selects tenancy.
 
-### Ownership
+## Screen reads
 
-Autom8x login authenticates an Autom8x user and creates an Autom8x session.
-Apple, Google, and Microsoft are identity providers; their authorization is
-not itself the Autom8x application session. Provider connections are a separate
-contract below.
-
-### Proposed client types
-
-These are contract types, not current implementation files.
-
-```ts
-export type AuthMethod =
-  | 'password'
-  | 'apple'
-  | 'google'
-  | 'microsoft'
-  | 'biometric';
-
-export type AuthSession = {
-  userId: string;
-  workspaceId: string;
-  expiresAt: string;
-};
-
-export type AuthState =
-  | { status: 'restoring' }
-  | { status: 'signed-out' }
-  | { status: 'submitting'; method: AuthMethod }
-  | { status: 'signed-in'; session: AuthSession }
-  | {
-      status: 'error';
-      method: AuthMethod;
-      code: string;
-      retryable: boolean;
-      field?: 'email' | 'password';
-    };
-
-export interface AuthClient {
-  restore(): Promise<AuthSession | null>;
-  signInWithPassword(input: {
-    email: string;
-    password: string;
-  }): Promise<AuthSession>;
-  signInWithProvider(
-    provider: 'apple' | 'google' | 'microsoft',
-  ): Promise<AuthSession>;
-  signUp(input: {
-    fullName: string;
-    email: string;
-    password: string;
-  }): Promise<AuthSession>;
-  requestPasswordReset(email: string): Promise<void>;
-  signOut(): Promise<void>;
-}
-```
-
-The exact server error-code vocabulary is still **Decision required**. The
-UI contract must at minimum distinguish field validation, invalid credentials,
-provider cancellation, provider failure, network failure, expired session,
-and unknown failure.
-
-### Required login states
-
-| State | Required behavior |
+| Surface | Published operations / mapping |
 | --- | --- |
-| Restoring | Block the auth/app decision until stored session restoration finishes |
-| Signed out | Show the auth entry point; protected routes redirect here |
-| Field validation | Show field-specific feedback; do not submit invalid input |
-| Submitting | Disable duplicate submission and show progress |
-| Provider browser | Show that the app is waiting for the external authorization flow |
-| Cancelled/denied | Return to the form with a recoverable message; do not create a session |
-| Signed in | Store the Autom8x session and enter the intended app route |
-| Session expired | Attempt the defined refresh path once, then return to signed out if it fails |
-| Sign out | Clear the Autom8x session and return to the auth entry point |
-| Biometric success | Unlock an existing local session only |
-| Biometric failure/cancel/unavailable/lockout | Do not enter the app; offer the defined fallback |
+| Login/signup | `GET /v1/auth/providers`; OAuth-only policy; password/reset refuse truthfully |
+| Home | session + catalog + `run-stats?since=<local midnight>` + runs + pending approvals |
+| Solutions/templates | workspace automation catalog and its server-supplied categories |
+| Setup/configure | catalog `setup[]` and the matching subscription config |
+| Flows/detail | subscriptions + catalog + run stats; identity is subscription ID/template ID |
+| Builder | selected catalog entry's required `pipeline[]`, in manifest order |
+| Activity/run detail | runs/list/detail joined to catalog/subscription identity |
+| Approvals | pending approvals joined through subscription → template → pipeline step |
+| Notifications | pending approvals plus failed runs; explicitly an in-app composition |
+| Settings | session/workspace, catalog totals, provider registry, and workspace connections |
 
-### Login acceptance criteria
+Every fetching surface has loading, offline, platform-error, **unavailable**, and
+applicable empty behavior, **with one carve-out the design owns**: Home draws a
+single combined failure state (`sHomeErr`), so a platform refusal and an
+unresolved workspace both render its connectivity wording. That is the design's
+own `Screen.dc.html`, not a client shortcut, and it is recorded here rather than
+asserted away — the sentence used to claim uniformity the code never had.
+Resource errors never reveal raw upstream bodies.
 
-- No login or signup action navigates to a protected route until the session
-  contract reports `signed-in`.
-- OAuth login uses an external user-agent, authorization code, PKCE, and a
-  verified callback. Tokens are not passed through route parameters.
-- The auth boundary is enforced at the route/layout level, not separately by
-  each screen.
-- Face ID never treats a timeout as authentication success.
-- “Stay logged in” has an explicit persistence policy before it is wired. The
-  current toggle does not define that policy.
+`unavailable` is separate from `error` because Retry distinguishes them. A
+`PlatformNotConfiguredError` — no backend origin, or no workspace resolved —
+cannot succeed on a second attempt, so offering "Retry now or come back in a
+moment" invites a person to press a button that can never work.
+`ScreenUnavailable` says what is actually wrong and offers no retry.
 
-## Workspace connection contract
+An empty queue is not an accomplishment. Approvals renders a first-run empty
+state when nothing is pending, and keeps its "all caught up — decisions synced"
+line for the case it describes: this person decided something.
 
-### Ownership
+`AutomationCatalogEntry.available` is reachability evidence and is rendered, not
+dropped: an automation that failed its probe says so and its Add / Activate /
+create actions are refused. The completed web client refuses the same actions on
+the same field, which is what keeps the two clients' §1 journeys the same
+journey.
 
-A connection is a provider authorization grant associated with an Autom8x
-workspace. It is not the user’s Autom8x login session.
+The Activity chips select on the published run status, never on a display tone.
+A tone is a treatment shared by several statuses, so filtering by it made "Needs
+review" — the held queue — also list running, queued and cancelled runs.
 
-Provider display names must not be used as identifiers. A provider registry must
-define stable provider IDs, requested scopes, display metadata, and the adapter
-that translates provider errors.
+## Mutations
 
-### Proposed client types
+- Solution activation: create a subscription with an idempotency key, then
+  patch its manifest-declared configuration.
+- Solution pause and flow pause/resume: patch the real subscription status.
+- Approval decision: post approved/rejected to the approval's stable ID with an
+  idempotency key; retry reuses the intent key.
+- API-key connection: generated credential fields → connection mutation with an
+  idempotency key.
+- OAuth connection: authorize → system browser → sealed native complete.
+- Disconnect: delete the stable connection ID.
+- Sign out: revoke first, clear locally only on a terminal/successful answer.
 
-These types intentionally do not contain access or refresh tokens.
+UI state changes occur only after a successful mutation. Failed actions remain
+on the loaded screen and show the shared inline failure callout.
 
-```ts
-export type ConnectionStatus =
-  | 'not-connected'
-  | 'authorizing'
-  | 'connected'
-  | 'reauthorization-required'
-  | 'error'
-  | 'disconnecting';
+An idempotency key is the identity of one intent, not of one screen. It is
+re-minted when the intent's body changes and again once the intent has
+succeeded — a key held across a success would replay the stored response
+instead of performing the next action, and a key held across a changed body is
+a 409 by contract rather than a replay.
 
-export type Connection = {
-  id: string;
-  providerId: string;
-  workspaceId: string;
-  externalAccount: {
-    id: string;
-    displayName: string;
-  };
-  status: ConnectionStatus;
-  requiredScopes: string[];
-  grantedScopes: string[];
-  lastValidatedAt?: string;
-  usedByCount: number;
-  errorCode?: string;
-};
+Client-held overrides (`hooks/use-solutions.tsx`, `hooks/use-workflows.tsx`) are
+scoped to one person in one workspace and are cleared when either changes. Both
+providers are mounted above the route tree, so without that they would outlive a
+sign-out and layer one account's local state over the next account's catalog.
 
-export interface ConnectionsClient {
-  list(workspaceId: string): Promise<Connection[]>;
-  beginAuthorization(input: {
-    providerId: string;
-    workspaceId: string;
-    requestedScopes: string[];
-  }): Promise<{
-    attemptId: string;
-    authorizationUrl: string;
-    expiresAt: string;
-  }>;
-  completeAuthorization(attemptId: string): Promise<Connection>;
-  reconnect(connectionId: string): Promise<{
-    attemptId: string;
-    authorizationUrl: string;
-  }>;
-  disconnect(connectionId: string): Promise<void>;
-}
-```
+## Refusal map: what is rendered instead
 
-### Required connection lifecycle
+These are published refusals or absent operations, not invitations to create a
+mobile-only shape.
 
-| Transition | Required behavior |
-| --- | --- |
-| Not connected → Authorizing | Create a one-time authorization attempt with provider, workspace, and requested scopes |
-| Authorizing → Connected | Complete the callback, validate the account and granted scopes, then return connection metadata |
-| Authorizing → Cancelled/denied | Keep the connection absent and return a recoverable UI state |
-| Connected → Reauthorization required | Show the provider/account and a reconnect action; do not silently discard the connection |
-| Connected → Error | Preserve the record and expose retryable/non-retryable failure information |
-| Connected → Disconnecting → Not connected | Confirm consequences, revoke/invalidate the grant where supported, then remove the usable connection |
+- Full run output is not public: render `resultSummary` on success and
+  `failureReason` on failure; never invent extracted fields.
+- A human run number is not public: use stable request/run identity where
+  appropriate and do not synthesize `#4821`.
+- Approval has no display title: join its subscription and `stepId` to the
+  catalog pipeline title.
+- There is no notifications endpoint/read state/push contract: compose pending
+  approvals and failed runs in app; do not claim OS push permission.
+- Confidence is unpublished: render the design's unavailable value.
+- `homeStats` is not an operation: derive the three tiles from windowed
+  `run-stats` exactly as the refusal directs.
+- Cross-tenant “used by teams” is not public: omit/inform with static product
+  copy; use only `Connection.usedByCount` for this workspace.
+- There is no retry operation preserving `rootRunId`: omit Retry rather than
+  starting an unrelated run and calling it a retry. This is historical Finding
+  9.
+- Billing/payment/invoice operations are absent and Round 7-owned: Settings
+  shows only the sum of published automation prices, never a fake plan base or
+  card.
 
-The current design copy says future solutions reuse the workspace connection and
-that agents keep running in the cloud. Based on that product behavior, the
-recommended architecture is for the service to own provider refresh
-credentials. This is an architecture recommendation, not current repository
-behavior. The mobile app should receive connection metadata, not provider
-refresh tokens.
+## Remaining contract ceilings (not Round 6 substitutions)
 
-### Proposed service surface
+- Historical Finding 3: pipeline `kicker` is closed to `TRIGGER`, `AI STEP`, and
+  `ACTION`; backend manifest validation currently prevents branch/delay/human
+  review kickers from reaching a client.
+- Historical Finding 4: a declared pipeline step has no icon. The client uses a
+  documented, lossy kicker-to-icon mapping and otherwise preserves its text.
+- Historical Finding 5 is resolved: configure and flow detail pass `template`,
+  New routes through Templates, and an identity-free/unknown Builder link is
+  refused.
+- Historical Finding 6 remains: a subscription publishes only
+  `unmetConnections`, so flow detail can name missing providers but cannot
+  invent already-satisfied provider rows.
+- Manifest setup resource fields carry a string value but no public resource
+  enumeration. Matching the completed web client, the generated control edits
+  that opaque string without inventing a picker data source.
 
-These endpoints do not currently exist; they define the boundary to implement
-after the design decisions are ratified.
+Builder is deliberately read-only in BUILD-PLAN 8.7. It renders the published
+pipeline; Save, Test run, insertion, and drag affordances are visibly disabled
+because no editing/test-run operation is in Round 6.
 
-```text
-POST   /v1/connection-attempts
-GET    /v1/connection-attempts/:attemptId
-GET    /v1/workspaces/:workspaceId/connections
-POST   /v1/connections/:connectionId/reconnect
-DELETE /v1/connections/:connectionId
-```
+## Identity and key rules
 
-Provider adapters must handle provider-specific scope, token lifetime, refresh
-rotation, account/workspace selection, and revocation behavior. The contract
-must not assume every provider has the same expiry or revoke semantics.
-
-### Connection acceptance criteria
-
-- A connection is scoped to a workspace and has a stable provider identifier.
-- UI can distinguish connected, reconnect-required, denied, failed, and
-  disconnecting states.
-- Each solution declares the minimum scopes it needs before authorization starts.
-- The callback returns an opaque attempt result, never a provider token in a
-  deep link or route parameter.
-- Disconnect behavior defines what happens to workflows using the connection.
-- Reconnect preserves or replaces the connection record according to an
-  explicit decision; the current code does not define this.
-
-## Decisions required before implementation
-
-| ID | Decision | Current status |
-| --- | --- | --- |
-| D1 | Supported login methods and provider ownership | Decision required |
-| D2 | “Stay logged in” persistence and sign-out behavior | Decision required |
-| D3 | Workspace selection after login | Decision required |
-| D4 | Stable provider registry and minimum scopes per solution | Decision required |
-| D5 | Whether connections are workspace-owned, user-owned, or both | Decision required |
-| D6 | Reconnect identity: preserve or replace connection ID | Decision required |
-| D7 | Workflow consequences when a connection is removed or revoked | Decision required |
-| D8 | Backend callback versus app callback ownership | Decision required |
-| D9 | Account selection when a provider has multiple workspaces/accounts | Decision required |
-
-## Implementation placement after ratification
-
-The proposed implementation locations are:
-
-```text
-lib/contracts/auth.ts
-lib/contracts/connections.ts
-hooks/use-session.tsx
-hooks/use-connections.tsx
-```
-
-These files do not exist yet. Screens should consume the shared contracts and
-hooks; they should not define provider-specific OAuth, token, or session logic.
+React lists use server IDs or stable declared IDs: template ID, subscription ID,
+run ID, approval ID, provider/connection ID, setup field key, and pipeline step
+ID. Array position is never business identity. No route falls back to “the
+first” catalog/subscription item when a requested identity is absent.

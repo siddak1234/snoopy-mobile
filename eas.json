@@ -1,0 +1,51 @@
+{
+  "$comment": [
+    "Build profiles for EAS. Two things this file deliberately does NOT declare,",
+    "because declaring them would describe a capability that does not exist:",
+    "",
+    "1. No `channel` on preview or production. A channel routes an over-the-air",
+    "   update to a build, and this app has no update mechanism: `expo-updates`",
+    "   is not a dependency and app.json carries no `updates` or `runtimeVersion`.",
+    "   The two channel keys that used to be here resolved to nothing. Adding OTA",
+    "   updates is Round 7 infrastructure work; when it lands, the channels come",
+    "   back alongside the runtime that reads them.",
+    "",
+    "2. No `submit.production` block. Store submission needs an Apple team and",
+    "   ASC key, and a Google service account — credentials Round 7 provisions.",
+    "   An empty object read as configured-and-ready; its absence reads as what",
+    "   is true.",
+    "",
+    "`appVersionSource: remote` requires a linked EAS project, and none is linked",
+    "(there is no `extra.eas.projectId` in app.json or app.config.js). Until",
+    "`eas init` runs against a real account, no profile here can build",
+    "non-interactively. That is recorded in DESIGN-GAPS.md rather than hidden by",
+    "a placeholder id.",
+    "",
+    "Preview and production supply EXPO_PUBLIC_BACKEND_API_ORIGIN and",
+    "EXPO_PUBLIC_NATIVE_REDIRECT_URI from the build environment, not from this",
+    "file: the redirect URI must string-match the Edge's NATIVE_APP_REDIRECT_URIS",
+    "for the deployment being built, and the origin is a real HTTPS Edge.",
+    "app.config.js throws when either is missing on a release profile, so a",
+    "misconfigured cloud build fails at config time rather than shipping a client",
+    "pointed at nothing."
+  ],
+  "cli": {
+    "version": ">= 5.9.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_BACKEND_API_ORIGIN": "http://localhost:8080"
+      }
+    },
+    "preview": {
+      "distribution": "internal"
+    },
+    "production": {
+      "autoIncrement": true
+    }
+  }
+}

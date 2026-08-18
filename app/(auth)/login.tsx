@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -7,7 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { UserFocus, WarningCircle } from 'phosphor-react-native';
 
@@ -15,23 +15,78 @@ import { BackCircle } from '@/components/nocturne/back-circle';
 import { BrandMark } from '@/components/nocturne/brand-mark';
 import { NocToggle } from '@/components/nocturne/noc-toggle';
 import { OAuthButton } from '@/components/nocturne/oauth-button';
+import { Skeleton } from '@/components/nocturne/skeleton';
 import { OrDivider } from '@/components/nocturne/or-divider';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { TextField } from '@/components/nocturne/text-field';
-import { em, fonts, layout, status } from '@/constants/theme';
+import { em, fonts, layout, radius, status } from '@/constants/theme';
+import { useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
+import { useResource } from '@/hooks/use-resource';
+import { readLoginProviders } from '@/lib/platform/auth';
+import type { LoginProvider } from '@/lib/platform/native-auth';
 
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { palette } = useTheme();
-  // Demo/dev entry into the designed error state until real auth exists:
-  // /(auth)/login?state=error
-  const { state } = useLocalSearchParams<{ state?: 'error' }>();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [signInError, setSignInError] = useState<string | null>(null);
+  const [busyProvider, setBusyProvider] = useState<LoginProvider | null>(null);
+  const signInInFlight = useRef(false);
+  const { signIn } = useSession();
+  const providerPolicy = useResource(readLoginProviders, []);
 
-  const [email, setEmail] = useState('alex@acme.co');
-  const [password, setPassword] = useState('automate88');
-  const [stayLoggedIn, setStayLoggedIn] = useState(true);
+  // The provider list is rendered as the platform sends it, `label` included.
+  // Rebuilding the label from the id locally is the same shape as inventing a
+  // filter vocabulary instead of using `categories`: the published field is
+  // there, so the client uses it. `app/(auth)/signup.tsx` already did.
+  const enabledProviders =
+    providerPolicy.status === 'ready' ? providerPolicy.data.providers : [];
+  const providerError =
+    providerPolicy.status === 'offline'
+      ? 'The platform is offline. Identity providers could not be loaded.'
+      : providerPolicy.status === 'error' || providerPolicy.status === 'unconfigured'
+        ? 'Identity providers are not available for this build.'
+        : providerPolicy.status === 'ready' && providerPolicy.data.providers.length === 0
+          ? 'This deployment has no identity provider enabled.'
+          : null;
+  const visibleError = signInError ?? providerError;
+  // The provider read is a request, so it has a pending state. Without one the
+  // only OAuth-capable half of the screen is simply missing while it resolves,
+  // which reads as a broken build rather than as a screen still loading.
+  const providersLoading = providerPolicy.status === 'loading';
+
+  const manualLoginUnavailable = () => {
+    setSignInError('Password login is not available. Continue with an identity provider below.');
+  };
+
+  /**
+   * Sign in through the system browser (ADR-0017).
+   *
+   * A cancelled sheet clears the callout rather than reporting anything — the
+   * person closed it on purpose. Only a real refusal is worth a message, and it
+   * renders in the callout the design already draws.
+   */
+  const startSignIn = async (provider: LoginProvider) => {
+    if (signInInFlight.current) return;
+    signInInFlight.current = true;
+    setSignInError(null);
+    setBusyProvider(provider);
+    try {
+      const outcome = await signIn(provider);
+      if (outcome.status === 'signed-in') {
+        router.replace('/(tabs)/(home)');
+        return;
+      }
+      if (outcome.status === 'cancelled') return;
+      setSignInError(outcome.message);
+    } finally {
+      signInInFlight.current = false;
+      setBusyProvider(null);
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -53,11 +108,11 @@ export default function LoginScreen() {
           Welcome back to your workspace.
         </Text>
 
-        {state === 'error' ? (
+        {visibleError ? (
           <View style={styles.errorCallout}>
             <WarningCircle size={16} color={status.err} style={styles.errorIcon} />
             <Text style={styles.errorText}>
-              That password didn&apos;t match. Try again, or reset it below.
+              {visibleError}
             </Text>
           </View>
         ) : null}
@@ -79,7 +134,7 @@ export default function LoginScreen() {
           />
           <View style={styles.rememberRow}>
             <View style={styles.rememberLeft}>
-              <NocToggle value={stayLoggedIn} onChange={setStayLoggedIn} />
+              <NocToggle value onChange={() => {}} disabled />
               <Text style={[styles.rememberLabel, { color: palette.neutral[300] }]}>
                 Stay logged in
               </Text>
@@ -91,7 +146,7 @@ export default function LoginScreen() {
               Forgot?
             </Text>
           </View>
-          <PillButton label="Log In" onPress={() => router.replace('/(tabs)/(home)')} />
+          <PillButton label="Log In" onPress={manualLoginUnavailable} />
           <PillButton
             label="Unlock with Face ID"
             variant="accent-ghost"
@@ -104,12 +159,27 @@ export default function LoginScreen() {
           />
         </View>
 
-        <OrDivider />
+        {/* No divider above an empty column: when the provider read fails or
+            the build is unconfigured there is nothing to separate, and an "or"
+            with nothing under it reads as a missing control rather than as the
+            honest refusal already shown in the callout above. */}
+        {enabledProviders.length > 0 || providersLoading ? <OrDivider /> : null}
 
         <View style={styles.oauthColumn}>
-          <OAuthButton provider="apple" label="Continue with Apple" />
-          <OAuthButton provider="google" label="Continue with Google" />
-          <OAuthButton provider="microsoft" label="Continue with Microsoft" />
+          {providersLoading
+            ? [0, 1, 2].map((row) => (
+                <Skeleton key={row} height={52} borderRadius={radius.pill} delay={row * 120} />
+              ))
+            : null}
+          {enabledProviders.map(({ id, label }) => (
+            <OAuthButton
+              key={id}
+              provider={id}
+              label={`Continue with ${label}`}
+              disabled={busyProvider !== null}
+              onPress={() => startSignIn(id as LoginProvider)}
+            />
+          ))}
         </View>
 
         <Text style={[styles.switchLine, { color: palette.neutral[400] }]}>

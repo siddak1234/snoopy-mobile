@@ -15,7 +15,8 @@ import { IconTile } from '@/components/nocturne/icon-tile';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { em, fonts, layout } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { onboardingPhases } from '@/lib/fixtures';
+import { useSession } from '@/hooks/use-session';
+import { onboardingPhases } from '@/lib/content/onboarding';
 
 /** Design: dot 6×6 neutral-700; active 22px wide accent; transition all .25s. */
 function Dot({ active }: { active: boolean }) {
@@ -45,6 +46,7 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { palette } = useTheme();
+  const session = useSession();
 
   const [phase, setPhase] = useState(0);
   const lastPhase = onboardingPhases.length - 1;
@@ -54,7 +56,7 @@ export default function OnboardingScreen() {
     if (phase < lastPhase) {
       setPhase((p) => p + 1);
     } else {
-      router.replace('/(tabs)/(home)');
+      router.replace(session.status === 'signed-in' ? '/(tabs)/(home)' : '/(auth)/login');
     }
   };
 
@@ -70,7 +72,11 @@ export default function OnboardingScreen() {
       <GlowBackground cx="50%" cy="20%" r="52%" />
 
       <View style={styles.skipRow}>
-        <Pressable onPress={() => router.replace('/(tabs)/(home)')} style={styles.skipHit}>
+        <Pressable
+          onPress={() =>
+            router.replace(session.status === 'signed-in' ? '/(tabs)/(home)' : '/(auth)/login')
+          }
+          style={styles.skipHit}>
           <Text style={[styles.skipLabel, { color: palette.neutral[400] }]}>Skip</Text>
         </Pressable>
       </View>
