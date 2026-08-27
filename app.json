@@ -51,6 +51,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "cb806193-8885-4b5c-b1d6-850da3f162a2"
+      }
+    },
+    "owner": "autom8x.ai"
   }
 }
