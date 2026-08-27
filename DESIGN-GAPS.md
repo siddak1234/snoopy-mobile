@@ -47,6 +47,11 @@ found the four tracked files this file called unreadable are readable again.
 | EAS preview/production cloud build | **NOT OBSERVED** | `eas` CLI is not installed and no EAS project is linked |
 | Authenticated §1 journey | **NOT OBSERVED** | native login answers 503 |
 
+The three NOT OBSERVED rows above are the Round 6 record and stand unedited.
+Round 7.5 (2026-08-27) exists to observe exactly those three lines; its
+evidence, and the current state of each, is in `ROUND-7.5-OBSERVATIONS.md` —
+this table is no longer the live register for them.
+
 ## What the audit found, and what was repaired
 
 Each of these failed a line this repository asserts. Six of the seven are
@@ -129,8 +134,12 @@ The audit's own "still open" list was worked down rather than carried forward:
 - **`eas.json` no longer describes capabilities that do not exist.** Both
   `channel` keys were inert (`expo-updates` is not installed and `app.json` has
   no `updates`/`runtimeVersion`), and `submit.production` was an empty object
-  that read as configured-and-ready. Both are gone, with the reasons recorded in
-  the file rather than in a commit message nobody re-reads.
+  that read as configured-and-ready. Both are gone. Their reasons were
+  recorded in the file itself until Round 7.5 (2026-08-27), when eas-cli 22's
+  strict schema validation forced the `$comment` out — it refuses the whole
+  file over an unknown key. Both absences still hold; the living rationale
+  now sits in README's build section, and the move itself is recorded in
+  `ROUND-7.5-OBSERVATIONS.md`.
 
 ## Still open, recorded rather than fixed
 
@@ -174,10 +183,15 @@ The audit's own "still open" list was worked down rather than carried forward:
   to Dark on every cold launch. No published contract covers it and the design
   does not say it should survive a launch, so it is recorded rather than decided
   here.
-- **`eas.json` cannot build until an EAS project is linked.**
-  `appVersionSource: "remote"` requires one and there is no `extra.eas.projectId`
-  anywhere, so no profile builds non-interactively. That needs an account, which
-  is Round 7's to provision.
+- **`eas.json` could not build until an EAS project was linked — resolved in
+  Round 7.5, 2026-08-27, no longer open.** `appVersionSource: "remote"`
+  requires a linked project, and through Round 6 there was deliberately no
+  `extra.eas.projectId` anywhere; that needed an account, which was Round 7's
+  to provision. `eas init` against the owner's account has since created
+  `@autom8x.ai/snoopy-mobile`, `app.json` carries the link and owner, and the
+  id is real, not a placeholder — the evidence, including a cloud build whose
+  EAS record names this repository's commit hash, is in
+  `ROUND-7.5-OBSERVATIONS.md`.
 - **A stray 4-object pack from May 4 was *evicted*, not corrupt.** The earlier
   record called it unreadable and reported "0 unreachable objects from HEAD";
   that number was **vacuous** — `git rev-list --objects HEAD` was itself failing
