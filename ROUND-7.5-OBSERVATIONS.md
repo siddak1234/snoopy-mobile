@@ -252,6 +252,27 @@ Preconditions verified live this session (2026-08-27):
   `object_store: adapter_not_configured` (finding 4). Unobservable from any
   client until the deployment configures an object store.
 
+## CI on the round branch
+
+The round's commits were moved onto `round-7.5-observations` (local `main`
+was reset to the Round 6 merge `7490231` and never pushed ahead of it), and
+PR #6 opened against `main` — the only mechanism that triggers CI
+(`.github/workflows/ci.yml` runs on `pull_request` and `push: main` only,
+the same lesson Round 6 recorded). All five jobs GREEN on run
+`33176482529` (2026-08-28):
+
+```
+Typecheck 30s · Architecture gates 34s · Lint 48s · Test 1m8s
+Native bundle export 2m1s
+```
+
+The Test job reproduces 32 suites / 397 tests / 78 snapshots exactly on the
+GitHub runner, matching this session's local runs — the counts are a
+property of the code, not of this laptop. The PR is deliberately left open:
+merging is Phase E of the round, after the 19c journey lands on the branch,
+and must be a merge commit — a squash would leave `034b269`, the hash the
+EAS evidence build's record names, off `main`'s history.
+
 ## Findings reported for a `snoopy-backend` / deployment session to file
 
 Per the master plan's rule, this session edits `snoopy-mobile` only; each item
