@@ -58,7 +58,18 @@ visual change is explicitly authorized.
 CI runs lint, typecheck, Jest, all architecture/dependency gates, contract
 verification, and both platform exports. Preview and production EAS values are
 supplied by the build environment; they are intentionally not committed to
-`eas.json`.
+`eas.json`. Since Round 7.5 that means the EAS-hosted `preview` and
+`production` environments on the linked project (`@autom8x.ai/snoopy-mobile`):
+each release profile names its environment in `eas.json`, both environments
+carry the two values, and `app.config.js` refuses a release build missing
+either one at config time, so a misconfigured cloud build fails before
+anything ships. The redirect URI stored there is subject to the exact-match
+rule above. Two `eas.json` absences remain deliberate: no `channel` keys,
+because the app has no update runtime (`expo-updates` is not a dependency and
+a channel would route an OTA update to a build that cannot receive one), and
+no `submit.production` block, because no store credentials exist and an empty
+block would read as configured-and-ready. The history of both is in
+`ROUND-7.5-OBSERVATIONS.md`.
 
 ## Runtime architecture
 
