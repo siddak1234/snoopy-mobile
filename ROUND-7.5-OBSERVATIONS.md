@@ -268,10 +268,12 @@ Native bundle export 2m1s
 
 The Test job reproduces 32 suites / 397 tests / 78 snapshots exactly on the
 GitHub runner, matching this session's local runs — the counts are a
-property of the code, not of this laptop. The PR is deliberately left open:
-merging is Phase E of the round, after the 19c journey lands on the branch,
-and must be a merge commit — a squash would leave `034b269`, the hash the
-EAS evidence build's record names, off `main`'s history.
+property of the code, not of this laptop. PR #6 merges this state — the
+19a/19b evidence and the staged 19c record — as a merge commit, never a
+squash: a squash would leave `034b269`, the hash the EAS evidence build's
+record names, off `main`'s history. The 19c journey evidence, which waits
+on two deployment-side fixes recorded in the findings below, lands as its
+own branch and PR against this same record when those clear.
 
 ## Findings reported for a `snoopy-backend` / deployment session to file
 
