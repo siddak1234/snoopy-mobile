@@ -47,6 +47,64 @@ export function nativeRedirectUri(): string | null {
   return typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
 }
 
+/**
+ * Where the system browser opens the start leg, or null for the API origin.
+ *
+ * The Edge keeps the OAuth transaction in a `__Host-` cookie, which is host-only
+ * by definition, and its deployed callback sits on the public web origin behind
+ * the website's `/api/platform` rewrite (manifest §12.1 #79). ADR-0017 §1 relies
+ * on the start request and the provider's callback landing on ONE origin, so the
+ * browser must open the start leg where the callback lives — not on the API
+ * origin the app's bearer calls use. Measured 2026-09-03: the same start opened
+ * on `api.autom8x.ai` sets a cookie the `www.autom8x.ai` callback never sees and
+ * every login ends at the website with `exchange_failed`; opened through the
+ * web origin, the callback 302s to the app with a sealed code.
+ */
+export function nativeAuthBaseUrl(): string | null {
+  const value = Constants.expoConfig?.extra?.nativeAuthBaseUrl;
+  return typeof value === 'string' && value.trim() !== '' ? value.trim().replace(/\/$/, '') : null;
+}
+
+/** What the system user-agent came back with, in the app's own vocabulary. */
+export type AuthSessionOutcome =
+  | { type: 'success'; url: string }
+  | { type: 'cancelled' }
+  | { type: 'failed'; message: string };
+
+/**
+ * `openAuthSessionAsync` throws when it cannot open a browser at all: Android's
+ * `NoMatchingActivityException` on a device with no browser, and
+ * `PREFERRED_PACKAGE_NOT_FOUND` when no Custom Tabs provider can be resolved.
+ * Until Round 7.5M that rejection propagated out of `signInWithProvider` uncaught,
+ * so a browserless device crashed the sign-in instead of being told why. Unreachable
+ * on any normal phone; a robustness gap, closed here for both callers.
+ */
+const NO_BROWSER_CODES = new Set(['ERR_NO_MATCHING_ACTIVITY', 'PREFERRED_PACKAGE_NOT_FOUND']);
+
+export async function openSystemAuthSession(
+  url: string,
+  returnTo: string,
+): Promise<AuthSessionOutcome> {
+  let result: WebBrowser.WebBrowserAuthSessionResult;
+  try {
+    result = await WebBrowser.openAuthSessionAsync(url, returnTo);
+  } catch (error) {
+    return { type: 'failed', message: describeBrowserFailure(error) };
+  }
+  // `dismiss` and `cancel` are a person closing the sheet, not a failure.
+  if (result.type !== 'success') return { type: 'cancelled' };
+  return { type: 'success', url: result.url };
+}
+
+function describeBrowserFailure(error: unknown): string {
+  const code =
+    error && typeof error === 'object' && 'code' in error ? String((error as { code: unknown }).code) : '';
+  if (NO_BROWSER_CODES.has(code)) {
+    return 'No web browser is available on this device to continue.';
+  }
+  return 'The system browser could not be opened.';
+}
+
 export async function signInWithProvider(provider: LoginProvider): Promise<LoginOutcome> {
   const origin = backendApiOrigin();
   if (!origin) {
@@ -67,8 +125,10 @@ export async function signInWithProvider(provider: LoginProvider): Promise<Login
   // in a URL — only the challenge does.
   const { codeVerifier, codeChallenge } = await createPkcePair();
 
+  // The browser-facing base, which must share an origin with the deployment's
+  // callback; the API origin is only right when it IS that origin.
   const startUrl =
-    `${origin}/v1/auth/native/${provider}/start` +
+    `${nativeAuthBaseUrl() ?? origin}/v1/auth/native/${provider}/start` +
     `?redirect_uri=${encodeURIComponent(redirectUri)}` +
     `&code_challenge=${encodeURIComponent(codeChallenge)}` +
     `&code_challenge_method=S256`;
@@ -76,11 +136,9 @@ export async function signInWithProvider(provider: LoginProvider): Promise<Login
   // The system browser, not a webview: it carries the Edge's transaction cookie
   // and shows the provider's real origin in the address bar, which a webview
   // cannot. RFC 8252 requires this, and DESIGN-CONTRACT restates it.
-  const result = await WebBrowser.openAuthSessionAsync(startUrl, redirectUri);
-  if (result.type !== 'success') {
-    // `dismiss` and `cancel` are a person closing the sheet, not a failure.
-    return { status: 'cancelled' };
-  }
+  const result = await openSystemAuthSession(startUrl, redirectUri);
+  if (result.type === 'failed') return { status: 'failed', message: result.message };
+  if (result.type === 'cancelled') return { status: 'cancelled' };
 
   const returned = new URL(result.url);
   if (!matchesNativeCallback(returned, redirectUri)) {

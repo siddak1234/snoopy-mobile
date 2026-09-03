@@ -283,6 +283,9 @@ cross-device read state; billing, payment methods, invoices and a plan base
 price; profile editing, workspace switching and member management; full
 satisfied-provider detail, per-step manifest icons, and branch/delay/human-review
 kickers; reduced-motion alternatives and exhaustive small-phone/tablet approval.
+Workspace switching was on this list until Round 7.5M (2026-09-03) added it over
+the published active-workspace operation; profile editing and member management
+remain out.
 
 ## Dependency boundary
 
