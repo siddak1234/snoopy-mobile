@@ -1,6 +1,6 @@
 import React from 'react';
-import { Text } from 'react-native';
-import { render, screen, waitFor } from '@testing-library/react-native';
+import { Pressable, Text } from 'react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { SessionProvider, useSession } from '@/hooks/use-session';
 import { PlatformError, PlatformNotConfiguredError } from '@/lib/platform/problem';
@@ -139,5 +139,92 @@ describe('SessionProvider', () => {
       </SessionProvider>,
     );
     expect(screen.getByText('status:restoring')).toBeTruthy();
+  });
+});
+
+/**
+ * `reload()` — a re-read of `/v1/session` while signed in.
+ *
+ * Added for the workspace switcher: after `PATCH /v1/session/active-workspace`
+ * succeeds the screens must follow the server's active workspace, which only a
+ * fresh session read can state. `refresh()` would do that by re-running the
+ * launch sequence, and its classification of a failed read as `unavailable`
+ * fails the tab guard closed — correct at launch, an ejection after a mutation
+ * that landed. So the distinction pinned here is that an outage leaves the
+ * resolved session in force, and only a 401 ends it.
+ */
+function sessionFor(workspaceId: string) {
+  return {
+    authenticated: true,
+    user: { userId: 'u1', email: 'dana@northwind.example', activeWorkspaceId: workspaceId },
+    workspaces: [],
+  };
+}
+
+const outcomes: unknown[] = [];
+
+function ReloadProbe() {
+  const session = useSession();
+  return (
+    <>
+      <Text>{`status:${session.status}`}</Text>
+      <Text>{`workspace:${session.status === 'signed-in' ? session.session.user.activeWorkspaceId : '-'}`}</Text>
+      <Pressable testID="reload" onPress={() => void session.reload().then((o) => outcomes.push(o))}>
+        <Text>reload</Text>
+      </Pressable>
+    </>
+  );
+}
+
+async function signedInProbe() {
+  platformOperation.mockResolvedValue(sessionFor('ws-1'));
+  await render(
+    <SessionProvider>
+      <ReloadProbe />
+    </SessionProvider>,
+  );
+  await screen.findByText('status:signed-in');
+  expect(screen.getByText('workspace:ws-1')).toBeTruthy();
+}
+
+describe('SessionProvider.reload', () => {
+  beforeEach(() => {
+    outcomes.length = 0;
+  });
+
+  it('adopts the platform\'s answer without passing through restoring', async () => {
+    await signedInProbe();
+    platformOperation.mockResolvedValue(sessionFor('ws-2'));
+
+    await fireEvent.press(screen.getByTestId('reload'));
+
+    await waitFor(() => expect(screen.getByText('workspace:ws-2')).toBeTruthy());
+    expect(screen.queryByText('status:restoring')).toBeNull();
+    expect(outcomes).toEqual([{ status: 'signed-in' }]);
+  });
+
+  it('keeps the resolved session through an outage, and says so', async () => {
+    await signedInProbe();
+    platformOperation.mockRejectedValue(new PlatformError('The platform is unreachable', 502));
+
+    await fireEvent.press(screen.getByTestId('reload'));
+
+    await waitFor(() =>
+      expect(outcomes).toEqual([{ status: 'unavailable', message: 'The platform is unreachable' }]),
+    );
+    expect(screen.getByText('status:signed-in')).toBeTruthy();
+    expect(screen.getByText('workspace:ws-1')).toBeTruthy();
+    expect(clearSession).not.toHaveBeenCalled();
+  });
+
+  it('ends the session only on a 401, which is the credential\'s final answer', async () => {
+    await signedInProbe();
+    platformOperation.mockRejectedValue(new PlatformError('Sign in is required.', 401, 'UNAUTHENTICATED'));
+
+    await fireEvent.press(screen.getByTestId('reload'));
+
+    await waitFor(() => expect(screen.getByText('status:signed-out')).toBeTruthy());
+    expect(clearSession).toHaveBeenCalled();
+    expect(outcomes).toEqual([{ status: 'signed-out' }]);
   });
 });

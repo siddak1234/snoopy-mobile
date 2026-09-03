@@ -354,3 +354,381 @@ recorded for the close audit or a later round.
   in `app.config.js` — where the other release guards already throw — would
   pin the one unversioned place the value now lives. A source change, so
   recorded here for the close audit rather than made.
+
+---
+
+# Round 7.5M — mobile completion re-entry
+
+Master plan §0.1 audited completion order, step 5, this repository only.
+Session date: 2026-09-03. Recorded the way the sections above are recorded:
+the command, and what it answered. A line that could not be observed says so
+and why; nothing here converts NOT OBSERVED into PASS.
+
+Entry verified by command before any work: `main` = `origin/main` = `cf7b5ed`,
+`git status --short` empty; `GET https://api.autom8x.ai/health/ready` → 200
+`ready` with five checks (`identity`, `access_session`, `automations`,
+`connections`, `entitlements`, all `configured` — the 7.5 finding 4
+`object_store` check is gone, not fixed-by-replacement); both `.well-known`
+app-claiming files 200; the EAS project linked (19a/19b stand as recorded
+above). The Round 7.5 finding 5 — a stale `CLAUDE.md` — is the first thing
+this round changed.
+
+Work went through branch `round-7.5m-mobile-completion` → PR #9 → CI → merge.
+The implementation commit is `f40cec0`; CI run `33782784151` GREEN on all
+five jobs (Architecture gates 38 s · Lint 52 s · Typecheck 38 s · Test 1 m 29 s
+· Native bundle export 1 m 33 s), the Test job reproducing 34 suites / 423
+tests / 78 snapshots on the GitHub runner. PR #9 merges this state as a merge
+commit, never a squash — a squash would leave `f40cec0`, the hash the EAS
+evidence build's record names, off `main`'s history. The 19c journey
+evidence, which waits on the owner's interactive sign-in, lands as its own
+branch and PR against this record when it exists.
+
+## The four recorded findings, dispositioned
+
+1. **`extra.eas.projectId` pinned in a real-config test — done.**
+   `__tests__/app-config.test.js` now runs the config factory over the
+   committed `app.json` under the production profile — the evaluation a cloud
+   build performs — and asserts `extra.eas.projectId ===
+   cb806193-8885-4b5c-b1d6-850da3f162a2`, `owner === autom8x.ai`, the bundle
+   identifier, the package, and that the derived app-link claims merge into
+   the static native config without dropping it. Proved to bite by injection:
+   with the `...config.extra` spread deleted from `app.config.js` in place,
+   the suite answers 2 failed / 9 passed — exactly the two real-config cases —
+   and the file was restored (`git status` clean for it) before anything
+   else ran.
+2. **Browserless auth failure handled — done.** `expo-web-browser`'s Android
+   module throws `NoMatchingActivityException` (code
+   `ERR_NO_MATCHING_ACTIVITY`) when nothing can open a Custom Tab and
+   `PREFERRED_PACKAGE_NOT_FOUND` when no Custom Tabs provider resolves — read
+   from `WebBrowserModule.kt` / `WebBrowserExceptions.kt` in the installed
+   package, not inferred. `openSystemAuthSession` in
+   `lib/platform/native-auth.ts` wraps the call for login AND connect; both
+   codes become `failed` with "No web browser is available on this device to
+   continue.", any other rejection becomes a fixed sentence without echoing
+   the error, and the sealed exchange is never attempted. Pinned in
+   `__tests__/native-auth.test.ts` and `__tests__/platform-mutations.test.ts`.
+3. **Expo dependency aligned — done.** `npx expo install
+   expo-local-authentication` → `~17.0.9` (lockfile resolves 17.0.9);
+   `npx expo-doctor` → **18/18 checks passed**, from 17/18.
+4. **Exact release redirect URI enforced — done, and extended.**
+   `app.config.js` holds `RELEASE_NATIVE_REDIRECT_URI =
+   https://app.autom8x.ai/auth/native/callback` and throws for a preview or
+   production build whose value differs byte-for-byte (shape is diagnosed
+   first, so a malformed value is still reported as malformed). Four
+   well-formed wrong values are refused in the suite, including a trailing
+   slash and a case change. The same guard now covers the browser-leg base
+   below, for the same reason: both values live only in EAS dashboard state.
+
+## The workspace switcher, over the published active-workspace operation
+
+`PATCH /v1/session/active-workspace` existed in the contract with zero mobile
+callers; the completed web client drives it from its top bar (snoopy PR #6,
+`68197bf`). The mobile switcher is a UI for the same two operations and
+nothing more:
+
+- `lib/platform/workspaces.ts`: `readWorkspaces()` → `GET /v1/workspaces`;
+  `selectActiveWorkspace(id, key)` → `PATCH /v1/session/active-workspace` with
+  an `Idempotency-Key` minted per selection (`workspace-activate-…`, the web's
+  prefix).
+- Settings' WORKSPACE row — the design's own row, which already carried a
+  caret in `Screen.dc.html` — becomes pressable with two or more workspaces or
+  when `SessionResponse.workspacesTruncated` says the session list is
+  incomplete; with one workspace it renders exactly as before. The dialog
+  (the CONNECTIONS dialog's own styles, no new primitive) reads the collection
+  on open, lists name and type, marks the server's `activeWorkspaceId`, and
+  refuses to mark a client guess.
+- Selecting: the PATCH, then `useSession().reload()` — a re-read of
+  `/v1/session` that adopts the platform's answer without passing through
+  `restoring`, ends the session only on a 401, and on an outage leaves the
+  resolved session in force and says so. `refresh()` was not reused because
+  it classifies a failed read as `unavailable`, which the tab guard fails
+  closed on: right at launch, an ejection after a switch that landed. A
+  failed PATCH stays inline in the dialog; a landed PATCH with a failed
+  re-read offers "Reload session" rather than pretending either way.
+- Every workspace-scoped read keys on the active workspace id, and the
+  client-held overrides are scoped to person + workspace, so the switch
+  propagates without any screen holding workspace state.
+
+Pinned by `__tests__/workspace-switcher.test.tsx` (8 cases: inert with one
+workspace; opens with two; opens on truncation; collection read failure
+inline; PATCH shape and key; re-selecting the active one closes without a
+mutation; a 404 stays inline with no re-read; a landed switch with a failed
+re-read offers the read again), `__tests__/platform-mutations.test.ts` (the two
+operations' exact request shapes) and `__tests__/session-provider.test.tsx`
+(`reload()`'s three outcomes). **Live rendering of the switcher on the
+emulator is NOT OBSERVED**: it sits behind a signed-in session, which is 19c's
+interactive step. The 78 Nocturne snapshots are unchanged in both palettes.
+
+## §12.1 #79's native caveat — what the mobile connect flow does
+
+Read in `apps/api/src/modules/connections/routes.ts` (read-only): the
+callback runs `authenticate()` FIRST; only when that throws does
+`handleUnauthenticatedCallback` ask Connections for the attempt's native return
+target, seal the provider's parameters and redirect to the app. A system
+browser that shares a logged-in `www.autom8x.ai` session (Chrome Custom Tabs
+share Chrome's cookie jar; `ASWebAuthenticationSession` shares Safari's unless
+ephemeral) therefore authenticates, takes the WEB branch, completes the
+connection as that web session's user, and `finish()` sends the tab to
+`https://www.autom8x.ai/connections?status=connected&provider=…`. The app's
+auth session never sees `returnTo`; the person closes the tab; the app receives
+`dismiss`/`cancel`.
+
+What the app did with that before this round: `connectOAuthProvider` answered
+`cancelled`, `applyConnectionAction` returned, the dialog stayed open and
+nothing re-read — a connection that HAD completed stayed "Not connected" until
+the screen remounted. What it does now: `cancelled` closes the dialog and
+re-reads the workspace's connections (`__tests__/settings-connections.test.tsx`
+proves the second read renders "Connected · used by 1 solution" from the
+published row while a real `failed` stays inline). The app claims no success
+it never received; it re-reads. Two bounds worth stating: (a) if the web
+session belongs to a DIFFERENT person than the app's user, the connections
+gateway compares the completing actor against the initiator (RFC 9700 §4.7)
+and refuses upstream — the app still sees `cancelled`, re-reads, and shows
+nothing changed, which is the truth; (b) login is unaffected, because the
+login callback chooses its native ending from the transaction cookie, not
+from any session. **NOT OBSERVED live**: reproducing it needs a native session
+plus a logged-in website session in the emulator's Chrome — both interactive
+with the owner's Google account. Reported for the backend: the callback could
+consult the attempt's recorded return target BEFORE choosing the web branch,
+so a native attempt hands back to the app even from a cookie-sharing browser.
+
+## New finding, found live: the start leg and the callback sit on different hosts
+
+The 7.5 record above says the recorded 19c blocker was the missing OAuth
+provider; that is gone (below). Re-probing the start leg from scratch found
+the next wall, one hop later, and it is the same topology §12.1 #79 named:
+
+```
+GET https://api.autom8x.ai/v1/auth/native/google/start?redirect_uri=…&code_challenge=…&code_challenge_method=S256
+  → 302 https://pwpjasbnrfklcteogvmj.supabase.co/auth/v1/authorize?provider=google
+        &redirect_to=https%3A%2F%2Fwww.autom8x.ai%2Fapi%2Fplatform%2Fv1%2Fauth%2Foauth%2Fcallback&…
+    set-cookie: __Host-autom8x-oauth=<…>; Path=/; SameSite=Lax; HttpOnly; Secure; Max-Age=600
+  → 302 https://accounts.google.com/o/oauth2/v2/auth?…      (the account chooser)
+
+GET https://www.autom8x.ai/api/platform/v1/auth/oauth/callback?code=fake-code       (no cookie — what a browser sends)
+  → 302 https://www.autom8x.ai/login?error=auth_callback&reason=exchange_failed
+GET https://api.autom8x.ai/v1/auth/oauth/callback?code=fake-code  with the api-set cookie
+  → 302 https://app.autom8x.ai/auth/native/callback?code=<sealed>                     (the native ending)
+GET https://www.autom8x.ai/api/platform/v1/auth/native/google/start?…               (start via the web origin)
+    set-cookie: __Host-autom8x-oauth=<…>   on www.autom8x.ai
+GET https://www.autom8x.ai/api/platform/v1/auth/oauth/callback?code=fake-code  with that cookie
+  → 302 https://app.autom8x.ai/auth/native/callback?code=<sealed>                     (the native ending)
+```
+
+`__Host-` cookies are host-only by definition (a `Domain` attribute is
+rejected), so a start leg opened on `api.autom8x.ai` — where the app's
+`EXPO_PUBLIC_BACKEND_API_ORIGIN` points — sets a cookie the callback on
+`www.autom8x.ai` never receives, and every native login ends at the website's
+login page with `exchange_failed`. Opened through the web origin's
+`/api/platform` rewrite, the cookie lands where the callback is and the Edge
+seals the code for the app. ADR-0017 §1's sentence "the start request and the
+provider's callback both land on this origin" holds only if the browser is
+pointed at the callback's origin; `AUTH_CALLBACK_URL` must share
+`PUBLIC_WEB_ORIGIN`'s origin by ADR-0017 §3, so in any deployment where the
+Edge and the website are on different hosts the browser leg has to go through
+the web origin. Not a contract change: same route, same parameters, same
+sealed handoff; only the origin the system browser is pointed at differs. The
+bearer API calls stay on `api.autom8x.ai`, where no cookie is needed.
+
+Resolved in this repository as configuration: `EXPO_PUBLIC_NATIVE_AUTH_BASE_URL`
+(validated like the other two values; unset falls back to the API origin,
+which is right only for a single-origin local Compose stack), pinned to
+`https://www.autom8x.ai/api/platform` in preview and production, read by
+`nativeAuthBaseUrl()` and used for the start URL only. Created in both EAS
+environments this session:
+
+```
+eas env:create preview    --name EXPO_PUBLIC_NATIVE_AUTH_BASE_URL --value https://www.autom8x.ai/api/platform --visibility plaintext --scope project
+eas env:create production --name EXPO_PUBLIC_NATIVE_AUTH_BASE_URL --value https://www.autom8x.ai/api/platform --visibility plaintext --scope project
+eas env:list preview / production → all three EXPO_PUBLIC_* values present in each
+```
+
+Reported for a `snoopy-backend` session (below, finding 1): ADR-0017 §1 and
+the deployment record should state the browser-facing base as a requirement of
+the native contract, or the Edge should carry the native transaction without
+a host-bound cookie.
+
+## Gate 8, re-run on this branch at `f40cec0`
+
+| Line | Result | Evidence |
+| --- | --- | --- |
+| `npm ci` | PASS | `rm -rf node_modules && npm ci` exit 0 in 27.8 s (the recorded iCloud workaround; a plain `npm ci` against the existing tree was not attempted this session). It also cleared **491** iCloud conflict copies under `node_modules` that had made `expo lint` exceed five minutes; on the clean tree lint is 5 s and `tsc` 3.6 s. |
+| `npm run verify` | PASS | exit 0 — **34 suites / 423 tests / 78 snapshots** (from 32 / 397 / 78: two new suites, 26 new cases). Four `console.error` lines are `act(...)` warnings from `__tests__/override-scope.test.tsx`, reproduced at the same count on a `main` worktree — pre-existing, not introduced. |
+| `npm run audit:dependencies` | PASS | exit 0 — 28 advisories (18 moderate, 10 high, **0 critical**). The count moved from Round 6's 22 with the registry's advisory database, not with the lockfile: the only dependency change this round is `expo-local-authentication` 17.0.8 → 17.0.9. |
+| `npx expo-doctor` | PASS | 18/18 |
+| `npm run export:ios` / `:android` | PASS | exit 0 each, 18.6 s / 18.1 s; `.hbc` 11,090,703 B (iOS) and 11,086,075 B (Android). Both bundles grepped for the new strings — `Switch workspace`, `/v1/session/active-workspace`, `Reload session`, `nativeAuthBaseUrl`, the no-browser sentence — each present once, ASCII (none are non-ASCII, so no UTF-16 form was expected). |
+| `verify:platform-contracts` | PASS | regenerated from the sibling backend checkout: current, no diff — no approved OAuth/scope contract change was waiting to be consumed |
+| Nocturne visual unchanged | PASS | 78 snapshots, both palettes, unchanged. Beyond the component gate: the whole Settings screen was rendered with the shared one-workspace test session on a `main` worktree and on this branch and the two react-test-renderer trees diffed — identical except one added `testID` prop on the WORKSPACE row, which is not a visual property. With one workspace the screen draws exactly what it drew before. |
+| No hand-written fetch | PASS | `audit:platform` 0 findings; 23 published operations by method and path (21 + `GET /v1/workspaces` + `PATCH /v1/session/active-workspace`) |
+| `git status --short` | clean after the commit | — |
+
+## 19c — authenticated §1 journey from the native client against the deployed Edge
+
+### Preconditions, re-observed this session (non-interactive)
+
+- `GET https://api.autom8x.ai/health/ready` → 200 `ready`, five checks, all
+  `configured`. The 7.5 finding 4 (`object_store: adapter_not_configured`)
+  is gone.
+- The 7.5 finding 2 (no OAuth provider enabled) is gone: the native start now
+  302s Edge → Supabase authorize → **`https://accounts.google.com/o/oauth2/v2/auth?…`**
+  (the account chooser), where on 2026-08-27 Supabase answered
+  `400 validation_failed — provider is not enabled`.
+- The 7.5 finding 1 (placeholder `assetlinks.json`) is gone:
+  `https://app.autom8x.ai/.well-known/assetlinks.json` serves the EAS
+  certificate's `52:B8:96:0B:…:5D:74`, and on the emulator
+  `adb shell pm verify-app-links --re-verify ai.autom8x.snoopy` followed by
+  `pm get-app-links` answers **`app.autom8x.ai: verified`** — where 7.5
+  recorded `legacy_failure`. The `https` return leg can re-enter the app.
+- The start-leg/callback host split found above is resolved for this build by
+  `EXPO_PUBLIC_NATIVE_AUTH_BASE_URL`, and the callback's native ending was
+  observed by command with the transaction cookie present (the sealed
+  `code=` redirect to `app.autom8x.ai/auth/native/callback`).
+- `apple-app-site-association` still carries `TEAMID` and `applinks.apps: []`
+  (7.5 finding 3, unchanged): iOS remains dead-ended until an Apple team
+  exists. The Android profile is the 19c path, as it was the 19a/19b path.
+
+### The build, and the staged start leg — OBSERVED from the shipped client
+
+The evidence build ran non-interactively on EAS from the committed, pushed
+tree at `f40cec0` (`git status --short` empty), profile `preview`, platform
+Android, after CI had gone green on the same commit:
+
+```
+npx eas-cli build --platform android --profile preview --non-interactive --no-wait
+npx eas-cli build:view --json 3ea8a363-0599-4d46-bf39-209cacede498
+  status FINISHED, platform ANDROID, profile preview
+  appIdentifier ai.autom8x.snoopy, appVersion 1.0.0, buildVersion 1, sdk 54.0.0
+  gitCommitHash f40cec08b0ace09f4b28695068ff8f5e606261bf   ← this branch's commit
+  created 2026-09-03T17:12:24Z, completed 2026-09-03T17:43:01Z (≈28 min in queue, ≈3 min building)
+```
+
+Build page:
+https://expo.dev/accounts/autom8x.ai/projects/snoopy-mobile/builds/3ea8a363-0599-4d46-bf39-209cacede498
+
+The artifact (90,170,548 B) hashes to SHA-256
+`86115a3cc6eba645e15ca920eabdad079aabb0dfbdfcea9707abea86b32ca3a7`;
+`apksigner verify --print-certs` names the same EAS certificate as 19b
+(`52b8960b…4a5d74`), so the deployed `assetlinks.json` fingerprint covers it.
+
+Staged on the emulator (`emulator-5554`, AVD `snoopy`, Android 15, the 19a
+runner), by script, from the downloaded artifact:
+
+```
+adb install -r snoopy-7.5m.apk                    → Success (versionCode 1, versionName 1.0.0, targetSdk 36)
+adb shell pm verify-app-links --re-verify ai.autom8x.snoopy
+adb shell pm get-app-links ai.autom8x.snoopy      → Signatures: [52:B8:96:0B:…:5D:74]
+                                                    app.autom8x.ai: verified
+adb shell am start -W -n ai.autom8x.snoopy/.MainActivity
+                                                  → Status: ok, LaunchState: COLD, TotalTime: 851
+adb shell pidof ai.autom8x.snoopy                 → 4117
+```
+
+- Cold launch renders onboarding; **Log in** renders the contract's auth
+  screen — the UI dump lists Email, Password, the policy-fixed "Stay logged
+  in", Log In, Unlock with Face ID, and Continue with Google / Microsoft /
+  Apple (the provider list as `/v1/auth/providers` publishes it).
+- Tapping **Continue with Google** made the shipped client fire
+  `act=android.intent.action.VIEW dat=https://www.autom8x.ai/…` to
+  `com.android.chrome` (`ActivityTaskManager`, twice, 12:44:00 and
+  12:45:29) — the browser-leg base in effect in the release bundle, not on
+  the API origin — and the foreground became Chrome's `CustomTabActivity`.
+- The tab rendered **Google's real sign-in page**: address bar
+  `accounts.google.com`, "Sign in with Google", the A8X mark, "Sign in — to
+  continue to autom8x", Email or phone, Google's Privacy Policy / Terms of
+  Service line for autom8x (screenshot captured and inspected, 12:45). That
+  is the ADR-0017 start leg live from the native client through the web
+  origin, past the Edge and past Supabase, to the provider's own consent
+  surface — where on 2026-08-27 the same tap ended at Supabase's
+  `provider is not enabled`.
+- Back dismissed the tab; the app was foreground again on the same pid 4117,
+  on the Log in screen, with no error callout — `openAuthSessionAsync`
+  resolving `dismiss` → `cancelled`, the contract's non-failure path.
+
+This is the start leg, observed. It is not the journey. The credential entry
+that follows is the owner's, below.
+
+### The interactive part, for the owner
+
+Everything below the sign-in is staged on the emulator (see the build and
+staging record that follows). The Google credential entry is the one step
+this session cannot perform. When you are at the machine:
+
+1. The emulator (`emulator-5554`, AVD `snoopy`) shows the app on the **Log
+   in** screen. If it does not, run
+   `adb shell am start -n ai.autom8x.snoopy/.MainActivity`, tap **Log in**.
+2. **Do not** sign in to `www.autom8x.ai` in the emulator's Chrome first: a
+   shared website session is exactly the §12.1 #79 caveat, and it is a
+   separate observation (step 6).
+3. Tap **Continue with Google**. A Chrome Custom Tab opens on
+   `www.autom8x.ai/api/platform/v1/auth/native/google/start…` and lands on
+   Google's account chooser. Sign in with the account you used for the web
+   Gate 4.5 journeys. Consent if asked.
+4. Expected: the tab closes by itself and the app lands on **Home** with your
+   name and workspace. If instead the tab shows the website's login page with
+   `error=auth_callback`, stop and report the URL bar — that is the callback
+   refusing, and the reason parameter is the finding.
+5. Then, from the app: **Solutions** (step 2, see the automation) → **Add**
+   on `invoice-check` (step 3, subscribe) → **Settings → CONNECTIONS → the
+   Google provider row (its title is the published `displayName`) →
+   Connect** (step 4, consent in the Custom Tab; expected: the tab closes and
+   the row reads "Connected · used by N solution(s)" with the server's
+   count). If you hold two workspaces, **Settings → WORKSPACE row** now opens
+   the switcher; switch and watch every screen follow.
+6. Optional, the #79 caveat: sign in to `www.autom8x.ai` in the emulator's
+   Chrome, disconnect the Google provider in the app, tap Connect again. Expected: the tab
+   finishes on the website's connections page; close it; the app's dialog
+   closes and the row re-reads as connected.
+7. Steps 5–7 of §1 (trigger, run, hold, approve): the native client has no
+   trigger operation (`createRun` has no caller; Run-now is web gate
+   scaffolding), so trigger from the web's Run-now, then observe the run in
+   the app's **Activity**, approve it in **Approvals**, and watch the
+   continuation appear.
+8. After step 4, run `19c-after-signin.sh` from the session scratchpad (it
+   captures the callback intent the OS delivered — code redacted — the pid,
+   and a Home screenshot) and, for each later step, `adb exec-out screencap
+   -p > <n>.png`. Hand the screenshots and the callback line to the session
+   recording this file.
+
+Until those steps are performed, **19c is NOT OBSERVED**: the start leg is
+observed from the shipped client (below), the return leg is observed by
+command, and the authenticated journey itself is not. Nothing here is a PASS.
+
+## Findings reported for a `snoopy-backend` / deployment session to file
+
+1. **The native start leg and the OAuth callback sit on different hosts, and
+   ADR-0017 §1 does not say so.** Evidence and the mobile-side resolution are
+   above. Owed a backend decision: either record the browser-facing base
+   (`PUBLIC_WEB_ORIGIN` + the website's `/api/platform` rewrite) as a stated
+   requirement of the native session contract and the deployment record, or
+   carry the native transaction without a host-bound cookie. Either way the
+   README's local-Compose instructions stay valid, because a single-origin
+   stack needs no base.
+2. **§12.1 #79's native residue can be closed on the callback side.**
+   `completeAuthorization` authenticates before it asks the attempt for a
+   return target; consulting `readReturnTarget(state)` first would let a
+   native attempt hand back to the app even from a cookie-sharing browser. The
+   mobile client now re-reads on `cancelled` so the connection is shown, but
+   the app-return itself is still skipped.
+3. **`apple-app-site-association` still carries `TEAMID`** (7.5 finding 3,
+   unchanged; not a 7.5M blocker).
+4. **7.5 finding 5 (stale `CLAUDE.md`) is resolved here**, in this
+   repository, as §0.1 step 5 directed.
+5. **`npm audit --omit=dev` now reports 28 advisories (18 moderate, 10 high,
+   0 critical)** against Round 6's 22; the lockfile changed by one patch
+   version. The critical gate holds; the drift is the registry's, and the
+   documented resolution remains an Expo SDK major.
+
+## Findings in this repository, recorded rather than fixed
+
+- **`__tests__/override-scope.test.tsx` emits four `act(...)` warnings** on
+  its rerender path, on `main` and on this branch alike. Cosmetic; a test
+  concern, not a product one.
+- **iCloud strays**: empty untracked directories `lib/platform 2`,
+  `lib/generated 2`, `lib/view 2`, `lib/content 2` and two stale
+  `.git/index 2` / `.git/index 3` copies exist in this checkout; 491 conflict
+  copies under `node_modules` were cleared by the reinstall. The empty
+  directories are inert to git and to every gate (they contain no files) and
+  were left alone rather than deleted from inside a round.
+- **The four gate blind spots from `DESIGN-GAPS.md` remain** (`audit:tokens`
+  and `audit:credentials` skip `constants/` and `.js`). Not in this round's
+  scope; still latent, not live.

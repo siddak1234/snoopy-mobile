@@ -40,9 +40,31 @@ export type SessionState =
   | { status: 'unconfigured' }
   | { status: 'unavailable'; message: string };
 
+/**
+ * What a mid-session re-read of `/v1/session` established.
+ *
+ * `unavailable` is deliberately NOT a state change: an outage while re-reading
+ * does not un-sign a person, any more than it clears the enclave. The caller
+ * that asked is told, and the last resolved session stays in force.
+ */
+export type SessionReloadOutcome =
+  | { status: 'signed-in' }
+  | { status: 'signed-out' }
+  | { status: 'unavailable'; message: string };
+
 export type SessionContextValue = SessionState & {
   /** Re-resolve the session — after signing in, or to retry an outage. */
   refresh: () => void;
+  /**
+   * Re-read `/v1/session` while signed in, without passing through `restoring`.
+   *
+   * `refresh()` re-runs the launch sequence and classifies a failed read as
+   * `unavailable`, which the tab guard fails closed on — right at launch, wrong
+   * after a mutation that succeeded: switching workspaces during a blip would
+   * eject a person whose session is fine. This keeps the resolved session on
+   * an outage and replaces it only with what the platform answered.
+   */
+  reload: () => Promise<SessionReloadOutcome>;
   signIn: (provider: LoginProvider) => Promise<LoginOutcome>;
   signOut: () => Promise<{ revoked: boolean }>;
 };
@@ -141,6 +163,26 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  const reload = useCallback(async (): Promise<SessionReloadOutcome> => {
+    try {
+      const session = await readCurrentSession();
+      setState({ status: 'signed-in', session });
+      return { status: 'signed-in' };
+    } catch (error) {
+      // The transport has already renewed once and retried once by the time a
+      // 401 reaches here, so it is the credential's final answer.
+      if (error instanceof PlatformError && error.status === 401) {
+        await clearSession();
+        setState({ status: 'signed-out' });
+        return { status: 'signed-out' };
+      }
+      return {
+        status: 'unavailable',
+        message: error instanceof Error ? error.message : 'The platform could not be reached.',
+      };
+    }
+  }, []);
+
   const signOut = useCallback(async () => {
     const result = await signOutOfPlatform();
     // A failed revocation leaves the tokens in place on purpose, so the state
@@ -150,8 +192,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<SessionContextValue>(
-    () => ({ ...state, refresh, signIn, signOut }),
-    [state, refresh, signIn, signOut],
+    () => ({ ...state, refresh, reload, signIn, signOut }),
+    [state, refresh, reload, signIn, signOut],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
