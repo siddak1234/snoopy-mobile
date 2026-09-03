@@ -9,6 +9,17 @@ type SolutionsContextValue = {
   /** Whether a solution is on the plan, by templateId. */
   isActive: (templateId: string, fallback: boolean) => boolean;
   toggle: (templateId: string, current: boolean) => void;
+  /**
+   * State a solution's plan membership after a mutation the platform accepted.
+   *
+   * `toggle` flips relative to the effective state, which is the right shape
+   * for one control and the wrong one for a mutation whose outcome is known:
+   * after `PATCH … status: live` succeeds the answer is "on", whatever a
+   * previous override said. Found live on 2026-09-03: a pause set the
+   * override to false, the later Activate never set it back, and Settings
+   * counted "0 active" against a subscription the database showed as live.
+   */
+  setActive: (templateId: string, active: boolean) => void;
   /** Totals for a supplied catalog; the provider holds only the overrides. */
   totals: (solutions: PricedSolution[]) => {
     activeCount: number;
@@ -72,6 +83,8 @@ export function SolutionsProvider({ children }: { children: React.ReactNode }) {
       isActive,
       toggle: (templateId: string, current: boolean) =>
         setOverrides((prev) => ({ ...prev, [templateId]: !isActive(templateId, current) })),
+      setActive: (templateId: string, active: boolean) =>
+        setOverrides((prev) => ({ ...prev, [templateId]: active })),
       totals: (solutions: PricedSolution[]) => {
         const active = solutions.filter((s) => isActive(s.templateId, s.subscribed));
         const sum = active.reduce((acc, s) => acc + s.price, 0);

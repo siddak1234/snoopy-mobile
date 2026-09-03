@@ -269,7 +269,6 @@ const styles = StyleSheet.create({
   },
   connectionsCard: {
     marginTop: 9,
-    overflow: 'hidden',
   },
   connectionRow: {
     flexDirection: 'row',

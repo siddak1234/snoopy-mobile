@@ -235,7 +235,6 @@ const styles = StyleSheet.create({
   },
   sectionCard: {
     marginTop: 9,
-    overflow: 'hidden',
   },
   timelineRow: {
     flexDirection: 'row',

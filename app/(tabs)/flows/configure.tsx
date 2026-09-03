@@ -300,7 +300,6 @@ const styles = StyleSheet.create({
   },
   stepsCard: {
     marginTop: 9,
-    overflow: 'hidden',
   },
   stepRow: {
     flexDirection: 'row',
