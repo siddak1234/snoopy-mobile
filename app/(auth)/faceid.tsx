@@ -106,17 +106,18 @@ export default function FaceIdScreen() {
   return (
     <View style={[styles.root, { backgroundColor: palette.bg }]}>
       <GlowBackground cx="50%" cy="45%" r="55%" />
-      <Animated.View
-        style={[
-          styles.scanBox,
-          {
-            borderColor: palette.accent,
-            shadowColor: palette.accent,
-          },
-          glowStyle,
-        ]}>
-        <FaceGlyph color={palette.accent} />
-        <Animated.View style={[styles.scanLineWrap, scanStyle]}>
+      {/*
+        The glow and the clip live on two Views. On Android (observed on the
+        Android 15 emulator, RN 0.81.5, new architecture) a View that both
+        elevates and clips draws none of its children — `__tests__/
+        android-card-overflow.test.js` records the finding. The outer View
+        carries the design's glow; the inner carries the ring and clips the
+        scan line to it.
+      */}
+      <Animated.View style={[styles.scanGlow, { shadowColor: palette.accent }, glowStyle]}>
+        <View style={[styles.scanBox, { borderColor: palette.accent }]}>
+          <FaceGlyph color={palette.accent} />
+          <Animated.View style={[styles.scanLineWrap, scanStyle]}>
           <Svg width="100%" height={2}>
             <Defs>
               <LinearGradient id="scan" x1="0" y1="0" x2="1" y2="0">
@@ -127,7 +128,8 @@ export default function FaceIdScreen() {
             </Defs>
             <Rect x="0" y="0" width="100%" height="2" rx="1" fill="url(#scan)" />
           </Svg>
-        </Animated.View>
+          </Animated.View>
+        </View>
       </Animated.View>
       <View style={styles.textGroup}>
         <Text style={[styles.title, { color: palette.text }]}>Face ID</Text>
@@ -158,6 +160,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 26,
   },
+  scanGlow: {
+    width: 96,
+    height: 96,
+    borderRadius: radius.faceid,
+    /* design: box-shadow 0 0 44px accent@35% */
+    shadowOpacity: 0.35,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 12,
+  },
   scanBox: {
     width: 96,
     height: 96,
@@ -166,11 +178,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    /* design: box-shadow 0 0 44px accent@35% */
-    shadowOpacity: 0.35,
-    shadowRadius: 22,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 12,
   },
   scanLineWrap: {
     position: 'absolute',

@@ -280,9 +280,7 @@ const styles = StyleSheet.create({
   pushBtn: {
     flex: 1,
   },
-  list: {
-    overflow: 'hidden',
-  },
+  list: {},
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',

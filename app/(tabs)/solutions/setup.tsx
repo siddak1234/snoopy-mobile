@@ -21,6 +21,7 @@ import {
 import { em, fonts, layout, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { activeWorkspaceId, useSession } from '@/hooks/use-session';
+import { useSolutions } from '@/hooks/use-solutions';
 import { useTheme } from '@/hooks/use-theme';
 import { UNAVAILABLE_NOTE, errorTitleFor } from '@/lib/content/screen-states';
 import { createSubscription, updateSubscription } from '@/lib/platform/automations';
@@ -35,6 +36,7 @@ export default function SetupScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const session = useSession();
+  const { setActive } = useSolutions();
   const workspaceId = activeWorkspaceId(session);
   const { template } = useLocalSearchParams<{ template?: string }>();
   const [config, setConfig] = useState<Record<string, unknown>>({});
@@ -159,6 +161,10 @@ export default function SetupScreen() {
         updateKey.current,
       );
       setLocalSubscription(updated.subscription);
+      // The platform accepted `live`: the plan membership shared with the
+      // marketplace and Settings is stated, not flipped, so an earlier pause
+      // override cannot outlive the activation that superseded it.
+      setActive(entry.templateId, true);
       // Spent intent; a later edit-and-activate must not replay this one.
       updateKey.current = newIdempotencyKey('activate');
       router.replace({ pathname: '/(tabs)/flows/detail', params: { flow: updated.subscription.id } });
@@ -243,7 +249,7 @@ const styles = StyleSheet.create({
     letterSpacing: em(-0.01, 21),
   },
   subtitle: { marginTop: 1, fontFamily: fonts.regular, fontSize: 12 },
-  sectionCard: { marginTop: 9, overflow: 'hidden' },
+  sectionCard: { marginTop: 9 },
   activateBtn: {
     minHeight: 52,
     borderRadius: 999,
