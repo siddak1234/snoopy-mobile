@@ -26,6 +26,7 @@ function sessionFor(state: SessionState): SessionContextValue {
   return {
     ...state,
     refresh: () => {},
+    reload: async () => ({ status: 'signed-in' as const }),
     signIn: async () => ({ status: 'unconfigured', message: '' }),
     signOut: async () => ({ revoked: true }),
   } as SessionContextValue;

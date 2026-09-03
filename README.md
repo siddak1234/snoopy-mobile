@@ -12,16 +12,25 @@ EXPO_PUBLIC_BACKEND_API_ORIGIN=http://localhost:8080 npm run ios
 ```
 
 Use `http://10.0.2.2:8080` for the Android emulator. Native login additionally
-requires an app-claimed HTTPS callback:
+requires an app-claimed HTTPS callback, and — whenever the Edge's callback is
+served from a different host than the API, which is every deployment behind a
+web proxy — the base the system browser opens the start leg on:
 
 ```bash
 EXPO_PUBLIC_NATIVE_REDIRECT_URI=https://app.example.com/auth/native/callback
+EXPO_PUBLIC_NATIVE_AUTH_BASE_URL=https://www.example.com/api/platform
 ```
 
 The callback must exactly match the Edge's `NATIVE_APP_REDIRECT_URIS` entry.
 `app.config.js` derives the iOS associated domain and Android verified app link
-from this value. It rejects custom schemes, malformed origins, insecure release
-origins, and preview/production builds missing either release value.
+from this value. The auth base must share an origin with the Edge's
+`AUTH_CALLBACK_URL`: the OAuth transaction lives in a host-only `__Host-`
+cookie, so the start leg and the callback have to land on one host. Unset, the
+browser opens the start leg on the API origin, which is right only for a
+single-origin stack such as local Compose. `app.config.js` rejects custom
+schemes, malformed values, insecure release values, and preview/production
+builds missing any of the three — and pins the release redirect URI and auth
+base to the deployment's exact strings.
 The iOS deployment target is 17.4 because that is the first version whose
 `ASWebAuthenticationSession` can match an HTTPS callback by associated host and
 path; no supported build can fall back to scheme-only matching.
@@ -61,10 +70,11 @@ supplied by the build environment; they are intentionally not committed to
 `eas.json`. Since Round 7.5 that means the EAS-hosted `preview` and
 `production` environments on the linked project (`@autom8x.ai/snoopy-mobile`):
 each release profile names its environment in `eas.json`, both environments
-carry the two values, and `app.config.js` refuses a release build missing
-either one at config time, so a misconfigured cloud build fails before
-anything ships. The redirect URI stored there is subject to the exact-match
-rule above. Two `eas.json` absences remain deliberate: no `channel` keys,
+carry the three values, and `app.config.js` refuses a release build missing
+any one of them at config time, so a misconfigured cloud build fails before
+anything ships. Since Round 7.5M the redirect URI and the auth base stored
+there are also compared byte-for-byte against the deployment's strings, so a
+well-formed value for the wrong host cannot ship either. Two `eas.json` absences remain deliberate: no `channel` keys,
 because the app has no update runtime (`expo-updates` is not a dependency and
 a channel would route an OTA update to a build that cannot receive one), and
 no `submit.production` block, because no store credentials exist and an empty
@@ -87,22 +97,29 @@ block would read as configured-and-ready. The history of both is in
   clears the local credential; an outage does not.
 - `lib/platform/native-auth.ts` implements ADR-0017's backend-mediated sealed
   handoff. `expo-web-browser.openAuthSessionAsync` opens the external system
-  user-agent; the app owns only its device PKCE pair and never receives provider
-  tokens. `expo-auth-session` is deliberately not used because its
-  `AuthRequest` models an app-owned OAuth authorization request with a required
-  client ID, while this app is not the OAuth client.
+  user-agent at the configured auth base (falling back to the API origin); the
+  app owns only its device PKCE pair and never receives provider tokens. A
+  device with no browser gets a `failed` outcome, not an uncaught rejection.
+  `expo-auth-session` is deliberately not used because its `AuthRequest`
+  models an app-owned OAuth authorization request with a required client ID,
+  while this app is not the OAuth client.
+- `lib/platform/workspaces.ts` backs the Settings workspace switcher with the
+  two published operations the web switcher uses: `GET /v1/workspaces` and
+  `PATCH /v1/session/active-workspace`. The backend session owns "active"; the
+  app mutates, then re-reads `/v1/session` through `useSession().reload()`.
 - `hooks/use-resource.tsx` and `components/screen-state.tsx` provide explicit
   loading, offline, platform-error, and empty states.
 - `lib/view/` performs the published wire-to-Nocturne mapping and owns no
   workspace truth.
 
-## Local platform observation
+## Platform observations
 
-On 2026-08-18 the sibling Compose stack was running, but public readiness was
-HTTP 503: identity, connections, and object storage were not configured.
-`/v1/session` returned 401, and a schema-valid native Google start returned 503
-naming `native_app_redirect_uris`. Therefore an authenticated live journey was
-not observable against that environment. The client renders those refusals and
+The Round 6 audit (2026-08-18) ran against a local Compose stack whose public
+readiness was 503; Round 7.5 (2026-08-27) observed the Android launch and the
+EAS cloud build against the deployed Edge; Round 7.5M (2026-09-03) found and
+fixed the start-leg cookie topology and staged the authenticated §1 journey.
+The live record for all three, including what remains NOT OBSERVED and why, is
+`ROUND-7.5-OBSERVATIONS.md`. The client renders every live refusal it meets and
 does not substitute fixtures or bypass the guard.
 
 An exact copy of this checkout produced an iOS Release build with **zero errors
@@ -120,15 +137,16 @@ that upstream limitation. Both platform exports passed, but an Android native
 launch remains unobserved because this host has neither `adb` nor `emulator`;
 an EAS cloud build also remains unobserved.
 
-That observation is not a claim about a future environment. Recheck it during
-the fresh Round 6 audit.
+That observation is not a claim about a future environment; the Round 6 audit
+rechecked it and Round 7.5 superseded it with the cloud build.
 
 ## Scope and handoff
 
-Round 6's current contract and screen-to-operation map are in
-[`DESIGN-CONTRACT.md`](DESIGN-CONTRACT.md). The evidence still required from a
-fresh audit session, plus deliberate non-Round-6 gaps, is in
-[`DESIGN-GAPS.md`](DESIGN-GAPS.md).
+The current contract and screen-to-operation map are in
+[`DESIGN-CONTRACT.md`](DESIGN-CONTRACT.md). The Round 6 audit record and its
+deliberate gaps are in [`DESIGN-GAPS.md`](DESIGN-GAPS.md); the Round 7.5 and
+7.5M observations, findings and the state of 19c are in
+[`ROUND-7.5-OBSERVATIONS.md`](ROUND-7.5-OBSERVATIONS.md).
 
 The governing master plan and round playbook live in the sibling private
 `snoopy-backend` repository. This repository may read them and must never edit

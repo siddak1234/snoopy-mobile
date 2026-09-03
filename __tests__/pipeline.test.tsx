@@ -30,6 +30,7 @@ const signedIn = {
     workspaces: [{ id: WORKSPACE, name: 'Acme', role: 'owner' }],
   },
   refresh: () => {},
+  reload: async () => ({ status: 'signed-in' as const }),
   signIn: async () => ({ status: 'unconfigured' as const, message: '' }),
   signOut: async () => ({ revoked: true }),
 } as unknown as SessionContextValue;

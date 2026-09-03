@@ -5,6 +5,9 @@ jest.mock('@/lib/platform/native-auth', () => ({
     (returned: URL, configured: string) =>
       `${returned.origin}${returned.pathname}` === configured && returned.hash === '',
   ),
+  // The real one: the connect flow shares login's browser wrapper, and its
+  // browserless refusal is what the last case below exercises.
+  openSystemAuthSession: jest.requireActual('@/lib/platform/native-auth').openSystemAuthSession,
 }));
 jest.mock('expo-web-browser', () => ({ openAuthSessionAsync: jest.fn() }));
 
@@ -20,12 +23,15 @@ import {
   connectProviderWithKey,
   disconnectConnection,
 } from '@/lib/platform/connections';
+import { readWorkspaces, selectActiveWorkspace } from '@/lib/platform/workspaces';
 
 const { platformOperation } = jest.requireMock('@/lib/platform/client');
 const automationsPost = jest.fn();
 const automationsPatch = jest.fn();
 const connectionsPost = jest.fn();
 const connectionsDelete = jest.fn();
+const platformGet = jest.fn();
+const platformPatch = jest.fn();
 const signal = new AbortController().signal;
 
 beforeEach(() => {
@@ -34,6 +40,8 @@ beforeEach(() => {
   automationsPatch.mockReset();
   connectionsPost.mockReset();
   connectionsDelete.mockReset();
+  platformGet.mockReset();
+  platformPatch.mockReset();
   (WebBrowser.openAuthSessionAsync as jest.Mock).mockReset();
 
   platformOperation.mockImplementation(async (_key: string, execute: Function) => {
@@ -41,10 +49,35 @@ beforeEach(() => {
       {
         automations: { POST: automationsPost, PATCH: automationsPatch },
         connections: { POST: connectionsPost, DELETE: connectionsDelete },
+        platform: { GET: platformGet, PATCH: platformPatch },
       },
       signal,
     );
     return result.data ?? null;
+  });
+});
+
+describe('workspace operations', () => {
+  it('reads the published workspace collection, not the bounded session list', async () => {
+    const list = { workspaces: [{ id: 'ws-1' }], activeWorkspaceId: 'ws-1' };
+    platformGet.mockResolvedValue({ data: list, response: { ok: true } });
+    await expect(readWorkspaces()).resolves.toBe(list);
+    expect(platformOperation.mock.calls[0][0]).toBe('/v1/workspaces');
+    expect(platformGet).toHaveBeenCalledWith('/v1/workspaces', { signal });
+  });
+
+  it('selects the active workspace through the session operation with an idempotency key', async () => {
+    // The same operation the web switcher drives (snoopy PR #6). The backend
+    // session owns "active"; the app sends one intent and reads the answer.
+    const answer = { activeWorkspaceId: 'ws-2' };
+    platformPatch.mockResolvedValue({ data: answer, response: { ok: true } });
+    await expect(selectActiveWorkspace('ws-2', 'workspace-activate-1')).resolves.toBe(answer);
+    expect(platformOperation.mock.calls[0][0]).toBe('/v1/session/active-workspace');
+    expect(platformPatch).toHaveBeenCalledWith('/v1/session/active-workspace', {
+      params: { header: { 'Idempotency-Key': 'workspace-activate-1' } },
+      body: { workspaceId: 'ws-2' },
+      signal,
+    });
   });
 });
 
@@ -195,5 +228,36 @@ describe('connection mutations', () => {
         params: { path: { workspaceId: 'workspace-1', connectionId: 'c1' } },
       }),
     );
+  });
+
+  it('reports a device with no browser as a failed connect, not a crash', async () => {
+    // expo-web-browser rejects with `NoMatchingActivityException` when no
+    // Custom Tabs provider exists. Before Round 7.5M that rejection escaped
+    // `connectOAuthProvider` (and `signInWithProvider`) uncaught.
+    connectionsPost.mockResolvedValueOnce({
+      data: { authorizationUrl: 'https://provider.example.test/authorize' },
+      response: { ok: true },
+    });
+    (WebBrowser.openAuthSessionAsync as jest.Mock).mockRejectedValue(
+      Object.assign(new Error('No matching browser activity found'), {
+        code: 'ERR_NO_MATCHING_ACTIVITY',
+      }),
+    );
+
+    await expect(
+      connectOAuthProvider('workspace-1', {
+        providerId: 'quickbooks',
+        displayName: 'QuickBooks',
+        description: 'Accounting',
+        authType: 'oauth2',
+        scopes: [],
+        icon: 'plugs',
+      }),
+    ).resolves.toEqual({
+      status: 'failed',
+      message: 'No web browser is available on this device to continue.',
+    });
+    // The attempt was minted; nothing was completed against it.
+    expect(connectionsPost).toHaveBeenCalledTimes(1);
   });
 });

@@ -35,6 +35,7 @@ export const signedInSession: SessionContextValue = {
     workspaces: [{ id: TEST_WORKSPACE, name: 'Acme Operations', role: 'owner' }],
   },
   refresh: () => {},
+  reload: async () => ({ status: 'signed-in' as const }),
   signIn: async () => ({ status: 'unconfigured', message: '' }),
   signOut: async () => ({ revoked: true }),
 } as unknown as SessionContextValue;

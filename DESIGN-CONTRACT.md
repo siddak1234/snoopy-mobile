@@ -1,16 +1,18 @@
-# Round 6 mobile contract
+# Mobile contract — Round 6, amended in Round 7.5M
 
 Verified against the sibling master plan, Round 6 playbook, BUILD-PLAN 8.5–8.7,
 ADR-0017, and the regenerated platform/automations/connections declarations on
-2026-08-17. The published API owns business truth. This file records how the
-client consumes it; it does not extend it.
+2026-08-17; re-verified against the regenerated declarations on 2026-09-03
+(`npm run verify:platform-contracts`: current). The published API owns business
+truth. This file records how the client consumes it; it does not extend it.
 
 ## Completion state
 
-The implementing session has completed the Round 6 code and local verification.
-This is **ready for a fresh audit**, not a declaration that Gate 8 is closed.
-`DESIGN-GAPS.md` is the audit handoff and lists the externally unobservable
-evidence separately from code completion.
+Round 6 closed on 2026-08-18 after two fresh audits (`DESIGN-GAPS.md`). Round
+7.5M (2026-09-03) added the workspace switcher, the browser-leg base, the
+browserless refusal and the pinned release values; everything is **ready for
+the Round 7F fresh audit**, not a declaration that any gate is closed.
+`ROUND-7.5-OBSERVATIONS.md` lists what is observed and what is not.
 
 ## Transport and credential boundary
 
@@ -32,7 +34,11 @@ The app is not a Google/Microsoft/Apple OAuth client. For a provider login it:
 
 1. generates a device PKCE verifier/challenge;
 2. opens the system authentication session at
-   `/v1/auth/native/{provider}/start` with the exact claimed HTTPS return URI;
+   `/v1/auth/native/{provider}/start` with the exact claimed HTTPS return URI —
+   on the configured browser-leg base (`EXPO_PUBLIC_NATIVE_AUTH_BASE_URL`,
+   the origin the deployed `AUTH_CALLBACK_URL` shares, since the Edge's
+   transaction cookie is host-only), falling back to the API origin only when
+   no base is configured;
 3. receives only the backend's sealed, one-use code in that URI;
 4. exchanges the code and device verifier at `/v1/auth/native/token`;
 5. stores only the Autom8x session returned by the Edge;
@@ -60,7 +66,10 @@ the UI signed in, because the platform never got to say and deleting the entry
 would strand a session that is still live upstream.
 
 `expo-web-browser.openAuthSessionAsync` is the correct system user-agent for
-this custom handoff. `expo-auth-session.AuthRequest` is not used: it models an
+this custom handoff. When it cannot open a browser at all — Android's
+`NoMatchingActivityException`, or no Custom Tabs provider — login and connect
+both report a `failed` outcome with a fixed sentence rather than propagating
+the rejection. `expo-auth-session.AuthRequest` is not used: it models an
 app-owned OAuth authorization request and requires a client ID. Adding one
 would contradict ADR-0017. The minimum iOS deployment is 17.4, the first
 version where `ASWebAuthenticationSession.Callback.https(host:path:)` performs
@@ -77,6 +86,13 @@ session and no timer counts as success.
 
 The active workspace is `session.user.activeWorkspaceId`, falling back only to
 the first server-supplied membership. A route/form value never selects tenancy.
+Switching it is a published mutation, `PATCH /v1/session/active-workspace`
+with an idempotency key, followed by a re-read of `/v1/session`
+(`useSession().reload()`); the app holds no workspace state of its own. The
+switcher lists `GET /v1/workspaces` rather than the session's bounded
+`workspaces` page, and Settings shows it only with two or more workspaces or
+when `workspacesTruncated` says the list is incomplete — the same rule the web
+switcher (snoopy PR #6) applies over the same operation.
 
 ## Screen reads
 
@@ -91,7 +107,7 @@ the first server-supplied membership. A route/form value never selects tenancy.
 | Activity/run detail | runs/list/detail joined to catalog/subscription identity |
 | Approvals | pending approvals joined through subscription → template → pipeline step |
 | Notifications | pending approvals plus failed runs; explicitly an in-app composition |
-| Settings | session/workspace, catalog totals, provider registry, and workspace connections |
+| Settings | session/workspace, catalog totals, provider registry, and workspace connections; the workspace switcher reads the workspace collection |
 
 Every fetching surface has loading, offline, platform-error, **unavailable**, and
 applicable empty behavior, **with one carve-out the design owns**: Home draws a
@@ -130,7 +146,15 @@ review" — the held queue — also list running, queued and cancelled runs.
   idempotency key; retry reuses the intent key.
 - API-key connection: generated credential fields → connection mutation with an
   idempotency key.
-- OAuth connection: authorize → system browser → sealed native complete.
+- OAuth connection: authorize → system browser → sealed native complete. A
+  sheet that comes back without a handoff (`cancelled`) closes the dialog and
+  re-reads the workspace's connections, because a system browser sharing a
+  logged-in website session completes the connect at the website and skips the
+  app handoff (manifest §12.1 #79); the re-read is how the app shows the truth
+  without claiming a success it never received.
+- Workspace switch: patch the session's active workspace with an idempotency
+  key, then re-read the session; on a failed re-read the loaded screen stays
+  and the dialog offers the read again.
 - Disconnect: delete the stable connection ID.
 - Sign out: revoke first, clear locally only on a terminal/successful answer.
 

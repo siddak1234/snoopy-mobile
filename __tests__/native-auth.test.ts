@@ -130,6 +130,95 @@ describe('signInWithProvider', () => {
     expect(openAuthSessionAsync).not.toHaveBeenCalled();
   });
 
+  it('opens the start leg on the API origin when no browser-leg base is configured', async () => {
+    // A single-origin deployment — the local Compose stack — has its callback on
+    // the API origin, so that is where the transaction cookie must be set.
+    openAuthSessionAsync.mockResolvedValue({ type: 'dismiss' });
+    await expect(signInWithProvider('google')).resolves.toEqual({ status: 'cancelled' });
+    const startUrl = new URL(openAuthSessionAsync.mock.calls[0][0]);
+    expect(startUrl.origin).toBe('https://api.example.test');
+    expect(startUrl.pathname).toBe('/v1/auth/native/google/start');
+  });
+
+  it('opens the start leg on the configured browser-leg base, and exchanges on the API origin', async () => {
+    // ADR-0017 §1: the start request and the provider's callback must land on
+    // ONE origin, because the Edge keeps the transaction in a host-only
+    // `__Host-` cookie. The deployed callback sits behind the public web
+    // origin's `/api/platform` rewrite, so the browser is sent there — while
+    // the bearer exchange stays on the API origin, where no cookie is needed.
+    jest.resetModules();
+    jest.doMock('expo-constants', () => ({
+      __esModule: true,
+      default: {
+        expoConfig: {
+          extra: {
+            backendApiOrigin: 'https://api.example.test',
+            nativeRedirectUri: 'https://app.example.test/auth/native/callback',
+            nativeAuthBaseUrl: 'https://www.example.test/api/platform/',
+          },
+        },
+      },
+    }));
+    let signIn!: typeof signInWithProvider;
+    let browser!: { openAuthSessionAsync: jest.Mock };
+    let transport!: { platformOperation: jest.Mock };
+    jest.isolateModules(() => {
+      signIn = require('@/lib/platform/native-auth').signInWithProvider;
+      browser = require('expo-web-browser');
+      transport = require('@/lib/platform/client');
+    });
+    browser.openAuthSessionAsync.mockResolvedValue({
+      type: 'success',
+      url: 'https://app.example.test/auth/native/callback?code=sealed-code',
+    });
+    transport.platformOperation.mockResolvedValue({
+      tokenType: 'Bearer',
+      accessToken: 'a',
+      refreshToken: 'r',
+      expiresIn: 3600,
+    });
+
+    await expect(signIn('google')).resolves.toEqual({ status: 'signed-in' });
+
+    const [startUrl, returnTo] = browser.openAuthSessionAsync.mock.calls[0];
+    expect(startUrl).toMatch(
+      /^https:\/\/www\.example\.test\/api\/platform\/v1\/auth\/native\/google\/start\?/,
+    );
+    expect(startUrl).not.toContain('//v1');
+    expect(returnTo).toBe('https://app.example.test/auth/native/callback');
+    // The exchange is an ordinary transport operation: API origin, bearer-free,
+    // cookie-free. The browser-leg base never touches it.
+    expect(transport.platformOperation.mock.calls[0][0]).toBe('/v1/auth/native/token');
+  });
+
+  it('reports a device with no browser as a failure, not a crash', async () => {
+    // expo-web-browser's Android module throws `NoMatchingActivityException`
+    // (code ERR_NO_MATCHING_ACTIVITY) when nothing can open a Custom Tab, and
+    // PREFERRED_PACKAGE_NOT_FOUND when no Custom Tabs provider resolves. Both
+    // propagated uncaught out of `signInWithProvider` before Round 7.5M.
+    for (const code of ['ERR_NO_MATCHING_ACTIVITY', 'PREFERRED_PACKAGE_NOT_FOUND']) {
+      openAuthSessionAsync.mockReset();
+      openAuthSessionAsync.mockRejectedValue(
+        Object.assign(new Error('No matching browser activity found'), { code }),
+      );
+      await expect(signInWithProvider('google')).resolves.toEqual({
+        status: 'failed',
+        message: 'No web browser is available on this device to continue.',
+      });
+    }
+    expect(platformOperation).not.toHaveBeenCalled();
+    expect(writeSession).not.toHaveBeenCalled();
+  });
+
+  it('turns any other browser rejection into a failure without echoing it', async () => {
+    openAuthSessionAsync.mockRejectedValue(new Error('<script>x</script>'));
+    await expect(signInWithProvider('google')).resolves.toEqual({
+      status: 'failed',
+      message: 'The system browser could not be opened.',
+    });
+    expect(platformOperation).not.toHaveBeenCalled();
+  });
+
   it('sends the challenge in the URL and the verifier only in the body', async () => {
     openAuthSessionAsync.mockResolvedValue({
       type: 'success',

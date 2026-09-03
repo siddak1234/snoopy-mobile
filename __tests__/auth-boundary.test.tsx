@@ -18,6 +18,7 @@ function withSession(state: SessionState): SessionContextValue {
   return {
     ...state,
     refresh: () => {},
+    reload: async () => ({ status: 'signed-in' as const }),
     signIn: async () => ({ status: 'cancelled' }),
     signOut: async () => ({ revoked: true }),
   };

@@ -1,8 +1,6 @@
-import * as WebBrowser from 'expo-web-browser';
-
 import type { components } from '@/lib/generated/platform-contracts/connections';
 import { platformOperation } from './client';
-import { matchesNativeCallback, nativeRedirectUri } from './native-auth';
+import { matchesNativeCallback, nativeRedirectUri, openSystemAuthSession } from './native-auth';
 import { PlatformNotConfiguredError } from './problem';
 
 export type Connection = components['schemas']['Connection'];
@@ -35,8 +33,16 @@ export async function connectOAuthProvider(
       }),
   );
 
-  const result = await WebBrowser.openAuthSessionAsync(started.authorizationUrl, returnTo);
-  if (result.type !== 'success') return { status: 'cancelled' };
+  // The same system user-agent login uses, with the same browserless refusal.
+  // Note what `cancelled` can hide here: a system browser that shares a
+  // logged-in WEBSITE session authenticates at the connections callback and
+  // finishes at the website instead of handing back to the app (manifest
+  // §12.1 #79). The connection completes upstream; the sheet is then dismissed
+  // by the person and arrives here as `cancelled`. Callers must re-read the
+  // workspace's connections on `cancelled` rather than assume nothing changed.
+  const result = await openSystemAuthSession(started.authorizationUrl, returnTo);
+  if (result.type === 'failed') return { status: 'failed', message: result.message };
+  if (result.type === 'cancelled') return { status: 'cancelled' };
 
   const returned = new URL(result.url);
   if (!matchesNativeCallback(returned, returnTo)) {
