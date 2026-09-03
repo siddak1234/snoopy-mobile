@@ -468,7 +468,6 @@ const styles = StyleSheet.create({
   },
   runsCard: {
     marginTop: 10,
-    overflow: 'hidden',
   },
   runRow: {
     flexDirection: 'row',

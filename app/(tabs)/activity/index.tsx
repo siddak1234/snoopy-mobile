@@ -220,7 +220,6 @@ const styles = StyleSheet.create({
   },
   sectionCard: {
     marginTop: 9,
-    overflow: 'hidden',
   },
   row: {
     flexDirection: 'row',

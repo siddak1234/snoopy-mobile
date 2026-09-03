@@ -22,7 +22,7 @@ import { useTheme } from '@/hooks/use-theme';
 
 export default function SolutionsScreen() {
   const { palette } = useTheme();
-  const { isActive, toggle, totals } = useSolutions();
+  const { isActive, setActive, totals } = useSolutions();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const session = useSession();
@@ -84,7 +84,9 @@ export default function SolutionsScreen() {
         ),
       );
       for (const subscription of matching) delete pauseKeys.current[subscription.id];
-      toggle(removeSolution.templateId, removeSolution.subscribed);
+      // The platform accepted `paused`: state it, rather than flipping
+      // relative to whatever an earlier override happened to say.
+      setActive(removeSolution.templateId, false);
       setRemoveId(null);
     } catch (error) {
       setPauseError(error instanceof Error ? error.message : 'The workflows were not paused.');
