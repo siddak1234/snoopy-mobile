@@ -876,3 +876,95 @@ commit: the newest run in the platform is still `d81cc20d` (15:42Z) and the
 phone's Activity shows that history correctly, held rows included, with the
 Home banner reading "0 items need your review" because every approval is
 decided.
+
+## 19c — steps 5–7 OBSERVED from the native client; the journey is complete
+
+Performed 2026-09-03 20:28–20:32Z on the same emulator, against the deployed
+Edge, with the fixed build (`30f0ea01`, commit `16d92db`). Every row below
+was read from the platform's database after the fact; every screen was
+captured and inspected.
+
+**Step 5 — Trigger.** The native client has no trigger operation (`createRun`
+has no caller; Run-now is web gate scaffolding by owner direction), so the
+trigger came from the website. It was performed by this session INSIDE the
+emulator's Chrome, not on the owner's desktop: `www.autom8x.ai/login` →
+Continue with Google → Google's account chooser already held the session the
+native login had created in Chrome's cookie jar → Continue on "You're
+signing back in to autom8x" → the dashboard. No password was entered and no
+credential left the device. On `/account/automations`, Run now with
+`{"vendor":"Acme","amount":750,"reference":"INV-003"}` (typed by key events
+after `input text` dropped the quotes) landed on
+`/account/runs/ebbad4d8-…`:
+
+```
+runs.runs         ebbad4d8  origin manual  created 20:28:10.13Z  status held  ended 20:28:11.85Z
+runs.run_steps    ebbad4d8  receive  ok    "Invoice INV-003 from Acme"                      20:28:11.17Z
+                  ebbad4d8  validate held  "Amount $750.00 is above the $500.00 threshold"  20:28:11.67Z
+runs.approvals    13f95fd1  run ebbad4d8  step validate  pending  20:28:11.85Z
+                            reason "Acme — $750.00, above the $500.00 threshold"
+runs.audit_events run.create allowed 20:28:10.43Z · run.complete allowed 20:28:11.97Z (caller edge)
+```
+
+**Step 6 — The automation works and holds.** Above: `receive` ok, `validate`
+held, the run ended held, the approval minted with the automation's own
+reason text. The phone's Home banner read "1 items need your review".
+
+**Step 7 — Hold, approve, complete — from the phone.** Home banner →
+Approvals rendered "Needs review · 1", the card "INVOICE CHECK · 1m ago ·
+Invoice check · Check the amount", the reason, Approve and Reject. Approve
+was tapped at 20:30:10Z. The screen then read "Needs review · 0", "All
+caught up — decisions synced to your workflows." and "Approved ✓ — agent
+resuming" (screenshots `63-approvals.png`, `64-approved.png`).
+
+```
+runs.audit_events approval.decide allowed  actor e8fe5f8a (the owner)  caller edge  20:30:11.38Z
+runs.approvals    13f95fd1  approved  decided_at 20:30:11.11Z  decided_by e8fe5f8a  continuation 7e826c5c
+runs.runs         7e826c5c  origin approval-continuation  continues ebbad4d8  root ebbad4d8
+                            created 20:30:11.11Z  succeeded  ended 20:30:13.83Z
+                            result_summary "Recorded INV-003 after approval"
+                            output {reference INV-003, vendor Acme, amount 750, decidedBy "after approval", notified true}
+runs.run_steps    7e826c5c  post    ok  "Recorded INV-003 after approval"   20:30:11.84Z
+                  7e826c5c  notify  ok  "Emailed the outcome of INV-003"    20:30:13.61Z
+runs.audit_events run.complete allowed 20:30:13.93Z
+```
+
+The outcome email went through the workspace's own Google grant — the
+connection the phone showed as reused at 18:53Z — from a decision made on the
+phone. After a cold relaunch, Activity listed "Recorded INV-003 after
+approval · 1m" and "Held · 3m" at the top of TODAY (`66-activity-after-
+relaunch.png`), Home read "Your agents ran 7 tasks today" and "0 items need
+your review", and the continuation's detail opened from Home's RECENT RUNS as
+"Run eb826da8" (the run's `requestId` prefix, the §12.1 #69 substitute for a
+human run number), Success, 2 s, "2 / 4 steps done", Confidence "—"
+(unpublished, rendered as the design's unavailable value), with `post` and
+`notify` done at 15:30 local (`69-run-detail.png`).
+
+**19c disposition: OBSERVED**, with one qualification stated rather than
+hidden: the trigger is web-originated by design, executed from the same
+device inside Chrome, and the native client observed, held, approved and
+completed. §1's seven steps have now each been exercised from the native
+client against the deployed Edge, with the database as the witness.
+
+### Findings from the journey, recorded for the owner and Round 7F
+
+1. **Tabs go stale after a mutation made elsewhere.** Every tab reads on
+   mount and on the error state's Retry only — no re-read on focus, no pull
+   to refresh (`hooks/use-resource.tsx`, and none of the tab screens add
+   one). One minute after the run existed, the already-mounted Activity tab
+   still showed seven rows; after the approval it still did; a cold relaunch
+   was needed to see the continuation. The web's `router.refresh()` after
+   each action has no mobile counterpart. A re-read on focus that keeps the
+   loaded rows in place (no skeleton) is the natural fix, but the design's
+   `gLoad` replaces the screen, so it is a design decision, not made here.
+2. **Activity rows do not open a run.** Only Home's RECENT RUNS and the
+   notifications inbox navigate to run detail; Activity's rows are inert.
+   Check against `Screen.dc.html` before changing.
+3. **A continuation's timeline shows the root run's steps as not done.**
+   "2 / 4 steps done" is true of run 7e826c5c alone; the web's run page shows
+   a continuation "under the same root". Joining the root's steps by
+   `rootRunId` is a client mapping decision, recorded here.
+4. **The appearance preference is not persisted** (already recorded in
+   `DESIGN-GAPS.md`): the relaunch came back in Dark.
+5. **Chrome's first run on the emulator** asked about notifications before
+   the website loaded; unrelated to the product, noted because the owner
+   step list said the tab would open directly.
