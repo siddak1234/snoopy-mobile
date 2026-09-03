@@ -32,6 +32,7 @@ const signedIn: SessionContextValue = {
     workspaces: [{ id: WORKSPACE, name: 'Acme', role: 'owner' }],
   } as SessionContextValue extends { session: infer S } ? S : never,
   refresh: () => {},
+  reload: async () => ({ status: 'signed-in' as const }),
   signIn: async () => ({ status: 'unconfigured', message: '' }),
   signOut: async () => ({ revoked: true }),
 };
@@ -39,6 +40,7 @@ const signedIn: SessionContextValue = {
 const unconfigured: SessionContextValue = {
   status: 'unconfigured',
   refresh: () => {},
+  reload: async () => ({ status: 'signed-in' as const }),
   signIn: async () => ({ status: 'unconfigured', message: '' }),
   signOut: async () => ({ revoked: true }),
 };

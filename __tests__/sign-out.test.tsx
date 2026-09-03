@@ -41,6 +41,7 @@ function sessionWith(signOut: SessionContextValue['signOut']): SessionContextVal
       workspaces: [{ id: '00000000-0000-4000-8000-000000000001', name: 'Acme', role: 'owner' }],
     },
     refresh: () => {},
+    reload: async () => ({ status: 'signed-in' as const }),
     signIn: async () => ({ status: 'unconfigured', message: 'no backend in tests' }),
     signOut,
   } as unknown as SessionContextValue;
