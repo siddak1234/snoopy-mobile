@@ -732,3 +732,147 @@ command, and the authenticated journey itself is not. Nothing here is a PASS.
 - **The four gate blind spots from `DESIGN-GAPS.md` remain** (`audit:tokens`
   and `audit:credentials` skip `constants/` and `.js`). Not in this round's
   scope; still latent, not live.
+
+## 19c, continued — the owner signed in; steps 1–4 verified in the live database
+
+The owner performed the interactive part on the staged emulator on
+2026-09-03 between 13:48 and 13:55 local (18:48–18:55Z). Recorded from three
+sources, none of them the app's own claim: the emulator's OS log, the
+platform's Supabase project (read-only SQL through the Supabase MCP; no token
+column was ever selected), and screenshots.
+
+**Step 1 — Login: OBSERVED.**
+
+- `ActivityTaskManager` logged the shipped client firing
+  `act=android.intent.action.VIEW dat=https://www.autom8x.ai/…` to Chrome at
+  13:48:32 and again at 13:49:23 (the start leg on the web origin — the
+  browser-leg base, in the release bundle).
+- At 13:53:14 the OS delivered `act=VIEW cat=[BROWSABLE]
+  dat=https://app.autom8x.ai/… cmp=ai.autom8x.snoopy/.MainActivity` — the
+  verified app link carrying the callback back into the app, which is the
+  return leg 7.5 could not get past.
+- `auth.sessions` holds a new row for the user, created
+  `2026-09-03 18:53:16Z`, `user_agent = node`, `ip = 64.225.8.140`: the
+  session was minted by the Edge, server-side, from the sealed code — the app
+  never touched Supabase, as ADR-0017 requires. The previous session on that
+  user is the web's, created 03:30Z.
+- The app rendered Home and every tab behind the fail-closed guard (the
+  Settings screenshot shows the session's user, "Personal · personal · owner").
+
+**Step 2 — See the automation: OBSERVED.** Solutions rendered the catalog;
+the Set up Invoice check screen rendered the manifest's `setup[]` fields
+(Hold above, Email the outcome to) from the published entry.
+
+**Step 3 — Subscribe / activate: OBSERVED.** `catalog.idempotency_records`
+holds two keys minted by this client — `pause-…` at 18:53:42Z and
+`activate-…` at 18:53:46Z — and `catalog.subscriptions` row
+`c40192b6` (`invoice-check` v2, created from the web at 02:12Z) now carries
+`config = {holdAboveAmount: 500, notifyEmail: <the owner's address>}`,
+`status = live`, `unmet_connections = []`, `updated_at = 18:53:46Z`: the
+values typed on the phone, accepted by the platform.
+
+**Step 4 — Connect the accounts: OBSERVED as REUSE, which is the product
+goal, and the owner's question about it answered by the data.** The owner
+saw Google already "Connected · used by 1 solution" and no Google consent
+screen, unlike the web. The database says why:
+
+- `connections.connections` `175ec348` is the workspace's live Google
+  connection, created **from the web at 15:31:14Z** by attempt `f39915f5`
+  (`redirect_uri` on www, `return_to` null — a web attempt), with
+  `granted_scopes` including `gmail.send` and `gmail.readonly`. That web
+  connect is where the consent screen was shown, once.
+- `connections.audit_events` holds `action = connection.reuse`,
+  `outcome = allowed`, `caller_service_id = edge`, actor = the owner, resource
+  = that connection, at **18:53:17Z — one second after the native session
+  was created**. That is ADR-0019 §3's login-grant adoption path checking
+  and §2's rule: the required scopes were already present on the workspace's
+  server-owned grant, so the connection was reused and **no authorization
+  attempt was created** (the newest attempt is the web's, 15:31Z). No consent
+  screen is the correct outcome, not a missing one.
+- The connection's `last_validated_at` moved to 18:52:34Z during the login.
+
+**Steps 5–7 (trigger, run, hold, approve): NOT OBSERVED from the native
+client at the time of writing.** `runs.runs` and `runs.approvals` hold no row
+for this subscription after 18:48Z. The trigger must come from the web
+(Run-now) since the client has no trigger operation; the observation of the
+run in Activity and the decision in Approvals from the phone is still owed.
+
+**The switcher was correctly hidden**: `access.workspace_memberships` holds
+exactly one workspace for this user (`Personal`, owner) and the session is
+not truncated, so the WORKSPACE row rendered inert, exactly as the tests say
+it must. Its live render remains NOT OBSERVED for want of a second workspace.
+
+## Two defects found on the phone during the journey, fixed in PR #11
+
+The first screen this repository has ever shown in the **light palette on a
+device** was the owner's Settings tab, and it was wrong:
+
+1. **Every elevated card drew nothing in light mode.** The section cards
+   rendered as empty white rectangles while `uiautomator dump` listed all 36
+   of their text nodes at the right bounds — laid out, not composited. The
+   two cards on the same screen without `overflow: 'hidden'` (Appearance,
+   Sign out) rendered. The light palette's `--shadow-sm` is an Android
+   `elevation` where the dark palette's is a hairline border, so every
+   dark-mode inspection through Rounds 6–7.5 passed and the defect waited for
+   light mode on Android 15 / RN 0.81.5 / the new architecture. Nine sites
+   combined elevation with clipping: eight `SurfaceCard` styles (Settings,
+   Home runs, Activity, Run, Notifications, Configure, Setup, Flow detail)
+   and the Face ID scan box. Fixed by removing the clip from the eight cards
+   (nothing inside needed it) and splitting the scan box into a glow wrapper
+   and a clipping ring; `__tests__/android-card-overflow.test.js` now refuses
+   the combination and fails on `main` naming all nine.
+2. **Settings counted "0 active · $0/mo" against a subscription the database
+   showed as `live`.** The marketplace's pause (18:53:42Z) set the
+   client-held override to false and the setup screen's Activate
+   (18:53:46Z) never set it back, so Settings read a stale local override
+   over the server's `subscribed: true` until the next cold launch.
+   `useSolutions().setActive` states the outcome of an accepted mutation and
+   both call sites use it; pinned in `override-scope.test.tsx`.
+
+Both were invisible to the Jest gates by construction — no Jest render can
+observe Android compositing, and the override defect needed two screens'
+mutations in sequence — and both are the kind of finding the master plan's
+"see how a user will interact" line exists for.
+
+### PR #11 verified on the device, and two observations the reinstall produced
+
+EAS build `30f0ea01-13c1-4774-9559-9fc31491430e` (profile `preview`, Android,
+`gitCommitHash 16d92db`, completed 2026-09-03T20:04:53Z, artifact SHA-256
+`2821d618aa1e955d05b3c16b69581a893d255ba79f0ddeada5d991e74a626401`, same
+signer) was installed over the signed-in app with `adb install -r`.
+
+- **Light mode, every affected screen, drawn.** Settings (all six cards with
+  their rows), Home (the three stat tiles, the review banner and the RECENT
+  RUNS card with four rows), Activity (seven rows under TODAY / YESTERDAY),
+  Flows (the Invoice check card, "Live", "7 runs · 3 ok · 2 failed") and
+  Solutions — screenshots captured at 15:11 local and inspected. The same
+  Settings screen that was six empty rectangles at 14:00 now reads
+  "Solutions total · 1 active from the published catalog", which is also the
+  override defect's truth on a fresh launch.
+- **The session survived the reinstall.** `SecureStore.xml` under the app's
+  `shared_prefs` (read as root on the userdebug emulator; key names only,
+  never values) still held the three `key_v1-autom8x.*` entries with their
+  13:53 mtime after the install.
+- **Launch-time renewal, observed live.** The access token minted at 18:53Z
+  had expired by the relaunch at 20:10Z; `auth.sessions 6d7ad2bf` now shows
+  `refreshed_at 2026-09-03T20:10:25Z`, refresh token 15 `revoked = true` and
+  token 16 issued with a parent — `refreshSession()` at launch, through
+  `/v1/auth/native/refresh`, from the shipped client, and the app opened on
+  Home ("Welcome back, Siddak · Your agents ran 5 tasks today").
+- **The FIRST launch after the install landed on Welcome with the credential
+  intact.** That launch's `am start` took 13.0 s against 0.85 s for the
+  second; Supabase's auth logs show no token call for it, and the enclave
+  entries were untouched, which is the `unavailable` branch — the credential
+  preserved, the guard failing closed — and not a sign-out. The transport's
+  request timeout is 10 s. Whether the renewal call was cut off by the cold
+  start or never left the process is NOT DETERMINED from the device (release
+  builds emit no client log, by design); recorded as observed, with the
+  second launch's renewal as the counter-evidence that the path works.
+  A person who sees Welcome once after an update and taps Log in would get
+  the provider buttons, not their session; worth a look in Round 7F.
+
+Steps 5–7 remain NOT OBSERVED from the native client at the time of this
+commit: the newest run in the platform is still `d81cc20d` (15:42Z) and the
+phone's Activity shows that history correctly, held rows included, with the
+Home banner reading "0 items need your review" because every approval is
+decided.
