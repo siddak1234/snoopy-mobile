@@ -72,12 +72,20 @@ describe('overrideScopeKey', () => {
 });
 
 function SolutionProbe() {
-  const { isActive, toggle } = useSolutions();
+  const { isActive, toggle, setActive, totals } = useSolutions();
+  const { activeCount } = totals([{ templateId: 'tpl.invoice', price: 49, subscribed: true }]);
   return (
     <>
       <Text testID="solution">{String(isActive('tpl.invoice', true))}</Text>
+      <Text testID="active-count">{String(activeCount)}</Text>
       <Pressable testID="toggle-solution" onPress={() => toggle('tpl.invoice', true)}>
         <Text>toggle</Text>
+      </Pressable>
+      <Pressable testID="pause-solution" onPress={() => setActive('tpl.invoice', false)}>
+        <Text>pause</Text>
+      </Pressable>
+      <Pressable testID="activate-solution" onPress={() => setActive('tpl.invoice', true)}>
+        <Text>activate</Text>
       </Pressable>
     </>
   );
@@ -141,6 +149,36 @@ describe('overrides do not outlive their scope', () => {
 
     await fireEvent.press(screen.getByTestId('toggle-solution'));
     rerender(tree(signedIn('user-a', 'ws-1')));
+    expect(screen.getByTestId('solution')).toHaveTextContent('false');
+  });
+});
+
+/**
+ * A mutation the platform accepted states the plan membership; it does not
+ * flip it. Found live on 2026-09-03: the marketplace's pause set the override
+ * to false, the setup screen's Activate never set it back, and Settings
+ * counted "0 active" against a subscription the database showed as `live`.
+ */
+describe('an accepted activation supersedes an earlier pause override', () => {
+  it('counts the solution active again after pause, then activate', async () => {
+    await mount(signedIn('user-a', 'ws-1'));
+    expect(screen.getByTestId('active-count')).toHaveTextContent('1');
+
+    await fireEvent.press(screen.getByTestId('pause-solution'));
+    expect(screen.getByTestId('solution')).toHaveTextContent('false');
+    expect(screen.getByTestId('active-count')).toHaveTextContent('0');
+
+    await fireEvent.press(screen.getByTestId('activate-solution'));
+    expect(screen.getByTestId('solution')).toHaveTextContent('true');
+    expect(screen.getByTestId('active-count')).toHaveTextContent('1');
+  });
+
+  it('states false on a repeated pause instead of flipping back to true', async () => {
+    // `toggle` after a pause would have flipped an already-false override to
+    // true; `setActive(false)` cannot.
+    await mount(signedIn('user-a', 'ws-1'));
+    await fireEvent.press(screen.getByTestId('pause-solution'));
+    await fireEvent.press(screen.getByTestId('pause-solution'));
     expect(screen.getByTestId('solution')).toHaveTextContent('false');
   });
 });
