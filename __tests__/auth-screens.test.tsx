@@ -40,16 +40,22 @@ describe('Log in', () => {
   it('shows the design copy', async () => {
     const { getByText, findByText } = await renderWithProviders(<LoginScreen />);
     expect(getByText('Welcome back to your workspace.')).toBeTruthy();
-    expect(getByText('Stay logged in')).toBeTruthy();
     expect(await findByText('Continue with Apple')).toBeTruthy();
     expect(getByText('Continue with Google')).toBeTruthy();
     expect(getByText('Continue with Microsoft')).toBeTruthy();
   });
 
-  it('refuses password login and routes the two real navigation actions', async () => {
-    const { getByText } = await renderWithProviders(<LoginScreen />);
-    await fireEvent.press(getByText('Log In'));
-    expect(getByText('Password login is not available. Continue with an identity provider below.')).toBeTruthy();
+  it('offers no password path at all, and routes the two real navigation actions', async () => {
+    // Owner direction 2026-09-08 (platform §12.1 #90): the Edge refuses password
+    // login and the website shows providers only, so the app draws no email,
+    // password, remember-me, "forgot" or Log In control — a form that only ever
+    // refused taught people the product had a capability it does not.
+    const { getByText, queryByText, queryByLabelText } = await renderWithProviders(<LoginScreen />);
+    expect(queryByLabelText('Email')).toBeNull();
+    expect(queryByLabelText('Password')).toBeNull();
+    expect(queryByText('Stay logged in')).toBeNull();
+    expect(queryByText('Forgot?')).toBeNull();
+    expect(queryByText('Log In')).toBeNull();
     expect(mockRouter.replace).not.toHaveBeenCalledWith('/(tabs)/(home)');
     await fireEvent.press(getByText('Unlock with Face ID'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(auth)/faceid');
@@ -59,10 +65,14 @@ describe('Log in', () => {
 });
 
 describe('Sign up', () => {
-  it('refuses manual account creation and routes Log in', async () => {
-    const { getByText } = await renderWithProviders(<SignupScreen />);
-    await fireEvent.press(getByText('Create account'));
-    expect(getByText('Accounts are created through Apple, Google, or Microsoft.')).toBeTruthy();
+  it('offers no manual account creation, and routes Log in', async () => {
+    // Same direction as the login screen: accounts are the identity provider's.
+    const { getByText, queryByText, queryByPlaceholderText } =
+      await renderWithProviders(<SignupScreen />);
+    expect(queryByText('Create account')).toBeNull();
+    expect(queryByPlaceholderText('8+ characters')).toBeNull();
+    expect(queryByPlaceholderText('you@company.com')).toBeNull();
+    expect(queryByPlaceholderText('Alex Kim')).toBeNull();
     expect(mockRouter.push).not.toHaveBeenCalledWith('/(auth)/onboarding');
     await fireEvent.press(getByText('Log in'));
     expect(mockRouter.replace).toHaveBeenCalledWith('/(auth)/login');
@@ -79,11 +89,14 @@ describe('Sign up', () => {
     expect(mockRouter.push).toHaveBeenCalledWith('/(auth)/onboarding');
   });
 
-  it('shows the design placeholders', async () => {
-    const { getByPlaceholderText } = await renderWithProviders(<SignupScreen />);
-    expect(getByPlaceholderText('Alex Kim')).toBeTruthy();
-    expect(getByPlaceholderText('you@company.com')).toBeTruthy();
-    expect(getByPlaceholderText('8+ characters')).toBeTruthy();
+  it('the provider column is the sign-up', async () => {
+    const { findByText, getByText } = await renderWithProviders(<SignupScreen />);
+    expect(await findByText('Sign up with Apple')).toBeTruthy();
+    expect(getByText('Sign up with Google')).toBeTruthy();
+    expect(getByText('Sign up with Microsoft')).toBeTruthy();
+    expect(
+      getByText('Your account is the Apple, Google, or Microsoft account you sign in with.'),
+    ).toBeTruthy();
   });
 });
 

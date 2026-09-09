@@ -16,7 +16,11 @@ in `AUTOM8X-ROUND-PLAYBOOK.md`, then this repository's `DESIGN-CONTRACT.md`,
 repository is read-only from a mobile session.
 
 If the master plan no longer names `snoopy-mobile` as the open or the next
-repository, stop.
+repository, stop. **One recorded exception:** on 2026-09-08 the owner directed,
+during Round 10, that the app draw no password surface (platform §0.1 owner
+decision 5, fourth fix; manifest §12.1 #90). That single change was made in
+this repository the same day as an owner-approved re-entry, the way §4 rule 1
+allows; the other three approved fixes wait for the next mobile round.
 
 ## Non-negotiable rules
 

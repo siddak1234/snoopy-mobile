@@ -13,12 +13,10 @@ import { UserFocus, WarningCircle } from 'phosphor-react-native';
 
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { BrandMark } from '@/components/nocturne/brand-mark';
-import { NocToggle } from '@/components/nocturne/noc-toggle';
 import { OAuthButton } from '@/components/nocturne/oauth-button';
 import { Skeleton } from '@/components/nocturne/skeleton';
 import { OrDivider } from '@/components/nocturne/or-divider';
 import { PillButton } from '@/components/nocturne/pill-button';
-import { TextField } from '@/components/nocturne/text-field';
 import { em, fonts, layout, radius, status } from '@/constants/theme';
 import { useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
@@ -30,8 +28,6 @@ export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { palette } = useTheme();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [signInError, setSignInError] = useState<string | null>(null);
   const [busyProvider, setBusyProvider] = useState<LoginProvider | null>(null);
   const signInInFlight = useRef(false);
@@ -57,10 +53,6 @@ export default function LoginScreen() {
   // only OAuth-capable half of the screen is simply missing while it resolves,
   // which reads as a broken build rather than as a screen still loading.
   const providersLoading = providerPolicy.status === 'loading';
-
-  const manualLoginUnavailable = () => {
-    setSignInError('Password login is not available. Continue with an identity provider below.');
-  };
 
   /**
    * Sign in through the system browser (ADR-0017).
@@ -117,36 +109,14 @@ export default function LoginScreen() {
           </View>
         ) : null}
 
+        {/* No email, no password, no "forgot": the platform refuses password
+            login (`passwordLoginEnabled: false`) and the website shows providers
+            only, so a form here taught people the product had a capability it
+            refused — and was the one place a customer would type a password into
+            this platform. Removed on the owner's direction, 2026-09-08 (platform
+            manifest §12.1 #90). What remains is real: the native session unlock,
+            and the identity providers the platform publishes. */}
         <View style={styles.form}>
-          <TextField
-            label="Email"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoComplete="email"
-          />
-          <TextField
-            label="Password"
-            value={password}
-            onChangeText={setPassword}
-            secure
-            autoComplete="password"
-          />
-          <View style={styles.rememberRow}>
-            <View style={styles.rememberLeft}>
-              <NocToggle value onChange={() => {}} disabled />
-              <Text style={[styles.rememberLabel, { color: palette.neutral[300] }]}>
-                Stay logged in
-              </Text>
-            </View>
-            <Text
-              onPress={() => router.push('/(auth)/reset')}
-              suppressHighlighting
-              style={[styles.forgot, { color: palette.accentRamp[300] }]}>
-              Forgot?
-            </Text>
-          </View>
-          <PillButton label="Log In" onPress={manualLoginUnavailable} />
           <PillButton
             label="Unlock with Face ID"
             variant="accent-ghost"
@@ -235,26 +205,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 13 * 1.45,
     color: status.err,
-  },
-  rememberRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 2,
-    paddingHorizontal: 2,
-  },
-  rememberLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  rememberLabel: {
-    fontFamily: fonts.regular,
-    fontSize: 13.5,
-  },
-  forgot: {
-    fontFamily: fonts.regular,
-    fontSize: 13,
   },
   oauthColumn: {
     gap: 9,
