@@ -12,7 +12,6 @@ export default function AuthLayout() {
       }}>
       <Stack.Screen name="welcome" options={{ animation: 'fade' }} />
       <Stack.Screen name="login" />
-      <Stack.Screen name="reset" />
       <Stack.Screen name="signup" />
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="faceid" options={{ animation: 'fade' }} />

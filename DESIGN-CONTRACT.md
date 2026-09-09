@@ -74,9 +74,12 @@ app-owned OAuth authorization request and requires a client ID. Adding one
 would contradict ADR-0017. The minimum iOS deployment is 17.4, the first
 version where `ASWebAuthenticationSession.Callback.https(host:path:)` performs
 the exact associated-domain match ADR-0017 requires; the installed Expo module
-uses that API at this floor. The login screen's “Stay logged in” control is a
-disabled-on policy display because persistence is fixed by ADR-0017; it does
-not pretend to offer an uncontracted session-only mode.
+uses that API at this floor. The login and signup screens draw NO password
+surface — no email or password field, no “Stay logged in” control, no
+“Forgot?” link, no reset screen — since 2026-09-08 on the owner's direction
+(platform manifest §12.1 #90): the Edge refuses password login and the website
+shows providers only, and a form that existed to refuse taught the opposite.
+Persistence is fixed by ADR-0017 and needs no control to say so.
 
 Session states are `restoring`, `signed-in`, `signed-out`, `unconfigured`, and
 `unavailable`. The tab layout admits only `signed-in`; every other state fails
@@ -98,7 +101,7 @@ switcher (snoopy PR #6) applies over the same operation.
 
 | Surface | Published operations / mapping |
 | --- | --- |
-| Login/signup | `GET /v1/auth/providers`; OAuth-only policy; password/reset refuse truthfully |
+| Login/signup | `GET /v1/auth/providers`; providers only — no password or reset surface is drawn (owner, 2026-09-08) |
 | Home | session + catalog + `run-stats?since=<local midnight>` + runs + pending approvals |
 | Solutions/templates | workspace automation catalog and its server-supplied categories |
 | Setup/configure | catalog `setup[]` and the matching subscription config |

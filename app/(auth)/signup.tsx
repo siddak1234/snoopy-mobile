@@ -14,9 +14,6 @@ import { BackCircle } from '@/components/nocturne/back-circle';
 import { BrandMark } from '@/components/nocturne/brand-mark';
 import { OAuthButton } from '@/components/nocturne/oauth-button';
 import { Skeleton } from '@/components/nocturne/skeleton';
-import { OrDivider } from '@/components/nocturne/or-divider';
-import { PillButton } from '@/components/nocturne/pill-button';
-import { TextField } from '@/components/nocturne/text-field';
 import { em, fonts, layout, radius } from '@/constants/theme';
 import { useResource } from '@/hooks/use-resource';
 import { useSession } from '@/hooks/use-session';
@@ -39,14 +36,6 @@ export default function SignupScreen() {
       : providerPolicy.status === 'error' || providerPolicy.status === 'unconfigured'
         ? 'Identity providers are not available for this build.'
         : null;
-
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-
-  const manualSignupUnavailable = () => {
-    setMessage('Accounts are created through Apple, Google, or Microsoft.');
-  };
 
   const startSignUp = async (provider: LoginProvider) => {
     if (signInInFlight.current) return;
@@ -80,50 +69,21 @@ export default function SignupScreen() {
         <BrandMark width={86} style={styles.brand} />
         <Text style={[styles.title, { color: palette.text }]}>Create your account</Text>
         <Text style={[styles.subtitle, { color: palette.neutral[400] }]}>
-          Start automating in minutes.
+          Your account is the Apple, Google, or Microsoft account you sign in with.
         </Text>
 
-        <View style={styles.form}>
-          <TextField
-            label="Full name"
-            value={fullName}
-            onChangeText={setFullName}
-            placeholder="Alex Kim"
-            autoComplete="name"
-          />
-          <TextField
-            label="Work email"
-            value={email}
-            onChangeText={setEmail}
-            placeholder="you@company.com"
-            keyboardType="email-address"
-            autoComplete="email"
-          />
-          <TextField
-            label="Password"
-            value={password}
-            onChangeText={setPassword}
-            placeholder="8+ characters"
-            secure
-            autoComplete="new-password"
-          />
-          <PillButton label="Create account" onPress={manualSignupUnavailable} />
-        </View>
-
+        {/* No name, email or password form: accounts are created by the identity
+            provider, and a form that answered "accounts are created through
+            Apple, Google, or Microsoft" taught the opposite before refusing.
+            Removed on the owner's direction, 2026-09-08 (platform manifest §12.1
+            #90). The provider column IS the sign-up. */}
         {message ?? providerError ? (
           <Text style={[styles.message, { color: palette.neutral[400] }]}>
             {message ?? providerError}
           </Text>
         ) : null}
 
-        {/* See login.tsx: no divider above an empty provider column, and a
-            pending state while the provider read resolves. */}
-        {(providerPolicy.status === 'ready' && providerPolicy.data.providers.length > 0) ||
-        providerPolicy.status === 'loading' ? (
-          <OrDivider />
-        ) : null}
-
-        <View style={styles.oauthColumn}>
+        <View style={[styles.oauthColumn, styles.form]}>
           {providerPolicy.status === 'loading'
             ? [0, 1, 2].map((row) => (
                 <Skeleton key={row} height={52} borderRadius={radius.pill} delay={row * 120} />
