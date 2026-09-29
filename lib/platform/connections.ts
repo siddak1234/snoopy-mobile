@@ -8,7 +8,7 @@ export type ConnectionState = components['schemas']['ConnectionState'];
 export type ConnectionProvider = components['schemas']['ConnectionProvider'];
 
 export type ConnectionOutcome =
-  | { status: 'connected'; connection: Connection }
+  | { status: 'connected'; connection: ConnectionState }
   | { status: 'cancelled' }
   | { status: 'failed'; message: string };
 
@@ -32,6 +32,12 @@ export async function connectOAuthProvider(
         signal,
       }),
   );
+
+  // `reused`: the live connection already holds every requested scope, so the
+  // platform started nothing and there is no consent page to open (ADR-0019 §2,
+  // BUILD-PLAN 22.8.1). It carries no `authorizationUrl`; reading it as
+  // connected is the whole of the rule.
+  if (started.outcome === 'reused') return { status: 'connected', connection: started.connection };
 
   // The same system user-agent login uses, with the same browserless refusal.
   // Note what `cancelled` can hide here: a system browser that shares a

@@ -87,7 +87,11 @@ block would read as configured-and-ready. The history of both is in
   and connections OpenAPI documents. Do not hand-edit it.
 - `lib/platform/client.ts` is the sole runtime transport boundary. It uses
   `openapi-fetch`, attaches the current bearer token through middleware,
-  applies a timeout and `no-store`, and maps RFC problem responses.
+  applies a timeout and `no-store`, and maps RFC problem responses. A 429 is
+  said as "busy, try again in N seconds" from its `retry-after` and never as
+  signed out. Its one raw `fetch` is `putFileToSignedUrl`, the credential-less
+  PUT of a file's bytes to the URL the platform signed; `audit:platform` admits
+  exactly that one.
 - `lib/platform/*.ts` exposes typed reads and mutations. Screens do not call a
   network primitive.
 - `lib/platform/session-store.ts` stores access/refresh credentials only in
@@ -111,6 +115,16 @@ block would read as configured-and-ready. The history of both is in
   loading, offline, platform-error, and empty states.
 - `lib/view/` performs the published wire-to-Nocturne mapping and owns no
   workspace truth.
+- The rules every screen shares (ADR-0032, BUILD-PLAN 24.3.6):
+  - `administers()` in `lib/view/roles.ts` decides owner and admin controls.
+  - `workspaceIfShown()` in `hooks/use-session.tsx`, with a resource's
+    `loadedFor`, binds an action to the workspace its screen loaded.
+  - `useIntentKeys()` keeps a resubmission's idempotency key.
+  - `refusalMessage()` in `lib/content/refusals.ts` says a refusal in the
+    website's words.
+- `npm run verify` ends by emitting `.autom8x/repo-facts/snoopy-mobile.json`
+  (gitignored). The backend's round close commits it, so the manifest quotes
+  this repository's counts rather than reading its files.
 
 ## Platform observations
 

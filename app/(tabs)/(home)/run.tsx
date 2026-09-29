@@ -14,7 +14,7 @@ import { em, fonts, layout, status } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { TimelineRowView as RunTimelineItem } from '@/lib/view/runs';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
-import { useWorkspaceResource } from '@/hooks/use-resource';
+import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { errorTitleFor } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
 import { readRun } from '@/lib/platform/runs';
@@ -145,7 +145,7 @@ export default function RunDetailScreen() {
     return (
       <ScreenError
         title={errorTitleFor('run')}
-        onRetry={detail.reload}
+        onRetry={detail.reload} body={busyBody(detail)}
         onBack={() => router.back()}
         topInset={insets.top}
       />

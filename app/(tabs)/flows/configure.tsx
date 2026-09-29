@@ -13,7 +13,7 @@ import { TextField } from '@/components/nocturne/text-field';
 import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
-import { useWorkspaceResource } from '@/hooks/use-resource';
+import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { activeWorkspaceId, useSession } from '@/hooks/use-session';
 import { CONFIGURE_FOOTNOTE, UNAVAILABLE_NOTE, errorTitleFor } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
@@ -90,7 +90,7 @@ export default function ConfigureTemplateScreen() {
     return (
       <ScreenError
         title={errorTitleFor('configure')}
-        onRetry={catalog.reload}
+        onRetry={catalog.reload} body={busyBody(catalog)}
         onBack={() => router.back()}
         topInset={insets.top}
       />

@@ -1,47 +1,68 @@
 # `snoopy-mobile` — session instructions
 
-Round 7.5M is the mobile completion re-entry named by the master plan's §0.1
-audited completion order, step 5. Rounds 6 and 7.5 are closed; their records
-stay in `DESIGN-GAPS.md` and `ROUND-7.5-OBSERVATIONS.md` and are not rewritten.
-**The round is not closed here.** Round 7F — a fresh `snoopy-backend` session
-that wrote none of this implementation — re-runs every gate line and closes
-only what it independently observes.
+**Round 16 is open** (BUILD-PLAN Phase 24, ADR-0032): the mobile app offers
+every signed-in feature the website offers, on the same published operations,
+and ships to Apple first. This repository owns 24.3–24.7, one phase per session:
+the foundation, automations/runs/connections, organization/projects/teams,
+billing/account/data/support, and the iOS release. **The round is not closed
+here.** A fresh `snoopy-backend` session that wrote none of it re-runs Gate 24
+and closes only what it independently observes. Earlier rounds' records stay in
+`DESIGN-GAPS.md` and `ROUND-7.5-OBSERVATIONS.md` and are not rewritten.
 
 ## Start every session
 
-Read `../snoopy-backend/docs/platform/AUTOM8X-MASTER-PLAN.md` §0.1 (the
-audited control block, including its completion order), then the Round 7 card
-in `AUTOM8X-ROUND-PLAYBOOK.md`, then this repository's `DESIGN-CONTRACT.md`,
-`DESIGN-GAPS.md` and `ROUND-7.5-OBSERVATIONS.md`. The sibling governance
-repository is read-only from a mobile session.
+Read `../snoopy-backend/docs/platform/AUTOM8X-MASTER-PLAN.md` §0.1, then the
+Round 16 card in `AUTOM8X-ROUND-PLAYBOOK.md`, BUILD-PLAN Phase 24 and
+`docs/adr/0032-mobile-offers-every-web-feature.md`, then this repository's
+`DESIGN-CONTRACT.md` and `DESIGN-GAPS.md`. The sibling governance repository is
+read-only from a mobile session.
 
 If the master plan no longer names `snoopy-mobile` as the open or the next
-repository, stop. **One recorded exception:** on 2026-09-08 the owner directed,
-during Round 10, that the app draw no password surface (platform §0.1 owner
-decision 5, fourth fix; manifest §12.1 #90). That single change was made in
-this repository the same day as an owner-approved re-entry, the way §4 rule 1
-allows; the other three approved fixes wait for the next mobile round.
+repository, stop.
 
 ## Non-negotiable rules
 
 1. Work only in this repository. A backend, web or deployment issue is a
    finding, not permission to edit a sibling repository — record it in
-   `ROUND-7.5-OBSERVATIONS.md` for a `snoopy-backend` session to file.
+   `DESIGN-GAPS.md` for a `snoopy-backend` session to file.
 2. Preserve the frozen Nocturne UI. The 18 components are snapshot-pinned in
-   both palettes. Disabled support may not change their default render.
+   both palettes; disabled support may not change their default render. New
+   screens mirror the website's pages and are composed from those components,
+   the shared `components/dialog.tsx` and the theme tokens. A new primitive is
+   added only when none fits, snapshot-pinned in both palettes (ADR-0032).
 3. Use theme tokens; no raw hex or ad-hoc font families outside
    `constants/theme.ts`.
 4. Do not duplicate a Nocturne primitive.
 5. Runtime network access goes through `lib/platform/client.ts` and generated
    `openapi-fetch` clients only. No raw `fetch`, property/global fetch,
-   XMLHttpRequest, WebSocket, EventSource, axios, or alternate client.
+   XMLHttpRequest, WebSocket, EventSource, axios, or alternate client. **One
+   exception, in that file only:** `putFileToSignedUrl`, the credential-less
+   PUT of a file's bytes to the URL the platform signed (FR-14).
+   `audit:platform` admits exactly one plain `fetch(` there, and no second.
 6. Credentials live only in `expo-secure-store`, this-device-only. Never put a
-   token in AsyncStorage, a URL, route params, logs, fixtures, or analytics.
+   token in AsyncStorage, a URL, route params, logs, fixtures, or analytics. A
+   webhook secret is shown once and stored nowhere, the Keychain included.
 7. Never invent a field or workflow absent from the published contract. Follow
    the refusal map in `DESIGN-CONTRACT.md`.
 8. Work goes through a branch, a PR, green CI and a merge; `npm run verify` is
-   green before every commit. No new documents: findings and observations go
-   into the files named above.
+   green before every commit. `/code-review` every PR; `/security-review`
+   anything touching auth, secrets, uploads, deletion or the billing link. No
+   new documents: findings and observations go into `DESIGN-GAPS.md`.
+9. **Billing (ADR-0032).** Every platform shows the plan, its price and the
+   workspace's billing status. On iOS, "Upgrade" and "Manage billing" open
+   the hosted checkout and portal in the system browser, and the app re-reads
+   billing when it returns to the foreground. Android shows no purchase control
+   or call to action. There is no in-app purchase. The app is offered in the
+   United States App Store storefront only; selling elsewhere needs a
+   storefront check first.
+10. **The shared rules every screen uses:**
+    - `administers()` (`lib/view/roles.ts`): owner or admin controls.
+    - `workspaceIfShown()` (`hooks/use-session.tsx`) with a resource's
+      `loadedFor`: an action targets the workspace its screen loaded, or is
+      refused with `WORKSPACE_CHANGED`.
+    - `useIntentKeys()`: a resubmission keeps its idempotency key.
+    - `refusalMessage()` (`lib/content/refusals.ts`): refusals in the website's
+      words.
 
 ## Release configuration, pinned
 
@@ -83,11 +104,11 @@ API origin, so the browser-leg base above exists. The published route and its
 parameters are unchanged; only the origin the browser is pointed at differs.
 Both variances are explicit and are judged by the fresh auditor.
 
-## Gate 8 commands
+## Gate commands
 
 ```bash
 npm ci
-npm run verify
+npm run verify            # ends by emitting .autom8x/repo-facts/snoopy-mobile.json
 npm run audit:dependencies
 npx expo-doctor
 npm run export:ios
@@ -99,7 +120,7 @@ git status --short
 fail `ENOTEMPTY`; `rm -rf node_modules && npm ci` is the recorded workaround
 and also clears the conflict copies that make `tsc` and `expo lint` crawl.
 
-The fresh audit must also inspect the simulator or emulator, exercise reachable
-refusal and auth states, compare the §1 endpoint journey with the web client,
+The fresh audit must also inspect the simulator or device, exercise reachable
+refusal and auth states, compare every screen with the website's page list,
 validate EAS configuration, and report any live journey that external
 configuration makes NOT OBSERVED. It must not convert NOT OBSERVED into PASS.

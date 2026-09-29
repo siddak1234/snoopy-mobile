@@ -11,7 +11,7 @@ import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { em, fonts, layout, radius, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
-import { useWorkspaceResource } from '@/hooks/use-resource';
+import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { useWorkflows, type FlowStatus } from '@/hooks/use-workflows';
 import {
   BROWSE_SOLUTIONS_LABEL,
@@ -73,7 +73,7 @@ export default function FlowsScreen() {
   }
   if (flows.status === 'error') {
     return (
-      <ScreenError title={errorTitleFor('flows')} onRetry={flows.reload} topInset={insets.top} />
+      <ScreenError title={errorTitleFor('flows')} onRetry={flows.reload} body={busyBody(flows)} topInset={insets.top} />
     );
   }
   if (live !== null && live.length === 0) {

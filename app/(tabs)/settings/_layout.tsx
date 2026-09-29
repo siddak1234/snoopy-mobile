@@ -1,0 +1,22 @@
+import { Stack } from 'expo-router';
+
+import { useTheme } from '@/hooks/use-theme';
+
+/**
+ * Settings tab stack — the admin areas the website keeps under `/account`
+ * (Organization, Projects, Teams, Billing, Account, Support) live here as screens
+ * so they keep the Settings tab highlighted (ADR-0032, BUILD-PLAN 24.3.8). Each
+ * screen registers itself here when it lands.
+ */
+export default function SettingsLayout() {
+  const { palette } = useTheme();
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: palette.bg },
+      }}>
+      <Stack.Screen name="index" />
+    </Stack>
+  );
+}

@@ -9,7 +9,7 @@ import { IconTile } from '@/components/nocturne/icon-tile';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
-import { useWorkspaceResource } from '@/hooks/use-resource';
+import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { activeWorkspaceId, useSession } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
 import { UNAVAILABLE_NOTE, errorTitleFor } from '@/lib/content/screen-states';
@@ -112,7 +112,7 @@ export default function SolutionsScreen() {
     return (
       <ScreenError
         title={errorTitleFor('solutions')}
-        onRetry={catalog.reload}
+        onRetry={catalog.reload} body={busyBody(catalog)}
         topInset={insets.top}
       />
     );

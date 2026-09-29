@@ -141,11 +141,14 @@ function FailureBody({
  */
 export function ScreenError({
   title,
+  body,
   onRetry,
   onBack,
   topInset = 0,
 }: {
   title: string;
+  /** The design's body unless a 429 stated its wait (`busyBody`, BUILD-PLAN 24.3.3). */
+  body?: string;
   onRetry?: () => void;
   onBack?: () => void;
   topInset?: number;
@@ -156,7 +159,7 @@ export function ScreenError({
       testID="screen-error"
       icon={<WarningCircle size={36} color={palette.neutral[500]} />}
       title={title}
-      body={ERROR_BODY}
+      body={body ?? ERROR_BODY}
       onRetry={onRetry}
       onBack={onBack}
       backLabel={BACK_LABEL}

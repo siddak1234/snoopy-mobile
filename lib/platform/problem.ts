@@ -42,6 +42,26 @@ export class PlatformUnreachableError extends PlatformError {
 }
 
 /**
+ * The platform answered 429: too many requests, for now.
+ *
+ * A subclass of `PlatformError` so every `status` check keeps working, and a
+ * class of its own so a screen can say "busy, try again" rather than "failed".
+ * It is never a statement about the session: only a 401 is (`use-session.tsx`),
+ * and a 429 on the refresh or sign-out path keeps the stored credential as any
+ * non-401 refusal does. `message` is already the words to show.
+ */
+export class PlatformRateLimitedError extends PlatformError {
+  constructor(
+    message: string,
+    /** The wait the platform asked for (`retry-after`), when it stated one. */
+    public readonly retryAfterSeconds?: number,
+  ) {
+    super(message, 429, 'TOO_MANY_REQUESTS');
+    this.name = 'PlatformRateLimitedError';
+  }
+}
+
+/**
  * Thrown when the app has no backend origin configured.
  *
  * Distinct from a failed request on purpose: an unconfigured client renders an

@@ -250,9 +250,51 @@ export interface paths {
         };
         /**
          * @description Everything this workspace owns, as records and references (BUILD-PLAN 7.4). Requires owner or admin. **The response carries IDs and references, never file bytes** — each artifact is named with its size and digest, and fetched separately through a short-lived signed URL.
-         *     `complete: false` means this is a partial export. That is true when a service cannot answer and also when any successful nested service section has `data.truncated: true`; success from every service alone is not a completeness guarantee. This response does not currently emit pagination cursors. If a future public export section does, its cursor is opaque: a client must preserve it byte-for-byte and send it unchanged only to that section's documented public pagination operation.
+         *     `complete: false` means this is a partial export. That is true when a service cannot answer and also when any successful nested service section has `data.truncated: true`; success from every service alone is not a completeness guarantee. This response does not emit pagination cursors: a workspace larger than one bounded section takes EVERYTHING through `startWorkspaceExport`, which stages the whole workspace as one file (§12.1 #39).
          */
         get: operations["exportWorkspace"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description **A complete export**, staged as one file (§12.1 #39, FR-21). Requires owner or admin. Answers at once with the export `running`; read it with `readWorkspaceExport` until it is `ready`, when it carries the file — an artifact id and a short-lived signed URL, never the bytes (invariant 6).
+         *
+         *     Every section of every service is paged, so no section is cut at 250 rows as the bounded `exportWorkspace` is. A run's `output` is not in it; the run detail serves it. A service that cannot answer makes the file partial (`complete: false`, and the file names the gap) rather than absent.
+         *
+         *     **One file has a ceiling**: the object store's maximum for any file, 25 MiB unless the deployment sets less. An export past it fails `too_large`, and stops as soon as it passes it rather than after reading everything.
+         *
+         *     One at a time per workspace: while one is running, asking again answers that one. The file is collected a day after it is made, after which the export reads `expired` and a new one may be asked for. Deleting the workspace withdraws a running export (`workspace_deleted`) and no file is made for it.
+         */
+        post: operations["startWorkspaceExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/exports/{exportId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description One export's state. `running` until the job ends; then `ready` with its `file`, or `failed` with a `failureReason` (`interrupted` when nothing finished it within its lease); `expired` once the file is collected. Requires owner or admin. Each read signs a fresh URL, valid for minutes. */
+        get: operations["readWorkspaceExport"];
         put?: never;
         post?: never;
         delete?: never;
@@ -319,8 +361,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description A workspace's active teams (ADR-0010). An owner or admin sees every team; any other member sees only the teams they are on, each carrying `viewerRole`. */
         get: operations["listTeams"];
         put?: never;
+        /** @description **Requires `owner` or `admin`**, and an organization workspace — a personal workspace has no teams and answers 400. */
         post: operations["createTeam"];
         delete?: never;
         options?: never;
@@ -335,10 +379,29 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description **Requires `owner` or `admin`, or the team's `manager`**; any other member receives 403. Names are not carried — resolve `userId` against the workspace's member list. */
         get: operations["listTeamMemberships"];
         put?: never;
+        /** @description Adds a workspace member to the team, or changes their team role. **Requires `owner` or `admin`, or the team's `manager`.** The person must already belong to the workspace. `removeTeamMembership` takes them off again. */
         post: operations["upsertTeamMembership"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/teams/{teamId}/memberships/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Takes a person off the team (§12.1 #174). **Requires `owner` or `admin`, or the team's `manager`** — the same authority that adds them. A manager may remove themselves; the workspace's owners and admins can always manage the team. Removing someone already absent answers `removed: false` rather than 404, so a retry is not an error. Whatever access the team gave them to a project ends with it. */
+        delete: operations["removeTeamMembership"];
         options?: never;
         head?: never;
         patch?: never;
@@ -403,10 +466,29 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description The teams granted access to this project. Anyone with a role on the project may read it; anyone else receives 404, which does not reveal the project. */
         get: operations["listProjectTeamGrants"];
         put?: never;
+        /** @description Grants a team a role on this project, or changes it. **Requires the project's `owner` or `admin`** — effective, so a workspace owner or admin qualifies. Ownership is never grantable to a team. **The team must be one the caller can see** (§12.1 #176) — any team for a workspace owner or admin, otherwise only a team they are on; any other team is 404, as `listTeams` hides it. `revokeProjectTeam` withdraws the grant. */
         post: operations["grantProjectTeam"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/projects/{projectId}/team-grants/{teamId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Withdraws a team's access to this project (§12.1 #174). **Requires the project's `owner` or `admin`**, effective, as granting does — and, unlike granting, not the team's visibility: every grant is listed to the project's owner and admins, so each one they can read they can withdraw. Revoking a grant already absent answers `revoked: false` rather than 404. */
+        delete: operations["revokeProjectTeam"];
         options?: never;
         head?: never;
         patch?: never;
@@ -573,7 +655,60 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /** @description Rename, configure, activate, archive, or move to another version with `templateVersion` (§12.1 #126). The request body and every refusal are specified in `docs/openapi/automations.yaml`. */
         patch: operations["updateSubscription"];
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description A webhook subscription's address without its secret; owner or admin only (§12.1 #91). Specified in `docs/openapi/automations.yaml`. */
+        get: operations["readWebhookEndpoint"];
+        put?: never;
+        /** @description Issues the address or rotates its secret, which is shown once; owner or admin only (§12.1 #91, #109). Specified in `docs/openapi/automations.yaml`. */
+        post: operations["issueWebhookEndpoint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description A signed URL the browser PUTs a run's file to directly (FR-14). Specified in `docs/openapi/automations.yaml`. */
+        post: operations["openUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/uploads/{uploadSessionId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description The store's measurement of what arrived, as a file a run can be given (FR-14). Specified in `docs/openapi/automations.yaml`. */
+        post: operations["completeUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/workspaces/{workspaceId}/runs": {
@@ -707,6 +842,87 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description The plans a workspace can move onto, with the capability values each grants (ADR-0025). Any signed-in person may read it: it is the same list for everyone and it is what a purchase decision is made from.
+         *     **A plan with no provider price is omitted**, which is how the free floor stays off this list — nothing can check out onto a plan the provider has no price for, so offering it would produce a button that 404s. **Each plan carries its `price` when the provider can state it** (§12.1 #163); the provider's own identifier for it is never published.
+         */
+        get: operations["listPlans"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/billing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description What this workspace is paying for (ADR-0025). **Requires owner or admin**, which is stricter than most workspace reads and deliberate: a plan, a dunning status and a renewal date are facts about the person who owns the account, not about the automations a member runs.
+         *     **No provider identifier is ever returned.** `planId` is this platform's, never the billing provider's. A workspace that has never paid reports the free plan rather than an absence, because the free plan is the floor and not a missing subscription.
+         */
+        get: operations["readWorkspaceBilling"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/billing/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Start a purchase (ADR-0025). Requires owner or admin. The platform creates a **provider-hosted** Checkout session and answers its URL; the client navigates there.
+         *     **The platform never renders a card field and never receives a card number** — card data does not touch a platform server, which keeps the estate in PCI SAQ-A. The returned URL is a capability, not a credential: single-purpose, short-lived, and useless for reading or mutating anything the platform owns.
+         *     The subscription becomes real when the provider's `checkout.session.completed` callback arrives at `POST /v1/billing/webhooks`, not when this call returns. A client should re-read `GET /v1/workspaces/{workspaceId}/billing` after the redirect rather than assuming the plan changed.
+         */
+        post: operations["createBillingCheckoutSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/billing/portal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Open the provider-hosted customer portal (ADR-0025). Requires owner or admin. **This is where a plan is changed or cancelled**: the platform publishes no cancel, upgrade or downgrade operation of its own, because each would be a money-moving mutation duplicating one the provider already implements correctly. The platform learns the outcome from `customer.subscription.updated` on the webhook it already verifies.
+         *     Answers **409** when the workspace has no billing relationship yet — the client should send the customer to checkout instead. That is not a 404: the workspace exists and the caller can plainly see it.
+         */
+        post: operations["createBillingPortalSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/billing/webhooks": {
         parameters: {
             query?: never;
@@ -733,7 +949,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description An automation container reporting in, authenticated by its run token rather than a session. The segment is the MESSAGE — step, result, model, provider, artifact — never a run id. */
+        /**
+         * @description An automation container reporting in, authenticated by its run token rather than a session. The segment is the MESSAGE — step, result, model, provider, artifact, mail — never a run id.
+         *
+         *     `mail` was served but unpublished from Round 8 until Round 11 (§12.1 #119a): the only definition of its shape was a route handler in a private repository, which an automation author copying the published wire format could not read. `AutomationMailRequest` in `@snoopy/contracts` is now that definition.
+         */
         post: operations["receiveAutomationCallback"];
         delete?: never;
         options?: never;
@@ -843,6 +1063,9 @@ export interface components {
         };
         RemovalResponse: {
             removed: boolean;
+        };
+        RevocationResponse: {
+            revoked: boolean;
         };
         WorkspaceMember: {
             /** Format: uuid */
@@ -1032,6 +1255,87 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
         };
+        TeamSummary: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            workspaceId: string;
+            name: string;
+            description?: string;
+            /** @enum {string} */
+            status: "active" | "archived";
+            /**
+             * @description The caller's role on this team; absent when they are not on it.
+             * @enum {string}
+             */
+            viewerRole?: "manager" | "member";
+            /** Format: date-time */
+            createdAt: string;
+        };
+        CreateTeamRequest: {
+            name: string;
+            description?: string;
+        };
+        TeamMutationResponse: {
+            team: components["schemas"]["TeamSummary"];
+        };
+        TeamListResponse: {
+            teams: components["schemas"]["TeamSummary"][];
+            nextCursor?: string;
+        };
+        TeamMembershipSummary: {
+            /** Format: uuid */
+            teamId: string;
+            /** Format: uuid */
+            workspaceId: string;
+            /** Format: uuid */
+            userId: string;
+            /** @enum {string} */
+            role: "manager" | "member";
+            /** Format: date-time */
+            createdAt: string;
+        };
+        UpsertTeamMembershipRequest: {
+            /** Format: uuid */
+            userId: string;
+            /** @enum {string} */
+            role: "manager" | "member";
+        };
+        TeamMembershipMutationResponse: {
+            membership: components["schemas"]["TeamMembershipSummary"];
+        };
+        TeamMembershipListResponse: {
+            memberships: components["schemas"]["TeamMembershipSummary"][];
+            nextCursor?: string;
+        };
+        ProjectTeamGrantSummary: {
+            /** Format: uuid */
+            projectId: string;
+            /** Format: uuid */
+            teamId: string;
+            /** Format: uuid */
+            workspaceId: string;
+            /** @enum {string} */
+            role: "admin" | "member";
+            /** Format: date-time */
+            createdAt: string;
+        };
+        GrantProjectTeamRequest: {
+            /** Format: uuid */
+            teamId: string;
+            /**
+             * @description Ownership is never grantable to a team; a project owner is always an explicit user.
+             * @enum {string}
+             */
+            role: "admin" | "member";
+        };
+        ProjectTeamGrantMutationResponse: {
+            grant: components["schemas"]["ProjectTeamGrantSummary"];
+        };
+        ProjectTeamGrantListResponse: {
+            grants: components["schemas"]["ProjectTeamGrantSummary"][];
+            nextCursor?: string;
+        };
         ProjectMutationResponse: {
             project: components["schemas"]["ProjectSummary"];
         };
@@ -1095,6 +1399,35 @@ export interface components {
             publishedVersion?: number;
             /** Format: date-time */
             updatedAt: string;
+        };
+        /** @description What `DELETE /v1/account` removed (FR-21), relayed from Access. The same shape on 200 and 409; only `deleted: true` means the operation committed. */
+        AccountDeletionResult: {
+            deleted: boolean;
+            /** @description Every workspace that leaves with the account (ADR-0028). */
+            workspaces: components["schemas"]["AccountDeletionWorkspace"][];
+            /** @description Present when `deleted` is false. */
+            reason?: string;
+            /** @description Present when `deleted` is true — what Access removed. */
+            account?: {
+                [key: string]: unknown;
+            };
+        };
+        AccountDeletionWorkspace: {
+            /** Format: uuid */
+            workspaceId: string;
+            /** @enum {string} */
+            type: "personal" | "organization";
+            /** @description True only when every service removed this workspace. */
+            complete: boolean;
+            services: {
+                /** @enum {string} */
+                service: "entitlements" | "connections" | "runs" | "catalog" | "artifacts";
+                ok: boolean;
+                /** @description What the service reported removing, in its own shape. */
+                detail?: unknown;
+                /** @description Why it did not, when it did not — `not_attempted` for a service after the one that refused. Never an upstream body verbatim. */
+                reason?: string;
+            }[];
         };
         ApiProblem: {
             /** Format: uri-reference */
@@ -1205,6 +1538,74 @@ export interface components {
             subscriptions: components["schemas"]["ExportEntitlementSubscriptionRecord"][];
             truncated: boolean;
         };
+        /** @description A workspace's billing state. **No provider identifier appears here or in any other public schema** (ADR-0025 §2): a provider id is a join key into an account the customer does not control, it is what a support screenshot leaks, and it would weld this contract to the vendor ADR-0005 exists to keep replaceable. */
+        WorkspaceBillingResponse: {
+            /** Format: uuid */
+            workspaceId: string;
+            /** @description This platform's plan id, never the provider's price or product id. */
+            planId: string;
+            displayName: string;
+            /**
+             * @description Absent when the workspace sits on the free floor and has never had a subscription. `past_due` still grants capabilities — dunning is a period in which the provider retries, and `canceled` and `unpaid` are what end access.
+             * @enum {string}
+             */
+            status?: "trialing" | "active" | "past_due" | "canceled" | "unpaid" | "incomplete";
+            /** Format: date-time */
+            currentPeriodEnd?: string;
+            cancelAtPeriodEnd?: boolean;
+        };
+        PlanListResponse: {
+            plans: components["schemas"]["PurchasablePlan"][];
+        };
+        PurchasablePlan: {
+            planId: string;
+            displayName: string;
+            /** @description Capability name to its numeric allowance, e.g. `automation.subscribe`. A capability is data rather than an enum in this contract (ADR-0016), so a new one is a row in a plan and not a contract change. */
+            capabilities: {
+                [key: string]: number;
+            };
+            /** @description Absent when the provider cannot state one flat amount for the plan's price, or cannot be reached — never invented. A client says the price is shown at checkout. */
+            price?: components["schemas"]["PlanPrice"];
+        };
+        /** @description What a plan costs, read from the billing provider by the plan's price (§12.1 #163). Display only: the provider's checkout states the figure a customer actually agrees to. */
+        PlanPrice: {
+            /** @description Minor units — cents for `usd` — so no float carries money. */
+            amount: number;
+            /** @description ISO 4217, lower case, as the provider states it. */
+            currency: string;
+            /**
+             * @description How often it recurs. Absent for a one-time price.
+             * @enum {string}
+             */
+            interval?: "day" | "week" | "month" | "year";
+        };
+        BillingCheckoutRequest: {
+            planId: string;
+            /**
+             * Format: uri
+             * @description Absolute `https:` URL the provider returns the browser to after payment. Validated server-side — an unvalidated value here is an open redirect with a just-paid customer on the other end of it. Defaults to the deployment's configured return URL when omitted.
+             */
+            successUrl?: string;
+            /**
+             * Format: uri
+             * @description Absolute `https:` URL for an abandoned checkout.
+             */
+            cancelUrl?: string;
+        };
+        BillingPortalRequest: {
+            /**
+             * Format: uri
+             * @description Absolute `https:` URL the portal returns the browser to.
+             */
+            returnUrl?: string;
+        };
+        /** @description A provider-hosted page. **A URL and an expiry, and nothing else** — no token, no customer id, no price. It is a capability rather than a credential, which is why it may cross to a browser at all. */
+        HostedBillingSession: {
+            /** Format: uri */
+            url: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
         ExportEntitlementSubscriptionRecord: {
             plan_id: string;
             display_name: string;
@@ -1257,12 +1658,16 @@ export interface components {
             template_version: number;
             name: string | null;
             /** @enum {string} */
-            status: "draft" | "live" | "paused";
+            status: "draft" | "live" | "paused" | "archived";
             /** @description Validated automation setup values. Provider credentials, webhook secrets, and webhook payloads are not subscription config. */
             config: {
                 [key: string]: unknown;
             };
             unmet_connections: string[];
+            /** Format: uuid */
+            project_id: string | null;
+            /** Format: uuid */
+            created_by_user_id: string | null;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -1319,6 +1724,37 @@ export interface components {
         ArtifactsWorkspaceExportData: {
             artifacts: components["schemas"]["ExportArtifactRecord"][];
             truncated: boolean;
+        };
+        WorkspaceExportJobResponse: {
+            export: components["schemas"]["WorkspaceExportJob"];
+        };
+        WorkspaceExportJob: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "running" | "ready" | "failed" | "expired";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            completedAt?: string;
+            /** @description False when a service could not answer; the file names which. */
+            complete?: boolean;
+            /** @description A short code: `interrupted`, `not_configured`, `too_large`, `upload_failed`, `store_refused`, `store_not_configured`, `workspace_deleted` or `internal_error`. A service that cannot be read is not a failure of the export: the file names it, and `complete` is false. */
+            failureReason?: string;
+            file?: components["schemas"]["WorkspaceExportFile"];
+        };
+        WorkspaceExportFile: {
+            /** Format: uuid */
+            artifactId: string;
+            filename: string;
+            sizeBytes: number;
+            /**
+             * Format: uri
+             * @description Signed and short-lived. Fetch the file from here directly.
+             */
+            downloadUrl: string;
+            /** Format: date-time */
+            expiresAt: string;
         };
         ExportArtifactRecord: {
             /** Format: uuid */
@@ -1841,22 +2277,22 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["AccountDeletionResult"];
                 };
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
-            /** @description The deletion did not complete across every service. */
+            /** @description The deletion did not complete across every service. `deleted` is false, `reason` says why, and each workspace reports its services. Nothing after the refusing service was attempted, so a retry resumes. */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ApiProblem"];
+                    "application/json": components["schemas"]["AccountDeletionResult"];
                 };
             };
-            /** @description Deleted, but the identity provider could not be reached to revoke the session. The device still holds a live credential; retry the revocation through `POST /v1/auth/logout`. */
+            /** @description **`SESSION_REVOCATION_FAILED` — bearer callers only.** The account was deleted, but the identity provider could not be reached to revoke the refresh token the caller sent. The device still holds a live credential; retry the revocation through `POST /v1/auth/logout`. A cookie caller never receives it: its cookies are cleared, which is itself effective. **`DEPENDENCY_FAILURE` — any caller.** The Edge could not complete its call to the service that deletes, so whether anything was removed is unknown; read `GET /v1/session` before telling a person either way. */
             502: {
                 headers: {
                     [name: string]: unknown;
@@ -1888,6 +2324,62 @@ export interface operations {
                     "application/json": components["schemas"]["WorkspaceExportResponse"];
                 };
             };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    startWorkspaceExport: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The export, running (or the one already running). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceExportJobResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    readWorkspaceExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                exportId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The export, and its file when ready. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceExportJobResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
@@ -1998,13 +2490,17 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Teams in this workspace. */
+            /** @description Teams the caller may see, newest first. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["TeamListResponse"];
+                };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -2019,16 +2515,26 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTeamRequest"];
+            };
+        };
         responses: {
-            /** @description The created team. */
+            /** @description The team, created or replayed. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["TeamMutationResponse"];
+                };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     listTeamMemberships: {
@@ -2046,13 +2552,19 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Who is on this team. */
+            /** @description Who is on this team, newest first. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["TeamMembershipListResponse"];
+                };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     upsertTeamMembership: {
@@ -2067,15 +2579,57 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertTeamMembershipRequest"];
+            };
+        };
         responses: {
-            /** @description The membership. */
+            /** @description The membership, created, changed or replayed. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["TeamMembershipMutationResponse"];
+                };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    removeTeamMembership: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                teamId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Whether a membership was removed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RemovalResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     readProject: {
@@ -2246,13 +2800,18 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Teams granted access to this project. */
+            /** @description The project's team grants, newest first. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ProjectTeamGrantListResponse"];
+                };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
         };
     };
     grantProjectTeam: {
@@ -2267,15 +2826,57 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GrantProjectTeamRequest"];
+            };
+        };
         responses: {
-            /** @description The grant. */
+            /** @description The grant, created, changed or replayed. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ProjectTeamGrantMutationResponse"];
+                };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    revokeProjectTeam: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                projectId: components["parameters"]["ProjectId"];
+                teamId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Whether a grant was revoked. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevocationResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     listJoinRequests: {
@@ -2660,6 +3261,99 @@ export interface operations {
             };
         };
     };
+    readWebhookEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                subscriptionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The address */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    issueWebhookEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                subscriptionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The address and its secret */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    openUpload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Where to PUT the file. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    completeUpload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                uploadSessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     listRuns: {
         parameters: {
             query?: never;
@@ -2842,8 +3536,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The delivery was accepted. */
-            202: {
+            /** @description The delivery was taken, or declined with `accepted: false` for a subscription that is not live or no longer webhook-triggered. The full contract is `deliverWebhook` in `docs/openapi/automations.yaml`. */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2851,6 +3545,121 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             429: components["responses"]["TooManyRequests"];
+        };
+    };
+    listPlans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The purchasable plans. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            502: components["responses"]["DependencyFailure"];
+            503: components["responses"]["NotConfigured"];
+        };
+    };
+    readWorkspaceBilling: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The workspace's current plan and subscription state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceBillingResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            502: components["responses"]["DependencyFailure"];
+            503: components["responses"]["NotConfigured"];
+        };
+    };
+    createBillingCheckoutSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillingCheckoutRequest"];
+            };
+        };
+        responses: {
+            /** @description A provider-hosted Checkout session. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HostedBillingSession"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            502: components["responses"]["DependencyFailure"];
+            503: components["responses"]["NotConfigured"];
+        };
+    };
+    createBillingPortalSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["BillingPortalRequest"];
+            };
+        };
+        responses: {
+            /** @description A provider-hosted portal session. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HostedBillingSession"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            502: components["responses"]["DependencyFailure"];
+            503: components["responses"]["NotConfigured"];
         };
     };
     receiveBillingWebhook: {
@@ -2896,7 +3705,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                message: "step" | "result" | "model" | "provider" | "artifact";
+                message: "step" | "result" | "model" | "provider" | "artifact" | "mail";
             };
             cookie?: never;
         };

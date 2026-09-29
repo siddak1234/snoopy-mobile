@@ -141,6 +141,42 @@ describe('architecture audit scripts', () => {
     expect(run(credentialAudit).status).toBe(0);
   });
 
+  it('allows the transport ONE plain fetch, the signed upload, and nothing more (24.3.4)', () => {
+    mkdirSync(join(root, 'lib/platform'), { recursive: true });
+    const transport = join(root, 'lib/platform/client.ts');
+    const put = "export const put = (url, bytes) => fetch(url, { method: 'PUT', body: bytes });";
+    writeFileSync(transport, put);
+    expect(run(platformAudit).status).toBe(0);
+
+    // Two calls on ONE line spend two (the budget counts calls, not lines).
+    writeFileSync(transport, "export const both = (a, b) => fetch(a).then(() => fetch(b));");
+    const twice = run(platformAudit);
+    expect(twice.status).toBe(1);
+    expect(twice.stderr).toContain('raw network primitive');
+
+    // An admitted call cannot carry another primitive on its line.
+    writeFileSync(transport, "export const mixed = (u) => fetch(u) && new XMLHttpRequest();");
+    expect(run(platformAudit).status).toBe(1);
+
+    for (const extra of [
+      'export const again = (url) => fetch(url);',
+      "export const other = () => globalThis.fetch('https://example.test');",
+      "export const socket = () => new WebSocket('wss://example.test');",
+    ]) {
+      writeFileSync(transport, `${put}\n${extra}`);
+      const result = run(platformAudit);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('raw network primitive');
+    }
+
+    // The allowance is the transport's alone: the same call anywhere else fails.
+    writeFileSync(transport, '');
+    writeFileSync(join(root, 'lib/upload.ts'), put);
+    const elsewhere = run(platformAudit);
+    expect(elsewhere.status).toBe(1);
+    expect(elsewhere.stderr).toContain('lib/upload.ts');
+  });
+
   it('fails a network primitive captured in a binding', () => {
     writeFileSync(
       join(root, 'app/bad.ts'),
