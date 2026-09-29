@@ -20,15 +20,17 @@ import {
 } from '@/components/screen-state';
 import { em, fonts, layout, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
-import { activeWorkspaceId, useSession } from '@/hooks/use-session';
+import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
 import { useTheme } from '@/hooks/use-theme';
+import { WORKSPACE_CHANGED, addRefusalMessage } from '@/lib/content/refusals';
 import { UNAVAILABLE_NOTE, errorTitleFor } from '@/lib/content/screen-states';
 import { createSubscription, updateSubscription } from '@/lib/platform/automations';
 import { readCatalog, readConnectionProviders } from '@/lib/platform/catalog';
 import { newIdempotencyKey } from '@/lib/platform/client';
-import { PlatformError, PlatformNotConfiguredError } from '@/lib/platform/problem';
+import { PlatformNotConfiguredError } from '@/lib/platform/problem';
 import { readSubscriptions } from '@/lib/platform/runs';
+import { withoutArchived } from '@/lib/view/catalog';
 
 /** One-time setup generated from the selected manifest. */
 export default function SetupScreen() {
@@ -37,7 +39,6 @@ export default function SetupScreen() {
   const insets = useSafeAreaInsets();
   const session = useSession();
   const { setActive } = useSolutions();
-  const workspaceId = activeWorkspaceId(session);
   const { template } = useLocalSearchParams<{ template?: string }>();
   const [config, setConfig] = useState<Record<string, unknown>>({});
   const [localSubscription, setLocalSubscription] = useState<
@@ -59,7 +60,8 @@ export default function SetupScreen() {
       ]);
       return {
         entry: catalog.automations.find((item) => item.templateId === template),
-        subscription: subscriptions.subscriptions.find((item) => item.templateId === template),
+        // An archived one is gone: adding it again makes a new subscription.
+        subscription: withoutArchived(subscriptions.subscriptions).find((item) => item.templateId === template),
         providers: new Map(providers.providers.map((item) => [item.providerId, item.displayName])),
       };
     },
@@ -86,7 +88,7 @@ export default function SetupScreen() {
   if (resource.status === 'offline') {
     return <ScreenOffline onRetry={resource.reload} onBack={() => router.back()} topInset={insets.top} />;
   }
-  if (resource.status !== 'ready' || !resource.data.entry || !workspaceId) {
+  if (resource.status !== 'ready' || !resource.data.entry) {
     return (
       <ScreenError
         title={errorTitleFor('setup')}
@@ -129,6 +131,11 @@ export default function SetupScreen() {
       setActionError(`Complete required setup: ${missing.map((field) => field.title).join(', ')}.`);
       return;
     }
+    const workspaceId = workspaceIfShown(session, resource.loadedFor);
+    if (!workspaceId) {
+      setActionError(WORKSPACE_CHANGED);
+      return;
+    }
     setBusy(true);
     setActionError(null);
     try {
@@ -141,6 +148,10 @@ export default function SetupScreen() {
         );
         current = created.subscription;
         setLocalSubscription(current);
+        // Spent: a later Activate on this screen — after this subscription is
+        // archived, say — is a new intent, and replaying this one would answer
+        // with a subscription that no longer counts.
+        createKey.current = newIdempotencyKey('subscribe');
         // The create changed what `configured` is computed FROM: a retry now
         // falls back to `created.config` where this attempt fell back to
         // `field.defaultValue`. Same key with a different body is a 409 by
@@ -169,9 +180,7 @@ export default function SetupScreen() {
       updateKey.current = newIdempotencyKey('activate');
       router.replace({ pathname: '/(tabs)/flows/detail', params: { flow: updated.subscription.id } });
     } catch (error) {
-      setActionError(
-        error instanceof PlatformError ? error.message : 'The solution could not be activated.',
-      );
+      setActionError(addRefusalMessage(error, 'The solution could not be activated.'));
     } finally {
       setBusy(false);
     }

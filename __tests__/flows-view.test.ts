@@ -1,6 +1,6 @@
 import type { CatalogEntry } from '@/lib/platform/catalog';
 import type { RunSubscriptionCounts, Subscription } from '@/lib/platform/runs';
-import { toFlows } from '@/lib/view/catalog';
+import { toFlows, toSolutions } from '@/lib/view/catalog';
 import {
   approvalTitle,
   composeNotifications,
@@ -98,6 +98,27 @@ describe('toFlows', () => {
   it('prefers the subscription’s own name over the catalog’s', () => {
     const [flow] = toFlows([sub({ name: 'AP triage — EU' })], [entry()], [counts()]);
     expect(flow.name).toBe('AP triage — EU');
+  });
+
+  it('leaves an archived subscription out: it is not a workflow any more', () => {
+    const flows = toFlows([sub(), sub({ id: 's2', status: 'archived' })], [entry()], [counts()]);
+    expect(flows.map((flow) => flow.key)).toEqual(['s1']);
+  });
+});
+
+describe('toSolutions — Added is a subscription the workspace still has', () => {
+  const catalog = { automations: [entry()], categories: ['All'] };
+
+  it('is Added with a live, paused or draft subscription', () => {
+    for (const status of ['live', 'paused', 'draft'] as const) {
+      expect(toSolutions(catalog, [sub({ status })])[0]!.subscribed).toBe(true);
+    }
+  });
+
+  it('is not Added with only an archived one, whatever the catalog flag says', () => {
+    // The catalog's `subscribed` is still true here: it counts the archived row.
+    expect(toSolutions(catalog, [sub({ status: 'archived' })])[0]!.subscribed).toBe(false);
+    expect(toSolutions(catalog, [])[0]!.subscribed).toBe(false);
   });
 });
 

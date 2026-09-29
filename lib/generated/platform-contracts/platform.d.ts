@@ -183,6 +183,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/native/identities/{provider}/ticket": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description A native client links another sign-in account (ADR-0017 §6). The same link transaction the website starts at `/v1/auth/identities/{provider}/start`, for the person the bearer names. A browser cannot carry that bearer, so the transaction comes back SEALED — a ticket the app opens once, in its own system browser, at `/v1/auth/native/identities/{provider}/start`. From the provider onwards it is login's native flow: the callback returns a one-time `code` to `redirectUri`, traded with the app's verifier at `/v1/auth/native/token` for a session that now carries the linked identity. The refresh token travels here as it does to `/v1/auth/native/refresh` and never in a URL. An access token at or near its expiry is refused with 401 rather than refreshed here, which would rotate the refresh token the device holds. */
+        post: operations["startNativeIdentityLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/native/identities/{provider}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The browser leg of a native link (ADR-0017 §6). Opened in the app's system browser on the same origin as `AUTH_CALLBACK_URL`: sets the OAuth transaction cookie login's start sets, then redirects to the provider. The ticket is AES-256-GCM under its own derived key, lives two minutes, and names its provider; a forged, tampered, expired or mismatched one is one 400. */
+        get: operations["openNativeIdentityLink"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/logout": {
         parameters: {
             query?: never;
@@ -1364,6 +1398,12 @@ export interface components {
         LoginIdentitiesResponse: {
             identities: components["schemas"]["LoginIdentitySummary"][];
         };
+        /** @description A sealed native link transaction (ADR-0017 §6). Opaque to the app, which only opens it in its own system browser; it is never stored. */
+        NativeIdentityLinkTicket: {
+            ticket: string;
+            /** @description Seconds the ticket stays usable. */
+            expiresIn: number;
+        };
         /** @description The only credential this platform issues to a client, and the reason ADR-0017 amends invariant 1. The website never receives this shape — its session lives in HttpOnly cookies it cannot read. A native client stores these in the OS secure enclave and presents `accessToken` as a bearer credential. */
         NativeSessionResponse: {
             /** @constant */
@@ -2171,6 +2211,85 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ApiProblem"];
                 };
             };
+            503: components["responses"]["NotConfigured"];
+        };
+    };
+    startNativeIdentityLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["parameters"]["LoginProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    refreshToken: string;
+                    /**
+                     * Format: uri
+                     * @description An exact entry of `NATIVE_APP_REDIRECT_URIS`, as for login.
+                     */
+                    redirectUri: string;
+                    /** @description Base64url SHA-256 of the app's own verifier (S256). */
+                    codeChallenge: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The sealed ticket, and how long it stays usable. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NativeIdentityLinkTicket"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description No bearer, a refused session, or an access token too close to expiry. Renew once and retry; a second 401 is a dead session. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description The identity provider could not start linking. Retry; keep the session. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            503: components["responses"]["NotConfigured"];
+        };
+    };
+    openNativeIdentityLink: {
+        parameters: {
+            query: {
+                ticket: string;
+            };
+            header?: never;
+            path: {
+                provider: components["parameters"]["LoginProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Redirect to the provider through Supabase Auth, with the signed PKCE state set. The callback later redirects to the ticket's `redirectUri` with a one-time `code`, or with `status=error` and a reason. */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
             503: components["responses"]["NotConfigured"];
         };
     };

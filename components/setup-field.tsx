@@ -10,6 +10,13 @@ import type { components } from '@/lib/generated/platform-contracts/automations'
 export type SetupField = components['schemas']['AutomationSetupField'];
 
 /**
+ * What a row draws of a manifest field. A setup field is one; so is a manual
+ * run's input other than a file (ADR-0030), which shares the `text`, `money`
+ * and `toggle` vocabulary — so the Run form draws the same rows (24.4.1).
+ */
+export type FieldRowSpec = Pick<SetupField, 'key' | 'title' | 'description' | 'required' | 'control'>;
+
+/**
  * One configuration row, generated from `manifest.setup[]`.
  *
  * This is the whole configuration surface for **every** automation that will
@@ -72,13 +79,35 @@ export function missingRequiredSetupFields(
   });
 }
 
+/**
+ * The values a manifest-driven form holds, in the type each control promises —
+ * the one conversion the Set up form and the Run form both need (the website's
+ * `declaredValues`). A toggle is always sent; an empty text or money field, and
+ * a file not yet uploaded, are left out, so the platform applies the manifest's
+ * default or refuses a required one. The platform stays the validator.
+ */
+export function declaredValues(
+  fields: readonly { key: string; control: string }[],
+  values: Record<string, unknown>,
+): Record<string, string | number | boolean> {
+  const declared: Record<string, string | number | boolean> = {};
+  for (const field of fields) {
+    const value = values[field.key];
+    if (field.control === 'toggle') declared[field.key] = value === true;
+    else if (field.control === 'money') {
+      if (typeof value === 'number' && Number.isFinite(value)) declared[field.key] = value;
+    } else if (typeof value === 'string' && value.trim() !== '') declared[field.key] = value;
+  }
+  return declared;
+}
+
 export function SetupFieldRow({
   field,
   value,
   onChange,
   divider,
 }: {
-  field: SetupField;
+  field: FieldRowSpec;
   value: unknown;
   onChange: (next: unknown) => void;
   divider: boolean;
@@ -101,7 +130,9 @@ export function SetupFieldRow({
   const changeText = (next: string) => {
     setDraft(next);
     if (field.control === 'money') {
-      const normalized = next.trim();
+      // The decimal pad types the locale's separator: "12,50" on a comma-decimal
+      // device is 12.5, not 12 with the rest dropped.
+      const normalized = next.trim().replace(',', '.');
       const numeric = normalized === '' ? undefined : Number(normalized);
       if (numeric === undefined || Number.isFinite(numeric)) {
         lastEmitted.current = numeric;

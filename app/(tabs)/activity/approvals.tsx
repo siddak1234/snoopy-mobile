@@ -9,7 +9,8 @@ import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
-import { activeWorkspaceId, useSession } from '@/hooks/use-session';
+import { useSession, workspaceIfShown } from '@/hooks/use-session';
+import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
 import { useTheme } from '@/hooks/use-theme';
 import {
   APPROVALS_EMPTY_BODY,
@@ -90,7 +91,6 @@ export default function ApprovalsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const session = useSession();
-  const workspaceId = activeWorkspaceId(session);
   const [decisions, setDecisions] = useState<Record<string, Decision>>({});
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -128,14 +128,21 @@ export default function ApprovalsScreen() {
   });
 
   const items = inbox.status === 'ready' ? inbox.data : [];
-  const decided = Object.keys(decisions).length;
+  // Only decisions on approvals still listed: a re-read drops the decided ones,
+  // and counting them against the new list would claim the queue is clear.
+  const decided = items.filter((item) => item.id in decisions).length;
   const pending = items.length - decided;
   // `decided > 0` is the difference between "you cleared the queue" and "the
   // queue was already empty"; only the first is a synchronisation.
   const allDone = decided > 0 && decided === items.length;
 
   const submitDecision = async (approvalId: string, decision: Decision) => {
-    if (!workspaceId || busy[approvalId]) return;
+    if (busy[approvalId]) return;
+    const workspaceId = workspaceIfShown(session, inbox.loadedFor);
+    if (!workspaceId) {
+      setErrors((previous) => ({ ...previous, [approvalId]: WORKSPACE_CHANGED }));
+      return;
+    }
     const previousIntent = intentKeys.current[approvalId];
     const intent = previousIntent?.decision === decision
       ? previousIntent
@@ -154,7 +161,7 @@ export default function ApprovalsScreen() {
     } catch (error) {
       setErrors((previous) => ({
         ...previous,
-        [approvalId]: error instanceof Error ? error.message : 'The decision was not saved.',
+        [approvalId]: refusalMessage(error, {}, 'The decision was not saved.'),
       }));
     } finally {
       setBusy((previous) => ({ ...previous, [approvalId]: false }));

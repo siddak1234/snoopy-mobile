@@ -30,7 +30,11 @@ export type SolutionView = {
   desc: string;
   cat: string;
   price: number;
-  /** Drives Add versus Added — the fixtures tracked this by array index. */
+  /**
+   * Drives Add versus Added: the workspace holds a subscription to it that is
+   * not archived (`withoutArchived`), rather than the catalog's own
+   * `subscribed`, which still counts an archived one.
+   */
   subscribed: boolean;
   /**
    * Evidence from the platform's reachability probe, never an assumption.
@@ -68,16 +72,39 @@ export type ConnectionView = {
   name: string;
   sub: string;
   connected: boolean;
+  /** The account the connection acts as — what Replace names (BUILD-PLAN 24.4.3). */
+  accountName?: string;
+  /**
+   * Whether its account can be replaced through consent: an OAuth connection
+   * that is not disconnected. A pasted key is replaced by pasting another.
+   * Ported from the website's `ConnectionsPanel` rule.
+   */
+  replaceable: boolean;
 };
 
-export function toSolution(entry: CatalogEntry): SolutionView {
+/**
+ * The subscriptions a workspace still has.
+ *
+ * Archiving is one-way and gives the plan slot back; using that automation
+ * again means adding it afresh. The list's contract does not promise to omit
+ * archived rows, so every screen treats one as absent — the website's rule
+ * (`snoopy/app/account/automations/page.tsx`). The catalog's `subscribed` is not
+ * used for this: it is true for a template with ANY subscription row, archived
+ * included (DESIGN-GAPS.md, Round 16), so after an Archive it would still say
+ * Added and offer Pause on a subscription the platform no longer runs.
+ */
+export function withoutArchived(subscriptions: Subscription[]): Subscription[] {
+  return subscriptions.filter((subscription) => subscription.status !== 'archived');
+}
+
+export function toSolution(entry: CatalogEntry, subscribed: boolean): SolutionView {
   return {
     icon: iconFor(entry.icon),
     name: entry.name,
     desc: entry.description,
     cat: entry.category,
     price: entry.monthlyPriceUsd,
-    subscribed: entry.subscribed,
+    subscribed,
     available: entry.available,
     templateId: entry.templateId,
   };
@@ -93,8 +120,9 @@ export function toTemplate(entry: CatalogEntry): TemplateView {
   };
 }
 
-export function toSolutions(response: CatalogResponse): SolutionView[] {
-  return response.automations.map(toSolution);
+export function toSolutions(response: CatalogResponse, subscriptions: Subscription[]): SolutionView[] {
+  const added = new Set(withoutArchived(subscriptions).map((subscription) => subscription.templateId));
+  return response.automations.map((entry) => toSolution(entry, added.has(entry.templateId)));
 }
 
 export function toTemplates(response: CatalogResponse): TemplateView[] {
@@ -139,6 +167,10 @@ export function toConnectionRows(
       name: provider.displayName,
       sub: connectionSubtitle(connection),
       connected: connection?.status === 'connected',
+      ...(connection ? { accountName: connection.externalAccount.displayName } : {}),
+      replaceable: Boolean(
+        connection && connection.status !== 'disconnected' && provider.authType === 'oauth2',
+      ),
     };
   });
 }
@@ -222,7 +254,8 @@ export type FlowConnectionView = {
  * window**, which is not the same as not existing — the endpoint returns only
  * those with at least one. So a missing entry means zeroes, and a Draft
  * subscription (which has never run) correctly shows the design's em dash rather
- * than "0".
+ * than "0". An archived subscription is not a workflow any more and is left
+ * out (`withoutArchived`).
  */
 export function toFlows(
   subscriptions: Subscription[],
@@ -233,7 +266,7 @@ export function toFlows(
   const entries = new Map(catalog.map((e) => [e.templateId, e]));
   const counts = new Map(perSubscription.map((c) => [c.subscriptionId, c]));
 
-  return subscriptions.map((sub) => {
+  return withoutArchived(subscriptions).map((sub) => {
     const entry = entries.get(sub.templateId);
     const c = counts.get(sub.id);
     const isDraft = sub.status === 'draft';

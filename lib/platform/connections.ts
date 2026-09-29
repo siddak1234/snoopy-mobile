@@ -8,13 +8,21 @@ export type ConnectionState = components['schemas']['ConnectionState'];
 export type ConnectionProvider = components['schemas']['ConnectionProvider'];
 
 export type ConnectionOutcome =
-  | { status: 'connected'; connection: ConnectionState }
+  /** `reused`: the live connection already held everything; no consent was asked. */
+  | { status: 'connected'; connection: ConnectionState; reused?: true }
   | { status: 'cancelled' }
   | { status: 'failed'; message: string };
 
+/**
+ * Connect, reconnect or extend a provider — or, with `replaceConnectionId`,
+ * replace the account a live connection holds (ADR-0019 §4, ADR-0026, BUILD-PLAN
+ * 24.4.3). Replacing names the exact connection it replaces; one that changed
+ * since the screen read it is refused with 409 and nothing is started.
+ */
 export async function connectOAuthProvider(
   workspaceId: string,
   provider: ConnectionProvider,
+  options: { replaceConnectionId?: string } = {},
 ): Promise<ConnectionOutcome> {
   const returnTo = nativeRedirectUri();
   if (!returnTo) throw new PlatformNotConfiguredError();
@@ -27,6 +35,7 @@ export async function connectOAuthProvider(
         body: {
           providerId: provider.providerId,
           ...(provider.scopes.length > 0 ? { scopes: provider.scopes } : {}),
+          ...(options.replaceConnectionId ? { replaceConnectionId: options.replaceConnectionId } : {}),
           returnTo,
         },
         signal,
@@ -37,7 +46,9 @@ export async function connectOAuthProvider(
   // platform started nothing and there is no consent page to open (ADR-0019 §2,
   // BUILD-PLAN 22.8.1). It carries no `authorizationUrl`; reading it as
   // connected is the whole of the rule.
-  if (started.outcome === 'reused') return { status: 'connected', connection: started.connection };
+  if (started.outcome === 'reused') {
+    return { status: 'connected', connection: started.connection, reused: true };
+  }
 
   // The same system user-agent login uses, with the same browserless refusal.
   // Note what `cancelled` can hide here: a system browser that shares a
