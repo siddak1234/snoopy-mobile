@@ -9,6 +9,7 @@ import {
   bySection,
   missingRequiredSetupFields,
 } from '@/components/setup-field';
+import { ChoiceChips } from '@/components/choice-chips';
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
@@ -29,6 +30,7 @@ import { createSubscription, updateSubscription } from '@/lib/platform/automatio
 import { readCatalog, readConnectionProviders } from '@/lib/platform/catalog';
 import { newIdempotencyKey } from '@/lib/platform/client';
 import { PlatformNotConfiguredError } from '@/lib/platform/problem';
+import { readProjects } from '@/lib/platform/projects';
 import { readSubscriptions } from '@/lib/platform/runs';
 import { withoutArchived } from '@/lib/view/catalog';
 
@@ -46,6 +48,9 @@ export default function SetupScreen() {
   >(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Where it is added: '' is the whole workspace, else a project's id. Unset
+  // until the person chooses; the first scope it is not in yet is the default.
+  const [chosenScope, setChosenScope] = useState<string | undefined>(undefined);
   const createKey = useRef(newIdempotencyKey('subscribe'));
   const updateKey = useRef(newIdempotencyKey('activate'));
   const hasFocused = useRef(false);
@@ -53,16 +58,21 @@ export default function SetupScreen() {
   const resource = useWorkspaceResource(
     async (id) => {
       if (!template) throw new PlatformNotConfiguredError();
-      const [catalog, subscriptions, providers] = await Promise.all([
+      const [catalog, subscriptions, providers, projects] = await Promise.all([
         readCatalog(id),
         readSubscriptions(id),
         readConnectionProviders(),
+        readProjects(id),
       ]);
       return {
         entry: catalog.automations.find((item) => item.templateId === template),
-        // An archived one is gone: adding it again makes a new subscription.
-        subscription: withoutArchived(subscriptions.subscriptions).find((item) => item.templateId === template),
+        // Its subscriptions, one per scope at most. An archived one is gone:
+        // adding it again makes a new subscription.
+        subscriptions: withoutArchived(subscriptions.subscriptions).filter((item) => item.templateId === template),
         providers: new Map(providers.providers.map((item) => [item.providerId, item.displayName])),
+        // An automation can be added to the whole workspace, or to one project
+        // so only the people who can see it see it (18.6.2), as on the website.
+        projects: projects.filter((project) => project.status !== 'archived'),
       };
     },
     [template],
@@ -99,8 +109,17 @@ export default function SetupScreen() {
     );
   }
 
-  const { entry, providers } = resource.data;
-  const subscription = localSubscription ?? resource.data.subscription ?? null;
+  const { entry, providers, projects } = resource.data;
+  const scopes = [
+    { value: '', label: 'Whole workspace' },
+    ...projects.map((project) => ({ value: project.id, label: `Project: ${project.name}` })),
+  ];
+  const inScope = (value: string) =>
+    resource.data.subscriptions.find((item) => (item.projectId ?? '') === value);
+  // A chosen project that has since gone (archived on a re-read) is no choice.
+  const stillOffered = chosenScope !== undefined && scopes.some((option) => option.value === chosenScope);
+  const scope = stillOffered ? chosenScope : (scopes.find((option) => !inScope(option.value))?.value ?? '');
+  const subscription = localSubscription ?? inScope(scope) ?? null;
   const unmet = subscription?.unmetConnections ?? [];
 
   const setField = (key: string, value: unknown) => {
@@ -143,7 +162,7 @@ export default function SetupScreen() {
       if (!current) {
         const created = await createSubscription(
           workspaceId,
-          { templateId: entry.templateId, templateVersion: entry.version },
+          { templateId: entry.templateId, templateVersion: entry.version, ...(scope ? { projectId: scope } : {}) },
           createKey.current,
         );
         current = created.subscription;
@@ -208,6 +227,22 @@ export default function SetupScreen() {
           <Text style={[styles.subtitle, { color: palette.neutral[400] }]}>One-time setup</Text>
         </View>
       </View>
+
+      {projects.length > 0 ? (
+        <ChoiceChips
+          label="Add to"
+          options={scopes}
+          value={scope}
+          onChange={(next) => {
+            // Another scope is another subscription: a new intent from the start.
+            setChosenScope(next);
+            setLocalSubscription(null);
+            setActionError(null);
+            createKey.current = newIdempotencyKey('subscribe');
+            updateKey.current = newIdempotencyKey('activate');
+          }}
+        />
+      ) : null}
 
       {bySection(entry.setup).map(({ section, fields }) => (
         <View key={section}>

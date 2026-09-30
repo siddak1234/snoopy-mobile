@@ -14,7 +14,8 @@ export type UploadedFile = components['schemas']['UploadedFile'];
 
 export function createSubscription(
   workspaceId: string,
-  input: { templateId: string; templateVersion?: number; name?: string },
+  /** `projectId` scopes it to one project (18.6.2); without one it is workspace-wide. */
+  input: { templateId: string; templateVersion?: number; name?: string; projectId?: string },
   idempotencyKey: string,
 ): Promise<{ subscription: Subscription }> {
   return platformOperation(`/v1/workspaces/${workspaceId}/subscriptions`, ({ automations }, signal) =>

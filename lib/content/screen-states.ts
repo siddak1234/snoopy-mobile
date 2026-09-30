@@ -27,7 +27,12 @@ export type ScreenKey =
   | 'templates'
   | 'setup'
   | 'configure'
-  | 'builder';
+  | 'builder'
+  | 'organization'
+  | 'projects'
+  | 'project'
+  | 'teams'
+  | 'team';
 
 /** `gErrTitle` — the design names the thing that failed, never the mechanism. */
 const ERROR_TITLES: Record<ScreenKey, string> = {
@@ -43,6 +48,11 @@ const ERROR_TITLES: Record<ScreenKey, string> = {
   setup: "Couldn't load this setup",
   configure: "Couldn't load this template",
   builder: "Couldn't load this workflow",
+  organization: "Couldn't load your organization",
+  projects: "Couldn't load your projects",
+  project: "Couldn't load this project",
+  teams: "Couldn't load teams",
+  team: "Couldn't load this team",
 };
 
 /** The design's own fallback for a screen not in the map. */

@@ -17,6 +17,7 @@ import { UNAVAILABLE_NOTE, errorTitleFor } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
 import { updateSubscription } from '@/lib/platform/automations';
 import { newIdempotencyKey } from '@/lib/platform/client';
+import { readProjects } from '@/lib/platform/projects';
 import { readSubscriptions } from '@/lib/platform/runs';
 import { toSolutions, withoutArchived, type SolutionView } from '@/lib/view/catalog';
 import { useTheme } from '@/hooks/use-theme';
@@ -45,12 +46,32 @@ export default function SolutionsScreen() {
    * catalog.
    */
   const catalog = useWorkspaceResource(async (id) => {
-    const [catalogResponse, subscriptions] = await Promise.all([
+    const [catalogResponse, subscriptions, projects] = await Promise.all([
       readCatalog(id),
       readSubscriptions(id),
+      readProjects(id),
     ]);
-    return { catalog: catalogResponse, subscriptions: subscriptions.subscriptions };
+    return {
+      catalog: catalogResponse,
+      subscriptions: subscriptions.subscriptions,
+      openProjects: projects.filter((project) => project.status !== 'archived'),
+    };
   });
+  /**
+   * Whether an added automation can still be added somewhere — the whole
+   * workspace or an open project it is not in yet — as the website's Add offers
+   * exactly those scopes (18.6.2). Without projects that is only the workspace,
+   * free when the automation was added to a project alone.
+   */
+  const canAddElsewhere = (templateId: string) => {
+    if (catalog.status !== 'ready') return false;
+    const taken = new Set(
+      withoutArchived(catalog.data.subscriptions)
+        .filter((subscription) => subscription.templateId === templateId)
+        .map((subscription) => subscription.projectId ?? ''),
+    );
+    return ['', ...catalog.data.openProjects.map((project) => project.id)].some((scope) => !taken.has(scope));
+  };
   const solutions: SolutionView[] =
     catalog.status === 'ready'
       ? toSolutions(catalog.data.catalog, catalog.data.subscriptions)
@@ -185,6 +206,17 @@ export default function SolutionsScreen() {
                 {!sol.available ? (
                   <Text style={[styles.cardMeta, { color: status.warnText }]}>
                     {UNAVAILABLE_NOTE}
+                  </Text>
+                ) : null}
+                {added && sol.available && canAddElsewhere(sol.templateId) ? (
+                  <Text
+                    testID={`add-elsewhere-${sol.templateId}`}
+                    suppressHighlighting
+                    onPress={() =>
+                      router.push({ pathname: '/(tabs)/solutions/setup', params: { template: sol.templateId } })
+                    }
+                    style={[styles.cardMeta, { color: palette.accentRamp[300] }]}>
+                    Add to…
                   </Text>
                 ) : null}
               </View>

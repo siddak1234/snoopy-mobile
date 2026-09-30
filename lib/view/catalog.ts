@@ -97,6 +97,21 @@ export function withoutArchived(subscriptions: Subscription[]): Subscription[] {
   return subscriptions.filter((subscription) => subscription.status !== 'archived');
 }
 
+/**
+ * Project names to label workflows with, where scopes mean something: the
+ * workspace has a project, or a workflow is scoped to one. Otherwise nothing,
+ * and the rows read as they always have.
+ */
+export function scopeLabels(
+  projects: readonly { id: string; name: string; status: string }[],
+  subscriptions: readonly Subscription[],
+): ReadonlyMap<string, string> | undefined {
+  const scoped =
+    projects.some((project) => project.status !== 'archived') ||
+    withoutArchived([...subscriptions]).some((subscription) => subscription.projectId);
+  return scoped ? new Map(projects.map((project) => [project.id, project.name])) : undefined;
+}
+
 export function toSolution(entry: CatalogEntry, subscribed: boolean): SolutionView {
   return {
     icon: iconFor(entry.icon),
@@ -230,6 +245,12 @@ export type FlowView = {
    * DESIGN-CONTRACT.md rather than filled in by guessing at a provider set.
    */
   connections: FlowConnectionView[];
+  /**
+   * Where it applies — "Whole workspace" or "Project: …" (18.6.2), as the
+   * website labels each subscription. Present only when the caller asks for
+   * it, which it does where the workspace has projects.
+   */
+  scope?: string;
 };
 
 export type FlowConnectionView = {
@@ -262,6 +283,8 @@ export function toFlows(
   catalog: CatalogEntry[],
   perSubscription: RunSubscriptionCounts[],
   providers?: Map<string, ConnectionProvider>,
+  /** Project names by id, to label each workflow's scope; absent, no label. */
+  projectNames?: ReadonlyMap<string, string>,
 ): FlowView[] {
   const entries = new Map(catalog.map((e) => [e.templateId, e]));
   const counts = new Map(perSubscription.map((c) => [c.subscriptionId, c]));
@@ -293,6 +316,13 @@ export function toFlows(
         tone: 'neutral' as const,
         status: 'Not connected',
       })),
+      ...(projectNames
+        ? {
+            scope: sub.projectId
+              ? `Project: ${projectNames.get(sub.projectId) ?? 'a project'}`
+              : 'Whole workspace',
+          }
+        : {}),
     };
   });
 }

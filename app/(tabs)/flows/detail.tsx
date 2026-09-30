@@ -23,8 +23,9 @@ import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
 import { UNAVAILABLE_NOTE, errorTitleFor } from '@/lib/content/screen-states';
 import { readCatalog, readConnectionProviders } from '@/lib/platform/catalog';
 import { updateSubscription } from '@/lib/platform/automations';
+import { readProjects } from '@/lib/platform/projects';
 import { readRunStats, readSubscriptions } from '@/lib/platform/runs';
-import { toFlows, type FlowView } from '@/lib/view/catalog';
+import { scopeLabels, toFlows, type FlowView } from '@/lib/view/catalog';
 import { administers } from '@/lib/view/roles';
 import { statusLabel } from '@/lib/view/status';
 
@@ -55,11 +56,12 @@ export default function WorkflowDetailScreen() {
    * entry are kept as read, for the actions (`AutomationActions`).
    */
   const flows = useWorkspaceResource(async (workspaceId) => {
-    const [subs, catalog, stats, providers] = await Promise.all([
+    const [subs, catalog, stats, providers, projects] = await Promise.all([
       readSubscriptions(workspaceId),
       readCatalog(workspaceId),
       readRunStats(workspaceId),
       readConnectionProviders(),
+      readProjects(workspaceId),
     ]);
     return {
       flows: toFlows(
@@ -67,6 +69,7 @@ export default function WorkflowDetailScreen() {
         catalog.automations,
         stats.subscriptions,
         new Map(providers.providers.map((p) => [p.providerId, p])),
+        scopeLabels(projects, subs.subscriptions),
       ),
       subscriptions: subs.subscriptions,
       automations: catalog.automations,
@@ -167,7 +170,9 @@ export default function WorkflowDetailScreen() {
         <BackCircle onPress={() => router.back()} />
         <View style={styles.headerText}>
           <Text style={[styles.title, { color: palette.text }]}>{def.name}</Text>
-          <Text style={[styles.subtitle, { color: palette.neutral[400] }]}>{def.desc}</Text>
+          <Text style={[styles.subtitle, { color: palette.neutral[400] }]}>
+            {def.scope ? `${def.scope} · ${def.desc}` : def.desc}
+          </Text>
         </View>
         <StatusPill label={current} />
       </View>

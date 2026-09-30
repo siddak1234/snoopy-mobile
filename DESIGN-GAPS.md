@@ -318,7 +318,7 @@ inside Round 6. The CI gate fails on critical advisories; there are none.
 Recorded by the session building BUILD-PLAN Phase 24 on 2026-09-29. None of
 this closes a line of Gate 24; a fresh session re-runs every one.
 
-### Findings
+### Findings, 24.4
 
 - **Backend: the catalog's `subscribed` counts an archived subscription.**
   `apps/catalog/src/postgres-automations.ts` answers `subscribed` from any
@@ -430,3 +430,50 @@ fail, and the file restored and checked byte-identical by SHA-256:
 | Approvals counts what is still listed | every decision counted | `return-reread` "still pending" |
 | A stale Replace re-reads when closed | no re-read | `settings-connections` "re-reads when closed" |
 | A comma decimal | no normalising | `setup-field` "comma-decimal" |
+
+### Findings, 24.5
+
+- **The website's join page is reached only by a link that names the
+  organization** (`/onboarding/join-org?w=`), and neither the website nor the
+  backend makes that link. The app's Organization screen lists what
+  `organization-discovery` returns instead — the same operation, which takes no
+  parameter and answers only for the person's verified email domain.
+- **Website: a retry after a failed domain claim creates a second
+  organization.** `createOrgWorkspaceAction` creates the workspace and then
+  claims the email domain; each create mints a new key
+  (`snoopy/lib/tenancy.ts`), so pressing Create again after the claim failed
+  makes another organization. The app keeps the one it made and retries the
+  claim alone. For a `snoopy` session to file.
+- **Not carried over, on purpose.** Onboarding's "create a personal account
+  instead": every signed-in person already has a personal workspace (backend
+  `ensurePersonalWorkspace`), and the app has no onboarding step. Delete on the
+  projects list: it is on the project's own screen, with the same operation and
+  the same confirmation.
+- **A project action acts on the project's own workspace**, which the screen
+  read it from and which can be other than the active one — as the website's
+  `findAccessibleProject` resolves it.
+- **An automation added to a project alone can still be added to the whole
+  workspace**, projects or not — the website's Add offers every scope not taken.
+  The app's "Add to…" follows that.
+
+### Guards proved to bite, 24.5
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| Organization managed by its owners and admins | the role check dropped | `organization-screen` "reads nothing it would be refused" |
+| Never an owner, never oneself, removed | every row removable | `organization-screen` "never an owner" |
+| Set up only on a company domain | the mailbox-provider check dropped | `organization-screen` "company domain" |
+| One organization, however often Create is pressed | the made one forgotten | `organization-screen` "creates the organization once" |
+| Member removal bound to the loaded workspace | the active workspace used directly | `organization-screen` "once another workspace is active" |
+| The DNS value seen before the re-read | re-read at once | `organization-screen` "DNS verification value" |
+| A project deleted in its own workspace | the active workspace used | `projects-screens` "own workspace" |
+| Leave only after typing DELETE | no word asked | `projects-screens` "typing DELETE" |
+| A team project only in the loaded organization | the binding dropped | `projects-screens` "no longer the active workspace" |
+| An owner's row not changed | both its guards removed | `projects-screens` "owner's row is not changed" |
+| Teams created by owners and admins | anyone offered Create | `teams-screens` "offered no Create" |
+| Team members read by its managers, owners and admins | anyone reading | `teams-screens` "read only by its managers" |
+| A team name of two characters at least | one allowed | `teams-screens` "two-letter name" |
+| The Teams row only in an organization | shown in any workspace | `teams-screens` "Teams only in an organization" |
+| Add to… wherever a scope remains | hidden without projects | `tab-screens` "Add to…" |
+| The chosen project sent with the create | dropped | `tab-screens` "project chosen" |
+| No scope drawn without projects | always drawn | `tab-screens` "no scope where" |

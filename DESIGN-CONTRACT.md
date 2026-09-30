@@ -115,6 +115,10 @@ switcher (snoopy PR #6) applies over the same operation.
 | Approvals | pending approvals joined through subscription → template → pipeline step |
 | Notifications | pending approvals plus failed runs; explicitly an in-app composition |
 | Settings | session/workspace, catalog + subscriptions for the plan totals, provider registry, and workspace connections; the workspace switcher reads the workspace collection |
+| Organization | the workspace collection; for an owner or admin of the active organization, its members, domains and join requests; for someone in no organization, `organization-discovery` |
+| Projects / project | the workspace collection and each workspace's projects; one project read in its own workspace; for a team project, its memberships, team grants and the visible teams, plus the workspace's members for its owner or admin |
+| Teams / team | the workspace collection and the organization's visible teams; for a team's manager or an owner or admin, its memberships and the workspace's members |
+| Solutions, setup, flows | also the active workspace's projects, for the scope an automation is added to and the label each workflow carries |
 
 Every fetching surface has loading, offline, platform-error, **unavailable**, and
 applicable empty behavior, **with one carve-out the design owns**: Home draws a
@@ -188,6 +192,25 @@ review" — the held queue — also list running, queued and cancelled runs.
     `reused` answer is said as nothing replaced.
 - Every action acts on the workspace its screen loaded (`workspaceIfShown`);
   after a switch it is refused with `WORKSPACE_CHANGED` and not sent.
+- Round 16 (24.5), each the website's operation, words and gating:
+  - Organization: rename; claim, update, verify and revoke a domain, its DNS
+    verification value shown once; remove a member, never an owner or oneself,
+    after a confirmation; approve or reject a join request. Someone in no
+    organization joins or asks to join one discovery found, and can cancel that
+    request; on a company domain they can set one up — created once, then its
+    domain claimed, a failed claim retried alone.
+  - Projects: create — personal in the personal workspace, team only in the
+    active organization it was loaded as; delete (archive) by its owner;
+    leave — typing DELETE from the project's Leave, or confirming from one's
+    own row, as the website does; add members, change a role (an admin only a
+    member's), remove; give a team a role, never ownership, and take it away.
+    Each acts on the project's own workspace, which can be other than the
+    active one.
+  - Teams: create (two characters at least), by an owner or admin; add
+    someone or change their role, one operation; remove someone — a manager
+    who removes themselves leaves the team's screen.
+  - An automation is added to the whole workspace or to a project, the scopes
+    it is not in yet, as the website's Add offers.
 - After a change, a screen re-reads from `loading`: what it showed is out of
   date and is not left to act on. A return to a screen re-reads it and keeps
   its rows until the answer lands (24.4.4).

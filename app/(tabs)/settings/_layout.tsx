@@ -17,6 +17,11 @@ export default function SettingsLayout() {
         contentStyle: { backgroundColor: palette.bg },
       }}>
       <Stack.Screen name="index" />
+      <Stack.Screen name="organization" />
+      <Stack.Screen name="projects" />
+      <Stack.Screen name="project" />
+      <Stack.Screen name="teams" />
+      <Stack.Screen name="team" />
     </Stack>
   );
 }
