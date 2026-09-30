@@ -74,11 +74,14 @@ carry the three values, and `app.config.js` refuses a release build missing
 any one of them at config time, so a misconfigured cloud build fails before
 anything ships. Since Round 7.5M the redirect URI and the auth base stored
 there are also compared byte-for-byte against the deployment's strings, so a
-well-formed value for the wrong host cannot ship either. Two `eas.json` absences remain deliberate: no `channel` keys,
+well-formed value for the wrong host cannot ship either. One `eas.json` absence remains deliberate: no `channel` keys,
 because the app has no update runtime (`expo-updates` is not a dependency and
-a channel would route an OTA update to a build that cannot receive one), and
-no `submit.production` block, because no store credentials exist and an empty
-block would read as configured-and-ready. The history of both is in
+a channel would route an OTA update to a build that cannot receive one). The
+`submit.production` block exists since Round 16 (BUILD-PLAN 24.7.1): the App
+Store Connect record's Apple ID and the Team ID, both public identifiers. The
+upload itself authenticates with the App Store Connect API key EAS holds for
+the project, created by the owner through `eas credentials` on 2026-09-30, so
+no Apple account name or password is written anywhere. The history is in
 `ROUND-7.5-OBSERVATIONS.md`.
 
 ## Runtime architecture

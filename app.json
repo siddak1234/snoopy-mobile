@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "snoopy-mobile",
+    "name": "Autom8x",
     "slug": "snoopy-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,7 +10,11 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "ai.autom8x.snoopy"
+      "bundleIdentifier": "ai.autom8x.snoopy",
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
