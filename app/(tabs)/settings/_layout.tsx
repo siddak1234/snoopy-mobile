@@ -22,6 +22,10 @@ export default function SettingsLayout() {
       <Stack.Screen name="project" />
       <Stack.Screen name="teams" />
       <Stack.Screen name="team" />
+      <Stack.Screen name="billing" />
+      <Stack.Screen name="account" />
+      <Stack.Screen name="data" />
+      <Stack.Screen name="support" />
     </Stack>
   );
 }

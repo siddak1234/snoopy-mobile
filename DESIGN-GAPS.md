@@ -477,3 +477,50 @@ fail, and the file restored and checked byte-identical by SHA-256:
 | Add to… wherever a scope remains | hidden without projects | `tab-screens` "Add to…" |
 | The chosen project sent with the create | dropped | `tab-screens` "project chosen" |
 | No scope drawn without projects | always drawn | `tab-screens` "no scope where" |
+
+### Findings, 24.6
+
+- **The website's linking is cookie-bound and web-only** (`LinkedAccountsSection`
+  navigates to `/v1/auth/identities/{provider}/start`). The app links through
+  24.2.1's ticket flow, which exists for exactly this reason (ADR-0017 §6).
+- **A bearer caller can meet one deletion answer the website never does**:
+  502 `SESSION_REVOCATION_FAILED`, the account gone but the refresh token it
+  sent still live. The app revokes it through sign-out before letting go, and
+  keeps the session if that fails, as the contract asks. A `DEPENDENCY_FAILURE`
+  502, or no answer, reads `GET /v1/session` before saying either way.
+- **Android and Apple's "call to action".** "Price shown at checkout" invites a
+  purchase, so Android draws it only where the price itself is known; iOS says
+  it. Android has no Choose plan, Manage billing or portal note (ADR-0032).
+- **The website's Support page is a placeholder** that links to the marketing
+  contact page. The app draws that form on the same public operation, with the
+  website's two required fields; the platform requires only the email.
+- **Privacy and Terms are not published by the platform**; the app opens the
+  website's pages, at the origin the browser leg shares. A build without that
+  base says so instead of linking nowhere.
+- **The bounded export is shared, not saved**: a phone has no download folder
+  the app can write to without another permission, so the JSON goes to the
+  system share sheet — as a file on iOS, as text on Android, which is what its
+  share intent carries. The complete export's file opens in the browser from the
+  signed link.
+- **24.7.1 waits on 24.8.6.** `eas.json` gains its `submit.production` block
+  once the App Store Connect record exists; its three values (Apple ID, team,
+  ASC app id) are the owner's, and an invented block would fail every submit.
+  The README's line stands until then.
+
+### Guards proved to bite, 24.6
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| The billing link on iOS only | offered on every platform | `billing-screen` "Android no purchase control" |
+| Only an https hosted address opened | any address | `billing-screen` "nothing but https" |
+| Billing read for an owner or admin only | read for a member | `billing-screen` "member is told" |
+| Billing read again on return | no re-read | `billing-screen` "comes back" |
+| A partial deletion keeps the account | 409 read as deleted | `deletion`, `account-screen` |
+| A lost answer checks the session | 5xx read as deleted | `deletion`, `account-screen` |
+| Deleted-not-revoked revokes first | let go at once | `account-screen` "not revoked" |
+| A deleted account leaves the keychain | session kept | `account-screen` "lets go of the session" |
+| The link ticket's token read inside the request | read before | `identity-link` "inside the request" |
+| A link code only from the claimed address | any address | `identity-link` "another address" |
+| The export link read at the download | the earlier link opened | `data-support-screens` "moment of the download" |
+| Export for an owner or admin only | offered to a member | `data-support-screens` "member is told why" |
+| Contact needs the workflow and email | sent empty | `data-support-screens` "contact form" |

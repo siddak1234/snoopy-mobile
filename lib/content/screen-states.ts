@@ -32,7 +32,10 @@ export type ScreenKey =
   | 'projects'
   | 'project'
   | 'teams'
-  | 'team';
+  | 'team'
+  | 'billing'
+  | 'account'
+  | 'data';
 
 /** `gErrTitle` — the design names the thing that failed, never the mechanism. */
 const ERROR_TITLES: Record<ScreenKey, string> = {
@@ -53,6 +56,9 @@ const ERROR_TITLES: Record<ScreenKey, string> = {
   project: "Couldn't load this project",
   teams: "Couldn't load teams",
   team: "Couldn't load this team",
+  billing: "Couldn't load billing",
+  account: "Couldn't load your account",
+  data: "Couldn't load data export",
 };
 
 /** The design's own fallback for a screen not in the map. */
