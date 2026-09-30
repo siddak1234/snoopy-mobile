@@ -21,8 +21,9 @@ import {
   errorTitleFor,
 } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
+import { readProjects } from '@/lib/platform/projects';
 import { readRunStats, readSubscriptions } from '@/lib/platform/runs';
-import { toFlows, type FlowView } from '@/lib/view/catalog';
+import { scopeLabels, toFlows, type FlowView } from '@/lib/view/catalog';
 
 /** Workflows list — design `sFlows`, now searchable and identity-aware. */
 export default function FlowsScreen() {
@@ -42,12 +43,19 @@ export default function FlowsScreen() {
    * which the endpoint documents as meaning all time.
    */
   const flows = useWorkspaceResource(async (workspaceId) => {
-    const [subs, catalog, stats] = await Promise.all([
+    const [subs, catalog, stats, projects] = await Promise.all([
       readSubscriptions(workspaceId),
       readCatalog(workspaceId),
       readRunStats(workspaceId),
+      readProjects(workspaceId),
     ]);
-    return toFlows(subs.subscriptions, catalog.automations, stats.subscriptions);
+    return toFlows(
+      subs.subscriptions,
+      catalog.automations,
+      stats.subscriptions,
+      undefined,
+      scopeLabels(projects, subs.subscriptions),
+    );
   });
 
   const live: FlowView[] | null = flows.status === 'ready' ? flows.data : null;
@@ -170,7 +178,9 @@ export default function FlowsScreen() {
               <View style={styles.flowBody}>
                 <Text style={[styles.flowName, { color: palette.text }]}>{def.name}</Text>
                 <Text style={[styles.flowDesc, { color: palette.neutral[400] }]}>{def.desc}</Text>
-                <Text style={[styles.flowRuns, { color: palette.neutral[500] }]}>{def.runs}</Text>
+                <Text style={[styles.flowRuns, { color: palette.neutral[500] }]}>
+                  {def.scope ? `${def.scope} · ${def.runs}` : def.runs}
+                </Text>
               </View>
               <StatusPill label={statusOf(key, def.status as FlowStatus)} />
             </SurfaceCard>

@@ -7,11 +7,14 @@ import {
   CaretRight,
   ClockClockwise,
   CrownSimple,
+  FolderSimple,
+  IdentificationBadge,
   Key,
   SignOut,
   Storefront,
   UserFocus,
   Users,
+  UsersThree,
 } from 'phosphor-react-native';
 import React, { useEffect, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -306,6 +309,34 @@ export default function SettingsScreen() {
               </View>
             }
           />
+          {/* The admin areas the website keeps under /account (ADR-0032, 24.5).
+              Teams belong to an organization, as the website's nav offers them. */}
+          <SettingsRow
+            icon={IdentificationBadge}
+            title="Organization"
+            divider
+            testID="settings-organization"
+            onPress={() => router.push('/(tabs)/settings/organization')}
+            right={<CaretRight size={15} color={palette.neutral[500]} />}
+          />
+          <SettingsRow
+            icon={FolderSimple}
+            title="Projects"
+            divider
+            testID="settings-projects"
+            onPress={() => router.push('/(tabs)/settings/projects')}
+            right={<CaretRight size={15} color={palette.neutral[500]} />}
+          />
+          {activeWorkspace?.type === 'organization' ? (
+            <SettingsRow
+              icon={UsersThree}
+              title="Teams"
+              divider
+              testID="settings-teams"
+              onPress={() => router.push('/(tabs)/settings/teams')}
+              right={<CaretRight size={15} color={palette.neutral[500]} />}
+            />
+          ) : null}
           <SettingsRow
             icon={Bell}
             title="Notifications"

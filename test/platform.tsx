@@ -184,6 +184,21 @@ export function subscriptionsPayload() {
   };
 }
 
+/** Projects of the test workspace, by name — for the screens that scope by project. */
+export function projectsPayload(...names: string[]) {
+  return {
+    projects: names.map((name, index) => ({
+      id: `project-${index + 1}`,
+      workspaceId: TEST_WORKSPACE,
+      name,
+      type: 'Operations',
+      status: 'active',
+      viewerRole: 'owner',
+      createdAt: '2026-09-01T00:00:00Z',
+    })),
+  };
+}
+
 /** Counts that reproduce the fixtures' own summary lines. */
 export function runStatsPayload() {
   return {
@@ -301,6 +316,8 @@ export function routePlatform(platformOperation: jest.Mock, overrides: Record<st
       if (path.includes(fragment)) return Promise.resolve(body);
     }
     if (path.includes('/automations')) return Promise.resolve(catalogPayload());
+    // No projects unless a test says so: without one, scopes are not drawn.
+    if (path.endsWith('/projects')) return Promise.resolve({ projects: [] });
     if (path === '/v1/auth/providers') {
       return Promise.resolve({
         providers: [

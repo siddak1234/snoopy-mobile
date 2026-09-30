@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 
 import SettingsScreen from '@/app/(tabs)/settings';
 import type { SessionContextValue, SessionReloadOutcome } from '@/hooks/use-session';
@@ -96,9 +96,11 @@ describe('the WORKSPACE row', () => {
 
     expect(await screen.findByTestId('workspace-switcher-dialog')).toBeTruthy();
     expect(await screen.findByTestId(`workspace-option-${PERSONAL}`)).toBeTruthy();
-    expect(screen.getByText("Alex's space")).toBeTruthy();
-    expect(screen.getByText('Personal')).toBeTruthy();
-    expect(screen.getByText('Organization')).toBeTruthy();
+    // Within the dialog: Settings also has an Organization row of its own (24.5.1).
+    const dialog = within(screen.getByTestId('workspace-switcher-dialog'));
+    expect(dialog.getByText("Alex's space")).toBeTruthy();
+    expect(dialog.getByText('Personal')).toBeTruthy();
+    expect(dialog.getByText('Organization')).toBeTruthy();
     // The server's active workspace is the one marked, not a client guess.
     expect(screen.getByTestId(`workspace-active-${ORG}`)).toBeTruthy();
     expect(screen.queryByTestId(`workspace-active-${PERSONAL}`)).toBeNull();

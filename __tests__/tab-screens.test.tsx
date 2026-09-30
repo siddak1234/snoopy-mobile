@@ -20,6 +20,7 @@ import {
   catalogPayload,
   flowCatalogPayload,
   planSubscriptionsPayload,
+  projectsPayload,
   routePlatform,
   runDetailPayload,
   signedInSession,
@@ -180,6 +181,25 @@ describe('Solutions marketplace', () => {
     expect(getByText('Solutions · $0/mo')).toBeTruthy();
   });
 
+  it('offers Add to… for an added automation wherever a scope it is not in remains (18.6.2)', async () => {
+    const view = await renderWithProviders(<SolutionsScreen />, signedInSession);
+    expect(await screen.findAllByText('Added ✓')).toHaveLength(3);
+    expect(screen.queryByText('Add to…')).toBeNull();
+    await view.unmount();
+
+    routePlatform(platformOperation, { '/subscriptions': planSubscriptionsPayload(), '/projects': projectsPayload('Finance') });
+    const withProject = await renderWithProviders(<SolutionsScreen />, signedInSession);
+    await fireEvent.press(await screen.findByTestId('add-elsewhere-tpl.0'));
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/solutions/setup', params: { template: 'tpl.0' } });
+    await withProject.unmount();
+
+    // Added to a project alone: the whole workspace is still free, projects or not.
+    const inProjectOnly = { ...planSubscriptionsPayload().subscriptions[0]!, projectId: 'project-9' };
+    routePlatform(platformOperation, { '/subscriptions': { subscriptions: [inProjectOnly] } });
+    await renderWithProviders(<SolutionsScreen />, signedInSession);
+    expect(await screen.findByTestId('add-elsewhere-tpl.0')).toBeTruthy();
+  });
+
   it('pauses only the subscriptions still running, never an archived one', async () => {
     const paused: string[] = [];
     routePlatform(platformOperation, {
@@ -302,6 +322,21 @@ describe('Workflows search (design v4)', () => {
 });
 
 /* flow screens read the flow catalog */
+describe('Workflow scope (18.6.2)', () => {
+  it('labels each workflow with where it applies, once the workspace has a project', async () => {
+    routePlatform(platformOperation, { '/automations': flowCatalogPayload(), '/projects': projectsPayload('Finance') });
+    await renderWithProviders(<FlowsScreen />, signedInSession);
+    expect(await screen.findByText('Whole workspace · 1,284 runs · 1,272 ok · 12 failed')).toBeTruthy();
+  });
+
+  it('draws no scope where the workspace has no project', async () => {
+    routePlatform(platformOperation, { '/automations': flowCatalogPayload() });
+    await renderWithProviders(<FlowsScreen />, signedInSession);
+    expect(await screen.findByText('1,284 runs · 1,272 ok · 12 failed')).toBeTruthy();
+    expect(screen.queryByText(/Whole workspace/)).toBeNull();
+  });
+});
+
 describe('Workflow detail', () => {
   beforeEach(() => {
     setMockParams({ flow: 'invoice' });
@@ -841,6 +876,39 @@ describe('Setup wizard (design sSetup)', () => {
     );
     const paths: string[] = platformOperation.mock.calls.map(([path]: [string]) => path);
     expect(paths.some((path) => path.endsWith('/subscriptions/archived-0'))).toBe(false);
+  });
+
+  it('adds an automation to the project chosen, where the workspace has projects (18.6.2)', async () => {
+    const catalog = catalogPayload();
+    catalog.automations = catalog.automations.map((automation) => ({ ...automation, setup: [] }));
+    const created: unknown[] = [];
+    routePlatform(platformOperation, {
+      '/automations': catalog,
+      '/projects': projectsPayload('Finance'),
+      '/subscriptions': { subscriptions: [], subscription: { ...planSubscriptionsPayload().subscriptions[0]!, id: 'scoped-0' } },
+    });
+    const routed = platformOperation.getMockImplementation();
+    // Each call to the subscriptions collection also runs against a client that
+    // keeps what a create sends; the routed fixture then answers it.
+    platformOperation.mockImplementation(async (path: string, execute: Function) => {
+      if (/\/subscriptions$/.test(path)) {
+        const client = {
+          GET: async () => ({ data: {} }),
+          POST: async (_p: string, init: { body: unknown }) => {
+            created.push(init.body);
+            return { data: {} };
+          },
+        };
+        await execute({ automations: client }).catch(() => undefined);
+      }
+      return routed?.(path, execute);
+    });
+    setMockParams({ template: 'tpl.0' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    expect(await screen.findByText('Whole workspace')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Project: Finance'));
+    await fireEvent.press(screen.getByText('Activate solution'));
+    await waitFor(() => expect(created.some((body) => (body as { projectId?: string }).projectId === 'project-1')).toBe(true));
   });
 
   it('generates its sections from manifest.setup[]', async () => {
