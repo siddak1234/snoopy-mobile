@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
-import { fireEvent, screen } from '@testing-library/react-native';
+import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import ActivityScreen from '@/app/(tabs)/activity/index';
 import ApprovalsScreen from '@/app/(tabs)/activity/approvals';
@@ -16,7 +16,15 @@ import SolutionsScreen from '@/app/(tabs)/solutions/index';
 import ConfigureScreen from '@/app/(tabs)/flows/configure';
 import NotificationsScreen from '@/app/(tabs)/(home)/notifications';
 import { nocturneDark, nocturneLight } from '@/constants/theme';
-import { catalogPayload, flowCatalogPayload, routePlatform, signedInSession } from '@/test/platform';
+import {
+  catalogPayload,
+  flowCatalogPayload,
+  planSubscriptionsPayload,
+  routePlatform,
+  runDetailPayload,
+  signedInSession,
+  subscriptionsPayload,
+} from '@/test/platform';
 import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
 
 jest.mock('@/lib/platform/client', () => ({
@@ -77,25 +85,10 @@ describe('Home dashboard', () => {
 });
 
 describe('Solutions marketplace', () => {
-  const solutionSubscriptions = [0, 1, 2].map((index) => ({
-    id: `solution-${index}`,
-    workspaceId: '00000000-0000-4000-8000-000000000001',
-    templateId: `tpl.${index}`,
-    templateVersion: 1,
-    status: 'live',
-    config: {},
-    unmetConnections: [],
-    createdAt: '2026-08-17T09:00:00Z',
-    updatedAt: '2026-08-17T09:00:00Z',
-  }));
+  const solutionSubscriptions = planSubscriptionsPayload().subscriptions;
 
   beforeEach(() => {
-    routePlatform(platformOperation, {
-      '/subscriptions': {
-        subscriptions: solutionSubscriptions,
-        subscription: solutionSubscriptions[0],
-      },
-    });
+    routePlatform(platformOperation, { '/subscriptions': planSubscriptionsPayload() });
   });
 
   it('lists the six solutions with prices and the live plan total', async () => {
@@ -173,18 +166,47 @@ describe('Solutions marketplace', () => {
     expect(getByText('Solutions · $48/mo')).toBeTruthy();
   });
 
-  it('refuses to claim a pause when the catalog has no matching subscription', async () => {
+  it('answers Added from the subscriptions the workspace still has — an archived one is gone', async () => {
+    // The catalog still flags tpl.0–2 `subscribed`: its flag counts an archived
+    // row too. The list is the answer, and there every one of them is archived.
     routePlatform(platformOperation, {
-      '/subscriptions': { subscriptions: [] },
+      '/subscriptions': {
+        subscriptions: solutionSubscriptions.map((row) => ({ ...row, status: 'archived' })),
+      },
     });
-    const { getAllByText, getByText } = await renderWithProviders(
+    const { queryAllByText, getByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
+    expect(queryAllByText('Added ✓')).toHaveLength(0);
+    expect(getByText('0 active · manage in Settings')).toBeTruthy();
+    expect(getByText('Solutions · $0/mo')).toBeTruthy();
+  });
+
+  it('pauses only the subscriptions still running, never an archived one', async () => {
+    const paused: string[] = [];
+    routePlatform(platformOperation, {
+      '/subscriptions': {
+        subscriptions: [
+          ...solutionSubscriptions,
+          { ...solutionSubscriptions[0], id: 'solution-0-archived', status: 'archived' },
+        ],
+      },
+    });
+    const routed = platformOperation.getMockImplementation();
+    platformOperation.mockImplementation((path: string, ...args: unknown[]) => {
+      const patched = /\/subscriptions\/([^/]+)$/.exec(path);
+      if (patched) {
+        paused.push(patched[1]!);
+        return Promise.resolve({ subscription: { id: patched[1], status: 'paused' } });
+      }
+      return routed?.(path, ...args);
+    });
+    const { getAllByText, getByText, findByText } = await renderWithProviders(
       <SolutionsScreen />,
       signedInSession,
     );
     await fireEvent.press(getAllByText('Added ✓')[0]);
     await fireEvent.press(getByText('Pause'));
-    expect(getByText('No matching workflow was found. Refresh before trying again.')).toBeTruthy();
-    expect(getByText('Solutions · $87/mo')).toBeTruthy();
+    expect(await findByText('Solutions · $48/mo')).toBeTruthy();
+    expect(paused).toEqual(['solution-0']);
   });
 
   it('reuses the same idempotency key when the same pause intent is retried', async () => {
@@ -332,16 +354,98 @@ describe('Workflow detail', () => {
     expect(getByText('Publish')).toBeTruthy();
   });
 
-  it('toggles Live → Paused and back (design dToggle)', async () => {
+  it('holds Publish back while an account is unconnected, as the website holds Go live', async () => {
+    setMockParams({ flow: 'lead' });
+    await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
+    await fireEvent.press(await screen.findByText('Publish'));
+    expect(platformOperation.mock.calls.some(([path]: [string]) => /\/subscriptions\/lead$/.test(path))).toBe(false);
+    expect(screen.getByText('Draft')).toBeTruthy();
+  });
+
+  it('offers what the website offers for this workflow: Set up for its settings, and Archive', async () => {
+    await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
+    expect(await screen.findByTestId('manage-setup')).toBeTruthy();
+    expect(screen.getByTestId('manage-archive')).toBeTruthy();
+    // Its pinned version declares no run input, so there is no form to offer.
+    expect(screen.queryByText('Run')).toBeNull();
+  });
+
+  it('returns to the Flows list after Archive, however detail was reached', async () => {
+    await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
+    await fireEvent.press(await screen.findByTestId('manage-archive'));
+    const buttons = await screen.findAllByText('Archive');
+    await fireEvent.press(buttons[buttons.length - 1]!);
+    await waitFor(() => expect(mockRouter.dismissTo).toHaveBeenCalledWith('/(tabs)/flows'));
+  });
+
+  it('gives a Resume after a lost Pause its own key, even when a re-read flips the button', async () => {
+    const { PlatformUnreachableError } = jest.requireActual('@/lib/platform/problem');
+    let n = 0;
+    newIdempotencyKey.mockImplementation((prefix: string) => `${prefix}-${++n}`);
+    let status = 'live';
+    const statusKeys: string[] = [];
+    const routed = platformOperation.getMockImplementation();
+    platformOperation.mockImplementation(async (path: string, execute: Function) => {
+      if (/\/subscriptions\/invoice$/.test(path)) {
+        let sent: { body: { status?: string }; key: string } | undefined;
+        const patch = async (_p: string, init: { body: { status?: string }; params: { header: Record<string, string> } }) => {
+          sent = { body: init.body, key: init.params.header['Idempotency-Key']! };
+          return { data: {} };
+        };
+        await execute({ automations: { PATCH: patch } });
+        if (sent?.body.status) {
+          statusKeys.push(sent.key);
+          const lost = status === 'live';
+          status = sent.body.status;
+          // The first Pause lands, but its answer is lost on the way back.
+          if (lost) throw new PlatformUnreachableError();
+        }
+        return { subscription: { ...subscriptionsPayload().subscriptions[0], status } };
+      }
+      if (/\/subscriptions$/.test(path)) {
+        const rows = subscriptionsPayload().subscriptions.map((row) => (row.id === 'invoice' ? { ...row, status } : row));
+        return { subscriptions: rows };
+      }
+      return routed?.(path, execute);
+    });
+    await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
+    await fireEvent.press(await screen.findByText('Pause'));
+    expect(await screen.findByText('The platform is unreachable')).toBeTruthy();
+
+    // Saving the settings re-reads: the Pause had landed, so the button now resumes.
+    await fireEvent.press(screen.getByTestId('manage-setup'));
+    const save = await screen.findAllByText('Save setup');
+    await fireEvent.press(save[save.length - 1]!);
+    await fireEvent.press(await screen.findByText('Resume'));
+    await waitFor(() => expect(statusKeys).toHaveLength(2));
+    expect(statusKeys[1]).not.toBe(statusKeys[0]);
+  });
+
+  it('toggles Live → Paused and back (design dToggle), showing what the platform answers', async () => {
+    // A platform that keeps what it is sent: the PATCH's status is what every
+    // later read of the subscription returns.
+    let status = 'live';
+    const routed = platformOperation.getMockImplementation();
+    platformOperation.mockImplementation(async (path: string, execute: Function) => {
+      if (/\/subscriptions\/invoice$/.test(path)) {
+        const patch = async (_path: string, init: { body: { status: string } }) => ({ data: init.body });
+        status = (await execute({ automations: { PATCH: patch } })).data.status;
+        return { subscription: { ...subscriptionsPayload().subscriptions[0], status } };
+      }
+      if (/\/subscriptions$/.test(path)) {
+        const rows = subscriptionsPayload().subscriptions.map((row) => (row.id === 'invoice' ? { ...row, status } : row));
+        return { subscriptions: rows };
+      }
+      return routed?.(path, execute);
+    });
     setMockParams({ flow: 'invoice' });
-    const { getByText, getAllByText, queryByText } = await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
-    expect(getByText('Live')).toBeTruthy();
-    expect(getByText('Pause')).toBeTruthy();
-    await fireEvent.press(getByText('Pause'));
-    expect(getByText('Paused')).toBeTruthy();
-    expect(getByText('Resume')).toBeTruthy();
-    await fireEvent.press(getByText('Resume'));
-    expect(getByText('Live')).toBeTruthy();
+    await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
+    expect(await screen.findByText('Live')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Pause'));
+    expect(await screen.findByText('Paused')).toBeTruthy();
+    expect(screen.getByText('Resume')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Resume'));
+    expect(await screen.findByText('Live')).toBeTruthy();
   });
 });
 
@@ -369,6 +473,17 @@ describe('Activity', () => {
     expect(getByText('YESTERDAY')).toBeTruthy();
     expect(getByText('32 emails routed · 3 escalated')).toBeTruthy();
     expect(getByText('Run #52 · failed — Sheets auth expired')).toBeTruthy();
+  });
+
+  it('opens a run from its row, as Home and the inbox do (24.4.4)', async () => {
+    const { getByText } = await renderWithProviders(<ActivityScreen />, signedInSession);
+    mockRouter.push.mockClear();
+    await fireEvent.press(getByText('32 emails routed · 3 escalated'));
+    expect(mockRouter.push).toHaveBeenCalledTimes(1);
+    const target = mockRouter.push.mock.calls[0]?.[0] as { pathname: string; params: { runId: string } };
+    expect(target.pathname).toBe('/(tabs)/(home)/run');
+    expect(typeof target.params.runId).toBe('string');
+    expect(target.params.runId.length).toBeGreaterThan(0);
   });
 
   it('filters to held runs via Needs review (design v3: chip filters, not navigates)', async () => {
@@ -563,6 +678,7 @@ describe('Settings & security', () => {
   });
 
   it('shows plan & billing with the derived totals and opens Solutions', async () => {
+    routePlatform(platformOperation, { '/subscriptions': planSubscriptionsPayload() });
     const { getByText, getAllByText, queryByText } = await renderWithProviders(<SettingsScreen />, signedInSession);
     expect(getByText('Solutions total')).toBeTruthy();
     // No plan base — the total is the solutions total (see Solutions above).
@@ -588,6 +704,58 @@ describe('Settings & security', () => {
     const { getByText, getAllByText, queryByText } = await renderWithProviders(<SettingsScreen />, signedInSession);
     await fireEvent.press(getByText('Sign out'));
     expect(mockRouter.replace).toHaveBeenCalledWith('/(auth)/welcome');
+  });
+});
+
+describe('Cancelling a run (24.4.2)', () => {
+  function routeRunningRun(cancel: (path: string) => Promise<unknown>) {
+    routePlatform(platformOperation);
+    const routed = platformOperation.getMockImplementation();
+    platformOperation.mockImplementation((path: string, ...rest: unknown[]) => {
+      if (path.endsWith('/cancel')) return cancel(path);
+      if (/\/runs\/run-1$/.test(path)) {
+        const payload = runDetailPayload('run-1');
+        return Promise.resolve({ ...payload, run: { ...payload.run, status: 'running' } });
+      }
+      return routed?.(path, ...rest);
+    });
+  }
+
+  async function confirmCancel() {
+    await fireEvent.press(await screen.findByText('Cancel run'));
+    expect(await screen.findByText('Cancel this run?')).toBeTruthy();
+    const buttons = screen.getAllByText('Cancel run');
+    await fireEvent.press(buttons[buttons.length - 1]);
+  }
+
+  it('offers Cancel while a run is going, confirms first, and cancels THIS run', async () => {
+    const cancelled: string[] = [];
+    routeRunningRun((path) => {
+      cancelled.push(path);
+      return Promise.resolve({ run: {} });
+    });
+    setMockParams({ runId: 'run-1' });
+    await renderWithProviders(<RunDetailScreen />, signedInSession);
+    await confirmCancel();
+    await waitFor(() => expect(cancelled).toHaveLength(1));
+    expect(cancelled[0]).toMatch(/\/v1\/workspaces\/[^/]+\/runs\/run-1\/cancel$/);
+  });
+
+  it('says a 404 as "already stopped", the one thing a person here can act on', async () => {
+    const { PlatformError } = jest.requireActual('@/lib/platform/problem');
+    routeRunningRun(() => Promise.reject(new PlatformError('Not found', 404)));
+    setMockParams({ runId: 'run-1' });
+    await renderWithProviders(<RunDetailScreen />, signedInSession);
+    await confirmCancel();
+    expect(await screen.findByText('This run has already stopped, so there is nothing to cancel.')).toBeTruthy();
+  });
+
+  it('offers no Cancel on a run that has ended', async () => {
+    routePlatform(platformOperation);
+    setMockParams({ runId: 'run-0' });
+    await renderWithProviders(<RunDetailScreen />, signedInSession);
+    expect(await screen.findByText('Duration')).toBeTruthy();
+    expect(screen.queryByText('Cancel run')).toBeNull();
   });
 });
 
@@ -655,6 +823,24 @@ describe('Setup wizard (design sSetup)', () => {
     await renderWithProviders(<SetupScreen />, signedInSession);
     // Item 3's first case: each solution opens its OWN setup.
     expect(await screen.findByText(/Weekly KPI digest/)).toBeTruthy();
+  });
+
+  it('adds an archived automation afresh rather than reviving the archived subscription', async () => {
+    const catalog = catalogPayload();
+    catalog.automations = catalog.automations.map((automation) => ({ ...automation, setup: [] }));
+    const archived = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'archived-0', status: 'archived' };
+    routePlatform(platformOperation, {
+      '/automations': catalog,
+      '/subscriptions': { subscriptions: [archived], subscription: { ...archived, id: 'fresh-0', status: 'live' } },
+    });
+    setMockParams({ template: 'tpl.0' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    await fireEvent.press(await screen.findByText('Activate solution'));
+    await waitFor(() =>
+      expect(mockRouter.replace).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'fresh-0' } }),
+    );
+    const paths: string[] = platformOperation.mock.calls.map(([path]: [string]) => path);
+    expect(paths.some((path) => path.endsWith('/subscriptions/archived-0'))).toBe(false);
   });
 
   it('generates its sections from manifest.setup[]', async () => {

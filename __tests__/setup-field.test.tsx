@@ -112,6 +112,16 @@ describe('SetupFieldRow — every control the union permits', () => {
     expect(onChange).toHaveBeenCalledWith(625.5);
   });
 
+  it('reads a comma-decimal keyboard\'s "12,50" as 12.5, not 12', async () => {
+    // The decimal pad types the locale's separator (de, fr, pt-BR…).
+    const onChange = jest.fn();
+    await renderWithProviders(
+      <SetupFieldRow field={field({ control: 'money', title: 'Amount' })} value={undefined} onChange={onChange} divider={false} />,
+    );
+    fireEvent.changeText(screen.getByLabelText('Amount'), '12,50');
+    expect(onChange).toHaveBeenLastCalledWith(12.5);
+  });
+
   it('renders text as an editable value', async () => {
     const onChange = jest.fn();
     await renderWithProviders(

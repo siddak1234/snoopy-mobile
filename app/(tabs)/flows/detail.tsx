@@ -1,9 +1,10 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pause, PencilSimple, Play, RocketLaunch } from 'phosphor-react-native';
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AutomationActions } from '@/components/automations/automation-actions';
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel } from '@/components/nocturne/section-label';
@@ -14,15 +15,18 @@ import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { em, fonts, layout, status } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ActionFailure, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
+import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
-import { activeWorkspaceId, useSession } from '@/hooks/use-session';
+import { roleIn, useSession, workspaceIfShown } from '@/hooks/use-session';
 import { statusAction, useWorkflows, type FlowStatus } from '@/hooks/use-workflows';
-import { errorTitleFor } from '@/lib/content/screen-states';
+import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
+import { UNAVAILABLE_NOTE, errorTitleFor } from '@/lib/content/screen-states';
 import { readCatalog, readConnectionProviders } from '@/lib/platform/catalog';
 import { updateSubscription } from '@/lib/platform/automations';
-import { newIdempotencyKey } from '@/lib/platform/client';
 import { readRunStats, readSubscriptions } from '@/lib/platform/runs';
 import { toFlows, type FlowView } from '@/lib/view/catalog';
+import { administers } from '@/lib/view/roles';
+import { statusLabel } from '@/lib/view/status';
 
 const ACTION_ICON = { pause: Pause, play: Play, rocket: RocketLaunch } as const;
 
@@ -31,13 +35,14 @@ export default function WorkflowDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { palette } = useTheme();
-  const { status: statusOf, toggle } = useWorkflows();
+  const { record } = useWorkflows();
   const session = useSession();
-  const workspaceId = activeWorkspaceId(session);
   const { flow } = useLocalSearchParams<{ flow?: string }>();
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const actionKey = useRef(newIdempotencyKey('status'));
+  // One key per target status: a retry of Pause keeps its key, and a Resume
+  // after a re-read is a different intent with its own.
+  const statusKeys = useIntentKeys('status');
 
   /**
    * This workflow, by subscription id.
@@ -46,7 +51,8 @@ export default function WorkflowDetailScreen() {
    * a subscription id, which is the identity the platform uses and the only one
    * that can name a workspace's actual workflows. The three reads are the same
    * join the list makes — subscription for status, catalog for name and
-   * `pipeline`, `run-stats` for the counters.
+   * `pipeline`, `run-stats` for the counters. The subscription and its catalog
+   * entry are kept as read, for the actions (`AutomationActions`).
    */
   const flows = useWorkspaceResource(async (workspaceId) => {
     const [subs, catalog, stats, providers] = await Promise.all([
@@ -55,35 +61,62 @@ export default function WorkflowDetailScreen() {
       readRunStats(workspaceId),
       readConnectionProviders(),
     ]);
-    return toFlows(
-      subs.subscriptions,
-      catalog.automations,
-      stats.subscriptions,
-      new Map(providers.providers.map((p) => [p.providerId, p])),
-    );
+    return {
+      flows: toFlows(
+        subs.subscriptions,
+        catalog.automations,
+        stats.subscriptions,
+        new Map(providers.providers.map((p) => [p.providerId, p])),
+      ),
+      subscriptions: subs.subscriptions,
+      automations: catalog.automations,
+    };
   });
 
   const live: FlowView | undefined =
     flows.status === 'ready'
-      ? flows.data.find((f) => f.key === flow)
+      ? flows.data.flows.find((f) => f.key === flow)
       : undefined;
   const def = live;
-  const key = def?.key ?? '';
-  const current = statusOf(key, (def?.status ?? 'Draft') as FlowStatus);
+  const subscription =
+    flows.status === 'ready' && live ? flows.data.subscriptions.find((s) => s.id === live.key) : undefined;
+  const entry =
+    flows.status === 'ready' && subscription
+      ? flows.data.automations.find((a) => a.templateId === subscription.templateId)
+      : undefined;
+  // The platform's status, as last read: every change re-reads it.
+  const current = (def?.status ?? 'Draft') as FlowStatus;
   const action = statusAction(current);
   const ActionIcon = ACTION_ICON[action.icon];
 
+  // Go live is offered only where it can succeed, as the website offers it: every
+  // required account connected, and the automation answering its probe.
+  const canGoLive = subscription?.unmetConnections.length === 0 && entry?.available === true;
+  const goingLive = current !== 'Live';
+
   const changeStatus = async () => {
-    if (!workspaceId || !def || busy) return;
+    if (!def || busy || (goingLive && !canGoLive)) return;
+    const workspaceId = workspaceIfShown(session, flows.loadedFor);
+    if (!workspaceId) {
+      setActionError(WORKSPACE_CHANGED);
+      return;
+    }
     setBusy(true);
     setActionError(null);
     try {
       const target = current === 'Live' ? 'paused' : 'live';
-      await updateSubscription(workspaceId, def.key, { status: target }, actionKey.current);
-      toggle(def.key, def.status as FlowStatus);
-      actionKey.current = newIdempotencyKey('status');
+      const { subscription: answered } = await updateSubscription(
+        workspaceId,
+        def.key,
+        { status: target },
+        statusKeys.keyFor(target),
+      );
+      statusKeys.settle(target);
+      // The list shows the platform's answer until it reads again.
+      record(def.key, statusLabel(answered.status) as FlowStatus);
+      flows.reload();
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : 'The workflow status was not changed.');
+      setActionError(refusalMessage(error, {}, 'The workflow status was not changed.'));
     } finally {
       setBusy(false);
     }
@@ -106,7 +139,7 @@ export default function WorkflowDetailScreen() {
       />
     );
   }
-  if (!def || flows.status === 'error') {
+  if (!def || !subscription || flows.status === 'error') {
     return (
       <ScreenError
         title={errorTitleFor('detail')}
@@ -200,38 +233,56 @@ export default function WorkflowDetailScreen() {
         </View>
       </View>
 
+      {entry && !entry.available ? (
+        <Text style={[styles.note, { color: status.warnText }]}>{UNAVAILABLE_NOTE}</Text>
+      ) : null}
       {actionError ? (
         <ActionFailure message={actionError} retryLabel="Try again" onRetry={changeStatus} />
       ) : null}
-      <View style={styles.actions}>
-        <PillButton
-          label={busy ? 'Saving…' : action.label}
-          variant="secondary"
-          height={46}
-          fontSize={14}
-          icon={ActionIcon}
-          iconSize={16}
-          style={styles.actionBtn}
-          onPress={changeStatus}
-        />
-        <PillButton
-          label="Edit in Builder"
-          variant="primary"
-          height={46}
-          fontSize={14}
-          icon={PencilSimple}
-          iconSize={16}
-          style={styles.actionBtn}
-          onPress={() =>
-            // Names the template so the builder can draw THIS workflow's
-            // Names the exact catalog identity whose manifest.pipeline is drawn.
-            router.push({
-              pathname: '/(tabs)/flows/builder',
-              params: live ? { template: live.templateId } : {},
-            })
-          }
-        />
-      </View>
+      <AutomationActions
+        name={def.name}
+        subscription={subscription}
+        entry={entry}
+        live={current === 'Live'}
+        shownWorkspaceId={flows.loadedFor}
+        canAdminister={administers(roleIn(session, flows.loadedFor))}
+        onChanged={flows.reload}
+        // To the list, whichever way detail was reached — a cross-tab replace
+        // from Setup leaves nothing to go back to.
+        onArchived={() => router.dismissTo('/(tabs)/flows')}
+        onRunStarted={(runId) => router.push({ pathname: '/(tabs)/(home)/run', params: { runId } })}
+        statusRow={
+          <View style={styles.actions}>
+            <PillButton
+              label={busy ? 'Saving…' : action.label}
+              variant="secondary"
+              height={46}
+              fontSize={14}
+              icon={ActionIcon}
+              iconSize={16}
+              style={styles.actionBtn}
+              disabled={busy || (goingLive && !canGoLive)}
+              onPress={changeStatus}
+            />
+            <PillButton
+              label="Edit in Builder"
+              variant="primary"
+              height={46}
+              fontSize={14}
+              icon={PencilSimple}
+              iconSize={16}
+              style={styles.actionBtn}
+              onPress={() =>
+                // Names the exact catalog identity whose manifest.pipeline is drawn.
+                router.push({
+                  pathname: '/(tabs)/flows/builder',
+                  params: { template: def.templateId },
+                })
+              }
+            />
+          </View>
+        }
+      />
     </ScrollView>
   );
 }
@@ -306,6 +357,10 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     gap: 10,
+  },
+  note: {
+    fontFamily: fonts.regular,
+    fontSize: 12,
   },
   actionBtn: {
     flex: 1,

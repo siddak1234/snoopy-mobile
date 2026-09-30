@@ -92,12 +92,15 @@ function SolutionProbe() {
 }
 
 function WorkflowProbe() {
-  const { status, toggle } = useWorkflows();
+  const { status, record, settle } = useWorkflows();
   return (
     <>
       <Text testID="workflow">{status('sub-1', 'Live')}</Text>
-      <Pressable testID="toggle-workflow" onPress={() => toggle('sub-1', 'Live')}>
-        <Text>toggle</Text>
+      <Pressable testID="toggle-workflow" onPress={() => record('sub-1', 'Paused')}>
+        <Text>record</Text>
+      </Pressable>
+      <Pressable testID="settle-workflow" onPress={() => settle(['sub-1'])}>
+        <Text>settle</Text>
       </Pressable>
     </>
   );
@@ -180,5 +183,21 @@ describe('an accepted activation supersedes an earlier pause override', () => {
     await fireEvent.press(screen.getByTestId('pause-solution'));
     await fireEvent.press(screen.getByTestId('pause-solution'));
     expect(screen.getByTestId('solution')).toHaveTextContent('false');
+  });
+});
+
+/**
+ * What detail recorded lasts until the next read, and no longer (24.4.1): a
+ * status changed anywhere else — Solutions' pause, a teammate on the website —
+ * must show when it is read, not stay behind what this device last changed.
+ */
+describe('a recorded workflow status yields to the next read', () => {
+  it('shows the recorded answer, then the platform once a read settles it', async () => {
+    await mount(signedIn('user-a', 'ws-1'));
+    await fireEvent.press(screen.getByTestId('toggle-workflow'));
+    expect(screen.getByTestId('workflow')).toHaveTextContent('Paused');
+
+    await fireEvent.press(screen.getByTestId('settle-workflow'));
+    expect(screen.getByTestId('workflow')).toHaveTextContent('Live');
   });
 });

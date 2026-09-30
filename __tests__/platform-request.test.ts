@@ -154,13 +154,15 @@ describe('generated platform transport', () => {
     fetchMock.mockResolvedValue(new Response(null, { status: 200 }));
     const bytes = new Uint8Array([1, 2, 3]);
 
-    await putFileToSignedUrl('https://store.example.test/bucket/key?signature=abc', bytes);
+    await putFileToSignedUrl('https://store.example.test/bucket/key?signature=abc', bytes, 'application/pdf');
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('https://store.example.test/bucket/key?signature=abc');
     expect(init.method).toBe('PUT');
     expect(init.body).toBe(bytes);
     expect(init.credentials).toBe('omit');
+    // The type it was opened for: Android refuses a body sent with none.
+    expect(init.headers).toEqual({ 'Content-Type': 'application/pdf' });
     // The URL is the capability. A bearer here would hand the session to the store.
     expect(JSON.stringify(init.headers ?? {})).not.toContain('token-value');
     expect(readAccessToken).not.toHaveBeenCalled();
@@ -168,13 +170,13 @@ describe('generated platform transport', () => {
 
   it('says a refused or lost upload in words, never as a session failure', async () => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 403 }));
-    await expect(putFileToSignedUrl('https://store.example.test/k', new Uint8Array([1]))).rejects.toMatchObject({
+    await expect(putFileToSignedUrl('https://store.example.test/k', new Uint8Array([1]), 'text/plain')).rejects.toMatchObject({
       status: 403,
       message: 'The file was not accepted. Choose it again.',
     });
 
     fetchMock.mockRejectedValueOnce(new TypeError('network down'));
-    await expect(putFileToSignedUrl('https://store.example.test/k', new Uint8Array([1]))).rejects.toMatchObject({
+    await expect(putFileToSignedUrl('https://store.example.test/k', new Uint8Array([1]), 'text/plain')).rejects.toMatchObject({
       status: 502,
       message: 'The file could not be sent. Try again.',
     });

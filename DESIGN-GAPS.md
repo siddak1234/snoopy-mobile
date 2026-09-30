@@ -312,3 +312,121 @@ inside Round 6. The CI gate fails on critical advisories; there are none.
 2. Close the round in the governing master plan. That file lives in the sibling
    `snoopy-backend` repository, which a mobile session may read and must never
    edit; it belongs to a separately authorized backend/governance session.
+
+## Round 16 — findings and observations (ADR-0032)
+
+Recorded by the session building BUILD-PLAN Phase 24 on 2026-09-29. None of
+this closes a line of Gate 24; a fresh session re-runs every one.
+
+### Findings
+
+- **Backend: the catalog's `subscribed` counts an archived subscription.**
+  `apps/catalog/src/postgres-automations.ts` answers `subscribed` from any
+  `catalog.subscriptions` row for the template, with no `status <> 'archived'`,
+  while the same service leaves archived rows out of the subscription list, the
+  plan counts and the one-per-template check (`postgres-subscriptions.ts`). The
+  contract says `subscribed` "drives Add versus Added", so after an Archive it
+  would still say Added. The app no longer uses the flag for that: Solutions'
+  Added and Settings' totals answer from the subscription list, and drop any
+  archived row it holds, as the website does — the list's contract does not
+  promise to omit them (`withoutArchived`). Home keeps the flag on purpose: it
+  asks whether the workspace has set anything up at all, and the list shows only
+  what the person can see. For a `snoopy-backend` session to file in manifest
+  §12.1.
+- **Backend contract: Set up cannot show the pinned version's settings.** A
+  `config` change is validated against the version the subscription PINNED,
+  but the only published `setup` is the catalog's, which is the newest
+  version's. Both clients therefore draw the newest version's fields; when the
+  two versions' settings differ, a save can be refused as undeclared, and a move
+  refused `invalid_config` can have no way out ("Open Set up, fix them, then
+  move" edits the old version's fields). The website has the same gap. For a
+  `snoopy-backend` session: publish the pinned version's `setup` on
+  `Subscription`, as `runInput` already is.
+- **Carried to 24.5.2: Add to a project, and each workflow's scope.** The
+  website adds an automation to the whole workspace or to one project, and
+  labels each subscription with its scope. Both need the workspace's projects,
+  which 24.5.2 reads. Until then the app adds workspace-wide, as it always has,
+  and lists every subscription the platform shows it.
+- **24.3.6's binding, completed in 24.4.** Five actions that predate the rule —
+  the approval decision, Solutions' pause, setup's activate, configure's create
+  and Flow detail's status — read the active workspace at the moment of the
+  press. Each now acts on its screen's `loadedFor` through `workspaceIfShown`.
+- **Known limit, for the refinement pass: a large file for a run.** The upload
+  reads the whole file into JavaScript, and React Native's `fetch` copies and
+  base64-encodes it on the JS thread. The code review measured about 2.5 s of
+  frozen UI and about 215 MB at peak for a 25 MiB file on an M1 Pro; a phone is
+  slower. The streaming path is expo-file-system's native upload, placed inside
+  `lib/platform/client.ts` beside the one `fetch` the transport audit admits.
+  Not done in 24.4: it reworks 24.3.4's upload and its audit, and the owner's
+  direction is a working baseline first, tuning after.
+- **Known limit, for the refinement pass: a return re-reads everything.**
+  24.4.4 re-reads a screen each time it regains focus, with no staleness window
+  and no abort, and each read counts against the Edge's per-person limit. A 429
+  keeps the rows and says the wait (24.3.3).
+
+### What `/code-review` found in 24.4, and what became of it
+
+Fifteen findings and a further list cut by its cap. Fixed, each with a test:
+
+- `reload()` after a change now starts from `loading`. Only a RETURN to a
+  screen keeps its rows. Kept rows had let Set up re-seed from the settings it
+  had just replaced, so the next save undid the one before, and a failed reload
+  hid behind them.
+- Flow detail shows the platform's status. The list shows what detail
+  recorded only until the list reads again (`record`/`settle`). Run is offered
+  on the status as read, never on what this device changed last.
+- A status change is keyed by its target, and a move by its version, so a
+  Resume after a lost Pause answer is a new intent and not a 409.
+- Archive forgets this device's plan statement for its template, and returns to
+  the Flows list with `dismissTo`: a cross-tab replace from Setup leaves nothing
+  to go back to.
+- Setup renews its create key once the create succeeds, as configure does.
+- Connections: Connect/Disconnect and Replace are one dialog in two modes,
+  because iOS will not present a second modal while the first is dismissing.
+  Closing after a stale 409 re-reads the rows.
+- The dialog rises above the iOS keyboard, and its actions wrap on a narrow
+  phone.
+- The upload `PUT` carries the type it was opened for; Android refuses a body
+  with none, and the store signs only its length and host.
+- A money field reads "12,50" from a comma-decimal keyboard as 12.5.
+- Approvals counts only decisions on approvals still listed.
+- Notifications marks read the rows "Mark all read" covered, not rows a later
+  re-read brings in.
+- The webhook dialog is held open only while a secret is being made.
+- Login's unlock button uses the device's biometric wording.
+
+Not changed:
+
+- Home's first-run test is left as it was (see the first finding).
+- A non-platform error's own words may reach a refusal line, as
+  `refusalMessage` was built to allow in 24.3.6.
+
+### Guards proved to bite, 24.4
+
+Each guard was broken by hand in the working tree, its test run and seen to
+fail, and the file restored and checked byte-identical by SHA-256:
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| Webhook address for owner or admin only | dropping `canAdminister` | `automation-actions` "to no one else" |
+| The webhook secret stored nowhere | a `SecureStore.setItemAsync` of it | `automation-actions` "stores it nowhere" |
+| The upload's exact size | sending bytes of another length | `run-file` "sends nothing when…" |
+| The platform asked before the file is read | reading first | `run-file` "asks before reading" |
+| The upload's type | no `Content-Type` | `platform-request` "no credential" |
+| Workspace binding (Archive and Move) | the active workspace used directly | `automation-actions` "once another workspace is active" |
+| Archived is absent | `withoutArchived` returning every row | `flows-view`, Solutions, Setup |
+| Run key renewed on a changed value | no renewal | `automation-actions` "a change is a new run" |
+| Run key kept for a resubmission | a new key each press | the same test |
+| Status key per target | one key for both | `tab-screens` "own key" |
+| Go live held back with an unmet connection | both its guards removed | `tab-screens` "holds Publish back" |
+| Move offered only for a newer version | `<` made `<=` | `automation-actions` "newer version" |
+| Run offered only with declared input | the `runInput` check dropped | `automation-actions` "declares input" |
+| Cancel only for a pending or running run | always cancellable | `tab-screens` "offers no Cancel" |
+| Pause never sent to an archived subscription | the filter dropped | `tab-screens` "never an archived one" |
+| Archive forgets the plan statement | no `forget` | `automation-actions` "answer Added again" |
+| Archive returns to the list | `router.back()` | `tab-screens` "however detail was reached" |
+| A reload starts from `loading` | rows kept | `use-resource` "starts a reload" |
+| The list settles what detail recorded | no `settle` | `return-reread` "Flows list reads again" |
+| Approvals counts what is still listed | every decision counted | `return-reread` "still pending" |
+| A stale Replace re-reads when closed | no re-read | `settings-connections` "re-reads when closed" |
+| A comma decimal | no normalising | `setup-field` "comma-decimal" |

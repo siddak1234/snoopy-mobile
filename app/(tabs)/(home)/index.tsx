@@ -204,6 +204,12 @@ export default function HomeScreen() {
       approvalCount: approvals.approvals.length,
       hasAttention:
         approvals.approvals.length > 0 || runs.runs.some((run) => run.status === 'failed'),
+      // Whether this workspace has set anything up, ever: the catalog's flag
+      // counts every subscription it holds, in any project, archived ones too.
+      // Not the subscription list, which shows only what this person can see —
+      // a member outside a project would get the first-run screen over runs
+      // and approvals they CAN see. Runs an archived automation made still
+      // belong on the dashboard.
       hasSubscriptions: catalog.automations.some((automation) => automation.subscribed),
     };
   });
