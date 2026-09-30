@@ -6,10 +6,13 @@ import {
   Buildings,
   CaretRight,
   ClockClockwise,
+  CreditCard,
   CrownSimple,
+  DownloadSimple,
   FolderSimple,
   IdentificationBadge,
   Key,
+  Lifebuoy,
   SignOut,
   Storefront,
   UserFocus,
@@ -203,7 +206,8 @@ export default function SettingsScreen() {
       showsVerticalScrollIndicator={false}>
       <Text style={[styles.h1, { color: palette.text }]}>Settings</Text>
 
-      <SurfaceCard style={styles.profileCard}>
+      {/* The account itself: linked sign-in accounts, and deleting it (24.6.2). */}
+      <SurfaceCard style={styles.profileCard} onPress={() => router.push('/(tabs)/settings/account')}>
         <AvatarBadge initials={initials} size={48} fontSize={16} />
         <View style={styles.rowBody}>
           <Text style={[styles.profileName, { color: palette.text }]}>{displayName}</Text>
@@ -272,6 +276,14 @@ export default function SettingsScreen() {
             onPress={() => router.push('/(tabs)/solutions')}
             right={<CaretRight size={15} color={palette.neutral[500]} />}
           />
+          <SettingsRow
+            icon={CreditCard}
+            title="Billing"
+            sub="Your plan, its price and status"
+            testID="settings-billing"
+            onPress={() => router.push('/(tabs)/settings/billing')}
+            right={<CaretRight size={15} color={palette.neutral[500]} />}
+          />
         </SurfaceCard>
       </View>
 
@@ -338,6 +350,14 @@ export default function SettingsScreen() {
             />
           ) : null}
           <SettingsRow
+            icon={DownloadSimple}
+            title="Data export"
+            divider
+            testID="settings-data"
+            onPress={() => router.push('/(tabs)/settings/data')}
+            right={<CaretRight size={15} color={palette.neutral[500]} />}
+          />
+          <SettingsRow
             icon={Bell}
             title="Notifications"
             sub="In-app inbox from approvals and failed runs"
@@ -370,6 +390,20 @@ export default function SettingsScreen() {
               </Pressable>
             );
           })}
+        </SurfaceCard>
+      </View>
+
+      <View>
+        <SectionLabel>HELP</SectionLabel>
+        <SurfaceCard style={styles.sectionCard}>
+          <SettingsRow
+            icon={Lifebuoy}
+            title="Support"
+            sub="Contact us, privacy and terms"
+            testID="settings-support"
+            onPress={() => router.push('/(tabs)/settings/support')}
+            right={<CaretRight size={15} color={palette.neutral[500]} />}
+          />
         </SurfaceCard>
       </View>
 

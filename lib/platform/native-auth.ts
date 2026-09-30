@@ -65,6 +65,22 @@ export function nativeAuthBaseUrl(): string | null {
   return typeof value === 'string' && value.trim() !== '' ? value.trim().replace(/\/$/, '') : null;
 }
 
+/**
+ * The public website's origin — the one the browser leg shares — for the pages
+ * the app links to rather than draws (Privacy, Terms). HTTPS only; null in a
+ * build with no browser-leg base configured.
+ */
+export function websiteOrigin(): string | null {
+  const base = nativeAuthBaseUrl();
+  if (!base) return null;
+  try {
+    const url = new URL(base);
+    return url.protocol === 'https:' ? url.origin : null;
+  } catch {
+    return null;
+  }
+}
+
 /** What the system user-agent came back with, in the app's own vocabulary. */
 export type AuthSessionOutcome =
   | { type: 'success'; url: string }
@@ -282,7 +298,7 @@ export async function signOut(): Promise<{ revoked: boolean }> {
   return { revoked: true };
 }
 
-function toStoredSession(session: NativeSession): StoredSession {
+export function toStoredSession(session: NativeSession): StoredSession {
   return {
     accessToken: session.accessToken,
     refreshToken: session.refreshToken,
@@ -309,7 +325,7 @@ function failureFrom(error: unknown): LoginOutcome {
  * which of forged/expired/replayed it was. Render one sentence per token and
  * nothing raw, so a crafted reason cannot put text on the screen.
  */
-function describeCallbackError(reason: string | null): string {
+export function describeCallbackError(reason: string | null): string {
   switch (reason) {
     case 'access_denied':
       return 'Sign-in was declined.';

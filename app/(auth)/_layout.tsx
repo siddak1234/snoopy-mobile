@@ -15,6 +15,7 @@ export default function AuthLayout() {
       <Stack.Screen name="signup" />
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="faceid" options={{ animation: 'fade' }} />
+      <Stack.Screen name="account-deleted" options={{ animation: 'fade' }} />
     </Stack>
   );
 }

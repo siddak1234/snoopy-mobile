@@ -119,6 +119,10 @@ switcher (snoopy PR #6) applies over the same operation.
 | Projects / project | the workspace collection and each workspace's projects; one project read in its own workspace; for a team project, its memberships, team grants and the visible teams, plus the workspace's members for its owner or admin |
 | Teams / team | the workspace collection and the organization's visible teams; for a team's manager or an owner or admin, its memberships and the workspace's members |
 | Solutions, setup, flows | also the active workspace's projects, for the scope an automation is added to and the label each workflow carries |
+| Billing | the workspace collection for the role; for an owner or admin, `/v1/plans` and the workspace's billing; read again when the app returns to the foreground on iOS |
+| Account | the linked sign-in identities and the login providers |
+| Data export | the workspace collection for the role; the bounded export on request; a complete export started, followed every 2 s (doubling after a failed read, three allowed), and its link read again at the moment of the download |
+| Support | nothing read; the contact request is sent on the public operation; Privacy and Terms open on the website |
 
 Every fetching surface has loading, offline, platform-error, **unavailable**, and
 applicable empty behavior, **with one carve-out the design owns**: Home draws a
@@ -211,6 +215,27 @@ review" — the held queue — also list running, queued and cancelled runs.
     who removes themselves leaves the team's screen.
   - An automation is added to the whole workspace or to a project, the scopes
     it is not in yet, as the website's Add offers.
+- Round 16 (24.6), each the website's operation, words and gating:
+  - Billing (ADR-0032 option B): every platform shows the plan, its price
+    (the provider's minor units, formatted only for a currency whose exponent
+    is known) and the workspace's status. On iOS only, Choose plan opens the
+    hosted checkout and Manage billing the hosted portal, each in the system
+    browser, https only; a portal 409 sends the person to a plan. Android shows
+    no purchase control or call to action. Owner or admin; a member is told who
+    manages it and nothing is read. A 503 is "unavailable", never a false plan.
+  - Account: linking another sign-in account is 24.2.1's native flow — a
+    sealed ticket asked for with the bearer and refresh token (in a body, read
+    inside the request), opened once in the system browser, then login's code
+    exchange against the claimed callback. Deleting the account is ADR-0028's,
+    in its words, and reads every answer the contract gives a bearer caller: a
+    partial deletion keeps the account; a lost answer reads the session before
+    saying either way; `SESSION_REVOCATION_FAILED` revokes through sign-out
+    before this device lets go; an ended session offers sign-in. Deleted, the
+    device clears its session and shows the signed-out screen.
+  - Data export: the bounded summary shared as a JSON file (iOS) or text
+    (Android); the complete export opened from the signed link, read afresh.
+  - Support: the contact form's fields and words; Privacy and Terms on the
+    website's origin, the one the browser leg shares.
 - After a change, a screen re-reads from `loading`: what it showed is out of
   date and is not left to act on. A return to a screen re-reads it and keeps
   its rows until the answer lands (24.4.4).
@@ -250,9 +275,9 @@ mobile-only shape.
 - There is no retry operation preserving `rootRunId`: omit Retry rather than
   starting an unrelated run and calling it a retry. This is historical Finding
   9.
-- Billing/payment/invoice operations are absent and Round 7-owned: Settings
-  shows only the sum of published automation prices, never a fake plan base or
-  card. (Round 16's 24.6.1 replaces this line with ADR-0032's billing rule.)
+- Billing is ADR-0025's four operations and ADR-0032's rule (24.6.1 above):
+  no card field, no in-app purchase, no price the platform did not state.
+  Settings' solutions total remains the sum of published automation prices.
 - An archived subscription is absent everywhere: not a workflow, not Added, not
   paused, not reused by Add (`withoutArchived`, the website's rule). The
   catalog's `subscribed` is not used for Added, because it still counts an
