@@ -66,6 +66,11 @@ repository, stop.
     - `withoutArchived()` (`lib/view/catalog.ts`): an archived subscription is
       absent — never a workflow, never Added. The catalog's `subscribed` counts
       one, so it never answers Added.
+    - `deletionOutcome()` (`lib/content/deletion.ts`): every answer
+      `DELETE /v1/account` gives a bearer caller, in ADR-0028's words. Never
+      say "deleted" for a lost answer: read the session first.
+    - `hostedAddress()` (`lib/platform/billing.ts`) and `websiteOrigin()`: the
+      only addresses the app opens outside itself, https only.
 
 ## Release configuration, pinned
 
