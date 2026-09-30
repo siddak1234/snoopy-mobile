@@ -502,10 +502,42 @@ fail, and the file restored and checked byte-identical by SHA-256:
   system share sheet — as a file on iOS, as text on Android, which is what its
   share intent carries. The complete export's file opens in the browser from the
   signed link.
-- **24.7.1 waits on 24.8.6.** `eas.json` gains its `submit.production` block
-  once the App Store Connect record exists; its three values (Apple ID, team,
-  ASC app id) are the owner's, and an invented block would fail every submit.
-  The README's line stands until then.
+- **24.7.1 waited on 24.8.6, and landed the same day** — see "Release
+  configuration, 24.7" below.
+
+### Release configuration, 24.7
+
+Written 2026-09-30, once the owner had completed 24.8.1, 24.8.2 and 24.8.6.
+
+- **`submit.production`** carries the App Store Connect record's Apple ID
+  (`6817885416`) and the Team ID (`6WBHARQXCQ`). Both are public identifiers —
+  the Team ID is served to the world in the AASA file. No `appleId` (the
+  account's email) is written: EAS Submit authenticates with the App Store
+  Connect API key the owner created through `eas credentials --platform ios`
+  (role APP_MANAGER, the least that can upload), which EAS holds and this
+  repository never sees.
+- **`ios.usesAppleSignIn: true` is declared for the capability sync, not for a
+  native sign-in.** The app signs in through the browser leg (ADR-0017) and
+  calls no `AuthenticationServices` API. But EAS synchronises the App ID's
+  capabilities on the Apple Developer portal from the app config on every
+  build, and the owner's first `eas credentials` run — before this key existed
+  — tried to switch Sign in with Apple and Associated Domains OFF on the App ID
+  (`Failed to patch capabilities: APPLE_ID_AUTH OFF, ASSOCIATED_DOMAINS OFF`;
+  Apple refused because the App Store record already existed). Switching it off
+  would break the web sign-in too: the Services ID Supabase uses is grouped
+  under this App ID as its primary. Declaring the entitlement makes the config
+  and the portal agree; Associated Domains was already declared through
+  `app.config.js`. The alternative, `EXPO_NO_CAPABILITY_SYNC=1` in the EAS
+  environment, is dashboard state nothing versions.
+- **`ITSAppUsesNonExemptEncryption: false`.** The app uses only the encryption
+  the OS provides — TLS, the Keychain and SHA-256 for PKCE — which is the exempt
+  case. Declaring it stops App Store Connect asking the export-compliance
+  question on every upload. The declaration is the owner's; recorded here so a
+  later session that adds its own cryptography knows to revisit it.
+- **`name: "Autom8x"`** is the name on the phone, matching the App Store Connect
+  record. The `slug` stays `snoopy-mobile`: it names the EAS project.
+- Not done here: 24.2.2 (the Team ID into the AASA file) is `snoopy-backend`'s,
+  and its deployment waits on production (§12.1 #156).
 
 ### Guards proved to bite, 24.6
 
