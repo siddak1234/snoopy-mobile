@@ -220,6 +220,34 @@ describe('the real static config, through the factory', () => {
     expect(resolved.android.adaptiveIcon).toEqual(appJson.expo.android.adaptiveIcon);
   });
 
+  /**
+   * Round 16 (BUILD-PLAN 24.7.1). The Sign in with Apple entitlement is declared
+   * so EAS's capability sync keeps the App ID's capability ON — the Services ID
+   * the web sign-in uses is grouped under it — after the first credentials run
+   * tried to switch it off. The encryption declaration is the OS-only case and
+   * stops the export-compliance question on every upload. Both are recorded in
+   * DESIGN-GAPS.md "Release configuration, 24.7".
+   */
+  it('declares the release entitlements and the name the store record carries', () => {
+    setEnv({ ...RELEASE, EAS_BUILD_PROFILE: 'production' });
+
+    const resolved = configFactory({ config: appJson.expo });
+    expect(resolved.name).toBe('Autom8x');
+    expect(resolved.ios.usesAppleSignIn).toBe(true);
+    expect(resolved.ios.infoPlist.ITSAppUsesNonExemptEncryption).toBe(false);
+  });
+
+  it('submits to the App Store Connect record by its public identifiers only', () => {
+    const eas = require('../eas.json');
+    expect(eas.submit).toEqual({
+      production: { ios: { ascAppId: '6817885416', appleTeamId: '6WBHARQXCQ' } },
+    });
+    // The account's email would be a credential-shaped value in git; EAS
+    // authenticates with the API key it holds instead.
+    expect(eas.submit.production.ios.appleId).toBeUndefined();
+    expect(eas.build.production.environment).toBe('production');
+  });
+
   it('keeps the project link in a development build too', () => {
     setEnv({});
     expect(configFactory({ config: appJson.expo }).extra.eas).toEqual({ projectId: EAS_PROJECT_ID });
