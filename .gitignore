@@ -58,3 +58,7 @@ coverage/
 # amounts. It belongs in encrypted storage, not in git — history is permanent, so
 # deleting the file later does not undo the commit. CI fails if one is tracked.
 _salvage/
+
+# The facts file `npm run verify` emits (scripts/repo-facts.mjs). Never committed
+# here: the round's close commits it into snoopy-backend (BUILD-PLAN 24.3.7).
+/.autom8x/

@@ -59,10 +59,38 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Configure, rename, or activate a subscription.
+         * Configure, rename, activate, or move a subscription to another version.
          * @description `config` is validated against the setup fields of the manifest version this subscription PINNED, not the newest, so a later version cannot change what an existing subscription accepts.
+         *
+         *     `templateVersion` moves the subscription to another registered, non-withdrawn version of the same template (§12.1 #126). The config it carries over is re-validated against THAT version, and a live subscription must still have every account that version needs. Refused with 409 while an approval for this subscription is still waiting, because a held run continues on the version it pinned, and while a run of it is still pending or running, because a run's callbacks are authorized against the version the subscription pins. Sending the version it already pins moves nothing and is not refused for either. A move emits `catalog.subscription-version-changed.v1` and is audited as `subscription.version-change`.
+         *
+         *     A refusal the person can act on names `details.reason`: 409 `approvals_pending`, `runs_in_flight`, `version_unavailable` or `subscription_archived`; 422 `invalid_config`, `unmet_connections` or `setup_incomplete`.
          */
         patch: operations["updateSubscription"];
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A webhook subscription's address, without its secret.
+         * @description **Owner or admin only** (§12.1 #91); a member gets 403 with `details.requiredRole: admin`. 404 when no address has been issued. The secret is never returned here — it is shown once, when issued.
+         */
+        get: operations["readWebhookEndpoint"];
+        put?: never;
+        /**
+         * Issue a webhook subscription's address, or rotate its secret.
+         * @description **Owner or admin only** (§12.1 #91, #109). The first call issues the address; every later call keeps the address and replaces the secret, which stops the old one at once. The secret is in this answer and nowhere else, ever: only its hash is stored. **Not replayable** and so takes no `Idempotency-Key` — replaying would mean storing the secret; a retry rotates again and the caller keeps the secret it last saw. 409 `trigger_kind_mismatch` for an automation not triggered by a webhook, `subscription_archived` for an archived one. Emits `runs.webhook-endpoint-issued.v1`, audited as `webhook.endpoint.create`.
+         */
+        post: operations["issueWebhookEndpoint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/workspaces/{workspaceId}/runs": {
@@ -80,9 +108,55 @@ export interface paths {
         put?: never;
         /**
          * Trigger a run.
-         * @description Idempotent per `Idempotency-Key`: the run id is derived from it, so a retried request returns the same run and dispatches once. The subscription must belong to this workspace and be `live`.
+         * @description Idempotent per `Idempotency-Key`: the run id is derived from it, so a retried request returns the same run and dispatches once. The subscription must belong to this workspace and be `live`. **When the subscription's pinned version declares `runInput`, `input` must satisfy it** (ADR-0030): an undeclared key, a missing required field or a value of the wrong type is refused with 422 and nothing runs.
+         *
+         *     **A file field (`control: artifact`) carries the `artifactId` an upload completed with** (FR-14). The file is checked before the run is created and given to the run before it is dispatched, so the automation can read it — and a continuation after an approval reads it too. A value that is not such an id is 422, and a file that is gone, another workspace's, already another run's, or outside the limits of the version this run pins is 422 with `details.reason: artifact_unavailable`: nothing is created, and the person chooses the file again.
          */
         post: operations["createRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Somewhere to put a file a run will read.
+         * @description FR-14. Answers a signed URL the browser PUTs the file to **directly** — the bytes never pass through the Edge. Any member who may start the subscription's runs may upload for it. The subscription must be this workspace's, `live` (409 `subscription_not_live`), and its pinned version must declare a file field (409 `no_file_input`).
+         *
+         *     The limits are the pinned manifest's `artifacts` block when it declares one, and the platform's own ceiling when it does not (ADR-0030, amended 2026-09-28). A type or size it refuses is 400 with `details.reason` `content_type_not_accepted` or `file_too_large`, before any bytes move. `sizeBytes` is required and is signed into the URL (§12.1 #139): send exactly that many bytes, or the store refuses the PUT.
+         *
+         *     Not replayable, so it takes no `Idempotency-Key`: a retry opens a second session, and the one never used expires and is swept.
+         */
+        post: operations["openUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/uploads/{uploadSessionId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * The file arrived; make it one a run can be given.
+         * @description The store measures what arrived — the size and digest are the store's, never the request's. The answer's `artifactId` is what a run's file field carries. A file no run is given within a day is collected. 400 with `details.reason` `session_expired`, `no_object` (nothing was PUT) or `too_large`; 404 for a session this workspace does not hold or that was already completed.
+         */
+        post: operations["completeUpload"];
         delete?: never;
         options?: never;
         head?: never;
@@ -241,10 +315,56 @@ export interface components {
             instance?: string;
             code: string;
             requestId: string;
-            /** @description Usually absent. On a 403 from subscription creation, only `reason: over_plan_limit` and `reason: entitlements_not_configured` may be present; all other upstream and authorization details are deliberately suppressed. */
+            /** @description Usually absent. On a 403 from subscription creation, only `reason: over_plan_limit` and `reason: entitlements_not_configured` may be present. A 403 for a missing role carries `requiredRole`. A 409 or 422 from a subscription update or a webhook address names only the reasons its operation lists. All other upstream and authorization details are deliberately suppressed. */
             details?: {
                 [key: string]: unknown;
             };
+        };
+        UploadTicket: {
+            /** Format: uuid */
+            uploadSessionId: string;
+            /**
+             * Format: uri
+             * @description PUT the file's bytes here, with no other header needed. Signed and expiring; it names the store, not the Edge.
+             */
+            uploadUrl: string;
+            /** Format: date-time */
+            expiresAt: string;
+            maximumSizeBytes: number;
+        };
+        UploadedFile: {
+            /** Format: uuid */
+            artifactId: string;
+            filename: string;
+            contentType: string;
+            sizeBytes: number;
+        };
+        WebhookEndpoint: {
+            /** Format: uuid */
+            endpointId: string;
+            /**
+             * Format: uri
+             * @description Where the vendor sends deliveries. Absent only where the platform has no public origin configured.
+             */
+            url?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            lastDeliveryAt?: string;
+            /** @description What the last delivery came to, such as `accepted`, `replayed`, `subscription_not_live` or `trigger_kind_mismatch`. */
+            lastOutcome?: string;
+        };
+        IssuedWebhookEndpoint: {
+            /** Format: uuid */
+            endpointId: string;
+            /** Format: uri */
+            url?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** @description Sent by the vendor as `x-autom8x-webhook-secret`. Shown once; store it in the vendor's settings now. */
+            secret: string;
+            /** @description True when an existing address was given a new secret. */
+            rotated: boolean;
         };
         AutomationCatalogResponse: {
             automations: components["schemas"]["AutomationCatalogEntry"][];
@@ -296,8 +416,19 @@ export interface components {
             /** @enum {string} */
             notifies?: "approval-requested" | "approval-expiring" | "run-failed" | "run-succeeded";
         };
+        /** @description One value a person supplies when starting a manual run (ADR-0030). The setup vocabulary without `section`, `notifies` or `resource-picker`, which describe a SETTING rather than one run. **`artifact` is a file the run reads**: never required, never defaulted, sent as the id an upload returned — a client with no upload surface does not render it, and the run starts without a file. */
+        AutomationRunInputField: {
+            /** @description The `input` object key the value is sent under. */
+            key: string;
+            title: string;
+            description: string;
+            /** @enum {string} */
+            control: "toggle" | "money" | "text" | "artifact";
+            defaultValue?: unknown;
+            required: boolean;
+        };
         /** @enum {string} */
-        SubscriptionStatus: "draft" | "live" | "paused";
+        SubscriptionStatus: "draft" | "live" | "paused" | "archived";
         Subscription: {
             /** Format: uuid */
             id: string;
@@ -313,6 +444,23 @@ export interface components {
             };
             /** @description Provider ids still to connect. Non-empty blocks going live. */
             unmetConnections: string[];
+            /** @description What a person supplies to START a run of this subscription (ADR-0030), read from the manifest version it PINS — never the newest — because that is the version that runs and the one `createRun` checks input against. Present only when the pinned version is `manual` and declares input; absent means no form a client could honestly render. A client renders it in order, and `createRun` refuses an undeclared key or a value of the wrong type with 422. */
+            runInput?: components["schemas"]["AutomationRunInputField"][];
+            /**
+             * @description What starts this subscription's runs, read from the version it PINS (§12.1 #91). A client offers a webhook address only when this is `webhook`; a move to another version can change it.
+             * @enum {string}
+             */
+            triggerKind?: "schedule" | "webhook" | "manual" | "provider-event";
+            /**
+             * Format: uuid
+             * @description The project this subscription is scoped to, or null for workspace-wide (18.6.2). A VISIBILITY scope inside one workspace tenant and never a second tenancy axis: a scoped subscription is listed only for someone who can see that project, so owners and admins see every one and a team grant is honoured.
+             */
+            projectId: string | null;
+            /**
+             * Format: uuid
+             * @description Who set this up. Attribution only (ADR-0019, 18.6.1): the workspace owns the subscription and nothing authorizes on this value. `null` means created before Round 11 recorded it, or by an account that no longer exists.
+             */
+            createdByUserId: string | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -564,6 +712,11 @@ export interface operations {
                     /** @description Omit to pin the newest version at subscribe time. */
                     templateVersion?: number;
                     name?: string;
+                    /**
+                     * Format: uuid
+                     * @description Scope this subscription to a project, so only people who can see that project see it (18.6.2). Omit for workspace-wide. A project the caller cannot see answers 404, deliberately indistinguishable from one that does not exist.
+                     */
+                    projectId?: string;
                 };
             };
         };
@@ -616,6 +769,7 @@ export interface operations {
                         [key: string]: unknown;
                     };
                     status?: components["schemas"]["SubscriptionStatus"];
+                    templateVersion?: number;
                 };
             };
         };
@@ -633,6 +787,62 @@ export interface operations {
             };
             400: components["responses"]["Problem"];
             401: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    readWebhookEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Must be a workspace the session names, or the answer is 404. */
+                workspaceId: components["parameters"]["WorkspaceId"];
+                subscriptionId: components["parameters"]["SubscriptionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The address, when it was issued, and its last delivery. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookEndpoint"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    issueWebhookEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Must be a workspace the session names, or the answer is 404. */
+                workspaceId: components["parameters"]["WorkspaceId"];
+                subscriptionId: components["parameters"]["SubscriptionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The address and its secret, shown this once. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedWebhookEndpoint"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
         };
@@ -684,7 +894,7 @@ export interface operations {
                 "application/json": {
                     /** Format: uuid */
                     subscriptionId: string;
-                    /** @description The trigger payload, passed to the automation verbatim. */
+                    /** @description The trigger payload, passed to the automation verbatim — and, when the pinned version declares `runInput`, held to it first. */
                     input?: {
                         [key: string]: unknown;
                     };
@@ -719,6 +929,77 @@ export interface operations {
             404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
+        };
+    };
+    openUpload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Must be a workspace the session names, or the answer is 404. */
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    subscriptionId: string;
+                    /** @description A label, not a path. A separator is refused. */
+                    filename: string;
+                    contentType: string;
+                    sizeBytes: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Where to PUT the file, until when, and the most it may be. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadTicket"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    completeUpload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Must be a workspace the session names, or the answer is 404. */
+                workspaceId: components["parameters"]["WorkspaceId"];
+                uploadSessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description The file, as a reference. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        artifact: components["schemas"]["UploadedFile"];
+                    };
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
         };
     };
     readRunStats: {
@@ -970,7 +1251,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The delivery was accepted. `accepted` is false with a reason when the subscription is not live — answered 200 so the vendor stops retrying a delivery this platform will never act on, rather than showing the customer a broken webhook for a state the customer chose. */
+            /** @description The delivery was accepted. `accepted` is false with a reason when the subscription is not live (`subscription_not_live`), or has moved to a version not triggered by a webhook (`trigger_kind_mismatch`, §12.1 #126) — answered 200 so the vendor stops retrying a delivery this platform will never act on, rather than showing the customer a broken webhook for a state the customer chose. */
             200: {
                 headers: {
                     [name: string]: unknown;

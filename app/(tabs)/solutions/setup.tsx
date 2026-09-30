@@ -19,7 +19,7 @@ import {
   ScreenOffline,
 } from '@/components/screen-state';
 import { em, fonts, layout, withAlpha } from '@/constants/theme';
-import { useWorkspaceResource } from '@/hooks/use-resource';
+import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { activeWorkspaceId, useSession } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
 import { useTheme } from '@/hooks/use-theme';
@@ -90,7 +90,7 @@ export default function SetupScreen() {
     return (
       <ScreenError
         title={errorTitleFor('setup')}
-        onRetry={resource.reload}
+        onRetry={resource.reload} body={busyBody(resource)}
         onBack={() => router.back()}
         topInset={insets.top}
       />

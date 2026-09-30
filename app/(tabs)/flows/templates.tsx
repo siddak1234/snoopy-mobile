@@ -11,7 +11,7 @@ import { IconTile } from '@/components/nocturne/icon-tile';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { em, fonts, layout } from '@/constants/theme';
-import { useWorkspaceResource } from '@/hooks/use-resource';
+import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { useTheme } from '@/hooks/use-theme';
 import { errorTitleFor } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
@@ -50,7 +50,7 @@ export default function TemplatesScreen() {
     return (
       <ScreenError
         title={errorTitleFor('templates')}
-        onRetry={catalog.reload}
+        onRetry={catalog.reload} body={busyBody(catalog)}
         onBack={() => router.back()}
         topInset={insets.top}
       />

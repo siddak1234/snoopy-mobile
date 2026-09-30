@@ -32,6 +32,12 @@ const RULES = [
     roots: RUNTIME_ROOTS,
     pattern: /(?:\bfetch|\.fetch|\[['"]fetch['"]\])\s*\(|\b(?:XMLHttpRequest|WebSocket|EventSource)\s*\(|\baxios\s*(?:\.|\()/,
     allow: () => false,
+    // BUILD-PLAN 24.3.4: the transport holds exactly ONE plain `fetch(` — the PUT
+    // of a file's bytes to the URL the platform signed, which no generated client
+    // can express and which must never pass through the Edge (FR-14, invariant 6).
+    // One call, in one file. A second is a second path to the network, and
+    // `globalThis.fetch(`, XHR or a socket are never it.
+    budget: { path: TRANSPORT, line: /(?<![.\w\]'"`])fetch\s*\(/, max: 1 },
     detail: `requests must be expressed through the schema-typed clients in ${TRANSPORT}`,
   },
   {
@@ -102,15 +108,27 @@ function stripComments(source) {
 const failures = [];
 
 for (const rule of RULES) {
+  let spent = 0;
   for (const dir of rule.roots) {
     for (const file of walk(join(root, dir))) {
       const path = relative(root, file).split("\\").join("/");
       if (rule.allow(path)) continue;
       const source = stripComments(readFileSync(file, "utf8"));
       source.split("\n").forEach((line, index) => {
-        if (rule.pattern.test(line)) {
-          failures.push(`${path}:${index + 1}: ${rule.name} — ${rule.detail}`);
+        if (!rule.pattern.test(line)) return;
+        const budget = rule.budget;
+        if (budget && path === budget.path && budget.line.test(line)) {
+          // Count CALLS, not lines: two on one line spend two. And the line must
+          // hold nothing else the rule refuses once the admitted calls are gone.
+          const every = new RegExp(budget.line.source, "g");
+          const calls = line.match(every)?.length ?? 0;
+          const rest = line.replace(every, "");
+          if (!rule.pattern.test(rest) && spent + calls <= budget.max) {
+            spent += calls;
+            return;
+          }
         }
+        failures.push(`${path}:${index + 1}: ${rule.name} — ${rule.detail}`);
       });
     }
   }

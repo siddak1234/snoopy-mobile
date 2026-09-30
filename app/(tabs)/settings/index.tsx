@@ -5,7 +5,6 @@ import {
   Bell,
   Buildings,
   CaretRight,
-  Check,
   ClockClockwise,
   CrownSimple,
   Key,
@@ -13,20 +12,22 @@ import {
   Storefront,
   UserFocus,
   Users,
-  type Icon,
 } from 'phosphor-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { AvatarBadge } from '@/components/nocturne/avatar-badge';
 import { NocToggle } from '@/components/nocturne/noc-toggle';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { TextField } from '@/components/nocturne/text-field';
 import { ActionFailure, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
+import { SettingsRow } from '@/components/settings/settings-row';
+import { WorkspaceSwitcher } from '@/components/settings/workspace-switcher';
 import { em, fonts, layout, status } from '@/constants/theme';
-import { useWorkspaceResource } from '@/hooks/use-resource';
+import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { useSession } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
 import { useTheme, type ThemeMode } from '@/hooks/use-theme';
@@ -39,78 +40,7 @@ import {
 } from '@/lib/platform/connections';
 import { newIdempotencyKey } from '@/lib/platform/client';
 import { readFaceIdEnabled, writeFaceIdEnabled } from '@/lib/platform/session-store';
-import {
-  readWorkspaces,
-  selectActiveWorkspace,
-  type WorkspaceSummary,
-} from '@/lib/platform/workspaces';
 import { toConnectionRows, toSolutions, type ConnectionView } from '@/lib/view/catalog';
-
-function SettingsRow({
-  icon: IconCmp,
-  title,
-  sub,
-  right,
-  divider = false,
-  onPress,
-  testID,
-}: {
-  icon: Icon;
-  title: string;
-  sub?: string;
-  right: React.ReactNode;
-  divider?: boolean;
-  onPress?: () => void;
-  testID?: string;
-}) {
-  const { palette } = useTheme();
-  const body = (
-    <>
-      <IconCmp size={20} color={palette.accentRamp[300]} />
-      <View style={styles.rowBody}>
-        <Text style={[styles.rowTitle, { color: palette.text }]}>{title}</Text>
-        {sub ? <Text style={[styles.rowSub, { color: palette.neutral[400] }]}>{sub}</Text> : null}
-      </View>
-      {right}
-    </>
-  );
-  const rowStyle = [
-    styles.row,
-    divider && { borderBottomWidth: 1, borderBottomColor: palette.divider },
-  ];
-  if (onPress) {
-    return (
-      <Pressable
-        testID={testID}
-        onPress={onPress}
-        style={({ pressed }) => [rowStyle, pressed && { opacity: 0.7 }]}>
-        {body}
-      </Pressable>
-    );
-  }
-  return (
-    <View testID={testID} style={rowStyle}>
-      {body}
-    </View>
-  );
-}
-
-/**
- * The switcher's own read of the workspace collection, in the dialog's states.
- *
- * Read on open rather than taken from the session: the session's `workspaces`
- * is a bounded first page (`workspacesTruncated`), and the contract says to page
- * the documented collection rather than infer non-membership from it.
- */
-type WorkspaceChoices =
-  | { status: 'loading' }
-  | { status: 'ready'; workspaces: WorkspaceSummary[]; activeWorkspaceId?: string }
-  | { status: 'error'; message: string };
-
-const WORKSPACE_TYPE_LABEL: Record<WorkspaceSummary['type'], string> = {
-  personal: 'Personal',
-  organization: 'Organization',
-};
 
 const APPEARANCE: { label: string; mode: ThemeMode }[] = [
   { label: 'Dark', mode: 'dark' },
@@ -134,12 +64,6 @@ export default function SettingsScreen() {
   const [connectionBusy, setConnectionBusy] = useState(false);
   const credentialKey = useRef(newIdempotencyKey('connection'));
   const [switcherOpen, setSwitcherOpen] = useState(false);
-  const [choices, setChoices] = useState<WorkspaceChoices>({ status: 'loading' });
-  const [switching, setSwitching] = useState<string | null>(null);
-  const [switchError, setSwitchError] = useState<string | null>(null);
-  // The PATCH landed but `/v1/session` could not be re-read; offer the read again.
-  const [reloadOwed, setReloadOwed] = useState(false);
-  const choicesRequest = useRef(0);
   const platformName = Platform.OS === 'ios' ? 'iOS' : Platform.OS === 'android' ? 'Android' : 'native';
   const appVersion = Constants.expoConfig?.version ?? '—';
 
@@ -226,86 +150,6 @@ export default function SettingsScreen() {
   const canSwitchWorkspace =
     currentSession !== null &&
     (currentSession.workspaces.length >= 2 || currentSession.workspacesTruncated === true);
-
-  const openWorkspaceSwitcher = () => {
-    const requestId = ++choicesRequest.current;
-    setSwitchError(null);
-    setReloadOwed(false);
-    setChoices({ status: 'loading' });
-    setSwitcherOpen(true);
-    readWorkspaces()
-      .then((response) => {
-        if (choicesRequest.current !== requestId) return;
-        setChoices({
-          status: 'ready',
-          workspaces: response.workspaces,
-          activeWorkspaceId: response.activeWorkspaceId ?? currentSession?.user.activeWorkspaceId,
-        });
-      })
-      .catch((error: unknown) => {
-        if (choicesRequest.current !== requestId) return;
-        setChoices({
-          status: 'error',
-          message: error instanceof Error ? error.message : 'Workspaces could not be loaded.',
-        });
-      });
-  };
-
-  const closeWorkspaceSwitcher = () => {
-    if (switching) return;
-    choicesRequest.current += 1;
-    setSwitcherOpen(false);
-    setSwitchError(null);
-    setReloadOwed(false);
-  };
-
-  /** Re-read `/v1/session` so the screens follow the server's active workspace. */
-  const adoptSwitchedSession = async () => {
-    const outcome = await session.reload();
-    if (outcome.status === 'signed-in') {
-      setReloadOwed(false);
-      setSwitchError(null);
-      setSwitcherOpen(false);
-      return;
-    }
-    if (outcome.status === 'unavailable') {
-      setReloadOwed(true);
-      setSwitchError(
-        `The workspace was switched, but this session could not be reloaded. ${outcome.message}`,
-      );
-    }
-    // `signed-out`: the credential is gone and the route guard fails closed.
-  };
-
-  const chooseWorkspace = async (workspace: WorkspaceSummary) => {
-    if (switching) return;
-    const activeId = choices.status === 'ready' ? choices.activeWorkspaceId : undefined;
-    if (workspace.id === activeId) {
-      closeWorkspaceSwitcher();
-      return;
-    }
-    setSwitching(workspace.id);
-    setSwitchError(null);
-    try {
-      // One intent, one key: each selection is a new body, so a new key.
-      await selectActiveWorkspace(workspace.id, newIdempotencyKey('workspace-activate'));
-      await adoptSwitchedSession();
-    } catch (error) {
-      setSwitchError(error instanceof Error ? error.message : 'The workspace was not switched.');
-    } finally {
-      setSwitching(null);
-    }
-  };
-
-  const retrySessionReload = async () => {
-    if (switching) return;
-    setSwitching('reload');
-    try {
-      await adoptSwitchedSession();
-    } finally {
-      setSwitching(null);
-    }
-  };
 
   const closeConnectionDialog = () => {
     setSelectedConnection(null);
@@ -405,7 +249,7 @@ export default function SettingsScreen() {
     return (
       <ScreenError
         title={errorTitleFor('settings')}
-        onRetry={connections.reload}
+        onRetry={connections.reload} body={busyBody(connections)}
         topInset={insets.top}
       />
     );
@@ -525,7 +369,7 @@ export default function SettingsScreen() {
             title={activeWorkspace?.name ?? 'Workspace'}
             divider
             testID="workspace-switcher-row"
-            onPress={canSwitchWorkspace ? openWorkspaceSwitcher : undefined}
+            onPress={canSwitchWorkspace ? () => setSwitcherOpen(true) : undefined}
             right={
               canSwitchWorkspace ? (
                 <View style={styles.membersRight}>
@@ -604,149 +448,38 @@ export default function SettingsScreen() {
         Autom8x for {platformName} · v{appVersion}
       </Text>
 
-      <Modal
+      <Dialog
         visible={selectedConnection !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={closeConnectionDialog}>
-        <View style={[styles.overlay, { backgroundColor: status.overlay }]}>
-          <View style={[styles.dialog, { backgroundColor: palette.surface, borderColor: palette.neutral[800] }]}>
-            <Text style={[styles.dialogTitle, { color: palette.text }]}>
-              {selectedConnection?.connected ? 'Disconnect' : 'Connect'} {selectedConnection?.name}
-            </Text>
-            <Text style={[styles.dialogBody, { color: palette.neutral[400] }]}>
-              {selectedConnection?.connected
-                ? selectedConnection.sub
-                : selectedConnection?.provider.description}
-            </Text>
+        onRequestClose={closeConnectionDialog}
+        title={`${selectedConnection?.connected ? 'Disconnect' : 'Connect'} ${selectedConnection?.name ?? ''}`}
+        body={selectedConnection?.connected ? selectedConnection.sub : selectedConnection?.provider.description}
+        actions={
+          <>
+            <DialogButton label="Cancel" onPress={closeConnectionDialog} />
+            <DialogButton
+              tone={selectedConnection?.connected ? 'danger' : 'accent'}
+              disabled={connectionBusy}
+              onPress={applyConnectionAction}
+              label={connectionBusy ? 'Working…' : selectedConnection?.connected ? 'Disconnect' : 'Connect'}
+            />
+          </>
+        }>
+        {selectedConnection?.authType === 'api-key' && !selectedConnection.connected
+          ? selectedConnection.credentialFields.map((field) => (
+              <TextField
+                key={field.name}
+                label={field.label}
+                value={credentials[field.name] ?? ''}
+                onChangeText={(value) => updateCredential(field.name, value)}
+                secure={field.secret}
+                placeholder={field.help}
+              />
+            ))
+          : null}
+        {connectionError ? <DialogText tone="error">{connectionError}</DialogText> : null}
+      </Dialog>
 
-            {selectedConnection?.authType === 'api-key' && !selectedConnection.connected
-              ? selectedConnection.credentialFields.map((field) => (
-                  <TextField
-                    key={field.name}
-                    label={field.label}
-                    value={credentials[field.name] ?? ''}
-                    onChangeText={(value) => updateCredential(field.name, value)}
-                    secure={field.secret}
-                    placeholder={field.help}
-                  />
-                ))
-              : null}
-
-            {connectionError ? (
-              <Text style={[styles.dialogBody, { color: status.err }]}>{connectionError}</Text>
-            ) : null}
-
-            <View style={styles.dialogActions}>
-              <Pressable
-                onPress={closeConnectionDialog}
-                style={[styles.dialogButton, { borderColor: palette.neutral[700] }]}>
-                <Text style={[styles.dialogButtonLabel, { color: palette.text }]}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                disabled={connectionBusy}
-                onPress={applyConnectionAction}
-                style={[
-                  styles.dialogButton,
-                  { borderColor: selectedConnection?.connected ? status.err : palette.accent },
-                ]}>
-                <Text
-                  style={[
-                    styles.dialogButtonLabel,
-                    { color: selectedConnection?.connected ? status.err : palette.accent },
-                  ]}>
-                  {connectionBusy
-                    ? 'Working…'
-                    : selectedConnection?.connected
-                      ? 'Disconnect'
-                      : 'Connect'}
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal
-        visible={switcherOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={closeWorkspaceSwitcher}>
-        <View style={[styles.overlay, { backgroundColor: status.overlay }]}>
-          <View
-            testID="workspace-switcher-dialog"
-            style={[styles.dialog, { backgroundColor: palette.surface, borderColor: palette.neutral[800] }]}>
-            <Text style={[styles.dialogTitle, { color: palette.text }]}>Switch workspace</Text>
-            <Text style={[styles.dialogBody, { color: palette.neutral[400] }]}>
-              Every screen reads from the active workspace. Connections and solutions are
-              workspace-wide.
-            </Text>
-
-            {choices.status === 'loading' ? (
-              <Text style={[styles.dialogBody, { color: palette.neutral[400] }]}>Loading workspaces…</Text>
-            ) : null}
-            {choices.status === 'error' ? (
-              <Text style={[styles.dialogBody, { color: status.err }]}>{choices.message}</Text>
-            ) : null}
-            {choices.status === 'ready' ? (
-              <View style={styles.switcherList}>
-                {choices.workspaces.map((workspace, i) => {
-                  const active = workspace.id === choices.activeWorkspaceId;
-                  return (
-                    <SettingsRow
-                      key={workspace.id}
-                      icon={Buildings}
-                      title={workspace.name}
-                      sub={WORKSPACE_TYPE_LABEL[workspace.type]}
-                      divider={i < choices.workspaces.length - 1}
-                      testID={`workspace-option-${workspace.id}`}
-                      onPress={switching ? undefined : () => chooseWorkspace(workspace)}
-                      right={
-                        switching === workspace.id ? (
-                          <Text style={[styles.membersCount, { color: palette.neutral[500] }]}>Switching…</Text>
-                        ) : active ? (
-                          <Check
-                            size={16}
-                            color={palette.accent}
-                            testID={`workspace-active-${workspace.id}`}
-                          />
-                        ) : null
-                      }
-                    />
-                  );
-                })}
-              </View>
-            ) : null}
-
-            {switchError ? (
-              <Text testID="workspace-switch-error" style={[styles.dialogBody, { color: status.err }]}>
-                {switchError}
-              </Text>
-            ) : null}
-
-            <View style={styles.dialogActions}>
-              <Pressable
-                disabled={switching !== null}
-                onPress={closeWorkspaceSwitcher}
-                style={[styles.dialogButton, { borderColor: palette.neutral[700] }]}>
-                <Text style={[styles.dialogButtonLabel, { color: palette.text }]}>
-                  {reloadOwed ? 'Close' : 'Cancel'}
-                </Text>
-              </Pressable>
-              {reloadOwed ? (
-                <Pressable
-                  disabled={switching !== null}
-                  onPress={retrySessionReload}
-                  style={[styles.dialogButton, { borderColor: palette.accent }]}>
-                  <Text style={[styles.dialogButtonLabel, { color: palette.accent }]}>
-                    {switching === 'reload' ? 'Working…' : 'Reload session'}
-                  </Text>
-                </Pressable>
-              ) : null}
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <WorkspaceSwitcher open={switcherOpen} onClose={() => setSwitcherOpen(false)} />
     </ScrollView>
   );
 }
@@ -780,23 +513,8 @@ const styles = StyleSheet.create({
   sectionCard: {
     marginTop: 9,
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 13,
-    paddingHorizontal: layout.rowPadH,
-  },
   rowBody: {
     flex: 1,
-  },
-  rowTitle: {
-    fontFamily: fonts.medium,
-    fontSize: 14,
-  },
-  rowSub: {
-    fontFamily: fonts.regular,
-    fontSize: 12,
   },
   membersRight: {
     flexDirection: 'row',
@@ -853,45 +571,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontFamily: fonts.regular,
     fontSize: 11,
-  },
-  overlay: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: layout.screenX,
-  },
-  dialog: {
-    gap: 14,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 18,
-    padding: 20,
-  },
-  dialogTitle: {
-    fontFamily: fonts.medium,
-    fontSize: 18,
-  },
-  dialogBody: {
-    fontFamily: fonts.regular,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  dialogActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 10,
-  },
-  switcherList: {
-    marginHorizontal: -layout.rowPadH,
-  },
-  dialogButton: {
-    minWidth: 96,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  dialogButtonLabel: {
-    fontFamily: fonts.medium,
-    fontSize: 13,
   },
 });

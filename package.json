@@ -18,7 +18,7 @@
     "audit:tokens": "node scripts/audit-tokens.mjs",
     "generate:platform-contracts": "node scripts/generate-platform-contracts.mjs",
     "verify:platform-contracts": "node scripts/verify-platform-contracts.mjs",
-    "verify": "npm run lint && npm run typecheck && npm run audit:credentials && npm run audit:tokens && npm run audit:fixtures && npm run audit:platform && npm run verify:platform-contracts && npm test -- --ci --runInBand"
+    "verify": "npm run lint && npm run typecheck && npm run audit:credentials && npm run audit:tokens && npm run audit:fixtures && npm run audit:platform && npm run verify:platform-contracts && npm test -- --ci --runInBand && node scripts/repo-facts.mjs --gate verify"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
@@ -29,6 +29,8 @@
     "expo-build-properties": "~1.0.10",
     "expo-constants": "~18.0.13",
     "expo-crypto": "~15.0.9",
+    "expo-document-picker": "~14.0.8",
+    "expo-file-system": "~19.0.24",
     "expo-font": "~14.0.12",
     "expo-haptics": "~15.0.8",
     "expo-linking": "~8.0.11",

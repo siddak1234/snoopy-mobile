@@ -13,7 +13,7 @@ import type { NotificationItem } from '@/lib/view/runs';
 import { readCatalog } from '@/lib/platform/catalog';
 import { readApprovals, readRuns, readSubscriptions } from '@/lib/platform/runs';
 import { catalogIndex, composeNotifications, subscriptionIndex } from '@/lib/view/runs';
-import { useWorkspaceResource } from '@/hooks/use-resource';
+import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import {
   NOTIFICATIONS_EMPTY_BODY,
@@ -94,7 +94,7 @@ export default function NotificationsScreen() {
     return (
       <ScreenError
         title={errorTitleFor('notifications')}
-        onRetry={inbox.reload}
+        onRetry={inbox.reload} body={busyBody(inbox)}
         onBack={() => router.back()}
         topInset={insets.top}
       />

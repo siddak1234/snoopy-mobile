@@ -124,7 +124,8 @@ export interface paths {
         /**
          * Begin connecting a provider account.
          * @description **Requires `owner` or `admin`.** Completing this flow supersedes any live connection for the same provider, so it is not an additive action a plain member may take. A member receives 403 with `details.requiredRole` — 403 rather than 404, since they already know the workspace exists.
-         *     Returns where to send the browser. `actorUserId` is not accepted — the actor comes from the session, and the same person must complete the flow.
+         *     Answers one of two outcomes (ADR-0019 §4). **`reused`**: the live connection already holds every requested scope, so no consent is needed and no attempt is created — the answer carries that connection. **`authorization-required`**: where to send the browser, and when the attempt expires. `actorUserId` is not accepted — the actor comes from the session, and the same person must complete the flow.
+         *     **Replacing the account is a separate, explicit intent** (ADR-0019 §4, ADR-0026): `replaceConnectionId` names the live connection being replaced, and completion may then return a different external account. Without it, completion must return the account the live connection already has. A `replaceConnectionId` that is not the live connection — it changed since the caller read it — is refused with 409 and nothing is started.
          *     The single-use `state` is deliberately NOT returned. It is already inside the authorization URL, and handing the browser a second copy of it creates somewhere it can be logged or referred onward without the flow gaining anything.
          *     `scopes` may narrow the request to a subset of what the reviewed spec declares. It can never widen it: a scope the spec does not declare is refused, so a caller cannot have the platform ask a provider for permissions nobody reviewed.
          */
@@ -220,6 +221,11 @@ export interface components {
             requiredScopes: string[];
             /** @description As granted, which a provider may narrow from what was requested. Worth rendering: an automation can fail on a scope the person declined. */
             grantedScopes: string[];
+            /**
+             * Format: uuid
+             * @description Who authorized the latest grant — attribution, not ownership: the workspace owns the connection (ADR-0019 §5). Absent for a connection no recorded person authorized.
+             */
+            authorizedByUserId?: string;
             /** Format: date-time */
             lastValidatedAt?: string;
             /** @description Why a connection is not usable — set when the refresh loop retires one it cannot renew. Never a provider's raw error text. */
@@ -229,6 +235,32 @@ export interface components {
         Connection: components["schemas"]["ConnectionState"] & {
             /** @description How many **live** subscriptions in this workspace require this provider — what breaks if the connection is removed. A draft subscription is not counted: it is being set up, not running. */
             usedByCount: number;
+        };
+        /** @description The live connection already holds every requested scope, so nothing is started and no consent is asked (ADR-0019 §2, §4). Only a `connected` connection is reused; one that needs reauthorization starts an attempt. */
+        ConnectionAuthorizationReused: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            outcome: "reused";
+            connection: components["schemas"]["ConnectionState"];
+        };
+        ConnectionAuthorizationRequired: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            outcome: "authorization-required";
+            /**
+             * Format: uri
+             * @description The provider's own consent page, with PKCE and state applied.
+             */
+            authorizationUrl: string;
+            /**
+             * Format: date-time
+             * @description After this, the attempt can no longer be completed.
+             */
+            expiresAt: string;
         };
     };
     responses: {
@@ -453,6 +485,11 @@ export interface operations {
                     /** @description Bounded so the advertised maximum fits inside the route's 8 KiB body limit — a documented maximum the server refuses is worse than a smaller one it honours. Real provider scopes are far below this: Google's longest is around 50 characters. */
                     scopes?: string[];
                     /**
+                     * Format: uuid
+                     * @description The live connection this authorization replaces, when the intent is to connect a DIFFERENT account. It must be the id the workspace's live connection has now; a stale id is 409. Omit it to connect, extend, or reconnect the same account.
+                     */
+                    replaceConnectionId?: string;
+                    /**
                      * Format: uri
                      * @description **Native clients only** (BUILD-PLAN 7.7.6). An app-claimed HTTPS URL from `NATIVE_APP_REDIRECT_URIS`, exact-matched. Its presence is what makes this a native flow: the callback then hands the app a sealed value to complete instead of finishing at the website.
                      *     Omit it for the browser flow, which is unchanged. A value not on the allowlist is refused with 400 and is **not echoed back** — reflecting a rejected redirect target is how a refusal becomes a reflection gadget.
@@ -462,30 +499,28 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Where to send the browser, and when the attempt expires. */
+            /** @description The live connection, reused; or where to send the browser, and when the attempt expires. Discriminated by `outcome`. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /**
-                         * Format: uri
-                         * @description The provider's own consent page, with PKCE and state applied.
-                         */
-                        authorizationUrl: string;
-                        /**
-                         * Format: date-time
-                         * @description After this, the attempt can no longer be completed.
-                         */
-                        expiresAt: string;
-                    };
+                    "application/json": components["schemas"]["ConnectionAuthorizationReused"] | components["schemas"]["ConnectionAuthorizationRequired"];
                 };
             };
             400: components["responses"]["Problem"];
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
+            /** @description `replaceConnectionId` is not the workspace's live connection — it changed since the caller read it. Nothing was started; read the connections again. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             503: components["responses"]["Problem"];
         };
     };

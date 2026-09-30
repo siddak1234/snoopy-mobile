@@ -2,10 +2,13 @@ import React from 'react';
 import { Text } from 'react-native';
 import { screen } from '@testing-library/react-native';
 
-import { useResource } from '@/hooks/use-resource';
+import { ScreenError } from '@/components/screen-state';
+import { busyBody, useResource } from '@/hooks/use-resource';
+import { ERROR_BODY } from '@/lib/content/screen-states';
 import {
   PlatformError,
   PlatformNotConfiguredError,
+  PlatformRateLimitedError,
   PlatformUnreachableError,
 } from '@/lib/platform/problem';
 import { renderWithProviders } from '@/test/render';
@@ -60,6 +63,23 @@ describe('useResource', () => {
         throw new PlatformError('Bad Gateway', 502);
       }),
     ).toBe('error');
+  });
+
+  it('says a 429 load in words with its wait, never as a plain failure (24.3.3)', async () => {
+    function Busy() {
+      const state = useResource<string>(async () => {
+        throw new PlatformRateLimitedError('The platform is busy right now. Try again in 30 seconds.', 30);
+      }, []);
+      if (state.status !== 'error') return <Text>{state.status}</Text>;
+      return <ScreenError title="Couldn't load this" body={busyBody(state)} onRetry={state.reload} />;
+    }
+    await renderWithProviders(<Busy />);
+    expect(await screen.findByText('The platform is busy right now. Try again in 30 seconds.')).toBeTruthy();
+    expect(screen.queryByText(ERROR_BODY)).toBeNull();
+  });
+
+  it('keeps the design body for an ordinary refusal', async () => {
+    expect(busyBody({ status: 'error', message: 'Forbidden' })).toBeUndefined();
   });
 
   it('reports UNCONFIGURED rather than inventing a backend failure', async () => {

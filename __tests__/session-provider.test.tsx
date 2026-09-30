@@ -3,7 +3,11 @@ import { Pressable, Text } from 'react-native';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { SessionProvider, useSession } from '@/hooks/use-session';
-import { PlatformError, PlatformNotConfiguredError } from '@/lib/platform/problem';
+import {
+  PlatformError,
+  PlatformNotConfiguredError,
+  PlatformRateLimitedError,
+} from '@/lib/platform/problem';
 
 /**
  * How a failed session request is classified.
@@ -129,6 +133,17 @@ describe('SessionProvider', () => {
         throw new PlatformError('You are not allowed to complete this action.', 403, 'FORBIDDEN');
       }),
     ).toBe('status:unavailable');
+  });
+
+  it('does not mistake a 429 for a sign-out, and keeps the stored credential', async () => {
+    // BUILD-PLAN 24.3.3, backend §12.1 #114: "busy" is the platform asking to be
+    // left for a while. The web read it as "no session" once (§12.1 #160).
+    expect(
+      await statusAfter(async () => {
+        throw new PlatformRateLimitedError('The platform is busy right now. Try again in 30 seconds.', 30);
+      }),
+    ).toBe('status:unavailable');
+    expect(clearSession).not.toHaveBeenCalled();
   });
 
   it('starts by restoring rather than assuming either answer', async () => {

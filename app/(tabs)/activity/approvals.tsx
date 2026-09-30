@@ -8,7 +8,7 @@ import { BackCircle } from '@/components/nocturne/back-circle';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
-import { useWorkspaceResource } from '@/hooks/use-resource';
+import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { activeWorkspaceId, useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import {
@@ -178,7 +178,7 @@ export default function ApprovalsScreen() {
     return (
       <ScreenError
         title={errorTitleFor('approvals')}
-        onRetry={inbox.reload}
+        onRetry={inbox.reload} body={busyBody(inbox)}
         onBack={() => router.back()}
         topInset={insets.top}
       />

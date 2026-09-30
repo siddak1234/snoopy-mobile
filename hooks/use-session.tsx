@@ -219,6 +219,25 @@ export function activeWorkspaceId(state: SessionState): string | null {
 }
 
 /**
+ * The workspace an action acts on: the active one, only while it is still the one
+ * the screen loaded — otherwise `null`, and the action is refused in words
+ * (`WORKSPACE_CHANGED`) rather than sent (BUILD-PLAN 24.3.6).
+ *
+ * A tab keeps its screen mounted while the person switches workspace elsewhere,
+ * so a control can outlive the data it was drawn for; the web met the same
+ * defect across browser tabs (`snoopy` F69–F77, its `activeWorkspaceIfShown`).
+ * The screen's loaded id is only compared: the path an action uses is always the
+ * session's, never a value the screen holds.
+ */
+export function workspaceIfShown(
+  state: SessionState,
+  shownWorkspaceId: string | null | undefined,
+): string | null {
+  const active = activeWorkspaceId(state);
+  return active && shownWorkspaceId && active === shownWorkspaceId ? active : null;
+}
+
+/**
  * The scope any client-held override belongs to: this person, in this workspace.
  *
  * `hooks/use-solutions.tsx` and `hooks/use-workflows.tsx` layer local overrides
