@@ -140,7 +140,7 @@ describe('connection mutations', () => {
   it('completes OAuth through the claimed HTTPS return and sealed handoff', async () => {
     connectionsPost
       .mockResolvedValueOnce({
-        data: { authorizationUrl: 'https://provider.example.test/authorize' },
+        data: { outcome: 'authorization-required', authorizationUrl: 'https://provider.example.test/authorize' },
         response: { ok: true },
       })
       .mockResolvedValueOnce({
@@ -180,9 +180,37 @@ describe('connection mutations', () => {
     expect(connectionsPost.mock.calls[1][1].body).toEqual({ code: 'sealed-connection-code' });
   });
 
+  it('reads a reused answer as connected and opens no consent page (22.8.1)', async () => {
+    // ADR-0019 §2: the live connection already holds every requested scope, so
+    // the platform started nothing. The answer carries no authorizationUrl.
+    connectionsPost.mockResolvedValueOnce({
+      data: {
+        outcome: 'reused',
+        connection: { id: 'connection-1', providerId: 'google', status: 'connected' },
+      },
+      response: { ok: true },
+    });
+
+    await expect(
+      connectOAuthProvider('workspace-1', {
+        providerId: 'google',
+        displayName: 'Google',
+        description: 'Mail',
+        authType: 'oauth2',
+        scopes: ['gmail.send'],
+        icon: 'plugs',
+      }),
+    ).resolves.toEqual({
+      status: 'connected',
+      connection: { id: 'connection-1', providerId: 'google', status: 'connected' },
+    });
+    expect(WebBrowser.openAuthSessionAsync).not.toHaveBeenCalled();
+    expect(connectionsPost).toHaveBeenCalledTimes(1);
+  });
+
   it('does not exchange a connection code returned to a different address', async () => {
     connectionsPost.mockResolvedValueOnce({
-      data: { authorizationUrl: 'https://provider.example.test/authorize' },
+      data: { outcome: 'authorization-required', authorizationUrl: 'https://provider.example.test/authorize' },
       response: { ok: true },
     });
     (WebBrowser.openAuthSessionAsync as jest.Mock).mockResolvedValue({
@@ -235,7 +263,7 @@ describe('connection mutations', () => {
     // Custom Tabs provider exists. Before Round 7.5M that rejection escaped
     // `connectOAuthProvider` (and `signInWithProvider`) uncaught.
     connectionsPost.mockResolvedValueOnce({
-      data: { authorizationUrl: 'https://provider.example.test/authorize' },
+      data: { outcome: 'authorization-required', authorizationUrl: 'https://provider.example.test/authorize' },
       response: { ok: true },
     });
     (WebBrowser.openAuthSessionAsync as jest.Mock).mockRejectedValue(

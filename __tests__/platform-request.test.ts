@@ -1,6 +1,6 @@
 import { readCurrentSession } from '@/lib/platform/auth';
-import { platformOperation, resetPlatformClientsForTests } from '@/lib/platform/client';
-import { PlatformError } from '@/lib/platform/problem';
+import { platformOperation, putFileToSignedUrl, resetPlatformClientsForTests } from '@/lib/platform/client';
+import { PlatformError, PlatformRateLimitedError } from '@/lib/platform/problem';
 
 jest.mock('expo-constants', () => ({
   __esModule: true,
@@ -112,6 +112,72 @@ describe('generated platform transport', () => {
         response: new Response(null, { status: 204 }),
       })),
     ).resolves.toBeNull();
+  });
+
+  it('reads a 429 as busy, with the wait it stated, and never renews the session', async () => {
+    // BUILD-PLAN 24.3.3, backend §12.1 #114. The Edge sends `retry-after` in
+    // whole seconds with `code: TOO_MANY_REQUESTS`.
+    readAccessToken.mockResolvedValue('token-value');
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ status: 429, code: 'TOO_MANY_REQUESTS' }), {
+        status: 429,
+        headers: { 'content-type': 'application/problem+json', 'retry-after': '30' },
+      }),
+    );
+
+    const error = await readCurrentSession().catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(PlatformRateLimitedError);
+    expect(error).toMatchObject({
+      status: 429,
+      code: 'TOO_MANY_REQUESTS',
+      retryAfterSeconds: 30,
+      message: 'The platform is busy right now. Try again in 30 seconds.',
+    });
+    // One request: a 429 says nothing about the credential, so nothing renews it.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('says a 429 without a time when the platform stated none it can read', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(null, { status: 429, headers: { 'retry-after': 'Wed, 21 Oct 2026 07:28:00 GMT' } }),
+    );
+
+    await expect(readCurrentSession()).rejects.toMatchObject({
+      status: 429,
+      message: 'The platform is busy right now. Try again in a moment.',
+    });
+  });
+
+  it('PUTs a file to its signed URL with no credential, even when signed in (24.3.4)', async () => {
+    readAccessToken.mockResolvedValue('token-value');
+    fetchMock.mockResolvedValue(new Response(null, { status: 200 }));
+    const bytes = new Uint8Array([1, 2, 3]);
+
+    await putFileToSignedUrl('https://store.example.test/bucket/key?signature=abc', bytes);
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://store.example.test/bucket/key?signature=abc');
+    expect(init.method).toBe('PUT');
+    expect(init.body).toBe(bytes);
+    expect(init.credentials).toBe('omit');
+    // The URL is the capability. A bearer here would hand the session to the store.
+    expect(JSON.stringify(init.headers ?? {})).not.toContain('token-value');
+    expect(readAccessToken).not.toHaveBeenCalled();
+  });
+
+  it('says a refused or lost upload in words, never as a session failure', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 403 }));
+    await expect(putFileToSignedUrl('https://store.example.test/k', new Uint8Array([1]))).rejects.toMatchObject({
+      status: 403,
+      message: 'The file was not accepted. Choose it again.',
+    });
+
+    fetchMock.mockRejectedValueOnce(new TypeError('network down'));
+    await expect(putFileToSignedUrl('https://store.example.test/k', new Uint8Array([1]))).rejects.toMatchObject({
+      status: 502,
+      message: 'The file could not be sent. Try again.',
+    });
   });
 
   it('projects public problems and suppresses raw transport errors', async () => {

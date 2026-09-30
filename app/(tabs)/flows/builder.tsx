@@ -10,7 +10,7 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { StepCard } from '@/components/nocturne/step-card';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { em, fonts, layout, radius } from '@/constants/theme';
-import { useWorkspaceResource } from '@/hooks/use-resource';
+import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { useTheme } from '@/hooks/use-theme';
 import { BUILDER_PALETTE_NAMES, errorTitleFor } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
@@ -92,7 +92,7 @@ export default function BuilderScreen() {
     return (
       <ScreenError
         title={errorTitleFor('builder')}
-        onRetry={catalog.reload}
+        onRetry={catalog.reload} body={busyBody(catalog)}
         topInset={insets.top}
       />
     );

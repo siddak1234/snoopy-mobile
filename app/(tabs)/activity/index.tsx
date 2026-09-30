@@ -9,7 +9,7 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { em, fonts, layout, status } from '@/constants/theme';
-import { useWorkspaceResource } from '@/hooks/use-resource';
+import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { useTheme } from '@/hooks/use-theme';
 import {
   ACTIVITY_EMPTY_BODY,
@@ -150,7 +150,7 @@ export default function ActivityScreen() {
     return (
       <ScreenError
         title={errorTitleFor('activity')}
-        onRetry={activity.reload}
+        onRetry={activity.reload} body={busyBody(activity)}
         topInset={insets.top}
       />
     );

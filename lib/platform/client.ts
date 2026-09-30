@@ -8,10 +8,12 @@ import { backendApiOrigin } from './origin';
 import {
   PlatformError,
   PlatformNotConfiguredError,
+  PlatformRateLimitedError,
   PlatformUnreachableError,
   fallbackProblemTitle,
   publicProblem,
 } from './problem';
+import { busyMessage, retryAfterSeconds } from './retry-after';
 import { recoverSession } from './session-recovery';
 import { readAccessToken } from './session-store';
 
@@ -137,6 +139,13 @@ async function sendOnce<T>(
     }
 
     if (!result.response.ok) {
+      // A 429 is the platform asking to be left for a while — backend §12.1
+      // #114, BUILD-PLAN 24.3.3. It is said in words with the wait it stated,
+      // here, once, so no screen can read it as "signed out" or as a failure.
+      if (result.response.status === 429) {
+        const seconds = retryAfterSeconds(result.response.headers.get('retry-after'));
+        throw new PlatformRateLimitedError(busyMessage(seconds), seconds);
+      }
       const problem = publicProblem(result.error);
       throw new PlatformError(
         problem.title ?? fallbackProblemTitle(result.response.status),
@@ -151,6 +160,44 @@ async function sendOnce<T>(
     return (result.data === undefined ? null : result.data) as T;
   } finally {
     clearTimeout(timer);
+  }
+}
+
+/** A phone upload can be slow; the web allows the same 15 minutes. */
+const UPLOAD_TIMEOUT_MS = 15 * 60_000;
+
+/**
+ * PUT a file's bytes to the URL `openUpload` signed (FR-14, BUILD-PLAN 24.3.4).
+ *
+ * The one request this app sends that is not to the Edge, and the one raw
+ * `fetch` the transport audit admits, in this file only. A generated client
+ * cannot express a URL the platform signs at runtime, and the bytes must never
+ * pass through the Edge (invariant 6). It carries NO credential: the URL is the
+ * capability, and a bearer attached here would hand the session to the store.
+ * The body must be the exact bytes whose length `openUpload` was told, because
+ * the size is signed. Ported from `snoopy/lib/platform-api.ts`.
+ */
+export async function putFileToSignedUrl(
+  url: string,
+  bytes: Uint8Array<ArrayBuffer>,
+  signal?: AbortSignal,
+): Promise<void> {
+  const upload = new AbortController();
+  const stop = () => upload.abort();
+  const timer = setTimeout(stop, UPLOAD_TIMEOUT_MS);
+  signal?.addEventListener('abort', stop, { once: true });
+  if (signal?.aborted) stop();
+  let response: Response;
+  try {
+    response = await fetch(url, { method: 'PUT', body: bytes, credentials: 'omit', signal: upload.signal });
+  } catch {
+    throw new PlatformUnreachableError('The file could not be sent. Try again.');
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener('abort', stop);
+  }
+  if (!response.ok) {
+    throw new PlatformError('The file was not accepted. Choose it again.', response.status);
   }
 }
 

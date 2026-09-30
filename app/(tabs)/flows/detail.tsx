@@ -14,7 +14,7 @@ import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { em, fonts, layout, status } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ActionFailure, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
-import { useWorkspaceResource } from '@/hooks/use-resource';
+import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { activeWorkspaceId, useSession } from '@/hooks/use-session';
 import { statusAction, useWorkflows, type FlowStatus } from '@/hooks/use-workflows';
 import { errorTitleFor } from '@/lib/content/screen-states';
@@ -110,7 +110,7 @@ export default function WorkflowDetailScreen() {
     return (
       <ScreenError
         title={errorTitleFor('detail')}
-        onRetry={flows.reload}
+        onRetry={flows.reload} body={busyBody(flows)}
         onBack={() => router.back()}
         topInset={insets.top}
       />

@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { activeWorkspaceId, useSession } from '@/hooks/use-session';
 import {
   PlatformError,
   PlatformNotConfiguredError,
+  PlatformRateLimitedError,
   PlatformUnreachableError,
 } from '@/lib/platform/problem';
 
@@ -25,13 +26,17 @@ import {
  * - `unconfigured` means no request can be made: the build has no backend or a
  *   workspace-scoped read has no resolved workspace. Screens render a refusal;
  *   they never substitute prototype data.
+ * - `error` with `busy` is a 429: the platform asked to be left a while
+ *   (backend §12.1 #114, BUILD-PLAN 24.3.3). The failed-load state then says
+ *   the wait in words (`busyBody`) instead of the generic body, as the web's
+ *   busy panel does — never "signed out".
  * - `401` is not handled here. It is the session's business, and
  *   `hooks/use-session.tsx` owns the route guard that answers it.
  */
 export type ResourceState<T> =
   | { status: 'loading' }
   | { status: 'ready'; data: T }
-  | { status: 'error'; message: string }
+  | { status: 'error'; message: string; busy?: true }
   | { status: 'offline' }
   | { status: 'unconfigured' };
 
@@ -69,6 +74,8 @@ export function useResource<T>(read: () => Promise<T>, deps: unknown[] = []): Re
           setState({ status: 'unconfigured' });
         } else if (error instanceof PlatformUnreachableError) {
           setState({ status: 'offline' });
+        } else if (error instanceof PlatformRateLimitedError) {
+          setState({ status: 'error', message: error.message, busy: true });
         } else if (error instanceof PlatformError) {
           setState({ status: 'error', message: error.message });
         } else {
@@ -87,6 +94,11 @@ export function useResource<T>(read: () => Promise<T>, deps: unknown[] = []): Re
   return { ...state, reload };
 }
 
+/** A failed load's words when it was a 429 — the wait it stated — else none. */
+export function busyBody(state: ResourceState<unknown>): string | undefined {
+  return state.status === 'error' && state.busy ? state.message : undefined;
+}
+
 /**
  * A read scoped to the workspace whose data the screens show.
  *
@@ -102,13 +114,26 @@ export function useResource<T>(read: () => Promise<T>, deps: unknown[] = []): Re
 export function useWorkspaceResource<T>(
   read: (workspaceId: string) => Promise<T>,
   deps: unknown[] = [],
-): Resource<T> {
+): Resource<T> & { loadedFor: string | null } {
   const session = useSession();
   const workspaceId = activeWorkspaceId(session);
+  // The workspace the data on screen was read for — what an action binds to
+  // (`workspaceIfShown`, BUILD-PLAN 24.3.6). Set in the read's own chain, so it
+  // is current before `useResource` renders the data it belongs to, and only by
+  // the LATEST read: `useResource` renders only that one, so an older read that
+  // finishes later must not re-label the data on screen with its workspace.
+  const loaded = useRef<string | null>(null);
+  const latest = useRef(0);
 
-  return useResource<T>(() => {
+  const resource = useResource<T>(() => {
     if (!workspaceId) throw new PlatformNotConfiguredError();
-    return read(workspaceId);
+    const request = ++latest.current;
+    return read(workspaceId).then((data) => {
+      if (request === latest.current) loaded.current = workspaceId;
+      return data;
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId, ...deps]);
+
+  return { ...resource, loadedFor: resource.status === 'ready' ? loaded.current : null };
 }
