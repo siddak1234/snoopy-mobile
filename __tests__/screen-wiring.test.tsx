@@ -144,13 +144,14 @@ describe('Settings CONNECTIONS, wired to the platform', () => {
     ],
   };
 
-  // Settings makes three reads now — providers, connections and the catalog (the
-  // last for the plan totals) — so the mock routes by path rather than answering
-  // everything with one body.
+  // Settings makes four reads now — providers, connections, and the catalog and
+  // subscriptions for the plan totals — so the mock routes by path rather than
+  // answering everything with one body.
   function routeReads() {
     platformOperation.mockImplementation((path: string) => {
       if (path === '/v1/connections/providers') return Promise.resolve(PROVIDERS);
       if (path.endsWith('/automations')) return Promise.resolve(CATALOG);
+      if (path.endsWith('/subscriptions')) return Promise.resolve({ subscriptions: [] });
       return Promise.resolve(CONNECTIONS);
     });
   }

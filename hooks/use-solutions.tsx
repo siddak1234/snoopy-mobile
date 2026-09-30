@@ -20,6 +20,13 @@ type SolutionsContextValue = {
    * counted "0 active" against a subscription the database showed as live.
    */
   setActive: (templateId: string, active: boolean) => void;
+  /**
+   * Drop what this device stated for a solution, so the subscriptions the
+   * workspace still has answer again. Archiving calls it: the solution is off
+   * the plan unless another subscription to it remains, which only the list
+   * knows (`withoutArchived`).
+   */
+  forget: (templateId: string) => void;
   /** Totals for a supplied catalog; the provider holds only the overrides. */
   totals: (solutions: PricedSolution[]) => {
     activeCount: number;
@@ -85,6 +92,13 @@ export function SolutionsProvider({ children }: { children: React.ReactNode }) {
         setOverrides((prev) => ({ ...prev, [templateId]: !isActive(templateId, current) })),
       setActive: (templateId: string, active: boolean) =>
         setOverrides((prev) => ({ ...prev, [templateId]: active })),
+      forget: (templateId: string) =>
+        setOverrides((prev) => {
+          if (!(templateId in prev)) return prev;
+          const next = { ...prev };
+          delete next[templateId];
+          return next;
+        }),
       totals: (solutions: PricedSolution[]) => {
         const active = solutions.filter((s) => isActive(s.templateId, s.subscribed));
         const sum = active.reduce((acc, s) => acc + s.price, 0);

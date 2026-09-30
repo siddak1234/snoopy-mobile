@@ -1,3 +1,4 @@
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { activeWorkspaceId, useSession } from '@/hooks/use-session';
@@ -14,8 +15,24 @@ import {
  * Screens used to read `lib/fixtures` synchronously, so they had nothing to be
  * in a state *about*. This is the missing half: it turns one request into the
  * exact vocabulary `Screen.dc.html` renders, and nothing more. It deliberately
- * does not cache, dedupe, or poll — a screen reads when it mounts and when the
- * person asks it to again, which is all the design describes.
+ * does not cache, dedupe, or poll — a screen reads when it mounts, when the
+ * person asks it to again, and when it regains focus.
+ *
+ * **Returning to a screen re-reads it and keeps the rows in place**
+ * (ROUND-7.5-OBSERVATIONS finding 1, BUILD-PLAN 24.4.4). A tab stays mounted, so
+ * without a re-read on focus it showed what it read at mount until the app was
+ * relaunched. That re-read of the SAME request keeps what is on screen — no
+ * skeleton — and replaces it only with what the platform answers; one that
+ * fails leaves it in place, because nothing the person was reading is destroyed
+ * to report an error.
+ *
+ * **`reload()` is different, and starts from `loading`.** A screen calls it
+ * after it changed something, or from Retry: the rows on screen are then known
+ * to be out of date, so they are not left to act on — a dialog would re-seed
+ * from them and a save would undo the one before — and a reload that fails
+ * says so. A CHANGED request (another workspace) also starts from `loading`:
+ * keeping the previous request's rows would show one workspace's data under
+ * another's name.
  *
  * The states are not interchangeable, and the difference is observable:
  *
@@ -45,18 +62,43 @@ export type Resource<T> = ResourceState<T> & { reload: () => void };
 export function useResource<T>(read: () => Promise<T>, deps: unknown[] = []): Resource<T> {
   const [state, setState] = useState<ResourceState<T>>({ status: 'loading' });
   const [attempt, setAttempt] = useState(0);
+  // Whether the next read is a return to this screen, which keeps the rows.
+  const returning = useRef(false);
 
-  const reload = useCallback(() => setAttempt((n) => n + 1), []);
+  const reload = useCallback(() => {
+    returning.current = false;
+    setAttempt((n) => n + 1);
+  }, []);
+  const refresh = useCallback(() => {
+    returning.current = true;
+    setAttempt((n) => n + 1);
+  }, []);
 
   // `read` is intentionally not a dependency: callers write it inline, so a new
   // identity every render would fetch forever. `deps` is the caller's statement
   // of what actually changes the request.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const readRef = useCallback(read, deps);
+  const lastRead = useRef(readRef);
+
+  // The first focus is the mount's own read; every later one is a return to
+  // this screen, and re-reads it.
+  const focusedOnce = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (focusedOnce.current) refresh();
+      else focusedOnce.current = true;
+    }, [refresh]),
+  );
 
   useEffect(() => {
     let cancelled = false;
-    setState({ status: 'loading' });
+    const keepRows = lastRead.current === readRef && returning.current;
+    lastRead.current = readRef;
+    returning.current = false;
+    const keep = (next: ResourceState<T>) => (previous: ResourceState<T>) =>
+      keepRows && previous.status === 'ready' ? previous : next;
+    setState(keep({ status: 'loading' }));
 
     // `Promise.resolve().then(...)` rather than `readRef()` directly: a reader
     // that throws SYNCHRONOUSLY would otherwise escape the chain entirely and
@@ -71,18 +113,20 @@ export function useResource<T>(read: () => Promise<T>, deps: unknown[] = []): Re
       .catch((error: unknown) => {
         if (cancelled) return;
         if (error instanceof PlatformNotConfiguredError) {
-          setState({ status: 'unconfigured' });
+          setState(keep({ status: 'unconfigured' }));
         } else if (error instanceof PlatformUnreachableError) {
-          setState({ status: 'offline' });
+          setState(keep({ status: 'offline' }));
         } else if (error instanceof PlatformRateLimitedError) {
-          setState({ status: 'error', message: error.message, busy: true });
+          setState(keep({ status: 'error', message: error.message, busy: true }));
         } else if (error instanceof PlatformError) {
-          setState({ status: 'error', message: error.message });
+          setState(keep({ status: 'error', message: error.message }));
         } else {
-          setState({
-            status: 'error',
-            message: error instanceof Error ? error.message : 'Something went wrong.',
-          });
+          setState(
+            keep({
+              status: 'error',
+              message: error instanceof Error ? error.message : 'Something went wrong.',
+            }),
+          );
         }
       });
 

@@ -5,6 +5,10 @@ jest.mock('expo-local-authentication', () => ({
   hasHardwareAsync: jest.fn(async () => false),
   isEnrolledAsync: jest.fn(async () => false),
   authenticateAsync: jest.fn(async () => ({ success: true })),
+  // The enum's real values (expo-local-authentication's own types), and an
+  // iPhone with Face ID by default — the design's wording.
+  AuthenticationType: { FINGERPRINT: 1, FACIAL_RECOGNITION: 2, IRIS: 3 },
+  supportedAuthenticationTypesAsync: jest.fn(async () => [2]),
 }));
 
 jest.mock('expo-haptics', () => ({

@@ -238,6 +238,18 @@ export function workspaceIfShown(
 }
 
 /**
+ * The person's role in a workspace, from the session's memberships — what
+ * `administers()` is asked about for the workspace a screen loaded.
+ */
+export function roleIn(
+  state: SessionState,
+  workspaceId: string | null | undefined,
+): WorkspaceSummary['role'] | undefined {
+  if (state.status !== 'signed-in' || !workspaceId) return undefined;
+  return state.session.workspaces.find((workspace) => workspace.id === workspaceId)?.role;
+}
+
+/**
  * The scope any client-held override belongs to: this person, in this workspace.
  *
  * `hooks/use-solutions.tsx` and `hooks/use-workflows.tsx` layer local overrides

@@ -63,6 +63,9 @@ repository, stop.
     - `useIntentKeys()`: a resubmission keeps its idempotency key.
     - `refusalMessage()` (`lib/content/refusals.ts`): refusals in the website's
       words.
+    - `withoutArchived()` (`lib/view/catalog.ts`): an archived subscription is
+      absent — never a workflow, never Added. The catalog's `subscribed` counts
+      one, so it never answers Added.
 
 ## Release configuration, pinned
 

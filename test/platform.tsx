@@ -40,6 +40,18 @@ export const signedInSession: SessionContextValue = {
   signOut: async () => ({ revoked: true }),
 } as unknown as SessionContextValue;
 
+/** The signed-in session, holding the given role in its one workspace. */
+export function sessionAs(role: 'owner' | 'admin' | 'member'): SessionContextValue {
+  if (signedInSession.status !== 'signed-in') throw new Error('fixture');
+  return {
+    ...signedInSession,
+    session: {
+      ...signedInSession.session,
+      workspaces: signedInSession.session.workspaces.map((workspace) => ({ ...workspace, role })),
+    },
+  };
+}
+
 /** The catalog, carrying every fixture solution and template. */
 export function catalogPayload() {
   const automations = solutionDefs.map((sol, i) => ({
@@ -125,6 +137,27 @@ export function flowCatalogPayload() {
     })),
     categories: ['All', 'Finance', 'Ops', 'Sales', 'Reporting'],
   };
+}
+
+/**
+ * The subscriptions behind `catalogPayload()`'s `subscribed` flags: tpl.0–2,
+ * live. Solutions, Settings and Home answer Added from the subscription list
+ * (`withoutArchived`), not from the catalog's flag, so a test that means "these
+ * three are on the plan" routes `/subscriptions` to this.
+ */
+export function planSubscriptionsPayload() {
+  const subscriptions = [0, 1, 2].map((index) => ({
+    id: `solution-${index}`,
+    workspaceId: TEST_WORKSPACE,
+    templateId: `tpl.${index}`,
+    templateVersion: 1,
+    status: 'live',
+    config: {},
+    unmetConnections: [],
+    createdAt: '2026-08-17T09:00:00Z',
+    updatedAt: '2026-08-17T09:00:00Z',
+  }));
+  return { subscriptions, subscription: subscriptions[0] };
 }
 
 /** One subscription per fixture workflow, keyed so `flow` params resolve. */

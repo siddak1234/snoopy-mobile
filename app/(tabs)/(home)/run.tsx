@@ -1,9 +1,10 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { FlowArrow } from 'phosphor-react-native';
-import React from 'react';
+import { FlowArrow, StopCircle } from 'phosphor-react-native';
+import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel } from '@/components/nocturne/section-label';
@@ -15,10 +16,13 @@ import { useTheme } from '@/hooks/use-theme';
 import type { TimelineRowView as RunTimelineItem } from '@/lib/view/runs';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
+import { useSession, workspaceIfShown } from '@/hooks/use-session';
+import { refusalMessage, WORKSPACE_CHANGED } from '@/lib/content/refusals';
 import { errorTitleFor } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
+import { cancelRun } from '@/lib/platform/automations';
 import { readRun } from '@/lib/platform/runs';
-import { PlatformNotConfiguredError } from '@/lib/platform/problem';
+import { PlatformError, PlatformNotConfiguredError } from '@/lib/platform/problem';
 import { clockTime, duration } from '@/lib/view/format';
 import { statusLabel, type StatusPillLabel } from '@/lib/view/status';
 import { metaFor, runLabel, toRunStats, toTimeline } from '@/lib/view/runs';
@@ -66,6 +70,10 @@ export default function RunDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { runId } = useLocalSearchParams<{ runId?: string }>();
+  const session = useSession();
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   /**
    * The prototype's retry was theatre: idle → 1600ms → swap to a 'retried'
@@ -122,8 +130,41 @@ export default function RunDetailScreen() {
         fields: false,
         action: undefined,
         subscriptionId: liveRun.detail.run.subscriptionId,
+        id: liveRun.detail.run.id,
+        // The two states the platform cancels (BUILD-PLAN 24.4.2).
+        cancellable: liveRun.detail.run.status === 'pending' || liveRun.detail.run.status === 'running',
       }
     : null;
+
+  /**
+   * Cancel a run that has not ended, confirmed first because a cancelled run is
+   * not resumed — it ends where it stands (BUILD-PLAN 24.4.2, ported from the
+   * website's CancelRunButton). Acts on the workspace this run was read in; a 404
+   * is said as "already stopped", the one thing a person here can act on.
+   */
+  const confirmCancel = async () => {
+    if (!run || cancelling) return;
+    const workspaceId = workspaceIfShown(session, detail.loadedFor);
+    if (!workspaceId) {
+      setCancelError(WORKSPACE_CHANGED);
+      return;
+    }
+    setCancelling(true);
+    setCancelError(null);
+    try {
+      await cancelRun(workspaceId, run.id);
+      setCancelOpen(false);
+      detail.reload();
+    } catch (error) {
+      setCancelError(
+        error instanceof PlatformError && error.status === 404
+          ? 'This run has already stopped, so there is nothing to cancel.'
+          : refusalMessage(error),
+      );
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   if (detail.status === 'loading') return <ScreenLoading tiles topInset={insets.top} />;
   if (detail.status === 'offline') {
@@ -185,6 +226,21 @@ export default function RunDetailScreen() {
       </View>
 
       <View style={styles.actions}>
+        {run.cancellable ? (
+          <PillButton
+            label="Cancel run"
+            variant="secondary"
+            height={46}
+            fontSize={14}
+            icon={StopCircle}
+            iconSize={16}
+            style={styles.actionBtn}
+            onPress={() => {
+              setCancelError(null);
+              setCancelOpen(true);
+            }}
+          />
+        ) : null}
         <PillButton
           label="View workflow"
           variant="secondary"
@@ -201,6 +257,26 @@ export default function RunDetailScreen() {
           }
         />
       </View>
+
+      <Dialog
+        visible={cancelOpen}
+        onRequestClose={() => (cancelling ? undefined : setCancelOpen(false))}
+        testID="cancel-run-dialog"
+        title="Cancel this run?"
+        body="It stops where it is and is not resumed. Steps it already finished stay finished."
+        actions={
+          <>
+            <DialogButton label="Keep it running" disabled={cancelling} onPress={() => setCancelOpen(false)} />
+            <DialogButton
+              tone="danger"
+              disabled={cancelling}
+              label={cancelling ? 'Cancelling…' : 'Cancel run'}
+              onPress={confirmCancel}
+            />
+          </>
+        }>
+        {cancelError ? <DialogText tone="error">{cancelError}</DialogText> : null}
+      </Dialog>
     </ScrollView>
   );
 }

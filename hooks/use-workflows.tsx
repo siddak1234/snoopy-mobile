@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import { overrideScopeKey, useSession } from '@/hooks/use-session';
 import type { FlowStatus } from '@/lib/view/status';
@@ -16,8 +16,10 @@ type WorkflowsContextValue = {
    * the platform actually uses.
    */
   status: (key: string, fallback: FlowStatus) => FlowStatus;
-  /** Live ⇄ Paused; a Draft publishes to Live (design dToggle). */
-  toggle: (key: string, current: FlowStatus) => void;
+  /** The status the platform answered a change with, until the next read. */
+  record: (key: string, answered: FlowStatus) => void;
+  /** A read landed for these workflows: its answer replaces what was recorded. */
+  settle: (keys: readonly string[]) => void;
 };
 
 const WorkflowsContext = createContext<WorkflowsContextValue | null>(null);
@@ -31,9 +33,12 @@ const WorkflowsContext = createContext<WorkflowsContextValue | null>(null);
  * index-keyed override would have toggled the wrong workflow. It now holds only
  * the overrides and takes the server's status as the base.
  *
- * The override is optimistic and deliberately local: pausing a workflow is a
- * PATCH the screen owns, and this keeps the two screens agreeing between that
- * request and the next read.
+ * The override is deliberately local: pausing a workflow is a PATCH the detail
+ * screen owns, and this keeps the list agreeing with it between that request
+ * and the list's next read. It is the platform's own answer (`record`), and it
+ * lasts only until a read lands (`settle`): a status changed anywhere else —
+ * Solutions' pause, a teammate on the website — must show when it is read, not
+ * stay hidden behind what this device last changed.
  */
 export function WorkflowsProvider({ children }: { children: React.ReactNode }) {
   const [overrides, setOverrides] = useState<Record<string, FlowStatus>>({});
@@ -46,17 +51,24 @@ export function WorkflowsProvider({ children }: { children: React.ReactNode }) {
     setOverrides({});
   }, [scope]);
 
-  const value = useMemo<WorkflowsContextValue>(() => {
-    const status = (key: string, fallback: FlowStatus) => overrides[key] ?? fallback;
-    return {
-      status,
-      toggle: (key: string, current: FlowStatus) =>
-        setOverrides((prev) => ({
-          ...prev,
-          [key]: status(key, current) === 'Live' ? 'Paused' : 'Live',
-        })),
-    };
-  }, [overrides]);
+  const record = useCallback((key: string, answered: FlowStatus) => {
+    setOverrides((prev) => ({ ...prev, [key]: answered }));
+  }, []);
+  // Stable, so a screen can settle in an effect on its data without re-running
+  // it — and clearing a fresh record — whenever an override changes.
+  const settle = useCallback((keys: readonly string[]) => {
+    setOverrides((prev) => {
+      if (!keys.some((key) => key in prev)) return prev;
+      const next = { ...prev };
+      for (const key of keys) delete next[key];
+      return next;
+    });
+  }, []);
+
+  const value = useMemo<WorkflowsContextValue>(
+    () => ({ status: (key, fallback) => overrides[key] ?? fallback, record, settle }),
+    [overrides, record, settle],
+  );
 
   return <WorkflowsContext.Provider value={value}>{children}</WorkflowsContext.Provider>;
 }

@@ -72,7 +72,9 @@ export default function NotificationsScreen() {
   // This card says that plainly and is dismiss-only; it never imitates an OS
   // permission grant.
   const [askPush, setAskPush] = useState(true);
-  const [allRead, setAllRead] = useState(false);
+  // The rows "Mark all read" covered, by id: a row a later re-read brings in
+  // is still unread.
+  const [readIds, setReadIds] = useState<ReadonlySet<string>>(() => new Set());
 
   // Every hook is above this line on purpose: the guards below return early, and
   // a hook called after them would run on some renders and not others.
@@ -148,7 +150,7 @@ export default function NotificationsScreen() {
         <BackCircle onPress={() => router.back()} />
         <Text style={[styles.title, { color: palette.text }]}>Notifications</Text>
         <Text
-          onPress={() => setAllRead(true)}
+          onPress={() => setReadIds(new Set(items.map((item) => item.id)))}
           suppressHighlighting
           style={[styles.markAll, { color: palette.accentRamp[300] }]}>
           Mark all read
@@ -198,7 +200,7 @@ export default function NotificationsScreen() {
       <SurfaceCard style={styles.list}>
         {items.map((item, i) => {
           const IconCmp = item.icon;
-          const unread = item.unread && !allRead;
+          const unread = item.unread && !readIds.has(item.id);
           return (
             <Pressable
               key={item.id}

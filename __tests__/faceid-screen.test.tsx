@@ -48,3 +48,22 @@ describe('Face ID unlock', () => {
     expect(mockRouter.replace).not.toHaveBeenCalledWith('/(tabs)/(home)');
   });
 });
+
+describe('biometric wording (24.4.4)', () => {
+  // Imported here so the file's own mocks above stay as they were.
+  const { biometricWordingFor } = jest.requireActual('@/hooks/use-biometric-wording');
+  const FINGERPRINT = 1;
+  const FACIAL_RECOGNITION = 2;
+
+  it('names the sensor this device has: Face ID, Touch ID, or Android’s own word', () => {
+    expect(biometricWordingFor('ios', [FACIAL_RECOGNITION]).title).toBe('Face ID');
+    expect(biometricWordingFor('ios', [FINGERPRINT]).title).toBe('Touch ID');
+    expect(biometricWordingFor('ios', [FINGERPRINT, FACIAL_RECOGNITION]).title).toBe('Face ID');
+    // Unanswered, an iPhone reads as the design does.
+    expect(biometricWordingFor('ios', undefined).title).toBe('Face ID');
+    // Android is never told about Apple's hardware.
+    const android = biometricWordingFor('android', [FACIAL_RECOGNITION]);
+    expect(android.title).toBe('Biometric unlock');
+    expect(JSON.stringify(android)).not.toMatch(/Face ID|Touch ID/);
+  });
+});

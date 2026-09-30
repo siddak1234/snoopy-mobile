@@ -203,6 +203,9 @@ describe('connection mutations', () => {
     ).resolves.toEqual({
       status: 'connected',
       connection: { id: 'connection-1', providerId: 'google', status: 'connected' },
+      // Said, so a Replace that was answered with the SAME connection is not
+      // reported as a replacement (24.4.3).
+      reused: true,
     });
     expect(WebBrowser.openAuthSessionAsync).not.toHaveBeenCalled();
     expect(connectionsPost).toHaveBeenCalledTimes(1);

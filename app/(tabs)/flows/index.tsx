@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,7 +29,7 @@ export default function FlowsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { palette } = useTheme();
-  const { status: statusOf } = useWorkflows();
+  const { status: statusOf, settle } = useWorkflows();
   const [query, setQuery] = useState('');
 
   /**
@@ -51,6 +51,10 @@ export default function FlowsScreen() {
   });
 
   const live: FlowView[] | null = flows.status === 'ready' ? flows.data : null;
+  // What detail recorded holds only until this list reads the platform again.
+  useEffect(() => {
+    if (live) settle(live.map((flow) => flow.key));
+  }, [live, settle]);
   const source: FlowView[] = live ?? [];
 
   const q = query.trim().toLowerCase();

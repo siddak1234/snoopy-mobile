@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { CheckCircle } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FilterChip } from '@/components/nocturne/filter-chip';
@@ -22,8 +22,13 @@ import { readCatalog } from '@/lib/platform/catalog';
 import { readRuns } from '@/lib/platform/runs';
 import { catalogIndex, runIcon, splitByDay, toRunRow } from '@/lib/view/runs';
 
+/**
+ * One run. Opens its run detail, as Home's RECENT RUNS and the inbox already do
+ * (ROUND-7.5-OBSERVATIONS finding 2, BUILD-PLAN 24.4.4) — the rows were inert.
+ */
 function ActivityRow({ item }: { item: ActivityItem }) {
   const { palette } = useTheme();
+  const router = useRouter();
   const IconCmp = item.icon;
   // The same five treatments the Nocturne StatusPill uses, so a run's row and
   // its pill agree. `accent` is the watched state and `neutral` is Draft's
@@ -36,14 +41,22 @@ function ActivityRow({ item }: { item: ActivityItem }) {
     neutral: palette.neutral[400],
   };
   return (
-    <View style={[styles.row, { borderBottomColor: palette.divider }]}>
+    <Pressable
+      testID={`activity-row-${item.id}`}
+      accessibilityRole="button"
+      onPress={() => router.push({ pathname: '/(tabs)/(home)/run', params: { runId: item.id } })}
+      style={({ pressed }) => [
+        styles.row,
+        { borderBottomColor: palette.divider },
+        pressed && { opacity: 0.7 },
+      ]}>
       <IconCmp size={19} color={toneColor[item.tone]} style={styles.rowIcon} />
       <View style={styles.rowBody}>
         <Text style={[styles.rowTitle, { color: palette.text }]}>{item.title}</Text>
         <Text style={[styles.rowDesc, { color: palette.neutral[400] }]}>{item.desc}</Text>
       </View>
       <Text style={[styles.rowTime, { color: palette.neutral[500] }]}>{item.time}</Text>
-    </View>
+    </Pressable>
   );
 }
 

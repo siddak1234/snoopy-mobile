@@ -14,7 +14,8 @@ import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ScreenError, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
-import { activeWorkspaceId, useSession } from '@/hooks/use-session';
+import { useSession, workspaceIfShown } from '@/hooks/use-session';
+import { WORKSPACE_CHANGED, addRefusalMessage } from '@/lib/content/refusals';
 import { CONFIGURE_FOOTNOTE, UNAVAILABLE_NOTE, errorTitleFor } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
 import { createSubscription } from '@/lib/platform/automations';
@@ -29,7 +30,6 @@ export default function ConfigureTemplateScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const session = useSession();
-  const workspaceId = activeWorkspaceId(session);
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -86,7 +86,7 @@ export default function ConfigureTemplateScreen() {
   if (catalog.status === 'offline') {
     return <ScreenOffline onRetry={catalog.reload} onBack={() => router.back()} topInset={insets.top} />;
   }
-  if (catalog.status !== 'ready' || !view || !entry || !workspaceId) {
+  if (catalog.status !== 'ready' || !view || !entry) {
     return (
       <ScreenError
         title={errorTitleFor('configure')}
@@ -103,6 +103,11 @@ export default function ConfigureTemplateScreen() {
     // first run cannot succeed.
     if (!entry.available) {
       setActionError(UNAVAILABLE_NOTE);
+      return;
+    }
+    const workspaceId = workspaceIfShown(session, catalog.loadedFor);
+    if (!workspaceId) {
+      setActionError(WORKSPACE_CHANGED);
       return;
     }
     creating.current = true;
@@ -124,7 +129,7 @@ export default function ConfigureTemplateScreen() {
       createKey.current = newIdempotencyKey('subscribe');
       router.push({ pathname: '/(tabs)/flows/builder', params: { template: entry.templateId } });
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : 'The workflow could not be created.');
+      setActionError(addRefusalMessage(error, 'The workflow could not be created.'));
     } finally {
       creating.current = false;
       setBusy(false);

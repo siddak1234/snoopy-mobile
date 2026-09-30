@@ -10,14 +10,15 @@ import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
-import { activeWorkspaceId, useSession } from '@/hooks/use-session';
+import { useSession, workspaceIfShown } from '@/hooks/use-session';
+import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
 import { useSolutions } from '@/hooks/use-solutions';
 import { UNAVAILABLE_NOTE, errorTitleFor } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
 import { updateSubscription } from '@/lib/platform/automations';
 import { newIdempotencyKey } from '@/lib/platform/client';
 import { readSubscriptions } from '@/lib/platform/runs';
-import { toSolutions, type SolutionView } from '@/lib/view/catalog';
+import { toSolutions, withoutArchived, type SolutionView } from '@/lib/view/catalog';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function SolutionsScreen() {
@@ -26,7 +27,6 @@ export default function SolutionsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const session = useSession();
-  const workspaceId = activeWorkspaceId(session);
   const [category, setCategory] = useState('All');
   /** The solution pending removal, by templateId (design rmIdx). */
   const [removeId, setRemoveId] = useState<string | null>(null);
@@ -37,8 +37,9 @@ export default function SolutionsScreen() {
   /**
    * The marketplace, from the catalog.
    *
-   * `subscribed` is the server's own answer to Add-versus-Added, and the filter
-   * chips come from `categories`, which the contract says a client must render
+   * Add-versus-Added is answered from the subscriptions the workspace still has
+   * (`withoutArchived`, the website's rule), and the filter chips come from
+   * `categories`, which the contract says a client must render
    * rather than invent. Identity is the templateId throughout — the array
    * position this screen used to key on cannot survive contact with a real
    * catalog.
@@ -52,7 +53,7 @@ export default function SolutionsScreen() {
   });
   const solutions: SolutionView[] =
     catalog.status === 'ready'
-      ? toSolutions(catalog.data.catalog)
+      ? toSolutions(catalog.data.catalog, catalog.data.subscriptions)
       : [];
   const chips =
     catalog.status === 'ready' ? catalog.data.catalog.categories : [];
@@ -62,11 +63,17 @@ export default function SolutionsScreen() {
   const { activeCount, planTotal } = totals(solutions);
 
   const pauseSolution = async () => {
-    if (!removeSolution || !workspaceId || catalog.status !== 'ready') return;
+    if (!removeSolution || catalog.status !== 'ready') return;
+    const workspaceId = workspaceIfShown(session, catalog.loadedFor);
+    if (!workspaceId) {
+      setPauseError(WORKSPACE_CHANGED);
+      return;
+    }
     setPausing(true);
     setPauseError(null);
     try {
-      const matching = catalog.data.subscriptions.filter(
+      // An archived one is not running and cannot be paused; it is left alone.
+      const matching = withoutArchived(catalog.data.subscriptions).filter(
         (subscription) => subscription.templateId === removeSolution.templateId,
       );
       if (matching.length === 0) {
@@ -89,7 +96,7 @@ export default function SolutionsScreen() {
       setActive(removeSolution.templateId, false);
       setRemoveId(null);
     } catch (error) {
-      setPauseError(error instanceof Error ? error.message : 'The workflows were not paused.');
+      setPauseError(refusalMessage(error, {}, 'The workflows were not paused.'));
     } finally {
       setPausing(false);
     }

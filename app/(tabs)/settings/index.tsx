@@ -13,34 +13,30 @@ import {
   UserFocus,
   Users,
 } from 'phosphor-react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { AvatarBadge } from '@/components/nocturne/avatar-badge';
 import { NocToggle } from '@/components/nocturne/noc-toggle';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
-import { TextField } from '@/components/nocturne/text-field';
 import { ActionFailure, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
+import { ConnectionsCard } from '@/components/settings/connections-card';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { WorkspaceSwitcher } from '@/components/settings/workspace-switcher';
 import { em, fonts, layout, status } from '@/constants/theme';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
+import { useBiometricWording } from '@/hooks/use-biometric-wording';
 import { useSession } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
 import { useTheme, type ThemeMode } from '@/hooks/use-theme';
 import { SIGN_OUT_FAILED, SIGN_OUT_RETRY, errorTitleFor } from '@/lib/content/screen-states';
 import { readCatalog, readConnectionProviders, readConnections } from '@/lib/platform/catalog';
-import {
-  connectOAuthProvider,
-  connectProviderWithKey,
-  disconnectConnection,
-} from '@/lib/platform/connections';
-import { newIdempotencyKey } from '@/lib/platform/client';
+import { readSubscriptions } from '@/lib/platform/runs';
 import { readFaceIdEnabled, writeFaceIdEnabled } from '@/lib/platform/session-store';
 import { toConnectionRows, toSolutions, type ConnectionView } from '@/lib/view/catalog';
+import { administers } from '@/lib/view/roles';
 
 const APPEARANCE: { label: string; mode: ThemeMode }[] = [
   { label: 'Dark', mode: 'dark' },
@@ -50,6 +46,7 @@ const APPEARANCE: { label: string; mode: ThemeMode }[] = [
 
 export default function SettingsScreen() {
   const { palette, mode, setMode } = useTheme();
+  const biometric = useBiometricWording();
   const { totals } = useSolutions();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -58,11 +55,6 @@ export default function SettingsScreen() {
   const [signOutFailed, setSignOutFailed] = useState(false);
   const session = useSession();
   const { signOut } = session;
-  const [selectedConnection, setSelectedConnection] = useState<ConnectionView | null>(null);
-  const [credentials, setCredentials] = useState<Record<string, string>>({});
-  const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [connectionBusy, setConnectionBusy] = useState(false);
-  const credentialKey = useRef(newIdempotencyKey('connection'));
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const platformName = Platform.OS === 'ios' ? 'iOS' : Platform.OS === 'android' ? 'Android' : 'native';
   const appVersion = Constants.expoConfig?.version ?? '—';
@@ -84,22 +76,22 @@ export default function SettingsScreen() {
         const hasHardware = await LocalAuthentication.hasHardwareAsync();
         const enrolled = hasHardware && (await LocalAuthentication.isEnrolledAsync());
         if (!enrolled) {
-          setFaceIdError('Face ID is not available or enrolled on this device.');
+          setFaceIdError(biometric.unavailableOrUnenrolled);
           return;
         }
         const result = await LocalAuthentication.authenticateAsync({
-          promptMessage: 'Enable Face ID unlock',
+          promptMessage: biometric.enablePrompt,
           disableDeviceFallback: true,
         });
         if (!result.success) {
-          setFaceIdError('Face ID unlock was not enabled.');
+          setFaceIdError(biometric.notEnabled);
           return;
         }
       }
       await writeFaceIdEnabled(enabled);
       setFaceId(enabled);
     } catch {
-      setFaceIdError('Face ID preference could not be saved on this device.');
+      setFaceIdError(biometric.notSaved);
     }
   };
 
@@ -112,14 +104,16 @@ export default function SettingsScreen() {
    * operations published in Round 6.6 also back the connection action below.
    */
   const connections = useWorkspaceResource(async (workspaceId) => {
-    const [providers, held, catalog] = await Promise.all([
+    const [providers, held, catalog, subscriptions] = await Promise.all([
       readConnectionProviders(),
       readConnections(workspaceId),
       readCatalog(workspaceId),
+      readSubscriptions(workspaceId),
     ]);
     return {
       rows: toConnectionRows(providers.providers, held.connections),
-      solutions: toSolutions(catalog),
+      // What is on the plan: the subscriptions it still has, not archived ones.
+      solutions: toSolutions(catalog, subscriptions.subscriptions),
     };
   });
 
@@ -150,65 +144,6 @@ export default function SettingsScreen() {
   const canSwitchWorkspace =
     currentSession !== null &&
     (currentSession.workspaces.length >= 2 || currentSession.workspacesTruncated === true);
-
-  const closeConnectionDialog = () => {
-    setSelectedConnection(null);
-    setCredentials({});
-    setConnectionError(null);
-    credentialKey.current = newIdempotencyKey('connection');
-  };
-
-  const updateCredential = (name: string, value: string) => {
-    setCredentials((previous) => ({ ...previous, [name]: value }));
-    credentialKey.current = newIdempotencyKey('connection');
-  };
-
-  const applyConnectionAction = async () => {
-    if (!selectedConnection || !activeWorkspace || connectionBusy) return;
-    setConnectionBusy(true);
-    setConnectionError(null);
-    try {
-      if (selectedConnection.connected && selectedConnection.connectionId) {
-        await disconnectConnection(activeWorkspace.id, selectedConnection.connectionId);
-      } else if (selectedConnection.authType === 'oauth2') {
-        const outcome = await connectOAuthProvider(activeWorkspace.id, selectedConnection.provider);
-        if (outcome.status === 'cancelled') {
-          // Not proof that nothing happened. A system browser sharing a
-          // logged-in website session completes the connect AT the website and
-          // skips the app handoff (manifest §12.1 #79); the person then closes
-          // the sheet and the app sees `cancelled`. Re-reading the published
-          // connections is the only honest answer, and it costs one read.
-          closeConnectionDialog();
-          connections.reload();
-          return;
-        }
-        if (outcome.status === 'failed') {
-          setConnectionError(outcome.message);
-          return;
-        }
-      } else {
-        const values = Object.fromEntries(
-          selectedConnection.credentialFields.map((field) => [field.name, credentials[field.name]?.trim() ?? '']),
-        );
-        if (Object.values(values).some((value) => !value)) {
-          setConnectionError('Complete every credential field before connecting.');
-          return;
-        }
-        await connectProviderWithKey(
-          activeWorkspace.id,
-          selectedConnection.providerId,
-          values,
-          credentialKey.current,
-        );
-      }
-      closeConnectionDialog();
-      connections.reload();
-    } catch (error) {
-      setConnectionError(error instanceof Error ? error.message : 'The connection was not changed.');
-    } finally {
-      setConnectionBusy(false);
-    }
-  };
 
   /**
    * Sign out for real, and honour the one answer the contract added for us.
@@ -281,8 +216,8 @@ export default function SettingsScreen() {
         <SurfaceCard style={styles.sectionCard}>
           <SettingsRow
             icon={UserFocus}
-            title="Face ID unlock"
-            sub="Require Face ID when opening"
+            title={biometric.settingsTitle}
+            sub={biometric.settingsSub}
             divider
             right={<NocToggle value={faceId} onChange={changeFaceId} />}
           />
@@ -305,36 +240,12 @@ export default function SettingsScreen() {
         ) : null}
       </View>
 
-      <View>
-        <SectionLabel>CONNECTIONS</SectionLabel>
-        <SurfaceCard style={styles.sectionCard}>
-          {connectionRows.map((c, i) => (
-            <SettingsRow
-              key={c.providerId}
-              icon={c.icon}
-              title={c.name}
-              sub={c.sub}
-              divider={i < connectionRows.length - 1}
-              onPress={() => {
-                setSelectedConnection(c);
-                setConnectionError(null);
-              }}
-              right={
-                c.connected ? (
-                  <View style={styles.connectedRight}>
-                    <View style={[styles.greenDot, { backgroundColor: status.ok }]} />
-                    <CaretRight size={15} color={palette.neutral[500]} />
-                  </View>
-                ) : (
-                  <Text style={[styles.connectLink, { color: palette.accentRamp[300] }]}>
-                    Connect
-                  </Text>
-                )
-              }
-            />
-          ))}
-        </SurfaceCard>
-      </View>
+      <ConnectionsCard
+        rows={connectionRows}
+        loadedFor={connections.loadedFor}
+        canManage={administers(activeWorkspace?.role)}
+        onChanged={connections.reload}
+      />
 
       <View>
         <SectionLabel>PLAN &amp; BILLING</SectionLabel>
@@ -448,36 +359,6 @@ export default function SettingsScreen() {
         Autom8x for {platformName} · v{appVersion}
       </Text>
 
-      <Dialog
-        visible={selectedConnection !== null}
-        onRequestClose={closeConnectionDialog}
-        title={`${selectedConnection?.connected ? 'Disconnect' : 'Connect'} ${selectedConnection?.name ?? ''}`}
-        body={selectedConnection?.connected ? selectedConnection.sub : selectedConnection?.provider.description}
-        actions={
-          <>
-            <DialogButton label="Cancel" onPress={closeConnectionDialog} />
-            <DialogButton
-              tone={selectedConnection?.connected ? 'danger' : 'accent'}
-              disabled={connectionBusy}
-              onPress={applyConnectionAction}
-              label={connectionBusy ? 'Working…' : selectedConnection?.connected ? 'Disconnect' : 'Connect'}
-            />
-          </>
-        }>
-        {selectedConnection?.authType === 'api-key' && !selectedConnection.connected
-          ? selectedConnection.credentialFields.map((field) => (
-              <TextField
-                key={field.name}
-                label={field.label}
-                value={credentials[field.name] ?? ''}
-                onChangeText={(value) => updateCredential(field.name, value)}
-                secure={field.secret}
-                placeholder={field.help}
-              />
-            ))
-          : null}
-        {connectionError ? <DialogText tone="error">{connectionError}</DialogText> : null}
-      </Dialog>
 
       <WorkspaceSwitcher open={switcherOpen} onClose={() => setSwitcherOpen(false)} />
     </ScrollView>
@@ -524,20 +405,6 @@ const styles = StyleSheet.create({
   planTotal: {
     fontFamily: fonts.medium,
     fontSize: 14,
-  },
-  connectedRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  greenDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 99,
-  },
-  connectLink: {
-    fontFamily: fonts.medium,
-    fontSize: 13,
   },
   membersCount: {
     fontFamily: fonts.regular,

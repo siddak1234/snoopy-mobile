@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import * as LocalAuthentication from 'expo-local-authentication';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
@@ -17,6 +17,7 @@ import { GlowBackground } from '@/components/nocturne/glow-background';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { fonts, radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useBiometricWording } from '@/hooks/use-biometric-wording';
 import { useSession } from '@/hooks/use-session';
 import { readSession } from '@/lib/platform/session-store';
 
@@ -52,6 +53,11 @@ export default function FaceIdScreen() {
   const router = useRouter();
   const session = useSession();
   const [message, setMessage] = useState('Unlocking your workspace…');
+  // Read through a ref inside the unlock effect: the wording can be refined
+  // after the first render, and that must not start a second biometric prompt.
+  const wording = useBiometricWording();
+  const words = useRef(wording);
+  words.current = wording;
 
   // Biometrics unlock an existing enclave-held session; they never mint one.
   // Every refusal remains on the auth side of the route boundary.
@@ -67,7 +73,7 @@ export default function FaceIdScreen() {
         const hasHardware = await LocalAuthentication.hasHardwareAsync();
         const enrolled = hasHardware && (await LocalAuthentication.isEnrolledAsync());
         if (!enrolled) {
-          if (!cancelled) setMessage('Face ID is not available on this device.');
+          if (!cancelled) setMessage(words.current.unavailable);
           return;
         }
         const result = await LocalAuthentication.authenticateAsync({
@@ -76,9 +82,9 @@ export default function FaceIdScreen() {
         });
         if (cancelled) return;
         if (result.success) router.replace('/(tabs)/(home)');
-        else setMessage('Face ID did not unlock this workspace.');
+        else setMessage(words.current.didNotUnlock);
       } catch {
-        if (!cancelled) setMessage('Face ID did not unlock this workspace.');
+        if (!cancelled) setMessage(words.current.didNotUnlock);
       }
     })();
     return () => {
@@ -132,7 +138,7 @@ export default function FaceIdScreen() {
         </View>
       </Animated.View>
       <View style={styles.textGroup}>
-        <Text style={[styles.title, { color: palette.text }]}>Face ID</Text>
+        <Text style={[styles.title, { color: palette.text }]}>{wording.title}</Text>
         <Text style={[styles.sub, { color: palette.neutral[400] }]}>
           {message}
         </Text>

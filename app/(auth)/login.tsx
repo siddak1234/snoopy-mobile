@@ -18,6 +18,7 @@ import { Skeleton } from '@/components/nocturne/skeleton';
 import { OrDivider } from '@/components/nocturne/or-divider';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { em, fonts, layout, radius, status } from '@/constants/theme';
+import { useBiometricWording } from '@/hooks/use-biometric-wording';
 import { useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { useResource } from '@/hooks/use-resource';
@@ -26,6 +27,7 @@ import type { LoginProvider } from '@/lib/platform/native-auth';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const biometric = useBiometricWording();
   const insets = useSafeAreaInsets();
   const { palette } = useTheme();
   const [signInError, setSignInError] = useState<string | null>(null);
@@ -118,7 +120,7 @@ export default function LoginScreen() {
             and the identity providers the platform publishes. */}
         <View style={styles.form}>
           <PillButton
-            label="Unlock with Face ID"
+            label={biometric.unlockLabel}
             variant="accent-ghost"
             height={48}
             fontSize={15}

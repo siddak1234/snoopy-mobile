@@ -1,9 +1,9 @@
-# Mobile contract — Round 6, amended in Round 7.5M
+# Mobile contract — Round 6, amended in Round 7.5M and Round 16
 
 Verified against the sibling master plan, Round 6 playbook, BUILD-PLAN 8.5–8.7,
 ADR-0017, and the regenerated platform/automations/connections declarations on
-2026-08-17; re-verified against the regenerated declarations on 2026-09-03
-(`npm run verify:platform-contracts`: current). The published API owns business
+2026-08-17; re-verified against the regenerated declarations on 2026-09-03 and
+on 2026-09-29 for Round 16 (`npm run verify:platform-contracts`: current). The published API owns business
 truth. This file records how the client consumes it; it does not extend it.
 
 ## Completion state
@@ -13,6 +13,10 @@ Round 6 closed on 2026-08-18 after two fresh audits (`DESIGN-GAPS.md`). Round
 browserless refusal and the pinned release values; everything is **ready for
 the Round 7F fresh audit**, not a declaration that any gate is closed.
 `ROUND-7.5-OBSERVATIONS.md` lists what is observed and what is not.
+
+Round 16 (ADR-0032, BUILD-PLAN Phase 24) makes the app offer every signed-in
+web feature on the same operations; its findings are in `DESIGN-GAPS.md`'s
+Round 16 section. Nothing here is closed by this repository.
 
 ## Transport and credential boundary
 
@@ -103,14 +107,14 @@ switcher (snoopy PR #6) applies over the same operation.
 | --- | --- |
 | Login/signup | `GET /v1/auth/providers`; providers only — no password or reset surface is drawn (owner, 2026-09-08) |
 | Home | session + catalog + `run-stats?since=<local midnight>` + runs + pending approvals |
-| Solutions/templates | workspace automation catalog and its server-supplied categories |
+| Solutions/templates | workspace automation catalog and its server-supplied categories, plus subscriptions (Added) |
 | Setup/configure | catalog `setup[]` and the matching subscription config |
-| Flows/detail | subscriptions + catalog + run stats; identity is subscription ID/template ID |
+| Flows/detail | subscriptions + catalog + run stats; identity is subscription ID/template ID. Detail keeps the subscription (`runInput`, `triggerKind`, `templateVersion`) and its catalog entry for its actions; the webhook address is read when its dialog opens |
 | Builder | selected catalog entry's required `pipeline[]`, in manifest order |
 | Activity/run detail | runs/list/detail joined to catalog/subscription identity |
 | Approvals | pending approvals joined through subscription → template → pipeline step |
 | Notifications | pending approvals plus failed runs; explicitly an in-app composition |
-| Settings | session/workspace, catalog totals, provider registry, and workspace connections; the workspace switcher reads the workspace collection |
+| Settings | session/workspace, catalog + subscriptions for the plan totals, provider registry, and workspace connections; the workspace switcher reads the workspace collection |
 
 Every fetching surface has loading, offline, platform-error, **unavailable**, and
 applicable empty behavior, **with one carve-out the design owns**: Home draws a
@@ -160,6 +164,33 @@ review" — the held queue — also list running, queued and cancelled runs.
   and the dialog offers the read again.
 - Disconnect: delete the stable connection ID.
 - Sign out: revoke first, clear locally only on a terminal/successful answer.
+- Round 16 (24.4), each the website's operation, words and gating:
+  - Run: `createRun` with exactly what the pinned version's `runInput`
+    declares, offered only on a live, available subscription that declares
+    some. Its key is new on each opening and on any changed value, so only a
+    resubmission of the same values reuses it. A file field uploads when
+    chosen: `openUpload` for the file's size on disk, then the bytes are read
+    and must be exactly that many, then the credential-less `PUT` to the signed
+    URL with the type it was opened for, and `completeUpload`; the run's input
+    carries only the file's id.
+  - Set up: patch `config` only; going live stays its own action.
+  - Go live: offered only with no unmet connection and an available
+    automation. Detail shows the status as read; the Flows list shows the
+    answer to detail's change only until the list reads again.
+  - Move to vN: patch `templateVersion`, confirmed first, when the catalog's
+    version is newer than the one pinned.
+  - Archive: patch `status: archived` behind its one-way confirmation.
+  - Webhook address: owner or admin, webhook-started only. The address is read
+    on each opening; a secret is issued with no idempotency key, shown once in
+    the dialog and kept nowhere else.
+  - Cancel run: pending or running only, confirmed first.
+  - Replace account: the OAuth connect with the connection it replaces; a
+    `reused` answer is said as nothing replaced.
+- Every action acts on the workspace its screen loaded (`workspaceIfShown`);
+  after a switch it is refused with `WORKSPACE_CHANGED` and not sent.
+- After a change, a screen re-reads from `loading`: what it showed is out of
+  date and is not left to act on. A return to a screen re-reads it and keeps
+  its rows until the answer lands (24.4.4).
 
 UI state changes occur only after a successful mutation. Failed actions remain
 on the loaded screen and show the shared inline failure callout.
@@ -198,7 +229,16 @@ mobile-only shape.
   9.
 - Billing/payment/invoice operations are absent and Round 7-owned: Settings
   shows only the sum of published automation prices, never a fake plan base or
-  card.
+  card. (Round 16's 24.6.1 replaces this line with ADR-0032's billing rule.)
+- An archived subscription is absent everywhere: not a workflow, not Added, not
+  paused, not reused by Add (`withoutArchived`, the website's rule). The
+  catalog's `subscribed` is not used for Added, because it still counts an
+  archived row (`DESIGN-GAPS.md`, Round 16). Home alone keeps it, to ask whether
+  the workspace has set anything up at all.
+- Refusals a person can act on are said in the website's words
+  (`lib/content/refusals.ts`): moving a version, issuing a webhook address,
+  starting a run, uploading its file, and Add's two plan reasons (on a 403
+  only).
 
 ## Remaining contract ceilings (not Round 6 substitutions)
 

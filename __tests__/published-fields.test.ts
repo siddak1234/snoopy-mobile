@@ -31,8 +31,8 @@ function entry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
 
 describe('AutomationCatalogEntry.available survives the mapping', () => {
   it('is carried onto a marketplace card', () => {
-    expect(toSolution(entry({ available: false })).available).toBe(false);
-    expect(toSolution(entry({ available: true })).available).toBe(true);
+    expect(toSolution(entry({ available: false }), false).available).toBe(false);
+    expect(toSolution(entry({ available: true }), false).available).toBe(true);
   });
 
   it('is carried onto a template card', () => {
@@ -44,8 +44,8 @@ describe('AutomationCatalogEntry.available survives the mapping', () => {
     // A subscribed automation can still stop answering, and a free one is not
     // more reachable than a paid one. `available` is probe evidence and has no
     // relationship to either, so nothing may stand in for it.
-    expect(toSolution(entry({ available: false, subscribed: true })).available).toBe(false);
-    expect(toSolution(entry({ available: false, monthlyPriceUsd: 0 })).available).toBe(false);
+    expect(toSolution(entry({ available: false, subscribed: true }), true).available).toBe(false);
+    expect(toSolution(entry({ available: false, monthlyPriceUsd: 0 }), false).available).toBe(false);
   });
 });
 

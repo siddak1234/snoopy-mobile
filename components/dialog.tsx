@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { fonts, layout, status } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -13,6 +13,10 @@ import { useTheme } from '@/hooks/use-theme';
  * the confirmations Round 16 adds (archive, remove, delete) draw the same thing
  * rather than a third copy (BUILD-PLAN 24.3.8). Not a Nocturne primitive: the
  * design set has no dialog, and this composes theme tokens only.
+ *
+ * Forms live in it (a run's input, setup, a pasted key), so on iOS it rises
+ * above the keyboard rather than hiding its own buttons under it, and its
+ * actions wrap onto a second line where a phone is too narrow for them.
  */
 export function Dialog({
   visible,
@@ -34,7 +38,9 @@ export function Dialog({
   const { palette } = useTheme();
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onRequestClose}>
-      <View style={[styles.overlay, { backgroundColor: status.overlay }]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={[styles.overlay, { backgroundColor: status.overlay }]}>
         <View
           testID={testID}
           style={[styles.dialog, { backgroundColor: palette.surface, borderColor: palette.neutral[800] }]}>
@@ -43,7 +49,7 @@ export function Dialog({
           {children}
           <View style={styles.actions}>{actions}</View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -119,6 +125,7 @@ const styles = StyleSheet.create({
   },
   actions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'flex-end',
     gap: 10,
   },
