@@ -73,8 +73,16 @@ function nativeLinkConfig(redirectUri) {
     throw new Error('EXPO_PUBLIC_NATIVE_REDIRECT_URI must be a plain HTTPS app-link URL');
   }
 
+  // Two services for the one host. `applinks` lets the callback's universal
+  // link re-enter the app. `webcredentials` is what the sign-in sheet itself
+  // needs: Apple's header for ASWebAuthenticationSession's HTTPS callback —
+  // "The host must be associated with the app using associated web credentials
+  // domains" — and without it iOS refuses to create the session, which
+  // expo-web-browser reports as a `cancel`. The first TestFlight build (Round
+  // 16, 2026-10-01) shipped `applinks` alone and every tap on a provider ended
+  // silently (DESIGN-GAPS.md, "The sign-in sheet that would not open").
   return {
-    ios: { associatedDomains: [`applinks:${url.host}`] },
+    ios: { associatedDomains: [`applinks:${url.host}`, `webcredentials:${url.host}`] },
     android: {
       intentFilters: [
         {

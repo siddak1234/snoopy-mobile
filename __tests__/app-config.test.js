@@ -178,7 +178,7 @@ describe('release app configuration', () => {
       nativeRedirectUri: 'https://app.autom8x.ai/auth/native/callback',
       nativeAuthBaseUrl: 'https://www.autom8x.ai/api/platform',
     });
-    expect(result.ios.associatedDomains).toEqual(['applinks:app.autom8x.ai']);
+    expect(result.ios.associatedDomains).toEqual(['applinks:app.autom8x.ai', 'webcredentials:app.autom8x.ai']);
     expect(result.android.intentFilters[0]).toMatchObject({
       autoVerify: true,
       data: [
@@ -215,7 +215,7 @@ describe('the real static config, through the factory', () => {
     expect(resolved.ios.bundleIdentifier).toBe('ai.autom8x.snoopy');
     expect(resolved.android.package).toBe('ai.autom8x.snoopy');
     // The static native config survives the derived claims being merged in.
-    expect(resolved.ios.associatedDomains).toEqual(['applinks:app.autom8x.ai']);
+    expect(resolved.ios.associatedDomains).toEqual(['applinks:app.autom8x.ai', 'webcredentials:app.autom8x.ai']);
     expect(resolved.android.intentFilters[0].data[0].host).toBe('app.autom8x.ai');
     expect(resolved.android.adaptiveIcon).toEqual(appJson.expo.android.adaptiveIcon);
   });
@@ -233,7 +233,12 @@ describe('the real static config, through the factory', () => {
 
     const resolved = configFactory({ config: appJson.expo });
     expect(resolved.name).toBe('Autom8x');
-    expect(resolved.ios.usesAppleSignIn).toBe(true);
+    // `ios.usesAppleSignIn` only WARNS without expo-apple-authentication installed
+    // and adds nothing (the first TestFlight build shipped without the entitlement);
+    // the entitlement is declared directly so EAS's capability sync keeps the App
+    // ID's Sign in with Apple ON, which the web Services ID is grouped under.
+    expect(resolved.ios.usesAppleSignIn).toBeUndefined();
+    expect(resolved.ios.entitlements).toEqual({ 'com.apple.developer.applesignin': ['Default'] });
     expect(resolved.ios.infoPlist.ITSAppUsesNonExemptEncryption).toBe(false);
   });
 

@@ -107,9 +107,30 @@ export async function openSystemAuthSession(
   } catch (error) {
     return { type: 'failed', message: describeBrowserFailure(error) };
   }
-  // `dismiss` and `cancel` are a person closing the sheet, not a failure.
-  if (result.type !== 'success') return { type: 'cancelled' };
-  return { type: 'success', url: result.url };
+  if (result.type === 'success') return { type: 'success', url: result.url };
+  // `dismiss` and `cancel` are a person closing the sheet, not a failure —
+  // except that iOS reports a session it could not START the same way. Its
+  // module resolves `cancel` for every ASWebAuthenticationSession error and
+  // carries the reason in an `error` field its types do not declare. Round 16's
+  // first TestFlight build shipped without the `webcredentials` association the
+  // HTTPS callback requires; iOS refused every session at once, this function
+  // read the refusal as a cancel, and the login screen showed nothing at all.
+  const reason = systemRefusal(result);
+  if (reason) return { type: 'failed', message: `Sign-in could not start on this device: ${reason}` };
+  return { type: 'cancelled' };
+}
+
+/**
+ * The reason the system user-agent gave for ending the session, when it was
+ * not a person closing it. `ASWebAuthenticationSessionErrorCodeCanceledLogin`
+ * is 1, and its description ends in "WebAuthenticationSession error 1." in
+ * every locale's parenthetical; everything else is a refusal worth showing.
+ */
+function systemRefusal(result: WebBrowser.WebBrowserAuthSessionResult): string | null {
+  const error = (result as { error?: unknown }).error;
+  if (typeof error !== 'string' || error.trim() === '') return null;
+  if (/WebAuthenticationSession error 1\./u.test(error)) return null;
+  return error.trim();
 }
 
 function describeBrowserFailure(error: unknown): string {
