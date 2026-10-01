@@ -24,8 +24,7 @@ import {
   routePlatform,
   runDetailPayload,
   signedInSession,
-  subscriptionsPayload,
-} from '@/test/platform';
+  subscriptionsPayload, runsPayload } from '@/test/platform';
 import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
 
 jest.mock('@/lib/platform/client', () => ({
@@ -482,6 +481,47 @@ describe('Workflow detail', () => {
     await fireEvent.press(screen.getByText('Resume'));
     expect(await screen.findByText('Live')).toBeTruthy();
   });
+
+  it('keeps the page while re-reading after Pause, never the skeleton (feedback #6)', async () => {
+    // The first TestFlight build re-read with reload(), which starts from
+    // `loading` and drew the tiled skeleton over the page: "it goes blank".
+    // The status just answered is already shown, so the re-read keeps the page.
+    let status = 'live';
+    let listReads = 0;
+    let releaseReread: (() => void) | undefined;
+    const rereadReleased = new Promise<void>((resolve) => {
+      releaseReread = resolve;
+    });
+    const routed = platformOperation.getMockImplementation();
+    platformOperation.mockImplementation(async (path: string, execute: Function) => {
+      if (/\/subscriptions\/invoice$/.test(path)) {
+        const patch = async (_path: string, init: { body: { status: string } }) => ({ data: init.body });
+        status = (await execute({ automations: { PATCH: patch } })).data.status;
+        return { subscription: { ...subscriptionsPayload().subscriptions[0], status } };
+      }
+      if (/\/subscriptions$/.test(path)) {
+        // The re-read after the PATCH is slow: the page must stay up meanwhile.
+        if (++listReads > 1) await rereadReleased;
+        const rows = subscriptionsPayload().subscriptions.map((row) => (row.id === 'invoice' ? { ...row, status } : row));
+        return { subscriptions: rows };
+      }
+      return routed?.(path, execute);
+    });
+    setMockParams({ flow: 'invoice' });
+    await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
+    expect(await screen.findByText('Live')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Pause'));
+    await waitFor(() => expect(listReads).toBeGreaterThan(1));
+    // Re-reading, and still the page: the name, the status as last read, no skeleton.
+    expect(screen.queryByTestId('screen-loading')).toBeNull();
+    expect(screen.getByText('Invoice triage')).toBeTruthy();
+    expect(screen.getByText('Live')).toBeTruthy();
+    // The re-read lands: the platform's answer replaces the status in place.
+    releaseReread?.();
+    expect(await screen.findByText('Paused')).toBeTruthy();
+    expect(screen.getByText('Resume')).toBeTruthy();
+    expect(screen.queryByTestId('screen-loading')).toBeNull();
+  });
 });
 
 describe('Builder', () => {
@@ -538,6 +578,39 @@ describe('Activity', () => {
     expect(getByText('32 emails routed · 3 escalated')).toBeTruthy();
     expect(queryByText('Run #52 · failed — Sheets auth expired')).toBeNull();
     expect(queryByText('Run #4820 · held for review — amount mismatch')).toBeNull();
+  });
+
+  it('lists runs older than two days under EARLIER, never as "no activity yet" (feedback #3)', async () => {
+    // The website's Activity is every run in the workspace. The first TestFlight
+    // build showed the first-run empty to a workspace whose 13 runs were all
+    // older than two days, while Home listed them under Recent runs.
+    const old = new Date();
+    old.setDate(old.getDate() - 16);
+    const runs = runsPayload();
+    routePlatform(platformOperation, {
+      '/automations': flowCatalogPayload(),
+      '/runs': {
+        runs: runs.runs.map((run) => ({ ...run, status: 'succeeded', createdAt: old.toISOString(), updatedAt: old.toISOString() })),
+      },
+    });
+    const { getByText, queryByText } = await renderWithProviders(<ActivityScreen />, signedInSession);
+    expect(getByText('EARLIER')).toBeTruthy();
+    expect(getByText('32 emails routed · 3 escalated')).toBeTruthy();
+    expect(queryByText('No activity yet')).toBeNull();
+    expect(queryByText('TODAY')).toBeNull();
+    expect(queryByText('YESTERDAY')).toBeNull();
+    // A filter with nothing under it says so without inventing a window.
+    // A filter with nothing to show says so — it is not the first-run empty.
+    await fireEvent.press(getByText('Needs review'));
+    expect(getByText('No held runs.')).toBeTruthy();
+    expect(queryByText('No activity yet')).toBeNull();
+  });
+
+  it('shows the first-run empty only to a workspace with no runs at all', async () => {
+    routePlatform(platformOperation, { '/automations': flowCatalogPayload(), '/runs': { runs: [] } });
+    const { getByText, queryByText } = await renderWithProviders(<ActivityScreen />, signedInSession);
+    expect(getByText('No activity yet')).toBeTruthy();
+    expect(queryByText('EARLIER')).toBeNull();
   });
 
   it('filters to failures and hides the empty TODAY section', async () => {

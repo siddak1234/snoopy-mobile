@@ -141,6 +141,24 @@ describe('who may change a connection (the Edge refuses a member 403)', () => {
   });
 });
 
+describe('the connection dialog’s actions (feedback #2)', () => {
+  it('stacks the three actions of a connected, replaceable connection, and keeps two in a row', async () => {
+    // The first TestFlight build drew Cancel and Replace account on one line
+    // and Disconnect alone on a second, right-aligned — a wrapped row read as
+    // broken. Three actions stack at full width; two still share a row.
+    const { StyleSheet } = jest.requireActual('react-native');
+    routeReads([[CONNECTED_GMAIL], [CONNECTED_GMAIL]]);
+    await renderWithProviders(<SettingsScreen />, sessionAs('owner'));
+    await fireEvent.press(await screen.findByText('Gmail'));
+    expect(await screen.findByText('Disconnect Gmail')).toBeTruthy();
+    expect(StyleSheet.flatten(screen.getByTestId('connection-dialog-actions').props.style).flexDirection).toBe('column');
+
+    await fireEvent.press(screen.getByText('Replace account'));
+    expect(await screen.findByText('Replace alex@acme.co?')).toBeTruthy();
+    expect(StyleSheet.flatten(screen.getByTestId('replace-account-dialog-actions').props.style).flexDirection).toBe('row');
+  });
+});
+
 describe('replacing a connection’s account', () => {
   async function openReplace() {
     await fireEvent.press(await screen.findByText('Gmail'));

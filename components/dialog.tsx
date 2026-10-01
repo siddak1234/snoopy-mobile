@@ -15,8 +15,11 @@ import { useTheme } from '@/hooks/use-theme';
  * design set has no dialog, and this composes theme tokens only.
  *
  * Forms live in it (a run's input, setup, a pasted key), so on iOS it rises
- * above the keyboard rather than hiding its own buttons under it, and its
- * actions wrap onto a second line where a phone is too narrow for them.
+ * above the keyboard rather than hiding its own buttons under it. Two actions
+ * sit in a row; a dialog with three asks for `actionsLayout="stack"`, which
+ * lays them out one under another at full width — the wrapped row put the
+ * third button alone on a second line, right-aligned, which the owner read as
+ * a broken layout (24.7.3 attempt 1, feedback #2).
  */
 export function Dialog({
   visible,
@@ -26,6 +29,7 @@ export function Dialog({
   testID,
   children,
   actions,
+  actionsLayout = 'row',
 }: {
   visible: boolean;
   onRequestClose: () => void;
@@ -34,6 +38,8 @@ export function Dialog({
   testID?: string;
   children?: React.ReactNode;
   actions: React.ReactNode;
+  /** `stack` for three or more actions: one under another, full width. */
+  actionsLayout?: 'row' | 'stack';
 }) {
   const { palette } = useTheme();
   return (
@@ -47,7 +53,11 @@ export function Dialog({
           <Text style={[styles.title, { color: palette.text }]}>{title}</Text>
           {body ? <DialogText>{body}</DialogText> : null}
           {children}
-          <View style={styles.actions}>{actions}</View>
+          <View
+            testID={testID ? `${testID}-actions` : undefined}
+            style={actionsLayout === 'stack' ? styles.actionsStacked : styles.actions}>
+            {actions}
+          </View>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -127,6 +137,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'flex-end',
+    gap: 10,
+  },
+  actionsStacked: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
     gap: 10,
   },
   button: {
