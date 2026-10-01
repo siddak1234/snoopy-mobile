@@ -167,6 +167,32 @@ describe('useResource', () => {
     expect(screen.getByText('ready:rows')).toBeTruthy();
   });
 
+  it('re-reads on refresh() after a change, keeping the rows, so a page never goes blank to confirm what it just showed (feedback #6)', async () => {
+    // Pausing a workflow records the platform's answer and then re-reads; the
+    // first TestFlight build re-read with reload(), which replaced the page
+    // with a skeleton the owner read as blank. refresh() is the focus re-read,
+    // deliberately: same request, rows kept, answer replaces them.
+    const seen: string[] = [];
+    let answer = 'live';
+    let refresh: () => void = () => undefined;
+    const read = jest.fn(async () => answer);
+    function Watch() {
+      const state = useResource(read, []);
+      refresh = state.refresh;
+      const label = state.status === 'ready' ? `ready:${state.data}` : state.status;
+      seen.push(label);
+      return <Text>{label}</Text>;
+    }
+    await renderWithProviders(<Watch />);
+    expect(await screen.findByText('ready:live')).toBeTruthy();
+
+    answer = 'paused';
+    await act(async () => refresh());
+    expect(await screen.findByText('ready:paused')).toBeTruthy();
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(seen.slice(seen.indexOf('ready:live'))).not.toContain('loading');
+  });
+
   it('starts a reload() — after a change, or Retry — from loading, and says when it fails', async () => {
     // The rows on screen are known to be out of date after a change, so they
     // are not left to act on, and a failed reload is not hidden behind them.

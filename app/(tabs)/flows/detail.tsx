@@ -117,7 +117,9 @@ export default function WorkflowDetailScreen() {
       statusKeys.settle(target);
       // The list shows the platform's answer until it reads again.
       record(def.key, statusLabel(answered.status) as FlowStatus);
-      flows.reload();
+      // Re-read keeping the page: the status just answered is already shown,
+      // and a skeleton here read as the screen going blank (feedback #6).
+      flows.refresh();
     } catch (error) {
       setActionError(refusalMessage(error, {}, 'The workflow status was not changed.'));
     } finally {

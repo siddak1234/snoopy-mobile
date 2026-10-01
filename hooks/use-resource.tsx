@@ -57,7 +57,14 @@ export type ResourceState<T> =
   | { status: 'offline' }
   | { status: 'unconfigured' };
 
-export type Resource<T> = ResourceState<T> & { reload: () => void };
+/**
+ * `reload()` starts from `loading`; `refresh()` re-reads the SAME request keeping
+ * the rows, exactly as a return to the screen does. A screen uses `refresh()`
+ * after a change whose answer is already on screen — a status it `record`ed —
+ * because replacing a workflow's page with a skeleton to confirm the status it
+ * just showed reads as the screen going blank (24.7.3 attempt 1, feedback #6).
+ */
+export type Resource<T> = ResourceState<T> & { reload: () => void; refresh: () => void };
 
 export function useResource<T>(read: () => Promise<T>, deps: unknown[] = []): Resource<T> {
   const [state, setState] = useState<ResourceState<T>>({ status: 'loading' });
@@ -135,7 +142,7 @@ export function useResource<T>(read: () => Promise<T>, deps: unknown[] = []): Re
     };
   }, [readRef, attempt]);
 
-  return { ...state, reload };
+  return { ...state, reload, refresh };
 }
 
 /** A failed load's words when it was a 429 — the wait it stated — else none. */

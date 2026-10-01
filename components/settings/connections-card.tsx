@@ -201,7 +201,10 @@ export function ConnectionsCard({
       <Dialog
         visible={selected !== null}
         onRequestClose={replacing && busy ? () => undefined : close}
-        testID={replacing ? 'replace-account-dialog' : undefined}
+        testID={replacing ? 'replace-account-dialog' : 'connection-dialog'}
+        // Connected + replaceable offers three actions; a row wrapped the third
+        // onto its own line (feedback #2), so they stack.
+        actionsLayout={!replacing && selected?.connected && selected.replaceable ? 'stack' : 'row'}
         title={
           replacing
             ? `Replace ${selected?.accountName ?? selected?.name ?? ''}?`
