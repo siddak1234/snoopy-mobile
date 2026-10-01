@@ -140,6 +140,38 @@ describe('signInWithProvider', () => {
     expect(startUrl.pathname).toBe('/v1/auth/native/google/start');
   });
 
+  it('reports a session iOS refused to start as a failure, in the system\u2019s words', async () => {
+    // expo-web-browser resolves `cancel` for EVERY ASWebAuthenticationSession
+    // error and carries the reason in an `error` field its types do not declare.
+    // Round 16's first TestFlight build shipped without the `webcredentials`
+    // association the HTTPS callback requires: iOS refused every session at
+    // once, and this module read the refusal as a person's cancel and said
+    // nothing. A refusal is a failure, and its reason is the one worth showing.
+    openAuthSessionAsync.mockResolvedValue({
+      type: 'cancel',
+      error:
+        'Application with identifier 6WBHARQXCQ.ai.autom8x.snoopy is not associated with domain app.example.test.',
+    });
+    await expect(signInWithProvider('google')).resolves.toEqual({
+      status: 'failed',
+      message:
+        'Sign-in could not start on this device: Application with identifier 6WBHARQXCQ.ai.autom8x.snoopy is not associated with domain app.example.test.',
+    });
+  });
+
+  it('keeps a person\u2019s own cancel as a cancel, with or without the system\u2019s description of it', async () => {
+    // ASWebAuthenticationSessionErrorCodeCanceledLogin is 1; iOS describes it
+    // with the domain and code in a parenthetical, Android sends no error.
+    openAuthSessionAsync.mockResolvedValue({
+      type: 'cancel',
+      error:
+        'The operation couldn\u2019t be completed. (com.apple.AuthenticationServices.WebAuthenticationSession error 1.)',
+    });
+    await expect(signInWithProvider('google')).resolves.toEqual({ status: 'cancelled' });
+    openAuthSessionAsync.mockResolvedValue({ type: 'cancel' });
+    await expect(signInWithProvider('google')).resolves.toEqual({ status: 'cancelled' });
+  });
+
   it('opens the start leg on the configured browser-leg base, and exchanges on the API origin', async () => {
     // ADR-0017 §1: the start request and the provider's callback must land on
     // ONE origin, because the Edge keeps the transaction in a host-only

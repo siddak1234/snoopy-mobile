@@ -22,7 +22,7 @@ EXPO_PUBLIC_NATIVE_AUTH_BASE_URL=https://www.example.com/api/platform
 ```
 
 The callback must exactly match the Edge's `NATIVE_APP_REDIRECT_URIS` entry.
-`app.config.js` derives the iOS associated domain and Android verified app link
+`app.config.js` derives the iOS associated domains (`applinks`, and `webcredentials`, which is what `ASWebAuthenticationSession`'s HTTPS callback requires) and the Android verified app link
 from this value. The auth base must share an origin with the Edge's
 `AUTH_CALLBACK_URL`: the OAuth transaction lives in a host-only `__Host-`
 cookie, so the start leg and the callback have to land on one host. Unset, the

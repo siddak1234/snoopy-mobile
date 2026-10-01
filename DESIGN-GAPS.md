@@ -516,19 +516,25 @@ Written 2026-09-30, once the owner had completed 24.8.1, 24.8.2 and 24.8.6.
   Connect API key the owner created through `eas credentials --platform ios`
   (role APP_MANAGER, the least that can upload), which EAS holds and this
   repository never sees.
-- **`ios.usesAppleSignIn: true` is declared for the capability sync, not for a
-  native sign-in.** The app signs in through the browser leg (ADR-0017) and
-  calls no `AuthenticationServices` API. But EAS synchronises the App ID's
-  capabilities on the Apple Developer portal from the app config on every
-  build, and the owner's first `eas credentials` run — before this key existed
-  — tried to switch Sign in with Apple and Associated Domains OFF on the App ID
-  (`Failed to patch capabilities: APPLE_ID_AUTH OFF, ASSOCIATED_DOMAINS OFF`;
-  Apple refused because the App Store record already existed). Switching it off
-  would break the web sign-in too: the Services ID Supabase uses is grouped
-  under this App ID as its primary. Declaring the entitlement makes the config
-  and the portal agree; Associated Domains was already declared through
-  `app.config.js`. The alternative, `EXPO_NO_CAPABILITY_SYNC=1` in the EAS
-  environment, is dashboard state nothing versions.
+- **The Sign in with Apple entitlement is declared directly (`ios.entitlements`),
+  for the capability sync, not for a native sign-in.** The app signs in through
+  the browser leg (ADR-0017) and calls no `AuthenticationServices` sign-in API.
+  But EAS synchronises the App ID's capabilities on the Apple Developer portal
+  from the app's entitlements on every build, and the owner's first
+  `eas credentials` run — before any entitlement existed — tried to switch Sign
+  in with Apple and Associated Domains OFF on the App ID (`Failed to patch
+  capabilities: APPLE_ID_AUTH OFF, ASSOCIATED_DOMAINS OFF`; Apple refused
+  because the App Store record already existed). Switching it off would break
+  the web sign-in too: the Services ID Supabase uses is grouped under this App
+  ID as its primary. **The first attempt, `ios.usesAppleSignIn: true` (#23),
+  added NOTHING**: without `expo-apple-authentication` installed that key only
+  logs a prebuild warning (`@expo/prebuild-config`'s legacy plugin), and the
+  shipped TestFlight binary carries no `com.apple.developer.applesignin` — read
+  from the ipa with `codesign -d --entitlements :-` on 2026-10-01. Declared as
+  the entitlement itself since #24; `npx expo config --type introspect` under
+  the production values resolves it beside the two associated domains. The
+  alternative, `EXPO_NO_CAPABILITY_SYNC=1` in the EAS environment, is dashboard
+  state nothing versions.
 - **`ITSAppUsesNonExemptEncryption: false`.** The app uses only the encryption
   the OS provides — TLS, the Keychain and SHA-256 for PKCE — which is the exempt
   case. Declaring it stops App Store Connect asking the export-compliance
@@ -538,6 +544,57 @@ Written 2026-09-30, once the owner had completed 24.8.1, 24.8.2 and 24.8.6.
   record. The `slug` stays `snoopy-mobile`: it names the EAS project.
 - Not done here: 24.2.2 (the Team ID into the AASA file) is `snoopy-backend`'s,
   and its deployment waits on production (§12.1 #156).
+
+### The sign-in sheet that would not open (24.7.3, attempt 1, 2026-10-01)
+
+**Observed by the owner on the first TestFlight build** (1.0.0 (1), from
+`d15c79c`, iPhone on iOS 26): tapping Continue with Google made the buttons
+flash and nothing else — no browser sheet, no message. Production's proxy logs
+for those minutes hold the app's six `GET /v1/auth/providers` (200, three
+providers) and **no** `/v1/auth/native/*/start` from the phone; no session,
+identity or auth audit row was created. The failure is on the device, before
+any request leaves it.
+
+**Cause, read rather than guessed.** The app opens the start leg with
+`expo-web-browser`'s `openAuthSessionAsync(url,
+'https://app.autom8x.ai/auth/native/callback')`. On iOS 17.4+ the module builds
+`ASWebAuthenticationSession(url:callback: .https(host:path:))`
+(`node_modules/expo-web-browser/ios/WebAuthSession.swift`). Apple's header for
+that callback (iOS 26.1 SDK, `ASWebAuthenticationSessionCallback.h`): *"The
+host must be associated with the app using associated web credentials
+domains."* The shipped binary's entitlements, read from the ipa with
+`codesign -d --entitlements :-`, carry
+`com.apple.developer.associated-domains = ['applinks:app.autom8x.ai']` and
+nothing else — `applinks` is the universal-link service that lets the callback
+re-enter the app; `webcredentials` is the service the sheet needs in order to be
+created at all. iOS therefore ended every session at once with an error. The
+module reports every error as `{ type: 'cancel', error: <description> }` —
+`error` is absent from its TypeScript types — and `openSystemAuthSession`
+treated any non-success as a person's cancel, which the login screen renders as
+nothing, by design, for a real cancel. Two defects, one symptom.
+
+**Fixed in #24.** `app.config.js` derives `webcredentials:<host>` beside
+`applinks:<host>`; `openSystemAuthSession` reads the undeclared `error` and
+reports a refusal as a failure in the system's words, keeping
+`ASWebAuthenticationSessionErrorCodeCanceledLogin` (code 1) as a cancel. The
+association file on the servers gains a `webcredentials` section
+(`snoopy-backend` §12.1 #192). What a device checks is Apple's CDN copy of that
+file, fetched on install and on update, so the fix is observed only on a build
+installed after the CDN has re-fetched it.
+
+**Why it was never seen.** Round 7.5's start-leg observations were on Android
+(Custom Tabs), and the iOS precedent was a simulator build; no iPhone had opened
+the sheet with the HTTPS callback before this build. The 17.4 floor and
+`.https(host:path:)` were verified in the module's source, never against a
+device with the production association.
+
+### Guards proved to bite, 24.7.3 attempt 1
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| `webcredentials` derived beside `applinks` | `applinks` alone again | `app-config` "derives both native link claims from the exact release redirect" |
+| A refused session is a failure, not a cancel | the `error` field ignored | `native-auth` "reports a session iOS refused to start as a failure" |
+| A person's cancel stays a cancel | every `error` read as a refusal | `native-auth` "keeps a person's own cancel as a cancel" |
 
 ### Guards proved to bite, 24.6
 
