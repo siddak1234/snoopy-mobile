@@ -134,18 +134,29 @@ export default function ActivityScreen() {
         time: row.time,
       };
     };
-    return { today: grouped.today.map(toRow), yesterday: grouped.yesterday.map(toRow) };
+    return {
+      today: grouped.today.map(toRow),
+      yesterday: grouped.yesterday.map(toRow),
+      earlier: grouped.earlier.map(toRow),
+    };
   });
 
   const live = activity.status === 'ready' ? activity.data : null;
   const sourceToday = live ? live.today : [];
   const sourceYesterday = live ? live.yesterday : [];
+  const sourceEarlier = live ? live.earlier : [];
 
   const today = sourceToday.filter((i) => matchesFilter(i, filter));
   const yesterday = sourceYesterday.filter((i) => matchesFilter(i, filter));
-  const isEmpty = today.length === 0 && yesterday.length === 0;
+  // The website's Activity is every run in the workspace; the two day sections
+  // are a grouping of it. Older runs sit under EARLIER rather than vanishing —
+  // the first TestFlight build showed "No activity yet" to a workspace with 13
+  // runs, all older than two days (24.7.3 attempt 1, feedback #3).
+  const earlier = sourceEarlier.filter((i) => matchesFilter(i, filter));
+  const isEmpty = today.length === 0 && yesterday.length === 0 && earlier.length === 0;
   /** Nothing at all, as opposed to nothing matching a filter. */
-  const hasNoRuns = live !== null && live.today.length === 0 && live.yesterday.length === 0;
+  const hasNoRuns =
+    live !== null && live.today.length === 0 && live.yesterday.length === 0 && live.earlier.length === 0;
 
   if (activity.status === 'loading') return <ScreenLoading topInset={insets.top} />;
   if (activity.status === 'offline') {
@@ -204,11 +215,12 @@ export default function ActivityScreen() {
       </View>
       {today.length > 0 ? <ActivitySection label="TODAY" items={today} /> : null}
       {yesterday.length > 0 ? <ActivitySection label="YESTERDAY" items={yesterday} /> : null}
+      {earlier.length > 0 ? <ActivitySection label="EARLIER" items={earlier} /> : null}
       {isEmpty && filter !== 'All' ? (
         <View style={styles.emptyWrap}>
           <CheckCircle size={38} color={palette.neutral[600]} />
           <Text style={[styles.emptyText, { color: palette.neutral[500] }]}>
-            No {EMPTY_LABEL[filter]} runs in the last two days.
+            No {EMPTY_LABEL[filter]} runs.
           </Text>
         </View>
       ) : null}

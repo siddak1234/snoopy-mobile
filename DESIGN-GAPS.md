@@ -588,6 +588,33 @@ the sheet with the HTTPS callback before this build. The 17.4 floor and
 `.https(host:path:)` were verified in the module's source, never against a
 device with the production association.
 
+### The first signed-in session (24.7.3, attempt 2, 2026-10-01 21:53Z–21:59Z)
+
+Build 2 signed in with Google on the owner's iPhone at 21:53:55Z (session row,
+`last_sign_in_at`), then read Home, Flows, Solutions, Activity, Settings,
+Billing and the connections card — 186 requests, every one `200`/`201`; the
+five `PATCH …/subscriptions/{id}` were the owner pausing and resuming both
+automations, and the `POST …/billing/portal` was Manage billing. The owner sent
+ten TestFlight feedback items, read through App Store Connect's API (the
+`betaFeedbackScreenshotSubmissions` resource) with their screenshots. Triage:
+
+| # | Feedback | What it is | Disposition |
+| --- | --- | --- | --- |
+| 10, 9, 8 | no providers / nothing happened / failed login | production down (#156); the `webcredentials` defect above; build 2 before the servers' file | fixed earlier, observed fixed at 21:53Z |
+| 7 | "dummy data or live?" | live production records: the runs are September's gate proofs | expected; said so |
+| 6 | pause/resume "goes blank" | `flows/detail` re-read with `reload()`, which starts from `loading` and draws the tiled skeleton over the page | **fixed**: `refresh()` keeps the page |
+| 5 | "pause or remove, and billing stops?" | billing is per plan, not per automation; pausing changes nothing; archiving frees a plan slot; cancelling is Manage billing | expected; a copy addition is the owner's call (both platforms) |
+| 4 | Manage billing → Stripe's portal, "sandbox" | ADR-0032's hosted portal, in test mode until Stripe goes live | expected; the badge leaves with 24.8.5 |
+| 3 | Activity empty "but we had runs" | the screen kept TODAY and YESTERDAY only and showed the first-run empty for 13 older runs, while Home listed them | **fixed**: EARLIER section; first-run empty only with no runs |
+| 2 | three dialog buttons wrapped | `Dialog` actions in a wrapping row | **fixed**: `actionsLayout="stack"` for three |
+| 1 | "What is this?" (workspace switcher) | two workspaces: Personal, and "Gate 18 L6 Proof", an organization Round 11's proof created on 2026-09-21 | expected; deleting the proof organization is the owner's call |
+
+What the simulator proved the same evening, without credentials: tapping each
+of Google, Microsoft and Apple opens iOS's consent, then the provider's own
+sign-in page through the web origin (`…/native/{provider}/start` 302 on the
+hosts), so 24.8.2 and 24.8.3 are configured end to end; the credential entry
+is the owner's.
+
 ### Guards proved to bite, 24.7.3 attempt 1
 
 | Guard | Broken by | Test that failed |
@@ -595,6 +622,17 @@ device with the production association.
 | `webcredentials` derived beside `applinks` | `applinks` alone again | `app-config` "derives both native link claims from the exact release redirect" |
 | A refused session is a failure, not a cancel | the `error` field ignored | `native-auth` "reports a session iOS refused to start as a failure" |
 | A person's cancel stays a cancel | every `error` read as a refusal | `native-auth` "keeps a person's own cancel as a cancel" |
+
+### Guards proved to bite, 24.7.3 attempt 2
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| Older runs under EARLIER | the EARLIER section left out | `tab-screens` "lists runs older than two days under EARLIER" |
+| Thirteen old runs are not "no activity yet" | `hasNoRuns` ignoring `earlier` | `tab-screens` "lists runs older than two days under EARLIER" |
+| The first-run empty for a workspace with no runs | `hasNoRuns` never true | `tab-screens` "shows the first-run empty only to a workspace with no runs" |
+| A status change re-reads keeping the page | `reload()` again | `tab-screens` "keeps the page while re-reading after Pause" |
+| `refresh()` keeps the rows | `refresh()` starting from `loading` like `reload()` | `use-resource` "re-reads on refresh() after a change, keeping the rows" |
+| Three actions stack | `actionsLayout` ignored | `settings-connections` "stacks the three actions" |
 
 ### Guards proved to bite, 24.6
 

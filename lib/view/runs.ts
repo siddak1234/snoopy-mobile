@@ -114,12 +114,16 @@ export function isSameLocalDay(iso: string | null | undefined, day: Date): boole
 export function splitByDay(
   runs: Run[],
   now: Date = new Date(),
-): { today: Run[]; yesterday: Run[] } {
+): { today: Run[]; yesterday: Run[]; earlier: Run[] } {
   const yesterdayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-  return {
-    today: runs.filter((r) => isSameLocalDay(r.createdAt, now)),
-    yesterday: runs.filter((r) => isSameLocalDay(r.createdAt, yesterdayDate)),
-  };
+  const today = runs.filter((r) => isSameLocalDay(r.createdAt, now));
+  const yesterday = runs.filter((r) => isSameLocalDay(r.createdAt, yesterdayDate));
+  // Everything older, in the platform's order. The website's Activity is
+  // "every run in this workspace"; the design's two day sections are a grouping
+  // of it, not a window onto it — a workspace whose runs are all older than two
+  // days still has activity (24.7.3 attempt 1, DESIGN-GAPS).
+  const earlier = runs.filter((r) => !today.includes(r) && !yesterday.includes(r));
+  return { today, yesterday, earlier };
 }
 
 /**
