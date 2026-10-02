@@ -1,7 +1,6 @@
 import React from 'react';
 import { screen } from '@testing-library/react-native';
 
-import BuilderScreen from '@/app/(tabs)/flows/builder';
 import type { SessionContextValue } from '@/hooks/use-session';
 import { toPipelineStep, toPipelineSteps, type DeclaredStep } from '@/lib/view/pipeline';
 import { renderWithProviders, setMockParams } from '@/test/render';
@@ -100,35 +99,5 @@ describe('toPipelineSteps', () => {
 
   it('treats an absent pipeline as empty rather than undefined', () => {
     expect(toPipelineSteps(undefined)).toEqual([]);
-  });
-});
-
-describe('Builder canvas', () => {
-  it('renders the named template’s declared steps', async () => {
-    platformOperation.mockResolvedValue(CATALOG);
-    setMockParams({ template: 'acme.reconcile' });
-    await renderWithProviders(<BuilderScreen />, signedIn);
-
-    expect(await screen.findByText('New row in the ledger')).toBeTruthy();
-    expect(screen.getByText('Post to the ledger')).toBeTruthy();
-    // The prototype's steps are gone when a real pipeline resolved.
-    expect(screen.queryByText('New email in AP inbox')).toBeNull();
-  });
-
-  it('refuses an identity-free canvas and routes to the template selector', async () => {
-    await renderWithProviders(<BuilderScreen />, signedIn);
-    expect(screen.getByText('Choose a template')).toBeTruthy();
-    expect(screen.getByText('Browse templates')).toBeTruthy();
-    expect(screen.queryByText('New email in AP inbox')).toBeNull();
-    expect(platformOperation).not.toHaveBeenCalled();
-  });
-
-  it('refuses a template that is not in the published catalog', async () => {
-    platformOperation.mockResolvedValue(CATALOG);
-    setMockParams({ template: 'missing.template' });
-    await renderWithProviders(<BuilderScreen />, signedIn);
-
-    expect(await screen.findByText('Template unavailable')).toBeTruthy();
-    expect(screen.queryByText('New row in the ledger')).toBeNull();
   });
 });

@@ -17,7 +17,6 @@ import {
   BROWSE_SOLUTIONS_LABEL,
   FLOWS_EMPTY_BODY,
   FLOWS_EMPTY_TITLE,
-  START_FROM_TEMPLATE_LABEL,
   errorTitleFor,
 } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
@@ -100,10 +99,6 @@ export default function FlowsScreen() {
           label: BROWSE_SOLUTIONS_LABEL,
           onPress: () => router.push('/(tabs)/solutions'),
         }}
-        secondaryAction={{
-          label: START_FROM_TEMPLATE_LABEL,
-          onPress: () => router.push('/(tabs)/flows/templates'),
-        }}
         topInset={insets.top}
       />
     );
@@ -127,7 +122,7 @@ export default function FlowsScreen() {
             height={36}
             fontSize={13}
             style={styles.headerPill}
-            onPress={() => router.push('/(tabs)/flows/templates')}
+            onPress={() => router.push('/(tabs)/solutions')}
           />
           <PillButton
             label="New"
@@ -138,7 +133,7 @@ export default function FlowsScreen() {
             iconSize={14}
             gap={5}
             style={styles.headerPill}
-            onPress={() => router.push('/(tabs)/flows/templates')}
+            onPress={() => router.push('/(tabs)/solutions')}
           />
         </View>
       </View>

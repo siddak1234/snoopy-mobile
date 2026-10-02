@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Pause, PencilSimple, Play, RocketLaunch } from 'phosphor-react-native';
-import React, { useState } from 'react';
+import { Pause, Play, RocketLaunch } from 'phosphor-react-native';
+import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -36,7 +36,7 @@ export default function WorkflowDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { palette } = useTheme();
-  const { record } = useWorkflows();
+  const { record, settle, status: statusOf } = useWorkflows();
   const session = useSession();
   const { flow } = useLocalSearchParams<{ flow?: string }>();
   const [actionError, setActionError] = useState<string | null>(null);
@@ -87,8 +87,18 @@ export default function WorkflowDetailScreen() {
     flows.status === 'ready' && subscription
       ? flows.data.automations.find((a) => a.templateId === subscription.templateId)
       : undefined;
-  // The platform's status, as last read: every change re-reads it.
-  const current = (def?.status ?? 'Draft') as FlowStatus;
+  // The platform's answer to this device's own change shows the moment it is
+  // answered (`record`), until this screen's re-read lands and confirms it
+  // (`settle` below). Showing "the status as last read" alone drew the old label
+  // again between the PATCH and the re-read — a flip the owner read as a bug
+  // (24.7.3 attempt 2, "it switches back then to the right state").
+  const current = def ? statusOf(def.key, def.status as FlowStatus) : ('Draft' as FlowStatus);
+  const landedStatus = flows.status === 'ready' ? def?.status : undefined;
+  useEffect(() => {
+    if (def && landedStatus) settle([def.key]);
+    // `def` is derived from `flows.data`; the landed status is what settles.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [landedStatus, flows.status]);
   const action = statusAction(current);
   const ActionIcon = ACTION_ICON[action.icon];
 
@@ -270,22 +280,6 @@ export default function WorkflowDetailScreen() {
               style={styles.actionBtn}
               disabled={busy || (goingLive && !canGoLive)}
               onPress={changeStatus}
-            />
-            <PillButton
-              label="Edit in Builder"
-              variant="primary"
-              height={46}
-              fontSize={14}
-              icon={PencilSimple}
-              iconSize={16}
-              style={styles.actionBtn}
-              onPress={() =>
-                // Names the exact catalog identity whose manifest.pipeline is drawn.
-                router.push({
-                  pathname: '/(tabs)/flows/builder',
-                  params: { template: def.templateId },
-                })
-              }
             />
           </View>
         }

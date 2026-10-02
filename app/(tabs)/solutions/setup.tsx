@@ -142,12 +142,25 @@ export default function SetupScreen() {
     const configured = Object.fromEntries(
       entry.setup.map((field) => [
         field.key,
-        config[field.key] ?? subscription?.config[field.key] ?? field.defaultValue,
+        // A field this person cleared stays cleared: `??` read a cleared field
+        // as untouched and put the default back under their thumb (24.7.3
+        // attempt 2, feedback #4).
+        field.key in config ? config[field.key] : (subscription?.config[field.key] ?? field.defaultValue),
       ]),
     );
     const missing = missingRequiredSetupFields(entry.setup, configured);
     if (missing.length > 0) {
       setActionError(`Complete required setup: ${missing.map((field) => field.title).join(', ')}.`);
+      return;
+    }
+    // A money field holds a number or nothing can be activated: an empty amount
+    // would silently fall back to the automation's own default.
+    const blankMoney = entry.setup.filter(
+      (field) =>
+        field.control === 'money' && (configured[field.key] === undefined || configured[field.key] === ''),
+    );
+    if (blankMoney.length > 0) {
+      setActionError(`Enter a number for ${blankMoney.map((field) => field.title).join(', ')}.`);
       return;
     }
     const workspaceId = workspaceIfShown(session, resource.loadedFor);
@@ -197,7 +210,11 @@ export default function SetupScreen() {
       setActive(entry.templateId, true);
       // Spent intent; a later edit-and-activate must not replay this one.
       updateKey.current = newIdempotencyKey('activate');
-      router.replace({ pathname: '/(tabs)/flows/detail', params: { flow: updated.subscription.id } });
+      // Leave Solutions at its root before opening the workflow: a `replace`
+      // across tabs left this screen in Solutions' history, so coming back
+      // showed Setup again with "Activate solution" (24.7.3 attempt 2, feedback #3).
+      router.dismissTo('/(tabs)/solutions');
+      router.push({ pathname: '/(tabs)/flows/detail', params: { flow: updated.subscription.id } });
     } catch (error) {
       setActionError(addRefusalMessage(error, 'The solution could not be activated.'));
     } finally {
@@ -252,7 +269,11 @@ export default function SetupScreen() {
               <SetupFieldRow
                 key={field.key}
                 field={field}
-                value={config[field.key] ?? subscription?.config[field.key] ?? field.defaultValue}
+                value={
+                  field.key in config
+                    ? config[field.key]
+                    : (subscription?.config[field.key] ?? field.defaultValue)
+                }
                 onChange={(next) => setField(field.key, next)}
                 divider={index < fields.length - 1}
               />
