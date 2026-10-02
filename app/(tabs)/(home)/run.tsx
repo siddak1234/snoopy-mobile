@@ -21,7 +21,7 @@ import { refusalMessage, WORKSPACE_CHANGED } from '@/lib/content/refusals';
 import { errorTitleFor } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
 import { cancelRun } from '@/lib/platform/automations';
-import { readRun } from '@/lib/platform/runs';
+import { readAllApprovals, readRun } from '@/lib/platform/runs';
 import { PlatformError, PlatformNotConfiguredError } from '@/lib/platform/problem';
 import { clockTime, duration } from '@/lib/view/format';
 import { statusLabel, type StatusPillLabel } from '@/lib/view/status';
@@ -100,12 +100,13 @@ export default function RunDetailScreen() {
   const detail = useWorkspaceResource(
     async (workspaceId) => {
       if (!runId) throw new PlatformNotConfiguredError();
-      const [run, catalog] = await Promise.all([
+      const [run, catalog, approvals] = await Promise.all([
         readRun(workspaceId, runId),
         readCatalog(workspaceId),
+        readAllApprovals(workspaceId),
       ]);
       const entry = catalog.automations.find((a) => a.templateId === run.run.templateId);
-      return { detail: run, entry };
+      return { detail: run, entry, approvals: approvals.approvals };
     },
     [runId],
   );
@@ -114,7 +115,13 @@ export default function RunDetailScreen() {
   const run = liveRun
     ? {
         title: runLabel(liveRun.detail.run),
-        sub: `${liveRun.entry?.name ?? liveRun.detail.run.templateId} · ${metaFor(liveRun.detail.run)}`,
+        // A held run says how it was decided; a continuation names the run it
+        // continues, as the website's run page does ("Continues …").
+        sub: `${liveRun.entry?.name ?? liveRun.detail.run.templateId} · ${metaFor(liveRun.detail.run, liveRun.approvals)}${
+          liveRun.detail.run.continuesRunId
+            ? ` · continues run ${liveRun.detail.run.continuesRunId.slice(0, 8)}`
+            : ''
+        }`,
         status: statusLabel(liveRun.detail.run.status) as StatusPillLabel,
         stats: toRunStats(
           liveRun.detail.steps.length,

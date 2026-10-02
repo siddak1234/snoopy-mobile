@@ -26,7 +26,7 @@ import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { readCatalog } from '@/lib/platform/catalog';
-import { localMidnight, readApprovals, readRunStats, readRuns } from '@/lib/platform/runs';
+import { localMidnight, readAllApprovals, readRunStats, readRuns } from '@/lib/platform/runs';
 import { toStatTiles, type StatTileView } from '@/lib/view/catalog';
 import { catalogIndex, toRunRows } from '@/lib/view/runs';
 
@@ -196,14 +196,21 @@ export default function HomeScreen() {
       readRunStats(workspaceId, localMidnight()),
       readRuns(workspaceId),
       readCatalog(workspaceId),
-      readApprovals(workspaceId),
+      readAllApprovals(workspaceId),
     ]);
+    // Every approval is read so a held run's row can say how it was decided;
+    // the banner counts the pending ones only.
+    const pending = approvals.approvals.filter((approval) => approval.status === 'pending');
     return {
       stats,
-      recentRuns: toRunRows(runs.runs.slice(0, 4), catalogIndex(catalog.automations)),
-      approvalCount: approvals.approvals.length,
-      hasAttention:
-        approvals.approvals.length > 0 || runs.runs.some((run) => run.status === 'failed'),
+      recentRuns: toRunRows(
+        runs.runs.slice(0, 4),
+        catalogIndex(catalog.automations),
+        Date.now(),
+        approvals.approvals,
+      ),
+      approvalCount: pending.length,
+      hasAttention: pending.length > 0 || runs.runs.some((run) => run.status === 'failed'),
       // Whether this workspace has set anything up, ever: the catalog's flag
       // counts every subscription it holds, in any project, archived ones too.
       // Not the subscription list, which shows only what this person can see —
@@ -341,13 +348,13 @@ export default function HomeScreen() {
           style={{ flex: 1 }}
         />
         <PillButton
-          label="Templates"
+          label="Solutions"
           variant="secondary"
           height={46}
           fontSize={14}
           icon={SquaresFour}
           iconSize={16}
-          onPress={() => router.push('/(tabs)/flows/templates')}
+          onPress={() => router.push('/(tabs)/solutions')}
           style={{ flex: 1 }}
         />
       </View>

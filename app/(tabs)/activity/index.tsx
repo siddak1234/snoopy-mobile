@@ -19,8 +19,8 @@ import {
 } from '@/lib/content/screen-states';
 import { ACTIVITY_FILTERS, type ActivityItem } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
-import { readRuns } from '@/lib/platform/runs';
-import { catalogIndex, runIcon, splitByDay, toRunRow } from '@/lib/view/runs';
+import { readAllApprovals, readRuns } from '@/lib/platform/runs';
+import { catalogIndex, needsReview, runIcon, splitByDay, toRunRow } from '@/lib/view/runs';
 
 /**
  * One run. Opens its run detail, as Home's RECENT RUNS and the inbox already do
@@ -98,7 +98,7 @@ const EMPTY_LABEL: Record<Exclude<ActivityFilter, 'All'>, string> = {
 };
 
 const matchesFilter = (item: ActivityItem, filter: ActivityFilter) =>
-  filter === 'All' || item.status === FILTER_STATUS[filter];
+  filter === 'All' || (filter === 'Needs review' ? item.needsReview : item.status === FILTER_STATUS[filter]);
 
 export default function ActivityScreen() {
   const { palette } = useTheme();
@@ -118,16 +118,21 @@ export default function ActivityScreen() {
    * sections and a person's own midnight decides them.
    */
   const activity = useWorkspaceResource(async (workspaceId) => {
-    const [runs, catalog] = await Promise.all([readRuns(workspaceId), readCatalog(workspaceId)]);
+    const [runs, catalog, approvals] = await Promise.all([
+      readRuns(workspaceId),
+      readCatalog(workspaceId),
+      readAllApprovals(workspaceId),
+    ]);
     const index = catalogIndex(catalog.automations);
     const grouped = splitByDay(runs.runs);
     const toRow = (run: (typeof runs.runs)[number]): ActivityItem => {
-      const row = toRunRow(run, index);
+      const row = toRunRow(run, index, Date.now(), approvals.approvals);
       return {
         id: run.id,
         icon: runIcon(run.status),
         // Carried verbatim: the chips select on this, never on the tone.
         status: run.status,
+        needsReview: needsReview(run, approvals.approvals),
         tone: row.tone,
         title: row.name,
         desc: row.meta,

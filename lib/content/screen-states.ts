@@ -27,7 +27,6 @@ export type ScreenKey =
   | 'templates'
   | 'setup'
   | 'configure'
-  | 'builder'
   | 'organization'
   | 'projects'
   | 'project'
@@ -50,7 +49,6 @@ const ERROR_TITLES: Record<ScreenKey, string> = {
   templates: "Couldn't load templates",
   setup: "Couldn't load this setup",
   configure: "Couldn't load this template",
-  builder: "Couldn't load this workflow",
   organization: "Couldn't load your organization",
   projects: "Couldn't load your projects",
   project: "Couldn't load this project",
@@ -117,7 +115,6 @@ export const FLOWS_EMPTY_BODY =
 export const ACTIVITY_EMPTY_TITLE = 'No activity yet';
 export const ACTIVITY_EMPTY_BODY = 'Every run lands here the moment your first agent goes live.';
 export const BROWSE_SOLUTIONS_LABEL = 'Browse solutions';
-export const START_FROM_TEMPLATE_LABEL = 'Start from a template';
 
 /**
  * `notifsEmpty` — and note it is not an apology.
@@ -187,26 +184,18 @@ export type ActivityItem = {
    * which is the redefinition Gate 8 forbids.
    */
   status: string;
+  /**
+   * Whether someone still has to decide this run: held, and its approval is
+   * pending (or unread). A run stays `held` after its approval, because the
+   * approval starts a new run — so "Needs review" keys on this, not on `status`.
+   */
+  needsReview: boolean;
   /** The full published tone; never narrowed, so no status borrows another's colour. */
   tone: import('@/lib/view/status').StatusTone;
   title: string;
   desc: string;
   time: string;
 };
-
-/** Builder palette chrome. Authoring is deliberately outside read-only Round 6. */
-export const BUILDER_PALETTE_NAMES = [
-  'Trigger',
-  'AI step',
-  'Branch',
-  'Action',
-  'Human review',
-  'Delay',
-] as const;
-
-/** Configure's closing line — the design's words about how setup works. */
-export const CONFIGURE_FOOTNOTE =
-  'Steps land preloaded — edit anything before it goes live.';
 
 /** The approvals card's confirmation copy. */
 export const APPROVAL_DONE_TEXT = {

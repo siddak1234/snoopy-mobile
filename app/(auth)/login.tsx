@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -23,6 +23,7 @@ import { useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { useResource } from '@/hooks/use-resource';
 import { readLoginProviders } from '@/lib/platform/auth';
+import { readSession } from '@/lib/platform/session-store';
 import type { LoginProvider } from '@/lib/platform/native-auth';
 
 export default function LoginScreen() {
@@ -35,6 +36,23 @@ export default function LoginScreen() {
   const signInInFlight = useRef(false);
   const { signIn } = useSession();
   const providerPolicy = useResource(readLoginProviders, []);
+  // Biometrics unlock a session this device already holds; they never mint one.
+  // So the unlock is offered only when there is something to unlock — after a
+  // sign-out or a fresh install there is not (24.7.3 attempt 2, feedback #10, #12).
+  const [storedSession, setStoredSession] = useState<boolean | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    readSession()
+      .then((stored) => {
+        if (!cancelled) setStoredSession(stored !== null);
+      })
+      .catch(() => {
+        if (!cancelled) setStoredSession(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // The provider list is rendered as the platform sends it, `label` included.
   // Rebuilding the label from the id locally is the same shape as inventing a
@@ -118,18 +136,20 @@ export default function LoginScreen() {
             this platform. Removed on the owner's direction, 2026-09-08 (platform
             manifest §12.1 #90). What remains is real: the native session unlock,
             and the identity providers the platform publishes. */}
-        <View style={styles.form}>
-          <PillButton
-            label={biometric.unlockLabel}
-            variant="accent-ghost"
-            height={48}
-            fontSize={15}
-            icon={UserFocus}
-            iconSize={21}
-            gap={9}
-            onPress={() => router.push('/(auth)/faceid')}
-          />
-        </View>
+        {storedSession ? (
+          <View style={styles.form}>
+            <PillButton
+              label={biometric.unlockLabel}
+              variant="accent-ghost"
+              height={48}
+              fontSize={15}
+              icon={UserFocus}
+              iconSize={21}
+              gap={9}
+              onPress={() => router.push('/(auth)/faceid')}
+            />
+          </View>
+        ) : null}
 
         {/* No divider above an empty column: when the provider read fails or
             the build is unconfigured there is nothing to separate, and an "or"

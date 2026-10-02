@@ -5,13 +5,11 @@ import {
   Bell,
   Buildings,
   CaretRight,
-  ClockClockwise,
   CreditCard,
   CrownSimple,
   DownloadSimple,
   FolderSimple,
   IdentificationBadge,
-  Key,
   Lifebuoy,
   SignOut,
   Storefront,
@@ -225,21 +223,7 @@ export default function SettingsScreen() {
             icon={UserFocus}
             title={biometric.settingsTitle}
             sub={biometric.settingsSub}
-            divider
             right={<NocToggle value={faceId} onChange={changeFaceId} />}
-          />
-          <SettingsRow
-            icon={Key}
-            title="Passkeys"
-            sub="Managed by your identity provider"
-            divider
-            right={<Text style={[styles.membersCount, { color: palette.neutral[500] }]}>External</Text>}
-          />
-          <SettingsRow
-            icon={ClockClockwise}
-            title="Stay signed in"
-            sub="Session stored in this device's secure enclave"
-            right={<Text style={[styles.membersCount, { color: status.ok }]}>On</Text>}
           />
         </SurfaceCard>
         {faceIdError ? (

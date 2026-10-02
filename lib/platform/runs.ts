@@ -93,6 +93,23 @@ export function readApprovals(
   );
 }
 
+/**
+ * Every approval, whatever its status. A held run's row needs this to say how
+ * it was decided: a run stays `held` after its approval, because the approval
+ * starts a NEW run (FR-15, FR-17), so the status alone reads as "still waiting"
+ * weeks after someone decided (24.7.3 attempt 2, feedback #5 and #7).
+ */
+export function readAllApprovals(workspaceId: string): Promise<{ approvals: Approval[] }> {
+  return platformOperation(
+    `/v1/workspaces/${workspaceId}/approvals`,
+    ({ automations }, signal) =>
+      automations.GET('/v1/workspaces/{workspaceId}/approvals', {
+        params: { path: { workspaceId } },
+        signal,
+      }),
+  );
+}
+
 /** The workspace's subscriptions — the middle hop of the approval-title join. */
 export function readSubscriptions(workspaceId: string): Promise<{ subscriptions: Subscription[] }> {
   return platformOperation(

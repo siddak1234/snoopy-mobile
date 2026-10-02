@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 
 import LoginScreen from '@/app/(auth)/login';
 import OnboardingScreen from '@/app/(auth)/onboarding';
@@ -8,6 +8,9 @@ import WelcomeScreen from '@/app/(auth)/welcome';
 import { routePlatform, signedInSession } from '@/test/platform';
 import { mockRouter, renderWithProviders } from '@/test/render';
 
+jest.mock('@/lib/platform/session-store', () => ({ readSession: jest.fn() }));
+const { readSession } = jest.requireMock('@/lib/platform/session-store');
+
 jest.mock('@/lib/platform/client', () => ({
   platformOperation: jest.fn(),
   newIdempotencyKey: jest.fn(() => 'test-intent'),
@@ -15,6 +18,8 @@ jest.mock('@/lib/platform/client', () => ({
 const { platformOperation } = jest.requireMock('@/lib/platform/client');
 
 beforeEach(() => {
+  readSession.mockReset();
+  readSession.mockResolvedValue({ accessToken: 'a', refreshToken: 'r', expiresAt: Date.now() + 60_000 });
   platformOperation.mockReset();
   routePlatform(platformOperation);
 });
@@ -45,6 +50,16 @@ describe('Log in', () => {
     expect(getByText('Continue with Microsoft')).toBeTruthy();
   });
 
+  it('offers no Face ID unlock when this device holds no session (feedback #10, #12)', async () => {
+    // Biometrics unlock a stored session and never mint one: after a sign-out or
+    // a fresh install there is nothing to unlock, so the button would only lead
+    // to "Sign in with your identity provider first."
+    readSession.mockResolvedValue(null);
+    const { queryByText, findByText } = await renderWithProviders(<LoginScreen />);
+    expect(await findByText('Continue with Google')).toBeTruthy();
+    expect(queryByText('Unlock with Face ID')).toBeNull();
+  });
+
   it('offers no password path at all, and routes the two real navigation actions', async () => {
     // Owner direction 2026-09-08 (platform §12.1 #90): the Edge refuses password
     // login and the website shows providers only, so the app draws no email,
@@ -57,7 +72,8 @@ describe('Log in', () => {
     expect(queryByText('Forgot?')).toBeNull();
     expect(queryByText('Log In')).toBeNull();
     expect(mockRouter.replace).not.toHaveBeenCalledWith('/(tabs)/(home)');
-    await fireEvent.press(getByText('Unlock with Face ID'));
+    // The unlock is offered because this device holds a session to unlock.
+    await fireEvent.press(await screen.findByText('Unlock with Face ID'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(auth)/faceid');
     await fireEvent.press(getByText('Sign up'));
     expect(mockRouter.replace).toHaveBeenCalledWith('/(auth)/signup');

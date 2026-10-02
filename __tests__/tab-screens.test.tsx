@@ -4,27 +4,27 @@ import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import ActivityScreen from '@/app/(tabs)/activity/index';
 import ApprovalsScreen from '@/app/(tabs)/activity/approvals';
-import BuilderScreen from '@/app/(tabs)/flows/builder';
 import FlowsScreen from '@/app/(tabs)/flows/index';
-import TemplatesScreen from '@/app/(tabs)/flows/templates';
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import HomeScreen from '@/app/(tabs)/(home)/index';
 import RunDetailScreen from '@/app/(tabs)/(home)/run';
 import SettingsScreen from '@/app/(tabs)/settings';
 import SetupScreen from '@/app/(tabs)/solutions/setup';
 import SolutionsScreen from '@/app/(tabs)/solutions/index';
-import ConfigureScreen from '@/app/(tabs)/flows/configure';
 import NotificationsScreen from '@/app/(tabs)/(home)/notifications';
 import { nocturneDark, nocturneLight } from '@/constants/theme';
 import {
+  approvalsPayload,
   catalogPayload,
   flowCatalogPayload,
   planSubscriptionsPayload,
   projectsPayload,
   routePlatform,
   runDetailPayload,
+  runsPayload,
   signedInSession,
-  subscriptionsPayload, runsPayload } from '@/test/platform';
+  subscriptionsPayload,
+} from '@/test/platform';
 import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
 
 jest.mock('@/lib/platform/client', () => ({
@@ -67,8 +67,8 @@ describe('Home dashboard', () => {
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity/approvals');
     await fireEvent.press(getByText('Add a solution'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/solutions');
-    await fireEvent.press(getByText('Templates'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/templates');
+    await fireEvent.press(getByText('Solutions'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/solutions');
     await fireEvent.press(getByText('See all'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity');
   });
@@ -81,6 +81,23 @@ describe('Home dashboard', () => {
       pathname: '/(tabs)/(home)/run',
       params: { runId: 'run-0' },
     });
+  });
+});
+
+describe('Home approvals banner (feedback #5, #7)', () => {
+  it('counts pending approvals only, though every approval is read for the run rows', async () => {
+    routePlatform(platformOperation, {
+      '/approvals': {
+        approvals: [
+          { ...approvalsPayload().approvals[0]!, id: 'a-pending', runId: 'run-0', status: 'pending' },
+          { ...approvalsPayload().approvals[1]!, id: 'a-done', runId: 'run-1', status: 'approved' },
+          { ...approvalsPayload().approvals[2]!, id: 'a-no', runId: 'run-2', status: 'rejected' },
+        ],
+      },
+    });
+    const { getByText, queryByText } = await renderWithProviders(<HomeScreen />, signedInSession);
+    expect(getByText('1 item needs your review')).toBeTruthy();
+    expect(queryByText('3 items need your review')).toBeNull();
   });
 });
 
@@ -288,17 +305,16 @@ describe('Workflows', () => {
     expect(getByText('Draft')).toBeTruthy();
   });
 
-  it('opens detail from a card and requires template selection for new workflows', async () => {
-    const { getByText, getAllByText, queryByText } = await renderWithProviders(<FlowsScreen />, signedInSession);
+  it('opens detail from a card, and New leads to Solutions — the website has no builder', async () => {
+    const { getByText } = await renderWithProviders(<FlowsScreen />, signedInSession);
     await fireEvent.press(getByText('Invoice triage'));
     expect(mockRouter.push).toHaveBeenCalledWith({
       pathname: '/(tabs)/flows/detail',
       params: { flow: 'invoice' },
     });
     await fireEvent.press(getByText('New'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/templates');
-    await fireEvent.press(getByText('Templates'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/templates');
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/solutions');
+    expect(mockRouter.push).not.toHaveBeenCalledWith(expect.stringContaining('templates'));
   });
 });
 
@@ -353,14 +369,10 @@ describe('Workflow detail', () => {
     expect(getByText('Post to QuickBooks')).toBeTruthy();
   });
 
-  it('routes Edit in Builder and back', async () => {
-    const { getByText, root, getAllByText, queryByText } = await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
-    await fireEvent.press(getByText('Edit in Builder'));
-    // The builder is told exactly which published workflow pipeline to draw.
-    expect(mockRouter.push).toHaveBeenCalledWith(
-      expect.objectContaining({ pathname: '/(tabs)/flows/builder' }),
-    );
-    expect(root).toBeTruthy();
+  it('offers no Edit in Builder: the website has no builder, and mobile offers what the website offers', async () => {
+    // Removed 2026-10-02 on the owner's direction (24.7.3 attempt 2 feedback).
+    const { queryByText } = await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
+    expect(queryByText('Edit in Builder')).toBeNull();
   });
 
   it('renders each workflow identity with its own content (design flowDefs)', async () => {
@@ -511,31 +523,20 @@ describe('Workflow detail', () => {
     await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
     expect(await screen.findByText('Live')).toBeTruthy();
     await fireEvent.press(screen.getByText('Pause'));
-    await waitFor(() => expect(listReads).toBeGreaterThan(1));
-    // Re-reading, and still the page: the name, the status as last read, no skeleton.
-    expect(screen.queryByTestId('screen-loading')).toBeNull();
-    expect(screen.getByText('Invoice triage')).toBeTruthy();
-    expect(screen.getByText('Live')).toBeTruthy();
-    // The re-read lands: the platform's answer replaces the status in place.
-    releaseReread?.();
+    // The platform's answer shows the moment it is answered — before the re-read
+    // lands — and the page stays: the name, no skeleton, and never the old label
+    // again (24.7.3 attempt 2: "it switches back, then to the right state").
     expect(await screen.findByText('Paused')).toBeTruthy();
     expect(screen.getByText('Resume')).toBeTruthy();
+    await waitFor(() => expect(listReads).toBeGreaterThan(1));
     expect(screen.queryByTestId('screen-loading')).toBeNull();
-  });
-});
-
-describe('Builder', () => {
-  it('shows the canvas steps and the six palette chips', async () => {
-    routePlatform(platformOperation, { '/automations': flowCatalogPayload() });
-    setMockParams({ template: 'tplflow.invoice' });
-    const { getByText } = await renderWithProviders(<BuilderScreen />, signedInSession);
-    expect(await screen.findByText('New email in AP inbox')).toBeTruthy();
-    expect(getByText('Test run')).toBeTruthy();
-    expect(getByText('Save')).toBeTruthy();
-    expect(getByText('ADD A STEP')).toBeTruthy();
-    for (const chip of ['Trigger', 'AI step', 'Branch', 'Action', 'Human review', 'Delay']) {
-      expect(getByText(chip)).toBeTruthy();
-    }
+    expect(screen.getByText('Invoice triage')).toBeTruthy();
+    expect(screen.queryByText('Pause')).toBeNull();
+    // The re-read lands and agrees; nothing flips.
+    releaseReread?.();
+    await waitFor(() => expect(screen.getByText('Resume')).toBeTruthy());
+    expect(screen.queryByText('Pause')).toBeNull();
+    expect(screen.queryByTestId('screen-loading')).toBeNull();
   });
 });
 
@@ -564,12 +565,37 @@ describe('Activity', () => {
   it('filters to held runs via Needs review (design v3: chip filters, not navigates)', async () => {
     const { getByText, queryByText, getAllByText } = await renderWithProviders(<ActivityScreen />, signedInSession);
     await fireEvent.press(getByText('Needs review'));
-    // `resultSummary` is success-only and `failureReason` failure-only, so a HELD
-    // run's row shows its status word. §12.1 #67 publishes nothing else.
-    expect(getAllByText('Held').length).toBeGreaterThan(0);
+    // A held run's row says where its approval stands — pending here, from the
+    // approvals read beside the runs — never just its status word (24.7.3 #5, #7).
+    expect(getAllByText(/Waiting for approval|Held for review/).length).toBeGreaterThan(0);
     expect(queryByText('32 emails routed · 3 escalated')).toBeNull();
     expect(queryByText('YESTERDAY')).toBeNull();
     expect(mockRouter.push).not.toHaveBeenCalled();
+  });
+
+  it('leaves a decided held run out of Needs review and says how it was decided (feedback #5, #7)', async () => {
+    // A run stays `held` after its approval, because the approval starts a new
+    // run (FR-15). The first signed-in session saw five "held" rows from
+    // September under Needs review with nothing to approve.
+    const held = { ...runsPayload().runs[0]!, id: 'held-decided', status: 'held' };
+    const continuation = {
+      ...runsPayload().runs[0]!,
+      id: 'held-continued',
+      status: 'succeeded',
+      origin: 'approval-continuation',
+      continuesRunId: 'held-decided',
+      resultSummary: 'Recorded INV-7',
+    };
+    routePlatform(platformOperation, {
+      '/runs': { runs: [held, continuation] },
+      '/approvals': { approvals: [{ ...approvalsPayload().approvals[0]!, runId: 'held-decided', status: 'approved' }] },
+    });
+    const { getByText, queryByText } = await renderWithProviders(<ActivityScreen />, signedInSession);
+    expect(getByText('Approved — continued in a new run')).toBeTruthy();
+    expect(getByText('After approval · Recorded INV-7')).toBeTruthy();
+    await fireEvent.press(getByText('Needs review'));
+    expect(getByText('No held runs.')).toBeTruthy();
+    expect(queryByText('Approved — continued in a new run')).toBeNull();
   });
 
   it('filters to successes only', async () => {
@@ -688,59 +714,6 @@ describe('Approvals inbox', () => {
   });
 });
 
-describe('Templates', () => {
-  it('shows all six templates and opens the builder on use', async () => {
-    const { getByText, getAllByText, queryByText } = await renderWithProviders(<TemplatesScreen />, signedInSession);
-    for (const name of [
-      'Email triage',
-      'Invoice capture',
-      'Weekly report digest',
-      'Lead enrichment',
-      'Receipt OCR',
-      'Slack alerts',
-    ]) {
-      expect(getByText(name)).toBeTruthy();
-    }
-    // Solutions and Templates read ONE catalog, so this is the catalog's size,
-    // not the prototype's separate six.
-    expect(getAllByText('Use →')).toHaveLength(8);
-    await fireEvent.press(getByText('Email triage'));
-    // Each card opens its own templateId, never a default card's content.
-    expect(mockRouter.push).toHaveBeenCalledWith(
-      expect.objectContaining({ pathname: '/(tabs)/flows/configure' }),
-    );
-  });
-});
-
-describe('Templates filtering (design v4)', () => {
-  it('filters templates by category', async () => {
-    const { getAllByText, getByText, queryByText } = await renderWithProviders(<TemplatesScreen />, signedInSession);
-    // "Finance" is both a chip and a card label — the chip is the first match.
-    await fireEvent.press(getAllByText('Finance')[0]);
-    expect(getByText('Invoice capture')).toBeTruthy();
-    expect(getByText('Receipt OCR')).toBeTruthy();
-    expect(queryByText('Email triage')).toBeNull();
-    await fireEvent.press(getAllByText('Sales')[0]);
-    expect(getByText('Lead enrichment')).toBeTruthy();
-    expect(queryByText('Invoice capture')).toBeNull();
-  });
-});
-
-describe('New from template (design sConfigure)', () => {
-  it('draws the named template, not always Invoice capture', async () => {
-    setMockParams({ template: 'tpl.1' });
-    await renderWithProviders(<ConfigureScreen />, signedInSession);
-    expect(await screen.findByText('Email triage')).toBeTruthy();
-  });
-
-  it('opens the Builder from configure', async () => {
-    setMockParams({ template: 'tpl.1' });
-    await renderWithProviders(<ConfigureScreen />, signedInSession);
-    await fireEvent.press(await screen.findByText('Create & open in Builder'));
-    expect(mockRouter.push).toHaveBeenCalled();
-  });
-});
-
 describe('Notifications inbox (design sNotifs)', () => {
   beforeEach(() => routePlatform(platformOperation, { '/automations': flowCatalogPayload() }));
   it('states that the inbox is in-app only and dismisses the notice', async () => {
@@ -780,7 +753,10 @@ describe('Settings & security', () => {
     expect(getByText('alex@acme.co')).toBeTruthy();
     expect(getByText('alex@acme.co · Acme Operations')).toBeTruthy();
     expect(getByText('Face ID unlock')).toBeTruthy();
-    expect(getByText('Managed by your identity provider')).toBeTruthy();
+    // Removed 2026-10-02: two static rows the website never had and nobody could
+    // act on (24.7.3 attempt 2, feedback #8 and #9).
+    expect(queryByText('Passkeys')).toBeNull();
+    expect(queryByText('Stay signed in')).toBeNull();
     expect(getByText(/^Autom8x for iOS · v/)).toBeTruthy();
     expect(getByText('In app')).toBeTruthy();
   });
@@ -933,6 +909,26 @@ describe('Setup wizard (design sSetup)', () => {
     expect(await screen.findByText(/Weekly KPI digest/)).toBeTruthy();
   });
 
+  it('keeps a cleared amount cleared, and asks for a number before activating (feedback #4)', async () => {
+    const catalog = catalogPayload();
+    const sample = catalog.automations[0]!.setup[0]!;
+    catalog.automations = catalog.automations.map((automation) => ({
+      ...automation,
+      setup: [{ ...sample, key: 'holdAboveAmount', title: 'Hold above', control: 'money', required: false, defaultValue: 500 }],
+    }));
+    routePlatform(platformOperation, { '/automations': catalog });
+    setMockParams({ template: 'tpl.0' });
+    const { getByLabelText, getByText } = await renderWithProviders(<SetupScreen />, signedInSession);
+    const amount = await waitFor(() => getByLabelText('Hold above'));
+    expect(amount.props.value).toBe('500');
+    await fireEvent.changeText(amount, '');
+    // The default does not come back under the thumb.
+    expect(getByLabelText('Hold above').props.value).toBe('');
+    await fireEvent.press(getByText('Activate solution'));
+    expect(await screen.findByText('Enter a number for Hold above.')).toBeTruthy();
+    expect(platformOperation.mock.calls.some(([path]: [string]) => /\/subscriptions/.test(path) && false)).toBe(false);
+  });
+
   it('adds an archived automation afresh rather than reviving the archived subscription', async () => {
     const catalog = catalogPayload();
     catalog.automations = catalog.automations.map((automation) => ({ ...automation, setup: [] }));
@@ -945,8 +941,10 @@ describe('Setup wizard (design sSetup)', () => {
     await renderWithProviders(<SetupScreen />, signedInSession);
     await fireEvent.press(await screen.findByText('Activate solution'));
     await waitFor(() =>
-      expect(mockRouter.replace).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'fresh-0' } }),
+      expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'fresh-0' } }),
     );
+    // Solutions is left at its root first, so Back never shows Setup again.
+    expect(mockRouter.dismissTo).toHaveBeenCalledWith('/(tabs)/solutions');
     const paths: string[] = platformOperation.mock.calls.map(([path]: [string]) => path);
     expect(paths.some((path) => path.endsWith('/subscriptions/archived-0'))).toBe(false);
   });

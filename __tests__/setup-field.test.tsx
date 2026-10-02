@@ -1,12 +1,7 @@
 import React from 'react';
 import { fireEvent, screen } from '@testing-library/react-native';
 
-import {
-  SetupFieldRow,
-  bySection,
-  missingRequiredSetupFields,
-  type SetupField,
-} from '@/components/setup-field';
+import { SetupFieldRow, bySection, isEmailField, missingRequiredSetupFields, type SetupField } from '@/components/setup-field';
 import { renderWithProviders } from '@/test/render';
 
 /**
@@ -169,5 +164,14 @@ describe('SetupFieldRow — every control the union permits', () => {
       <SetupFieldRow field={field({ description: 'Pause when the amount differs' })} value={true} onChange={() => {}} divider={false} />,
     );
     expect(screen.getByText('Pause when the amount differs')).toBeTruthy();
+  });
+});
+
+describe('an address field gets the email keyboard (24.7.3 attempt 2, feedback #2)', () => {
+  it('reads an `email` control, and a text field named for email, as an address', () => {
+    expect(isEmailField({ key: 'notifyEmail', title: 'Email the outcome to', control: 'text' })).toBe(true);
+    expect(isEmailField({ key: 'to', title: 'Recipient', control: 'email' as never })).toBe(true);
+    expect(isEmailField({ key: 'reference', title: 'Reference', control: 'text' })).toBe(false);
+    expect(isEmailField({ key: 'holdAboveAmount', title: 'Hold above', control: 'money' })).toBe(false);
   });
 });

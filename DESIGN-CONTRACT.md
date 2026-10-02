@@ -110,7 +110,7 @@ switcher (snoopy PR #6) applies over the same operation.
 | Solutions/templates | workspace automation catalog and its server-supplied categories, plus subscriptions (Added) |
 | Setup/configure | catalog `setup[]` and the matching subscription config |
 | Flows/detail | subscriptions + catalog + run stats; identity is subscription ID/template ID. Detail keeps the subscription (`runInput`, `triggerKind`, `templateVersion`) and its catalog entry for its actions; the webhook address is read when its dialog opens |
-| Builder | selected catalog entry's required `pipeline[]`, in manifest order |
+| ~~Builder~~ | **Removed 2026-10-02** with Templates and Configure, on the owner's direction: the website has no builder, and FR-25 is parity with the website. Flow detail draws `pipeline[]` itself |
 | Activity/run detail | runs/list/detail joined to catalog/subscription identity |
 | Approvals | pending approvals joined through subscription → template → pipeline step |
 | Notifications | pending approvals plus failed runs; explicitly an in-app composition |
@@ -305,9 +305,13 @@ mobile-only shape.
   enumeration. Matching the completed web client, the generated control edits
   that opaque string without inventing a picker data source.
 
-Builder is deliberately read-only in BUILD-PLAN 8.7. It renders the published
-pipeline; Save, Test run, insertion, and drag affordances are visibly disabled
-because no editing/test-run operation is in Round 6.
+Builder was deliberately read-only in BUILD-PLAN 8.7, rendering the published
+pipeline with Save, Test run, insertion and drag visibly disabled. **Removed
+2026-10-02** with Templates and Configure (24.7.3 attempt 2 feedback): the website
+has no builder, so a read-only one on mobile offered nothing the website offers.
+"New" and Home's button lead to Solutions. The Settings SECURITY card keeps the
+Face ID unlock only; its Passkeys and Stay signed in rows were static design
+copy the website never had, and went the same day.
 
 ## Identity and key rules
 
