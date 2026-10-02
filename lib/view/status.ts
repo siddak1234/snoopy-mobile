@@ -49,6 +49,7 @@ export type FlowStatus = 'Live' | 'Paused' | 'Draft';
  */
 export type StatusPillLabel =
   | FlowStatus
+  | 'Archived'
   | 'Held'
   | 'Success'
   | 'Failed'
@@ -61,6 +62,8 @@ const STATUS_TONE: Record<string, StatusTone> = {
   live: 'ok',
   paused: 'warn',
   draft: 'neutral',
+  // A removed flow (24.11.8): the server's `archived`, drawn neutral.
+  archived: 'neutral',
 
   // Run.
   succeeded: 'ok',

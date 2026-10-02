@@ -1,12 +1,13 @@
 import type { Approval, Run, RunStats, RunStatusCounts, Subscription } from '@/lib/platform/runs';
 
 /**
- * What a project scope selects (BUILD-PLAN 24.9.2).
+ * What a team scope selects (BUILD-PLAN 24.9.2; teams since 24.11.7 — a team is a
+ * project in the platform's contract).
  *
  * A subscription carries its `projectId` (backend 18.6.2): `null` is
- * workspace-wide. A chosen project shows the flows added to it — only those,
- * so a project reads as its own list; "All projects" shows every flow with its
- * scope label. Runs and approvals have no project of their own and follow
+ * workspace-wide. A chosen team shows the flows added to it — only those, so a
+ * team reads as its own list; "All teams" shows every flow with its scope
+ * label. Runs and approvals have no team of their own and follow
  * their subscription; a run whose subscription is unknown (archived and gone
  * from the list, or beyond the page) is kept, because hiding it would make a
  * run disappear rather than mis-file it.

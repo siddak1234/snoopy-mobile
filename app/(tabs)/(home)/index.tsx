@@ -151,6 +151,13 @@ function HomeError({
   );
 }
 
+/** The Activity chip each stat tile opens: a tone is an outcome here (24.11.9). */
+const OUTCOME_FILTER: Record<StatTileView['tone'], 'All' | 'Success' | 'Failed'> = {
+  text: 'All',
+  ok: 'Success',
+  err: 'Failed',
+};
+
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -300,13 +307,21 @@ export default function HomeScreen() {
 
       {/* Stats */}
       <View style={styles.statsRow}>
+        {/* A tile opens Activity for that outcome, today's runs being its subject (24.11.9). */}
         {tiles.map((s) => (
-          <StatCard
+          <Pressable
             key={s.label}
-            value={s.value}
-            label={s.label}
-            valueColor={s.tone === 'ok' ? status.ok : s.tone === 'err' ? status.err : undefined}
-          />
+            testID={`stat-${OUTCOME_FILTER[s.tone]}`}
+            accessibilityRole="button"
+            accessibilityLabel={`${s.label}: see these runs in Activity`}
+            style={styles.statPressable}
+            onPress={() => router.push({ pathname: '/(tabs)/activity', params: { filter: OUTCOME_FILTER[s.tone] } })}>
+            <StatCard
+              value={s.value}
+              label={s.label}
+              valueColor={s.tone === 'ok' ? status.ok : s.tone === 'err' ? status.err : undefined}
+            />
+          </Pressable>
         ))}
       </View>
 
@@ -423,7 +438,7 @@ export default function HomeScreen() {
             </Pressable>
           ))}
           {runRows.length === 0 ? (
-            <Text style={[styles.noRuns, { color: palette.neutral[500] }]}>No runs in this project yet.</Text>
+            <Text style={[styles.noRuns, { color: palette.neutral[500] }]}>No runs in this team yet.</Text>
           ) : null}
         </SurfaceCard>
       </View>
@@ -463,6 +478,7 @@ const styles = StyleSheet.create({
     height: 7,
     borderRadius: 99,
   },
+  statPressable: { flex: 1 },
   statsRow: {
     flexDirection: 'row',
     gap: 10,

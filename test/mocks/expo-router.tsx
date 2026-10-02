@@ -7,6 +7,8 @@ export const mockRouter = {
   back: jest.fn(),
   dismissTo: jest.fn(),
   setParams: jest.fn(),
+  // A screen opened from another has somewhere to go back to.
+  canGoBack: jest.fn(() => true),
 };
 
 export const useRouter = () => mockRouter;

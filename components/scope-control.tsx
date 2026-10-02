@@ -1,33 +1,33 @@
-import { Buildings, CaretDown, Check, FolderSimple, Stack } from 'phosphor-react-native';
+import { Buildings, CaretDown, Check, Plus, Stack, UsersThree } from 'phosphor-react-native';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { WorkspaceSwitcher } from '@/components/settings/workspace-switcher';
+import { CreateTeamDialog } from '@/components/teams/create-team-dialog';
 import { fonts, layout, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useScope } from '@/hooks/use-scope';
-import { useSession } from '@/hooks/use-session';
+import { activeWorkspaceId, useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { readProjects } from '@/lib/platform/projects';
 
 /**
- * The scope control at the top of Home, Flows and Activity (BUILD-PLAN
- * 24.9.2): the workspace, then "All projects" or one project. The workspace
- * pill opens the switcher that lived under Settings until 2026-10-02 — the
- * owner's feedback 2: "create and select a project should be in home". The
- * project pill is drawn only where the workspace has an open project; a
- * workspace without projects reads as it always has.
+ * The scope control at the top of Home, Flows and Activity (BUILD-PLAN 24.9.2;
+ * teams since 24.11.7): the workspace, then "All teams" or one team. The
+ * workspace pill opens the switcher. The team pill is always there — with no
+ * team yet it still offers "Create a team", which is where a person starts one
+ * (the owner, build 7) — and a team made from it is the scope at once.
  *
- * Projects come from the shared snapshot, so three screens drawing this read
- * the list once.
+ * Teams come from the shared snapshot, so three screens drawing this read the
+ * list once.
  */
 export function ScopeControl() {
   const { palette } = useTheme();
   const session = useSession();
   const { projectId, setProjectId } = useScope();
-  const [open, setOpen] = useState<'workspace' | 'project' | null>(null);
+  const [open, setOpen] = useState<'workspace' | 'team' | 'create' | null>(null);
 
   const currentSession = session.status === 'signed-in' ? session.session : null;
   const activeWorkspace =
@@ -37,13 +37,13 @@ export function ScopeControl() {
     currentSession !== null &&
     (currentSession.workspaces.length >= 2 || currentSession.workspacesTruncated === true);
 
-  const projects = useWorkspaceResource(async (workspaceId) =>
+  const teams = useWorkspaceResource(async (workspaceId) =>
     (await readProjects(workspaceId)).filter((project) => project.status !== 'archived'),
   );
-  const openProjects = projects.status === 'ready' ? projects.data : [];
-  const chosen = openProjects.find((project) => project.id === projectId);
-  // A stored project that is gone (archived, or another workspace's) reads as all.
-  const projectLabel = chosen ? chosen.name : 'All projects';
+  const openTeams = teams.status === 'ready' ? teams.data : [];
+  const chosen = openTeams.find((project) => project.id === projectId);
+  // A stored team that is gone (deleted, left, or another workspace's) reads as all.
+  const teamLabel = chosen ? chosen.name : 'All teams';
 
   const pill = (pressed: boolean) => [
     styles.pill,
@@ -63,36 +63,34 @@ export function ScopeControl() {
         </Text>
         {canSwitchWorkspace ? <CaretDown size={12} color={palette.neutral[500]} /> : null}
       </Pressable>
-      {openProjects.length > 0 ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Project: ${projectLabel}`}
-          onPress={() => setOpen('project')}
-          style={({ pressed }) => pill(pressed)}>
-          {chosen ? (
-            <FolderSimple size={15} color={palette.accentRamp[300]} />
-          ) : (
-            <Stack size={15} color={palette.accentRamp[300]} />
-          )}
-          <Text numberOfLines={1} style={[styles.pillLabel, { color: palette.text }]}>
-            {projectLabel}
-          </Text>
-          <CaretDown size={12} color={palette.neutral[500]} />
-        </Pressable>
-      ) : null}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Team: ${teamLabel}`}
+        onPress={() => setOpen('team')}
+        style={({ pressed }) => pill(pressed)}>
+        {chosen ? (
+          <UsersThree size={15} color={palette.accentRamp[300]} />
+        ) : (
+          <Stack size={15} color={palette.accentRamp[300]} />
+        )}
+        <Text numberOfLines={1} style={[styles.pillLabel, { color: palette.text }]}>
+          {teamLabel}
+        </Text>
+        <CaretDown size={12} color={palette.neutral[500]} />
+      </Pressable>
 
       <WorkspaceSwitcher open={open === 'workspace'} onClose={() => setOpen(null)} />
       <Dialog
-        visible={open === 'project'}
+        visible={open === 'team'}
         onRequestClose={() => setOpen(null)}
-        testID="scope-project-dialog"
+        testID="scope-team-dialog"
         title="Show"
-        body="Flows, runs and approvals follow the project you pick. Connections and billing are the workspace's."
+        body="Flows, runs and approvals follow the team you pick. Connections and billing are the workspace's."
         actions={<DialogButton label="Done" onPress={() => setOpen(null)} />}>
         <View style={styles.list}>
           <SettingsRow
             icon={Stack}
-            title="All projects"
+            title="All teams"
             divider
             testID="scope-option-all"
             onPress={() => {
@@ -101,13 +99,13 @@ export function ScopeControl() {
             }}
             right={projectId === null || !chosen ? <Check size={16} color={palette.accent} /> : null}
           />
-          {openProjects.map((project, index) => (
+          {openTeams.map((project) => (
             <SettingsRow
               key={project.id}
-              icon={FolderSimple}
+              icon={UsersThree}
               title={project.name}
-              sub={project.description || undefined}
-              divider={index < openProjects.length - 1}
+              sub={project.type}
+              divider
               testID={`scope-option-${project.id}`}
               onPress={() => {
                 setProjectId(project.id);
@@ -116,9 +114,30 @@ export function ScopeControl() {
               right={project.id === projectId ? <Check size={16} color={palette.accent} /> : null}
             />
           ))}
+          <SettingsRow
+            icon={Plus}
+            title="Create a team"
+            testID="scope-create-team"
+            // The picker closes first: a dialog shown over another is not
+            // presented reliably on iOS.
+            onPress={() => setOpen('create')}
+            right={null}
+          />
         </View>
-        {projects.status === 'error' ? <DialogText tone="error">{projects.message}</DialogText> : null}
+        {teams.status === 'error' ? <DialogText tone="error">{teams.message}</DialogText> : null}
       </Dialog>
+      {open === 'create' ? (
+        <CreateTeamDialog
+          initialWorkspaceId={activeWorkspaceId(session)}
+          onClose={() => setOpen(null)}
+          onCreated={(team) => {
+            setOpen(null);
+            teams.reload();
+            // Made here, for the workspace being looked at: it is the scope now.
+            if (team.workspaceId === activeWorkspaceId(session)) setProjectId(team.id);
+          }}
+        />
+      ) : null}
     </View>
   );
 }

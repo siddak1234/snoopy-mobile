@@ -7,6 +7,7 @@ const platformAudit = resolve(__dirname, '../scripts/audit-platform.mjs');
 const fixtureAudit = resolve(__dirname, '../scripts/audit-fixtures.mjs');
 const credentialAudit = resolve(__dirname, '../scripts/audit-credentials.mjs');
 const tokenAudit = resolve(__dirname, '../scripts/audit-tokens.mjs');
+const vocabularyAudit = resolve(__dirname, '../scripts/audit-vocabulary.mjs');
 let root;
 
 beforeEach(() => {
@@ -200,5 +201,37 @@ describe('architecture audit scripts', () => {
     const result = run(fixtureAudit);
     expect(result.status).toBe(1);
     expect(result.stderr).toContain('may not live in a runtime root');
+  });
+});
+
+describe('the vocabulary audit (24.11.7)', () => {
+  it('fails copy that says project or automation, and passes the code that keeps those names', () => {
+    expect(run(vocabularyAudit).status).toBe(0);
+
+    for (const [file, source] of [
+      ['app/screen.tsx', 'export const A = () => <Text>Your projects</Text>;'],
+      ['components/row.tsx', 'export const B = () => <Row title="Create a project" />;'],
+      ['lib/words.ts', 'export const C = `This automation is ${state}.`;'],
+      ['hooks/label.ts', "export const D = 'Automations';"],
+    ]) {
+      writeFileSync(join(root, file), source);
+      const result = run(vocabularyAudit);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(file);
+      rmSync(join(root, file));
+    }
+
+    writeFileSync(
+      join(root, 'lib/code.tsx'),
+      [
+        "import { readProjects } from '@/lib/platform/projects';",
+        "export const path = '/v1/workspaces/{workspaceId}/projects';",
+        "export const scope = { kind: 'project', projectId: 'p-1' };",
+        'export const id = `project-${scope.projectId}`;',
+        'export const Mark = () => <Text testID="automation-row">AUTOMATION × AI</Text>;',
+        '// a project in the contract is a team on screen',
+      ].join('\n'),
+    );
+    expect(run(vocabularyAudit).status).toBe(0);
   });
 });

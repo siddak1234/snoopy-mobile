@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pause, Play, RocketLaunch } from 'phosphor-react-native';
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AutomationActions } from '@/components/automations/automation-actions';
@@ -20,12 +20,12 @@ import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { roleIn, useSession, workspaceIfShown } from '@/hooks/use-session';
 import { statusAction, useWorkflows, type FlowStatus } from '@/hooks/use-workflows';
 import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
-import { UNAVAILABLE_NOTE, errorTitleFor } from '@/lib/content/screen-states';
+import { ADD_AGAIN_LABEL, REMOVED_FLOW_BODY, UNAVAILABLE_NOTE, errorTitleFor } from '@/lib/content/screen-states';
 import { readCatalog, readConnectionProviders } from '@/lib/platform/catalog';
 import { updateSubscription } from '@/lib/platform/automations';
 import { readProjects } from '@/lib/platform/projects';
-import { readRunStats, readSubscriptions } from '@/lib/platform/runs';
-import { scopeLabels, toFlows, type FlowView } from '@/lib/view/catalog';
+import { readRemovedSubscriptionsOrNone, readRunStats, readSubscriptions } from '@/lib/platform/runs';
+import { scopeLabels, toFlows, toRemovedFlows, type FlowView } from '@/lib/view/catalog';
 import { administers } from '@/lib/view/roles';
 import { statusLabel } from '@/lib/view/status';
 
@@ -56,22 +56,30 @@ export default function WorkflowDetailScreen() {
    * entry are kept as read, for the actions (`AutomationActions`).
    */
   const flows = useWorkspaceResource(async (workspaceId) => {
-    const [subs, catalog, stats, providers, projects] = await Promise.all([
+    const [subs, catalog, stats, providers, projects, removed] = await Promise.all([
       readSubscriptions(workspaceId),
       readCatalog(workspaceId),
       readRunStats(workspaceId),
       readConnectionProviders(),
       readProjects(workspaceId),
+      readRemovedSubscriptionsOrNone(workspaceId),
     ]);
+    const labels = scopeLabels(projects, subs.subscriptions);
     return {
-      flows: toFlows(
-        subs.subscriptions,
-        catalog.automations,
-        stats.subscriptions,
-        new Map(providers.providers.map((p) => [p.providerId, p])),
-        scopeLabels(projects, subs.subscriptions),
-      ),
-      subscriptions: subs.subscriptions,
+      // A removed flow is read here too (24.11.8): its page stays, read-only,
+      // so a run row that names it opens something rather than "Couldn't load".
+      flows: [
+        ...toFlows(
+          subs.subscriptions,
+          catalog.automations,
+          stats.subscriptions,
+          new Map(providers.providers.map((p) => [p.providerId, p])),
+          labels,
+        ),
+        ...toRemovedFlows(removed.subscriptions, catalog.automations, stats.subscriptions, labels),
+      ],
+      // A removed flow's own row too, so its page can say what it was.
+      subscriptions: [...subs.subscriptions, ...removed.subscriptions],
       automations: catalog.automations,
     };
   });
@@ -186,23 +194,37 @@ export default function WorkflowDetailScreen() {
             {def.scope ? `${def.scope} · ${def.desc}` : def.desc}
           </Text>
         </View>
-        <StatusPill label={current} />
+        {def.removed ? (
+          <Text style={[styles.removedBadge, { color: palette.neutral[400] }]}>Removed</Text>
+        ) : (
+          <StatusPill label={current} />
+        )}
       </View>
 
+      {/* The three tiles open Activity for this flow and that outcome (24.11.9). */}
       <View style={styles.statsRow}>
-        <StatCard value={def.runCount} label="Runs" size="sm" />
-        <StatCard
-          value={def.okCount}
-          label="Successes"
-          size="sm"
-          valueColor={dash(def.okCount) ? palette.neutral[500] : status.ok}
-        />
-        <StatCard
-          value={def.failCount}
-          label="Failures"
-          size="sm"
-          valueColor={dash(def.failCount) ? palette.neutral[500] : status.err}
-        />
+        {(
+          [
+            ['Runs', def.runCount, 'All', undefined],
+            ['Successes', def.okCount, 'Success', dash(def.okCount) ? palette.neutral[500] : status.ok],
+            ['Failures', def.failCount, 'Failed', dash(def.failCount) ? palette.neutral[500] : status.err],
+          ] as const
+        ).map(([label, value, filter, valueColor]) => (
+          <Pressable
+            key={label}
+            testID={`flow-stat-${filter}`}
+            accessibilityRole="button"
+            accessibilityLabel={`${label}: see these runs in Activity`}
+            style={styles.statPressable}
+            onPress={() =>
+              router.push({
+                pathname: '/(tabs)/activity',
+                params: { flow: def.key, flowName: def.name, filter },
+              })
+            }>
+            <StatCard value={value} label={label} size="sm" valueColor={valueColor} />
+          </Pressable>
+        ))}
       </View>
 
       <View>
@@ -250,12 +272,33 @@ export default function WorkflowDetailScreen() {
         </View>
       </View>
 
-      {entry && !entry.available ? (
+      {def.removed ? (
+        // Read-only (24.11.8): no status, no actions. The one thing to do with a
+        // removed flow is add it again, which is Setup for its template, in the
+        // scope it had.
+        <SurfaceCard style={styles.removedCard}>
+          <Text style={[styles.note, { color: palette.neutral[400] }]}>{REMOVED_FLOW_BODY}</Text>
+          <PillButton
+            label={ADD_AGAIN_LABEL}
+            variant="primary"
+            height={44}
+            fontSize={14}
+            onPress={() =>
+              router.push({
+                pathname: '/(tabs)/flows/setup',
+                params: { template: def.templateId, ...(def.projectId ? { project: def.projectId } : {}) },
+              })
+            }
+          />
+        </SurfaceCard>
+      ) : null}
+      {!def.removed && entry && !entry.available ? (
         <Text style={[styles.note, { color: status.warnText }]}>{UNAVAILABLE_NOTE}</Text>
       ) : null}
-      {actionError ? (
+      {!def.removed && actionError ? (
         <ActionFailure message={actionError} retryLabel="Try again" onRetry={changeStatus} />
       ) : null}
+      {def.removed ? null : (
       <AutomationActions
         name={def.name}
         subscription={subscription}
@@ -285,6 +328,7 @@ export default function WorkflowDetailScreen() {
           </View>
         }
       />
+      )}
     </ScrollView>
   );
 }
@@ -293,6 +337,9 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
   },
+  statPressable: { flex: 1 },
+  removedBadge: { fontFamily: fonts.regular, fontSize: 12.5 },
+  removedCard: { padding: 14, gap: 12 },
   content: {
     paddingHorizontal: layout.screenX,
     paddingBottom: 20,

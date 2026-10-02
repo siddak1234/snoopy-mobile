@@ -48,14 +48,14 @@ function sessionWith(signOut: SessionContextValue['signOut']): SessionContextVal
 }
 
 describe('Settings sign-out', () => {
-  it('leaves for Sign in only when the session was actually revoked', async () => {
+  it('leaves for the cover only when the session was actually revoked (24.11.6)', async () => {
     const signOut = jest.fn(async () => ({ revoked: true }));
     await renderWithProviders(<SettingsScreen />, sessionWith(signOut));
 
     await fireEvent.press(await screen.findByText('Sign out'));
 
     expect(signOut).toHaveBeenCalled();
-    expect(mockRouter.replace).toHaveBeenCalledWith('/(auth)/login');
+    expect(mockRouter.replace).toHaveBeenCalledWith('/');
     expect(screen.queryByTestId('action-failure')).toBeNull();
   });
 
@@ -84,6 +84,6 @@ describe('Settings sign-out', () => {
 
     await fireEvent.press(screen.getByText('Retry sign out'));
     expect(signOut).toHaveBeenCalledTimes(2);
-    expect(mockRouter.replace).toHaveBeenCalledWith('/(auth)/login');
+    expect(mockRouter.replace).toHaveBeenCalledWith('/');
   });
 });

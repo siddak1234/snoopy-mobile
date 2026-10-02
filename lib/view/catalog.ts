@@ -98,9 +98,10 @@ export function withoutArchived(subscriptions: Subscription[]): Subscription[] {
 }
 
 /**
- * Project names to label workflows with, where scopes mean something: the
- * workspace has a project, or a workflow is scoped to one. Otherwise nothing,
- * and the rows read as they always have.
+ * Team names to label workflows with, where scopes mean something: the
+ * workspace has a team, or a workflow is scoped to one. Otherwise nothing,
+ * and the rows read as they always have. (A team is a project in the
+ * platform's contract, 24.11.5.)
  */
 export function scopeLabels(
   projects: readonly { id: string; name: string; status: string }[],
@@ -246,13 +247,15 @@ export type FlowView = {
    */
   connections: FlowConnectionView[];
   /**
-   * Where it applies — "Whole workspace" or "Project: …" (18.6.2), as the
-   * website labels each subscription. Present only when the caller asks for
-   * it, which it does where the workspace has projects.
+   * Where it applies — "Whole workspace" or "Team: …" (18.6.2; teams since
+   * 24.11.7), as the website labels each subscription. Present only when the
+   * caller asks for it, which it does where the workspace has teams.
    */
   scope?: string;
-  /** The project it is scoped to, `null` for the whole workspace (24.9.2). */
+  /** The team it is scoped to, `null` for the whole workspace (24.9.2). */
   projectId: string | null;
+  /** Removed (archived): kept with its history, read-only, addable again (24.11.8). */
+  removed: boolean;
 };
 
 export type FlowConnectionView = {
@@ -288,10 +291,38 @@ export function toFlows(
   /** Project names by id, to label each workflow's scope; absent, no label. */
   projectNames?: ReadonlyMap<string, string>,
 ): FlowView[] {
+  return withoutArchived(subscriptions).map((sub) =>
+    flowFrom(sub, catalog, perSubscription, providers, projectNames),
+  );
+}
+
+/**
+ * The flows removed from a workspace (24.11.8): the archived subscriptions,
+ * built the same way, marked `removed`. A separate reader because every other
+ * screen treats an archived row as absent, and only Removed and a run's own
+ * page want to see one.
+ */
+export function toRemovedFlows(
+  subscriptions: Subscription[],
+  catalog: CatalogEntry[],
+  perSubscription: RunSubscriptionCounts[],
+  projectNames?: ReadonlyMap<string, string>,
+): FlowView[] {
+  return subscriptions
+    .filter((subscription) => subscription.status === 'archived')
+    .map((sub) => flowFrom(sub, catalog, perSubscription, undefined, projectNames));
+}
+
+function flowFrom(
+  sub: Subscription,
+  catalog: CatalogEntry[],
+  perSubscription: RunSubscriptionCounts[],
+  providers?: Map<string, ConnectionProvider>,
+  projectNames?: ReadonlyMap<string, string>,
+): FlowView {
   const entries = new Map(catalog.map((e) => [e.templateId, e]));
   const counts = new Map(perSubscription.map((c) => [c.subscriptionId, c]));
-
-  return withoutArchived(subscriptions).map((sub) => {
+  {
     const entry = entries.get(sub.templateId);
     const c = counts.get(sub.id);
     const isDraft = sub.status === 'draft';
@@ -299,6 +330,7 @@ export function toFlows(
       key: sub.id,
       templateId: sub.templateId,
       projectId: sub.projectId ?? null,
+      removed: sub.status === 'archived',
       icon: iconFor(entry?.icon),
       name: sub.name ?? entry?.name ?? sub.templateId,
       desc: entry?.description ?? '',
@@ -322,10 +354,10 @@ export function toFlows(
       ...(projectNames
         ? {
             scope: sub.projectId
-              ? `Project: ${projectNames.get(sub.projectId) ?? 'a project'}`
+              ? `Team: ${projectNames.get(sub.projectId) ?? 'a team'}`
               : 'Whole workspace',
           }
         : {}),
     };
-  });
+  }
 }

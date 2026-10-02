@@ -116,6 +116,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/identities/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Removes a linked sign-in account from the website's session (BUILD-PLAN 24.11.1). The account the person signed up with (`primary`) and the last one left are refused, so there is always a way to sign in; a 400's `detail` is a sentence a client shows as it is. A native client, whose refresh token travels in a body, calls `/v1/auth/native/identities/{provider}/unlink`. */
+        delete: operations["unlinkLoginIdentity"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/identities/{provider}/start": {
         parameters: {
             query?: never;
@@ -194,6 +211,23 @@ export interface paths {
         put?: never;
         /** @description A native client links another sign-in account (ADR-0017 §6). The same link transaction the website starts at `/v1/auth/identities/{provider}/start`, for the person the bearer names. A browser cannot carry that bearer, so the transaction comes back SEALED — a ticket the app opens once, in its own system browser, at `/v1/auth/native/identities/{provider}/start`. From the provider onwards it is login's native flow: the callback returns a one-time `code` to `redirectUri`, traded with the app's verifier at `/v1/auth/native/token` for a session that now carries the linked identity. The refresh token travels here as it does to `/v1/auth/native/refresh` and never in a URL. An access token at or near its expiry is refused with 401 rather than refreshed here, which would rotate the refresh token the device holds. */
         post: operations["startNativeIdentityLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/native/identities/{provider}/unlink": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description A native client removes a linked sign-in account (BUILD-PLAN 24.11.1): the website's `DELETE /v1/auth/identities/{provider}` for the person the bearer names, with the refresh token in the body as at `/v1/auth/native/refresh`. The same refusals, with the same sentences: the account the person signed up with and the last one left stay linked. An access token at or near its expiry is refused with 401 rather than refreshed here, which would rotate the refresh token the device holds. */
+        post: operations["unlinkNativeIdentity"];
         delete?: never;
         options?: never;
         head?: never;
@@ -388,59 +422,6 @@ export interface paths {
         patch: operations["updateWorkspace"];
         trace?: never;
     };
-    "/v1/workspaces/{workspaceId}/teams": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description A workspace's active teams (ADR-0010). An owner or admin sees every team; any other member sees only the teams they are on, each carrying `viewerRole`. */
-        get: operations["listTeams"];
-        put?: never;
-        /** @description **Requires `owner` or `admin`**, and an organization workspace — a personal workspace has no teams and answers 400. */
-        post: operations["createTeam"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/workspaces/{workspaceId}/teams/{teamId}/memberships": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description **Requires `owner` or `admin`, or the team's `manager`**; any other member receives 403. Names are not carried — resolve `userId` against the workspace's member list. */
-        get: operations["listTeamMemberships"];
-        put?: never;
-        /** @description Adds a workspace member to the team, or changes their team role. **Requires `owner` or `admin`, or the team's `manager`.** The person must already belong to the workspace. `removeTeamMembership` takes them off again. */
-        post: operations["upsertTeamMembership"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/workspaces/{workspaceId}/teams/{teamId}/memberships/{userId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** @description Takes a person off the team (§12.1 #174). **Requires `owner` or `admin`, or the team's `manager`** — the same authority that adds them. A manager may remove themselves; the workspace's owners and admins can always manage the team. Removing someone already absent answers `removed: false` rather than 404, so a retry is not an error. Whatever access the team gave them to a project ends with it. */
-        delete: operations["removeTeamMembership"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/v1/workspaces/{workspaceId}/projects/{projectId}": {
         parameters: {
             query?: never;
@@ -448,7 +429,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description One project (BUILD-PLAN 4.6.1). A workspace member who is not on the project gets 404, so the refusal does not reveal that it exists. */
+        /** @description One team — a project in this contract (BUILD-PLAN 4.6.1; the vocabulary is 24.11.5). A workspace member who is not on the team gets 404, so the refusal does not reveal that it exists; an owner or admin of the organization sees every team. */
         get: operations["readProject"];
         put?: never;
         post?: never;
@@ -493,25 +474,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/workspaces/{workspaceId}/projects/{projectId}/team-grants": {
+    "/v1/workspaces/{workspaceId}/project-directory": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** @description The teams granted access to this project. Anyone with a role on the project may read it; anyone else receives 404, which does not reveal the project. */
-        get: operations["listProjectTeamGrants"];
+        /** @description The team directory (BUILD-PLAN 24.11.4): every open team — a project in this contract — in the organization, by name and kind, with where the person stands: `member` (they can already see it — on it, or an owner or admin of the organization), `requested` (a pending request), or `none` (they may ask, at `/projects/{projectId}/access-requests`). Any member of the workspace reads it; nothing about a team's flows or people travels here. */
+        get: operations["listProjectDirectory"];
         put?: never;
-        /** @description Grants a team a role on this project, or changes it. **Requires the project's `owner` or `admin`** — effective, so a workspace owner or admin qualifies. Ownership is never grantable to a team. **The team must be one the caller can see** (§12.1 #176) — any team for a workspace owner or admin, otherwise only a team they are on; any other team is 404, as `listTeams` hides it. `revokeProjectTeam` withdraws the grant. */
-        post: operations["grantProjectTeam"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/v1/workspaces/{workspaceId}/projects/{projectId}/team-grants/{teamId}": {
+    "/v1/workspaces/{workspaceId}/projects/{projectId}/access-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Who is asking to join this team (a project in this contract; BUILD-PLAN 24.11.2). A manager of the team — `owner` or `admin`, which an owner or admin of the organization is on every team — sees every request; anyone else in the organization sees only their own, so a person who asked can see where it stands. */
+        get: operations["listProjectAccessRequests"];
+        put?: never;
+        /** @description Asks to join a team the person is not on. No body: the person is the session's, the team is the path's. Someone who can already see the team has nothing to ask for (409); asking again returns the same pending request. */
+        post: operations["requestProjectAccess"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspaces/{workspaceId}/projects/{projectId}/access-requests/{requestId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -521,11 +519,12 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** @description Withdraws a team's access to this project (§12.1 #174). **Requires the project's `owner` or `admin`**, effective, as granting does — and, unlike granting, not the team's visibility: every grant is listed to the project's owner and admins, so each one they can read they can withdraw. Revoking a grant already absent answers `revoked: false` rather than 404. */
-        delete: operations["revokeProjectTeam"];
+        /** @description Withdraws the person's own pending request, and nobody else's. */
+        delete: operations["cancelProjectAccessRequest"];
         options?: never;
         head?: never;
-        patch?: never;
+        /** @description Approves or denies. Approval adds the person to the team as a `member`, the same row and event as adding them by hand. A manager of the team, or an owner or admin of the organization, decides; the requester cannot see the team and so cannot decide their own. */
+        patch: operations["decideProjectAccessRequest"];
         trace?: never;
     };
     "/v1/workspaces/{workspaceId}/join-requests": {
@@ -1034,6 +1033,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description The teams the person can see — a team is a project in this contract (24.11.5): a sub-organization with its own flows. A member sees the teams they are on; an owner or admin of the organization sees every team. */
         get: operations["listWorkspaceProjects"];
         put?: never;
         post: operations["createWorkspaceProject"];
@@ -1098,9 +1098,6 @@ export interface components {
         RemovalResponse: {
             removed: boolean;
         };
-        RevocationResponse: {
-            revoked: boolean;
-        };
         WorkspaceMember: {
             /** Format: uuid */
             workspaceId: string;
@@ -1153,6 +1150,59 @@ export interface components {
             userId: string;
             /** @enum {string} */
             role: "owner" | "admin" | "member";
+        };
+        /** @description One person's request onto one team (a project in this contract), with their name and address so a manager's list means something (BUILD-PLAN 24.11.2). */
+        ProjectAccessRequest: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            projectId: string;
+            /** Format: uuid */
+            workspaceId: string;
+            /** Format: uuid */
+            userId: string;
+            /** @enum {string} */
+            status: "pending" | "approved" | "denied" | "cancelled";
+            displayName?: string;
+            email: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            decidedAt?: string;
+            /** Format: uuid */
+            decidedByUserId?: string;
+        };
+        /** @description A team by name and kind, and where the person stands with it (24.11.4). */
+        ProjectDirectoryEntry: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            workspaceId: string;
+            name: string;
+            type: string;
+            /** @enum {string} */
+            status: "active" | "paused" | "draft" | "archived";
+            /** @enum {string} */
+            access: "member" | "requested" | "none";
+            /** Format: date-time */
+            createdAt: string;
+        };
+        ProjectDirectoryResponse: {
+            projects: components["schemas"]["ProjectDirectoryEntry"][];
+            /** @description Opaque; return unchanged as cursor. */
+            nextCursor?: string;
+        };
+        ProjectAccessRequestListResponse: {
+            requests: components["schemas"]["ProjectAccessRequest"][];
+            /** @description Opaque; return unchanged as cursor. */
+            nextCursor?: string;
+        };
+        ProjectAccessRequestMutationResponse: {
+            request: components["schemas"]["ProjectAccessRequest"];
+        };
+        DecideProjectAccessRequest: {
+            /** @enum {string} */
+            decision: "approve" | "deny";
         };
         OrganizationDomain: {
             /** Format: uuid */
@@ -1274,6 +1324,7 @@ export interface components {
             type: string;
             description?: string;
         };
+        /** @description A team, as the person calls it — a project in this contract (24.11.5). `type` is the kind of team (HR, Accounting, Finance, Legal, Compliance, Data, Operations, Sales, Marketing, Customer Support, IT, Engineering, Product, Procurement, Administration, Research, or the person's own words). */
         ProjectSummary: {
             /** Format: uuid */
             id: string;
@@ -1288,87 +1339,6 @@ export interface components {
             viewerRole: "owner" | "admin" | "member";
             /** Format: date-time */
             createdAt: string;
-        };
-        TeamSummary: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            workspaceId: string;
-            name: string;
-            description?: string;
-            /** @enum {string} */
-            status: "active" | "archived";
-            /**
-             * @description The caller's role on this team; absent when they are not on it.
-             * @enum {string}
-             */
-            viewerRole?: "manager" | "member";
-            /** Format: date-time */
-            createdAt: string;
-        };
-        CreateTeamRequest: {
-            name: string;
-            description?: string;
-        };
-        TeamMutationResponse: {
-            team: components["schemas"]["TeamSummary"];
-        };
-        TeamListResponse: {
-            teams: components["schemas"]["TeamSummary"][];
-            nextCursor?: string;
-        };
-        TeamMembershipSummary: {
-            /** Format: uuid */
-            teamId: string;
-            /** Format: uuid */
-            workspaceId: string;
-            /** Format: uuid */
-            userId: string;
-            /** @enum {string} */
-            role: "manager" | "member";
-            /** Format: date-time */
-            createdAt: string;
-        };
-        UpsertTeamMembershipRequest: {
-            /** Format: uuid */
-            userId: string;
-            /** @enum {string} */
-            role: "manager" | "member";
-        };
-        TeamMembershipMutationResponse: {
-            membership: components["schemas"]["TeamMembershipSummary"];
-        };
-        TeamMembershipListResponse: {
-            memberships: components["schemas"]["TeamMembershipSummary"][];
-            nextCursor?: string;
-        };
-        ProjectTeamGrantSummary: {
-            /** Format: uuid */
-            projectId: string;
-            /** Format: uuid */
-            teamId: string;
-            /** Format: uuid */
-            workspaceId: string;
-            /** @enum {string} */
-            role: "admin" | "member";
-            /** Format: date-time */
-            createdAt: string;
-        };
-        GrantProjectTeamRequest: {
-            /** Format: uuid */
-            teamId: string;
-            /**
-             * @description Ownership is never grantable to a team; a project owner is always an explicit user.
-             * @enum {string}
-             */
-            role: "admin" | "member";
-        };
-        ProjectTeamGrantMutationResponse: {
-            grant: components["schemas"]["ProjectTeamGrantSummary"];
-        };
-        ProjectTeamGrantListResponse: {
-            grants: components["schemas"]["ProjectTeamGrantSummary"][];
-            nextCursor?: string;
         };
         ProjectMutationResponse: {
             project: components["schemas"]["ProjectSummary"];
@@ -1515,7 +1485,6 @@ export interface components {
             workspace: null | components["schemas"]["ExportWorkspaceRecord"];
             members: components["schemas"]["ExportWorkspaceMemberRecord"][];
             projects: components["schemas"]["ExportProjectRecord"][];
-            teams: components["schemas"]["ExportTeamRecord"][];
             domains: components["schemas"]["ExportDomainRecord"][];
             truncated: boolean;
         };
@@ -1545,13 +1514,6 @@ export interface components {
             type: string;
             description: string | null;
             status: string;
-            /** Format: date-time */
-            created_at: string;
-        };
-        ExportTeamRecord: {
-            /** Format: uuid */
-            id: string;
-            name: string;
             /** Format: date-time */
             created_at: string;
         };
@@ -2070,6 +2032,50 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
         };
     };
+    unlinkLoginIdentity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["parameters"]["LoginProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What stays linked. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginIdentitiesResponse"];
+                };
+            };
+            /** @description The primary account, the last account, or one the provider will not remove; `details.reason` is `primary`, `last` or `refused`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            /** @description That provider is not linked to this account. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            502: components["responses"]["DependencyFailure"];
+            503: components["responses"]["NotConfigured"];
+        };
+    };
     startLoginIdentityLink: {
         parameters: {
             query?: {
@@ -2266,6 +2272,63 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ApiProblem"];
                 };
             };
+            503: components["responses"]["NotConfigured"];
+        };
+    };
+    unlinkNativeIdentity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["parameters"]["LoginProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    refreshToken: string;
+                };
+            };
+        };
+        responses: {
+            /** @description What stays linked. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginIdentitiesResponse"];
+                };
+            };
+            /** @description The primary account, the last account, or one the provider will not remove (`details.reason` is `primary`, `last` or `refused`); or a body without `refreshToken`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description No bearer, a refused session, or an access token too close to expiry. Renew once and retry; a second 401 is a dead session. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            /** @description That provider is not linked to this account. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            502: components["responses"]["DependencyFailure"];
             503: components["responses"]["NotConfigured"];
         };
     };
@@ -2595,162 +2658,6 @@ export interface operations {
             409: components["responses"]["Conflict"];
         };
     };
-    listTeams: {
-        parameters: {
-            query?: {
-                limit?: components["parameters"]["PageLimit"];
-                cursor?: components["parameters"]["PageCursor"];
-            };
-            header?: never;
-            path: {
-                workspaceId: components["parameters"]["WorkspaceId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Teams the caller may see, newest first. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TeamListResponse"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    createTeam: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                workspaceId: components["parameters"]["WorkspaceId"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateTeamRequest"];
-            };
-        };
-        responses: {
-            /** @description The team, created or replayed. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TeamMutationResponse"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-        };
-    };
-    listTeamMemberships: {
-        parameters: {
-            query?: {
-                limit?: components["parameters"]["PageLimit"];
-                cursor?: components["parameters"]["PageCursor"];
-            };
-            header?: never;
-            path: {
-                workspaceId: components["parameters"]["WorkspaceId"];
-                teamId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Who is on this team, newest first. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TeamMembershipListResponse"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    upsertTeamMembership: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                workspaceId: components["parameters"]["WorkspaceId"];
-                teamId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpsertTeamMembershipRequest"];
-            };
-        };
-        responses: {
-            /** @description The membership, created, changed or replayed. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TeamMembershipMutationResponse"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-        };
-    };
-    removeTeamMembership: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                workspaceId: components["parameters"]["WorkspaceId"];
-                teamId: string;
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Whether a membership was removed. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RemovalResponse"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-        };
-    };
     readProject: {
         parameters: {
             query?: never;
@@ -2904,7 +2811,35 @@ export interface operations {
             409: components["responses"]["Conflict"];
         };
     };
-    listProjectTeamGrants: {
+    listProjectDirectory: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["PageLimit"];
+                cursor?: components["parameters"]["PageCursor"];
+            };
+            header?: never;
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The open teams, newest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectDirectoryResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listProjectAccessRequests: {
         parameters: {
             query?: {
                 limit?: components["parameters"]["PageLimit"];
@@ -2919,13 +2854,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The project's team grants, newest first. */
+            /** @description Requests onto the team, newest first. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ProjectTeamGrantListResponse"];
+                    "application/json": components["schemas"]["ProjectAccessRequestListResponse"];
                 };
             };
             400: components["responses"]["BadRequest"];
@@ -2933,7 +2868,7 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
-    grantProjectTeam: {
+    requestProjectAccess: {
         parameters: {
             query?: never;
             header: {
@@ -2945,19 +2880,15 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["GrantProjectTeamRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
-            /** @description The grant, created, changed or replayed. */
+            /** @description The pending request. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ProjectTeamGrantMutationResponse"];
+                    "application/json": components["schemas"]["ProjectAccessRequestMutationResponse"];
                 };
             };
             400: components["responses"]["BadRequest"];
@@ -2967,7 +2898,7 @@ export interface operations {
             409: components["responses"]["Conflict"];
         };
     };
-    revokeProjectTeam: {
+    cancelProjectAccessRequest: {
         parameters: {
             query?: never;
             header: {
@@ -2976,19 +2907,52 @@ export interface operations {
             path: {
                 workspaceId: components["parameters"]["WorkspaceId"];
                 projectId: components["parameters"]["ProjectId"];
-                teamId: string;
+                requestId: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Whether a grant was revoked. */
+            /** @description The cancelled request. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RevocationResponse"];
+                    "application/json": components["schemas"]["ProjectAccessRequestMutationResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    decideProjectAccessRequest: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                workspaceId: components["parameters"]["WorkspaceId"];
+                projectId: components["parameters"]["ProjectId"];
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecideProjectAccessRequest"];
+            };
+        };
+        responses: {
+            /** @description The decided request. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectAccessRequestMutationResponse"];
                 };
             };
             400: components["responses"]["BadRequest"];
@@ -3938,7 +3902,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Bounded project page for projects the actor is authorized to access. */
+            /** @description Bounded page of the teams (projects) the actor is authorized to see. */
             200: {
                 headers: {
                     [name: string]: unknown;

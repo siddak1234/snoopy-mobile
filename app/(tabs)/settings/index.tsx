@@ -2,12 +2,12 @@ import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
 import * as LocalAuthentication from 'expo-local-authentication';
 import {
+  Archive,
   Bell,
   Buildings,
   CaretRight,
   CreditCard,
   DownloadSimple,
-  FolderSimple,
   IdentificationBadge,
   Lifebuoy,
   SignOut,
@@ -149,7 +149,8 @@ export default function SettingsScreen() {
       return;
     }
     setSignOutFailed(false);
-    router.replace('/(auth)/login');
+    // Signed out is the cover (24.11.6); Sign in is one tap from it.
+    router.replace('/');
   };
 
   // The design applies gLoad/gErr/gOff to every screen but Home, Settings
@@ -271,7 +272,8 @@ export default function SettingsScreen() {
             }
           />
           {/* The admin areas the website keeps under /account (ADR-0032, 24.5).
-              Teams belong to an organization, as the website's nav offers them. */}
+              Teams are every workspace's: in an organization, and the person's own
+              (24.11.7) — the old organization-only Teams of people groups went. */}
           <SettingsRow
             icon={IdentificationBadge}
             title="Organization"
@@ -281,24 +283,23 @@ export default function SettingsScreen() {
             right={<CaretRight size={15} color={palette.neutral[500]} />}
           />
           <SettingsRow
-            icon={FolderSimple}
-            title="Projects"
-            sub="All projects, and each one's members and settings"
+            icon={UsersThree}
+            title="Teams"
+            sub="Your teams, who is on them, and asking to join one"
             divider
-            testID="settings-projects"
-            onPress={() => router.push('/(tabs)/settings/projects')}
+            testID="settings-teams"
+            onPress={() => router.push('/(tabs)/settings/teams')}
             right={<CaretRight size={15} color={palette.neutral[500]} />}
           />
-          {activeWorkspace?.type === 'organization' ? (
-            <SettingsRow
-              icon={UsersThree}
-              title="Teams"
-              divider
-              testID="settings-teams"
-              onPress={() => router.push('/(tabs)/settings/teams')}
-              right={<CaretRight size={15} color={palette.neutral[500]} />}
-            />
-          ) : null}
+          <SettingsRow
+            icon={Archive}
+            title="Removed flows"
+            sub="Kept with their history; add any again"
+            divider
+            testID="settings-removed-flows"
+            onPress={() => router.push('/(tabs)/flows/removed')}
+            right={<CaretRight size={15} color={palette.neutral[500]} />}
+          />
           <SettingsRow
             icon={DownloadSimple}
             title="Export my data"

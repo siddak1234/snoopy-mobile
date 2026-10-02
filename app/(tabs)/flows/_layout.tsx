@@ -17,6 +17,7 @@ export default function FlowsLayout() {
       <Stack.Screen name="detail" />
       <Stack.Screen name="add" />
       <Stack.Screen name="setup" />
+      <Stack.Screen name="removed" />
     </Stack>
   );
 }

@@ -69,8 +69,8 @@ export function SetupDialog({
       visible
       testID="setup-dialog"
       onRequestClose={busy ? () => undefined : onClose}
-      title="Automation setup"
-      body="Complete the settings supplied by this automation."
+      title="Flow setup"
+      body="Complete the settings supplied by this flow."
       actions={
         <>
           <DialogButton label="Cancel" disabled={busy} onPress={onClose} />

@@ -48,8 +48,8 @@ export default function SetupScreen() {
   >(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  // Where it is added: '' is the whole workspace, else a project's id. The
-  // catalog passes the project the scope control had chosen (24.9.3), so it is
+  // Where it is added: '' is the whole workspace, else a team's id. The
+  // catalog passes the team the scope control had chosen (24.9.3), so it is
   // not chosen twice; otherwise unset until the person chooses, and the first
   // scope it is not in yet is the default.
   const [chosenScope, setChosenScope] = useState<string | undefined>(project || undefined);
@@ -129,11 +129,11 @@ export default function SetupScreen() {
   const sectionOffset = required.length > 0 ? 1 : 0;
   const scopes = [
     { value: '', label: 'Whole workspace' },
-    ...projects.map((project) => ({ value: project.id, label: `Project: ${project.name}` })),
+    ...projects.map((project) => ({ value: project.id, label: `Team: ${project.name}` })),
   ];
   const inScope = (value: string) =>
     resource.data.subscriptions.find((item) => (item.projectId ?? '') === value);
-  // A chosen project that has since gone (archived on a re-read) is no choice.
+  // A chosen team that has since gone (archived on a re-read) is no choice.
   const stillOffered = chosenScope !== undefined && scopes.some((option) => option.value === chosenScope);
   const scope = stillOffered ? chosenScope : (scopes.find((option) => !inScope(option.value))?.value ?? '');
   const subscription = localSubscription ?? inScope(scope) ?? null;

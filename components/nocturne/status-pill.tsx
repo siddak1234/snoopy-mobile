@@ -32,6 +32,8 @@ export function StatusPill({ label }: { label: StatusPillLabel }) {
     },
     Queued: neutral,
     Cancelled: neutral,
+    // A removed flow (24.11.8) reads as Draft does: kept, not live.
+    Archived: neutral,
   } as const;
   const t = tones[label];
   return (

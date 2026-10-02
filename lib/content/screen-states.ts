@@ -28,8 +28,7 @@ export type ScreenKey =
   | 'setup'
   | 'configure'
   | 'organization'
-  | 'projects'
-  | 'project'
+  | 'removed'
   | 'teams'
   | 'team'
   | 'billing'
@@ -50,9 +49,8 @@ const ERROR_TITLES: Record<ScreenKey, string> = {
   setup: "Couldn't load this setup",
   configure: "Couldn't load this template",
   organization: "Couldn't load your organization",
-  projects: "Couldn't load your projects",
-  project: "Couldn't load this project",
-  teams: "Couldn't load teams",
+  removed: "Couldn't load your removed flows",
+  teams: "Couldn't load your teams",
   team: "Couldn't load this team",
   billing: "Couldn't load billing",
   account: "Couldn't load your account",
@@ -111,12 +109,22 @@ export const UNAVAILABLE_NOTE = 'Not responding — it cannot run yet.';
  */
 export const FLOWS_EMPTY_TITLE = 'No flows yet';
 export const FLOWS_EMPTY_BODY = 'Add a prebuilt flow — your first one can be live in minutes.';
-/** The workspace has flows; the chosen project has none (24.9.2). */
-export const FLOWS_SCOPE_EMPTY_TITLE = 'No flows in this project yet';
-export const FLOWS_SCOPE_EMPTY_BODY = 'Add one here, or pick All projects above to see every flow.';
+/** Removed flows (24.11.8): archived, kept with their history, addable again. */
+export const REMOVED_FLOWS_TITLE = 'Removed flows';
+export const REMOVED_FLOWS_NOTE = 'A removed flow keeps its history here. Add it again any time.';
+export const REMOVED_FLOWS_EMPTY = 'Nothing removed here.';
+export const REMOVED_FLOW_BODY =
+  'This flow was removed. Its runs stay in Activity, and you can add it again — its setup starts fresh.';
+export const ADD_AGAIN_LABEL = 'Add it again';
+/** A run row whose flow was removed says so (24.11.8). */
+export const RUN_FLOW_REMOVED = 'Flow removed';
+
+/** The workspace has flows; the chosen team has none (24.9.2; teams since 24.11.7). */
+export const FLOWS_SCOPE_EMPTY_TITLE = 'No flows in this team yet';
+export const FLOWS_SCOPE_EMPTY_BODY = 'Add one here, or pick All teams above to see every flow.';
 export const ACTIVITY_EMPTY_TITLE = 'No activity yet';
 export const ACTIVITY_EMPTY_BODY = 'Every run lands here the moment your first agent goes live.';
-export const ACTIVITY_SCOPE_EMPTY = 'No runs in this project yet.';
+export const ACTIVITY_SCOPE_EMPTY = 'No runs in this team yet.';
 /** The one way in, named for what it does (24.9.3): "Flows will be the name". */
 export const ADD_FLOW_LABEL = 'Add a flow';
 

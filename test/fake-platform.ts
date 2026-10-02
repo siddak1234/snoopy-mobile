@@ -9,6 +9,8 @@ export type Sent = {
   method: string;
   path: string;
   values: Record<string, string>;
+  /** The query parameters sent, when there were any. */
+  query?: Record<string, string>;
   key?: string;
   body?: unknown;
 };
@@ -22,11 +24,18 @@ export function fakePlatform(platformOperation: jest.Mock) {
 
   const call =
     (method: string) =>
-    async (path: string, init?: { params?: { path?: Record<string, string>; header?: Record<string, string> }; body?: unknown }) => {
+    async (
+      path: string,
+      init?: {
+        params?: { path?: Record<string, string>; query?: Record<string, string>; header?: Record<string, string> };
+        body?: unknown;
+      },
+    ) => {
       const entry: Sent = {
         method,
         path,
         values: init?.params?.path ?? {},
+        ...(init?.params?.query && Object.keys(init.params.query).length > 0 ? { query: init.params.query } : {}),
         ...(init?.params?.header?.['Idempotency-Key'] ? { key: init.params.header['Idempotency-Key'] } : {}),
         ...(init?.body !== undefined ? { body: init.body } : {}),
       };

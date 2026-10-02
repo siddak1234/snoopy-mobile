@@ -4,6 +4,7 @@ import React, { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
@@ -23,10 +24,11 @@ import {
   type DeletionOutcome,
 } from '@/lib/content/deletion';
 import { errorTitleFor } from '@/lib/content/screen-states';
-import { deleteAccount, readIdentities } from '@/lib/platform/account';
+import { deleteAccount, readIdentities, unlinkIdentity, type LoginIdentity } from '@/lib/platform/account';
 import { readCurrentSession, readLoginProviders } from '@/lib/platform/auth';
 import { linkIdentity } from '@/lib/platform/identity-link';
 import type { LoginProvider } from '@/lib/platform/native-auth';
+import { refusalMessage } from '@/lib/content/refusals';
 import { PlatformError } from '@/lib/platform/problem';
 import { clearSession } from '@/lib/platform/session-store';
 
@@ -44,6 +46,7 @@ export default function AccountScreen() {
   const session = useSession();
   const [linking, setLinking] = useState<LoginProvider | null>(null);
   const [linkError, setLinkError] = useState<string | null>(null);
+  const [unlinking, setUnlinking] = useState<LoginIdentity['provider'] | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const account = useResource(async () => {
@@ -61,6 +64,24 @@ export default function AccountScreen() {
     // Linked, or closed part-way: what the account now holds is read, either way.
     if (outcome.status === 'linked') void session.reload();
     account.reload();
+  };
+
+  /**
+   * Unlink (backend 24.11.1, the owner's build 7 ask). Confirmed first: the
+   * account's primary and its last sign-in are refused upstream with a sentence,
+   * which is shown as it is; anything else re-reads what is linked.
+   */
+  const unlink = async (provider: LoginIdentity['provider']) => {
+    setLinkError(null);
+    try {
+      await unlinkIdentity(provider);
+      void session.reload();
+    } catch (caught) {
+      setLinkError(refusalMessage(caught, {}, 'The account could not be unlinked.'));
+    } finally {
+      setUnlinking(null);
+      account.reload();
+    }
   };
 
   if (account.status === 'loading') return <ScreenLoading topInset={insets.top} />;
@@ -112,8 +133,12 @@ export default function AccountScreen() {
                 title={provider.label}
                 divider={index < account.data.providers.length - 1}
                 right={
-                  primary !== undefined ? (
-                    <Text style={[styles.small, muted]}>{primary ? 'Primary' : 'Linked'}</Text>
+                  primary === true ? (
+                    <Text style={[styles.small, muted]}>Primary</Text>
+                  ) : primary === false ? (
+                    <Pressable testID={`unlink-${provider.id}`} disabled={linking !== null} onPress={() => setUnlinking(provider.id)}>
+                      <Text style={[styles.linkLabel, { color: palette.neutral[400] }]}>Unlink</Text>
+                    </Pressable>
                   ) : (
                     <Pressable testID={`link-${provider.id}`} disabled={linking !== null} onPress={() => link(provider.id)}>
                       <Text style={[styles.linkLabel, { color: palette.accentRamp[300] }]}>
@@ -127,6 +152,19 @@ export default function AccountScreen() {
           })}
         </SurfaceCard>
         {linkError ? <Text style={[styles.text, styles.lead, { color: status.err }]}>{linkError}</Text> : null}
+        {unlinking ? (
+          <ConfirmDialog
+            testID="unlink-dialog"
+            title={`Unlink ${account.data.providers.find((p) => p.id === unlinking)?.label ?? unlinking}?`}
+            body="You can still sign in with your other linked accounts, and link this one again later."
+            confirmLabel="Unlink"
+            busyLabel="Unlinking…"
+            fallback="The account could not be unlinked."
+            run={() => unlink(unlinking)}
+            onClose={() => setUnlinking(null)}
+            onDone={() => setUnlinking(null)}
+          />
+        ) : null}
       </View>
 
       <View>
@@ -151,7 +189,7 @@ export default function AccountScreen() {
           }}
           onSignIn={() => {
             setDeleting(false);
-            router.replace('/(auth)/login');
+            router.replace('/');
           }}
           signOut={session.signOut}
         />

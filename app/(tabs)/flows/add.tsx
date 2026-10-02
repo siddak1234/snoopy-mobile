@@ -56,7 +56,7 @@ export default function AddFlowScreen() {
   const scopeKey = scopeProject ? scopeProject.id : '';
   const scopeName = scopeProject ? scopeProject.name : 'your workspace';
   const projectName = (id: string | null) =>
-    id === null ? 'your workspace' : (ready?.openProjects.find((project) => project.id === id)?.name ?? 'a project');
+    id === null ? 'your workspace' : (ready?.openProjects.find((project) => project.id === id)?.name ?? 'a team');
 
   const subscriptionsFor = (templateId: string): Subscription[] =>
     (ready?.subscriptions ?? []).filter((subscription) => subscription.templateId === templateId);

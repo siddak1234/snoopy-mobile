@@ -212,7 +212,7 @@ export function ConnectionsCard({
         }
         body={
           replacing
-            ? `You will sign in to ${selected?.name ?? ''} with the account every automation that uses this connection should act as from now on. ${selected?.accountName ?? 'The current account'} stays connected until that sign-in completes.`
+            ? `You will sign in to ${selected?.name ?? ''} with the account every flow that uses this connection should act as from now on. ${selected?.accountName ?? 'The current account'} stays connected until that sign-in completes.`
             : selected?.connected
               ? selected.sub
               : selected?.provider.description

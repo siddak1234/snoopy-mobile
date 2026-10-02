@@ -12,10 +12,10 @@ import { useSession } from '@/hooks/use-session';
  * every tab, rather than a condition each screen could forget.
  *
  * `restoring` renders nothing so protected content never flashes. Every resolved
- * state other than `signed-in` returns to the auth stack. Being unconfigured or
- * temporarily unreachable is not proof of identity and must not open customer
- * data—the auth screen can render those honest states without weakening this
- * boundary.
+ * state other than `signed-in` returns to the cover (BUILD-PLAN 24.11.6), whose
+ * "Get started" leads to Sign in. Being unconfigured or temporarily unreachable
+ * is not proof of identity and must not open customer data—the auth screens can
+ * render those honest states without weakening this boundary.
  */
 export default function TabLayout() {
   const session = useSession();
@@ -23,7 +23,7 @@ export default function TabLayout() {
   if (session.status === 'restoring') return null;
 
   if (session.status !== 'signed-in') {
-    return <Redirect href="/(auth)/login" />;
+    return <Redirect href="/" />;
   }
 
   return (

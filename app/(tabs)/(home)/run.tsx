@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { FlowArrow, StopCircle } from 'phosphor-react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -15,8 +15,8 @@ import { em, fonts, layout, status } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { TimelineRowView as RunTimelineItem } from '@/lib/view/runs';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
-import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
-import { useSession, workspaceIfShown } from '@/hooks/use-session';
+import { useResource, busyBody } from '@/hooks/use-resource';
+import { activeWorkspaceId, useSession, workspaceIfShown } from '@/hooks/use-session';
 import { refusalMessage, WORKSPACE_CHANGED } from '@/lib/content/refusals';
 import { errorTitleFor } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
@@ -71,6 +71,19 @@ export default function RunDetailScreen() {
   const insets = useSafeAreaInsets();
   const { runId } = useLocalSearchParams<{ runId?: string }>();
   const session = useSession();
+  // **A run belongs to the workspace it was opened in.** The read is bound to
+  // that workspace, not to whichever is active: re-reading a run id in another
+  // workspace answered 404 three times on build 7 (BUILD-PLAN 24.11.9). When
+  // the active workspace changes, this page leaves instead — the run is not
+  // the new workspace's to show.
+  const [openedIn] = useState(() => activeWorkspaceId(session));
+  const activeNow = activeWorkspaceId(session);
+  useEffect(() => {
+    if (openedIn && activeNow && activeNow !== openedIn) {
+      if (router.canGoBack()) router.back();
+      else router.replace('/(tabs)/activity');
+    }
+  }, [activeNow, openedIn, router]);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
@@ -97,19 +110,16 @@ export default function RunDetailScreen() {
    * design's own em dash; the fields card is omitted, exactly as the design
    * already omits it on a failed run.
    */
-  const detail = useWorkspaceResource(
-    async (workspaceId) => {
-      if (!runId) throw new PlatformNotConfiguredError();
-      const [run, catalog, approvals] = await Promise.all([
-        readRun(workspaceId, runId),
-        readCatalog(workspaceId),
-        readAllApprovals(workspaceId),
-      ]);
-      const entry = catalog.automations.find((a) => a.templateId === run.run.templateId);
-      return { detail: run, entry, approvals: approvals.approvals };
-    },
-    [runId],
-  );
+  const detail = useResource(async () => {
+    if (!runId || !openedIn) throw new PlatformNotConfiguredError();
+    const [run, catalog, approvals] = await Promise.all([
+      readRun(openedIn, runId),
+      readCatalog(openedIn),
+      readAllApprovals(openedIn),
+    ]);
+    const entry = catalog.automations.find((a) => a.templateId === run.run.templateId);
+    return { detail: run, entry, approvals: approvals.approvals };
+  }, [runId, openedIn]);
 
   const liveRun = detail.status === 'ready' ? detail.data : null;
   const run = liveRun
@@ -151,7 +161,8 @@ export default function RunDetailScreen() {
    */
   const confirmCancel = async () => {
     if (!run || cancelling) return;
-    const workspaceId = workspaceIfShown(session, detail.loadedFor);
+    // The run's own workspace, and only while it is still the active one.
+    const workspaceId = workspaceIfShown(session, openedIn);
     if (!workspaceId) {
       setCancelError(WORKSPACE_CHANGED);
       return;

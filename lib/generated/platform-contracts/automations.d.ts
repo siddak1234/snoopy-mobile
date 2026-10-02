@@ -672,7 +672,10 @@ export interface operations {
     };
     listSubscriptions: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description `archived` lists the removed flows and nothing else — the Removed flows page (BUILD-PLAN 24.11.8). Without it the list is every subscription that is not archived (§12.1 #92); the two are never mixed. No other value is accepted. */
+                status?: "archived";
+            };
             header?: never;
             path: {
                 /** @description Must be a workspace the session names, or the answer is 404. */
@@ -682,7 +685,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Every subscription the workspace holds. */
+            /** @description Every subscription the workspace holds that the person may see, not archived — or, with `status=archived`, only the archived ones. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -694,6 +697,7 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["Problem"];
             401: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
         };

@@ -29,7 +29,8 @@ describe('Log in', () => {
   it('is one screen with the website\'s words: Sign in, the providers, and Remember me (feedback #1)', async () => {
     const { getByText, findByText, queryByText } = await renderWithProviders(<LoginScreen />);
     expect(getByText('Sign in')).toBeTruthy();
-    expect(getByText('Continue to Autom8x.')).toBeTruthy();
+    // The subtitle went with the cover page, which already says what this is (24.11.6).
+    expect(queryByText('Continue to Autom8x.')).toBeNull();
     expect(await findByText('Sign in with Apple')).toBeTruthy();
     expect(getByText('Sign in with Google')).toBeTruthy();
     expect(getByText('Sign in with Microsoft')).toBeTruthy();

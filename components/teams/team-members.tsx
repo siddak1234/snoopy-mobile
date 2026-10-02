@@ -27,13 +27,13 @@ const ROLES = [
 ] as const;
 
 /**
- * Who is on a team project, and their roles (24.5.2) — the website's
- * `ProjectMemberList` and `ProjectMemberPicker`, by its rules: an owner's row is
- * not changed; a person leaves from their own row; an owner or admin removes
- * others, an owner changes any role, an admin only a member's. Everything acts
- * on the project's own workspace.
+ * Who is on a team, and their roles (24.5.2; a team since 24.11.7) — the
+ * website's member list and picker, by its rules: an owner's row is not changed;
+ * a person leaves from their own row; an owner or admin removes others, an owner
+ * changes any role, an admin only a member's. Everything acts on the team's own
+ * workspace.
  */
-export function ProjectMembers({
+export function TeamMembers({
   workspaceId,
   projectId,
   viewerUserId,
@@ -48,13 +48,13 @@ export function ProjectMembers({
   viewerUserId: string | null;
   viewerRole: ProjectRole;
   members: ProjectMembership[];
-  /** Workspace members not on the project yet — offered to an owner or admin only. */
+  /** Workspace members not on the team yet — offered to an owner or admin only. */
   available: WorkspaceMember[];
   onChanged: () => void;
   onLeft: () => void;
 }) {
   const { palette } = useTheme();
-  const keys = useIntentKeys('project-member');
+  const keys = useIntentKeys('team-member');
   // One key per intent, settled once the platform accepted it.
   const once = async (intent: string, send: (key: string) => Promise<unknown>) => {
     await send(keys.keyFor(intent));
@@ -68,7 +68,7 @@ export function ProjectMembers({
 
   return (
     <View>
-      <SectionLabel>{`TEAM · ${members.length} ${members.length === 1 ? 'MEMBER' : 'MEMBERS'}`}</SectionLabel>
+      <SectionLabel>{`MEMBERS · ${members.length}`}</SectionLabel>
       <SurfaceCard style={styles.card}>
         {members.length === 0 ? <Text style={[styles.text, styles.pad, { color: palette.neutral[400] }]}>No members yet.</Text> : null}
         {members.map((member, index) => {
@@ -78,7 +78,7 @@ export function ProjectMembers({
           return (
             <SettingsRow
               key={member.userId}
-              testID={`project-member-${member.userId}`}
+              testID={`team-member-${member.userId}`}
               icon={UserCircle}
               title={`${nameOf(member)}${own ? ' (you)' : ''}`}
               sub={member.displayName ? member.email : undefined}
@@ -95,7 +95,7 @@ export function ProjectMembers({
         })}
       </SurfaceCard>
       {manager ? (
-        <PillButton label="Add team members" variant="secondary" height={42} icon={UserPlus} iconSize={15} style={styles.add} onPress={() => setAdding(true)} />
+        <PillButton label="Add members" variant="secondary" height={42} icon={UserPlus} iconSize={15} style={styles.add} onPress={() => setAdding(true)} />
       ) : null}
 
       {open ? (
@@ -116,12 +116,12 @@ export function ProjectMembers({
       ) : null}
       {leaving ? (
         <ConfirmDialog
-          testID="leave-project-row-dialog"
-          title="Leave this project?"
-          body="You will lose access immediately."
+          testID="leave-team-row-dialog"
+          title="Leave this team?"
+          body="You will lose access to its flows immediately."
           confirmLabel="Leave"
           busyLabel="Leaving…"
-          fallback="You could not leave this project."
+          fallback="You could not leave this team."
           run={() => once('leave', (key) => removeProjectMember(workspaceId, projectId, viewerUserId ?? '', key))}
           onClose={() => setLeaving(false)}
           onDone={() => {
@@ -181,10 +181,10 @@ function MemberDialog({
   return (
     <Dialog
       visible
-      testID="project-member-dialog"
+      testID="team-member-dialog"
       onRequestClose={busy ? () => undefined : onClose}
-      title={confirming ? `Remove ${name} from this project?` : name}
-      body={confirming ? undefined : canChangeRole ? 'Role on this project' : `Role on this project: ${member.role}`}
+      title={confirming ? `Remove ${name} from this team?` : name}
+      body={confirming ? undefined : canChangeRole ? 'Role on this team' : `Role on this team: ${member.role}`}
       actions={
         confirming ? (
           <>
@@ -252,13 +252,13 @@ function AddMembersDialog({
   return (
     <Dialog
       visible
-      testID="add-project-members-dialog"
+      testID="add-team-members-dialog"
       onRequestClose={addingId ? () => undefined : () => onClose(added)}
-      title="Add team members"
-      body="Select workspace members to add to this project."
+      title="Add members"
+      body="Pick people in this organization to add to the team."
       actions={<DialogButton label="Done" disabled={addingId !== null} onPress={() => onClose(added)} />}>
       <ChoiceChips label="Add as" options={ROLES} value={role} onChange={setRole} />
-      {left.length === 0 ? <DialogText>All workspace members are already in this project.</DialogText> : null}
+      {left.length === 0 ? <DialogText>Everyone in this organization is already on the team.</DialogText> : null}
       <ScrollView style={styles.list}>
         {left.map((member) => (
           <View key={member.userId} style={[styles.addRow, { borderBottomColor: palette.divider }]}>

@@ -24,21 +24,21 @@ export const CONNECTIONS_MANAGED_BY =
 /** Moving a subscription to another version (backend §12.1 #126). */
 export const MOVE_REFUSALS: Readonly<Record<string, string>> = {
   approvals_pending:
-    'An approval for this automation is still waiting. Decide it first, then move.',
-  runs_in_flight: 'A run of this automation is still going. Wait for it to finish, then move.',
+    'An approval for this flow is still waiting. Decide it first, then move.',
+  runs_in_flight: 'A run of this flow is still going. Wait for it to finish, then move.',
   version_unavailable: 'That version is no longer available.',
-  subscription_archived: 'An archived automation cannot move.',
+  subscription_archived: 'A removed flow cannot move.',
   invalid_config: 'Its settings do not fit that version. Open Set up, fix them, then move.',
   unmet_connections:
-    'That version needs an account this workspace has not connected. Connect it first, or pause the automation and move.',
+    'That version needs an account this workspace has not connected. Connect it first, or pause the flow and move.',
   setup_incomplete:
-    'That version needs a setting this automation does not have yet. Pause it, move, then finish Set up.',
+    'That version needs a setting this flow does not have yet. Pause it, move, then finish Set up.',
 };
 
 /** Issuing or rotating a webhook address (backend §12.1 #91, #109). */
 export const WEBHOOK_ISSUE_REFUSALS: Readonly<Record<string, string>> = {
-  trigger_kind_mismatch: 'This automation is not started by a webhook.',
-  subscription_archived: 'An archived automation has no address.',
+  trigger_kind_mismatch: 'This flow is not started by a webhook.',
+  subscription_archived: 'A removed flow has no address.',
 };
 
 /**
@@ -59,13 +59,13 @@ export const RUN_REFUSALS: Readonly<Record<string, string>> = {
 
 /** A file for a run (FR-14): opening the upload, and completing it. */
 export const UPLOAD_REFUSALS: Readonly<Record<string, string>> = {
-  content_type_not_accepted: 'This automation does not accept that type of file.',
-  file_too_large: 'The file is larger than this automation accepts.',
-  subscription_not_live: 'Go live first; a paused automation takes no files.',
-  no_file_input: 'This automation does not take a file.',
+  content_type_not_accepted: 'This flow does not accept that type of file.',
+  file_too_large: 'The file is larger than this flow accepts.',
+  subscription_not_live: 'Go live first; a paused flow takes no files.',
+  no_file_input: 'This flow does not take a file.',
   session_expired: 'The upload took too long. Choose the file again.',
   no_object: 'The file did not arrive. Choose it again.',
-  too_large: 'The file is larger than this automation accepts.',
+  too_large: 'The file is larger than this flow accepts.',
 };
 
 /** The words for a refused Add. */
@@ -92,7 +92,7 @@ export function runRefusal(error: unknown): { message: string; fileGone: boolean
     };
   }
   if (error instanceof PlatformError && error.status === 409) {
-    return { message: 'This automation is not live, so it cannot run.', fileGone: false };
+    return { message: 'This flow is not live, so it cannot run.', fileGone: false };
   }
   return { message: refusalMessage(error, {}, 'The run was not started.'), fileGone: false };
 }

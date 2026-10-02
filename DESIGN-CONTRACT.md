@@ -105,35 +105,44 @@ switcher lists `GET /v1/workspaces` rather than the session's bounded
 when `workspacesTruncated` says the list is incomplete — the same rule the web
 switcher (snoopy PR #6) applies over the same operation.
 
-**The scope control** (24.9.2, 2026-10-02) sits at the top of Home, Flows and
-Activity: the workspace — the switcher, reached there as well as from Settings —
-and "All projects" or one project. A project is a visibility scope on a
-subscription (backend 18.6.2); runs and approvals carry no project and follow
-their flow's, and one whose flow is unknown is kept rather than hidden. The
-choice is kept per workspace on the device (`lib/platform/scope-store.ts`) and
-never selects tenancy. The website has no project selector: a deliberate mobile
-difference under FR-25, as the snapshot's windows are.
+**The scope control** (24.9.2, 2026-10-02; teams since 24.11.7) sits at the top
+of Home, Flows and Activity: the workspace — the switcher, reached there as well
+as from Settings — and "All teams" or one team. A team is a project in the
+platform's contract (backend 24.11.5) and a visibility scope on a subscription
+(backend 18.6.2); runs and approvals carry no team and follow their flow's, and
+one whose flow is unknown is kept rather than hidden. The team pill is always
+there; its list ends with "Create a team", and a team made from it is the scope
+at once. The choice is kept per workspace on the device
+(`lib/platform/scope-store.ts`) and never selects tenancy. The website has no
+team selector: a deliberate mobile difference under FR-25, as the snapshot's
+windows are. The app's copy says team and flow, never project or automation;
+`audit:vocabulary` fails the build on either word in copy, and the code keeps
+the contract's names (24.11.7).
+
+**Signed out is the cover** (24.11.6): launch, sign-out, an ended session and a
+deleted account all land on the cover, which waits; "Get started" is the one way
+on, to Sign in. Signed in, the same screen is the splash and moves on by itself.
 
 ## Screen reads
 
 | Surface | Published operations / mapping |
 | --- | --- |
-| Sign in | `GET /v1/auth/providers`; providers only — no password or reset surface is drawn (owner, 2026-09-08). **One screen since 2026-10-02**: the website's words ("Sign in with …"), a Remember me toggle, and the Face ID question once after a remembered sign-in; Welcome, Sign up and the Onboarding tour are gone |
+| Sign in | `GET /v1/auth/providers`; providers only — no password or reset surface is drawn (owner, 2026-09-08). **One screen since 2026-10-02**: the website's words ("Sign in with …"), a Remember me toggle, and the Face ID question once after a remembered sign-in; Welcome, Sign up and the Onboarding tour are gone. Reached from the cover's "Get started" (24.11.6) |
 | Home | session + catalog + `run-stats?since=<local midnight>` + runs + pending approvals |
 | Flows/add (the catalog, "New") | workspace automation catalog and its server-supplied categories, plus subscriptions and projects — Added ✓ or Add per the scope looked at (24.9.3) |
 | Setup/configure | catalog `setup[]` and the matching subscription config |
-| Flows/detail | subscriptions + catalog + run stats; identity is subscription ID/template ID. Detail keeps the subscription (`runInput`, `triggerKind`, `templateVersion`) and its catalog entry for its actions; the webhook address is read when its dialog opens |
+| Flows/detail | subscriptions + catalog + run stats; identity is subscription ID/template ID. Detail keeps the subscription (`runInput`, `triggerKind`, `templateVersion`) and its catalog entry for its actions; the webhook address is read when its dialog opens. A removed flow is read with the removed list and drawn read-only, with "Add it again" (24.11.8). The Runs, Successes and Failures tiles open Activity for this flow and outcome (24.11.9) |
+| Flows/removed | `GET …/subscriptions?status=archived` (backend §12.1 #203), only the archived rows kept, within the scope; Flows shows them as one row with a count, and Settings links here (24.11.8) |
 | ~~Builder~~ | **Removed 2026-10-02** with Templates and Configure, on the owner's direction: the website has no builder, and FR-25 is parity with the website. Flow detail draws `pipeline[]` itself |
-| Activity/run detail | runs/list/detail joined to catalog/subscription identity |
+| Activity/run detail | runs/list/detail joined to catalog/subscription identity. Activity takes a flow and an outcome from a tile (24.11.9); a run of a removed flow says so. Run detail reads in the workspace it was opened in and leaves when the active one changes |
 | Approvals | pending approvals joined through subscription → template → pipeline step |
 | Notifications | pending approvals plus failed runs; explicitly an in-app composition |
 | Settings | session/workspace, provider registry, and workspace connections; the workspace switcher reads the workspace collection. The plan's totals left with the Solutions tab (24.9.5) |
 | Organization | the workspace collection; for an owner or admin of the active organization, its members, domains and join requests; for someone in no organization, `organization-discovery` |
-| Projects / project | the workspace collection and each workspace's projects; one project read in its own workspace; for a team project, its memberships, team grants and the visible teams, plus the workspace's members for its owner or admin |
-| Teams / team | the workspace collection and the organization's visible teams; for a team's manager or an owner or admin, its memberships and the workspace's members |
-| Home, Flows, add, setup, Activity | also the active workspace's projects — the scope control (24.9.2), the scope a flow is added to, and the label each flow carries |
+| Teams / team (24.11.7) | the workspace collection, each workspace's teams (`…/projects`), and each organization's directory (`…/project-directory`, backend 24.11.4); one team read in its own workspace; in an organization its memberships, and for its owner or admin — or the organization's — the workspace's members and the requests to join (`…/access-requests`) |
+| Home, Flows, add, setup, Activity | also the active workspace's teams — the scope control (24.9.2), the scope a flow is added to, and the label each flow carries |
 | Billing | the workspace collection for the role; for an owner or admin, `/v1/plans` and the workspace's billing; read again when the app returns to the foreground on iOS |
-| Account | the linked sign-in identities and the login providers |
+| Account | the linked sign-in identities and the login providers; Unlink is `POST /v1/auth/native/identities/{provider}/unlink` with the device's refresh token (backend 24.11.1) |
 | Data export | the workspace collection for the role; the bounded export on request; a complete export started, followed every 2 s (doubling after a failed read, three allowed), and its link read again at the moment of the download |
 | Support | nothing read; the contact request is sent on the public operation; Privacy and Terms open on the website |
 
@@ -218,18 +227,16 @@ review" — the held queue — also list running, queued and cancelled runs.
     organization joins or asks to join one discovery found, and can cancel that
     request; on a company domain they can set one up — created once, then its
     domain claimed, a failed claim retried alone.
-  - Projects: create — personal in the personal workspace, team only in the
-    active organization it was loaded as; delete (archive) by its owner;
-    leave — typing DELETE from the project's Leave, or confirming from one's
-    own row, as the website does; add members, change a role (an admin only a
-    member's), remove; give a team a role, never ownership, and take it away.
-    Each acts on the project's own workspace, which can be other than the
-    active one.
-  - Teams: create (two characters at least), by an owner or admin; add
-    someone or change their role, one operation; remove someone — a manager
-    who removes themselves leaves the team's screen.
-  - An automation is added to the whole workspace or to a project, the scopes
-    it is not in yet, as the website's Add offers.
+  - Teams (24.11.7; projects in the contract): create — in the organization
+    or personal workspace picked, of a kind from the list or the person's own
+    words, 2 to 60 characters; delete (archive) by its owner, which leaves its
+    flows running; leave — typing DELETE, or confirming from one's own row; add
+    members, change a role (an admin only a member's), remove; ask to join a
+    team in the directory and withdraw the request; approve or deny a request,
+    by the team's owner or admin or the organization's. Each acts on the team's
+    own workspace, which can be other than the active one.
+  - A flow is added to the whole workspace or to a team, the scopes it is not
+    in yet, as the website's Add offers.
 - Round 16 (24.6), each the website's operation, words and gating:
   - Billing (ADR-0032 option B): every platform shows the plan, its price
     (the provider's minor units, formatted only for a currency whose exponent
@@ -301,8 +308,10 @@ mobile-only shape.
   no card field, no in-app purchase, no price the platform did not state.
   Billing states the plan; the solutions total left Settings with the Solutions
   tab (24.9.5).
-- A removed (archived) subscription is absent everywhere: not a flow, not Added,
-  not paused, not reused by Add (`withoutArchived`, the website's rule). The
+- A removed (archived) subscription is absent everywhere but Removed flows: not a
+  flow, not Added, not paused, not reused by Add (`withoutArchived`, the website's
+  rule); Removed reads it by name (`status=archived`, 24.11.8) and shows it
+  read-only. The
   catalog's `subscribed` is not used for Added, because it still counts an
   archived row (`DESIGN-GAPS.md`, Round 16). Home alone keeps it, to ask whether
   the workspace has set anything up at all.
