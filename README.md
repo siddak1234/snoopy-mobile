@@ -48,6 +48,8 @@ The individual architecture gates are:
 
 - `audit:credentials`: no pinned demo credentials.
 - `audit:tokens`: no raw colour literals outside the theme.
+- `audit:vocabulary`: no copy says "project" or "automation" — the app says
+  team and flow; the code keeps the contract's names (24.11.7).
 - `audit:fixtures`: zero prototype fixture data inside the runtime roots — both
   zero imports (static, dynamic, alias, side-effect and CommonJS forms, in every
   extension Metro resolves) and zero occurrences of the module itself. Design

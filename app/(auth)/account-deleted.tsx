@@ -11,7 +11,7 @@ import { useTheme } from '@/hooks/use-theme';
 /**
  * Where a deleted account lands (BUILD-PLAN 24.6.2) — the website's
  * `/account-deleted`, in its words. Signed out: this device has already let go
- * of the session.
+ * of the session, so "Continue" is the cover (24.11.6).
  */
 export default function AccountDeletedScreen() {
   const router = useRouter();
@@ -27,7 +27,7 @@ export default function AccountDeletedScreen() {
         <Text style={[styles.small, { color: palette.neutral[400] }]}>
           You can come back anytime — your first sign-in creates a new account.
         </Text>
-        <PillButton label="Continue to Autom8x" variant="primary" height={46} onPress={() => router.replace('/(auth)/login')} />
+        <PillButton label="Continue to Autom8x" variant="primary" height={46} onPress={() => router.replace('/')} />
       </SurfaceCard>
     </View>
   );

@@ -127,6 +127,36 @@ export function readSubscriptions(workspaceId: string): Promise<{ subscriptions:
   );
 }
 
+/**
+ * The removed (archived) flows (BUILD-PLAN 24.11.8, backend §12.1 #203), asked
+ * for by name: the default list never holds them. A platform from before the
+ * SEVENTEENTH promotion ignores the filter and answers the live list, so only
+ * the rows that ARE archived are kept — a live flow is never shown as removed.
+ * Kept under the subscriptions key, so whatever re-reads the list (adding,
+ * removing, pausing a flow) re-reads this too.
+ */
+export function readRemovedSubscriptions(workspaceId: string): Promise<{ subscriptions: Subscription[] }> {
+  return shared(workspaceId, 'subscriptions:archived', 'volatile', async () => {
+    const answer = await platformOperation(
+      `/v1/workspaces/${workspaceId}/subscriptions?status=archived`,
+      ({ automations }, signal) =>
+        automations.GET('/v1/workspaces/{workspaceId}/subscriptions', {
+          params: { path: { workspaceId }, query: { status: 'archived' } },
+          signal,
+        }),
+    );
+    return { subscriptions: answer.subscriptions.filter((subscription) => subscription.status === 'archived') };
+  });
+}
+
+/**
+ * The removed flows where a screen only notes them (a count, a row's word):
+ * not reachable is none, rather than the screen failing on its secondary part.
+ */
+export function readRemovedSubscriptionsOrNone(workspaceId: string): Promise<{ subscriptions: Subscription[] }> {
+  return readRemovedSubscriptions(workspaceId).catch(() => ({ subscriptions: [] }));
+}
+
 export type RunDetail = components['schemas']['RunDetail'];
 
 /**

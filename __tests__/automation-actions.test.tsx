@@ -196,7 +196,7 @@ describe('Run (24.4.1, ADR-0030)', () => {
     await pressLast('Start run');
     expect(await screen.findByText('The run was not started. Check each value and try again.')).toBeTruthy();
     await pressLast('Start run');
-    expect(await screen.findByText('This automation is not live, so it cannot run.')).toBeTruthy();
+    expect(await screen.findByText('This flow is not live, so it cannot run.')).toBeTruthy();
   });
 
   it('uploads a chosen file, waits for it, sends only its id — and empties it when the platform no longer takes it', async () => {
@@ -262,7 +262,7 @@ describe('Move to a newer version (24.4.1, backend §12.1 #126)', () => {
     await fireEvent.press(screen.getByText('Move to v2'));
     await pressLast('Move to v2');
     expect(
-      await screen.findByText('A run of this automation is still going. Wait for it to finish, then move.'),
+      await screen.findByText('A run of this flow is still going. Wait for it to finish, then move.'),
     ).toBeTruthy();
     expect(callbacks.onChanged).not.toHaveBeenCalled();
   });
@@ -348,7 +348,9 @@ describe('Webhook address (24.4.1, backend §12.1 #91, #109)', () => {
     await renderActions({ sub: subscription({ triggerKind: 'webhook' }) });
 
     await fireEvent.press(screen.getByTestId('manage-webhook'));
-    expect(await screen.findByText('This automation has no address yet.')).toBeTruthy();
+    expect(await screen.findByText('This flow has no address yet.')).toBeTruthy();
+    // What the address is for, first (owner, build 7; 24.11.9).
+    expect(screen.getByText(/^Where a service sends the events that start this flow — /u)).toBeTruthy();
     await fireEvent.press(screen.getByText('Create address'));
     expect(await screen.findByText('whsec_shown_once')).toBeTruthy();
     expect(screen.getByText('Secret — shown this once. Copy it now.')).toBeTruthy();

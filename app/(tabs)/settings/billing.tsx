@@ -23,7 +23,7 @@ import { administers } from '@/lib/view/roles';
 
 /** Capabilities with words; a name without them is not printed (backend §12.1 #163). */
 const CAPABILITY: Record<string, string> = {
-  'automation.subscribe': 'Automations',
+  'automation.subscribe': 'Flows',
   'workspace.rate': 'Requests per minute',
 };
 

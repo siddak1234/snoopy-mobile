@@ -101,7 +101,9 @@ export function WebhookAddressDialog({
       // when it answers, and the new one exists only in that answer.
       onRequestClose={issuing ? () => undefined : onClose}
       title="Webhook address"
-      body="Give this address and secret to the service that sends the events. It sends the secret as the x-autom8x-webhook-secret header."
+      // One sentence on what it is for (owner, build 7; 24.11.9): only a
+      // webhook-started flow has one, and the row that opens this says so too.
+      body="Where a service sends the events that start this flow — give it this address and the secret, which it sends as the x-autom8x-webhook-secret header."
       actions={
         <>
           <DialogButton label="Close" disabled={issuing} onPress={onClose} />
@@ -143,7 +145,7 @@ export function WebhookAddressDialog({
           </Text>
         </View>
       ) : null}
-      {endpoint === null ? <DialogText>This automation has no address yet.</DialogText> : null}
+      {endpoint === null ? <DialogText>This flow has no address yet.</DialogText> : null}
       {endpoint ? (
         <Text style={[styles.label, muted]}>
           A new secret keeps the address and stops the old secret at once.

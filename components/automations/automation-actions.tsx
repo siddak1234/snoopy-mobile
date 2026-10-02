@@ -59,7 +59,7 @@ export function AutomationActions({
   entry: CatalogEntry | undefined;
   /** Whether it is live now, as the screen shows it. */
   live: boolean;
-  /** Where it applies, as the list labels it ("Project: Finance"); absent without projects. */
+  /** Where it applies, as the list labels it ("Team: Finance"); absent without teams. */
   scope?: string;
   shownWorkspaceId: string | null;
   canAdminister: boolean;
@@ -214,7 +214,7 @@ export function AutomationActions({
         testID="remove-dialog"
         onRequestClose={removing ? () => undefined : close}
         title={`Remove ${name}?`}
-        body={`It stops and leaves ${inProject ? "this project's" : 'your'} flows. Its runs stay in Activity, and you can add it again later.`}
+        body={`It stops and leaves ${inProject ? "this team's" : 'your'} flows. Its runs stay in Activity, and you can add it again later.`}
         actions={
           <>
             <DialogButton label="Cancel" disabled={removing} onPress={close} />

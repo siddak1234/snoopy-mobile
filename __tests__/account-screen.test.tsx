@@ -9,7 +9,7 @@ jest.mock('@/lib/platform/session-store', () => ({
 }));
 jest.mock('@/lib/platform/identity-link', () => ({ linkIdentity: jest.fn() }));
 
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import React from 'react';
 
 import AccountScreen from '@/app/(tabs)/settings/account';
@@ -146,5 +146,56 @@ describe('Deleting the account (24.6.2, ADR-0028)', () => {
     expect(await screen.findByText(DELETION_WORDS.expired)).toBeTruthy();
     expect(screen.getByText('Sign in again')).toBeTruthy();
     expect(screen.queryByText('Try again')).toBeNull();
+  });
+});
+
+describe('Unlinking a sign-in account (backend 24.11.1)', () => {
+  function routeLinked() {
+    const fake = fakePlatform(platformOperation);
+    fake.always('GET /v1/auth/identities', {
+      identities: [
+        { provider: 'google', primary: true },
+        { provider: 'apple', primary: false },
+      ],
+    });
+    fake.always('GET /v1/auth/providers', {
+      providers: [
+        { id: 'google', label: 'Google' },
+        { id: 'apple', label: 'Apple' },
+      ],
+      passwordLoginEnabled: false,
+      magicLinkLoginEnabled: false,
+    });
+    return fake;
+  }
+
+  it('offers Unlink on a linked account and never on the primary; confirms; sends the refresh token; re-reads', async () => {
+    const fake = routeLinked();
+    fake.always('POST /v1/auth/native/identities/{provider}/unlink', {
+      identities: [{ provider: 'google', primary: true }],
+    });
+    await renderWithProviders(<AccountScreen />, session());
+    expect(await screen.findByText('Primary')).toBeTruthy();
+    expect(screen.queryByTestId('unlink-google')).toBeNull();
+    const reads = fake.to('GET /v1/auth/identities').length;
+    await fireEvent.press(screen.getByTestId('unlink-apple'));
+    expect(await screen.findByText('Unlink Apple?')).toBeTruthy();
+    await fireEvent.press(within(screen.getByTestId('unlink-dialog')).getByText('Unlink'));
+    await waitFor(() => expect(fake.to('POST /v1/auth/native/identities/{provider}/unlink').length).toBe(1));
+    const sent = fake.to('POST /v1/auth/native/identities/{provider}/unlink')[0];
+    expect(sent?.values).toEqual({ provider: 'apple' });
+    expect(sent?.body).toEqual({ refreshToken: 'refresh-1' });
+    await waitFor(() => expect(fake.to('GET /v1/auth/identities').length).toBe(reads + 1));
+  });
+
+  it("shows the platform's sentence when an unlink is refused", async () => {
+    const fake = routeLinked();
+    fake.always('POST /v1/auth/native/identities/{provider}/unlink', () => {
+      throw new PlatformError('The last sign-in account stays linked', 400, 'BAD_REQUEST', { reason: 'last' });
+    });
+    await renderWithProviders(<AccountScreen />, session());
+    await fireEvent.press(await screen.findByTestId('unlink-apple'));
+    await fireEvent.press(within(await screen.findByTestId('unlink-dialog')).getByText('Unlink'));
+    expect(await screen.findByText('The last sign-in account stays linked')).toBeTruthy();
   });
 });
