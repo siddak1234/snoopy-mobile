@@ -20,7 +20,7 @@ import { useTheme } from '@/hooks/use-theme';
 
 export default function SolutionsScreen() {
   const { palette } = useTheme();
-  const { isActive, setActive, totals } = useSolutions();
+  const { isActive, totals } = useSolutions();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [category, setCategory] = useState('All');

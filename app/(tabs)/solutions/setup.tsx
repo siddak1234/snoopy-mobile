@@ -119,9 +119,11 @@ export default function SetupScreen() {
   const { entry, providers, projects, connected } = resource.data;
   // Step 1 is the accounts the automation needs, when it needs any (24.7.3
   // attempt 4, feedback #5: every step numbered 1…N, connections included). The
-  // entry publishes them since 2026-10-02; a subscription's `unmetConnections`
-  // still decides whether Activate may proceed.
-  const required = entry.requiredConnections;
+  // entry publishes them since 2026-10-02. A platform from before that date —
+  // production until the SEVENTEENTH promotion — sends the entry without the
+  // field: then no step is drawn, and a subscription's `unmetConnections` still
+  // refuses an activation that lacks an account.
+  const required = entry.requiredConnections ?? [];
   const sectionOffset = required.length > 0 ? 1 : 0;
   const scopes = [
     { value: '', label: 'Whole workspace' },
