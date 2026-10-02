@@ -271,18 +271,18 @@ describe('Move to a newer version (24.4.1, backend §12.1 #126)', () => {
 describe('Archive (24.4.1, backend §12.1 #92)', () => {
   it('is reached only through its one-way confirmation', async () => {
     await renderActions();
-    await fireEvent.press(screen.getByTestId('manage-archive'));
-    expect(await screen.findByText('Archive Invoice triage?')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('remove-flow'));
+    expect(await screen.findByText('Remove Invoice triage?')).toBeTruthy();
     expect(
       screen.getByText(
-        'It stops running and gives its plan slot back. This cannot be undone: to use it again, add it afresh. Runs it already made stay in Activity.',
+        'It stops and leaves your flows. Its runs stay in Activity, and you can add it again later.',
       ),
     ).toBeTruthy();
     await fireEvent.press(screen.getByText('Cancel'));
     expect(sent).toHaveLength(0);
 
-    await fireEvent.press(screen.getByTestId('manage-archive'));
-    await pressLast('Archive');
+    await fireEvent.press(screen.getByTestId('remove-flow'));
+    await pressLast('Remove');
     await waitFor(() => expect(callbacks.onArchived).toHaveBeenCalled());
     expect(sent).toEqual([expect.objectContaining({ method: 'PATCH', path: SUB_PATH, body: { status: 'archived' } })]);
   });
@@ -307,8 +307,8 @@ describe('Archive and the plan', () => {
     await fireEvent.press(screen.getByTestId('activate'));
     expect(screen.getByTestId('added')).toHaveTextContent('true');
 
-    await fireEvent.press(screen.getByTestId('manage-archive'));
-    await pressLast('Archive');
+    await fireEvent.press(screen.getByTestId('remove-flow'));
+    await pressLast('Remove');
     await waitFor(() => expect(callbacks.onArchived).toHaveBeenCalled());
     expect(screen.getByTestId('added')).toHaveTextContent('false');
   });
@@ -382,8 +382,8 @@ describe('Set up (24.4.1)', () => {
 describe('every action acts on the workspace the screen loaded (24.3.6)', () => {
   it('is refused in words, and sends nothing, once another workspace is active', async () => {
     await renderActions({ shown: 'another-workspace', entry: entry({ version: 2 }) });
-    await fireEvent.press(screen.getByTestId('manage-archive'));
-    await pressLast('Archive');
+    await fireEvent.press(screen.getByTestId('remove-flow'));
+    await pressLast('Remove');
     expect(await screen.findByText(WORKSPACE_CHANGED)).toBeTruthy();
     await fireEvent.press(screen.getByText('Cancel'));
 

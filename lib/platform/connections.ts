@@ -1,5 +1,6 @@
 import type { components } from '@/lib/generated/platform-contracts/connections';
 import { platformOperation } from './client';
+import { invalidateShared } from './snapshot';
 import { matchesNativeCallback, nativeRedirectUri, openSystemAuthSession } from './native-auth';
 import { PlatformNotConfiguredError } from './problem';
 
@@ -77,6 +78,7 @@ export async function connectOAuthProvider(
       signal,
     }),
   );
+  invalidateShared(workspaceId, ['connections', 'subscriptions']);
   return { status: 'connected', connection: completed.connection };
 }
 

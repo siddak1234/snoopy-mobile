@@ -8,7 +8,7 @@ import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
  * costs: it proves nothing about real navigation. What it does hold is the
  * component's own rendering — which is the whole of what a snapshot asserts.
  */
-const ROUTES = ['(home)', 'flows', 'solutions', 'activity', 'settings'];
+const ROUTES = ['(home)', 'flows', 'activity', 'settings'];
 
 export function makeTabBarProps(activeIndex = 0) {
   const navigation = {

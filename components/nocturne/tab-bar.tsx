@@ -9,19 +9,18 @@ import {
   Gear,
   House,
   Pulse,
-  Storefront,
   type Icon,
 } from 'phosphor-react-native';
 
 import { fonts, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-/** Route → tab config, in the design's order (Builder moved under Flows;
- *  the Solutions marketplace took its tab slot). */
+/** Route → tab config. Four tabs since 2026-10-02 (BUILD-PLAN 24.9.2): the
+ *  Solutions marketplace folded into Flows as its "New" step, on the owner's
+ *  word — one name for one thing. */
 const TABS: Record<string, { label: string; icon: Icon }> = {
   '(home)': { label: 'Home', icon: House },
   flows: { label: 'Flows', icon: FlowArrow },
-  solutions: { label: 'Solutions', icon: Storefront },
   activity: { label: 'Activity', icon: Pulse },
   settings: { label: 'Settings', icon: Gear },
 };

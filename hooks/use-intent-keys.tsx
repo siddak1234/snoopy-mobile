@@ -13,7 +13,7 @@ import { newIdempotencyKey } from '@/lib/platform/client';
  * first succeeded must not. `scope` separates intents on different things — one
  * per subscription, say — so pausing two automations never shares a key.
  *
- * This is the pattern `app/(tabs)/solutions/index.tsx` already wrote by hand
+ * This is the pattern the Solutions screen (now `app/(tabs)/flows/add.tsx`) wrote by hand
  * (`pauseKeys`), named once for the screens Round 16 adds.
  */
 export function useIntentKeys(prefix: string) {

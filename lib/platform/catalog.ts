@@ -1,6 +1,7 @@
 import type { components as automations } from '@/lib/generated/platform-contracts/automations';
 import type { components as connections } from '@/lib/generated/platform-contracts/connections';
 import { platformOperation } from './client';
+import { GLOBAL_SCOPE, shared } from './snapshot';
 
 /**
  * The reads the marketplace, template and connection screens are built on.
@@ -25,21 +26,25 @@ export type ConnectionProvider = connections['schemas']['ConnectionProvider'];
  * hardcoded list.
  */
 export function readCatalog(workspaceId: string): Promise<CatalogResponse> {
-  return platformOperation(`/v1/workspaces/${workspaceId}/automations`, ({ automations }, signal) =>
-    automations.GET('/v1/workspaces/{workspaceId}/automations', {
-      params: { path: { workspaceId } },
-      signal,
-    }),
+  return shared(workspaceId, 'catalog', 'settled', () =>
+    platformOperation(`/v1/workspaces/${workspaceId}/automations`, ({ automations }, signal) =>
+      automations.GET('/v1/workspaces/{workspaceId}/automations', {
+        params: { path: { workspaceId } },
+        signal,
+      }),
+    ),
   );
 }
 
 /** Every connection the workspace holds, live or broken. */
 export function readConnections(workspaceId: string): Promise<{ connections: Connection[] }> {
-  return platformOperation(`/v1/workspaces/${workspaceId}/connections`, ({ connections }, signal) =>
-    connections.GET('/v1/workspaces/{workspaceId}/connections', {
-      params: { path: { workspaceId } },
-      signal,
-    }),
+  return shared(workspaceId, 'connections', 'volatile', () =>
+    platformOperation(`/v1/workspaces/${workspaceId}/connections`, ({ connections }, signal) =>
+      connections.GET('/v1/workspaces/{workspaceId}/connections', {
+        params: { path: { workspaceId } },
+        signal,
+      }),
+    ),
   );
 }
 
@@ -51,7 +56,9 @@ export function readConnections(workspaceId: string): Promise<{ connections: Con
  * "Slack · Not connected" row has no source without this.
  */
 export function readConnectionProviders(): Promise<{ providers: ConnectionProvider[] }> {
-  return platformOperation('/v1/connections/providers', ({ connections }, signal) =>
-    connections.GET('/v1/connections/providers', { signal }),
+  return shared(GLOBAL_SCOPE, 'providers', 'settled', () =>
+    platformOperation('/v1/connections/providers', ({ connections }, signal) =>
+      connections.GET('/v1/connections/providers', { signal }),
+    ),
   );
 }

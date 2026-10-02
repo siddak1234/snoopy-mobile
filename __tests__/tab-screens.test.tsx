@@ -9,8 +9,8 @@ import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import HomeScreen from '@/app/(tabs)/(home)/index';
 import RunDetailScreen from '@/app/(tabs)/(home)/run';
 import SettingsScreen from '@/app/(tabs)/settings';
-import SetupScreen from '@/app/(tabs)/solutions/setup';
-import SolutionsScreen from '@/app/(tabs)/solutions/index';
+import SetupScreen from '@/app/(tabs)/flows/setup';
+import SolutionsScreen from '@/app/(tabs)/flows/add';
 import NotificationsScreen from '@/app/(tabs)/(home)/notifications';
 import { nocturneDark, nocturneLight } from '@/constants/theme';
 import {
@@ -27,6 +27,7 @@ import {
   subscriptionsPayload,
 } from '@/test/platform';
 import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
+import { resetSnapshot } from '@/lib/platform/snapshot';
 
 jest.mock('@/lib/platform/client', () => ({
   platformOperation: jest.fn(),
@@ -66,10 +67,10 @@ describe('Home dashboard', () => {
     const { getByText, getAllByText, queryByText } = await renderWithProviders(<HomeScreen />, signedInSession);
     await fireEvent.press(getByText('3 items need your review'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity/approvals');
-    await fireEvent.press(getByText('Add a solution'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/solutions');
-    await fireEvent.press(getByText('Solutions'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/solutions');
+    await fireEvent.press(getByText('Add a flow'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/add');
+    await fireEvent.press(getByText('Flows'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows');
     await fireEvent.press(getByText('See all'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity');
   });
@@ -102,53 +103,44 @@ describe('Home approvals banner (feedback #5, #7)', () => {
   });
 });
 
-describe('Solutions marketplace', () => {
+describe('Add a flow — the catalog inside Flows (24.9.3)', () => {
   const solutionSubscriptions = planSubscriptionsPayload().subscriptions;
 
   beforeEach(() => {
     routePlatform(platformOperation, { '/subscriptions': planSubscriptionsPayload() });
   });
 
-  it('lists the six solutions with prices and the live plan total', async () => {
+  it('lists the catalog with prices, Added ✓ for what this scope holds and Add for the rest — no plan banner', async () => {
     const { getByText, getAllByText, queryByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
-    // No plan base: entitlements.plans has no price column and only `free` is
-    // seeded, so the total is the solutions total. Backend answer, 2026-08-17.
-    expect(getByText('Solutions · $87/mo')).toBeTruthy();
-    expect(getByText('3 active · plan and billing')).toBeTruthy();
+    expect(await screen.findByText('Add a flow')).toBeTruthy();
+    expect(getByText('Prebuilt flows, set up in minutes. Adding to your workspace.')).toBeTruthy();
     expect(getAllByText('Weekly KPI digest').length).toBeGreaterThan(0);
     expect(getAllByText('Finance · $39/mo').length).toBeGreaterThan(0);
     expect(getAllByText('Ops · $9/mo').length).toBeGreaterThan(0);
-    expect(getAllByText('Added ✓').length).toBeGreaterThan(0);
+    expect(getAllByText('Added ✓')).toHaveLength(3);
     expect(getAllByText('Add').length).toBeGreaterThan(0);
+    expect(queryByText(/plan and billing/u)).toBeNull();
+    expect(queryByText(/Solutions · \$/u)).toBeNull();
   });
 
-  it('Add opens the Setup wizard with the solution index (design v3)', async () => {
-    const { getAllByText, queryByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
-    // First not-added solution is Weekly KPI digest (index 3).
+  it('Add opens Setup with the template, for the scope being looked at', async () => {
+    const { getAllByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
     await fireEvent.press(getAllByText('Add')[0]);
     expect(mockRouter.push).toHaveBeenCalledWith({
-      pathname: '/(tabs)/solutions/setup',
-      // Carries BOTH: templateId is the real identity, and index keeps the
-      // prototype path working while an unconfigured build has no catalog.
+      pathname: '/(tabs)/flows/setup',
       params: expect.objectContaining({ template: expect.any(String) }),
     });
   });
 
-  it('Added opens the workflow, where Pause and Archive live — no pause dialog here (feedback #3)', async () => {
+  it('Added ✓ is not a button: the card opens the flow, where Pause and Remove live (feedback #3, #5)', async () => {
     const { getAllByText, queryByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
     await fireEvent.press(getAllByText('Added ✓')[0]);
     expect(queryByText('Pause Invoice triage?')).toBeNull();
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'solution-0' } });
   });
 
-  it('opens Billing from the plan banner (feedback #2)', async () => {
-    const { getByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
-    await fireEvent.press(getByText('3 active · plan and billing'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/billing');
-  });
-
-  it('filters the marketplace by category', async () => {
-    const { getByText, queryByText, getAllByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
+  it('filters the catalog by category', async () => {
+    const { getByText, queryByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
     await fireEvent.press(getByText('Finance'));
     expect(getByText('Invoice triage')).toBeTruthy();
     expect(getByText('Receipt OCR')).toBeTruthy();
@@ -159,15 +151,15 @@ describe('Solutions marketplace', () => {
     expect(queryByText('Invoice triage')).toBeNull();
   });
 
-  it('opens the correct workflow from a filtered list', async () => {
+  it('opens the correct flow from a filtered list', async () => {
     const { getByText, getAllByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
     await fireEvent.press(getByText('Finance'));
-    // Finance shows Invoice triage first; its workflow is subscription solution-0.
+    // Finance shows Invoice triage first; its flow is subscription solution-0.
     await fireEvent.press(getAllByText('Added ✓')[0]);
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'solution-0' } });
   });
 
-  it('answers Added from the subscriptions the workspace still has — an archived one is gone', async () => {
+  it('answers Added from the subscriptions the workspace still has — a removed one is gone', async () => {
     // The catalog still flags tpl.0–2 `subscribed`: its flag counts an archived
     // row too. The list is the answer, and there every one of them is archived.
     routePlatform(platformOperation, {
@@ -175,31 +167,24 @@ describe('Solutions marketplace', () => {
         subscriptions: solutionSubscriptions.map((row) => ({ ...row, status: 'archived' })),
       },
     });
-    const { queryAllByText, getByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
+    const { queryAllByText, getAllByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
+    expect(await screen.findByText('Add a flow')).toBeTruthy();
     expect(queryAllByText('Added ✓')).toHaveLength(0);
-    expect(getByText('0 active · plan and billing')).toBeTruthy();
-    expect(getByText('Solutions · $0/mo')).toBeTruthy();
+    expect(getAllByText('Add').length).toBeGreaterThan(0);
   });
 
-  it('offers Add to… for an added automation wherever a scope it is not in remains (18.6.2)', async () => {
-    const view = await renderWithProviders(<SolutionsScreen />, signedInSession);
-    expect(await screen.findAllByText('Added ✓')).toHaveLength(3);
-    expect(screen.queryByText('Add to…')).toBeNull();
-    await view.unmount();
-
-    routePlatform(platformOperation, { '/subscriptions': planSubscriptionsPayload(), '/projects': projectsPayload('Finance') });
-    const withProject = await renderWithProviders(<SolutionsScreen />, signedInSession);
-    await fireEvent.press(await screen.findByTestId('add-elsewhere-tpl.0'));
-    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/solutions/setup', params: { template: 'tpl.0' } });
-    await withProject.unmount();
-
-    // Added to a project alone: the whole workspace is still free, projects or not.
+  it('says where a flow is already added, and offers Add for the scope it is not in yet (18.6.2)', async () => {
+    // Added to a project alone: the whole workspace — the scope looked at — is still free.
     const inProjectOnly = { ...planSubscriptionsPayload().subscriptions[0]!, projectId: 'project-9' };
-    routePlatform(platformOperation, { '/subscriptions': { subscriptions: [inProjectOnly] } });
+    routePlatform(platformOperation, {
+      '/subscriptions': { subscriptions: [inProjectOnly] },
+      '/projects': projectsPayload('Finance'),
+    });
     await renderWithProviders(<SolutionsScreen />, signedInSession);
-    expect(await screen.findByTestId('add-elsewhere-tpl.0')).toBeTruthy();
+    expect((await screen.findByTestId('added-elsewhere-tpl.0')).props.children.join('')).toMatch(/^Added in /u);
+    expect(screen.getByTestId('add-tpl.0')).toBeTruthy();
+    expect(screen.queryByTestId('added-tpl.0')).toBeNull();
   });
-
 });
 
 describe('Run detail', () => {
@@ -217,7 +202,7 @@ describe('Run detail', () => {
   it('routes to the workflow, which is now ITS workflow', async () => {
     setMockParams({ runId: 'run-1' });
     await renderWithProviders(<RunDetailScreen />, signedInSession);
-    await fireEvent.press(await screen.findByText('View workflow'));
+    await fireEvent.press(await screen.findByText('View flow'));
     expect(mockRouter.push).toHaveBeenCalled();
   });
 });
@@ -243,7 +228,7 @@ describe('Workflows', () => {
       params: { flow: 'invoice' },
     });
     await fireEvent.press(getByText('New'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/solutions');
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/add');
     expect(mockRouter.push).not.toHaveBeenCalledWith(expect.stringContaining('templates'));
   });
 });
@@ -256,12 +241,12 @@ describe('Workflows search (design v4)', () => {
       <FlowsScreen />,
       signedInSession,
     );
-    await fireEvent.changeText(getByPlaceholderText('Search workflows'), 'invoice');
+    await fireEvent.changeText(getByPlaceholderText('Search flows'), 'invoice');
     expect(getByText('Invoice triage')).toBeTruthy();
     expect(queryByText('Email triage')).toBeNull();
-    await fireEvent.changeText(getByPlaceholderText('Search workflows'), 'zzz');
-    expect(getByText('No workflows match "zzz".')).toBeTruthy();
-    await fireEvent.changeText(getByPlaceholderText('Search workflows'), '');
+    await fireEvent.changeText(getByPlaceholderText('Search flows'), 'zzz');
+    expect(getByText('No flows match "zzz".')).toBeTruthy();
+    await fireEvent.changeText(getByPlaceholderText('Search flows'), '');
     expect(getByText('Email triage')).toBeTruthy();
   });
 });
@@ -338,18 +323,21 @@ describe('Workflow detail', () => {
     expect(screen.getByText('Draft')).toBeTruthy();
   });
 
-  it('offers what the website offers for this workflow: Set up for its settings, and Archive', async () => {
+  it('offers what the website offers for this flow: Set up for its settings, and Remove flow last (24.9.4)', async () => {
     await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
     expect(await screen.findByTestId('manage-setup')).toBeTruthy();
-    expect(screen.getByTestId('manage-archive')).toBeTruthy();
+    expect(screen.getByTestId('remove-flow')).toBeTruthy();
+    expect(screen.getByText('Remove flow')).toBeTruthy();
     // Its pinned version declares no run input, so there is no form to offer.
     expect(screen.queryByText('Run')).toBeNull();
   });
 
-  it('returns to the Flows list after Archive, however detail was reached', async () => {
+  it('returns to the Flows list after Remove, however the flow was reached', async () => {
     await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
-    await fireEvent.press(await screen.findByTestId('manage-archive'));
-    const buttons = await screen.findAllByText('Archive');
+    await fireEvent.press(await screen.findByTestId('remove-flow'));
+    expect(await screen.findByText('Remove Invoice triage?')).toBeTruthy();
+    expect(screen.getByText('It stops and leaves your flows. Its runs stay in Activity, and you can add it again later.')).toBeTruthy();
+    const buttons = await screen.findAllByText('Remove');
     await fireEvent.press(buttons[buttons.length - 1]!);
     await waitFor(() => expect(mockRouter.dismissTo).toHaveBeenCalledWith('/(tabs)/flows'));
   });
@@ -691,16 +679,19 @@ describe('Settings & security', () => {
     expect(getByText('In app')).toBeTruthy();
   });
 
-  it('shows plan & billing with the derived totals and opens Solutions', async () => {
-    routePlatform(platformOperation, { '/subscriptions': planSubscriptionsPayload() });
-    const { getByText, getAllByText, queryByText } = await renderWithProviders(<SettingsScreen />, signedInSession);
-    expect(getByText('Solutions total')).toBeTruthy();
-    // No plan base — the total is the solutions total (see Solutions above).
-    expect(getByText('$87/mo')).toBeTruthy();
-    expect(getByText('3 active · $87/mo')).toBeTruthy();
+  it('shows Billing without the plan totals, and reads only what it draws (24.9.5)', async () => {
+    const { getByText, queryByText } = await renderWithProviders(<SettingsScreen />, signedInSession);
+    expect(await screen.findByText('Billing')).toBeTruthy();
+    expect(queryByText('Solutions total')).toBeNull();
+    expect(queryByText('Manage solutions')).toBeNull();
     expect(queryByText('Visa ···· 4242')).toBeNull();
-    await fireEvent.press(getByText('Manage solutions'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/solutions');
+    expect(getByText('Export my data')).toBeTruthy();
+    // Providers and the workspace's connections: no catalog, no subscriptions.
+    const paths: string[] = platformOperation.mock.calls.map(([path]: [string]) => path);
+    expect(paths.some((path) => path.includes('/automations'))).toBe(false);
+    expect(paths.some((path) => path.includes('/subscriptions'))).toBe(false);
+    await fireEvent.press(getByText('Billing'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/billing');
   });
 
   it('switches the live theme from the appearance control', async () => {
@@ -809,11 +800,11 @@ describe('Home data states (design sHomeLoad/Empty/Err)', () => {
     expect(await screen.findByText('Nothing automated. Yet.')).toBeTruthy();
     expect(
       getByText(
-        'Add a prebuilt solution and your first agent is running in minutes — no building required.',
+        'Add a prebuilt flow and your first agent is running in minutes — no building required.',
       ),
     ).toBeTruthy();
-    await fireEvent.press(getByText('Browse solutions'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/solutions');
+    await fireEvent.press(getByText('Add a flow'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/add');
     // The onboarding tour went with the sign-up screen (2026-10-02): one way in.
     expect(mockRouter.push).not.toHaveBeenCalledWith('/(auth)/onboarding');
   });
@@ -923,7 +914,7 @@ describe('Setup wizard (design sSetup)', () => {
       expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'fresh-0' } }),
     );
     // Solutions is left at its root first, so Back never shows Setup again.
-    expect(mockRouter.dismissTo).toHaveBeenCalledWith('/(tabs)/solutions');
+    expect(mockRouter.dismissTo).toHaveBeenCalledWith('/(tabs)/flows');
     const paths: string[] = platformOperation.mock.calls.map(([path]: [string]) => path);
     expect(paths.some((path) => path.endsWith('/subscriptions/archived-0'))).toBe(false);
   });

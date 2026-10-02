@@ -1,6 +1,6 @@
-import { Archive, CaretRight, PlayCircle, SlidersHorizontal, WebhooksLogo, type Icon } from 'phosphor-react-native';
+import { CaretRight, PlayCircle, SlidersHorizontal, Trash, WebhooksLogo, type Icon } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { MoveVersion } from '@/components/automations/move-version';
 import { RunDialog } from '@/components/automations/run-dialog';
@@ -11,6 +11,7 @@ import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { SettingsRow } from '@/components/settings/settings-row';
+import { fonts, layout, status } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
@@ -19,10 +20,10 @@ import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
 import { updateSubscription, type Subscription } from '@/lib/platform/automations';
 import type { CatalogEntry } from '@/lib/platform/catalog';
 
-type Open = 'run' | 'setup' | 'webhook' | 'archive' | null;
+type Open = 'run' | 'setup' | 'webhook' | 'remove' | null;
 
 /**
- * What a person can do with one workflow, on the website's operations and by
+ * What a person can do with one flow, on the website's operations and by
  * its rules (BUILD-PLAN 24.4.1, `snoopy/app/account/automations`):
  *
  * - **Run** only where it can be honest: live, available, and a pinned version
@@ -31,8 +32,10 @@ type Open = 'run' | 'setup' | 'webhook' | 'archive' | null;
  * - **Set up** when the automation declares settings.
  * - **Move to vN** when the catalog has a newer version than the one pinned.
  * - **Webhook address** for a webhook-started version, owner or admin only.
- * - **Archive**, one-way, behind its confirmation — its own action, so the
- *   irreversible transition is reachable no other way.
+ * - **Remove flow**, at the bottom and in red (BUILD-PLAN 24.9.4, the owner's
+ *   feedback 5 of 2026-10-02): the platform's one-way `archived`, behind its
+ *   confirmation — it stops, leaves the list, keeps its runs in Activity, and
+ *   the flow can be added again later. Pause keeps it listed.
  *
  * Every action acts on the workspace the screen loaded (`shownWorkspaceId`).
  * `statusRow` is the screen's own Go live / Pause row, placed after Run.
@@ -42,6 +45,7 @@ export function AutomationActions({
   subscription,
   entry,
   live,
+  scope,
   shownWorkspaceId,
   canAdminister,
   statusRow,
@@ -55,6 +59,8 @@ export function AutomationActions({
   entry: CatalogEntry | undefined;
   /** Whether it is live now, as the screen shows it. */
   live: boolean;
+  /** Where it applies, as the list labels it ("Project: Finance"); absent without projects. */
+  scope?: string;
   shownWorkspaceId: string | null;
   canAdminister: boolean;
   statusRow: React.ReactNode;
@@ -67,8 +73,8 @@ export function AutomationActions({
   const { forget } = useSolutions();
   const archiveKeys = useIntentKeys('archive');
   const [open, setOpen] = useState<Open>(null);
-  const [archiving, setArchiving] = useState(false);
-  const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [removing, setRemoving] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
 
   const runInput = subscription.runInput ?? [];
   const canRun = live && runInput.length > 0 && entry?.available === true;
@@ -77,15 +83,15 @@ export function AutomationActions({
   const webhook = subscription.triggerKind === 'webhook' && canAdminister;
   const close = () => setOpen(null);
 
-  const archive = async () => {
-    if (archiving) return;
+  const remove = async () => {
+    if (removing) return;
     const workspaceId = workspaceIfShown(session, shownWorkspaceId);
     if (!workspaceId) {
-      setArchiveError(WORKSPACE_CHANGED);
+      setRemoveError(WORKSPACE_CHANGED);
       return;
     }
-    setArchiving(true);
-    setArchiveError(null);
+    setRemoving(true);
+    setRemoveError(null);
     try {
       await updateSubscription(workspaceId, subscription.id, { status: 'archived' }, archiveKeys.keyFor());
       archiveKeys.settle();
@@ -94,9 +100,9 @@ export function AutomationActions({
       setOpen(null);
       onArchived();
     } catch (caught) {
-      setArchiveError(refusalMessage(caught, {}, 'The automation was not archived.'));
+      setRemoveError(refusalMessage(caught, {}, 'The flow was not removed.'));
     } finally {
-      setArchiving(false);
+      setRemoving(false);
     }
   };
 
@@ -107,8 +113,9 @@ export function AutomationActions({
     ...(webhook
       ? [{ key: 'webhook', icon: WebhooksLogo, title: 'Webhook address', sub: 'Where a service sends the events that start it', open: 'webhook' as const }]
       : []),
-    { key: 'archive', icon: Archive, title: 'Archive', sub: 'Stop it for good and give its plan slot back', open: 'archive' },
   ];
+
+  const inProject = scope !== undefined && scope !== 'Whole workspace';
 
   return (
     <View style={styles.stack}>
@@ -134,26 +141,44 @@ export function AutomationActions({
           onMoved={onChanged}
         />
       ) : null}
-      <View>
-        <SectionLabel>MANAGE</SectionLabel>
-        <SurfaceCard style={styles.card}>
-          {rows.map((row, index) => (
-            <SettingsRow
-              key={row.key}
-              testID={`manage-${row.key}`}
-              icon={row.icon}
-              title={row.title}
-              sub={row.sub}
-              divider={index < rows.length - 1}
-              onPress={() => {
-                setArchiveError(null);
-                setOpen(row.open);
-              }}
-              right={<CaretRight size={15} color={palette.neutral[500]} />}
-            />
-          ))}
-        </SurfaceCard>
-      </View>
+      {rows.length > 0 ? (
+        <View>
+          <SectionLabel>MANAGE</SectionLabel>
+          <SurfaceCard style={styles.card}>
+            {rows.map((row, index) => (
+              <SettingsRow
+                key={row.key}
+                testID={`manage-${row.key}`}
+                icon={row.icon}
+                title={row.title}
+                sub={row.sub}
+                divider={index < rows.length - 1}
+                onPress={() => setOpen(row.open)}
+                right={<CaretRight size={15} color={palette.neutral[500]} />}
+              />
+            ))}
+          </SurfaceCard>
+        </View>
+      ) : null}
+
+      {/* Last on the page, in red: the one-way action, where a person scrolls
+          to find it rather than taps it by mistake (24.9.4). */}
+      <Pressable
+        testID="remove-flow"
+        accessibilityRole="button"
+        accessibilityLabel={`Remove ${name}`}
+        onPress={() => {
+          setRemoveError(null);
+          setOpen('remove');
+        }}
+        style={({ pressed }) => [
+          styles.remove,
+          { borderColor: status.err },
+          pressed && { backgroundColor: status.errCalloutBg },
+        ]}>
+        <Trash size={18} color={status.err} />
+        <Text style={[styles.removeLabel, { color: status.err }]}>Remove flow</Text>
+      </Pressable>
 
       {open === 'run' ? (
         <RunDialog
@@ -185,23 +210,23 @@ export function AutomationActions({
         <WebhookAddressDialog subscriptionId={subscription.id} shownWorkspaceId={shownWorkspaceId} onClose={close} />
       ) : null}
       <Dialog
-        visible={open === 'archive'}
-        testID="archive-dialog"
-        onRequestClose={archiving ? () => undefined : close}
-        title={`Archive ${name}?`}
-        body="It stops running and gives its plan slot back. This cannot be undone: to use it again, add it afresh. Runs it already made stay in Activity."
+        visible={open === 'remove'}
+        testID="remove-dialog"
+        onRequestClose={removing ? () => undefined : close}
+        title={`Remove ${name}?`}
+        body={`It stops and leaves ${inProject ? "this project's" : 'your'} flows. Its runs stay in Activity, and you can add it again later.`}
         actions={
           <>
-            <DialogButton label="Cancel" disabled={archiving} onPress={close} />
+            <DialogButton label="Cancel" disabled={removing} onPress={close} />
             <DialogButton
               tone="danger"
-              disabled={archiving}
-              onPress={archive}
-              label={archiving ? 'Archiving…' : 'Archive'}
+              disabled={removing}
+              onPress={remove}
+              label={removing ? 'Removing…' : 'Remove'}
             />
           </>
         }>
-        {archiveError ? <DialogText tone="error">{archiveError}</DialogText> : null}
+        {removeError ? <DialogText tone="error">{removeError}</DialogText> : null}
       </Dialog>
     </View>
   );
@@ -213,5 +238,20 @@ const styles = StyleSheet.create({
   },
   card: {
     marginTop: 9,
+  },
+  remove: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 8,
+    paddingVertical: 13,
+    paddingHorizontal: layout.rowPadH,
+    borderWidth: 1,
+    borderRadius: 14,
+  },
+  removeLabel: {
+    fontFamily: fonts.medium,
+    fontSize: 14,
   },
 });
