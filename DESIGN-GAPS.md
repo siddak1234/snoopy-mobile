@@ -757,7 +757,7 @@ the platform at `ef91ecd`:
 | # | Feedback | What it is | Disposition |
 | --- | --- | --- | --- |
 | 1 | "Remove the continue to autom8x… bring back the get started cover page… logo and sign in bigger… controls lower" | the splash advanced to Sign in by itself; the Sign in screen led with a small mark and a subtitle | **fixed (24.11.6)**: signed out — launch, sign-out, an ended session, a deleted account — is the cover, waiting, with "Get started" the one way on to Sign in; every route that left for Sign in leaves for the cover. Sign in: the subtitle gone, the mark 124 and the title 34, the providers lower |
-| 2 | "I removed a flow then added it back. Where is the archive of the old one?" | the list holds no archived row by design (backend §12.1 #92), so a removed flow had nowhere to be read | **fixed (24.11.8)**: Removed flows — a row with a count in Flows, within the scope, a Settings entry, a read-only page with its history and "Add it again"; read with `status=archived` (backend §12.1 #203, #140) |
+| 2 | "I removed a flow then added it back. Where is the archive of the old one?" | the list holds no archived row by design (backend §12.1 #92), so a removed flow had nowhere to be read | **fixed (24.11.8)**: Removed flows — a row with a count in Flows, within the scope, a Settings entry, a read-only page with its history and "Add it again", each saying the day it was removed; read with `status=archived` (backend §12.1 #203, #140). The day is the row's `updatedAt`: nothing in the app changes a removed flow, so it is the removal (a rename through the API would move it) |
 | 3 | "What is this webhook address for?" | the dialog opened on how to use it, not what it is | **fixed (24.11.9)**: its first sentence says what it is — where a service sends the events that start the flow |
 | 4, 8 | "what about projects or teams… hr, development, accounting… Org Team Project Flows — is this a good hierarchy?" | projects lived under Settings; Teams were people groups; one name too many | **fixed (24.11.7)**: Teams replace Projects everywhere — the scope pill always there with "Create a team"; Settings › Teams; a team's page with members and requests to join; the old Teams screens gone. The hierarchy is organization → team → flows |
 | 5 | "How do I unlink an account?" | linking had no inverse anywhere | **fixed (24.11.9)**: Unlink on a linked account, never the primary, confirmed first; the platform's sentence shown as it is (backend #138) |
@@ -791,7 +791,7 @@ gone, the mark 124 and the title 34, the providers lower.
 
 ### Guards proved to bite, 24.11
 
-Fourteen breaks, each run against its own suite and the file restored by SHA-256.
+Fifteen breaks, each run against its own suite and the file restored by SHA-256.
 
 | Guard | Broken by | Test that failed |
 | --- | --- | --- |
@@ -809,6 +809,7 @@ Fourteen breaks, each run against its own suite and the file restored by SHA-256
 | Settings › Teams opens Teams | the row opening Organization | `teams-screens` "always offers Organization and Teams" |
 | No copy says project or automation | the audit's pattern matching nothing | `audit-gates` "fails copy that says project or automation" |
 | The webhook dialog says what the address is for | the sentence replaced | `automation-actions` "shows the secret once, in the dialog" |
+| A removed flow says the day it was removed | the day dropped | `tab-screens` "the Removed page lists them" and "a removed flow's page opens" |
 
 ### Guards proved to bite, 24.6
 

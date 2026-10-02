@@ -1014,7 +1014,7 @@ describe('Flow history — the tiles open Activity (24.11.9)', () => {
 function withRemovedFlow(invoiceToo = false) {
   const base = subscriptionsPayload().subscriptions;
   const rows = base.map((row) => (invoiceToo && row.id === 'invoice' ? { ...row, status: 'archived' } : row));
-  const gone = { ...base[0]!, id: 'gone', name: 'Old intake', status: 'archived' };
+  const gone = { ...base[0]!, id: 'gone', name: 'Old intake', status: 'archived', updatedAt: '2026-09-30T12:00:00Z' };
   routePlatform(platformOperation, {
     '/automations': flowCatalogPayload(),
     '/subscriptions': { subscriptions: [...rows, gone], subscription: rows[0] },
@@ -1035,7 +1035,7 @@ describe('Removed flows (24.11.8)', () => {
     withRemovedFlow();
     const { findByText, getByText } = await renderWithProviders(<RemovedFlowsScreen />, signedInSession);
     expect(await findByText('Old intake')).toBeTruthy();
-    expect(getByText('Removed')).toBeTruthy();
+    expect(getByText('Removed Sep 30, 2026')).toBeTruthy();
     await fireEvent.press(getByText('Old intake'));
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'gone' } });
 
@@ -1051,6 +1051,7 @@ describe('Removed flows (24.11.8)', () => {
     const { findByText, queryByText, getByText } = await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
     expect(await findByText('Old intake')).toBeTruthy();
     expect(getByText('Removed')).toBeTruthy();
+    expect(getByText(/^This flow was removed on Sep 30, 2026\. /u)).toBeTruthy();
     expect(queryByText("Couldn't load this flow")).toBeNull();
     expect(queryByText('Remove flow')).toBeNull();
     expect(queryByText('Pause')).toBeNull();

@@ -20,7 +20,7 @@ import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { roleIn, useSession, workspaceIfShown } from '@/hooks/use-session';
 import { statusAction, useWorkflows, type FlowStatus } from '@/hooks/use-workflows';
 import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
-import { ADD_AGAIN_LABEL, REMOVED_FLOW_BODY, UNAVAILABLE_NOTE, errorTitleFor } from '@/lib/content/screen-states';
+import { ADD_AGAIN_LABEL, UNAVAILABLE_NOTE, errorTitleFor, removedFlowBody } from '@/lib/content/screen-states';
 import { readCatalog, readConnectionProviders } from '@/lib/platform/catalog';
 import { updateSubscription } from '@/lib/platform/automations';
 import { readProjects } from '@/lib/platform/projects';
@@ -277,7 +277,7 @@ export default function WorkflowDetailScreen() {
         // removed flow is add it again, which is Setup for its template, in the
         // scope it had.
         <SurfaceCard style={styles.removedCard}>
-          <Text style={[styles.note, { color: palette.neutral[400] }]}>{REMOVED_FLOW_BODY}</Text>
+          <Text style={[styles.note, { color: palette.neutral[400] }]}>{removedFlowBody(def.removedOn)}</Text>
           <PillButton
             label={ADD_AGAIN_LABEL}
             variant="primary"
