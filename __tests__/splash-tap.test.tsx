@@ -19,7 +19,7 @@ describe('Splash tap', () => {
     const { getByText } = await renderWithProviders(<SplashScreen />);
     // fireEvent walks up from the kicker to the screen's root Pressable.
     await fireEvent.press(getByText('AUTOMATION × AI'));
-    expect(mockRouter.replace).toHaveBeenCalledWith('/(auth)/welcome');
+    expect(mockRouter.replace).toHaveBeenCalledWith('/(auth)/login');
     act(() => {
       jest.advanceTimersByTime(3000);
     });

@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { CaretRight, CrownSimple, MagnifyingGlass } from 'phosphor-react-native';
-import React, { useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FilterChip } from '@/components/nocturne/filter-chip';
@@ -10,13 +10,9 @@ import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
-import { useSession, workspaceIfShown } from '@/hooks/use-session';
-import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
 import { useSolutions } from '@/hooks/use-solutions';
 import { UNAVAILABLE_NOTE, errorTitleFor } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
-import { updateSubscription } from '@/lib/platform/automations';
-import { newIdempotencyKey } from '@/lib/platform/client';
 import { readProjects } from '@/lib/platform/projects';
 import { readSubscriptions } from '@/lib/platform/runs';
 import { toSolutions, withoutArchived, type SolutionView } from '@/lib/view/catalog';
@@ -27,13 +23,7 @@ export default function SolutionsScreen() {
   const { isActive, setActive, totals } = useSolutions();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const session = useSession();
   const [category, setCategory] = useState('All');
-  /** The solution pending removal, by templateId (design rmIdx). */
-  const [removeId, setRemoveId] = useState<string | null>(null);
-  const [pauseError, setPauseError] = useState<string | null>(null);
-  const [pausing, setPausing] = useState(false);
-  const pauseKeys = useRef<Record<string, string>>({});
 
   /**
    * The marketplace, from the catalog.
@@ -57,6 +47,14 @@ export default function SolutionsScreen() {
       openProjects: projects.filter((project) => project.status !== 'archived'),
     };
   });
+  /** The workflow "Added" opens: the workspace-level subscription first, else the first in a project. */
+  const subscriptionFor = (templateId: string) => {
+    if (catalog.status !== 'ready') return undefined;
+    const matching = withoutArchived(catalog.data.subscriptions).filter(
+      (subscription) => subscription.templateId === templateId,
+    );
+    return matching.find((subscription) => !subscription.projectId) ?? matching[0];
+  };
   /**
    * Whether an added automation can still be added somewhere — the whole
    * workspace or an open project it is not in yet — as the website's Add offers
@@ -80,48 +78,8 @@ export default function SolutionsScreen() {
     catalog.status === 'ready' ? catalog.data.catalog.categories : [];
 
   const visible = solutions.filter((sol) => category === 'All' || sol.cat === category);
-  const removeSolution = removeId == null ? null : solutions.find((s) => s.templateId === removeId);
   const { activeCount, planTotal } = totals(solutions);
 
-  const pauseSolution = async () => {
-    if (!removeSolution || catalog.status !== 'ready') return;
-    const workspaceId = workspaceIfShown(session, catalog.loadedFor);
-    if (!workspaceId) {
-      setPauseError(WORKSPACE_CHANGED);
-      return;
-    }
-    setPausing(true);
-    setPauseError(null);
-    try {
-      // An archived one is not running and cannot be paused; it is left alone.
-      const matching = withoutArchived(catalog.data.subscriptions).filter(
-        (subscription) => subscription.templateId === removeSolution.templateId,
-      );
-      if (matching.length === 0) {
-        setPauseError('No matching workflow was found. Refresh before trying again.');
-        return;
-      }
-      await Promise.all(
-        matching.map((subscription) =>
-          updateSubscription(
-            workspaceId,
-            subscription.id,
-            { status: 'paused' },
-            (pauseKeys.current[subscription.id] ??= newIdempotencyKey('pause')),
-          ),
-        ),
-      );
-      for (const subscription of matching) delete pauseKeys.current[subscription.id];
-      // The platform accepted `paused`: state it, rather than flipping
-      // relative to whatever an earlier override happened to say.
-      setActive(removeSolution.templateId, false);
-      setRemoveId(null);
-    } catch (error) {
-      setPauseError(refusalMessage(error, {}, 'The workflows were not paused.'));
-    } finally {
-      setPausing(false);
-    }
-  };
 
   // Below every hook: these return early.
   if (catalog.status === 'loading') return <ScreenLoading topInset={insets.top} />;
@@ -162,7 +120,7 @@ export default function SolutionsScreen() {
       </View>
 
       <Pressable
-        onPress={() => router.push('/(tabs)/settings')}
+        onPress={() => router.push('/(tabs)/settings/billing')}
         style={({ pressed }) => [
           styles.planBanner,
           {
@@ -176,7 +134,7 @@ export default function SolutionsScreen() {
             Solutions · {planTotal}/mo
           </Text>
           <Text style={[styles.planSub, { color: palette.neutral[400] }]}>
-            {activeCount} active · manage in Settings
+            {activeCount} active · plan and billing
           </Text>
         </View>
         <CaretRight size={15} color={palette.neutral[500]} />
@@ -223,11 +181,17 @@ export default function SolutionsScreen() {
               <Pressable
                 disabled={!added && !sol.available}
                 accessibilityState={{ disabled: !added && !sol.available }}
-                onPress={() =>
-                  added
-                    ? setRemoveId(sol.templateId)
-                    : router.push({ pathname: '/(tabs)/solutions/setup', params: { template: sol.templateId } })
-                }
+                onPress={() => {
+                  // "Added" opens the workflow, where Pause and Archive live — the
+                  // platform's two words, the website's too. A pause dialog here
+                  // read as "remove" (owner, 2026-10-02; 24.7.3 attempt 4, #3).
+                  const subscription = added ? subscriptionFor(sol.templateId) : undefined;
+                  if (subscription) {
+                    router.push({ pathname: '/(tabs)/flows/detail', params: { flow: subscription.id } });
+                    return;
+                  }
+                  router.push({ pathname: '/(tabs)/solutions/setup', params: { template: sol.templateId } });
+                }}
                 style={({ pressed }) => [
                   styles.addBtn,
                   { borderColor: added || !sol.available ? palette.neutral[700] : palette.accent },
@@ -255,52 +219,6 @@ export default function SolutionsScreen() {
         ) : null}
       </View>
 
-      <Modal
-        visible={removeId != null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setRemoveId(null)}>
-        <View style={[styles.overlay, { backgroundColor: status.overlay }]}>
-          <View
-            style={[
-              styles.dialog,
-              { backgroundColor: palette.surface, borderColor: palette.neutral[800] },
-            ]}>
-            <Text style={[styles.dialogTitle, { color: palette.text }]}>
-              Pause {removeSolution?.name}?
-            </Text>
-            <Text style={[styles.dialogBody, { color: palette.neutral[400] }]}>
-              Every workflow built on it will be paused. Workspace connections remain available.
-            </Text>
-            <View style={styles.dialogActions}>
-              <Pressable
-                onPress={() => setRemoveId(null)}
-                style={({ pressed }) => [
-                  styles.dialogBtn,
-                  { borderColor: palette.neutral[700] },
-                  pressed && { backgroundColor: withAlpha(palette.text, 0.06) },
-                ]}>
-                <Text style={[styles.dialogBtnLabel, { color: palette.text }]}>Keep it</Text>
-              </Pressable>
-              <Pressable
-                disabled={pausing}
-                onPress={pauseSolution}
-                style={({ pressed }) => [
-                  styles.dialogBtn,
-                  { borderColor: status.err },
-                  pressed && { backgroundColor: status.errCalloutBg },
-                ]}>
-                <Text style={[styles.dialogBtnLabel, { color: status.err }]}>
-                  {pausing ? 'Pausing…' : 'Pause'}
-                </Text>
-              </Pressable>
-            </View>
-            {pauseError ? (
-              <Text style={[styles.dialogBody, { color: status.err }]}>{pauseError}</Text>
-            ) : null}
-          </View>
-        </View>
-      </Modal>
     </ScrollView>
   );
 }
@@ -391,44 +309,5 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     fontSize: 13.5,
     textAlign: 'center',
-  },
-  overlay: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 28,
-  },
-  dialog: {
-    alignSelf: 'stretch',
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 20,
-    gap: 10,
-  },
-  dialogTitle: {
-    fontFamily: fonts.medium,
-    fontSize: 16,
-  },
-  dialogBody: {
-    fontFamily: fonts.regular,
-    fontSize: 13.5,
-    lineHeight: 13.5 * 1.5,
-  },
-  dialogActions: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 6,
-  },
-  dialogBtn: {
-    flex: 1,
-    height: 44,
-    borderRadius: 999,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dialogBtnLabel: {
-    fontFamily: fonts.medium,
-    fontSize: 14,
   },
 });

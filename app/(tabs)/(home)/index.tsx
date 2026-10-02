@@ -101,14 +101,6 @@ function HomeEmpty({ paddingTop, initials }: { paddingTop: number; initials: str
           onPress={() => router.push('/(tabs)/solutions')}
           style={styles.stateCta}
         />
-        <PillButton
-          label="See how it works"
-          variant="plain"
-          height={44}
-          fontSize={14.5}
-          onPress={() => router.push('/(auth)/onboarding')}
-          style={styles.stateSecondary}
-        />
       </View>
     </View>
   );
@@ -532,9 +524,6 @@ const styles = StyleSheet.create({
   },
   stateCta: {
     marginTop: 8,
-    alignSelf: 'stretch',
-  },
-  stateSecondary: {
     alignSelf: 'stretch',
   },
   errorHero: {

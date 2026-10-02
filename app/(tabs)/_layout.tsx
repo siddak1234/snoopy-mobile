@@ -23,7 +23,7 @@ export default function TabLayout() {
   if (session.status === 'restoring') return null;
 
   if (session.status !== 'signed-in') {
-    return <Redirect href="/(auth)/welcome" />;
+    return <Redirect href="/(auth)/login" />;
   }
 
   return (

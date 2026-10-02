@@ -25,6 +25,8 @@ jest.mock('@/lib/platform/client', () => ({
 jest.mock('@/lib/platform/session-store', () => ({
   readSession: jest.fn(),
   clearSession: jest.fn(),
+  readRememberSession: jest.fn(async () => true),
+  writeRememberSession: jest.fn(async () => undefined),
 }));
 
 jest.mock('@/lib/platform/native-auth', () => ({
@@ -34,7 +36,7 @@ jest.mock('@/lib/platform/native-auth', () => ({
 }));
 
 const { platformOperation } = jest.requireMock('@/lib/platform/client');
-const { readSession, clearSession } = jest.requireMock('@/lib/platform/session-store');
+const { readSession, clearSession, readRememberSession } = jest.requireMock('@/lib/platform/session-store');
 const { refreshSession } = jest.requireMock('@/lib/platform/native-auth');
 
 function Probe() {
@@ -57,6 +59,7 @@ beforeEach(() => {
   platformOperation.mockReset();
   readSession.mockReset().mockResolvedValue(null);
   clearSession.mockReset().mockResolvedValue(undefined);
+  readRememberSession.mockReset().mockResolvedValue(true);
   refreshSession.mockReset().mockResolvedValue({ status: 'refreshed' });
 });
 
@@ -122,6 +125,22 @@ describe('SessionProvider', () => {
     refreshSession.mockResolvedValue({ status: 'signed-out' });
 
     expect(await statusAfter(jest.fn())).toBe('status:signed-out');
+    expect(platformOperation).not.toHaveBeenCalled();
+  });
+
+  it('ends a session the person chose not to remember at the next cold start, keeping nothing', async () => {
+    // Remember me off (24.7.3 attempt 4): the session lasted until the app was
+    // closed. The stored credential is cleared before any refresh or probe.
+    readSession.mockResolvedValue({
+      accessToken: 'live-access',
+      refreshToken: 'live-refresh',
+      expiresAt: Date.now() + 60 * 60 * 1000,
+    });
+    readRememberSession.mockResolvedValue(false);
+
+    expect(await statusAfter(jest.fn())).toBe('status:signed-out');
+    expect(clearSession).toHaveBeenCalledTimes(1);
+    expect(refreshSession).not.toHaveBeenCalled();
     expect(platformOperation).not.toHaveBeenCalled();
   });
 

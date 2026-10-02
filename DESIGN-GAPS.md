@@ -670,6 +670,41 @@ the website at `2b729e3` (FR-25 parity):
 | An address field gets the email keyboard | `isEmailField` always false | `setup-field` "reads an `email` control" |
 | The banner counts pending approvals | every approval counted | `tab-screens` "counts pending approvals only" |
 
+### The third signed-in session (24.7.3, attempt 4, 2026-10-02 05:09Z–05:23Z)
+
+Build 4 on the owner's iPhone: the Google connection re-consented (05:09Z), Invoice
+check paused from the Solutions dialog (05:19Z), five TestFlight feedback items, and the
+owner's own account in chat of a Face ID prompt at relaunch. Verified against the code at
+`212d7fb`, the database and the website at `2b729e3`:
+
+| # | Feedback | What it is | Disposition |
+| --- | --- | --- | --- |
+| chat | after a fresh OAuth sign-in, a relaunch asked to allow Face ID and opened without OAuth | the Face ID choice lived in the Keychain, which outlives a sign-out and a reinstall; `clearSession` never deleted it; the first biometric check — and so iOS's permission alert — ran at launch (platform §12.1 #198) | **fixed**: the choice and Remember me are cleared with the tokens; the question is asked once, after a remembered sign-in, on a screen where "Use Face ID" is what triggers the system alert; Settings keeps the toggle |
+| chat, 1 | two names for one action; "why an or and a bar on top" | Welcome, Log in, Sign up and an Onboarding tour for the one action the website offers on one page; the divider was left behind when the unlock button was hidden | **fixed**: one "Sign in" screen with the website's words and a Remember me toggle (on by default; off ends the session at the next cold start); no divider without an unlock |
+| 2 | the Solutions plan card opened the Settings tab | the design's banner | **fixed**: it opens Billing |
+| 3 | "pause, unadd, stop, or remove?" | "Added ✓" opened a pause dialog; the platform's words are Pause and Archive, and both live on the workflow page as on the website | **fixed**: "Added ✓" opens the workflow; the dialog is gone |
+| 4 | the amount should format as currency, start at 0.00, number pad only; fields too small, the email cut off; "Optional" somewhere | a plain decimal box beside the words | **fixed**: digits fill from the right as currency with thousands separators, number pad; every field full width under its words; Optional named |
+| 5 | "where is 1 and 2" — every step 1…N, connections included | the design's four fixed section numbers, empty ones skipped; the catalog entry did not say which accounts an automation needs (platform §12.1 #197) | **fixed**: sections numbered as they appear, and a Connections step from the entry's new `requiredConnections` with Connected / Connect per account. Every pipeline step as a numbered item with its own input or account is Round 17's (Phase 25.3), recorded there |
+
+### Guards proved to bite, 24.7.3 attempt 4
+
+Nine breaks, each run against its own suite and the file restored by SHA-256. The
+first break of the cold-start check left every `session-provider` test green — the rule
+had no test — so its test was written and the break run again before anything was
+committed.
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| Sign-out clears the Face ID choice | `FACE_ID_ENABLED_KEY` left out of `clearSession` | `session-store` "sign-out clears the Face ID choice and "remember me" with the tokens" (and the five-deletion count) |
+| Remember me off ends the session at cold start | the cold-start check removed | `session-provider` "ends a session the person chose not to remember at the next cold start" |
+| The Face ID question after a remembered sign-in | sign-in always going home | `auth-screens` "asks the Face ID question once, after a remembered sign-in" |
+| "Use Face ID" records the choice | `writeFaceIdEnabled(true)` removed | `faceid-offer` ""Use Face ID" runs the check now, records the choice, and opens the app" |
+| Added opens the workflow | the push aimed at the Flows list | `tab-screens` "Added opens the workflow" and "opens the correct workflow from a filtered list" |
+| The plan card opens Billing | the push aimed at Settings | `tab-screens` "opens Billing from the plan banner" |
+| A Connections step shifts the numbering | `sectionOffset` fixed at 0 | `tab-screens` "numbers the accounts an automation needs as step 1" |
+| Currency with thousands separators | the separator insertion removed | `setup-field` "formats cents with thousands separators" and "fills cents first as digits arrive" |
+| The Optional marker | "Optional" reworded | `setup-field` "marks a field that is not required as Optional" |
+
 ### Guards proved to bite, 24.6
 
 | Guard | Broken by | Test that failed |
