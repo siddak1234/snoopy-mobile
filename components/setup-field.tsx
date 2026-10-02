@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
-import { HandPalm, Sliders, Tray } from 'phosphor-react-native';
+import { EnvelopeSimple, HandPalm, Sliders, Tray } from 'phosphor-react-native';
 
 import { NocToggle } from '@/components/nocturne/noc-toggle';
 import { fonts } from '@/constants/theme';
@@ -57,6 +57,8 @@ const CONTROL_ICON = {
   money: Sliders,
   text: Tray,
   'resource-picker': Tray,
+  // The address control (backend, 2026-10-02): the email keyboard, an envelope.
+  email: EnvelopeSimple,
 } as const;
 
 /** Group fields by section, preserving manifest order within each. */
@@ -108,7 +110,7 @@ export function declaredValues(
  * choice only, never a validation (24.7.3 attempt 2, feedback #2).
  */
 export function isEmailField(field: Pick<FieldRowSpec, 'key' | 'title' | 'control'>): boolean {
-  return (field.control as string) === 'email' || /email/iu.test(`${field.key} ${field.title}`);
+  return field.control === 'email' || /email/iu.test(`${field.key} ${field.title}`);
 }
 
 export function SetupFieldRow({
