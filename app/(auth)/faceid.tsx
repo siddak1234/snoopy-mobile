@@ -148,7 +148,7 @@ export default function FaceIdScreen() {
           label="Use identity provider"
           height={44}
           fontSize={14}
-          onPress={() => router.replace('/(auth)/login')}
+          onPress={() => router.replace('/')}
           style={styles.fallback}
         />
       ) : null}

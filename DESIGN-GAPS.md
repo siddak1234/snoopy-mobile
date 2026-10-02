@@ -745,6 +745,71 @@ a break can reach, and is not claimed here.
 | Settings reads only what it draws | the catalog read put back | `tab-screens` "shows Billing without the plan totals, and reads only what it draws" (and three Settings tests with it) |
 | A link failure is a sentence, never a title | the problem's title returned for a 503 | `identity-link` "says in a sentence when the platform's manual-linking switch is off" |
 
+### The fifth signed-in session (24.11, build 7, 2026-10-02 18:33Z–18:44Z)
+
+Build 7 on the owner's iPhone: eleven feedback items, then the owner's decisions — a
+team is the sub-organization with its own flows (a project in the platform's contract);
+a person asks to join one, is on it or leaves it; an organization owner or admin sees
+every team; the old Teams (people groups granted onto projects) go; Unlink now; the cover
+page whenever signed out. Verified against the code at `9ae164f`, the production logs and
+the platform at `ef91ecd`:
+
+| # | Feedback | What it is | Disposition |
+| --- | --- | --- | --- |
+| 1 | "Remove the continue to autom8x… bring back the get started cover page… logo and sign in bigger… controls lower" | the splash advanced to Sign in by itself; the Sign in screen led with a small mark and a subtitle | **fixed (24.11.6)**: signed out — launch, sign-out, an ended session, a deleted account — is the cover, waiting, with "Get started" the one way on to Sign in; every route that left for Sign in leaves for the cover. Sign in: the subtitle gone, the mark 124 and the title 34, the providers lower |
+| 2 | "I removed a flow then added it back. Where is the archive of the old one?" | the list holds no archived row by design (backend §12.1 #92), so a removed flow had nowhere to be read | **fixed (24.11.8)**: Removed flows — a row with a count in Flows, within the scope, a Settings entry, a read-only page with its history and "Add it again"; read with `status=archived` (backend §12.1 #203, #140) |
+| 3 | "What is this webhook address for?" | the dialog opened on how to use it, not what it is | **fixed (24.11.9)**: its first sentence says what it is — where a service sends the events that start the flow |
+| 4, 8 | "what about projects or teams… hr, development, accounting… Org Team Project Flows — is this a good hierarchy?" | projects lived under Settings; Teams were people groups; one name too many | **fixed (24.11.7)**: Teams replace Projects everywhere — the scope pill always there with "Create a team"; Settings › Teams; a team's page with members and requests to join; the old Teams screens gone. The hierarchy is organization → team → flows |
+| 5 | "How do I unlink an account?" | linking had no inverse anywhere | **fixed (24.11.9)**: Unlink on a linked account, never the primary, confirmed first; the platform's sentence shown as it is (backend #138) |
+| 6 | "Why is sign out here but delete account somewhere else" | sign-out ends a session; deletion ends the account | **kept as is**, the owner's decision of 2026-10-02 |
+| 7 | "Should we not make this drop downs instead?" | Create project took the kind as free text | **fixed (24.11.7)**: Create a team takes the organization and the kind from dropdowns; "Other" opens a field. The kinds are `lib/content/team-types.ts` |
+| 9 | "Error page or look is fine. But why am i getting this?" | a run row of a removed flow opened the flow page, which matched nothing: "Couldn't load this flow", with no failed request | **fixed (24.11.8)**: a removed flow's page opens, read-only; its run rows say "Flow removed" |
+| 10 | "Nothing held how do i test approve" | no flow had held anything yet | **a test step, not a defect**: move Invoice triage to v4 and Run above its threshold; the run is held and the decision is the owner's (24.11.13) |
+| 11 | "I should be able to click runs and the other headers to check the history" | the stat tiles were not pressable | **fixed (24.11.9)**: Home's tiles open Activity for that outcome; a flow page's Runs, Successes and Failures open Activity for that flow and outcome, the flow a chip that clears it |
+| — | three `404` on `runs/{id}` after a workspace switch | the run page re-read its run id in whichever workspace was active | **fixed (24.11.9)**: the page reads in the workspace it was opened in, and leaves when the active one changes |
+| — | Delete project: "You can restore it later by creating a project of the same type — your data will reattach" | nothing in the platform reattaches anything: creating makes a new team, and archiving leaves its flows running | **corrected**: "It leaves every team list. Its flows keep running until you remove them in Flows." |
+
+Two things degrade rather than fail against a platform from before the SEVENTEENTH
+promotion, which carries backend #138–#140: the team directory and a team's requests
+answer 404 there, so Teams lists the teams a person is on without the asking section, and
+a team's page draws no requests; the removed-flows read is answered with the live list,
+which the client discards (only archived rows are kept). Unlink and Request are refused
+upstream until then, in the platform's words.
+
+The words: the app's copy says team and flow (24.11.7, and "Flows will be the name we use
+from now on", 24.9). Nineteen strings still said "automation" — the webhook dialog's "This
+automation has no address yet.", Setup's title, the move and file refusals, Billing's
+capability label and the connection note — and now say "flow"; an archived one is "a removed
+flow", as Flows calls it. `audit:vocabulary` parses the copy and fails the build on either
+word; the brand line "AUTOMATION × AI" is the one exact string allowed.
+
+The screens, from this commit in the iOS simulator (iPhone 16 Pro, iOS 18.6, Expo Go 54.0.7,
+2026-10-02), signed out: the cover, waiting on "Get started", and Sign in with the subtitle
+gone, the mark 124 and the title 34, the providers lower.
+
+![The cover, signed out](design-gaps/24.11-cover.png) ![Sign in](design-gaps/24.11-sign-in.png)
+
+### Guards proved to bite, 24.11
+
+Fourteen breaks, each run against its own suite and the file restored by SHA-256.
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| Signed out is the cover | the tab guard redirecting to Sign in | `auth-boundary` — the three closed states |
+| The cover waits for Get started | Get started not drawn | `splash-tap` "waits when signed out" |
+| Unlink never on the primary | the primary drawn with Unlink | `account-screen` "offers Unlink… never on the primary" (and "shows what is linked") |
+| Unlink sends the device's refresh token | an empty token | `account-screen` "offers Unlink… sends the refresh token" |
+| Removed flows are the archived ones only | the status filter dropped | `removed-flows` "asks with status=archived and keeps only rows that are archived" |
+| A removed flow's page offers no actions | the actions drawn for it | `tab-screens` "a removed flow's page opens instead of Couldn't load" |
+| A run stays in the workspace it was opened in | the switch ignored | `run-workspace` "reads the run in the workspace it was opened in, and leaves" |
+| A flow's history is that flow's | the flow filter dropped | `tab-screens` "a flow nobody ran reads as its own empty" |
+| A team made from the pill is the scope | not selected | `scope-control` "Create a team makes one and makes it the scope" |
+| No directory yet is not a failure | a 404 thrown | `teams-screens` "lists the teams it is on when the platform has no directory yet" |
+| A manager's decision is the one chosen | Deny sending approve | `teams-screens` "approves or denies them" |
+| Settings › Teams opens Teams | the row opening Organization | `teams-screens` "always offers Organization and Teams" |
+| No copy says project or automation | the audit's pattern matching nothing | `audit-gates` "fails copy that says project or automation" |
+| The webhook dialog says what the address is for | the sentence replaced | `automation-actions` "shows the secret once, in the dialog" |
+
 ### Guards proved to bite, 24.6
 
 | Guard | Broken by | Test that failed |

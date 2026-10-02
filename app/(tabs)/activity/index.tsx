@@ -1,6 +1,6 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { CheckCircle } from 'phosphor-react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -18,11 +18,12 @@ import {
   ACTIVITY_EMPTY_TITLE,
   ACTIVITY_SCOPE_EMPTY,
   ADD_FLOW_LABEL,
+  RUN_FLOW_REMOVED,
   errorTitleFor,
 } from '@/lib/content/screen-states';
 import { ACTIVITY_FILTERS, type ActivityItem } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
-import { readAllApprovals, readRuns, readSubscriptions } from '@/lib/platform/runs';
+import { readAllApprovals, readRemovedSubscriptionsOrNone, readRuns, readSubscriptions } from '@/lib/platform/runs';
 import { catalogIndex, needsReview, runIcon, splitByDay, toRunRow } from '@/lib/view/runs';
 import { scopeRuns } from '@/lib/view/scope';
 
@@ -104,12 +105,38 @@ const EMPTY_LABEL: Record<Exclude<ActivityFilter, 'All'>, string> = {
 const matchesFilter = (item: ActivityItem, filter: ActivityFilter) =>
   filter === 'All' || (filter === 'Needs review' ? item.needsReview : item.status === FILTER_STATUS[filter]);
 
+const isActivityFilter = (value: unknown): value is ActivityFilter =>
+  typeof value === 'string' && (ACTIVITY_FILTERS as readonly string[]).includes(value);
+
+/** What a tile on Home or a flow page arrived with (24.11.9): an outcome, and perhaps a flow. */
+function arrivedWith(params: { flow?: string; flowName?: string; filter?: string }): {
+  filter: ActivityFilter;
+  flow: { id: string; name: string } | null;
+} {
+  return {
+    filter: isActivityFilter(params.filter) ? params.filter : 'All',
+    flow: params.flow ? { id: params.flow, name: params.flowName || 'this flow' } : null,
+  };
+}
+
 export default function ActivityScreen() {
   const { palette } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { projectId } = useScope();
-  const [filter, setFilter] = useState<ActivityFilter>('All');
+  const params = useLocalSearchParams<{ flow?: string; flowName?: string; filter?: string }>();
+  const [filter, setFilter] = useState<ActivityFilter>(() => arrivedWith(params).filter);
+  // One flow's history (24.11.9): a tile on Home or a flow page arrives with the
+  // flow and the outcome, and that selection replaces whatever was chosen here.
+  // The chip clears it; the tab bar arrives with nothing and changes nothing.
+  const [flow, setFlow] = useState<{ id: string; name: string } | null>(() => arrivedWith(params).flow);
+  useEffect(() => {
+    if (!params.flow && !params.filter) return;
+    const arrived = arrivedWith(params);
+    setFilter(arrived.filter);
+    setFlow(arrived.flow);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.flow, params.flowName, params.filter]);
 
   /**
    * The runs list, joined to the catalog for a display name.
@@ -124,14 +151,17 @@ export default function ActivityScreen() {
    * sections and a person's own midnight decides them.
    */
   const activity = useWorkspaceResource(async (workspaceId) => {
-    const [runs, catalog, approvals, subscriptions] = await Promise.all([
+    const [runs, catalog, approvals, subscriptions, removed] = await Promise.all([
       readRuns(workspaceId),
       readCatalog(workspaceId),
       readAllApprovals(workspaceId),
       readSubscriptions(workspaceId),
+      readRemovedSubscriptionsOrNone(workspaceId),
     ]);
     const index = catalogIndex(catalog.automations);
     const grouped = splitByDay(runs.runs);
+    // A run whose flow was removed says so on its row (24.11.8).
+    const removedFlows = new Set(removed.subscriptions.map((s) => s.id));
     const toRow = (run: (typeof runs.runs)[number]): ActivityItem => {
       const row = toRunRow(run, index, Date.now(), approvals.approvals);
       return {
@@ -143,7 +173,7 @@ export default function ActivityScreen() {
         needsReview: needsReview(run, approvals.approvals),
         tone: row.tone,
         title: row.name,
-        desc: row.meta,
+        desc: removedFlows.has(run.subscriptionId) ? `${row.meta} · ${RUN_FLOW_REMOVED}` : row.meta,
         time: row.time,
       };
     };
@@ -156,11 +186,16 @@ export default function ActivityScreen() {
   });
 
   const live = activity.status === 'ready' ? activity.data : null;
-  // The scope narrows what is shown, never what was read (24.9.2).
+  // The scope narrows what is shown, never what was read (24.9.2); a chosen flow
+  // narrows it further (24.11.9), and the two empties stay distinct.
   const inScope = (items: ActivityItem[]) => (live ? scopeRuns(items, live.subscriptions, projectId) : []);
-  const sourceToday = inScope(live ? live.today : []);
-  const sourceYesterday = inScope(live ? live.yesterday : []);
-  const sourceEarlier = inScope(live ? live.earlier : []);
+  const inFlow = (items: ActivityItem[]) => (flow ? items.filter((item) => item.subscriptionId === flow.id) : items);
+  const scopedToday = inScope(live ? live.today : []);
+  const scopedYesterday = inScope(live ? live.yesterday : []);
+  const scopedEarlier = inScope(live ? live.earlier : []);
+  const sourceToday = inFlow(scopedToday);
+  const sourceYesterday = inFlow(scopedYesterday);
+  const sourceEarlier = inFlow(scopedEarlier);
 
   const today = sourceToday.filter((i) => matchesFilter(i, filter));
   const yesterday = sourceYesterday.filter((i) => matchesFilter(i, filter));
@@ -175,7 +210,7 @@ export default function ActivityScreen() {
     live !== null && live.today.length === 0 && live.yesterday.length === 0 && live.earlier.length === 0;
   /** The workspace has runs, the chosen project has none. */
   const scopeIsEmpty =
-    !hasNoRuns && sourceToday.length === 0 && sourceYesterday.length === 0 && sourceEarlier.length === 0;
+    !hasNoRuns && scopedToday.length === 0 && scopedYesterday.length === 0 && scopedEarlier.length === 0;
 
   if (activity.status === 'loading') return <ScreenLoading topInset={insets.top} />;
   if (activity.status === 'offline') {
@@ -220,6 +255,14 @@ export default function ActivityScreen() {
       <ScopeControl />
       <Text style={[styles.h1, { color: palette.text }]}>Activity</Text>
       <View style={styles.filters}>
+        {flow ? (
+          <FilterChip
+            key="flow"
+            label={`${flow.name} ✕`}
+            active
+            onPress={() => setFlow(null)}
+          />
+        ) : null}
         {ACTIVITY_FILTERS.map((f) => (
           <FilterChip
             key={f}
@@ -237,11 +280,13 @@ export default function ActivityScreen() {
           <CheckCircle size={38} color={palette.neutral[600]} />
           <Text style={[styles.emptyText, { color: palette.neutral[500] }]}>{ACTIVITY_SCOPE_EMPTY}</Text>
         </View>
-      ) : isEmpty && filter !== 'All' ? (
+      ) : isEmpty && (filter !== 'All' || flow) ? (
         <View style={styles.emptyWrap}>
           <CheckCircle size={38} color={palette.neutral[600]} />
           <Text style={[styles.emptyText, { color: palette.neutral[500] }]}>
-            No {EMPTY_LABEL[filter]} runs.
+            {filter === 'All'
+              ? `No runs for ${flow?.name ?? 'this flow'} yet.`
+              : `No ${EMPTY_LABEL[filter]} runs${flow ? ` for ${flow.name}` : ''}.`}
           </Text>
         </View>
       ) : null}

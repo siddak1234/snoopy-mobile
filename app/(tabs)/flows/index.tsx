@@ -2,11 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { FlowArrow, MagnifyingGlass, Plus } from 'phosphor-react-native';
+import { Archive, CaretRight, FlowArrow, MagnifyingGlass, Plus } from 'phosphor-react-native';
 
 import { IconTile } from '@/components/nocturne/icon-tile';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { StatusPill } from '@/components/nocturne/status-pill';
+import { SettingsRow } from '@/components/settings/settings-row';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { ScopeControl } from '@/components/scope-control';
 import { em, fonts, layout, radius, withAlpha } from '@/constants/theme';
@@ -25,8 +26,8 @@ import {
 } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
 import { readProjects } from '@/lib/platform/projects';
-import { readRunStats, readSubscriptions } from '@/lib/platform/runs';
-import { scopeLabels, toFlows, type FlowView } from '@/lib/view/catalog';
+import { readRemovedSubscriptionsOrNone, readRunStats, readSubscriptions } from '@/lib/platform/runs';
+import { scopeLabels, toFlows, toRemovedFlows, type FlowView } from '@/lib/view/catalog';
 import { inScope } from '@/lib/view/scope';
 
 /**
@@ -53,22 +54,24 @@ export default function FlowsScreen() {
    * the shared snapshot where it is fresh (24.9.1).
    */
   const flows = useWorkspaceResource(async (workspaceId) => {
-    const [subs, catalog, stats, projects] = await Promise.all([
+    const [subs, catalog, stats, projects, removed] = await Promise.all([
       readSubscriptions(workspaceId),
       readCatalog(workspaceId),
       readRunStats(workspaceId),
       readProjects(workspaceId),
+      readRemovedSubscriptionsOrNone(workspaceId),
     ]);
-    return toFlows(
-      subs.subscriptions,
-      catalog.automations,
-      stats.subscriptions,
-      undefined,
-      scopeLabels(projects, subs.subscriptions),
-    );
+    const labels = scopeLabels(projects, subs.subscriptions);
+    return {
+      flows: toFlows(subs.subscriptions, catalog.automations, stats.subscriptions, undefined, labels),
+      // Removed (archived) flows are a count here and a page of their own (24.11.8).
+      removed: toRemovedFlows(removed.subscriptions, catalog.automations, stats.subscriptions, labels),
+    };
   });
 
-  const live: FlowView[] | null = flows.status === 'ready' ? flows.data : null;
+  const live: FlowView[] | null = flows.status === 'ready' ? flows.data.flows : null;
+  const removedInScope: FlowView[] =
+    flows.status === 'ready' ? flows.data.removed.filter((flow) => inScope(flow, projectId)) : [];
   // What detail recorded holds only until this list reads the platform again.
   useEffect(() => {
     if (live) settle(live.map((flow) => flow.key));
@@ -94,7 +97,7 @@ export default function FlowsScreen() {
       <ScreenError title={errorTitleFor('flows')} onRetry={flows.reload} body={busyBody(flows)} topInset={insets.top} />
     );
   }
-  if (live !== null && live.length === 0) {
+  if (live !== null && live.length === 0 && removedInScope.length === 0) {
     // The first-run empty. The filtered one below reads `No flows match
     // "{query}"`, which is nonsense for a workspace that has none at all.
     return (
@@ -201,11 +204,24 @@ export default function FlowsScreen() {
           </View>
         ) : null}
       </View>
+      {removedInScope.length > 0 ? (
+        <SurfaceCard style={styles.removedCard}>
+          <SettingsRow
+            icon={Archive}
+            title={`Removed flows (${removedInScope.length})`}
+            sub="Kept with their history; add any again"
+            testID="flows-removed"
+            onPress={() => router.push('/(tabs)/flows/removed')}
+            right={<CaretRight size={15} color={palette.neutral[500]} />}
+          />
+        </SurfaceCard>
+      ) : null}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  removedCard: { marginTop: 4 },
   root: {
     flex: 1,
   },

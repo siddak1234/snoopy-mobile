@@ -134,12 +134,13 @@ export default function LoginScreen() {
           paddingHorizontal: layout.authX,
           paddingBottom: 40,
         }}>
-        <BrandMark width={86} style={styles.brand} />
-        {/* One screen, the website's words: the provider creates the account on
+        {/* The mark and the title carry the screen; the subtitle went with the
+            cover page, which already said what this is (owner, build 7; 24.11.6).
+            One screen, the website's words: the provider creates the account on
             a first sign-in, so "Sign up" was the same action under another name
             (owner, 2026-10-02; 24.7.3 attempt 4). */}
+        <BrandMark width={124} style={styles.brand} />
         <Text style={[styles.title, { color: palette.text }]}>Sign in</Text>
-        <Text style={[styles.subtitle, { color: palette.neutral[400] }]}>Continue to Autom8x.</Text>
 
         {visibleError ? (
           <View style={styles.errorCallout}>
@@ -176,7 +177,7 @@ export default function LoginScreen() {
             above it, an "or" read as a missing control (24.7.3 attempt 4, #1). */}
         {storedSession && (enabledProviders.length > 0 || providersLoading) ? <OrDivider /> : null}
 
-        <View style={styles.oauthColumn}>
+        <View style={[styles.oauthColumn, storedSession ? null : styles.oauthColumnAlone]}>
           {providersLoading
             ? [0, 1, 2].map((row) => (
                 <Skeleton key={row} height={52} borderRadius={radius.pill} delay={row * 120} />
@@ -212,22 +213,17 @@ const styles = StyleSheet.create({
     marginTop: 26,
   },
   title: {
-    marginTop: 14,
+    marginTop: 22,
     fontFamily: fonts.medium,
-    fontSize: 28,
-    letterSpacing: em(-0.015, 28),
-  },
-  subtitle: {
-    marginTop: 6,
-    fontFamily: fonts.regular,
-    fontSize: 14,
+    fontSize: 34,
+    letterSpacing: em(-0.015, 34),
   },
   form: {
-    marginTop: 26,
+    marginTop: 44,
     gap: 14,
   },
   errorCallout: {
-    marginTop: 16,
+    marginTop: 24,
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 9,
@@ -250,6 +246,10 @@ const styles = StyleSheet.create({
   },
   oauthColumn: {
     gap: 9,
+  },
+  // With no unlock above them, the providers sit lower, under the title's air.
+  oauthColumnAlone: {
+    marginTop: 44,
   },
   rememberRow: {
     marginTop: 18,

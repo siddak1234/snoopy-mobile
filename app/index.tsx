@@ -15,6 +15,7 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { BrandMark } from '@/components/nocturne/brand-mark';
 import { GlowBackground } from '@/components/nocturne/glow-background';
+import { PillButton } from '@/components/nocturne/pill-button';
 import { em, fonts } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useSession } from '@/hooks/use-session';
@@ -31,35 +32,47 @@ const PULSE_ACTIVE_MS = 2100;
 const PULSE_HOLD_MS = 700;
 const PULSE_RING2_DELAY_MS = 1400;
 
+/**
+ * The cover, and the splash.
+ *
+ * Signed in, this is the splash it always was: the mark, the pulse, and on to
+ * the workspace (or the Face ID unlock) 2400ms after mount, or on a tap. Signed
+ * out — a fresh install, a sign-out, an ended session, a deleted account — it is
+ * the cover: it stays, and "Get started" is the one way on, to Sign in (the
+ * owner, build 7: "anytime they have to sign in they see the cover page";
+ * BUILD-PLAN 24.11.6). Every route that used to leave for Sign in leaves for
+ * here instead, so the cover is what being signed out looks like.
+ */
 export default function SplashScreen() {
   const { palette } = useTheme();
   const router = useRouter();
   const session = useSession();
   const navigatedRef = useRef(false);
   const mountedAtRef = useRef(Date.now());
+  const signedIn = session.status === 'signed-in';
 
-  const leaveSplash = useCallback(async () => {
-    if (navigatedRef.current) return;
-    if (session.status === 'restoring') return;
+  const enterWorkspace = useCallback(async () => {
+    if (navigatedRef.current || !signedIn) return;
     navigatedRef.current = true;
-    if (session.status === 'signed-in') {
-      router.replace(
-        (await readFaceIdEnabled()) ? '/(auth)/faceid' : '/(tabs)/(home)',
-      );
-      return;
-    }
-    router.replace('/(auth)/login');
-  }, [router, session.status]);
+    router.replace((await readFaceIdEnabled()) ? '/(auth)/faceid' : '/(tabs)/(home)');
+  }, [router, signedIn]);
 
-  // Auto-advance 2400ms after mount, but never before session restoration has
-  // resolved. The remaining time is scheduled rather than restarting the full
-  // delay when `restoring` changes.
+  const getStarted = useCallback(() => {
+    if (navigatedRef.current) return;
+    navigatedRef.current = true;
+    router.replace('/(auth)/login');
+  }, [router]);
+
+  // Signed in, auto-advance 2400ms after mount, but never before session
+  // restoration has resolved. The remaining time is scheduled rather than
+  // restarting the full delay when `restoring` changes. Signed out, nothing is
+  // scheduled: the cover waits for the person.
   useEffect(() => {
-    if (session.status === 'restoring') return;
+    if (!signedIn) return;
     const elapsed = Date.now() - mountedAtRef.current;
-    const t = setTimeout(leaveSplash, Math.max(0, 2400 - elapsed));
+    const t = setTimeout(enterWorkspace, Math.max(0, 2400 - elapsed));
     return () => clearTimeout(t);
-  }, [leaveSplash, session.status]);
+  }, [enterWorkspace, signedIn]);
 
   // Pulse ring progress: 0→1 over the active phase, held at 1 while
   // invisible, then snapped back to 0 and repeated.
@@ -114,8 +127,13 @@ export default function SplashScreen() {
     transform: [{ translateY: 14 * (1 - up.value) }],
   }));
 
+  // Whether the cover's one control is drawn: not while the session is still
+  // being restored (a flash of "Get started" for a person who is signed in), and
+  // not for a person who is.
+  const showGetStarted = session.status !== 'restoring' && !signedIn;
+
   return (
-    <Pressable onPress={leaveSplash} style={[styles.root, { backgroundColor: palette.bg }]}>
+    <Pressable onPress={enterWorkspace} style={[styles.root, { backgroundColor: palette.bg }]}>
       <GlowBackground cx="50%" cy="40%" r="58%" />
       <View style={styles.markWrap}>
         <Animated.View
@@ -139,6 +157,11 @@ export default function SplashScreen() {
         </Svg>
         <Text style={[styles.kicker, { color: palette.neutral[400] }]}>AUTOMATION × AI</Text>
       </Animated.View>
+      {showGetStarted ? (
+        <Animated.View style={[styles.getStarted, upStyle]}>
+          <PillButton label="Get started" variant="primary" height={52} onPress={getStarted} />
+        </Animated.View>
+      ) : null}
     </Pressable>
   );
 }
@@ -172,5 +195,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: em(0.36, 12),
     paddingLeft: em(0.36, 12),
+  },
+  getStarted: {
+    position: 'absolute',
+    left: 28,
+    right: 28,
+    bottom: 64,
   },
 });

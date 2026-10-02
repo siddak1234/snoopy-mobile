@@ -7,7 +7,10 @@ import React from 'react';
 import { act } from '@testing-library/react-native';
 
 import SplashScreen from '@/app/index';
+import { signedInSession } from '@/test/platform';
 import { mockRouter, renderWithProviders } from '@/test/render';
+
+jest.mock('@/lib/platform/session-store', () => ({ readFaceIdEnabled: jest.fn(async () => false) }));
 
 beforeEach(() => {
   jest.useFakeTimers();
@@ -19,12 +22,13 @@ afterEach(() => {
 });
 
 describe('Splash', () => {
-  it('auto-advances to Sign in after 2400ms', async () => {
-    const { getByText } = await renderWithProviders(<SplashScreen />);
+  it('signed in, auto-advances to the workspace after 2400ms; signed out it is the cover, and stays (24.11.6)', async () => {
+    const { getByText, queryByText } = await renderWithProviders(<SplashScreen />, signedInSession);
     expect(getByText('AUTOMATION × AI')).toBeTruthy();
-    act(() => {
+    expect(queryByText('Get started')).toBeNull();
+    await act(async () => {
       jest.advanceTimersByTime(2400);
     });
-    expect(mockRouter.replace).toHaveBeenCalledWith('/(auth)/login');
+    expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)/(home)');
   });
 });

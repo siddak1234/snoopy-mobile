@@ -60,7 +60,7 @@ export function MoveVersion({
       setOpen(false);
       onMoved();
     } catch (caught) {
-      setError(refusalMessage(caught, MOVE_REFUSALS, 'The automation was not moved.'));
+      setError(refusalMessage(caught, MOVE_REFUSALS, 'The flow was not moved.'));
     } finally {
       setBusy(false);
     }

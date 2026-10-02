@@ -4,7 +4,7 @@ import { useTheme } from '@/hooks/use-theme';
 
 /**
  * Settings tab stack — the admin areas the website keeps under `/account`
- * (Organization, Projects, Teams, Billing, Account, Support) live here as screens
+ * (Organization, Teams, Billing, Account, Support) live here as screens
  * so they keep the Settings tab highlighted (ADR-0032, BUILD-PLAN 24.3.8). Each
  * screen registers itself here when it lands.
  */
@@ -18,8 +18,6 @@ export default function SettingsLayout() {
       }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="organization" />
-      <Stack.Screen name="projects" />
-      <Stack.Screen name="project" />
       <Stack.Screen name="teams" />
       <Stack.Screen name="team" />
       <Stack.Screen name="billing" />

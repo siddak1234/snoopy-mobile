@@ -204,7 +204,7 @@ export default function DataExportScreen() {
         <SurfaceCard style={styles.pad}>
           <Text style={[styles.text, muted]}>
             Exporting a workspace is for its owners and admins, because the export holds every member&apos;s email and
-            every project.
+            every team.
           </Text>
         </SurfaceCard>
       ) : (
@@ -213,7 +213,7 @@ export default function DataExportScreen() {
             <SectionLabel>SUMMARY</SectionLabel>
             <SurfaceCard style={[styles.card, styles.pad]}>
               <Text style={[styles.text, muted]}>
-                A copy of this workspace&apos;s records — its runs, approvals, flows, connections, projects and
+                A copy of this workspace&apos;s records — its runs, approvals, flows, connections, teams and
                 members — as a JSON file you can keep. The summary takes each part&apos;s most recent entries.
               </Text>
               <PillButton
