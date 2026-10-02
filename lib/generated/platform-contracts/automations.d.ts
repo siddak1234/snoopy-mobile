@@ -410,7 +410,7 @@ export interface components {
             title: string;
             description: string;
             /** @enum {string} */
-            control: "toggle" | "money" | "text" | "resource-picker";
+            control: "toggle" | "money" | "text" | "email" | "resource-picker";
             defaultValue?: unknown;
             required: boolean;
             /** @enum {string} */
@@ -423,7 +423,7 @@ export interface components {
             title: string;
             description: string;
             /** @enum {string} */
-            control: "toggle" | "money" | "text" | "artifact";
+            control: "toggle" | "money" | "text" | "email" | "artifact";
             defaultValue?: unknown;
             required: boolean;
         };
