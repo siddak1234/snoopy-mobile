@@ -1,5 +1,6 @@
 import type { components } from '@/lib/generated/platform-contracts/automations';
 import { platformOperation } from './client';
+import { shared } from './snapshot';
 
 /**
  * Run reads, including the aggregates Round 6.6 published.
@@ -32,27 +33,29 @@ export type Run = components['schemas']['Run'];
 export function readRunStats(workspaceId: string, since?: Date): Promise<RunStats> {
   const sinceValue = since?.toISOString();
   const query = sinceValue ? `?since=${encodeURIComponent(sinceValue)}` : '';
-  return platformOperation(
-    `/v1/workspaces/${workspaceId}/run-stats${query}`,
-    ({ automations }, signal) =>
+  return shared(workspaceId, sinceValue ? `run-stats:${sinceValue}` : 'run-stats', 'volatile', () =>
+    platformOperation(`/v1/workspaces/${workspaceId}/run-stats${query}`, ({ automations }, signal) =>
       automations.GET('/v1/workspaces/{workspaceId}/run-stats', {
         params: { path: { workspaceId }, query: sinceValue ? { since: sinceValue } : {} },
         signal,
       }),
+    ),
   );
 }
 
 /** Runs for a workspace, newest first, optionally one subscription's. */
 export function readRuns(workspaceId: string, subscriptionId?: string): Promise<{ runs: Run[] }> {
   const query = subscriptionId ? `?subscriptionId=${encodeURIComponent(subscriptionId)}` : '';
-  return platformOperation(`/v1/workspaces/${workspaceId}/runs${query}`, ({ automations }, signal) =>
-    automations.GET('/v1/workspaces/{workspaceId}/runs', {
-      params: {
-        path: { workspaceId },
-        query: subscriptionId ? { subscriptionId } : {},
-      },
-      signal,
-    }),
+  return shared(workspaceId, subscriptionId ? `runs:${subscriptionId}` : 'runs', 'volatile', () =>
+    platformOperation(`/v1/workspaces/${workspaceId}/runs${query}`, ({ automations }, signal) =>
+      automations.GET('/v1/workspaces/{workspaceId}/runs', {
+        params: {
+          path: { workspaceId },
+          query: subscriptionId ? { subscriptionId } : {},
+        },
+        signal,
+      }),
+    ),
   );
 }
 
@@ -83,13 +86,15 @@ export function readApprovals(
   workspaceId: string,
   status: Approval['status'] = 'pending',
 ): Promise<{ approvals: Approval[] }> {
-  return platformOperation(
-    `/v1/workspaces/${workspaceId}/approvals?status=${encodeURIComponent(status)}`,
-    ({ automations }, signal) =>
-      automations.GET('/v1/workspaces/{workspaceId}/approvals', {
-        params: { path: { workspaceId }, query: { status } },
-        signal,
-      }),
+  return shared(workspaceId, `approvals:${status}`, 'volatile', () =>
+    platformOperation(
+      `/v1/workspaces/${workspaceId}/approvals?status=${encodeURIComponent(status)}`,
+      ({ automations }, signal) =>
+        automations.GET('/v1/workspaces/{workspaceId}/approvals', {
+          params: { path: { workspaceId }, query: { status } },
+          signal,
+        }),
+    ),
   );
 }
 
@@ -100,25 +105,25 @@ export function readApprovals(
  * weeks after someone decided (24.7.3 attempt 2, feedback #5 and #7).
  */
 export function readAllApprovals(workspaceId: string): Promise<{ approvals: Approval[] }> {
-  return platformOperation(
-    `/v1/workspaces/${workspaceId}/approvals`,
-    ({ automations }, signal) =>
+  return shared(workspaceId, 'approvals', 'volatile', () =>
+    platformOperation(`/v1/workspaces/${workspaceId}/approvals`, ({ automations }, signal) =>
       automations.GET('/v1/workspaces/{workspaceId}/approvals', {
         params: { path: { workspaceId } },
         signal,
       }),
+    ),
   );
 }
 
 /** The workspace's subscriptions — the middle hop of the approval-title join. */
 export function readSubscriptions(workspaceId: string): Promise<{ subscriptions: Subscription[] }> {
-  return platformOperation(
-    `/v1/workspaces/${workspaceId}/subscriptions`,
-    ({ automations }, signal) =>
+  return shared(workspaceId, 'subscriptions', 'volatile', () =>
+    platformOperation(`/v1/workspaces/${workspaceId}/subscriptions`, ({ automations }, signal) =>
       automations.GET('/v1/workspaces/{workspaceId}/subscriptions', {
         params: { path: { workspaceId } },
         signal,
       }),
+    ),
   );
 }
 

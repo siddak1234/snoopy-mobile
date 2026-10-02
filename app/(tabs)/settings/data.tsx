@@ -197,7 +197,7 @@ export default function DataExportScreen() {
       showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <BackCircle onPress={() => router.back()} />
-        <Text style={[styles.title, { color: palette.text }]}>Data export</Text>
+        <Text style={[styles.title, { color: palette.text }]}>Export my data</Text>
       </View>
 
       {!access.data.canExport ? (
@@ -213,7 +213,8 @@ export default function DataExportScreen() {
             <SectionLabel>SUMMARY</SectionLabel>
             <SurfaceCard style={[styles.card, styles.pad]}>
               <Text style={[styles.text, muted]}>
-                A quick summary of this workspace&apos;s records — each part bounded to its most recent entries.
+                A copy of this workspace&apos;s records — its runs, approvals, flows, connections, projects and
+                members — as a JSON file you can keep. The summary takes each part&apos;s most recent entries.
               </Text>
               <PillButton
                 label={busy === 'summary' ? 'Preparing export…' : 'Prepare export'}
@@ -254,8 +255,8 @@ export default function DataExportScreen() {
             <SectionLabel>EVERYTHING</SectionLabel>
             <SurfaceCard style={[styles.card, styles.pad]}>
               <Text style={[styles.text, muted]}>
-                Or export everything as one file, however large the workspace. It takes a moment to prepare and is kept
-                for a day.
+                Or export every record as one file, however large the workspace. It takes a moment to prepare and the
+                file is kept for a day.
               </Text>
               <PillButton
                 label={running ? 'Preparing everything…' : 'Export everything'}

@@ -8,6 +8,7 @@ import {
   PlatformRateLimitedError,
   PlatformUnreachableError,
 } from '@/lib/platform/problem';
+import { invalidateShared } from '@/lib/platform/snapshot';
 
 /**
  * One read, in the four states the design draws.
@@ -186,5 +187,16 @@ export function useWorkspaceResource<T>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId, ...deps]);
 
-  return { ...resource, loadedFor: resource.status === 'ready' ? loaded.current : null };
+  // `reload()` is the screen saying its rows are out of date (after a change,
+  // or Retry): the workspace's shared snapshot is dropped first, so the read
+  // that follows is a real request and not an answer the snapshot kept
+  // (24.9.1). `refresh()` — a return to the screen — keeps the snapshot and
+  // re-validates only what its window has let go.
+  const { reload: reloadResource } = resource;
+  const reload = useCallback(() => {
+    if (workspaceId) invalidateShared(workspaceId);
+    reloadResource();
+  }, [workspaceId, reloadResource]);
+
+  return { ...resource, reload, loadedFor: resource.status === 'ready' ? loaded.current : null };
 }

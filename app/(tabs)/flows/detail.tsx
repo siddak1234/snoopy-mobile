@@ -31,7 +31,7 @@ import { statusLabel } from '@/lib/view/status';
 
 const ACTION_ICON = { pause: Pause, play: Play, rocket: RocketLaunch } as const;
 
-/** Workflow detail — one screen per workflow identity (design `flow` prop). */
+/** The flow page — one screen per flow identity (design `flow` prop). */
 export default function WorkflowDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -131,7 +131,7 @@ export default function WorkflowDetailScreen() {
       // and a skeleton here read as the screen going blank (feedback #6).
       flows.refresh();
     } catch (error) {
-      setActionError(refusalMessage(error, {}, 'The workflow status was not changed.'));
+      setActionError(refusalMessage(error, {}, 'The flow status was not changed.'));
     } finally {
       setBusy(false);
     }
@@ -261,6 +261,7 @@ export default function WorkflowDetailScreen() {
         subscription={subscription}
         entry={entry}
         live={current === 'Live'}
+        scope={def.scope}
         shownWorkspaceId={flows.loadedFor}
         canAdminister={administers(roleIn(session, flows.loadedFor))}
         onChanged={flows.reload}

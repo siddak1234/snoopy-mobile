@@ -249,7 +249,7 @@ export default function RunDetailScreen() {
           />
         ) : null}
         <PillButton
-          label="View workflow"
+          label="View flow"
           variant="secondary"
           height={46}
           fontSize={14}

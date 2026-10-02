@@ -6,13 +6,11 @@ import {
   Buildings,
   CaretRight,
   CreditCard,
-  CrownSimple,
   DownloadSimple,
   FolderSimple,
   IdentificationBadge,
   Lifebuoy,
   SignOut,
-  Storefront,
   UserFocus,
   Users,
   UsersThree,
@@ -33,13 +31,11 @@ import { em, fonts, layout, status } from '@/constants/theme';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { useBiometricWording } from '@/hooks/use-biometric-wording';
 import { useSession } from '@/hooks/use-session';
-import { useSolutions } from '@/hooks/use-solutions';
 import { useTheme, type ThemeMode } from '@/hooks/use-theme';
 import { SIGN_OUT_FAILED, SIGN_OUT_RETRY, errorTitleFor } from '@/lib/content/screen-states';
-import { readCatalog, readConnectionProviders, readConnections } from '@/lib/platform/catalog';
-import { readSubscriptions } from '@/lib/platform/runs';
+import { readConnectionProviders, readConnections } from '@/lib/platform/catalog';
 import { readFaceIdEnabled, writeFaceIdEnabled } from '@/lib/platform/session-store';
-import { toConnectionRows, toSolutions, type ConnectionView } from '@/lib/view/catalog';
+import { toConnectionRows, type ConnectionView } from '@/lib/view/catalog';
 import { administers } from '@/lib/view/roles';
 
 const APPEARANCE: { label: string; mode: ThemeMode }[] = [
@@ -51,7 +47,6 @@ const APPEARANCE: { label: string; mode: ThemeMode }[] = [
 export default function SettingsScreen() {
   const { palette, mode, setMode } = useTheme();
   const biometric = useBiometricWording();
-  const { totals } = useSolutions();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [faceId, setFaceId] = useState(false);
@@ -106,24 +101,13 @@ export default function SettingsScreen() {
    * read omits a provider with no connection at all, and the design draws
    * exactly that row ("Slack · Not connected"). The native authorize/complete
    * operations published in Round 6.6 also back the connection action below.
+   * The plan's totals left this screen with the Solutions tab (24.9.5): Billing
+   * states the plan, and Flows is where a flow is added or removed.
    */
   const connections = useWorkspaceResource(async (workspaceId) => {
-    const [providers, held, catalog, subscriptions] = await Promise.all([
-      readConnectionProviders(),
-      readConnections(workspaceId),
-      readCatalog(workspaceId),
-      readSubscriptions(workspaceId),
-    ]);
-    return {
-      rows: toConnectionRows(providers.providers, held.connections),
-      // What is on the plan: the subscriptions it still has, not archived ones.
-      solutions: toSolutions(catalog, subscriptions.subscriptions),
-    };
+    const [providers, held] = await Promise.all([readConnectionProviders(), readConnections(workspaceId)]);
+    return { rows: toConnectionRows(providers.providers, held.connections) };
   });
-
-  // The plan totals need the priced catalog; the provider holds only overrides.
-  const pricedSolutions = connections.status === 'ready' ? connections.data.solutions : [];
-  const { activeCount, solutionsTotal, planTotal } = totals(pricedSolutions);
 
   const connectionRows: ConnectionView[] =
     connections.status === 'ready' ? connections.data.rows : [];
@@ -239,27 +223,8 @@ export default function SettingsScreen() {
       />
 
       <View>
-        <SectionLabel>PLAN &amp; BILLING</SectionLabel>
+        <SectionLabel>BILLING</SectionLabel>
         <SurfaceCard style={styles.sectionCard}>
-          <SettingsRow
-            icon={CrownSimple}
-            title="Solutions total"
-            sub={`${activeCount} active from the published catalog`}
-            divider
-            right={
-              <Text style={[styles.planTotal, { color: palette.accentRamp[300] }]}>
-                {planTotal}/mo
-              </Text>
-            }
-          />
-          <SettingsRow
-            icon={Storefront}
-            title="Manage solutions"
-            sub={`${activeCount} active · ${solutionsTotal}/mo`}
-            divider
-            onPress={() => router.push('/(tabs)/solutions')}
-            right={<CaretRight size={15} color={palette.neutral[500]} />}
-          />
           <SettingsRow
             icon={CreditCard}
             title="Billing"
@@ -318,6 +283,7 @@ export default function SettingsScreen() {
           <SettingsRow
             icon={FolderSimple}
             title="Projects"
+            sub="All projects, and each one's members and settings"
             divider
             testID="settings-projects"
             onPress={() => router.push('/(tabs)/settings/projects')}
@@ -335,7 +301,8 @@ export default function SettingsScreen() {
           ) : null}
           <SettingsRow
             icon={DownloadSimple}
-            title="Data export"
+            title="Export my data"
+            sub="A copy of this workspace's records, as a file"
             divider
             testID="settings-data"
             onPress={() => router.push('/(tabs)/settings/data')}
@@ -450,10 +417,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-  },
-  planTotal: {
-    fontFamily: fonts.medium,
-    fontSize: 14,
   },
   membersCount: {
     fontFamily: fonts.regular,

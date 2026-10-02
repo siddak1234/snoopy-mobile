@@ -1,6 +1,7 @@
 import type { components } from '@/lib/generated/platform-contracts/platform';
 import { platformOperation } from './client';
 import { collectPages } from './paging';
+import { invalidateShared, shared } from './snapshot';
 import { readWorkspaces, type WorkspaceSummary } from './workspaces';
 
 /**
@@ -17,6 +18,10 @@ export type ProjectMembership = Schema['ProjectMembership'];
 export type ProjectTeamGrant = Schema['ProjectTeamGrantSummary'];
 
 export function readProjects(workspaceId: string): Promise<Project[]> {
+  return shared(workspaceId, 'projects', 'settled', () => readProjectPages(workspaceId));
+}
+
+function readProjectPages(workspaceId: string): Promise<Project[]> {
   return collectPages(async (cursor) => {
     const page = await platformOperation(`/v1/workspaces/${workspaceId}/projects`, ({ platform }, signal) =>
       platform.GET('/v1/workspaces/{workspaceId}/projects', {
@@ -68,7 +73,15 @@ export function createProject(
       body,
       signal,
     }),
-  );
+  ).then(changedProjects(workspaceId));
+}
+
+/** A project changed: the next read of the list is a real request. */
+function changedProjects<T>(workspaceId: string): (answer: T) => T {
+  return (answer) => {
+    invalidateShared(workspaceId, ['projects']);
+    return answer;
+  };
 }
 
 /** Deleting a project archives it — the website's Delete. */
@@ -79,7 +92,7 @@ export function archiveProject(workspaceId: string, projectId: string, idempoten
       body: { status: 'archived' },
       signal,
     }),
-  );
+  ).then(changedProjects(workspaceId));
 }
 
 export function readProjectMembers(workspaceId: string, projectId: string): Promise<ProjectMembership[]> {

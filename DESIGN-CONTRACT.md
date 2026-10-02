@@ -105,24 +105,33 @@ switcher lists `GET /v1/workspaces` rather than the session's bounded
 when `workspacesTruncated` says the list is incomplete — the same rule the web
 switcher (snoopy PR #6) applies over the same operation.
 
+**The scope control** (24.9.2, 2026-10-02) sits at the top of Home, Flows and
+Activity: the workspace — the switcher, reached there as well as from Settings —
+and "All projects" or one project. A project is a visibility scope on a
+subscription (backend 18.6.2); runs and approvals carry no project and follow
+their flow's, and one whose flow is unknown is kept rather than hidden. The
+choice is kept per workspace on the device (`lib/platform/scope-store.ts`) and
+never selects tenancy. The website has no project selector: a deliberate mobile
+difference under FR-25, as the snapshot's windows are.
+
 ## Screen reads
 
 | Surface | Published operations / mapping |
 | --- | --- |
 | Sign in | `GET /v1/auth/providers`; providers only — no password or reset surface is drawn (owner, 2026-09-08). **One screen since 2026-10-02**: the website's words ("Sign in with …"), a Remember me toggle, and the Face ID question once after a remembered sign-in; Welcome, Sign up and the Onboarding tour are gone |
 | Home | session + catalog + `run-stats?since=<local midnight>` + runs + pending approvals |
-| Solutions/templates | workspace automation catalog and its server-supplied categories, plus subscriptions (Added) |
+| Flows/add (the catalog, "New") | workspace automation catalog and its server-supplied categories, plus subscriptions and projects — Added ✓ or Add per the scope looked at (24.9.3) |
 | Setup/configure | catalog `setup[]` and the matching subscription config |
 | Flows/detail | subscriptions + catalog + run stats; identity is subscription ID/template ID. Detail keeps the subscription (`runInput`, `triggerKind`, `templateVersion`) and its catalog entry for its actions; the webhook address is read when its dialog opens |
 | ~~Builder~~ | **Removed 2026-10-02** with Templates and Configure, on the owner's direction: the website has no builder, and FR-25 is parity with the website. Flow detail draws `pipeline[]` itself |
 | Activity/run detail | runs/list/detail joined to catalog/subscription identity |
 | Approvals | pending approvals joined through subscription → template → pipeline step |
 | Notifications | pending approvals plus failed runs; explicitly an in-app composition |
-| Settings | session/workspace, catalog + subscriptions for the plan totals, provider registry, and workspace connections; the workspace switcher reads the workspace collection |
+| Settings | session/workspace, provider registry, and workspace connections; the workspace switcher reads the workspace collection. The plan's totals left with the Solutions tab (24.9.5) |
 | Organization | the workspace collection; for an owner or admin of the active organization, its members, domains and join requests; for someone in no organization, `organization-discovery` |
 | Projects / project | the workspace collection and each workspace's projects; one project read in its own workspace; for a team project, its memberships, team grants and the visible teams, plus the workspace's members for its owner or admin |
 | Teams / team | the workspace collection and the organization's visible teams; for a team's manager or an owner or admin, its memberships and the workspace's members |
-| Solutions, setup, flows | also the active workspace's projects, for the scope an automation is added to and the label each workflow carries |
+| Home, Flows, add, setup, Activity | also the active workspace's projects — the scope control (24.9.2), the scope a flow is added to, and the label each flow carries |
 | Billing | the workspace collection for the role; for an owner or admin, `/v1/plans` and the workspace's billing; read again when the app returns to the foreground on iOS |
 | Account | the linked sign-in identities and the login providers |
 | Data export | the workspace collection for the role; the bounded export on request; a complete export started, followed every 2 s (doubling after a failed read, three allowed), and its link read again at the moment of the download |
@@ -191,7 +200,9 @@ review" — the held queue — also list running, queued and cancelled runs.
     answer to detail's change only until the list reads again.
   - Move to vN: patch `templateVersion`, confirmed first, when the catalog's
     version is newer than the one pinned.
-  - Archive: patch `status: archived` behind its one-way confirmation.
+  - Remove flow: patch `status: archived` behind its one-way confirmation — the
+    last thing on the flow page, in red (24.9.4). It leaves the list, keeps its
+    runs in Activity, and the flow can be added again; Pause keeps it listed.
   - Webhook address: owner or admin, webhook-started only. The address is read
     on each opening; a secret is issued with no idempotency key, shown once in
     the dialog and kept nowhere else.
@@ -242,7 +253,14 @@ review" — the held queue — also list running, queued and cancelled runs.
     website's origin, the one the browser leg shares.
 - After a change, a screen re-reads from `loading`: what it showed is out of
   date and is not left to act on. A return to a screen re-reads it and keeps
-  its rows until the answer lands (24.4.4).
+  its rows until the answer lands (24.4.4) — through the shared workspace
+  snapshot since 2026-10-02 (24.9.1, `lib/platform/snapshot.ts`): one in-flight
+  request per resource; a resource younger than its window is answered from the
+  snapshot (15 s for runs, approvals, subscriptions, counts and connections;
+  120 s for the catalog, projects, providers and workspaces); an action
+  invalidates what it changed, and `reload()` drops the workspace's whole
+  snapshot. The website reads per navigation and caches nothing on the client:
+  the windows are a deliberate mobile difference under FR-25.
 
 UI state changes occur only after a successful mutation. Failed actions remain
 on the loaded screen and show the shared inline failure callout.
@@ -281,9 +299,10 @@ mobile-only shape.
   9.
 - Billing is ADR-0025's four operations and ADR-0032's rule (24.6.1 above):
   no card field, no in-app purchase, no price the platform did not state.
-  Settings' solutions total remains the sum of published automation prices.
-- An archived subscription is absent everywhere: not a workflow, not Added, not
-  paused, not reused by Add (`withoutArchived`, the website's rule). The
+  Billing states the plan; the solutions total left Settings with the Solutions
+  tab (24.9.5).
+- A removed (archived) subscription is absent everywhere: not a flow, not Added,
+  not paused, not reused by Add (`withoutArchived`, the website's rule). The
   catalog's `subscribed` is not used for Added, because it still counts an
   archived row (`DESIGN-GAPS.md`, Round 16). Home alone keeps it, to ask whether
   the workspace has set anything up at all.
@@ -313,7 +332,9 @@ Builder was deliberately read-only in BUILD-PLAN 8.7, rendering the published
 pipeline with Save, Test run, insertion and drag visibly disabled. **Removed
 2026-10-02** with Templates and Configure (24.7.3 attempt 2 feedback): the website
 has no builder, so a read-only one on mobile offered nothing the website offers.
-"New" and Home's button lead to Solutions. The Settings SECURITY card keeps the
+"New" and Home's button lead to the catalog inside Flows (`app/(tabs)/flows/add.tsx`,
+24.9.3); the Solutions tab itself went on 2026-10-02, on the owner's word — four
+tabs: Home, Flows, Activity, Settings. The Settings SECURITY card keeps the
 Face ID unlock only; its Passkeys and Stay signed in rows were static design
 copy the website never had, and went the same day.
 

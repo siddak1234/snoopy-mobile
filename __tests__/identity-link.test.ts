@@ -109,3 +109,22 @@ it('says a declined link in words, and keeps nothing', async () => {
 it('names the website by the origin the browser leg shares, https only', () => {
   expect(websiteOrigin()).toBe('https://www.example.test');
 });
+
+it("says in a sentence when the platform's manual-linking switch is off, never the problem's title (backend §12.1 #200)", async () => {
+  const { PlatformError } = require('@/lib/platform/problem');
+  platformOperation.mockImplementation(async () => {
+    throw new PlatformError('Not Configured', 503, 'NOT_CONFIGURED', { component: 'identity.manual_linking' });
+  });
+  await expect(linkIdentity('microsoft')).resolves.toEqual({
+    status: 'failed',
+    message: "Account linking isn't enabled on this platform yet.",
+  });
+  platformOperation.mockImplementation(async () => {
+    throw new PlatformError('Dependency Failure', 502, 'DEPENDENCY_FAILURE');
+  });
+  await expect(linkIdentity('microsoft')).resolves.toEqual({
+    status: 'failed',
+    message: "The sign-in provider couldn't be reached. Try again in a moment.",
+  });
+  expect(openAuthSessionAsync).not.toHaveBeenCalled();
+});

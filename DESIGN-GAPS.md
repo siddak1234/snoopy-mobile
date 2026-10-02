@@ -712,6 +712,39 @@ committed.
 | The Optional marker | "Optional" reworded | `setup-field` "marks a field that is not required as Optional" |
 | An entry without `requiredConnections` draws no step | the absent-means-none read removed | `tab-screens` "draws no Connections step when the platform predates `requiredConnections`" |
 
+### The fourth signed-in session (24.9, build 6, 2026-10-02 15:48Z–16:07Z)
+
+Build 6 on the owner's iPhone: a fresh sign-in at 14:39Z and the remembered cold start at
+15:47Z worked by the logs; five feedback items followed, and the owner's decisions the same
+day ("Flows will be the name we use from now on"). Verified against the code at `5cddcab`,
+the production logs and the website at `2b729e3`:
+
+| # | Feedback | What it is | Disposition |
+| --- | --- | --- | --- |
+| 1 | "Cannot link an account" | Supabase's "Allow manual linking" switch is off: three link starts answered 502 and Supabase's auth log says `404 manual_linking_disabled` for each (backend §12.1 #200); the app showed the problem's title, "Dependency Failure" | **the platform says so as a 503** (backend #136); **fixed here**: link failures are sentences by code, never a title (24.9.6). The switch is the owner's (24.10.5) |
+| 2 | projects should be chosen from Home, not Settings | the switcher and Projects lived under Settings → Workspace; Home read workspace-wide | **fixed**: the scope control on Home, Flows and Activity — the workspace, then All projects or one — kept per workspace on the device (24.9.2); Settings keeps project admin |
+| 3 | "How does data export work… what are we downloading, why in settings" | the website's Data export, in its words | **fixed**: "Export my data" says what the file holds; a project's activity log and a per-flow export are platform work (backend Phase 26) |
+| 4 | Workflows vs Solutions: consolidate; "Flows" | tab "Flows", title "Workflows", "Templates" and "New" both opening the Solutions tab; the plan card twice in Settings | **fixed**: four tabs and one vocabulary; the catalog is "New" inside Flows, Added ✓ or Add per scope (24.9.3); the plan rows and the Solutions tab went |
+| 5 | "How do I unadd or remove it… specific to a project" | "Added ✓" opened the flow, where the platform's word was Archive | **fixed**: "Remove flow" last on the flow page, in red — it archives, keeps the runs in Activity and says so (24.9.4); Pause keeps it listed; once added, the catalog shows no button |
+| — | the first real burst (backend §12.1 #199) | each screen 3–5 reads, re-run on every tab return, shared by nothing: 65 and 77 requests in a minute from one phone | **fixed**: the shared workspace snapshot (24.9.1) — one in-flight read per resource, 15 s / 120 s windows on a return, an action invalidating what it changed; a five-tab pass is 18 requests once, then about 4 |
+
+### Guards proved to bite, 24.9
+
+Eight breaks, each run against its own suite and the file restored by SHA-256. The
+four-tab bar is held by the layout and the tab bar's visual snapshot, not by a guard
+a break can reach, and is not claimed here.
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| One request per resource, and a window on a return | the snapshot answering nothing | `snapshot` "answers two readers of one resource with one request", "serves a return within the window", "drops only what an action names" |
+| A subscription change drops what it changed | `updateSubscription` invalidating nothing | `snapshot-invalidation` "a subscription change drops the subscriptions and the catalog, not the runs" |
+| `reload()` drops the workspace snapshot | the invalidation removed from `useWorkspaceResource` | `settings-connections` "closes the dialog and re-reads the workspace connections" (and the 409 case) |
+| A project scope selects a flow by its own project | `inScope` always true | `scope` — all three |
+| The scope control narrows Flows | the filter removed from the list | `scope-control` "narrows Flows to the chosen project", "restores the kept choice" |
+| Remove flow archives | the patch sending `paused` | `automation-actions` "is reached only through its one-way confirmation" |
+| Settings reads only what it draws | the catalog read put back | `tab-screens` "shows Billing without the plan totals, and reads only what it draws" (and three Settings tests with it) |
+| A link failure is a sentence, never a title | the problem's title returned for a 503 | `identity-link` "says in a sentence when the platform's manual-linking switch is off" |
+
 ### Guards proved to bite, 24.6
 
 | Guard | Broken by | Test that failed |

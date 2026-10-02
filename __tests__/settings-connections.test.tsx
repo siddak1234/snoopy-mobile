@@ -90,7 +90,7 @@ describe('an OAuth connect that comes back cancelled', () => {
       expect(reads.filter((path) => path.endsWith('/connections')).length).toBe(readsBefore + 1),
     );
     // The truth the re-read established, rendered from the published field.
-    expect(await screen.findByText('Connected · used by 1 solution')).toBeTruthy();
+    expect(await screen.findByText('Connected · used by 1 flow')).toBeTruthy();
     expect(screen.queryByText('Not connected')).toBeNull();
   });
 
