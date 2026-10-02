@@ -89,6 +89,16 @@ export function duration(
   return `${Math.floor(minutes / 60)}h`;
 }
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** A day in the device's zone: `'Sep 30, 2026'`. */
+export function calendarDate(iso: string | null | undefined): string {
+  const at = parseInstant(iso);
+  if (at === null) return EMPTY;
+  const date = new Date(at);
+  return `${MONTHS[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+}
+
 function parseInstant(iso: string | null | undefined): number | null {
   if (typeof iso !== 'string' || iso.trim() === '') return null;
   const parsed = Date.parse(iso);

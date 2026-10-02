@@ -113,8 +113,9 @@ export const FLOWS_EMPTY_BODY = 'Add a prebuilt flow — your first one can be l
 export const REMOVED_FLOWS_TITLE = 'Removed flows';
 export const REMOVED_FLOWS_NOTE = 'A removed flow keeps its history here. Add it again any time.';
 export const REMOVED_FLOWS_EMPTY = 'Nothing removed here.';
-export const REMOVED_FLOW_BODY =
-  'This flow was removed. Its runs stay in Activity, and you can add it again — its setup starts fresh.';
+export function removedFlowBody(removedOn?: string): string {
+  return `This flow was removed${removedOn ? ` on ${removedOn}` : ''}. Its runs stay in Activity, and you can add it again — its setup starts fresh.`;
+}
 export const ADD_AGAIN_LABEL = 'Add it again';
 /** A run row whose flow was removed says so (24.11.8). */
 export const RUN_FLOW_REMOVED = 'Flow removed';

@@ -1,5 +1,6 @@
 import {
   EMPTY,
+  calendarDate,
   clockTime,
   count,
   duration,
@@ -170,6 +171,17 @@ describe('clockTime', () => {
 
   it('renders the empty mark when absent', () => {
     expect(clockTime(undefined)).toBe('—');
+  });
+});
+
+describe('calendarDate', () => {
+  it('renders the day in the device zone, the month in words', () => {
+    expect(calendarDate(new Date(2026, 8, 30, 12, 0).toISOString())).toBe('Sep 30, 2026');
+    expect(calendarDate(new Date(2026, 0, 2, 0, 5).toISOString())).toBe('Jan 2, 2026');
+  });
+
+  it('renders the empty mark when absent', () => {
+    expect(calendarDate(undefined)).toBe('—');
   });
 });
 
