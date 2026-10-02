@@ -634,6 +634,42 @@ is the owner's.
 | `refresh()` keeps the rows | `refresh()` starting from `loading` like `reload()` | `use-resource` "re-reads on refresh() after a change, keeping the rows" |
 | Three actions stack | `actionsLayout` ignored | `settings-connections` "stacks the three actions" |
 
+### The second signed-in session (24.7.3, attempt 3, 2026-10-02 02:38Z–03:00Z)
+
+Build 3 on the owner's iPhone: the three fixes of attempt 2 confirmed, the Google
+connection re-consented on the device (02:38Z), Face ID unlock exercised, and
+twelve TestFlight feedback items sent (02:50Z–03:00Z), read through App Store
+Connect's API with their screenshots. The owner also asked three things in chat.
+Verified against the code at `238a926`, the database, both hosts' proxy logs and
+the website at `2b729e3` (FR-25 parity):
+
+| # | Feedback | What it is | Disposition |
+| --- | --- | --- | --- |
+| chat | "If an invoice is held, why not under Needs review on Home?" | Home counts pending approvals (none); every held run's approval was decided in September. A run stays `held` after its approval because the approval starts a new run (FR-15); Activity's "Needs review" keyed on that status | **fixed**: every approval is read beside the runs; a held row says how it was decided; "Needs review" means a pending decision; a continuation reads "After approval ·", as the website labels it |
+| chat | Pause "switches back, then to the right state" | the detail showed the status as last read; the re-read is five requests | **fixed**: the recorded answer shows at once and settles when this screen's re-read lands |
+| chat | "Remove Edit in Builder and the page" | Builder, Templates and Configure were Round 6's read-only design path; the website has no builder | **removed**, with "New" and the Home button leading to Solutions |
+| 1, 2 | the setup screen; "look up how text fields are entered on iOS" | the notify-email field is a `text` control; the vocabulary knows no address | **fixed** on the device: a field named for email gets the email keyboard; the vocabulary gains `email` (backend) |
+| 3 | after Activate, Back shows Setup again | a cross-tab `replace` left Setup in Solutions' history | **fixed**: Solutions is left at its root first |
+| 4 | deleting the 5 re-enters 500 | `??` read a cleared field as untouched and put the default back | **fixed**: cleared stays cleared; Activate asks for a number |
+| 5, 7 | "I see held runs but can't approve them" | nothing was pending; see the first row | **fixed** by the first row; the test path is a run above the threshold on the v4 subscription |
+| 6 | "why does it say invoice rejected" | the string is not in this app; the one rejected approval is from 2026-09-12 | **open — ask which screen**; the pipeline-components idea is recorded for Round 17 |
+| 8, 9 | Passkeys, Stay signed in | two static rows the website never had; the session is always kept in the enclave (ADR-0017) | **removed** |
+| 10, 12 | Face ID offered before any sign-in | the login screen always drew the unlock | **fixed**: offered only when this device holds a session |
+| 11 | Face ID unlock works | — | — |
+
+### Guards proved to bite, 24.7.3 attempt 3
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| A decided held run leaves Needs review | `needsReview` ignoring the decision | `tab-screens` "leaves a decided held run out of Needs review" |
+| A held row says how it was decided | the approvals branch of `metaFor` removed | `flows-view` "lets a held row carry its decision" |
+| The recorded status shows at once | the status as last read again | `tab-screens` "keeps the page while re-reading after Pause" |
+| A cleared amount stays cleared | `??` fallback restored | `tab-screens` "keeps a cleared amount cleared" |
+| Setup leaves Solutions' history | `dismissTo` removed | `tab-screens` "adds an archived automation afresh" |
+| Face ID offered only with a session | the unlock drawn unconditionally | `auth-screens` "offers no Face ID unlock when this device holds no session" |
+| An address field gets the email keyboard | `isEmailField` always false | `setup-field` "reads an `email` control" |
+| The banner counts pending approvals | every approval counted | `tab-screens` "counts pending approvals only" |
+
 ### Guards proved to bite, 24.6
 
 | Guard | Broken by | Test that failed |

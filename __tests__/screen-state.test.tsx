@@ -20,11 +20,14 @@ import {
   NOTIFICATIONS_EMPTY_BODY,
   NOTIFICATIONS_EMPTY_TITLE,
   OFFLINE_TITLE,
-  START_FROM_TEMPLATE_LABEL,
   errorTitleFor,
 } from '@/lib/content/screen-states';
 import { renderWithProviders } from '@/test/render';
 import { stabilizeAnimated } from '@/test/stabilize';
+
+// A sample second action for the component: the product's template path is gone
+// (2026-10-02), the EmptyState component still offers one.
+const START_FROM_TEMPLATE_LABEL = 'Start from a template';
 
 /**
  * The shared data states, and the copy they are contractually required to say.

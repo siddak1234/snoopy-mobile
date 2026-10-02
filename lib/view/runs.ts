@@ -2,7 +2,7 @@ import type { Icon } from 'phosphor-react-native';
 import { CheckCircle, CircleDashed, HandPalm, XCircle } from 'phosphor-react-native';
 
 import type { CatalogEntry } from '@/lib/platform/catalog';
-import type { Run } from '@/lib/platform/runs';
+import type { Approval, Run } from '@/lib/platform/runs';
 import { EMPTY, relativeTime } from './format';
 import { statusLabel, statusTone, type StatusPillLabel, type StatusTone } from './status';
 
@@ -49,21 +49,58 @@ export function nameFor(run: Run, catalog: Map<string, CatalogEntry>): string {
  * optional even then — an automation that supplied no summary has none — so this
  * degrades to the run's status word rather than leaving the line blank.
  */
-export function metaFor(run: Run): string {
-  if (run.status === 'succeeded' && run.resultSummary) return run.resultSummary;
-  if (run.status === 'failed' && run.failureReason) return run.failureReason;
-  return statusLabel(run.status);
+export function metaFor(run: Run, approvals?: readonly Approval[]): string {
+  // A continuation is part of the run it continues, as the website says beside
+  // its name ("after approval"); a held run says how it was decided, because its
+  // status never changes after the decision (FR-15).
+  const prefix = run.origin === 'approval-continuation' ? 'After approval · ' : '';
+  if (run.status === 'held' && approvals) return heldDecisionLine(run, approvals);
+  if (run.status === 'succeeded' && run.resultSummary) return prefix + run.resultSummary;
+  if (run.status === 'failed' && run.failureReason) return prefix + run.failureReason;
+  return prefix + statusLabel(run.status);
+}
+
+/** How a held run was decided, from the approvals read beside it. */
+export type HeldDecision = 'pending' | 'approved' | 'rejected' | 'closed' | 'unknown';
+
+export function heldDecision(run: Run, approvals: readonly Approval[]): HeldDecision | null {
+  if (run.status !== 'held') return null;
+  const approval = approvals.find((a) => a.runId === run.id);
+  if (!approval) return 'unknown';
+  if (approval.status === 'pending') return 'pending';
+  if (approval.status === 'approved') return 'approved';
+  if (approval.status === 'rejected') return 'rejected';
+  return 'closed';
+}
+
+const HELD_DECISION_LINE: Record<HeldDecision, string> = {
+  pending: 'Waiting for approval',
+  approved: 'Approved — continued in a new run',
+  rejected: 'Rejected',
+  closed: 'No longer awaiting approval',
+  unknown: 'Held for review',
+};
+
+export function heldDecisionLine(run: Run, approvals: readonly Approval[]): string {
+  return HELD_DECISION_LINE[heldDecision(run, approvals) ?? 'unknown'];
+}
+
+/** Whether a run still needs someone's decision: held, and nobody has decided. */
+export function needsReview(run: Run, approvals: readonly Approval[]): boolean {
+  const decision = heldDecision(run, approvals);
+  return decision === 'pending' || decision === 'unknown';
 }
 
 export function toRunRow(
   run: Run,
   catalog: Map<string, CatalogEntry>,
   now: number = Date.now(),
+  approvals?: readonly Approval[],
 ): RunRowView {
   return {
     runId: run.id,
     name: nameFor(run, catalog),
-    meta: metaFor(run),
+    meta: metaFor(run, approvals),
     time: relativeTime(run.createdAt, now),
     tone: statusTone(run.status),
     status: statusLabel(run.status) as StatusPillLabel,
@@ -74,8 +111,9 @@ export function toRunRows(
   runs: Run[],
   catalog: Map<string, CatalogEntry>,
   now: number = Date.now(),
+  approvals?: readonly Approval[],
 ): RunRowView[] {
-  return runs.map((run) => toRunRow(run, catalog, now));
+  return runs.map((run) => toRunRow(run, catalog, now, approvals));
 }
 
 /** The glyph the activity list draws beside a run, by outcome. */

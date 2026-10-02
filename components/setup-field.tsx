@@ -101,6 +101,16 @@ export function declaredValues(
   return declared;
 }
 
+/**
+ * An address field gets the email keyboard. The manifest vocabulary gains an
+ * `email` control (backend, 2026-10-02); until a registered version declares
+ * it, a `text` field whose key or title says "email" is read as one — a keyboard
+ * choice only, never a validation (24.7.3 attempt 2, feedback #2).
+ */
+export function isEmailField(field: Pick<FieldRowSpec, 'key' | 'title' | 'control'>): boolean {
+  return (field.control as string) === 'email' || /email/iu.test(`${field.key} ${field.title}`);
+}
+
 export function SetupFieldRow({
   field,
   value,
@@ -168,7 +178,11 @@ export function SetupFieldRow({
             onChangeText={changeText}
             placeholder={field.required ? 'Required' : 'Optional'}
             placeholderTextColor={palette.neutral[500]}
-            keyboardType={field.control === 'money' ? 'decimal-pad' : 'default'}
+            keyboardType={
+              field.control === 'money' ? 'decimal-pad' : isEmailField(field) ? 'email-address' : 'default'
+            }
+            textContentType={isEmailField(field) ? 'emailAddress' : undefined}
+            autoComplete={isEmailField(field) ? 'email' : undefined}
             autoCapitalize="none"
             autoCorrect={false}
             selectionColor={palette.accent}

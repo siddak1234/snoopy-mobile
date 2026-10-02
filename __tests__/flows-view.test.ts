@@ -4,7 +4,9 @@ import { toFlows, toSolutions } from '@/lib/view/catalog';
 import {
   approvalTitle,
   composeNotifications,
+  heldDecisionLine,
   metaFor,
+  needsReview,
   runLabel,
   splitByDay,
   subscriptionIndex,
@@ -252,5 +254,34 @@ describe('composeNotifications — §12.1 #71', () => {
       now,
     );
     expect(rows[0].title).toBe('Run failed');
+  });
+});
+
+describe('a held run says how it was decided (24.7.3 attempt 2, feedback #5 and #7)', () => {
+  const held = { id: 'r1', status: 'held', origin: 'manual' } as never;
+  const approval = (status: string) => ({ runId: 'r1', status }) as never;
+
+  it('is pending, approved, rejected, or closed by its approval, and "held" without one', () => {
+    expect(heldDecisionLine(held, [approval('pending')])).toBe('Waiting for approval');
+    expect(heldDecisionLine(held, [approval('approved')])).toBe('Approved — continued in a new run');
+    expect(heldDecisionLine(held, [approval('rejected')])).toBe('Rejected');
+    expect(heldDecisionLine(held, [approval('cancelled')])).toBe('No longer awaiting approval');
+    expect(heldDecisionLine(held, [])).toBe('Held for review');
+  });
+
+  it('needs review only while nobody has decided', () => {
+    expect(needsReview(held, [approval('pending')])).toBe(true);
+    expect(needsReview(held, [])).toBe(true);
+    expect(needsReview(held, [approval('approved')])).toBe(false);
+    expect(needsReview(held, [approval('rejected')])).toBe(false);
+    expect(needsReview({ id: 'r2', status: 'succeeded' } as never, [])).toBe(false);
+  });
+
+  it('prefixes a continuation the way the website labels it, and lets a held row carry its decision', () => {
+    const continuation = { id: 'r3', status: 'succeeded', origin: 'approval-continuation', resultSummary: 'Posted' } as never;
+    expect(metaFor(continuation)).toBe('After approval · Posted');
+    expect(metaFor(held, [approval('approved')])).toBe('Approved — continued in a new run');
+    // Without the approvals beside it, a held run still reads as the status word.
+    expect(metaFor(held)).toBe('Held');
   });
 });
