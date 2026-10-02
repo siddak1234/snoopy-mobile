@@ -106,7 +106,9 @@ export default function RemovedFlowsScreen() {
                 {def.scope && projectId === null ? `${def.scope} · ${def.runs}` : def.runs}
               </Text>
             </View>
-            <Text style={[styles.removed, { color: palette.neutral[400] }]}>Removed</Text>
+            <Text style={[styles.removed, { color: palette.neutral[400] }]}>
+              {def.removedOn ? `Removed ${def.removedOn}` : 'Removed'}
+            </Text>
           </SurfaceCard>
         ))}
       </View>

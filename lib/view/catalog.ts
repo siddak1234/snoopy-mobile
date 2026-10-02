@@ -7,7 +7,7 @@ import type {
   ConnectionProvider,
 } from '@/lib/platform/catalog';
 import type { RunStatusCounts, RunSubscriptionCounts, Subscription } from '@/lib/platform/runs';
-import { EMPTY, count } from './format';
+import { EMPTY, calendarDate, count } from './format';
 import { toPipelineSteps, type PipelineStep } from './pipeline';
 import { iconFor } from './icon-registry';
 import { statusLabel, type StatusPillLabel } from './status';
@@ -256,6 +256,11 @@ export type FlowView = {
   projectId: string | null;
   /** Removed (archived): kept with its history, read-only, addable again (24.11.8). */
   removed: boolean;
+  /**
+   * The day it was removed (24.11.8): its `updatedAt`, since archiving is the
+   * last change anything in the app makes to it — a removed flow offers none.
+   */
+  removedOn?: string;
 };
 
 export type FlowConnectionView = {
@@ -331,6 +336,7 @@ function flowFrom(
       templateId: sub.templateId,
       projectId: sub.projectId ?? null,
       removed: sub.status === 'archived',
+      ...(sub.status === 'archived' ? { removedOn: calendarDate(sub.updatedAt) } : {}),
       icon: iconFor(entry?.icon),
       name: sub.name ?? entry?.name ?? sub.templateId,
       desc: entry?.description ?? '',
