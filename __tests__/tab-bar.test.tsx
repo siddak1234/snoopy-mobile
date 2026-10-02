@@ -8,12 +8,13 @@ import { renderWithProviders } from '@/test/render';
 import { makeTabBarProps as makeProps } from '@/test/tab-bar-props';
 
 describe('NocturneTabBar', () => {
-  it('renders the five design tabs in order', async () => {
+  it('renders the four tabs in order — Solutions folded into Flows (24.9.3)', async () => {
     const { props } = makeProps();
-    const { getByText } = await renderWithProviders(<NocturneTabBar {...props} />);
-    for (const label of ['Home', 'Flows', 'Solutions', 'Activity', 'Settings']) {
+    const { getByText, queryByText } = await renderWithProviders(<NocturneTabBar {...props} />);
+    for (const label of ['Home', 'Flows', 'Activity', 'Settings']) {
       expect(getByText(label)).toBeTruthy();
     }
+    expect(queryByText('Solutions')).toBeNull();
   });
 
   it('tints the active tab with the accent and the rest neutral-500', async () => {

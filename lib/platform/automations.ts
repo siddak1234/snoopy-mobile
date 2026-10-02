@@ -1,6 +1,7 @@
 import type { components } from '@/lib/generated/platform-contracts/automations';
 import { platformOperation } from './client';
 import { PlatformError } from './problem';
+import { invalidateShared } from './snapshot';
 
 export type Subscription = components['schemas']['Subscription'];
 export type SubscriptionStatus = components['schemas']['SubscriptionStatus'];
@@ -11,6 +12,18 @@ export type WebhookEndpoint = components['schemas']['WebhookEndpoint'];
 export type IssuedWebhookEndpoint = components['schemas']['IssuedWebhookEndpoint'];
 export type UploadTicket = components['schemas']['UploadTicket'];
 export type UploadedFile = components['schemas']['UploadedFile'];
+
+/**
+ * What an action changed is read again next time, and only that (24.9.1): a
+ * subscription's change also moves the catalog's `subscribed` flag; a run or a
+ * decision moves the runs and their counts.
+ */
+function changed<T>(workspaceId: string, keys: readonly string[]): (answer: T) => T {
+  return (answer) => {
+    invalidateShared(workspaceId, keys);
+    return answer;
+  };
+}
 
 export function createSubscription(
   workspaceId: string,
@@ -27,7 +40,7 @@ export function createSubscription(
       body: input,
       signal,
     }),
-  );
+  ).then(changed(workspaceId, ['subscriptions', 'catalog']));
 }
 
 export function updateSubscription(
@@ -53,7 +66,7 @@ export function updateSubscription(
         body: input,
         signal,
       }),
-  );
+  ).then(changed(workspaceId, ['subscriptions', 'catalog']));
 }
 
 export function createRun(
@@ -71,7 +84,7 @@ export function createRun(
       body: { subscriptionId, ...(input ? { input } : {}) },
       signal,
     }),
-  );
+  ).then(changed(workspaceId, ['runs', 'run-stats']));
 }
 
 export function decideApproval(
@@ -91,7 +104,7 @@ export function decideApproval(
         body: { decision },
         signal,
       }),
-  );
+  ).then(changed(workspaceId, ['approvals', 'runs', 'run-stats']));
 }
 
 /**
@@ -185,6 +198,6 @@ export function cancelRun(workspaceId: string, runId: string): Promise<{ run: Ru
       params: { path: { workspaceId, runId } },
       signal,
     }),
-  );
+  ).then(changed(workspaceId, ['runs', 'run-stats']));
 }
 

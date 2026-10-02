@@ -470,7 +470,7 @@ exports[`screen states — dark palette ScreenEmpty/two-actions renders unchange
           ]
         }
       >
-        No workflows yet
+        No flows yet
       </Text>
       <Text
         style={
@@ -488,7 +488,7 @@ exports[`screen states — dark palette ScreenEmpty/two-actions renders unchange
           ]
         }
       >
-        Add a prebuilt solution or start from a template — your first workflow can be live in minutes.
+        Add a prebuilt flow — your first one can be live in minutes.
       </Text>
       <View
         accessibilityState={
@@ -622,7 +622,7 @@ exports[`screen states — dark palette ScreenEmpty/two-actions renders unchange
             }
           }
         >
-          Browse solutions
+          Add a flow
         </Text>
       </View>
       <View
@@ -2990,7 +2990,7 @@ exports[`screen states — light palette ScreenEmpty/two-actions renders unchang
           ]
         }
       >
-        No workflows yet
+        No flows yet
       </Text>
       <Text
         style={
@@ -3008,7 +3008,7 @@ exports[`screen states — light palette ScreenEmpty/two-actions renders unchang
           ]
         }
       >
-        Add a prebuilt solution or start from a template — your first workflow can be live in minutes.
+        Add a prebuilt flow — your first one can be live in minutes.
       </Text>
       <View
         accessibilityState={
@@ -3142,7 +3142,7 @@ exports[`screen states — light palette ScreenEmpty/two-actions renders unchang
             }
           }
         >
-          Browse solutions
+          Add a flow
         </Text>
       </View>
       <View

@@ -3,6 +3,7 @@ import { render } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { SessionContext, type SessionContextValue } from '@/hooks/use-session';
+import { ScopeProvider } from '@/hooks/use-scope';
 import { SolutionsProvider } from '@/hooks/use-solutions';
 import { NocturneThemeProvider, type ThemeMode } from '@/hooks/use-theme';
 import { WorkflowsProvider } from '@/hooks/use-workflows';
@@ -40,9 +41,11 @@ export function renderWithProviders(
     <SafeAreaProvider initialMetrics={initialMetrics}>
       <NocturneThemeProvider initialMode={themeMode}>
         <SessionContext.Provider value={session}>
-          <SolutionsProvider>
-            <WorkflowsProvider>{ui}</WorkflowsProvider>
-          </SolutionsProvider>
+          <ScopeProvider>
+            <SolutionsProvider>
+              <WorkflowsProvider>{ui}</WorkflowsProvider>
+            </SolutionsProvider>
+          </ScopeProvider>
         </SessionContext.Provider>
       </NocturneThemeProvider>
     </SafeAreaProvider>,

@@ -89,6 +89,9 @@
       "hooks/**/*.tsx",
       "lib/**/*.ts",
       "!app/**/_layout.tsx"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/test/jest-after-env.js"
     ]
   }
 }

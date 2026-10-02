@@ -23,7 +23,7 @@ export type ScreenKey =
   | 'settings'
   | 'flows'
   | 'activity'
-  | 'solutions'
+  | 'add'
   | 'templates'
   | 'setup'
   | 'configure'
@@ -39,13 +39,13 @@ export type ScreenKey =
 /** `gErrTitle` — the design names the thing that failed, never the mechanism. */
 const ERROR_TITLES: Record<ScreenKey, string> = {
   run: "Couldn't load this run",
-  detail: "Couldn't load this workflow",
+  detail: "Couldn't load this flow",
   approvals: "Couldn't load approvals",
   notifications: "Couldn't load notifications",
   settings: "Couldn't load settings",
-  flows: "Couldn't load your workflows",
+  flows: "Couldn't load your flows",
   activity: "Couldn't load activity",
-  solutions: "Couldn't load solutions",
+  add: "Couldn't load the flow catalog",
   templates: "Couldn't load templates",
   setup: "Couldn't load this setup",
   configure: "Couldn't load this template",
@@ -109,12 +109,16 @@ export const UNAVAILABLE_NOTE = 'Not responding — it cannot run yet.';
  * got copy that made no sense. The design added a genuine first-run state for
  * each, in Home's grammar: an invitation with somewhere to go, never a dead end.
  */
-export const FLOWS_EMPTY_TITLE = 'No workflows yet';
-export const FLOWS_EMPTY_BODY =
-  'Add a prebuilt solution or start from a template — your first workflow can be live in minutes.';
+export const FLOWS_EMPTY_TITLE = 'No flows yet';
+export const FLOWS_EMPTY_BODY = 'Add a prebuilt flow — your first one can be live in minutes.';
+/** The workspace has flows; the chosen project has none (24.9.2). */
+export const FLOWS_SCOPE_EMPTY_TITLE = 'No flows in this project yet';
+export const FLOWS_SCOPE_EMPTY_BODY = 'Add one here, or pick All projects above to see every flow.';
 export const ACTIVITY_EMPTY_TITLE = 'No activity yet';
 export const ACTIVITY_EMPTY_BODY = 'Every run lands here the moment your first agent goes live.';
-export const BROWSE_SOLUTIONS_LABEL = 'Browse solutions';
+export const ACTIVITY_SCOPE_EMPTY = 'No runs in this project yet.';
+/** The one way in, named for what it does (24.9.3): "Flows will be the name". */
+export const ADD_FLOW_LABEL = 'Add a flow';
 
 /**
  * `notifsEmpty` — and note it is not an apology.
@@ -173,6 +177,8 @@ export const ACTIVITY_FILTERS = ['All', 'Success', 'Needs review', 'Failed'] as 
 export type ActivityItem = {
   /** Stable run identity; list position is not identity. */
   id: string;
+  /** The flow it ran for — what a project scope selects by (24.9.2). */
+  subscriptionId: string;
   icon: import('phosphor-react-native').Icon;
   /**
    * The run's own published status, carried verbatim.

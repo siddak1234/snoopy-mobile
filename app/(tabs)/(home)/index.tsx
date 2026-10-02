@@ -6,10 +6,10 @@ import {
   ArrowClockwise,
   Bell,
   CaretRight,
+  FlowArrow,
   HandPalm,
+  Plus,
   Sparkle,
-  SquaresFour,
-  Storefront,
   WifiSlash,
 } from 'phosphor-react-native';
 
@@ -21,14 +21,18 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { Skeleton } from '@/components/nocturne/skeleton';
 import { StatCard } from '@/components/nocturne/stat-card';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { ScopeControl } from '@/components/scope-control';
 import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
+import { useScope } from '@/hooks/use-scope';
 import { useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
+import { ADD_FLOW_LABEL } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
-import { localMidnight, readAllApprovals, readRunStats, readRuns } from '@/lib/platform/runs';
+import { localMidnight, readAllApprovals, readRunStats, readRuns, readSubscriptions } from '@/lib/platform/runs';
 import { toStatTiles, type StatTileView } from '@/lib/view/catalog';
 import { catalogIndex, toRunRows } from '@/lib/view/runs';
+import { scopeApprovals, scopeRuns, scopeStats } from '@/lib/view/scope';
 
 /** Skeleton layout while the dashboard loads (design sHomeLoad). */
 function HomeLoading({ paddingTop }: { paddingTop: number }) {
@@ -89,16 +93,15 @@ function HomeEmpty({ paddingTop, initials }: { paddingTop: number; initials: str
         </View>
         <Text style={[styles.stateTitle, { color: palette.text }]}>Nothing automated. Yet.</Text>
         <Text style={[styles.stateBody, { color: palette.neutral[400] }]}>
-          Add a prebuilt solution and your first agent is running in minutes — no building
-          required.
+          Add a prebuilt flow and your first agent is running in minutes — no building required.
         </Text>
         <PillButton
-          label="Browse solutions"
+          label={ADD_FLOW_LABEL}
           variant="primary"
           height={48}
-          icon={Storefront}
+          icon={Plus}
           iconSize={18}
-          onPress={() => router.push('/(tabs)/solutions')}
+          onPress={() => router.push('/(tabs)/flows/add')}
           style={styles.stateCta}
         />
       </View>
@@ -153,6 +156,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { palette } = useTheme();
   const session = useSession();
+  const { projectId } = useScope();
   const paddingTop = insets.top + (layout.designTop.app - layout.statusArea);
 
   const currentSession = session.status === 'signed-in' ? session.session : null;
@@ -180,29 +184,26 @@ export default function HomeScreen() {
    * converts that boundary to the UTC instant the API wants.
    *
    * Home keeps its own bespoke loading and error states rather than the shared
-   * ones. The four reads resolve atomically so no partial dashboard can combine
-   * fresh counts with stale or absent activity.
+   * ones. The five reads resolve atomically so no partial dashboard can combine
+   * fresh counts with stale or absent activity; the scope then narrows what is
+   * shown, never what was read (24.9.2).
    */
   const dashboard = useWorkspaceResource(async (workspaceId) => {
-    const [stats, runs, catalog, approvals] = await Promise.all([
+    const [stats, runs, catalog, approvals, subscriptions] = await Promise.all([
       readRunStats(workspaceId, localMidnight()),
       readRuns(workspaceId),
       readCatalog(workspaceId),
       readAllApprovals(workspaceId),
+      readSubscriptions(workspaceId),
     ]);
-    // Every approval is read so a held run's row can say how it was decided;
-    // the banner counts the pending ones only.
-    const pending = approvals.approvals.filter((approval) => approval.status === 'pending');
     return {
       stats,
-      recentRuns: toRunRows(
-        runs.runs.slice(0, 4),
-        catalogIndex(catalog.automations),
-        Date.now(),
-        approvals.approvals,
-      ),
-      approvalCount: pending.length,
-      hasAttention: pending.length > 0 || runs.runs.some((run) => run.status === 'failed'),
+      runs: runs.runs,
+      index: catalogIndex(catalog.automations),
+      // Every approval is read so a held run's row can say how it was decided;
+      // the banner counts the pending ones only.
+      approvals: approvals.approvals,
+      subscriptions: subscriptions.subscriptions,
       // Whether this workspace has set anything up, ever: the catalog's flag
       // counts every subscription it holds, in any project, archived ones too.
       // Not the subscription list, which shows only what this person can see —
@@ -221,9 +222,18 @@ export default function HomeScreen() {
     return <HomeEmpty paddingTop={paddingTop} initials={initials} />;
   }
 
-  const tiles: StatTileView[] = toStatTiles(dashboard.data.stats.workspace);
-  const runRows = dashboard.data.recentRuns;
-  const approvalCount = dashboard.data.approvalCount;
+  const { stats, runs, index, approvals, subscriptions } = dashboard.data;
+  const counts = scopeStats(stats, subscriptions, projectId);
+  const tiles: StatTileView[] = toStatTiles(counts);
+  const scopedRuns = scopeRuns(runs, subscriptions, projectId);
+  const runRows = toRunRows(scopedRuns.slice(0, 4), index, Date.now(), approvals);
+  const pending = scopeApprovals(
+    approvals.filter((approval) => approval.status === 'pending'),
+    subscriptions,
+    projectId,
+  );
+  const approvalCount = pending.length;
+  const hasAttention = approvalCount > 0 || scopedRuns.some((run) => run.status === 'failed');
 
   return (
     <ScrollView
@@ -247,9 +257,7 @@ export default function HomeScreen() {
               pressed && { backgroundColor: withAlpha(palette.text, 0.07) },
             ]}>
             <Bell size={19} color={palette.neutral[300]} weight="regular" />
-            {dashboard.data.hasAttention ? (
-              <View style={[styles.bellDot, { backgroundColor: palette.accent }]} />
-            ) : null}
+            {hasAttention ? <View style={[styles.bellDot, { backgroundColor: palette.accent }]} /> : null}
           </Pressable>
           <Pressable
             onPress={() => router.push('/(tabs)/settings')}
@@ -260,6 +268,9 @@ export default function HomeScreen() {
           </Pressable>
         </View>
       </View>
+
+      {/* The scope: the workspace, and the project looked at (24.9.2). */}
+      <ScopeControl />
 
       {/* Greeting */}
       <View>
@@ -283,7 +294,7 @@ export default function HomeScreen() {
             fontSize: 13.5,
             color: palette.neutral[400],
           }}>
-          Your agents ran {dashboard.data.stats.workspace.total.toLocaleString()} tasks today.
+          Your agents ran {counts.total.toLocaleString()} tasks today.
         </Text>
       </View>
 
@@ -330,23 +341,23 @@ export default function HomeScreen() {
       {/* Quick actions */}
       <View style={styles.actionsRow}>
         <PillButton
-          label="Add a solution"
+          label={ADD_FLOW_LABEL}
           variant="primary"
           height={46}
           fontSize={14}
-          icon={Storefront}
+          icon={Plus}
           iconSize={16}
-          onPress={() => router.push('/(tabs)/solutions')}
+          onPress={() => router.push('/(tabs)/flows/add')}
           style={{ flex: 1 }}
         />
         <PillButton
-          label="Solutions"
+          label="Flows"
           variant="secondary"
           height={46}
           fontSize={14}
-          icon={SquaresFour}
+          icon={FlowArrow}
           iconSize={16}
-          onPress={() => router.push('/(tabs)/solutions')}
+          onPress={() => router.push('/(tabs)/flows')}
           style={{ flex: 1 }}
         />
       </View>
@@ -411,6 +422,9 @@ export default function HomeScreen() {
               </Text>
             </Pressable>
           ))}
+          {runRows.length === 0 ? (
+            <Text style={[styles.noRuns, { color: palette.neutral[500] }]}>No runs in this project yet.</Text>
+          ) : null}
         </SurfaceCard>
       </View>
     </ScrollView>
@@ -486,6 +500,12 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 99,
+  },
+  noRuns: {
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    textAlign: 'center',
+    paddingVertical: 16,
   },
   stateRoot: {
     flex: 1,

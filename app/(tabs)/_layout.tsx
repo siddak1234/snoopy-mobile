@@ -32,7 +32,6 @@ export default function TabLayout() {
       screenOptions={{ headerShown: false }}>
       <Tabs.Screen name="(home)" options={{ title: 'Home' }} />
       <Tabs.Screen name="flows" options={{ title: 'Flows' }} />
-      <Tabs.Screen name="solutions" options={{ title: 'Solutions' }} />
       <Tabs.Screen name="activity" options={{ title: 'Activity' }} />
       <Tabs.Screen name="settings" options={{ title: 'Settings' }} />
     </Tabs>

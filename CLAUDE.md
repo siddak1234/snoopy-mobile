@@ -2,7 +2,7 @@
 
 **Round 16 is open** (BUILD-PLAN Phase 24, ADR-0032): the mobile app offers
 every signed-in feature the website offers, on the same published operations,
-and ships to Apple first. This repository owns 24.3–24.7, one phase per session:
+and ships to Apple first. This repository owns 24.3–24.7 and, since the owner's build 6 feedback of 2026-10-02, 24.9 (the flows design pass: one Flows tab, a project scope, a shared workspace snapshot), one phase per session:
 the foundation, automations/runs/connections, organization/projects/teams,
 billing/account/data/support, and the iOS release. **The round is not closed
 here.** A fresh `snoopy-backend` session that wrote none of it re-runs Gate 24

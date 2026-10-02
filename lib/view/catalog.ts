@@ -190,13 +190,13 @@ export function toConnectionRows(
   });
 }
 
-/** `Connected · used by 2 solutions`, `Reauthorization required`, `Not connected`. */
+/** `Connected · used by 2 flows`, `Reauthorization required`, `Not connected`. */
 function connectionSubtitle(connection: Connection | undefined): string {
   if (!connection) return 'Not connected';
   const state = statusLabel(connection.status);
   const used = connection.usedByCount;
   if (typeof used !== 'number' || used < 1) return state;
-  return `${state} · used by ${used} ${used === 1 ? 'solution' : 'solutions'}`;
+  return `${state} · used by ${used} ${used === 1 ? 'flow' : 'flows'}`;
 }
 
 /** A Home stat tile, in the shape `homeStats` had. */
@@ -251,6 +251,8 @@ export type FlowView = {
    * it, which it does where the workspace has projects.
    */
   scope?: string;
+  /** The project it is scoped to, `null` for the whole workspace (24.9.2). */
+  projectId: string | null;
 };
 
 export type FlowConnectionView = {
@@ -296,6 +298,7 @@ export function toFlows(
     return {
       key: sub.id,
       templateId: sub.templateId,
+      projectId: sub.projectId ?? null,
       icon: iconFor(entry?.icon),
       name: sub.name ?? entry?.name ?? sub.templateId,
       desc: entry?.description ?? '',

@@ -8,38 +8,49 @@ import { IconTile } from '@/components/nocturne/icon-tile';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { ScopeControl } from '@/components/scope-control';
 import { em, fonts, layout, radius, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
+import { useScope } from '@/hooks/use-scope';
 import { useWorkflows, type FlowStatus } from '@/hooks/use-workflows';
 import {
-  BROWSE_SOLUTIONS_LABEL,
+  ADD_FLOW_LABEL,
   FLOWS_EMPTY_BODY,
   FLOWS_EMPTY_TITLE,
+  FLOWS_SCOPE_EMPTY_BODY,
+  FLOWS_SCOPE_EMPTY_TITLE,
   errorTitleFor,
 } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
 import { readProjects } from '@/lib/platform/projects';
 import { readRunStats, readSubscriptions } from '@/lib/platform/runs';
 import { scopeLabels, toFlows, type FlowView } from '@/lib/view/catalog';
+import { inScope } from '@/lib/view/scope';
 
-/** Workflows list — design `sFlows`, now searchable and identity-aware. */
+/**
+ * Flows — the one tab for what the workspace runs (design `sFlows`; one tab
+ * since BUILD-PLAN 24.9.3). The scope control narrows it to a project; "New"
+ * opens the catalog inside this tab.
+ */
 export default function FlowsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { palette } = useTheme();
   const { status: statusOf, settle } = useWorkflows();
+  const { projectId } = useScope();
   const [query, setQuery] = useState('');
 
   /**
-   * A workspace's workflows: subscriptions, the catalog, and their run counts.
+   * A workspace's flows: subscriptions, the catalog, and their run counts.
    *
    * Three reads because each answers a part nothing else can — `Subscription`
    * has identity and status, the catalog has name/description/icon/pipeline, and
    * `run-stats` has the totals this row's summary line draws. All-time rather
    * than windowed: the design's line is a lifetime count, so `since` is omitted,
-   * which the endpoint documents as meaning all time.
+   * which the endpoint documents as meaning all time. Every read is served from
+   * the shared snapshot where it is fresh (24.9.1).
    */
   const flows = useWorkspaceResource(async (workspaceId) => {
     const [subs, catalog, stats, projects] = await Promise.all([
@@ -62,10 +73,11 @@ export default function FlowsScreen() {
   useEffect(() => {
     if (live) settle(live.map((flow) => flow.key));
   }, [live, settle]);
-  const source: FlowView[] = live ?? [];
+  // The scope narrows what is shown, never what was read (24.9.2).
+  const scoped: FlowView[] = (live ?? []).filter((flow) => inScope(flow, projectId));
 
   const q = query.trim().toLowerCase();
-  const visible = source.filter((def) => {
+  const visible = scoped.filter((def) => {
     if (!q) return true;
     return `${def.name} ${def.desc}`.toLowerCase().includes(q);
   });
@@ -75,12 +87,7 @@ export default function FlowsScreen() {
     return <ScreenOffline onRetry={flows.reload} topInset={insets.top} />;
   }
   if (flows.status === 'unconfigured') {
-    return (
-      <ScreenUnavailable
-        title={errorTitleFor('flows')}
-        topInset={insets.top}
-      />
-    );
+    return <ScreenUnavailable title={errorTitleFor('flows')} topInset={insets.top} />;
   }
   if (flows.status === 'error') {
     return (
@@ -88,7 +95,7 @@ export default function FlowsScreen() {
     );
   }
   if (live !== null && live.length === 0) {
-    // The first-run empty. The filtered one below reads `No workflows match
+    // The first-run empty. The filtered one below reads `No flows match
     // "{query}"`, which is nonsense for a workspace that has none at all.
     return (
       <ScreenEmpty
@@ -96,8 +103,8 @@ export default function FlowsScreen() {
         title={FLOWS_EMPTY_TITLE}
         body={FLOWS_EMPTY_BODY}
         action={{
-          label: BROWSE_SOLUTIONS_LABEL,
-          onPress: () => router.push('/(tabs)/solutions'),
+          label: ADD_FLOW_LABEL,
+          onPress: () => router.push('/(tabs)/flows/add'),
         }}
         topInset={insets.top}
       />
@@ -113,29 +120,20 @@ export default function FlowsScreen() {
         styles.content,
         { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) },
       ]}>
+      <ScopeControl />
       <View style={styles.titleRow}>
-        <Text style={[styles.title, { color: palette.text }]}>Workflows</Text>
-        <View style={styles.titleActions}>
-          <PillButton
-            label="Templates"
-            variant="secondary"
-            height={36}
-            fontSize={13}
-            style={styles.headerPill}
-            onPress={() => router.push('/(tabs)/solutions')}
-          />
-          <PillButton
-            label="New"
-            variant="primary"
-            height={36}
-            fontSize={13}
-            icon={Plus}
-            iconSize={14}
-            gap={5}
-            style={styles.headerPill}
-            onPress={() => router.push('/(tabs)/solutions')}
-          />
-        </View>
+        <Text style={[styles.title, { color: palette.text }]}>Flows</Text>
+        <PillButton
+          label="New"
+          variant="primary"
+          height={36}
+          fontSize={13}
+          icon={Plus}
+          iconSize={14}
+          gap={5}
+          style={styles.headerPill}
+          onPress={() => router.push('/(tabs)/flows/add')}
+        />
       </View>
 
       <View
@@ -150,7 +148,7 @@ export default function FlowsScreen() {
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Search workflows"
+          placeholder="Search flows"
           placeholderTextColor={palette.neutral[500]}
           selectionColor={palette.accent}
           autoCapitalize="none"
@@ -174,18 +172,31 @@ export default function FlowsScreen() {
                 <Text style={[styles.flowName, { color: palette.text }]}>{def.name}</Text>
                 <Text style={[styles.flowDesc, { color: palette.neutral[400] }]}>{def.desc}</Text>
                 <Text style={[styles.flowRuns, { color: palette.neutral[500] }]}>
-                  {def.scope ? `${def.scope} · ${def.runs}` : def.runs}
+                  {def.scope && projectId === null ? `${def.scope} · ${def.runs}` : def.runs}
                 </Text>
               </View>
               <StatusPill label={statusOf(key, def.status as FlowStatus)} />
             </SurfaceCard>
           );
         })}
-        {visible.length === 0 ? (
+        {visible.length === 0 && scoped.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <FlowArrow size={34} color={palette.neutral[600]} />
+            <Text style={[styles.emptyTitle, { color: palette.text }]}>{FLOWS_SCOPE_EMPTY_TITLE}</Text>
+            <Text style={[styles.emptyText, { color: palette.neutral[500] }]}>{FLOWS_SCOPE_EMPTY_BODY}</Text>
+            <PillButton
+              label={ADD_FLOW_LABEL}
+              variant="primary"
+              height={40}
+              fontSize={13.5}
+              onPress={() => router.push('/(tabs)/flows/add')}
+            />
+          </View>
+        ) : visible.length === 0 ? (
           <View style={styles.emptyWrap}>
             <MagnifyingGlass size={34} color={palette.neutral[600]} />
             <Text style={[styles.emptyText, { color: palette.neutral[500] }]}>
-              No workflows match &quot;{query}&quot;.
+              No flows match &quot;{query}&quot;.
             </Text>
           </View>
         ) : null}
@@ -212,10 +223,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
     fontSize: 26,
     letterSpacing: em(-0.015, 26),
-  },
-  titleActions: {
-    flexDirection: 'row',
-    gap: 8,
   },
   headerPill: {
     paddingHorizontal: 14,
@@ -267,9 +274,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  emptyTitle: {
+    fontFamily: fonts.medium,
+    fontSize: 16,
+    textAlign: 'center',
+  },
   emptyText: {
     fontFamily: fonts.regular,
     fontSize: 13.5,
     textAlign: 'center',
+    maxWidth: 260,
   },
 });

@@ -7,20 +7,24 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FilterChip } from '@/components/nocturne/filter-chip';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { ScopeControl } from '@/components/scope-control';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { em, fonts, layout, status } from '@/constants/theme';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
+import { useScope } from '@/hooks/use-scope';
 import { useTheme } from '@/hooks/use-theme';
 import {
   ACTIVITY_EMPTY_BODY,
   ACTIVITY_EMPTY_TITLE,
-  BROWSE_SOLUTIONS_LABEL,
+  ACTIVITY_SCOPE_EMPTY,
+  ADD_FLOW_LABEL,
   errorTitleFor,
 } from '@/lib/content/screen-states';
 import { ACTIVITY_FILTERS, type ActivityItem } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
-import { readAllApprovals, readRuns } from '@/lib/platform/runs';
+import { readAllApprovals, readRuns, readSubscriptions } from '@/lib/platform/runs';
 import { catalogIndex, needsReview, runIcon, splitByDay, toRunRow } from '@/lib/view/runs';
+import { scopeRuns } from '@/lib/view/scope';
 
 /**
  * One run. Opens its run detail, as Home's RECENT RUNS and the inbox already do
@@ -104,6 +108,7 @@ export default function ActivityScreen() {
   const { palette } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { projectId } = useScope();
   const [filter, setFilter] = useState<ActivityFilter>('All');
 
   /**
@@ -112,16 +117,18 @@ export default function ActivityScreen() {
    * Two reads because `Run` publishes `templateId` and no name — the runs list's
    * own description calls that join intended client work, so it is not a gap.
    * The second line comes from `resultSummary` or `failureReason`, which is
-   * §12.1 #67's named substitute for the run output it refuses.
+   * §12.1 #67's named substitute for the run output it refuses. Subscriptions
+   * are read for the scope: a run follows its flow's project (24.9.2).
    *
    * Grouping is local-day, not UTC: "Today" and "Yesterday" are the design's two
    * sections and a person's own midnight decides them.
    */
   const activity = useWorkspaceResource(async (workspaceId) => {
-    const [runs, catalog, approvals] = await Promise.all([
+    const [runs, catalog, approvals, subscriptions] = await Promise.all([
       readRuns(workspaceId),
       readCatalog(workspaceId),
       readAllApprovals(workspaceId),
+      readSubscriptions(workspaceId),
     ]);
     const index = catalogIndex(catalog.automations);
     const grouped = splitByDay(runs.runs);
@@ -129,6 +136,7 @@ export default function ActivityScreen() {
       const row = toRunRow(run, index, Date.now(), approvals.approvals);
       return {
         id: run.id,
+        subscriptionId: run.subscriptionId,
         icon: runIcon(run.status),
         // Carried verbatim: the chips select on this, never on the tone.
         status: run.status,
@@ -143,13 +151,16 @@ export default function ActivityScreen() {
       today: grouped.today.map(toRow),
       yesterday: grouped.yesterday.map(toRow),
       earlier: grouped.earlier.map(toRow),
+      subscriptions: subscriptions.subscriptions,
     };
   });
 
   const live = activity.status === 'ready' ? activity.data : null;
-  const sourceToday = live ? live.today : [];
-  const sourceYesterday = live ? live.yesterday : [];
-  const sourceEarlier = live ? live.earlier : [];
+  // The scope narrows what is shown, never what was read (24.9.2).
+  const inScope = (items: ActivityItem[]) => (live ? scopeRuns(items, live.subscriptions, projectId) : []);
+  const sourceToday = inScope(live ? live.today : []);
+  const sourceYesterday = inScope(live ? live.yesterday : []);
+  const sourceEarlier = inScope(live ? live.earlier : []);
 
   const today = sourceToday.filter((i) => matchesFilter(i, filter));
   const yesterday = sourceYesterday.filter((i) => matchesFilter(i, filter));
@@ -162,24 +173,23 @@ export default function ActivityScreen() {
   /** Nothing at all, as opposed to nothing matching a filter. */
   const hasNoRuns =
     live !== null && live.today.length === 0 && live.yesterday.length === 0 && live.earlier.length === 0;
+  /** The workspace has runs, the chosen project has none. */
+  const scopeIsEmpty =
+    !hasNoRuns && sourceToday.length === 0 && sourceYesterday.length === 0 && sourceEarlier.length === 0;
 
   if (activity.status === 'loading') return <ScreenLoading topInset={insets.top} />;
   if (activity.status === 'offline') {
     return <ScreenOffline onRetry={activity.reload} topInset={insets.top} />;
   }
   if (activity.status === 'unconfigured') {
-    return (
-      <ScreenUnavailable
-        title={errorTitleFor('activity')}
-        topInset={insets.top}
-      />
-    );
+    return <ScreenUnavailable title={errorTitleFor('activity')} topInset={insets.top} />;
   }
   if (activity.status === 'error') {
     return (
       <ScreenError
         title={errorTitleFor('activity')}
-        onRetry={activity.reload} body={busyBody(activity)}
+        onRetry={activity.reload}
+        body={busyBody(activity)}
         topInset={insets.top}
       />
     );
@@ -193,7 +203,7 @@ export default function ActivityScreen() {
         icon={<CheckCircle size={40} color={status.ok} />}
         title={ACTIVITY_EMPTY_TITLE}
         body={ACTIVITY_EMPTY_BODY}
-        action={{ label: BROWSE_SOLUTIONS_LABEL, onPress: () => router.push('/(tabs)/solutions') }}
+        action={{ label: ADD_FLOW_LABEL, onPress: () => router.push('/(tabs)/flows/add') }}
         topInset={insets.top}
       />
     );
@@ -207,6 +217,7 @@ export default function ActivityScreen() {
         { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) },
       ]}
       showsVerticalScrollIndicator={false}>
+      <ScopeControl />
       <Text style={[styles.h1, { color: palette.text }]}>Activity</Text>
       <View style={styles.filters}>
         {ACTIVITY_FILTERS.map((f) => (
@@ -221,7 +232,12 @@ export default function ActivityScreen() {
       {today.length > 0 ? <ActivitySection label="TODAY" items={today} /> : null}
       {yesterday.length > 0 ? <ActivitySection label="YESTERDAY" items={yesterday} /> : null}
       {earlier.length > 0 ? <ActivitySection label="EARLIER" items={earlier} /> : null}
-      {isEmpty && filter !== 'All' ? (
+      {scopeIsEmpty ? (
+        <View style={styles.emptyWrap}>
+          <CheckCircle size={38} color={palette.neutral[600]} />
+          <Text style={[styles.emptyText, { color: palette.neutral[500] }]}>{ACTIVITY_SCOPE_EMPTY}</Text>
+        </View>
+      ) : isEmpty && filter !== 'All' ? (
         <View style={styles.emptyWrap}>
           <CheckCircle size={38} color={palette.neutral[600]} />
           <Text style={[styles.emptyText, { color: palette.neutral[500] }]}>

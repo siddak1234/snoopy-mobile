@@ -41,16 +41,18 @@ export default function SetupScreen() {
   const insets = useSafeAreaInsets();
   const session = useSession();
   const { setActive } = useSolutions();
-  const { template } = useLocalSearchParams<{ template?: string }>();
+  const { template, project } = useLocalSearchParams<{ template?: string; project?: string }>();
   const [config, setConfig] = useState<Record<string, unknown>>({});
   const [localSubscription, setLocalSubscription] = useState<
     Awaited<ReturnType<typeof createSubscription>>['subscription'] | null
   >(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  // Where it is added: '' is the whole workspace, else a project's id. Unset
-  // until the person chooses; the first scope it is not in yet is the default.
-  const [chosenScope, setChosenScope] = useState<string | undefined>(undefined);
+  // Where it is added: '' is the whole workspace, else a project's id. The
+  // catalog passes the project the scope control had chosen (24.9.3), so it is
+  // not chosen twice; otherwise unset until the person chooses, and the first
+  // scope it is not in yet is the default.
+  const [chosenScope, setChosenScope] = useState<string | undefined>(project || undefined);
   const createKey = useRef(newIdempotencyKey('subscribe'));
   const updateKey = useRef(newIdempotencyKey('activate'));
   const hasFocused = useRef(false);
@@ -228,7 +230,7 @@ export default function SetupScreen() {
       // Leave Solutions at its root before opening the workflow: a `replace`
       // across tabs left this screen in Solutions' history, so coming back
       // showed Setup again with "Activate solution" (24.7.3 attempt 2, feedback #3).
-      router.dismissTo('/(tabs)/solutions');
+      router.dismissTo('/(tabs)/flows');
       router.push({ pathname: '/(tabs)/flows/detail', params: { flow: updated.subscription.id } });
     } catch (error) {
       setActionError(addRefusalMessage(error, 'The solution could not be activated.'));

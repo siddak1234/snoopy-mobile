@@ -82,10 +82,21 @@ export async function linkIdentity(provider: LoginProvider): Promise<LinkOutcome
   }
 }
 
+/**
+ * A sentence for each refusal, by its code — never the problem's title, which
+ * is a category ("Dependency Failure") and read as a crash on the owner's phone
+ * (backend §12.1 #200, BUILD-PLAN 24.9.6).
+ */
 function linkFailure(error: unknown): string {
   if (error instanceof PlatformError) {
-    if (error.status === 503) return 'Linking is not available yet.';
-    return error.message;
+    if (error.code === 'NOT_CONFIGURED' || error.status === 503) {
+      return "Account linking isn't enabled on this platform yet.";
+    }
+    if (error.code === 'DEPENDENCY_FAILURE' || error.status === 502) {
+      return "The sign-in provider couldn't be reached. Try again in a moment.";
+    }
+    if (error.status === 429) return error.message;
+    return 'The account could not be linked.';
   }
   return 'The account could not be linked.';
 }

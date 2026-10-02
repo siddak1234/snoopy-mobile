@@ -1,5 +1,6 @@
 import type { components } from '@/lib/generated/platform-contracts/platform';
 import { platformOperation } from './client';
+import { GLOBAL_SCOPE, invalidateShared, shared } from './snapshot';
 
 /**
  * The two published workspace operations the switcher is built on.
@@ -24,8 +25,8 @@ export type ActiveWorkspaceResponse = components['schemas']['ActiveWorkspaceResp
 
 /** Every workspace available to the signed-in person, with the server's active one. */
 export function readWorkspaces(): Promise<WorkspaceListResponse> {
-  return platformOperation('/v1/workspaces', ({ platform }, signal) =>
-    platform.GET('/v1/workspaces', { signal }),
+  return shared(GLOBAL_SCOPE, 'workspaces', 'settled', () =>
+    platformOperation('/v1/workspaces', ({ platform }, signal) => platform.GET('/v1/workspaces', { signal })),
   );
 }
 
@@ -40,5 +41,9 @@ export function selectActiveWorkspace(
       body: { workspaceId },
       signal,
     }),
-  );
+  ).then((answer) => {
+    // The list's `activeWorkspaceId` is stale now.
+    invalidateShared(GLOBAL_SCOPE, ['workspaces']);
+    return answer;
+  });
 }

@@ -134,7 +134,7 @@ export function WorkspaceSwitcher({ open, onClose }: { open: boolean; onClose: (
       onRequestClose={close}
       testID="workspace-switcher-dialog"
       title="Switch workspace"
-      body="Every screen reads from the active workspace. Connections and solutions are workspace-wide."
+      body="Every screen reads from the active workspace. Connections and billing are the workspace's; flows and runs follow the project you pick."
       actions={
         <>
           <DialogButton label={reloadOwed ? 'Close' : 'Cancel'} disabled={switching !== null} onPress={close} />

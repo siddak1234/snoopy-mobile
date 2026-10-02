@@ -12,7 +12,7 @@ import {
 } from '@/components/screen-state';
 import {
   ACTIVITY_EMPTY_BODY,
-  BROWSE_SOLUTIONS_LABEL,
+  ADD_FLOW_LABEL,
   ERROR_BODY,
   FALLBACK_ERROR_TITLE,
   FLOWS_EMPTY_BODY,
@@ -59,7 +59,7 @@ const CASES = [
         icon={<FlowArrow size={40} />}
         title={FLOWS_EMPTY_TITLE}
         body={FLOWS_EMPTY_BODY}
-        action={{ label: BROWSE_SOLUTIONS_LABEL, icon: Storefront }}
+        action={{ label: ADD_FLOW_LABEL, icon: Storefront }}
         secondaryAction={{ label: START_FROM_TEMPLATE_LABEL }}
       />
     ),
@@ -86,8 +86,9 @@ describe.each(['dark', 'light'] as const)('screen states — %s palette', (mode)
 describe('errorTitleFor — the design names the thing, not the mechanism', () => {
   it('gives every fetching screen its own title', () => {
     expect(errorTitleFor('run')).toBe("Couldn't load this run");
-    expect(errorTitleFor('detail')).toBe("Couldn't load this workflow");
-    expect(errorTitleFor('flows')).toBe("Couldn't load your workflows");
+    expect(errorTitleFor('detail')).toBe("Couldn't load this flow");
+    expect(errorTitleFor('flows')).toBe("Couldn't load your flows");
+    expect(errorTitleFor('add')).toBe("Couldn't load the flow catalog");
     expect(errorTitleFor('approvals')).toBe("Couldn't load approvals");
     expect(errorTitleFor('configure')).toBe("Couldn't load this template");
   });
@@ -145,14 +146,14 @@ describe('the first-run empties — invitations, not apologies', () => {
         icon={<FlowArrow size={40} />}
         title={FLOWS_EMPTY_TITLE}
         body={FLOWS_EMPTY_BODY}
-        action={{ label: BROWSE_SOLUTIONS_LABEL, icon: Storefront, onPress: onBrowse }}
+        action={{ label: ADD_FLOW_LABEL, icon: Storefront, onPress: onBrowse }}
         secondaryAction={{ label: START_FROM_TEMPLATE_LABEL, onPress: onTemplate }}
       />,
     );
 
     expect(getByTestId('screen-empty')).toBeTruthy();
     expect(getByText(FLOWS_EMPTY_TITLE)).toBeTruthy();
-    await fireEvent.press(getByText(BROWSE_SOLUTIONS_LABEL));
+    await fireEvent.press(getByText(ADD_FLOW_LABEL));
     await fireEvent.press(getByText(START_FROM_TEMPLATE_LABEL));
     expect(onBrowse).toHaveBeenCalled();
     expect(onTemplate).toHaveBeenCalled();
@@ -180,7 +181,7 @@ describe('the first-run empties — invitations, not apologies', () => {
     );
     expect(getByText(NOTIFICATIONS_EMPTY_TITLE)).toBeTruthy();
     expect(getByText(NOTIFICATIONS_EMPTY_BODY)).toBeTruthy();
-    expect(queryByText(BROWSE_SOLUTIONS_LABEL)).toBeNull();
+    expect(queryByText(ADD_FLOW_LABEL)).toBeNull();
   });
 
   it('keeps Activity’s own words rather than reusing Flows’', async () => {

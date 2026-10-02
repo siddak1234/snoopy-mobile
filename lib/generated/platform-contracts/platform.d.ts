@@ -307,7 +307,7 @@ export interface paths {
         /**
          * @description **A complete export**, staged as one file (§12.1 #39, FR-21). Requires owner or admin. Answers at once with the export `running`; read it with `readWorkspaceExport` until it is `ready`, when it carries the file — an artifact id and a short-lived signed URL, never the bytes (invariant 6).
          *
-         *     Every section of every service is paged, so no section is cut at 250 rows as the bounded `exportWorkspace` is. A run's `output` is not in it; the run detail serves it. A service that cannot answer makes the file partial (`complete: false`, and the file names the gap) rather than absent.
+         *     Every section of every service is paged, so no section is cut at 250 rows as the bounded `exportWorkspace` is. A run's `output` is not in it, nor in the run detail (SYSTEM-MANIFEST §12.1 #67 keeps it unpublished; the per-flow export of BUILD-PLAN Phase 26 is its planned first shape). A service that cannot answer makes the file partial (`complete: false`, and the file names the gap) rather than absent.
          *
          *     **One file has a ceiling**: the object store's maximum for any file, 25 MiB unless the deployment sets less. An export past it fails `too_large`, and stops as soon as it passes it rather than after reading everything.
          *

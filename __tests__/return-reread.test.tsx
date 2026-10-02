@@ -89,7 +89,11 @@ it('shows the platform\'s status once the Flows list reads again, over what deta
   await fireEvent.press(screen.getByTestId('record'));
   expect(screen.getAllByText('Paused').length).toBe(2);
 
-  await act(async () => mockFocusEffects.at(-1)?.());
-  // Only the fixture's own paused workflow is Paused now.
+  // The screen regains focus: every read it registered re-runs — the list's,
+  // and the scope control's (24.9.2) — not only the last one registered.
+  await act(async () => {
+    for (const effect of mockFocusEffects) effect?.();
+  });
+  // Only the fixture's own paused flow is Paused now.
   expect(await screen.findAllByText('Paused')).toHaveLength(1);
 });
