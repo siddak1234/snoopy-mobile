@@ -10,7 +10,7 @@ export type PillButtonVariant =
   | 'primary'
   /** Neutral-700 outline + text-color label. */
   | 'secondary'
-  /** No outline, text-color label (e.g. Welcome → "Log in"). */
+  /** No outline, text-color label (e.g. the Face ID question → "Not now"). */
   | 'plain'
   /** No outline, accent-300 label (e.g. "Unlock with Face ID"). */
   | 'accent-ghost';

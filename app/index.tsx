@@ -48,7 +48,7 @@ export default function SplashScreen() {
       );
       return;
     }
-    router.replace('/(auth)/welcome');
+    router.replace('/(auth)/login');
   }, [router, session.status]);
 
   // Auto-advance 2400ms after mount, but never before session restoration has

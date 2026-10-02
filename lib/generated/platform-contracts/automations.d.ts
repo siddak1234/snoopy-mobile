@@ -383,6 +383,12 @@ export interface components {
             subscribed: boolean;
             /** @description Evidence from a reachability probe, never an assumption. */
             available: boolean;
+            /** @description The accounts this automation needs, from the manifest — provider, its display name, and why. A client shows them as a step before anything is subscribed; `Subscription.unmetConnections` still says which are missing once it exists. Scopes are not published here: the provider's consent page states them. */
+            requiredConnections: {
+                providerId: string;
+                displayName: string;
+                purpose: string;
+            }[];
             /** @description Customer-facing manifest setup fields, in manifest order. A field's `key` is the identity written to subscription `config[key]`. On PATCH the server rejects undeclared keys and values with the wrong control type; a required field may be omitted only when it declares a default. */
             setup: components["schemas"]["AutomationSetupField"][];
             /**

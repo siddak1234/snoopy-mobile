@@ -89,7 +89,11 @@ Session states are `restoring`, `signed-in`, `signed-out`, `unconfigured`, and
 `unavailable`. The tab layout admits only `signed-in`; every other state fails
 closed to the auth entry. On launch, an enabled Face ID preference gates an
 existing session through `expo-local-authentication`. Biometrics never create a
-session and no timer counts as success.
+session and no timer counts as success. **The choice is the session's** (2026-10-02):
+it is asked once after a remembered sign-in, on the screen where "Use Face ID" runs
+the first check, and it is cleared with the tokens on sign-out — never inherited by
+a later sign-in or a reinstall. Remember me off ends the session at the next cold
+start, with nothing left in the enclave.
 
 The active workspace is `session.user.activeWorkspaceId`, falling back only to
 the first server-supplied membership. A route/form value never selects tenancy.
@@ -105,7 +109,7 @@ switcher (snoopy PR #6) applies over the same operation.
 
 | Surface | Published operations / mapping |
 | --- | --- |
-| Login/signup | `GET /v1/auth/providers`; providers only — no password or reset surface is drawn (owner, 2026-09-08) |
+| Sign in | `GET /v1/auth/providers`; providers only — no password or reset surface is drawn (owner, 2026-09-08). **One screen since 2026-10-02**: the website's words ("Sign in with …"), a Remember me toggle, and the Face ID question once after a remembered sign-in; Welcome, Sign up and the Onboarding tour are gone |
 | Home | session + catalog + `run-stats?since=<local midnight>` + runs + pending approvals |
 | Solutions/templates | workspace automation catalog and its server-supplied categories, plus subscriptions (Added) |
 | Setup/configure | catalog `setup[]` and the matching subscription config |

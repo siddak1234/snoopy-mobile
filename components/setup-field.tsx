@@ -37,12 +37,34 @@ export type FieldRowSpec = Pick<SetupField, 'key' | 'title' | 'description' | 'r
 export const SECTION_ORDER = ['connections', 'source', 'rules', 'notifications'] as const;
 export type SetupSection = (typeof SECTION_ORDER)[number];
 
-export const SECTION_LABEL: Record<SetupSection, string> = {
-  connections: '1 · CONNECTIONS',
-  source: '2 · SOURCE',
-  rules: '3 · REVIEW RULES',
-  notifications: '4 · NOTIFICATIONS',
+export const SECTION_NAME: Record<SetupSection, string> = {
+  connections: 'CONNECTIONS',
+  source: 'SOURCE',
+  rules: 'REVIEW RULES',
+  notifications: 'NOTIFICATIONS',
 };
+
+/**
+ * A section's heading, numbered by its place on the screen — 1 … N over the
+ * sections an automation actually has. The design's fixed numbers left an
+ * automation with rules and notifications only starting at "3", which read as
+ * two missing steps (24.7.3 attempt 4, feedback #5).
+ */
+export function sectionLabel(position: number, section: SetupSection): string {
+  return `${position} · ${SECTION_NAME[section]}`;
+}
+
+/** Whole dollars with thousands separators, and two cents: what a money field shows. */
+export function formatMoney(cents: number): string {
+  const whole = Math.floor(cents / 100).toString().replace(/\B(?=(\d{3})+(?!\d))/gu, ',');
+  return `${whole}.${String(cents % 100).padStart(2, '0')}`;
+}
+
+/** The cents a money field holds for a value, or null for none. */
+export function moneyCents(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  return Math.max(0, Math.round(value * 100));
+}
 
 /**
  * Control → glyph.
@@ -126,8 +148,15 @@ export function SetupFieldRow({
 }) {
   const { palette } = useTheme();
   const Glyph = CONTROL_ICON[field.control];
-  const externalValue =
-    typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+  const isMoney = field.control === 'money';
+  const externalValue = isMoney
+    ? (() => {
+        const cents = moneyCents(value);
+        return cents === null ? '' : formatMoney(cents);
+      })()
+    : typeof value === 'string' || typeof value === 'number'
+      ? String(value)
+      : '';
   const [draft, setDraft] = useState(externalValue);
   const lastEmitted = useRef<unknown>(value);
 
@@ -140,49 +169,60 @@ export function SetupFieldRow({
   }, [externalValue, value]);
 
   const changeText = (next: string) => {
-    setDraft(next);
-    if (field.control === 'money') {
-      // The decimal pad types the locale's separator: "12,50" on a comma-decimal
-      // device is 12.5, not 12 with the rest dropped.
-      const normalized = next.trim().replace(',', '.');
-      const numeric = normalized === '' ? undefined : Number(normalized);
-      if (numeric === undefined || Number.isFinite(numeric)) {
-        lastEmitted.current = numeric;
-        onChange(numeric);
+    if (isMoney) {
+      // An amount is typed from the right, as a card terminal takes it: the digits
+      // fill cents first, so "1" is $0.01, "12345" is $123.45, and a delete removes
+      // the last digit. Only digits count; the number pad has nothing else
+      // (24.7.3 attempt 4, feedback #4).
+      const digits = next.replace(/\D/gu, '').replace(/^0+(?=\d)/u, '').slice(-12);
+      if (digits === '') {
+        setDraft('');
+        lastEmitted.current = undefined;
+        onChange(undefined);
+        return;
       }
+      const cents = Number(digits);
+      const amount = cents / 100;
+      setDraft(formatMoney(cents));
+      lastEmitted.current = amount;
+      onChange(amount);
       return;
     }
+    setDraft(next);
     lastEmitted.current = next;
     onChange(next);
   };
 
+  // Title line, then the description, then the control at full width: a field
+  // that holds an address or an amount needs the whole row, not a box beside
+  // the words (24.7.3 attempt 4, feedback #4). Optional fields say so by name.
   const body = (
     <>
-      <Glyph size={20} color={palette.accentRamp[300]} />
-      <View style={styles.rowBody}>
+      <View style={styles.titleLine}>
+        <Glyph size={20} color={palette.accentRamp[300]} />
         <Text style={[styles.rowTitle, { color: palette.text }]}>{field.title}</Text>
-        <Text style={[styles.rowSub, { color: palette.neutral[400] }]}>{field.description}</Text>
+        {!field.required ? (
+          <Text style={[styles.optional, { color: palette.neutral[500] }]}>Optional</Text>
+        ) : null}
+        {field.control === 'toggle' ? (
+          <NocToggle value={value === true} onChange={(next) => onChange(next)} />
+        ) : null}
       </View>
-      {field.control === 'toggle' ? (
-        <NocToggle value={value === true} onChange={(next) => onChange(next)} />
-      ) : (
+      <Text style={[styles.rowSub, { color: palette.neutral[400] }]}>{field.description}</Text>
+      {field.control === 'toggle' ? null : (
         <View
           style={[
             styles.inputWrap,
             { borderColor: palette.neutral[700], backgroundColor: palette.bg },
           ]}>
-          {field.control === 'money' ? (
-            <Text style={[styles.currency, { color: palette.neutral[400] }]}>$</Text>
-          ) : null}
+          {isMoney ? <Text style={[styles.currency, { color: palette.neutral[400] }]}>$</Text> : null}
           <TextInput
             accessibilityLabel={field.title}
             value={draft}
             onChangeText={changeText}
-            placeholder={field.required ? 'Required' : 'Optional'}
+            placeholder={isMoney ? '0.00' : field.required ? 'Required' : 'Optional'}
             placeholderTextColor={palette.neutral[500]}
-            keyboardType={
-              field.control === 'money' ? 'decimal-pad' : isEmailField(field) ? 'email-address' : 'default'
-            }
+            keyboardType={isMoney ? 'number-pad' : isEmailField(field) ? 'email-address' : 'default'}
             textContentType={isEmailField(field) ? 'emailAddress' : undefined}
             autoComplete={isEmailField(field) ? 'email' : undefined}
             autoCapitalize="none"
@@ -208,31 +248,31 @@ export function SetupFieldRow({
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    gap: 6,
     paddingVertical: 13,
     paddingHorizontal: 14,
   },
-  rowBody: { flex: 1, minWidth: 0, gap: 2 },
-  rowTitle: { fontFamily: fonts.medium, fontSize: 14 },
-  rowSub: { fontFamily: fonts.regular, fontSize: 12 },
+  titleLine: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  rowTitle: { flex: 1, minWidth: 0, fontFamily: fonts.medium, fontSize: 14 },
+  optional: { fontFamily: fonts.regular, fontSize: 12 },
+  rowSub: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, paddingLeft: 30 },
   inputWrap: {
-    width: 112,
-    minHeight: 38,
+    alignSelf: 'stretch',
+    marginTop: 4,
+    minHeight: 44,
     borderWidth: 1,
     borderRadius: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
   },
-  currency: { fontFamily: fonts.regular, fontSize: 13 },
+  currency: { fontFamily: fonts.regular, fontSize: 15, marginRight: 2 },
   input: {
     flex: 1,
     minWidth: 0,
-    paddingVertical: 7,
+    paddingVertical: 9,
     paddingHorizontal: 2,
     fontFamily: fonts.regular,
-    fontSize: 12.5,
+    fontSize: 15,
   },
 });

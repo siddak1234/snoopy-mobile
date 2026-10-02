@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { SectionLabel } from '@/components/nocturne/section-label';
-import { SECTION_LABEL, SetupFieldRow, bySection, declaredValues, type SetupField } from '@/components/setup-field';
+import { sectionLabel, SetupFieldRow, bySection, declaredValues, type SetupField } from '@/components/setup-field';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
@@ -78,9 +78,9 @@ export function SetupDialog({
         </>
       }>
       <ScrollView style={styles.fields} keyboardShouldPersistTaps="handled">
-        {bySection(setup).map(({ section, fields }) => (
+        {bySection(setup).map(({ section, fields }, position) => (
           <View key={section}>
-            <SectionLabel>{SECTION_LABEL[section]}</SectionLabel>
+            <SectionLabel>{sectionLabel(position + 1, section)}</SectionLabel>
             {fields.map((field, index) => (
               <SetupFieldRow
                 key={field.key}

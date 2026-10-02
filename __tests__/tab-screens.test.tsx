@@ -14,6 +14,7 @@ import SolutionsScreen from '@/app/(tabs)/solutions/index';
 import NotificationsScreen from '@/app/(tabs)/(home)/notifications';
 import { nocturneDark, nocturneLight } from '@/constants/theme';
 import {
+  TEST_WORKSPACE,
   approvalsPayload,
   catalogPayload,
   flowCatalogPayload,
@@ -113,7 +114,7 @@ describe('Solutions marketplace', () => {
     // No plan base: entitlements.plans has no price column and only `free` is
     // seeded, so the total is the solutions total. Backend answer, 2026-08-17.
     expect(getByText('Solutions · $87/mo')).toBeTruthy();
-    expect(getByText('3 active · manage in Settings')).toBeTruthy();
+    expect(getByText('3 active · plan and billing')).toBeTruthy();
     expect(getAllByText('Weekly KPI digest').length).toBeGreaterThan(0);
     expect(getAllByText('Finance · $39/mo').length).toBeGreaterThan(0);
     expect(getAllByText('Ops · $9/mo').length).toBeGreaterThan(0);
@@ -133,31 +134,17 @@ describe('Solutions marketplace', () => {
     });
   });
 
-  it('removal goes through the confirm dialog (design rmOpen)', async () => {
-    const { getByText, getAllByText, queryByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
+  it('Added opens the workflow, where Pause and Archive live — no pause dialog here (feedback #3)', async () => {
+    const { getAllByText, queryByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
     await fireEvent.press(getAllByText('Added ✓')[0]);
-    expect(getByText('Pause Invoice triage?')).toBeTruthy();
-    expect(
-      getByText(
-        'Every workflow built on it will be paused. Workspace connections remain available.',
-      ),
-    ).toBeTruthy();
-    await fireEvent.press(getByText('Keep it'));
     expect(queryByText('Pause Invoice triage?')).toBeNull();
-    // No plan base: entitlements.plans has no price column and only `free` is
-    // seeded, so the total is the solutions total. Backend answer, 2026-08-17.
-    expect(getByText('Solutions · $87/mo')).toBeTruthy();
-    await fireEvent.press(getAllByText('Added ✓')[0]);
-    await fireEvent.press(getByText('Pause'));
-    // $87 − $39 with the base gone.
-    expect(getByText('Solutions · $48/mo')).toBeTruthy();
-    expect(getByText('2 active · manage in Settings')).toBeTruthy();
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'solution-0' } });
   });
 
-  it('opens Settings from the plan banner', async () => {
-    const { getByText, getAllByText, queryByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
-    await fireEvent.press(getByText('3 active · manage in Settings'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings');
+  it('opens Billing from the plan banner (feedback #2)', async () => {
+    const { getByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
+    await fireEvent.press(getByText('3 active · plan and billing'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/billing');
   });
 
   it('filters the marketplace by category', async () => {
@@ -172,15 +159,12 @@ describe('Solutions marketplace', () => {
     expect(queryByText('Invoice triage')).toBeNull();
   });
 
-  it('removes the correct solution from a filtered list', async () => {
-    const { getByText, getAllByText, queryByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
+  it('opens the correct workflow from a filtered list', async () => {
+    const { getByText, getAllByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
     await fireEvent.press(getByText('Finance'));
-    // Finance shows Invoice triage ($39, added) and Receipt OCR ($19, added).
+    // Finance shows Invoice triage first; its workflow is subscription solution-0.
     await fireEvent.press(getAllByText('Added ✓')[0]);
-    await fireEvent.press(getByText('Pause'));
-    // Removing Invoice triage: $186 − $39 = $147.
-    // $87 − $39 with the base gone.
-    expect(getByText('Solutions · $48/mo')).toBeTruthy();
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'solution-0' } });
   });
 
   it('answers Added from the subscriptions the workspace still has — an archived one is gone', async () => {
@@ -193,7 +177,7 @@ describe('Solutions marketplace', () => {
     });
     const { queryAllByText, getByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
     expect(queryAllByText('Added ✓')).toHaveLength(0);
-    expect(getByText('0 active · manage in Settings')).toBeTruthy();
+    expect(getByText('0 active · plan and billing')).toBeTruthy();
     expect(getByText('Solutions · $0/mo')).toBeTruthy();
   });
 
@@ -216,60 +200,6 @@ describe('Solutions marketplace', () => {
     expect(await screen.findByTestId('add-elsewhere-tpl.0')).toBeTruthy();
   });
 
-  it('pauses only the subscriptions still running, never an archived one', async () => {
-    const paused: string[] = [];
-    routePlatform(platformOperation, {
-      '/subscriptions': {
-        subscriptions: [
-          ...solutionSubscriptions,
-          { ...solutionSubscriptions[0], id: 'solution-0-archived', status: 'archived' },
-        ],
-      },
-    });
-    const routed = platformOperation.getMockImplementation();
-    platformOperation.mockImplementation((path: string, ...args: unknown[]) => {
-      const patched = /\/subscriptions\/([^/]+)$/.exec(path);
-      if (patched) {
-        paused.push(patched[1]!);
-        return Promise.resolve({ subscription: { id: patched[1], status: 'paused' } });
-      }
-      return routed?.(path, ...args);
-    });
-    const { getAllByText, getByText, findByText } = await renderWithProviders(
-      <SolutionsScreen />,
-      signedInSession,
-    );
-    await fireEvent.press(getAllByText('Added ✓')[0]);
-    await fireEvent.press(getByText('Pause'));
-    expect(await findByText('Solutions · $48/mo')).toBeTruthy();
-    expect(paused).toEqual(['solution-0']);
-  });
-
-  it('reuses the same idempotency key when the same pause intent is retried', async () => {
-    const routed = platformOperation.getMockImplementation();
-    let pauseAttempts = 0;
-    platformOperation.mockImplementation((path: string, ...args: unknown[]) => {
-      if (/\/subscriptions\/solution-0$/.test(path)) {
-        pauseAttempts += 1;
-        if (pauseAttempts === 1) return Promise.reject(new Error('Temporary pause failure'));
-        return Promise.resolve({ subscription: { id: 'solution-0', status: 'paused' } });
-      }
-      return routed?.(path, ...args);
-    });
-    newIdempotencyKey.mockReturnValue('pause-intent');
-
-    const { getAllByText, getByText, findByText } = await renderWithProviders(
-      <SolutionsScreen />,
-      signedInSession,
-    );
-    await fireEvent.press(getAllByText('Added ✓')[0]);
-    await fireEvent.press(getByText('Pause'));
-    expect(await findByText('Temporary pause failure')).toBeTruthy();
-    await fireEvent.press(getByText('Pause'));
-    expect(await findByText('Solutions · $48/mo')).toBeTruthy();
-    expect(newIdempotencyKey).toHaveBeenCalledTimes(1);
-    expect(newIdempotencyKey).toHaveBeenCalledWith('pause');
-  });
 });
 
 describe('Run detail', () => {
@@ -784,10 +714,10 @@ describe('Settings & security', () => {
     expect(title()).toBe(nocturneDark.text);
   });
 
-  it('signs out to Welcome', async () => {
+  it('signs out to Sign in', async () => {
     const { getByText, getAllByText, queryByText } = await renderWithProviders(<SettingsScreen />, signedInSession);
     await fireEvent.press(getByText('Sign out'));
-    expect(mockRouter.replace).toHaveBeenCalledWith('/(auth)/welcome');
+    expect(mockRouter.replace).toHaveBeenCalledWith('/(auth)/login');
   });
 });
 
@@ -884,8 +814,8 @@ describe('Home data states (design sHomeLoad/Empty/Err)', () => {
     ).toBeTruthy();
     await fireEvent.press(getByText('Browse solutions'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/solutions');
-    await fireEvent.press(getByText('See how it works'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(auth)/onboarding');
+    // The onboarding tour went with the sign-up screen (2026-10-02): one way in.
+    expect(mockRouter.push).not.toHaveBeenCalledWith('/(auth)/onboarding');
   });
 
   it('renders the connection-error state with Retry', async () => {
@@ -909,18 +839,46 @@ describe('Setup wizard (design sSetup)', () => {
     expect(await screen.findByText(/Weekly KPI digest/)).toBeTruthy();
   });
 
+  it('numbers the accounts an automation needs as step 1, Connected or Connect, before the fields (feedback #5)', async () => {
+    const catalog = catalogPayload();
+    const sample = catalog.automations[0]!.setup[0]!;
+    catalog.automations = catalog.automations.map((automation) => ({
+      ...automation,
+      requiredConnections: [
+        { providerId: 'google', displayName: 'Google', purpose: 'Read the invoices' },
+        { providerId: 'quickbooks', displayName: 'QuickBooks Online', purpose: 'Post draft bills' },
+      ],
+      setup: [{ ...sample, key: 'holdAboveAmount', title: 'Hold above', control: 'money', section: 'rules', required: false, defaultValue: 500 }],
+    }));
+    routePlatform(platformOperation, {
+      '/automations': catalog,
+      // The workspace's connections, not the providers list (`/v1/connections/providers`).
+      [`${TEST_WORKSPACE}/connections`]: { connections: [{ id: 'c-google', providerId: 'google', status: 'connected' }] },
+    });
+    setMockParams({ template: 'tpl.0' });
+    const { getByText } = await renderWithProviders(<SetupScreen />, signedInSession);
+    expect(await screen.findByText('1 · CONNECTIONS')).toBeTruthy();
+    expect(getByText('Connected ✓')).toBeTruthy();
+    expect(getByText('Post draft bills')).toBeTruthy();
+    expect(getByText('2 · REVIEW RULES')).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText('Connect QuickBooks Online'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings');
+  });
+
   it('keeps a cleared amount cleared, and asks for a number before activating (feedback #4)', async () => {
     const catalog = catalogPayload();
     const sample = catalog.automations[0]!.setup[0]!;
     catalog.automations = catalog.automations.map((automation) => ({
       ...automation,
-      setup: [{ ...sample, key: 'holdAboveAmount', title: 'Hold above', control: 'money', required: false, defaultValue: 500 }],
+      setup: [{ ...sample, key: 'holdAboveAmount', title: 'Hold above', control: 'money', section: 'rules', required: false, defaultValue: 500 }],
     }));
     routePlatform(platformOperation, { '/automations': catalog });
     setMockParams({ template: 'tpl.0' });
     const { getByLabelText, getByText } = await renderWithProviders(<SetupScreen />, signedInSession);
     const amount = await waitFor(() => getByLabelText('Hold above'));
-    expect(amount.props.value).toBe('500');
+    expect(amount.props.value).toBe('500.00');
+    // Rules and notifications only: numbered 1 and 2, not 3 and 4 (feedback #5).
+    expect(screen.getByText('1 · REVIEW RULES')).toBeTruthy();
     await fireEvent.changeText(amount, '');
     // The default does not come back under the thumb.
     expect(getByLabelText('Hold above').props.value).toBe('');

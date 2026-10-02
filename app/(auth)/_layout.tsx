@@ -10,10 +10,8 @@ export default function AuthLayout() {
         headerShown: false,
         contentStyle: { backgroundColor: palette.bg },
       }}>
-      <Stack.Screen name="welcome" options={{ animation: 'fade' }} />
-      <Stack.Screen name="login" />
-      <Stack.Screen name="signup" />
-      <Stack.Screen name="onboarding" />
+      <Stack.Screen name="login" options={{ animation: 'fade' }} />
+      <Stack.Screen name="faceid-offer" options={{ animation: 'fade' }} />
       <Stack.Screen name="faceid" options={{ animation: 'fade' }} />
       <Stack.Screen name="account-deleted" options={{ animation: 'fade' }} />
     </Stack>

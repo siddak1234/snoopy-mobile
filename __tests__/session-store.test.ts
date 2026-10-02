@@ -9,9 +9,12 @@ import * as SecureStore from 'expo-secure-store';
 
 import {
   clearSession,
+  readFaceIdChoice,
   readFaceIdEnabled,
+  readRememberSession,
   readSession,
   writeFaceIdEnabled,
+  writeRememberSession,
   writeSession,
 } from '@/lib/platform/session-store';
 
@@ -58,7 +61,8 @@ describe('secure session storage', () => {
   it('clears every credential locally even if one keychain deletion fails', async () => {
     deleteItemAsync.mockRejectedValueOnce(new Error('locked'));
     await expect(clearSession()).resolves.toBeUndefined();
-    expect(deleteItemAsync).toHaveBeenCalledTimes(3);
+    // Three credentials, and the two choices made at sign-in (2026-10-02).
+    expect(deleteItemAsync).toHaveBeenCalledTimes(5);
     for (const call of deleteItemAsync.mock.calls) expect(call[1]).toEqual(options);
   });
 
@@ -69,5 +73,38 @@ describe('secure session storage', () => {
     getItemAsync.mockResolvedValue('true');
     await expect(readFaceIdEnabled()).resolves.toBe(true);
     expect(getItemAsync).toHaveBeenCalledWith('autom8x.face-id-enabled', options);
+  });
+});
+
+describe('the choices made at sign-in live and die with the session (24.7.3 attempt 4)', () => {
+  it('sign-out clears the Face ID choice and "remember me" with the tokens', async () => {
+    await clearSession();
+    expect(deleteItemAsync.mock.calls.map(([key]) => key).sort()).toEqual(
+      [
+        'autom8x.access-expires-at',
+        'autom8x.access-token',
+        'autom8x.face-id-enabled',
+        'autom8x.refresh-token',
+        'autom8x.remember-session',
+      ].sort(),
+    );
+  });
+
+  it('reads the Face ID question as unanswered until it is answered either way', async () => {
+    getItemAsync.mockResolvedValueOnce(null);
+    expect(await readFaceIdChoice()).toBe('unset');
+    getItemAsync.mockResolvedValueOnce('true');
+    expect(await readFaceIdChoice()).toBe('on');
+    getItemAsync.mockResolvedValueOnce('false');
+    expect(await readFaceIdChoice()).toBe('off');
+  });
+
+  it('a session stored before the choice existed is remembered; only an explicit no is not', async () => {
+    getItemAsync.mockResolvedValueOnce(null);
+    expect(await readRememberSession()).toBe(true);
+    getItemAsync.mockResolvedValueOnce('false');
+    expect(await readRememberSession()).toBe(false);
+    await writeRememberSession(false);
+    expect(setItemAsync).toHaveBeenCalledWith('autom8x.remember-session', 'false', options);
   });
 });

@@ -1,7 +1,7 @@
 import React from 'react';
 import { fireEvent, screen } from '@testing-library/react-native';
 
-import { SetupFieldRow, bySection, isEmailField, missingRequiredSetupFields, type SetupField } from '@/components/setup-field';
+import { SetupFieldRow, bySection, formatMoney, isEmailField, missingRequiredSetupFields, sectionLabel, type SetupField } from '@/components/setup-field';
 import { renderWithProviders } from '@/test/render';
 
 /**
@@ -102,7 +102,8 @@ describe('SetupFieldRow — every control the union permits', () => {
       />,
     );
     const input = screen.getByLabelText('Auto-approve under');
-    expect(input.props.value).toBe('500');
+    // Shown as currency; typed digits fill from the right (2026-10-02).
+    expect(input.props.value).toBe('500.00');
     fireEvent.changeText(input, '625.50');
     expect(onChange).toHaveBeenCalledWith(625.5);
   });
@@ -173,5 +174,46 @@ describe('an address field gets the email keyboard (24.7.3 attempt 2, feedback #
     expect(isEmailField({ key: 'to', title: 'Recipient', control: 'email' as never })).toBe(true);
     expect(isEmailField({ key: 'reference', title: 'Reference', control: 'text' })).toBe(false);
     expect(isEmailField({ key: 'holdAboveAmount', title: 'Hold above', control: 'money' })).toBe(false);
+  });
+});
+
+describe('an amount is typed from the right, as currency (24.7.3 attempt 4, feedback #4)', () => {
+  const money = { key: 'holdAboveAmount', title: 'Hold above', description: 'Threshold', control: 'money', required: false } as never;
+
+  it('formats cents with thousands separators and two decimals', () => {
+    expect(formatMoney(1)).toBe('0.01');
+    expect(formatMoney(12345)).toBe('123.45');
+    expect(formatMoney(123456789)).toBe('1,234,567.89');
+    expect(formatMoney(50000)).toBe('500.00');
+  });
+
+  it('fills cents first as digits arrive, and a cleared field stays cleared', async () => {
+    const onChange = jest.fn();
+    await renderWithProviders(<SetupFieldRow field={money} value={undefined} onChange={onChange} divider={false} />);
+    const input = screen.getByLabelText('Hold above');
+    expect(input.props.keyboardType).toBe('number-pad');
+    await fireEvent.changeText(input, '1');
+    expect(onChange).toHaveBeenLastCalledWith(0.01);
+    expect(screen.getByLabelText('Hold above').props.value).toBe('0.01');
+    await fireEvent.changeText(screen.getByLabelText('Hold above'), '0.012');
+    expect(onChange).toHaveBeenLastCalledWith(0.12);
+    await fireEvent.changeText(screen.getByLabelText('Hold above'), '0.1234567');
+    expect(onChange).toHaveBeenLastCalledWith(12345.67);
+    expect(screen.getByLabelText('Hold above').props.value).toBe('12,345.67');
+    await fireEvent.changeText(screen.getByLabelText('Hold above'), '');
+    expect(onChange).toHaveBeenLastCalledWith(undefined);
+    expect(screen.getByLabelText('Hold above').props.value).toBe('');
+  });
+
+  it('shows a stored amount formatted, and marks a field that is not required as Optional', async () => {
+    await renderWithProviders(<SetupFieldRow field={money} value={500} onChange={jest.fn()} divider={false} />);
+    expect(screen.getByLabelText('Hold above').props.value).toBe('500.00');
+    expect(screen.getByText('Optional')).toBeTruthy();
+  });
+
+  it('numbers sections by their place on the screen, not by the design\'s fixed four', () => {
+    expect(sectionLabel(1, 'rules')).toBe('1 · REVIEW RULES');
+    expect(sectionLabel(2, 'notifications')).toBe('2 · NOTIFICATIONS');
+    expect(sectionLabel(1, 'connections')).toBe('1 · CONNECTIONS');
   });
 });

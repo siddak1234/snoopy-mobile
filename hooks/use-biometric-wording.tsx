@@ -26,6 +26,10 @@ export type BiometricWording = {
   didNotUnlock: string;
   notEnabled: string;
   notSaved: string;
+  /** The one-time question after a remembered sign-in (app/(auth)/faceid-offer.tsx). */
+  offerTitle: string;
+  offerBody: string;
+  offerAccept: string;
 };
 
 const FACE_ID: BiometricWording = {
@@ -39,6 +43,9 @@ const FACE_ID: BiometricWording = {
   didNotUnlock: 'Face ID did not unlock this workspace.',
   notEnabled: 'Face ID unlock was not enabled.',
   notSaved: 'Face ID preference could not be saved on this device.',
+  offerTitle: 'Open with Face ID next time?',
+  offerBody: 'Unlock Autom8x with Face ID instead of signing in again. You can change this later in Settings.',
+  offerAccept: 'Use Face ID',
 };
 
 const TOUCH_ID: BiometricWording = {
@@ -52,6 +59,9 @@ const TOUCH_ID: BiometricWording = {
   didNotUnlock: 'Touch ID did not unlock this workspace.',
   notEnabled: 'Touch ID unlock was not enabled.',
   notSaved: 'Touch ID preference could not be saved on this device.',
+  offerTitle: 'Open with Touch ID next time?',
+  offerBody: 'Unlock Autom8x with Touch ID instead of signing in again. You can change this later in Settings.',
+  offerAccept: 'Use Touch ID',
 };
 
 /** Android's own word for the family — fingerprint, face or iris, whichever it has. */
@@ -66,6 +76,9 @@ const BIOMETRIC: BiometricWording = {
   didNotUnlock: 'Biometric unlock did not unlock this workspace.',
   notEnabled: 'Biometric unlock was not enabled.',
   notSaved: 'Biometric unlock preference could not be saved on this device.',
+  offerTitle: 'Open with biometrics next time?',
+  offerBody: 'Unlock Autom8x with biometrics instead of signing in again. You can change this later in Settings.',
+  offerAccept: 'Use biometrics',
 };
 
 /** Pure, so it is tested without a device: the platform and what it reports. */

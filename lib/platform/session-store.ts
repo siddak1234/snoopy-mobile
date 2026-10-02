@@ -24,6 +24,12 @@ const ACCESS_TOKEN_KEY = 'autom8x.access-token';
 const REFRESH_TOKEN_KEY = 'autom8x.refresh-token';
 const EXPIRES_AT_KEY = 'autom8x.access-expires-at';
 const FACE_ID_ENABLED_KEY = 'autom8x.face-id-enabled';
+/**
+ * "Remember me", chosen at sign-in. Unset reads as remembered, so a session a
+ * build before 2026-10-02 stored stays signed in. A session not remembered is
+ * ended by the next cold start (`use-session`), never by a timer.
+ */
+const REMEMBER_SESSION_KEY = 'autom8x.remember-session';
 
 const OPTIONS: SecureStore.SecureStoreOptions = {
   keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
@@ -78,8 +84,12 @@ export async function writeSession(session: StoredSession): Promise<void> {
 }
 
 export async function clearSession(): Promise<void> {
+  // The Face ID choice and "remember me" belong to the session they were made
+  // for. The Keychain outlives a sign-out and even a reinstall, so leaving them
+  // behind put a fresh OAuth sign-in through a Face ID prompt nobody had chosen
+  // on this install (24.7.3 attempt 4).
   await Promise.all(
-    [ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, EXPIRES_AT_KEY].map(async (key) => {
+    [ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, EXPIRES_AT_KEY, FACE_ID_ENABLED_KEY, REMEMBER_SESSION_KEY].map(async (key) => {
       try {
         await SecureStore.deleteItemAsync(key, OPTIONS);
       } catch {
@@ -100,4 +110,26 @@ export async function readFaceIdEnabled(): Promise<boolean> {
 
 export async function writeFaceIdEnabled(enabled: boolean): Promise<void> {
   await SecureStore.setItemAsync(FACE_ID_ENABLED_KEY, String(enabled), OPTIONS);
+}
+
+/** Whether the Face ID question has been answered for this session: on, off, or never asked. */
+export async function readFaceIdChoice(): Promise<'on' | 'off' | 'unset'> {
+  try {
+    const stored = await SecureStore.getItemAsync(FACE_ID_ENABLED_KEY, OPTIONS);
+    return stored === 'true' ? 'on' : stored === 'false' ? 'off' : 'unset';
+  } catch {
+    return 'unset';
+  }
+}
+
+export async function readRememberSession(): Promise<boolean> {
+  try {
+    return (await SecureStore.getItemAsync(REMEMBER_SESSION_KEY, OPTIONS)) !== 'false';
+  } catch {
+    return true;
+  }
+}
+
+export async function writeRememberSession(remember: boolean): Promise<void> {
+  await SecureStore.setItemAsync(REMEMBER_SESSION_KEY, String(remember), OPTIONS);
 }
