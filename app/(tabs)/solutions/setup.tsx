@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
-  SECTION_LABEL,
+  sectionLabel,
   SetupFieldRow,
   bySection,
   missingRequiredSetupFields,
@@ -19,7 +19,7 @@ import {
   ScreenLoading,
   ScreenOffline,
 } from '@/components/screen-state';
-import { em, fonts, layout, withAlpha } from '@/constants/theme';
+import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
@@ -27,7 +27,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { WORKSPACE_CHANGED, addRefusalMessage } from '@/lib/content/refusals';
 import { UNAVAILABLE_NOTE, errorTitleFor } from '@/lib/content/screen-states';
 import { createSubscription, updateSubscription } from '@/lib/platform/automations';
-import { readCatalog, readConnectionProviders } from '@/lib/platform/catalog';
+import { readCatalog, readConnectionProviders, readConnections } from '@/lib/platform/catalog';
 import { newIdempotencyKey } from '@/lib/platform/client';
 import { PlatformNotConfiguredError } from '@/lib/platform/problem';
 import { readProjects } from '@/lib/platform/projects';
@@ -58,11 +58,12 @@ export default function SetupScreen() {
   const resource = useWorkspaceResource(
     async (id) => {
       if (!template) throw new PlatformNotConfiguredError();
-      const [catalog, subscriptions, providers, projects] = await Promise.all([
+      const [catalog, subscriptions, providers, projects, connections] = await Promise.all([
         readCatalog(id),
         readSubscriptions(id),
         readConnectionProviders(),
         readProjects(id),
+        readConnections(id),
       ]);
       return {
         entry: catalog.automations.find((item) => item.templateId === template),
@@ -73,6 +74,12 @@ export default function SetupScreen() {
         // An automation can be added to the whole workspace, or to one project
         // so only the people who can see it see it (18.6.2), as on the website.
         projects: projects.filter((project) => project.status !== 'archived'),
+        // The accounts this workspace holds: the Connections step reads its state here.
+        connected: new Set(
+          connections.connections
+            .filter((connection) => connection.status === 'connected')
+            .map((connection) => connection.providerId),
+        ),
       };
     },
     [template],
@@ -109,7 +116,13 @@ export default function SetupScreen() {
     );
   }
 
-  const { entry, providers, projects } = resource.data;
+  const { entry, providers, projects, connected } = resource.data;
+  // Step 1 is the accounts the automation needs, when it needs any (24.7.3
+  // attempt 4, feedback #5: every step numbered 1…N, connections included). The
+  // entry publishes them since 2026-10-02; a subscription's `unmetConnections`
+  // still decides whether Activate may proceed.
+  const required = entry.requiredConnections;
+  const sectionOffset = required.length > 0 ? 1 : 0;
   const scopes = [
     { value: '', label: 'Whole workspace' },
     ...projects.map((project) => ({ value: project.id, label: `Project: ${project.name}` })),
@@ -261,9 +274,48 @@ export default function SetupScreen() {
         />
       ) : null}
 
-      {bySection(entry.setup).map(({ section, fields }) => (
+      {required.length > 0 ? (
+        <View>
+          <SectionLabel>{sectionLabel(1, 'connections')}</SectionLabel>
+          <SurfaceCard style={styles.sectionCard}>
+            {required.map((connection, index) => {
+              const isConnected = connected.has(connection.providerId);
+              return (
+                <View
+                  key={connection.providerId}
+                  style={[
+                    styles.connectionRow,
+                    index < required.length - 1 && { borderBottomWidth: 1, borderBottomColor: palette.divider },
+                  ]}>
+                  <View style={styles.connectionText}>
+                    <Text style={[styles.connectionName, { color: palette.text }]}>{connection.displayName}</Text>
+                    <Text style={[styles.connectionPurpose, { color: palette.neutral[400] }]}>{connection.purpose}</Text>
+                  </View>
+                  {isConnected ? (
+                    <Text style={[styles.connectionState, { color: status.ok }]}>Connected ✓</Text>
+                  ) : (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Connect ${connection.displayName}`}
+                      onPress={() => router.push('/(tabs)/settings')}
+                      style={({ pressed }) => [
+                        styles.connectBtn,
+                        { borderColor: palette.accent },
+                        pressed && { backgroundColor: withAlpha(palette.accent, 0.12) },
+                      ]}>
+                      <Text style={[styles.connectLabel, { color: palette.accent }]}>Connect ›</Text>
+                    </Pressable>
+                  )}
+                </View>
+              );
+            })}
+          </SurfaceCard>
+        </View>
+      ) : null}
+
+      {bySection(entry.setup).map(({ section, fields }, position) => (
         <View key={section}>
-          <SectionLabel>{SECTION_LABEL[section]}</SectionLabel>
+          <SectionLabel>{sectionLabel(position + 1 + sectionOffset, section)}</SectionLabel>
           <SurfaceCard style={styles.sectionCard}>
             {fields.map((field, index) => (
               <SetupFieldRow
@@ -315,6 +367,13 @@ const styles = StyleSheet.create({
   },
   subtitle: { marginTop: 1, fontFamily: fonts.regular, fontSize: 12 },
   sectionCard: { marginTop: 9 },
+  connectionRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 14 },
+  connectionText: { flex: 1, minWidth: 0, gap: 2 },
+  connectionName: { fontFamily: fonts.medium, fontSize: 14 },
+  connectionPurpose: { fontFamily: fonts.regular, fontSize: 12 },
+  connectionState: { fontFamily: fonts.medium, fontSize: 13 },
+  connectBtn: { borderWidth: 1, borderRadius: 999, paddingVertical: 7, paddingHorizontal: 14 },
+  connectLabel: { fontFamily: fonts.medium, fontSize: 13 },
   activateBtn: {
     minHeight: 52,
     borderRadius: 999,

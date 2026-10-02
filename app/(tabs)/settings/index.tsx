@@ -165,7 +165,7 @@ export default function SettingsScreen() {
       return;
     }
     setSignOutFailed(false);
-    router.replace('/(auth)/welcome');
+    router.replace('/(auth)/login');
   };
 
   // The design applies gLoad/gErr/gOff to every screen but Home, Settings

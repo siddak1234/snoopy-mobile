@@ -9,9 +9,10 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { UserFocus, WarningCircle } from 'phosphor-react-native';
 
-import { BackCircle } from '@/components/nocturne/back-circle';
+import { NocToggle } from '@/components/nocturne/noc-toggle';
 import { BrandMark } from '@/components/nocturne/brand-mark';
 import { OAuthButton } from '@/components/nocturne/oauth-button';
 import { Skeleton } from '@/components/nocturne/skeleton';
@@ -23,8 +24,23 @@ import { useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { useResource } from '@/hooks/use-resource';
 import { readLoginProviders } from '@/lib/platform/auth';
-import { readSession } from '@/lib/platform/session-store';
+import { readFaceIdChoice, readSession } from '@/lib/platform/session-store';
 import type { LoginProvider } from '@/lib/platform/native-auth';
+
+/**
+ * Whether to ask the Face ID question after this sign-in: a remembered session,
+ * a device with biometrics enrolled, and no answer recorded for this session.
+ */
+async function offersFaceId(remember: boolean): Promise<boolean> {
+  if (!remember) return false;
+  try {
+    if ((await readFaceIdChoice()) !== 'unset') return false;
+    const hasHardware = await LocalAuthentication.hasHardwareAsync();
+    return hasHardware && (await LocalAuthentication.isEnrolledAsync());
+  } catch {
+    return false;
+  }
+}
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -40,6 +56,11 @@ export default function LoginScreen() {
   // So the unlock is offered only when there is something to unlock — after a
   // sign-out or a fresh install there is not (24.7.3 attempt 2, feedback #10, #12).
   const [storedSession, setStoredSession] = useState<boolean | null>(null);
+  // "Remember me", as every sign-in screen offers it (owner, 2026-10-02): on by
+  // default; off means the session ends when the app is closed. The Face ID
+  // question is asked only for a remembered session — there is nothing to
+  // unlock otherwise.
+  const [remember, setRemember] = useState(true);
   useEffect(() => {
     let cancelled = false;
     readSession()
@@ -57,7 +78,7 @@ export default function LoginScreen() {
   // The provider list is rendered as the platform sends it, `label` included.
   // Rebuilding the label from the id locally is the same shape as inventing a
   // filter vocabulary instead of using `categories`: the published field is
-  // there, so the client uses it. `app/(auth)/signup.tsx` already did.
+  // there, so the client uses it.
   const enabledProviders =
     providerPolicy.status === 'ready' ? providerPolicy.data.providers : [];
   const providerError =
@@ -87,9 +108,9 @@ export default function LoginScreen() {
     setSignInError(null);
     setBusyProvider(provider);
     try {
-      const outcome = await signIn(provider);
+      const outcome = await signIn(provider, { remember });
       if (outcome.status === 'signed-in') {
-        router.replace('/(tabs)/(home)');
+        router.replace((await offersFaceId(remember)) ? '/(auth)/faceid-offer' : '/(tabs)/(home)');
         return;
       }
       if (outcome.status === 'cancelled') return;
@@ -113,12 +134,12 @@ export default function LoginScreen() {
           paddingHorizontal: layout.authX,
           paddingBottom: 40,
         }}>
-        <BackCircle onPress={() => router.back()} />
         <BrandMark width={86} style={styles.brand} />
-        <Text style={[styles.title, { color: palette.text }]}>Log in</Text>
-        <Text style={[styles.subtitle, { color: palette.neutral[400] }]}>
-          Welcome back to your workspace.
-        </Text>
+        {/* One screen, the website's words: the provider creates the account on
+            a first sign-in, so "Sign up" was the same action under another name
+            (owner, 2026-10-02; 24.7.3 attempt 4). */}
+        <Text style={[styles.title, { color: palette.text }]}>Sign in</Text>
+        <Text style={[styles.subtitle, { color: palette.neutral[400] }]}>Continue to Autom8x.</Text>
 
         {visibleError ? (
           <View style={styles.errorCallout}>
@@ -151,11 +172,9 @@ export default function LoginScreen() {
           </View>
         ) : null}
 
-        {/* No divider above an empty column: when the provider read fails or
-            the build is unconfigured there is nothing to separate, and an "or"
-            with nothing under it reads as a missing control rather than as the
-            honest refusal already shown in the callout above. */}
-        {enabledProviders.length > 0 || providersLoading ? <OrDivider /> : null}
+        {/* The divider separates the unlock from the providers; with no unlock
+            above it, an "or" read as a missing control (24.7.3 attempt 4, #1). */}
+        {storedSession && (enabledProviders.length > 0 || providersLoading) ? <OrDivider /> : null}
 
         <View style={styles.oauthColumn}>
           {providersLoading
@@ -167,21 +186,22 @@ export default function LoginScreen() {
             <OAuthButton
               key={id}
               provider={id}
-              label={`Continue with ${label}`}
+              label={`Sign in with ${label}`}
               disabled={busyProvider !== null}
               onPress={() => startSignIn(id as LoginProvider)}
             />
           ))}
         </View>
 
-        <Text style={[styles.switchLine, { color: palette.neutral[400] }]}>
-          {'New here? '}
-          <Text
-            onPress={() => router.replace('/(auth)/signup')}
-            style={{ fontFamily: fonts.medium, color: palette.accentRamp[300] }}>
-            Sign up
-          </Text>
-        </Text>
+        <View style={[styles.rememberRow, { borderColor: palette.neutral[800] }]}>
+          <View style={styles.rememberText}>
+            <Text style={[styles.rememberTitle, { color: palette.text }]}>Remember me</Text>
+            <Text style={[styles.rememberSub, { color: palette.neutral[400] }]}>
+              {remember ? 'Stay signed in on this phone.' : 'Sign in again after closing the app.'}
+            </Text>
+          </View>
+          <NocToggle value={remember} onChange={setRemember} />
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -231,10 +251,17 @@ const styles = StyleSheet.create({
   oauthColumn: {
     gap: 9,
   },
-  switchLine: {
-    marginTop: 20,
-    textAlign: 'center',
-    fontFamily: fonts.regular,
-    fontSize: 13.5,
+  rememberRow: {
+    marginTop: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderRadius: 14,
   },
+  rememberText: { flex: 1, minWidth: 0, gap: 2 },
+  rememberTitle: { fontFamily: fonts.medium, fontSize: 14 },
+  rememberSub: { fontFamily: fonts.regular, fontSize: 12 },
 });

@@ -19,12 +19,12 @@ afterEach(() => {
 });
 
 describe('Splash', () => {
-  it('auto-advances to Welcome after 2400ms', async () => {
+  it('auto-advances to Sign in after 2400ms', async () => {
     const { getByText } = await renderWithProviders(<SplashScreen />);
     expect(getByText('AUTOMATION × AI')).toBeTruthy();
     act(() => {
       jest.advanceTimersByTime(2400);
     });
-    expect(mockRouter.replace).toHaveBeenCalledWith('/(auth)/welcome');
+    expect(mockRouter.replace).toHaveBeenCalledWith('/(auth)/login');
   });
 });

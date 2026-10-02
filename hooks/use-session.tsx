@@ -11,7 +11,7 @@ import {
 } from '@/lib/platform/native-auth';
 import { PlatformError, PlatformNotConfiguredError } from '@/lib/platform/problem';
 import { onSessionEnded } from '@/lib/platform/session-recovery';
-import { clearSession, readSession } from '@/lib/platform/session-store';
+import { clearSession, readRememberSession, readSession, writeRememberSession } from '@/lib/platform/session-store';
 
 /**
  * Who is signed in, and whether the app is allowed past the auth stack.
@@ -65,7 +65,7 @@ export type SessionContextValue = SessionState & {
    * an outage and replaces it only with what the platform answered.
    */
   reload: () => Promise<SessionReloadOutcome>;
-  signIn: (provider: LoginProvider) => Promise<LoginOutcome>;
+  signIn: (provider: LoginProvider, options?: { remember?: boolean }) => Promise<LoginOutcome>;
   signOut: () => Promise<{ revoked: boolean }>;
 };
 
@@ -92,6 +92,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         // covers the round trip and a little clock drift. `refreshSession`
         // clears the enclave on a dead credential and keeps it on an outage.
         const stored = await readSession();
+        // "Remember me" was off at sign-in: the session lasted until the app was
+        // closed. A cold start ends it here, with nothing left in the enclave.
+        if (stored && !(await readRememberSession())) {
+          await clearSession();
+          if (!cancelled) setState({ status: 'signed-out' });
+          return;
+        }
         if (stored && stored.expiresAt <= Date.now() + EXPIRY_SKEW_MS) {
           const outcome = await refreshSession();
           if (outcome.status === 'signed-out') {
@@ -139,10 +146,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => onSessionEnded(() => setState({ status: 'signed-out' })), []);
 
   const signIn = useCallback(
-    async (provider: LoginProvider) => {
+    async (provider: LoginProvider, options?: { remember?: boolean }) => {
       const outcome = await signInWithProvider(provider);
       if (outcome.status === 'signed-in') {
         try {
+          // The choice made beside the provider buttons, kept with the tokens.
+          await writeRememberSession(options?.remember ?? true);
           // Resolve the protected projection before returning success. Routing
           // first would race the fail-closed tab guard and bounce a valid login.
           const session = await readCurrentSession();

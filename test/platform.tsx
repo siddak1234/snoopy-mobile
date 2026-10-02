@@ -64,6 +64,7 @@ export function catalogPayload() {
     monthlyPriceUsd: sol.price,
     subscribed: [0, 1, 2].includes(i),
     available: true,
+    requiredConnections: [] as { providerId: string; displayName: string; purpose: string }[],
     setup: [
       {
         section: 'connections',

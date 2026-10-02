@@ -22,7 +22,7 @@ const { platformOperation } = jest.requireMock('@/lib/platform/client');
  * the screen must not navigate away on a failure — doing so would claim a
  * sign-out that did not happen, and strand a session nobody can reach.
  *
- * Before this was wired, the button called `router.replace('/(auth)/welcome')`
+ * Before this was wired, the button called `router.replace('/(auth)/login')`
  * and never called `signOut()` at all, so the contract's whole point was unused.
  */
 
@@ -48,14 +48,14 @@ function sessionWith(signOut: SessionContextValue['signOut']): SessionContextVal
 }
 
 describe('Settings sign-out', () => {
-  it('leaves for Welcome only when the session was actually revoked', async () => {
+  it('leaves for Sign in only when the session was actually revoked', async () => {
     const signOut = jest.fn(async () => ({ revoked: true }));
     await renderWithProviders(<SettingsScreen />, sessionWith(signOut));
 
     await fireEvent.press(await screen.findByText('Sign out'));
 
     expect(signOut).toHaveBeenCalled();
-    expect(mockRouter.replace).toHaveBeenCalledWith('/(auth)/welcome');
+    expect(mockRouter.replace).toHaveBeenCalledWith('/(auth)/login');
     expect(screen.queryByTestId('action-failure')).toBeNull();
   });
 
@@ -84,6 +84,6 @@ describe('Settings sign-out', () => {
 
     await fireEvent.press(screen.getByText('Retry sign out'));
     expect(signOut).toHaveBeenCalledTimes(2);
-    expect(mockRouter.replace).toHaveBeenCalledWith('/(auth)/welcome');
+    expect(mockRouter.replace).toHaveBeenCalledWith('/(auth)/login');
   });
 });

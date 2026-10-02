@@ -27,7 +27,7 @@ export default function AccountDeletedScreen() {
         <Text style={[styles.small, { color: palette.neutral[400] }]}>
           You can come back anytime — your first sign-in creates a new account.
         </Text>
-        <PillButton label="Continue to Autom8x" variant="primary" height={46} onPress={() => router.replace('/(auth)/welcome')} />
+        <PillButton label="Continue to Autom8x" variant="primary" height={46} onPress={() => router.replace('/(auth)/login')} />
       </SurfaceCard>
     </View>
   );

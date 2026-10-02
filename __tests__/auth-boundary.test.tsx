@@ -48,7 +48,7 @@ describe('tab route guard', () => {
   it('sends a signed-out visitor back to the auth stack', async () => {
     // A 401 from a reachable Edge is the one state that closes the guard.
     await renderWithProviders(<TabLayout />, withSession({ status: 'signed-out' }));
-    expect(mockRedirect).toHaveBeenCalledWith('/(auth)/welcome');
+    expect(mockRedirect).toHaveBeenCalledWith('/(auth)/login');
   });
 
   it('admits a signed-in visitor', async () => {
@@ -58,7 +58,7 @@ describe('tab route guard', () => {
 
   it('fails closed when no backend is configured', async () => {
     await renderWithProviders(<TabLayout />, withSession({ status: 'unconfigured' }));
-    expect(mockRedirect).toHaveBeenCalledWith('/(auth)/welcome');
+    expect(mockRedirect).toHaveBeenCalledWith('/(auth)/login');
   });
 
   it('does not expose protected routes while the backend is unreachable', async () => {
@@ -66,7 +66,7 @@ describe('tab route guard', () => {
       <TabLayout />,
       withSession({ status: 'unavailable', message: 'The platform is unreachable' }),
     );
-    expect(mockRedirect).toHaveBeenCalledWith('/(auth)/welcome');
+    expect(mockRedirect).toHaveBeenCalledWith('/(auth)/login');
   });
 
   it('does not flash a redirect while the session is still restoring', async () => {
