@@ -865,6 +865,27 @@ describe('Setup wizard (design sSetup)', () => {
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings');
   });
 
+  it('draws no Connections step when the platform predates `requiredConnections` (the image before the SEVENTEENTH promotion)', async () => {
+    const base = catalogPayload();
+    const sample = base.automations[0]!.setup[0]!;
+    const catalog = {
+      ...base,
+      automations: base.automations.map((automation) => {
+        const entry: Record<string, unknown> = {
+          ...automation,
+          setup: [{ ...sample, key: 'holdAboveAmount', title: 'Hold above', control: 'money', section: 'rules', required: false, defaultValue: 500 }],
+        };
+        delete entry.requiredConnections;
+        return entry;
+      }),
+    };
+    routePlatform(platformOperation, { '/automations': catalog });
+    setMockParams({ template: 'tpl.0' });
+    const { queryByText } = await renderWithProviders(<SetupScreen />, signedInSession);
+    expect(await screen.findByText('1 · REVIEW RULES')).toBeTruthy();
+    expect(queryByText(/CONNECTIONS/u)).toBeNull();
+  });
+
   it('keeps a cleared amount cleared, and asks for a number before activating (feedback #4)', async () => {
     const catalog = catalogPayload();
     const sample = catalog.automations[0]!.setup[0]!;

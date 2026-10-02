@@ -686,6 +686,12 @@ owner's own account in chat of a Face ID prompt at relaunch. Verified against th
 | 4 | the amount should format as currency, start at 0.00, number pad only; fields too small, the email cut off; "Optional" somewhere | a plain decimal box beside the words | **fixed**: digits fill from the right as currency with thousands separators, number pad; every field full width under its words; Optional named |
 | 5 | "where is 1 and 2" — every step 1…N, connections included | the design's four fixed section numbers, empty ones skipped; the catalog entry did not say which accounts an automation needs (platform §12.1 #197) | **fixed**: sections numbered as they appear, and a Connections step from the entry's new `requiredConnections` with Connected / Connect per account. Every pipeline step as a numbered item with its own input or account is Round 17's (Phase 25.3), recorded there |
 
+**Addendum, before build 6**: production still runs the image pinned before #134, so its
+catalog entry carries no `requiredConnections`, and the first build 5 Setup screen would have
+failed on the missing list. The screen now reads the field as absent-means-none — no step
+drawn, `unmetConnections` still refusing an activation without its account — until the
+SEVENTEENTH promotion serves it (mobile #29).
+
 ### Guards proved to bite, 24.7.3 attempt 4
 
 Nine breaks, each run against its own suite and the file restored by SHA-256. The
@@ -704,6 +710,7 @@ committed.
 | A Connections step shifts the numbering | `sectionOffset` fixed at 0 | `tab-screens` "numbers the accounts an automation needs as step 1" |
 | Currency with thousands separators | the separator insertion removed | `setup-field` "formats cents with thousands separators" and "fills cents first as digits arrive" |
 | The Optional marker | "Optional" reworded | `setup-field` "marks a field that is not required as Optional" |
+| An entry without `requiredConnections` draws no step | the absent-means-none read removed | `tab-screens` "draws no Connections step when the platform predates `requiredConnections`" |
 
 ### Guards proved to bite, 24.6
 
