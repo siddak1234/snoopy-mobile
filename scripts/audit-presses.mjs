@@ -152,7 +152,7 @@ writeFileSync(
 printTable(inventory);
 console.log(
   `\n${totals.presses} presses: ${totals.run} run by a test, ${totals.notRun} never run, ${totals.unresolved} unresolved, ` +
-    `${totals.noCoverage + totals.staleCoverage} without coverage, ${totals.excluded} excluded (build 13 part 2). ` +
+    `${totals.noCoverage + totals.staleCoverage} without coverage, ${totals.excluded} excluded. ` +
     `${totals.passthrough} passthroughs are audited at their callers.\nInventory: ${displayPath(inventoryFile)}`,
 );
 

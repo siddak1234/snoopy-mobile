@@ -94,7 +94,7 @@ export default function TeamsScreen() {
 
   if (teams.status === 'loading') return <ScreenLoading topInset={insets.top} />;
   if (teams.status === 'offline') {
-    return <ScreenOffline onRetry={teams.reload} onBack={() => router.back()} topInset={insets.top} />;
+    return <ScreenOffline onRetry={() => teams.reload()} onBack={() => router.back()} topInset={insets.top} />;
   }
   if (teams.status === 'unconfigured') {
     return <ScreenUnavailable title={errorTitleFor('teams')} onBack={() => router.back()} topInset={insets.top} />;
@@ -103,7 +103,7 @@ export default function TeamsScreen() {
     return (
       <ScreenError
         title={errorTitleFor('teams')}
-        onRetry={teams.reload}
+        onRetry={() => teams.reload()}
         body={busyBody(teams)}
         onBack={() => router.back()}
         topInset={insets.top}

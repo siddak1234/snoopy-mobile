@@ -83,7 +83,14 @@ export function ScreenLoading({ tiles = false, topInset = 0 }: { tiles?: boolean
   );
 }
 
-/** The hero + copy + actions shared by the two failure states. */
+/**
+ * The hero + copy + actions shared by the failure states. A control is drawn
+ * only when it has something to do: Retry with an \`onRetry\`, the back circle
+ * and "Go back" with an \`onBack\` (build 13's button audit: the unavailable
+ * state drew a Retry that did nothing, and the Activity and Flows tabs — roots,
+ * with nothing to go back to — drew a back circle and "Go back" that did
+ * nothing).
+ */
 function FailureBody({
   icon,
   title,
@@ -108,23 +115,25 @@ function FailureBody({
     <View
       testID={testID}
       style={[styles.root, { paddingTop: topInset + DESIGN_TOP, backgroundColor: palette.bg }]}>
-      <BackCircle onPress={onBack} />
+      {onBack ? <BackCircle onPress={onBack} /> : null}
       <View style={styles.center}>
         <View style={[styles.hero, { borderColor: palette.neutral[800] }]}>{icon}</View>
         <Text style={[styles.title, { color: palette.text }]}>{title}</Text>
         <Text style={[styles.body, { color: palette.neutral[400] }]}>{body}</Text>
-        <PillButton
-          label={RETRY_LABEL}
-          variant="primary"
-          height={44}
-          fontSize={typeScale.label.fontSize}
-          icon={ArrowClockwise}
-          iconSize={16}
-          gap={8}
-          onPress={onRetry}
-          style={styles.retry}
-        />
-        {backLabel ? (
+        {onRetry ? (
+          <PillButton
+            label={RETRY_LABEL}
+            variant="primary"
+            height={44}
+            fontSize={typeScale.label.fontSize}
+            icon={ArrowClockwise}
+            iconSize={16}
+            gap={8}
+            onPress={onRetry}
+            style={styles.retry}
+          />
+        ) : null}
+        {backLabel && onBack ? (
           <PillButton label={backLabel} variant="plain" height={40} fontSize={typeScale.body.fontSize} onPress={onBack} />
         ) : null}
       </View>

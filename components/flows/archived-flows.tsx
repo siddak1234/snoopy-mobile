@@ -65,7 +65,7 @@ export function ArchivedFlows({ detailPath }: { detailPath: ArchivedFlowPath }) 
 
   if (archived.status === 'loading') return <ScreenLoading topInset={insets.top} />;
   if (archived.status === 'offline') {
-    return <ScreenOffline onRetry={archived.reload} onBack={() => router.back()} topInset={insets.top} />;
+    return <ScreenOffline onRetry={() => archived.reload()} onBack={() => router.back()} topInset={insets.top} />;
   }
   if (archived.status === 'unconfigured') {
     return <ScreenUnavailable title={errorTitleFor('archived')} onBack={() => router.back()} topInset={insets.top} />;
@@ -74,7 +74,7 @@ export function ArchivedFlows({ detailPath }: { detailPath: ArchivedFlowPath }) 
     return (
       <ScreenError
         title={errorTitleFor('archived')}
-        onRetry={archived.reload}
+        onRetry={() => archived.reload()}
         body={busyBody(archived)}
         onBack={() => router.back()}
         topInset={insets.top}

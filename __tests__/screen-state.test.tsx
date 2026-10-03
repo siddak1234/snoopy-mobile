@@ -41,8 +41,11 @@ const START_FROM_TEMPLATE_LABEL = 'Start from a template';
 const CASES = [
   { name: 'ScreenLoading', element: <ScreenLoading /> },
   { name: 'ScreenLoading/tiles', element: <ScreenLoading tiles /> },
-  { name: 'ScreenError', element: <ScreenError title="Couldn't load this run" /> },
-  { name: 'ScreenOffline', element: <ScreenOffline /> },
+  // The design's full failure states: Retry and the way back both live. A control
+  // is drawn only with its handler (build 13's button audit), so the snapshots
+  // pass both, as every pushed screen in the app does.
+  { name: 'ScreenError', element: <ScreenError title="Couldn't load this run" onRetry={() => undefined} onBack={() => undefined} /> },
+  { name: 'ScreenOffline', element: <ScreenOffline onRetry={() => undefined} onBack={() => undefined} /> },
   {
     name: 'ActionFailure',
     element: (
@@ -115,7 +118,7 @@ describe('the failure states', () => {
   });
 
   it('offers only Retry when offline — nothing is wrong with the platform', async () => {
-    const { getByText, queryByText } = await renderWithProviders(<ScreenOffline />);
+    const { getByText, queryByText } = await renderWithProviders(<ScreenOffline onRetry={jest.fn()} />);
     expect(getByText(OFFLINE_TITLE)).toBeTruthy();
     expect(getByText('Retry')).toBeTruthy();
     expect(queryByText('Go back')).toBeNull();

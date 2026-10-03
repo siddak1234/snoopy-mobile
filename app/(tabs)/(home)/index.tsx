@@ -233,7 +233,7 @@ export default function HomeScreen() {
 
   if (dashboard.status === 'loading') return <HomeLoading paddingTop={paddingTop} />;
   if (dashboard.status !== 'ready') {
-    return <HomeError paddingTop={paddingTop} initials={initials} onRetry={dashboard.reload} />;
+    return <HomeError paddingTop={paddingTop} initials={initials} onRetry={() => dashboard.reload()} />;
   }
   if (!dashboard.data.hasSubscriptions) {
     return <HomeEmpty paddingTop={paddingTop} initials={initials} />;

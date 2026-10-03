@@ -168,7 +168,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
   // Below every hook on purpose — these return early.
   if (flows.status === 'loading') return <ScreenLoading tiles topInset={insets.top} />;
   if (flows.status === 'offline') {
-    return <ScreenOffline onRetry={flows.reload} onBack={() => router.back()} topInset={insets.top} />;
+    return <ScreenOffline onRetry={() => flows.reload()} onBack={() => router.back()} topInset={insets.top} />;
   }
   // An unconfigured build or an unresolved workspace cannot succeed on a
   // retry, so it does not get a Retry. A refused identity and a platform
@@ -186,7 +186,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
     return (
       <ScreenError
         title={errorTitleFor('detail')}
-        onRetry={flows.reload} body={busyBody(flows)}
+        onRetry={() => flows.reload()} body={busyBody(flows)}
         onBack={() => router.back()}
         topInset={insets.top}
       />

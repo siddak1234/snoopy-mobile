@@ -20,6 +20,7 @@ import {
   ScreenError,
   ScreenLoading,
   ScreenOffline,
+  ScreenUnavailable,
 } from '@/components/screen-state';
 import { Pressable } from '@/components/pressable';
 import { CreateTeamDialog } from '@/components/teams/create-team-dialog';
@@ -137,13 +138,18 @@ export default function SetupScreen() {
 
   if (resource.status === 'loading') return <ScreenLoading topInset={insets.top} />;
   if (resource.status === 'offline') {
-    return <ScreenOffline onRetry={resource.reload} onBack={() => router.back()} topInset={insets.top} />;
+    return <ScreenOffline onRetry={() => resource.reload()} onBack={() => router.back()} topInset={insets.top} />;
+  }
+  if (resource.status === 'unconfigured') {
+    // No backend, no workspace, or no flow named: a second attempt cannot change
+    // that, so no Retry (the unavailable state, as every fetching screen has).
+    return <ScreenUnavailable title={errorTitleFor('setup')} onBack={() => router.back()} topInset={insets.top} />;
   }
   if (resource.status !== 'ready' || !resource.data.entry) {
     return (
       <ScreenError
         title={errorTitleFor('setup')}
-        onRetry={resource.reload} body={busyBody(resource)}
+        onRetry={() => resource.reload()} body={busyBody(resource)}
         onBack={() => router.back()}
         topInset={insets.top}
       />

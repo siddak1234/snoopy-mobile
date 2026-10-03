@@ -68,7 +68,7 @@ export default function AddFlowScreen() {
   // Below every hook: these return early.
   if (catalog.status === 'loading') return <ScreenLoading topInset={insets.top} />;
   if (catalog.status === 'offline') {
-    return <ScreenOffline onRetry={catalog.reload} onBack={() => router.back()} topInset={insets.top} />;
+    return <ScreenOffline onRetry={() => catalog.reload()} onBack={() => router.back()} topInset={insets.top} />;
   }
   if (catalog.status === 'unconfigured') {
     return <ScreenUnavailable title={errorTitleFor('add')} onBack={() => router.back()} topInset={insets.top} />;
@@ -77,7 +77,7 @@ export default function AddFlowScreen() {
     return (
       <ScreenError
         title={errorTitleFor('add')}
-        onRetry={catalog.reload}
+        onRetry={() => catalog.reload()}
         body={busyBody(catalog)}
         onBack={() => router.back()}
         topInset={insets.top}

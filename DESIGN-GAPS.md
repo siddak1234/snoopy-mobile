@@ -1504,6 +1504,335 @@ the team — is a style no test reads, so no break was run for it.
 | An archived copy holds nothing (the rule) | archived rows counted as held | `flows-view` "is none for another template or an archived row — another team's copy IS the twin (the owner's build 12 item 9: one flow per workspace; until build 13 null matched null only)" |
 | An archived copy holds nothing (Setup adds a new one) | archived rows counted as held | `tab-screens` "adds an archived automation afresh rather than reviving the archived subscription" |
 
+### Every press, its test (build 13)
+
+The owner's build 12 checklist, B9: every press in the app has a test that presses it
+and checks what it is configured to do — configured by `DESIGN-CONTRACT.md`, this file
+and the owner's recorded decisions. `audit:presses` (`scripts/audit-presses.mjs`, in
+`verify` after the coverage pass, and in CI) resolves every `onPress` and `onLongPress`
+in `app/` and `components/` to the function it runs, and istanbul's coverage says
+whether a test ran it: the gate proves a test ran the press's handler, and the test's
+own assertions prove the press did what it is configured to do — the screen and params
+it opens, the request it sends (method, path, body), the dialog it opens or closes, what
+changes on screen, a refusal in words; never only that a mock was called. A press
+repeated across screens is one table-driven test, a row per screen. A press an existing
+test already pressed and held by its outcome got no new test; one pressed but not held —
+a weak assertion, or another branch of it — did.
+
+**Totals.** 268 presses, and 35 passthroughs audited at their callers. At the merged
+build 13 code (`7c5f81d`), before these tests: 141 run by a test, 93 never run, 34
+unresolved. Now: all 268 run, 0 never run, 0 unresolved. The 34 were handlers the audit
+cannot pin to one button — 33 Retry props given a hook's own function
+(`onRetry={x.reload}`, whose count is every screen's) and the inbox's
+`onPress={openSettings}` — each now written as an arrow on the same line
+(`() => x.reload()`), the behaviour unchanged. 131 tests were added, 117 of them the
+cases of 15 tables (`it.each`) and 14 single tests: `presses-patterns-failure-states`
+47, `presses-patterns-back-circle` 14, `presses-patterns-dialog-close` 25 and
+`presses-patterns-empty-actions` 2, one table each; `presses-home-activity` 13 (8 in
+three tables), `presses-flows` 14 (10 in three), `presses-settings` 15 (11 in five) and
+`presses-close` 1. All pass: the 15 that failed on purpose — the three defects below — pass
+since their fix (build 13). Every single test, and every table through at least one of its
+rows, was proved to bite: one exact break of the handler's behaviour, made in an
+isolated copy of the tree, failed it — read from jest's own record — and the file was
+restored byte for byte, its SHA-256 checked. The 80 snapshots are byte-identical.
+
+Tests are `__tests__/<name>.test.tsx:<line>` (`real-router/…` in the real-router
+project); app files are named from `app/(tabs)/`, components by their file name.
+
+**Failure states (table-driven).** Configured: Retry sends the screen's failed read
+again and draws the state again; Back and Go back go back once, nothing pushed or
+replaced; the unavailable state offers Back and Go back, and no Retry. One table,
+`presses-patterns-failure-states:164`, a row per screen and state (`:N` below); D1 and
+D2 are rows of it.
+
+| Screen | Presses | Rows: offline, unavailable, error |
+| --- | --- | --- |
+| Home, its own failure (Retry only) | `(home)/index.tsx:236` Retry | `:92` |
+| Run | `(home)/run.tsx:189` Retry, Back · `:198` Back · `:207` Retry · `:208` Back | `:93`, `:94` (D1), `:95` |
+| Approvals | `activity/approvals.tsx:174` Retry, Back · `:180` Back · `:189` Retry · `:190` Back | `:96`, `:97` (D1), `:98` |
+| Activity, a tab (Retry only) | `activity/index.tsx:251` Retry · `:260` Retry | `:99`, `:100` |
+| Add a flow | `flows/add.tsx:71` Retry, Back · `:74` Back · `:80` Retry · `:82` Back | `:101`, `:102` (D1), `:103` |
+| Flow page | `flows/detail.tsx:171` Retry, Back · `:180` Back · `:189` Retry · `:190` Back | `:104`, `:105` (D1), `:106` |
+| Flows, a tab (Retry only) | `flows/index.tsx:96` Retry · `:103` Retry | `:107`, `:108` |
+| Setup | `flows/setup.tsx:140` Retry, Back · `:146` Retry · `:147` Back | `:109`, `:113` (D2), `:110` |
+| Account | `settings/account.tsx:92` Retry, Back · `:95` Back · `:101` Retry · `:103` Back | `:114`, `:115` (D1), `:116` |
+| Billing | `settings/billing.tsx:194` Retry, Back · `:197` Back · `:203` Retry · `:205` Back | `:117`, `:118` (D1), `:119` |
+| Connections | `settings/connections.tsx:42` Retry, Back · `:45` Back · `:51` Retry · `:53` Back | `:120`, `:121` (D1), `:122` |
+| Export my data | `settings/data.tsx:192` Retry, Back · `:195` Back · `:199` Retry, Back | `:123`, `:124` (D1), `:125` |
+| Organization | `settings/organization.tsx:88` Retry, Back · `:91` Back · `:97` Retry · `:99` Back | `:126`, `:127` (D1), `:128` |
+| Team | `settings/team.tsx:78` Retry, Back · `:81` Back · `:87` Retry · `:89` Back | `:129`, `:130` (D1), `:131` |
+| Teams | `settings/teams.tsx:97` Retry, Back · `:100` Back · `:106` Retry · `:108` Back | `:132`, `:133` (D1), `:134` |
+| Archived flows (both copies) | `archived-flows.tsx:68` Retry, Back · `:71` Back · `:77` Retry · `:79` Back | `:135`, `:136` (D1), `:137` |
+| Notifications (both copies) | `inbox.tsx:104` Retry, Back · `:110` Back · `:119` Retry · `:120` Back | `:138`, `:139` (D1), `:140` |
+
+**Back circle on a loaded page, and on the empty standard (table-driven).** Configured:
+back once, nothing pushed, replaced or dismissed. One table,
+`presses-patterns-back-circle:201`, a row per page (`:N` below); the empty standard's
+Back and the inbox's own were already held.
+
+| Press | Test |
+| --- | --- |
+| `(home)/run.tsx:223` | `:86` |
+| `activity/approvals.tsx:217` | `:93` |
+| `flows/add.tsx:110` | `:99` |
+| `flows/add.tsx:95` — empty catalog | `tab-screens:230` |
+| `flows/detail.tsx:210` | `:106` |
+| `flows/setup.tsx:298` | `:114` |
+| `settings/account.tsx:118` | `:121` |
+| `settings/billing.tsx:250` | `:128` |
+| `settings/connections.tsx:75` | `:138` |
+| `settings/connections.tsx:63` — empty | `settings-connections:232` |
+| `settings/data.tsx:213` | `:144` |
+| `settings/organization.tsx:135` | `:151` |
+| `settings/organization.tsx:116` — empty | `organization-screen:242` |
+| `settings/support.tsx:76` | `:158` |
+| `settings/team.tsx:109` | `:164` |
+| `settings/teams.tsx:156` | `:175` |
+| `settings/teams.tsx:142` — empty | `teams-screens:324` |
+| `archived-flows.tsx:105` | `:186` |
+| `archived-flows.tsx:92` — empty | `tab-screens:1944` |
+| `inbox.tsx:176` — the inbox | `tab-screens:1044` |
+| `inbox.tsx:138` — empty inbox | `tab-screens:752` |
+
+**A dialog's Cancel or Close (table-driven).** Configured: the dialog closes, nothing is
+sent — no change and no read — and nothing navigates; a Cancel on a dialog's second step
+returns to its first. One table, `presses-patterns-dialog-close:511`, a row per dialog
+(`:N` below); three are held in the feature files.
+
+| Press | Test |
+| --- | --- |
+| `flows/setup.tsx:435` — Create a team › Cancel | `:231` |
+| `settings/account.tsx:176` — Unlink › Cancel | `:243` |
+| `settings/account.tsx:195` — Delete account › Cancel | `:253` |
+| `settings/organization.tsx:187` — Organization name › Cancel | `:263` |
+| `org-domains.tsx:101` — a domain › Close | `:273` |
+| `org-domains.tsx:260` — Add domain › Cancel; Done after a claim closes and reads the organization again | `:283`, `organization-screen:115` |
+| `org-people.tsx:130` — Remove member › Cancel | `:293` |
+| `org-people.tsx:141` — Join request › Cancel | `:303` |
+| `settings/team.tsx:170` — Delete team › Cancel | `:313` |
+| `settings/team.tsx:189` — Leave team › Cancel | `:323` |
+| `team-members.tsx:111` — a member › Close | `:333` |
+| `team-members.tsx:192` — Remove from this team? › Cancel: back to the member | `:343` |
+| `team-members.tsx:127` — own row, Leave this team? › Cancel | `:356` |
+| `team-members.tsx:260` — Add members › Done: reads the team again only if someone was added | `presses-settings:369` |
+| `team-requests.tsx:68` — Request to join › Cancel | `:366` |
+| `settings/teams.tsx:125` — Create a team › Cancel | `:376` |
+| `settings/teams.tsx:262` — Withdraw request › Cancel | `:386` |
+| `automation-actions.tsx:187` — Run › Cancel | `:396` |
+| `automation-actions.tsx:200` — Set up › Cancel | `:406` |
+| `automation-actions.tsx:208` — Webhook address › Close | `:416` |
+| `automation-actions.tsx:218` — Archive flow › Cancel | `:428` |
+| `move-version.tsx:94` — Move to vN › Cancel | `:438` |
+| `(home)/run.tsx:288` — Cancel this run? › Keep it running | `presses-home-activity:107` |
+| `connections-card.tsx:228` — Connect › Cancel | `:448` |
+| `connections-card.tsx:223` — Replace account? › Cancel | `:459` |
+| `workspace-switcher.tsx:140` — Switch workspace › Cancel | `:472` |
+| `scope-control.tsx:95` — Show › Done | `presses-home-activity:316` |
+| `scope-control.tsx:138` — Show › Create a team › Cancel | `:494` |
+
+**The empty standard's action.**
+
+| Press | Configured outcome | Test |
+| --- | --- | --- |
+| `(home)/index.tsx:105` — first run: Add a flow | opens Add (`/(tabs)/flows/add`) | `tab-screens:1186` |
+| `activity/index.tsx:275` — Add a flow | opens Add | `presses-patterns-empty-actions:37` |
+| `activity/approvals.tsx:202` — Go back | back, nothing pushed | `presses-patterns-empty-actions:28` |
+| `flows/index.tsx:119` — Add a flow | opens Add | `tab-screens:2057` |
+| `flows/index.tsx:122` — Archived flows | opens Archived (`/(tabs)/flows/archived`) | `tab-screens:2059` |
+| `settings/teams.tsx:141` — Create a team | opens the Create a team dialog | `teams-screens:326` |
+
+**Home, the run page, Activity, Approvals, the inbox, the scope control, the tab bar.**
+
+| Press | Configured outcome | Test |
+| --- | --- | --- |
+| `(home)/index.tsx:268` — the bell | opens Notifications | `tab-screens:97` |
+| `(home)/index.tsx:280` — the avatar | opens Settings | `tab-screens:94` |
+| `(home)/index.tsx:328` — a stat tile | Activity with its outcome and `period: 'today'` | `tab-screens:1621` |
+| `(home)/index.tsx:344` — the review banner | opens Approvals | `tab-screens:80` |
+| `(home)/index.tsx:379` — Add a flow | opens Add | `tab-screens:82` |
+| `(home)/index.tsx:389` — Flows | opens Flows | `tab-screens:84` |
+| `(home)/index.tsx:399` — See all | opens Activity | `tab-screens:86` |
+| `(home)/index.tsx:413` — a recent run | the run page `{runId}` | `tab-screens:108` |
+| `(home)/run.tsx:257` — Cancel run | opens Cancel this run?, only while pending or running | `tab-screens:1102`, `tab-screens:1138` |
+| `(home)/run.tsx:293` — Cancel run (confirm) | POST `…/runs/{runId}/cancel` in its workspace; closes; reads the run again; a 404 in words | `presses-home-activity:121`, `tab-screens:1115` |
+| `(home)/run.tsx:271` — View flow | the flow page `{flow: subscriptionId}` | `presses-home-activity:142` |
+| `activity/index.tsx:54` — a row | the run page with THAT row's `runId` | `presses-home-activity:155` |
+| `activity/index.tsx:301` — the flow chip ✕ | clears the flow | `tab-screens:1655`, `real-router/activity-selection:95` |
+| `activity/index.tsx:305` — Today ✕ | clears today, back to every run | `tab-screens:1819` |
+| `activity/index.tsx:315` — an outcome chip | lists that published status | `tab-screens:555` |
+| `activity/approvals.tsx:65, :75` — Approve, Reject | POST `…/approvals/{id}/decision` `{decision}`, keyed — a retry reuses the key — then the done line | `presses-home-activity:183` (2 cases) |
+| `inbox.tsx:179` — Mark all read | every dot off, rows kept; a row a later read brings stays unread | `presses-home-activity:232` |
+| `inbox.tsx:195` — a row | a failed run's page; a held one, Activity | `tab-screens:728` |
+| `inbox.tsx:274` — Turn on | iOS asks; the phone registers | `push-registration:149` |
+| `inbox.tsx:284` — Open Settings | opens iOS Settings; read again on return | `push-registration:205` |
+| `inbox.tsx:293` — Not now | the ask goes for the session | `tab-screens:723`, `push-registration:221` |
+| `scope-control.tsx:64` — the workspace pill | Switch workspace with two or more (or a cut list); with one, not a button | `presses-home-activity:295` (3 cases) |
+| `scope-control.tsx:75` — the team pill | opens Show | `scope-control:68` |
+| `scope-control.tsx:102` — All teams | scope all, kept as none, closes | `presses-home-activity:316` |
+| `scope-control.tsx:115` — a team | scope that team, kept, closes | `presses-home-activity:316`, `scope-control:68` |
+| `scope-control.tsx:129` — Create a team | the dialog; the new team is the scope | `scope-control:134` |
+| `tab-bar.tsx:80` — a tab | opens that tab, changing nothing on it | `tab-bar:29`, `real-router/activity-selection:107` |
+
+**Flows: the list, Add, Setup, a flow page and its actions.**
+
+| Press | Configured outcome | Test |
+| --- | --- | --- |
+| `flows/index.tsx:153` — Archived | opens Archived | `tab-screens:1911` |
+| `flows/index.tsx:164, :196` — New; a flow card | opens Add; the flow page `{flow}` | `tab-screens:268` |
+| `flows/index.tsx:224` — Add a flow (a team with none) | opens Add | `presses-flows:173` |
+| `flows/add.tsx:121` — a category | narrows the catalog | `tab-screens:172` |
+| `flows/add.tsx:135` — an Added ✓ card | opens that flow's page (the first copy) | `tab-screens:165`, `build13-unarchive-and-one-flow:129` |
+| `flows/add.tsx:166` — Add | Setup with the template and the scope's team; refused while not responding | `tab-screens:154`, `presses-flows:275` |
+| `flows/setup.tsx:335` — Create a team | the dialog; the new team is chosen | `tab-screens:1424` |
+| `flows/setup.tsx:348` — See teams | opens Settings › Teams | `tab-screens:1499` |
+| `flows/setup.tsx:378` — Connect › | opens Settings | `tab-screens:1278` |
+| `flows/setup.tsx:423` — Activate | POST subscribe `{templateId, templateVersion, projectId}` then PATCH `{config, status: 'live'}`, each keyed, then the flow page; a held flow configured, none added; refusals in words | `presses-flows:190`, `tab-screens:1397`, `build13-unarchive-and-one-flow:169`, `presses-flows:396` |
+| `flows/setup.tsx:416` — Try again | the same request, the same key | `presses-flows:355` |
+| `choice-chips.tsx:34` — a chip (Setup's team, a team role) | chooses it; the team is sent as `projectId` | `tab-screens:1397`, `teams-screens:463` |
+| `flows/detail.tsx:238` — Runs / Successes / Failures | Activity `{flow, flowName, filter}`, no day | `tab-screens:1638` |
+| `flows/detail.tsx:314` — Open the live flow | the twin's page, same stack | `tab-screens:1985` |
+| `flows/detail.tsx:325` — Unarchive | Setup with the template and the team it had | `build13-unarchive-and-one-flow:56` |
+| `flows/detail.tsx:366` — Pause / Resume / Publish | PATCH `{status}`; refused while not responding | `tab-screens:460`, `presses-flows:301` |
+| `flows/detail.tsx:340` — Try again | the same change, the same key | `presses-flows:328` |
+| `automation-actions.tsx:128` — Run | the Run dialog with the declared fields | `automation-actions:159` |
+| `automation-actions.tsx:154` — Set up; Webhook address | their dialogs | `automation-actions:388`, `automation-actions:352` |
+| `automation-actions.tsx:168` — Archive flow | the one-way confirmation | `automation-actions:275` |
+| `automation-actions.tsx:222` — Archive | PATCH `{status: 'archived'}`, then the Flows list | `automation-actions:275`, `tab-screens:405` |
+| `move-version.tsx:81` — Move to vN | its confirmation | `automation-actions:246` |
+| `move-version.tsx:98` — Move to vN (confirm) | PATCH `{templateVersion}`; refusals in words | `automation-actions:246`, `automation-actions:260` |
+| `run-dialog.tsx:105` — Start run | POST runs `{subscriptionId, input}`; closes; the run's page | `automation-actions:159`, `presses-flows:248` |
+| `run-file-field.tsx:142` — Choose file | uploads it; the run carries its id; a refusal in words | `automation-actions:205`, `presses-flows:418` |
+| `setup-dialog.tsx:77` — Save setup | PATCH `{config}` only | `automation-actions:388` |
+| `webhook-address-dialog.tsx:114` — Create address / Make a new secret | POST, no key; the secret shown once; a refusal in words | `automation-actions:352`, `presses-flows:413` |
+| `archived-flows.tsx:116` — an archived row | its page in the same stack | `tab-screens:1928` |
+| `select-field.tsx:55, :80` — the box; an option | opens the list in place; selects and closes it | `select-field:21` |
+
+**Settings, Face ID, Account, Billing, Export my data, Help.**
+
+| Press | Configured outcome | Test |
+| --- | --- | --- |
+| `settings/index.tsx:149, :167, :177, :220, :230, :241, :250, :263, :303` — the page rows | each opens its page | `tab-screens:969` |
+| `settings/index.tsx:191` — the workspace row | Switch workspace with two or more; inert with one | `workspace-switcher:91`, `workspace-switcher:80` |
+| `settings/index.tsx:279` — Auto / Dark / Light | sets the theme | `tab-screens:1012` |
+| `settings/index.tsx:316` — Sign out | signs out; the root guard shows the cover | `real-router/sign-out:48`, `sign-out:93` |
+| `settings/index.tsx:312` — Retry sign out | signs out again | `sign-out:119` |
+| `face-id-row.tsx:78` — Face ID's Try again | repeats the change that failed | `presses-settings:452` (D3) |
+| `noc-toggle.tsx:40` — a toggle | turns it the other way | `components:166` |
+| `settings/account.tsx:150` — Unlink | asks first; POST `…/unlink`; refusals by reason | `account-screen:235` |
+| `settings/account.tsx:155` — Link | links in the system browser | `account-screen:60` |
+| `settings/account.tsx:189, :310` — Delete Account; Yes, delete my account / Try again | the typed-DELETE dialog; `DELETE /v1/account`, every answer in words | `account-screen:111` |
+| `settings/account.tsx:305` — Sign in again | signs this phone out; the guard shows the cover | `account-screen:191`, `real-router/sign-out:152` |
+| `settings/billing.tsx:271` — a plan card, not paying | the hosted checkout for that plan (iOS) | `billing-screen:104` |
+| `settings/billing.tsx:271, :296` — a plan card while paying; Manage billing | the hosted portal | `billing-screen:133` |
+| `settings/data.tsx:238` — Prepare export | the bounded export | `data-support-screens:59` |
+| `settings/data.tsx:261` — Share JSON | iOS: a JSON file in the cache to the share sheet, then removed; Android: text | `presses-settings:404` (2 cases) |
+| `settings/data.tsx:280, :290` — Export everything; Download file | starts the complete export and follows it; its link read again at the download, to the share sheet | `data-support-screens:98` |
+| `settings/support.tsx:100` — Send | the contact request | `data-support-screens:138` |
+| `settings/support.tsx:111, :112` — Privacy policy; Terms of service | open on the website | `data-support-screens:156` |
+
+**Organization.**
+
+| Press | Configured outcome | Test |
+| --- | --- | --- |
+| `settings/organization.tsx:154, :264` — Name; Save | the rename dialog; saves the name | `organization-screen:380` |
+| `settings/organization.tsx:168` — Share join link | the share sheet with the link | `organization-screen:310` |
+| `org-domains.tsx:77` — a domain | its dialog, with only what its state allows | `presses-settings:145` |
+| `org-domains.tsx:180, :187, :194` — Revoke; Verify DNS; Save settings | DELETE `…/domains/{id}`; POST `…/verification`; PATCH `{joinPolicy, discoveryEnabled}` — a refusal in the dialog, the key kept, then closes and reads again | `presses-settings:145` (3 cases) |
+| `org-domains.tsx:85, :262` — Add domain; its Add domain | the dialog; claims the domain | `organization-screen:115` |
+| `org-join.tsx:135, :127` — Join / Request; Cancel request | joins or asks; withdraws | `organization-screen:197` |
+| `org-join.tsx:205` — Create organization | creates it | `organization-screen:251` |
+| `org-people.tsx:77` — a member | the Remove question | `organization-screen:96` |
+| `org-people.tsx:109, :207` — a join request; Approve | its dialog; approves it | `organization-screen:130` |
+| `org-people.tsx:201` — Reject | PATCH `…/join-requests/{id}` `{decision: 'reject'}`; closes; reads again | `presses-settings:218` |
+
+**Teams.**
+
+| Press | Configured outcome | Test |
+| --- | --- | --- |
+| `settings/team.tsx:153` — Delete team / Leave team | its confirmation | `teams-screens:403`, `teams-screens:434` |
+| `settings/teams.tsx:172`; `create-team-dialog.tsx:106` — Create a team; Create team | the dialog; creates it, refusals in words | `teams-screens:219` |
+| `create-team-dialog.tsx:91` — Done, after a create | opens the new team's page | `teams-screens:242` |
+| `settings/teams.tsx:192` — a team | its page `{projectId, workspaceId}` — the team's own workspace | `presses-settings:252` |
+| `settings/teams.tsx:220, :227` — Requested; Request | the withdraw question; asks to join | `teams-screens:152` |
+| `team-members.tsx:87`; `confirm-dialog.tsx:72` — your own row; the confirm | Leave this team? — DELETE your membership, Leaving… while sent, once, then back | `presses-settings:310` |
+| `team-members.tsx:87, :99, :204, :271` — a member; Add members; Save role; Add | their dialog; the add dialog; POST `…/memberships` `{userId, role}` — a new role, or a member added | `teams-screens:454` |
+| `team-members.tsx:198, :193` — Remove; Remove (confirm) | asks in the same dialog; DELETE `…/memberships/{userId}`, a refusal there, the key kept, then closes and reads again | `presses-settings:334` |
+| `team-requests.tsx:56, :125, :130` — a request; Deny; Approve | its dialog; decides it | `teams-screens:474` |
+
+**Connections and the workspace switcher.**
+
+| Press | Configured outcome | Test |
+| --- | --- | --- |
+| `connections-card.tsx:176` — a provider | its dialog | `settings-connections:66` |
+| `connections-card.tsx:242` — Connect / Disconnect | OAuth in the browser; DELETE `…/connections/{id}`; POST `…/connections/key` `{providerId, credentials}`, trimmed, keyed — then closes and reads again | `presses-settings:525` (2 cases), `settings-connections:66` |
+| `connections-card.tsx:233, :224` — Replace account; Replace account (confirm) | asks first; connects again in the browser, replacing that connection (`replaceConnectionId`) | `settings-connections:146`, `settings-connections:173` |
+| `workspace-switcher.tsx:165` — a workspace | PATCH `/v1/session/active-workspace`, keyed, then the session read again | `workspace-switcher:140` |
+| `workspace-switcher.tsx:146` — Reload session | reads the session again; the dialog closes | `workspace-switcher:203` |
+
+**The cover, sign-in, the lock, and shared controls.**
+
+| Press | Configured outcome | Test |
+| --- | --- | --- |
+| `app/index.tsx:138` — the cover | signed in, Home; signed out, nothing | `cover-haptics:26`, `splash-tap:18` |
+| `app/index.tsx:164` — Get started | opens Sign in, once | `splash-tap:18`, `real-router/sign-out:97` |
+| `(auth)/login.tsx:192` — Sign in with … | that provider's sign-in | `auth-screens:45` |
+| `(auth)/login.tsx:171` — Unlock with Face ID | opens the lock | `auth-screens:86` |
+| `(auth)/faceid-offer.tsx:98, :101` — Use Face ID; Not now | checks Face ID, records yes, opens Home; records no, opens Home | `faceid-offer:27`, `faceid-offer:36` |
+| `(auth)/faceid.tsx:181` — Use identity provider | signs this phone out, then the cover | `faceid-screen:70`, `real-router/sign-out:234` |
+| `(auth)/account-deleted.tsx:30` — Continue | the cover | `real-router/sign-out:181` |
+| `text-field.tsx:76` — Show / Hide password | shows or hides it | `components:223` |
+| `picker-dialog.tsx:39` — a row (no screen draws PickerDialog since build 8) | picks that row's value; the picker closes | `presses-close:51` |
+
+**Defects — found by the audit, fixed in build 13.** The audit itself changed no product
+line but the 34 arrows above; the fixes followed it, each held by the test that failed:
+
+- **Fixed (build 13), D1 and the tabs' dead way back:** `FailureBody` draws a control only
+  with its handler — Retry with an `onRetry`, the back circle and "Go back" with an
+  `onBack` — so the unavailable state has no Retry, and the Activity and Flows tabs (roots,
+  with nothing to go back to) no back circle or "Go back" (the audit had flagged those
+  two for a decision). The design snapshots of `ScreenError` and `ScreenOffline` pass both
+  handlers, as every pushed screen does, and stay byte-identical. Held by the 13
+  unavailable rows and, for the tabs, the table's no-back branch (`presses-patterns-
+  failure-states`; proved: the back circle drawn unconditionally again fails "Activity,
+  error").
+- **Fixed (build 13), D2:** Setup draws an unconfigured read as the unavailable state.
+- **Fixed (build 13), D3:** Face ID's Try again repeats the change that failed (a ref
+  holds the last one asked for).
+
+
+- **D1 — the unavailable state draws a Retry that does nothing.**
+  `components/screen-state.tsx:116-126`: `FailureBody` draws the Retry pill whatever its
+  `onRetry`, and `ScreenUnavailable` (`:182-203`) passes none, so every unavailable
+  state — the 13 pushed screens' (Run, Approvals, Add, the flow page, Account, Billing,
+  Connections, Export my data, Organization, Team, Teams, Archived flows, Notifications)
+  and the Activity and Flows tabs' — shows "Retry" with no handler: a press that does
+  nothing and gives no tick. Configured: "`ScreenUnavailable` says what is actually
+  wrong and offers no retry" (`DESIGN-CONTRACT.md:178-182`; Round 6's "`unconfigured` is
+  its own state", above; the component's own comment, `screen-state.tsx:175-180`). Since
+  `74eee65` (2026-08-18), which built `ScreenUnavailable` on `FailureBody`. Failing: the
+  13 unavailable rows of `presses-patterns-failure-states` (`:94`, `:97`, `:102`,
+  `:105`, `:115`, `:118`, `:121`, `:124`, `:127`, `:130`, `:133`, `:136`, `:139`), each
+  at `:188` — "Retry" is on the screen — after its Back and Go back passed; the table
+  has no unavailable row for the two tabs. `ScreenUnavailable` has no snapshot: the
+  screen-state snapshots are `ScreenError`'s and `ScreenOffline`'s, drawn with no
+  handler, so a fix confined to the unavailable state moves none of the 80.
+- **D2 — Setup draws an unconfigured read as the error state, with its Retry.**
+  `app/(tabs)/flows/setup.tsx:142-151`: every status but `ready` draws `ScreenError`,
+  `unconfigured` included — no backend, no workspace, or no `template` param (the throw
+  at `:80`) — so Setup offers a Retry that cannot succeed. Configured: every fetching
+  surface has the unavailable state, Home its one carve-out
+  (`DESIGN-CONTRACT.md:170-182`). Failing: `presses-patterns-failure-states:113`, at
+  `:170` — no `screen-unavailable`; the screen draws `screen-error`.
+- **D3 — Face ID's Try again always turns Face ID on.**
+  `components/settings/face-id-row.tsx:78`, `onRetry={() => changeFaceId(true)}`: after
+  a failed turn-off — the keychain refuses the write, "Face ID preference could not be
+  saved on this device." — Try again shows the Face ID prompt and saves `true`, so the
+  toggle ends on, the opposite of what was asked. Configured: a failed action stays on
+  the loaded screen with the shared inline failure callout
+  (`DESIGN-CONTRACT.md:364-365`), whose Try again is that action again. Since `76bfc0b`
+  (2026-08-18). Failing: `presses-settings:452`, the case "a failure turning it off …",
+  at `:491` — the "Enable Face ID unlock" prompt was shown; the turn-on case passes.
+
 ### Guards proved to bite, 24.6
 
 | Guard | Broken by | Test that failed |

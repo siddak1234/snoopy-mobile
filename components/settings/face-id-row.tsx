@@ -1,6 +1,6 @@
 import * as LocalAuthentication from 'expo-local-authentication';
 import { UserFocus } from 'phosphor-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { NocToggle } from '@/components/nocturne/noc-toggle';
@@ -35,7 +35,11 @@ export function FaceIdRow({ size = 'regular', testID }: { size?: SettingsRowSize
     };
   }, []);
 
+  // Try again repeats the change that failed — turning Face ID off as well as on
+  // (build 13's button audit: it always turned Face ID on).
+  const attempted = useRef(true);
   const changeFaceId = async (enabled: boolean) => {
+    attempted.current = enabled;
     setFaceIdError(null);
     try {
       if (enabled) {
@@ -75,7 +79,7 @@ export function FaceIdRow({ size = 'regular', testID }: { size?: SettingsRowSize
       </SurfaceCard>
       {/* Directly under the toggle, not at the foot of the page: it names this row's failure. */}
       {faceIdError ? (
-        <ActionFailure message={faceIdError} retryLabel="Try again" onRetry={() => changeFaceId(true)} />
+        <ActionFailure message={faceIdError} retryLabel="Try again" onRetry={() => changeFaceId(attempted.current)} />
       ) : null}
     </View>
   );

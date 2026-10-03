@@ -248,7 +248,7 @@ export default function ActivityScreen() {
 
   if (activity.status === 'loading') return <ScreenLoading topInset={insets.top} />;
   if (activity.status === 'offline') {
-    return <ScreenOffline onRetry={activity.reload} topInset={insets.top} />;
+    return <ScreenOffline onRetry={() => activity.reload()} topInset={insets.top} />;
   }
   if (activity.status === 'unconfigured') {
     return <ScreenUnavailable title={errorTitleFor('activity')} topInset={insets.top} />;
@@ -257,7 +257,7 @@ export default function ActivityScreen() {
     return (
       <ScreenError
         title={errorTitleFor('activity')}
-        onRetry={activity.reload}
+        onRetry={() => activity.reload()}
         body={busyBody(activity)}
         topInset={insets.top}
       />

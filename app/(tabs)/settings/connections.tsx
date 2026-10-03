@@ -39,7 +39,7 @@ export default function ConnectionsScreen() {
 
   if (connections.status === 'loading') return <ScreenLoading topInset={insets.top} />;
   if (connections.status === 'offline') {
-    return <ScreenOffline onRetry={connections.reload} onBack={() => router.back()} topInset={insets.top} />;
+    return <ScreenOffline onRetry={() => connections.reload()} onBack={() => router.back()} topInset={insets.top} />;
   }
   if (connections.status === 'unconfigured') {
     return <ScreenUnavailable title={errorTitleFor('settings')} onBack={() => router.back()} topInset={insets.top} />;
@@ -48,7 +48,7 @@ export default function ConnectionsScreen() {
     return (
       <ScreenError
         title={errorTitleFor('settings')}
-        onRetry={connections.reload}
+        onRetry={() => connections.reload()}
         body={busyBody(connections)}
         onBack={() => router.back()}
         topInset={insets.top}

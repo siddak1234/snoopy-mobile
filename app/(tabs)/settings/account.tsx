@@ -89,7 +89,7 @@ export default function AccountScreen() {
 
   if (account.status === 'loading') return <ScreenLoading topInset={insets.top} />;
   if (account.status === 'offline') {
-    return <ScreenOffline onRetry={account.reload} onBack={() => router.back()} topInset={insets.top} />;
+    return <ScreenOffline onRetry={() => account.reload()} onBack={() => router.back()} topInset={insets.top} />;
   }
   if (account.status === 'unconfigured') {
     return <ScreenUnavailable title={errorTitleFor('account')} onBack={() => router.back()} topInset={insets.top} />;
@@ -98,7 +98,7 @@ export default function AccountScreen() {
     return (
       <ScreenError
         title={errorTitleFor('account')}
-        onRetry={account.reload}
+        onRetry={() => account.reload()}
         body={busyBody(account)}
         onBack={() => router.back()}
         topInset={insets.top}

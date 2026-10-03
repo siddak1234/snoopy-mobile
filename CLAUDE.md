@@ -120,6 +120,17 @@ repository, stop.
     takes on arrival gets a test there. The auth boundary is the root layout's
     `Stack.Protected`; nothing inside the tabs navigates to "/", which there
     names Home, not the cover.
+12. **Every press has a test that presses it and asserts its outcome** (build
+    13, B9): the screen and params it opens, the request it sends (method,
+    path, body), the dialog it opens or closes, what changes on screen, or the
+    refusal it says — never only that a mock was called. `audit:presses`
+    (`scripts/audit-presses.mjs`, coverage-based, in `verify` and CI) resolves
+    every `onPress` and `onLongPress` in `app/` and `components/` to the
+    function it runs and fails when no test ran it, or when it cannot tell
+    which function that is (write a hook's function as `() => x.reload()`). A
+    press repeated across screens — Retry, Back, a dialog's Cancel — is one
+    table-driven test (`it.each`), not a copy per screen. The register is
+    `DESIGN-GAPS.md`, "Every press, its test (build 13)".
 
 ## Release configuration, pinned
 
