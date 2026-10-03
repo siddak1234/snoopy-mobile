@@ -55,56 +55,15 @@ const PRESS_ATTRIBUTES = ["onPress", "onLongPress"];
  * Presses another change owns right now, and that change brings their tests.
  * Each is EXCLUDED in the inventory, never counted as run. An entry whose file
  * is here but holds no press it matches fails the audit, so a change that lands
- * cannot leave its entry behind.
- *
- * TODO(build 13 part 2): empty this list when part 2 lands — the sign-out paths
- * (#6), the archived flow's Unarchive (#4) and one flow per workspace (#9) — so
- * this audit holds those presses as it holds every other.
- *
- * Part 2's too, and not entries because they hold no press: the guards in
- * app/_layout.tsx and app/(tabs)/_layout.tsx, and the Linked accounts lead
- * sentence (#8).
+ * cannot leave its entry behind. Empty: build 13 part 2 (the sign-out paths, #6;
+ * the archived flow's Unarchive, #4; one flow per workspace, #9) landed with its
+ * tests, so this audit holds those presses as it holds every other.
  *
  * `handler` is the press's value as written (or a list of them), `attribute` the
  * prop it is passed as, `inside` the condition whose true branch holds it; with
  * none of them, the whole file.
  */
-const EXCLUDED = [
-  {
-    file: "app/(tabs)/settings/index.tsx",
-    handler: "handleSignOut",
-    reason: "Settings › Sign out, and its failure's Try again: the sign-out paths (#6), build 13 part 2",
-  },
-  {
-    file: "app/(auth)/faceid.tsx",
-    handler: "onUseIdentityProvider",
-    reason: 'The Face ID lock\'s "Use identity provider": the sign-out paths (#6, #7), build 13 part 2',
-  },
-  {
-    file: "app/(tabs)/settings/account.tsx",
-    attribute: "onSignIn",
-    reason: 'Delete account\'s "Sign in again": the sign-out paths (#6), build 13 part 2',
-  },
-  {
-    file: "app/(tabs)/flows/detail.tsx",
-    inside: "def.removed",
-    reason: 'The archived flow page\'s "Add it again" section, Unarchive (#4), build 13 part 2',
-  },
-  {
-    file: "app/(tabs)/flows/add.tsx",
-    reason: "Flows › Add: one flow per workspace (#9), build 13 part 2",
-  },
-  {
-    file: "app/(tabs)/flows/setup.tsx",
-    handler: ["() => setCreatingTeam(true)", "() => router.push('/(tabs)/settings/teams')", "() => setCreatingTeam(false)"],
-    reason: "Setup's team/scope choice: one flow per workspace (#9), build 13 part 2",
-  },
-  {
-    file: "app/(tabs)/flows/setup.tsx",
-    handler: "activate",
-    reason: "Setup's Activate, and its failure's Try again: one flow per workspace (#9), build 13 part 2",
-  },
-];
+const EXCLUDED = [];
 
 /** A press no test ran, or one the audit cannot vouch for. */
 const FAILING = new Set(["not-run", "unresolved", "no-coverage", "stale-coverage"]);
