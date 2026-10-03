@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 
-import { fonts, withAlpha } from '@/constants/theme';
+import { fonts, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 type Props = {
@@ -12,7 +12,7 @@ type Props = {
 };
 
 /** Circular initials badge: accent-16% fill, accent-800 ring, accent-200 text. */
-export function AvatarBadge({ initials, size = 38, fontSize = 13 }: Props) {
+export function AvatarBadge({ initials, size = 38, fontSize = typeScale.body.fontSize }: Props) {
   const { palette } = useTheme();
   return (
     <View

@@ -31,7 +31,7 @@ exports[`Nocturne set — dark palette AvatarBadge renders unchanged 1`] = `
         {
           "color": "#e7e5fe",
           "fontFamily": "Inter_600SemiBold",
-          "fontSize": 13,
+          "fontSize": 15,
         }
       }
     >
@@ -269,7 +269,7 @@ exports[`Nocturne set — dark palette FilterChip/active renders unchanged 1`] =
         {
           "color": "#9184d9",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 12.5,
+          "fontSize": 14,
         }
       }
     >
@@ -339,7 +339,7 @@ exports[`Nocturne set — dark palette FilterChip/inactive renders unchanged 1`]
         {
           "color": "#b2b6ca",
           "fontFamily": "Inter_400Regular",
-          "fontSize": 12.5,
+          "fontSize": 14,
         }
       }
     >
@@ -961,7 +961,7 @@ exports[`Nocturne set — dark palette OAuthButton renders unchanged 1`] = `
         {
           "color": "#e9e9ed",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 14.5,
+          "fontSize": 16,
         }
       }
     >
@@ -1011,7 +1011,7 @@ exports[`Nocturne set — dark palette OrDivider renders unchanged 1`] = `
         [
           {
             "fontFamily": "Inter_400Regular",
-            "fontSize": 12.5,
+            "fontSize": 14,
           },
           {
             "color": "#9397ab",
@@ -1103,7 +1103,7 @@ exports[`Nocturne set — dark palette PillButton/accent-ghost renders unchanged
         {
           "color": "#d2cefd",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 16,
+          "fontSize": 17,
         }
       }
     >
@@ -1178,7 +1178,7 @@ exports[`Nocturne set — dark palette PillButton/plain renders unchanged 1`] = 
         {
           "color": "#e9e9ed",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 16,
+          "fontSize": 17,
         }
       }
     >
@@ -1253,7 +1253,7 @@ exports[`Nocturne set — dark palette PillButton/primary renders unchanged 1`] 
         {
           "color": "#9184d9",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 16,
+          "fontSize": 17,
         }
       }
     >
@@ -1328,7 +1328,7 @@ exports[`Nocturne set — dark palette PillButton/secondary renders unchanged 1`
         {
           "color": "#e9e9ed",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 16,
+          "fontSize": 17,
         }
       }
     >
@@ -1356,8 +1356,8 @@ exports[`Nocturne set — dark palette SectionLabel renders unchanged 1`] = `
         {
           "color": "#b2b6ca",
           "fontFamily": "Inter_400Regular",
-          "fontSize": 11,
-          "letterSpacing": 1.54,
+          "fontSize": 13,
+          "letterSpacing": 1.8200000000000003,
         },
         undefined,
       ]
@@ -1460,8 +1460,8 @@ exports[`Nocturne set — dark palette StatCard renders unchanged 1`] = `
         {
           "color": "#e9e9ed",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 20,
-          "letterSpacing": -0.2,
+          "fontSize": 21,
+          "letterSpacing": -0.21,
         }
       }
     >
@@ -1472,7 +1472,7 @@ exports[`Nocturne set — dark palette StatCard renders unchanged 1`] = `
         {
           "color": "#b2b6ca",
           "fontFamily": "Inter_400Regular",
-          "fontSize": 11,
+          "fontSize": 13,
           "marginTop": 3,
         }
       }
@@ -1512,7 +1512,7 @@ exports[`Nocturne set — dark palette StatusPill/Cancelled renders unchanged 1`
         {
           "color": "#b2b6ca",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 11,
+          "fontSize": 13,
         }
       }
     >
@@ -1551,7 +1551,7 @@ exports[`Nocturne set — dark palette StatusPill/Draft renders unchanged 1`] = 
         {
           "color": "#b2b6ca",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 11,
+          "fontSize": 13,
         }
       }
     >
@@ -1590,7 +1590,7 @@ exports[`Nocturne set — dark palette StatusPill/Failed renders unchanged 1`] =
         {
           "color": "#f87171",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 11,
+          "fontSize": 13,
         }
       }
     >
@@ -1629,7 +1629,7 @@ exports[`Nocturne set — dark palette StatusPill/Held renders unchanged 1`] = `
         {
           "color": "#fbbf24",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 11,
+          "fontSize": 13,
         }
       }
     >
@@ -1668,7 +1668,7 @@ exports[`Nocturne set — dark palette StatusPill/Live renders unchanged 1`] = `
         {
           "color": "#34d399",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 11,
+          "fontSize": 13,
         }
       }
     >
@@ -1707,7 +1707,7 @@ exports[`Nocturne set — dark palette StatusPill/Paused renders unchanged 1`] =
         {
           "color": "#fbbf24",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 11,
+          "fontSize": 13,
         }
       }
     >
@@ -1746,7 +1746,7 @@ exports[`Nocturne set — dark palette StatusPill/Queued renders unchanged 1`] =
         {
           "color": "#b2b6ca",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 11,
+          "fontSize": 13,
         }
       }
     >
@@ -1785,7 +1785,7 @@ exports[`Nocturne set — dark palette StatusPill/Running renders unchanged 1`] 
         {
           "color": "#d2cefd",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 11,
+          "fontSize": 13,
         }
       }
     >
@@ -1824,7 +1824,7 @@ exports[`Nocturne set — dark palette StatusPill/Success renders unchanged 1`] 
         {
           "color": "#34d399",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 11,
+          "fontSize": 13,
         }
       }
     >
@@ -1973,8 +1973,8 @@ exports[`Nocturne set — dark palette StepCard renders unchanged 1`] = `
             {
               "color": "#d2cefd",
               "fontFamily": "Inter_400Regular",
-              "fontSize": 10,
-              "letterSpacing": 1.6,
+              "fontSize": 12,
+              "letterSpacing": 1.92,
             },
             undefined,
           ]
@@ -1987,7 +1987,7 @@ exports[`Nocturne set — dark palette StepCard renders unchanged 1`] = `
           [
             {
               "fontFamily": "Inter_500Medium",
-              "fontSize": 14,
+              "fontSize": 16,
               "marginTop": 2,
             },
             {
@@ -2003,7 +2003,7 @@ exports[`Nocturne set — dark palette StepCard renders unchanged 1`] = `
           [
             {
               "fontFamily": "Inter_400Regular",
-              "fontSize": 12,
+              "fontSize": 14,
               "marginTop": 1,
             },
             {
@@ -2217,7 +2217,7 @@ exports[`Nocturne set — dark palette TabBar renders unchanged 1`] = `
             {
               "color": "#9184d9",
               "fontFamily": "Inter_500Medium",
-              "fontSize": 10,
+              "fontSize": 12,
             }
           }
         >
@@ -2342,7 +2342,7 @@ exports[`Nocturne set — dark palette TabBar renders unchanged 1`] = `
             {
               "color": "#9397ab",
               "fontFamily": "Inter_500Medium",
-              "fontSize": 10,
+              "fontSize": 12,
             }
           }
         >
@@ -2467,7 +2467,7 @@ exports[`Nocturne set — dark palette TabBar renders unchanged 1`] = `
             {
               "color": "#9397ab",
               "fontFamily": "Inter_500Medium",
-              "fontSize": 10,
+              "fontSize": 12,
             }
           }
         >
@@ -2592,7 +2592,7 @@ exports[`Nocturne set — dark palette TabBar renders unchanged 1`] = `
             {
               "color": "#9397ab",
               "fontFamily": "Inter_500Medium",
-              "fontSize": 10,
+              "fontSize": 12,
             }
           }
         >
@@ -2631,7 +2631,7 @@ exports[`Nocturne set — dark palette TextField renders unchanged 1`] = `
         {
           "color": "#b2b6ca",
           "fontFamily": "Inter_400Regular",
-          "fontSize": 12.5,
+          "fontSize": 14,
         }
       }
     >
@@ -2663,7 +2663,7 @@ exports[`Nocturne set — dark palette TextField renders unchanged 1`] = `
             "color": "#e9e9ed",
             "flex": 1,
             "fontFamily": "Inter_400Regular",
-            "fontSize": 15,
+            "fontSize": 17,
             "paddingVertical": 0,
           }
         }
@@ -2701,7 +2701,7 @@ exports[`Nocturne set — dark palette TextField/secure renders unchanged 1`] = 
         {
           "color": "#b2b6ca",
           "fontFamily": "Inter_400Regular",
-          "fontSize": 12.5,
+          "fontSize": 14,
         }
       }
     >
@@ -2733,7 +2733,7 @@ exports[`Nocturne set — dark palette TextField/secure renders unchanged 1`] = 
             "color": "#e9e9ed",
             "flex": 1,
             "fontFamily": "Inter_400Regular",
-            "fontSize": 15,
+            "fontSize": 17,
             "paddingVertical": 0,
           }
         }
@@ -2882,7 +2882,7 @@ exports[`Nocturne set — light palette AvatarBadge renders unchanged 1`] = `
         {
           "color": "#453a91",
           "fontFamily": "Inter_600SemiBold",
-          "fontSize": 13,
+          "fontSize": 15,
         }
       }
     >
@@ -3120,7 +3120,7 @@ exports[`Nocturne set — light palette FilterChip/active renders unchanged 1`] 
         {
           "color": "#6a5cc4",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 12.5,
+          "fontSize": 14,
         }
       }
     >
@@ -3190,7 +3190,7 @@ exports[`Nocturne set — light palette FilterChip/inactive renders unchanged 1`
         {
           "color": "#666a82",
           "fontFamily": "Inter_400Regular",
-          "fontSize": 12.5,
+          "fontSize": 14,
         }
       }
     >
@@ -3812,7 +3812,7 @@ exports[`Nocturne set — light palette OAuthButton renders unchanged 1`] = `
         {
           "color": "#20222f",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 14.5,
+          "fontSize": 16,
         }
       }
     >
@@ -3862,7 +3862,7 @@ exports[`Nocturne set — light palette OrDivider renders unchanged 1`] = `
         [
           {
             "fontFamily": "Inter_400Regular",
-            "fontSize": 12.5,
+            "fontSize": 14,
           },
           {
             "color": "#7c8095",
@@ -3954,7 +3954,7 @@ exports[`Nocturne set — light palette PillButton/accent-ghost renders unchange
         {
           "color": "#5548ab",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 16,
+          "fontSize": 17,
         }
       }
     >
@@ -4029,7 +4029,7 @@ exports[`Nocturne set — light palette PillButton/plain renders unchanged 1`] =
         {
           "color": "#20222f",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 16,
+          "fontSize": 17,
         }
       }
     >
@@ -4104,7 +4104,7 @@ exports[`Nocturne set — light palette PillButton/primary renders unchanged 1`]
         {
           "color": "#6a5cc4",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 16,
+          "fontSize": 17,
         }
       }
     >
@@ -4179,7 +4179,7 @@ exports[`Nocturne set — light palette PillButton/secondary renders unchanged 1
         {
           "color": "#20222f",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 16,
+          "fontSize": 17,
         }
       }
     >
@@ -4207,8 +4207,8 @@ exports[`Nocturne set — light palette SectionLabel renders unchanged 1`] = `
         {
           "color": "#666a82",
           "fontFamily": "Inter_400Regular",
-          "fontSize": 11,
-          "letterSpacing": 1.54,
+          "fontSize": 13,
+          "letterSpacing": 1.8200000000000003,
         },
         undefined,
       ]
@@ -4317,8 +4317,8 @@ exports[`Nocturne set — light palette StatCard renders unchanged 1`] = `
         {
           "color": "#20222f",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 20,
-          "letterSpacing": -0.2,
+          "fontSize": 21,
+          "letterSpacing": -0.21,
         }
       }
     >
@@ -4329,7 +4329,7 @@ exports[`Nocturne set — light palette StatCard renders unchanged 1`] = `
         {
           "color": "#666a82",
           "fontFamily": "Inter_400Regular",
-          "fontSize": 11,
+          "fontSize": 13,
           "marginTop": 3,
         }
       }
@@ -4369,7 +4369,7 @@ exports[`Nocturne set — light palette StatusPill/Cancelled renders unchanged 1
         {
           "color": "#666a82",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 11,
+          "fontSize": 13,
         }
       }
     >
@@ -4408,7 +4408,7 @@ exports[`Nocturne set — light palette StatusPill/Draft renders unchanged 1`] =
         {
           "color": "#666a82",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 11,
+          "fontSize": 13,
         }
       }
     >
@@ -4447,7 +4447,7 @@ exports[`Nocturne set — light palette StatusPill/Failed renders unchanged 1`] 
         {
           "color": "#f87171",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 11,
+          "fontSize": 13,
         }
       }
     >
@@ -4486,7 +4486,7 @@ exports[`Nocturne set — light palette StatusPill/Held renders unchanged 1`] = 
         {
           "color": "#fbbf24",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 11,
+          "fontSize": 13,
         }
       }
     >
@@ -4525,7 +4525,7 @@ exports[`Nocturne set — light palette StatusPill/Live renders unchanged 1`] = 
         {
           "color": "#34d399",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 11,
+          "fontSize": 13,
         }
       }
     >
@@ -4564,7 +4564,7 @@ exports[`Nocturne set — light palette StatusPill/Paused renders unchanged 1`] 
         {
           "color": "#fbbf24",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 11,
+          "fontSize": 13,
         }
       }
     >
@@ -4603,7 +4603,7 @@ exports[`Nocturne set — light palette StatusPill/Queued renders unchanged 1`] 
         {
           "color": "#666a82",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 11,
+          "fontSize": 13,
         }
       }
     >
@@ -4642,7 +4642,7 @@ exports[`Nocturne set — light palette StatusPill/Running renders unchanged 1`]
         {
           "color": "#5548ab",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 11,
+          "fontSize": 13,
         }
       }
     >
@@ -4681,7 +4681,7 @@ exports[`Nocturne set — light palette StatusPill/Success renders unchanged 1`]
         {
           "color": "#34d399",
           "fontFamily": "Inter_500Medium",
-          "fontSize": 11,
+          "fontSize": 13,
         }
       }
     >
@@ -4836,8 +4836,8 @@ exports[`Nocturne set — light palette StepCard renders unchanged 1`] = `
             {
               "color": "#5548ab",
               "fontFamily": "Inter_400Regular",
-              "fontSize": 10,
-              "letterSpacing": 1.6,
+              "fontSize": 12,
+              "letterSpacing": 1.92,
             },
             undefined,
           ]
@@ -4850,7 +4850,7 @@ exports[`Nocturne set — light palette StepCard renders unchanged 1`] = `
           [
             {
               "fontFamily": "Inter_500Medium",
-              "fontSize": 14,
+              "fontSize": 16,
               "marginTop": 2,
             },
             {
@@ -4866,7 +4866,7 @@ exports[`Nocturne set — light palette StepCard renders unchanged 1`] = `
           [
             {
               "fontFamily": "Inter_400Regular",
-              "fontSize": 12,
+              "fontSize": 14,
               "marginTop": 1,
             },
             {
@@ -5086,7 +5086,7 @@ exports[`Nocturne set — light palette TabBar renders unchanged 1`] = `
             {
               "color": "#6a5cc4",
               "fontFamily": "Inter_500Medium",
-              "fontSize": 10,
+              "fontSize": 12,
             }
           }
         >
@@ -5211,7 +5211,7 @@ exports[`Nocturne set — light palette TabBar renders unchanged 1`] = `
             {
               "color": "#7c8095",
               "fontFamily": "Inter_500Medium",
-              "fontSize": 10,
+              "fontSize": 12,
             }
           }
         >
@@ -5336,7 +5336,7 @@ exports[`Nocturne set — light palette TabBar renders unchanged 1`] = `
             {
               "color": "#7c8095",
               "fontFamily": "Inter_500Medium",
-              "fontSize": 10,
+              "fontSize": 12,
             }
           }
         >
@@ -5461,7 +5461,7 @@ exports[`Nocturne set — light palette TabBar renders unchanged 1`] = `
             {
               "color": "#7c8095",
               "fontFamily": "Inter_500Medium",
-              "fontSize": 10,
+              "fontSize": 12,
             }
           }
         >
@@ -5500,7 +5500,7 @@ exports[`Nocturne set — light palette TextField renders unchanged 1`] = `
         {
           "color": "#666a82",
           "fontFamily": "Inter_400Regular",
-          "fontSize": 12.5,
+          "fontSize": 14,
         }
       }
     >
@@ -5532,7 +5532,7 @@ exports[`Nocturne set — light palette TextField renders unchanged 1`] = `
             "color": "#20222f",
             "flex": 1,
             "fontFamily": "Inter_400Regular",
-            "fontSize": 15,
+            "fontSize": 17,
             "paddingVertical": 0,
           }
         }
@@ -5570,7 +5570,7 @@ exports[`Nocturne set — light palette TextField/secure renders unchanged 1`] =
         {
           "color": "#666a82",
           "fontFamily": "Inter_400Regular",
-          "fontSize": 12.5,
+          "fontSize": 14,
         }
       }
     >
@@ -5602,7 +5602,7 @@ exports[`Nocturne set — light palette TextField/secure renders unchanged 1`] =
             "color": "#20222f",
             "flex": 1,
             "fontFamily": "Inter_400Regular",
-            "fontSize": 15,
+            "fontSize": 17,
             "paddingVertical": 0,
           }
         }

@@ -1,5 +1,6 @@
 import createClient, { type Client, type Middleware } from 'openapi-fetch';
 import * as Crypto from 'expo-crypto';
+import { File, Paths } from 'expo-file-system';
 
 import type { paths as AutomationPaths } from '@/lib/generated/platform-contracts/automations';
 import type { paths as ConnectionPaths } from '@/lib/generated/platform-contracts/connections';
@@ -207,6 +208,32 @@ export async function putFileToSignedUrl(
   }
   if (!response.ok) {
     throw new PlatformError('The file was not accepted. Choose it again.', response.status);
+  }
+}
+
+/** A downloaded file, to its caller: where it is, and a way to remove it. */
+export type SavedFile = Pick<File, 'uri' | 'exists' | 'delete'>;
+
+/**
+ * Save the file a signed link points at into the app's cache, for the share
+ * sheet (24.12, the owner's build 9: "share or download to files like apple
+ * native rather than go to safari") — the complete export, read afresh.
+ *
+ * The second request this app sends that is not to the Edge, beside
+ * `putFileToSignedUrl` and like it carrying NO credential: the URL is the
+ * capability, and a bearer attached here would hand the session to the store.
+ * It is not a `fetch`: expo-file-system's native download writes the bytes
+ * straight into the file. `audit:platform` admits exactly one
+ * `downloadFileAsync(`, here. The name is the platform's, without any directory
+ * it might carry; a refused or lost download is said in words.
+ */
+export async function downloadSignedFile(url: string, filename: string): Promise<SavedFile> {
+  const base = filename.split(/[\\/]/u).pop()?.trim() ?? '';
+  const name = base && base !== '.' && base !== '..' ? base : 'workspace-export';
+  try {
+    return await File.downloadFileAsync(url, new File(Paths.cache, name), { idempotent: true });
+  } catch {
+    throw new Error('The file could not be saved.');
   }
 }
 

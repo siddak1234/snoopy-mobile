@@ -7,7 +7,7 @@ import { UserFocus } from 'phosphor-react-native';
 
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
-import { em, fonts, layout, status } from '@/constants/theme';
+import { em, fonts, layout, status, typeScale } from '@/constants/theme';
 import { useBiometricWording } from '@/hooks/use-biometric-wording';
 import { useTheme } from '@/hooks/use-theme';
 import { writeFaceIdEnabled } from '@/lib/platform/session-store';
@@ -93,12 +93,12 @@ export default function FaceIdOfferScreen() {
             label={biometric.offerAccept}
             variant="primary"
             height={48}
-            fontSize={15}
+            fontSize={typeScale.lead.fontSize}
             disabled={busy}
             onPress={enable}
             style={styles.action}
           />
-          <PillButton label="Not now" variant="plain" height={44} fontSize={14.5} disabled={busy} onPress={decline} />
+          <PillButton label="Not now" variant="plain" height={44} fontSize={typeScale.label.fontSize} disabled={busy} onPress={decline} />
         </View>
       </SurfaceCard>
     </View>
@@ -117,9 +117,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 4,
   },
-  title: { fontFamily: fonts.medium, fontSize: 20, letterSpacing: em(-0.01, 20), textAlign: 'center' },
-  body: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, textAlign: 'center' },
-  message: { fontFamily: fonts.regular, fontSize: 13, textAlign: 'center' },
+  title: { fontFamily: fonts.medium, fontSize: typeScale.title.fontSize, letterSpacing: em(-0.01, typeScale.title.fontSize), textAlign: 'center' },
+  body: { fontFamily: fonts.regular, ...typeScale.label, textAlign: 'center' },
+  message: { fontFamily: fonts.regular, fontSize: typeScale.body.fontSize, textAlign: 'center' },
   actions: { alignSelf: 'stretch', marginTop: 8, gap: 6 },
   action: { alignSelf: 'stretch' },
 });

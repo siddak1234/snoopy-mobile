@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, Text, TextInput, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Eye, EyeSlash } from 'phosphor-react-native';
 
-import { fonts, radius, withAlpha } from '@/constants/theme';
+import { fonts, radius, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 type Props = {
@@ -16,8 +16,9 @@ type Props = {
   style?: StyleProp<ViewStyle>;
 };
 
-/** Labelled auth field: 12.5px neutral-400 label over a 50px, radius-12 box
- *  (neutral-700 ring, surface at 72%). */
+/** Labelled auth field: neutral-400 label (the design's 12.5px, the scale's
+ *  `small` since 24.12) over a 50px, radius-12 box (neutral-700 ring, surface
+ *  at 72%). */
 export function TextField({
   label,
   value,
@@ -33,7 +34,7 @@ export function TextField({
   const EyeIcon = hidden ? Eye : EyeSlash;
   return (
     <View style={[{ gap: 6 }, style]}>
-      <Text style={{ fontFamily: fonts.regular, fontSize: 12.5, color: palette.neutral[400] }}>
+      <Text style={{ fontFamily: fonts.regular, fontSize: typeScale.small.fontSize, color: palette.neutral[400] }}>
         {label}
       </Text>
       <View
@@ -64,7 +65,7 @@ export function TextField({
           style={{
             flex: 1,
             fontFamily: fonts.regular,
-            fontSize: 15,
+            fontSize: typeScale.lead.fontSize,
             color: palette.text,
             paddingVertical: 0,
           }}

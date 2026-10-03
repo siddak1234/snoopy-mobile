@@ -41,6 +41,18 @@ const RULES = [
     detail: `requests must be expressed through the schema-typed clients in ${TRANSPORT}`,
   },
   {
+    // BUILD-PLAN 24.12: the transport's one native download — the complete
+    // export's signed link, saved into the app for the share sheet. Like the
+    // signed upload it carries no credential and is not the Edge; one call, in
+    // one file. A second is a second path to the network.
+    name: "native file download",
+    roots: RUNTIME_ROOTS,
+    pattern: /\bdownloadFileAsync\s*\(/,
+    allow: () => false,
+    budget: { path: TRANSPORT, line: /\bdownloadFileAsync\s*\(/, max: 1 },
+    detail: `a file is downloaded only by ${TRANSPORT}'s credential-less downloadSignedFile`,
+  },
+  {
     // `const send = globalThis.fetch` then `send(url)` never writes `fetch(`,
     // so the call-shape rule above cannot see it. Binding the primitive is the
     // step that matters — what the alias is called afterwards is arbitrary — so

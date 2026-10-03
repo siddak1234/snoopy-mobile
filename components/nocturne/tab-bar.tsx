@@ -12,7 +12,7 @@ import {
   type Icon,
 } from 'phosphor-react-native';
 
-import { fonts, withAlpha } from '@/constants/theme';
+import { fonts, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 /** Route → tab config. Four tabs since 2026-10-02 (BUILD-PLAN 24.9.2): the
@@ -26,7 +26,8 @@ const TABS: Record<string, { label: string; icon: Icon }> = {
 };
 
 /** The design's tab bar: hairline divider on top, bg at 88% over blur(14),
- *  22px Phosphor glyphs with 10px labels, active = accent. The design's
+ *  22px Phosphor glyphs with labels (the design's 10px, the scale's `micro`
+ *  since 24.12), active = accent. The design's
  *  22px bottom pad already accounts for the home-indicator band; live we
  *  derive it from the safe-area inset. */
 export function NocturneTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
@@ -78,7 +79,7 @@ export function NocturneTabBar({ state, descriptors, navigation }: BottomTabBarP
               onPress={onPress}
               style={{ flex: 1, alignItems: 'center', gap: 3, paddingVertical: 8 }}>
               <IconCmp size={22} color={color} weight="regular" />
-              <Text style={{ fontFamily: fonts.medium, fontSize: 10, color }}>{tab.label}</Text>
+              <Text style={{ fontFamily: fonts.medium, fontSize: typeScale.micro.fontSize, color }}>{tab.label}</Text>
             </Pressable>
           );
         })}

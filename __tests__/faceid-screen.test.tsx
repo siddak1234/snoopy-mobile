@@ -66,4 +66,14 @@ describe('biometric wording (24.4.4)', () => {
     expect(android.title).toBe('Biometric unlock');
     expect(JSON.stringify(android)).not.toMatch(/Face ID|Touch ID/);
   });
+
+  it('names the page the setting is on — Settings › Security (24.12)', () => {
+    for (const wording of [
+      biometricWordingFor('ios', [FACIAL_RECOGNITION]),
+      biometricWordingFor('ios', [FINGERPRINT]),
+      biometricWordingFor('android', [FINGERPRINT]),
+    ]) {
+      expect(wording.offerBody).toMatch(/You can change this later in Settings › Security\.$/);
+    }
+  });
 });

@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
-import { Buildings, CaretRight } from 'phosphor-react-native';
+import { Buildings, CaretRight, ShareNetwork } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
@@ -12,17 +12,19 @@ import { TextField } from '@/components/nocturne/text-field';
 import { OrgDomains } from '@/components/organization/org-domains';
 import { OrgJoin } from '@/components/organization/org-join';
 import { OrgPeople } from '@/components/organization/org-people';
-import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
+import { ScreenEmpty, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { SettingsRow } from '@/components/settings/settings-row';
-import { em, fonts, layout } from '@/constants/theme';
+import { em, fonts, layout, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { busyBody, useWorkspaceResource } from '@/hooks/use-resource';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
+import { joinLinkLine } from '@/lib/content/join-link';
 import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
-import { errorTitleFor } from '@/lib/content/screen-states';
+import { ORGANIZATION_EMPTY_BODY, ORGANIZATION_EMPTY_TITLE, errorTitleFor } from '@/lib/content/screen-states';
 import {
   discoverOrganizations,
+  joinLink,
   readDomains,
   readJoinRequests,
   readWorkspaceMembers,
@@ -43,7 +45,14 @@ import { administers } from '@/lib/view/roles';
  *   members and join requests;
  * - someone in an organization otherwise is told who manages it;
  * - someone in none finds the organization their email domain belongs to, and
- *   on a company domain can set one up.
+ *   on a company domain can set one up; with neither, the screen is the
+ *   empty-state standard (24.12).
+ *
+ * An owner or admin shares the organization's join link (24.12, the owner's
+ * decision 5): the website's join page for it, which accepts a request only
+ * from someone at a verified email domain the organization shows for matching
+ * emails — the line under it follows that domain's joining policy
+ * (`joinLinkLine`), or says what to do first.
  */
 export default function OrganizationScreen() {
   const router = useRouter();
@@ -95,7 +104,26 @@ export default function OrganizationScreen() {
 
   const data = org.data;
   const domain = emailDomain(user?.email);
+  const canSetUp = domain !== '' && !isPublicDomain(domain);
   const muted = { color: palette.neutral[400] };
+
+  if (data.kind === 'find' && data.found.length === 0 && !canSetUp) {
+    return (
+      <ScreenEmpty
+        icon={<Buildings size={40} color={palette.accentRamp[300]} />}
+        title={ORGANIZATION_EMPTY_TITLE}
+        body={ORGANIZATION_EMPTY_BODY}
+        onBack={() => router.back()}
+        topInset={insets.top}
+      />
+    );
+  }
+
+  const link = data.kind === 'manage' ? joinLink(data.workspace.id) : null;
+  // iOS shares the link itself; Android's share intent carries text (as data.tsx shares).
+  const shareJoinLink = (address: string) => {
+    void Share.share(Platform.OS === 'ios' ? { url: address } : { message: address }).catch(() => undefined);
+  };
 
   return (
     <ScrollView
@@ -122,6 +150,7 @@ export default function OrganizationScreen() {
                 icon={Buildings}
                 title="Name"
                 testID="organization-name"
+                divider={link !== null}
                 onPress={() => setRenaming(true)}
                 right={
                   <View style={styles.right}>
@@ -130,6 +159,16 @@ export default function OrganizationScreen() {
                   </View>
                 }
               />
+              {link ? (
+                <SettingsRow
+                  icon={ShareNetwork}
+                  title="Share join link"
+                  sub={joinLinkLine(data.domains)}
+                  testID="organization-join-link"
+                  onPress={() => shareJoinLink(link)}
+                  right={<CaretRight size={15} color={palette.neutral[500]} />}
+                />
+              ) : null}
             </SurfaceCard>
           </View>
           <OrgDomains domains={data.domains} shownWorkspaceId={org.loadedFor} onChanged={org.reload} />
@@ -158,16 +197,11 @@ export default function OrganizationScreen() {
           <Text style={[styles.text, muted]}>
             {data.active?.type === 'organization'
               ? `Only ${data.active.name}'s owners and admins manage it.`
-              : `You belong to ${data.organizations.map((entry) => entry.name).join(', ')}. Switch to it from Settings' workspace row; its owners and admins manage it there.`}
+              : `You belong to ${data.organizations.map((entry) => entry.name).join(', ')}. Switch to it in Settings › Workspace; its owners and admins manage it there.`}
           </Text>
         </SurfaceCard>
       ) : (
-        <OrgJoin
-          found={data.found}
-          domain={domain}
-          canSetUp={domain !== '' && !isPublicDomain(domain)}
-          onJoined={afterJoin}
-        />
+        <OrgJoin found={data.found} domain={domain} canSetUp={canSetUp} onJoined={afterJoin} />
       )}
     </ScrollView>
   );
@@ -247,11 +281,11 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: layout.screenX, paddingBottom: 32, gap: 18 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   headerText: { flex: 1 },
-  title: { fontFamily: fonts.medium, fontSize: 21, letterSpacing: em(-0.01, 21) },
-  subtitle: { fontFamily: fonts.regular, fontSize: 12, marginTop: 1 },
+  title: { fontFamily: fonts.medium, fontSize: typeScale.heading.fontSize, letterSpacing: em(-0.01, typeScale.heading.fontSize) },
+  subtitle: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize, marginTop: 1 },
   card: { marginTop: 9 },
   right: { flexDirection: 'row', alignItems: 'center', gap: 10, maxWidth: '55%' },
-  value: { fontFamily: fonts.regular, fontSize: 13 },
+  value: { fontFamily: fonts.regular, fontSize: typeScale.body.fontSize },
   note: { padding: 14 },
-  text: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18 },
+  text: { fontFamily: fonts.regular, ...typeScale.body },
 });

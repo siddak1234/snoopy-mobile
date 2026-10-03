@@ -22,7 +22,7 @@ import { Skeleton } from '@/components/nocturne/skeleton';
 import { StatCard } from '@/components/nocturne/stat-card';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { ScopeControl } from '@/components/scope-control';
-import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
+import { em, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useScope } from '@/hooks/use-scope';
 import { useSession } from '@/hooks/use-session';
@@ -139,7 +139,7 @@ function HomeError({
           label="Retry"
           variant="primary"
           height={44}
-          fontSize={14}
+          fontSize={typeScale.label.fontSize}
           icon={ArrowClockwise}
           iconSize={16}
           gap={8}
@@ -288,8 +288,8 @@ export default function HomeScreen() {
           style={{
             marginTop: 8,
             fontFamily: fonts.medium,
-            fontSize: 26,
-            letterSpacing: em(-0.015, 26),
+            fontSize: typeScale.display.fontSize,
+            letterSpacing: em(-0.015, typeScale.display.fontSize),
             color: palette.text,
           }}>
           Welcome back, {firstName}
@@ -298,7 +298,7 @@ export default function HomeScreen() {
           style={{
             marginTop: 5,
             fontFamily: fonts.regular,
-            fontSize: 13.5,
+            fontSize: typeScale.body.fontSize,
             color: palette.neutral[400],
           }}>
           Your agents ran {counts.total.toLocaleString()} tasks today.
@@ -337,14 +337,14 @@ export default function HomeScreen() {
         ]}>
         <IconTile icon={HandPalm} size={40} iconSize={21} borderRadius={12} tint={0.16} />
         <View style={{ flex: 1 }}>
-          <Text style={{ fontFamily: fonts.medium, fontSize: 14.5, color: palette.text }}>
+          <Text style={{ fontFamily: fonts.medium, fontSize: typeScale.label.fontSize, color: palette.text }}>
             {approvalCount} {approvalCount === 1 ? 'item needs' : 'items need'} your review
           </Text>
           <Text
             style={{
               marginTop: 2,
               fontFamily: fonts.regular,
-              fontSize: 12,
+              fontSize: typeScale.small.fontSize,
               color: palette.neutral[400],
             }}>
             Exceptions your agents held for judgment
@@ -359,7 +359,7 @@ export default function HomeScreen() {
           label={ADD_FLOW_LABEL}
           variant="primary"
           height={46}
-          fontSize={14}
+          fontSize={typeScale.label.fontSize}
           icon={Plus}
           iconSize={16}
           onPress={() => router.push('/(tabs)/flows/add')}
@@ -369,7 +369,7 @@ export default function HomeScreen() {
           label="Flows"
           variant="secondary"
           height={46}
-          fontSize={14}
+          fontSize={typeScale.label.fontSize}
           icon={FlowArrow}
           iconSize={16}
           onPress={() => router.push('/(tabs)/flows')}
@@ -386,7 +386,7 @@ export default function HomeScreen() {
             suppressHighlighting
             style={{
               fontFamily: fonts.regular,
-              fontSize: 12.5,
+              fontSize: typeScale.small.fontSize,
               color: palette.accentRamp[300],
             }}>
             See all
@@ -414,14 +414,14 @@ export default function HomeScreen() {
                 ]}
               />
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={{ fontFamily: fonts.medium, fontSize: 14, color: palette.text }}>
+                <Text style={{ fontFamily: fonts.medium, fontSize: typeScale.label.fontSize, color: palette.text }}>
                   {r.name}
                 </Text>
                 <Text
                   style={{
                     marginTop: 1,
                     fontFamily: fonts.regular,
-                    fontSize: 12,
+                    fontSize: typeScale.small.fontSize,
                     color: palette.neutral[400],
                   }}>
                   {r.meta}
@@ -430,7 +430,7 @@ export default function HomeScreen() {
               <Text
                 style={{
                   fontFamily: fonts.regular,
-                  fontSize: 11.5,
+                  fontSize: typeScale.caption.fontSize,
                   color: palette.neutral[500],
                 }}>
                 {r.time}
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
   },
   noRuns: {
     fontFamily: fonts.regular,
-    fontSize: 13,
+    fontSize: typeScale.body.fontSize,
     textAlign: 'center',
     paddingVertical: 16,
   },
@@ -547,14 +547,13 @@ const styles = StyleSheet.create({
   stateTitle: {
     marginTop: 8,
     fontFamily: fonts.medium,
-    fontSize: 22,
-    letterSpacing: em(-0.015, 22),
+    fontSize: typeScale.heading.fontSize,
+    letterSpacing: em(-0.015, typeScale.heading.fontSize),
     textAlign: 'center',
   },
   stateBody: {
     fontFamily: fonts.regular,
-    fontSize: 14,
-    lineHeight: 14 * 1.55,
+    ...typeScale.label,
     textAlign: 'center',
     maxWidth: 224,
   },
@@ -573,14 +572,13 @@ const styles = StyleSheet.create({
   errorTitle: {
     marginTop: 8,
     fontFamily: fonts.medium,
-    fontSize: 20,
-    letterSpacing: em(-0.01, 20),
+    fontSize: typeScale.title.fontSize,
+    letterSpacing: em(-0.01, typeScale.title.fontSize),
     textAlign: 'center',
   },
   errorBody: {
     fontFamily: fonts.regular,
-    fontSize: 13.5,
-    lineHeight: 13.5 * 1.55,
+    ...typeScale.body,
     textAlign: 'center',
     maxWidth: 224,
   },

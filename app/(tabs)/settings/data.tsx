@@ -10,13 +10,14 @@ import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
-import { em, fonts, layout, status } from '@/constants/theme';
+import { em, fonts, layout, status, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { busyBody, useWorkspaceResource } from '@/hooks/use-resource';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
 import { errorTitleFor } from '@/lib/content/screen-states';
+import { downloadSignedFile } from '@/lib/platform/client';
 import {
   isPartialExport,
   readBoundedExport,
@@ -42,10 +43,13 @@ const FAILURES: Record<string, string> = {
 /**
  * Settings → Data export (BUILD-PLAN 24.6.3) — the website's workspace export
  * section: a quick summary, bounded, shared as a JSON file; and everything as
- * one file, prepared on the platform and downloaded in the browser from a link
- * read again at the moment of the download, since one read earlier may have
- * expired (23.10.1). An export holds every member's email, every project and
- * every run, so it is an owner's or an admin's; anyone else is told so.
+ * one file, prepared on the platform from a link read again at the moment of
+ * the download, since one read earlier may have expired (23.10.1). On iOS that
+ * file is saved into the app and handed to the share sheet — Save to Files,
+ * AirDrop, Mail — rather than opened in Safari (24.12, the owner's build 9); on
+ * Android, whose share sheet carries text, the link opens in the browser. An
+ * export holds every member's email, every project and every run, so it is an
+ * owner's or an admin's; anyone else is told so.
  */
 export default function DataExportScreen() {
   const router = useRouter();
@@ -164,12 +168,22 @@ export default function DataExportScreen() {
       async () => {
         const fresh = await readCompleteExport(workspaceId, job.id);
         setJob(fresh);
-        const link = fresh.file?.downloadUrl;
-        if (!link) return;
-        if (new URL(link).protocol !== 'https:') throw new Error('The export answered an unusable address.');
-        await Linking.openURL(link);
+        const file = fresh.file;
+        if (!file?.downloadUrl) return;
+        if (new URL(file.downloadUrl).protocol !== 'https:') throw new Error('The export answered an unusable address.');
+        if (Platform.OS !== 'ios') {
+          await Linking.openURL(file.downloadUrl);
+          return;
+        }
+        // Saved in the app's cache, handed to the share sheet, removed once shared.
+        const saved = await downloadSignedFile(file.downloadUrl, file.filename);
+        try {
+          await Share.share({ url: saved.uri });
+        } finally {
+          if (saved.exists) saved.delete();
+        }
       },
-      'The file could not be opened.',
+      'The file could not be saved.',
     );
   };
 
@@ -267,7 +281,7 @@ export default function DataExportScreen() {
               />
               {job?.status === 'ready' ? (
                 <PillButton
-                  label={busy === 'download' ? 'Opening…' : 'Download file'}
+                  label={busy === 'download' ? 'Saving…' : 'Download file'}
                   variant="primary"
                   height={42}
                   icon={DownloadSimple}
@@ -299,9 +313,9 @@ export default function DataExportScreen() {
 const styles = StyleSheet.create({
   content: { paddingHorizontal: layout.screenX, paddingBottom: 32, gap: 18 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  title: { fontFamily: fonts.medium, fontSize: 21, letterSpacing: em(-0.01, 21) },
+  title: { fontFamily: fonts.medium, fontSize: typeScale.heading.fontSize, letterSpacing: em(-0.01, typeScale.heading.fontSize) },
   card: { marginTop: 9 },
   pad: { padding: 14, gap: 10 },
-  text: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18 },
-  small: { fontFamily: fonts.regular, fontSize: 12 },
+  text: { fontFamily: fonts.regular, ...typeScale.body },
+  small: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
 });

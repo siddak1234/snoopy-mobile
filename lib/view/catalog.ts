@@ -101,16 +101,16 @@ export function withoutArchived(subscriptions: Subscription[]): Subscription[] {
  * Team names to label workflows with, where scopes mean something: the
  * workspace has a team, or a workflow is scoped to one. Otherwise nothing,
  * and the rows read as they always have. (A team is a project in the
- * platform's contract, 24.11.5.)
+ * platform's contract, 24.11.5.) A team is named by its kind (24.12).
  */
 export function scopeLabels(
-  projects: readonly { id: string; name: string; status: string }[],
+  projects: readonly { id: string; type: string; status: string }[],
   subscriptions: readonly Subscription[],
 ): ReadonlyMap<string, string> | undefined {
   const scoped =
     projects.some((project) => project.status !== 'archived') ||
     withoutArchived([...subscriptions]).some((subscription) => subscription.projectId);
-  return scoped ? new Map(projects.map((project) => [project.id, project.name])) : undefined;
+  return scoped ? new Map(projects.map((project) => [project.id, project.type])) : undefined;
 }
 
 export function toSolution(entry: CatalogEntry, subscribed: boolean): SolutionView {

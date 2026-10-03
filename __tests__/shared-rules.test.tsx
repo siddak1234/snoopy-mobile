@@ -5,8 +5,14 @@ import { act, render, screen, waitFor } from '@testing-library/react-native';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { SessionContext, workspaceIfShown, type SessionContextValue } from '@/hooks/use-session';
-import { MOVE_REFUSALS, WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
-import { PlatformError } from '@/lib/platform/problem';
+import {
+  MOVE_REFUSALS,
+  WEBHOOK_ISSUE_REFUSALS,
+  WORKSPACE_CHANGED,
+  refusalMessage,
+  unlinkRefusal,
+} from '@/lib/content/refusals';
+import { PlatformError, PlatformRateLimitedError, PlatformUnreachableError } from '@/lib/platform/problem';
 import { administers } from '@/lib/view/roles';
 
 /**
@@ -67,6 +73,35 @@ describe('refusalMessage', () => {
 
     expect(refusalMessage('not an error')).toBe('That did not work. Try again.');
     expect(WORKSPACE_CHANGED).toMatch(/Reload this screen/);
+  });
+
+  it('says an archived flow is archived, not removed (24.12)', () => {
+    const archived = new PlatformError('Conflict', 409, 'CONFLICT', { reason: 'subscription_archived' });
+    expect(refusalMessage(archived, MOVE_REFUSALS)).toBe('An archived flow cannot move.');
+    expect(refusalMessage(archived, WEBHOOK_ISSUE_REFUSALS)).toBe('An archived flow has no address.');
+  });
+});
+
+describe('unlinkRefusal (24.12)', () => {
+  it('says every unlink refusal in words by its reason, and never a bare problem title', () => {
+    const cases: [unknown, string][] = [
+      // The Edge's own "no such route": a platform from before the unlink route.
+      [new PlatformError('Not Found', 404, 'NOT_FOUND', { method: 'POST', path: '/v1/auth/native/identities/apple/unlink' }), "Unlinking isn't available yet."],
+      [new PlatformError('Not Found', 404, 'NOT_FOUND'), 'That sign-in account is not linked.'],
+      // Only both names make it a missing route.
+      [new PlatformError('Not Found', 404, 'NOT_FOUND', { method: 'POST' }), 'That sign-in account is not linked.'],
+      [new PlatformError('Bad Request', 400, 'BAD_REQUEST', { reason: 'primary' }), 'The account you signed up with stays linked.'],
+      [new PlatformError('Bad Request', 400, 'BAD_REQUEST', { reason: 'last' }), 'The last sign-in account stays linked.'],
+      [new PlatformError('Bad Request', 400, 'BAD_REQUEST', { reason: 'refused' }), 'This sign-in account cannot be unlinked.'],
+      [new PlatformError('Bad Request', 400, 'BAD_REQUEST', { reason: 'toString' }), 'The account could not be unlinked.'],
+      [new PlatformError('Dependency Failure', 502, 'DEPENDENCY_FAILURE'), 'The account could not be unlinked.'],
+      [new PlatformUnreachableError(), 'The account could not be unlinked.'],
+      [new Error('raw'), 'The account could not be unlinked.'],
+    ];
+    for (const [error, words] of cases) expect(unlinkRefusal(error)).toBe(words);
+    // A 429 keeps the wait it stated.
+    const busy = new PlatformRateLimitedError('The platform is busy right now. Try again in 30 seconds.', 30);
+    expect(unlinkRefusal(busy)).toBe('The platform is busy right now. Try again in 30 seconds.');
   });
 });
 

@@ -1,5 +1,10 @@
 import { readCurrentSession } from '@/lib/platform/auth';
-import { platformOperation, putFileToSignedUrl, resetPlatformClientsForTests } from '@/lib/platform/client';
+import {
+  downloadSignedFile,
+  platformOperation,
+  putFileToSignedUrl,
+  resetPlatformClientsForTests,
+} from '@/lib/platform/client';
 import { PlatformError, PlatformRateLimitedError } from '@/lib/platform/problem';
 
 jest.mock('expo-constants', () => ({
@@ -10,6 +15,19 @@ jest.mock('expo-constants', () => ({
 jest.mock('@/lib/platform/session-store', () => ({
   readAccessToken: jest.fn(),
 }));
+
+// The native download, as expo-file-system's File: a destination names itself.
+jest.mock('expo-file-system', () => ({
+  File: Object.assign(
+    jest.fn(function (this: { directory: unknown; name: string }, directory: unknown, name: string) {
+      this.directory = directory;
+      this.name = name;
+    }),
+    { downloadFileAsync: jest.fn() },
+  ),
+  Paths: { cache: { uri: 'file:///cache/' } },
+}));
+const { File: MockFile } = jest.requireMock('expo-file-system');
 
 const { readAccessToken } = jest.requireMock('@/lib/platform/session-store');
 const fetchMock = jest.fn();
@@ -166,6 +184,45 @@ describe('generated platform transport', () => {
     // The URL is the capability. A bearer here would hand the session to the store.
     expect(JSON.stringify(init.headers ?? {})).not.toContain('token-value');
     expect(readAccessToken).not.toHaveBeenCalled();
+  });
+
+  it('saves a signed file with no credential, under its own name, for the share sheet (24.12)', async () => {
+    readAccessToken.mockResolvedValue('token-value');
+    const saved = { uri: 'file:///cache/acme-export.json', exists: true, delete: jest.fn() };
+    MockFile.downloadFileAsync.mockReset().mockResolvedValue(saved);
+
+    await expect(
+      downloadSignedFile('https://store.example.test/export?signature=abc', 'exports/acme-export.json'),
+    ).resolves.toBe(saved);
+
+    const [url, destination, options] = MockFile.downloadFileAsync.mock.calls[0];
+    expect(url).toBe('https://store.example.test/export?signature=abc');
+    expect(destination.directory).toEqual({ uri: 'file:///cache/' });
+    expect(destination.name).toBe('acme-export.json');
+    // No headers at all: the URL is the capability, and a bearer here would hand the session to the store.
+    expect(options).toEqual({ idempotent: true });
+    expect(readAccessToken).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps only the last step of the name the platform gave, never a way out of the cache', async () => {
+    MockFile.downloadFileAsync.mockReset().mockResolvedValue({ uri: 'file:///cache/x', exists: true, delete: jest.fn() });
+    for (const [given, kept] of [
+      ['../../secrets.json', 'secrets.json'],
+      ['a\\b\\c.json', 'c.json'],
+      ['..', 'workspace-export'],
+      ['exports/', 'workspace-export'],
+    ]) {
+      await downloadSignedFile('https://store.example.test/x', given!);
+      expect(MockFile.downloadFileAsync.mock.calls.at(-1)[1].name).toBe(kept);
+    }
+  });
+
+  it('says a refused or lost download in words, never the store\'s own', async () => {
+    MockFile.downloadFileAsync.mockReset().mockRejectedValue(new Error('UnableToDownload: status 403'));
+    await expect(downloadSignedFile('https://store.example.test/x', 'x.json')).rejects.toThrow(
+      'The file could not be saved.',
+    );
   });
 
   it('says a refused or lost upload in words, never as a session failure', async () => {

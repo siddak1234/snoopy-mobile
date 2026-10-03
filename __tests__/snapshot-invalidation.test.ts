@@ -1,6 +1,8 @@
 import { createRun, decideApproval, updateSubscription } from '@/lib/platform/automations';
 import { readCatalog } from '@/lib/platform/catalog';
+import { createOrganization, renameWorkspace, requestToJoin } from '@/lib/platform/organization';
 import { readAllApprovals, readRunStats, readRuns, readSubscriptions } from '@/lib/platform/runs';
+import { readWorkspaces } from '@/lib/platform/workspaces';
 
 jest.mock('@/lib/platform/client', () => ({
   platformOperation: jest.fn(),
@@ -28,6 +30,7 @@ describe('what an action invalidates', () => {
       if (path.includes('/runs')) return { runs: [], run: { id: 'run-1' } };
       if (path.includes('/approvals/')) return { approval: { id: 'ap-1' } };
       if (path.includes('/approvals')) return { approvals: [] };
+      if (path === '/v1/workspaces') return { workspaces: [], activeWorkspaceId: WS };
       return {};
     });
   });
@@ -57,5 +60,23 @@ describe('what an action invalidates', () => {
     paths = calls();
     expect(paths.filter((p) => p.endsWith('/approvals'))).toHaveLength(2);
     expect(paths.filter((p) => p.endsWith('/runs'))).toHaveLength(3 + 1);
+  });
+
+  it('a rename, a new organization and a join drop the workspace list (24.12)', async () => {
+    const lists = () => calls().filter((path) => path === '/v1/workspaces').length;
+    await readWorkspaces();
+    await readWorkspaces();
+    expect(lists()).toBe(1);
+    await renameWorkspace(WS, 'Acme Group', 'key-1');
+    await readWorkspaces();
+    expect(lists()).toBe(2);
+    await requestToJoin('org-9', 'key-1');
+    await readWorkspaces();
+    expect(lists()).toBe(3);
+    // createOrganization POSTs to /v1/workspaces too: count the reads after it.
+    await createOrganization('Acme', 'key-1');
+    const beforeRead = lists();
+    await readWorkspaces();
+    expect(lists()).toBe(beforeRead + 1);
   });
 });

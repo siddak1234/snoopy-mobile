@@ -16,10 +16,11 @@
     "audit:platform": "node scripts/audit-platform.mjs",
     "audit:dependencies": "npm audit --omit=dev --audit-level=critical",
     "audit:tokens": "node scripts/audit-tokens.mjs",
+    "audit:type": "node scripts/audit-type.mjs",
     "audit:vocabulary": "node scripts/audit-vocabulary.mjs",
     "generate:platform-contracts": "node scripts/generate-platform-contracts.mjs",
     "verify:platform-contracts": "node scripts/verify-platform-contracts.mjs",
-    "verify": "npm run lint && npm run typecheck && npm run audit:credentials && npm run audit:tokens && npm run audit:vocabulary && npm run audit:fixtures && npm run audit:platform && npm run verify:platform-contracts && npm test -- --ci --runInBand && node scripts/repo-facts.mjs --gate verify"
+    "verify": "npm run lint && npm run typecheck && npm run audit:credentials && npm run audit:tokens && npm run audit:type && npm run audit:vocabulary && npm run audit:fixtures && npm run audit:platform && npm run verify:platform-contracts && npm test -- --ci --runInBand && node scripts/repo-facts.mjs --gate verify"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",

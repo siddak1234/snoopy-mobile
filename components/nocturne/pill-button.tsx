@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, Text, type StyleProp, type ViewStyle } from 'react-native';
 import type { Icon } from 'phosphor-react-native';
 
-import { fonts, withAlpha } from '@/constants/theme';
+import { fonts, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type PillButtonVariant =
@@ -42,7 +42,9 @@ export function PillButton({
   style,
 }: Props) {
   const { palette } = useTheme();
-  const size = fontSize ?? (height >= 52 ? 16 : height >= 44 ? 14 : 13);
+  const size =
+    fontSize ??
+    (height >= 52 ? typeScale.lead.fontSize : height >= 44 ? typeScale.label.fontSize : typeScale.body.fontSize);
 
   const borderColor =
     variant === 'primary' ? palette.accent :

@@ -9,16 +9,16 @@ import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
-import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
+import { ScreenEmpty, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { CreateTeamDialog } from '@/components/teams/create-team-dialog';
-import { em, fonts, layout, status } from '@/constants/theme';
+import { em, fonts, layout, status, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { busyBody, useWorkspaceResource } from '@/hooks/use-resource';
-import { activeWorkspaceId, useSession } from '@/hooks/use-session';
+import { activeWorkspaceId, roleIn, useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { refusalMessage } from '@/lib/content/refusals';
-import { errorTitleFor } from '@/lib/content/screen-states';
+import { TEAMS_EMPTY_BODY, TEAMS_EMPTY_TITLE, errorTitleFor } from '@/lib/content/screen-states';
 import { PlatformError } from '@/lib/platform/problem';
 import {
   cancelAccessRequest,
@@ -30,6 +30,7 @@ import {
   type TeamDirectoryEntry,
 } from '@/lib/platform/projects';
 import { readWorkspaces, type WorkspaceSummary } from '@/lib/platform/workspaces';
+import { administers } from '@/lib/view/roles';
 
 const ROLE: Record<Project['viewerRole'], string> = { owner: 'Owner', admin: 'Admin', member: 'Member' };
 
@@ -54,7 +55,10 @@ async function directoryIfThere(workspaceId: string): Promise<TeamDirectoryEntry
  * on, in every workspace they are in, grouped by workspace (an organization's
  * owners and admins see all of its teams); Create a team; and, in each
  * organization, the teams they could ask to join, with Request, or Requested
- * and a way to withdraw. A deleted (archived) team is not listed.
+ * and a way to withdraw. A deleted (archived) team is not listed. A team is
+ * named by its kind (24.12). Create makes one in the active workspace, and is
+ * not offered to a plain member of an organization. With nothing to list, the
+ * screen is the empty-state standard (the owner's build 9).
  */
 export default function TeamsScreen() {
   const router = useRouter();
@@ -123,7 +127,39 @@ export default function TeamsScreen() {
   const { groups } = teams.data;
   const shown = groups.filter((group) => group.mine.length > 0 || group.askable.length > 0);
   const organizations = groups.filter((group) => group.workspace.type === 'organization').length;
+  const active = activeWorkspaceId(session);
+  const canCreate = administers(
+    groups.find((group) => group.workspace.id === active)?.workspace.role ?? roleIn(session, active),
+  );
   const muted = { color: palette.neutral[400] };
+
+  const createDialog = creating ? (
+    <CreateTeamDialog
+      onClose={() => setCreating(false)}
+      onCreated={(team) => {
+        setCreating(false);
+        teams.reload();
+        router.push({ pathname: '/(tabs)/settings/team', params: { projectId: team.id, workspaceId: team.workspaceId } });
+      }}
+    />
+  ) : null;
+
+  if (shown.length === 0) {
+    return (
+      <>
+        <ScreenEmpty
+          icon={<UsersThree size={40} color={palette.accentRamp[300]} />}
+          title={TEAMS_EMPTY_TITLE}
+          body={TEAMS_EMPTY_BODY}
+          {...(canCreate ? { action: { label: 'Create a team', icon: Plus, onPress: () => setCreating(true) } } : {})}
+          onBack={() => router.back()}
+          topInset={insets.top}
+        />
+        {createDialog}
+      </>
+    );
+  }
+
   return (
     <ScrollView
       style={{ backgroundColor: palette.bg }}
@@ -139,23 +175,18 @@ export default function TeamsScreen() {
         </View>
       </View>
 
-      <PillButton
-        label="Create a team"
-        variant="primary"
-        height={46}
-        icon={Plus}
-        iconSize={16}
-        onPress={() => setCreating(true)}
-      />
+      {canCreate ? (
+        <PillButton
+          label="Create a team"
+          variant="primary"
+          height={46}
+          icon={Plus}
+          iconSize={16}
+          onPress={() => setCreating(true)}
+        />
+      ) : null}
 
       {askError ? <Text style={[styles.text, { color: status.err }]}>{askError}</Text> : null}
-
-      {shown.length === 0 ? (
-        <SurfaceCard style={styles.note}>
-          <Text style={[styles.text, { color: palette.text }]}>No teams yet.</Text>
-          <Text style={[styles.text, muted]}>Create one, or join an organization to ask onto its teams.</Text>
-        </SurfaceCard>
-      ) : null}
 
       {shown.map(({ workspace, mine, askable }) => (
         <View key={workspace.id} style={styles.group}>
@@ -169,8 +200,7 @@ export default function TeamsScreen() {
                 key={project.id}
                 testID={`team-${project.id}`}
                 icon={UsersThree}
-                title={project.name}
-                sub={project.type}
+                title={project.type}
                 divider={index < mine.length - 1}
                 onPress={() =>
                   router.push({
@@ -196,8 +226,7 @@ export default function TeamsScreen() {
                     key={entry.id}
                     testID={`askable-${entry.id}`}
                     icon={UsersThree}
-                    title={entry.name}
-                    sub={entry.type}
+                    title={entry.type}
                     divider={index < askable.length - 1}
                     right={
                       entry.access === 'requested' ? (
@@ -223,21 +252,11 @@ export default function TeamsScreen() {
         </View>
       ))}
 
-      {creating ? (
-        <CreateTeamDialog
-          initialWorkspaceId={activeWorkspaceId(session)}
-          onClose={() => setCreating(false)}
-          onCreated={(team) => {
-            setCreating(false);
-            teams.reload();
-            router.push({ pathname: '/(tabs)/settings/team', params: { projectId: team.id, workspaceId: team.workspaceId } });
-          }}
-        />
-      ) : null}
+      {createDialog}
       {withdrawing ? (
         <ConfirmDialog
           testID="withdraw-request-dialog"
-          title={`Withdraw your request to join ${withdrawing.entry.name}?`}
+          title={`Withdraw your request to join ${withdrawing.entry.type}?`}
           body="You can ask again any time."
           confirmLabel="Withdraw"
           busyLabel="Withdrawing…"
@@ -266,14 +285,13 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: layout.screenX, paddingBottom: 32, gap: 18 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   headerText: { flex: 1 },
-  title: { fontFamily: fonts.medium, fontSize: 21, letterSpacing: em(-0.01, 21) },
-  subtitle: { fontFamily: fonts.regular, fontSize: 12, marginTop: 1 },
+  title: { fontFamily: fonts.medium, fontSize: typeScale.heading.fontSize, letterSpacing: em(-0.01, typeScale.heading.fontSize) },
+  subtitle: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize, marginTop: 1 },
   group: { gap: 12 },
   card: { marginTop: 9 },
   pad: { padding: 14 },
   right: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  role: { fontFamily: fonts.regular, fontSize: 12.5 },
-  link: { fontFamily: fonts.medium, fontSize: 13 },
-  note: { padding: 14, gap: 4 },
-  text: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18 },
+  role: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
+  link: { fontFamily: fonts.medium, fontSize: typeScale.body.fontSize },
+  text: { fontFamily: fonts.regular, ...typeScale.body },
 });

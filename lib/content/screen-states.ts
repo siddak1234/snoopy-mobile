@@ -28,7 +28,7 @@ export type ScreenKey =
   | 'setup'
   | 'configure'
   | 'organization'
-  | 'removed'
+  | 'archived'
   | 'teams'
   | 'team'
   | 'billing'
@@ -49,7 +49,7 @@ const ERROR_TITLES: Record<ScreenKey, string> = {
   setup: "Couldn't load this setup",
   configure: "Couldn't load this template",
   organization: "Couldn't load your organization",
-  removed: "Couldn't load your removed flows",
+  archived: "Couldn't load your archived flows",
   teams: "Couldn't load your teams",
   team: "Couldn't load this team",
   billing: "Couldn't load billing",
@@ -109,16 +109,35 @@ export const UNAVAILABLE_NOTE = 'Not responding — it cannot run yet.';
  */
 export const FLOWS_EMPTY_TITLE = 'No flows yet';
 export const FLOWS_EMPTY_BODY = 'Add a prebuilt flow — your first one can be live in minutes.';
-/** Removed flows (24.11.8): archived, kept with their history, addable again. */
-export const REMOVED_FLOWS_TITLE = 'Removed flows';
-export const REMOVED_FLOWS_NOTE = 'A removed flow keeps its history here. Add it again any time.';
-export const REMOVED_FLOWS_EMPTY = 'Nothing removed here.';
-export function removedFlowBody(removedOn?: string): string {
-  return `This flow was removed${removedOn ? ` on ${removedOn}` : ''}. Its runs stay in Activity, and you can add it again — its setup starts fresh.`;
+/**
+ * Archived flows (24.11.8; "Archive flow" / "Archived flows" since the owner's
+ * decision 4 of 2026-10-02, 24.12): kept with their history, addable again.
+ */
+export const ARCHIVED_FLOWS_TITLE = 'Archived flows';
+export const ARCHIVED_FLOWS_NOTE = 'An archived flow keeps its history here. Add it again any time.';
+export const ARCHIVED_FLOWS_EMPTY_TITLE = 'No archived flows';
+export const ARCHIVED_FLOWS_EMPTY_BODY = 'A flow you archive keeps its history here, and you can add it again.';
+export function archivedFlowBody(archivedOn?: string): string {
+  return `This flow was archived${archivedOn ? ` on ${archivedOn}` : ''}. Its runs stay in Activity, and you can add it again — its setup starts fresh.`;
 }
 export const ADD_AGAIN_LABEL = 'Add it again';
-/** A run row whose flow was removed says so (24.11.8). */
-export const RUN_FLOW_REMOVED = 'Flow removed';
+/** A run row whose flow was archived says so (24.11.8). */
+export const RUN_FLOW_ARCHIVED = 'Flow archived';
+
+/**
+ * The whole-screen empties (24.12, the owner's decision 6 of 2026-10-02): a
+ * screen with nothing on it is the centred standard — icon, title, one line,
+ * and an action where there is one — and a section with nothing in it keeps its
+ * own line.
+ */
+export const TEAMS_EMPTY_TITLE = 'No teams yet';
+export const TEAMS_EMPTY_BODY = 'A team has its own flows and its own people.';
+export const ORGANIZATION_EMPTY_TITLE = 'No organization yet';
+export const ORGANIZATION_EMPTY_BODY =
+  'No organization is registered to your email domain. An owner can send you a join link.';
+export const CATALOG_EMPTY_TITLE = 'No flows to add yet';
+export const CATALOG_EMPTY_BODY = 'More are on the way.';
+export const CONNECTIONS_EMPTY_TITLE = 'No integrations yet';
 
 /** The workspace has flows; the chosen team has none (24.9.2; teams since 24.11.7). */
 export const FLOWS_SCOPE_EMPTY_TITLE = 'No flows in this team yet';
