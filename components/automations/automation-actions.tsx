@@ -37,7 +37,8 @@ type Open = 'run' | 'setup' | 'webhook' | 'archive' | null;
  *   feedback 5 of 2026-10-02; "Archive", not "Remove", since decision 4 of the
  *   same day, 24.12): the platform's one-way `archived`, behind its
  *   confirmation — it stops, moves to Archived flows, keeps its runs in
- *   Activity, and the flow can be added again later. Pause keeps it listed.
+ *   Activity, and the flow can be unarchived later (the owner's build 12 item
+ *   4: the word for adding it again). Pause keeps it listed.
  *
  * Every action acts on the workspace the screen loaded (`shownWorkspaceId`).
  * `statusRow` is the screen's own Go live / Pause row, placed after Run.
@@ -211,7 +212,7 @@ export function AutomationActions({
         testID="archive-dialog"
         onRequestClose={archiving ? () => undefined : close}
         title={`Archive ${name}?`}
-        body="It stops and moves to Archived flows. Its runs stay in Activity, and you can add it again later."
+        body="It stops and moves to Archived flows. Its runs stay in Activity, and you can unarchive it later."
         actions={
           <>
             <DialogButton label="Cancel" disabled={archiving} onPress={close} />

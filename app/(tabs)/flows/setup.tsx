@@ -30,6 +30,7 @@ import { useSolutions } from '@/hooks/use-solutions';
 import { useTheme } from '@/hooks/use-theme';
 import { WORKSPACE_CHANGED, addRefusalMessage } from '@/lib/content/refusals';
 import {
+  SETUP_ADDED_TO,
   SETUP_ASK_TO_JOIN_A_TEAM_FIRST,
   SETUP_CREATE_A_TEAM,
   SETUP_CREATE_A_TEAM_FIRST,
@@ -45,7 +46,7 @@ import { newIdempotencyKey } from '@/lib/platform/client';
 import { PlatformNotConfiguredError } from '@/lib/platform/problem';
 import { readProjects, teamDirectoryIfThere } from '@/lib/platform/projects';
 import { readSubscriptions } from '@/lib/platform/runs';
-import { withoutArchived } from '@/lib/view/catalog';
+import { heldAs, scopeLabel, scopeLabels } from '@/lib/view/catalog';
 import { administers } from '@/lib/view/roles';
 
 /** One-time setup generated from the selected manifest. */
@@ -66,7 +67,8 @@ export default function SetupScreen() {
   // 10 item 7: "Each flow has to be in a team"); there is no whole-workspace
   // choice. The catalog passes the team the scope control had chosen (24.9.3),
   // so it is not chosen twice; under All teams, and for a whole-workspace flow
-  // added again, it is unset until the person picks one here.
+  // unarchived, it is unset until the person picks one here. A flow the
+  // workspace holds already has no choice: it stays where it is (item 9).
   const [chosenScope, setChosenScope] = useState<string | undefined>(project || undefined);
   const [creatingTeam, setCreatingTeam] = useState(false);
   const createKey = useRef(newIdempotencyKey('subscribe'));
@@ -97,11 +99,14 @@ export default function SetupScreen() {
         open.length === 0 && (await teamDirectoryIfThere(id)).some((entry) => entry.access !== 'member');
       return {
         entry: catalog.automations.find((item) => item.templateId === template),
-        // Its subscriptions, one per scope at most. An archived one is gone:
-        // adding it again makes a new subscription.
-        subscriptions: withoutArchived(subscriptions.subscriptions).filter((item) => item.templateId === template),
+        // Where the workspace holds it, in any team (the owner's build 12 item
+        // 9): one copy, or two added before the rule. An archived one is gone:
+        // unarchiving makes a new subscription.
+        subscriptions: heldAs(template, subscriptions.subscriptions),
         providers: new Map(providers.providers.map((item) => [item.providerId, item.displayName])),
         projects: open,
+        // Every team's name, an archived team's too: a held flow says where it is.
+        labels: scopeLabels(projects),
         askable,
         // The accounts this workspace holds: the Connections step reads its state here.
         connected: new Set(
@@ -145,7 +150,7 @@ export default function SetupScreen() {
     );
   }
 
-  const { entry, providers, projects, askable, connected } = resource.data;
+  const { entry, providers, projects, labels, askable, connected } = resource.data;
   // Step 1 is the accounts the automation needs, when it needs any (24.7.3
   // attempt 4, feedback #5: every step numbered 1…N, connections included). The
   // entry publishes them since 2026-10-02. A platform from before that date —
@@ -155,11 +160,13 @@ export default function SetupScreen() {
   const required = entry.requiredConnections ?? [];
   const sectionOffset = required.length > 0 ? 1 : 0;
   const scopes = projects.map((project) => ({ value: project.id, label: `Team: ${project.type}` }));
-  const inScope = (value: string) => resource.data.subscriptions.find((item) => item.projectId === value);
+  // The copy the workspace holds already (the owner's build 12 item 9): Setup
+  // configures that one, where it is, and adds no second — so no team choice.
+  const held = resource.data.subscriptions[0];
   // A chosen team that has since gone (archived on a re-read) is no choice; none is chosen for the person.
   const scope =
     chosenScope !== undefined && scopes.some((option) => option.value === chosenScope) ? chosenScope : undefined;
-  const subscription = localSubscription ?? (scope ? inScope(scope) : undefined) ?? null;
+  const subscription = localSubscription ?? held ?? null;
   const unmet = subscription?.unmetConnections ?? [];
   // With no team yet, an owner or admin makes one here; a plain member cannot
   // (in an organization its owners and admins create teams, 24.12), and asks
@@ -172,8 +179,9 @@ export default function SetupScreen() {
   };
 
   const activate = async () => {
-    // A team first (D4): nothing is sent without one.
-    if (!scope) {
+    // A team first (D4): nothing is added without one. A flow the workspace
+    // holds, or added on this screen already, is configured where it is.
+    if (!subscription && !scope) {
       setActionError(SETUP_PICK_A_TEAM);
       return;
     }
@@ -294,7 +302,12 @@ export default function SetupScreen() {
         </View>
       </View>
 
-      {projects.length > 0 ? (
+      {held ? (
+        <View testID="setup-held" style={styles.held}>
+          <Text style={[styles.heldLabel, { color: palette.neutral[400] }]}>{SETUP_ADDED_TO}</Text>
+          <Text style={[styles.heldWhere, { color: palette.text }]}>{scopeLabel(held.projectId, labels)}</Text>
+        </View>
+      ) : projects.length > 0 ? (
         <ChoiceChips
           label="Add to"
           options={scopes}
@@ -403,8 +416,8 @@ export default function SetupScreen() {
         <ActionFailure message={actionError} retryLabel="Try again" onRetry={activate} />
       ) : null}
 
-      {/* No Activate for a member with no team to add to: nothing can be sent. */}
-      {projects.length > 0 || canCreateTeam ? (
+      {/* No Activate for a member with no team to add to and nothing held: nothing can be sent. */}
+      {held || projects.length > 0 || canCreateTeam ? (
         <Pressable
           disabled={busy}
           onPress={activate}
@@ -449,6 +462,9 @@ const styles = StyleSheet.create({
     letterSpacing: em(-0.01, typeScale.heading.fontSize),
   },
   subtitle: { marginTop: 1, fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
+  held: { gap: 6 },
+  heldLabel: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
+  heldWhere: { fontFamily: fonts.medium, fontSize: typeScale.body.fontSize },
   noTeam: { gap: 10, alignItems: 'flex-start' },
   noTeamLine: { fontFamily: fonts.regular, ...typeScale.body },
   sectionCard: { marginTop: 9 },

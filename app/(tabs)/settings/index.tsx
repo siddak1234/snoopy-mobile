@@ -233,7 +233,7 @@ export default function SettingsScreen() {
           <SettingsRow
             icon={Archive}
             title="Archived flows"
-            sub="Kept with their history; add any again"
+            sub="Kept with their history; unarchive any"
             divider
             size="roomy"
             testID="settings-archived-flows"
