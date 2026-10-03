@@ -2,12 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Archive, CaretRight, FlowArrow, MagnifyingGlass, Plus } from 'phosphor-react-native';
+import { Archive, FlowArrow, MagnifyingGlass, Plus } from 'phosphor-react-native';
 
 import { IconTile } from '@/components/nocturne/icon-tile';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { StatusPill } from '@/components/nocturne/status-pill';
-import { SettingsRow } from '@/components/settings/settings-row';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { ScopeControl } from '@/components/scope-control';
 import { em, fonts, layout, radius, typeScale, withAlpha } from '@/constants/theme';
@@ -18,6 +17,7 @@ import { useScope } from '@/hooks/use-scope';
 import { useWorkflows, type FlowStatus } from '@/hooks/use-workflows';
 import {
   ADD_FLOW_LABEL,
+  ARCHIVED_FLOWS_LABEL,
   FLOWS_EMPTY_BODY,
   FLOWS_EMPTY_TITLE,
   FLOWS_SCOPE_EMPTY_BODY,
@@ -32,8 +32,13 @@ import { inScope } from '@/lib/view/scope';
 
 /**
  * Flows — the one tab for what the workspace runs (design `sFlows`; one tab
- * since BUILD-PLAN 24.9.3). The scope control narrows it to a project; "New"
- * opens the catalog inside this tab.
+ * since BUILD-PLAN 24.9.3). The scope control narrows it to a team; "New"
+ * opens the catalog inside this tab, and "Archived", left of it (build 11, D5
+ * — the owner's build 10 item 8: "a button to the left of new… We dont need a
+ * component on the page"), opens the archived flows, always, count or none.
+ * With no live flow in the workspace the screen is the empty standard,
+ * whatever is archived (D6, item 9: "like this when no flows even if archive"),
+ * with the way to the archived ones under it when there are any.
  */
 export default function FlowsScreen() {
   const router = useRouter();
@@ -61,10 +66,11 @@ export default function FlowsScreen() {
       readProjects(workspaceId),
       readRemovedSubscriptionsOrNone(workspaceId),
     ]);
-    const labels = scopeLabels(projects, subs.subscriptions);
+    const labels = scopeLabels(projects);
     return {
       flows: toFlows(subs.subscriptions, catalog.automations, stats.subscriptions, undefined, labels),
-      // Archived flows are a count here and a page of their own (24.11.8).
+      // Archived flows are a page of their own (24.11.8); read here only to
+      // know whether the empty screen has any to offer (D6).
       removed: toRemovedFlows(removed.subscriptions, catalog.automations, stats.subscriptions, labels),
     };
   });
@@ -97,9 +103,12 @@ export default function FlowsScreen() {
       <ScreenError title={errorTitleFor('flows')} onRetry={flows.reload} body={busyBody(flows)} topInset={insets.top} />
     );
   }
-  if (live !== null && live.length === 0 && removedInScope.length === 0) {
-    // The first-run empty. The filtered one below reads `No flows match
-    // "{query}"`, which is nonsense for a workspace that has none at all.
+  if (live !== null && live.length === 0) {
+    // No live flow in the workspace, whatever is archived: the empty standard
+    // (D6), as Activity's. The filtered one below reads `No flows match
+    // "{query}"`, which is nonsense for a workspace that has none at all. The
+    // person who just archived their last flow lands here, so the way to it is
+    // under Add a flow when archived flows exist in the scope.
     return (
       <ScreenEmpty
         icon={<FlowArrow size={40} color={palette.accentRamp[300]} />}
@@ -109,6 +118,9 @@ export default function FlowsScreen() {
           label: ADD_FLOW_LABEL,
           onPress: () => router.push('/(tabs)/flows/add'),
         }}
+        {...(removedInScope.length > 0
+          ? { secondaryAction: { label: ARCHIVED_FLOWS_LABEL, onPress: () => router.push('/(tabs)/flows/archived') } }
+          : {})}
         topInset={insets.top}
       />
     );
@@ -126,17 +138,32 @@ export default function FlowsScreen() {
       <ScopeControl />
       <View style={styles.titleRow}>
         <Text style={[styles.title, { color: palette.text }]}>Flows</Text>
-        <PillButton
-          label="New"
-          variant="primary"
-          height={36}
-          fontSize={typeScale.body.fontSize}
-          icon={Plus}
-          iconSize={14}
-          gap={5}
-          style={styles.headerPill}
-          onPress={() => router.push('/(tabs)/flows/add')}
-        />
+        {/* [Archived][New]: Archived secondary, so New stays the one accent control. */}
+        <View style={styles.headerActions}>
+          <PillButton
+            label="Archived"
+            variant="secondary"
+            height={36}
+            fontSize={typeScale.body.fontSize}
+            icon={Archive}
+            iconSize={14}
+            gap={5}
+            style={styles.headerPill}
+            testID="flows-archived"
+            onPress={() => router.push('/(tabs)/flows/archived')}
+          />
+          <PillButton
+            label="New"
+            variant="primary"
+            height={36}
+            fontSize={typeScale.body.fontSize}
+            icon={Plus}
+            iconSize={14}
+            gap={5}
+            style={styles.headerPill}
+            onPress={() => router.push('/(tabs)/flows/add')}
+          />
+        </View>
       </View>
 
       <View
@@ -174,8 +201,10 @@ export default function FlowsScreen() {
               <View style={styles.flowBody}>
                 <Text style={[styles.flowName, { color: palette.text }]}>{def.name}</Text>
                 <Text style={[styles.flowDesc, { color: palette.neutral[400] }]}>{def.desc}</Text>
+                {/* Its team, or "Whole workspace", in every scope — a picked
+                    team's too (D4: every card; the build 11 review). */}
                 <Text style={[styles.flowRuns, { color: palette.neutral[500] }]}>
-                  {def.scope && projectId === null ? `${def.scope} · ${def.runs}` : def.runs}
+                  {def.scope ? `${def.scope} · ${def.runs}` : def.runs}
                 </Text>
               </View>
               <StatusPill label={statusOf(key, def.status as FlowStatus)} />
@@ -204,24 +233,11 @@ export default function FlowsScreen() {
           </View>
         ) : null}
       </View>
-      {removedInScope.length > 0 ? (
-        <SurfaceCard style={styles.removedCard}>
-          <SettingsRow
-            icon={Archive}
-            title={`Archived flows (${removedInScope.length})`}
-            sub="Kept with their history; add any again"
-            testID="flows-archived"
-            onPress={() => router.push('/(tabs)/flows/archived')}
-            right={<CaretRight size={15} color={palette.neutral[500]} />}
-          />
-        </SurfaceCard>
-      ) : null}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  removedCard: { marginTop: 4 },
   root: {
     flex: 1,
   },
@@ -234,6 +250,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   title: {
     fontFamily: fonts.medium,

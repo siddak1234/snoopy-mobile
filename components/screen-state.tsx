@@ -5,6 +5,7 @@ import { ArrowClockwise, WarningCircle, WifiSlash, type Icon } from 'phosphor-re
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { Skeleton } from '@/components/nocturne/skeleton';
+import { pressed } from '@/components/pressable';
 import { em, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import {
@@ -243,7 +244,11 @@ export function ScreenOffline({
  * Since the owner's decision 6 of 2026-10-02 (24.12) every whole screen with
  * nothing on it draws this — a pushed screen with `onBack`, which draws the
  * failure states' back control; without it the render is as it always was. A
- * screen whose empty says only its title leaves out `body`.
+ * screen whose empty says only its title leaves out `body`. `above` is drawn
+ * under the way back and above the centred block, which stays centred in what
+ * is left: the inbox's push ask, which the owner put on the empty inbox too
+ * (build 11, 2026-10-03: "Also on empty"), as the design draws `pushAsk` above
+ * `notifsEmpty`. Without it the render is unchanged.
  */
 export function ScreenEmpty({
   icon,
@@ -251,6 +256,7 @@ export function ScreenEmpty({
   body,
   action,
   secondaryAction,
+  above,
   onBack,
   topInset = 0,
 }: {
@@ -259,6 +265,8 @@ export function ScreenEmpty({
   body?: string;
   action?: { label: string; icon?: Icon; onPress?: () => void };
   secondaryAction?: { label: string; onPress?: () => void };
+  /** Drawn above the centred block, under the way back (the inbox's push ask). */
+  above?: React.ReactNode;
   /** A pushed screen's way back. */
   onBack?: () => void;
   topInset?: number;
@@ -269,6 +277,7 @@ export function ScreenEmpty({
       testID="screen-empty"
       style={[styles.root, { paddingTop: topInset + DESIGN_TOP, backgroundColor: palette.bg }]}>
       {onBack ? <BackCircle onPress={onBack} /> : null}
+      {above}
       <View style={styles.center}>
         <View
           style={[
@@ -335,7 +344,7 @@ export function ActionFailure({
       <View style={styles.calloutBody}>
         <Text style={[styles.calloutText, { color: palette.text }]}>{message}</Text>
         <Text
-          onPress={onRetry}
+          onPress={pressed(onRetry)}
           suppressHighlighting
           accessibilityRole="button"
           style={[styles.calloutAction, { color: status.err }]}>

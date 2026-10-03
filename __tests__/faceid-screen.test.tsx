@@ -67,13 +67,14 @@ describe('biometric wording (24.4.4)', () => {
     expect(JSON.stringify(android)).not.toMatch(/Face ID|Touch ID/);
   });
 
-  it('names the page the setting is on — Settings › Security (24.12)', () => {
+  it('says where the setting is — Settings, since the Face ID row is on the index again (build 11, D1)', () => {
     for (const wording of [
       biometricWordingFor('ios', [FACIAL_RECOGNITION]),
       biometricWordingFor('ios', [FINGERPRINT]),
       biometricWordingFor('android', [FINGERPRINT]),
     ]) {
-      expect(wording.offerBody).toMatch(/You can change this later in Settings › Security\.$/);
+      expect(wording.offerBody).toMatch(/You can change this later in Settings\.$/);
+      expect(wording.offerBody).not.toMatch(/›/u);
     }
   });
 });

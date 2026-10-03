@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Pressable, Text, TextInput, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Text, TextInput, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Eye, EyeSlash } from 'phosphor-react-native';
 
+import { Pressable } from '@/components/pressable';
 import { fonts, radius, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 

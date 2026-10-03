@@ -1,8 +1,9 @@
 import { Buildings, CaretDown, Check, Plus, Stack, UsersThree } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
+import { Pressable } from '@/components/pressable';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { WorkspaceSwitcher } from '@/components/settings/workspace-switcher';
 import { CreateTeamDialog } from '@/components/teams/create-team-dialog';

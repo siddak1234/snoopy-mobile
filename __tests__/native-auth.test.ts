@@ -31,6 +31,9 @@ jest.mock('@/lib/platform/session-store', () => ({
   readSession: jest.fn(),
   writeSession: jest.fn(),
   clearSession: jest.fn(),
+  // No phone registered for push here, so sign-out sends no device DELETE
+  // (build 11, D8); `sign-out.test.tsx` holds the DELETE before the logout.
+  readDeviceId: jest.fn(async () => null),
 }));
 
 const { openAuthSessionAsync } = jest.requireMock('expo-web-browser');

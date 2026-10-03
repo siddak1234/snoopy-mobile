@@ -13,11 +13,14 @@ type Props = {
   height?: number;
   opacity?: number;
   style?: StyleProp<ImageStyle>;
+  /** For a screen's own tests (Home's header, D9); absent everywhere else, so no snapshot moves. */
+  testID?: string;
 };
 
-/** The A8X wordmark. The PNG is monochrome light-grey; on light theme the
- *  design inverts it (invert(.87) ≈ #383838), which tintColor reproduces. */
-export function BrandMark({ width, height, opacity = 1, style }: Props) {
+/** The A8X wordmark. The PNG is white glyphs on a transparent ground — the mark
+ *  draws nothing behind them; on light theme the design inverts it
+ *  (invert(.87) ≈ #383838), which tintColor reproduces. */
+export function BrandMark({ width, height, opacity = 1, style, testID }: Props) {
   const { palette } = useTheme();
   const w = width ?? (height ? height * ASPECT : 118);
   const h = height ?? w / ASPECT;
@@ -26,6 +29,7 @@ export function BrandMark({ width, height, opacity = 1, style }: Props) {
       source={require('@/assets/images/a8x-mark.png')}
       style={[{ width: w, height: h, opacity, tintColor: palette.brandTint }, style]}
       resizeMode="contain"
+      testID={testID}
     />
   );
 }

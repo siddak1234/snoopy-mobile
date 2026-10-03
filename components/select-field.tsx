@@ -1,7 +1,8 @@
 import { CaretDown, CaretUp, Check } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { Pressable } from '@/components/pressable';
 import { fonts, radius, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 

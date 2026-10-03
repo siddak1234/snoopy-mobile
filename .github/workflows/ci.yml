@@ -72,6 +72,10 @@ jobs:
       # A person reads Teams and Flows; the contract's "project" and "automation"
       # stay in the code. A renamed screen could keep an old sentence (24.11.7).
       - run: npm run audit:vocabulary
+      # Every press ticks through components/pressable.tsx (build 11, D7): a
+      # Pressable drawn from react-native, expo-haptics called elsewhere, or a
+      # Text's own onPress would be a silent press again.
+      - run: npm run audit:haptics
       # Gate 8's first mobile line is "0 imports of lib/fixtures outside tests".
       # It was re-derived by hand with git grep in every audit; this is the
       # ratchet. The set may shrink and may never grow, and a file that stops

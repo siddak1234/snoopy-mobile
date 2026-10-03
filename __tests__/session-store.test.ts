@@ -9,11 +9,15 @@ import * as SecureStore from 'expo-secure-store';
 
 import {
   clearSession,
+  readDeviceId,
   readFaceIdChoice,
   readFaceIdEnabled,
+  readPushNotNow,
   readRememberSession,
   readSession,
+  writeDeviceId,
   writeFaceIdEnabled,
+  writePushNotNow,
   writeRememberSession,
   writeSession,
 } from '@/lib/platform/session-store';
@@ -61,8 +65,9 @@ describe('secure session storage', () => {
   it('clears every credential locally even if one keychain deletion fails', async () => {
     deleteItemAsync.mockRejectedValueOnce(new Error('locked'));
     await expect(clearSession()).resolves.toBeUndefined();
-    // Three credentials, and the two choices made at sign-in (2026-10-02).
-    expect(deleteItemAsync).toHaveBeenCalledTimes(5);
+    // Three credentials, the two choices made at sign-in (2026-10-02), and push's
+    // device id and "Not now" (build 11, D8 — a decided flip from 5).
+    expect(deleteItemAsync).toHaveBeenCalledTimes(7);
     for (const call of deleteItemAsync.mock.calls) expect(call[1]).toEqual(options);
   });
 
@@ -83,11 +88,33 @@ describe('the choices made at sign-in live and die with the session (24.7.3 atte
       [
         'autom8x.access-expires-at',
         'autom8x.access-token',
+        // Build 11, D8 — a decided addition: push's device id and "Not now"
+        // belong to the session too.
+        'autom8x.device-id',
         'autom8x.face-id-enabled',
+        'autom8x.push-not-now',
         'autom8x.refresh-token',
         'autom8x.remember-session',
       ].sort(),
     );
+  });
+
+  it("keeps push's device id and \"Not now\" this-device-only, beside the session (build 11, D8)", async () => {
+    await writeDeviceId('2f1c7a52-1d0e-4c83-9b5e-6c1a0d9f3e21');
+    expect(setItemAsync).toHaveBeenCalledWith('autom8x.device-id', '2f1c7a52-1d0e-4c83-9b5e-6c1a0d9f3e21', options);
+    getItemAsync.mockResolvedValueOnce('2f1c7a52-1d0e-4c83-9b5e-6c1a0d9f3e21');
+    await expect(readDeviceId()).resolves.toBe('2f1c7a52-1d0e-4c83-9b5e-6c1a0d9f3e21');
+    expect(getItemAsync).toHaveBeenCalledWith('autom8x.device-id', options);
+    // An unreadable enclave is no device, not a crash.
+    getItemAsync.mockRejectedValueOnce(new Error('locked'));
+    await expect(readDeviceId()).resolves.toBeNull();
+
+    getItemAsync.mockResolvedValueOnce(null);
+    await expect(readPushNotNow()).resolves.toBe(false);
+    await writePushNotNow();
+    expect(setItemAsync).toHaveBeenCalledWith('autom8x.push-not-now', 'true', options);
+    getItemAsync.mockResolvedValueOnce('true');
+    await expect(readPushNotNow()).resolves.toBe(true);
   });
 
   it('reads the Face ID question as unanswered until it is answered either way', async () => {

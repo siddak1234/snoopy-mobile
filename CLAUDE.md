@@ -2,7 +2,7 @@
 
 **Round 16 is open** (BUILD-PLAN Phase 24, ADR-0032): the mobile app offers
 every signed-in feature the website offers, on the same published operations,
-and ships to Apple first. This repository owns 24.3–24.7 and, since the owner's build 6 feedback of 2026-10-02, 24.9 (the flows design pass: one Flows tab, a project scope, a shared workspace snapshot) and, since build 7's, 24.11.6–24.11.10 (the cover when signed out, Teams in place of Projects, Archived flows (Removed flows until 24.12), Unlink, flow history), and, since build 9's (the owner's decisions of 2026-10-02), the app's part of 24.12 (a team is its kind, the archive wording, Settings by category, the billing cards, the join link, the export to the share sheet, Unlink in words, the empty-screen standard, the bigger type), one phase per session:
+and ships to Apple first. This repository owns 24.3–24.7 and, since the owner's build 6 feedback of 2026-10-02, 24.9 (the flows design pass: one Flows tab, a project scope, a shared workspace snapshot) and, since build 7's, 24.11.6–24.11.10 (the cover when signed out, Teams in place of Projects, Archived flows (Removed flows until 24.12), Unlink, flow history), and, since build 9's (the owner's decisions of 2026-10-02), the app's part of 24.12 (a team is its kind, the archive wording, Settings by category, the billing cards, the join link, the export to the share sheet, Unlink in words, the empty-screen standard, the bigger type), and, since build 10's (the owner's decisions of 2026-10-03, build 11), Settings as one grouped page, compact billing cards with a drawn Pro, an archived flow's live twin, a team on and for every flow, the Archived header button and the Flows empty standard, and a tick on every press, one phase per session:
 the foundation, automations/runs/connections, organization/projects/teams,
 billing/account/data/support, and the iOS release. **The round is not closed
 here.** A fresh `snoopy-backend` session that wrote none of it re-runs Gate 24
@@ -34,7 +34,9 @@ repository, stop.
    (2026-10-02, "whole app — easy to read") put every font size on the app's
    type scale, `typeScale` in `constants/theme.ts` (24.12), and the snapshots
    were re-pinned once for it, in build 10. `audit:type` keeps every size on
-   the scale.
+   the scale. Every press ticks through `components/pressable.tsx` (build 11,
+   D7) — a behaviour wrapper, not a primitive, so the 18 stay 18 — and
+   `audit:haptics` keeps every press on it; the snapshots did not move for it.
 3. Use theme tokens; no raw hex or ad-hoc font families outside
    `constants/theme.ts`.
 4. Do not duplicate a Nocturne primitive.
@@ -47,7 +49,14 @@ repository, stop.
    Since 24.12 a second, also credential-less and also there only:
    `downloadSignedFile`, expo-file-system's native download of the complete
    export's signed link into the app's cache for the share sheet;
-   `audit:platform` admits exactly one `downloadFileAsync(`.
+   `audit:platform` admits exactly one `downloadFileAsync(`. Since build 11
+   (D8) a third, also credential-less and in no file of this repository:
+   `expo-notifications`' `getExpoPushTokenAsync` asks Expo's token service,
+   from inside the library, for this phone's push token — the library's own
+   request, which `audit:platform` does not see because it reads this
+   repository's source. No session credential goes with it, and the token it
+   answers reaches the platform only through `lib/platform/devices.ts`, in the
+   `PUT /v1/session/devices` body — never a log, a URL or the enclave.
 6. Credentials live only in `expo-secure-store`, this-device-only. Never put a
    token in AsyncStorage, a URL, route params, logs, fixtures, or analytics. A
    webhook secret is shown once and stored nowhere, the Keychain included.
@@ -64,8 +73,15 @@ repository, stop.
    or call to action. There is no in-app purchase. Since 24.12 the plans are
    cards (the owner's decisions 7 and 8): Free — the app's own, $0.00 per
    month, since the platform lists only what can be bought — then the
-   platform's plans by price, each its name and price; the workspace's card says
-   "Enrolled" with its status. On iOS, not paying, a paid card opens the hosted
+   platform's plans by price, each its name and price, then Pro — drawn by the
+   app at the owner's $10.00 per month while the platform lists no plan with
+   id `pro` (build 11, D2), an inert card on every platform and for every role
+   (no checkout, no portal), which the platform's Pro replaces once listed; the
+   workspace's card says "Enrolled" with its status. The cards are compact,
+   at their natural height (D2). The enrolled plan is one rule,
+   `lib/view/billing.ts`, shared with the Settings index's plan line, which
+   reads the workspace's billing quietly through the shared snapshot for an
+   owner or admin (D1). On iOS, not paying, a paid card opens the hosted
    checkout for that plan; paying, any other card opens Manage billing, since a
    second checkout would start a second subscription. The app is offered in the
    United States App Store storefront only; selling elsewhere needs a
@@ -86,6 +102,12 @@ repository, stop.
       say "deleted" for a lost answer: read the session first.
     - `hostedAddress()` (`lib/platform/billing.ts`) and `websiteOrigin()`: the
       only addresses the app opens outside itself, https only.
+    - `Pressable` and `pressed()` (`components/pressable.tsx`): every press
+      ticks, through the one helper; a press with no handler, a disabled
+      control and the signed-out cover give none (build 11, D7).
+    - `addedAgainAs()` (`lib/view/catalog.ts`): an archived flow's live twin —
+      the same template in the same scope, null matching null only — and with
+      one, no "Add it again" (D3). `scopeLabels()` labels every flow (D4).
 
 ## Release configuration, pinned
 

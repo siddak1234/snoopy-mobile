@@ -1,6 +1,6 @@
 import { CaretRight, UserCircle, UserPlus } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ChoiceChips } from '@/components/choice-chips';
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -8,6 +8,7 @@ import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { Pressable } from '@/components/pressable';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { fonts, status, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';

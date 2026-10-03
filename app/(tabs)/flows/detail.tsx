@@ -1,10 +1,11 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pause, Play, RocketLaunch } from 'phosphor-react-native';
 import React, { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AutomationActions } from '@/components/automations/automation-actions';
+import type { ArchivedFlowPath } from '@/components/flows/archived-flows';
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel } from '@/components/nocturne/section-label';
@@ -12,6 +13,7 @@ import { StatCard } from '@/components/nocturne/stat-card';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { StepCard } from '@/components/nocturne/step-card';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { Pressable } from '@/components/pressable';
 import { em, fonts, layout, status, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ActionFailure, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
@@ -20,19 +22,31 @@ import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { roleIn, useSession, workspaceIfShown } from '@/hooks/use-session';
 import { statusAction, useWorkflows, type FlowStatus } from '@/hooks/use-workflows';
 import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
-import { ADD_AGAIN_LABEL, UNAVAILABLE_NOTE, archivedFlowBody, errorTitleFor } from '@/lib/content/screen-states';
+import {
+  ADD_AGAIN_LABEL,
+  OPEN_LIVE_FLOW_LABEL,
+  UNAVAILABLE_NOTE,
+  archivedFlowAddedAgainBody,
+  archivedFlowBody,
+  errorTitleFor,
+} from '@/lib/content/screen-states';
 import { readCatalog, readConnectionProviders } from '@/lib/platform/catalog';
 import { updateSubscription } from '@/lib/platform/automations';
 import { readProjects } from '@/lib/platform/projects';
 import { readRemovedSubscriptionsOrNone, readRunStats, readSubscriptions } from '@/lib/platform/runs';
-import { scopeLabels, toFlows, toRemovedFlows, type FlowView } from '@/lib/view/catalog';
+import { addedAgainAs, scopeLabels, toFlows, toRemovedFlows, type FlowView } from '@/lib/view/catalog';
 import { administers } from '@/lib/view/roles';
 import { statusLabel } from '@/lib/view/status';
 
 const ACTION_ICON = { pause: Pause, play: Play, rocket: RocketLaunch } as const;
 
-/** The flow page — one screen per flow identity (design `flow` prop). */
-export default function WorkflowDetailScreen() {
+/**
+ * The flow page — one screen per flow identity (design `flow` prop). Drawn in
+ * the Flows stack and, for an archived flow opened from Settings, in the
+ * Settings stack (24.12); `detailPath` is where its live twin opens (build 11,
+ * D3), in the same stack, as the archived list's rows open there.
+ */
+export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { palette } = useTheme();
@@ -64,7 +78,7 @@ export default function WorkflowDetailScreen() {
       readProjects(workspaceId),
       readRemovedSubscriptionsOrNone(workspaceId),
     ]);
-    const labels = scopeLabels(projects, subs.subscriptions);
+    const labels = scopeLabels(projects);
     return {
       // An archived flow is read here too (24.11.8): its page stays, read-only,
       // so a run row that names it opens something rather than "Couldn't load".
@@ -94,6 +108,12 @@ export default function WorkflowDetailScreen() {
   const entry =
     flows.status === 'ready' && subscription
       ? flows.data.automations.find((a) => a.templateId === subscription.templateId)
+      : undefined;
+  // An archived flow added again in the same scope (D3): its live twin, from
+  // the live list already read here — no extra request.
+  const twin =
+    flows.status === 'ready' && subscription?.status === 'archived'
+      ? addedAgainAs(subscription, flows.data.subscriptions)
       : undefined;
   // The platform's answer to this device's own change shows the moment it is
   // answered (`record`), until this screen's re-read lands and confirms it
@@ -275,21 +295,40 @@ export default function WorkflowDetailScreen() {
       {def.removed ? (
         // Read-only (24.11.8): no status, no actions. The one thing to do with an
         // archived flow is add it again, which is Setup for its template, in the
-        // scope it had.
+        // team it had — or, once it has been (D3), open the live copy: the
+        // platform holds one live flow per template and scope, so a second add
+        // would only re-configure that one.
         <SurfaceCard style={styles.removedCard}>
-          <Text style={[styles.note, { color: palette.neutral[400] }]}>{archivedFlowBody(def.removedOn)}</Text>
-          <PillButton
-            label={ADD_AGAIN_LABEL}
-            variant="primary"
-            height={44}
-            fontSize={typeScale.label.fontSize}
-            onPress={() =>
-              router.push({
-                pathname: '/(tabs)/flows/setup',
-                params: { template: def.templateId, ...(def.projectId ? { project: def.projectId } : {}) },
-              })
-            }
-          />
+          {twin ? (
+            <>
+              <Text style={[styles.note, { color: palette.neutral[400] }]}>
+                {archivedFlowAddedAgainBody(def.removedOn)}
+              </Text>
+              <PillButton
+                label={OPEN_LIVE_FLOW_LABEL}
+                variant="secondary"
+                height={44}
+                fontSize={typeScale.label.fontSize}
+                onPress={() => router.push({ pathname: detailPath, params: { flow: twin.id } })}
+              />
+            </>
+          ) : (
+            <>
+              <Text style={[styles.note, { color: palette.neutral[400] }]}>{archivedFlowBody(def.removedOn)}</Text>
+              <PillButton
+                label={ADD_AGAIN_LABEL}
+                variant="primary"
+                height={44}
+                fontSize={typeScale.label.fontSize}
+                onPress={() =>
+                  router.push({
+                    pathname: '/(tabs)/flows/setup',
+                    params: { template: def.templateId, ...(def.projectId ? { project: def.projectId } : {}) },
+                  })
+                }
+              />
+            </>
+          )}
         </SurfaceCard>
       ) : null}
       {!def.removed && entry && !entry.available ? (
@@ -330,6 +369,11 @@ export default function WorkflowDetailScreen() {
       )}
     </ScrollView>
   );
+}
+
+/** The Flows tab's own page: a live twin opens here too. */
+export default function WorkflowDetailScreen() {
+  return <WorkflowDetail detailPath="/(tabs)/flows/detail" />;
 }
 
 const styles = StyleSheet.create({

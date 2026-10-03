@@ -15,7 +15,8 @@ import { StatCard } from '@/components/nocturne/stat-card';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { StepCard } from '@/components/nocturne/step-card';
 import { TextField } from '@/components/nocturne/text-field';
-import { nocturneDark, status } from '@/constants/theme';
+import { SettingsRow } from '@/components/settings/settings-row';
+import { layout, nocturneDark, status, typeScale } from '@/constants/theme';
 import { steps } from '@/test/design-data';
 import { renderWithProviders } from '@/test/render';
 
@@ -53,6 +54,24 @@ describe('PillButton', () => {
     expect(button?.props.accessibilityState).toEqual({ disabled: true });
     await fireEvent.press(getByText('Unavailable'));
     expect(onPress).not.toHaveBeenCalled();
+  });
+});
+
+describe('SettingsRow', () => {
+  it('keeps the row every list had, and is roomier only where the Settings index asks (build 11, D1)', async () => {
+    const { getByTestId, getByText } = await renderWithProviders(
+      <>
+        <SettingsRow icon={Receipt} title="Plain" sub="A line" right={null} testID="plain" />
+        <SettingsRow icon={Receipt} title="Roomy" sub="A line" right={null} testID="roomy" size="roomy" onPress={() => undefined} />
+      </>,
+    );
+    expect(StyleSheet.flatten(getByTestId('plain').props.style).paddingVertical).toBe(layout.rowPadV);
+    expect(StyleSheet.flatten(getByTestId('roomy').props.style).paddingVertical).toBe(layout.rowPadVRoomy);
+    expect(layout.rowPadVRoomy).toBeGreaterThan(layout.rowPadV);
+    // The roomy title and line sit at their scale heights; the plain row sets no line height, as before.
+    const title = (text: string) => StyleSheet.flatten(getByText(text).props.style) as { lineHeight?: number };
+    expect(title('Roomy').lineHeight).toBe(typeScale.label.lineHeight);
+    expect(title('Plain').lineHeight).toBeUndefined();
   });
 });
 

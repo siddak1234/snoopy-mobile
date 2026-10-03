@@ -177,7 +177,7 @@ describe('Organization — everyone else', () => {
     expect(screen.queryByText('MEMBERS')).toBeNull();
   });
 
-  it('names the page to switch to an organization from — Settings › Workspace (24.12)', async () => {
+  it('names where to switch to an organization — Settings, whose workspace row is on the index again (build 11, D1)', async () => {
     const fake = fakePlatform(platformOperation);
     fake.always('GET /v1/workspaces', {
       workspaces: [
@@ -189,7 +189,7 @@ describe('Organization — everyone else', () => {
     await renderWithProviders(<OrganizationScreen />, session());
     expect(
       await screen.findByText(
-        'You belong to Acme Operations. Switch to it in Settings › Workspace; its owners and admins manage it there.',
+        'You belong to Acme Operations. Switch to it in Settings; its owners and admins manage it there.',
       ),
     ).toBeTruthy();
   });
