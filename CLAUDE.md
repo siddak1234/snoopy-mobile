@@ -106,9 +106,15 @@ repository, stop.
     - `Pressable` and `pressed()` (`components/pressable.tsx`): every press
       ticks, through the one helper; a press with no handler, a disabled
       control and the signed-out cover give none (build 11, D7).
+    - `heldAs()` (`lib/view/catalog.ts`): a workspace holds a flow once (the
+      owner's build 12 item 9) — any subscription of its template that is not
+      archived, in any team or the whole workspace. Add reads a held flow
+      "Added ✓" and Setup configures it, never adding a second; a copy Setup
+      has just added is held from that moment (the build 13 review).
     - `addedAgainAs()` (`lib/view/catalog.ts`): an archived flow's live twin —
-      the same template in the same scope, null matching null only — and with
-      one, no "Add it again" (D3). `scopeLabels()` labels every flow (D4).
+      the same template in any team or the whole workspace (`heldAs`, the
+      owner's build 12 item 9) — and with one, no "Unarchive" (D3).
+      `scopeLabels()` labels every flow (D4).
 11. **Where a screen goes is proved under the real router** (build 13, the
     owner's build 12 item 6). Jest runs two projects (`package.json`
     `jest.projects`), and `npm test`, so `verify` and CI, runs both: `unit` maps
@@ -118,8 +124,9 @@ repository, stop.
     `test/real-router.tsx`) runs the app's own tree under the real expo-router.
     A change to sign-in, sign-out, the guard, a redirect, or the params a screen
     takes on arrival gets a test there. The auth boundary is the root layout's
-    `Stack.Protected`; nothing inside the tabs navigates to "/", which there
-    names Home, not the cover.
+    `Stack.Protected`, which admits the tabs only signed in and past the Face
+    ID lock (`locked`, `hooks/use-session.tsx`; the build 13 review); nothing
+    inside the tabs navigates to "/", which there names Home, not the cover.
 
 ## Release configuration, pinned
 

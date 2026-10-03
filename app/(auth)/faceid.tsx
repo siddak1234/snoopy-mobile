@@ -60,8 +60,14 @@ export default function FaceIdScreen() {
   const words = useRef(wording);
   words.current = wording;
 
+  const { unlock } = session;
+
   // Biometrics unlock an existing enclave-held session; they never mint one.
-  // Every refusal remains on the auth side of the route boundary.
+  // Every refusal remains on the auth side of the route boundary. A check that
+  // passes opens the session (`unlock`) before Home is asked for: the root
+  // guard holds the tabs from a locked session, so it is this, not the
+  // address, that lets Home open — and a link that arrives while the lock shows
+  // opens nothing (the build 13 review).
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -82,8 +88,10 @@ export default function FaceIdScreen() {
           disableDeviceFallback: true,
         });
         if (cancelled) return;
-        if (result.success) router.replace('/(tabs)/(home)');
-        else setMessage(words.current.didNotUnlock);
+        if (result.success) {
+          unlock();
+          router.replace('/(tabs)/(home)');
+        } else setMessage(words.current.didNotUnlock);
       } catch {
         if (!cancelled) setMessage(words.current.didNotUnlock);
       }
@@ -91,7 +99,7 @@ export default function FaceIdScreen() {
     return () => {
       cancelled = true;
     };
-  }, [router, session.status]);
+  }, [router, session.status, unlock]);
 
   /**
    * "Use identity provider" signs this phone out, the way Settings › Sign out

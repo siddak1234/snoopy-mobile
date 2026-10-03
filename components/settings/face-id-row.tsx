@@ -8,6 +8,7 @@ import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { ActionFailure } from '@/components/screen-state';
 import { SettingsRow, type SettingsRowSize } from '@/components/settings/settings-row';
 import { useBiometricWording } from '@/hooks/use-biometric-wording';
+import { useSession } from '@/hooks/use-session';
 import { readFaceIdEnabled, writeFaceIdEnabled } from '@/lib/platform/session-store';
 
 /**
@@ -18,10 +19,13 @@ import { readFaceIdEnabled, writeFaceIdEnabled } from '@/lib/platform/session-st
  * on runs the hardware and enrolment check, then the OS prompt; the choice is
  * the session's and leaves with it (`lib/platform/session-store.ts`). The
  * state is read from the secure store, never the platform, so the index still
- * reads nothing for it.
+ * reads nothing for it. Turned off, nothing holds the session any more: it is
+ * unlocked (`useSession().unlock`), and turned on, the next cold start locks it
+ * (the build 13 review).
  */
 export function FaceIdRow({ size = 'regular', testID }: { size?: SettingsRowSize; testID?: string }) {
   const biometric = useBiometricWording();
+  const { unlock } = useSession();
   const [faceId, setFaceId] = useState(false);
   const [faceIdError, setFaceIdError] = useState<string | null>(null);
 
@@ -56,6 +60,7 @@ export function FaceIdRow({ size = 'regular', testID }: { size?: SettingsRowSize
       }
       await writeFaceIdEnabled(enabled);
       setFaceId(enabled);
+      if (!enabled) unlock();
     } catch {
       setFaceIdError(biometric.notSaved);
     }

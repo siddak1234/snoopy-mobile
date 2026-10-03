@@ -20,7 +20,6 @@ import { Pressable } from '@/components/pressable';
 import { em, fonts, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useSession } from '@/hooks/use-session';
-import { readFaceIdEnabled } from '@/lib/platform/session-store';
 
 /** CSS `ease-out` (a8xPulse timing). */
 const easeOut = Easing.out(Easing.ease);
@@ -51,12 +50,15 @@ export default function SplashScreen() {
   const navigatedRef = useRef(false);
   const mountedAtRef = useRef(Date.now());
   const signedIn = session.status === 'signed-in';
+  const locked = session.locked;
 
-  const enterWorkspace = useCallback(async () => {
+  // A session the Face ID lock holds goes to the lock: the root guard keeps the
+  // tabs from it until the lock's check passes (the build 13 review).
+  const enterWorkspace = useCallback(() => {
     if (navigatedRef.current || !signedIn) return;
     navigatedRef.current = true;
-    router.replace((await readFaceIdEnabled()) ? '/(auth)/faceid' : '/(tabs)/(home)');
-  }, [router, signedIn]);
+    router.replace(locked ? '/(auth)/faceid' : '/(tabs)/(home)');
+  }, [router, signedIn, locked]);
 
   const getStarted = useCallback(() => {
     if (navigatedRef.current) return;

@@ -166,8 +166,13 @@ export default function SetupScreen() {
   // A chosen team that has since gone (archived on a re-read) is no choice; none is chosen for the person.
   const scope =
     chosenScope !== undefined && scopes.some((option) => option.value === chosenScope) ? chosenScope : undefined;
-  const subscription = localSubscription ?? held ?? null;
-  const unmet = subscription?.unmetConnections ?? [];
+  // Where this flow is: the copy the workspace held, or the one this screen
+  // added. Added here, it is held from that moment — a draft still owed an
+  // account, or one whose activation failed — so it too is "Added to" its
+  // team, with no team choice: picking another team made a second copy (the
+  // build 13 review).
+  const placed = localSubscription ?? held;
+  const unmet = placed?.unmetConnections ?? [];
   // With no team yet, an owner or admin makes one here; a plain member cannot
   // (in an organization its owners and admins create teams, 24.12), and asks
   // to join one where the organization has one (`askable`, F84).
@@ -181,7 +186,7 @@ export default function SetupScreen() {
   const activate = async () => {
     // A team first (D4): nothing is added without one. A flow the workspace
     // holds, or added on this screen already, is configured where it is.
-    if (!subscription && !scope) {
+    if (!placed && !scope) {
       setActionError(SETUP_PICK_A_TEAM);
       return;
     }
@@ -202,7 +207,7 @@ export default function SetupScreen() {
         // A field this person cleared stays cleared: `??` read a cleared field
         // as untouched and put the default back under their thumb (24.7.3
         // attempt 2, feedback #4).
-        field.key in config ? config[field.key] : (subscription?.config[field.key] ?? field.defaultValue),
+        field.key in config ? config[field.key] : (placed?.config[field.key] ?? field.defaultValue),
       ]),
     );
     const missing = missingRequiredSetupFields(entry.setup, configured);
@@ -228,7 +233,7 @@ export default function SetupScreen() {
     setBusy(true);
     setActionError(null);
     try {
-      let current = subscription;
+      let current = placed;
       if (!current) {
         const created = await createSubscription(
           workspaceId,
@@ -302,10 +307,10 @@ export default function SetupScreen() {
         </View>
       </View>
 
-      {held ? (
+      {placed ? (
         <View testID="setup-held" style={styles.held}>
           <Text style={[styles.heldLabel, { color: palette.neutral[400] }]}>{SETUP_ADDED_TO}</Text>
-          <Text style={[styles.heldWhere, { color: palette.text }]}>{scopeLabel(held.projectId, labels)}</Text>
+          <Text style={[styles.heldWhere, { color: palette.text }]}>{scopeLabel(placed.projectId, labels)}</Text>
         </View>
       ) : projects.length > 0 ? (
         <ChoiceChips
@@ -313,9 +318,10 @@ export default function SetupScreen() {
           options={scopes}
           value={scope ?? ''}
           onChange={(next) => {
-            // Another scope is another subscription: a new intent from the start.
+            // Nothing is added yet — the chips go once it is — so another team
+            // is a new intent from the start: a create that failed for one
+            // team is not replayed, under its key, for another.
             setChosenScope(next);
-            setLocalSubscription(null);
             setActionError(null);
             createKey.current = newIdempotencyKey('subscribe');
             updateKey.current = newIdempotencyKey('activate');
@@ -402,7 +408,7 @@ export default function SetupScreen() {
                 value={
                   field.key in config
                     ? config[field.key]
-                    : (subscription?.config[field.key] ?? field.defaultValue)
+                    : (placed?.config[field.key] ?? field.defaultValue)
                 }
                 onChange={(next) => setField(field.key, next)}
                 divider={index < fields.length - 1}
@@ -417,7 +423,7 @@ export default function SetupScreen() {
       ) : null}
 
       {/* No Activate for a member with no team to add to and nothing held: nothing can be sent. */}
-      {held || projects.length > 0 || canCreateTeam ? (
+      {placed || projects.length > 0 || canCreateTeam ? (
         <Pressable
           disabled={busy}
           onPress={activate}

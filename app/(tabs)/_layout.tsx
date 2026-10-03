@@ -17,19 +17,23 @@ import { useSession } from '@/hooks/use-session';
  * data.
  *
  * Here, anything but `signed-in` draws nothing, so protected content never
- * flashes while the root's guard takes the tabs away. It never navigates: from
- * inside the tabs "/" names Home, not the cover, and the redirect to it that
- * stood here replaced the tabs with themselves, again and again (the owner's
- * build 12 item 6).
+ * flashes while the root's guard takes the tabs away — nor does a session the
+ * Face ID lock still holds (`locked`, the root guard's other half; the build
+ * 13 review). It never navigates: from inside the tabs "/" names Home, not the
+ * cover, and the redirect to it that stood here replaced the tabs with
+ * themselves, again and again (the owner's build 12 item 6).
  */
 export default function TabLayout() {
   const session = useSession();
+  const open = session.status === 'signed-in' && !session.locked;
   // Device push for the signed-in person (build 11, D8): an allowed phone kept
   // registered, the banner in the foreground, a tap's way in. Called before the
-  // guard, as every hook is, and idle until signed in; it never asks.
-  usePushRegistration(session.status === 'signed-in');
+  // guard, as every hook is, and idle until the session is open — signed in and
+  // past the Face ID lock — so a tap's screen waits for the lock as it waits
+  // for a sign-in. It never asks.
+  usePushRegistration(open);
 
-  if (session.status !== 'signed-in') return null;
+  if (!open) return null;
 
   return (
     <Tabs
