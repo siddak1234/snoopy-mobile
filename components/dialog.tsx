@@ -85,7 +85,7 @@ export function DialogText({
   );
 }
 
-/** One action. `danger` is for what cannot be undone; `accent` for the way on. */
+/** One action. `danger` is for what cannot be undone, in `palette.danger`; `accent` for the way on. */
 export function DialogButton({
   label,
   onPress,
@@ -100,8 +100,8 @@ export function DialogButton({
   testID?: string;
 }) {
   const { palette } = useTheme();
-  const color = tone === 'danger' ? status.err : tone === 'accent' ? palette.accent : palette.text;
-  const border = tone === 'danger' ? status.err : tone === 'accent' ? palette.accent : palette.neutral[700];
+  const color = tone === 'danger' ? palette.danger : tone === 'accent' ? palette.accent : palette.text;
+  const border = tone === 'danger' ? palette.danger : tone === 'accent' ? palette.accent : palette.neutral[700];
   return (
     <Pressable
       testID={testID}

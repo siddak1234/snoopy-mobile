@@ -85,7 +85,7 @@ export default function OrganizationScreen() {
 
   if (org.status === 'loading') return <ScreenLoading topInset={insets.top} />;
   if (org.status === 'offline') {
-    return <ScreenOffline onRetry={org.reload} onBack={() => router.back()} topInset={insets.top} />;
+    return <ScreenOffline onRetry={() => org.reload()} onBack={() => router.back()} topInset={insets.top} />;
   }
   if (org.status === 'unconfigured') {
     return <ScreenUnavailable title={errorTitleFor('organization')} onBack={() => router.back()} topInset={insets.top} />;
@@ -94,7 +94,7 @@ export default function OrganizationScreen() {
     return (
       <ScreenError
         title={errorTitleFor('organization')}
-        onRetry={org.reload}
+        onRetry={() => org.reload()}
         body={busyBody(org)}
         onBack={() => router.back()}
         topInset={insets.top}

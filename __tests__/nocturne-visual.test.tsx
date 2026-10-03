@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text } from 'react-native';
-import { Receipt } from 'phosphor-react-native';
+import { Receipt, Trash } from 'phosphor-react-native';
 
 import { AvatarBadge } from '@/components/nocturne/avatar-badge';
 import { BackCircle } from '@/components/nocturne/back-circle';
@@ -80,6 +80,8 @@ const CASES: { name: string; element: React.ReactElement }[] = [
   { name: 'PillButton/secondary', element: <PillButton label="Templates" variant="secondary" /> },
   { name: 'PillButton/accent-ghost', element: <PillButton label="Unlock" variant="accent-ghost" /> },
   { name: 'PillButton/plain', element: <PillButton label="See how it works" variant="plain" /> },
+  // The design's red pill (Screen.dc.html:450), added for the owner's build 12 item 5.
+  { name: 'PillButton/danger', element: <PillButton label="Delete Account" variant="danger" icon={Trash} /> },
   { name: 'SectionLabel', element: <SectionLabel>Recent runs</SectionLabel> },
   { name: 'Skeleton', element: <Skeleton width={214} height={22} /> },
   { name: 'StatCard', element: <StatCard value="1,284" label="Runs today" /> },

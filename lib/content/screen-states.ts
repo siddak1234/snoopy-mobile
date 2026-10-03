@@ -111,19 +111,23 @@ export const FLOWS_EMPTY_TITLE = 'No flows yet';
 export const FLOWS_EMPTY_BODY = 'Add a prebuilt flow — your first one can be live in minutes.';
 /**
  * Archived flows (24.11.8; "Archive flow" / "Archived flows" since the owner's
- * decision 4 of 2026-10-02, 24.12): kept with their history, addable again.
+ * decision 4 of 2026-10-02, 24.12): kept with their history. "Unarchive" since
+ * the owner's build 12 item 4 ("Rather than add it again what if we say
+ * unarchive") — a new word for what "Add it again" did, a fresh setup of the
+ * flow; the platform's archive stays one-way.
  */
 export const ARCHIVED_FLOWS_TITLE = 'Archived flows';
-export const ARCHIVED_FLOWS_NOTE = 'An archived flow keeps its history here. Add it again any time.';
+export const ARCHIVED_FLOWS_NOTE = 'An archived flow keeps its history here. Unarchive it any time.';
 export const ARCHIVED_FLOWS_EMPTY_TITLE = 'No archived flows';
-export const ARCHIVED_FLOWS_EMPTY_BODY = 'A flow you archive keeps its history here, and you can add it again.';
+export const ARCHIVED_FLOWS_EMPTY_BODY = 'A flow you archive keeps its history here, and you can unarchive it.';
 export function archivedFlowBody(archivedOn?: string): string {
-  return `This flow was archived${archivedOn ? ` on ${archivedOn}` : ''}. Its runs stay in Activity, and you can add it again — its setup starts fresh.`;
+  return `This flow was archived${archivedOn ? ` on ${archivedOn}` : ''}. Its runs stay in Activity, and you can unarchive it — its setup starts fresh.`;
 }
-export const ADD_AGAIN_LABEL = 'Add it again';
+export const UNARCHIVE_LABEL = 'Unarchive';
 /**
- * The archived flow has a live twin — added again in the same scope (build 11,
- * D3): no "Add it again"; the twin's page is one tap away.
+ * The archived flow has a live twin — the workspace holds it again, in any
+ * team (build 11, D3; any team since the owner's build 12 item 9): no
+ * "Unarchive"; the twin's page is one tap away.
  */
 export function archivedFlowAddedAgainBody(archivedOn?: string): string {
   return `This flow was archived${archivedOn ? ` on ${archivedOn}` : ''}. Its runs stay in Activity. It has been added again, and the new copy is in Flows.`;
@@ -165,8 +169,11 @@ export const ARCHIVED_FLOWS_LABEL = 'Archived flows';
  * plain member asks to join one where the organization has a team they are not
  * on — the team directory lists one — with See teams (F84: found by the
  * website's change audit, 2026-10-03, where the member line was false), and
- * otherwise waits for an owner or admin to make the first.
+ * otherwise waits for an owner or admin to make the first. A flow the
+ * workspace already holds is not added again (the owner's build 12 item 9):
+ * Setup says where it is, under "Added to", and offers no team.
  */
+export const SETUP_ADDED_TO = 'Added to';
 export const SETUP_PICK_A_TEAM = 'Pick a team.';
 export const SETUP_CREATE_A_TEAM_FIRST = 'Create a team first.';
 export const SETUP_CREATE_A_TEAM = 'Create a team';

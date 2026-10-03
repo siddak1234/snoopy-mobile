@@ -25,6 +25,8 @@ import { WorkflowsProvider, useWorkflows } from '@/hooks/use-workflows';
 function sessionFor(state: SessionState): SessionContextValue {
   return {
     ...state,
+    locked: false,
+    unlock: () => {},
     refresh: () => {},
     reload: async () => ({ status: 'signed-in' as const }),
     signIn: async () => ({ status: 'unconfigured', message: '' }),

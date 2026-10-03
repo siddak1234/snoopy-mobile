@@ -2,7 +2,9 @@ import React from 'react';
 import { Pressable, Text } from 'react-native';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
+import { FaceIdRow } from '@/components/settings/face-id-row';
 import { SessionProvider, useSession } from '@/hooks/use-session';
+import { NocturneThemeProvider } from '@/hooks/use-theme';
 import {
   PlatformError,
   PlatformNotConfiguredError,
@@ -28,6 +30,8 @@ jest.mock('@/lib/platform/session-store', () => ({
   clearSession: jest.fn(),
   readRememberSession: jest.fn(async () => true),
   writeRememberSession: jest.fn(async () => undefined),
+  readFaceIdEnabled: jest.fn(async () => false),
+  writeFaceIdEnabled: jest.fn(async () => undefined),
 }));
 
 jest.mock('@/lib/platform/native-auth', () => ({
@@ -37,7 +41,8 @@ jest.mock('@/lib/platform/native-auth', () => ({
 }));
 
 const { platformOperation } = jest.requireMock('@/lib/platform/client');
-const { readSession, clearSession, readRememberSession } = jest.requireMock('@/lib/platform/session-store');
+const { readSession, clearSession, readRememberSession, readFaceIdEnabled, writeFaceIdEnabled } =
+  jest.requireMock('@/lib/platform/session-store');
 const { refreshSession, signInWithProvider, signOut } = jest.requireMock('@/lib/platform/native-auth');
 
 function Probe() {
@@ -61,6 +66,8 @@ beforeEach(() => {
   readSession.mockReset().mockResolvedValue(null);
   clearSession.mockReset().mockResolvedValue(undefined);
   readRememberSession.mockReset().mockResolvedValue(true);
+  readFaceIdEnabled.mockReset().mockResolvedValue(false);
+  writeFaceIdEnabled.mockReset().mockResolvedValue(undefined);
   refreshSession.mockReset().mockResolvedValue({ status: 'refreshed' });
 });
 
@@ -342,5 +349,147 @@ describe('SessionProvider and the shared snapshot', () => {
     expect(signInWithProvider).toHaveBeenCalledWith('google');
     await readWorkspaces();
     expect(listReads()).toBe(2);
+  });
+});
+
+/**
+ * The Face ID lock (the build 13 review): `locked` is what the root guard reads
+ * beside `signed-in`. A cold start locks a stored session whose owner turned
+ * Face ID on — from the first render, so the guard never opens on a guess — and
+ * the lock's own check, a sign-in, or Face ID turned off opens it; only the next
+ * cold start locks it again. Where the guard then lands is the real-router
+ * project's (`__tests__/real-router/face-id-lock.test.tsx`).
+ */
+describe('SessionProvider: the Face ID lock', () => {
+  /** Every render's status and lock, in order. */
+  const drawn: string[] = [];
+
+  function LockProbe() {
+    const session = useSession();
+    drawn.push(`${session.status} ${session.locked ? 'locked' : 'open'}`);
+    return (
+      <>
+        <Text>{`${session.status} ${session.locked ? 'locked' : 'open'}`}</Text>
+        <Pressable testID="unlock" onPress={() => session.unlock()}>
+          <Text>unlock</Text>
+        </Pressable>
+        <Pressable testID="refresh" onPress={() => session.refresh()}>
+          <Text>refresh</Text>
+        </Pressable>
+        <Pressable testID="sign-in" onPress={() => void session.signIn('google')}>
+          <Text>sign in</Text>
+        </Pressable>
+      </>
+    );
+  }
+
+  /** A remembered session this phone holds, its owner's Face ID choice, and the platform answering it. */
+  function storedSession(faceId: boolean) {
+    readSession.mockResolvedValue({
+      accessToken: 'live-access',
+      refreshToken: 'live-refresh',
+      expiresAt: Date.now() + 60 * 60 * 1000,
+    });
+    readFaceIdEnabled.mockResolvedValue(faceId);
+    platformOperation.mockResolvedValue(sessionFor('ws-1'));
+  }
+
+  /** A cold start: the provider mounts and restores. */
+  async function coldStart(children: React.ReactNode = <LockProbe />) {
+    const view = await render(
+      <NocturneThemeProvider>
+        <SessionProvider>{children}</SessionProvider>
+      </NocturneThemeProvider>,
+    );
+    await screen.findByText(/^signed-in /u);
+    return view;
+  }
+
+  beforeEach(() => {
+    drawn.length = 0;
+  });
+
+  it('locks a stored session whose owner turned Face ID on from the first render: never once signed in and open', async () => {
+    storedSession(true);
+    await coldStart();
+    expect(screen.getByText('signed-in locked')).toBeTruthy();
+    expect(drawn[0]).toBe('restoring locked');
+    expect(drawn).not.toContain('signed-in open');
+  });
+
+  it('with Face ID off, a stored session is open', async () => {
+    storedSession(false);
+    await coldStart();
+    expect(screen.getByText('signed-in open')).toBeTruthy();
+  });
+
+  it("the lock's check opens it, a later refresh does not lock it again, and the next cold start does", async () => {
+    storedSession(true);
+    const first = await coldStart();
+    expect(screen.getByText('signed-in locked')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('unlock'));
+    expect(screen.getByText('signed-in open')).toBeTruthy();
+
+    // A refresh re-runs the launch's reads, and is not a cold start: what it
+    // draws, once its session read has answered, is open.
+    const before = drawn.length;
+    await fireEvent.press(screen.getByTestId('refresh'));
+    await waitFor(() => expect(platformOperation).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(drawn.length).toBeGreaterThan(before));
+    expect(drawn.slice(before)).toEqual(['signed-in open']);
+
+    await first.unmount();
+    await coldStart();
+    expect(screen.getByText('signed-in locked')).toBeTruthy();
+  });
+
+  it('a sign-in opens a locked session: it is its own proof', async () => {
+    storedSession(true);
+    await coldStart();
+    expect(screen.getByText('signed-in locked')).toBeTruthy();
+    signInWithProvider.mockResolvedValue({ status: 'signed-in' });
+    await fireEvent.press(screen.getByTestId('sign-in'));
+    await waitFor(() => expect(screen.getByText('signed-in open')).toBeTruthy());
+  });
+
+  it('a sign-in after a cold start that ended signed out decides the lock: a refresh does not lock it, though Face ID was turned on since', async () => {
+    // The cold start finds no session: signed out, and nothing decided.
+    platformOperation.mockRejectedValue(new PlatformError('Sign in is required.', 401, 'UNAUTHENTICATED'));
+    await render(
+      <SessionProvider>
+        <LockProbe />
+      </SessionProvider>,
+    );
+    await screen.findByText(/^signed-out /u);
+
+    signInWithProvider.mockResolvedValue({ status: 'signed-in' });
+    platformOperation.mockReset().mockResolvedValue(sessionFor('ws-1'));
+    await fireEvent.press(screen.getByTestId('sign-in'));
+    await screen.findByText('signed-in open');
+
+    // The new session is kept, and its owner turned Face ID on (the question after a sign-in).
+    storedSession(true);
+    const before = drawn.length;
+    await fireEvent.press(screen.getByTestId('refresh'));
+    await waitFor(() => expect(platformOperation).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(drawn.length).toBeGreaterThan(before));
+    expect(drawn.slice(before)).toEqual(['signed-in open']);
+  });
+
+  it("turning Face ID off on Settings' row opens a locked session", async () => {
+    storedSession(true);
+    await coldStart(
+      <>
+        <LockProbe />
+        <FaceIdRow />
+      </>,
+    );
+    expect(screen.getByText('signed-in locked')).toBeTruthy();
+    // The row reads the choice it shows from the keychain: on.
+    await waitFor(() => expect(screen.getByRole('switch').props.accessibilityState).toMatchObject({ checked: true }));
+
+    await fireEvent.press(screen.getByRole('switch'));
+    await waitFor(() => expect(writeFaceIdEnabled).toHaveBeenCalledWith(false));
+    await waitFor(() => expect(screen.getByText('signed-in open')).toBeTruthy());
   });
 });

@@ -189,14 +189,14 @@ export default function DataExportScreen() {
 
   if (access.status === 'loading') return <ScreenLoading topInset={insets.top} />;
   if (access.status === 'offline') {
-    return <ScreenOffline onRetry={access.reload} onBack={() => router.back()} topInset={insets.top} />;
+    return <ScreenOffline onRetry={() => access.reload()} onBack={() => router.back()} topInset={insets.top} />;
   }
   if (access.status === 'unconfigured') {
     return <ScreenUnavailable title={errorTitleFor('data')} onBack={() => router.back()} topInset={insets.top} />;
   }
   if (access.status === 'error') {
     return (
-      <ScreenError title={errorTitleFor('data')} onRetry={access.reload} body={busyBody(access)} onBack={() => router.back()} topInset={insets.top} />
+      <ScreenError title={errorTitleFor('data')} onRetry={() => access.reload()} body={busyBody(access)} onBack={() => router.back()} topInset={insets.top} />
     );
   }
 

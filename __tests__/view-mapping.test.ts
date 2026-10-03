@@ -9,6 +9,7 @@ import {
   relativeTimeAgo,
 } from '@/lib/view/format';
 import { hasIcon, iconFor } from '@/lib/view/icon-registry';
+import { organizationValue } from '@/lib/view/organization';
 import {
   isContinuation,
   runOriginLabel,
@@ -216,5 +217,38 @@ describe('iconFor', () => {
     expect(iconFor('SomeIconShippedLater')).toBeDefined();
     expect(iconFor(null)).toBeDefined();
     expect(iconFor('')).toBeDefined();
+  });
+});
+
+describe("organizationValue — the Settings index's Organization row, from the session (the owner's build 12 item 3)", () => {
+  type Workspace = Parameters<typeof organizationValue>[0][number];
+  const personal: Workspace = { id: 'p', name: 'Alex Kim', type: 'personal', role: 'owner' };
+  const sikho: Workspace = { id: 'o1', name: 'Sikho Mode Solutions', type: 'organization', role: 'owner' };
+  const acme: Workspace = { id: 'o2', name: 'Acme Operations', type: 'organization', role: 'member' };
+
+  it('names the active organization, whatever the role, and whatever else is listed', () => {
+    expect(organizationValue([personal, sikho], sikho, false)).toBe('Sikho Mode Solutions');
+    expect(organizationValue([personal, sikho, acme], acme, false)).toBe('Acme Operations');
+    // The session's own list is cut off: the active one is still known by name.
+    expect(organizationValue([personal, acme], acme, true)).toBe('Acme Operations');
+  });
+
+  it('from a personal workspace, names the one organization the session lists', () => {
+    expect(organizationValue([personal, sikho], personal, false)).toBe('Sikho Mode Solutions');
+  });
+
+  it('from a personal workspace, counts several', () => {
+    expect(organizationValue([personal, sikho, acme], personal, false)).toBe('2 organizations');
+  });
+
+  it('from a personal workspace in none, says None', () => {
+    expect(organizationValue([personal], personal, false)).toBe('None');
+    expect(organizationValue([personal], personal, undefined)).toBe('None');
+    // A workspace with no type said is not an organization.
+    expect(organizationValue([{ id: 'w', name: 'Acme', role: 'owner' } as Workspace], undefined, undefined)).toBe('None');
+  });
+
+  it('says nothing when the list is cut off and shows no organization — one may lie past the cut', () => {
+    expect(organizationValue([personal], personal, true)).toBeUndefined();
   });
 });

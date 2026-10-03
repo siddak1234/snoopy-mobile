@@ -20,6 +20,7 @@ import {
   ScreenError,
   ScreenLoading,
   ScreenOffline,
+  ScreenUnavailable,
 } from '@/components/screen-state';
 import { Pressable } from '@/components/pressable';
 import { CreateTeamDialog } from '@/components/teams/create-team-dialog';
@@ -30,6 +31,7 @@ import { useSolutions } from '@/hooks/use-solutions';
 import { useTheme } from '@/hooks/use-theme';
 import { WORKSPACE_CHANGED, addRefusalMessage } from '@/lib/content/refusals';
 import {
+  SETUP_ADDED_TO,
   SETUP_ASK_TO_JOIN_A_TEAM_FIRST,
   SETUP_CREATE_A_TEAM,
   SETUP_CREATE_A_TEAM_FIRST,
@@ -45,7 +47,7 @@ import { newIdempotencyKey } from '@/lib/platform/client';
 import { PlatformNotConfiguredError } from '@/lib/platform/problem';
 import { readProjects, teamDirectoryIfThere } from '@/lib/platform/projects';
 import { readSubscriptions } from '@/lib/platform/runs';
-import { withoutArchived } from '@/lib/view/catalog';
+import { heldAs, scopeLabel, scopeLabels } from '@/lib/view/catalog';
 import { administers } from '@/lib/view/roles';
 
 /** One-time setup generated from the selected manifest. */
@@ -66,7 +68,8 @@ export default function SetupScreen() {
   // 10 item 7: "Each flow has to be in a team"); there is no whole-workspace
   // choice. The catalog passes the team the scope control had chosen (24.9.3),
   // so it is not chosen twice; under All teams, and for a whole-workspace flow
-  // added again, it is unset until the person picks one here.
+  // unarchived, it is unset until the person picks one here. A flow the
+  // workspace holds already has no choice: it stays where it is (item 9).
   const [chosenScope, setChosenScope] = useState<string | undefined>(project || undefined);
   const [creatingTeam, setCreatingTeam] = useState(false);
   const createKey = useRef(newIdempotencyKey('subscribe'));
@@ -97,11 +100,14 @@ export default function SetupScreen() {
         open.length === 0 && (await teamDirectoryIfThere(id)).some((entry) => entry.access !== 'member');
       return {
         entry: catalog.automations.find((item) => item.templateId === template),
-        // Its subscriptions, one per scope at most. An archived one is gone:
-        // adding it again makes a new subscription.
-        subscriptions: withoutArchived(subscriptions.subscriptions).filter((item) => item.templateId === template),
+        // Where the workspace holds it, in any team (the owner's build 12 item
+        // 9): one copy, or two added before the rule. An archived one is gone:
+        // unarchiving makes a new subscription.
+        subscriptions: heldAs(template, subscriptions.subscriptions),
         providers: new Map(providers.providers.map((item) => [item.providerId, item.displayName])),
         projects: open,
+        // Every team's name, an archived team's too: a held flow says where it is.
+        labels: scopeLabels(projects),
         askable,
         // The accounts this workspace holds: the Connections step reads its state here.
         connected: new Set(
@@ -132,20 +138,25 @@ export default function SetupScreen() {
 
   if (resource.status === 'loading') return <ScreenLoading topInset={insets.top} />;
   if (resource.status === 'offline') {
-    return <ScreenOffline onRetry={resource.reload} onBack={() => router.back()} topInset={insets.top} />;
+    return <ScreenOffline onRetry={() => resource.reload()} onBack={() => router.back()} topInset={insets.top} />;
+  }
+  if (resource.status === 'unconfigured') {
+    // No backend, no workspace, or no flow named: a second attempt cannot change
+    // that, so no Retry (the unavailable state, as every fetching screen has).
+    return <ScreenUnavailable title={errorTitleFor('setup')} onBack={() => router.back()} topInset={insets.top} />;
   }
   if (resource.status !== 'ready' || !resource.data.entry) {
     return (
       <ScreenError
         title={errorTitleFor('setup')}
-        onRetry={resource.reload} body={busyBody(resource)}
+        onRetry={() => resource.reload()} body={busyBody(resource)}
         onBack={() => router.back()}
         topInset={insets.top}
       />
     );
   }
 
-  const { entry, providers, projects, askable, connected } = resource.data;
+  const { entry, providers, projects, labels, askable, connected } = resource.data;
   // Step 1 is the accounts the automation needs, when it needs any (24.7.3
   // attempt 4, feedback #5: every step numbered 1…N, connections included). The
   // entry publishes them since 2026-10-02. A platform from before that date —
@@ -155,12 +166,19 @@ export default function SetupScreen() {
   const required = entry.requiredConnections ?? [];
   const sectionOffset = required.length > 0 ? 1 : 0;
   const scopes = projects.map((project) => ({ value: project.id, label: `Team: ${project.type}` }));
-  const inScope = (value: string) => resource.data.subscriptions.find((item) => item.projectId === value);
+  // The copy the workspace holds already (the owner's build 12 item 9): Setup
+  // configures that one, where it is, and adds no second — so no team choice.
+  const held = resource.data.subscriptions[0];
   // A chosen team that has since gone (archived on a re-read) is no choice; none is chosen for the person.
   const scope =
     chosenScope !== undefined && scopes.some((option) => option.value === chosenScope) ? chosenScope : undefined;
-  const subscription = localSubscription ?? (scope ? inScope(scope) : undefined) ?? null;
-  const unmet = subscription?.unmetConnections ?? [];
+  // Where this flow is: the copy the workspace held, or the one this screen
+  // added. Added here, it is held from that moment — a draft still owed an
+  // account, or one whose activation failed — so it too is "Added to" its
+  // team, with no team choice: picking another team made a second copy (the
+  // build 13 review).
+  const placed = localSubscription ?? held;
+  const unmet = placed?.unmetConnections ?? [];
   // With no team yet, an owner or admin makes one here; a plain member cannot
   // (in an organization its owners and admins create teams, 24.12), and asks
   // to join one where the organization has one (`askable`, F84).
@@ -172,8 +190,9 @@ export default function SetupScreen() {
   };
 
   const activate = async () => {
-    // A team first (D4): nothing is sent without one.
-    if (!scope) {
+    // A team first (D4): nothing is added without one. A flow the workspace
+    // holds, or added on this screen already, is configured where it is.
+    if (!placed && !scope) {
       setActionError(SETUP_PICK_A_TEAM);
       return;
     }
@@ -194,7 +213,7 @@ export default function SetupScreen() {
         // A field this person cleared stays cleared: `??` read a cleared field
         // as untouched and put the default back under their thumb (24.7.3
         // attempt 2, feedback #4).
-        field.key in config ? config[field.key] : (subscription?.config[field.key] ?? field.defaultValue),
+        field.key in config ? config[field.key] : (placed?.config[field.key] ?? field.defaultValue),
       ]),
     );
     const missing = missingRequiredSetupFields(entry.setup, configured);
@@ -220,7 +239,7 @@ export default function SetupScreen() {
     setBusy(true);
     setActionError(null);
     try {
-      let current = subscription;
+      let current = placed;
       if (!current) {
         const created = await createSubscription(
           workspaceId,
@@ -294,15 +313,21 @@ export default function SetupScreen() {
         </View>
       </View>
 
-      {projects.length > 0 ? (
+      {placed ? (
+        <View testID="setup-held" style={styles.held}>
+          <Text style={[styles.heldLabel, { color: palette.neutral[400] }]}>{SETUP_ADDED_TO}</Text>
+          <Text style={[styles.heldWhere, { color: palette.text }]}>{scopeLabel(placed.projectId, labels)}</Text>
+        </View>
+      ) : projects.length > 0 ? (
         <ChoiceChips
           label="Add to"
           options={scopes}
           value={scope ?? ''}
           onChange={(next) => {
-            // Another scope is another subscription: a new intent from the start.
+            // Nothing is added yet — the chips go once it is — so another team
+            // is a new intent from the start: a create that failed for one
+            // team is not replayed, under its key, for another.
             setChosenScope(next);
-            setLocalSubscription(null);
             setActionError(null);
             createKey.current = newIdempotencyKey('subscribe');
             updateKey.current = newIdempotencyKey('activate');
@@ -389,7 +414,7 @@ export default function SetupScreen() {
                 value={
                   field.key in config
                     ? config[field.key]
-                    : (subscription?.config[field.key] ?? field.defaultValue)
+                    : (placed?.config[field.key] ?? field.defaultValue)
                 }
                 onChange={(next) => setField(field.key, next)}
                 divider={index < fields.length - 1}
@@ -403,8 +428,8 @@ export default function SetupScreen() {
         <ActionFailure message={actionError} retryLabel="Try again" onRetry={activate} />
       ) : null}
 
-      {/* No Activate for a member with no team to add to: nothing can be sent. */}
-      {projects.length > 0 || canCreateTeam ? (
+      {/* No Activate for a member with no team to add to and nothing held: nothing can be sent. */}
+      {placed || projects.length > 0 || canCreateTeam ? (
         <Pressable
           disabled={busy}
           onPress={activate}
@@ -449,6 +474,9 @@ const styles = StyleSheet.create({
     letterSpacing: em(-0.01, typeScale.heading.fontSize),
   },
   subtitle: { marginTop: 1, fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
+  held: { gap: 6 },
+  heldLabel: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
+  heldWhere: { fontFamily: fonts.medium, fontSize: typeScale.body.fontSize },
   noTeam: { gap: 10, alignItems: 'flex-start' },
   noTeamLine: { fontFamily: fonts.regular, ...typeScale.body },
   sectionCard: { marginTop: 9 },

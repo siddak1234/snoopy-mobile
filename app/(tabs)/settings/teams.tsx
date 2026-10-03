@@ -94,7 +94,7 @@ export default function TeamsScreen() {
 
   if (teams.status === 'loading') return <ScreenLoading topInset={insets.top} />;
   if (teams.status === 'offline') {
-    return <ScreenOffline onRetry={teams.reload} onBack={() => router.back()} topInset={insets.top} />;
+    return <ScreenOffline onRetry={() => teams.reload()} onBack={() => router.back()} topInset={insets.top} />;
   }
   if (teams.status === 'unconfigured') {
     return <ScreenUnavailable title={errorTitleFor('teams')} onBack={() => router.back()} topInset={insets.top} />;
@@ -103,7 +103,7 @@ export default function TeamsScreen() {
     return (
       <ScreenError
         title={errorTitleFor('teams')}
-        onRetry={teams.reload}
+        onRetry={() => teams.reload()}
         body={busyBody(teams)}
         onBack={() => router.back()}
         topInset={insets.top}
@@ -245,6 +245,8 @@ export default function TeamsScreen() {
           testID="withdraw-request-dialog"
           title={`Withdraw your request to join ${withdrawing.entry.type}?`}
           body="You can ask again any time."
+          // Asking again undoes it, so it is not red (the owner's build 12 item 5; the website's rule too).
+          tone="accent"
           confirmLabel="Withdraw"
           busyLabel="Withdrawing…"
           fallback="Your request could not be withdrawn."

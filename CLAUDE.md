@@ -79,7 +79,8 @@ repository, stop.
    (no checkout, no portal), which the platform's Pro replaces once listed; the
    workspace's card says "Enrolled" with its status. The cards are compact,
    at their natural height (D2). The enrolled plan is one rule,
-   `lib/view/billing.ts`, shared with the Settings index's plan line, which
+   `lib/view/billing.ts`, shared with the plan's name on the Settings index —
+   Billing's value, before the arrow (the owner's build 12 item 2) — which
    reads the workspace's billing quietly through the shared snapshot for an
    owner or admin (D1). On iOS, not paying, a paid card opens the hosted
    checkout for that plan; paying, any other card opens Manage billing, since a
@@ -105,9 +106,38 @@ repository, stop.
     - `Pressable` and `pressed()` (`components/pressable.tsx`): every press
       ticks, through the one helper; a press with no handler, a disabled
       control and the signed-out cover give none (build 11, D7).
+    - `heldAs()` (`lib/view/catalog.ts`): a workspace holds a flow once (the
+      owner's build 12 item 9) — any subscription of its template that is not
+      archived, in any team or the whole workspace. Add reads a held flow
+      "Added ✓" and Setup configures it, never adding a second; a copy Setup
+      has just added is held from that moment (the build 13 review).
     - `addedAgainAs()` (`lib/view/catalog.ts`): an archived flow's live twin —
-      the same template in the same scope, null matching null only — and with
-      one, no "Add it again" (D3). `scopeLabels()` labels every flow (D4).
+      the same template in any team or the whole workspace (`heldAs`, the
+      owner's build 12 item 9) — and with one, no "Unarchive" (D3).
+      `scopeLabels()` labels every flow (D4).
+11. **Where a screen goes is proved under the real router** (build 13, the
+    owner's build 12 item 6). Jest runs two projects (`package.json`
+    `jest.projects`), and `npm test`, so `verify` and CI, runs both: `unit` maps
+    expo-router to `test/mocks/expo-router.tsx`, which records an href and runs
+    no navigator — how build 8–12's Sign out passed every test while it was
+    dropped on the phone — and `real-router` (`__tests__/real-router/`, harness
+    `test/real-router.tsx`) runs the app's own tree under the real expo-router.
+    A change to sign-in, sign-out, the guard, a redirect, or the params a screen
+    takes on arrival gets a test there. The auth boundary is the root layout's
+    `Stack.Protected`, which admits the tabs only signed in and past the Face
+    ID lock (`locked`, `hooks/use-session.tsx`; the build 13 review); nothing
+    inside the tabs navigates to "/", which there names Home, not the cover.
+12. **Every press has a test that presses it and asserts its outcome** (build
+    13, B9): the screen and params it opens, the request it sends (method,
+    path, body), the dialog it opens or closes, what changes on screen, or the
+    refusal it says — never only that a mock was called. `audit:presses`
+    (`scripts/audit-presses.mjs`, coverage-based, in `verify` and CI) resolves
+    every `onPress` and `onLongPress` in `app/` and `components/` to the
+    function it runs and fails when no test ran it, or when it cannot tell
+    which function that is (write a hook's function as `() => x.reload()`). A
+    press repeated across screens — Retry, Back, a dialog's Cancel — is one
+    table-driven test (`it.each`), not a copy per screen. The register is
+    `DESIGN-GAPS.md`, "Every press, its test (build 13)".
 
 ## Release configuration, pinned
 

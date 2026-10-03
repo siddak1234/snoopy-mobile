@@ -191,7 +191,7 @@ export default function BillingScreen() {
 
   if (billing.status === 'loading') return <ScreenLoading topInset={insets.top} />;
   if (billing.status === 'offline') {
-    return <ScreenOffline onRetry={billing.reload} onBack={() => router.back()} topInset={insets.top} />;
+    return <ScreenOffline onRetry={() => billing.reload()} onBack={() => router.back()} topInset={insets.top} />;
   }
   if (billing.status === 'unconfigured') {
     return <ScreenUnavailable title={errorTitleFor('billing')} onBack={() => router.back()} topInset={insets.top} />;
@@ -200,7 +200,7 @@ export default function BillingScreen() {
     return (
       <ScreenError
         title={errorTitleFor('billing')}
-        onRetry={billing.reload}
+        onRetry={() => billing.reload()}
         body={busyBody(billing)}
         onBack={() => router.back()}
         topInset={insets.top}

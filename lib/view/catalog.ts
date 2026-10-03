@@ -112,26 +112,40 @@ export function scopeLabels(
   return new Map(projects.map((project) => [project.id, project.type]));
 }
 
+/** One flow's label from `scopeLabels`: "Team: {kind}", or "Whole workspace" (D4). */
+export function scopeLabel(projectId: string | null | undefined, labels: ReadonlyMap<string, string>): string {
+  return projectId ? `Team: ${labels.get(projectId) ?? 'a team'}` : 'Whole workspace';
+}
+
+/**
+ * Where the workspace holds a flow (the owner's build 12 item 9: "Teams cannot
+ * have the same flows. One flow per account type. Personal or org not multiple
+ * of the same in account type."): its subscriptions that are not archived —
+ * live, paused or draft — in any team or the whole workspace. A workspace holds
+ * a flow once — Personal is one workspace, each organization one — so this is
+ * one subscription, or two where a workspace added a flow to two teams before
+ * the rule, both kept and both listed. Add reads a held flow as "Added ✓" and
+ * Setup configures it rather than adding a second. The rule is the clients' in
+ * build 13: the platform still accepts one copy per team (18.6.2) until its
+ * own guard lands.
+ */
+export function heldAs(templateId: string, subscriptions: readonly Subscription[]): Subscription[] {
+  return withoutArchived([...subscriptions]).filter((candidate) => candidate.templateId === templateId);
+}
+
 /**
  * The live twin of an archived subscription (build 11, D3; the owner's build
  * 10 items 5, 6 and 11: "I already added it back I shouldnt see add it again"):
- * a subscription that is not archived — live, paused or draft, since the
- * platform refuses a second subscribe for each — with the same template AND
- * the same scope, the whole workspace matching the whole workspace only: a
- * team's copy is another scope, and `null` matches `null`. That is the
- * platform's own uniqueness, one non-archived row per workspace, template and
- * project. With a twin the archived page offers no "Add it again"; it opens
- * the twin instead.
+ * the workspace holds its flow again (`heldAs`), in any team or the whole
+ * workspace. Until the owner's build 12 item 9 it had to be in the same scope
+ * too — the platform's per-team uniqueness. With a twin the archived page
+ * offers no "Unarchive"; it opens the twin instead.
  */
 export function addedAgainAs(
-  archived: Pick<Subscription, 'templateId' | 'projectId'>,
+  archived: Pick<Subscription, 'templateId'>,
   subscriptions: readonly Subscription[],
 ): Subscription | undefined {
-  return withoutArchived([...subscriptions]).find(
-    (candidate) =>
-      candidate.templateId === archived.templateId &&
-      (candidate.projectId ?? null) === (archived.projectId ?? null),
-  );
+  return heldAs(archived.templateId, subscriptions)[0];
 }
 
 export function toSolution(entry: CatalogEntry, subscribed: boolean): SolutionView {
@@ -228,15 +242,19 @@ export type StatTileView = { value: string; label: string; tone: 'text' | 'ok' |
  * The three tiles Home draws, from `run-stats`' workspace counts.
  *
  * §12.1 #73b names these three of the seven statuses and no others: `total` is
- * "Runs today", `succeeded` is "Successes", `failed` is "Failures". The other
- * four — pending, running, held, cancelled — are deliberately not shown; adding a
+ * the runs, `succeeded` "Successes", `failed` "Failures". The other four —
+ * pending, running, held, cancelled — are deliberately not shown; adding a
  * fourth tile would be a design change, and the UI is frozen.
+ *
+ * The window is today, and Home says so once, over the row (TODAY), so each tile
+ * reads as a flow page's does — "Runs", not "Runs today" beside two that named
+ * no window (the owner's build 12 item 1).
  *
  * `count()` rather than `String()` so 1284 reads "1,284" as the design draws it.
  */
 export function toStatTiles(counts: RunStatusCounts): StatTileView[] {
   return [
-    { value: count(counts.total), label: 'Runs today', tone: 'text' },
+    { value: count(counts.total), label: 'Runs', tone: 'text' },
     { value: count(counts.succeeded), label: 'Successes', tone: 'ok' },
     { value: count(counts.failed), label: 'Failures', tone: 'err' },
   ];
@@ -379,13 +397,7 @@ function flowFrom(
         tone: 'neutral' as const,
         status: 'Not connected',
       })),
-      ...(projectNames
-        ? {
-            scope: sub.projectId
-              ? `Team: ${projectNames.get(sub.projectId) ?? 'a team'}`
-              : 'Whole workspace',
-          }
-        : {}),
+      ...(projectNames ? { scope: scopeLabel(sub.projectId, projectNames) } : {}),
     };
   }
 }

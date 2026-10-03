@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { components } from '@/lib/generated/platform-contracts/platform';
 import { readCurrentSession } from '@/lib/platform/auth';
@@ -11,7 +11,13 @@ import {
 } from '@/lib/platform/native-auth';
 import { PlatformError, PlatformNotConfiguredError } from '@/lib/platform/problem';
 import { onSessionEnded } from '@/lib/platform/session-recovery';
-import { clearSession, readRememberSession, readSession, writeRememberSession } from '@/lib/platform/session-store';
+import {
+  clearSession,
+  readFaceIdEnabled,
+  readRememberSession,
+  readSession,
+  writeRememberSession,
+} from '@/lib/platform/session-store';
 import { resetSnapshot } from '@/lib/platform/snapshot';
 
 /**
@@ -26,6 +32,9 @@ import { resetSnapshot } from '@/lib/platform/snapshot';
  * whether this build lacks configuration or the platform is temporarily down.
  * Neither state is permission to enter the protected tab tree: the route guard
  * fails closed until the platform has positively resolved `signed-in`.
+ *
+ * Nor is `signed-in` alone, when the owner chose Face ID: the session is
+ * `locked` until the lock's check passes (`locked` below; the build 13 review).
  */
 
 type SessionResponse = components['schemas']['SessionResponse'];
@@ -65,6 +74,20 @@ export type SessionReloadOutcome =
   | { status: 'unavailable'; message: string };
 
 export type SessionContextValue = SessionState & {
+  /**
+   * Whether the Face ID lock still holds this session (DESIGN-CONTRACT.md: an
+   * enabled Face ID preference gates an existing session). A cold start locks
+   * a stored session whose owner turned Face ID on, and the session is locked
+   * until that is known, so nothing opens on a guess. The lock's own check
+   * passing opens it (`unlock`), as do a sign-in — its own proof — and turning
+   * Face ID off; only the next cold start locks again. The root guard admits
+   * the tabs only `signed-in` AND unlocked, so a link that arrives while the
+   * lock shows opens nothing: a tab, before, without Face ID (the build 13
+   * review).
+   */
+  locked: boolean;
+  /** The lock's check passed, or Face ID was turned off: nothing holds this session now. */
+  unlock: () => void;
   /** Re-resolve the session — after signing in, or to retry an outage. */
   refresh: () => void;
   /**
@@ -91,6 +114,12 @@ export const SessionContext = createContext<SessionContextValue | null>(null);
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<SessionState>({ status: 'restoring' });
   const [attempt, setAttempt] = useState(0);
+  // Locked until the cold start says otherwise (`locked`, above).
+  const [locked, setLocked] = useState(true);
+  // Whether this run of the app has decided its lock: the first restore that
+  // reaches a session, or a sign-in before it. A later restore (`refresh()`)
+  // keeps what was decided: only a cold start locks.
+  const lockDecided = useRef(false);
 
   const refresh = useCallback(() => setAttempt((value) => value + 1), []);
 
@@ -124,7 +153,17 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         }
 
         const session = await readCurrentSession();
-        if (!cancelled) setState({ status: 'signed-in', session });
+        if (cancelled) return;
+        // The cold start's lock, decided before the session is signed in, so
+        // the guard never opens on a guess: a stored session whose owner turned
+        // Face ID on stays locked until the lock's check passes.
+        if (!lockDecided.current) {
+          const lock = stored !== null && (await readFaceIdEnabled());
+          if (cancelled) return;
+          lockDecided.current = true;
+          setLocked(lock);
+        }
+        setState({ status: 'signed-in', session });
       } catch (error) {
         if (cancelled) return;
         if (error instanceof PlatformNotConfiguredError) {
@@ -169,6 +208,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           const session = await readCurrentSession();
           // A new session begins: nothing an earlier one read answers it.
           resetSnapshot();
+          // A sign-in is its own proof: whatever a cold start locked is open.
+          lockDecided.current = true;
+          setLocked(false);
           setState({ status: 'signed-in', session });
         } catch (error) {
           if (error instanceof PlatformError && error.status === 401) {
@@ -214,9 +256,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     return result;
   }, []);
 
+  // Only ever called once the lock is decided: the lock asks for its check
+  // only signed in, and Settings' row is behind the guard.
+  const unlock = useCallback(() => setLocked(false), []);
+
   const value = useMemo<SessionContextValue>(
-    () => ({ ...state, refresh, reload, signIn, signOut }),
-    [state, refresh, reload, signIn, signOut],
+    () => ({ ...state, locked, unlock, refresh, reload, signIn, signOut }),
+    [state, locked, unlock, refresh, reload, signIn, signOut],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

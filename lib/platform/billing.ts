@@ -22,7 +22,7 @@ export function readPlans(): Promise<{ plans: PurchasablePlan[] }> {
 
 /**
  * Owner or admin only; the Edge refuses anyone else. Through the shared
- * snapshot since build 11 (D1), for the Settings index's quiet plan line: a
+ * snapshot since build 11 (D1), for the plan's name on the Settings index: a
  * visit to Settings is one request per workspace per settled window, not one
  * per mount. A hosted page handed out drops it (`changedBilling` below).
  *
@@ -30,7 +30,7 @@ export function readPlans(): Promise<{ plans: PurchasablePlan[] }> {
  * was before the snapshot — a read the snapshot kept from before Stripe's
  * webhook landed would otherwise show the old plan on the page itself for up
  * to the window's two minutes after a checkout (the build 11 review). Its
- * answer replaces the snapshot's, so the plan line reads what the page read.
+ * answer replaces the snapshot's, so the index's plan reads what the page read.
  */
 export function readBilling(workspaceId: string, options: { fresh?: boolean } = {}): Promise<WorkspaceBilling> {
   if (options.fresh) invalidateShared(workspaceId, ['billing']);

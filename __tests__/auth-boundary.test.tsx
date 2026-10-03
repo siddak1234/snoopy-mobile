@@ -3,7 +3,7 @@ import React from 'react';
 import TabLayout from '@/app/(tabs)/_layout';
 import type { SessionContextValue, SessionState } from '@/hooks/use-session';
 import { activeWorkspaceId } from '@/hooks/use-session';
-import { mockRedirect, renderWithProviders } from '@/test/render';
+import { mockRedirect, mockTabsDrawn, renderWithProviders } from '@/test/render';
 
 /**
  * The protected-route boundary.
@@ -12,11 +12,21 @@ import { mockRedirect, renderWithProviders } from '@/test/render';
  * nothing reaches a protected route before `signed-in`. What makes this worth
  * its own suite is that only one of the four non-authenticated states is an
  * authentication failure; every non-authenticated state must still fail closed.
+ *
+ * Since the owner's build 12 item 6 the guard is the root stack's
+ * (`Stack.Protected` in app/_layout.tsx), which takes the tabs away and shows
+ * the cover. The tab layout draws nothing until signed in and redirects
+ * nowhere: from inside the tabs "/" is Home, and its redirect there looped.
+ * Where a closed guard lands is the real-router project's to prove
+ * (`__tests__/real-router/sign-out.test.tsx`, "the root guard fails closed") —
+ * this project's router is a mock that runs no navigator.
  */
 
-function withSession(state: SessionState): SessionContextValue {
+function withSession(state: SessionState, locked = false): SessionContextValue {
   return {
     ...state,
+    locked,
+    unlock: () => {},
     refresh: () => {},
     reload: async () => ({ status: 'signed-in' as const }),
     signIn: async () => ({ status: 'cancelled' }),
@@ -24,7 +34,7 @@ function withSession(state: SessionState): SessionContextValue {
   };
 }
 
-const signedIn = withSession({
+const signedInState: SessionState = {
   status: 'signed-in',
   session: {
     authenticated: true,
@@ -42,35 +52,48 @@ const signedIn = withSession({
       },
     ],
   },
-});
+};
+const signedIn = withSession(signedInState);
 
 describe('tab route guard', () => {
-  it('sends a signed-out visitor back to the cover (24.11.6)', async () => {
+  it("draws nothing for a signed-out visitor, and redirects nowhere: the root guard shows the cover (24.11.6; the owner's build 12 item 6)", async () => {
     // A 401 from a reachable Edge is the one state that closes the guard.
     await renderWithProviders(<TabLayout />, withSession({ status: 'signed-out' }));
-    expect(mockRedirect).toHaveBeenCalledWith('/');
+    expect(mockTabsDrawn).not.toHaveBeenCalled();
+    expect(mockRedirect).not.toHaveBeenCalled();
   });
 
   it('admits a signed-in visitor', async () => {
     await renderWithProviders(<TabLayout />, signedIn);
+    expect(mockTabsDrawn).toHaveBeenCalled();
     expect(mockRedirect).not.toHaveBeenCalled();
   });
 
-  it('fails closed when no backend is configured', async () => {
+  it('fails closed when no backend is configured: nothing drawn, no redirect', async () => {
     await renderWithProviders(<TabLayout />, withSession({ status: 'unconfigured' }));
-    expect(mockRedirect).toHaveBeenCalledWith('/');
+    expect(mockTabsDrawn).not.toHaveBeenCalled();
+    expect(mockRedirect).not.toHaveBeenCalled();
   });
 
-  it('does not expose protected routes while the backend is unreachable', async () => {
+  it('does not expose protected routes while the backend is unreachable: nothing drawn, no redirect', async () => {
     await renderWithProviders(
       <TabLayout />,
       withSession({ status: 'unavailable', message: 'The platform is unreachable' }),
     );
-    expect(mockRedirect).toHaveBeenCalledWith('/');
+    expect(mockTabsDrawn).not.toHaveBeenCalled();
+    expect(mockRedirect).not.toHaveBeenCalled();
   });
 
   it('does not flash a redirect while the session is still restoring', async () => {
     await renderWithProviders(<TabLayout />, withSession({ status: 'restoring' }));
+    expect(mockTabsDrawn).not.toHaveBeenCalled();
+    expect(mockRedirect).not.toHaveBeenCalled();
+  });
+
+  it('draws nothing for a signed-in session the Face ID lock still holds, and redirects nowhere (the build 13 review)', async () => {
+    // The root guard's other half: signed in is not open until the lock's check passes.
+    await renderWithProviders(<TabLayout />, withSession(signedInState, true));
+    expect(mockTabsDrawn).not.toHaveBeenCalled();
     expect(mockRedirect).not.toHaveBeenCalled();
   });
 });

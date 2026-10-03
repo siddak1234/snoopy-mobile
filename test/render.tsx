@@ -25,6 +25,8 @@ const initialMetrics = {
  */
 const defaultSession: SessionContextValue = {
   status: 'unconfigured',
+  locked: false,
+  unlock: () => {},
   refresh: () => {},
   reload: async () => ({ status: 'signed-in' as const }),
   signIn: async () => ({ status: 'unconfigured', message: 'no backend in tests' }),
@@ -52,4 +54,4 @@ export function renderWithProviders(
   );
 }
 
-export { mockRedirect, mockRouter, setMockParams } from '@/test/mocks/expo-router';
+export { mockRedirect, mockRouter, mockTabsDrawn, setMockParams } from '@/test/mocks/expo-router';

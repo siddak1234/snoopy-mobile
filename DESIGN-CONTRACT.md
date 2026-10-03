@@ -91,14 +91,32 @@ shows providers only, and a form that existed to refuse taught the opposite.
 Persistence is fixed by ADR-0017 and needs no control to say so.
 
 Session states are `restoring`, `signed-in`, `signed-out`, `unconfigured`, and
-`unavailable`. The tab layout admits only `signed-in`; every other state fails
-closed to the auth entry. On launch, an enabled Face ID preference gates an
-existing session through `expo-local-authentication`. Biometrics never create a
+`unavailable`. **The boundary is the root layout's guard** (the owner's build 12
+item 6): `Stack.Protected` admits the tabs only for `signed-in` and unlocked (below),
+and otherwise removes them and lands on the root stack's anchor, the cover — by name,
+never by address. The tab layout draws nothing until then and redirects nowhere.
+**Nothing inside the tabs navigates to "/"**: there it names Home, not the cover, and
+build 8–12's Sign out, aimed at it, was dropped while the tab layout's redirect to it
+looped. An enabled Face ID preference gates an existing session through
+`expo-local-authentication`, and **the guard enforces it** (the build 13 review): a cold
+start locks a stored session whose owner turned Face ID on — `locked`, in the session
+provider, decided before the session is signed in and true until it is known — and the
+session opens only when the lock's own check passes, on a sign-in (its own proof), or
+when Face ID is turned off; only the next cold start locks it again. While it is locked
+the tabs are not in the root stack, so a link that arrives then — snoopymobile:///settings
+from Safari — opens nothing (until the review such a link opened the tab without Face ID,
+since before build 12); a push tap's screen waits for the lock as it waits for a
+sign-in; and the Face ID question, guarded the same way in the auth stack, cannot be
+reached to answer "Not now". A check that passes opens Home; a link dropped while locked
+is not replayed. Biometrics never create a
 session and no timer counts as success. **The choice is the session's** (2026-10-02):
 it is asked once after a remembered sign-in, on the screen where "Use Face ID" runs
 the first check, and it is cleared with the tokens on sign-out — never inherited by
-a later sign-in or a reinstall. Remember me off ends the session at the next cold
-start, with nothing left in the enclave.
+a later sign-in or a reinstall. The lock's "Use identity provider" is Settings › Sign
+out's sign-out, then the cover — it leaves only once the session is revoked, keeps the
+lock and says so when it could not be, and goes straight to the cover when no signed-in
+session is there to unlock (the owner's build 12 item 7). Remember me off ends the
+session at the next cold start, with nothing left in the enclave.
 
 The active workspace is `session.user.activeWorkspaceId`, falling back only to
 the first server-supplied membership. A route/form value never selects tenancy.
@@ -129,29 +147,33 @@ either word in copy, and the code keeps the contract's names (24.11.7).
 **Signed out is the cover** (24.11.6): launch, sign-out, an ended session and a
 deleted account all land on the cover, which waits; "Get started" is the one way
 on, to Sign in. Signed in, the same screen is the splash and moves on by itself.
+Sign out, an ended session and Delete account's "Sign in again" only end the session,
+and the root guard shows the cover; a sign-out not revoked stays where it is and says
+so. The Face ID lock and Account deleted sit in `(auth)`, which the guard does not
+move, and leave for "/" themselves — from there "/" is the cover (build 13).
 
 ## Screen reads
 
 | Surface | Published operations / mapping |
 | --- | --- |
 | Sign in | `GET /v1/auth/providers`; providers only — no password or reset surface is drawn (owner, 2026-09-08). **One screen since 2026-10-02**: the website's words ("Sign in with …"), a Remember me toggle, and the Face ID question once after a remembered sign-in; Welcome, Sign up and the Onboarding tour are gone. Reached from the cover's "Get started" (24.11.6) |
-| Home | session + catalog + `run-stats?since=<local midnight>` + runs + pending approvals |
-| Flows/add (the catalog, "New") | workspace automation catalog and its server-supplied categories, plus subscriptions and projects — Added ✓ or Add per the scope looked at (24.9.3) |
+| Home | session + catalog + `run-stats?since=<local midnight>` + runs + pending approvals. The three tiles are today's and say so once, TODAY over the row — Runs, Successes, Failures — and each opens Activity with its outcome and today, so its number is the rows it opens (the owner's build 12 item 1). Every stat tile, Home's and a flow page's, looks like the button it is: a caret and, pressed, the review banner's tint, drawn around the frozen StatCard (`components/stat-tile-button.tsx`) |
+| Flows/add (the catalog, "New") | workspace automation catalog and its server-supplied categories, plus subscriptions and projects — a flow the workspace holds, in any team or the whole workspace, is Added ✓ with its team and opens it, whatever the scope looked at; Add for the rest, to the team the scope control chose (24.9.3; one flow per workspace since the owner's build 12 item 9 — ~~Added ✓ or Add per the scope looked at~~) |
 | Setup/configure | catalog `setup[]` and the matching subscription config |
-| Flows/detail | subscriptions + catalog + run stats; identity is subscription ID/template ID. Detail keeps the subscription (`runInput`, `triggerKind`, `templateVersion`) and its catalog entry for its actions; the webhook address is read when its dialog opens. An archived flow is read with the archived list and drawn read-only, with "Add it again" (24.11.8; "Archived" since 24.12) — or, once a non-archived subscription with the same template AND the same scope exists (`addedAgainAs`, the platform's own one-per-template-and-scope rule; null matches null only), the sentence that it has been added again and "Open the live flow", which opens the twin in the same stack (build 11, D3). Every flow page says its team, or "Whole workspace", under its name (D4). The Runs, Successes and Failures tiles open Activity for this flow and outcome (24.11.9) |
+| Flows/detail | subscriptions + catalog + run stats; identity is subscription ID/template ID. Detail keeps the subscription (`runInput`, `triggerKind`, `templateVersion`) and its catalog entry for its actions; the webhook address is read when its dialog opens. An archived flow is read with the archived list and drawn read-only, with "Unarchive" (24.11.8; "Archived" since 24.12; "Add it again" until the owner's build 12 item 4 — the same action, renamed: Setup for its flow, in the team it had, a fresh setup) — or, once a non-archived subscription with the same template exists in any team or the whole workspace (`addedAgainAs`; ~~the same scope only, the platform's one-per-template-and-scope rule~~ until the owner's build 12 item 9: a workspace holds a flow once), the sentence that it has been added again and "Open the live flow", which opens the twin in the same stack (build 11, D3). Every flow page says its team, or "Whole workspace", under its name (D4). The Runs, Successes and Failures tiles open Activity for this flow and outcome (24.11.9) |
 | Flows/archived | `GET …/subscriptions?status=archived` (backend §12.1 #203), only the archived rows kept, within the scope, each with the day it was archived (its `updatedAt`), and every row with its team or "Whole workspace" in every scope, a picked team's included (D4; the build 11 review); Flows reaches them through "Archived", a secondary button left of New in its header, always drawn, with no count (build 11, D5 — ~~one row with a count, 24.11.8~~), and from the empty standard's "Archived flows" button when any exist in the scope (D6). Settings has a copy in the Settings stack, whose flows open in Settings too, so Back stays there (24.12) |
 | ~~Builder~~ | **Removed 2026-10-02** with Templates and Configure, on the owner's direction: the website has no builder, and FR-25 is parity with the website. Flow detail draws `pipeline[]` itself |
-| Activity/run detail | runs/list/detail joined to catalog/subscription identity. Activity takes a flow and an outcome from a tile (24.11.9); a run of an archived flow says so. Run detail reads in the workspace it was opened in and leaves when the active one changes |
+| Activity/run detail | runs/list/detail joined to catalog/subscription identity. Activity takes a flow and an outcome from a flow page's tile (24.11.9), and an outcome and today from Home's (the owner's build 12 item 1): the flow, or Today, is a chip that clears itself, on a row of its own above the four outcome chips; with Today on, only today's runs are listed, and none says "No runs today." / "No successful runs today." / "No failed runs today."; every arrival from a tile applies its selection, the same tile pressed again included — Activity takes it once and clears it from its route (build 13); the tab bar arrives with nothing and changes nothing. A run of an archived flow says so. Run detail reads in the workspace it was opened in and leaves when the active one changes |
 | Approvals | pending approvals joined through subscription → template → pipeline step |
 | Notifications | pending approvals plus failed runs; explicitly an in-app composition. Settings › Notifications is the same inbox, a copy in the Settings stack whose failed runs open in Settings too, so Back stays there (24.12) |
-| Settings | **only the plan, quietly** (build 11, D1): for an owner or admin, the workspace's billing through the shared snapshot — one request per workspace per settled window, ~~shared with the Billing page~~ refreshed by the Billing page's own read, which is a real request at every visit (the build 11 review) — drawn as the plan's name under Billing ("Free", "Plus", "Pro", by the one enrolled-plan rule in `lib/view/billing.ts`) once it is known, nothing while loading and nothing on a failure or offline (no error screen: a quiet line, the first of its kind); a member's is never read, and their line says "Managed by owners and admins". Everything else is the session's: ONE grouped page — Account (its email under it) → page · SECURITY: the Face ID row · Connections → page · Billing → page · WORKSPACE: the switcher row, Your role, Organization, Teams, Archived flows, Export my data · Notifications → page · APPEARANCE: Auto, Dark, Light · Help → page · Sign out · the version — in place of 24.12's eight pages (the owner's build 10 items 1, 2 and 4). The plan's totals left with the Solutions tab (24.9.5) |
+| Settings | **only the plan, quietly** (build 11, D1): for an owner or admin, the workspace's billing through the shared snapshot — one request per workspace per settled window, ~~shared with the Billing page~~ refreshed by the Billing page's own read, which is a real request at every visit (the build 11 review) — drawn as Billing's value, the plan's name on the title's line before the arrow ("Free", "Plus", "Pro", by the one enrolled-plan rule in `lib/view/billing.ts`; under the title until the owner's build 12 item 2), once it is known, nothing while loading and nothing on a failure or offline (no error screen: a quiet line, the first of its kind); a member's is never read, and their line under the title says "Managed by owners and admins". Everything else is the session's, the organization's name included (the owner's build 12 item 3): Organization's value is the active organization's name, for any role; in a personal workspace the one organization's name, "{n} organizations" for several, "None" for none, and nothing when the session's list is cut off (`workspacesTruncated`) without one — one rule, `organizationValue` (`lib/view/organization.ts`). A value is drawn on its title's line and moves under the title when the two do not fit, never cut (SettingsRow's `value`). ONE grouped page — Account (its email under it) → page · SECURITY: the Face ID row · Connections → page · Billing → page · WORKSPACE: the switcher row, Your role, Organization, Teams, Archived flows, Export my data · Notifications → page · APPEARANCE: Auto, Dark, Light · Help → page · Sign out · the version — in place of 24.12's eight pages (the owner's build 10 items 1, 2 and 4). The plan's totals left with the Solutions tab (24.9.5) |
 | Settings › Connections | the provider registry and the workspace's connections: third-party integrations only (24.12, decision 9); sign-in accounts are Account's |
 | ~~Settings › Workspace~~, ~~Settings › Security~~, ~~Settings › Appearance~~ | **gone in build 11 (D1)**: their rows and controls are on the index; the workspace switcher still reads the workspace collection only when it opens |
 | Organization | the workspace collection; for an owner or admin of the active organization, its members, domains and join requests — each request named by its requester's `displayName` and `email`, the id only when neither is sent (24.12) — and its join link — the website's `/onboarding/join-org?w=` on the browser leg's origin, its line following the joining policy of the first verified domain shown for matching emails, in the website's words (`joinLinkLine`; 24.12, decision 5); for someone in no organization, `organization-discovery` |
 | Teams / team (24.11.7) | the workspace collection, each workspace's teams (`…/projects`), and each organization's directory (`…/project-directory`, backend 24.11.4); one team read in its own workspace; in an organization its memberships, and for its owner or admin — or the organization's — the workspace's members and the requests to join (`…/access-requests`) |
 | Home, Flows, add, setup, Activity | also the active workspace's teams — the scope control (24.9.2), the scope a flow is added to, and the label each flow carries |
 | Billing | the workspace collection for the role; `/v1/plans`, which anyone signed in may read; for an owner or admin, the workspace's billing — a real request at every visit, never the snapshot's answer, which it replaces for the Settings line (the build 11 review: a plan read before Stripe's webhook landed was otherwise shown here for up to the 120 s window after a checkout); read again when the app returns to the foreground on iOS |
-| Account | the linked sign-in identities and the login providers — a linked identity shows the address its provider reports (`email`, 24.12), none when absent; Unlink is `POST /v1/auth/native/identities/{provider}/unlink` with the device's refresh token (backend 24.11.1), its refusals said by reason (24.12) |
+| Account | the linked sign-in identities and the login providers, under a lead that says what linking does: "Any account linked here signs you in to this same account, in the app and on the website. Link an account before you first sign in with it." and then the credentials sentence (the owner's build 12 item 8) — a linked identity shows the address its provider reports (`email`, 24.12), none when absent; Unlink is `POST /v1/auth/native/identities/{provider}/unlink` with the device's refresh token (backend 24.11.1), its refusals said by reason (24.12) |
 | Data export | the workspace collection for the role; the bounded export on request; a complete export started, followed every 2 s (doubling after a failed read, three allowed), and its link read again at the moment of the download — on iOS saved into the app and handed to the share sheet (24.12) |
 | Support | nothing read; the contact request is sent on the public operation; Privacy and Terms open on the website |
 
@@ -233,7 +255,20 @@ review" — the held queue — also list running, queued and cancelled runs.
   - Archive flow ("Remove flow" until 24.12, the owner's decision 4): patch
     `status: archived` behind its one-way confirmation — the last thing on the
     flow page, in red (24.9.4). It moves to Archived flows, keeps its runs in
-    Activity, and the flow can be added again; Pause keeps it listed.
+    Activity, and the flow can be unarchived ("added again" until the owner's
+    build 12 item 4); Pause keeps it listed.
+  - Red (the owner's build 12 item 5): an action that removes or ends something
+    and cannot be undone with a tap is drawn in `palette.danger` — dark #f87171
+    (`status.err`), light #dc2626 (the website's light `--error-text`) — on its
+    page and in the button that confirms it. On the page, Delete Account, Delete
+    team / Leave team and Cancel run are PillButton's `danger` variant, the
+    design's red pill (Screen.dc.html:450); Unlink's text, Sign out and Archive
+    flow are drawn in it. Confirming, every `DialogButton` of tone `danger`:
+    Delete account, Delete team, Leave team, Leave, Remove member, Archive, Cancel
+    run, Disconnect, Unlink, Revoke. Not red: Pause (Resume undoes it), Reject
+    and Deny (an answer, not a removal), Withdraw and Cancel request (the person
+    can ask again — Withdraw's confirm is accent), Make a new secret, and every
+    Cancel, Close and Not now.
   - Webhook address: owner or admin, webhook-started only. The address is read
     on each opening; a secret is issued with no idempotency key, shown once in
     the dialog and kept nowhere else.
@@ -279,7 +314,20 @@ review" — the held queue — also list running, queued and cancelled runs.
     which opens Teams, and otherwise "An owner or admin creates the first
     team."; neither has Activate. Existing whole-workspace flows
     stay, labelled "Whole workspace", under All teams; the platform is unchanged
-    (`projectId` null is still a visibility scope it accepts). Every flow card,
+    (`projectId` null is still a visibility scope it accepts). A workspace
+    holds a flow once — Personal is one workspace, each organization one (the
+    owner's build 12 item 9: "One flow per account type. Personal or org not
+    multiple of the same") — so a flow it holds, live, paused or draft, in any
+    team or the whole workspace (`heldAs`), is not added again: Add reads
+    "Added ✓" with its team and opens it, whatever the scope looked at, and
+    Setup, reached for it, shows "Added to" and its team — no team choice and
+    none of the lines above — and Activate configures that subscription. A flow
+    Setup has just added — a draft still owed an account, or one whose
+    activation failed — is held from that moment and drawn the same way, so
+    Activate configures it and never adds a second (the build 13 review). A
+    duplicate added before the rule stays, listed. The rule is the clients'
+    until the platform's own guard lands; the platform still accepts one copy
+    per team (18.6.2). Every flow card,
     archived row and flow page says "Team: {kind}" or "Whole workspace", the
     website's words, in every scope — inside a picked team too (the build 11
     review: ~~a card under All teams only; inside a picked team the card does

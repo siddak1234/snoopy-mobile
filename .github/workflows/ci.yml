@@ -40,12 +40,19 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # `--runInBand` matches what `npm run verify` does locally. Without it CI
-      # ran the suite in a different concurrency mode from every Gate 8 run, so
-      # a flake could appear in exactly one of the two places and neither would
-      # reproduce the other. `--ci` makes a missing snapshot a failure instead of
-      # writing one, which is what keeps the visual gate a gate.
-      - run: npm test -- --ci --watchAll=false --runInBand
+      # The suite as `npm run verify` runs it, one command for both. `--runInBand`:
+      # without it CI ran the suite in a different concurrency mode from every
+      # Gate 8 run, so a flake could appear in exactly one of the two places and
+      # neither would reproduce the other. `--ci` makes a missing snapshot a
+      # failure instead of writing one, which is what keeps the visual gate a
+      # gate. The coverage is istanbul's function counts, in coverage/, for the
+      # press audit that follows.
+      - run: npm run test:coverage
+      # Every press is run by a test (build 13: "Ensure auditing of all
+      # functionality that buttons and items work as we have configured"): each
+      # onPress resolved to the function it runs, and that function's count read
+      # from the coverage above. A press no test pressed fails the build.
+      - run: npm run audit:presses
 
   gates:
     name: Architecture gates

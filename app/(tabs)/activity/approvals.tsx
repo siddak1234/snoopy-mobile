@@ -171,7 +171,7 @@ export default function ApprovalsScreen() {
 
   if (inbox.status === 'loading') return <ScreenLoading topInset={insets.top} />;
   if (inbox.status === 'offline') {
-    return <ScreenOffline onRetry={inbox.reload} onBack={() => router.back()} topInset={insets.top} />;
+    return <ScreenOffline onRetry={() => inbox.reload()} onBack={() => router.back()} topInset={insets.top} />;
   }
   if (inbox.status === 'unconfigured') {
     return (
@@ -186,7 +186,7 @@ export default function ApprovalsScreen() {
     return (
       <ScreenError
         title={errorTitleFor('approvals')}
-        onRetry={inbox.reload} body={busyBody(inbox)}
+        onRetry={() => inbox.reload()} body={busyBody(inbox)}
         onBack={() => router.back()}
         topInset={insets.top}
       />
