@@ -1,8 +1,7 @@
 import React from 'react';
-import { Platform, Pressable, Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { BlurView } from 'expo-blur';
-import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   FlowArrow,
@@ -12,6 +11,7 @@ import {
   type Icon,
 } from 'phosphor-react-native';
 
+import { Pressable } from '@/components/pressable';
 import { fonts, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -29,7 +29,9 @@ const TABS: Record<string, { label: string; icon: Icon }> = {
  *  22px Phosphor glyphs with labels (the design's 10px, the scale's `micro`
  *  since 24.12), active = accent. The design's
  *  22px bottom pad already accounts for the home-indicator band; live we
- *  derive it from the safe-area inset. */
+ *  derive it from the safe-area inset. A tab ticks as every press does, through
+ *  `components/pressable.tsx` (build 11): the tick that was this component's own
+ *  is the app's rule now. */
 export function NocturneTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { palette } = useTheme();
   const insets = useSafeAreaInsets();
@@ -60,7 +62,6 @@ export function NocturneTabBar({ state, descriptors, navigation }: BottomTabBarP
           const color = focused ? palette.accent : palette.neutral[500];
           const IconCmp = tab.icon;
           const onPress = () => {
-            if (Platform.OS === 'ios') Haptics.selectionAsync();
             const event = navigation.emit({
               type: 'tabPress',
               target: route.key,

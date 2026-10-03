@@ -844,13 +844,13 @@ and the contract names this app reads (409 `team_kind_taken`, the 403 for a plai
 | 10 | "Linked microsoft then trued unlinking apple and it said not found. See why and is that error message good and descriptive to the user?" | production runs an image from before the unlink route (backend #138), so the Edge answered its own 404 for a route it does not have, and the app showed that problem's title, "Not Found" | **fixed (24.12)**: an unlink refusal is a sentence by its reason — "Unlinking isn't available yet." for a route the platform does not have; the not-linked, primary, last and refused sentences; otherwise "The account could not be unlinked." — never a title. The route goes live with the SEVENTEENTH promotion. This corrects the fifth session's row 5 |
 | 11 | "Also which account is linked i dont even know from here whT accounts are there." | `LoginIdentitySummary` is `{provider, primary}`: the contract names no account | ~~**waits for the backend contract** (24.12: an optional `email`); the row shows it once the contract carries it~~ **fixed (24.12)**, once backend #142 (`866a557`) put the optional `email` in the contract: each linked account shows the address its provider reports, a muted line under its name — none when it reports none, never on an account that is not linked. Production sends it from the SEVENTEENTH promotion, which carries 24.12 |
 | 12 | "I dont see the linked accounts on connections. Also shouldnt connections basically take me to a page… third party integrations the user connects to" | Settings drew the integrations card inline; the sign-in accounts are Account's | **fixed (24.12)**: Settings › Connections is a page of its own, third-party integrations only (decision 9) |
-| 13 | "This needs to be revamped. Think of free, plus, pro plans. Monthly in component cards." | a CURRENT PLAN card and a PLANS list with capability lines | **fixed (24.12)**: tall cards — Free (the app's, $0.00 per month, since the platform lists only what can be bought), then the platform's plans by price, today Plus and Pro once it is listed — each its name and price; the workspace's own says "Enrolled" with its renewal or past-due line. On iOS, not paying, a card opens the checkout for its plan; paying, another card opens Manage billing, as does a checkout refused with 409 `plan_exists`; a member sees the cards without actions; Android shows the prices only |
-| 14 | "Why is everything so small and why is everything listed in settings…" | one long Settings screen; the design's sizes | **fixed (24.12)**: Settings is eight categories — Account, Security, Connections, Billing, Workspace, Notifications, Appearance, Help — each its own page, then Sign out and the version (decision 10). And the bigger type (decision 11, "whole app — easy to read"): every font size, line height and tracked size is a step of the app's type scale, `typeScale` in `constants/theme.ts` — about 2 pt over the design's text sizes and 3 over its titles, 12 at the smallest, where the tab labels were 10 — and `audit:type` fails a size written anywhere else; the scope pills wrap rather than cut a name short. The Nocturne and screen-state snapshots were re-pinned once for it: 58 of their 78 entries, the other 20 setting no font size. NOT OBSERVED on a device yet, the largest text sizes included |
+| 13 | "This needs to be revamped. Think of free, plus, pro plans. Monthly in component cards." | a CURRENT PLAN card and a PLANS list with capability lines | **fixed (24.12)**: ~~tall cards~~ **Corrected in build 11 (D2):** compact cards at their natural height — the tallness was the implementer's reading (the draft checklist's "filling the screen"), not the owner's words, which said only "Monthly in component cards"; and Pro is drawn at the owner's $10.00 per month until the platform lists it (the seventh session, item 3). The rest stands: Free (the app's, $0.00 per month, since the platform lists only what can be bought), then the platform's plans by price, today Plus and Pro once it is listed — each its name and price; the workspace's own says "Enrolled" with its renewal or past-due line. On iOS, not paying, a card opens the checkout for its plan; paying, another card opens Manage billing, as does a checkout refused with 409 `plan_exists`; a member sees the cards without actions; Android shows the prices only |
+| 14 | "Why is everything so small and why is everything listed in settings…" | one long Settings screen; the design's sizes | **fixed (24.12)** — the categories read again in build 11 as one grouped page, the seventh session's items 1, 2 and 4: Settings is eight categories — Account, Security, Connections, Billing, Workspace, Notifications, Appearance, Help — each its own page, then Sign out and the version (decision 10). And the bigger type (decision 11, "whole app — easy to read"): every font size, line height and tracked size is a step of the app's type scale, `typeScale` in `constants/theme.ts` — about 2 pt over the design's text sizes and 3 over its titles, 12 at the smallest, where the tab labels were 10 — and `audit:type` fails a size written anywhere else; the scope pills wrap rather than cut a name short. The Nocturne and screen-state snapshots were re-pinned once for it: 58 of their 78 entries, the other 20 setting no font size. NOT OBSERVED on a device yet, the largest text sizes included |
 | — | the shared snapshot outlived a session | its global entries — the workspace list, the providers — could answer the next account on this device for up to 120 s | **fixed (24.12)**: emptied when a session ends and when one begins |
 | — | Settings › Notifications was one row, "Open inbox", that pushed Home's inbox | a push across tabs — item 7's defect again — so Back returned to Home | **fixed (24.12, the owner's default: "Settings › Notifications shows the inbox itself, so Back returns to Settings")**: the page is the inbox itself, a copy in the Settings stack as Archived flows is; a failed run opens there too (`settings/run`, the Home tab's run page), so Back returns to Settings; a held run still opens Activity, as from Home |
 | — | Create a team read the active workspace at every render | the scope control keeps the dialog open across a workspace switch, so the switch would have moved the team, and the line naming the workspace, to the new one (CLAUDE.md rule 10) | **fixed (24.12)**: the dialog keeps the workspace it was opened in and names it; once another is active, Create is refused in words (`WORKSPACE_CHANGED`) and nothing is sent, as the run dialog does |
 | — | the join link's line said "can ask to join" whatever the domain's joining policy, and named the first verified domain whether or not it is shown for matching emails | the platform takes a request through the link only at a verified domain the organization shows for matching emails (`requireEligibleDomain` needs both), and the policy decides what follows: automatic joins at once, invite only lets no one in | **fixed (24.12)**: the line follows the first verified domain shown for matching emails — approval, automatic or invite only — in the website's words (`joinLinkLine`, as `snoopy/lib/join-link.ts`); a verified domain not shown says "Show for matching verified email domains" must be on; none verified says to verify one first |
-| — | copy told people to do something "in Settings" | Settings is eight pages since decision 10 | **fixed (24.12)**: it names the page — "Settings › Workspace" on Organization, "Settings › Connections" on Setup's button and its refusal, "Settings › Security" in the Face ID offer. Setup's button still opens Settings itself, one tap from Connections: a push from another tab straight into a Settings page is not made anywhere yet, and where Back lands from one is NOT OBSERVED |
+| — | copy told people to do something "in Settings" | Settings is eight pages since decision 10 | **fixed (24.12)**: it names the page — "Settings › Workspace" on Organization, "Settings › Connections" on Setup's button and its refusal, "Settings › Security" in the Face ID offer. Setup's button still opens Settings itself, one tap from Connections: a push from another tab straight into a Settings page is not made anywhere yet, and where Back lands from one is NOT OBSERVED. **Since build 11 one is (F84):** Setup's "See teams" opens Settings › Teams, for a plain member only — the build 11 review's fifth finding, recorded with the seventh session below, NOT OBSERVED as well |
 | — | a join request named its requester by user id | the contract carried no name until backend #142 (`866a557`, 24.12.4) | **fixed (24.12)**: a request is titled by the person's name — or address — with the address under a name, and the decision names them too; the id only when the platform sends neither, as production does until the SEVENTEENTH promotion |
 | — | the empty Notifications, Approvals and Flows screens drew their icon black | Phosphor's default colour is `#000`, and those three set none — near invisible on the dark theme | **fixed (24.12)**: each draws its icon in its siblings' colour — the accent's 300 for Notifications and Flows, as Add a flow and the new empty screens do; `status.ok` for Approvals, as Activity's empty screen does |
 
@@ -955,6 +955,290 @@ Settings › Notifications no longer opens the inbox, it is the inbox.
 | The Face ID offer names Settings › Security | "in Settings" put back | `faceid-screen` "names the page the setting is on — Settings › Security (24.12)" |
 | A linked account shows the address its provider reports | the line dropped | `account-screen` "shows the address a linked account reports, muted under its name — none when it reports none, none when not linked (24.12)" |
 | A join request names the person asking | the user id as its title again | `organization-screen` "names the person asking to join — their name and address, the id only when the platform sends neither (24.12)" |
+
+### The seventh signed-in session (build 10, 2026-10-03 02:57Z–03:14Z)
+
+Build 10 on the owner's iPhone (iOS 26.6.2): thirteen TestFlight feedback items in
+seventeen minutes, read with their screenshots, then the owner's decisions the same day
+("do all recommended except" push and the logo, which go further) — (D1) Settings is ONE
+grouped page, the large areas behind rows and the small things inline, roomier; (D2) the
+billing cards compact, and Pro drawn at $10.00 per month until the platform lists it; (D3)
+an archived flow that is live again in the same scope offers no "Add it again" but the live
+flow; (D4) every flow says its team, and a flow is added to a team, in both clients; (D5)
+"Archived" is a header button left of New; (D6) Flows is the empty standard whenever the
+workspace has no live flow; (D7) every press ticks, through one shared pressable; (D8) device
+push, built now, not later ("i said to add it"); (D9) the Home mark fills the header's free
+space. Verified against the code at `daef007`; the platform is unchanged by this pass — a
+whole-workspace flow is still a scope it accepts, and Pro's real plan waits on its Stripe price
+(E4, A1):
+
+| # | Feedback | What it is | Disposition |
+| --- | --- | --- | --- |
+| 1 | "I didnt want all to be like this. Also they look swished together. It should be vertically more roomy. Maybe what we can do is add a bit of meta data on this page per category. For example account can have the email. Billing can have the plan type (free,plus or pro) Appearance does not need a special section it can be displayed here. Its just auto, dark, or light. Workspace can also be a drop down right unless theres a lot more." | build 10 read decision 10 as EVERY category becoming a page: eight title-only rows in one card at ~47 pt pitch, no section label, no sub line, the profile card gone — the three things that gave the build 9 screen its rhythm | **fixed (build 11, D1)**: one grouped page in the build's order — Account with the session's email under it → page · SECURITY: the Face ID row · Connections → page · Billing with the plan's name under it → page · WORKSPACE: the switcher row (the existing Switch workspace dialog, mounted on the index), Your role, Organization, Teams, Archived flows (the Settings copy), Export my data · Notifications → page · APPEARANCE: Auto, Dark, Light · Help → page · Sign out · the version. The rows are roomier on this page only (`SettingsRow size="roomy"`: 17 pt of vertical padding and the scale's line heights; every other list keeps its row). The plan line is a new, quiet kind of read: an owner's or admin's billing through the shared snapshot — one request per workspace per 120 s window, ~~shared with the Billing page~~ refreshed by the Billing page's own read, which is a real request at every visit (**corrected by the build 11 review**: shared, it kept a plan read before Stripe's webhook landed on the page for up to two minutes), and dropped when a checkout or the portal opens — said once it is known as "Free", "Plus" or "Pro" by the one enrolled-plan rule (`lib/view/billing.ts`, the Billing page's too), nothing while loading, nothing on a failure or offline, no error screen; a member's is never read and their line says "Managed by owners and admins" |
+| 2 | "Security does not need its own page it can be in the main settings page like before." | decision 10 gave a one-row category a page | **fixed (D1)**: the Face ID row is on the index under SECURITY, its toggle and its failure under it (`components/settings/face-id-row.tsx`, the handler the build 9 screen and the build 10 page had); the page and its route went, and the Face ID offer says "You can change this later in Settings." |
+| 3 | "I said free plus and pro. Also the components dont need to be that big. Visually it looks unpleasing" | three nested `flex: 1` split the leftover screen between the two cards, each about 2.4× its content; and no `pro` plan is seeded — `/v1/plans` lists only a priced plan — so Pro could not appear from data | **fixed (D2)**: compact cards at their natural height — name, price at the scale's `title`, the status line — no stretching. Pro is drawn after Plus at "$10.00 per month", the owner's price, while the platform lists no plan with id `pro`: an inert card on every platform and for every role (a checkout for it would answer 404 and show "Not Found"; the portal has no Pro), replaced by the platform's Pro once its Stripe price exists and A1 seeds it (E4). This corrects the sixth session's row 13 |
+| 4 | "This can also be in the main settings page. Just like this" (the Workspace page) | decision 10 made Workspace a page; the owner's #1 read its switcher row as "a drop down" | **fixed (D1)**: the six rows are the index's WORKSPACE group, the switcher row opening the existing Switch workspace dialog (a list to pick from — the caret and read-on-open rule unchanged); the page and its route went, and Organization's sentence says "Switch to it in Settings; its owners and admins manage it there." |
+| 5, 6, 11 | "I added the archived and went back in to archived. I shouldnt be able to add it again right. What is the best way to ensure it stays in archived but cant add it again if it is already active" · "I already added it back I shouldnt see add it again then" · "I was able to add the archived back even though there was an existing on flows page" | the archived page branched on its own status alone, never on whether the live list held the same template in the same scope; and Setup edits the one non-archived row per template and scope, so "Add it again" silently re-configured the LIVE flow while saying it was adding one | **fixed (D3)**: the live twin is the platform's own uniqueness — a non-archived subscription (live, paused or draft) with the same template AND the same scope, the whole workspace matching the whole workspace only (`addedAgainAs`, `lib/view/catalog.ts`), read from the live list the page already holds. With one: no "Add it again"; "This flow was archived on {day}. Its runs stay in Activity. It has been added again, and the new copy is in Flows." and "Open the live flow", which opens the twin in the same stack (Flows, or Settings' copy). The archived row stays as it is — archiving is one-way on the platform, and the row never leaves the list |
+| 7 | "What team is that flow part of? Each flow has to be in a team" | the label was drawn only once the workspace had a team (a 24.9 choice so the rows read as they always had), so a workspace with none could not answer the question; and both clients offered the whole workspace first | **fixed (D4)**: every card under All teams, every archived row and every flow page says "Team: {kind}" or "Whole workspace", the website's words (`scopeLabels` labels whatever the workspace holds; ~~inside a picked team the card still does not repeat it~~ — **corrected by the build 11 review:** an exception D4 never made, so the card and the archived row say it in every scope now, as the flow page always did). Adding requires a team: Setup has no whole-workspace chip, chips whenever teams exist, nothing chosen for the person under All teams or for a whole-workspace flow added again, "Pick a team." refused with nothing sent, `projectId` always sent; with no team yet an owner or admin sees "Create a team first." and a "Create a team" button opening the Create a team dialog, and the team made is the chip chosen; a plain member sees "An owner or admin creates the first team." and no Activate. The two existing whole-workspace flows stay, labelled, under All teams; the platform is unchanged (`projectId` null is still a scope it accepts, and a member on no team still sees nothing scoped — its visibility rule, not the app's) |
+| 8 | "Archived should be a button to the left of new . It should have that icon too. We dont need a component on the page. The screen will be treated as empty if there are no flows even if there are archived. So it should follow the format similar to activity when empty on the page." | 24.11.8 placed the archived entry as a counted row after the list, so it was a component on the page in every state, the search's no-match state included | **fixed (D5, D6)**: the title row's right side is [Archived][New] — Archived a secondary pill with the Archive icon and the word, no count, always drawn, opening the archived page; the row is gone (`PillButton` took an optional `testID` for it; the Nocturne snapshots did not move). The whole-screen empty is Activity's format whenever the workspace has no live flow |
+| 9 | "Flows should have it like this when no flows even if archive." (Activity's empty screen) | the whole-screen empty needed zero archived flows too, so with only archived ones the screen fell through to the list and drew the in-team line — "No flows in this team yet" under All teams | **fixed (D6)**: the condition is live flows only (`live.length === 0`), whatever is archived — the archived read stays only to know whether to offer them: a plain "Archived flows" button under "Add a flow" when any exist in the scope, so the person who just archived their last flow has a way to it (the build 9 complaint). A chosen team with none while the workspace has some keeps its inline line, so the scope control stays |
+| 10 | "Clicking the name icon ln the top should give haptic feedback. Ensure any button clicked does haptic feedback like the others" | exactly one haptic existed — the tab bar's `selectionAsync` on iOS, inside the component — and nothing made it the rule: 27 files drew react-native's Pressable (37 sites, and through the primitives some 140 more presses), 3 presses were `Text` handlers, all silent; the avatar and the bell among them | **fixed (D7)**: `components/pressable.tsx` — `Pressable`, react-native's with its press wrapped, and `pressed()` for a host element's handler — one selection tick before the handler, iOS only, the native call's rejection swallowed; every file's import moved (no JSX changed), the three Text handlers wrapped (See all, Mark all read, a callout's retry), the tab bar on the helper, the toggle included; a press with no handler (the unswitchable workspace pill, the signed-out cover, which now has no handler at all) or a disabled control gives none. `audit:haptics` (verify and CI) fails a Pressable/Touchable/Button from react-native outside the helper, a default or namespace import of react-native, expo-haptics elsewhere, and a Text/View/Image/ScrollView/Animated press handler that is not `pressed(…)`; its negative tests are in `audit-gates`. The Nocturne and screen-state snapshots are byte-identical (the host tree did not change) — no re-pin |
+| 12 | "Also make the logo on the top left bigger" | the Home mark was the design's 17 pt (Screen.dc.html sHome) in a row the bell and the avatar make 38 tall — 10.5 pt of air above and below it (the owner's screenshot measured: 34.0 × 16.3 pt) | **fixed (build 11, D9 — "should fill up that empty space top left … just the logo")**: the mark is 38 pt, the row's height, in all four Home states (`HOME_MARK_HEIGHT` through BrandMark's own `height`), 77.8 × 38 pt; the row, the bell, the avatar and the 18-pt gap to the pills are unchanged, so nothing below moves, and at 320 pt the mark and the two buttons still leave 116 pt between them. It draws only the PNG's glyphs — white on a transparent ground, no tile, border or shadow — which the header test holds in both palettes; BrandMark gained only an optional `testID`, and its two Nocturne snapshots are byte-identical. **NOT OBSERVED** on a device until the owner's build 11 screenshot |
+| 13 | "What do we need to do here?" (the push card on Notifications: "Device push delivery is not configured.") | the platform had no push contract (the refusal map), so the inbox was an in-app composition and the card said so | **fixed (build 11, D8, "i said to add it"; BUILD-PLAN 24.13.6, ADR-0035)**: device push for held and failed runs. `expo-notifications` and `expo-device` at the SDK 54 pins, and the plugin in `app.json`, which writes `aps-environment` at prebuild — never hand-written, which `app-config` holds (`npx expo config --type introspect` shows `development`, the plugin's default; build 11's ipa is read for `production`, 24.13.8). `lib/platform/devices.ts`: `PUT /v1/session/devices` with `{ platform: 'ios', token, appBuild }`, only the answered device id kept, in SecureStore with the session. `hooks/use-push-registration.tsx`, in the signed-in tree: an iPhone that iOS already lets notify registers on every sign-in and cold start, and again when its token changes (the first token heard is a registration's own echo); a push shows its banner in the foreground while someone is signed in; a tap opens a failed run's page (`run-failed`) or Activity (`approval-requested`), while the app runs or as the tap that opened it, once signed in. The card is the only ask, never a prompt at launch: "Get a notification on this phone when a run is held or fails." with "Turn on" (iOS asks at the tap) and "Not now" (held for the session, the Face ID offer's rule); off in iOS Settings, "Notifications for Autom8x are off in iOS Settings." with "Open Settings", read again on the return; registered, no card; Android or a simulator, "Notifications on this phone are coming in a later build." with no Turn on (backend §12.1 #211); a platform from before the route (404/503), "Notifications aren't available yet."; no token on the build, "Notifications aren't available on this build."; any other failure, "Notifications couldn't be turned on. Try again." under the ask. Sign-out DELETEs the device with the still-valid bearer BEFORE the logout, never blocking and logging nothing; a session ended any other way — a 401, or "remember me" off at the next cold start — cannot, and the phone stays registered until it registers again or the prune (backend §12.1 #210). No web push. **NOT OBSERVED** until a push arrives on the owner's phone (24.13.8): the EIGHTEENTH promotion, the APNs key through `eas credentials` and build 11's entitlement come first |
+
+Not in the first pass of this build, and why: D8 and D9 above — each since done in a later
+pass (rows 12 and 13). The catalog's subtitle under All teams still reads
+"Adding to your workspace." (a sentence the build's shared wording does not give; under D4 the
+flow is added to a team picked on Setup) — for the next pass, with its words. NOT OBSERVED, for
+a device: the header's fit with "Flows", Archived and New at the bigger type; the roomier index
+and its thirteen rows; the longer labelled line ("Whole workspace · 1,284 runs…") on a narrow
+phone; the empty screen with its second button; whether the selection tick from a list row or a
+card feels as the tabs' did (the simulator has none). Two decided flips of pinned behaviour,
+each named in its test: "draws no scope where the workspace has no project" became "says Whole
+workspace where the workspace has no team at all" (D4), and a flow page's subtitle is "Whole
+workspace · Sheets → Slack digest" where it was the description alone; "adds an automation to
+the project chosen" lost its "Whole workspace" step and gained the "Pick a team." refusal (D4);
+the Face ID offer and Organization's sentence no longer name a page (D1); the archived page's
+"Add it again" test was split in two, with and without a live twin (D3).
+
+Left by the D8 pass (row 13), each for the owner's word: an empty inbox was the 24.12 empty
+standard with no card, so a person with nothing held or failed could not turn push on anywhere,
+Settings › Notifications included — **decided by the owner 2026-10-03 ("Also on empty
+(Recommended)") and done**: the ask is drawn above the empty standard on both inboxes, as the
+design draws `pushAsk` above `notifsEmpty` (`ScreenEmpty`'s `above`, under the way back; every
+other empty screen renders as before and both snapshot files are unchanged); Home's bell is not re-read
+when a push arrives in the foreground, only on its next read; and a sign-out whose logout then
+fails (502, still signed in) has already unregistered the phone, which gets no push until the
+next sign-in or cold start registers it again. Its decided flips, each named in its test: the
+inbox card's `tab-screens` test holds the ask ("Turn on", "Not now") where it held "Device
+push delivery is not configured." with "Got it" and "Dismiss"; and `session-store`'s sign-out
+clears seven keys where it cleared five, push's device id and "Not now" joining them. One more
+item the pass left — a push named its run but not its workspace, so a tap on one from a
+workspace other than the active one opened a run page that read in the active one and said it
+could not load it — is handled in the app since: a push naming another of the person's
+workspaces (`data.workspaceId`, a UUID on the session's list) switches to it as the switcher
+does — `PATCH /v1/session/active-workspace` with a `workspace-activate` key, then `/v1/session`
+read again — and opens the run's page or Activity only once the switched session is drawn, so
+the run's page binds to that workspace (24.11.9); a refused switch, or a session read that fails
+or leaves another workspace active, opens nothing and leaves the person where they are; the
+active workspace, no workspace, an id of another shape or one not theirs opens in the active
+workspace, as before. Each notification still opens once, by its identifier, and the tap that
+opened the app still waits for sign-in. It is live once the platform names the workspace in
+every push (`data = { event, workspaceId, runId?, approvalId? }`, snoopy-backend's change, in
+production with the NINETEENTH promotion); until then no push names one, a tap opens in the
+active workspace, and another workspace's run still says it could not load it. **NOT
+OBSERVED** on a device until a push from a second workspace is tapped there.
+
+**F84** (the website's register — found by its change audit of the build 10 decisions,
+2026-10-03, and fixed on `snoopy`'s round-16-build-11 in c2e25da; fixed here for parity): a
+plain member on no team, in an organization that has a team they could ask to join, read "An
+owner or admin creates the first team." on Setup (row 7's member line) — false there, while
+Teams offered that very team under ASK TO JOIN. Now, in the website's rule and words: where the
+workspace has no open team to add to, Setup reads the team directory — only in that state, one
+read where there is no team at all; an owner or admin, who sees every team, reads none to ask
+onto, and their "Create a team first." is drawn first anyway — and a plain member for whom it
+lists a team they are not on (access `none` or `requested`) reads "Ask to join a team first."
+with a secondary "See teams" button that opens Teams, and no Activate; otherwise "An owner or
+admin creates the first team.", as before. The directory's tolerant read is one helper,
+`teamDirectoryIfThere` (`lib/platform/projects.ts`), moved out of the Teams screen unchanged: a
+platform from before the SEVENTEENTH promotion answers 404 and lists nothing, so Setup draws
+the owner-or-admin line, and every other failure is the screen's. Setup's loader does not read
+the role — it is keyed on the template, and its closure would keep a stale one. The test
+transport's default directory lists nothing (`test/platform.tsx`), as its default teams do.
+**NOT OBSERVED** on a device.
+
+**The single-pass review of build 11** (2026-10-03, over the whole uncommitted build at
+`daef007`; one pass, the owner's rule) found five things, each verified against the tree
+before it was acted on:
+
+1. **Sign-out against a push registration still in flight (security) — fixed.** Sign-out
+   read only the device id already kept, so a `PUT` still out when Sign out was pressed —
+   the tree's at sign-in or a cold start, Turn on's, a changed token's — was not waited
+   for: no `DELETE`, and its answer then wrote the id after the keychain was cleared, the
+   phone left registered to the person who had signed out, their pushes still arriving.
+   `lib/platform/devices.ts` now tracks every registration in flight, each for its `PUT`
+   and the write of its id (a set: the token listener registers outside the hook's single
+   flight), and sign-out waits for them — `settleDeviceRegistration`, bounded at 5 s,
+   never throwing — BEFORE it reads the id to send back; it then ends the epoch
+   (`endDeviceEpoch`), and a registration started before that point that answers after
+   it keeps no id. That late one cannot be unregistered — the `DELETE` needs the bearer
+   the logout revokes — so the phone stays registered to the person who signed out until
+   it registers again or the platform's prune: the accepted residual of backend §12.1
+   #210, as for a session that ends without a sign-out (said in the code where it
+   happens, too).
+   `lib` still imports nothing from `hooks`; the hook's generation counter and its single
+   flight between the tree and the card are unchanged.
+2. **A token service failure read as "not on this build" (correctness) — fixed.**
+   `register()` answered `no-build` for every `getExpoPushTokenAsync` failure, so a phone
+   offline at Turn on, or Expo's token service failing, read "Notifications aren't
+   available on this build." with no Turn on. The installed expo-notifications (0.32.17,
+   `build/getExpoPushTokenAsync.js`) throws those two as `CodedError`s, by `code`:
+   `ERR_NOTIFICATIONS_NETWORK_ERROR` (its fetch rejected) and
+   `ERR_NOTIFICATIONS_SERVER_ERROR` (an answer not OK, or not the token's shape). Both
+   are `failed` now — "Notifications couldn't be turned on. Try again." under the ask,
+   with Turn on; every other failure is still `no-build`.
+3. **The Billing page read through the snapshot (regression) — fixed.** D1 put
+   `readBilling` through the shared snapshot's 120 s settled window for the Settings
+   index's plan line, and with it the Billing page, which at `daef007` read afresh at
+   every visit: a read made before Stripe's webhook landed kept the old plan on the page
+   for up to two minutes after a checkout. The page reads `fresh` now — a real request at
+   every visit, whose answer replaces the snapshot's — and the index's line keeps the
+   snapshot, as D1 decided.
+4. **The team label only under All teams (D4) — fixed.** Flows' cards and the archived
+   rows (both copies) said "Team: {kind}" or "Whole workspace" only with the scope on All
+   teams; D4 — "every flow card, archived row and flow page" — makes no such exception.
+   They say it in every scope now; the flow page always did. One decided flip of pinned
+   behaviour, named in its test: `scope-control` "narrows Flows to the chosen team, and
+   keeps the choice" holds the label inside the team where it held its absence; row 7
+   above and DESIGN-CONTRACT are corrected.
+5. **"See teams" crosses tabs (records only) — not changed.** F84's "See teams" on Setup
+   (`router.push('/(tabs)/settings/teams')`) is a push from the Flows tab straight into a
+   Settings page, the first since the sixth session's row that said none was made (now
+   annotated). Teams opens in the Settings stack, so Back from it goes back in that stack —
+   to Settings' index, or whatever page that stack was left on — and never to Setup; with
+   Settings not yet opened in this run of the app, the stack holds Teams alone and Back
+   leaves it for Home, the first tab (expo-router puts the pushed page alone in a stack
+   not yet mounted, and the tabs go back to their first route). That is the code's
+   reading: **NOT OBSERVED** on a device. A plain member's path only — an owner or admin
+   never sees "See teams". The follow-up, if wanted: a copy of Teams in the Flows stack,
+   as Archived flows has a copy in the Settings stack — which needs the team page it
+   opens copied too.
+
+### Guards proved to bite, build 11
+
+A hundred and fourteen breaks, each run against its own suite with the test's name as the filter —
+the named test confirmed failed from jest's own record — and the file restored byte for
+byte, its SHA-256 checked before and after. The thirty-four of device push (D8) were run by
+one script, and the whole working tree's hashes were checked again after its last restore;
+the twenty-three of F84 and of a tap's own workspace were run the same way by a second, which
+also ran the D8 pass's five tap guards again against the reworked tap handler — each failed
+its test again — and the working tree's hashes matched after its last restore. The three of
+the ask on an empty inbox were run the same way by the main session, each file restored by
+SHA-256. The fourteen of the single-pass review (the last rows) were run the same way by a
+third script, which also ran six of the earlier guards again on the code the review
+reworked — sign-out's four, the kept device id and "not available on this build" — each
+failing its test again; every failure read was the assertion meant, and the working
+tree's hashes matched after its last restore.
+The three breaks of the repository's own presses are run against the gate, `audit:haptics`,
+which names the broken file. Compact cards are a style no test reads, as the empty screens'
+icon colour was in build 10, so no break was run for the card's height.
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| Settings is the groups in the build's order, as drawn | the Notifications card moved above WORKSPACE | `tab-screens` "is the groups in the build's order, as drawn — the labels, the rows, the control — then Sign out and the version" |
+| The appearance control is Auto, Dark, Light | Dark put first | `tab-screens` "switches the live theme from the control on the index — Auto, Dark, Light, in that order" |
+| The index reads only the plan | a second read made beside it | `tab-screens` "reads only the plan, quietly: one billing read for an owner, said as the plan name under Billing; the email under Account" |
+| A member's billing is never read | read for a member too | `tab-screens` "never reads billing for a member, whose line says who manages it" |
+| The enrolled plan is one rule: canceled is the free floor | canceled no longer ending access | `tab-screens` "says Free on the free floor and for a subscription whose access has ended — the Billing page's own rule" |
+| A hosted page opened drops the workspace's billing | the portal invalidating nothing | `snapshot-invalidation` "a checkout or the portal opened drops the workspace's billing, which is otherwise shared (build 11)" |
+| The roomier row is the index's only | the roomy padding dropped from the row | `components` "is roomier only where the Settings index asks (build 11, D1)" |
+| A failed Face ID enable is said under its row | the failure never drawn | `tab-screens` "says a failed Face ID enable right under its row, and keeps the page" |
+| Archived flows opens in Settings' own stack | the row pushing the Flows tab's page | `tab-screens` "opens each page row on its page — Archived flows in Settings' own stack (the owner's build 9)" |
+| The Face ID offer says "in Settings" | "Settings › Security" put back | `faceid-screen` "says where the setting is — Settings, since the Face ID row is on the index again (build 11, D1)" |
+| Organization says "Switch to it in Settings" | "Settings › Workspace" put back | `organization-screen` "names where to switch to an organization — Settings, whose workspace row is on the index again (build 11, D1)" |
+| The drawn Pro is inert | the drawn card acting like a listed one | `billing-screen` "draws Pro at $10.00 per month after Plus when the platform does not list it, and that card does nothing on iOS — not paying, it opens no checkout (build 11, D2)" |
+| A listed Pro replaces the drawn one | the drawn card always appended | `billing-screen` "a Pro the platform lists replaces the drawn one: three cards, the listed price, a real checkout" |
+| Nothing listed says so, the drawn Pro notwithstanding | the line keyed on the card count again | `billing-screen` "with nothing listed: Free and the drawn Pro, and the line that nothing can be bought right now" |
+| A live twin has the same template AND the same scope: null matches null only | any scope matching | `flows-view` "is none for another template, another team's copy, or an archived row — null matches null only" |
+| No Add it again with a live twin | Add it again drawn for every archived flow | `tab-screens` "offers no Add it again once the flow is live again in the same scope: it says so and opens the live flow (build 11, D3; the owner's build 10 items 5, 6 and 11)" |
+| Open the live flow opens in the same stack | the Flows path used from Settings too | `tab-screens` "the Settings copy opens the live flow in the Settings stack, so Back returns to Settings" |
+| Every flow says its team, or Whole workspace | the label gated on a team existing again | `tab-screens` "says Whole workspace where the workspace has no team at all (the owner's build 10 item 7)" |
+| Nothing is sent without a team | the refusal removed | `tab-screens` "adds a flow to the team chosen — there is no whole-workspace choice, and nothing is sent until one is picked (D4)" |
+| projectId is always sent | the team left out of the create | `tab-screens` "adds a flow to the team chosen — there is no whole-workspace choice, and nothing is sent until one is picked (D4)" |
+| A plain member with no team is told who creates one, with no Activate | Create offered to everyone | `tab-screens` "with no team yet, a plain member is told an owner or admin creates the first one, and has no Activate" |
+| A team made from Setup is the team chosen | the team made not chosen | `tab-screens` "with no team yet, an owner or admin creates one first — from Setup — and it is the team chosen (D4)" |
+| Archived sits left of New | New put first | `tab-screens` "Flows offers Archived as a header button, left of New, which opens the page — no row on the page, under a no-match search either (build 11, D5)" |
+| Flows is empty whatever is archived | the archived count put back in the condition | `tab-screens` "is the empty standard whatever is archived — Activity's format — with the way to the archived ones under Add a flow (the owner's build 10 items 8 and 9)" |
+| The Archived flows button only when any exist | the button always drawn | `tab-screens` "offers no Archived flows button when nothing is archived" |
+| A press ticks | the tick removed from the helper | `pressable` "ticks once, then calls the handler with its event" |
+| No handler, no tick | a tick with no handler | `pressable` "gives no tick with no handler: a press that does nothing" |
+| iOS only | the platform guard removed | `pressable` "is silent on Android, as the tab bar always was" |
+| The signed-out cover is silent | the cover given its handler whatever the session | `cover-haptics` "gives no tick to a tap that does nothing — the signed-out cover — and one to Get started" |
+| The tabs tick through the helper | react-native's Pressable put back in the tab bar | `tab-bar` "ticks on a tab press — the selection haptic, through the shared pressable now (build 11, D7)" |
+| The avatar and the bell tick | react-native's Pressable put back on Home | `tab-screens` "ticks when the avatar, the bell or See all is tapped, then opens its page (the owner's build 10 item 10; D7)" |
+| See all ticks | its Text handler unwrapped | `tab-screens` "ticks when the avatar, the bell or See all is tapped, then opens its page (the owner's build 10 item 10; D7)" |
+| audit:haptics fails a Pressable from react-native | the import rule disabled | `audit-gates` "fails a press that bypasses the shared pressable, in each form it is written, and passes the helper and what uses it" |
+| audit:haptics fails a host element's own onPress | the host-handler rule disabled | `audit-gates` "fails a press that bypasses the shared pressable, in each form it is written, and passes the helper and what uses it" |
+| audit:haptics fails expo-haptics outside the helper | the haptics-import rule disabled | `audit-gates` "fails a press that bypasses the shared pressable, in each form it is written, and passes the helper and what uses it" |
+| The repository's own presses go through the helper: ActionFailure's retry | its Text handler unwrapped | `npm run audit:haptics` — the gate itself, naming the file |
+| The repository's own presses go through the helper: Mark all read | its Text handler unwrapped | `npm run audit:haptics` — the gate itself, naming the file |
+| The repository's own presses go through the helper: NocToggle | react-native's Pressable put back in the toggle | `npm run audit:haptics` — the gate itself, naming the file |
+| The Home mark fills its 38-pt row | the height put back to 17 | `tab-screens` "fills the 38-pt row on the dashboard, beside the bell and the avatar it leaves untouched" |
+| The Home mark draws nothing but itself | a tile drawn behind it (`backgroundColor`) | `tab-screens` "fills the 38-pt row on the dashboard, beside the bell and the avatar it leaves untouched" |
+| Nothing is asked or registered at launch | the tree asking iOS at sign-in (requestPermissionsAsync in place of the read) | `push-registration` "asks nothing and registers nothing at launch: signed in, the tree only reads what iOS already allows" |
+| Turn on is where iOS asks | Turn on reading the permission instead of requesting it | `push-registration` "Turn on asks iOS at the tap, then registers this phone — PUT { platform, token, appBuild } — keeps only the device id, and the card goes" |
+| The PUT is { platform, token, appBuild } | appBuild left out of the body | `push-registration` "Turn on asks iOS at the tap, then registers this phone — PUT { platform, token, appBuild } — keeps only the device id, and the card goes" |
+| The device id is kept, beside the session | the answered id not written | `push-registration` "Turn on asks iOS at the tap, then registers this phone — PUT { platform, token, appBuild } — keeps only the device id, and the card goes" |
+| Allowed already: one registration between the tree and the card | the tree registering outside the shared single flight | `push-registration` "already allowed: no card, and the signed-in tree and the card register once between them" |
+| Off in iOS Settings is said, with Open Settings | a "no" on record read as askable | `push-registration` "off in iOS Settings: the card says so and opens Settings, and back with notifications on it registers and goes" |
+| Open Settings opens iOS Settings | the button doing nothing | `push-registration` "off in iOS Settings: the card says so and opens Settings, and back with notifications on it registers and goes" |
+| Back from iOS Settings, allowed: registered, no card | the return to the app not read again | `push-registration` "off in iOS Settings: the card says so and opens Settings, and back with notifications on it registers and goes" |
+| "Not now" is kept for the session | the answer not written to the keychain | `push-registration` ""Not now" holds for the session: gone from both inboxes, still gone at the next launch, and nothing asked" |
+| "Not now" holds at the next launch | the kept answer not read | `push-registration` ""Not now" holds for the session: gone from both inboxes, still gone at the next launch, and nothing asked" |
+| Not now hides the ask | Not now not hiding the card | `tab-screens` "asks for notifications on this phone, asks iOS nothing until Turn on, and Not now hides the ask (build 11, D8; the owner's build 10 item 13)" |
+| A simulator registers nothing, and is told why | the phone check (Device.isDevice) dropped | `push-registration` "Android and a simulator register nothing, and the card says why — with nothing to turn on" |
+| Android registers nothing, and is told why | the iOS check dropped | `push-registration` "Android and a simulator register nothing, and the card says why — with nothing to turn on" |
+| An older platform (404/503) is "not available yet" in words | 503 no longer read as not yet | `push-registration` "a platform from before the devices route — 404 or 503 — is "not available yet", in words, never a problem title" |
+| No push token is "not available on this build" | a refused token read as a failed registration | `push-registration` "a build with no push token says so, and sends nothing" |
+| Any other failure asks again, in words | every other failure read as not yet | `push-registration` "any other failed registration asks again, in words, and a second Turn on registers" |
+| A changed token registers again | the listener ignoring every token | `push-registration` "registers again when the token changes — the first token heard is a registration’s own echo" |
+| The first token heard is an echo, not a change | the baseline taken as a change | `push-registration` "registers again when the token changes — the first token heard is a registration’s own echo" |
+| A run id from a push is an id | the run id pattern dropped | `push-registration` "a tap while the app runs opens what it names: a failed run’s page, or Activity for a held one" |
+| One tap opens one screen | the tap not remembered | `push-registration` "a tap while the app runs opens what it names: a failed run’s page, or Activity for a held one" |
+| A failed run opens its page in the Home stack | the run opened in the Settings stack | `push-registration` "a tap while the app runs opens what it names: a failed run’s page, or Activity for a held one" |
+| The tap that opened the app opens its screen | the last response never read | `push-registration` "the tap that opened the app opens its screen once signed in, and not before" |
+| …and not before the session is signed in | the signed-in gate dropped from the tap effect | `push-registration` "the tap that opened the app opens its screen once signed in, and not before" |
+| The banner shows in the foreground | the banner turned off | `push-registration` "shows a push’s banner while the app is open, and only while someone is signed in" |
+| …only while someone is signed in | the handler left in place at sign-out | `push-registration` "shows a push’s banner while the app is open, and only while someone is signed in" |
+| Sign-out DELETEs the device BEFORE the logout | the DELETE moved after the logout | `sign-out` "sends DELETE for the device with the still-valid bearer BEFORE the logout, then clears it with the session" |
+| A failed DELETE never blocks sign-out | the failure rethrown | `sign-out` "never lets a failed DELETE block the sign-out, and logs nothing about it" |
+| A failed DELETE logs nothing | the failure logged | `sign-out` "never lets a failed DELETE block the sign-out, and logs nothing about it" |
+| No registered device, no DELETE | a DELETE sent without a device id | `sign-out` "sends only the logout when this phone never registered" |
+| The device id is this-device-only | the keychain option dropped | `session-store` "keeps push's device id and "Not now" this-device-only, beside the session (build 11, D8)" |
+| The device id is cleared with the session | its key dropped from clearSession | `session-store` "sign-out clears the Face ID choice and "remember me" with the tokens" |
+| "Not now" is cleared with the session | its key dropped from clearSession | `session-store` "sign-out clears the Face ID choice and "remember me" with the tokens" |
+| aps-environment is the plugin's, never hand-written | aps-environment written into app.json | `app-config` "applies the expo-notifications plugin, which owns aps-environment — never hand-written (build 11, D8)" |
+| The expo-notifications plugin is applied | the plugin removed from app.json | `app-config` "applies the expo-notifications plugin, which owns aps-environment — never hand-written (build 11, D8)" |
+| A plain member on no team, where the organization has a team to ask onto, is told to ask to join one (F84) | the ask branch never taken | `tab-screens` "with no team yet, a plain member whose organization has a team to ask onto is told to ask to join one, with See teams — and has no Activate (F84)" |
+| A team they have asked onto still counts (`requested`) | only access `none` counted | `tab-screens` "with no team yet, a plain member whose organization has a team to ask onto is told to ask to join one, with See teams — and has no Activate (F84)" |
+| See teams opens Teams | See teams opening the Settings index | `tab-screens` "with no team yet, a plain member whose organization has a team to ask onto is told to ask to join one, with See teams — and has no Activate (F84)" |
+| Asking to join has no Activate | Activate drawn for the ask line too | `tab-screens` "with no team yet, a plain member whose organization has a team to ask onto is told to ask to join one, with See teams — and has no Activate (F84)" |
+| A team they can already see is not one to ask onto (`member`) | the access filter dropped | `tab-screens` "with no team yet, a plain member whose directory lists nothing to ask onto is still told an owner or admin creates the first one (F84)" |
+| An owner's or admin's own line comes first | the ask line drawn before "Create a team first." | `tab-screens` "an owner or admin with no team is offered Create a team first, whatever the directory lists — their line comes first (F84)" |
+| The directory is read only where there is no team to add to | the directory read whatever the teams | `tab-screens` "reads the directory only where there is no team to add to: with a team, the chips and no directory read (F84)" |
+| No directory yet (404): Setup draws, with the owner-or-admin line | the shared helper's 404 tolerance dropped | `tab-screens` "a platform with no directory yet (404) leaves a plain member the owner-or-admin line, and Setup still draws (F84)" |
+| Teams tolerates 404 through the shared helper | the shared helper's 404 tolerance dropped | `teams-screens` "lists the teams it is on when the platform has no directory yet, and offers nothing to ask for" |
+| Any other failure of the directory is the screen's | every refusal read as an empty directory | `teams-screens` "reads the directory through the one helper Setup shares: a 404 is nothing to list, any other failure is the screen's (F84)" |
+| Teams lists the directory through the shared helper | the helper answering nothing | `teams-screens` "lists the teams the person is on, by workspace and not a deleted one, and the ones they can ask to join" |
+| A push from another of the person's workspaces switches to it | the named workspace never switched to | `push-registration` "switches to another of the person’s workspaces as the switcher does — the switch, then the session read — and opens the run there once that session is drawn" |
+| Switched as the switcher does: the `workspace-activate` key | another key prefix | `push-registration` "switches to another of the person’s workspaces as the switcher does — the switch, then the session read — and opens the run there once that session is drawn" |
+| The session is read after the switch, not before | the read moved before the switch | `push-registration` "switches to another of the person’s workspaces as the switcher does — the switch, then the session read — and opens the run there once that session is drawn" |
+| A switched tap opens once the switched session is drawn | the target opened as soon as the read returned | `push-registration` "switches to another of the person’s workspaces as the switcher does — the switch, then the session read — and opens the run there once that session is drawn" |
+| A held run from another workspace switches too, then opens Activity | the switch made for a failed run only | `push-registration` "switches the same way for a held run, then opens Activity" |
+| The active workspace named: opened at once, no switch | the active-workspace check dropped | `push-registration` "opens at once, with no switch, when the push names the active workspace" |
+| A workspace id from a push is a UUID | the shape check dropped | `push-registration` "opens in the active workspace, as before, when the push names none, one not theirs, or an id of another shape" |
+| Only one of the person's own workspaces is switched to | the session's list not consulted | `push-registration` "opens in the active workspace, as before, when the push names none, one not theirs, or an id of another shape" |
+| A refused switch opens nothing | the target opened where the person is when the switch fails | `push-registration` "opens nothing when the platform refuses the switch, or the session cannot be read again — the person stays where they are" |
+| A failed session read opens nothing | the drawn session's workspace not checked before opening | `push-registration` "opens nothing when the platform refuses the switch, or the session cannot be read again — the person stays where they are" |
+| One tap, one switch, one screen | the tap not remembered | `push-registration` "switches and opens once for one tap, though it is heard twice — as it arrives and as the tap that opened the app" |
+| The tap that opened the app switches only once signed in | the signed-in gate dropped from the tap effect | `push-registration` "the tap that opened the app switches to its workspace once signed in, and not before" |
+| The empty inbox asks too | the ask not passed to the empty standard | `push-registration` "asks above "Quiet, as designed" on both inboxes, and Turn on registers there — else push could not be turned on at all" |
+| The ask is above the empty standard | the ask drawn below the centred block | `push-registration` "asks above "Quiet, as designed" on both inboxes, and Turn on registers there — else push could not be turned on at all" |
+| Not now leaves the empty standard whole | the empty standard's sentence dropped under an ask | `push-registration` ""Not now" on an empty inbox takes the ask away and leaves the empty standard whole" |
+| Sign-out waits for a registration in flight, then DELETEs the id it answers before the logout | the wait removed from `signOut` | `sign-out` "waits for a registration in flight when Sign out is pressed: the DELETE sends the id it answers, BEFORE the logout, then the keychain is cleared" |
+| The wait sees every registration in flight | a registration not tracked while in flight | `sign-out` "waits for a registration in flight when Sign out is pressed: the DELETE sends the id it answers, BEFORE the logout, then the keychain is cleared" |
+| The epoch ends after the wait, not before it | the epoch ended before the wait | `sign-out` "waits for a registration in flight when Sign out is pressed: the DELETE sends the id it answers, BEFORE the logout, then the keychain is cleared" |
+| The wait is bounded: five seconds, then sign-out goes on | the timer removed, so the wait is unbounded | `sign-out` "goes on after five seconds without a registration that has not answered: the logout is sent, and when it answers later no device id is kept" |
+| A registration that answers after the wait keeps no id | the epoch check removed from the registration | `sign-out` "goes on after five seconds without a registration that has not answered: the logout is sent, and when it answers later no device id is kept" |
+| Sign-out ends the epoch | `endDeviceEpoch()` removed from `signOut` | `sign-out` "goes on after five seconds without a registration that has not answered: the logout is sent, and when it answers later no device id is kept" |
+| A token service offline asks again, with Turn on | `ERR_NOTIFICATIONS_NETWORK_ERROR` dropped from the codes that ask again | `push-registration` "a token service that is offline or failing asks again, in words, with Turn on — never "not on this build" — and a second Turn on registers (the build 11 review)" |
+| A token service failing asks again, with Turn on | `ERR_NOTIFICATIONS_SERVER_ERROR` dropped from the codes that ask again | `push-registration` "a token service that is offline or failing asks again, in words, with Turn on — never "not on this build" — and a second Turn on registers (the build 11 review)" |
+| The Billing page reads afresh at every visit | the page's read without `fresh` — through the snapshot again | `billing-screen` "reads the workspace's billing afresh at every visit — twice inside the 120 s window is two GETs — while the Settings index's plan line reads once through the snapshot (the build 11 review)" |
+| A fresh read is a real request | `fresh` ignored by `readBilling` | `billing-screen` "reads the workspace's billing afresh at every visit — twice inside the 120 s window is two GETs — while the Settings index's plan line reads once through the snapshot (the build 11 review)" |
+| A fresh read's answer serves the Settings line | the page's answer not kept in the snapshot | `billing-screen` "reads the workspace's billing afresh at every visit — twice inside the 120 s window is two GETs — while the Settings index's plan line reads once through the snapshot (the build 11 review)" |
+| The Settings index's plan line keeps the snapshot (D1) | the index line reading `fresh` too | `billing-screen` "reads the workspace's billing afresh at every visit — twice inside the 120 s window is two GETs — while the Settings index's plan line reads once through the snapshot (the build 11 review)" |
+| Every card says its team inside a picked team too | the card's label gated on All teams again | `scope-control` "says the team on every card and every archived row inside a picked team too — D4 has no All-teams exception (the build 11 review)" |
+| Every archived row says its team inside a picked team too | the archived row's label gated on All teams again | `scope-control` "says the team on every card and every archived row inside a picked team too — D4 has no All-teams exception (the build 11 review)" |
 
 ### Guards proved to bite, 24.6
 

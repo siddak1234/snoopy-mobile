@@ -1,7 +1,7 @@
 import React from 'react';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 
-import WorkspaceScreen from '@/app/(tabs)/settings/workspace';
+import SettingsScreen from '@/app/(tabs)/settings';
 import type { SessionContextValue, SessionReloadOutcome } from '@/hooks/use-session';
 import { PlatformError } from '@/lib/platform/problem';
 import type { WorkspaceSummary } from '@/lib/platform/workspaces';
@@ -19,7 +19,8 @@ const { platformOperation, newIdempotencyKey } = jest.requireMock('@/lib/platfor
  *
  * The completed web client drives `PATCH /v1/session/active-workspace` from its
  * top bar (snoopy PR #6); this is the same operation from the workspace row of
- * Settings › Workspace (its own page since 24.12). What the cases pin: the backend session stays the only owner of "active"
+ * Settings' WORKSPACE group — on the index again since build 11 (D1), after a
+ * page of its own in 24.12. What the cases pin: the backend session stays the only owner of "active"
  * — the app mutates, then re-reads `/v1/session`, and never holds a workspace
  * of its own; the trigger is hidden below two workspaces unless the session
  * says its list is truncated; and a failed mutation stays on the loaded screen
@@ -78,7 +79,7 @@ beforeEach(() => {
 describe('the WORKSPACE row', () => {
   it('is inert with one workspace and no truncation, exactly as before', async () => {
     routeWorkspaces({ workspaces: [org], activeWorkspaceId: ORG }, async () => ({}));
-    await renderWithProviders(<WorkspaceScreen />, sessionWith([org]));
+    await renderWithProviders(<SettingsScreen />, sessionWith([org]));
 
     const row = await screen.findByTestId('workspace-switcher-row');
     expect(screen.queryByTestId('workspace-switcher-caret')).toBeNull();
@@ -89,14 +90,14 @@ describe('the WORKSPACE row', () => {
 
   it('opens the switcher with two workspaces, reading the published collection', async () => {
     routeWorkspaces({ workspaces: [org, personal], activeWorkspaceId: ORG }, async () => ({}));
-    await renderWithProviders(<WorkspaceScreen />, sessionWith([org, personal]));
+    await renderWithProviders(<SettingsScreen />, sessionWith([org, personal]));
 
     expect(await screen.findByTestId('workspace-switcher-caret')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('workspace-switcher-row'));
 
     expect(await screen.findByTestId('workspace-switcher-dialog')).toBeTruthy();
     expect(await screen.findByTestId(`workspace-option-${PERSONAL}`)).toBeTruthy();
-    // Within the dialog: the Workspace page also has an Organization row of its own (24.5.1).
+    // Within the dialog: Settings also has an Organization row of its own (24.5.1).
     const dialog = within(screen.getByTestId('workspace-switcher-dialog'));
     expect(dialog.getByText("Alex's space")).toBeTruthy();
     expect(dialog.getByText('Personal')).toBeTruthy();
@@ -110,7 +111,7 @@ describe('the WORKSPACE row', () => {
     // Non-membership must not be inferred from the bounded session list; the
     // collection is what says how many there are.
     routeWorkspaces({ workspaces: [org, personal, extra], activeWorkspaceId: ORG }, async () => ({}));
-    await renderWithProviders(<WorkspaceScreen />, sessionWith([org], { truncated: true }));
+    await renderWithProviders(<SettingsScreen />, sessionWith([org], { truncated: true }));
 
     expect(await screen.findByTestId('workspace-switcher-caret')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('workspace-switcher-row'));
@@ -126,12 +127,12 @@ describe('the WORKSPACE row', () => {
         ? Promise.reject(new PlatformError('Service Unavailable', 503))
         : fallback(path, execute),
     );
-    await renderWithProviders(<WorkspaceScreen />, sessionWith([org, personal]));
+    await renderWithProviders(<SettingsScreen />, sessionWith([org, personal]));
 
     await fireEvent.press(await screen.findByTestId('workspace-switcher-row'));
     expect(await screen.findByText('Service Unavailable')).toBeTruthy();
     // The loaded screen is still there behind the dialog; nothing was replaced.
-    expect(screen.getByText('Workspace')).toBeTruthy();
+    expect(screen.getByText('Settings')).toBeTruthy();
   });
 });
 
@@ -147,7 +148,7 @@ describe('switching', () => {
       return { activeWorkspaceId: PERSONAL };
     });
     const session = sessionWith([org, personal]);
-    await renderWithProviders(<WorkspaceScreen />, session);
+    await renderWithProviders(<SettingsScreen />, session);
 
     await fireEvent.press(await screen.findByTestId('workspace-switcher-row'));
     await fireEvent.press(await screen.findByTestId(`workspace-option-${PERSONAL}`));
@@ -170,7 +171,7 @@ describe('switching', () => {
     const patch = jest.fn(async () => ({}));
     routeWorkspaces({ workspaces: [org, personal], activeWorkspaceId: ORG }, patch);
     const session = sessionWith([org, personal]);
-    await renderWithProviders(<WorkspaceScreen />, session);
+    await renderWithProviders(<SettingsScreen />, session);
 
     await fireEvent.press(await screen.findByTestId('workspace-switcher-row'));
     await fireEvent.press(await screen.findByTestId(`workspace-option-${ORG}`));
@@ -185,7 +186,7 @@ describe('switching', () => {
       throw new PlatformError('The requested resource is unavailable.', 404, 'NOT_FOUND');
     });
     const session = sessionWith([org, personal]);
-    await renderWithProviders(<WorkspaceScreen />, session);
+    await renderWithProviders(<SettingsScreen />, session);
 
     await fireEvent.press(await screen.findByTestId('workspace-switcher-row'));
     await fireEvent.press(await screen.findByTestId(`workspace-option-${PERSONAL}`));
@@ -207,7 +208,7 @@ describe('switching', () => {
     routeWorkspaces({ workspaces: [org, personal], activeWorkspaceId: ORG }, async () => ({
       activeWorkspaceId: PERSONAL,
     }));
-    await renderWithProviders(<WorkspaceScreen />, sessionWith([org, personal], { reload }));
+    await renderWithProviders(<SettingsScreen />, sessionWith([org, personal], { reload }));
 
     await fireEvent.press(await screen.findByTestId('workspace-switcher-row'));
     await fireEvent.press(await screen.findByTestId(`workspace-option-${PERSONAL}`));
@@ -217,7 +218,7 @@ describe('switching', () => {
     );
     // The dialog does not pretend the switch failed, and does not eject anyone.
     expect(screen.getByText('Reload session')).toBeTruthy();
-    expect(screen.getByText('Workspace')).toBeTruthy();
+    expect(screen.getByText('Settings')).toBeTruthy();
 
     await fireEvent.press(screen.getByText('Reload session'));
     await waitFor(() => expect(reload).toHaveBeenCalledTimes(2));

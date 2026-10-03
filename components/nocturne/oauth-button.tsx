@@ -1,7 +1,8 @@
 import React from 'react';
-import { Pressable, Text } from 'react-native';
+import { Text } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 
+import { Pressable } from '@/components/pressable';
 import { fonts, radius, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 

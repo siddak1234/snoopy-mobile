@@ -106,7 +106,8 @@ Switching it is a published mutation, `PATCH /v1/session/active-workspace`
 with an idempotency key, followed by a re-read of `/v1/session`
 (`useSession().reload()`); the app holds no workspace state of its own. The
 switcher lists `GET /v1/workspaces` rather than the session's bounded
-`workspaces` page, and Settings › Workspace (its own page since 24.12) shows it
+`workspaces` page, and Settings' WORKSPACE row (on the index again since build
+11, D1, after a page of its own in 24.12) shows it
 only with two or more workspaces or when `workspacesTruncated` says the list is
 incomplete — the same rule the web switcher (snoopy PR #6) applies over the
 same operation.
@@ -137,19 +138,19 @@ on, to Sign in. Signed in, the same screen is the splash and moves on by itself.
 | Home | session + catalog + `run-stats?since=<local midnight>` + runs + pending approvals |
 | Flows/add (the catalog, "New") | workspace automation catalog and its server-supplied categories, plus subscriptions and projects — Added ✓ or Add per the scope looked at (24.9.3) |
 | Setup/configure | catalog `setup[]` and the matching subscription config |
-| Flows/detail | subscriptions + catalog + run stats; identity is subscription ID/template ID. Detail keeps the subscription (`runInput`, `triggerKind`, `templateVersion`) and its catalog entry for its actions; the webhook address is read when its dialog opens. An archived flow is read with the archived list and drawn read-only, with "Add it again" (24.11.8; "Archived" since 24.12). The Runs, Successes and Failures tiles open Activity for this flow and outcome (24.11.9) |
-| Flows/archived | `GET …/subscriptions?status=archived` (backend §12.1 #203), only the archived rows kept, within the scope, each with the day it was archived (its `updatedAt`); Flows shows them as one row with a count (24.11.8). Settings › Workspace has a copy in the Settings stack, whose flows open in Settings too, so Back stays there (24.12) |
+| Flows/detail | subscriptions + catalog + run stats; identity is subscription ID/template ID. Detail keeps the subscription (`runInput`, `triggerKind`, `templateVersion`) and its catalog entry for its actions; the webhook address is read when its dialog opens. An archived flow is read with the archived list and drawn read-only, with "Add it again" (24.11.8; "Archived" since 24.12) — or, once a non-archived subscription with the same template AND the same scope exists (`addedAgainAs`, the platform's own one-per-template-and-scope rule; null matches null only), the sentence that it has been added again and "Open the live flow", which opens the twin in the same stack (build 11, D3). Every flow page says its team, or "Whole workspace", under its name (D4). The Runs, Successes and Failures tiles open Activity for this flow and outcome (24.11.9) |
+| Flows/archived | `GET …/subscriptions?status=archived` (backend §12.1 #203), only the archived rows kept, within the scope, each with the day it was archived (its `updatedAt`), and every row with its team or "Whole workspace" in every scope, a picked team's included (D4; the build 11 review); Flows reaches them through "Archived", a secondary button left of New in its header, always drawn, with no count (build 11, D5 — ~~one row with a count, 24.11.8~~), and from the empty standard's "Archived flows" button when any exist in the scope (D6). Settings has a copy in the Settings stack, whose flows open in Settings too, so Back stays there (24.12) |
 | ~~Builder~~ | **Removed 2026-10-02** with Templates and Configure, on the owner's direction: the website has no builder, and FR-25 is parity with the website. Flow detail draws `pipeline[]` itself |
 | Activity/run detail | runs/list/detail joined to catalog/subscription identity. Activity takes a flow and an outcome from a tile (24.11.9); a run of an archived flow says so. Run detail reads in the workspace it was opened in and leaves when the active one changes |
 | Approvals | pending approvals joined through subscription → template → pipeline step |
 | Notifications | pending approvals plus failed runs; explicitly an in-app composition. Settings › Notifications is the same inbox, a copy in the Settings stack whose failed runs open in Settings too, so Back stays there (24.12) |
-| Settings | nothing: eight categories, each its own page — Account, Security, Connections, Billing, Workspace, Notifications, Appearance, Help — then Sign out (24.12, the owner's decision 10). The plan's totals left with the Solutions tab (24.9.5) |
+| Settings | **only the plan, quietly** (build 11, D1): for an owner or admin, the workspace's billing through the shared snapshot — one request per workspace per settled window, ~~shared with the Billing page~~ refreshed by the Billing page's own read, which is a real request at every visit (the build 11 review) — drawn as the plan's name under Billing ("Free", "Plus", "Pro", by the one enrolled-plan rule in `lib/view/billing.ts`) once it is known, nothing while loading and nothing on a failure or offline (no error screen: a quiet line, the first of its kind); a member's is never read, and their line says "Managed by owners and admins". Everything else is the session's: ONE grouped page — Account (its email under it) → page · SECURITY: the Face ID row · Connections → page · Billing → page · WORKSPACE: the switcher row, Your role, Organization, Teams, Archived flows, Export my data · Notifications → page · APPEARANCE: Auto, Dark, Light · Help → page · Sign out · the version — in place of 24.12's eight pages (the owner's build 10 items 1, 2 and 4). The plan's totals left with the Solutions tab (24.9.5) |
 | Settings › Connections | the provider registry and the workspace's connections: third-party integrations only (24.12, decision 9); sign-in accounts are Account's |
-| Settings › Workspace | the session; the workspace switcher reads the workspace collection when it opens |
+| ~~Settings › Workspace~~, ~~Settings › Security~~, ~~Settings › Appearance~~ | **gone in build 11 (D1)**: their rows and controls are on the index; the workspace switcher still reads the workspace collection only when it opens |
 | Organization | the workspace collection; for an owner or admin of the active organization, its members, domains and join requests — each request named by its requester's `displayName` and `email`, the id only when neither is sent (24.12) — and its join link — the website's `/onboarding/join-org?w=` on the browser leg's origin, its line following the joining policy of the first verified domain shown for matching emails, in the website's words (`joinLinkLine`; 24.12, decision 5); for someone in no organization, `organization-discovery` |
 | Teams / team (24.11.7) | the workspace collection, each workspace's teams (`…/projects`), and each organization's directory (`…/project-directory`, backend 24.11.4); one team read in its own workspace; in an organization its memberships, and for its owner or admin — or the organization's — the workspace's members and the requests to join (`…/access-requests`) |
 | Home, Flows, add, setup, Activity | also the active workspace's teams — the scope control (24.9.2), the scope a flow is added to, and the label each flow carries |
-| Billing | the workspace collection for the role; `/v1/plans`, which anyone signed in may read; for an owner or admin, the workspace's billing; read again when the app returns to the foreground on iOS |
+| Billing | the workspace collection for the role; `/v1/plans`, which anyone signed in may read; for an owner or admin, the workspace's billing — a real request at every visit, never the snapshot's answer, which it replaces for the Settings line (the build 11 review: a plan read before Stripe's webhook landed was otherwise shown here for up to the 120 s window after a checkout); read again when the app returns to the foreground on iOS |
 | Account | the linked sign-in identities and the login providers — a linked identity shows the address its provider reports (`email`, 24.12), none when absent; Unlink is `POST /v1/auth/native/identities/{provider}/unlink` with the device's refresh token (backend 24.11.1), its refusals said by reason (24.12) |
 | Data export | the workspace collection for the role; the bounded export on request; a complete export started, followed every 2 s (doubling after a failed read, three allowed), and its link read again at the moment of the download — on iOS saved into the app and handed to the share sheet (24.12) |
 | Support | nothing read; the contact request is sent on the public operation; Privacy and Terms open on the website |
@@ -209,7 +210,11 @@ review" — the held queue — also list running, queued and cancelled runs.
   key, then re-read the session; on a failed re-read the loaded screen stays
   and the dialog offers the read again.
 - Disconnect: delete the stable connection ID.
-- Sign out: revoke first, clear locally only on a terminal/successful answer.
+- Sign out: unregister this phone's push device first, with the still-valid
+  bearer and never blocking on it (build 11, D8) — once a registration still in
+  flight has answered, waited for up to five seconds, so the id it answers is
+  the one sent; one answering later keeps no id (the build 11 review); then
+  revoke, and clear locally only on a terminal/successful answer.
 - Round 16 (24.4), each the website's operation, words and gating:
   - Run: `createRun` with exactly what the pinned version's `runInput`
     declares, offered only on a live, available subscription that declares
@@ -262,8 +267,23 @@ review" — the held queue — also list running, queued and cancelled runs.
     team in the directory and withdraw the request; approve or deny a request,
     by the team's owner or admin or the organization's. Each acts on the team's
     own workspace, which can be other than the active one.
-  - A flow is added to the whole workspace or to a team, the scopes it is not
-    in yet, as the website's Add offers.
+  - A flow is added to a team, always (build 11, D4; the owner's build 10 item
+    7: "Each flow has to be in a team") — there is no whole-workspace choice in
+    either client, and `projectId` is always sent. A team not chosen on Setup is
+    refused in words ("Pick a team."), and nothing is sent. With no team yet an
+    owner or admin is told "Create a team first." and makes one from Setup,
+    which is then the team chosen; a plain member, where the organization has
+    a team they could ask onto (the team directory, read only in that state,
+    lists one they are not on; a platform without it, 404, lists none — F84,
+    the website's rule), is told "Ask to join a team first." with "See teams",
+    which opens Teams, and otherwise "An owner or admin creates the first
+    team."; neither has Activate. Existing whole-workspace flows
+    stay, labelled "Whole workspace", under All teams; the platform is unchanged
+    (`projectId` null is still a visibility scope it accepts). Every flow card,
+    archived row and flow page says "Team: {kind}" or "Whole workspace", the
+    website's words, in every scope — inside a picked team too (the build 11
+    review: ~~a card under All teams only; inside a picked team the card does
+    not repeat the label~~, an exception D4 never made).
 - Round 16 (24.6), each the website's operation, words and gating:
   - Billing (ADR-0032 option B; the cards since 24.12, the owner's decisions 7
     and 8): every platform shows the plans as cards — Free, then the
@@ -331,8 +351,25 @@ mobile-only shape.
   appropriate and do not synthesize `#4821`.
 - Approval has no display title: join its subscription and `stepId` to the
   catalog pipeline title.
-- There is no notifications endpoint/read state/push contract: compose pending
-  approvals and failed runs in app; do not claim OS push permission.
+- There is no notifications endpoint and no read state (backend §12.1 #71
+  stands): compose pending approvals and failed runs in app, every row unread.
+  Device push (build 11, D8; BUILD-PLAN 24.13.6, ADR-0035) is registered
+  through `PUT /v1/session/devices` — on iOS phones only, the push token in its
+  body and only the answered device id kept, in SecureStore with the session —
+  and unregistered by `DELETE /v1/session/devices/{deviceId}` before the
+  logout. It is asked for on the inbox's card, never at launch — above the rows,
+  and above the empty standard when there are none (the owner, 2026-10-03) — iOS
+  asks at the "Turn on" tap, "Not now" holds for the session; Android and a simulator
+  register nothing and the card says so (§12.1 #211); a platform without the
+  route (404/503) is "Notifications aren't available yet." in words. A tap
+  opens a failed run's page, or Activity for a held one, in the workspace the
+  push names (`data.workspaceId`, sent from the NINETEENTH promotion): another
+  of the person's workspaces — a UUID on the session's list — is switched to
+  first as the switcher does (`PATCH /v1/session/active-workspace`, then
+  `/v1/session` read again), and the screen opens once that session is drawn;
+  a switch or a read that fails opens nothing. No workspace named, the active
+  one, an id of another shape or one not theirs: it opens in the active
+  workspace. No web push.
 - Confidence is unpublished: render the design's unavailable value.
 - `homeStats` is not an operation: derive the three tiles from windowed
   `run-stats` exactly as the refusal directs.
@@ -344,7 +381,13 @@ mobile-only shape.
 - Billing is ADR-0025's four operations and ADR-0032's rule (24.6.1 above):
   no card field, no in-app purchase, no price the platform did not state —
   but Free's $0.00 per month, which the app draws by the owner's decision 7
-  (24.12): `/v1/plans` lists only what can be bought.
+  (24.12), and, since build 11 (D2, the owner's build 10 item 3: "I said free
+  plus and pro"), Pro's $10.00 per month, the price the owner set, drawn while
+  `/v1/plans` does not list a plan with id `pro` — an inert card on every
+  platform and for every role (no checkout, which would answer 404; no portal,
+  which has no Pro), replaced by the platform's Pro once it is listed.
+  `/v1/plans` lists only what can be bought. The cards are compact, at their
+  natural height (D2).
   Billing states the plan; the solutions total left Settings with the Solutions
   tab (24.9.5).
 - An archived subscription is absent everywhere but Archived flows: not a
@@ -385,9 +428,9 @@ has no builder, so a read-only one on mobile offered nothing the website offers.
 "New" and Home's button lead to the catalog inside Flows (`app/(tabs)/flows/add.tsx`,
 24.9.3); the Solutions tab itself went on 2026-10-02, on the owner's word — four
 tabs: Home, Flows, Activity, Settings. The Settings SECURITY card keeps the
-Face ID unlock only (Settings › Security, its own page since 24.12); its
-Passkeys and Stay signed in rows were static design copy the website never had,
-and went the same day.
+Face ID unlock only (a page of its own in 24.12, on the index again since build
+11, D1); its Passkeys and Stay signed in rows were static design copy the website
+never had, and went the same day.
 
 **The type is the app's own scale** (24.12, the owner's decision 11 of
 2026-10-02: bigger type, "whole app — easy to read"). Every font size, line
@@ -395,6 +438,28 @@ height and tracked size comes from `typeScale` in `constants/theme.ts` — about
 2 pt over the design's text sizes and 3 over its titles, 12 at the smallest —
 no longer the design's values carried over 1:1. `audit:type` fails a size
 written anywhere else, and the Nocturne snapshots were re-pinned once for it.
+
+**The Home mark fills its row** (build 11, D9; the owner's build 10 item 12:
+"should fill up that empty space top left"). The design drew it at 17 in a row
+its two buttons make 38 tall; it is 38 — the row's height — in every Home
+state, through BrandMark's own `height`, so the row and everything below stay
+where they were. The primitive and its snapshots are unchanged.
+
+**Every press ticks** (build 11, D7; the owner's build 10 item 10: "Ensure any
+button clicked does haptic feedback like the others"). The tab bar's selection
+haptic — the one the app had — is the app's rule: every press passes through
+`components/pressable.tsx`, whose `Pressable` is react-native's with its press
+wrapped, and whose `pressed()` wraps the handler of a host element (the three
+`Text` handlers: See all, Mark all read, a callout's retry). One selection tick,
+before the handler, on iOS only; Android is as it was. A press that does
+nothing gives none: no handler (the unswitchable workspace pill, the signed-out
+cover, whose tap has no handler at all), or a disabled control. The toggle
+ticks like every other press. A behaviour wrapper, not a Nocturne primitive —
+the host tree is unchanged and the 18 components' snapshots with it.
+`audit:haptics` holds it: a Pressable, Touchable or Button imported from
+react-native outside the helper, a default or namespace import of react-native,
+expo-haptics imported anywhere else, or a Text/View/Image/ScrollView/Animated
+onPress that is not `pressed(…)` fails the build.
 
 ## Identity and key rules
 

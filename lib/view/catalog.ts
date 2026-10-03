@@ -98,19 +98,40 @@ export function withoutArchived(subscriptions: Subscription[]): Subscription[] {
 }
 
 /**
- * Team names to label workflows with, where scopes mean something: the
- * workspace has a team, or a workflow is scoped to one. Otherwise nothing,
- * and the rows read as they always have. (A team is a project in the
- * platform's contract, 24.11.5.) A team is named by its kind (24.12).
+ * Team names to label every flow with (build 11, D4; the owner's build 10 item
+ * 7: "What team is that flow part of?"): a map whatever the workspace holds,
+ * so each card, archived row and flow page says "Team: {kind}" or "Whole
+ * workspace", as the website labels each subscription. Until build 11 the
+ * label was drawn only where the workspace had a team, so a workspace with
+ * none could not answer the question. (A team is a project in the platform's
+ * contract, 24.11.5.) A team is named by its kind (24.12).
  */
 export function scopeLabels(
   projects: readonly { id: string; type: string; status: string }[],
+): ReadonlyMap<string, string> {
+  return new Map(projects.map((project) => [project.id, project.type]));
+}
+
+/**
+ * The live twin of an archived subscription (build 11, D3; the owner's build
+ * 10 items 5, 6 and 11: "I already added it back I shouldnt see add it again"):
+ * a subscription that is not archived — live, paused or draft, since the
+ * platform refuses a second subscribe for each — with the same template AND
+ * the same scope, the whole workspace matching the whole workspace only: a
+ * team's copy is another scope, and `null` matches `null`. That is the
+ * platform's own uniqueness, one non-archived row per workspace, template and
+ * project. With a twin the archived page offers no "Add it again"; it opens
+ * the twin instead.
+ */
+export function addedAgainAs(
+  archived: Pick<Subscription, 'templateId' | 'projectId'>,
   subscriptions: readonly Subscription[],
-): ReadonlyMap<string, string> | undefined {
-  const scoped =
-    projects.some((project) => project.status !== 'archived') ||
-    withoutArchived([...subscriptions]).some((subscription) => subscription.projectId);
-  return scoped ? new Map(projects.map((project) => [project.id, project.type])) : undefined;
+): Subscription | undefined {
+  return withoutArchived([...subscriptions]).find(
+    (candidate) =>
+      candidate.templateId === archived.templateId &&
+      (candidate.projectId ?? null) === (archived.projectId ?? null),
+  );
 }
 
 export function toSolution(entry: CatalogEntry, subscribed: boolean): SolutionView {
@@ -248,8 +269,9 @@ export type FlowView = {
   connections: FlowConnectionView[];
   /**
    * Where it applies — "Whole workspace" or "Team: …" (18.6.2; teams since
-   * 24.11.7), as the website labels each subscription. Present only when the
-   * caller asks for it, which it does where the workspace has teams.
+   * 24.11.7), as the website labels each subscription. Present when the
+   * caller hands over the team names, which every flow screen does since
+   * build 11 (D4): a flow always says its team, or that it is the workspace's.
    */
   scope?: string;
   /** The team it is scoped to, `null` for the whole workspace (24.9.2). */

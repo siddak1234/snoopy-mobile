@@ -1027,6 +1027,43 @@ export interface paths {
         patch: operations["selectActiveWorkspace"];
         trace?: never;
     };
+    "/v1/session/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * @description Registers the phone this session is on for push, or refreshes it (BUILD-PLAN 24.13.3, ADR-0035). **Bearer only**: the website has no device, and a cookie caller is refused 400 "A native session is required" before any session is resolved. The actor is the session's person — nothing in the body may name one.
+         *     **Idempotent by the token**, so there is no `Idempotency-Key`: the app calls this on every cold start, the same phone answers the same `deviceId`, and each call refreshes the registration's `last_seen_at`. The same token registered from another account moves the device to that account — a phone two people use pushes to whoever signed in last. The token travels in this body once and is echoed nowhere; the answer is one id, kept in the enclave beside the session and sent back on sign-out.
+         */
+        put: operations["registerSessionDevice"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/session/devices/{deviceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Unregisters a device of the session's person — called on sign-out, with the still-valid bearer, BEFORE the logout that revokes it (BUILD-PLAN 24.13.3). Bearer only, like registration. Idempotent: a device already gone, or one another account has since registered, is still 204. A device is named by the id registration answered, never by its token, which is the only reason an identifier appears in this URL at all. */
+        delete: operations["unregisterSessionDevice"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/{workspaceId}/projects": {
         parameters: {
             query?: never;
@@ -1391,6 +1428,23 @@ export interface components {
             refreshToken: string;
             /** @description Seconds until `accessToken` expires. The refresh token's lifetime is not stated. */
             expiresIn: number;
+        };
+        /** @description What a phone sends once to register itself for push (BUILD-PLAN 24.13.3, ADR-0035). The token travels in this body and nowhere else on the public surface: never a URL, never a response, never a log. */
+        DeviceRegistration: {
+            /**
+             * @description `android` is admitted so a token can be stored; no FCM credential exists yet, and the app registers nothing there (§12.1 #211).
+             * @enum {string}
+             */
+            platform: "ios" | "android";
+            /** @description The push service's token for this device; no whitespace. */
+            token: string;
+            /** @description The app build that registered, for the operator's eyes only. */
+            appBuild?: string;
+        };
+        /** @description The only identifier a device is known by after registration. The app keeps it beside the session and sends it back on sign-out. */
+        DeviceRegistered: {
+            /** Format: uuid */
+            deviceId: string;
         };
         SessionResponse: {
             /** @constant */
@@ -3911,6 +3965,66 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    registerSessionDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeviceRegistration"];
+            };
+        };
+        responses: {
+            /** @description Registered, or refreshed. The only identifier the device is known by afterwards. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceRegistered"];
+                };
+            };
+            /** @description The body is not a registration, or the caller presented no bearer token. The refusal names the field, never the token's value. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            503: components["responses"]["NotConfigured"];
+        };
+    };
+    unregisterSessionDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The device is not registered to this person — removed now, or gone already. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            503: components["responses"]["NotConfigured"];
         };
     };
     listWorkspaceProjects: {

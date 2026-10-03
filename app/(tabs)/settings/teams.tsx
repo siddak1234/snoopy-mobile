@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { CaretRight, Plus, UsersThree } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -9,6 +9,7 @@ import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { Pressable } from '@/components/pressable';
 import { ScreenEmpty, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { CreateTeamDialog } from '@/components/teams/create-team-dialog';
@@ -19,13 +20,12 @@ import { activeWorkspaceId, roleIn, useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { refusalMessage } from '@/lib/content/refusals';
 import { TEAMS_EMPTY_BODY, TEAMS_EMPTY_TITLE, errorTitleFor } from '@/lib/content/screen-states';
-import { PlatformError } from '@/lib/platform/problem';
 import {
   cancelAccessRequest,
   readAccessRequests,
   readProjects,
-  readTeamDirectory,
   requestAccess,
+  teamDirectoryIfThere,
   type Project,
   type TeamDirectoryEntry,
 } from '@/lib/platform/projects';
@@ -33,21 +33,6 @@ import { readWorkspaces, type WorkspaceSummary } from '@/lib/platform/workspaces
 import { administers } from '@/lib/view/roles';
 
 const ROLE: Record<Project['viewerRole'], string> = { owner: 'Owner', admin: 'Admin', member: 'Member' };
-
-/**
- * The directory, where the platform has one. A platform from before the
- * SEVENTEENTH promotion answers 404 for it: then the teams this person is on
- * are still listed and the asking section is simply not drawn, rather than the
- * whole screen failing on the part that is not there yet.
- */
-async function directoryIfThere(workspaceId: string): Promise<TeamDirectoryEntry[]> {
-  try {
-    return await readTeamDirectory(workspaceId);
-  } catch (error) {
-    if (error instanceof PlatformError && error.status === 404) return [];
-    throw error;
-  }
-}
 
 /**
  * Settings → Teams (BUILD-PLAN 24.11.7). A team is a sub-organization with its
@@ -77,9 +62,11 @@ export default function TeamsScreen() {
     const { workspaces } = await readWorkspaces();
     const groups = await Promise.all(
       workspaces.map(async (workspace) => {
+        // The directory where the platform has one: a 404 is nothing to ask
+        // onto, and the teams this person is on are still listed.
         const [visible, directory] = await Promise.all([
           readProjects(workspace.id),
-          workspace.type === 'organization' ? directoryIfThere(workspace.id) : Promise.resolve([]),
+          workspace.type === 'organization' ? teamDirectoryIfThere(workspace.id) : Promise.resolve([]),
         ]);
         const mine = visible.filter((project) => project.status !== 'archived');
         const onIt = new Set(mine.map((project) => project.id));

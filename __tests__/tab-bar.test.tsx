@@ -36,6 +36,14 @@ describe('NocturneTabBar', () => {
     expect(navigation.navigate).toHaveBeenCalledWith('flows', undefined);
   });
 
+  it('ticks on a tab press — the selection haptic, through the shared pressable now (build 11, D7)', async () => {
+    const Haptics = jest.requireMock('expo-haptics');
+    const { props } = makeProps(0);
+    const { getByText } = await renderWithProviders(<NocturneTabBar {...props} />);
+    await fireEvent.press(getByText('Flows'));
+    expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
+  });
+
   it('does not navigate when pressing the already-active tab', async () => {
     const { props, navigation } = makeProps(0);
     const { getByText } = await renderWithProviders(<NocturneTabBar {...props} />);

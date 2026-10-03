@@ -323,6 +323,8 @@ export function routePlatform(platformOperation: jest.Mock, overrides: Record<st
     if (path.includes('/automations')) return Promise.resolve(catalogPayload());
     // No projects unless a test says so: without one, scopes are not drawn.
     if (path.endsWith('/projects')) return Promise.resolve({ projects: [] });
+    // Nor a team directory: with no team, Setup reads it (F84) and finds none to ask onto.
+    if (path.endsWith('/project-directory')) return Promise.resolve({ projects: [] });
     if (path === '/v1/auth/providers') {
       return Promise.resolve({
         providers: [
