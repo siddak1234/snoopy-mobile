@@ -34,6 +34,9 @@ export const signedInSession: SessionContextValue = {
     user: { userId: 'u1', email: 'alex@acme.co', activeWorkspaceId: TEST_WORKSPACE },
     workspaces: [{ id: TEST_WORKSPACE, name: 'Acme Operations', role: 'owner' }],
   },
+  // Past the Face ID lock: a session that is open.
+  locked: false,
+  unlock: () => {},
   refresh: () => {},
   reload: async () => ({ status: 'signed-in' as const }),
   signIn: async () => ({ status: 'unconfigured', message: '' }),

@@ -219,7 +219,9 @@ function switchFor(named: unknown, state: SessionState): string | null {
 
 /**
  * The signed-in tree's half, mounted in `app/(tabs)/_layout.tsx` and idle until
- * `signedIn`. It asks nothing.
+ * `signedIn` — which the layout passes only for an open session: signed in, and
+ * not held by the Face ID lock, so a tap's screen waits for the lock as it
+ * waits for a sign-in (the build 13 review). It asks nothing.
  */
 export function usePushRegistration(signedIn: boolean): void {
   const router = useRouter();

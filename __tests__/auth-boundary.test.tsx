@@ -22,9 +22,11 @@ import { mockRedirect, mockTabsDrawn, renderWithProviders } from '@/test/render'
  * this project's router is a mock that runs no navigator.
  */
 
-function withSession(state: SessionState): SessionContextValue {
+function withSession(state: SessionState, locked = false): SessionContextValue {
   return {
     ...state,
+    locked,
+    unlock: () => {},
     refresh: () => {},
     reload: async () => ({ status: 'signed-in' as const }),
     signIn: async () => ({ status: 'cancelled' }),
@@ -32,7 +34,7 @@ function withSession(state: SessionState): SessionContextValue {
   };
 }
 
-const signedIn = withSession({
+const signedInState: SessionState = {
   status: 'signed-in',
   session: {
     authenticated: true,
@@ -50,7 +52,8 @@ const signedIn = withSession({
       },
     ],
   },
-});
+};
+const signedIn = withSession(signedInState);
 
 describe('tab route guard', () => {
   it("draws nothing for a signed-out visitor, and redirects nowhere: the root guard shows the cover (24.11.6; the owner's build 12 item 6)", async () => {
@@ -83,6 +86,13 @@ describe('tab route guard', () => {
 
   it('does not flash a redirect while the session is still restoring', async () => {
     await renderWithProviders(<TabLayout />, withSession({ status: 'restoring' }));
+    expect(mockTabsDrawn).not.toHaveBeenCalled();
+    expect(mockRedirect).not.toHaveBeenCalled();
+  });
+
+  it('draws nothing for a signed-in session the Face ID lock still holds, and redirects nowhere (the build 13 review)', async () => {
+    // The root guard's other half: signed in is not open until the lock's check passes.
+    await renderWithProviders(<TabLayout />, withSession(signedInState, true));
     expect(mockTabsDrawn).not.toHaveBeenCalled();
     expect(mockRedirect).not.toHaveBeenCalled();
   });

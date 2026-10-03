@@ -473,6 +473,26 @@ describe('Device push: the signed-in tree (build 11, D8)', () => {
     }
   });
 
+  it('the tap that opened the app waits for the Face ID lock: nothing is read or opened while it holds the session, and its screen opens once it lets go (the build 13 review)', async () => {
+    Notifications.getLastNotificationResponseAsync.mockImplementation(async () =>
+      tap('n-locked', { event: 'run-failed', runId: 'run-11' }),
+    );
+    const locked = { ...signedInSession, locked: true } as SessionContextValue;
+
+    const held = await renderWithProviders(<TabLayout />, locked);
+    await settle();
+    expect(Notifications.getLastNotificationResponseAsync).not.toHaveBeenCalled();
+    expect(Notifications.setNotificationHandler).not.toHaveBeenCalled();
+    expect(mockRouter.push).not.toHaveBeenCalled();
+    await held.unmount();
+
+    await renderWithProviders(<TabLayout />, signedInSession);
+    await waitFor(() =>
+      expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/(home)/run', params: { runId: 'run-11' } }),
+    );
+    expect(mockRouter.push).toHaveBeenCalledTimes(1);
+  });
+
   it('shows a push’s banner while the app is open, and only while someone is signed in', async () => {
     const view = await renderWithProviders(<TabLayout />, signedInSession);
     const handler = Notifications.setNotificationHandler.mock.calls[0][0];

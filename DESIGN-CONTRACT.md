@@ -92,13 +92,23 @@ Persistence is fixed by ADR-0017 and needs no control to say so.
 
 Session states are `restoring`, `signed-in`, `signed-out`, `unconfigured`, and
 `unavailable`. **The boundary is the root layout's guard** (the owner's build 12
-item 6): `Stack.Protected` admits the tabs only for `signed-in`, and in every other
-state removes them and lands on the root stack's anchor, the cover — by name, never by
-address. The tab layout draws nothing until signed in and redirects nowhere. **Nothing
-inside the tabs navigates to "/"**: there it names Home, not the cover, and build 8–12's
-Sign out, aimed at it, was dropped while the tab layout's redirect to it looped. On
-launch, an enabled Face ID preference gates an existing session through
-`expo-local-authentication`. Biometrics never create a
+item 6): `Stack.Protected` admits the tabs only for `signed-in` and unlocked (below),
+and otherwise removes them and lands on the root stack's anchor, the cover — by name,
+never by address. The tab layout draws nothing until then and redirects nowhere.
+**Nothing inside the tabs navigates to "/"**: there it names Home, not the cover, and
+build 8–12's Sign out, aimed at it, was dropped while the tab layout's redirect to it
+looped. An enabled Face ID preference gates an existing session through
+`expo-local-authentication`, and **the guard enforces it** (the build 13 review): a cold
+start locks a stored session whose owner turned Face ID on — `locked`, in the session
+provider, decided before the session is signed in and true until it is known — and the
+session opens only when the lock's own check passes, on a sign-in (its own proof), or
+when Face ID is turned off; only the next cold start locks it again. While it is locked
+the tabs are not in the root stack, so a link that arrives then — snoopymobile:///settings
+from Safari — opens nothing (until the review such a link opened the tab without Face ID,
+since before build 12); a push tap's screen waits for the lock as it waits for a
+sign-in; and the Face ID question, guarded the same way in the auth stack, cannot be
+reached to answer "Not now". A check that passes opens Home; a link dropped while locked
+is not replayed. Biometrics never create a
 session and no timer counts as success. **The choice is the session's** (2026-10-02):
 it is asked once after a remembered sign-in, on the screen where "Use Face ID" runs
 the first check, and it is cleared with the tokens on sign-out — never inherited by
@@ -311,7 +321,10 @@ review" — the held queue — also list running, queued and cancelled runs.
     team or the whole workspace (`heldAs`), is not added again: Add reads
     "Added ✓" with its team and opens it, whatever the scope looked at, and
     Setup, reached for it, shows "Added to" and its team — no team choice and
-    none of the lines above — and Activate configures that subscription. A
+    none of the lines above — and Activate configures that subscription. A flow
+    Setup has just added — a draft still owed an account, or one whose
+    activation failed — is held from that moment and drawn the same way, so
+    Activate configures it and never adds a second (the build 13 review). A
     duplicate added before the rule stays, listed. The rule is the clients'
     until the platform's own guard lands; the platform still accepts one copy
     per team (18.6.2). Every flow card,

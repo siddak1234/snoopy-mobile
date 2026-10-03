@@ -5,6 +5,7 @@ import SolutionsScreen from '@/app/(tabs)/flows/add';
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import SetupScreen from '@/app/(tabs)/flows/setup';
 import SettingsScreen from '@/app/(tabs)/settings';
+import { PlatformError } from '@/lib/platform/problem';
 import {
   TEST_WORKSPACE,
   catalogPayload,
@@ -205,5 +206,109 @@ describe("One flow per workspace (the owner's build 12 item 9)", () => {
       body: { config: {}, status: 'live' },
     });
     expect(screen.queryByText('Pick a team.')).toBeNull();
+  });
+});
+
+/**
+ * Nothing held yet: Setup's create answers `created`, in the team it was sent
+ * for, and its activation answers `activation()`. Every write is kept.
+ */
+function routeCreate(created: Record<string, unknown>, activation: () => unknown) {
+  const catalog = catalogPayload();
+  catalog.automations = catalog.automations.map((automation) => ({ ...automation, setup: [] }));
+  routePlatform(platformOperation, { '/automations': catalog, '/projects': projectsPayload('Finance', 'Sales') });
+  const routed = platformOperation.getMockImplementation();
+  const writes: { method: string; path: string; body: { projectId?: string } }[] = [];
+  platformOperation.mockImplementation(async (path: string, execute: Function) => {
+    if (!/\/subscriptions(\/[^/?]+)?$/u.test(path)) return routed?.(path, execute);
+    let method = 'GET';
+    let body: { projectId?: string } = {};
+    const keep = (verb: string) => async (_route: string, init: { body?: { projectId?: string } }) => {
+      method = verb;
+      body = init.body ?? {};
+      return { data: {} };
+    };
+    try {
+      await execute({ automations: { GET: keep('GET'), POST: keep('POST'), PATCH: keep('PATCH') } });
+    } catch {
+      // Only the method and the body are wanted; the answers are below.
+    }
+    if (method === 'GET') return { subscriptions: [] };
+    writes.push({ method, path, body });
+    if (method === 'POST') return { subscription: { ...created, projectId: body.projectId } };
+    return activation();
+  });
+  return writes;
+}
+
+/**
+ * The build 13 review's second finding — a hole in item 9: once Setup had added
+ * the flow, it still drew the "Add to" chips, and another team reset what it
+ * had added, so Activate sent a second create — two copies in one workspace.
+ * What Setup adds is held from that moment, as the copy a workspace held is.
+ */
+describe("One flow per workspace: what Setup adds is held at once (the build 13 review; the owner's build 12 item 9)", () => {
+  it('a create still owed an account says where it is under Added to, with no team to pick again — no second copy can be sent', async () => {
+    const created = {
+      ...planSubscriptionsPayload().subscriptions[0]!,
+      id: 'added-0',
+      status: 'draft',
+      unmetConnections: ['hubspot'],
+    };
+    const writes = routeCreate(created, () => {
+      throw new Error('a draft owed an account is not activated');
+    });
+    setMockParams({ template: 'tpl.0' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+
+    await fireEvent.press(await screen.findByText('Team: Finance'));
+    await fireEvent.press(screen.getByText('Activate solution'));
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect(writes[0]).toMatchObject({ method: 'POST', body: { templateId: 'tpl.0', projectId: 'project-1' } });
+    expect(
+      await screen.findByText('Connect the required providers in Settings › Connections, then return to activate.'),
+    ).toBeTruthy();
+
+    const where = screen.getByTestId('setup-held');
+    expect(within(where).getByText('Added to')).toBeTruthy();
+    expect(within(where).getByText('Team: Finance')).toBeTruthy();
+    expect(screen.queryByText('Add to')).toBeNull();
+    expect(screen.queryByText('Team: Sales')).toBeNull();
+
+    // Its one way on is the account it is owed; Try again is the same. Nothing is added again.
+    await fireEvent.press(screen.getByText('Connect HubSpot in Settings › Connections'));
+    await fireEvent.press(screen.getByText('Try again'));
+    expect(mockRouter.push).toHaveBeenCalledTimes(2);
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings');
+    expect(writes).toHaveLength(1);
+  });
+
+  it('a create whose activation failed stays Added to its team, and Activate again activates that copy — never a second', async () => {
+    const created = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'added-0', status: 'draft', unmetConnections: [] };
+    let activations = 0;
+    const writes = routeCreate(created, () => {
+      activations += 1;
+      if (activations === 1) throw new PlatformError('The platform is unreachable', 502);
+      return { subscription: { ...created, projectId: 'project-1', status: 'live' } };
+    });
+    setMockParams({ template: 'tpl.0' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+
+    await fireEvent.press(await screen.findByText('Team: Finance'));
+    await fireEvent.press(screen.getByText('Activate solution'));
+    await waitFor(() => expect(writes.map((write) => write.method)).toEqual(['POST', 'PATCH']));
+    expect(await screen.findByTestId('action-failure')).toBeTruthy();
+    expect(within(screen.getByTestId('setup-held')).getByText('Team: Finance')).toBeTruthy();
+    expect(screen.queryByText('Team: Sales')).toBeNull();
+
+    await fireEvent.press(screen.getByText('Activate solution'));
+    await waitFor(() =>
+      expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'added-0' } }),
+    );
+    expect(writes.map((write) => [write.method, write.path])).toEqual([
+      ['POST', `/v1/workspaces/${TEST_WORKSPACE}/subscriptions`],
+      ['PATCH', `/v1/workspaces/${TEST_WORKSPACE}/subscriptions/added-0`],
+      ['PATCH', `/v1/workspaces/${TEST_WORKSPACE}/subscriptions/added-0`],
+    ]);
   });
 });
