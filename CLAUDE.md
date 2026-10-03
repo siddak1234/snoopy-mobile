@@ -79,7 +79,8 @@ repository, stop.
    (no checkout, no portal), which the platform's Pro replaces once listed; the
    workspace's card says "Enrolled" with its status. The cards are compact,
    at their natural height (D2). The enrolled plan is one rule,
-   `lib/view/billing.ts`, shared with the Settings index's plan line, which
+   `lib/view/billing.ts`, shared with the plan's name on the Settings index —
+   Billing's value, before the arrow (the owner's build 12 item 2) — which
    reads the workspace's billing quietly through the shared snapshot for an
    owner or admin (D1). On iOS, not paying, a paid card opens the hosted
    checkout for that plan; paying, any other card opens Manage billing, since a

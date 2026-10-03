@@ -145,7 +145,8 @@ export default function AccountScreen() {
                     <Text style={[styles.small, muted]}>Primary</Text>
                   ) : primary === false ? (
                     <Pressable testID={`unlink-${provider.id}`} disabled={linking !== null} onPress={() => setUnlinking(provider.id)}>
-                      <Text style={[styles.linkLabel, { color: palette.neutral[400] }]}>Unlink</Text>
+                      {/* It removes a way to sign in: red, as its confirm is (the owner's build 12 item 5). */}
+                      <Text style={[styles.linkLabel, { color: palette.danger }]}>Unlink</Text>
                     </Pressable>
                   ) : (
                     <Pressable testID={`link-${provider.id}`} disabled={linking !== null} onPress={() => link(provider.id)}>
@@ -181,7 +182,8 @@ export default function AccountScreen() {
           <Text style={[styles.text, muted]}>
             Permanently delete your account, your personal workspace, and every organization you alone own.
           </Text>
-          <PillButton label="Delete Account" variant="secondary" height={42} icon={Trash} iconSize={15} onPress={() => setDeleting(true)} />
+          {/* Red, the design's red pill: it cannot be undone (the owner's build 12 item 5). */}
+          <PillButton label="Delete Account" variant="danger" height={42} icon={Trash} iconSize={15} onPress={() => setDeleting(true)} />
         </SurfaceCard>
       </View>
 

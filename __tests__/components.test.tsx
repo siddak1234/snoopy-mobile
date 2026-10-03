@@ -1,7 +1,7 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
-import { fireEvent } from '@testing-library/react-native';
-import { Receipt } from 'phosphor-react-native';
+import { StyleSheet, Text } from 'react-native';
+import { fireEvent, within } from '@testing-library/react-native';
+import { Receipt, Trash } from 'phosphor-react-native';
 
 import { AvatarBadge } from '@/components/nocturne/avatar-badge';
 import { BackCircle } from '@/components/nocturne/back-circle';
@@ -16,9 +16,11 @@ import { StatusPill } from '@/components/nocturne/status-pill';
 import { StepCard } from '@/components/nocturne/step-card';
 import { TextField } from '@/components/nocturne/text-field';
 import { SettingsRow } from '@/components/settings/settings-row';
-import { layout, nocturneDark, status, typeScale } from '@/constants/theme';
+import { DialogButton } from '@/components/dialog';
+import { layout, nocturneDark, nocturneLight, status, typeScale, withAlpha } from '@/constants/theme';
 import { steps } from '@/test/design-data';
 import { renderWithProviders } from '@/test/render';
+import { touch } from '@/test/touch';
 
 const textColor = (node: { props: { style?: unknown } }) =>
   (StyleSheet.flatten(node.props.style) as { color?: string }).color;
@@ -45,6 +47,29 @@ describe('PillButton', () => {
     expect(textColor(getByText('Unlock with Face ID'))).toBe(nocturneDark.accentRamp[300]);
   });
 
+  it.each(['dark', 'light'] as const)(
+    "draws the danger variant in the theme's red — label, icon and a 1-pt outline — and tints it a tenth while pressed (%s)",
+    async (mode) => {
+      const palette = mode === 'dark' ? nocturneDark : nocturneLight;
+      const { getByTestId, getByText } = await renderWithProviders(
+        <PillButton label="Delete Account" variant="danger" icon={Trash} testID="danger" onPress={() => undefined} />,
+        undefined,
+        mode,
+      );
+      expect(textColor(getByText('Delete Account'))).toBe(palette.danger);
+      expect(getByTestId('phosphor-react-native-trash-regular').props.color).toBe(palette.danger);
+      const pill = getByTestId('danger');
+      expect(StyleSheet.flatten(pill.props.style)).toMatchObject({
+        borderWidth: 1,
+        borderColor: palette.danger,
+        backgroundColor: 'transparent',
+      });
+      // The design's hover, rgba(248,113,113,.1), as the pressed state.
+      await fireEvent(pill, 'responderGrant', touch('onResponderGrant'));
+      expect(StyleSheet.flatten(pill.props.style).backgroundColor).toBe(withAlpha(palette.danger, 0.1));
+    },
+  );
+
   it('does not fire and exposes disabled semantics when the operation is unavailable', async () => {
     const onPress = jest.fn();
     const { getByText } = await renderWithProviders(
@@ -54,6 +79,19 @@ describe('PillButton', () => {
     expect(button?.props.accessibilityState).toEqual({ disabled: true });
     await fireEvent.press(getByText('Unavailable'));
     expect(onPress).not.toHaveBeenCalled();
+  });
+});
+
+describe('DialogButton', () => {
+  it.each(['dark', 'light'] as const)("draws a danger button — what cannot be undone — in the theme's red (%s)", async (mode) => {
+    const palette = mode === 'dark' ? nocturneDark : nocturneLight;
+    const { getByText, getByTestId } = await renderWithProviders(
+      <DialogButton label="Delete team" tone="danger" testID="confirm" onPress={() => undefined} />,
+      undefined,
+      mode,
+    );
+    expect(textColor(getByText('Delete team'))).toBe(palette.danger);
+    expect(StyleSheet.flatten(getByTestId('confirm').props.style).borderColor).toBe(palette.danger);
   });
 });
 
@@ -72,6 +110,55 @@ describe('SettingsRow', () => {
     const title = (text: string) => StyleSheet.flatten(getByText(text).props.style) as { lineHeight?: number };
     expect(title('Roomy').lineHeight).toBe(typeScale.label.lineHeight);
     expect(title('Plain').lineHeight).toBeUndefined();
+  });
+
+  it("draws a value on the title's line, before the arrow, and lets it move under the title rather than squeeze it", async () => {
+    const { getByTestId, getByText, queryByTestId } = await renderWithProviders(
+      <>
+        <SettingsRow
+          icon={Receipt}
+          title="Organization"
+          value="Sikho Mode Solutions"
+          right={<Text>arrow</Text>}
+          testID="valued"
+          size="roomy"
+          onPress={() => undefined}
+        />
+        <SettingsRow icon={Receipt} title="Teams" sub="A line" right={<Text>arrow</Text>} testID="plain" size="roomy" />
+      </>,
+    );
+    // Read in order across the row: the title, its value, then the arrow.
+    expect(within(getByTestId('valued')).getAllByText(/./u).map((node) => node.props.children)).toEqual([
+      'Organization',
+      'Sikho Mode Solutions',
+      'arrow',
+    ]);
+    // The title and the value share ONE line that wraps: side by side when both fit,
+    // the value under the title when they do not — never one squeezing the other.
+    const value = getByTestId('value-of-valued');
+    const line = value.parent!;
+    expect(StyleSheet.flatten(line.props.style)).toMatchObject({
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+    });
+    expect(within(line).getAllByText(/./u).map((node) => node.props.children)).toEqual([
+      'Organization',
+      'Sikho Mode Solutions',
+    ]);
+    // Neither is ever cut short.
+    expect(getByText('Organization').props.numberOfLines).toBeUndefined();
+    expect(value.props.numberOfLines).toBeUndefined();
+    // In the index's value style: regular, the scale's small step, neutral-500.
+    expect(StyleSheet.flatten(value.props.style)).toMatchObject({
+      fontSize: typeScale.small.fontSize,
+      color: nocturneDark.neutral[500],
+    });
+    // A row without a value draws as before: the title straight in the row's body, its line under it.
+    expect(queryByTestId('value-of-plain')).toBeNull();
+    const plainTitle = getByText('Teams');
+    expect(StyleSheet.flatten(plainTitle.parent!.props.style)).toEqual({ flex: 1 });
+    expect(within(plainTitle.parent!).getAllByText(/./u).map((node) => node.props.children)).toEqual(['Teams', 'A line']);
   });
 });
 

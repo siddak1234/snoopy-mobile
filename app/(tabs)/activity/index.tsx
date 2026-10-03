@@ -109,15 +109,33 @@ const matchesFilter = (item: ActivityItem, filter: ActivityFilter) =>
 const isActivityFilter = (value: unknown): value is ActivityFilter =>
   typeof value === 'string' && (ACTIVITY_FILTERS as readonly string[]).includes(value);
 
-/** What a tile on Home or a flow page arrived with (24.11.9): an outcome, and perhaps a flow. */
-function arrivedWith(params: { flow?: string; flowName?: string; filter?: string }): {
+type ArrivalParams = { flow?: string; flowName?: string; filter?: string; period?: string };
+
+/**
+ * What a tile on Home or a flow page arrived with (24.11.9): an outcome, and
+ * perhaps a flow — or, from Home, today (the owner's build 12 item 1): Home's
+ * tiles count today's runs, so the list a tile opens is today's, and its number
+ * is the rows it opens.
+ */
+function arrivedWith(params: ArrivalParams): {
   filter: ActivityFilter;
   flow: { id: string; name: string } | null;
+  todayOnly: boolean;
 } {
   return {
     filter: isActivityFilter(params.filter) ? params.filter : 'All',
     flow: params.flow ? { id: params.flow, name: params.flowName || 'this flow' } : null,
+    todayOnly: params.period === 'today',
   };
+}
+
+/** What an empty selection says: the outcome, the flow, and the day, as chosen. */
+function emptyLine(filter: ActivityFilter, flow: { name: string } | null, todayOnly: boolean): string {
+  if (filter === 'All') {
+    if (flow) return `No runs for ${flow.name} ${todayOnly ? 'today' : 'yet'}.`;
+    return 'No runs today.';
+  }
+  return `No ${EMPTY_LABEL[filter]} runs${flow ? ` for ${flow.name}` : ''}${todayOnly ? ' today' : ''}.`;
 }
 
 export default function ActivityScreen() {
@@ -125,19 +143,23 @@ export default function ActivityScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { projectId } = useScope();
-  const params = useLocalSearchParams<{ flow?: string; flowName?: string; filter?: string }>();
+  const params = useLocalSearchParams<ArrivalParams>();
   const [filter, setFilter] = useState<ActivityFilter>(() => arrivedWith(params).filter);
   // One flow's history (24.11.9): a tile on Home or a flow page arrives with the
   // flow and the outcome, and that selection replaces whatever was chosen here.
   // The chip clears it; the tab bar arrives with nothing and changes nothing.
   const [flow, setFlow] = useState<{ id: string; name: string } | null>(() => arrivedWith(params).flow);
+  // Today only (the owner's build 12 item 1): a Home tile arrives with it, a flow
+  // page's with none — its tiles count all time. Its chip clears it, as the flow's does.
+  const [todayOnly, setTodayOnly] = useState<boolean>(() => arrivedWith(params).todayOnly);
   useEffect(() => {
-    if (!params.flow && !params.filter) return;
+    if (!params.flow && !params.filter && !params.period) return;
     const arrived = arrivedWith(params);
     setFilter(arrived.filter);
     setFlow(arrived.flow);
+    setTodayOnly(arrived.todayOnly);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.flow, params.flowName, params.filter]);
+  }, [params.flow, params.flowName, params.filter, params.period]);
 
   /**
    * The runs list, joined to the catalog for a display name.
@@ -199,12 +221,13 @@ export default function ActivityScreen() {
   const sourceEarlier = inFlow(scopedEarlier);
 
   const today = sourceToday.filter((i) => matchesFilter(i, filter));
-  const yesterday = sourceYesterday.filter((i) => matchesFilter(i, filter));
+  // Today only, while a Home tile's chip is on: the runs its number counted.
+  const yesterday = todayOnly ? [] : sourceYesterday.filter((i) => matchesFilter(i, filter));
   // The website's Activity is every run in the workspace; the two day sections
   // are a grouping of it. Older runs sit under EARLIER rather than vanishing —
   // the first TestFlight build showed "No activity yet" to a workspace with 13
   // runs, all older than two days (24.7.3 attempt 1, feedback #3).
-  const earlier = sourceEarlier.filter((i) => matchesFilter(i, filter));
+  const earlier = todayOnly ? [] : sourceEarlier.filter((i) => matchesFilter(i, filter));
   const isEmpty = today.length === 0 && yesterday.length === 0 && earlier.length === 0;
   /** Nothing at all, as opposed to nothing matching a filter. */
   const hasNoRuns =
@@ -255,15 +278,25 @@ export default function ActivityScreen() {
       showsVerticalScrollIndicator={false}>
       <ScopeControl />
       <Text style={[styles.h1, { color: palette.text }]}>Activity</Text>
-      <View style={styles.filters}>
-        {flow ? (
-          <FilterChip
-            key="flow"
-            label={`${flow.name} ✕`}
-            active
-            onPress={() => setFlow(null)}
-          />
-        ) : null}
+      {/* What a tile chose — the flow, or today — on a row of its own above the
+          outcomes: a fifth chip beside the four runs off a phone's width
+          (the owner's build 12 item 1). Each clears itself. */}
+      {flow || todayOnly ? (
+        <View style={styles.filters} testID="activity-selection">
+          {flow ? (
+            <FilterChip
+              key="flow"
+              label={`${flow.name} ✕`}
+              active
+              onPress={() => setFlow(null)}
+            />
+          ) : null}
+          {todayOnly ? (
+            <FilterChip key="today" label="Today ✕" active onPress={() => setTodayOnly(false)} />
+          ) : null}
+        </View>
+      ) : null}
+      <View style={styles.filters} testID="activity-outcomes">
         {ACTIVITY_FILTERS.map((f) => (
           <FilterChip
             key={f}
@@ -281,14 +314,10 @@ export default function ActivityScreen() {
           <CheckCircle size={38} color={palette.neutral[600]} />
           <Text style={[styles.emptyText, { color: palette.neutral[500] }]}>{ACTIVITY_SCOPE_EMPTY}</Text>
         </View>
-      ) : isEmpty && (filter !== 'All' || flow) ? (
+      ) : isEmpty && (filter !== 'All' || flow || todayOnly) ? (
         <View style={styles.emptyWrap}>
           <CheckCircle size={38} color={palette.neutral[600]} />
-          <Text style={[styles.emptyText, { color: palette.neutral[500] }]}>
-            {filter === 'All'
-              ? `No runs for ${flow?.name ?? 'this flow'} yet.`
-              : `No ${EMPTY_LABEL[filter]} runs${flow ? ` for ${flow.name}` : ''}.`}
-          </Text>
+          <Text style={[styles.emptyText, { color: palette.neutral[500] }]}>{emptyLine(filter, flow, todayOnly)}</Text>
         </View>
       ) : null}
     </ScrollView>

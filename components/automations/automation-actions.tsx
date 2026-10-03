@@ -12,7 +12,7 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
 import { SettingsRow } from '@/components/settings/settings-row';
-import { fonts, layout, status, typeScale } from '@/constants/theme';
+import { fonts, layout, typeScale, withAlpha } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
@@ -170,11 +170,11 @@ export function AutomationActions({
         }}
         style={({ pressed }) => [
           styles.archive,
-          { borderColor: status.err },
-          pressed && { backgroundColor: status.errCalloutBg },
+          { borderColor: palette.danger },
+          pressed && { backgroundColor: withAlpha(palette.danger, 0.08) },
         ]}>
-        <Archive size={18} color={status.err} />
-        <Text style={[styles.archiveLabel, { color: status.err }]}>Archive flow</Text>
+        <Archive size={18} color={palette.danger} />
+        <Text style={[styles.archiveLabel, { color: palette.danger }]}>Archive flow</Text>
       </Pressable>
 
       {open === 'run' ? (

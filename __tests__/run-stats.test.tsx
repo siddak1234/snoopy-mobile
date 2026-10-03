@@ -84,7 +84,8 @@ describe('localMidnight', () => {
 describe('toStatTiles', () => {
   it('draws total, succeeded and failed — the three §12.1 #73b names', () => {
     expect(toStatTiles(COUNTS)).toEqual([
-      { value: '1,284', label: 'Runs today', tone: 'text' },
+      // "Runs", as a flow page's tile says: Home names the window once, TODAY over the row (build 12 item 1).
+      { value: '1,284', label: 'Runs', tone: 'text' },
       { value: '1,272', label: 'Successes', tone: 'ok' },
       { value: '12', label: 'Failures', tone: 'err' },
     ]);

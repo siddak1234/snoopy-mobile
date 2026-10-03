@@ -17,11 +17,19 @@ export type SettingsRowSize = 'regular' | 'roomy';
  * index's alone (build 11, the owner's "vertically more roomy"): more vertical
  * padding, and the title and line at their scale heights; every other list
  * keeps the row it had.
+ *
+ * `value` (the owner's build 12 items 2 and 3: the plan's name "closer to the
+ * arrow", the organization's name "just like how owner is written") is drawn on
+ * the title's line, at its right end — the row's gap before `right` — in the
+ * index's value style. Title and value share one wrapping line, so a value that
+ * does not fit beside the title moves under it, as an iOS value cell stacks,
+ * and the title is never cut or squeezed. A row without `value` draws as before.
  */
 export function SettingsRow({
   icon: IconCmp,
   title,
   sub,
+  value,
   right,
   divider = false,
   onPress,
@@ -31,6 +39,8 @@ export function SettingsRow({
   icon: Icon;
   title: string;
   sub?: string;
+  /** Said on the title's line, before `right`; under the title when the two do not fit side by side. */
+  value?: string;
   right: React.ReactNode;
   divider?: boolean;
   onPress?: () => void;
@@ -39,11 +49,25 @@ export function SettingsRow({
 }) {
   const { palette } = useTheme();
   const roomy = size === 'roomy';
+  const titleText = (
+    <Text style={[styles.rowTitle, roomy && styles.rowTitleRoomy, { color: palette.text }]}>{title}</Text>
+  );
   const body = (
     <>
       <IconCmp size={20} color={palette.accentRamp[300]} />
       <View style={styles.rowBody}>
-        <Text style={[styles.rowTitle, roomy && styles.rowTitleRoomy, { color: palette.text }]}>{title}</Text>
+        {value ? (
+          <View style={styles.titleLine}>
+            {titleText}
+            <Text
+              testID={testID ? `value-of-${testID}` : undefined}
+              style={[styles.rowValue, roomy && styles.rowValueRoomy, { color: palette.neutral[500] }]}>
+              {value}
+            </Text>
+          </View>
+        ) : (
+          titleText
+        )}
         {sub ? (
           <Text style={[styles.rowSub, roomy && styles.rowSubRoomy, { color: palette.neutral[400] }]}>{sub}</Text>
         ) : null}
@@ -93,6 +117,22 @@ const styles = StyleSheet.create({
   },
   rowTitleRoomy: {
     ...typeScale.label,
+  },
+  // The title and its value on one line that wraps: side by side when both fit,
+  // the value under the title when they do not (a lone item on a line starts it).
+  titleLine: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    columnGap: 12,
+  },
+  rowValue: {
+    fontFamily: fonts.regular,
+    fontSize: typeScale.small.fontSize,
+  },
+  rowValueRoomy: {
+    ...typeScale.small,
   },
   rowSub: {
     fontFamily: fonts.regular,

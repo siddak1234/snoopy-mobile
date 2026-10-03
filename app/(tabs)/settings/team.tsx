@@ -142,10 +142,11 @@ export default function TeamScreen() {
         />
       ) : null}
 
+      {/* Both end something, so both are red (the owner's build 12 item 5). */}
       {owner || onTeam ? (
         <PillButton
           label={owner ? 'Delete team' : 'Leave team'}
-          variant="secondary"
+          variant="danger"
           height={44}
           icon={owner ? Trash : SignOut}
           iconSize={16}

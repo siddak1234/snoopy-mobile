@@ -12,14 +12,15 @@ jest.mock('expo-secure-store', () => ({
   WHEN_UNLOCKED_THIS_DEVICE_ONLY: 'WHEN_UNLOCKED_THIS_DEVICE_ONLY',
 }));
 
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import * as SecureStore from 'expo-secure-store';
 import React from 'react';
-import { Pressable, Text } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { AutomationActions } from '@/components/automations/automation-actions';
+import { nocturneDark, nocturneLight } from '@/constants/theme';
 import { useSolutions } from '@/hooks/use-solutions';
 import { WORKSPACE_CHANGED } from '@/lib/content/refusals';
 import type { AutomationRunInputField, Subscription } from '@/lib/platform/automations';
@@ -110,6 +111,7 @@ async function renderActions(
     shown?: string;
     role?: 'owner' | 'admin' | 'member';
     before?: React.ReactNode;
+    mode?: 'dark' | 'light';
   } = {},
 ) {
   const sub = props.sub ?? subscription();
@@ -128,6 +130,7 @@ async function renderActions(
     />
     </>,
     sessionAs(props.role ?? 'owner'),
+    props.mode ?? 'dark',
   );
 }
 
@@ -287,6 +290,21 @@ describe('Archive (24.4.1, backend §12.1 #92; "Archive flow" since 24.12)', () 
     await pressLast('Archive');
     await waitFor(() => expect(callbacks.onArchived).toHaveBeenCalled());
     expect(sent).toEqual([expect.objectContaining({ method: 'PATCH', path: SUB_PATH, body: { status: 'archived' } })]);
+  });
+});
+
+describe("Archive flow is red in either theme (24.9.4; the owner's build 12 item 5)", () => {
+  it.each(['dark', 'light'] as const)("draws Archive flow and its confirm in the theme's red (%s)", async (mode) => {
+    const palette = mode === 'dark' ? nocturneDark : nocturneLight;
+    const color = (style: unknown) => StyleSheet.flatten(style) as { color?: string; borderColor?: string };
+    await renderActions({ mode });
+    const archive = screen.getByTestId('archive-flow');
+    expect(color(archive.props.style).borderColor).toBe(palette.danger);
+    expect(color(within(archive).getByText('Archive flow').props.style).color).toBe(palette.danger);
+    expect(within(archive).getByTestId(/^phosphor-react-native-archive-/u).props.color).toBe(palette.danger);
+    await fireEvent.press(archive);
+    const confirm = within(await screen.findByTestId('archive-dialog')).getByText('Archive');
+    expect(color(confirm.props.style).color).toBe(palette.danger);
   });
 });
 

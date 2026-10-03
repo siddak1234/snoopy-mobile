@@ -228,15 +228,19 @@ export type StatTileView = { value: string; label: string; tone: 'text' | 'ok' |
  * The three tiles Home draws, from `run-stats`' workspace counts.
  *
  * §12.1 #73b names these three of the seven statuses and no others: `total` is
- * "Runs today", `succeeded` is "Successes", `failed` is "Failures". The other
- * four — pending, running, held, cancelled — are deliberately not shown; adding a
+ * the runs, `succeeded` "Successes", `failed` "Failures". The other four —
+ * pending, running, held, cancelled — are deliberately not shown; adding a
  * fourth tile would be a design change, and the UI is frozen.
+ *
+ * The window is today, and Home says so once, over the row (TODAY), so each tile
+ * reads as a flow page's does — "Runs", not "Runs today" beside two that named
+ * no window (the owner's build 12 item 1).
  *
  * `count()` rather than `String()` so 1284 reads "1,284" as the design draws it.
  */
 export function toStatTiles(counts: RunStatusCounts): StatTileView[] {
   return [
-    { value: count(counts.total), label: 'Runs today', tone: 'text' },
+    { value: count(counts.total), label: 'Runs', tone: 'text' },
     { value: count(counts.succeeded), label: 'Successes', tone: 'ok' },
     { value: count(counts.failed), label: 'Failures', tone: 'err' },
   ];

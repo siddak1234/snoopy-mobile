@@ -1240,6 +1240,107 @@ icon colour was in build 10, so no break was run for the card's height.
 | Every card says its team inside a picked team too | the card's label gated on All teams again | `scope-control` "says the team on every card and every archived row inside a picked team too — D4 has no All-teams exception (the build 11 review)" |
 | Every archived row says its team inside a picked team too | the archived row's label gated on All teams again | `scope-control` "says the team on every card and every archived row inside a picked team too — D4 has no All-teams exception (the build 11 review)" |
 
+### The eighth signed-in session (build 12, 2026-10-03 15:39Z–16:05Z)
+
+Build 12 on the owner's iPhone (iOS 26.6.2): nine TestFlight feedback items in
+twenty-six minutes, read with their screenshots, then the owner's word the same day —
+"Continue and complete these items" — every decision its recommended option and the
+listed defaults. Verified against the code at `d77dd3a`; the platform and the website
+are unchanged by this pass. Build 13 takes them in two parts: this first one is items
+7, 2 and 3, 1 and 5 (the app's half), in that order; items 4, 6, 8 and 9 are the
+second:
+
+| # | Feedback | What it is | Disposition |
+| --- | --- | --- | --- |
+| 1 | "Why do i see 0 numbers for the runs if we have activities? Also i thought i said they should be buttons to see the actual numbers" | nothing was miscounted: Home counts today — `run-stats?since=<local midnight>` (backend §12.1 #73) — and the newest run on the screen was 18 days old, so 0 was right for today. But only the first tile of three said so ("Runs today" beside "Successes" and "Failures", the words a flow page uses for all time); the tiles had been buttons since 24.11.9 but were drawn as the design's static cards, with no caret and no pressed look, unlike the review banner beside them; and a tile opened Activity over every run, not the runs it counted. The earlier ask was the fifth session's row 11, half delivered | **fixed (build 13, option A)**: TODAY over the row, as RECENT RUNS heads its card, and the tiles read Runs, Successes, Failures; the read stays `run-stats?since=<local midnight>`. Every stat tile — Home's and a flow page's — draws a caret and, while pressed, the review banner's accent tint, around the frozen StatCard (`components/stat-tile-button.tsx`; StatCard's render and its snapshots unchanged). A Home tile opens Activity with its outcome AND today: "Today ✕" on a row of its own above the four outcome chips (the flow chip moved to that row too — a fifth chip beside the four ran off a phone's width), only today's runs while it is on, "No runs today." / "No successful runs today." / "No failed runs today." when there are none; the chip clears back to every run, and the tab bar changes nothing. Each Home tile's number is the rows it opens (All teams). Two edges stay, from the code: under a team, Home counts that team's live flows while Activity also keeps runs of flows it cannot place; and a day of more than 100 runs lists the newest 100 (the runs contract's page). **NOT OBSERVED** on a device |
+| 2 | "Rather than free billow billing can we move the plan type name closer to the arrow on the right side" | where build 11 (D1) drew it: the plan's name was Billing's `sub`, and SettingsRow draws `sub` only under the title — the row grew 20 pt when the plan arrived; the values on the right ("organization", "owner") were the index's own text in `right`, which nothing kept from squeezing the title | **fixed (build 13, option A)**: SettingsRow has an optional `value`, on the title's line at its right end, before the arrow, in the index's value style (Inter regular, the scale's small step, neutral-500). Title and value share one wrapping line, so a value that does not fit moves under the title, as an iOS value cell stacks — never cut, never squeezing the title — and a row without one draws as before. Billing's plan is its value for an owner or admin (the row stays 57 pt), nothing while loading, on a refusal or offline; a member keeps "Managed by owners and admins" under the title. Still one request, the plan. **NOT OBSERVED** on a device |
+| 3 | "Just like how owner is written in organization on the right hand side can we put the organization name. That way the user knows as well before clicking. " | the index never worked out an organization value, though the session it already reads holds every workspace's name and type; the row passed only the arrow | **fixed (build 13, option A)**: Organization's value, from the session alone — one pure rule, `organizationValue` (`lib/view/organization.ts`): in an organization, its name, for any role; in a personal workspace, the one organization's name, "{n} organizations" for several, "None" for none, and nothing when the session's list is cut off (`workspacesTruncated`) without one. No request: the index still reads only the plan. Shown inside an organization too, though the switcher row above names it. Under a cut-off list that does show organizations, the name or the count is of those the session lists (its first 50). **NOT OBSERVED** on a device |
+| 4 | "Rather than add it again what if we say unarchive" | the platform cannot bring an archived subscription back: archiving is one-way on purpose (BUILD-PLAN 18.5.3, §12.1 #92 — a status change out of `archived` is 409, "subscribe again instead"), so both clients can only add a new subscription — a new id, empty settings, the newest version — while the archived row stays under Archived | in progress (build 13, part 2) |
+| 5 | "Could delete account be in red. Things like remove, sign out, stop, and such should be in red right" | PillButton had no red style (primary, secondary, plain, accent-ghost), so Delete Account was drawn `secondary` (`account.tsx:184`), as were Delete team / Leave team and Cancel run, while the buttons confirming them were red; red existed only where drawn by hand (Sign out, Archive flow) and in DialogButton's `danger`; and it was one value, #f87171, for both themes — 2.77:1 on a white card | **fixed (build 13, option A — the app's half)**: one rule — red marks an action that removes or ends something and cannot be undone with a tap. `palette.danger`, dark #f87171 (`status.err`, unchanged), light #dc2626 (the website's light `--error-text`, 4.83:1 on a card); PillButton's `danger` variant, the design's red pill (Screen.dc.html:450) — a 1-pt outline, label and icon in red, a tenth-strength tint pressed — on Delete Account, Delete team / Leave team and Cancel run; Unlink's text, Sign out, Archive flow and every DialogButton `danger` read `palette.danger` (dark as before). Withdraw's confirm is accent: asking again undoes it. Pause, Reject, Deny, Cancel request and Make a new secret are as they were. The four existing PillButton variants and the default render did not move; nocturne-visual gained `PillButton/danger` in both palettes, two snapshots added and the 64 byte-identical. In light, #dc2626 is 4.44:1 on the bare page background, where Cancel run, Delete/Leave team and Archive flow sit — a hair under 4.5:1, as the website's is. The website's half — the same list in `snoopy`, on its existing `danger` variant and `--error-text` — is that repository's. **NOT OBSERVED** on a device |
+| 6 | "Sign out was clicked and it hung on this screen untill i closed the app then it took me to get started. Sign out should sign out the user and take them to the get started page." | being found. The proxies' access logs show build 12's four logouts during the session (15:52:47Z–16:01:55Z) each answered `204` in 0.18–0.31 s, so the hang is in the app, after a sign-out that succeeded | in progress (build 13, part 2) |
+| 7 | "I clicked use identity provider when face id failed and it kept bringing up face id. It should allow the user to log back in using their account right" | "Use identity provider" (`faceid.tsx:151`) only replaced to `/`, which for a person still signed in is the splash — and the splash, the Face ID choice still on, replaced itself with the lock 2400 ms later: Face ID again, in a loop. `bda1136` (24.11.6, build 8's batch) applied "every route that left for Sign in leaves for the cover" (the fifth session's row 1) to a screen where the person is still signed in; build 7 had sent it to Sign in. It shipped in builds 9–12, unseen: no test returned a failed Face ID or pressed the fallback, and no session recorded one | **fixed (build 13, option A)**: the fallback is Settings › Sign out's. With a signed-in session it awaits `signOut()` and replaces to the cover only on `revoked: true` — this phone's session revoked (the web's stays), its push registration let go, the tokens and the Face ID choice cleared, so the next sign-in asks the Face ID question again; on `revoked: false` the lock stays and says `SIGN_OUT_FAILED`, nothing cleared, and the button tries again; with no signed-in session to unlock (an outage, nothing stored) it goes to the cover without a sign-out, as before. **NOT OBSERVED** on the phone: Face ID on, relaunch, cancel Face ID, Use identity provider — the cover, Get started, Sign in, the Face ID question, Home |
+| 8 | "Lets say i link microsoft and apple then log out the app. If i log back in will it let me use apple? " | a question, not a defect | in progress (build 13, part 2) |
+| 9 | "Why do i have two of the same automations across teams. Teams cannot have the same flows. One flow per account type. Personal or org not multiple of the same in account type. This is a bug" | build 11 (D4) adds every flow to a team, and the platform's uniqueness — the one `addedAgainAs` reads — is one non-archived subscription per workspace, template and team, so one workspace can hold the same flow once in each of its teams (the seventh session's rows 5, 6, 11 and 7) | in progress (build 13, part 2) |
+
+Decided flips of pinned behaviour, each named in its test: `run-stats` "draws total,
+succeeded and failed — the three §12.1 #73b names" holds "Runs" where it held "Runs
+today"; `tab-screens` "a Home stat tile opens Activity for that outcome" holds the push
+with `period: 'today'`; and the Settings test that held the plan as a line under
+Billing is `tab-screens` "reads only the plan, quietly: one billing read for an owner,
+shown as Billing's value on its right; the email under Account" — the build 11 guard
+"The index reads only the plan" names it by its old title. Not in this part, and why:
+items 4, 6, 8 and 9 (part 2); the website's half of item 5 (`snoopy`); and the
+platform's records the fact-finding names — a BUILD-PLAN item and a §12.1 row for item
+7, BUILD-PLAN lines for items 1 and 5 — which are `snoopy-backend`'s, read-only from a
+mobile session.
+
+### Guards proved to bite, build 13
+
+Forty-six breaks, each run against its own suite with the test's name as the filter —
+the named test confirmed failed from jest's own record — and the file restored byte for
+byte, its SHA-256 checked before and after, by one script; the working tree's hashes
+matched after its last restore. The first three rows are item 7's tests run against the
+lock as it is at `d77dd3a`: each fails there. The fourth Face ID test, "with no
+signed-in session to unlock, the fallback goes to the cover without signing out", passes
+there, as it should — it pins the outage path the fix keeps, the cover with no sign-out —
+and bites instead on the break that signs out without a session (its row below). One
+guard did not bite at first: with the name kept from a member, the member's case still
+read "Acme Operations", because its session listed no other organization and the
+Personal rule found the same one; the case now lists a second organization, and that
+break and the no-request one were run again against it, each failing its test. The look
+of a tile — the caret's place, the tint's strength — the row heights, and the lock's
+message centred inside the screen's side margin (for `SIGN_OUT_FAILED`, a long sentence)
+are styles no test reads, so no break was run for them.
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| The fallback signs out, and only then leaves | `faceid.tsx` as it is at `d77dd3a` (builds 11 and 12) | `faceid-screen` "a failed Face ID, then Use identity provider, signs this phone out and only then leaves for the cover" |
+| A sign-out not revoked keeps the lock | `faceid.tsx` as it is at `d77dd3a` (builds 11 and 12) | `faceid-screen` "a sign-out that could not be revoked keeps the lock and says so; the button tries again" |
+| Face ID not available signs out too | `faceid.tsx` as it is at `d77dd3a` (builds 11 and 12) | `faceid-screen` "when Face ID is not available, the fallback signs out too" |
+| The fallback signs this phone out | the sign-out skipped (taken as revoked) | `faceid-screen` "a failed Face ID, then Use identity provider, signs this phone out and only then leaves for the cover" |
+| It leaves only once the sign-out has answered | the cover replaced to before the sign-out is awaited | `faceid-screen` "a failed Face ID, then Use identity provider, signs this phone out and only then leaves for the cover" |
+| It leaves only on revoked: true | the revoked: false branch removed | `faceid-screen` "a sign-out that could not be revoked keeps the lock and says so; the button tries again" |
+| A sign-out not revoked is said in SIGN_OUT_FAILED | the lock saying "did not unlock" again instead | `faceid-screen` "a sign-out that could not be revoked keeps the lock and says so; the button tries again" |
+| Keyed on the session, not the message | the sign-out keyed on the "did not unlock" message | `faceid-screen` "when Face ID is not available, the fallback signs out too" |
+| No signed-in session: no sign-out | the session check removed (always sign out) | `faceid-screen` "with no signed-in session to unlock, the fallback goes to the cover without signing out" |
+| SettingsRow: title and value share one wrapping line | flexWrap removed from the title line | `components` "draws a value on the title's line, before the arrow, and lets it move under the title rather than squeeze it" |
+| Billing's plan is its value, not a line under it | the plan put back as sub | `tab-screens` "reads only the plan, quietly: one billing read for an owner, shown as Billing's value on its right; the email under Account" |
+| A member's line stays under the title | the member's line moved into the value | `tab-screens` "never reads billing for a member, whose line says who manages it" |
+| The organization's name is the session's: no request | the value read with readWorkspaces() beside the plan | `tab-screens` "names the active organization on the Organization row, for an owner and for a member, with no request" |
+| The active organization by name, for any role | the name kept from a member | `tab-screens` "names the active organization on the Organization row, for an owner and for a member, with no request" |
+| Cut off with no organization shown: nothing, not None | the cut-off check removed | `tab-screens` "in a personal workspace, names the organization the session lists: one by name, several as a count, none as None, and nothing when the list is cut off without one" |
+| Cut off with no organization shown: nothing, not None (the rule) | the cut-off check removed | `view-mapping` "says nothing when the list is cut off and shows no organization — one may lie past the cut" |
+| Several organizations are a count | the count dropped | `view-mapping` "from a personal workspace, counts several" |
+| TODAY sits over the tiles | the TODAY label removed | `tab-screens` "says its window once, over the row: TODAY, then Runs, Successes, Failures — the greeting as it was" |
+| The first tile reads Runs | "Runs today" put back | `run-stats` "draws total, succeeded and failed — the three §12.1 #73b names" |
+| Every stat tile draws a caret | the caret removed from the tile button | `tab-screens` "every stat tile looks like the button it is, on Home and on a flow page: a caret on each, and the tint while pressed" |
+| A pressed tile draws the tint | the tint never drawn | `tab-screens` "every stat tile looks like the button it is, on Home and on a flow page: a caret on each, and the tint while pressed" |
+| A Home tile opens today | the period removed from the push | `tab-screens` "each Home tile's number is the rows it opens: today's runs by outcome, the older ones left out (All teams)" |
+| A Home tile opens today (the push) | the period removed from the push | `tab-screens` "a Home stat tile opens Activity for that outcome" |
+| Today lists no earlier run | EARLIER drawn under Today | `tab-screens` "each Home tile's number is the rows it opens: today's runs by outcome, the older ones left out (All teams)" |
+| Today lists no yesterday's run | YESTERDAY drawn under Today | `tab-screens` "Activity arriving with today and Failed lists only today's failed runs; Today ✕ sits on its own row above the outcomes, and clears back to every run" |
+| Today ✕ is on its own row, above the outcomes | the Today chip put back in the outcome row | `tab-screens` "Activity arriving with today and Failed lists only today's failed runs; Today ✕ sits on its own row above the outcomes, and clears back to every run" |
+| Today ✕ clears back to every run | the chip's press doing nothing | `tab-screens` "Activity arriving with today and Failed lists only today's failed runs; Today ✕ sits on its own row above the outcomes, and clears back to every run" |
+| The flow chip is on the selection row too | the flow chip put back in the outcome row | `tab-screens` "a flow page's chip sits on the same row, above the outcomes, and its tiles bring no day: they count all time" |
+| An empty Today says the day | " today" dropped from the empty line | `tab-screens` "with no run today but older ones, each tile's list says so: No runs today. / No successful runs today. / No failed runs today." |
+| The tab bar changes nothing | the param-less arrival's early return removed | `tab-screens` "opening Activity from the tab bar after a tile visit leaves Today as it was" |
+| A flow page's tiles bring no day: they count all time | today added to a flow tile's push | `tab-screens` "a flow page's three tiles open Activity for this flow and that outcome" |
+| Light's red reads at AA on its surface | light set back to #f87171 | `theme` "reads at 4.5:1 or more on its own palette's surface, where the design's red on white does not" |
+| Dark's red is the design's, status.err | dark given another red | `theme` "is the design's red in dark — status.err itself — and the website's light red in light" |
+| PillButton danger: label and icon in palette.danger | the danger label drawn in the text colour | `components` "draws the danger variant in the theme's red — label, icon and a 1-pt outline — and tints it a tenth while pressed (dark)" |
+| PillButton danger: a 1-pt outline in palette.danger | the outline dropped | `components` "draws the danger variant in the theme's red — label, icon and a 1-pt outline — and tints it a tenth while pressed (light)" |
+| PillButton danger: a tenth-strength tint while pressed | the pressed tint at 7% | `components` "draws the danger variant in the theme's red — label, icon and a 1-pt outline — and tints it a tenth while pressed (dark)" |
+| DialogButton danger reads palette.danger | status.err put back | `components` "draws a danger button — what cannot be undone — in the theme's red (light)" |
+| Delete Account is the red pill | variant="secondary" put back | `account-screen` "draws Delete Account, Unlink and Unlink's confirm in the theme's red (the owner's build 12 item 5; dark)" |
+| Unlink's text is red | neutral-400 put back | `account-screen` "draws Delete Account, Unlink and Unlink's confirm in the theme's red (the owner's build 12 item 5; dark)" |
+| Delete team / Leave team are the red pill | variant="secondary" put back | `teams-screens` "draws Delete team for its owner and Leave team for a member in red, as their confirms are (the owner's build 12 item 5)" |
+| Cancel run is the red pill | variant="secondary" put back | `tab-screens` "draws Cancel run in red and View flow as it was (the owner's build 12 item 5: "stop")" |
+| Sign out reads palette.danger | the design's fixed red put back on the label | `tab-screens` "says Sign out in the theme's red — light, #dc2626 (the owner's build 12 item 5)" |
+| Archive flow reads palette.danger | the design's fixed red put back on the label | `automation-actions` "draws Archive flow and its confirm in the theme's red (light)" |
+| Withdraw's confirm is accent, not red | tone="accent" removed (red by default) | `teams-screens` "asks to join a team and reads the directory again; withdraws a request it made" |
+| Pause stays plain | Pause drawn as the red pill | `tab-screens` "keeps Pause plain — Resume undoes it in one tap — while Archive flow, last, is red (the owner's build 12 item 5)" |
+| Reject stays plain | Reject drawn in red | `tab-screens` "approves and rejects independently, matching the design done-states" |
+
 ### Guards proved to bite, 24.6
 
 | Guard | Broken by | Test that failed |

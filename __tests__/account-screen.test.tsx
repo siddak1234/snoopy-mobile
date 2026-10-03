@@ -14,7 +14,7 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 
 import AccountScreen from '@/app/(tabs)/settings/account';
-import { nocturneDark } from '@/constants/theme';
+import { nocturneDark, nocturneLight } from '@/constants/theme';
 import type { SessionContextValue } from '@/hooks/use-session';
 import { DELETE_ACCOUNT_BODY, DELETION_WORDS } from '@/lib/content/deletion';
 import { PlatformError } from '@/lib/platform/problem';
@@ -215,6 +215,22 @@ describe('Unlinking a sign-in account (backend 24.11.1)', () => {
     expect(sent?.body).toEqual({ refreshToken: 'refresh-1' });
     await waitFor(() => expect(fake.to('GET /v1/auth/identities').length).toBe(reads + 1));
   });
+
+  it.each(['dark', 'light'] as const)(
+    "draws Delete Account, Unlink and Unlink's confirm in the theme's red (the owner's build 12 item 5; %s)",
+    async (mode) => {
+      const palette = mode === 'dark' ? nocturneDark : nocturneLight;
+      const color = (node: { props: { style?: unknown } }) => (StyleSheet.flatten(node.props.style) as { color?: string }).color;
+      routeLinked();
+      await renderWithProviders(<AccountScreen />, session(), mode);
+      expect(color(await screen.findByText('Delete Account'))).toBe(palette.danger);
+      expect(color(screen.getByText('Unlink'))).toBe(palette.danger);
+      // Link, the way on, is not red.
+      expect(color(within(screen.getByTestId('identity-google')).getByText('Primary'))).not.toBe(palette.danger);
+      await fireEvent.press(screen.getByTestId('unlink-apple'));
+      expect(color(within(await screen.findByTestId('unlink-dialog')).getByText('Unlink'))).toBe(palette.danger);
+    },
+  );
 
   /** Unlink Apple, refused as `refusal` — a PlatformError carrying the problem's TITLE, as the transport builds it. */
   async function unlinkRefused(refusal: PlatformError) {

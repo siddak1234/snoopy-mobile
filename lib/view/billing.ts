@@ -5,9 +5,10 @@ export const FREE_PLAN_ID = 'free';
 
 /**
  * The plan a workspace is enrolled in, from what `GET …/billing` answers —
- * ONE rule, shared by the Billing page's cards and the Settings index's plan
- * line (build 11, D1), so the two can never disagree on a workspace mid-way
- * out of a subscription.
+ * ONE rule, shared by the Billing page's cards and the plan's name on the
+ * Settings index's Billing row (build 11, D1; on the row's right since the
+ * owner's build 12 item 2), so the two can never disagree on a workspace
+ * mid-way out of a subscription.
  *
  * `canceled` and `unpaid` end access, which leaves the free floor; `past_due`
  * still grants capabilities — dunning is a period in which the provider

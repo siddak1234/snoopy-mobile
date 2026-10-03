@@ -9,11 +9,10 @@ import type { ArchivedFlowPath } from '@/components/flows/archived-flows';
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel } from '@/components/nocturne/section-label';
-import { StatCard } from '@/components/nocturne/stat-card';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { StepCard } from '@/components/nocturne/step-card';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
-import { Pressable } from '@/components/pressable';
+import { StatTileButton } from '@/components/stat-tile-button';
 import { em, fonts, layout, status, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ActionFailure, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
@@ -221,7 +220,8 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
         )}
       </View>
 
-      {/* The three tiles open Activity for this flow and that outcome (24.11.9). */}
+      {/* The three tiles open Activity for this flow and that outcome, over all time (24.11.9);
+          each looks like the button it is (the owner's build 12 item 1). */}
       <View style={styles.statsRow}>
         {(
           [
@@ -230,20 +230,21 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
             ['Failures', def.failCount, 'Failed', dash(def.failCount) ? palette.neutral[500] : status.err],
           ] as const
         ).map(([label, value, filter, valueColor]) => (
-          <Pressable
+          <StatTileButton
             key={label}
             testID={`flow-stat-${filter}`}
-            accessibilityRole="button"
             accessibilityLabel={`${label}: see these runs in Activity`}
-            style={styles.statPressable}
             onPress={() =>
               router.push({
                 pathname: '/(tabs)/activity',
                 params: { flow: def.key, flowName: def.name, filter },
               })
-            }>
-            <StatCard value={value} label={label} size="sm" valueColor={valueColor} />
-          </Pressable>
+            }
+            value={value}
+            label={label}
+            size="sm"
+            valueColor={valueColor}
+          />
         ))}
       </View>
 
@@ -380,7 +381,6 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
   },
-  statPressable: { flex: 1 },
   removedBadge: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
   removedCard: { padding: 14, gap: 12 },
   content: {

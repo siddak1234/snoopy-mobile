@@ -245,6 +245,8 @@ export default function TeamsScreen() {
           testID="withdraw-request-dialog"
           title={`Withdraw your request to join ${withdrawing.entry.type}?`}
           body="You can ask again any time."
+          // Asking again undoes it, so it is not red (the owner's build 12 item 5; the website's rule too).
+          tone="accent"
           confirmLabel="Withdraw"
           busyLabel="Withdrawing…"
           fallback="Your request could not be withdrawn."

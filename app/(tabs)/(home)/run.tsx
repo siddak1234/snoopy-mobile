@@ -244,10 +244,11 @@ export default function RunDetailScreen() {
       </View>
 
       <View style={styles.actions}>
+        {/* It stops the run, which is not resumed: red (the owner's build 12 item 5, "stop"). */}
         {run.cancellable ? (
           <PillButton
             label="Cancel run"
-            variant="secondary"
+            variant="danger"
             height={46}
             fontSize={typeScale.label.fontSize}
             icon={StopCircle}
