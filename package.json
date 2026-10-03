@@ -8,6 +8,7 @@
     "ios": "expo run:ios",
     "lint": "expo lint",
     "test": "jest",
+    "test:coverage": "jest --ci --runInBand --coverage --coverageReporters=json --coverageDirectory=coverage",
     "typecheck": "tsc --noEmit",
     "export:ios": "expo export --platform ios --output-dir dist/ios",
     "export:android": "expo export --platform android --output-dir dist/android",
@@ -19,9 +20,10 @@
     "audit:type": "node scripts/audit-type.mjs",
     "audit:vocabulary": "node scripts/audit-vocabulary.mjs",
     "audit:haptics": "node scripts/audit-haptics.mjs",
+    "audit:presses": "node scripts/audit-presses.mjs",
     "generate:platform-contracts": "node scripts/generate-platform-contracts.mjs",
     "verify:platform-contracts": "node scripts/verify-platform-contracts.mjs",
-    "verify": "npm run lint && npm run typecheck && npm run audit:credentials && npm run audit:tokens && npm run audit:type && npm run audit:vocabulary && npm run audit:haptics && npm run audit:fixtures && npm run audit:platform && npm run verify:platform-contracts && npm test -- --ci --runInBand && node scripts/repo-facts.mjs --gate verify"
+    "verify": "npm run lint && npm run typecheck && npm run audit:credentials && npm run audit:tokens && npm run audit:type && npm run audit:vocabulary && npm run audit:haptics && npm run audit:fixtures && npm run audit:platform && npm run verify:platform-contracts && npm run test:coverage && npm run audit:presses && node scripts/repo-facts.mjs --gate verify"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
