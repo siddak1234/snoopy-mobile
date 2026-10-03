@@ -3,15 +3,18 @@ jest.mock('@/lib/platform/client', () => ({
   newIdempotencyKey: jest.fn(),
 }));
 
-import { fireEvent, screen, waitFor, within } from '@testing-library/react-native';
-import React from 'react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
+import React, { useState } from 'react';
 
-import SettingsScreen from '@/app/(tabs)/settings';
 import TeamScreen from '@/app/(tabs)/settings/team';
 import TeamsScreen from '@/app/(tabs)/settings/teams';
+import WorkspaceScreen from '@/app/(tabs)/settings/workspace';
+import { CreateTeamDialog } from '@/components/teams/create-team-dialog';
+import { SessionContext, type SessionContextValue } from '@/hooks/use-session';
+import { WORKSPACE_CHANGED } from '@/lib/content/refusals';
 import { PlatformError } from '@/lib/platform/problem';
 import { fakePlatform, type Sent } from '@/test/fake-platform';
-import { TEST_WORKSPACE, routePlatform, signedInSession } from '@/test/platform';
+import { TEST_WORKSPACE, sessionAs, signedInSession } from '@/test/platform';
 import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
 
 const { platformOperation, newIdempotencyKey } = jest.requireMock('@/lib/platform/client');
@@ -37,25 +40,45 @@ const workspaces = (orgRole: 'owner' | 'admin' | 'member' = 'member') => ({
   ],
   activeWorkspaceId: TEST_WORKSPACE,
 });
-const team = (id: string, workspaceId: string, name: string, extra: Record<string, unknown> = {}) => ({
+/** A team is its kind (24.12): the kind is its name and its type. A team made before keeps its own name. */
+const team = (id: string, workspaceId: string, kind: string, extra: Record<string, unknown> = {}) => ({
   id,
   workspaceId,
-  name,
-  type: 'Finance',
+  name: kind,
+  type: kind,
   status: 'active',
   viewerRole: 'owner',
   createdAt: '2026-09-01T00:00:00Z',
   ...extra,
 });
-const entry = (id: string, name: string, access: 'member' | 'requested' | 'none') => ({
+const entry = (id: string, kind: string, access: 'member' | 'requested' | 'none') => ({
   id,
   workspaceId: TEST_WORKSPACE,
-  name,
-  type: 'Legal',
+  name: kind,
+  type: kind,
   status: 'active',
   access,
   createdAt: '2026-09-01T00:00:00Z',
 });
+
+/** The signed-in session in its organization, with this role there. */
+const orgSession = (role: 'owner' | 'admin' | 'member') => sessionAs(role);
+
+/** The same person with their personal workspace active. */
+function personalSession(): SessionContextValue {
+  if (signedInSession.status !== 'signed-in') throw new Error('fixture');
+  return {
+    ...signedInSession,
+    session: {
+      ...signedInSession.session,
+      user: { ...signedInSession.session.user, activeWorkspaceId: PERSONAL },
+      workspaces: [
+        { id: PERSONAL, name: 'Personal', type: 'personal', role: 'owner' },
+        { id: TEST_WORKSPACE, name: 'Acme Operations', type: 'organization', role: 'member' },
+      ],
+    },
+  };
+}
 
 async function pressLast(label: string) {
   const buttons = await screen.findAllByText(label);
@@ -63,17 +86,32 @@ async function pressLast(label: string) {
 }
 
 describe('Teams (24.11.7)', () => {
-  function routeList(directory: unknown = { projects: [entry('p1', 'AP inbox', 'member'), entry('p4', 'Legal', 'none'), entry('p5', 'Data', 'requested')] }) {
+  function routeList(
+    directory: unknown = { projects: [entry('p1', 'Finance', 'member'), entry('p4', 'Legal', 'none'), entry('p5', 'Data', 'requested')] },
+    orgRole: 'owner' | 'admin' | 'member' = 'member',
+  ) {
     const fake = fakePlatform(platformOperation);
-    fake.always('GET /v1/workspaces', workspaces());
+    fake.always('GET /v1/workspaces', workspaces(orgRole));
     fake.always('GET /v1/workspaces/{workspaceId}/projects', (sent: Sent) =>
       sent.values.workspaceId === TEST_WORKSPACE
-        ? { projects: [team('p1', TEST_WORKSPACE, 'AP inbox', { viewerRole: 'member' }), team('p2', TEST_WORKSPACE, 'Old', { status: 'archived' })] }
-        : { projects: [team('p3', PERSONAL, 'Receipts')] },
+        ? { projects: [team('p1', TEST_WORKSPACE, 'Finance', { viewerRole: 'member' }), team('p2', TEST_WORKSPACE, 'Sales', { status: 'archived' })] }
+        : { projects: [team('p3', PERSONAL, 'Accounting')] },
     );
     fake.always('GET /v1/workspaces/{workspaceId}/project-directory', directory);
     fake.always('POST /v1/workspaces/{workspaceId}/projects', (sent: Sent) => ({
-      project: team('p9', sent.values.workspaceId!, (sent.body as { name: string }).name),
+      project: team('p9', sent.values.workspaceId!, (sent.body as { type: string }).type),
+    }));
+    return fake;
+  }
+
+  /** Nothing to list anywhere: no team, nothing to ask onto. */
+  function routeNone(orgRole: 'owner' | 'admin' | 'member') {
+    const fake = fakePlatform(platformOperation);
+    fake.always('GET /v1/workspaces', workspaces(orgRole));
+    fake.always('GET /v1/workspaces/{workspaceId}/projects', { projects: [] });
+    fake.always('GET /v1/workspaces/{workspaceId}/project-directory', { projects: [] });
+    fake.always('POST /v1/workspaces/{workspaceId}/projects', (sent: Sent) => ({
+      project: team('p9', sent.values.workspaceId!, (sent.body as { type: string }).type),
     }));
     return fake;
   }
@@ -83,14 +121,27 @@ describe('Teams (24.11.7)', () => {
     await renderWithProviders(<TeamsScreen />, signedInSession);
     expect(await screen.findByText('ACME OPERATIONS')).toBeTruthy();
     expect(screen.getByText('PERSONAL')).toBeTruthy();
-    expect(screen.getByText('AP inbox')).toBeTruthy();
-    expect(screen.getByText('Receipts')).toBeTruthy();
-    expect(screen.queryByText('Old')).toBeNull();
+    expect(screen.getByText('Accounting')).toBeTruthy();
+    expect(screen.queryByText('Sales')).toBeNull();
     expect(screen.getByText('ASK TO JOIN')).toBeTruthy();
     // A team they are on is not offered to ask onto again.
     expect(screen.queryByTestId('askable-p1')).toBeNull();
     expect(screen.getByTestId('request-p4')).toBeTruthy();
     expect(screen.getByTestId('requested-p5')).toBeTruthy();
+  });
+
+  it('titles a team by its kind and says the kind once — a team named before 24.12 too (24.12)', async () => {
+    const fake = routeList();
+    fake.always('GET /v1/workspaces/{workspaceId}/projects', (sent: Sent) =>
+      sent.values.workspaceId === TEST_WORKSPACE
+        ? { projects: [team('p1', TEST_WORKSPACE, 'Finance', { name: 'AP inbox', viewerRole: 'member' })] }
+        : { projects: [team('p3', PERSONAL, 'Accounting')] },
+    );
+    await renderWithProviders(<TeamsScreen />, signedInSession);
+    expect(await screen.findByText('Finance')).toBeTruthy();
+    expect(screen.getAllByText('Finance')).toHaveLength(1);
+    expect(screen.getAllByText('Accounting')).toHaveLength(1);
+    expect(screen.queryByText('AP inbox')).toBeNull();
   });
 
   it('asks to join a team and reads the directory again; withdraws a request it made', async () => {
@@ -129,57 +180,160 @@ describe('Teams (24.11.7)', () => {
       throw new PlatformError('Not found', 404);
     });
     await renderWithProviders(<TeamsScreen />, signedInSession);
-    expect(await screen.findByText('AP inbox')).toBeTruthy();
+    expect(await screen.findByText('Finance')).toBeTruthy();
     expect(screen.queryByText('ASK TO JOIN')).toBeNull();
     expect(screen.queryByText("Couldn't load your teams")).toBeNull();
   });
 
-  it('creates a team where the person picks, of a kind from the list or in their own words, then opens it', async () => {
-    const fake = routeList({ projects: [] });
-    await renderWithProviders(<TeamsScreen />, signedInSession);
+  it('creates a team in the workspace the person is in: the kind only, sent as its name and its type (24.12)', async () => {
+    const fake = routeList({ projects: [] }, 'admin');
+    await renderWithProviders(<TeamsScreen />, orgSession('admin'));
     await fireEvent.press(await screen.findByText('Create a team'));
-    // Preselected: the workspace being looked at.
-    expect(await screen.findByLabelText('Organization: Acme Operations')).toBeTruthy();
-    await fireEvent.changeText(screen.getByPlaceholderText('Accounts payable'), 'Payables');
+    // Named, not picked: no organization picker, no name, no description.
+    expect(await screen.findByText('In Acme Operations.')).toBeTruthy();
+    expect(screen.queryByLabelText(/^Organization:/u)).toBeNull();
+    expect(screen.queryByText('Team name')).toBeNull();
+    expect(screen.queryByText('Description (optional)')).toBeNull();
     await pressLast('Create team');
     expect(await screen.findByText('Pick the kind of team.')).toBeTruthy();
     expect(fake.to('POST /v1/workspaces/{workspaceId}/projects')).toHaveLength(0);
 
-    // The kinds are a dropdown; Other opens a field for the person's own words.
     await fireEvent.press(screen.getByTestId('team-kind'));
     expect(screen.getByTestId('team-kind-option-Customer Support')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('team-kind-option-Finance'));
+    await pressLast('Create team');
+    await waitFor(() => expect(fake.to('POST /v1/workspaces/{workspaceId}/projects')).toHaveLength(1));
+    const [created] = fake.to('POST /v1/workspaces/{workspaceId}/projects');
+    expect(created!.values).toEqual({ workspaceId: TEST_WORKSPACE });
+    expect(created!.body).toEqual({ name: 'Finance', type: 'Finance' });
+
+    expect(await screen.findByText('Your team is ready. Add people on its page.')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Done'));
+    expect(mockRouter.push).toHaveBeenCalledWith({
+      pathname: '/(tabs)/settings/team',
+      params: { projectId: 'p9', workspaceId: TEST_WORKSPACE },
+    });
+  });
+
+  it("sends Other's own words, trimmed, as the name and the type", async () => {
+    const fake = routeList({ projects: [] }, 'owner');
+    await renderWithProviders(<TeamsScreen />, orgSession('owner'));
+    await fireEvent.press(await screen.findByText('Create a team'));
+    await fireEvent.press(await screen.findByTestId('team-kind'));
     await fireEvent.press(screen.getByTestId('team-kind-option-Other'));
-    await fireEvent.changeText(screen.getByPlaceholderText('Facilities'), 'Treasury');
-    await fireEvent.press(screen.getByTestId('team-workspace'));
-    await fireEvent.press(screen.getByTestId(`team-workspace-option-${PERSONAL}`));
-    expect(screen.getByLabelText('Organization: Personal — just you')).toBeTruthy();
+    await fireEvent.changeText(screen.getByPlaceholderText('Facilities'), '  Treasury ');
+    await pressLast('Create team');
+    await waitFor(() => expect(fake.to('POST /v1/workspaces/{workspaceId}/projects')).toHaveLength(1));
+    expect(fake.to('POST /v1/workspaces/{workspaceId}/projects')[0]!.body).toEqual({ name: 'Treasury', type: 'Treasury' });
+  });
+
+  it('creates one in the personal workspace when that is the one the person is in', async () => {
+    const fake = routeList({ projects: [] });
+    await renderWithProviders(<TeamsScreen />, personalSession());
+    await fireEvent.press(await screen.findByText('Create a team'));
+    expect(await screen.findByText('In your personal workspace.')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('team-kind'));
+    await fireEvent.press(screen.getByTestId('team-kind-option-HR'));
     await pressLast('Create team');
     await waitFor(() => expect(fake.to('POST /v1/workspaces/{workspaceId}/projects')).toHaveLength(1));
     const [created] = fake.to('POST /v1/workspaces/{workspaceId}/projects');
     expect(created!.values).toEqual({ workspaceId: PERSONAL });
-    expect(created!.body).toEqual({ name: 'Payables', type: 'Treasury' });
-
-    await fireEvent.press(await screen.findByText('Done'));
-    expect(mockRouter.push).toHaveBeenCalledWith({
-      pathname: '/(tabs)/settings/team',
-      params: { projectId: 'p9', workspaceId: PERSONAL },
-    });
+    expect(created!.body).toEqual({ name: 'HR', type: 'HR' });
+    // A personal team has only its owner: there is nobody to add.
+    expect(await screen.findByText('Your team is ready.')).toBeTruthy();
   });
 
-  it('refuses a one-letter name and an empty Other, sending nothing', async () => {
-    const fake = routeList({ projects: [] });
-    await renderWithProviders(<TeamsScreen />, signedInSession);
+  it('refuses an empty Other and words outside 2 to 60 characters, sending nothing', async () => {
+    const fake = routeList({ projects: [] }, 'admin');
+    await renderWithProviders(<TeamsScreen />, orgSession('admin'));
     await fireEvent.press(await screen.findByText('Create a team'));
-    await fireEvent.changeText(await screen.findByPlaceholderText('Accounts payable'), 'P');
-    await fireEvent.press(screen.getByTestId('team-kind'));
-    await fireEvent.press(screen.getByTestId('team-kind-option-HR'));
-    await pressLast('Create team');
-    expect(await screen.findByText('A team name is 2 to 60 characters.')).toBeTruthy();
-    await fireEvent.changeText(screen.getByPlaceholderText('Accounts payable'), 'People');
-    await fireEvent.press(screen.getByTestId('team-kind'));
+    await fireEvent.press(await screen.findByTestId('team-kind'));
     await fireEvent.press(screen.getByTestId('team-kind-option-Other'));
+    for (const words of ['', ' ', 'X', 'x'.repeat(61)]) {
+      await fireEvent.changeText(screen.getByPlaceholderText('Facilities'), words);
+      await pressLast('Create team');
+      expect(await screen.findByText('Say what kind of team it is, in 2 to 60 characters.')).toBeTruthy();
+    }
+    expect(fake.to('POST /v1/workspaces/{workspaceId}/projects')).toHaveLength(0);
+  });
+
+  it('says a second team of a kind in words — never "Conflict" — and a refusal to a member as the rule', async () => {
+    const fake = routeList({ projects: [] }, 'admin');
+    fake.once('POST /v1/workspaces/{workspaceId}/projects', () => {
+      throw new PlatformError('Conflict', 409, 'CONFLICT', { reason: 'team_kind_taken' });
+    });
+    fake.once('POST /v1/workspaces/{workspaceId}/projects', () => {
+      throw new PlatformError('Forbidden', 403, 'FORBIDDEN');
+    });
+    await renderWithProviders(<TeamsScreen />, orgSession('admin'));
+    await fireEvent.press(await screen.findByText('Create a team'));
+    await fireEvent.press(await screen.findByTestId('team-kind'));
+    await fireEvent.press(screen.getByTestId('team-kind-option-Finance'));
     await pressLast('Create team');
-    expect(await screen.findByText('Say what kind of team it is, in up to 120 characters.')).toBeTruthy();
+    expect(await screen.findByText('This workspace already has a team for Finance.')).toBeTruthy();
+    expect(screen.queryByText('Conflict')).toBeNull();
+    await pressLast('Create team');
+    expect(await screen.findByText('Only an owner or admin can create a team here.')).toBeTruthy();
+    expect(screen.queryByText('Forbidden')).toBeNull();
+  });
+
+  it('does not offer Create a team to a plain member of the organization (24.12)', async () => {
+    routeList();
+    await renderWithProviders(<TeamsScreen />, orgSession('member'));
+    expect(await screen.findByText('Finance')).toBeTruthy();
+    expect(screen.queryByText('Create a team')).toBeNull();
+  });
+
+  it('is the empty-state standard with nothing to list: Create a team opens the dialog, and Back leaves (24.12)', async () => {
+    routeNone('admin');
+    await renderWithProviders(<TeamsScreen />, orgSession('admin'));
+    expect(await screen.findByTestId('screen-empty')).toBeTruthy();
+    expect(screen.getByText('No teams yet')).toBeTruthy();
+    expect(screen.getByText('A team has its own flows and its own people.')).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText('Back'));
+    expect(mockRouter.back).toHaveBeenCalled();
+    await fireEvent.press(screen.getByText('Create a team'));
+    expect(await screen.findByTestId('create-team-dialog')).toBeTruthy();
+  });
+
+  it("empty for a plain member, it offers no Create a team", async () => {
+    routeNone('member');
+    await renderWithProviders(<TeamsScreen />, orgSession('member'));
+    expect(await screen.findByText('No teams yet')).toBeTruthy();
+    expect(screen.queryByText('Create a team')).toBeNull();
+  });
+});
+
+describe('Create a team acts on the workspace it was opened in (24.12, CLAUDE.md rule 10)', () => {
+  /** The session the dialog sees, switchable mid-test as the switcher does. */
+  let switchTo: (next: SessionContextValue) => void = () => undefined;
+  function Switchable({ children }: { children: React.ReactNode }) {
+    const [session, setSession] = useState<SessionContextValue>(orgSession('admin'));
+    switchTo = setSession;
+    return <SessionContext.Provider value={session}>{children}</SessionContext.Provider>;
+  }
+
+  it('keeps naming that workspace, and refuses Create in words — sending nothing — once another is active', async () => {
+    const fake = fakePlatform(platformOperation);
+    fake.always('POST /v1/workspaces/{workspaceId}/projects', (sent: Sent) => ({
+      project: team('p9', sent.values.workspaceId!, (sent.body as { type: string }).type),
+    }));
+    await renderWithProviders(
+      <Switchable>
+        <CreateTeamDialog onClose={() => undefined} onCreated={() => undefined} />
+      </Switchable>,
+      orgSession('admin'),
+    );
+    expect(screen.getByText('In Acme Operations.')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('team-kind'));
+    await fireEvent.press(screen.getByTestId('team-kind-option-Finance'));
+
+    // The scope control keeps the dialog open while another workspace becomes active.
+    await act(async () => switchTo(personalSession()));
+    expect(screen.getByText('In Acme Operations.')).toBeTruthy();
+    expect(screen.queryByText('In your personal workspace.')).toBeNull();
+    await pressLast('Create team');
+    expect(await screen.findByText(WORKSPACE_CHANGED)).toBeTruthy();
     expect(fake.to('POST /v1/workspaces/{workspaceId}/projects')).toHaveLength(0);
   });
 });
@@ -192,7 +346,7 @@ describe('One team (24.11.7)', () => {
     const workspaceId = options.workspaceId ?? TEST_WORKSPACE;
     const fake = fakePlatform(platformOperation);
     fake.always('GET /v1/workspaces', workspaces(options.orgRole));
-    fake.always('GET /v1/workspaces/{workspaceId}/projects/{projectId}', { project: team('p1', workspaceId, 'AP inbox', { viewerRole }) });
+    fake.always('GET /v1/workspaces/{workspaceId}/projects/{projectId}', { project: team('p1', workspaceId, 'Finance', { viewerRole }) });
     fake.always('GET /v1/workspaces/{workspaceId}/projects/{projectId}/memberships', {
       memberships: [
         { projectId: 'p1', workspaceId, userId: 'u2', role: 'owner', displayName: 'Ben', email: 'ben@acme.co', createdAt: '2026-09-01T00:00:00Z' },
@@ -219,10 +373,13 @@ describe('One team (24.11.7)', () => {
     const fake = routeTeam('owner', { workspaceId: PERSONAL });
     fake.always('PATCH /v1/workspaces/{workspaceId}/projects/{projectId}', { project: {} });
     await renderWithProviders(<TeamScreen />, signedInSession);
+    // Its title is its kind, said once (24.12).
+    expect(await screen.findByText('Finance')).toBeTruthy();
+    expect(screen.queryByText(/^Finance · /u)).toBeNull();
     await fireEvent.press(await screen.findByText('Delete team'));
-    expect(await screen.findByText('Delete "AP inbox"?')).toBeTruthy();
+    expect(await screen.findByText('Delete "Finance"?')).toBeTruthy();
     // What actually happens — not a promise that data "reattaches" (it never did).
-    expect(screen.getByText('It leaves every team list. Its flows keep running until you remove them in Flows.')).toBeTruthy();
+    expect(screen.getByText('It leaves every team list. Its flows keep running until you archive them in Flows.')).toBeTruthy();
     await pressLast('Delete team');
     await waitFor(() => expect(mockRouter.back).toHaveBeenCalled());
     const [archived] = fake.to('PATCH /v1/workspaces/{workspaceId}/projects/{projectId}');
@@ -307,10 +464,9 @@ describe('One team (24.11.7)', () => {
   });
 });
 
-describe('Settings rows for the admin areas (24.3.8, 24.5, 24.11.7)', () => {
+describe('Settings rows for the admin areas (24.3.8, 24.5, 24.11.7; Settings › Workspace since 24.12)', () => {
   it('always offers Organization and Teams — and no Projects row, and no organization-only Teams', async () => {
-    routePlatform(platformOperation);
-    await renderWithProviders(<SettingsScreen />, signedInSession);
+    await renderWithProviders(<WorkspaceScreen />, signedInSession);
     expect(await screen.findByTestId('settings-organization')).toBeTruthy();
     expect(screen.queryByTestId('settings-projects')).toBeNull();
     await fireEvent.press(screen.getByTestId('settings-teams'));

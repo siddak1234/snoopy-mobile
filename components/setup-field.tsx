@@ -3,7 +3,7 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { EnvelopeSimple, HandPalm, Sliders, Tray } from 'phosphor-react-native';
 
 import { NocToggle } from '@/components/nocturne/noc-toggle';
-import { fonts } from '@/constants/theme';
+import { fonts, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { components } from '@/lib/generated/platform-contracts/automations';
 
@@ -253,9 +253,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   titleLine: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  rowTitle: { flex: 1, minWidth: 0, fontFamily: fonts.medium, fontSize: 14 },
-  optional: { fontFamily: fonts.regular, fontSize: 12 },
-  rowSub: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, paddingLeft: 30 },
+  rowTitle: { flex: 1, minWidth: 0, fontFamily: fonts.medium, fontSize: typeScale.label.fontSize },
+  optional: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
+  rowSub: { fontFamily: fonts.regular, ...typeScale.small, paddingLeft: 30 },
   inputWrap: {
     alignSelf: 'stretch',
     marginTop: 4,
@@ -266,13 +266,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
   },
-  currency: { fontFamily: fonts.regular, fontSize: 15, marginRight: 2 },
+  currency: { fontFamily: fonts.regular, fontSize: typeScale.lead.fontSize, marginRight: 2 },
   input: {
     flex: 1,
     minWidth: 0,
     paddingVertical: 9,
     paddingHorizontal: 2,
     fontFamily: fonts.regular,
-    fontSize: 15,
+    fontSize: typeScale.lead.fontSize,
   },
 });

@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, Text } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 
-import { fonts, radius, withAlpha } from '@/constants/theme';
+import { fonts, radius, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type OAuthProvider = 'apple' | 'google' | 'microsoft';
@@ -46,7 +46,8 @@ type Props = {
   disabled?: boolean;
 };
 
-/** 48px OAuth row button: radius 12, neutral-700 ring, 14.5px medium label. */
+/** 48px OAuth row button: radius 12, neutral-700 ring, medium label (the
+ *  design's 14.5px, the scale's `label` since 24.12). */
 export function OAuthButton({ provider, label, onPress, disabled = false }: Props) {
   const { palette } = useTheme();
   return (
@@ -67,7 +68,7 @@ export function OAuthButton({ provider, label, onPress, disabled = false }: Prop
         ...(disabled ? { opacity: 0.5 } : {}),
       })}>
       <ProviderGlyph provider={provider} color={palette.text} />
-      <Text style={{ fontFamily: fonts.medium, fontSize: 14.5, color: palette.text }}>{label}</Text>
+      <Text style={{ fontFamily: fonts.medium, fontSize: typeScale.label.fontSize, color: palette.text }}>{label}</Text>
     </Pressable>
   );
 }

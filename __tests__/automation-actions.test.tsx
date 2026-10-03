@@ -268,21 +268,23 @@ describe('Move to a newer version (24.4.1, backend §12.1 #126)', () => {
   });
 });
 
-describe('Archive (24.4.1, backend §12.1 #92)', () => {
+describe('Archive (24.4.1, backend §12.1 #92; "Archive flow" since 24.12)', () => {
   it('is reached only through its one-way confirmation', async () => {
     await renderActions();
-    await fireEvent.press(screen.getByTestId('remove-flow'));
-    expect(await screen.findByText('Remove Invoice triage?')).toBeTruthy();
+    expect(screen.getByLabelText('Archive Invoice triage')).toBeTruthy();
+    expect(screen.getByText('Archive flow')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('archive-flow'));
+    expect(await screen.findByText('Archive Invoice triage?')).toBeTruthy();
     expect(
       screen.getByText(
-        'It stops and leaves your flows. Its runs stay in Activity, and you can add it again later.',
+        'It stops and moves to Archived flows. Its runs stay in Activity, and you can add it again later.',
       ),
     ).toBeTruthy();
     await fireEvent.press(screen.getByText('Cancel'));
     expect(sent).toHaveLength(0);
 
-    await fireEvent.press(screen.getByTestId('remove-flow'));
-    await pressLast('Remove');
+    await fireEvent.press(screen.getByTestId('archive-flow'));
+    await pressLast('Archive');
     await waitFor(() => expect(callbacks.onArchived).toHaveBeenCalled());
     expect(sent).toEqual([expect.objectContaining({ method: 'PATCH', path: SUB_PATH, body: { status: 'archived' } })]);
   });
@@ -307,8 +309,8 @@ describe('Archive and the plan', () => {
     await fireEvent.press(screen.getByTestId('activate'));
     expect(screen.getByTestId('added')).toHaveTextContent('true');
 
-    await fireEvent.press(screen.getByTestId('remove-flow'));
-    await pressLast('Remove');
+    await fireEvent.press(screen.getByTestId('archive-flow'));
+    await pressLast('Archive');
     await waitFor(() => expect(callbacks.onArchived).toHaveBeenCalled());
     expect(screen.getByTestId('added')).toHaveTextContent('false');
   });
@@ -384,8 +386,8 @@ describe('Set up (24.4.1)', () => {
 describe('every action acts on the workspace the screen loaded (24.3.6)', () => {
   it('is refused in words, and sends nothing, once another workspace is active', async () => {
     await renderActions({ shown: 'another-workspace', entry: entry({ version: 2 }) });
-    await fireEvent.press(screen.getByTestId('remove-flow'));
-    await pressLast('Remove');
+    await fireEvent.press(screen.getByTestId('archive-flow'));
+    await pressLast('Archive');
     expect(await screen.findByText(WORKSPACE_CHANGED)).toBeTruthy();
     await fireEvent.press(screen.getByText('Cancel'));
 

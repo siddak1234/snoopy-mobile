@@ -9,7 +9,7 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { ScopeControl } from '@/components/scope-control';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
-import { em, fonts, layout, status } from '@/constants/theme';
+import { em, fonts, layout, status, typeScale } from '@/constants/theme';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { useScope } from '@/hooks/use-scope';
 import { useTheme } from '@/hooks/use-theme';
@@ -18,7 +18,7 @@ import {
   ACTIVITY_EMPTY_TITLE,
   ACTIVITY_SCOPE_EMPTY,
   ADD_FLOW_LABEL,
-  RUN_FLOW_REMOVED,
+  RUN_FLOW_ARCHIVED,
   errorTitleFor,
 } from '@/lib/content/screen-states';
 import { ACTIVITY_FILTERS, type ActivityItem } from '@/lib/content/screen-states';
@@ -160,7 +160,7 @@ export default function ActivityScreen() {
     ]);
     const index = catalogIndex(catalog.automations);
     const grouped = splitByDay(runs.runs);
-    // A run whose flow was removed says so on its row (24.11.8).
+    // A run whose flow was archived says so on its row (24.11.8).
     const removedFlows = new Set(removed.subscriptions.map((s) => s.id));
     const toRow = (run: (typeof runs.runs)[number]): ActivityItem => {
       const row = toRunRow(run, index, Date.now(), approvals.approvals);
@@ -173,7 +173,7 @@ export default function ActivityScreen() {
         needsReview: needsReview(run, approvals.approvals),
         tone: row.tone,
         title: row.name,
-        desc: removedFlows.has(run.subscriptionId) ? `${row.meta} · ${RUN_FLOW_REMOVED}` : row.meta,
+        desc: removedFlows.has(run.subscriptionId) ? `${row.meta} · ${RUN_FLOW_ARCHIVED}` : row.meta,
         time: row.time,
       };
     };
@@ -302,8 +302,8 @@ const styles = StyleSheet.create({
   },
   h1: {
     fontFamily: fonts.medium,
-    fontSize: 26,
-    letterSpacing: em(-0.015, 26),
+    fontSize: typeScale.display.fontSize,
+    letterSpacing: em(-0.015, typeScale.display.fontSize),
   },
   filters: {
     flexDirection: 'row',
@@ -329,16 +329,16 @@ const styles = StyleSheet.create({
   },
   rowTitle: {
     fontFamily: fonts.medium,
-    fontSize: 14,
+    fontSize: typeScale.label.fontSize,
   },
   rowDesc: {
     marginTop: 1,
     fontFamily: fonts.regular,
-    fontSize: 12.5,
+    fontSize: typeScale.small.fontSize,
   },
   rowTime: {
     fontFamily: fonts.regular,
-    fontSize: 11.5,
+    fontSize: typeScale.caption.fontSize,
   },
   emptyWrap: {
     paddingVertical: 56,
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontFamily: fonts.regular,
-    fontSize: 13.5,
+    fontSize: typeScale.body.fontSize,
     textAlign: 'center',
   },
 });

@@ -10,7 +10,7 @@ import { StatusPill } from '@/components/nocturne/status-pill';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { ScopeControl } from '@/components/scope-control';
-import { em, fonts, layout, radius, withAlpha } from '@/constants/theme';
+import { em, fonts, layout, radius, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
@@ -64,7 +64,7 @@ export default function FlowsScreen() {
     const labels = scopeLabels(projects, subs.subscriptions);
     return {
       flows: toFlows(subs.subscriptions, catalog.automations, stats.subscriptions, undefined, labels),
-      // Removed (archived) flows are a count here and a page of their own (24.11.8).
+      // Archived flows are a count here and a page of their own (24.11.8).
       removed: toRemovedFlows(removed.subscriptions, catalog.automations, stats.subscriptions, labels),
     };
   });
@@ -102,7 +102,7 @@ export default function FlowsScreen() {
     // "{query}"`, which is nonsense for a workspace that has none at all.
     return (
       <ScreenEmpty
-        icon={<FlowArrow size={40} />}
+        icon={<FlowArrow size={40} color={palette.accentRamp[300]} />}
         title={FLOWS_EMPTY_TITLE}
         body={FLOWS_EMPTY_BODY}
         action={{
@@ -130,7 +130,7 @@ export default function FlowsScreen() {
           label="New"
           variant="primary"
           height={36}
-          fontSize={13}
+          fontSize={typeScale.body.fontSize}
           icon={Plus}
           iconSize={14}
           gap={5}
@@ -191,7 +191,7 @@ export default function FlowsScreen() {
               label={ADD_FLOW_LABEL}
               variant="primary"
               height={40}
-              fontSize={13.5}
+              fontSize={typeScale.body.fontSize}
               onPress={() => router.push('/(tabs)/flows/add')}
             />
           </View>
@@ -208,10 +208,10 @@ export default function FlowsScreen() {
         <SurfaceCard style={styles.removedCard}>
           <SettingsRow
             icon={Archive}
-            title={`Removed flows (${removedInScope.length})`}
+            title={`Archived flows (${removedInScope.length})`}
             sub="Kept with their history; add any again"
-            testID="flows-removed"
-            onPress={() => router.push('/(tabs)/flows/removed')}
+            testID="flows-archived"
+            onPress={() => router.push('/(tabs)/flows/archived')}
             right={<CaretRight size={15} color={palette.neutral[500]} />}
           />
         </SurfaceCard>
@@ -237,8 +237,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: fonts.medium,
-    fontSize: 26,
-    letterSpacing: em(-0.015, 26),
+    fontSize: typeScale.display.fontSize,
+    letterSpacing: em(-0.015, typeScale.display.fontSize),
   },
   headerPill: {
     paddingHorizontal: 14,
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontFamily: fonts.regular,
-    fontSize: 14,
+    fontSize: typeScale.label.fontSize,
     paddingVertical: 0,
   },
   cardList: {
@@ -273,16 +273,16 @@ const styles = StyleSheet.create({
   },
   flowName: {
     fontFamily: fonts.medium,
-    fontSize: 15,
+    fontSize: typeScale.lead.fontSize,
   },
   flowDesc: {
     fontFamily: fonts.regular,
-    fontSize: 12.5,
+    fontSize: typeScale.small.fontSize,
     marginTop: 2,
   },
   flowRuns: {
     fontFamily: fonts.regular,
-    fontSize: 11.5,
+    fontSize: typeScale.caption.fontSize,
     marginTop: 4,
   },
   emptyWrap: {
@@ -292,12 +292,12 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontFamily: fonts.medium,
-    fontSize: 16,
+    fontSize: typeScale.lead.fontSize,
     textAlign: 'center',
   },
   emptyText: {
     fontFamily: fonts.regular,
-    fontSize: 13.5,
+    fontSize: typeScale.body.fontSize,
     textAlign: 'center',
     maxWidth: 260,
   },

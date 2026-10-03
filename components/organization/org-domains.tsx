@@ -9,7 +9,7 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { TextField } from '@/components/nocturne/text-field';
 import { SettingsRow } from '@/components/settings/settings-row';
-import { fonts } from '@/constants/theme';
+import { fonts, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
@@ -291,8 +291,8 @@ function AddDomainDialog({
 
 const styles = StyleSheet.create({
   card: { marginTop: 9 },
-  empty: { fontFamily: fonts.regular, fontSize: 13, paddingHorizontal: 14, paddingTop: 13 },
+  empty: { fontFamily: fonts.regular, fontSize: typeScale.body.fontSize, paddingHorizontal: 14, paddingTop: 13 },
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  toggleLabel: { flex: 1, fontFamily: fonts.regular, fontSize: 13 },
-  value: { fontFamily: fonts.medium, fontSize: 13, marginTop: 4 },
+  toggleLabel: { flex: 1, fontFamily: fonts.regular, fontSize: typeScale.body.fontSize },
+  value: { fontFamily: fonts.medium, fontSize: typeScale.body.fontSize, marginTop: 4 },
 });

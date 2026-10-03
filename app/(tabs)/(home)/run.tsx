@@ -11,7 +11,7 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { StatCard } from '@/components/nocturne/stat-card';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
-import { em, fonts, layout, status } from '@/constants/theme';
+import { em, fonts, layout, status, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { TimelineRowView as RunTimelineItem } from '@/lib/view/runs';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
@@ -249,7 +249,7 @@ export default function RunDetailScreen() {
             label="Cancel run"
             variant="secondary"
             height={46}
-            fontSize={14}
+            fontSize={typeScale.label.fontSize}
             icon={StopCircle}
             iconSize={16}
             style={styles.actionBtn}
@@ -263,7 +263,7 @@ export default function RunDetailScreen() {
           label="View flow"
           variant="secondary"
           height={46}
-          fontSize={14}
+          fontSize={typeScale.label.fontSize}
           icon={FlowArrow}
           iconSize={16}
           style={styles.actionBtn}
@@ -315,13 +315,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: fonts.medium,
-    fontSize: 21,
-    letterSpacing: em(-0.01, 21),
+    fontSize: typeScale.heading.fontSize,
+    letterSpacing: em(-0.01, typeScale.heading.fontSize),
   },
   subtitle: {
     marginTop: 1,
     fontFamily: fonts.regular,
-    fontSize: 12,
+    fontSize: typeScale.small.fontSize,
   },
   statsRow: {
     flexDirection: 'row',
@@ -345,16 +345,16 @@ const styles = StyleSheet.create({
   },
   timelineTitle: {
     fontFamily: fonts.medium,
-    fontSize: 14,
+    fontSize: typeScale.label.fontSize,
   },
   timelineSub: {
     marginTop: 1,
     fontFamily: fonts.regular,
-    fontSize: 12.5,
+    fontSize: typeScale.small.fontSize,
   },
   timelineTime: {
     fontFamily: fonts.regular,
-    fontSize: 11.5,
+    fontSize: typeScale.caption.fontSize,
   },
   fieldRow: {
     flexDirection: 'row',
@@ -364,11 +364,11 @@ const styles = StyleSheet.create({
   },
   fieldKey: {
     fontFamily: fonts.regular,
-    fontSize: 13.5,
+    fontSize: typeScale.body.fontSize,
   },
   fieldValue: {
     fontFamily: fonts.medium,
-    fontSize: 13.5,
+    fontSize: typeScale.body.fontSize,
   },
   actions: {
     flexDirection: 'row',

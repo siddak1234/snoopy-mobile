@@ -1,4 +1,4 @@
-import { CaretRight, PlayCircle, SlidersHorizontal, Trash, WebhooksLogo, type Icon } from 'phosphor-react-native';
+import { Archive, CaretRight, PlayCircle, SlidersHorizontal, WebhooksLogo, type Icon } from 'phosphor-react-native';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -11,7 +11,7 @@ import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { SettingsRow } from '@/components/settings/settings-row';
-import { fonts, layout, status } from '@/constants/theme';
+import { fonts, layout, status, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
@@ -20,7 +20,7 @@ import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
 import { updateSubscription, type Subscription } from '@/lib/platform/automations';
 import type { CatalogEntry } from '@/lib/platform/catalog';
 
-type Open = 'run' | 'setup' | 'webhook' | 'remove' | null;
+type Open = 'run' | 'setup' | 'webhook' | 'archive' | null;
 
 /**
  * What a person can do with one flow, on the website's operations and by
@@ -32,10 +32,11 @@ type Open = 'run' | 'setup' | 'webhook' | 'remove' | null;
  * - **Set up** when the automation declares settings.
  * - **Move to vN** when the catalog has a newer version than the one pinned.
  * - **Webhook address** for a webhook-started version, owner or admin only.
- * - **Remove flow**, at the bottom and in red (BUILD-PLAN 24.9.4, the owner's
- *   feedback 5 of 2026-10-02): the platform's one-way `archived`, behind its
- *   confirmation — it stops, leaves the list, keeps its runs in Activity, and
- *   the flow can be added again later. Pause keeps it listed.
+ * - **Archive flow**, at the bottom and in red (BUILD-PLAN 24.9.4, the owner's
+ *   feedback 5 of 2026-10-02; "Archive", not "Remove", since decision 4 of the
+ *   same day, 24.12): the platform's one-way `archived`, behind its
+ *   confirmation — it stops, moves to Archived flows, keeps its runs in
+ *   Activity, and the flow can be added again later. Pause keeps it listed.
  *
  * Every action acts on the workspace the screen loaded (`shownWorkspaceId`).
  * `statusRow` is the screen's own Go live / Pause row, placed after Run.
@@ -45,7 +46,6 @@ export function AutomationActions({
   subscription,
   entry,
   live,
-  scope,
   shownWorkspaceId,
   canAdminister,
   statusRow,
@@ -59,8 +59,6 @@ export function AutomationActions({
   entry: CatalogEntry | undefined;
   /** Whether it is live now, as the screen shows it. */
   live: boolean;
-  /** Where it applies, as the list labels it ("Team: Finance"); absent without teams. */
-  scope?: string;
   shownWorkspaceId: string | null;
   canAdminister: boolean;
   statusRow: React.ReactNode;
@@ -73,8 +71,8 @@ export function AutomationActions({
   const { forget } = useSolutions();
   const archiveKeys = useIntentKeys('archive');
   const [open, setOpen] = useState<Open>(null);
-  const [removing, setRemoving] = useState(false);
-  const [removeError, setRemoveError] = useState<string | null>(null);
+  const [archiving, setArchiving] = useState(false);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
 
   const runInput = subscription.runInput ?? [];
   const canRun = live && runInput.length > 0 && entry?.available === true;
@@ -83,15 +81,15 @@ export function AutomationActions({
   const webhook = subscription.triggerKind === 'webhook' && canAdminister;
   const close = () => setOpen(null);
 
-  const remove = async () => {
-    if (removing) return;
+  const archive = async () => {
+    if (archiving) return;
     const workspaceId = workspaceIfShown(session, shownWorkspaceId);
     if (!workspaceId) {
-      setRemoveError(WORKSPACE_CHANGED);
+      setArchiveError(WORKSPACE_CHANGED);
       return;
     }
-    setRemoving(true);
-    setRemoveError(null);
+    setArchiving(true);
+    setArchiveError(null);
     try {
       await updateSubscription(workspaceId, subscription.id, { status: 'archived' }, archiveKeys.keyFor());
       archiveKeys.settle();
@@ -100,9 +98,9 @@ export function AutomationActions({
       setOpen(null);
       onArchived();
     } catch (caught) {
-      setRemoveError(refusalMessage(caught, {}, 'The flow was not removed.'));
+      setArchiveError(refusalMessage(caught, {}, 'The flow was not archived.'));
     } finally {
-      setRemoving(false);
+      setArchiving(false);
     }
   };
 
@@ -115,8 +113,6 @@ export function AutomationActions({
       : []),
   ];
 
-  const inProject = scope !== undefined && scope !== 'Whole workspace';
-
   return (
     <View style={styles.stack}>
       {canRun ? (
@@ -124,7 +120,7 @@ export function AutomationActions({
           label="Run"
           variant="primary"
           height={46}
-          fontSize={14}
+          fontSize={typeScale.label.fontSize}
           icon={PlayCircle}
           iconSize={16}
           onPress={() => setOpen('run')}
@@ -164,20 +160,20 @@ export function AutomationActions({
       {/* Last on the page, in red: the one-way action, where a person scrolls
           to find it rather than taps it by mistake (24.9.4). */}
       <Pressable
-        testID="remove-flow"
+        testID="archive-flow"
         accessibilityRole="button"
-        accessibilityLabel={`Remove ${name}`}
+        accessibilityLabel={`Archive ${name}`}
         onPress={() => {
-          setRemoveError(null);
-          setOpen('remove');
+          setArchiveError(null);
+          setOpen('archive');
         }}
         style={({ pressed }) => [
-          styles.remove,
+          styles.archive,
           { borderColor: status.err },
           pressed && { backgroundColor: status.errCalloutBg },
         ]}>
-        <Trash size={18} color={status.err} />
-        <Text style={[styles.removeLabel, { color: status.err }]}>Remove flow</Text>
+        <Archive size={18} color={status.err} />
+        <Text style={[styles.archiveLabel, { color: status.err }]}>Archive flow</Text>
       </Pressable>
 
       {open === 'run' ? (
@@ -210,23 +206,23 @@ export function AutomationActions({
         <WebhookAddressDialog subscriptionId={subscription.id} shownWorkspaceId={shownWorkspaceId} onClose={close} />
       ) : null}
       <Dialog
-        visible={open === 'remove'}
-        testID="remove-dialog"
-        onRequestClose={removing ? () => undefined : close}
-        title={`Remove ${name}?`}
-        body={`It stops and leaves ${inProject ? "this team's" : 'your'} flows. Its runs stay in Activity, and you can add it again later.`}
+        visible={open === 'archive'}
+        testID="archive-dialog"
+        onRequestClose={archiving ? () => undefined : close}
+        title={`Archive ${name}?`}
+        body="It stops and moves to Archived flows. Its runs stay in Activity, and you can add it again later."
         actions={
           <>
-            <DialogButton label="Cancel" disabled={removing} onPress={close} />
+            <DialogButton label="Cancel" disabled={archiving} onPress={close} />
             <DialogButton
               tone="danger"
-              disabled={removing}
-              onPress={remove}
-              label={removing ? 'Removing…' : 'Remove'}
+              disabled={archiving}
+              onPress={archive}
+              label={archiving ? 'Archiving…' : 'Archive'}
             />
           </>
         }>
-        {removeError ? <DialogText tone="error">{removeError}</DialogText> : null}
+        {archiveError ? <DialogText tone="error">{archiveError}</DialogText> : null}
       </Dialog>
     </View>
   );
@@ -239,7 +235,7 @@ const styles = StyleSheet.create({
   card: {
     marginTop: 9,
   },
-  remove: {
+  archive: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -250,8 +246,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 14,
   },
-  removeLabel: {
+  archiveLabel: {
     fontFamily: fonts.medium,
-    fontSize: 14,
+    fontSize: typeScale.label.fontSize,
   },
 });

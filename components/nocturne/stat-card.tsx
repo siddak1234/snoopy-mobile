@@ -1,14 +1,16 @@
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
 
-import { em, fonts } from '@/constants/theme';
+import { em, fonts, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 
 type Props = {
   value: string;
   label: string;
-  /** Home uses 20px values with tighter padding than the 18px detail cards. */
+  /** Home's tiles (the design's 20px values) are tracked tighter and padded more
+   *  than the detail cards (its 18px); both sizes are the scale's `title` step
+   *  since 24.12. */
   size?: 'md' | 'sm';
   /** Home stats tint their values (ok/err); defaults to the text color. */
   valueColor?: string;
@@ -23,8 +25,8 @@ export function StatCard({ value, label, size = 'md', valueColor }: Props) {
       <Text
         style={{
           fontFamily: fonts.medium,
-          fontSize: md ? 20 : 18,
-          letterSpacing: md ? em(-0.01, 20) : 0,
+          fontSize: typeScale.title.fontSize,
+          letterSpacing: md ? em(-0.01, typeScale.title.fontSize) : 0,
           color: valueColor ?? palette.text,
         }}>
         {value}
@@ -33,7 +35,7 @@ export function StatCard({ value, label, size = 'md', valueColor }: Props) {
         style={{
           marginTop: md ? 3 : 2,
           fontFamily: fonts.regular,
-          fontSize: 11,
+          fontSize: typeScale.caption.fontSize,
           color: palette.neutral[400],
         }}>
         {label}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text, type StyleProp, type TextStyle } from 'react-native';
 
-import { em, fonts } from '@/constants/theme';
+import { em, fonts, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 type Props = {
@@ -16,7 +16,7 @@ type Props = {
 };
 
 /** Tracked uppercase kicker/section label. */
-export function SectionLabel({ children, fontSize = 11, track = 0.14, color, style }: Props) {
+export function SectionLabel({ children, fontSize = typeScale.caption.fontSize, track = 0.14, color, style }: Props) {
   const { palette } = useTheme();
   return (
     <Text

@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { fonts } from '@/constants/theme';
+import { fonts, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { IconTile } from '@/components/nocturne/icon-tile';
 import { SectionLabel } from '@/components/nocturne/section-label';
@@ -27,7 +27,7 @@ export function StepCard({ step, outlined = false, trailing }: Props) {
       ]}>
       <IconTile icon={step.icon} />
       <View style={styles.body}>
-        <SectionLabel fontSize={10} track={0.16} color={palette.accentRamp[300]}>
+        <SectionLabel fontSize={typeScale.micro.fontSize} track={0.16} color={palette.accentRamp[300]}>
           {step.kicker}
         </SectionLabel>
         <Text style={[styles.title, { color: palette.text }]}>{step.title}</Text>
@@ -52,12 +52,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: fonts.medium,
-    fontSize: 14,
+    fontSize: typeScale.label.fontSize,
     marginTop: 2,
   },
   desc: {
     fontFamily: fonts.regular,
-    fontSize: 12,
+    fontSize: typeScale.small.fontSize,
     marginTop: 1,
   },
 });

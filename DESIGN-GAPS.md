@@ -760,7 +760,7 @@ the platform at `ef91ecd`:
 | 2 | "I removed a flow then added it back. Where is the archive of the old one?" | the list holds no archived row by design (backend §12.1 #92), so a removed flow had nowhere to be read | **fixed (24.11.8)**: Removed flows — a row with a count in Flows, within the scope, a Settings entry, a read-only page with its history and "Add it again", each saying the day it was removed; read with `status=archived` (backend §12.1 #203, #140). The day is the row's `updatedAt`: nothing in the app changes a removed flow, so it is the removal (a rename through the API would move it) |
 | 3 | "What is this webhook address for?" | the dialog opened on how to use it, not what it is | **fixed (24.11.9)**: its first sentence says what it is — where a service sends the events that start the flow |
 | 4, 8 | "what about projects or teams… hr, development, accounting… Org Team Project Flows — is this a good hierarchy?" | projects lived under Settings; Teams were people groups; one name too many | **fixed (24.11.7)**: Teams replace Projects everywhere — the scope pill always there with "Create a team"; Settings › Teams; a team's page with members and requests to join; the old Teams screens gone. The hierarchy is organization → team → flows |
-| 5 | "How do I unlink an account?" | linking had no inverse anywhere | **fixed (24.11.9)**: Unlink on a linked account, never the primary, confirmed first; the platform's sentence shown as it is (backend #138) |
+| 5 | "How do I unlink an account?" | linking had no inverse anywhere | **fixed (24.11.9)**: Unlink on a linked account, never the primary, confirmed first; ~~the platform's sentence shown as it is~~ (backend #138). **Corrected in build 10 (24.12):** the app showed the problem's TITLE — "Bad Request", "Not Found" — never its sentence: the transport keeps a problem's title, code and details, not its `detail`, and the test passed only because it built the error with the sentence as its message. Unlink now says each refusal by its reason; see the sixth session, item 10 |
 | 6 | "Why is sign out here but delete account somewhere else" | sign-out ends a session; deletion ends the account | **kept as is**, the owner's decision of 2026-10-02 |
 | 7 | "Should we not make this drop downs instead?" | Create project took the kind as free text | **fixed (24.11.7)**: Create a team takes the organization and the kind from dropdowns; "Other" opens a field. The kinds are `lib/content/team-types.ts` |
 | 9 | "Error page or look is fine. But why am i getting this?" | a run row of a removed flow opened the flow page, which matched nothing: "Couldn't load this flow", with no failed request | **fixed (24.11.8)**: a removed flow's page opens, read-only; its run rows say "Flow removed" |
@@ -774,7 +774,10 @@ promotion, which carries backend #138–#140: the team directory and a team's re
 answer 404 there, so Teams lists the teams a person is on without the asking section, and
 a team's page draws no requests; the removed-flows read is answered with the live list,
 which the client discards (only archived rows are kept). Unlink and Request are refused
-upstream until then, in the platform's words.
+upstream until then, ~~in the platform's words~~. **Corrected in build 10 (24.12):** not in
+words — both showed the Edge's problem title, "Not Found" (the sixth session, item 10).
+Unlink now says "Unlinking isn't available yet." for a route the platform does not have;
+Request still shows the title, which build 10 does not change.
 
 The words: the app's copy says team and flow (24.11.7, and "Flows will be the name we use
 from now on", 24.9). Nineteen strings still said "automation" — the webhook dialog's "This
@@ -810,6 +813,148 @@ Fifteen breaks, each run against its own suite and the file restored by SHA-256.
 | No copy says project or automation | the audit's pattern matching nothing | `audit-gates` "fails copy that says project or automation" |
 | The webhook dialog says what the address is for | the sentence replaced | `automation-actions` "shows the secret once, in the dialog" |
 | A removed flow says the day it was removed | the day dropped | `tab-screens` "the Removed page lists them" and "a removed flow's page opens" |
+
+### The sixth signed-in session (build 9, 2026-10-02 22:20Z–22:35Z)
+
+Build 9 on the owner's iPhone (iOS 26.6.2): fourteen TestFlight feedback items in fifteen
+minutes, read with their screenshots, then the owner's decisions the same day — (1) a team
+is its kind, with no separate name: one team per kind in a workspace, an archived team
+freeing its kind; (2) teams in the personal workspace too, made in the workspace the person
+is in, with no picker, and in an organization by its owners and admins only; (3) no
+description on create; (4) "Archive flow" / "Archived flows"; (5) a join link, which an
+organization accepts only from someone at its verified email domain (today's platform rule),
+while a personal workspace stays private; (6) the centred empty state on whole empty screens
+only; (7) Free, Plus (the `team` plan renamed, its id kept) and Pro once its price exists,
+as cards with the name and price only; (8) a plan picked opens Stripe's hosted checkout for
+it, and once paying a change goes through Manage billing; (9) Connections is third-party
+integrations only; (10) Settings by category; (11) bigger type; (12) "Other" kinds of 2 to
+60 characters. Verified against the code at `6fc52f5`; the platform's half is backend 24.12,
+and the contract names this app reads (409 `team_kind_taken`, the 403 for a plain member,
+409 `plan_exists`, Plus as `team`'s display name) are the build's shared wording:
+
+| # | Feedback | What it is | Disposition |
+| --- | --- | --- | --- |
+| 1 | "The drop down should not extend the card… bring the drop down to the front… remove the team name thing… Just 2 things to click max… we shouldnt have to select [the organization] either" | the kind list opened in the card's flow and pushed the fields down; Create a team asked for a workspace, a name, a kind and a description | **fixed (24.12)**: the list floats in front of the card; Create a team is the kind alone — "Other" opens a field of 2 to 60 characters — sent as the team's name and its type, in the workspace the person is in, which one line names; no picker, name or description. A second team of a kind is refused in words (409 `team_kind_taken`), and a plain member of an organization is not offered Create (the platform's 403 is said in words too). A team's title is its kind, said once — on Teams, the pill, a team's page and a flow's label |
+| 2, 6 | "I removed the flow but where are the archives?" · "I literally asked for archives. Not removed flows. Archived flows" | the page existed (24.11.8) under the name Removed flows | **fixed (24.12)**: "Archive flow" and "Archived flows" everywhere — the button and its confirmation, the list and its row in Flows, the badge, the run rows, the refusals; the route is `flows/archived` |
+| 3, 9 | "I changed the org name and it did not save… how i can invite team members to teams now if they are in the organization" · "Now it changed to the new name. Something is going on regarding the name" | the rename saved; the screen read the workspace list again from the shared snapshot, whose 120 s window nothing dropped (24.9.1) — item 9 is that window running out. There was no link to send anyone | **fixed (24.12)**: a rename, a new organization and a join drop the workspace list, so the next read is real. An owner or admin shares a join link (decision 5); the line under it names the organization's verified domain, the only one the platform accepts a request from, or says to verify one first — made exact below: the domain must also be shown for matching emails, and the line follows its joining policy |
+| 4 | "Make a not when a screen is empty i dont want component cards like this. Look at flows when no flows are there…" | Teams drew a card, "No teams yet.", under its Create button; other whole screens had lines of their own | **fixed (24.12)**: the centred standard — icon, title, line, an action where there is one, Back on a pushed screen — on Teams, Archived flows (both copies), the empty inbox, Organization with nothing found, an empty catalog, and Connections with no integrations; a section keeps its own line (decision 6) |
+| 5 | "Isnt it easier from app to either share or download to files like apple native rather than go to safari" | Download file opened the export's signed link in Safari | **fixed (24.12)**: on iOS the file is saved into the app — a credential-less native download in the transport, budgeted to one call by `audit:platform` — and handed to the share sheet (Save to Files, AirDrop, Mail), then removed; Android, whose share sheet carries text, still opens the link |
+| 7 | "When i press back it takes me here from archived flows in settings. Shouldnt it take me back to settings…" | Settings' row pushed the Flows tab's page — a push across tabs — so Back landed in Flows | **fixed (24.12)**: Settings › Workspace › Archived flows is a copy in the Settings stack, and its flows open there too |
+| 8 | "Why is choosing a plan taking me to stripe? I thought per flow we charge users." | billing is per plan: Choose plan opened Stripe's hosted checkout (ADR-0032); the price on each flow in the catalog is a list price | **answered by decisions 7 and 8 (24.12)**: picking a plan opens Stripe's checkout for that plan; once paying, Manage billing |
+| 10 | "Linked microsoft then trued unlinking apple and it said not found. See why and is that error message good and descriptive to the user?" | production runs an image from before the unlink route (backend #138), so the Edge answered its own 404 for a route it does not have, and the app showed that problem's title, "Not Found" | **fixed (24.12)**: an unlink refusal is a sentence by its reason — "Unlinking isn't available yet." for a route the platform does not have; the not-linked, primary, last and refused sentences; otherwise "The account could not be unlinked." — never a title. The route goes live with the SEVENTEENTH promotion. This corrects the fifth session's row 5 |
+| 11 | "Also which account is linked i dont even know from here whT accounts are there." | `LoginIdentitySummary` is `{provider, primary}`: the contract names no account | ~~**waits for the backend contract** (24.12: an optional `email`); the row shows it once the contract carries it~~ **fixed (24.12)**, once backend #142 (`866a557`) put the optional `email` in the contract: each linked account shows the address its provider reports, a muted line under its name — none when it reports none, never on an account that is not linked. Production sends it from the SEVENTEENTH promotion, which carries 24.12 |
+| 12 | "I dont see the linked accounts on connections. Also shouldnt connections basically take me to a page… third party integrations the user connects to" | Settings drew the integrations card inline; the sign-in accounts are Account's | **fixed (24.12)**: Settings › Connections is a page of its own, third-party integrations only (decision 9) |
+| 13 | "This needs to be revamped. Think of free, plus, pro plans. Monthly in component cards." | a CURRENT PLAN card and a PLANS list with capability lines | **fixed (24.12)**: tall cards — Free (the app's, $0.00 per month, since the platform lists only what can be bought), then the platform's plans by price, today Plus and Pro once it is listed — each its name and price; the workspace's own says "Enrolled" with its renewal or past-due line. On iOS, not paying, a card opens the checkout for its plan; paying, another card opens Manage billing, as does a checkout refused with 409 `plan_exists`; a member sees the cards without actions; Android shows the prices only |
+| 14 | "Why is everything so small and why is everything listed in settings…" | one long Settings screen; the design's sizes | **fixed (24.12)**: Settings is eight categories — Account, Security, Connections, Billing, Workspace, Notifications, Appearance, Help — each its own page, then Sign out and the version (decision 10). And the bigger type (decision 11, "whole app — easy to read"): every font size, line height and tracked size is a step of the app's type scale, `typeScale` in `constants/theme.ts` — about 2 pt over the design's text sizes and 3 over its titles, 12 at the smallest, where the tab labels were 10 — and `audit:type` fails a size written anywhere else; the scope pills wrap rather than cut a name short. The Nocturne and screen-state snapshots were re-pinned once for it: 58 of their 78 entries, the other 20 setting no font size. NOT OBSERVED on a device yet, the largest text sizes included |
+| — | the shared snapshot outlived a session | its global entries — the workspace list, the providers — could answer the next account on this device for up to 120 s | **fixed (24.12)**: emptied when a session ends and when one begins |
+| — | Settings › Notifications was one row, "Open inbox", that pushed Home's inbox | a push across tabs — item 7's defect again — so Back returned to Home | **fixed (24.12, the owner's default: "Settings › Notifications shows the inbox itself, so Back returns to Settings")**: the page is the inbox itself, a copy in the Settings stack as Archived flows is; a failed run opens there too (`settings/run`, the Home tab's run page), so Back returns to Settings; a held run still opens Activity, as from Home |
+| — | Create a team read the active workspace at every render | the scope control keeps the dialog open across a workspace switch, so the switch would have moved the team, and the line naming the workspace, to the new one (CLAUDE.md rule 10) | **fixed (24.12)**: the dialog keeps the workspace it was opened in and names it; once another is active, Create is refused in words (`WORKSPACE_CHANGED`) and nothing is sent, as the run dialog does |
+| — | the join link's line said "can ask to join" whatever the domain's joining policy, and named the first verified domain whether or not it is shown for matching emails | the platform takes a request through the link only at a verified domain the organization shows for matching emails (`requireEligibleDomain` needs both), and the policy decides what follows: automatic joins at once, invite only lets no one in | **fixed (24.12)**: the line follows the first verified domain shown for matching emails — approval, automatic or invite only — in the website's words (`joinLinkLine`, as `snoopy/lib/join-link.ts`); a verified domain not shown says "Show for matching verified email domains" must be on; none verified says to verify one first |
+| — | copy told people to do something "in Settings" | Settings is eight pages since decision 10 | **fixed (24.12)**: it names the page — "Settings › Workspace" on Organization, "Settings › Connections" on Setup's button and its refusal, "Settings › Security" in the Face ID offer. Setup's button still opens Settings itself, one tap from Connections: a push from another tab straight into a Settings page is not made anywhere yet, and where Back lands from one is NOT OBSERVED |
+| — | a join request named its requester by user id | the contract carried no name until backend #142 (`866a557`, 24.12.4) | **fixed (24.12)**: a request is titled by the person's name — or address — with the address under a name, and the decision names them too; the id only when the platform sends neither, as production does until the SEVENTEENTH promotion |
+| — | the empty Notifications, Approvals and Flows screens drew their icon black | Phosphor's default colour is `#000`, and those three set none — near invisible on the dark theme | **fixed (24.12)**: each draws its icon in its siblings' colour — the accent's 300 for Notifications and Flows, as Add a flow and the new empty screens do; `status.ok` for Approvals, as Activity's empty screen does |
+
+What waits on the platform (backend 24.12, for the `snoopy-backend` session): the duplicate-kind
+409 and the 403 for a plain member — until they land, a second team of a kind is still made,
+and the app's hiding of Create is the only check; the requester's name and email on a join
+request, without which an owner approves a user id; `LoginIdentitySummary.email` (item 11);
+409 `plan_exists` on a checkout while paying, without which a Plus subscriber who checks out
+Pro is billed twice; and the `team` plan's display name, Plus. The join link cannot work in
+production yet: a request needs a verified, discoverable domain of the organization, and
+production has none. NOT OBSERVED, for a device: whether the floating list takes a touch where
+it overhangs the dialog on Android, and Save to Files for the export's file type. ~~Settings ›
+Notifications' "Open inbox" opens Home's inbox, a push across tabs, so Back returns to Home.~~
+**Corrected in build 10 (24.12):** that was item 7's defect again, so it did not stay: Settings ›
+Notifications is the inbox itself, a copy in the Settings stack, and a failed run opened there
+opens in Settings too, so Back returns to Settings (the owner's default).
+
+**Since then, in build 10:** backend #142 (`866a557`, 24.12.1–24.12.4) landed all of it — in
+the contract the duplicate-kind 409 and the member's 403, `LoginIdentitySummary.email`, the
+requester's `displayName` and `email` and 409 `plan_exists`, and in the plans it seeds Plus as
+`team`'s display name — and the app's generated types were regenerated from it. Production
+sends them from the SEVENTEENTH promotion, which carries 24.12; until then a join request
+shows its user id and a linked account no address, as before.
+
+### Guards proved to bite, build 10
+
+Sixty-seven breaks, each run against its own suite and the file restored by SHA-256. The
+first break of the category order left its test green — the test found each row by its key,
+so it checked the titles and not their order — so the test was made to read the rows as drawn
+and the break run again before anything was committed. The last eleven guard what build 10
+finished with: the inbox in Settings, the dialog's workspace, the join link's line, the pages
+named, a linked account's address and a requester's name. The empty screens' icon colour is a
+style no test reads, so no break was run for it. One earlier guard went with what it guarded:
+Settings › Notifications no longer opens the inbox, it is the inbox.
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| A team is its kind: the kind is sent as its name and its type | the name sent as "Team" | `teams-screens` "creates a team in the workspace the person is in: the kind only, sent as its name and its type (24.12)" |
+| A team is made in the workspace the person is in, personal included | the first organization taken instead of the active workspace | `teams-screens` "creates one in the personal workspace when that is the one the person is in" |
+| Other is 2 to 60 characters | the old 1-to-120 limit | `teams-screens` "refuses an empty Other and words outside 2 to 60 characters, sending nothing" |
+| A second team of a kind, and a member refused, are said in words | the error's own message shown | `teams-screens` "says a second team of a kind in words — never "Conflict" — and a refusal to a member as the rule" |
+| A plain organization member is not offered Create a team (Teams) | Create always offered | `teams-screens` "does not offer Create a team to a plain member of the organization (24.12)" |
+| A plain organization member is not offered Create a team (the team pill) | Create always offered | `scope-control` "lists a team by its kind, once, and offers a plain member no Create a team (24.12)" |
+| The dropdown floats in front of the card | the list put back in normal flow | `select-field` "opens a list that floats under the box, opaque and in front, and picking an option closes it" |
+| A team's title is its kind (Teams) | the name as the title | `teams-screens` "titles a team by its kind and says the kind once — a team named before 24.12 too (24.12)" |
+| A team's title is its kind (the team pill) | the name as the title | `scope-control` "lists a team by its kind, once, and offers a plain member no Create a team (24.12)" |
+| A team page says its kind once | the kind put back in the subtitle | `teams-screens` "deletes its owner's team in the team's own workspace, saying what becomes of its flows" |
+| A flow's team label is the team's kind | the name as the label | `flows-view` "labels a flow by its team's kind — a team named before 24.12 too" |
+| Archive wording: the confirmation | the old "leaves your flows" body | `automation-actions` "is reached only through its one-way confirmation" |
+| Archive wording: an archived flow's page | "removed" put back | `tab-screens` "an archived flow's page opens instead of "Couldn't load": no actions, its history, and Add it again" |
+| Archive wording: the refusals | "A removed flow cannot move." put back | `shared-rules` "says an archived flow is archived, not removed (24.12)" |
+| Settings › Workspace › Archived flows stays in Settings | the row pushing the Flows tab's page | `tab-screens` "Settings › Workspace offers the Archived flows page, in Settings' own stack" |
+| An archived flow opened from Settings opens in Settings | the Settings copy opening the Flows detail | `tab-screens` "the Settings copy opens an archived flow in the Settings stack, so Back returns to Settings" |
+| A rename shows the new name | renameWorkspace invalidating nothing | `organization-screen` "reads the workspace list again after a rename, so the new name shows" |
+| A rename, a new organization and a join drop the workspace list | changedWorkspaces dropping nothing | `snapshot-invalidation` "a rename, a new organization and a join drop the workspace list (24.12)" |
+| The snapshot is emptied when a session ends | signedOut() not resetting | `session-provider` "is emptied by a sign-out the platform revoked" |
+| The snapshot is emptied when a new session begins | sign-in's reset removed | `session-provider` "is emptied when a new session begins" |
+| The join link is shared as a link on iOS | text shared on iOS too | `organization-screen` "lets an owner share it on iOS as a link, saying who at the verified domain can ask to join" |
+| The join link line names a verified domain, or says verify first | the first domain taken, verified or not | `organization-screen` "says a domain must be verified first when none is" |
+| No join link without a website origin | a link built on an empty origin | `organization-screen` "is not offered to a member, nor without a website to link to" |
+| The empty standard draws Back only for a pushed screen | Back always drawn | `screen-state` "draws a way back only for a pushed screen that asks for one (24.12)" |
+| Teams with nothing to list is the empty standard | the empty branch never taken | `teams-screens` "is the empty-state standard with nothing to list: Create a team opens the dialog, and Back leaves (24.12)" |
+| Archived flows with none is the empty standard | the empty branch never taken | `tab-screens` "the Archived page lists them, read-only, and is the empty standard when there are none" |
+| An empty inbox has its way back | onBack removed | `tab-screens` "is the empty standard with its way back, since the inbox is a pushed screen" |
+| Organization with nothing found is the empty standard | the empty branch never taken | `organization-screen` "offers setting one up only on a company domain, not a mailbox provider" |
+| An empty catalog is the empty standard | the empty branch never taken | `tab-screens` "is the whole-screen empty standard, with its way back" |
+| Connections with no providers is the empty standard | the empty branch never taken | `settings-connections` "lists the third-party integrations, and is the empty-state standard with none" |
+| Settings is the eight categories in the owner's order | Workspace moved above Billing | `tab-screens` "is eight categories in the owner's order, then Sign out and the version — and reads nothing (24.12)" |
+| Each category opens its own page | Security opening Account | `tab-screens` "opens each category on its own page" |
+| ~~Settings › Notifications opens the inbox~~ | ~~the row going back instead~~ | ~~`tab-screens` "says what notifications are on the Notifications page, and opens the inbox"~~ — the row and its test went when the page became the inbox itself (below) |
+| Billing: Free, then the plans by price | the platform order kept | `billing-screen` "shows Free, Plus and Pro in that order, each its name and price only — the workspace's own "Enrolled" with its status" |
+| Billing: Free is $0.00 per month | the free price changed | `billing-screen` "shows Free, Plus and Pro in that order, each its name and price only — the workspace's own "Enrolled" with its status" |
+| Billing: the workspace's plan says "Enrolled" | "Enrolled" not drawn | `billing-screen` "shows Free, Plus and Pro in that order, each its name and price only — the workspace's own "Enrolled" with its status" |
+| Billing: not paying, a card opens the checkout for THAT plan | every card checking out Plus | `billing-screen` "on iOS, not paying: a paid plan's card opens the hosted checkout for THAT plan, and nothing but https" |
+| Billing: paying, another card opens the portal, never a second checkout | the portal branch removed | `billing-screen` "on iOS, paying: another card opens Manage billing — the portal — never a second checkout" |
+| Billing: 409 plan_exists opens Manage billing | the refusal shown instead | `billing-screen` "on iOS, a checkout refused because the workspace already has a plan (409 plan_exists) opens Manage billing" |
+| Billing: a member sees the cards without actions | the cards acting for a member | `billing-screen` "shows a member the cards without actions and who manages billing; this workspace's billing is not read" |
+| Billing: Android shows prices only | purchasing on every platform | `billing-screen` "on Android offers no purchase control or call to action: a card does nothing" |
+| Export: on iOS the file is saved into the app and shared, not opened in Safari | the link opened on iOS too | `data-support-screens` "on iOS saves the complete export into the app, read afresh, and hands it to the share sheet — not Safari (24.12)" |
+| Export: the saved file is removed once shared | the delete removed | `data-support-screens` "on iOS saves the complete export into the app, read afresh, and hands it to the share sheet — not Safari (24.12)" |
+| Export: the download keeps only the file's own name | the name taken whole | `platform-request` "keeps only the last step of the name the platform gave, never a way out of the cache" |
+| audit:platform admits one native download, in the transport only | the budget raised to two | `audit-gates` "allows the transport ONE native download, the signed export, and nothing more (24.12)" |
+| Unlink: a route the platform does not have is "not available yet" | every 404 read as not linked | `account-screen` "says unlinking isn't available yet where the platform has no such route — build 9's "Not Found"" |
+| Unlink: a refusal is said by its reason, never the title | the error's message (the title) shown | `account-screen` "says a refused unlink in words by its reason, never the problem title (24.12)" |
+| The type scale's smallest step is 12 or more | `micro` put back to the design's 10 | `theme` "ascends the type scale from a smallest step of 12 or more, each line clear of its glyphs (24.12)" |
+| The type scale ascends | `title` set to 16, under `lead` | `theme` "ascends the type scale from a smallest step of 12 or more, each line clear of its glyphs (24.12)" |
+| Each step's line clears Inter's 1.21 em | `hero`'s line height cut to 40 | `theme` "ascends the type scale from a smallest step of 12 or more, each line clear of its glyphs (24.12)" |
+| audit:type fails a size written as a number | the audit's number test finding nothing | `audit-gates` "fails a font size written outside the type scale, in each form a number becomes a size, and passes the scale" |
+| audit:type follows a name to the number it was given — a const, a default, a local table | the name lookup finding nothing | `audit-gates` "fails a font size written outside the type scale, in each form a number becomes a size, and passes the scale" |
+| audit:type reads no size in a comparison | the comparison rule removed | `audit-gates` "fails a font size written outside the type scale, in each form a number becomes a size, and passes the scale" |
+| The scope pills wrap rather than run off the screen | the row's wrap removed | `scope-control` "keeps a long name whole: the row wraps and a pill may take all of it, so neither is cut short nor runs off the screen" |
+| A scope pill may take the whole row | the 60% cap put back | `scope-control` "keeps a long name whole: the row wraps and a pill may take all of it, so neither is cut short nor runs off the screen" |
+| The Nocturne set is drawn at the scale (the re-pin) | PillButton's default put back to the design's 16 | `nocturne-visual` "PillButton/… renders unchanged", the four variants in both palettes |
+| Settings › Notifications is the inbox, and its runs open in Settings | the Settings copy given Home's run path | `tab-screens` "is the inbox itself on the Notifications page, in Settings' own stack: its rows, its Back, and its runs (24.12)" |
+| Create a team keeps the workspace it was opened in | the workspace read at every render again | `teams-screens` "keeps naming that workspace, and refuses Create in words — sending nothing — once another is active" |
+| Create a team is refused once another workspace is active | the opened workspace sent without `workspaceIfShown` | `teams-screens` "keeps naming that workspace, and refuses Create in words — sending nothing — once another is active" |
+| The join link's line follows the joining policy | automatic worded as approval | `organization-screen` "words the line by the joining policy — automatic (joinLinkLine, 24.12)" |
+| The join link's line takes a domain shown for matching emails | the first verified domain taken, shown or not | `organization-screen` "takes a domain shown for matching emails over a hidden one, whatever the order" (and the "verified, not shown for matching emails" case) |
+| Setup's button names Settings › Connections | "in Settings" put back | `tab-screens` "names the page an account is connected on — Settings › Connections — while one is missing (24.12)" |
+| Setup's refusal names Settings › Connections | "in Settings" put back | `tab-screens` "names that page when the flow it just added still needs an account (24.12)" |
+| Organization names Settings › Workspace | "Settings' workspace row" put back | `organization-screen` "names the page to switch to an organization from — Settings › Workspace (24.12)" |
+| The Face ID offer names Settings › Security | "in Settings" put back | `faceid-screen` "names the page the setting is on — Settings › Security (24.12)" |
+| A linked account shows the address its provider reports | the line dropped | `account-screen` "shows the address a linked account reports, muted under its name — none when it reports none, none when not linked (24.12)" |
+| A join request names the person asking | the user id as its title again | `organization-screen` "names the person asking to join — their name and address, the id only when the platform sends neither (24.12)" |
 
 ### Guards proved to bite, 24.6
 

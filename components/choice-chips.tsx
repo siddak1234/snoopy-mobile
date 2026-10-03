@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { FilterChip } from '@/components/nocturne/filter-chip';
-import { fonts } from '@/constants/theme';
+import { fonts, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -41,6 +41,6 @@ export function ChoiceChips<T extends string>({
 
 const styles = StyleSheet.create({
   wrap: { gap: 6 },
-  label: { fontFamily: fonts.regular, fontSize: 12.5 },
+  label: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 });

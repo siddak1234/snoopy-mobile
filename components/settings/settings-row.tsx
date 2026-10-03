@@ -2,7 +2,7 @@ import type { Icon } from 'phosphor-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { fonts, layout } from '@/constants/theme';
+import { fonts, layout, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -70,10 +70,10 @@ const styles = StyleSheet.create({
   },
   rowTitle: {
     fontFamily: fonts.medium,
-    fontSize: 14,
+    fontSize: typeScale.label.fontSize,
   },
   rowSub: {
     fontFamily: fonts.regular,
-    fontSize: 12,
+    fontSize: typeScale.small.fontSize,
   },
 });

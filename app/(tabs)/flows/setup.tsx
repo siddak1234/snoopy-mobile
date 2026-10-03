@@ -19,7 +19,7 @@ import {
   ScreenLoading,
   ScreenOffline,
 } from '@/components/screen-state';
-import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
+import { em, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
@@ -129,7 +129,7 @@ export default function SetupScreen() {
   const sectionOffset = required.length > 0 ? 1 : 0;
   const scopes = [
     { value: '', label: 'Whole workspace' },
-    ...projects.map((project) => ({ value: project.id, label: `Team: ${project.name}` })),
+    ...projects.map((project) => ({ value: project.id, label: `Team: ${project.type}` })),
   ];
   const inScope = (value: string) =>
     resource.data.subscriptions.find((item) => (item.projectId ?? '') === value);
@@ -209,7 +209,7 @@ export default function SetupScreen() {
         // intent, so it gets a new key.
         updateKey.current = newIdempotencyKey('activate');
         if (current.unmetConnections.length > 0) {
-          setActionError('Connect the required providers in Settings, then return to activate.');
+          setActionError('Connect the required providers in Settings › Connections, then return to activate.');
           return;
         }
       }
@@ -241,7 +241,7 @@ export default function SetupScreen() {
 
   const buttonLabel =
     unmet.length > 0
-      ? `Connect ${unmet.map((id) => providers.get(id) ?? id).join(', ')} in Settings`
+      ? `Connect ${unmet.map((id) => providers.get(id) ?? id).join(', ')} in Settings › Connections`
       : busy
         ? 'Activating…'
         : 'Activate solution';
@@ -366,18 +366,18 @@ const styles = StyleSheet.create({
   headerText: { flex: 1 },
   title: {
     fontFamily: fonts.medium,
-    fontSize: 21,
-    letterSpacing: em(-0.01, 21),
+    fontSize: typeScale.heading.fontSize,
+    letterSpacing: em(-0.01, typeScale.heading.fontSize),
   },
-  subtitle: { marginTop: 1, fontFamily: fonts.regular, fontSize: 12 },
+  subtitle: { marginTop: 1, fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
   sectionCard: { marginTop: 9 },
   connectionRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 14 },
   connectionText: { flex: 1, minWidth: 0, gap: 2 },
-  connectionName: { fontFamily: fonts.medium, fontSize: 14 },
-  connectionPurpose: { fontFamily: fonts.regular, fontSize: 12 },
-  connectionState: { fontFamily: fonts.medium, fontSize: 13 },
+  connectionName: { fontFamily: fonts.medium, fontSize: typeScale.label.fontSize },
+  connectionPurpose: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
+  connectionState: { fontFamily: fonts.medium, fontSize: typeScale.body.fontSize },
   connectBtn: { borderWidth: 1, borderRadius: 999, paddingVertical: 7, paddingHorizontal: 14 },
-  connectLabel: { fontFamily: fonts.medium, fontSize: 13 },
+  connectLabel: { fontFamily: fonts.medium, fontSize: typeScale.body.fontSize },
   activateBtn: {
     minHeight: 52,
     borderRadius: 999,
@@ -386,5 +386,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 18,
   },
-  activateLabel: { fontFamily: fonts.medium, fontSize: 15, textAlign: 'center' },
+  activateLabel: { fontFamily: fonts.medium, fontSize: typeScale.lead.fontSize, textAlign: 'center' },
 });

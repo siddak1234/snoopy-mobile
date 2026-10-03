@@ -28,6 +28,11 @@ Round 16 section. Nothing here is closed by this repository.
 - Runtime source is forbidden from using raw/indirect fetch, XMLHttpRequest,
   WebSocket, EventSource, axios-like clients, or importing `openapi-fetch`
   elsewhere.
+- Two credential-less requests leave the Edge, both in `lib/platform/client.ts`
+  and each budgeted to one call by `audit:platform`: the PUT of a run's file to
+  the URL the platform signed (`putFileToSignedUrl`, 24.3.4), and since 24.12
+  the native download of the complete export's signed link into the app's cache
+  (`downloadSignedFile`), for the share sheet.
 - Access and refresh tokens are stored as separate SecureStore values with
   `WHEN_UNLOCKED_THIS_DEVICE_ONLY`; no backup, URL, log, or AsyncStorage copy is
   permitted.
@@ -101,9 +106,10 @@ Switching it is a published mutation, `PATCH /v1/session/active-workspace`
 with an idempotency key, followed by a re-read of `/v1/session`
 (`useSession().reload()`); the app holds no workspace state of its own. The
 switcher lists `GET /v1/workspaces` rather than the session's bounded
-`workspaces` page, and Settings shows it only with two or more workspaces or
-when `workspacesTruncated` says the list is incomplete — the same rule the web
-switcher (snoopy PR #6) applies over the same operation.
+`workspaces` page, and Settings › Workspace (its own page since 24.12) shows it
+only with two or more workspaces or when `workspacesTruncated` says the list is
+incomplete — the same rule the web switcher (snoopy PR #6) applies over the
+same operation.
 
 **The scope control** (24.9.2, 2026-10-02; teams since 24.11.7) sits at the top
 of Home, Flows and Activity: the workspace — the switcher, reached there as well
@@ -111,13 +117,13 @@ as from Settings — and "All teams" or one team. A team is a project in the
 platform's contract (backend 24.11.5) and a visibility scope on a subscription
 (backend 18.6.2); runs and approvals carry no team and follow their flow's, and
 one whose flow is unknown is kept rather than hidden. The team pill is always
-there; its list ends with "Create a team", and a team made from it is the scope
-at once. The choice is kept per workspace on the device
-(`lib/platform/scope-store.ts`) and never selects tenancy. The website has no
-team selector: a deliberate mobile difference under FR-25, as the snapshot's
-windows are. The app's copy says team and flow, never project or automation;
-`audit:vocabulary` fails the build on either word in copy, and the code keeps
-the contract's names (24.11.7).
+there; its list ends with "Create a team" for an owner or admin (24.12), and a
+team made from it is the scope at once. A team is named by its kind (24.12). The
+choice is kept per workspace on the device (`lib/platform/scope-store.ts`) and
+never selects tenancy. The website has no team selector: a deliberate mobile
+difference under FR-25, as the snapshot's windows are. The app's copy says team
+and flow, never project or automation; `audit:vocabulary` fails the build on
+either word in copy, and the code keeps the contract's names (24.11.7).
 
 **Signed out is the cover** (24.11.6): launch, sign-out, an ended session and a
 deleted account all land on the cover, which waits; "Get started" is the one way
@@ -131,19 +137,21 @@ on, to Sign in. Signed in, the same screen is the splash and moves on by itself.
 | Home | session + catalog + `run-stats?since=<local midnight>` + runs + pending approvals |
 | Flows/add (the catalog, "New") | workspace automation catalog and its server-supplied categories, plus subscriptions and projects — Added ✓ or Add per the scope looked at (24.9.3) |
 | Setup/configure | catalog `setup[]` and the matching subscription config |
-| Flows/detail | subscriptions + catalog + run stats; identity is subscription ID/template ID. Detail keeps the subscription (`runInput`, `triggerKind`, `templateVersion`) and its catalog entry for its actions; the webhook address is read when its dialog opens. A removed flow is read with the removed list and drawn read-only, with "Add it again" (24.11.8). The Runs, Successes and Failures tiles open Activity for this flow and outcome (24.11.9) |
-| Flows/removed | `GET …/subscriptions?status=archived` (backend §12.1 #203), only the archived rows kept, within the scope, each with the day it was removed (its `updatedAt`); Flows shows them as one row with a count, and Settings links here (24.11.8) |
+| Flows/detail | subscriptions + catalog + run stats; identity is subscription ID/template ID. Detail keeps the subscription (`runInput`, `triggerKind`, `templateVersion`) and its catalog entry for its actions; the webhook address is read when its dialog opens. An archived flow is read with the archived list and drawn read-only, with "Add it again" (24.11.8; "Archived" since 24.12). The Runs, Successes and Failures tiles open Activity for this flow and outcome (24.11.9) |
+| Flows/archived | `GET …/subscriptions?status=archived` (backend §12.1 #203), only the archived rows kept, within the scope, each with the day it was archived (its `updatedAt`); Flows shows them as one row with a count (24.11.8). Settings › Workspace has a copy in the Settings stack, whose flows open in Settings too, so Back stays there (24.12) |
 | ~~Builder~~ | **Removed 2026-10-02** with Templates and Configure, on the owner's direction: the website has no builder, and FR-25 is parity with the website. Flow detail draws `pipeline[]` itself |
-| Activity/run detail | runs/list/detail joined to catalog/subscription identity. Activity takes a flow and an outcome from a tile (24.11.9); a run of a removed flow says so. Run detail reads in the workspace it was opened in and leaves when the active one changes |
+| Activity/run detail | runs/list/detail joined to catalog/subscription identity. Activity takes a flow and an outcome from a tile (24.11.9); a run of an archived flow says so. Run detail reads in the workspace it was opened in and leaves when the active one changes |
 | Approvals | pending approvals joined through subscription → template → pipeline step |
-| Notifications | pending approvals plus failed runs; explicitly an in-app composition |
-| Settings | session/workspace, provider registry, and workspace connections; the workspace switcher reads the workspace collection. The plan's totals left with the Solutions tab (24.9.5) |
-| Organization | the workspace collection; for an owner or admin of the active organization, its members, domains and join requests; for someone in no organization, `organization-discovery` |
+| Notifications | pending approvals plus failed runs; explicitly an in-app composition. Settings › Notifications is the same inbox, a copy in the Settings stack whose failed runs open in Settings too, so Back stays there (24.12) |
+| Settings | nothing: eight categories, each its own page — Account, Security, Connections, Billing, Workspace, Notifications, Appearance, Help — then Sign out (24.12, the owner's decision 10). The plan's totals left with the Solutions tab (24.9.5) |
+| Settings › Connections | the provider registry and the workspace's connections: third-party integrations only (24.12, decision 9); sign-in accounts are Account's |
+| Settings › Workspace | the session; the workspace switcher reads the workspace collection when it opens |
+| Organization | the workspace collection; for an owner or admin of the active organization, its members, domains and join requests — each request named by its requester's `displayName` and `email`, the id only when neither is sent (24.12) — and its join link — the website's `/onboarding/join-org?w=` on the browser leg's origin, its line following the joining policy of the first verified domain shown for matching emails, in the website's words (`joinLinkLine`; 24.12, decision 5); for someone in no organization, `organization-discovery` |
 | Teams / team (24.11.7) | the workspace collection, each workspace's teams (`…/projects`), and each organization's directory (`…/project-directory`, backend 24.11.4); one team read in its own workspace; in an organization its memberships, and for its owner or admin — or the organization's — the workspace's members and the requests to join (`…/access-requests`) |
 | Home, Flows, add, setup, Activity | also the active workspace's teams — the scope control (24.9.2), the scope a flow is added to, and the label each flow carries |
-| Billing | the workspace collection for the role; for an owner or admin, `/v1/plans` and the workspace's billing; read again when the app returns to the foreground on iOS |
-| Account | the linked sign-in identities and the login providers; Unlink is `POST /v1/auth/native/identities/{provider}/unlink` with the device's refresh token (backend 24.11.1) |
-| Data export | the workspace collection for the role; the bounded export on request; a complete export started, followed every 2 s (doubling after a failed read, three allowed), and its link read again at the moment of the download |
+| Billing | the workspace collection for the role; `/v1/plans`, which anyone signed in may read; for an owner or admin, the workspace's billing; read again when the app returns to the foreground on iOS |
+| Account | the linked sign-in identities and the login providers — a linked identity shows the address its provider reports (`email`, 24.12), none when absent; Unlink is `POST /v1/auth/native/identities/{provider}/unlink` with the device's refresh token (backend 24.11.1), its refusals said by reason (24.12) |
+| Data export | the workspace collection for the role; the bounded export on request; a complete export started, followed every 2 s (doubling after a failed read, three allowed), and its link read again at the moment of the download — on iOS saved into the app and handed to the share sheet (24.12) |
 | Support | nothing read; the contact request is sent on the public operation; Privacy and Terms open on the website |
 
 Every fetching surface has loading, offline, platform-error, **unavailable**, and
@@ -163,6 +171,14 @@ moment" invites a person to press a button that can never work.
 An empty queue is not an accomplishment. Approvals renders a first-run empty
 state when nothing is pending, and keeps its "all caught up — decisions synced"
 line for the case it describes: this person decided something.
+
+**Whole screens only** (24.12, the owner's decision 6): a screen with nothing on
+it draws the centred empty standard (`ScreenEmpty` — icon, title, one line, an
+action where there is one, and Back on a pushed screen): Teams, Archived flows,
+the empty inbox, Organization with nothing found and nothing to set up, an empty
+catalog, Connections with no integrations, alongside Flows, Activity and
+Approvals. A section with nothing in it, on a screen that has other things,
+keeps its own line.
 
 `AutomationCatalogEntry.available` is reachability evidence and is rendered, not
 dropped: an automation that failed its probe says so and its Add / Activate /
@@ -209,9 +225,10 @@ review" — the held queue — also list running, queued and cancelled runs.
     answer to detail's change only until the list reads again.
   - Move to vN: patch `templateVersion`, confirmed first, when the catalog's
     version is newer than the one pinned.
-  - Remove flow: patch `status: archived` behind its one-way confirmation — the
-    last thing on the flow page, in red (24.9.4). It leaves the list, keeps its
-    runs in Activity, and the flow can be added again; Pause keeps it listed.
+  - Archive flow ("Remove flow" until 24.12, the owner's decision 4): patch
+    `status: archived` behind its one-way confirmation — the last thing on the
+    flow page, in red (24.9.4). It moves to Archived flows, keeps its runs in
+    Activity, and the flow can be added again; Pause keeps it listed.
   - Webhook address: owner or admin, webhook-started only. The address is read
     on each opening; a secret is issued with no idempotency key, shown once in
     the dialog and kept nowhere else.
@@ -226,11 +243,21 @@ review" — the held queue — also list running, queued and cancelled runs.
     after a confirmation; approve or reject a join request. Someone in no
     organization joins or asks to join one discovery found, and can cancel that
     request; on a company domain they can set one up — created once, then its
-    domain claimed, a failed claim retried alone.
-  - Teams (24.11.7; projects in the contract): create — in the organization
-    or personal workspace picked, of a kind from the list or the person's own
-    words, 2 to 60 characters; delete (archive) by its owner, which leaves its
-    flows running; leave — typing DELETE, or confirming from one's own row; add
+    domain claimed, a failed claim retried alone. An owner or admin shares the
+    join link through the share sheet (24.12); the platform accepts a request
+    through it only from someone at a verified email domain the organization
+    shows for matching emails, and that domain's joining policy decides what
+    follows, as the line under the link says.
+  - Teams (24.11.7; projects in the contract): create (24.12, the owner's
+    decisions 1–3) — in the workspace the person is in when the dialog opens,
+    personal included, and refused with `WORKSPACE_CHANGED` if another is active
+    by Create; of a kind from the list or the person's own words, 2 to 60
+    characters, the kind sent as both its name and its type, with no name,
+    picker or description; one team per kind, a second refused in words (409
+    `team_kind_taken`); in an organization its owners and admins only, so a
+    plain member is not offered it. A team's title is its kind. Delete
+    (archive) by its owner, which leaves its flows running; leave — typing
+    DELETE, or confirming from one's own row; add
     members, change a role (an admin only a member's), remove; ask to join a
     team in the directory and withdraw the request; approve or deny a request,
     by the team's owner or admin or the organization's. Each acts on the team's
@@ -238,36 +265,46 @@ review" — the held queue — also list running, queued and cancelled runs.
   - A flow is added to the whole workspace or to a team, the scopes it is not
     in yet, as the website's Add offers.
 - Round 16 (24.6), each the website's operation, words and gating:
-  - Billing (ADR-0032 option B): every platform shows the plan, its price
-    (the provider's minor units, formatted only for a currency whose exponent
-    is known) and the workspace's status. On iOS only, Choose plan opens the
-    hosted checkout and Manage billing the hosted portal, each in the system
-    browser, https only; a portal 409 sends the person to a plan. Android shows
-    no purchase control or call to action. Owner or admin; a member is told who
-    manages it and nothing is read. A 503 is "unavailable", never a false plan.
+  - Billing (ADR-0032 option B; the cards since 24.12, the owner's decisions 7
+    and 8): every platform shows the plans as cards — Free, then the
+    platform's plans by price — each its name and price (the provider's minor
+    units, formatted only for a currency whose exponent is known), and the
+    workspace's card says "Enrolled" with its status. On iOS only, not paying,
+    a paid card opens the hosted checkout for that plan; paying, any other card
+    opens Manage billing, the hosted portal — so does a checkout refused with
+    409 `plan_exists` — each in the system browser, https only; a portal 409
+    sends the person to a plan. Android shows no purchase control or call to
+    action. The workspace's billing is an owner's or admin's; a member sees the
+    plans without actions and is told who manages billing. A 503 is
+    "unavailable", never a false plan.
   - Account: linking another sign-in account is 24.2.1's native flow — a
     sealed ticket asked for with the bearer and refresh token (in a body, read
     inside the request), opened once in the system browser, then login's code
-    exchange against the claimed callback. Deleting the account is ADR-0028's,
+    exchange against the claimed callback. Unlink's refusals are sentences by
+    reason, never the problem's title (24.12). Deleting the account is ADR-0028's,
     in its words, and reads every answer the contract gives a bearer caller: a
     partial deletion keeps the account; a lost answer reads the session before
     saying either way; `SESSION_REVOCATION_FAILED` revokes through sign-out
     before this device lets go; an ended session offers sign-in. Deleted, the
     device clears its session and shows the signed-out screen.
   - Data export: the bounded summary shared as a JSON file (iOS) or text
-    (Android); the complete export opened from the signed link, read afresh.
+    (Android); the complete export read afresh from its signed link and, on iOS,
+    saved into the app and handed to the share sheet (24.12) — on Android the
+    link opens in the browser.
   - Support: the contact form's fields and words; Privacy and Terms on the
     website's origin, the one the browser leg shares.
 - After a change, a screen re-reads from `loading`: what it showed is out of
-  date and is not left to act on. A return to a screen re-reads it and keeps
-  its rows until the answer lands (24.4.4) — through the shared workspace
-  snapshot since 2026-10-02 (24.9.1, `lib/platform/snapshot.ts`): one in-flight
-  request per resource; a resource younger than its window is answered from the
-  snapshot (15 s for runs, approvals, subscriptions, counts and connections;
-  120 s for the catalog, projects, providers and workspaces); an action
-  invalidates what it changed, and `reload()` drops the workspace's whole
-  snapshot. The website reads per navigation and caches nothing on the client:
-  the windows are a deliberate mobile difference under FR-25.
+  date and is not left to act on. A return to a screen re-reads it and keeps its
+  rows until the answer lands (24.4.4) — through the shared workspace snapshot
+  since 2026-10-02 (24.9.1, `lib/platform/snapshot.ts`): one in-flight request
+  per resource; a resource younger than its window is answered from the snapshot
+  (15 s for runs, approvals, subscriptions, counts and connections; 120 s for
+  the catalog, projects, providers and workspaces); an action invalidates what
+  it changed — a rename, a new organization and a join drop the workspace list
+  (24.12) — and `reload()` drops the workspace's whole snapshot. The whole
+  snapshot is emptied when a session ends or begins (24.12). The website reads
+  per navigation and caches nothing on the client: the windows are a deliberate
+  mobile difference under FR-25.
 
 UI state changes occur only after a successful mutation. Failed actions remain
 on the loaded screen and show the shared inline failure callout.
@@ -305,12 +342,14 @@ mobile-only shape.
   starting an unrelated run and calling it a retry. This is historical Finding
   9.
 - Billing is ADR-0025's four operations and ADR-0032's rule (24.6.1 above):
-  no card field, no in-app purchase, no price the platform did not state.
+  no card field, no in-app purchase, no price the platform did not state —
+  but Free's $0.00 per month, which the app draws by the owner's decision 7
+  (24.12): `/v1/plans` lists only what can be bought.
   Billing states the plan; the solutions total left Settings with the Solutions
   tab (24.9.5).
-- A removed (archived) subscription is absent everywhere but Removed flows: not a
+- An archived subscription is absent everywhere but Archived flows: not a
   flow, not Added, not paused, not reused by Add (`withoutArchived`, the website's
-  rule); Removed reads it by name (`status=archived`, 24.11.8) and shows it
+  rule); Archived flows reads it by name (`status=archived`, 24.11.8) and shows it
   read-only. The
   catalog's `subscribed` is not used for Added, because it still counts an
   archived row (`DESIGN-GAPS.md`, Round 16). Home alone keeps it, to ask whether
@@ -318,7 +357,9 @@ mobile-only shape.
 - Refusals a person can act on are said in the website's words
   (`lib/content/refusals.ts`): moving a version, issuing a webhook address,
   starting a run, uploading its file, and Add's two plan reasons (on a 403
-  only).
+  only); since 24.12 creating a team (a kind already taken, and a member's
+  403) and unlinking a sign-in account — by reason, and "Unlinking isn't
+  available yet." for a platform without the route.
 
 ## Remaining contract ceilings (not Round 6 substitutions)
 
@@ -344,8 +385,16 @@ has no builder, so a read-only one on mobile offered nothing the website offers.
 "New" and Home's button lead to the catalog inside Flows (`app/(tabs)/flows/add.tsx`,
 24.9.3); the Solutions tab itself went on 2026-10-02, on the owner's word — four
 tabs: Home, Flows, Activity, Settings. The Settings SECURITY card keeps the
-Face ID unlock only; its Passkeys and Stay signed in rows were static design
-copy the website never had, and went the same day.
+Face ID unlock only (Settings › Security, its own page since 24.12); its
+Passkeys and Stay signed in rows were static design copy the website never had,
+and went the same day.
+
+**The type is the app's own scale** (24.12, the owner's decision 11 of
+2026-10-02: bigger type, "whole app — easy to read"). Every font size, line
+height and tracked size comes from `typeScale` in `constants/theme.ts` — about
+2 pt over the design's text sizes and 3 over its titles, 12 at the smallest —
+no longer the design's values carried over 1:1. `audit:type` fails a size
+written anywhere else, and the Nocturne snapshots were re-pinned once for it.
 
 ## Identity and key rules
 
