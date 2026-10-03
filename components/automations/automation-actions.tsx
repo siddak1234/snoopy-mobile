@@ -12,7 +12,7 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
 import { SettingsRow } from '@/components/settings/settings-row';
-import { fonts, layout, status, typeScale } from '@/constants/theme';
+import { fonts, layout, typeScale, withAlpha } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
@@ -37,7 +37,8 @@ type Open = 'run' | 'setup' | 'webhook' | 'archive' | null;
  *   feedback 5 of 2026-10-02; "Archive", not "Remove", since decision 4 of the
  *   same day, 24.12): the platform's one-way `archived`, behind its
  *   confirmation — it stops, moves to Archived flows, keeps its runs in
- *   Activity, and the flow can be added again later. Pause keeps it listed.
+ *   Activity, and the flow can be unarchived later (the owner's build 12 item
+ *   4: the word for adding it again). Pause keeps it listed.
  *
  * Every action acts on the workspace the screen loaded (`shownWorkspaceId`).
  * `statusRow` is the screen's own Go live / Pause row, placed after Run.
@@ -170,11 +171,11 @@ export function AutomationActions({
         }}
         style={({ pressed }) => [
           styles.archive,
-          { borderColor: status.err },
-          pressed && { backgroundColor: status.errCalloutBg },
+          { borderColor: palette.danger },
+          pressed && { backgroundColor: withAlpha(palette.danger, 0.08) },
         ]}>
-        <Archive size={18} color={status.err} />
-        <Text style={[styles.archiveLabel, { color: status.err }]}>Archive flow</Text>
+        <Archive size={18} color={palette.danger} />
+        <Text style={[styles.archiveLabel, { color: palette.danger }]}>Archive flow</Text>
       </Pressable>
 
       {open === 'run' ? (
@@ -211,7 +212,7 @@ export function AutomationActions({
         testID="archive-dialog"
         onRequestClose={archiving ? () => undefined : close}
         title={`Archive ${name}?`}
-        body="It stops and moves to Archived flows. Its runs stay in Activity, and you can add it again later."
+        body="It stops and moves to Archived flows. Its runs stay in Activity, and you can unarchive it later."
         actions={
           <>
             <DialogButton label="Cancel" disabled={archiving} onPress={close} />

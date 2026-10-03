@@ -5,11 +5,13 @@ jest.mock('@/lib/platform/client', () => ({
 
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import React, { useState } from 'react';
+import { StyleSheet } from 'react-native';
 
 import TeamScreen from '@/app/(tabs)/settings/team';
 import TeamsScreen from '@/app/(tabs)/settings/teams';
 import SettingsScreen from '@/app/(tabs)/settings';
 import { CreateTeamDialog } from '@/components/teams/create-team-dialog';
+import { nocturneDark } from '@/constants/theme';
 import { SessionContext, type SessionContextValue } from '@/hooks/use-session';
 import { WORKSPACE_CHANGED } from '@/lib/content/refusals';
 import { PlatformError } from '@/lib/platform/problem';
@@ -85,6 +87,8 @@ async function pressLast(label: string) {
   const buttons = await screen.findAllByText(label);
   await fireEvent.press(buttons[buttons.length - 1]!);
 }
+
+const colorOf = (node: { props: { style?: unknown } }) => (StyleSheet.flatten(node.props.style) as { color?: string }).color;
 
 describe('Teams (24.11.7)', () => {
   function routeList(
@@ -164,6 +168,10 @@ describe('Teams (24.11.7)', () => {
 
     await fireEvent.press(await screen.findByTestId('requested-p5'));
     expect(await screen.findByText('Withdraw your request to join Data?')).toBeTruthy();
+    // Asking again undoes it, so its confirm is the way on, not red (the owner's build 12 item 5).
+    const withdraw = within(screen.getByTestId('withdraw-request-dialog')).getByText('Withdraw');
+    expect(colorOf(withdraw)).toBe(nocturneDark.accent);
+    expect(colorOf(withdraw)).not.toBe(nocturneDark.danger);
     await pressLast('Withdraw');
     await waitFor(() =>
       expect(fake.to('DELETE /v1/workspaces/{workspaceId}/projects/{projectId}/access-requests/{requestId}')).toHaveLength(1),
@@ -408,6 +416,19 @@ describe('One team (24.11.7)', () => {
     const [archived] = fake.to('PATCH /v1/workspaces/{workspaceId}/projects/{projectId}');
     expect(archived!.values).toEqual({ workspaceId: PERSONAL, projectId: 'p1' });
     expect(archived!.body).toEqual({ status: 'archived' });
+  });
+
+  it("draws Delete team for its owner and Leave team for a member in red, as their confirms are (the owner's build 12 item 5)", async () => {
+    routeTeam('owner', { workspaceId: PERSONAL });
+    const owner = await renderWithProviders(<TeamScreen />, signedInSession);
+    expect(colorOf(await owner.findByText('Delete team'))).toBe(nocturneDark.danger);
+    await fireEvent.press(owner.getByText('Delete team'));
+    expect(colorOf(within(await owner.findByTestId('delete-team-dialog')).getByText('Delete team'))).toBe(nocturneDark.danger);
+    await owner.unmount();
+
+    routeTeam('member');
+    const member = await renderWithProviders(<TeamScreen />, signedInSession);
+    expect(colorOf(await member.findByText('Leave team'))).toBe(nocturneDark.danger);
   });
 
   it('lets a member leave only after typing DELETE, and shows them no requests', async () => {

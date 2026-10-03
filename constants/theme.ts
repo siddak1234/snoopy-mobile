@@ -46,6 +46,15 @@ export type NocturnePalette = {
   /** Brand mark tint: design renders the (light-grey) PNG as-is on dark and
    *  applies CSS invert(.87) on light, which computes to ~#383838. */
   brandTint: string | undefined;
+  /**
+   * An action that removes or ends something and cannot be undone with a tap —
+   * Delete account, Delete or Leave team, Cancel run, Archive flow, Unlink, Sign
+   * out — on its page and in the button that confirms it (the owner's build 12
+   * item 5). Dark is the design's red, `status.err`; the design gives light no
+   * red of its own, and #f87171 on a white card is 2.77:1, so light takes the
+   * website's light `--error-text` (snoopy app/globals.css), 4.83:1 on a card.
+   */
+  danger: string;
 };
 
 const darkNeutral: Ramp = {
@@ -68,6 +77,8 @@ export const nocturneDark: NocturnePalette = {
   neutral: darkNeutral,
   accentRamp: darkAccent,
   brandTint: undefined,
+  // status.err, the design's own red.
+  danger: '#f87171',
 };
 
 export const nocturneLight: NocturnePalette = {
@@ -88,6 +99,7 @@ export const nocturneLight: NocturnePalette = {
     700: '#c3bcec', 800: '#dcd8f4', 900: '#e9e6f8',
   },
   brandTint: '#383838',
+  danger: '#dc2626',
 };
 
 /** Run/status colors from the design's screen logic. */

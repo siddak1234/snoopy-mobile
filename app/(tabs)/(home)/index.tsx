@@ -19,10 +19,10 @@ import { IconTile } from '@/components/nocturne/icon-tile';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { Skeleton } from '@/components/nocturne/skeleton';
-import { StatCard } from '@/components/nocturne/stat-card';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable, pressed } from '@/components/pressable';
 import { ScopeControl } from '@/components/scope-control';
+import { StatTileButton } from '@/components/stat-tile-button';
 import { em, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useScope } from '@/hooks/use-scope';
@@ -233,7 +233,7 @@ export default function HomeScreen() {
 
   if (dashboard.status === 'loading') return <HomeLoading paddingTop={paddingTop} />;
   if (dashboard.status !== 'ready') {
-    return <HomeError paddingTop={paddingTop} initials={initials} onRetry={dashboard.reload} />;
+    return <HomeError paddingTop={paddingTop} initials={initials} onRetry={() => dashboard.reload()} />;
   }
   if (!dashboard.data.hasSubscriptions) {
     return <HomeEmpty paddingTop={paddingTop} initials={initials} />;
@@ -315,24 +315,28 @@ export default function HomeScreen() {
         </Text>
       </View>
 
-      {/* Stats */}
-      <View style={styles.statsRow}>
-        {/* A tile opens Activity for that outcome, today's runs being its subject (24.11.9). */}
-        {tiles.map((s) => (
-          <Pressable
-            key={s.label}
-            testID={`stat-${OUTCOME_FILTER[s.tone]}`}
-            accessibilityRole="button"
-            accessibilityLabel={`${s.label}: see these runs in Activity`}
-            style={styles.statPressable}
-            onPress={() => router.push({ pathname: '/(tabs)/activity', params: { filter: OUTCOME_FILTER[s.tone] } })}>
-            <StatCard
+      {/* Stats: today's, and said so over the row (the owner's build 12 item 1). */}
+      <View>
+        <SectionLabel>TODAY</SectionLabel>
+        <View style={[styles.statsRow, styles.statsUnderLabel]} testID="home-stats">
+          {/* A tile opens Activity for that outcome AND today — the runs it counts (24.11.9; build 12 item 1). */}
+          {tiles.map((s) => (
+            <StatTileButton
+              key={s.label}
+              testID={`stat-${OUTCOME_FILTER[s.tone]}`}
+              accessibilityLabel={`${s.label}: see these runs in Activity`}
+              onPress={() =>
+                router.push({
+                  pathname: '/(tabs)/activity',
+                  params: { filter: OUTCOME_FILTER[s.tone], period: 'today' },
+                })
+              }
               value={s.value}
               label={s.label}
               valueColor={s.tone === 'ok' ? status.ok : s.tone === 'err' ? status.err : undefined}
             />
-          </Pressable>
-        ))}
+          ))}
+        </View>
       </View>
 
       {/* Approvals banner */}
@@ -488,10 +492,13 @@ const styles = StyleSheet.create({
     height: 7,
     borderRadius: 99,
   },
-  statPressable: { flex: 1 },
   statsRow: {
     flexDirection: 'row',
     gap: 10,
+  },
+  // The tiles sit under TODAY as the runs card sits under RECENT RUNS.
+  statsUnderLabel: {
+    marginTop: 10,
   },
   approvalsBanner: {
     flexDirection: 'row',

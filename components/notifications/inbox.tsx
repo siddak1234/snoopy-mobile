@@ -101,7 +101,7 @@ export function Inbox({ runPath }: { runPath: InboxRunPath }) {
 
   if (inbox.status === 'loading') return <ScreenLoading topInset={insets.top} />;
   if (inbox.status === 'offline') {
-    return <ScreenOffline onRetry={inbox.reload} onBack={() => router.back()} topInset={insets.top} />;
+    return <ScreenOffline onRetry={() => inbox.reload()} onBack={() => router.back()} topInset={insets.top} />;
   }
   if (inbox.status === 'unconfigured') {
     return (
@@ -116,7 +116,7 @@ export function Inbox({ runPath }: { runPath: InboxRunPath }) {
     return (
       <ScreenError
         title={errorTitleFor('notifications')}
-        onRetry={inbox.reload} body={busyBody(inbox)}
+        onRetry={() => inbox.reload()} body={busyBody(inbox)}
         onBack={() => router.back()}
         topInset={insets.top}
       />
@@ -281,7 +281,7 @@ function PushCard() {
             variant="primary"
             height={42}
             fontSize={typeScale.body.fontSize}
-            onPress={openSettings}
+            onPress={() => openSettings()}
             style={styles.pushBtn}
           />
         ) : null}

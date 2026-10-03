@@ -14,7 +14,13 @@ export type PillButtonVariant =
   /** No outline, text-color label (e.g. the Face ID question → "Not now"). */
   | 'plain'
   /** No outline, accent-300 label (e.g. "Unlock with Face ID"). */
-  | 'accent-ghost';
+  | 'accent-ghost'
+  /**
+   * Danger outline + danger label and icon, a 10% danger tint when pressed — the
+   * design's red pill ("Remove", Screen.dc.html:450): an action that removes or
+   * ends something (the owner's build 12 item 5). `palette.danger` per theme.
+   */
+  | 'danger';
 
 type Props = {
   label: string;
@@ -51,13 +57,16 @@ export function PillButton({
 
   const borderColor =
     variant === 'primary' ? palette.accent :
-    variant === 'secondary' ? palette.neutral[700] : 'transparent';
+    variant === 'secondary' ? palette.neutral[700] :
+    variant === 'danger' ? palette.danger : 'transparent';
   const color =
     variant === 'primary' ? palette.accent :
-    variant === 'accent-ghost' ? palette.accentRamp[300] : palette.text;
+    variant === 'accent-ghost' ? palette.accentRamp[300] :
+    variant === 'danger' ? palette.danger : palette.text;
   const pressedBg =
     variant === 'primary' ? withAlpha(palette.accent, 0.12) :
     variant === 'accent-ghost' ? withAlpha(palette.accent, 0.08) :
+    variant === 'danger' ? withAlpha(palette.danger, 0.1) :
     withAlpha(palette.text, 0.07);
 
   return (
@@ -70,7 +79,7 @@ export function PillButton({
         {
           height,
           borderRadius: 999,
-          borderWidth: variant === 'primary' || variant === 'secondary' ? 1 : 0,
+          borderWidth: variant === 'primary' || variant === 'secondary' || variant === 'danger' ? 1 : 0,
           borderColor,
           flexDirection: 'row',
           alignItems: 'center',

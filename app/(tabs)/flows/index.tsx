@@ -93,14 +93,14 @@ export default function FlowsScreen() {
 
   if (flows.status === 'loading') return <ScreenLoading topInset={insets.top} />;
   if (flows.status === 'offline') {
-    return <ScreenOffline onRetry={flows.reload} topInset={insets.top} />;
+    return <ScreenOffline onRetry={() => flows.reload()} topInset={insets.top} />;
   }
   if (flows.status === 'unconfigured') {
     return <ScreenUnavailable title={errorTitleFor('flows')} topInset={insets.top} />;
   }
   if (flows.status === 'error') {
     return (
-      <ScreenError title={errorTitleFor('flows')} onRetry={flows.reload} body={busyBody(flows)} topInset={insets.top} />
+      <ScreenError title={errorTitleFor('flows')} onRetry={() => flows.reload()} body={busyBody(flows)} topInset={insets.top} />
     );
   }
   if (live !== null && live.length === 0) {

@@ -32,6 +32,8 @@ import {
   subscriptionsPayload,
 } from '@/test/platform';
 import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
+import { touch } from '@/test/touch';
+import type { SessionContextValue } from '@/hooks/use-session';
 import { resetSnapshot } from '@/lib/platform/snapshot';
 import { resetPushForTests } from '@/hooks/use-push-registration';
 
@@ -65,6 +67,7 @@ describe('Home dashboard', () => {
     expect(getByText('128')).toBeTruthy();
     expect(getByText('124')).toBeTruthy();
     expect(getByText('4')).toBeTruthy();
+    expect(getByText('Runs')).toBeTruthy();
     expect(getByText('Successes')).toBeTruthy();
     expect(getByText('Failures')).toBeTruthy();
     expect(getByText('3 items need your review')).toBeTruthy();
@@ -200,17 +203,20 @@ describe('Add a flow — the catalog inside Flows (24.9.3)', () => {
     expect(getAllByText('Add').length).toBeGreaterThan(0);
   });
 
-  it('says where a flow is already added, and offers Add for the scope it is not in yet (18.6.2)', async () => {
-    // Added to a project alone: the whole workspace — the scope looked at — is still free.
-    const inProjectOnly = { ...planSubscriptionsPayload().subscriptions[0]!, projectId: 'project-9' };
+  it('names where a flow is held — Added ✓ with its team, the card opens it — and offers no Add for another team (the owner\'s build 12 item 9: one flow per workspace; until build 13 "Added in …" and Add, 18.6.2)', async () => {
+    // Held in a team alone, looked at from All teams (the whole workspace): no second copy is offered.
+    const inTeamOnly = { ...planSubscriptionsPayload().subscriptions[0]!, projectId: 'project-1' };
     routePlatform(platformOperation, {
-      '/subscriptions': { subscriptions: [inProjectOnly] },
+      '/subscriptions': { subscriptions: [inTeamOnly] },
       '/projects': projectsPayload('Finance'),
     });
     await renderWithProviders(<SolutionsScreen />, signedInSession);
-    expect((await screen.findByTestId('added-elsewhere-tpl.0')).props.children.join('')).toMatch(/^Added in /u);
-    expect(screen.getByTestId('add-tpl.0')).toBeTruthy();
-    expect(screen.queryByTestId('added-tpl.0')).toBeNull();
+    expect((await screen.findByTestId('added-where-tpl.0')).props.children).toBe('Team: Finance');
+    expect(screen.getByTestId('added-tpl.0')).toBeTruthy();
+    expect(screen.queryByTestId('add-tpl.0')).toBeNull();
+    expect(screen.queryByText(/^Added in /u)).toBeNull();
+    await fireEvent.press(screen.getByTestId('added-tpl.0'));
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'solution-0' } });
   });
 });
 
@@ -339,6 +345,14 @@ describe('Workflow detail', () => {
     expect(getByText('Post to QuickBooks')).toBeTruthy();
   });
 
+  it("keeps Pause plain — Resume undoes it in one tap — while Archive flow, last, is red (the owner's build 12 item 5)", async () => {
+    await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
+    const color = (node: { props: { style?: unknown } }) => (StyleSheet.flatten(node.props.style) as { color?: string }).color;
+    expect(color(await screen.findByText('Pause'))).toBe(nocturneDark.text);
+    expect(color(screen.getByText('Pause'))).not.toBe(nocturneDark.danger);
+    expect(color(screen.getByText('Archive flow'))).toBe(nocturneDark.danger);
+  });
+
   it('offers no Edit in Builder: the website has no builder, and mobile offers what the website offers', async () => {
     // Removed 2026-10-02 on the owner's direction (24.7.3 attempt 2 feedback).
     const { queryByText } = await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
@@ -388,12 +402,12 @@ describe('Workflow detail', () => {
     expect(screen.queryByText('Run')).toBeNull();
   });
 
-  it('returns to the Flows list after Archive, however the flow was reached', async () => {
+  it("returns to the Flows list after Archive, however the flow was reached — the confirmation saying it can be unarchived later (the owner's build 12 item 4)", async () => {
     await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
     await fireEvent.press(await screen.findByTestId('archive-flow'));
     expect(await screen.findByText('Archive Invoice triage?')).toBeTruthy();
     expect(
-      screen.getByText('It stops and moves to Archived flows. Its runs stay in Activity, and you can add it again later.'),
+      screen.getByText('It stops and moves to Archived flows. Its runs stay in Activity, and you can unarchive it later.'),
     ).toBeTruthy();
     const buttons = await screen.findAllByText('Archive');
     await fireEvent.press(buttons[buttons.length - 1]!);
@@ -632,6 +646,8 @@ describe('Approvals inbox', () => {
   it('approves and rejects independently, matching the design done-states', async () => {
     const { getAllByText, getByText, queryAllByText, queryByText } = await renderWithProviders(<ApprovalsScreen />, signedInSession);
     expect(getAllByText('Approve')).toHaveLength(3);
+    // Reject is an answer, not a removal: plain, as the design draws it (the owner's build 12 item 5).
+    expect((StyleSheet.flatten(getAllByText('Reject')[0]!.props.style) as { color?: string }).color).toBe(nocturneDark.neutral[300]);
 
     await fireEvent.press(getAllByText('Approve')[0]);
     expect(getByText('Approved ✓ — agent resuming')).toBeTruthy();
@@ -811,11 +827,17 @@ describe('Settings — one grouped page (build 11, D1)', () => {
     expect(screen.queryByText('Appearance')).toBeNull();
   });
 
-  it('reads only the plan, quietly: one billing read for an owner, said as the plan name under Billing; the email under Account', async () => {
+  it("reads only the plan, quietly: one billing read for an owner, shown as Billing's value on its right; the email under Account", async () => {
     routePlatform(platformOperation, { [BILLING]: ON_PLUS });
     await renderWithProviders(<SettingsScreen />, signedInSession);
     expect(await screen.findByText('Plus')).toBeTruthy();
-    expect(within(screen.getByTestId('settings-billing')).getByText('Plus')).toBeTruthy();
+    // The plan is the row's value, on the title's line before the arrow (the owner's
+    // build 12 item 2) — not a line under "Billing", so the row keeps its height.
+    expect(screen.getByTestId('value-of-settings-billing').props.children).toBe('Plus');
+    expect(within(screen.getByTestId('settings-billing')).getAllByText(/./u).map((node) => node.props.children)).toEqual([
+      'Billing',
+      'Plus',
+    ]);
     expect(within(screen.getByTestId('settings-account')).getByText('alex@acme.co')).toBeTruthy();
     // The one request: the workspace's billing — not the workspace list, not the plans, nothing for any other row.
     expect(platformOperation.mock.calls.map(([path]: [string]) => path)).toEqual([BILLING]);
@@ -837,8 +859,88 @@ describe('Settings — one grouped page (build 11, D1)', () => {
     await renderWithProviders(<SettingsScreen />, sessionAs('member'));
     expect(await screen.findByText('Managed by owners and admins')).toBeTruthy();
     expect(within(screen.getByTestId('settings-billing')).getByText('Managed by owners and admins')).toBeTruthy();
+    // It explains rather than states a plan: the line under the title, and Billing has no value.
+    expect(screen.queryByTestId('value-of-settings-billing')).toBeNull();
+    expect(StyleSheet.flatten(screen.getByText('Billing').parent!.props.style)).toEqual({ flex: 1 });
     expect(platformOperation).not.toHaveBeenCalled();
     expect(screen.queryByText('Free')).toBeNull();
+  });
+
+  /** A session in the given workspaces, the first one active unless said. */
+  function sessionIn(
+    workspaces: { id: string; name: string; type: 'personal' | 'organization'; role: 'owner' | 'admin' | 'member' }[],
+    options: { active?: string; truncated?: boolean } = {},
+  ): SessionContextValue {
+    return {
+      ...signedInSession,
+      session: {
+        user: { userId: 'u1', email: 'alex@acme.co', activeWorkspaceId: options.active ?? workspaces[0]!.id },
+        workspaces,
+        ...(options.truncated ? { workspacesTruncated: true } : {}),
+      },
+    } as SessionContextValue;
+  }
+  const PERSONAL = '00000000-0000-4000-8000-0000000000aa';
+  const SECOND_ORG = '00000000-0000-4000-8000-0000000000bb';
+
+  it('names the active organization on the Organization row, for an owner and for a member, with no request', async () => {
+    routePlatform(platformOperation, { [BILLING]: ON_PLUS });
+    const owner = await renderWithProviders(
+      <SettingsScreen />,
+      sessionIn([{ id: TEST_WORKSPACE, name: 'Acme Operations', type: 'organization', role: 'owner' }]),
+    );
+    expect(await owner.findByText('Plus')).toBeTruthy();
+    expect(owner.getByTestId('value-of-settings-organization').props.children).toBe('Acme Operations');
+    expect(within(owner.getByTestId('settings-organization')).getAllByText(/./u).map((node) => node.props.children)).toEqual([
+      'Organization',
+      'Acme Operations',
+    ]);
+    // The name is the session's: the one request is still the plan.
+    expect(platformOperation.mock.calls.map(([path]: [string]) => path)).toEqual([BILLING]);
+    await owner.unmount();
+
+    platformOperation.mockClear();
+    // A member of it, and of another: still the one they are in, not a count of both.
+    const member = await renderWithProviders(
+      <SettingsScreen />,
+      sessionIn([
+        { id: TEST_WORKSPACE, name: 'Acme Operations', type: 'organization', role: 'member' },
+        { id: SECOND_ORG, name: 'Sikho Mode Solutions', type: 'organization', role: 'owner' },
+        { id: PERSONAL, name: 'Alex Kim', type: 'personal', role: 'owner' },
+      ]),
+    );
+    expect(await member.findByText('Managed by owners and admins')).toBeTruthy();
+    expect(member.getByTestId('value-of-settings-organization').props.children).toBe('Acme Operations');
+    expect(platformOperation).not.toHaveBeenCalled();
+  });
+
+  it('in a personal workspace, names the organization the session lists: one by name, several as a count, none as None, and nothing when the list is cut off without one', async () => {
+    const personal = { id: PERSONAL, name: 'Alex Kim', type: 'personal', role: 'owner' } as const;
+    const sikho = { id: TEST_WORKSPACE, name: 'Sikho Mode Solutions', type: 'organization', role: 'owner' } as const;
+    const acme = { id: SECOND_ORG, name: 'Acme Operations', type: 'organization', role: 'member' } as const;
+    const PERSONAL_BILLING = `/v1/workspaces/${PERSONAL}/billing`;
+    const cases = [
+      { workspaces: [personal, sikho], truncated: false, value: 'Sikho Mode Solutions' },
+      { workspaces: [personal, sikho, acme], truncated: false, value: '2 organizations' },
+      { workspaces: [personal], truncated: false, value: 'None' },
+      { workspaces: [personal], truncated: true, value: null },
+    ];
+    for (const { workspaces, truncated, value } of cases) {
+      resetSnapshot();
+      platformOperation.mockClear();
+      routePlatform(platformOperation, { [PERSONAL_BILLING]: { ...ON_PLUS, workspaceId: PERSONAL } });
+      const view = await renderWithProviders(<SettingsScreen />, sessionIn([...workspaces], { active: PERSONAL, truncated }));
+      expect(await view.findByText('Plus')).toBeTruthy();
+      if (value === null) {
+        expect(view.queryByTestId('value-of-settings-organization')).toBeNull();
+        expect(view.queryByText('None')).toBeNull();
+      } else {
+        expect(view.getByTestId('value-of-settings-organization').props.children).toBe(value);
+      }
+      // Whatever it says, it asked for nothing but the plan.
+      expect(platformOperation.mock.calls.map(([path]: [string]) => path)).toEqual([PERSONAL_BILLING]);
+      await view.unmount();
+    }
   });
 
   it('shows no plan line and no error screen when the billing read is refused or the platform is unreachable', async () => {
@@ -955,10 +1057,24 @@ describe('Settings — one grouped page (build 11, D1)', () => {
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/billing');
   });
 
-  it('signs out to the cover (24.11.6)', async () => {
-    const { getByText } = await renderWithProviders(<SettingsScreen />, signedInSession);
+  it.each([
+    ['dark', '#f87171'],
+    ['light', '#dc2626'],
+  ] as const)("says Sign out in the theme's red — %s, %s (the owner's build 12 item 5)", async (mode, red) => {
+    await renderWithProviders(<SettingsScreen />, signedInSession, mode);
+    const label = await screen.findByText('Sign out');
+    expect((StyleSheet.flatten(label.props.style) as { color?: string }).color).toBe(red);
+    expect(screen.getByTestId(/^phosphor-react-native-sign-out-/u).props.color).toBe(red);
+  });
+
+  it("signs out, and the root guard — not Settings — shows the cover (24.11.6; the owner's build 12 item 6)", async () => {
+    const signOut = jest.fn(async () => ({ revoked: true }));
+    const { getByText } = await renderWithProviders(<SettingsScreen />, { ...signedInSession, signOut });
     await fireEvent.press(getByText('Sign out'));
-    expect(mockRouter.replace).toHaveBeenCalledWith('/');
+    await waitFor(() => expect(signOut).toHaveBeenCalledTimes(1));
+    // Inside the tabs "/" is Home; the move to the cover is the root guard's
+    // (`__tests__/real-router/sign-out.test.tsx`).
+    expect(mockRouter.replace).not.toHaveBeenCalled();
   });
 });
 
@@ -1003,6 +1119,20 @@ describe('Cancelling a run (24.4.2)', () => {
     await renderWithProviders(<RunDetailScreen />, signedInSession);
     await confirmCancel();
     expect(await screen.findByText('This run has already stopped, so there is nothing to cancel.')).toBeTruthy();
+  });
+
+  it("draws Cancel run in red and View flow as it was (the owner's build 12 item 5: \"stop\")", async () => {
+    routeRunningRun(() => Promise.resolve({ run: {} }));
+    setMockParams({ runId: 'run-1' });
+    await renderWithProviders(<RunDetailScreen />, signedInSession);
+    const color = (node: { props: { style?: unknown } }) => (StyleSheet.flatten(node.props.style) as { color?: string }).color;
+    expect(color(await screen.findByText('Cancel run'))).toBe(nocturneDark.danger);
+    expect(screen.getByTestId('phosphor-react-native-stop-circle-regular').props.color).toBe(nocturneDark.danger);
+    expect(color(screen.getByText('View flow'))).toBe(nocturneDark.text);
+    await fireEvent.press(screen.getByText('Cancel run'));
+    expect(color(within(await screen.findByTestId('cancel-run-dialog')).getByText('Cancel run'))).toBe(nocturneDark.danger);
+    // Keep it running is the neutral way out.
+    expect(color(screen.getByText('Keep it running'))).not.toBe(nocturneDark.danger);
   });
 
   it('offers no Cancel on a run that has ended', async () => {
@@ -1490,10 +1620,19 @@ describe('Setup wizard (design sSetup)', () => {
 describe('Flow history — the tiles open Activity (24.11.9)', () => {
   it('a Home stat tile opens Activity for that outcome', async () => {
     const { getByTestId } = await renderWithProviders(<HomeScreen />, signedInSession);
+    // And for today, the window its number counts (the owner's build 12 item 1).
     await fireEvent.press(getByTestId('stat-Failed'));
-    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/activity', params: { filter: 'Failed' } });
+    expect(mockRouter.push).toHaveBeenCalledWith({
+      pathname: '/(tabs)/activity',
+      params: { filter: 'Failed', period: 'today' },
+    });
     await fireEvent.press(getByTestId('stat-Success'));
-    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/activity', params: { filter: 'Success' } });
+    expect(mockRouter.push).toHaveBeenCalledWith({
+      pathname: '/(tabs)/activity',
+      params: { filter: 'Success', period: 'today' },
+    });
+    await fireEvent.press(getByTestId('stat-All'));
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/activity', params: { filter: 'All', period: 'today' } });
   });
 
   it("a flow page's three tiles open Activity for this flow and that outcome", async () => {
@@ -1531,6 +1670,231 @@ describe('Flow history — the tiles open Activity (24.11.9)', () => {
   });
 });
 
+/* --------------------------------- Home's tiles: today's, said and opened (build 12 item 1) */
+
+/**
+ * The owner's build 12 item 1: "Why do i see 0 numbers for the runs if we have
+ * activities? Also i thought i said they should be buttons to see the actual
+ * numbers". Home counts today (run-stats?since=<local midnight>, §12.1 #73),
+ * which only one tile of three said; the tiles had opened Activity since 24.11.9
+ * but looked like static cards; and a tile opened every run, not the ones it
+ * counted. Now: TODAY over the row, a caret and a pressed tint on every stat
+ * tile, and a Home tile opens Activity with its outcome AND today.
+ */
+describe("Home's tiles count today, say so, and open today's runs (the owner's build 12 item 1)", () => {
+  /** Runs today (2 succeeded, 1 failed, 1 held), yesterday and ten days ago, in the platform's order. */
+  function todayAndOlder() {
+    const now = new Date();
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const older = new Date(now);
+    older.setDate(now.getDate() - 10);
+    const base = runsPayload().runs[0]!;
+    const run = (id: string, status: string, at: Date) => ({
+      ...base,
+      id,
+      rootRunId: id,
+      status,
+      resultSummary: status === 'succeeded' ? `Summary ${id}` : undefined,
+      failureReason: status === 'failed' ? `Reason ${id}` : undefined,
+      createdAt: at.toISOString(),
+      updatedAt: at.toISOString(),
+    });
+    return [
+      run('today-ok-1', 'succeeded', now),
+      run('today-ok-2', 'succeeded', now),
+      run('today-failed', 'failed', now),
+      run('today-held', 'held', now),
+      run('yesterday-ok', 'succeeded', yesterday),
+      run('yesterday-failed', 'failed', yesterday),
+      run('older-ok', 'succeeded', older),
+      run('older-failed', 'failed', older),
+    ];
+  }
+
+  /**
+   * The platform's run-stats, counted as it counts (created_at >= since, every
+   * status in the total; snoopy-backend apps/runs/src/postgres-stats.ts) from the
+   * same runs the list answers with — so a tile's number and the list it opens
+   * come from one set of runs, as on the device.
+   */
+  function routeRuns(runs: ReturnType<typeof todayAndOlder>) {
+    routePlatform(platformOperation, { '/runs': { runs } });
+    const routed = platformOperation.getMockImplementation();
+    platformOperation.mockImplementation((path: string, ...rest: unknown[]) => {
+      if (!path.includes('/run-stats')) return routed?.(path, ...rest);
+      const since = new URLSearchParams(path.split('?')[1] ?? '').get('since');
+      const counted = since ? runs.filter((run) => new Date(run.createdAt) >= new Date(since)) : runs;
+      const of = (status: string) => counted.filter((run) => run.status === status).length;
+      const counts = { total: counted.length, pending: 0, running: 0, held: of('held'), succeeded: of('succeeded'), failed: of('failed'), cancelled: 0 };
+      return Promise.resolve({ workspace: counts, subscriptions: [{ subscriptionId: 'invoice', ...counts }] });
+    });
+  }
+
+  it('says its window once, over the row: TODAY, then Runs, Successes, Failures — the greeting as it was', async () => {
+    await renderWithProviders(<HomeScreen />, signedInSession);
+    expect(await screen.findByText('Your agents ran 128 tasks today.')).toBeTruthy();
+    const row = screen.getByTestId('home-stats');
+    // TODAY is the label of the group the row sits in, drawn first, as RECENT RUNS heads its card.
+    expect(within(row.parent!).getAllByText(/./u).map((node) => node.props.children)).toEqual([
+      'TODAY',
+      '128',
+      'Runs',
+      '124',
+      'Successes',
+      '4',
+      'Failures',
+    ]);
+    expect(screen.queryByText('Runs today')).toBeNull();
+    // Still today's: the read is run-stats?since=<local midnight> (§12.1 #73).
+    expect(platformOperation).toHaveBeenCalledWith(
+      `/v1/workspaces/${TEST_WORKSPACE}/run-stats?since=${encodeURIComponent(new Date(new Date().setHours(0, 0, 0, 0)).toISOString())}`,
+      expect.any(Function),
+    );
+  });
+
+  it('every stat tile looks like the button it is, on Home and on a flow page: a caret on each, and the tint while pressed', async () => {
+    const home = await renderWithProviders(<HomeScreen />, signedInSession);
+    await home.findByText('Welcome back, Alex');
+    for (const id of ['stat-All', 'stat-Success', 'stat-Failed']) {
+      expect(home.getByTestId(`${id}-caret`)).toBeTruthy();
+      expect(home.getByTestId(id).props.accessibilityRole).toBe('button');
+    }
+    // Pressed, the review banner's accent tint is drawn over the tile; let go, it goes.
+    const tile = home.getByTestId('stat-Success');
+    expect(home.queryByTestId('stat-Success-pressed')).toBeNull();
+    await fireEvent(tile, 'responderGrant', touch('onResponderGrant'));
+    expect(StyleSheet.flatten(home.getByTestId('stat-Success-pressed').props.style).backgroundColor).toBe(
+      `rgba(145,132,217,0.15)`,
+    );
+    await fireEvent(tile, 'responderRelease', touch('onResponderRelease'));
+    await waitFor(() => expect(home.queryByTestId('stat-Success-pressed')).toBeNull());
+    await home.unmount();
+
+    setMockParams({ flow: 'invoice' });
+    routePlatform(platformOperation, { '/automations': flowCatalogPayload() });
+    const flowPage = await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
+    await flowPage.findByText('Invoice triage');
+    for (const id of ['flow-stat-All', 'flow-stat-Success', 'flow-stat-Failed']) {
+      expect(flowPage.getByTestId(`${id}-caret`)).toBeTruthy();
+      expect(flowPage.getByTestId(id).props.accessibilityRole).toBe('button');
+    }
+    await fireEvent(flowPage.getByTestId('flow-stat-All'), 'responderGrant', touch('onResponderGrant'));
+    expect(flowPage.getByTestId('flow-stat-All-pressed')).toBeTruthy();
+  });
+
+  it("each Home tile's number is the rows it opens: today's runs by outcome, the older ones left out (All teams)", async () => {
+    const runs = todayAndOlder();
+    routeRuns(runs);
+    const home = await renderWithProviders(<HomeScreen />, signedInSession);
+    await home.findByText('Welcome back, Alex');
+    const tiles = [
+      ['stat-All', '4'],
+      ['stat-Success', '2'],
+      ['stat-Failed', '1'],
+    ] as const;
+    const opened: { id: string; number: string; params: Record<string, string> }[] = [];
+    for (const [id, number] of tiles) {
+      expect(within(home.getByTestId(id)).getAllByText(/./u)[0]!.props.children).toBe(number);
+      mockRouter.push.mockClear();
+      await fireEvent.press(home.getByTestId(id));
+      opened.push({ id, number, params: mockRouter.push.mock.calls[0]![0].params });
+    }
+    await home.unmount();
+
+    for (const { id, number, params } of opened) {
+      setMockParams(params);
+      const activity = await renderWithProviders(<ActivityScreen />, signedInSession);
+      expect(await activity.findByText('Today ✕')).toBeTruthy();
+      const rows = activity.queryAllByTestId(/^activity-row-/u).map((row) => row.props.testID);
+      // The number on the tile is the rows it opened — today's, nothing older.
+      expect([id, String(rows.length)]).toEqual([id, number]);
+      expect(rows.every((testID: string) => testID.startsWith('activity-row-today-'))).toBe(true);
+      expect(activity.queryByText('YESTERDAY')).toBeNull();
+      expect(activity.queryByText('EARLIER')).toBeNull();
+      await activity.unmount();
+    }
+  });
+
+  it("Activity arriving with today and Failed lists only today's failed runs; Today ✕ sits on its own row above the outcomes, and clears back to every run", async () => {
+    routeRuns(todayAndOlder());
+    setMockParams({ filter: 'Failed', period: 'today' });
+    await renderWithProviders(<ActivityScreen />, signedInSession);
+    expect(await screen.findByText('Today ✕')).toBeTruthy();
+    expect(screen.queryAllByTestId(/^activity-row-/u).map((row) => row.props.testID)).toEqual(['activity-row-today-failed']);
+    // Its own row, above the four outcome chips — not a fifth chip beside them.
+    expect(within(screen.getByTestId('activity-selection')).getAllByText(/./u).map((node) => node.props.children)).toEqual([
+      'Today ✕',
+    ]);
+    expect(within(screen.getByTestId('activity-outcomes')).getAllByText(/./u).map((node) => node.props.children)).toEqual([
+      'All',
+      'Success',
+      'Needs review',
+      'Failed',
+    ]);
+    const order = screen.getAllByText(/^(Today ✕|All|Success|Needs review|Failed)$/u).map((node) => node.props.children);
+    expect(order[0]).toBe('Today ✕');
+
+    await fireEvent.press(screen.getByText('Today ✕'));
+    expect(screen.queryByText('Today ✕')).toBeNull();
+    expect(screen.queryByTestId('activity-selection')).toBeNull();
+    // Every failed run again, under its day; the outcome stays as chosen.
+    expect(screen.getByText('YESTERDAY')).toBeTruthy();
+    expect(screen.getByText('EARLIER')).toBeTruthy();
+    expect(screen.queryAllByTestId(/^activity-row-/u).map((row) => row.props.testID)).toEqual([
+      'activity-row-today-failed',
+      'activity-row-yesterday-failed',
+      'activity-row-older-failed',
+    ]);
+  });
+
+  it('with no run today but older ones, each tile\'s list says so: No runs today. / No successful runs today. / No failed runs today.', async () => {
+    routeRuns(todayAndOlder().filter((run) => !run.id.startsWith('today-')));
+    for (const [filter, line] of [
+      ['All', 'No runs today.'],
+      ['Success', 'No successful runs today.'],
+      ['Failed', 'No failed runs today.'],
+    ] as const) {
+      setMockParams({ filter, period: 'today' });
+      const activity = await renderWithProviders(<ActivityScreen />, signedInSession);
+      expect(await activity.findByText(line)).toBeTruthy();
+      expect(activity.queryAllByTestId(/^activity-row-/u)).toHaveLength(0);
+      // Not the first-run empty: the workspace has runs, just none today.
+      expect(activity.queryByText('No activity yet')).toBeNull();
+      await activity.unmount();
+    }
+  });
+
+  it("a flow page's chip sits on the same row, above the outcomes, and its tiles bring no day: they count all time", async () => {
+    setMockParams({ flow: 'invoice', flowName: 'Invoice triage', filter: 'Failed' });
+    routePlatform(platformOperation, { '/automations': flowCatalogPayload() });
+    await renderWithProviders(<ActivityScreen />, signedInSession);
+    expect(await screen.findByText('Invoice triage ✕')).toBeTruthy();
+    expect(within(screen.getByTestId('activity-selection')).getAllByText(/./u).map((node) => node.props.children)).toEqual([
+      'Invoice triage ✕',
+    ]);
+    expect(within(screen.getByTestId('activity-outcomes')).queryByText('Invoice triage ✕')).toBeNull();
+    expect(screen.queryByText('Today ✕')).toBeNull();
+    // Yesterday's failed run is listed: no day was chosen.
+    expect(screen.getByText('YESTERDAY')).toBeTruthy();
+  });
+
+  it('opening Activity from the tab bar after a tile visit leaves Today as it was', async () => {
+    routeRuns(todayAndOlder());
+    setMockParams({ filter: 'Success', period: 'today' });
+    const view = await renderWithProviders(<ActivityScreen />, signedInSession);
+    expect(await view.findByText('Today ✕')).toBeTruthy();
+    expect(view.queryAllByTestId(/^activity-row-/u)).toHaveLength(2);
+    // The tab bar arrives with nothing, and changes nothing: the screen draws again
+    // with no params (an outcome chosen here), and today is still the day chosen.
+    setMockParams({});
+    await fireEvent.press(view.getByText('All'));
+    expect(view.getByText('Today ✕')).toBeTruthy();
+    expect(view.queryAllByTestId(/^activity-row-/u)).toHaveLength(4);
+    expect(view.queryByText('YESTERDAY')).toBeNull();
+  });
+});
+
 /* ------------------------------------------------ archived flows (24.11.8) */
 
 function withRemovedFlow(invoiceToo = false) {
@@ -1561,12 +1925,12 @@ describe('Archived flows (24.11.8; "Archived" since 24.12)', () => {
     expect(queryByText(/^Archived flows/u)).toBeNull();
   });
 
-  it('the Archived page lists them, read-only, and is the empty standard when there are none', async () => {
+  it("the Archived page lists them, read-only, and is the empty standard when there are none — each saying unarchive (the owner's build 12 item 4)", async () => {
     withRemovedFlow();
     const { findByText, getByText } = await renderWithProviders(<ArchivedFlowsScreen />, signedInSession);
     expect(await findByText('Old intake')).toBeTruthy();
     expect(getByText('Archived flows')).toBeTruthy();
-    expect(getByText('An archived flow keeps its history here. Add it again any time.')).toBeTruthy();
+    expect(getByText('An archived flow keeps its history here. Unarchive it any time.')).toBeTruthy();
     expect(getByText('Archived Sep 30, 2026')).toBeTruthy();
     await fireEvent.press(getByText('Old intake'));
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'gone' } });
@@ -1576,7 +1940,7 @@ describe('Archived flows (24.11.8; "Archived" since 24.12)', () => {
     const empty = await renderWithProviders(<ArchivedFlowsScreen />, signedInSession);
     expect(await empty.findByTestId('screen-empty')).toBeTruthy();
     expect(empty.getByText('No archived flows')).toBeTruthy();
-    expect(empty.getByText('A flow you archive keeps its history here, and you can add it again.')).toBeTruthy();
+    expect(empty.getByText('A flow you archive keeps its history here, and you can unarchive it.')).toBeTruthy();
     await fireEvent.press(empty.getByLabelText('Back'));
     expect(mockRouter.back).toHaveBeenCalled();
   });
@@ -1596,28 +1960,29 @@ describe('Archived flows (24.11.8; "Archived" since 24.12)', () => {
     expect(mockRouter.back).toHaveBeenCalled();
   });
 
-  it("an archived flow's page opens instead of \"Couldn't load\": no actions, its history, and Add it again where no live twin exists", async () => {
+  it("an archived flow's page opens instead of \"Couldn't load\": no actions, its history, and Unarchive where no live twin exists — Add it again renamed, still Setup for its flow (the owner's build 12 item 4)", async () => {
     setMockParams({ flow: 'gone' });
-    // The live 'invoice' row is archived too: nothing live holds this template in this scope.
+    // The live 'invoice' row is archived too: nothing live holds this template in the workspace.
     withRemovedFlow(true);
     const { findByText, queryByText, getByText } = await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
     expect(await findByText('Old intake')).toBeTruthy();
     expect(getByText('Archived')).toBeTruthy();
     expect(
-      getByText('This flow was archived on Sep 30, 2026. Its runs stay in Activity, and you can add it again — its setup starts fresh.'),
+      getByText('This flow was archived on Sep 30, 2026. Its runs stay in Activity, and you can unarchive it — its setup starts fresh.'),
     ).toBeTruthy();
     expect(queryByText("Couldn't load this flow")).toBeNull();
     expect(queryByText('Archive flow')).toBeNull();
     expect(queryByText('Pause')).toBeNull();
     expect(queryByText('Open the live flow')).toBeNull();
-    await fireEvent.press(getByText('Add it again'));
+    expect(queryByText('Add it again')).toBeNull();
+    await fireEvent.press(getByText('Unarchive'));
     expect(mockRouter.push).toHaveBeenCalledWith({
       pathname: '/(tabs)/flows/setup',
       params: { template: 'tplflow.invoice' },
     });
   });
 
-  it("offers no Add it again once the flow is live again in the same scope: it says so and opens the live flow (build 11, D3; the owner's build 10 items 5, 6 and 11)", async () => {
+  it("offers no Unarchive once the flow is live again in the same scope: it says so and opens the live flow (build 11, D3; the owner's build 10 items 5, 6 and 11; Unarchive since the owner's build 12 item 4)", async () => {
     setMockParams({ flow: 'gone' });
     // `gone` shares its template and its scope (the whole workspace) with the LIVE 'invoice' row.
     withRemovedFlow();
@@ -1627,17 +1992,17 @@ describe('Archived flows (24.11.8; "Archived" since 24.12)', () => {
     expect(
       getByText('This flow was archived on Sep 30, 2026. Its runs stay in Activity. It has been added again, and the new copy is in Flows.'),
     ).toBeTruthy();
-    expect(queryByText('Add it again')).toBeNull();
-    expect(queryByText(/add it again — its setup starts fresh/u)).toBeNull();
+    expect(queryByText('Unarchive')).toBeNull();
+    expect(queryByText(/unarchive it — its setup starts fresh/u)).toBeNull();
     await fireEvent.press(getByText('Open the live flow'));
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'invoice' } });
     expect(mockRouter.push).not.toHaveBeenCalledWith(expect.objectContaining({ pathname: '/(tabs)/flows/setup' }));
   });
 
-  it("still offers Add it again when the live copy is another team's: the whole workspace matches the whole workspace only", async () => {
+  it("offers no Unarchive when the live copy is another team's: that copy is the twin, and it opens (the owner's build 12 item 9: one flow per workspace; until build 13 the whole workspace matched the whole workspace only)", async () => {
     setMockParams({ flow: 'gone' });
     const base = subscriptionsPayload().subscriptions;
-    // The template is live again, but in a team: not this archived row's scope.
+    // The template is live again, in a team: not this archived row's scope, and still its twin.
     const rows = base.map((row) => (row.id === 'invoice' ? { ...row, projectId: 'project-1' } : row));
     const gone = { ...base[0]!, id: 'gone', name: 'Old intake', status: 'archived', updatedAt: '2026-09-30T12:00:00Z' };
     routePlatform(platformOperation, {
@@ -1646,8 +2011,12 @@ describe('Archived flows (24.11.8; "Archived" since 24.12)', () => {
       '/subscriptions': { subscriptions: [...rows, gone], subscription: rows[0] },
     });
     const { findByText, queryByText } = await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
-    expect(await findByText('Add it again')).toBeTruthy();
-    expect(queryByText('Open the live flow')).toBeNull();
+    expect(
+      await findByText('This flow was archived on Sep 30, 2026. Its runs stay in Activity. It has been added again, and the new copy is in Flows.'),
+    ).toBeTruthy();
+    expect(queryByText('Unarchive')).toBeNull();
+    await fireEvent.press(await findByText('Open the live flow'));
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'invoice' } });
   });
 
   it('the Settings copy opens the live flow in the Settings stack, so Back returns to Settings', async () => {

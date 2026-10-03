@@ -26,13 +26,14 @@ import { ActionFailure } from '@/components/screen-state';
 import { FaceIdRow } from '@/components/settings/face-id-row';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { WorkspaceSwitcher } from '@/components/settings/workspace-switcher';
-import { em, fonts, layout, status, typeScale } from '@/constants/theme';
+import { em, fonts, layout, typeScale } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useSession } from '@/hooks/use-session';
 import { useTheme, type ThemeMode } from '@/hooks/use-theme';
 import { SIGN_OUT_FAILED, SIGN_OUT_RETRY } from '@/lib/content/screen-states';
 import { readBilling } from '@/lib/platform/billing';
 import { enrolledPlanName } from '@/lib/view/billing';
+import { organizationValue } from '@/lib/view/organization';
 import { administers } from '@/lib/view/roles';
 
 /** The theme's three options, in the owner's order (build 10, item 1: "auto, dark, or light"). */
@@ -42,7 +43,7 @@ const APPEARANCE: { label: string; mode: ThemeMode }[] = [
   { label: 'Light', mode: 'light' },
 ];
 
-/** Under Billing for a member, whose workspace's billing is never read (the Edge refuses it). */
+/** Under Billing's title for a member, whose workspace's billing is never read (the Edge refuses it). */
 const BILLING_MANAGED_BY = 'Managed by owners and admins';
 
 /**
@@ -53,14 +54,17 @@ const BILLING_MANAGED_BY = 'Managed by owners and admins';
  * Notifications, Help — are rows that open their pages; the small things sit
  * here, under their labels, as the build 9 screen had them: the Face ID row,
  * the six workspace rows with the switcher, and the theme control. Each row
- * carries its line: the account's email, the plan's name.
+ * carries its detail: the account's email under it; the plan's name and the
+ * organization's on the right, before the arrow (the owner's build 12 items 2
+ * and 3), as the workspace's type and the role are.
  *
  * It reads only the plan, quietly: an owner's or admin's billing through the
  * shared snapshot (one request per workspace per window), said once it is
  * known — nothing while loading, nothing on a failure or offline, since a
  * wrong plan name is worse than none; a member's is never read. Everything
- * else here is the session's, and the switcher reads the workspace collection
- * only when it opens. The rows are roomier than every other list's (`size`).
+ * else here is the session's — the organization's name included — and the
+ * switcher reads the workspace collection only when it opens. The rows are
+ * roomier than every other list's (`size`).
  */
 export default function SettingsScreen() {
   const { palette, mode, setMode } = useTheme();
@@ -89,17 +93,19 @@ export default function SettingsScreen() {
     currentSession !== null &&
     (currentSession.workspaces.length >= 2 || currentSession.workspacesTruncated === true);
 
-  // The plan line: read for an owner or admin only, and only ever shown as a
-  // name the platform answered. A member's read would be refused, so it is not made.
+  // The plan's name, Billing's value: read for an owner or admin only, and only
+  // ever shown as a name the platform answered. A member's read would be
+  // refused, so it is not made; their line under the title says who manages it.
   const billing = useWorkspaceResource(
     async (workspaceId) => (canAdminister ? readBilling(workspaceId) : null),
     [canAdminister],
   );
-  const planLine = !canAdminister
-    ? BILLING_MANAGED_BY
-    : billing.status === 'ready' && billing.data
-      ? enrolledPlanName(billing.data)
-      : undefined;
+  const planName =
+    canAdminister && billing.status === 'ready' && billing.data ? enrolledPlanName(billing.data) : undefined;
+  // The organization's name, from the session's own list: no request for it.
+  const organization = currentSession
+    ? organizationValue(currentSession.workspaces, activeWorkspace, currentSession.workspacesTruncated)
+    : undefined;
 
   /**
    * Sign out for real, and honour the one answer the contract added for us.
@@ -107,18 +113,16 @@ export default function SettingsScreen() {
    * ADR-0017 §4 makes `POST /v1/auth/logout` answer **502** rather than 204 when
    * revocation fails, precisely so a client can tell. The session is still live
    * upstream at that point, so `signOut()` deliberately leaves the enclave
-   * intact — and this screen must not navigate away claiming a sign-out that did
-   * not happen. It says so inline instead and offers the action again.
+   * intact — and this screen must not claim a sign-out that did not happen. It
+   * says so inline instead and offers the action again.
+   *
+   * Signed out, the root layout's guard takes the tabs away and shows the cover
+   * (24.11.6). Nothing navigates from here: inside the tabs "/" is Home, and
+   * build 12's move to it was dropped (the owner's build 12 item 6).
    */
   const handleSignOut = async () => {
     const { revoked } = await signOut();
-    if (!revoked) {
-      setSignOutFailed(true);
-      return;
-    }
-    setSignOutFailed(false);
-    // Signed out is the cover (24.11.6); Sign in is one tap from it.
-    router.replace('/');
+    setSignOutFailed(!revoked);
   };
 
   const caret = <CaretRight size={15} color={palette.neutral[500]} />;
@@ -166,7 +170,8 @@ export default function SettingsScreen() {
         <SettingsRow
           icon={CreditCard}
           title="Billing"
-          sub={planLine}
+          sub={canAdminister ? undefined : BILLING_MANAGED_BY}
+          value={planName}
           size="roomy"
           testID="settings-billing"
           onPress={() => router.push('/(tabs)/settings/billing')}
@@ -208,6 +213,7 @@ export default function SettingsScreen() {
           <SettingsRow
             icon={IdentificationBadge}
             title="Organization"
+            value={organization}
             divider
             size="roomy"
             testID="settings-organization"
@@ -227,7 +233,7 @@ export default function SettingsScreen() {
           <SettingsRow
             icon={Archive}
             title="Archived flows"
-            sub="Kept with their history; add any again"
+            sub="Kept with their history; unarchive any"
             divider
             size="roomy"
             testID="settings-archived-flows"
@@ -308,8 +314,8 @@ export default function SettingsScreen() {
       ) : null}
 
       <SurfaceCard onPress={handleSignOut} style={styles.signOutCard}>
-        <SignOut size={20} color={status.err} />
-        <Text style={[styles.signOutLabel, { color: status.err }]}>Sign out</Text>
+        <SignOut size={20} color={palette.danger} />
+        <Text style={[styles.signOutLabel, { color: palette.danger }]}>Sign out</Text>
       </SurfaceCard>
 
       <Text style={[styles.version, { color: palette.neutral[600] }]}>

@@ -17,19 +17,21 @@ import { useTheme } from '@/hooks/use-theme';
 import { CATALOG_EMPTY_BODY, CATALOG_EMPTY_TITLE, UNAVAILABLE_NOTE, errorTitleFor } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
 import { readProjects } from '@/lib/platform/projects';
-import { readSubscriptions, type Subscription } from '@/lib/platform/runs';
-import { toSolutions, withoutArchived } from '@/lib/view/catalog';
+import { readSubscriptions } from '@/lib/platform/runs';
+import { heldAs, scopeLabel, scopeLabels, toSolutions, withoutArchived } from '@/lib/view/catalog';
 
 /**
  * "New" — the catalog, inside Flows (BUILD-PLAN 24.9.3; the owner's feedback 4
  * and 5 of 2026-10-02: "name them flows… the new gives us a list of all flows
  * and which one to pick up or add then what project to assign it to").
  *
- * The scope control chose where a flow is added: the chosen project, or the
- * whole workspace. A flow already added there says so and opens itself; one
- * not yet added there offers Add, whatever other scopes already hold it — the
- * website's rule (18.6.2): a flow can be added once per scope. Setup is told
- * the project, so the person does not choose it twice.
+ * The scope control chooses the team a flow is added to: Setup is told it, so
+ * the person does not choose it twice. A workspace holds a flow once (the
+ * owner's build 12 item 9: "Teams cannot have the same flows"): one it holds,
+ * in any team or the whole workspace, reads "Added ✓" with where it is and
+ * opens itself, whatever the scope control shows — no Add for another team.
+ * Until build 13 a flow could be added once per scope, the platform's rule
+ * (18.6.2), which it keeps until its own guard lands; this one is the app's.
  */
 export default function AddFlowScreen() {
   const { palette } = useTheme();
@@ -48,6 +50,8 @@ export default function AddFlowScreen() {
       catalog: catalogResponse,
       subscriptions: withoutArchived(subscriptions.subscriptions),
       openProjects: projects.filter((project) => project.status !== 'archived'),
+      // Every team's name, an archived team's too: a flow held there says where.
+      labels: scopeLabels(projects),
     };
   });
 
@@ -56,15 +60,6 @@ export default function AddFlowScreen() {
   // '' is the whole workspace, as `Subscription.projectId` null is.
   const scopeKey = scopeProject ? scopeProject.id : '';
   const scopeName = scopeProject ? scopeProject.type : 'your workspace';
-  const projectName = (id: string | null) =>
-    id === null ? 'your workspace' : (ready?.openProjects.find((project) => project.id === id)?.type ?? 'a team');
-
-  const subscriptionsFor = (templateId: string): Subscription[] =>
-    (ready?.subscriptions ?? []).filter((subscription) => subscription.templateId === templateId);
-  const inThisScope = (templateId: string) =>
-    subscriptionsFor(templateId).find((subscription) => (subscription.projectId ?? '') === scopeKey);
-  const elsewhere = (templateId: string) =>
-    subscriptionsFor(templateId).filter((subscription) => (subscription.projectId ?? '') !== scopeKey);
 
   const solutions = ready ? toSolutions(ready.catalog, ready.subscriptions) : [];
   const chips = ready ? ready.catalog.categories : [];
@@ -73,7 +68,7 @@ export default function AddFlowScreen() {
   // Below every hook: these return early.
   if (catalog.status === 'loading') return <ScreenLoading topInset={insets.top} />;
   if (catalog.status === 'offline') {
-    return <ScreenOffline onRetry={catalog.reload} onBack={() => router.back()} topInset={insets.top} />;
+    return <ScreenOffline onRetry={() => catalog.reload()} onBack={() => router.back()} topInset={insets.top} />;
   }
   if (catalog.status === 'unconfigured') {
     return <ScreenUnavailable title={errorTitleFor('add')} onBack={() => router.back()} topInset={insets.top} />;
@@ -82,7 +77,7 @@ export default function AddFlowScreen() {
     return (
       <ScreenError
         title={errorTitleFor('add')}
-        onRetry={catalog.reload}
+        onRetry={() => catalog.reload()}
         body={busyBody(catalog)}
         onBack={() => router.back()}
         topInset={insets.top}
@@ -129,8 +124,10 @@ export default function AddFlowScreen() {
 
       <View style={styles.list}>
         {visible.map((sol) => {
-          const here = inThisScope(sol.templateId);
-          const others = elsewhere(sol.templateId);
+          // Where the workspace holds it, in any team (item 9). Two copies added
+          // before the rule are both named; the card opens the first.
+          const held = ready ? heldAs(sol.templateId, ready.subscriptions) : [];
+          const here = held[0];
           const openFlow = here
             ? () => router.push({ pathname: '/(tabs)/flows/detail', params: { flow: here.id } })
             : undefined;
@@ -149,9 +146,9 @@ export default function AddFlowScreen() {
                 {!sol.available ? (
                   <Text style={[styles.cardMeta, { color: status.warnText }]}>{UNAVAILABLE_NOTE}</Text>
                 ) : null}
-                {others.length > 0 ? (
-                  <Text testID={`added-elsewhere-${sol.templateId}`} style={[styles.cardMeta, { color: palette.neutral[500] }]}>
-                    Added in {others.map((subscription) => projectName(subscription.projectId)).join(', ')}
+                {ready && held.length > 0 ? (
+                  <Text testID={`added-where-${sol.templateId}`} style={[styles.cardMeta, { color: palette.neutral[500] }]}>
+                    {held.map((subscription) => scopeLabel(subscription.projectId, ready.labels)).join(', ')}
                   </Text>
                 ) : null}
               </View>

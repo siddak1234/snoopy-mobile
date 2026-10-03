@@ -14,9 +14,10 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 
 import AccountScreen from '@/app/(tabs)/settings/account';
-import { nocturneDark } from '@/constants/theme';
+import { nocturneDark, nocturneLight } from '@/constants/theme';
 import type { SessionContextValue } from '@/hooks/use-session';
 import { DELETE_ACCOUNT_BODY, DELETION_WORDS } from '@/lib/content/deletion';
+import { SIGN_OUT_FAILED } from '@/lib/content/screen-states';
 import { PlatformError } from '@/lib/platform/problem';
 import { fakePlatform } from '@/test/fake-platform';
 import { signedInSession } from '@/test/platform';
@@ -92,6 +93,17 @@ describe('Linked accounts (24.6.2, on 24.2.1)', () => {
     // Linked, but its provider reported no address; and not linked at all.
     expect(within(screen.getByTestId('identity-microsoft')).queryByText(/@/u)).toBeNull();
     expect(within(screen.getByTestId('identity-apple')).queryByText(/@/u)).toBeNull();
+  });
+
+  it("says what a linked account does, and to link one before its first sign-in, over the list; the credentials sentence stays (the owner's build 12 item 8)", async () => {
+    route();
+    await renderWithProviders(<AccountScreen />, session());
+    expect(
+      await screen.findByText(
+        'Any account linked here signs you in to this same account, in the app and on the website. Link an account before you first sign in with it. Provider credentials are handled by the Autom8x backend and never reach this app.',
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Link additional sign-in options to this account\./u)).toBeNull();
   });
 });
 
@@ -175,6 +187,29 @@ describe('Deleting the account (24.6.2, ADR-0028)', () => {
     expect(screen.getByText('Sign in again')).toBeTruthy();
     expect(screen.queryByText('Try again')).toBeNull();
   });
+
+  it("Sign in again signs this phone out through the session and navigates nowhere; a sign-out not revoked keeps the dialog and says so, and the button tries again (the owner's build 12 item 6)", async () => {
+    const fake = route();
+    fake.always('DELETE /v1/account', () => {
+      throw new PlatformError('Unauthenticated', 401);
+    });
+    const signOut = jest.fn(async () => ({ revoked: false }));
+    await renderWithProviders(<AccountScreen />, session(signOut));
+    await openDelete();
+    await fireEvent.press(await screen.findByText('Sign in again'));
+
+    await waitFor(() => expect(signOut).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText(SIGN_OUT_FAILED)).toBeTruthy();
+    expect(screen.getByText('Sign in again')).toBeTruthy();
+
+    signOut.mockResolvedValue({ revoked: true });
+    await fireEvent.press(screen.getByText('Sign in again'));
+    await waitFor(() => expect(signOut).toHaveBeenCalledTimes(2));
+    // Signed out, the root layout's guard shows the cover (the real-router
+    // project holds it): inside the tabs "/" is Home, and nothing navigates here.
+    expect(mockRouter.replace).not.toHaveBeenCalled();
+    expect(fake.to('DELETE /v1/account')).toHaveLength(1);
+  });
 });
 
 describe('Unlinking a sign-in account (backend 24.11.1)', () => {
@@ -215,6 +250,22 @@ describe('Unlinking a sign-in account (backend 24.11.1)', () => {
     expect(sent?.body).toEqual({ refreshToken: 'refresh-1' });
     await waitFor(() => expect(fake.to('GET /v1/auth/identities').length).toBe(reads + 1));
   });
+
+  it.each(['dark', 'light'] as const)(
+    "draws Delete Account, Unlink and Unlink's confirm in the theme's red (the owner's build 12 item 5; %s)",
+    async (mode) => {
+      const palette = mode === 'dark' ? nocturneDark : nocturneLight;
+      const color = (node: { props: { style?: unknown } }) => (StyleSheet.flatten(node.props.style) as { color?: string }).color;
+      routeLinked();
+      await renderWithProviders(<AccountScreen />, session(), mode);
+      expect(color(await screen.findByText('Delete Account'))).toBe(palette.danger);
+      expect(color(screen.getByText('Unlink'))).toBe(palette.danger);
+      // Link, the way on, is not red.
+      expect(color(within(screen.getByTestId('identity-google')).getByText('Primary'))).not.toBe(palette.danger);
+      await fireEvent.press(screen.getByTestId('unlink-apple'));
+      expect(color(within(await screen.findByTestId('unlink-dialog')).getByText('Unlink'))).toBe(palette.danger);
+    },
+  );
 
   /** Unlink Apple, refused as `refusal` — a PlatformError carrying the problem's TITLE, as the transport builds it. */
   async function unlinkRefused(refusal: PlatformError) {

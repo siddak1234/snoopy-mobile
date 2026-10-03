@@ -84,6 +84,33 @@ describe('status colors — from the design screen logic', () => {
   });
 });
 
+/** WCAG 2's contrast ratio between two #rrggbb colours. */
+function contrast(a: string, b: string): number {
+  const luminance = (hex: string) => {
+    const [r, g, b] = [1, 3, 5]
+      .map((at) => parseInt(hex.slice(at, at + 2), 16) / 255)
+      .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+  };
+  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (light! + 0.05) / (dark! + 0.05);
+}
+
+describe("danger — one red per theme, readable in each (the owner's build 12 item 5)", () => {
+  it("is the design's red in dark — status.err itself — and the website's light red in light", () => {
+    expect(nocturneDark.danger).toBe('#f87171');
+    expect(nocturneDark.danger).toBe(status.err);
+    expect(nocturneLight.danger).toBe('#dc2626');
+  });
+
+  it("reads at 4.5:1 or more on its own palette's surface, where the design's red on white does not", () => {
+    expect(contrast(nocturneDark.danger, nocturneDark.surface)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(nocturneLight.danger, nocturneLight.surface)).toBeGreaterThanOrEqual(4.5);
+    // Why light has its own: #f87171 on a white card is 2.77:1.
+    expect(contrast(status.err, nocturneLight.surface)).toBeLessThan(3);
+  });
+});
+
 describe('elevation — ring on dark, ink shadow on light', () => {
   it('dark sm is a hairline neutral-800 ring', () => {
     const e = elevation(nocturneDark);

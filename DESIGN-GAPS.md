@@ -1240,6 +1240,670 @@ icon colour was in build 10, so no break was run for the card's height.
 | Every card says its team inside a picked team too | the card's label gated on All teams again | `scope-control` "says the team on every card and every archived row inside a picked team too — D4 has no All-teams exception (the build 11 review)" |
 | Every archived row says its team inside a picked team too | the archived row's label gated on All teams again | `scope-control` "says the team on every card and every archived row inside a picked team too — D4 has no All-teams exception (the build 11 review)" |
 
+### The eighth signed-in session (build 12, 2026-10-03 15:39Z–16:05Z)
+
+Build 12 on the owner's iPhone (iOS 26.6.2): nine TestFlight feedback items in
+twenty-six minutes, read with their screenshots, then the owner's word the same day —
+"Continue and complete these items" — every decision its recommended option and the
+listed defaults. Verified against the code at `d77dd3a`; the platform and the website
+are unchanged by this pass. Build 13 takes them in two parts: this first one is items
+7, 2 and 3, 1 and 5 (the app's half), in that order; items 4, 6, 8 and 9 are the
+second:
+
+| # | Feedback | What it is | Disposition |
+| --- | --- | --- | --- |
+| 1 | "Why do i see 0 numbers for the runs if we have activities? Also i thought i said they should be buttons to see the actual numbers" | nothing was miscounted: Home counts today — `run-stats?since=<local midnight>` (backend §12.1 #73) — and the newest run on the screen was 18 days old, so 0 was right for today. But only the first tile of three said so ("Runs today" beside "Successes" and "Failures", the words a flow page uses for all time); the tiles had been buttons since 24.11.9 but were drawn as the design's static cards, with no caret and no pressed look, unlike the review banner beside them; and a tile opened Activity over every run, not the runs it counted. The earlier ask was the fifth session's row 11, half delivered | **fixed (build 13, option A)**: TODAY over the row, as RECENT RUNS heads its card, and the tiles read Runs, Successes, Failures; the read stays `run-stats?since=<local midnight>`. Every stat tile — Home's and a flow page's — draws a caret and, while pressed, the review banner's accent tint, around the frozen StatCard (`components/stat-tile-button.tsx`; StatCard's render and its snapshots unchanged). A Home tile opens Activity with its outcome AND today: "Today ✕" on a row of its own above the four outcome chips (the flow chip moved to that row too — a fifth chip beside the four ran off a phone's width), only today's runs while it is on, "No runs today." / "No successful runs today." / "No failed runs today." when there are none; the chip clears back to every run, and the tab bar changes nothing. Each Home tile's number is the rows it opens (All teams). Two edges stay, from the code: under a team, Home counts that team's live flows while Activity also keeps runs of flows it cannot place; and a day of more than 100 runs lists the newest 100 (the runs contract's page). **NOT OBSERVED** on a device |
+| 2 | "Rather than free billow billing can we move the plan type name closer to the arrow on the right side" | where build 11 (D1) drew it: the plan's name was Billing's `sub`, and SettingsRow draws `sub` only under the title — the row grew 20 pt when the plan arrived; the values on the right ("organization", "owner") were the index's own text in `right`, which nothing kept from squeezing the title | **fixed (build 13, option A)**: SettingsRow has an optional `value`, on the title's line at its right end, before the arrow, in the index's value style (Inter regular, the scale's small step, neutral-500). Title and value share one wrapping line, so a value that does not fit moves under the title, as an iOS value cell stacks — never cut, never squeezing the title — and a row without one draws as before. Billing's plan is its value for an owner or admin (the row stays 57 pt), nothing while loading, on a refusal or offline; a member keeps "Managed by owners and admins" under the title. Still one request, the plan. **NOT OBSERVED** on a device |
+| 3 | "Just like how owner is written in organization on the right hand side can we put the organization name. That way the user knows as well before clicking. " | the index never worked out an organization value, though the session it already reads holds every workspace's name and type; the row passed only the arrow | **fixed (build 13, option A)**: Organization's value, from the session alone — one pure rule, `organizationValue` (`lib/view/organization.ts`): in an organization, its name, for any role; in a personal workspace, the one organization's name, "{n} organizations" for several, "None" for none, and nothing when the session's list is cut off (`workspacesTruncated`) without one. No request: the index still reads only the plan. Shown inside an organization too, though the switcher row above names it. Under a cut-off list that does show organizations, the name or the count is of those the session lists (its first 50). **NOT OBSERVED** on a device |
+| 4 | "Rather than add it again what if we say unarchive" | the platform cannot bring an archived subscription back: archiving is one-way on purpose (BUILD-PLAN 18.5.3, §12.1 #92 — a status change out of `archived` is 409, "subscribe again instead"), so both clients can only add a new subscription — a new id, empty settings, the newest version — while the archived row stays under Archived | **fixed (build 13, part 2 — the owner's decision of 2026-10-03: a rename, client-only)**: the archived flow's "Add it again" is "Unarchive" and does what it did — Setup for that flow, in the team it had, a fresh setup — so it still adds a new subscription and the archived row stays under Archived; the platform is unchanged and its archive stays one-way. Every line that said "add it again" says "unarchive": the page with no twin, "This flow was archived on {day}. Its runs stay in Activity, and you can unarchive it — its setup starts fresh."; Settings' Archived flows, "Kept with their history; unarchive any"; the archive confirmation, "…and you can unarchive it later."; the Archived list's note, "An archived flow keeps its history here. Unarchive it any time.", and its empty line, "A flow you archive keeps its history here, and you can unarchive it." With a live twin, D3 as it was — "It has been added again, and the new copy is in Flows." and "Open the live flow", no Unarchive — the twin now in any team (item 9). The website's words are `snoopy`'s. **NOT OBSERVED** on a device |
+| 5 | "Could delete account be in red. Things like remove, sign out, stop, and such should be in red right" | PillButton had no red style (primary, secondary, plain, accent-ghost), so Delete Account was drawn `secondary` (`account.tsx:184`), as were Delete team / Leave team and Cancel run, while the buttons confirming them were red; red existed only where drawn by hand (Sign out, Archive flow) and in DialogButton's `danger`; and it was one value, #f87171, for both themes — 2.77:1 on a white card | **fixed (build 13, option A — the app's half)**: one rule — red marks an action that removes or ends something and cannot be undone with a tap. `palette.danger`, dark #f87171 (`status.err`, unchanged), light #dc2626 (the website's light `--error-text`, 4.83:1 on a card); PillButton's `danger` variant, the design's red pill (Screen.dc.html:450) — a 1-pt outline, label and icon in red, a tenth-strength tint pressed — on Delete Account, Delete team / Leave team and Cancel run; Unlink's text, Sign out, Archive flow and every DialogButton `danger` read `palette.danger` (dark as before). Withdraw's confirm is accent: asking again undoes it. Pause, Reject, Deny, Cancel request and Make a new secret are as they were. The four existing PillButton variants and the default render did not move; nocturne-visual gained `PillButton/danger` in both palettes, two snapshots added and the 64 byte-identical. In light, #dc2626 is 4.44:1 on the bare page background, where Cancel run, Delete/Leave team and Archive flow sit — a hair under 4.5:1, as the website's is. The website's half — the same list in `snoopy`, on its existing `danger` variant and `--error-text` — is that repository's. **NOT OBSERVED** on a device |
+| 6 | "Sign out was clicked and it hung on this screen untill i closed the app then it took me to get started. Sign out should sign out the user and take them to the get started page." | the sign-out worked and the move to the cover did not. The proxies' logs show build 12's four logouts (15:52:47Z–16:01:55Z) each answered `204` in 0.18–0.31 s, and the app sent nothing more until a session read with no bearer — a relaunch. `"/"` named two screens, the cover (`app/index.tsx`) and Home (`app/(tabs)/(home)/index.tsx`): a group adds nothing to an address, and expo-router reads one from where the person is and prefers a screen in the same group, so from inside the tabs `"/"` meant Home. Settings' `router.replace('/')` became a replace sent to the tab bar, which cannot take one — dropped without a word in a release build — and once the session read signed out, the tab layout's `<Redirect href="/" />` replaced the tabs with a copy of themselves, which redirected again, without end. The keychain was already empty, so the next launch opened on the cover: what the owner saw. The same loop met a session that ended mid-use, and Delete account's "Sign in again" sent the same dropped `"/"`. Since `bda1136` (24.11.6, build 8's code), unchanged through build 12; unseen because the tests used a mocked router (`test/mocks/expo-router.tsx`), which records an href and runs no navigator | **fixed (build 13, option A; decision 2 yes)**: the root stack guards the tabs — `<Stack.Protected guard={session.status === 'signed-in'}>`, expo-router 6.0.24's protected routes, in `app/_layout.tsx` — and in any other state removes them and lands on its anchor, the cover, by name. The tab layout draws nothing until signed in and redirects nowhere; Settings' Sign out only signs out (a 502 still stays and says `SIGN_OUT_FAILED`); Delete account's "Sign in again" signs this phone out through the session (one not revoked keeps the dialog and says `SIGN_OUT_FAILED`, and the button tries again). No `router.replace('/')` or `href="/"` is left under `app/(tabs)/`; the Face ID lock and Account deleted, in `(auth)`, still leave for `"/"`, which from there is the cover. A second jest project runs the real expo-router (below): Sign out, an ended session, the owner's loop twice, a 502, Sign in again, a deleted account, the lock's fallback and the guard failing closed — each fails on `d77dd3a` but the 502's and the deleted account's, paths that were right there and are kept. **NOT OBSERVED** on a device |
+| 7 | "I clicked use identity provider when face id failed and it kept bringing up face id. It should allow the user to log back in using their account right" | "Use identity provider" (`faceid.tsx:151`) only replaced to `/`, which for a person still signed in is the splash — and the splash, the Face ID choice still on, replaced itself with the lock 2400 ms later: Face ID again, in a loop. `bda1136` (24.11.6, build 8's batch) applied "every route that left for Sign in leaves for the cover" (the fifth session's row 1) to a screen where the person is still signed in; build 7 had sent it to Sign in. It shipped in builds 9–12, unseen: no test returned a failed Face ID or pressed the fallback, and no session recorded one | **fixed (build 13, option A)**: the fallback is Settings › Sign out's. With a signed-in session it awaits `signOut()` and replaces to the cover only on `revoked: true` — this phone's session revoked (the web's stays), its push registration let go, the tokens and the Face ID choice cleared, so the next sign-in asks the Face ID question again; on `revoked: false` the lock stays and says `SIGN_OUT_FAILED`, nothing cleared, and the button tries again; with no signed-in session to unlock (an outage, nothing stored) it goes to the cover without a sign-out, as before. **NOT OBSERVED** on the phone: Face ID on, relaunch, cancel Face ID, Use identity provider — the cover, Get started, Sign in, the Face ID question, Home |
+| 8 | "Lets say i link microsoft and apple then log out the app. If i log back in will it let me use apple? " | a question, not a defect, and the page did not answer it. Yes: a linked account signs in to this same account — one Supabase user, matched by the provider's own id for the person, not by email, so the same Access user, workspaces, teams and flows, in the app and on the website. The lead spoke of "sign-in options" and credentials; only the Unlink confirmation said a linked account signs in; nothing warned that a first sign-in with a provider not yet linked can start a separate account | **answered; fixed (build 13, option A — the app's half)**: the lead's first sentence is "Any account linked here signs you in to this same account, in the app and on the website. Link an account before you first sign in with it."; the credentials sentence stays. The website's half, the same sentence, is `snoopy`'s. **NOT OBSERVED**: the fact-finding asked for it to ship after the owner's Apple sign-in is seen (link Microsoft and Apple, sign out, sign in with Apple, the same account) — not yet run, and Apple has never completed a sign-in in production |
+| 9 | "Why do i have two of the same automations across teams. Teams cannot have the same flows. One flow per account type. Personal or org not multiple of the same in account type. This is a bug" | build 11 (D4) adds every flow to a team, and the platform's uniqueness — the one `addedAgainAs` reads — is one non-archived subscription per workspace, template and team, so one workspace can hold the same flow once in each of its teams (the seventh session's rows 5, 6, 11 and 7) | **fixed (build 13, part 2 — client-only; the platform's own guard is a later follow-up)**: a workspace holds a flow once — Personal is one workspace, each organization one — and a flow is held while any subscription of its template that is not archived exists there, in any team or the whole workspace (`heldAs`, `lib/view/catalog.ts`). Add: a held flow reads "Added ✓" with where it is, "Team: {kind}" or "Whole workspace", and the card opens it, whatever the scope control shows — no Add and no "Added in …". Setup: for a held flow, "Added to" and its team, no team choice, and Activate configures that subscription — nothing is created; a flow not held keeps D4's team chips. D3's live twin is the same template in any team, so an archived flow whose template the workspace holds in another team shows the twin's sentence and "Open the live flow", no Unarchive. Existing duplicates stay, listed — production's one pair is the owner's two Invoice checks in Personal — and Add names both places and opens the first the platform lists (its newest). Until the platform's guard lands it still accepts one copy per team (18.6.2), so a second copy can still come from the API, from build 12, from the website (its Add offers each team the flow is not in, F21), or from a plain member who cannot see the team holding it: the list they read holds only the teams they can see (`snoopy-backend` `apps/catalog/src/postgres-subscriptions.ts:601-609` @765ef5c). **NOT OBSERVED** on a device |
+
+Decided flips of pinned behaviour, each named in its test: `run-stats` "draws total,
+succeeded and failed — the three §12.1 #73b names" holds "Runs" where it held "Runs
+today"; `tab-screens` "a Home stat tile opens Activity for that outcome" holds the push
+with `period: 'today'`; and the Settings test that held the plan as a line under
+Billing is `tab-screens` "reads only the plan, quietly: one billing read for an owner,
+shown as Billing's value on its right; the email under Account" — the build 11 guard
+"The index reads only the plan" names it by its old title. Not in this part, and why:
+items 4, 6, 8 and 9 (part 2); the website's half of item 5 (`snoopy`); and the
+platform's records the fact-finding names — a BUILD-PLAN item and a §12.1 row for item
+7, BUILD-PLAN lines for items 1 and 5 — which are `snoopy-backend`'s, read-only from a
+mobile session.
+
+Part 2's items 4 and 9, on the owner's decisions of 2026-10-03 — no platform change in
+this build — flipped these pinned behaviours, each named in its test: `tab-screens`
+"names where a flow is held — Added ✓ with its team, the card opens it — and offers no
+Add for another team (…)", until now "says where a flow is already added, and offers Add
+for the scope it is not in yet (18.6.2)"; `tab-screens` "offers no Unarchive when the
+live copy is another team's: that copy is the twin, and it opens (…)", until now "still
+offers Add it again when the live copy is another team's: the whole workspace matches the
+whole workspace only"; and `flows-view` "is none for another template or an archived row
+— another team's copy IS the twin (…)", until now "is none for another template, another
+team's copy, or an archived row — null matches null only", the test the build 11 guard "A
+live twin has the same template AND the same scope" names: item 9 reverses that guard.
+Five tests that held the words "add it again" hold "unarchive", each title naming item 4;
+earlier guard rows name them by their old titles (24.9's "Remove flow archives", build
+10's two "Archive wording" rows and "Archived flows with none is the empty standard",
+build 11's "No Add it again with a live twin"). Not in this part, and why: a real
+unarchive that brings the same row back, paused, with its settings and runs (the
+fact-finding's option b), and the platform's one-per-workspace guard with a refusal the
+app would put in words — the platform's, later; the website's half of both items
+(`snoopy` at 24f737d: its Archived note and archive confirmation say "add it again", and
+its Add offers each team a flow is not in); and `CLAUDE.md`'s `addedAgainAs` line,
+which still says "the same template in the same scope" and "no "Add it again"" — not
+edited by this session.
+
+### Guards proved to bite, build 13
+
+Forty-six breaks, each run against its own suite with the test's name as the filter —
+the named test confirmed failed from jest's own record — and the file restored byte for
+byte, its SHA-256 checked before and after, by one script; the working tree's hashes
+matched after its last restore. The first three rows are item 7's tests run against the
+lock as it is at `d77dd3a`: each fails there. The fourth Face ID test, "with no
+signed-in session to unlock, the fallback goes to the cover without signing out", passes
+there, as it should — it pins the outage path the fix keeps, the cover with no sign-out —
+and bites instead on the break that signs out without a session (its row below). One
+guard did not bite at first: with the name kept from a member, the member's case still
+read "Acme Operations", because its session listed no other organization and the
+Personal rule found the same one; the case now lists a second organization, and that
+break and the no-request one were run again against it, each failing its test. The look
+of a tile — the caret's place, the tint's strength — the row heights, and the lock's
+message centred inside the screen's side margin (for `SIGN_OUT_FAILED`, a long sentence)
+are styles no test reads, so no break was run for them.
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| The fallback signs out, and only then leaves | `faceid.tsx` as it is at `d77dd3a` (builds 11 and 12) | `faceid-screen` "a failed Face ID, then Use identity provider, signs this phone out and only then leaves for the cover" |
+| A sign-out not revoked keeps the lock | `faceid.tsx` as it is at `d77dd3a` (builds 11 and 12) | `faceid-screen` "a sign-out that could not be revoked keeps the lock and says so; the button tries again" |
+| Face ID not available signs out too | `faceid.tsx` as it is at `d77dd3a` (builds 11 and 12) | `faceid-screen` "when Face ID is not available, the fallback signs out too" |
+| The fallback signs this phone out | the sign-out skipped (taken as revoked) | `faceid-screen` "a failed Face ID, then Use identity provider, signs this phone out and only then leaves for the cover" |
+| It leaves only once the sign-out has answered | the cover replaced to before the sign-out is awaited | `faceid-screen` "a failed Face ID, then Use identity provider, signs this phone out and only then leaves for the cover" |
+| It leaves only on revoked: true | the revoked: false branch removed | `faceid-screen` "a sign-out that could not be revoked keeps the lock and says so; the button tries again" |
+| A sign-out not revoked is said in SIGN_OUT_FAILED | the lock saying "did not unlock" again instead | `faceid-screen` "a sign-out that could not be revoked keeps the lock and says so; the button tries again" |
+| Keyed on the session, not the message | the sign-out keyed on the "did not unlock" message | `faceid-screen` "when Face ID is not available, the fallback signs out too" |
+| No signed-in session: no sign-out | the session check removed (always sign out) | `faceid-screen` "with no signed-in session to unlock, the fallback goes to the cover without signing out" |
+| SettingsRow: title and value share one wrapping line | flexWrap removed from the title line | `components` "draws a value on the title's line, before the arrow, and lets it move under the title rather than squeeze it" |
+| Billing's plan is its value, not a line under it | the plan put back as sub | `tab-screens` "reads only the plan, quietly: one billing read for an owner, shown as Billing's value on its right; the email under Account" |
+| A member's line stays under the title | the member's line moved into the value | `tab-screens` "never reads billing for a member, whose line says who manages it" |
+| The organization's name is the session's: no request | the value read with readWorkspaces() beside the plan | `tab-screens` "names the active organization on the Organization row, for an owner and for a member, with no request" |
+| The active organization by name, for any role | the name kept from a member | `tab-screens` "names the active organization on the Organization row, for an owner and for a member, with no request" |
+| Cut off with no organization shown: nothing, not None | the cut-off check removed | `tab-screens` "in a personal workspace, names the organization the session lists: one by name, several as a count, none as None, and nothing when the list is cut off without one" |
+| Cut off with no organization shown: nothing, not None (the rule) | the cut-off check removed | `view-mapping` "says nothing when the list is cut off and shows no organization — one may lie past the cut" |
+| Several organizations are a count | the count dropped | `view-mapping` "from a personal workspace, counts several" |
+| TODAY sits over the tiles | the TODAY label removed | `tab-screens` "says its window once, over the row: TODAY, then Runs, Successes, Failures — the greeting as it was" |
+| The first tile reads Runs | "Runs today" put back | `run-stats` "draws total, succeeded and failed — the three §12.1 #73b names" |
+| Every stat tile draws a caret | the caret removed from the tile button | `tab-screens` "every stat tile looks like the button it is, on Home and on a flow page: a caret on each, and the tint while pressed" |
+| A pressed tile draws the tint | the tint never drawn | `tab-screens` "every stat tile looks like the button it is, on Home and on a flow page: a caret on each, and the tint while pressed" |
+| A Home tile opens today | the period removed from the push | `tab-screens` "each Home tile's number is the rows it opens: today's runs by outcome, the older ones left out (All teams)" |
+| A Home tile opens today (the push) | the period removed from the push | `tab-screens` "a Home stat tile opens Activity for that outcome" |
+| Today lists no earlier run | EARLIER drawn under Today | `tab-screens` "each Home tile's number is the rows it opens: today's runs by outcome, the older ones left out (All teams)" |
+| Today lists no yesterday's run | YESTERDAY drawn under Today | `tab-screens` "Activity arriving with today and Failed lists only today's failed runs; Today ✕ sits on its own row above the outcomes, and clears back to every run" |
+| Today ✕ is on its own row, above the outcomes | the Today chip put back in the outcome row | `tab-screens` "Activity arriving with today and Failed lists only today's failed runs; Today ✕ sits on its own row above the outcomes, and clears back to every run" |
+| Today ✕ clears back to every run | the chip's press doing nothing | `tab-screens` "Activity arriving with today and Failed lists only today's failed runs; Today ✕ sits on its own row above the outcomes, and clears back to every run" |
+| The flow chip is on the selection row too | the flow chip put back in the outcome row | `tab-screens` "a flow page's chip sits on the same row, above the outcomes, and its tiles bring no day: they count all time" |
+| An empty Today says the day | " today" dropped from the empty line | `tab-screens` "with no run today but older ones, each tile's list says so: No runs today. / No successful runs today. / No failed runs today." |
+| The tab bar changes nothing | the param-less arrival's early return removed | `tab-screens` "opening Activity from the tab bar after a tile visit leaves Today as it was" |
+| A flow page's tiles bring no day: they count all time | today added to a flow tile's push | `tab-screens` "a flow page's three tiles open Activity for this flow and that outcome" |
+| Light's red reads at AA on its surface | light set back to #f87171 | `theme` "reads at 4.5:1 or more on its own palette's surface, where the design's red on white does not" |
+| Dark's red is the design's, status.err | dark given another red | `theme` "is the design's red in dark — status.err itself — and the website's light red in light" |
+| PillButton danger: label and icon in palette.danger | the danger label drawn in the text colour | `components` "draws the danger variant in the theme's red — label, icon and a 1-pt outline — and tints it a tenth while pressed (dark)" |
+| PillButton danger: a 1-pt outline in palette.danger | the outline dropped | `components` "draws the danger variant in the theme's red — label, icon and a 1-pt outline — and tints it a tenth while pressed (light)" |
+| PillButton danger: a tenth-strength tint while pressed | the pressed tint at 7% | `components` "draws the danger variant in the theme's red — label, icon and a 1-pt outline — and tints it a tenth while pressed (dark)" |
+| DialogButton danger reads palette.danger | status.err put back | `components` "draws a danger button — what cannot be undone — in the theme's red (light)" |
+| Delete Account is the red pill | variant="secondary" put back | `account-screen` "draws Delete Account, Unlink and Unlink's confirm in the theme's red (the owner's build 12 item 5; dark)" |
+| Unlink's text is red | neutral-400 put back | `account-screen` "draws Delete Account, Unlink and Unlink's confirm in the theme's red (the owner's build 12 item 5; dark)" |
+| Delete team / Leave team are the red pill | variant="secondary" put back | `teams-screens` "draws Delete team for its owner and Leave team for a member in red, as their confirms are (the owner's build 12 item 5)" |
+| Cancel run is the red pill | variant="secondary" put back | `tab-screens` "draws Cancel run in red and View flow as it was (the owner's build 12 item 5: "stop")" |
+| Sign out reads palette.danger | the design's fixed red put back on the label | `tab-screens` "says Sign out in the theme's red — light, #dc2626 (the owner's build 12 item 5)" |
+| Archive flow reads palette.danger | the design's fixed red put back on the label | `automation-actions` "draws Archive flow and its confirm in the theme's red (light)" |
+| Withdraw's confirm is accent, not red | tone="accent" removed (red by default) | `teams-screens` "asks to join a team and reads the directory again; withdraws a request it made" |
+| Pause stays plain | Pause drawn as the red pill | `tab-screens` "keeps Pause plain — Resume undoes it in one tap — while Archive flow, last, is red (the owner's build 12 item 5)" |
+| Reject stays plain | Reject drawn in red | `tab-screens` "approves and rejects independently, matching the design done-states" |
+
+### Build 13, part 2: items 6 and 8, and a tile pressed again
+
+Items 6 and 8 as their rows above say, and one finding of the first part. Items 4 and 9
+wait on the platform (the unarchive route and one flow per workspace, `snoopy-backend`).
+
+**A tile pressed again** (found in the first part, fixed in this one): Activity applied a
+tile's selection only when the route's params changed, and the same tile sends the same
+params to the same mounted screen — clear "Today ✕", go back, press the same Home tile,
+and Activity stayed as it was left. A flow page's tile did the same with its flow since
+24.11.9: `d77dd3a` fails that test at the second press. Activity now takes a selection
+once and clears it from its own route — `navigation.setParams`, on the screen's own
+navigation object; `router.setParams` goes to the focused route, which on the first
+arrival is still the tab, and left the params in place — so every press is a change,
+from any tile, and the tab bar still changes nothing. **NOT OBSERVED** on a device.
+
+**The real-router project.** `package.json` runs two jest projects, and `npm test` — so
+`npm run verify` and CI's Test job — runs both: `unit`, which keeps
+`test/mocks/expo-router.tsx`, and `real-router` (`__tests__/real-router/`; its fakes in
+`test/real-router-setup.ts`, its harness in `test/real-router.tsx`), which runs the
+app's own tree under expo-router 6.0.24 with only the transport, the keychain and the
+provider's browser leg faked. Ported from the fact-finding's reproduction, with its
+harness rules: await the render and every press (overlapping act scopes gave false
+failures); a press runs as development, where a command no navigator handles is logged —
+a release build drops it, a test build throws; a redirect loop is cut off after a dozen
+replaces. Its thirteen tests, run on `d77dd3a`'s tree (`git archive d77dd3a`, with the
+project's tests, harness and config copied in): every sign-out test fails there but two,
+which pass, as they should — the 502's and the deleted account's (Account deleted sits
+in `(auth)`, where "/" was always the cover): those paths were right and are kept; the
+Face ID test fails there too, since `d77dd3a`'s fallback never signed out (item 7, fixed
+in part 1); the Home-tile and tab-bar tests fail there at their first press, before a
+Home tile carried today:
+
+| Test | On `d77dd3a` |
+| --- | --- |
+| real-router `sign-out` "Settings › Sign out: one logout, the keychain empty, and the cover at "/" with Get started — no command dropped, no loop" | failed |
+| real-router `sign-out` "a session that ends inside the tabs — a 401 the refresh cannot recover — reaches the cover" | failed |
+| real-router `sign-out` "the owner's loop, twice: the cover, Get started, Sign in with Google, Home, Settings, Sign out, the cover" | failed |
+| real-router `sign-out` "a logout that answers 502 keeps the session: Settings stays and says so, with Retry sign out, and nothing navigates" | passed |
+| real-router `sign-out` "Delete account's Sign in again, after an attempt the session's end stopped, signs out and reaches the cover" | failed |
+| real-router `sign-out` "a deleted account: Account deleted, signed out, and its Continue reaches the cover" | passed |
+| real-router `sign-out` "Use identity provider with a signed-in session signs out to the cover, and signing in again asks Face ID's question" | failed |
+| real-router `sign-out` "signed out (the session read answers 401): a tab address opens the cover, never the tab" | failed |
+| real-router `sign-out` "no backend configured: a tab address opens the cover, never the tab" | failed |
+| real-router `sign-out` "the platform unreachable: a tab address opens the cover, never the tab" | failed |
+| real-router `activity-selection` "the same Home tile pressed again, after its selection was cleared on Activity, opens Activity with it again" | failed |
+| real-router `activity-selection` "the same flow page tile pressed again, after its flow was cleared on Activity, opens Activity with it again" | failed |
+| real-router `activity-selection` "the tab bar changes nothing: after a tile visit and a clear, Activity opens from its tab as it was left" | failed |
+
+Decided flips of pinned behaviour, part 2, each named in its test — eleven mocked tests
+waited on `router.replace('/')` or `mockRedirect('/')`, which the fact-finding counted
+as ten (it did not run `tab-screens`): `sign-out` "leaves for the cover only when the
+session was actually revoked (24.11.6)" is "signs out and leaves the cover to the root
+guard: Settings navigates nowhere (24.11.6; the owner's build 12 item 6)", and its six
+other cases keep their names and wait on the sign-out's own answer and the keychain,
+every device-unregister, settle, epoch and no-log assertion kept; `auth-boundary`'s
+three redirect cases are "draws nothing for a signed-out visitor, and redirects nowhere:
+the root guard shows the cover (24.11.6; the owner's build 12 item 6)", "fails closed
+when no backend is configured: nothing drawn, no redirect" and "does not expose
+protected routes while the backend is unreachable: nothing drawn, no redirect" — where a
+closed guard lands is the real-router project's "the root guard fails closed"; and
+`tab-screens` "signs out to the cover (24.11.6)" is "signs out, and the root guard — not
+Settings — shows the cover (24.11.6; the owner's build 12 item 6)". The router mock
+gained `useNavigation` and a record of a drawn tab navigator (`mockTabsDrawn`). The 80
+snapshots are byte-identical.
+
+### Guards proved to bite, build 13, part 2
+
+Twenty-eight runs by one script, each against its own suite with the test's name as the
+filter — the test's status read from jest's own record — and the file restored byte for
+byte, its SHA-256 checked before and after; the working tree's hashes matched after its
+last restore. Twenty-six breaks failed their test. The three rows against `6850589` put
+back part 1's Activity whole: the two re-apply tests fail there, and the tab-bar test
+passes, as it should — the tab bar changed nothing then either. One break did not bite:
+the tab layout's `<Redirect href="/" />` put back left the real router's ended-session
+test passing — under the root guard the tabs are gone before their layout draws signed
+out — so the unit project's two tab-layout tests hold that line.
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| The root guard takes the tabs away when signed out | the guard always open (`guard={true}`) | real-router `sign-out` "Settings › Sign out: one logout, the keychain empty, and the cover at "/" with Get started — no command dropped, no loop" |
+| An ended session lands on the cover | the guard always open (`guard={true}`) | real-router `sign-out` "a session that ends inside the tabs — a 401 the refresh cannot recover — reaches the cover" |
+| Sign in again lands on the cover | the guard always open (`guard={true}`) | real-router `sign-out` "Delete account's Sign in again, after an attempt the session's end stopped, signs out and reaches the cover" |
+| Signed out at launch, a tab address opens the cover | the guard always open (`guard={true}`) | real-router `sign-out` "signed out (the session read answers 401): a tab address opens the cover, never the tab" |
+| Only signed-in passes: unconfigured fails closed | the guard open for anything but signed out (`status !== 'signed-out'`) | real-router `sign-out` "no backend configured: a tab address opens the cover, never the tab" |
+| Only signed-in passes: unreachable fails closed | the guard open for anything but signed out (`status !== 'signed-out'`) | real-router `sign-out` "the platform unreachable: a tab address opens the cover, never the tab" |
+| Signing in still reaches Home under the guard | the guard always shut (`guard={false}`) | real-router `sign-out` "the owner's loop, twice: the cover, Get started, Sign in with Google, Home, Settings, Sign out, the cover" |
+| Settings navigates nowhere after a sign-out | Settings' `router.replace('/')` put back after a revoked sign-out | `sign-out` "signs out and leaves the cover to the root guard: Settings navigates nowhere (24.11.6; the owner's build 12 item 6)" |
+| Settings navigates nowhere after a sign-out (tab-screens) | Settings' `router.replace('/')` put back after a revoked sign-out | `tab-screens` "signs out, and the root guard — not Settings — shows the cover (24.11.6; the owner's build 12 item 6)" |
+| Settings navigates nowhere after a sign-out (real router) | Settings' `router.replace('/')` put back after a revoked sign-out | real-router `sign-out` "Settings › Sign out: one logout, the keychain empty, and the cover at "/" with Get started — no command dropped, no loop" |
+| The tab layout draws nothing and redirects nowhere when signed out | the tab layout's `<Redirect href="/" />` put back | `auth-boundary` "draws nothing for a signed-out visitor, and redirects nowhere: the root guard shows the cover (24.11.6; the owner's build 12 item 6)" |
+| The tab layout draws nothing and redirects nowhere when unconfigured | the tab layout's `<Redirect href="/" />` put back | `auth-boundary` "fails closed when no backend is configured: nothing drawn, no redirect" |
+| The tab layout redirects nowhere (real router) | the tab layout's `<Redirect href="/" />` put back | none — real-router `sign-out` "a session that ends inside the tabs — a 401 the refresh cannot recover — reaches the cover" passed |
+| Sign in again signs out through the session | the sign-out skipped (taken as revoked) | real-router `sign-out` "Delete account's Sign in again, after an attempt the session's end stopped, signs out and reaches the cover" |
+| Sign in again: a sign-out not revoked keeps the dialog and says so | the `revoked: false` branch removed | `account-screen` "Sign in again signs this phone out through the session and navigates nowhere; a sign-out not revoked keeps the dialog and says so, and the button tries again (the owner's build 12 item 6)" |
+| A deleted account still reaches Account deleted, then the cover | the replace to Account deleted removed (the guard alone moves the person) | real-router `sign-out` "a deleted account: Account deleted, signed out, and its Continue reaches the cover" |
+| A sign-out not revoked keeps the session, so the guard keeps the tabs | the provider's sign-out signing out on any answer | real-router `sign-out` "a logout that answers 502 keeps the session: Settings stays and says so, with Retry sign out, and nothing navigates" |
+| A 502 is said on Settings | the failure never said (`setSignOutFailed(false)`) | real-router `sign-out` "a logout that answers 502 keeps the session: Settings stays and says so, with Retry sign out, and nothing navigates" |
+| A 502 is said on Settings (unit) | the failure never said (`setSignOutFailed(false)`) | `sign-out` "stays put and says so when revocation failed (502)" |
+| The Face ID lock leaves for the cover itself | the lock's replace to the cover after a revoked sign-out removed | real-router `sign-out` "Use identity provider with a signed-in session signs out to the cover, and signing in again asks Face ID's question" |
+| Linked accounts' lead says what linking does, and to link first | the old lead put back | `account-screen` "says what a linked account does, and to link one before its first sign-in, over the list; the credentials sentence stays (the owner's build 12 item 8)" |
+| The same Home tile pressed again re-applies | `activity/index.tsx` as it is at `6850589` (part 1) | real-router `activity-selection` "the same Home tile pressed again, after its selection was cleared on Activity, opens Activity with it again" |
+| The same flow page tile pressed again re-applies | `activity/index.tsx` as it is at `6850589` (part 1) | real-router `activity-selection` "the same flow page tile pressed again, after its flow was cleared on Activity, opens Activity with it again" |
+| The tab bar changes nothing (kept) | `activity/index.tsx` as it is at `6850589` (part 1) | none — real-router `activity-selection` "the tab bar changes nothing: after a tile visit and a clear, Activity opens from its tab as it was left" passed |
+| A selection is taken once and cleared from the route | the clearing `navigation.setParams` removed | real-router `activity-selection` "the same Home tile pressed again, after its selection was cleared on Activity, opens Activity with it again" |
+| A selection is taken once and cleared from the route (flow page) | the clearing `navigation.setParams` removed | real-router `activity-selection` "the same flow page tile pressed again, after its flow was cleared on Activity, opens Activity with it again" |
+| Cleared through the screen's own navigation | `router.setParams` (the focused route) in its place | real-router `activity-selection` "the same Home tile pressed again, after its selection was cleared on Activity, opens Activity with it again" |
+| The tab bar re-sends its tab's params as they are | the tab bar sending a copy of the tab's params | real-router `activity-selection` "the tab bar changes nothing: after a tile visit and a clear, Activity opens from its tab as it was left" |
+
+Part 2 (items 4 and 9): twenty-two breaks, run the same way by their own script — each
+against its own suite with the test's name as the filter, the named test the one test
+the filter ran, confirmed failed from jest's own record, and the file restored byte for
+byte, its SHA-256 checked before and after; the working tree's hashes matched after the
+last restore. A break listed twice bit both tests. The Setup line's look — "Added to" over
+the team — is a style no test reads, so no break was run for it.
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| The archived page's button says Unarchive | "Add it again" put back as its label | `build13-unarchive-and-one-flow` "an archived flow with no live copy says it can be unarchived, and Unarchive opens Setup for that flow in the team it had — a fresh setup; the page sends nothing" |
+| The archived page's button says Unarchive (the flipped test) | "Add it again" put back as its label | `tab-screens` "an archived flow's page opens instead of "Couldn't load": no actions, its history, and Unarchive where no live twin exists — Add it again renamed, still Setup for its flow (the owner's build 12 item 4)" |
+| The sentence with no twin says unarchive | its "add it again" put back | `build13-unarchive-and-one-flow` "an archived flow with no live copy says it can be unarchived, and Unarchive opens Setup for that flow in the team it had — a fresh setup; the page sends nothing" |
+| Unarchive opens Setup in the team it had, as Add it again did | the team dropped from the push | `build13-unarchive-and-one-flow` "an archived flow with no live copy says it can be unarchived, and Unarchive opens Setup for that flow in the team it had — a fresh setup; the page sends nothing" |
+| Settings' Archived flows line says unarchive | "add any again" put back | `build13-unarchive-and-one-flow` "Settings › Archived flows says they are kept with their history and any can be unarchived" |
+| The archive confirmation says unarchive | "add it again later" put back | `automation-actions` "is reached only through its one-way confirmation, which says it can be unarchived later (the owner's build 12 item 4)" |
+| The archive confirmation says unarchive (the flow page) | "add it again later" put back | `tab-screens` "returns to the Flows list after Archive, however the flow was reached — the confirmation saying it can be unarchived later (the owner's build 12 item 4)" |
+| The Archived list's note says unarchive | "Add it again any time." put back | `tab-screens` "the Archived page lists them, read-only, and is the empty standard when there are none — each saying unarchive (the owner's build 12 item 4)" |
+| The Archived list's empty line says unarchive | "you can add it again." put back | `tab-screens` "the Archived page lists them, read-only, and is the empty standard when there are none — each saying unarchive (the owner's build 12 item 4)" |
+| With a live twin, no Unarchive (D3 as it was) | the twin branch never taken | `tab-screens` "offers no Unarchive once the flow is live again in the same scope: it says so and opens the live flow (build 11, D3; the owner's build 10 items 5, 6 and 11; Unarchive since the owner's build 12 item 4)" |
+| Add: a flow held in another team is Added ✓, with no Add (All teams) | the per-scope rule put back: Added only for the scope looked at | `tab-screens` "names where a flow is held — Added ✓ with its team, the card opens it — and offers no Add for another team (the owner's build 12 item 9: one flow per workspace; until build 13 "Added in …" and Add, 18.6.2)" |
+| Add: held is held whatever the scope control shows | the per-scope rule put back: Added only for the scope looked at | `build13-unarchive-and-one-flow` "Add reads a flow held for the whole workspace as Added ✓ · Whole workspace inside a picked team too — whatever the scope control shows — with no Add, and the card opens it" |
+| Add: a held flow says its team | every place labelled Whole workspace | `tab-screens` "names where a flow is held — Added ✓ with its team, the card opens it — and offers no Add for another team (the owner's build 12 item 9: one flow per workspace; until build 13 "Added in …" and Add, 18.6.2)" |
+| Add: both places of a duplicate are named | only the first place named | `build13-unarchive-and-one-flow` "Add names both places of a flow added to two before the rule — the duplicate stays — and offers no Add" |
+| Setup: a held flow says where it is, with no team choice | the held branch never taken (the team chips again) | `build13-unarchive-and-one-flow` "Setup, for a flow the workspace holds, says where it is under Added to, offers no team, and Activate configures that subscription — nothing is added" |
+| Setup: Activate configures the held subscription, never a second | the held copy not configured (a new one added) | `build13-unarchive-and-one-flow` "Setup, for a flow the workspace holds, says where it is under Added to, offers no team, and Activate configures that subscription — nothing is added" |
+| Setup: a held flow needs no team | the team check on every Activate again | `build13-unarchive-and-one-flow` "Setup, for a flow held for the whole workspace, needs no team: a plain member with none to add to still has Activate, and it configures that subscription" |
+| Setup: Activate for a held flow with no team to add to | Activate offered only with a team or Create a team | `build13-unarchive-and-one-flow` "Setup, for a flow held for the whole workspace, needs no team: a plain member with none to add to still has Activate, and it configures that subscription" |
+| D3's twin is in any team (the rule) | the same scope required again | `flows-view` "is none for another template or an archived row — another team's copy IS the twin (the owner's build 12 item 9: one flow per workspace; until build 13 null matched null only)" |
+| D3's twin is in any team (the archived page) | the same scope required again | `tab-screens` "offers no Unarchive when the live copy is another team's: that copy is the twin, and it opens (the owner's build 12 item 9: one flow per workspace; until build 13 the whole workspace matched the whole workspace only)" |
+| An archived copy holds nothing (the rule) | archived rows counted as held | `flows-view` "is none for another template or an archived row — another team's copy IS the twin (the owner's build 12 item 9: one flow per workspace; until build 13 null matched null only)" |
+| An archived copy holds nothing (Setup adds a new one) | archived rows counted as held | `tab-screens` "adds an archived automation afresh rather than reviving the archived subscription" |
+
+### Every press, its test (build 13)
+
+The owner's build 12 checklist, B9: every press in the app has a test that presses it
+and checks what it is configured to do — configured by `DESIGN-CONTRACT.md`, this file
+and the owner's recorded decisions. `audit:presses` (`scripts/audit-presses.mjs`, in
+`verify` after the coverage pass, and in CI) resolves every `onPress` and `onLongPress`
+in `app/` and `components/` to the function it runs, and istanbul's coverage says
+whether a test ran it: the gate proves a test ran the press's handler, and the test's
+own assertions prove the press did what it is configured to do — the screen and params
+it opens, the request it sends (method, path, body), the dialog it opens or closes, what
+changes on screen, a refusal in words; never only that a mock was called. A press
+repeated across screens is one table-driven test, a row per screen. A press an existing
+test already pressed and held by its outcome got no new test; one pressed but not held —
+a weak assertion, or another branch of it — did.
+
+**Totals.** 268 presses, and 35 passthroughs audited at their callers. At the merged
+build 13 code (`7c5f81d`), before these tests: 141 run by a test, 93 never run, 34
+unresolved. Now: all 268 run, 0 never run, 0 unresolved. The 34 were handlers the audit
+cannot pin to one button — 33 Retry props given a hook's own function
+(`onRetry={x.reload}`, whose count is every screen's) and the inbox's
+`onPress={openSettings}` — each now written as an arrow on the same line
+(`() => x.reload()`), the behaviour unchanged. 131 tests were added, 117 of them the
+cases of 15 tables (`it.each`) and 14 single tests: `presses-patterns-failure-states`
+47, `presses-patterns-back-circle` 14, `presses-patterns-dialog-close` 25 and
+`presses-patterns-empty-actions` 2, one table each; `presses-home-activity` 13 (8 in
+three tables), `presses-flows` 14 (10 in three), `presses-settings` 15 (11 in five) and
+`presses-close` 1. All pass: the 15 that failed on purpose — the three defects below — pass
+since their fix (build 13). Every single test, and every table through at least one of its
+rows, was proved to bite: one exact break of the handler's behaviour, made in an
+isolated copy of the tree, failed it — read from jest's own record — and the file was
+restored byte for byte, its SHA-256 checked. The 80 snapshots are byte-identical.
+
+Tests are `__tests__/<name>.test.tsx:<line>` (`real-router/…` in the real-router
+project); app files are named from `app/(tabs)/`, components by their file name.
+
+**Failure states (table-driven).** Configured: Retry sends the screen's failed read
+again and draws the state again; Back and Go back go back once, nothing pushed or
+replaced; the unavailable state offers Back and Go back, and no Retry. One table,
+`presses-patterns-failure-states:164`, a row per screen and state (`:N` below); D1 and
+D2 are rows of it.
+
+| Screen | Presses | Rows: offline, unavailable, error |
+| --- | --- | --- |
+| Home, its own failure (Retry only) | `(home)/index.tsx:236` Retry | `:92` |
+| Run | `(home)/run.tsx:189` Retry, Back · `:198` Back · `:207` Retry · `:208` Back | `:93`, `:94` (D1), `:95` |
+| Approvals | `activity/approvals.tsx:174` Retry, Back · `:180` Back · `:189` Retry · `:190` Back | `:96`, `:97` (D1), `:98` |
+| Activity, a tab (Retry only) | `activity/index.tsx:251` Retry · `:260` Retry | `:99`, `:100` |
+| Add a flow | `flows/add.tsx:71` Retry, Back · `:74` Back · `:80` Retry · `:82` Back | `:101`, `:102` (D1), `:103` |
+| Flow page | `flows/detail.tsx:171` Retry, Back · `:180` Back · `:189` Retry · `:190` Back | `:104`, `:105` (D1), `:106` |
+| Flows, a tab (Retry only) | `flows/index.tsx:96` Retry · `:103` Retry | `:107`, `:108` |
+| Setup | `flows/setup.tsx:140` Retry, Back · `:146` Retry · `:147` Back | `:109`, `:113` (D2), `:110` |
+| Account | `settings/account.tsx:92` Retry, Back · `:95` Back · `:101` Retry · `:103` Back | `:114`, `:115` (D1), `:116` |
+| Billing | `settings/billing.tsx:194` Retry, Back · `:197` Back · `:203` Retry · `:205` Back | `:117`, `:118` (D1), `:119` |
+| Connections | `settings/connections.tsx:42` Retry, Back · `:45` Back · `:51` Retry · `:53` Back | `:120`, `:121` (D1), `:122` |
+| Export my data | `settings/data.tsx:192` Retry, Back · `:195` Back · `:199` Retry, Back | `:123`, `:124` (D1), `:125` |
+| Organization | `settings/organization.tsx:88` Retry, Back · `:91` Back · `:97` Retry · `:99` Back | `:126`, `:127` (D1), `:128` |
+| Team | `settings/team.tsx:78` Retry, Back · `:81` Back · `:87` Retry · `:89` Back | `:129`, `:130` (D1), `:131` |
+| Teams | `settings/teams.tsx:97` Retry, Back · `:100` Back · `:106` Retry · `:108` Back | `:132`, `:133` (D1), `:134` |
+| Archived flows (both copies) | `archived-flows.tsx:68` Retry, Back · `:71` Back · `:77` Retry · `:79` Back | `:135`, `:136` (D1), `:137` |
+| Notifications (both copies) | `inbox.tsx:104` Retry, Back · `:110` Back · `:119` Retry · `:120` Back | `:138`, `:139` (D1), `:140` |
+
+**Back circle on a loaded page, and on the empty standard (table-driven).** Configured:
+back once, nothing pushed, replaced or dismissed. One table,
+`presses-patterns-back-circle:201`, a row per page (`:N` below); the empty standard's
+Back and the inbox's own were already held.
+
+| Press | Test |
+| --- | --- |
+| `(home)/run.tsx:223` | `:86` |
+| `activity/approvals.tsx:217` | `:93` |
+| `flows/add.tsx:110` | `:99` |
+| `flows/add.tsx:95` — empty catalog | `tab-screens:230` |
+| `flows/detail.tsx:210` | `:106` |
+| `flows/setup.tsx:298` | `:114` |
+| `settings/account.tsx:118` | `:121` |
+| `settings/billing.tsx:250` | `:128` |
+| `settings/connections.tsx:75` | `:138` |
+| `settings/connections.tsx:63` — empty | `settings-connections:232` |
+| `settings/data.tsx:213` | `:144` |
+| `settings/organization.tsx:135` | `:151` |
+| `settings/organization.tsx:116` — empty | `organization-screen:242` |
+| `settings/support.tsx:76` | `:158` |
+| `settings/team.tsx:109` | `:164` |
+| `settings/teams.tsx:156` | `:175` |
+| `settings/teams.tsx:142` — empty | `teams-screens:324` |
+| `archived-flows.tsx:105` | `:186` |
+| `archived-flows.tsx:92` — empty | `tab-screens:1944` |
+| `inbox.tsx:176` — the inbox | `tab-screens:1044` |
+| `inbox.tsx:138` — empty inbox | `tab-screens:752` |
+
+**A dialog's Cancel or Close (table-driven).** Configured: the dialog closes, nothing is
+sent — no change and no read — and nothing navigates; a Cancel on a dialog's second step
+returns to its first. One table, `presses-patterns-dialog-close:511`, a row per dialog
+(`:N` below); three are held in the feature files.
+
+| Press | Test |
+| --- | --- |
+| `flows/setup.tsx:435` — Create a team › Cancel | `:231` |
+| `settings/account.tsx:176` — Unlink › Cancel | `:243` |
+| `settings/account.tsx:195` — Delete account › Cancel | `:253` |
+| `settings/organization.tsx:187` — Organization name › Cancel | `:263` |
+| `org-domains.tsx:101` — a domain › Close | `:273` |
+| `org-domains.tsx:260` — Add domain › Cancel; Done after a claim closes and reads the organization again | `:283`, `organization-screen:115` |
+| `org-people.tsx:130` — Remove member › Cancel | `:293` |
+| `org-people.tsx:141` — Join request › Cancel | `:303` |
+| `settings/team.tsx:170` — Delete team › Cancel | `:313` |
+| `settings/team.tsx:189` — Leave team › Cancel | `:323` |
+| `team-members.tsx:111` — a member › Close | `:333` |
+| `team-members.tsx:192` — Remove from this team? › Cancel: back to the member | `:343` |
+| `team-members.tsx:127` — own row, Leave this team? › Cancel | `:356` |
+| `team-members.tsx:260` — Add members › Done: reads the team again only if someone was added | `presses-settings:369` |
+| `team-requests.tsx:68` — Request to join › Cancel | `:366` |
+| `settings/teams.tsx:125` — Create a team › Cancel | `:376` |
+| `settings/teams.tsx:262` — Withdraw request › Cancel | `:386` |
+| `automation-actions.tsx:187` — Run › Cancel | `:396` |
+| `automation-actions.tsx:200` — Set up › Cancel | `:406` |
+| `automation-actions.tsx:208` — Webhook address › Close | `:416` |
+| `automation-actions.tsx:218` — Archive flow › Cancel | `:428` |
+| `move-version.tsx:94` — Move to vN › Cancel | `:438` |
+| `(home)/run.tsx:288` — Cancel this run? › Keep it running | `presses-home-activity:107` |
+| `connections-card.tsx:228` — Connect › Cancel | `:448` |
+| `connections-card.tsx:223` — Replace account? › Cancel | `:459` |
+| `workspace-switcher.tsx:140` — Switch workspace › Cancel | `:472` |
+| `scope-control.tsx:95` — Show › Done | `presses-home-activity:316` |
+| `scope-control.tsx:138` — Show › Create a team › Cancel | `:494` |
+
+**The empty standard's action.**
+
+| Press | Configured outcome | Test |
+| --- | --- | --- |
+| `(home)/index.tsx:105` — first run: Add a flow | opens Add (`/(tabs)/flows/add`) | `tab-screens:1186` |
+| `activity/index.tsx:275` — Add a flow | opens Add | `presses-patterns-empty-actions:37` |
+| `activity/approvals.tsx:202` — Go back | back, nothing pushed | `presses-patterns-empty-actions:28` |
+| `flows/index.tsx:119` — Add a flow | opens Add | `tab-screens:2057` |
+| `flows/index.tsx:122` — Archived flows | opens Archived (`/(tabs)/flows/archived`) | `tab-screens:2059` |
+| `settings/teams.tsx:141` — Create a team | opens the Create a team dialog | `teams-screens:326` |
+
+**Home, the run page, Activity, Approvals, the inbox, the scope control, the tab bar.**
+
+| Press | Configured outcome | Test |
+| --- | --- | --- |
+| `(home)/index.tsx:268` — the bell | opens Notifications | `tab-screens:97` |
+| `(home)/index.tsx:280` — the avatar | opens Settings | `tab-screens:94` |
+| `(home)/index.tsx:328` — a stat tile | Activity with its outcome and `period: 'today'` | `tab-screens:1621` |
+| `(home)/index.tsx:344` — the review banner | opens Approvals | `tab-screens:80` |
+| `(home)/index.tsx:379` — Add a flow | opens Add | `tab-screens:82` |
+| `(home)/index.tsx:389` — Flows | opens Flows | `tab-screens:84` |
+| `(home)/index.tsx:399` — See all | opens Activity | `tab-screens:86` |
+| `(home)/index.tsx:413` — a recent run | the run page `{runId}` | `tab-screens:108` |
+| `(home)/run.tsx:257` — Cancel run | opens Cancel this run?, only while pending or running | `tab-screens:1102`, `tab-screens:1138` |
+| `(home)/run.tsx:293` — Cancel run (confirm) | POST `…/runs/{runId}/cancel` in its workspace; closes; reads the run again; a 404 in words | `presses-home-activity:121`, `tab-screens:1115` |
+| `(home)/run.tsx:271` — View flow | the flow page `{flow: subscriptionId}` | `presses-home-activity:142` |
+| `activity/index.tsx:54` — a row | the run page with THAT row's `runId` | `presses-home-activity:155` |
+| `activity/index.tsx:301` — the flow chip ✕ | clears the flow | `tab-screens:1655`, `real-router/activity-selection:95` |
+| `activity/index.tsx:305` — Today ✕ | clears today, back to every run | `tab-screens:1819` |
+| `activity/index.tsx:315` — an outcome chip | lists that published status | `tab-screens:555` |
+| `activity/approvals.tsx:65, :75` — Approve, Reject | POST `…/approvals/{id}/decision` `{decision}`, keyed — a retry reuses the key — then the done line | `presses-home-activity:183` (2 cases) |
+| `inbox.tsx:179` — Mark all read | every dot off, rows kept; a row a later read brings stays unread | `presses-home-activity:232` |
+| `inbox.tsx:195` — a row | a failed run's page; a held one, Activity | `tab-screens:728` |
+| `inbox.tsx:274` — Turn on | iOS asks; the phone registers | `push-registration:149` |
+| `inbox.tsx:284` — Open Settings | opens iOS Settings; read again on return | `push-registration:205` |
+| `inbox.tsx:293` — Not now | the ask goes for the session | `tab-screens:723`, `push-registration:221` |
+| `scope-control.tsx:64` — the workspace pill | Switch workspace with two or more (or a cut list); with one, not a button | `presses-home-activity:295` (3 cases) |
+| `scope-control.tsx:75` — the team pill | opens Show | `scope-control:68` |
+| `scope-control.tsx:102` — All teams | scope all, kept as none, closes | `presses-home-activity:316` |
+| `scope-control.tsx:115` — a team | scope that team, kept, closes | `presses-home-activity:316`, `scope-control:68` |
+| `scope-control.tsx:129` — Create a team | the dialog; the new team is the scope | `scope-control:134` |
+| `tab-bar.tsx:80` — a tab | opens that tab, changing nothing on it | `tab-bar:29`, `real-router/activity-selection:107` |
+
+**Flows: the list, Add, Setup, a flow page and its actions.**
+
+| Press | Configured outcome | Test |
+| --- | --- | --- |
+| `flows/index.tsx:153` — Archived | opens Archived | `tab-screens:1911` |
+| `flows/index.tsx:164, :196` — New; a flow card | opens Add; the flow page `{flow}` | `tab-screens:268` |
+| `flows/index.tsx:224` — Add a flow (a team with none) | opens Add | `presses-flows:173` |
+| `flows/add.tsx:121` — a category | narrows the catalog | `tab-screens:172` |
+| `flows/add.tsx:135` — an Added ✓ card | opens that flow's page (the first copy) | `tab-screens:165`, `build13-unarchive-and-one-flow:129` |
+| `flows/add.tsx:166` — Add | Setup with the template and the scope's team; refused while not responding | `tab-screens:154`, `presses-flows:275` |
+| `flows/setup.tsx:335` — Create a team | the dialog; the new team is chosen | `tab-screens:1424` |
+| `flows/setup.tsx:348` — See teams | opens Settings › Teams | `tab-screens:1499` |
+| `flows/setup.tsx:378` — Connect › | opens Settings | `tab-screens:1278` |
+| `flows/setup.tsx:423` — Activate | POST subscribe `{templateId, templateVersion, projectId}` then PATCH `{config, status: 'live'}`, each keyed, then the flow page; a held flow configured, none added; refusals in words | `presses-flows:190`, `tab-screens:1397`, `build13-unarchive-and-one-flow:169`, `presses-flows:396` |
+| `flows/setup.tsx:416` — Try again | the same request, the same key | `presses-flows:355` |
+| `choice-chips.tsx:34` — a chip (Setup's team, a team role) | chooses it; the team is sent as `projectId` | `tab-screens:1397`, `teams-screens:463` |
+| `flows/detail.tsx:238` — Runs / Successes / Failures | Activity `{flow, flowName, filter}`, no day | `tab-screens:1638` |
+| `flows/detail.tsx:314` — Open the live flow | the twin's page, same stack | `tab-screens:1985` |
+| `flows/detail.tsx:325` — Unarchive | Setup with the template and the team it had | `build13-unarchive-and-one-flow:56` |
+| `flows/detail.tsx:366` — Pause / Resume / Publish | PATCH `{status}`; refused while not responding | `tab-screens:460`, `presses-flows:301` |
+| `flows/detail.tsx:340` — Try again | the same change, the same key | `presses-flows:328` |
+| `automation-actions.tsx:128` — Run | the Run dialog with the declared fields | `automation-actions:159` |
+| `automation-actions.tsx:154` — Set up; Webhook address | their dialogs | `automation-actions:388`, `automation-actions:352` |
+| `automation-actions.tsx:168` — Archive flow | the one-way confirmation | `automation-actions:275` |
+| `automation-actions.tsx:222` — Archive | PATCH `{status: 'archived'}`, then the Flows list | `automation-actions:275`, `tab-screens:405` |
+| `move-version.tsx:81` — Move to vN | its confirmation | `automation-actions:246` |
+| `move-version.tsx:98` — Move to vN (confirm) | PATCH `{templateVersion}`; refusals in words | `automation-actions:246`, `automation-actions:260` |
+| `run-dialog.tsx:105` — Start run | POST runs `{subscriptionId, input}`; closes; the run's page | `automation-actions:159`, `presses-flows:248` |
+| `run-file-field.tsx:142` — Choose file | uploads it; the run carries its id; a refusal in words | `automation-actions:205`, `presses-flows:418` |
+| `setup-dialog.tsx:77` — Save setup | PATCH `{config}` only | `automation-actions:388` |
+| `webhook-address-dialog.tsx:114` — Create address / Make a new secret | POST, no key; the secret shown once; a refusal in words | `automation-actions:352`, `presses-flows:413` |
+| `archived-flows.tsx:116` — an archived row | its page in the same stack | `tab-screens:1928` |
+| `select-field.tsx:55, :80` — the box; an option | opens the list in place; selects and closes it | `select-field:21` |
+
+**Settings, Face ID, Account, Billing, Export my data, Help.**
+
+| Press | Configured outcome | Test |
+| --- | --- | --- |
+| `settings/index.tsx:149, :167, :177, :220, :230, :241, :250, :263, :303` — the page rows | each opens its page | `tab-screens:969` |
+| `settings/index.tsx:191` — the workspace row | Switch workspace with two or more; inert with one | `workspace-switcher:91`, `workspace-switcher:80` |
+| `settings/index.tsx:279` — Auto / Dark / Light | sets the theme | `tab-screens:1012` |
+| `settings/index.tsx:316` — Sign out | signs out; the root guard shows the cover | `real-router/sign-out:48`, `sign-out:93` |
+| `settings/index.tsx:312` — Retry sign out | signs out again | `sign-out:119` |
+| `face-id-row.tsx:78` — Face ID's Try again | repeats the change that failed | `presses-settings:452` (D3) |
+| `noc-toggle.tsx:40` — a toggle | turns it the other way | `components:166` |
+| `settings/account.tsx:150` — Unlink | asks first; POST `…/unlink`; refusals by reason | `account-screen:235` |
+| `settings/account.tsx:155` — Link | links in the system browser | `account-screen:60` |
+| `settings/account.tsx:189, :310` — Delete Account; Yes, delete my account / Try again | the typed-DELETE dialog; `DELETE /v1/account`, every answer in words | `account-screen:111` |
+| `settings/account.tsx:305` — Sign in again | signs this phone out; the guard shows the cover | `account-screen:191`, `real-router/sign-out:152` |
+| `settings/billing.tsx:271` — a plan card, not paying | the hosted checkout for that plan (iOS) | `billing-screen:104` |
+| `settings/billing.tsx:271, :296` — a plan card while paying; Manage billing | the hosted portal | `billing-screen:133` |
+| `settings/data.tsx:238` — Prepare export | the bounded export | `data-support-screens:59` |
+| `settings/data.tsx:261` — Share JSON | iOS: a JSON file in the cache to the share sheet, then removed; Android: text | `presses-settings:404` (2 cases) |
+| `settings/data.tsx:280, :290` — Export everything; Download file | starts the complete export and follows it; its link read again at the download, to the share sheet | `data-support-screens:98` |
+| `settings/support.tsx:100` — Send | the contact request | `data-support-screens:138` |
+| `settings/support.tsx:111, :112` — Privacy policy; Terms of service | open on the website | `data-support-screens:156` |
+
+**Organization.**
+
+| Press | Configured outcome | Test |
+| --- | --- | --- |
+| `settings/organization.tsx:154, :264` — Name; Save | the rename dialog; saves the name | `organization-screen:380` |
+| `settings/organization.tsx:168` — Share join link | the share sheet with the link | `organization-screen:310` |
+| `org-domains.tsx:77` — a domain | its dialog, with only what its state allows | `presses-settings:145` |
+| `org-domains.tsx:180, :187, :194` — Revoke; Verify DNS; Save settings | DELETE `…/domains/{id}`; POST `…/verification`; PATCH `{joinPolicy, discoveryEnabled}` — a refusal in the dialog, the key kept, then closes and reads again | `presses-settings:145` (3 cases) |
+| `org-domains.tsx:85, :262` — Add domain; its Add domain | the dialog; claims the domain | `organization-screen:115` |
+| `org-join.tsx:135, :127` — Join / Request; Cancel request | joins or asks; withdraws | `organization-screen:197` |
+| `org-join.tsx:205` — Create organization | creates it | `organization-screen:251` |
+| `org-people.tsx:77` — a member | the Remove question | `organization-screen:96` |
+| `org-people.tsx:109, :207` — a join request; Approve | its dialog; approves it | `organization-screen:130` |
+| `org-people.tsx:201` — Reject | PATCH `…/join-requests/{id}` `{decision: 'reject'}`; closes; reads again | `presses-settings:218` |
+
+**Teams.**
+
+| Press | Configured outcome | Test |
+| --- | --- | --- |
+| `settings/team.tsx:153` — Delete team / Leave team | its confirmation | `teams-screens:403`, `teams-screens:434` |
+| `settings/teams.tsx:172`; `create-team-dialog.tsx:106` — Create a team; Create team | the dialog; creates it, refusals in words | `teams-screens:219` |
+| `create-team-dialog.tsx:91` — Done, after a create | opens the new team's page | `teams-screens:242` |
+| `settings/teams.tsx:192` — a team | its page `{projectId, workspaceId}` — the team's own workspace | `presses-settings:252` |
+| `settings/teams.tsx:220, :227` — Requested; Request | the withdraw question; asks to join | `teams-screens:152` |
+| `team-members.tsx:87`; `confirm-dialog.tsx:72` — your own row; the confirm | Leave this team? — DELETE your membership, Leaving… while sent, once, then back | `presses-settings:310` |
+| `team-members.tsx:87, :99, :204, :271` — a member; Add members; Save role; Add | their dialog; the add dialog; POST `…/memberships` `{userId, role}` — a new role, or a member added | `teams-screens:454` |
+| `team-members.tsx:198, :193` — Remove; Remove (confirm) | asks in the same dialog; DELETE `…/memberships/{userId}`, a refusal there, the key kept, then closes and reads again | `presses-settings:334` |
+| `team-requests.tsx:56, :125, :130` — a request; Deny; Approve | its dialog; decides it | `teams-screens:474` |
+
+**Connections and the workspace switcher.**
+
+| Press | Configured outcome | Test |
+| --- | --- | --- |
+| `connections-card.tsx:176` — a provider | its dialog | `settings-connections:66` |
+| `connections-card.tsx:242` — Connect / Disconnect | OAuth in the browser; DELETE `…/connections/{id}`; POST `…/connections/key` `{providerId, credentials}`, trimmed, keyed — then closes and reads again | `presses-settings:525` (2 cases), `settings-connections:66` |
+| `connections-card.tsx:233, :224` — Replace account; Replace account (confirm) | asks first; connects again in the browser, replacing that connection (`replaceConnectionId`) | `settings-connections:146`, `settings-connections:173` |
+| `workspace-switcher.tsx:165` — a workspace | PATCH `/v1/session/active-workspace`, keyed, then the session read again | `workspace-switcher:140` |
+| `workspace-switcher.tsx:146` — Reload session | reads the session again; the dialog closes | `workspace-switcher:203` |
+
+**The cover, sign-in, the lock, and shared controls.**
+
+| Press | Configured outcome | Test |
+| --- | --- | --- |
+| `app/index.tsx:138` — the cover | signed in, Home; signed out, nothing | `cover-haptics:26`, `splash-tap:18` |
+| `app/index.tsx:164` — Get started | opens Sign in, once | `splash-tap:18`, `real-router/sign-out:97` |
+| `(auth)/login.tsx:192` — Sign in with … | that provider's sign-in | `auth-screens:45` |
+| `(auth)/login.tsx:171` — Unlock with Face ID | opens the lock | `auth-screens:86` |
+| `(auth)/faceid-offer.tsx:98, :101` — Use Face ID; Not now | checks Face ID, records yes, opens Home; records no, opens Home | `faceid-offer:27`, `faceid-offer:36` |
+| `(auth)/faceid.tsx:181` — Use identity provider | signs this phone out, then the cover | `faceid-screen:70`, `real-router/sign-out:234` |
+| `(auth)/account-deleted.tsx:30` — Continue | the cover | `real-router/sign-out:181` |
+| `text-field.tsx:76` — Show / Hide password | shows or hides it | `components:223` |
+| `picker-dialog.tsx:39` — a row (no screen draws PickerDialog since build 8) | picks that row's value; the picker closes | `presses-close:51` |
+
+**Defects — found by the audit, fixed in build 13.** The audit itself changed no product
+line but the 34 arrows above; the fixes followed it, each held by the test that failed:
+
+- **Fixed (build 13), D1 and the tabs' dead way back:** `FailureBody` draws a control only
+  with its handler — Retry with an `onRetry`, the back circle and "Go back" with an
+  `onBack` — so the unavailable state has no Retry, and the Activity and Flows tabs (roots,
+  with nothing to go back to) no back circle or "Go back" (the audit had flagged those
+  two for a decision). The design snapshots of `ScreenError` and `ScreenOffline` pass both
+  handlers, as every pushed screen does, and stay byte-identical. Held by the 13
+  unavailable rows and, for the tabs, the table's no-back branch (`presses-patterns-
+  failure-states`; proved: the back circle drawn unconditionally again fails "Activity,
+  error").
+- **Fixed (build 13), D2:** Setup draws an unconfigured read as the unavailable state.
+- **Fixed (build 13), D3:** Face ID's Try again repeats the change that failed (a ref
+  holds the last one asked for).
+
+
+- **D1 — the unavailable state draws a Retry that does nothing.**
+  `components/screen-state.tsx:116-126`: `FailureBody` draws the Retry pill whatever its
+  `onRetry`, and `ScreenUnavailable` (`:182-203`) passes none, so every unavailable
+  state — the 13 pushed screens' (Run, Approvals, Add, the flow page, Account, Billing,
+  Connections, Export my data, Organization, Team, Teams, Archived flows, Notifications)
+  and the Activity and Flows tabs' — shows "Retry" with no handler: a press that does
+  nothing and gives no tick. Configured: "`ScreenUnavailable` says what is actually
+  wrong and offers no retry" (`DESIGN-CONTRACT.md:178-182`; Round 6's "`unconfigured` is
+  its own state", above; the component's own comment, `screen-state.tsx:175-180`). Since
+  `74eee65` (2026-08-18), which built `ScreenUnavailable` on `FailureBody`. Failing: the
+  13 unavailable rows of `presses-patterns-failure-states` (`:94`, `:97`, `:102`,
+  `:105`, `:115`, `:118`, `:121`, `:124`, `:127`, `:130`, `:133`, `:136`, `:139`), each
+  at `:188` — "Retry" is on the screen — after its Back and Go back passed; the table
+  has no unavailable row for the two tabs. `ScreenUnavailable` has no snapshot: the
+  screen-state snapshots are `ScreenError`'s and `ScreenOffline`'s, drawn with no
+  handler, so a fix confined to the unavailable state moves none of the 80.
+- **D2 — Setup draws an unconfigured read as the error state, with its Retry.**
+  `app/(tabs)/flows/setup.tsx:142-151`: every status but `ready` draws `ScreenError`,
+  `unconfigured` included — no backend, no workspace, or no `template` param (the throw
+  at `:80`) — so Setup offers a Retry that cannot succeed. Configured: every fetching
+  surface has the unavailable state, Home its one carve-out
+  (`DESIGN-CONTRACT.md:170-182`). Failing: `presses-patterns-failure-states:113`, at
+  `:170` — no `screen-unavailable`; the screen draws `screen-error`.
+- **D3 — Face ID's Try again always turns Face ID on.**
+  `components/settings/face-id-row.tsx:78`, `onRetry={() => changeFaceId(true)}`: after
+  a failed turn-off — the keychain refuses the write, "Face ID preference could not be
+  saved on this device." — Try again shows the Face ID prompt and saves `true`, so the
+  toggle ends on, the opposite of what was asked. Configured: a failed action stays on
+  the loaded screen with the shared inline failure callout
+  (`DESIGN-CONTRACT.md:364-365`), whose Try again is that action again. Since `76bfc0b`
+  (2026-08-18). Failing: `presses-settings:452`, the case "a failure turning it off …",
+  at `:491` — the "Enable Face ID unlock" prompt was shown; the turn-on case passes.
+
+### Build 13 review: four findings, and what became of them
+
+The single review pass of build 13 (`d77dd3a..0f01c0b`; the owner stopped review
+fan-out) verified four findings with reproductions. All four are fixed here, on
+`round-16-build-13-fix` from `7c5f81d` (build 13 merged, with `audit:presses`):
+
+| # | Finding | Disposition |
+| --- | --- | --- |
+| 1 | **Security, major — pre-existing since before build 12.** The Face ID lock did not gate the session against a link. The root guard admitted any `signed-in` session, locked or not (`app/_layout.tsx:86`), and so did the tab layout's own check. With Face ID on, the lock showing and its check cancelled, snoopymobile:///settings opened from Safari (the scheme, `app.json:8`) reached expo-router's URL listener (`useLinking.native.js:149-176`), which opened Settings — and every tab behind it, approvals and Delete Account among them — without Face ID. DESIGN-CONTRACT said that an enabled Face ID preference gates an existing session, and for a link it did not. Fixing it found a second way past the same gate, which the review had not reported: a link to the Face ID question (snoopymobile:///faceid-offer) while the lock showed opened the question. Its "Not now" switched Face ID off and opened Home. Run on `7c5f81d`, the route went from `["(auth)","faceid"]` to `["(tabs)","(home)"]` and `autom8x.face-id-enabled` became "false", so the next cold start also opened without Face ID | **fixed with a session-level lock.** The session provider's `locked` is true from the cold start whenever a stored session's owner turned Face ID on. It is decided from the keychain before the session is signed in, and it stays true until that is known. It is cleared when the lock's own check passes (`unlock()`), when someone signs in (a sign-in is its own proof) and when Face ID is turned off on Settings' row. Only the next cold start sets it again; a `refresh()` does not. The root guard is now `session.status === 'signed-in' && !session.locked`, and the tab layout draws nothing and keeps push idle until the same holds. So a link that arrives while the session is locked finds no tab in the root stack, and expo-router drops it. A check that passes opens Home, as it always did, and the dropped link is not replayed. A push tap's screen waits for the lock as it waits for a sign-in, and "Use identity provider" still signs out (part 1). The splash now sends a locked session to the lock by reading `locked` instead of the preference, so within one unlocked session "/" goes on to Home and does not ask for Face ID twice. The Face ID question is guarded in the auth stack as the tabs are (`app/(auth)/_layout.tsx`). A link to it while the lock shows opens nothing. A cold-start link to it now shows Sign in until the splash moves on, where `7c5f81d` drew the question. **NOT OBSERVED** on a device |
+| 2 | **Correctness, major — a hole in item 9.** After Setup had added a flow (a draft still owed an account, or a create whose activation failed), it still drew the "Add to" team chips. `held` was read before the create and not again until the screen regained focus. Picking another team reset what Setup had added (`setup.tsx:316-318`), and Activate then sent a second create. That made two copies of one flow in one workspace, which the platform still accepts per team (18.6.2). Row 9's list of ways a duplicate can still arise did not include this one | **fixed**: `const placed = localSubscription ?? held`. What Setup adds is held from that moment: it reads "Added to" its team (`scopeLabel(placed.projectId, …)`) and draws no chips, so no team change can reset it. Activate configures that copy: a draft still owed an account goes to Settings, and a failed activation sends the same PATCH again. The chips' reset of the local copy was removed with them, since with nothing added there is nothing to reset; their reset of the idempotency keys stays. **NOT OBSERVED** on a device |
+| 3 | **Test gap, minor.** No test held the guard shut while the session restores, which is what stops a cold-start link from skipping the lock. A guard that also admitted `restoring` passed all thirteen real-router tests | **fixed** by two real-router tests in `face-id-lock`. "a cold start at a tab address with Face ID on draws no tab at any moment, and ends on the lock" samples after the first render and after each wait. "with Face ID off, a cold start reaches Home through the splash, and nothing asks for Face ID" covers the other path. The first test fails on `d77dd3a` (Settings drawn at seven samples, across the splash's 2.4 s) and on `7c5f81d` with the review's mutation. On `7c5f81d` as committed it passes, because build 13's root guard had already closed the cold-start case, as the review found. On this branch no single break of the guard fails it either (below) |
+| 4 | **Records, minor.** `CLAUDE.md`'s `addedAgainAs()` line still described build 11's same-scope twin and "Add it again", the opposite of items 4 and 9 | **fixed**: rule 10 in `CLAUDE.md` now lists `heldAs()`: a workspace holds a flow once (any copy not archived, in any team or the whole workspace), and a copy Setup has just added is held. It also lists `addedAgainAs()`: the live twin is the same template in any team or the whole workspace (`heldAs`, item 9), and with one there is no "Unarchive" (D3). Rule 11 says the boundary admits the tabs only past the Face ID lock. `DESIGN-CONTRACT.md` says the guard enforces the lock and that a flow Setup adds is held |
+
+No pinned behaviour changed. The only edits to existing tests are the session fixtures, which now state an open session (`locked: false` and an `unlock`) where they state a session: `test/platform.tsx`'s `signedInSession`, `test/render.tsx`'s default, and `auth-boundary`'s and `override-scope`'s own. The 80 snapshots did not move. `audit:presses` stands where `7c5f81d` left it, failing on both trees with the same inventory row for row: 268 presses, 141 run, 93 not run and 34 unresolved. The files this change touched hold the same fifteen rows with the same statuses, and the change adds no press.
+
+The new tests were run on the code they fix. The new and changed test files were copied into `git archive` trees of `7c5f81d` and `d77dd3a`, with `node_modules` linked and nothing else changed, and each status was read from jest's own record. The unit tests stand on build 13 part 2 and were run on `7c5f81d` only:
+
+| Test | `7c5f81d` | `d77dd3a` |
+| --- | --- | --- |
+| real-router `face-id-lock` "a link to a tab that arrives while the lock shows opens nothing — Settings never drawn, the lock stays — and Face ID passing opens Home" | failed (Settings drawn) | failed |
+| real-router `face-id-lock` "a Face ID check that does not pass keeps the lock: a link to a tab after it opens nothing either" | failed (Settings drawn) | failed |
+| real-router `face-id-lock` "a cold start at a tab address with Face ID on draws no tab at any moment, and ends on the lock" | passed; failed with the review's mutation (`guard={session.status === 'signed-in' \|\| session.status === 'restoring'}`) | failed |
+| real-router `face-id-lock` "with Face ID off, a cold start reaches Home through the splash, and nothing asks for Face ID" | passed | passed |
+| real-router `face-id-lock` "a link to the Face ID question while the lock shows opens nothing: it cannot be answered Not now, and Face ID stays on for the next cold start" | failed (the question drawn) | failed |
+| real-router `face-id-lock` "a sign-in opens a session the lock held — it is its own proof: Use identity provider, Get started, Sign in with Google, Not now, Home" | passed | failed (its fallback did not sign out: item 7) |
+| real-router `face-id-lock` "a push tap that opened the app waits for the lock: nothing opens while it shows, and the run opens once Face ID passes" | passed | passed |
+| `session-provider` "locks a stored session whose owner turned Face ID on from the first render: never once signed in and open" | failed | — |
+| `session-provider` "with Face ID off, a stored session is open" | passed | — |
+| `session-provider` "the lock's check opens it, a later refresh does not lock it again, and the next cold start does" | failed | — |
+| `session-provider` "a sign-in opens a locked session: it is its own proof" | failed | — |
+| `session-provider` "a sign-in after a cold start that ended signed out decides the lock: a refresh does not lock it, though Face ID was turned on since" | passed | — |
+| `session-provider` "turning Face ID off on Settings' row opens a locked session" | failed | — |
+| `auth-boundary` "draws nothing for a signed-in session the Face ID lock still holds, and redirects nowhere (the build 13 review)" | failed | — |
+| `push-registration` "the tap that opened the app waits for the Face ID lock: nothing is read or opened while it holds the session, and its screen opens once it lets go (the build 13 review)" | failed | — |
+| `build13-unarchive-and-one-flow` "a create still owed an account says where it is under Added to, with no team to pick again — no second copy can be sent" | failed (no "Added to") | — |
+| `build13-unarchive-and-one-flow` "a create whose activation failed stays Added to its team, and Activate again activates that copy — never a second" | failed (no "Added to") | — |
+
+The tests that pass on `7c5f81d` hold what the fix must keep: the paths that were already right. Face ID off reaches Home, a sign-in reaches Home, and a push tap waits for a lock that the cold start never got past. The lock's state machine is held where `7c5f81d` had no lock.
+
+### Guards proved to bite, the build 13 review
+
+One script made twenty-five runs. Each run made one exact break (two, in the one row that names two files) and ran the named test on its own with jest's `-t`. The test's status was read from jest's own record, which showed that it was the only test that ran. The file was then restored byte for byte and its SHA-256 checked before and after. After the last restore the working tree's hashes matched those taken before the first break. Twenty-three breaks failed their test. Two did not bite, and both were single breaks of the root guard against the cold-start test. On this branch the tab layout's own check, now `open`, draws nothing for a locked session, and the splash under the tabs moves on to the lock. The guard and that check both have to fall before the cold start shows a tab, and the row that breaks both fails. The guard alone is held by the link tests in the first rows.
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| The guard admits the tabs only when unlocked | the guard as it was: `session.status === 'signed-in'` | real-router `face-id-lock` "a link to a tab that arrives while the lock shows opens nothing — Settings never drawn, the lock stays — and Face ID passing opens Home" |
+| The guard admits the tabs only when unlocked (after a failed check) | the guard as it was: `session.status === 'signed-in'` | real-router `face-id-lock` "a Face ID check that does not pass keeps the lock: a link to a tab after it opens nothing either" |
+| A cold start shows no tab (the guard alone) | the guard loosened to `session.status !== 'signed-out'` | none: real-router `face-id-lock` "a cold start at a tab address with Face ID on draws no tab at any moment, and ends on the lock" passed, held by the tab layout's check |
+| A cold start shows no tab (the review's mutation) | the guard admitting `restoring`, with no lock | none: the same test passed, held by the tab layout's check |
+| A cold start shows no tab | the review's mutation, and the tab layout's check without the lock | real-router `face-id-lock` "a cold start at a tab address with Face ID on draws no tab at any moment, and ends on the lock" |
+| Locked until known | `useState(false)` for `locked` | `session-provider` "locks a stored session whose owner turned Face ID on from the first render: never once signed in and open" |
+| The cold start locks only for Face ID on | every stored session locked (`stored !== null`) | real-router `face-id-lock` "with Face ID off, a cold start reaches Home through the splash, and nothing asks for Face ID" |
+| The cold start locks only for Face ID on (the provider) | every stored session locked (`stored !== null`) | `session-provider` "with Face ID off, a stored session is open" |
+| Only a cold start locks | every restore deciding the lock again | `session-provider` "the lock's check opens it, a later refresh does not lock it again, and the next cold start does" |
+| A sign-in opens the lock | the sign-in leaving the lock as it was | `session-provider` "a sign-in opens a locked session: it is its own proof" |
+| A sign-in opens the lock (the real router) | the sign-in leaving the lock as it was | real-router `face-id-lock` "a sign-in opens a session the lock held — it is its own proof: Use identity provider, Get started, Sign in with Google, Not now, Home" |
+| A sign-in decides the lock | the sign-in opening the lock but leaving it undecided | `session-provider` "a sign-in after a cold start that ended signed out decides the lock: a refresh does not lock it, though Face ID was turned on since" |
+| A passed check opens the session, then Home | `unlock()` removed from the lock's success | real-router `face-id-lock` "a link to a tab that arrives while the lock shows opens nothing — Settings never drawn, the lock stays — and Face ID passing opens Home" |
+| A push tap's screen opens once the check passes | `unlock()` removed from the lock's success | real-router `face-id-lock` "a push tap that opened the app waits for the lock: nothing opens while it shows, and the run opens once Face ID passes" |
+| Only a passed check unlocks | `unlock()` called on any answer | real-router `face-id-lock` "a Face ID check that does not pass keeps the lock: a link to a tab after it opens nothing either" |
+| The splash sends a locked session to the lock | the splash replacing to Home whatever the lock | real-router `face-id-lock` "a link to a tab that arrives while the lock shows opens nothing — Settings never drawn, the lock stays — and Face ID passing opens Home" |
+| The tab layout draws nothing while locked | its check without the lock (`open = signed-in`) | `auth-boundary` "draws nothing for a signed-in session the Face ID lock still holds, and redirects nowhere (the build 13 review)" |
+| Push waits for the lock (the layout) | its check without the lock (`open = signed-in`) | `push-registration` "the tap that opened the app waits for the Face ID lock: nothing is read or opened while it holds the session, and its screen opens once it lets go (the build 13 review)" |
+| Push waits for the lock (the hook's argument) | `usePushRegistration(session.status === 'signed-in')` | `push-registration` "the tap that opened the app waits for the Face ID lock: nothing is read or opened while it holds the session, and its screen opens once it lets go (the build 13 review)" |
+| The Face ID question is guarded | `faceid-offer` taken out of its `Stack.Protected` | real-router `face-id-lock` "a link to the Face ID question while the lock shows opens nothing: it cannot be answered Not now, and Face ID stays on for the next cold start" |
+| Face ID turned off opens the lock | `unlock()` removed from Settings' row | `session-provider` "turning Face ID off on Settings' row opens a locked session" |
+| Setup: an added draft is "Added to" its team | the held block for `held` only, as it was | `build13-unarchive-and-one-flow` "a create still owed an account says where it is under Added to, with no team to pick again — no second copy can be sent" |
+| Setup: a failed activation keeps its copy | the held block for `held` only, as it was | `build13-unarchive-and-one-flow` "a create whose activation failed stays Added to its team, and Activate again activates that copy — never a second" |
+| Setup: what it added is where the flow is | `placed = held` | `build13-unarchive-and-one-flow` "a create still owed an account says where it is under Added to, with no team to pick again — no second copy can be sent" |
+| Setup: what it added is activated, never added again | `placed = held` | `build13-unarchive-and-one-flow` "a create whose activation failed stays Added to its team, and Activate again activates that copy — never a second" |
+
 ### Guards proved to bite, 24.6
 
 | Guard | Broken by | Test that failed |

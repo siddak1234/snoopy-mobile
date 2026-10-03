@@ -186,7 +186,7 @@ export default function RunDetailScreen() {
 
   if (detail.status === 'loading') return <ScreenLoading tiles topInset={insets.top} />;
   if (detail.status === 'offline') {
-    return <ScreenOffline onRetry={detail.reload} onBack={() => router.back()} topInset={insets.top} />;
+    return <ScreenOffline onRetry={() => detail.reload()} onBack={() => router.back()} topInset={insets.top} />;
   }
   // An unconfigured build or an unresolved workspace cannot succeed on a
   // retry, so it does not get a Retry. A refused identity and a platform
@@ -204,7 +204,7 @@ export default function RunDetailScreen() {
     return (
       <ScreenError
         title={errorTitleFor('run')}
-        onRetry={detail.reload} body={busyBody(detail)}
+        onRetry={() => detail.reload()} body={busyBody(detail)}
         onBack={() => router.back()}
         topInset={insets.top}
       />
@@ -244,10 +244,11 @@ export default function RunDetailScreen() {
       </View>
 
       <View style={styles.actions}>
+        {/* It stops the run, which is not resumed: red (the owner's build 12 item 5, "stop"). */}
         {run.cancellable ? (
           <PillButton
             label="Cancel run"
-            variant="secondary"
+            variant="danger"
             height={46}
             fontSize={typeScale.label.fontSize}
             icon={StopCircle}

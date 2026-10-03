@@ -9,11 +9,10 @@ import type { ArchivedFlowPath } from '@/components/flows/archived-flows';
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel } from '@/components/nocturne/section-label';
-import { StatCard } from '@/components/nocturne/stat-card';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { StepCard } from '@/components/nocturne/step-card';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
-import { Pressable } from '@/components/pressable';
+import { StatTileButton } from '@/components/stat-tile-button';
 import { em, fonts, layout, status, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ActionFailure, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
@@ -23,8 +22,8 @@ import { roleIn, useSession, workspaceIfShown } from '@/hooks/use-session';
 import { statusAction, useWorkflows, type FlowStatus } from '@/hooks/use-workflows';
 import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
 import {
-  ADD_AGAIN_LABEL,
   OPEN_LIVE_FLOW_LABEL,
+  UNARCHIVE_LABEL,
   UNAVAILABLE_NOTE,
   archivedFlowAddedAgainBody,
   archivedFlowBody,
@@ -109,8 +108,9 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
     flows.status === 'ready' && subscription
       ? flows.data.automations.find((a) => a.templateId === subscription.templateId)
       : undefined;
-  // An archived flow added again in the same scope (D3): its live twin, from
-  // the live list already read here — no extra request.
+  // An archived flow the workspace holds again, in any team (D3; any team since
+  // the owner's build 12 item 9): its live twin, from the live list already
+  // read here — no extra request.
   const twin =
     flows.status === 'ready' && subscription?.status === 'archived'
       ? addedAgainAs(subscription, flows.data.subscriptions)
@@ -168,7 +168,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
   // Below every hook on purpose — these return early.
   if (flows.status === 'loading') return <ScreenLoading tiles topInset={insets.top} />;
   if (flows.status === 'offline') {
-    return <ScreenOffline onRetry={flows.reload} onBack={() => router.back()} topInset={insets.top} />;
+    return <ScreenOffline onRetry={() => flows.reload()} onBack={() => router.back()} topInset={insets.top} />;
   }
   // An unconfigured build or an unresolved workspace cannot succeed on a
   // retry, so it does not get a Retry. A refused identity and a platform
@@ -186,7 +186,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
     return (
       <ScreenError
         title={errorTitleFor('detail')}
-        onRetry={flows.reload} body={busyBody(flows)}
+        onRetry={() => flows.reload()} body={busyBody(flows)}
         onBack={() => router.back()}
         topInset={insets.top}
       />
@@ -221,7 +221,8 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
         )}
       </View>
 
-      {/* The three tiles open Activity for this flow and that outcome (24.11.9). */}
+      {/* The three tiles open Activity for this flow and that outcome, over all time (24.11.9);
+          each looks like the button it is (the owner's build 12 item 1). */}
       <View style={styles.statsRow}>
         {(
           [
@@ -230,20 +231,21 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
             ['Failures', def.failCount, 'Failed', dash(def.failCount) ? palette.neutral[500] : status.err],
           ] as const
         ).map(([label, value, filter, valueColor]) => (
-          <Pressable
+          <StatTileButton
             key={label}
             testID={`flow-stat-${filter}`}
-            accessibilityRole="button"
             accessibilityLabel={`${label}: see these runs in Activity`}
-            style={styles.statPressable}
             onPress={() =>
               router.push({
                 pathname: '/(tabs)/activity',
                 params: { flow: def.key, flowName: def.name, filter },
               })
-            }>
-            <StatCard value={value} label={label} size="sm" valueColor={valueColor} />
-          </Pressable>
+            }
+            value={value}
+            label={label}
+            size="sm"
+            valueColor={valueColor}
+          />
         ))}
       </View>
 
@@ -294,10 +296,10 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
 
       {def.removed ? (
         // Read-only (24.11.8): no status, no actions. The one thing to do with an
-        // archived flow is add it again, which is Setup for its template, in the
-        // team it had — or, once it has been (D3), open the live copy: the
-        // platform holds one live flow per template and scope, so a second add
-        // would only re-configure that one.
+        // archived flow is unarchive it — "Add it again" until the owner's build
+        // 12 item 4, the same action: Setup for its template, in the team it had,
+        // a fresh setup — or, once the workspace holds it again in any team (D3;
+        // item 9: one flow per workspace), open that copy instead.
         <SurfaceCard style={styles.removedCard}>
           {twin ? (
             <>
@@ -316,7 +318,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
             <>
               <Text style={[styles.note, { color: palette.neutral[400] }]}>{archivedFlowBody(def.removedOn)}</Text>
               <PillButton
-                label={ADD_AGAIN_LABEL}
+                label={UNARCHIVE_LABEL}
                 variant="primary"
                 height={44}
                 fontSize={typeScale.label.fontSize}
@@ -380,7 +382,6 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
   },
-  statPressable: { flex: 1 },
   removedBadge: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
   removedCard: { padding: 14, gap: 12 },
   content: {

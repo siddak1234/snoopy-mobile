@@ -15,10 +15,11 @@ import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from 'react-nativ
 import { BrandMark } from '@/components/nocturne/brand-mark';
 import { GlowBackground } from '@/components/nocturne/glow-background';
 import { PillButton } from '@/components/nocturne/pill-button';
-import { fonts, radius, typeScale } from '@/constants/theme';
+import { fonts, layout, radius, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useBiometricWording } from '@/hooks/use-biometric-wording';
 import { useSession } from '@/hooks/use-session';
+import { SIGN_OUT_FAILED } from '@/lib/content/screen-states';
 import { readSession } from '@/lib/platform/session-store';
 
 /** CSS `ease` / `ease-in-out` used by a8xGlow / a8xScan. */
@@ -59,8 +60,14 @@ export default function FaceIdScreen() {
   const words = useRef(wording);
   words.current = wording;
 
+  const { unlock } = session;
+
   // Biometrics unlock an existing enclave-held session; they never mint one.
-  // Every refusal remains on the auth side of the route boundary.
+  // Every refusal remains on the auth side of the route boundary. A check that
+  // passes opens the session (`unlock`) before Home is asked for: the root
+  // guard holds the tabs from a locked session, so it is this, not the
+  // address, that lets Home open — and a link that arrives while the lock shows
+  // opens nothing (the build 13 review).
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -81,8 +88,10 @@ export default function FaceIdScreen() {
           disableDeviceFallback: true,
         });
         if (cancelled) return;
-        if (result.success) router.replace('/(tabs)/(home)');
-        else setMessage(words.current.didNotUnlock);
+        if (result.success) {
+          unlock();
+          router.replace('/(tabs)/(home)');
+        } else setMessage(words.current.didNotUnlock);
       } catch {
         if (!cancelled) setMessage(words.current.didNotUnlock);
       }
@@ -90,7 +99,36 @@ export default function FaceIdScreen() {
     return () => {
       cancelled = true;
     };
-  }, [router, session.status]);
+  }, [router, session.status, unlock]);
+
+  /**
+   * "Use identity provider" signs this phone out, the way Settings › Sign out
+   * does, and only then shows the cover (the owner's build 12 item 7, option A:
+   * "It should allow the user to log back in using their account").
+   *
+   * The cover waits only for someone signed out. Sent there still signed in, it
+   * was the splash, which replaced itself with this lock 2400 ms later — the
+   * Face ID prompt again, in a loop (builds 9–12). The sign-out revokes this
+   * phone's session (the web's stays), lets go of its push registration and
+   * clears the Face ID choice with the tokens, so the next sign-in is asked
+   * again. A sign-out that could not be revoked keeps the lock and says so,
+   * with nothing cleared (ADR-0017 §4), and the button tries again. With no
+   * signed-in session to unlock — an outage, or nothing stored — there is
+   * nothing to revoke, and it goes to the cover as before.
+   */
+  const onUseIdentityProvider = async () => {
+    if (session.status !== 'signed-in') {
+      router.replace('/');
+      return;
+    }
+    const { revoked } = await session.signOut();
+    if (!revoked) {
+      setMessage(SIGN_OUT_FAILED);
+      return;
+    }
+    // Signed out is the cover (24.11.6); Sign in is one tap from it.
+    router.replace('/');
+  };
 
   // a8xGlow: opacity .45 → 1 → .45, 2s ease infinite.
   const glow = useSharedValue(0);
@@ -148,7 +186,7 @@ export default function FaceIdScreen() {
           label="Use identity provider"
           height={44}
           fontSize={typeScale.label.fontSize}
-          onPress={() => router.replace('/')}
+          onPress={onUseIdentityProvider}
           style={styles.fallback}
         />
       ) : null}
@@ -194,6 +232,8 @@ const styles = StyleSheet.create({
   textGroup: {
     alignItems: 'center',
     gap: 8,
+    // A sign-out that could not be revoked says so in a long sentence.
+    paddingHorizontal: layout.screenX,
   },
   fallback: {
     minWidth: 210,
@@ -205,6 +245,7 @@ const styles = StyleSheet.create({
   sub: {
     fontFamily: fonts.regular,
     fontSize: typeScale.body.fontSize,
+    textAlign: 'center',
   },
   brand: {
     position: 'absolute',

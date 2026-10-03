@@ -32,8 +32,9 @@ export type ArchivedFlowPath = '/(tabs)/flows/detail' | '/(tabs)/settings/archiv
  * The flows archived in this team, or in the whole workspace (BUILD-PLAN
  * 24.11.8; "Archived flows" since the owner's decision 4 of 2026-10-02, 24.12).
  * Archiving a flow stops it and moves it here: its runs stay in Activity and it
- * stays here, read-only, with "Add it again" on its page — or, once it has been
- * added again in the same scope, "Open the live flow" (build 11, D3). The scope
+ * stays here, read-only, with "Unarchive" on its page ("Add it again" until the
+ * owner's build 12 item 4) — or, once the workspace holds it again in any team,
+ * "Open the live flow" (build 11, D3; any team since item 9). The scope
  * is the one the person is looking at, as everywhere else; every row says its
  * team, or "Whole workspace" (D4).
  *
@@ -64,7 +65,7 @@ export function ArchivedFlows({ detailPath }: { detailPath: ArchivedFlowPath }) 
 
   if (archived.status === 'loading') return <ScreenLoading topInset={insets.top} />;
   if (archived.status === 'offline') {
-    return <ScreenOffline onRetry={archived.reload} onBack={() => router.back()} topInset={insets.top} />;
+    return <ScreenOffline onRetry={() => archived.reload()} onBack={() => router.back()} topInset={insets.top} />;
   }
   if (archived.status === 'unconfigured') {
     return <ScreenUnavailable title={errorTitleFor('archived')} onBack={() => router.back()} topInset={insets.top} />;
@@ -73,7 +74,7 @@ export function ArchivedFlows({ detailPath }: { detailPath: ArchivedFlowPath }) 
     return (
       <ScreenError
         title={errorTitleFor('archived')}
-        onRetry={archived.reload}
+        onRetry={() => archived.reload()}
         body={busyBody(archived)}
         onBack={() => router.back()}
         topInset={insets.top}
