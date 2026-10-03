@@ -1,137 +1,66 @@
 import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
-import * as LocalAuthentication from 'expo-local-authentication';
 import {
-  Archive,
   Bell,
   Buildings,
   CaretRight,
   CreditCard,
-  DownloadSimple,
-  IdentificationBadge,
   Lifebuoy,
+  Palette,
+  Plugs,
+  ShieldCheck,
   SignOut,
-  UserFocus,
-  Users,
-  UsersThree,
+  UserCircle,
+  type Icon,
 } from 'phosphor-react-native';
-import React, { useEffect, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Platform, ScrollView, StyleSheet, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AvatarBadge } from '@/components/nocturne/avatar-badge';
-import { NocToggle } from '@/components/nocturne/noc-toggle';
-import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
-import { ActionFailure, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
-import { ConnectionsCard } from '@/components/settings/connections-card';
+import { ActionFailure } from '@/components/screen-state';
 import { SettingsRow } from '@/components/settings/settings-row';
-import { WorkspaceSwitcher } from '@/components/settings/workspace-switcher';
-import { em, fonts, layout, status } from '@/constants/theme';
-import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
-import { useBiometricWording } from '@/hooks/use-biometric-wording';
+import { em, fonts, layout, status, typeScale } from '@/constants/theme';
 import { useSession } from '@/hooks/use-session';
-import { useTheme, type ThemeMode } from '@/hooks/use-theme';
-import { SIGN_OUT_FAILED, SIGN_OUT_RETRY, errorTitleFor } from '@/lib/content/screen-states';
-import { readConnectionProviders, readConnections } from '@/lib/platform/catalog';
-import { readFaceIdEnabled, writeFaceIdEnabled } from '@/lib/platform/session-store';
-import { toConnectionRows, type ConnectionView } from '@/lib/view/catalog';
-import { administers } from '@/lib/view/roles';
+import { useTheme } from '@/hooks/use-theme';
+import { SIGN_OUT_FAILED, SIGN_OUT_RETRY } from '@/lib/content/screen-states';
 
-const APPEARANCE: { label: string; mode: ThemeMode }[] = [
-  { label: 'Dark', mode: 'dark' },
-  { label: 'Light', mode: 'light' },
-  { label: 'Auto', mode: 'auto' },
+type CategoryPath =
+  | '/(tabs)/settings/account'
+  | '/(tabs)/settings/security'
+  | '/(tabs)/settings/connections'
+  | '/(tabs)/settings/billing'
+  | '/(tabs)/settings/workspace'
+  | '/(tabs)/settings/notifications'
+  | '/(tabs)/settings/appearance'
+  | '/(tabs)/settings/support';
+
+/** The categories, in the owner's order (decision 10 of 2026-10-02, 24.12). Help is Support. */
+const CATEGORIES: readonly { key: string; title: string; icon: Icon; path: CategoryPath }[] = [
+  { key: 'account', title: 'Account', icon: UserCircle, path: '/(tabs)/settings/account' },
+  { key: 'security', title: 'Security', icon: ShieldCheck, path: '/(tabs)/settings/security' },
+  { key: 'connections', title: 'Connections', icon: Plugs, path: '/(tabs)/settings/connections' },
+  { key: 'billing', title: 'Billing', icon: CreditCard, path: '/(tabs)/settings/billing' },
+  { key: 'workspace', title: 'Workspace', icon: Buildings, path: '/(tabs)/settings/workspace' },
+  { key: 'notifications', title: 'Notifications', icon: Bell, path: '/(tabs)/settings/notifications' },
+  { key: 'appearance', title: 'Appearance', icon: Palette, path: '/(tabs)/settings/appearance' },
+  { key: 'help', title: 'Help', icon: Lifebuoy, path: '/(tabs)/settings/support' },
 ];
 
+/**
+ * Settings (24.12, the owner's build 9: "a few main items then buttons that
+ * you click and it takes you to a category specific page"): eight categories,
+ * each its own page in this stack, then Sign out and the version. It reads
+ * nothing — each page reads what it draws.
+ */
 export default function SettingsScreen() {
-  const { palette, mode, setMode } = useTheme();
-  const biometric = useBiometricWording();
+  const { palette } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [faceId, setFaceId] = useState(false);
-  const [faceIdError, setFaceIdError] = useState<string | null>(null);
+  const { signOut } = useSession();
   const [signOutFailed, setSignOutFailed] = useState(false);
-  const session = useSession();
-  const { signOut } = session;
-  const [switcherOpen, setSwitcherOpen] = useState(false);
   const platformName = Platform.OS === 'ios' ? 'iOS' : Platform.OS === 'android' ? 'Android' : 'native';
   const appVersion = Constants.expoConfig?.version ?? '—';
-
-  useEffect(() => {
-    let cancelled = false;
-    readFaceIdEnabled().then((enabled) => {
-      if (!cancelled) setFaceId(enabled);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const changeFaceId = async (enabled: boolean) => {
-    setFaceIdError(null);
-    try {
-      if (enabled) {
-        const hasHardware = await LocalAuthentication.hasHardwareAsync();
-        const enrolled = hasHardware && (await LocalAuthentication.isEnrolledAsync());
-        if (!enrolled) {
-          setFaceIdError(biometric.unavailableOrUnenrolled);
-          return;
-        }
-        const result = await LocalAuthentication.authenticateAsync({
-          promptMessage: biometric.enablePrompt,
-          disableDeviceFallback: true,
-        });
-        if (!result.success) {
-          setFaceIdError(biometric.notEnabled);
-          return;
-        }
-      }
-      await writeFaceIdEnabled(enabled);
-      setFaceId(enabled);
-    } catch {
-      setFaceIdError(biometric.notSaved);
-    }
-  };
-
-  /**
-   * The CONNECTIONS card needs both reads.
-   *
-   * Driven by the provider list rather than the connection list: the connections
-   * read omits a provider with no connection at all, and the design draws
-   * exactly that row ("Slack · Not connected"). The native authorize/complete
-   * operations published in Round 6.6 also back the connection action below.
-   * The plan's totals left this screen with the Solutions tab (24.9.5): Billing
-   * states the plan, and Flows is where a flow is added or removed.
-   */
-  const connections = useWorkspaceResource(async (workspaceId) => {
-    const [providers, held] = await Promise.all([readConnectionProviders(), readConnections(workspaceId)]);
-    return { rows: toConnectionRows(providers.providers, held.connections) };
-  });
-
-  const connectionRows: ConnectionView[] =
-    connections.status === 'ready' ? connections.data.rows : [];
-
-  const currentSession = session.status === 'signed-in' ? session.session : null;
-  const activeWorkspace = currentSession?.workspaces.find(
-    (workspace) => workspace.id === currentSession.user.activeWorkspaceId,
-  ) ?? currentSession?.workspaces[0];
-  const displayName = currentSession?.user.displayName?.trim() || currentSession?.user.email || 'Account';
-  const initials = displayName
-    .split(/\s+|@/u)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('') || 'A';
-
-  /**
-   * Hidden below two workspaces, as the web switcher is — unless the session
-   * says its list is truncated, in which case the collection may hold more and
-   * only reading it can say. The trigger is the design's own WORKSPACE row.
-   */
-  const canSwitchWorkspace =
-    currentSession !== null &&
-    (currentSession.workspaces.length >= 2 || currentSession.workspacesTruncated === true);
 
   /**
    * Sign out for real, and honour the one answer the contract added for us.
@@ -153,32 +82,6 @@ export default function SettingsScreen() {
     router.replace('/');
   };
 
-  // The design applies gLoad/gErr/gOff to every screen but Home, Settings
-  // included, so a failed read replaces the screen rather than stranding a
-  // half-populated one. An unconfigured build is also a refusal; it does not
-  // receive invented profile or connection rows.
-  if (connections.status === 'loading') return <ScreenLoading topInset={insets.top} />;
-  if (connections.status === 'offline') {
-    return <ScreenOffline onRetry={connections.reload} topInset={insets.top} />;
-  }
-  if (connections.status === 'unconfigured') {
-    return (
-      <ScreenUnavailable
-        title={errorTitleFor('settings')}
-        topInset={insets.top}
-      />
-    );
-  }
-  if (connections.status === 'error') {
-    return (
-      <ScreenError
-        title={errorTitleFor('settings')}
-        onRetry={connections.reload} body={busyBody(connections)}
-        topInset={insets.top}
-      />
-    );
-  }
-
   return (
     <ScrollView
       style={{ backgroundColor: palette.bg }}
@@ -189,175 +92,19 @@ export default function SettingsScreen() {
       showsVerticalScrollIndicator={false}>
       <Text style={[styles.h1, { color: palette.text }]}>Settings</Text>
 
-      {/* The account itself: linked sign-in accounts, and deleting it (24.6.2). */}
-      <SurfaceCard style={styles.profileCard} onPress={() => router.push('/(tabs)/settings/account')}>
-        <AvatarBadge initials={initials} size={48} fontSize={16} />
-        <View style={styles.rowBody}>
-          <Text style={[styles.profileName, { color: palette.text }]}>{displayName}</Text>
-          <Text style={[styles.profileSub, { color: palette.neutral[400] }]}>
-            {[currentSession?.user.email, activeWorkspace?.name].filter(Boolean).join(' · ')}
-          </Text>
-        </View>
-        <CaretRight size={16} color={palette.neutral[500]} />
+      <SurfaceCard>
+        {CATEGORIES.map((category, index) => (
+          <SettingsRow
+            key={category.key}
+            icon={category.icon}
+            title={category.title}
+            testID={`settings-${category.key}`}
+            divider={index < CATEGORIES.length - 1}
+            onPress={() => router.push(category.path)}
+            right={<CaretRight size={15} color={palette.neutral[500]} />}
+          />
+        ))}
       </SurfaceCard>
-
-      <View>
-        <SectionLabel>SECURITY</SectionLabel>
-        <SurfaceCard style={styles.sectionCard}>
-          <SettingsRow
-            icon={UserFocus}
-            title={biometric.settingsTitle}
-            sub={biometric.settingsSub}
-            right={<NocToggle value={faceId} onChange={changeFaceId} />}
-          />
-        </SurfaceCard>
-        {faceIdError ? (
-          <ActionFailure message={faceIdError} retryLabel="Try again" onRetry={() => changeFaceId(true)} />
-        ) : null}
-      </View>
-
-      <ConnectionsCard
-        rows={connectionRows}
-        loadedFor={connections.loadedFor}
-        canManage={administers(activeWorkspace?.role)}
-        onChanged={connections.reload}
-      />
-
-      <View>
-        <SectionLabel>BILLING</SectionLabel>
-        <SurfaceCard style={styles.sectionCard}>
-          <SettingsRow
-            icon={CreditCard}
-            title="Billing"
-            sub="Your plan, its price and status"
-            testID="settings-billing"
-            onPress={() => router.push('/(tabs)/settings/billing')}
-            right={<CaretRight size={15} color={palette.neutral[500]} />}
-          />
-        </SurfaceCard>
-      </View>
-
-      <View>
-        <SectionLabel>WORKSPACE</SectionLabel>
-        <SurfaceCard style={styles.sectionCard}>
-          <SettingsRow
-            icon={Buildings}
-            title={activeWorkspace?.name ?? 'Workspace'}
-            divider
-            testID="workspace-switcher-row"
-            onPress={canSwitchWorkspace ? () => setSwitcherOpen(true) : undefined}
-            right={
-              canSwitchWorkspace ? (
-                <View style={styles.membersRight}>
-                  <Text style={[styles.membersCount, { color: palette.neutral[500] }]}>
-                    {activeWorkspace?.type ?? ''}
-                  </Text>
-                  <CaretRight size={15} color={palette.neutral[500]} testID="workspace-switcher-caret" />
-                </View>
-              ) : (
-                <Text style={[styles.membersCount, { color: palette.neutral[500] }]}>{activeWorkspace?.type ?? ''}</Text>
-              )
-            }
-          />
-          <SettingsRow
-            icon={Users}
-            title="Your role"
-            divider
-            right={
-              <View style={styles.membersRight}>
-                <Text style={[styles.membersCount, { color: palette.neutral[500] }]}>
-                  {activeWorkspace?.role ?? '—'}
-                </Text>
-              </View>
-            }
-          />
-          {/* The admin areas the website keeps under /account (ADR-0032, 24.5).
-              Teams are every workspace's: in an organization, and the person's own
-              (24.11.7) — the old organization-only Teams of people groups went. */}
-          <SettingsRow
-            icon={IdentificationBadge}
-            title="Organization"
-            divider
-            testID="settings-organization"
-            onPress={() => router.push('/(tabs)/settings/organization')}
-            right={<CaretRight size={15} color={palette.neutral[500]} />}
-          />
-          <SettingsRow
-            icon={UsersThree}
-            title="Teams"
-            sub="Your teams, who is on them, and asking to join one"
-            divider
-            testID="settings-teams"
-            onPress={() => router.push('/(tabs)/settings/teams')}
-            right={<CaretRight size={15} color={palette.neutral[500]} />}
-          />
-          <SettingsRow
-            icon={Archive}
-            title="Removed flows"
-            sub="Kept with their history; add any again"
-            divider
-            testID="settings-removed-flows"
-            onPress={() => router.push('/(tabs)/flows/removed')}
-            right={<CaretRight size={15} color={palette.neutral[500]} />}
-          />
-          <SettingsRow
-            icon={DownloadSimple}
-            title="Export my data"
-            sub="A copy of this workspace's records, as a file"
-            divider
-            testID="settings-data"
-            onPress={() => router.push('/(tabs)/settings/data')}
-            right={<CaretRight size={15} color={palette.neutral[500]} />}
-          />
-          <SettingsRow
-            icon={Bell}
-            title="Notifications"
-            sub="In-app inbox from approvals and failed runs"
-            right={<Text style={[styles.membersCount, { color: palette.neutral[500] }]}>In app</Text>}
-          />
-        </SurfaceCard>
-      </View>
-
-      <View>
-        <SectionLabel>APPEARANCE</SectionLabel>
-        <SurfaceCard style={styles.segCard}>
-          {APPEARANCE.map((opt) => {
-            const active = mode === opt.mode;
-            return (
-              <Pressable
-                key={opt.mode}
-                onPress={() => setMode(opt.mode)}
-                style={[
-                  styles.segOpt,
-                  active && { borderWidth: 1, borderColor: palette.accent },
-                ]}>
-                <Text
-                  style={{
-                    fontFamily: active ? fonts.medium : fonts.regular,
-                    fontSize: 13,
-                    color: active ? palette.accent : palette.neutral[400],
-                  }}>
-                  {opt.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </SurfaceCard>
-      </View>
-
-      <View>
-        <SectionLabel>HELP</SectionLabel>
-        <SurfaceCard style={styles.sectionCard}>
-          <SettingsRow
-            icon={Lifebuoy}
-            title="Support"
-            sub="Contact us, privacy and terms"
-            testID="settings-support"
-            onPress={() => router.push('/(tabs)/settings/support')}
-            right={<CaretRight size={15} color={palette.neutral[500]} />}
-          />
-        </SurfaceCard>
-      </View>
 
       {signOutFailed ? (
         <ActionFailure
@@ -375,9 +122,6 @@ export default function SettingsScreen() {
       <Text style={[styles.version, { color: palette.neutral[600] }]}>
         Autom8x for {platformName} · v{appVersion}
       </Text>
-
-
-      <WorkspaceSwitcher open={switcherOpen} onClose={() => setSwitcherOpen(false)} />
     </ScrollView>
   );
 }
@@ -390,51 +134,8 @@ const styles = StyleSheet.create({
   },
   h1: {
     fontFamily: fonts.medium,
-    fontSize: 26,
-    letterSpacing: em(-0.015, 26),
-  },
-  profileCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 13,
-    padding: layout.cardPad,
-  },
-  profileName: {
-    fontFamily: fonts.medium,
-    fontSize: 15.5,
-  },
-  profileSub: {
-    marginTop: 1,
-    fontFamily: fonts.regular,
-    fontSize: 12.5,
-  },
-  sectionCard: {
-    marginTop: 9,
-  },
-  rowBody: {
-    flex: 1,
-  },
-  membersRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  membersCount: {
-    fontFamily: fonts.regular,
-    fontSize: 12.5,
-  },
-  segCard: {
-    marginTop: 9,
-    flexDirection: 'row',
-    gap: 4,
-    padding: 6,
-  },
-  segOpt: {
-    flex: 1,
-    height: 34,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
+    fontSize: typeScale.display.fontSize,
+    letterSpacing: em(-0.015, typeScale.display.fontSize),
   },
   signOutCard: {
     flexDirection: 'row',
@@ -445,11 +146,11 @@ const styles = StyleSheet.create({
   },
   signOutLabel: {
     fontFamily: fonts.medium,
-    fontSize: 14,
+    fontSize: typeScale.label.fontSize,
   },
   version: {
     textAlign: 'center',
     fontFamily: fonts.regular,
-    fontSize: 11,
+    fontSize: typeScale.caption.fontSize,
   },
 });

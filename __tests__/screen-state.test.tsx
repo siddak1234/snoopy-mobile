@@ -190,4 +190,29 @@ describe('the first-run empties — invitations, not apologies', () => {
     );
     expect(getByText(ACTIVITY_EMPTY_BODY)).toBeTruthy();
   });
+
+  it('draws a way back only for a pushed screen that asks for one (24.12)', async () => {
+    const onBack = jest.fn();
+    const pushed = await renderWithProviders(
+      <ScreenEmpty icon={<FlowArrow size={40} />} title={FLOWS_EMPTY_TITLE} body={FLOWS_EMPTY_BODY} onBack={onBack} />,
+    );
+    await fireEvent.press(pushed.getByLabelText('Back'));
+    expect(onBack).toHaveBeenCalled();
+    await pushed.unmount();
+
+    // A tab's own screen has nowhere to go back to: the render is as it was.
+    const root = await renderWithProviders(
+      <ScreenEmpty icon={<FlowArrow size={40} />} title={FLOWS_EMPTY_TITLE} body={FLOWS_EMPTY_BODY} />,
+    );
+    expect(root.queryByLabelText('Back')).toBeNull();
+  });
+
+  it('says only its title when an empty has nothing more to say (24.12)', async () => {
+    const { getByText, queryAllByText } = await renderWithProviders(
+      <ScreenEmpty icon={<FlowArrow size={40} />} title="No integrations yet" />,
+    );
+    expect(getByText('No integrations yet')).toBeTruthy();
+    // The hero and the title, and no empty line under them.
+    expect(queryAllByText(/[\s\S]*/u)).toHaveLength(1);
+  });
 });

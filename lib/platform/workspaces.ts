@@ -30,6 +30,17 @@ export function readWorkspaces(): Promise<WorkspaceListResponse> {
   );
 }
 
+/**
+ * The person's workspace list changed — a rename, a new organization, a join —
+ * so its next read is a real request, as after a switch below. Without it the
+ * Organization screen showed the old name for up to the snapshot's 120 s window
+ * (the owner's build 9, 24.12).
+ */
+export function changedWorkspaces<T>(answer: T): T {
+  invalidateShared(GLOBAL_SCOPE, ['workspaces']);
+  return answer;
+}
+
 /** Make one workspace the session's active workspace. Owned by the backend session. */
 export function selectActiveWorkspace(
   workspaceId: string,

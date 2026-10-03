@@ -8,6 +8,7 @@ import {
   PlatformNotConfiguredError,
   PlatformRateLimitedError,
 } from '@/lib/platform/problem';
+import { readWorkspaces } from '@/lib/platform/workspaces';
 
 /**
  * How a failed session request is classified.
@@ -37,7 +38,7 @@ jest.mock('@/lib/platform/native-auth', () => ({
 
 const { platformOperation } = jest.requireMock('@/lib/platform/client');
 const { readSession, clearSession, readRememberSession } = jest.requireMock('@/lib/platform/session-store');
-const { refreshSession } = jest.requireMock('@/lib/platform/native-auth');
+const { refreshSession, signInWithProvider, signOut } = jest.requireMock('@/lib/platform/native-auth');
 
 function Probe() {
   const session = useSession();
@@ -260,5 +261,86 @@ describe('SessionProvider.reload', () => {
     await waitFor(() => expect(screen.getByText('status:signed-out')).toBeTruthy());
     expect(clearSession).toHaveBeenCalled();
     expect(outcomes).toEqual([{ status: 'signed-out' }]);
+  });
+});
+
+/**
+ * The shared snapshot (24.9.1) belongs to one session (24.12). Its global
+ * entries — the workspace list, the providers — would otherwise answer the next
+ * account on this device for up to their 120 s window: it is emptied when a
+ * session ends and when one begins, so the next read is a real request.
+ */
+describe('SessionProvider and the shared snapshot', () => {
+  const listReads = () =>
+    platformOperation.mock.calls.filter(([path]: [string]) => path === '/v1/workspaces').length;
+  /** What each sign-in answered, once it has finished. */
+  const signIns: unknown[] = [];
+  beforeEach(() => {
+    signIns.length = 0;
+  });
+
+  function SnapshotProbe() {
+    const session = useSession();
+    return (
+      <>
+        <Text>{`status:${session.status}`}</Text>
+        <Pressable testID="sign-out" onPress={() => void session.signOut()}>
+          <Text>sign out</Text>
+        </Pressable>
+        <Pressable testID="sign-in" onPress={() => void session.signIn('google').then((o) => signIns.push(o))}>
+          <Text>sign in</Text>
+        </Pressable>
+        <Pressable testID="reload" onPress={() => void session.reload()}>
+          <Text>reload</Text>
+        </Pressable>
+      </>
+    );
+  }
+
+  /** Signed in, with the workspace list read once and answered from the snapshot after. */
+  async function signedInWithAList() {
+    platformOperation.mockImplementation(async (path: string) =>
+      path === '/v1/workspaces' ? { workspaces: [], activeWorkspaceId: 'ws-1' } : sessionFor('ws-1'),
+    );
+    await render(
+      <SessionProvider>
+        <SnapshotProbe />
+      </SessionProvider>,
+    );
+    await screen.findByText('status:signed-in');
+    await readWorkspaces();
+    await readWorkspaces();
+    expect(listReads()).toBe(1);
+  }
+
+  it('is emptied by a sign-out the platform revoked', async () => {
+    await signedInWithAList();
+    signOut.mockResolvedValue({ revoked: true });
+    await fireEvent.press(screen.getByTestId('sign-out'));
+    await screen.findByText('status:signed-out');
+    await readWorkspaces();
+    expect(listReads()).toBe(2);
+  });
+
+  it('is emptied when a session ends by itself (a 401 on a re-read)', async () => {
+    await signedInWithAList();
+    platformOperation.mockImplementation(async (path: string) => {
+      if (path === '/v1/workspaces') return { workspaces: [], activeWorkspaceId: 'ws-1' };
+      throw new PlatformError('Sign in is required.', 401, 'UNAUTHENTICATED');
+    });
+    await fireEvent.press(screen.getByTestId('reload'));
+    await screen.findByText('status:signed-out');
+    await readWorkspaces();
+    expect(listReads()).toBe(2);
+  });
+
+  it('is emptied when a new session begins', async () => {
+    await signedInWithAList();
+    signInWithProvider.mockResolvedValue({ status: 'signed-in' });
+    await fireEvent.press(screen.getByTestId('sign-in'));
+    await waitFor(() => expect(signIns).toEqual([{ status: 'signed-in' }]));
+    expect(signInWithProvider).toHaveBeenCalledWith('google');
+    await readWorkspaces();
+    expect(listReads()).toBe(2);
   });
 });

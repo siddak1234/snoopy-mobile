@@ -5,10 +5,13 @@
  * - light values: Screen.dc.html `.thm-light` overrides (unlisted steps
  *   intentionally inherit the dark ramp value, matching the CSS cascade)
  * - status colors: Screen.dc.html screen logic (ok/warn/err + pill triples)
+ * - type sizes: NOT the design's — the app's own scale, `typeScale` below, since
+ *   the owner's decision 11 (2026-10-02, 24.12)
  *
  * Adherence rule (from _ds/_adherence.oxlintrc.json): no raw hex colors and no
  * ad-hoc font families outside this file — screens and components must consume
- * these tokens.
+ * these tokens. Since 24.12 no font size either: `audit:type` fails one written
+ * outside this file.
  */
 import type { TextStyle, ViewStyle } from 'react-native';
 
@@ -129,6 +132,42 @@ export const fonts = {
   semibold: 'Inter_600SemiBold',
 } as const;
 
+/**
+ * The app's type scale: every font size in `app/` and `components/` is one of
+ * these steps, each with the line height a paragraph at that size takes.
+ *
+ * The design wrote text at 10–16 pt and titles at 18–34, and the app carried
+ * them over 1:1 until the owner's build 9 ("Why is everything so small"):
+ * decision 11 of 2026-10-02 is bigger type across the whole app — easy to read
+ * (24.12). Each step is about 2 pt over the design sizes it replaces for text
+ * and 3 for titles; the comment on a step names them. Text leads at about 1.45
+ * (the design's paragraphs use 1.45–1.55) and titles at about 1.25, never under
+ * Inter's own line box of 1.21 em. `audit:type` fails a size written anywhere
+ * else, so tuning the type is this table.
+ */
+export const typeScale = {
+  /** The design's 10–10.5. */
+  micro: { fontSize: 12, lineHeight: 17 },
+  /** 11–11.5. */
+  caption: { fontSize: 13, lineHeight: 19 },
+  /** 12–12.5. */
+  small: { fontSize: 14, lineHeight: 20 },
+  /** 13–13.5. */
+  body: { fontSize: 15, lineHeight: 22 },
+  /** 14–14.5. */
+  label: { fontSize: 16, lineHeight: 23 },
+  /** 15–16. */
+  lead: { fontSize: 17, lineHeight: 25 },
+  /** 18–20. */
+  title: { fontSize: 21, lineHeight: 26 },
+  /** 21–22. */
+  heading: { fontSize: 24, lineHeight: 30 },
+  /** 24–26. */
+  display: { fontSize: 29, lineHeight: 36 },
+  /** 34. */
+  hero: { fontSize: 37, lineHeight: 46 },
+} as const;
+
 /** DS radius scale + the specific radii the screens are drawn with. */
 export const radius = {
   sm: 4,
@@ -196,7 +235,7 @@ export function elevation(p: NocturnePalette): Elevation {
 }
 
 /** Kicker/section-label text style ("AUTOMATION × AI", "RECENT RUNS", …). */
-export function kicker(p: NocturnePalette, size = 11, track = 0.14): TextStyle {
+export function kicker(p: NocturnePalette, size: number = typeScale.caption.fontSize, track = 0.14): TextStyle {
   return {
     fontFamily: fonts.regular,
     fontSize: size,

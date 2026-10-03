@@ -8,6 +8,7 @@ const fixtureAudit = resolve(__dirname, '../scripts/audit-fixtures.mjs');
 const credentialAudit = resolve(__dirname, '../scripts/audit-credentials.mjs');
 const tokenAudit = resolve(__dirname, '../scripts/audit-tokens.mjs');
 const vocabularyAudit = resolve(__dirname, '../scripts/audit-vocabulary.mjs');
+const typeAudit = resolve(__dirname, '../scripts/audit-type.mjs');
 let root;
 
 beforeEach(() => {
@@ -178,6 +179,27 @@ describe('architecture audit scripts', () => {
     expect(elsewhere.stderr).toContain('lib/upload.ts');
   });
 
+  it('allows the transport ONE native download, the signed export, and nothing more (24.12)', () => {
+    mkdirSync(join(root, 'lib/platform'), { recursive: true });
+    const transport = join(root, 'lib/platform/client.ts');
+    const save = 'export const save = (url, to) => File.downloadFileAsync(url, to, { idempotent: true });';
+    writeFileSync(transport, save);
+    expect(run(platformAudit).status).toBe(0);
+
+    // A second download in the transport is a second path to the network.
+    writeFileSync(transport, `${save}\nexport const again = (url, to) => File.downloadFileAsync(url, to);`);
+    const twice = run(platformAudit);
+    expect(twice.status).toBe(1);
+    expect(twice.stderr).toContain('native file download');
+
+    // The allowance is the transport's alone: the same call in a screen fails.
+    writeFileSync(transport, '');
+    writeFileSync(join(root, 'app/screen.tsx'), save);
+    const elsewhere = run(platformAudit);
+    expect(elsewhere.status).toBe(1);
+    expect(elsewhere.stderr).toContain('app/screen.tsx');
+  });
+
   it('fails a network primitive captured in a binding', () => {
     writeFileSync(
       join(root, 'app/bad.ts'),
@@ -233,5 +255,55 @@ describe('the vocabulary audit (24.11.7)', () => {
       ].join('\n'),
     );
     expect(run(vocabularyAudit).status).toBe(0);
+  });
+});
+
+describe('the type audit (24.12)', () => {
+  it('fails a font size written outside the type scale, in each form a number becomes a size, and passes the scale', () => {
+    expect(run(typeAudit).status).toBe(0);
+
+    for (const [file, source] of [
+      ['app/screen.tsx', 'export const s = { fontSize: 13 };'],
+      ['components/label.tsx', 'export const L = () => <SectionLabel fontSize={10.5}>Runs</SectionLabel>;'],
+      ['components/badge.tsx', 'export function B({ fontSize = 13 }) {\n  return <Text style={{ fontSize }} />;\n}'],
+      ['components/stat.tsx', 'export const value = (md) => ({ fontSize: md ? 20 : 18 });'],
+      [
+        'components/pill.tsx',
+        'export function P({ height }) {\n  const size = height >= 52 ? 16 : 13;\n  return <Text style={{ fontSize: size }} />;\n}',
+      ],
+      ['lib/sizes.ts', 'const SIZES = { title: 21 };\nexport const t = { fontSize: SIZES.title };'],
+      ['hooks/kicker.ts', 'export const k = { letterSpacing: em(0.14, 11) };'],
+      ['constants/lead.ts', 'export const p = { lineHeight: 18 };'],
+    ]) {
+      writeFileSync(join(root, file), source);
+      const result = run(typeAudit);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(file);
+      rmSync(join(root, file));
+    }
+
+    // The scale's own file is where a size is a number, and a size read from it
+    // passes — a spread pair, a prop's default, the threshold a pill compares.
+    writeFileSync(
+      join(root, 'constants/theme.ts'),
+      'export const typeScale = { body: { fontSize: 15, lineHeight: 22 }, lead: { fontSize: 17, lineHeight: 25 } };',
+    );
+    writeFileSync(
+      join(root, 'components/fine.tsx'),
+      [
+        "import { em, typeScale } from '@/constants/theme';",
+        'export const a = { fontSize: typeScale.body.fontSize, letterSpacing: em(-0.01, typeScale.body.fontSize) };',
+        'export const b = { ...typeScale.body, height: 34, marginTop: 4 };',
+        'export function P({ height, fontSize, iconSize }) {',
+        '  const size = fontSize ?? (height >= 52 ? typeScale.lead.fontSize : typeScale.body.fontSize);',
+        '  return <Text style={{ fontSize: size }}>{iconSize ?? size + 1}</Text>;',
+        '}',
+        'export function L({ fontSize = typeScale.body.fontSize }) {',
+        '  return <Text style={{ fontSize }} />;',
+        '}',
+        'export const c = (wide) => ({ fontSize: (wide > 360 && typeScale.lead.fontSize) || typeScale.body.fontSize });',
+      ].join('\n'),
+    );
+    expect(run(typeAudit).status).toBe(0);
   });
 });

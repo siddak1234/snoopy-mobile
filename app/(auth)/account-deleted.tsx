@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
-import { em, fonts, layout } from '@/constants/theme';
+import { em, fonts, layout, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -36,7 +36,7 @@ export default function AccountDeletedScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, paddingHorizontal: layout.screenX },
   card: { padding: 22, gap: 12 },
-  title: { fontFamily: fonts.medium, fontSize: 24, letterSpacing: em(-0.01, 24), textAlign: 'center' },
-  text: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, textAlign: 'center' },
-  small: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, textAlign: 'center' },
+  title: { fontFamily: fonts.medium, fontSize: typeScale.display.fontSize, letterSpacing: em(-0.01, typeScale.display.fontSize), textAlign: 'center' },
+  text: { fontFamily: fonts.regular, ...typeScale.label, textAlign: 'center' },
+  small: { fontFamily: fonts.regular, ...typeScale.body, textAlign: 'center' },
 });

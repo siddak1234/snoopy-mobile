@@ -185,14 +185,18 @@ export function subscriptionsPayload() {
   };
 }
 
-/** Projects of the test workspace, by name — for the screens that scope by project. */
-export function projectsPayload(...names: string[]) {
+/**
+ * Teams of the test workspace (projects in the contract), by kind — for the
+ * screens that scope by team. A team is its kind since 24.12: the kind is sent
+ * as both its name and its type.
+ */
+export function projectsPayload(...kinds: string[]) {
   return {
-    projects: names.map((name, index) => ({
+    projects: kinds.map((kind, index) => ({
       id: `project-${index + 1}`,
       workspaceId: TEST_WORKSPACE,
-      name,
-      type: 'Operations',
+      name: kind,
+      type: kind,
       status: 'active',
       viewerRole: 'owner',
       createdAt: '2026-09-01T00:00:00Z',

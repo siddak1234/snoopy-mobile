@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, Text } from 'react-native';
 
-import { fonts, withAlpha } from '@/constants/theme';
+import { fonts, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 type Props = {
@@ -30,7 +30,7 @@ export function FilterChip({ label, active = false, onPress, height = 32 }: Prop
       <Text
         style={{
           fontFamily: active ? fonts.medium : fonts.regular,
-          fontSize: 12.5,
+          fontSize: typeScale.small.fontSize,
           color: active ? palette.accent : palette.neutral[400],
         }}>
         {label}

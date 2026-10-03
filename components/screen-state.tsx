@@ -5,7 +5,7 @@ import { ArrowClockwise, WarningCircle, WifiSlash, type Icon } from 'phosphor-re
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { Skeleton } from '@/components/nocturne/skeleton';
-import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
+import { em, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import {
   BACK_LABEL,
@@ -116,7 +116,7 @@ function FailureBody({
           label={RETRY_LABEL}
           variant="primary"
           height={44}
-          fontSize={14}
+          fontSize={typeScale.label.fontSize}
           icon={ArrowClockwise}
           iconSize={16}
           gap={8}
@@ -124,7 +124,7 @@ function FailureBody({
           style={styles.retry}
         />
         {backLabel ? (
-          <PillButton label={backLabel} variant="plain" height={40} fontSize={13.5} onPress={onBack} />
+          <PillButton label={backLabel} variant="plain" height={40} fontSize={typeScale.body.fontSize} onPress={onBack} />
         ) : null}
       </View>
     </View>
@@ -239,6 +239,11 @@ export function ScreenOffline({
  * failure states use — nothing has gone wrong here, so it must not look like it
  * has. `action` is optional because the notifications empty state has none: an
  * empty inbox is the product's own rule working, not something to fix.
+ *
+ * Since the owner's decision 6 of 2026-10-02 (24.12) every whole screen with
+ * nothing on it draws this — a pushed screen with `onBack`, which draws the
+ * failure states' back control; without it the render is as it always was. A
+ * screen whose empty says only its title leaves out `body`.
  */
 export function ScreenEmpty({
   icon,
@@ -246,13 +251,16 @@ export function ScreenEmpty({
   body,
   action,
   secondaryAction,
+  onBack,
   topInset = 0,
 }: {
   icon: React.ReactNode;
   title: string;
-  body: string;
+  body?: string;
   action?: { label: string; icon?: Icon; onPress?: () => void };
   secondaryAction?: { label: string; onPress?: () => void };
+  /** A pushed screen's way back. */
+  onBack?: () => void;
   topInset?: number;
 }) {
   const { palette } = useTheme();
@@ -260,6 +268,7 @@ export function ScreenEmpty({
     <View
       testID="screen-empty"
       style={[styles.root, { paddingTop: topInset + DESIGN_TOP, backgroundColor: palette.bg }]}>
+      {onBack ? <BackCircle onPress={onBack} /> : null}
       <View style={styles.center}>
         <View
           style={[
@@ -269,7 +278,7 @@ export function ScreenEmpty({
           {icon}
         </View>
         <Text style={[styles.emptyTitle, { color: palette.text }]}>{title}</Text>
-        <Text style={[styles.body, { color: palette.neutral[400] }]}>{body}</Text>
+        {body ? <Text style={[styles.body, { color: palette.neutral[400] }]}>{body}</Text> : null}
         {action ? (
           <PillButton
             label={action.label}
@@ -285,7 +294,7 @@ export function ScreenEmpty({
             label={secondaryAction.label}
             variant="plain"
             height={44}
-            fontSize={14.5}
+            fontSize={typeScale.label.fontSize}
             onPress={secondaryAction.onPress}
             style={styles.emptySecondary}
           />
@@ -366,14 +375,13 @@ const styles = StyleSheet.create({
   title: {
     marginTop: 8,
     fontFamily: fonts.medium,
-    fontSize: 20,
-    letterSpacing: em(-0.01, 20),
+    fontSize: typeScale.title.fontSize,
+    letterSpacing: em(-0.01, typeScale.title.fontSize),
     textAlign: 'center',
   },
   body: {
     fontFamily: fonts.regular,
-    fontSize: 13.5,
-    lineHeight: 13.5 * 1.55,
+    ...typeScale.body,
     textAlign: 'center',
     maxWidth: 224,
   },
@@ -389,8 +397,8 @@ const styles = StyleSheet.create({
   emptyTitle: {
     marginTop: 8,
     fontFamily: fonts.medium,
-    fontSize: 22,
-    letterSpacing: em(-0.015, 22),
+    fontSize: typeScale.heading.fontSize,
+    letterSpacing: em(-0.015, typeScale.heading.fontSize),
     textAlign: 'center',
   },
   emptyCta: { marginTop: 8, alignSelf: 'stretch' },
@@ -405,6 +413,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   calloutBody: { flex: 1, gap: 6 },
-  calloutText: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 13 * 1.5 },
-  calloutAction: { fontFamily: fonts.medium, fontSize: 13 },
+  calloutText: { fontFamily: fonts.regular, ...typeScale.body },
+  calloutAction: { fontFamily: fonts.medium, fontSize: typeScale.body.fontSize },
 });

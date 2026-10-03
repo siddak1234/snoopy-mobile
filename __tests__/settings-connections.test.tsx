@@ -1,9 +1,10 @@
 import React from 'react';
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
-import SettingsScreen from '@/app/(tabs)/settings';
+import ConnectionsScreen from '@/app/(tabs)/settings/connections';
+import { resetSnapshot } from '@/lib/platform/snapshot';
 import { sessionAs, signedInSession } from '@/test/platform';
-import { renderWithProviders } from '@/test/render';
+import { mockRouter, renderWithProviders } from '@/test/render';
 
 jest.mock('@/lib/platform/client', () => ({
   platformOperation: jest.fn(),
@@ -18,8 +19,8 @@ const { platformOperation } = jest.requireMock('@/lib/platform/client');
 const { connectOAuthProvider } = jest.requireMock('@/lib/platform/connections');
 
 /**
- * What the CONNECTIONS card does when the system browser comes back without a
- * handoff.
+ * What the CONNECTIONS card — Settings › Connections, its own page since 24.12 —
+ * does when the system browser comes back without a handoff.
  *
  * Manifest §12.1 #79's native residue: a system browser that shares a logged-in
  * WEBSITE session authenticates at the connections callback and finishes at the
@@ -77,7 +78,7 @@ describe('an OAuth connect that comes back cancelled', () => {
     // connection the website completed.
     const reads = routeReads([[], [connected]]);
     connectOAuthProvider.mockResolvedValue({ status: 'cancelled' });
-    await renderWithProviders(<SettingsScreen />, signedInSession);
+    await renderWithProviders(<ConnectionsScreen />, signedInSession);
 
     expect(await screen.findByText('Not connected')).toBeTruthy();
     const readsBefore = reads.filter((path) => path.endsWith('/connections')).length;
@@ -100,7 +101,7 @@ describe('an OAuth connect that comes back cancelled', () => {
       status: 'failed',
       message: 'No web browser is available on this device to continue.',
     });
-    await renderWithProviders(<SettingsScreen />, signedInSession);
+    await renderWithProviders(<ConnectionsScreen />, signedInSession);
     expect(await screen.findByText('Not connected')).toBeTruthy();
     const readsBefore = reads.filter((path) => path.endsWith('/connections')).length;
 
@@ -131,7 +132,7 @@ const CONNECTED_GMAIL = {
 describe('who may change a connection (the Edge refuses a member 403)', () => {
   it('offers a member nothing to press, and says who can change it', async () => {
     routeReads([[CONNECTED_GMAIL]]);
-    await renderWithProviders(<SettingsScreen />, sessionAs('member'));
+    await renderWithProviders(<ConnectionsScreen />, sessionAs('member'));
     await fireEvent.press(await screen.findByText('Gmail'));
     expect(screen.queryByText('Disconnect Gmail')).toBeNull();
     expect(screen.queryByText('Connect')).toBeNull();
@@ -148,7 +149,7 @@ describe('the connection dialog’s actions (feedback #2)', () => {
     // broken. Three actions stack at full width; two still share a row.
     const { StyleSheet } = jest.requireActual('react-native');
     routeReads([[CONNECTED_GMAIL], [CONNECTED_GMAIL]]);
-    await renderWithProviders(<SettingsScreen />, sessionAs('owner'));
+    await renderWithProviders(<ConnectionsScreen />, sessionAs('owner'));
     await fireEvent.press(await screen.findByText('Gmail'));
     expect(await screen.findByText('Disconnect Gmail')).toBeTruthy();
     expect(StyleSheet.flatten(screen.getByTestId('connection-dialog-actions').props.style).flexDirection).toBe('column');
@@ -172,7 +173,7 @@ describe('replacing a connection’s account', () => {
   it('names the exact connection it replaces', async () => {
     routeReads([[CONNECTED_GMAIL], [CONNECTED_GMAIL]]);
     connectOAuthProvider.mockResolvedValue({ status: 'connected', connection: CONNECTED_GMAIL });
-    await renderWithProviders(<SettingsScreen />, sessionAs('owner'));
+    await renderWithProviders(<ConnectionsScreen />, sessionAs('owner'));
     await openReplace();
     await waitFor(() => expect(connectOAuthProvider).toHaveBeenCalledTimes(1));
     const [workspaceId, provider, options] = connectOAuthProvider.mock.calls[0];
@@ -185,7 +186,7 @@ describe('replacing a connection’s account', () => {
     const { PlatformError } = jest.requireActual('@/lib/platform/problem');
     const reads = routeReads([[CONNECTED_GMAIL], [CONNECTED_GMAIL]]);
     connectOAuthProvider.mockRejectedValue(new PlatformError('Conflict', 409));
-    await renderWithProviders(<SettingsScreen />, sessionAs('admin'));
+    await renderWithProviders(<ConnectionsScreen />, sessionAs('admin'));
     await openReplace();
     expect(
       await screen.findByText(
@@ -203,8 +204,32 @@ describe('replacing a connection’s account', () => {
   it('says so when the platform reused the connection instead', async () => {
     routeReads([[CONNECTED_GMAIL]]);
     connectOAuthProvider.mockResolvedValue({ status: 'connected', connection: CONNECTED_GMAIL, reused: true });
-    await renderWithProviders(<SettingsScreen />, sessionAs('owner'));
+    await renderWithProviders(<ConnectionsScreen />, sessionAs('owner'));
     await openReplace();
     expect(await screen.findByText('alex@acme.co is still connected — there was nothing to replace.')).toBeTruthy();
+  });
+});
+
+describe('Settings › Connections, the integrations page (24.12)', () => {
+  it('lists the third-party integrations, and is the empty-state standard with none', async () => {
+    const reads = routeReads([[CONNECTED_GMAIL]]);
+    const view = await renderWithProviders(<ConnectionsScreen />, sessionAs('owner'));
+    expect(await screen.findByText('Gmail')).toBeTruthy();
+    expect(screen.getByText('Connections')).toBeTruthy();
+    // Integrations only: the sign-in accounts are Account's.
+    expect(reads.some((path) => path.includes('/v1/auth/identities'))).toBe(false);
+    await view.unmount();
+
+    platformOperation.mockReset();
+    platformOperation.mockImplementation((path: string) =>
+      Promise.resolve(path === '/v1/connections/providers' ? { providers: [] } : { connections: [] }),
+    );
+    // A fresh read: the providers are kept in the shared snapshot.
+    resetSnapshot();
+    await renderWithProviders(<ConnectionsScreen />, sessionAs('owner'));
+    expect(await screen.findByTestId('screen-empty')).toBeTruthy();
+    expect(screen.getByText('No integrations yet')).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText('Back'));
+    expect(mockRouter.back).toHaveBeenCalled();
   });
 });

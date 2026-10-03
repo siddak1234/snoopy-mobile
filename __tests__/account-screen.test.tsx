@@ -11,8 +11,10 @@ jest.mock('@/lib/platform/identity-link', () => ({ linkIdentity: jest.fn() }));
 
 import { fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import React from 'react';
+import { StyleSheet } from 'react-native';
 
 import AccountScreen from '@/app/(tabs)/settings/account';
+import { nocturneDark } from '@/constants/theme';
 import type { SessionContextValue } from '@/hooks/use-session';
 import { DELETE_ACCOUNT_BODY, DELETION_WORDS } from '@/lib/content/deletion';
 import { PlatformError } from '@/lib/platform/problem';
@@ -64,6 +66,32 @@ describe('Linked accounts (24.6.2, on 24.2.1)', () => {
     await fireEvent.press(screen.getByTestId('link-apple'));
     await waitFor(() => expect(linkIdentity).toHaveBeenCalledWith('apple'));
     await waitFor(() => expect(fake.to('GET /v1/auth/identities').length).toBe(reads + 1));
+  });
+
+  it('shows the address a linked account reports, muted under its name — none when it reports none, none when not linked (24.12)', async () => {
+    const fake = fakePlatform(platformOperation);
+    fake.always('GET /v1/auth/identities', {
+      identities: [
+        { provider: 'google', primary: true, email: 'alex@acme.co' },
+        { provider: 'microsoft', primary: false },
+      ],
+    });
+    fake.always('GET /v1/auth/providers', {
+      providers: [
+        { id: 'google', label: 'Google' },
+        { id: 'microsoft', label: 'Microsoft' },
+        { id: 'apple', label: 'Apple' },
+      ],
+      passwordLoginEnabled: false,
+      magicLinkLoginEnabled: false,
+    });
+    await renderWithProviders(<AccountScreen />, session());
+    const google = await screen.findByTestId('identity-google');
+    const address = within(google).getByText('alex@acme.co');
+    expect((StyleSheet.flatten(address.props.style) as { color?: string }).color).toBe(nocturneDark.neutral[400]);
+    // Linked, but its provider reported no address; and not linked at all.
+    expect(within(screen.getByTestId('identity-microsoft')).queryByText(/@/u)).toBeNull();
+    expect(within(screen.getByTestId('identity-apple')).queryByText(/@/u)).toBeNull();
   });
 });
 
@@ -188,14 +216,49 @@ describe('Unlinking a sign-in account (backend 24.11.1)', () => {
     await waitFor(() => expect(fake.to('GET /v1/auth/identities').length).toBe(reads + 1));
   });
 
-  it("shows the platform's sentence when an unlink is refused", async () => {
+  /** Unlink Apple, refused as `refusal` — a PlatformError carrying the problem's TITLE, as the transport builds it. */
+  async function unlinkRefused(refusal: PlatformError) {
     const fake = routeLinked();
     fake.always('POST /v1/auth/native/identities/{provider}/unlink', () => {
-      throw new PlatformError('The last sign-in account stays linked', 400, 'BAD_REQUEST', { reason: 'last' });
+      throw refusal;
     });
     await renderWithProviders(<AccountScreen />, session());
     await fireEvent.press(await screen.findByTestId('unlink-apple'));
     await fireEvent.press(within(await screen.findByTestId('unlink-dialog')).getByText('Unlink'));
-    expect(await screen.findByText('The last sign-in account stays linked')).toBeTruthy();
+  }
+
+  it('says a refused unlink in words by its reason, never the problem title (24.12)', async () => {
+    await unlinkRefused(new PlatformError('Bad Request', 400, 'BAD_REQUEST', { reason: 'last' }));
+    expect(await screen.findByText('The last sign-in account stays linked.')).toBeTruthy();
+    expect(screen.queryByText('Bad Request')).toBeNull();
+  });
+
+  it('says the account you signed up with stays linked (reason primary)', async () => {
+    await unlinkRefused(new PlatformError('Bad Request', 400, 'BAD_REQUEST', { reason: 'primary' }));
+    expect(await screen.findByText('The account you signed up with stays linked.')).toBeTruthy();
+  });
+
+  it('says a provider refusal in words (reason refused)', async () => {
+    await unlinkRefused(new PlatformError('Bad Request', 400, 'BAD_REQUEST', { reason: 'refused' }));
+    expect(await screen.findByText('This sign-in account cannot be unlinked.')).toBeTruthy();
+  });
+
+  it("says unlinking isn't available yet where the platform has no such route — build 9's \"Not Found\"", async () => {
+    await unlinkRefused(
+      new PlatformError('Not Found', 404, 'NOT_FOUND', { method: 'POST', path: '/v1/auth/native/identities/apple/unlink' }),
+    );
+    expect(await screen.findByText("Unlinking isn't available yet.")).toBeTruthy();
+    expect(screen.queryByText('Not Found')).toBeNull();
+  });
+
+  it('says an account that is not linked is not linked (a plain 404)', async () => {
+    await unlinkRefused(new PlatformError('Not Found', 404, 'NOT_FOUND'));
+    expect(await screen.findByText('That sign-in account is not linked.')).toBeTruthy();
+  });
+
+  it('falls back to its own sentence for anything else', async () => {
+    await unlinkRefused(new PlatformError('Dependency Failure', 502, 'DEPENDENCY_FAILURE'));
+    expect(await screen.findByText('The account could not be unlinked.')).toBeTruthy();
+    expect(screen.queryByText('Dependency Failure')).toBeNull();
   });
 });

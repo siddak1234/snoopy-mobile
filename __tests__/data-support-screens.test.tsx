@@ -1,4 +1,8 @@
-jest.mock('@/lib/platform/client', () => ({ platformOperation: jest.fn(), newIdempotencyKey: jest.fn(() => 'export-key') }));
+jest.mock('@/lib/platform/client', () => ({
+  platformOperation: jest.fn(),
+  newIdempotencyKey: jest.fn(() => 'export-key'),
+  downloadSignedFile: jest.fn(),
+}));
 jest.mock('expo-file-system', () => ({ File: jest.fn(), Paths: { cache: {} } }));
 jest.mock('expo-constants', () => ({
   __esModule: true,
@@ -7,7 +11,7 @@ jest.mock('expo-constants', () => ({
 
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import React from 'react';
-import { Linking } from 'react-native';
+import { Linking, Platform, Share } from 'react-native';
 
 import DataExportScreen from '@/app/(tabs)/settings/data';
 import SupportScreen from '@/app/(tabs)/settings/support';
@@ -15,11 +19,12 @@ import { fakePlatform } from '@/test/fake-platform';
 import { TEST_WORKSPACE, sessionAs, signedInSession } from '@/test/platform';
 import { renderWithProviders } from '@/test/render';
 
-const { platformOperation } = jest.requireMock('@/lib/platform/client');
+const { platformOperation, downloadSignedFile } = jest.requireMock('@/lib/platform/client');
 
 let openURL: jest.SpyInstance;
 beforeEach(() => {
   openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+  downloadSignedFile.mockReset();
 });
 afterEach(() => {
   openURL.mockRestore();
@@ -67,15 +72,17 @@ describe('Data export (24.6.3)', () => {
     expect(screen.getByText('Runs: included (bounded)')).toBeTruthy();
   });
 
-  it('follows the complete export until it is ready, and reads the link again at the moment of the download', async () => {
+  /** Started, followed until ready, with an older link first and the fresh one read at the download. */
+  async function readyToDownload() {
     jest.useFakeTimers();
     const fake = routeData('owner');
+    const file = (downloadUrl: string) => ({ downloadUrl, artifactId: 'a', filename: 'exports/acme-export.json', sizeBytes: 1, expiresAt: 'x' });
     fake.always('POST /v1/workspaces/{workspaceId}/exports', { export: job('running') });
     fake.once('GET /v1/workspaces/{workspaceId}/exports/{exportId}', {
-      export: job('ready', { complete: true, file: { downloadUrl: 'https://store.example.test/old', artifactId: 'a', filename: 'f', sizeBytes: 1, expiresAt: 'x' } }),
+      export: job('ready', { complete: true, file: file('https://store.example.test/old') }),
     });
-    fake.once('GET /v1/workspaces/{workspaceId}/exports/{exportId}', {
-      export: job('ready', { complete: true, file: { downloadUrl: 'https://store.example.test/fresh', artifactId: 'a', filename: 'f', sizeBytes: 1, expiresAt: 'x' } }),
+    fake.always('GET /v1/workspaces/{workspaceId}/exports/{exportId}', {
+      export: job('ready', { complete: true, file: file('https://store.example.test/fresh') }),
     });
     await renderWithProviders(<DataExportScreen />, sessionAs('owner'));
     await fireEvent.press(await screen.findByText('Export everything'));
@@ -86,8 +93,44 @@ describe('Data export (24.6.3)', () => {
       jest.advanceTimersByTime(2_000);
     });
     expect(await screen.findByText('Ready. The file holds the whole workspace.')).toBeTruthy();
+  }
+
+  it('on iOS saves the complete export into the app, read afresh, and hands it to the share sheet — not Safari (24.12)', async () => {
+    const ios = jest.replaceProperty(Platform, 'OS', 'ios');
+    const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
+    const saved = { uri: 'file:///cache/acme-export.json', exists: true, delete: jest.fn() };
+    let arrive: (file: typeof saved) => void = () => undefined;
+    downloadSignedFile.mockImplementation(() => new Promise((resolve) => (arrive = resolve)));
+    await readyToDownload();
+    await fireEvent.press(screen.getByText('Download file'));
+    expect(await screen.findByText('Saving…')).toBeTruthy();
+    await act(async () => arrive(saved));
+    await waitFor(() => expect(share).toHaveBeenCalledWith({ url: 'file:///cache/acme-export.json' }));
+    expect(downloadSignedFile).toHaveBeenCalledWith('https://store.example.test/fresh', 'exports/acme-export.json');
+    // Removed once shared, and never opened in the browser.
+    expect(saved.delete).toHaveBeenCalled();
+    expect(openURL).not.toHaveBeenCalled();
+    share.mockRestore();
+    ios.restore();
+  });
+
+  it('says so when the file could not be saved', async () => {
+    const ios = jest.replaceProperty(Platform, 'OS', 'ios');
+    downloadSignedFile.mockRejectedValue(new Error('The file could not be saved.'));
+    await readyToDownload();
+    await fireEvent.press(screen.getByText('Download file'));
+    expect(await screen.findByText('The file could not be saved.')).toBeTruthy();
+    expect(openURL).not.toHaveBeenCalled();
+    ios.restore();
+  });
+
+  it("on Android, whose share sheet carries text, opens the fresh link as before", async () => {
+    const android = jest.replaceProperty(Platform, 'OS', 'android');
+    await readyToDownload();
     await fireEvent.press(screen.getByText('Download file'));
     await waitFor(() => expect(openURL).toHaveBeenCalledWith('https://store.example.test/fresh'));
+    expect(downloadSignedFile).not.toHaveBeenCalled();
+    android.restore();
   });
 });
 

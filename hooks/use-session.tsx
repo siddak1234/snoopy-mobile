@@ -12,6 +12,7 @@ import {
 import { PlatformError, PlatformNotConfiguredError } from '@/lib/platform/problem';
 import { onSessionEnded } from '@/lib/platform/session-recovery';
 import { clearSession, readRememberSession, readSession, writeRememberSession } from '@/lib/platform/session-store';
+import { resetSnapshot } from '@/lib/platform/snapshot';
 
 /**
  * Who is signed in, and whether the app is allowed past the auth stack.
@@ -32,6 +33,17 @@ export type WorkspaceSummary = components['schemas']['WorkspaceSummary'];
 
 /** Renew this far ahead of expiry, to cover the round trip and clock drift. */
 const EXPIRY_SKEW_MS = 30_000;
+
+/**
+ * The state of a session that has ended. The shared snapshot (24.9.1) is
+ * emptied with it: its global entries — the workspace list, the providers —
+ * would otherwise answer the next account on this device for up to their
+ * window (24.12).
+ */
+function signedOut(): SessionState {
+  resetSnapshot();
+  return { status: 'signed-out' };
+}
 
 export type SessionState =
   | { status: 'restoring' }
@@ -96,13 +108,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         // closed. A cold start ends it here, with nothing left in the enclave.
         if (stored && !(await readRememberSession())) {
           await clearSession();
-          if (!cancelled) setState({ status: 'signed-out' });
+          if (!cancelled) setState(signedOut());
           return;
         }
         if (stored && stored.expiresAt <= Date.now() + EXPIRY_SKEW_MS) {
           const outcome = await refreshSession();
           if (outcome.status === 'signed-out') {
-            if (!cancelled) setState({ status: 'signed-out' });
+            if (!cancelled) setState(signedOut());
             return;
           }
           if (outcome.status === 'unavailable') {
@@ -119,7 +131,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           setState({ status: 'unconfigured' });
         } else if (error instanceof PlatformError && error.status === 401) {
           await clearSession();
-          setState({ status: 'signed-out' });
+          setState(signedOut());
         } else {
           setState({
             status: 'unavailable',
@@ -143,7 +155,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
    * layout's fail-closed rule apply to a session that expired mid-use, not
    * only to one that was already gone at launch.
    */
-  useEffect(() => onSessionEnded(() => setState({ status: 'signed-out' })), []);
+  useEffect(() => onSessionEnded(() => setState(signedOut())), []);
 
   const signIn = useCallback(
     async (provider: LoginProvider, options?: { remember?: boolean }) => {
@@ -155,11 +167,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           // Resolve the protected projection before returning success. Routing
           // first would race the fail-closed tab guard and bounce a valid login.
           const session = await readCurrentSession();
+          // A new session begins: nothing an earlier one read answers it.
+          resetSnapshot();
           setState({ status: 'signed-in', session });
         } catch (error) {
           if (error instanceof PlatformError && error.status === 401) {
             await clearSession();
-            setState({ status: 'signed-out' });
+            setState(signedOut());
           }
           return {
             status: 'failed' as const,
@@ -182,7 +196,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       // 401 reaches here, so it is the credential's final answer.
       if (error instanceof PlatformError && error.status === 401) {
         await clearSession();
-        setState({ status: 'signed-out' });
+        setState(signedOut());
         return { status: 'signed-out' };
       }
       return {
@@ -196,7 +210,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     const result = await signOutOfPlatform();
     // A failed revocation leaves the tokens in place on purpose, so the state
     // stays signed-in rather than claiming a sign-out that did not happen.
-    if (result.revoked) setState({ status: 'signed-out' });
+    if (result.revoked) setState(signedOut());
     return result;
   }, []);
 

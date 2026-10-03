@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
-import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
+import { em, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
@@ -195,7 +195,7 @@ export default function ApprovalsScreen() {
   if (items.length === 0) {
     return (
       <ScreenEmpty
-        icon={<CheckCircle size={40} />}
+        icon={<CheckCircle size={40} color={status.ok} />}
         title={APPROVALS_EMPTY_TITLE}
         body={APPROVALS_EMPTY_BODY}
         secondaryAction={{ label: 'Go back', onPress: () => router.back() }}
@@ -255,8 +255,8 @@ const styles = StyleSheet.create({
   h1: {
     flex: 1,
     fontFamily: fonts.medium,
-    fontSize: 22,
-    letterSpacing: em(-0.01, 22),
+    fontSize: typeScale.heading.fontSize,
+    letterSpacing: em(-0.01, typeScale.heading.fontSize),
   },
   badge: {
     minWidth: 26,
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
   },
   badgeLabel: {
     fontFamily: fonts.semibold,
-    fontSize: 12,
+    fontSize: typeScale.small.fontSize,
   },
   allDone: {
     marginTop: 8,
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
   },
   allDoneText: {
     fontFamily: fonts.medium,
-    fontSize: 13.5,
+    fontSize: typeScale.body.fontSize,
   },
   card: {
     marginHorizontal: layout.screenX,
@@ -301,16 +301,16 @@ const styles = StyleSheet.create({
   },
   kicker: {
     fontFamily: fonts.regular,
-    fontSize: 10.5,
-    letterSpacing: em(0.14, 10.5),
+    fontSize: typeScale.micro.fontSize,
+    letterSpacing: em(0.14, typeScale.micro.fontSize),
   },
   time: {
     fontFamily: fonts.regular,
-    fontSize: 11.5,
+    fontSize: typeScale.caption.fontSize,
   },
   title: {
     fontFamily: fonts.medium,
-    fontSize: 15,
+    fontSize: typeScale.lead.fontSize,
   },
   callout: {
     flexDirection: 'row',
@@ -329,13 +329,12 @@ const styles = StyleSheet.create({
   calloutText: {
     flex: 1,
     fontFamily: fonts.regular,
-    fontSize: 13,
-    lineHeight: 13 * 1.45,
+    ...typeScale.body,
     color: status.warnText,
   },
   doneNote: {
     fontFamily: fonts.medium,
-    fontSize: 13.5,
+    fontSize: typeScale.body.fontSize,
     paddingVertical: 4,
     paddingHorizontal: 2,
   },
@@ -352,6 +351,6 @@ const styles = StyleSheet.create({
   },
   actionLabel: {
     fontFamily: fonts.medium,
-    fontSize: 14,
+    fontSize: typeScale.label.fontSize,
   },
 });

@@ -2,7 +2,7 @@
 
 **Round 16 is open** (BUILD-PLAN Phase 24, ADR-0032): the mobile app offers
 every signed-in feature the website offers, on the same published operations,
-and ships to Apple first. This repository owns 24.3–24.7 and, since the owner's build 6 feedback of 2026-10-02, 24.9 (the flows design pass: one Flows tab, a project scope, a shared workspace snapshot) and, since build 7's, 24.11.6–24.11.10 (the cover when signed out, Teams in place of Projects, Removed flows, Unlink, flow history), one phase per session:
+and ships to Apple first. This repository owns 24.3–24.7 and, since the owner's build 6 feedback of 2026-10-02, 24.9 (the flows design pass: one Flows tab, a project scope, a shared workspace snapshot) and, since build 7's, 24.11.6–24.11.10 (the cover when signed out, Teams in place of Projects, Archived flows (Removed flows until 24.12), Unlink, flow history), and, since build 9's (the owner's decisions of 2026-10-02), the app's part of 24.12 (a team is its kind, the archive wording, Settings by category, the billing cards, the join link, the export to the share sheet, Unlink in words, the empty-screen standard, the bigger type), one phase per session:
 the foundation, automations/runs/connections, organization/projects/teams,
 billing/account/data/support, and the iOS release. **The round is not closed
 here.** A fresh `snoopy-backend` session that wrote none of it re-runs Gate 24
@@ -30,6 +30,11 @@ repository, stop.
    screens mirror the website's pages and are composed from those components,
    the shared `components/dialog.tsx` and the theme tokens. A new primitive is
    added only when none fits, snapshot-pinned in both palettes (ADR-0032).
+   Their type is the one change the owner has authorised: decision 11
+   (2026-10-02, "whole app — easy to read") put every font size on the app's
+   type scale, `typeScale` in `constants/theme.ts` (24.12), and the snapshots
+   were re-pinned once for it, in build 10. `audit:type` keeps every size on
+   the scale.
 3. Use theme tokens; no raw hex or ad-hoc font families outside
    `constants/theme.ts`.
 4. Do not duplicate a Nocturne primitive.
@@ -39,6 +44,10 @@ repository, stop.
    exception, in that file only:** `putFileToSignedUrl`, the credential-less
    PUT of a file's bytes to the URL the platform signed (FR-14).
    `audit:platform` admits exactly one plain `fetch(` there, and no second.
+   Since 24.12 a second, also credential-less and also there only:
+   `downloadSignedFile`, expo-file-system's native download of the complete
+   export's signed link into the app's cache for the share sheet;
+   `audit:platform` admits exactly one `downloadFileAsync(`.
 6. Credentials live only in `expo-secure-store`, this-device-only. Never put a
    token in AsyncStorage, a URL, route params, logs, fixtures, or analytics. A
    webhook secret is shown once and stored nowhere, the Keychain included.
@@ -52,7 +61,13 @@ repository, stop.
    workspace's billing status. On iOS, "Upgrade" and "Manage billing" open
    the hosted checkout and portal in the system browser, and the app re-reads
    billing when it returns to the foreground. Android shows no purchase control
-   or call to action. There is no in-app purchase. The app is offered in the
+   or call to action. There is no in-app purchase. Since 24.12 the plans are
+   cards (the owner's decisions 7 and 8): Free — the app's own, $0.00 per
+   month, since the platform lists only what can be bought — then the
+   platform's plans by price, each its name and price; the workspace's card says
+   "Enrolled" with its status. On iOS, not paying, a paid card opens the hosted
+   checkout for that plan; paying, any other card opens Manage billing, since a
+   second checkout would start a second subscription. The app is offered in the
    United States App Store storefront only; selling elsewhere needs a
    storefront check first.
 10. **The shared rules every screen uses:**

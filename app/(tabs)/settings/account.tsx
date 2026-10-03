@@ -12,7 +12,7 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { SettingsRow } from '@/components/settings/settings-row';
-import { em, fonts, layout, status } from '@/constants/theme';
+import { em, fonts, layout, status, typeScale } from '@/constants/theme';
 import { busyBody, useResource } from '@/hooks/use-resource';
 import { useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
@@ -28,7 +28,7 @@ import { deleteAccount, readIdentities, unlinkIdentity, type LoginIdentity } fro
 import { readCurrentSession, readLoginProviders } from '@/lib/platform/auth';
 import { linkIdentity } from '@/lib/platform/identity-link';
 import type { LoginProvider } from '@/lib/platform/native-auth';
-import { refusalMessage } from '@/lib/content/refusals';
+import { unlinkRefusal } from '@/lib/content/refusals';
 import { PlatformError } from '@/lib/platform/problem';
 import { clearSession } from '@/lib/platform/session-store';
 
@@ -67,9 +67,11 @@ export default function AccountScreen() {
   };
 
   /**
-   * Unlink (backend 24.11.1, the owner's build 7 ask). Confirmed first: the
-   * account's primary and its last sign-in are refused upstream with a sentence,
-   * which is shown as it is; anything else re-reads what is linked.
+   * Unlink (backend 24.11.1, the owner's build 7 ask). Confirmed first. A
+   * refusal is said in words by its reason (`unlinkRefusal`) — the primary, the
+   * last sign-in, a route the platform does not have yet — never the problem's
+   * title, which build 9 showed as "Not Found"; either way what is linked is
+   * read again.
    */
   const unlink = async (provider: LoginIdentity['provider']) => {
     setLinkError(null);
@@ -77,7 +79,7 @@ export default function AccountScreen() {
       await unlinkIdentity(provider);
       void session.reload();
     } catch (caught) {
-      setLinkError(refusalMessage(caught, {}, 'The account could not be unlinked.'));
+      setLinkError(unlinkRefusal(caught));
     } finally {
       setUnlinking(null);
       account.reload();
@@ -103,7 +105,7 @@ export default function AccountScreen() {
     );
   }
 
-  const linked = new Map(account.data.identities.map((identity) => [identity.provider, identity.primary]));
+  const linked = new Map(account.data.identities.map((identity) => [identity.provider, identity]));
   const muted = { color: palette.neutral[400] };
 
   return (
@@ -124,13 +126,18 @@ export default function AccountScreen() {
         </Text>
         <SurfaceCard style={styles.card}>
           {account.data.providers.map((provider, index) => {
-            const primary = linked.get(provider.id);
+            const identity = linked.get(provider.id);
+            const primary = identity?.primary;
             return (
               <SettingsRow
                 key={provider.id}
                 testID={`identity-${provider.id}`}
                 icon={Key}
                 title={provider.label}
+                // The address the provider reports, so two linked accounts can be
+                // told apart (backend 24.12.2); none when it reports none, and an
+                // account not linked has none.
+                sub={identity?.email}
                 divider={index < account.data.providers.length - 1}
                 right={
                   primary === true ? (
@@ -295,11 +302,11 @@ function DeleteAccountDialog({
 const styles = StyleSheet.create({
   content: { paddingHorizontal: layout.screenX, paddingBottom: 32, gap: 18 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  title: { fontFamily: fonts.medium, fontSize: 21, letterSpacing: em(-0.01, 21) },
+  title: { fontFamily: fonts.medium, fontSize: typeScale.heading.fontSize, letterSpacing: em(-0.01, typeScale.heading.fontSize) },
   card: { marginTop: 9 },
   pad: { padding: 14, gap: 10 },
   lead: { marginTop: 8 },
-  text: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18 },
-  small: { fontFamily: fonts.regular, fontSize: 12.5 },
-  linkLabel: { fontFamily: fonts.medium, fontSize: 13 },
+  text: { fontFamily: fonts.regular, ...typeScale.body },
+  small: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
+  linkLabel: { fontFamily: fonts.medium, fontSize: typeScale.body.fontSize },
 });

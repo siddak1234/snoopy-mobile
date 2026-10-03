@@ -6,6 +6,7 @@ import {
   nocturneLight,
   radius,
   status,
+  typeScale,
   withAlpha,
 } from '@/constants/theme';
 
@@ -108,5 +109,16 @@ describe('scales', () => {
       medium: 'Inter_500Medium',
       semibold: 'Inter_600SemiBold',
     });
+  });
+
+  it('ascends the type scale from a smallest step of 12 or more, each line clear of its glyphs (24.12)', () => {
+    const steps = Object.values(typeScale);
+    expect(Math.min(...steps.map((step) => step.fontSize))).toBeGreaterThanOrEqual(12);
+    steps.slice(1).forEach((step, index) => {
+      expect(step.fontSize).toBeGreaterThan(steps[index]!.fontSize);
+      expect(step.lineHeight).toBeGreaterThan(steps[index]!.lineHeight);
+    });
+    // Inter's own line box is 1.21 em: a shorter line would cut its glyphs.
+    for (const step of steps) expect(step.lineHeight).toBeGreaterThanOrEqual(step.fontSize * 1.21);
   });
 });

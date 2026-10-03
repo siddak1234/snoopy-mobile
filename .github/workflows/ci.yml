@@ -65,6 +65,10 @@ jobs:
       # adherence config saying so, but nothing runs it — `expo lint` does not.
       # This is the gate that makes the rule real.
       - run: npm run audit:tokens
+      # Every font size is a step of the type scale in constants/theme.ts — the
+      # owner's bigger type (24.12) — so a screen cannot drift back to the
+      # design's small sizes, and tuning the type stays one table.
+      - run: npm run audit:type
       # A person reads Teams and Flows; the contract's "project" and "automation"
       # stay in the code. A renamed screen could keep an old sentence (24.11.7).
       - run: npm run audit:vocabulary

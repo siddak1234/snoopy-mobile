@@ -10,7 +10,7 @@ import { PillButton } from '@/components/nocturne/pill-button';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { TeamMembers } from '@/components/teams/team-members';
 import { TeamRequests } from '@/components/teams/team-requests';
-import { em, fonts, layout } from '@/constants/theme';
+import { em, fonts, layout, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { busyBody, useResource } from '@/hooks/use-resource';
 import { useSession } from '@/hooks/use-session';
@@ -44,8 +44,9 @@ async function requestsIfThere(workspaceId: string, projectId: string): Promise<
  * active one. In an organization a team has members, and — for those who decide:
  * its owner or admin, and the organization's — the people asking to join. A
  * personal workspace's team has only its owner. The owner deletes it (archived:
- * it leaves every team list, and its flows keep running until removed in
- * Flows); anyone else on it leaves, typing DELETE first.
+ * it leaves every team list, and its flows keep running until archived in
+ * Flows); anyone else on it leaves, typing DELETE first. Its title is its kind
+ * (24.12), said once.
  */
 export default function TeamScreen() {
   const router = useRouter();
@@ -107,10 +108,9 @@ export default function TeamScreen() {
       <View style={styles.header}>
         <BackCircle onPress={() => router.back()} />
         <View style={styles.headerText}>
-          <Text style={[styles.title, { color: palette.text }]}>{project.name}</Text>
+          <Text style={[styles.title, { color: palette.text }]}>{project.type}</Text>
           <Text style={[styles.subtitle, muted]}>
             {[
-              project.type,
               workspace.type === 'personal' ? 'Personal' : workspace.name,
               onTeam ? `You are its ${project.viewerRole}` : 'You see every team as an organization admin',
             ].join(' · ')}
@@ -136,7 +136,7 @@ export default function TeamScreen() {
         <TeamRequests
           workspaceId={workspace.id}
           projectId={project.id}
-          teamName={project.name}
+          teamName={project.type}
           requests={requests}
           onChanged={detail.reload}
         />
@@ -157,8 +157,8 @@ export default function TeamScreen() {
         owner ? (
           <ConfirmDialog
             testID="delete-team-dialog"
-            title={`Delete "${project.name}"?`}
-            body="It leaves every team list. Its flows keep running until you remove them in Flows."
+            title={`Delete "${project.type}"?`}
+            body="It leaves every team list. Its flows keep running until you archive them in Flows."
             confirmLabel="Delete team"
             busyLabel="Deleting…"
             fallback="The team could not be deleted."
@@ -175,7 +175,7 @@ export default function TeamScreen() {
         ) : (
           <ConfirmDialog
             testID="leave-team-dialog"
-            title={`Leave “${project.name}”?`}
+            title={`Leave “${project.type}”?`}
             body="You will be removed from this team and stop seeing its flows. To confirm, type DELETE."
             confirmLabel="Leave team"
             busyLabel="Leaving…"
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: layout.screenX, paddingBottom: 32, gap: 18 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   headerText: { flex: 1 },
-  title: { fontFamily: fonts.medium, fontSize: 21, letterSpacing: em(-0.01, 21) },
-  subtitle: { fontFamily: fonts.regular, fontSize: 12, marginTop: 1 },
-  text: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18 },
+  title: { fontFamily: fonts.medium, fontSize: typeScale.heading.fontSize, letterSpacing: em(-0.01, typeScale.heading.fontSize) },
+  subtitle: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize, marginTop: 1 },
+  text: { fontFamily: fonts.regular, ...typeScale.body },
 });

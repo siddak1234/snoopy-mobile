@@ -22,7 +22,9 @@ export async function readIdentities(): Promise<LoginIdentity[]> {
  * Unlink a sign-in account (backend 24.11.1). A device sends its refresh token
  * in the body, as it does to sign out; the answer is what stays linked, so the
  * screen needs no second read. The account the person signed up with and the
- * last one left are refused with a sentence the screen shows as it is.
+ * last one left are refused with a reason; the screen says it in words
+ * (`unlinkRefusal`), since the error carries the problem's title, not its
+ * sentence.
  */
 export async function unlinkIdentity(provider: LoginIdentity['provider']): Promise<LoginIdentity[]> {
   const left = await platformOperation(`/v1/auth/native/identities/${provider}/unlink`, async ({ platform }, signal) => {

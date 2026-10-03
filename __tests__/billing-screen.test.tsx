@@ -3,7 +3,7 @@ jest.mock('@/lib/platform/client', () => ({
   newIdempotencyKey: jest.fn(() => 'key'),
 }));
 
-import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import React from 'react';
 import { AppState, Linking, Platform } from 'react-native';
 
@@ -15,13 +15,17 @@ import { renderWithProviders } from '@/test/render';
 
 const { platformOperation } = jest.requireMock('@/lib/platform/client');
 
+// Listed as the platform orders them (by id): Pro before Plus. The cards go by price.
 const PLANS = {
   plans: [
-    { planId: 'free', displayName: 'Free', capabilities: { 'automation.subscribe': 1 } },
-    { planId: 'team', displayName: 'Team', capabilities: { 'automation.subscribe': 10, 'workspace.rate': 120 }, price: { amount: 4900, currency: 'usd', interval: 'month' } },
-    { planId: 'custom', displayName: 'Custom', capabilities: {}, price: { amount: 100, currency: 'bhd' } },
+    { planId: 'pro', displayName: 'Pro', capabilities: { 'automation.subscribe': 20, 'workspace.rate': 240 }, price: { amount: 1000, currency: 'usd', interval: 'month' } },
+    { planId: 'team', displayName: 'Plus', capabilities: { 'automation.subscribe': 5, 'workspace.rate': 120 }, price: { amount: 500, currency: 'usd', interval: 'month' } },
   ],
 };
+const FREE_FLOOR = { workspaceId: TEST_WORKSPACE, planId: 'free', displayName: 'Free' };
+const ON_PLUS = { workspaceId: TEST_WORKSPACE, planId: 'team', displayName: 'Plus', status: 'active', currentPeriodEnd: '2026-10-30T12:00:00Z' };
+const CHECKOUT = 'POST /v1/workspaces/{workspaceId}/billing/checkout';
+const PORTAL = 'POST /v1/workspaces/{workspaceId}/billing/portal';
 
 let openURL: jest.SpyInstance;
 let listen: jest.SpyInstance;
@@ -39,7 +43,7 @@ afterEach(() => {
   listen.mockRestore();
 });
 
-function route(role: 'owner' | 'member', billing: unknown = { workspaceId: TEST_WORKSPACE, planId: 'free', displayName: 'Free' }) {
+function route(role: 'owner' | 'member', billing: unknown = FREE_FLOOR) {
   const fake = fakePlatform(platformOperation);
   fake.always('GET /v1/workspaces', {
     workspaces: [{ id: TEST_WORKSPACE, name: 'Acme', type: 'organization', role }],
@@ -54,45 +58,119 @@ function on(os: 'ios' | 'android') {
   return jest.replaceProperty(Platform, 'OS', os);
 }
 
-describe('Billing (24.6.1, ADR-0032 option B)', () => {
-  it('shows every platform the plan, its price and status — and Android no purchase control or call to action', async () => {
+/** A card's own words, by its plan id. */
+const card = (planId: string) => within(screen.getByTestId(`plan-${planId}`));
+
+describe('Billing (24.6.1, ADR-0032 option B; the cards since 24.12)', () => {
+  it('shows Free, Plus and Pro in that order, each its name and price only — the workspace\'s own "Enrolled" with its status', async () => {
     const android = on('android');
-    route('owner', { workspaceId: TEST_WORKSPACE, planId: 'team', displayName: 'Team', status: 'past_due' });
+    route('owner', { ...ON_PLUS, status: 'past_due' });
     await renderWithProviders(<BillingScreen />, sessionAs('owner'));
     expect(await screen.findByText('Status: past due')).toBeTruthy();
-    expect(screen.getByText('$49.00 per month')).toBeTruthy();
-    expect(screen.queryByText('Manage billing')).toBeNull();
-    expect(screen.queryByText('Choose plan')).toBeNull();
-    expect(screen.queryByText(/use Manage billing/)).toBeNull();
-    expect(screen.queryByText('Price shown at checkout')).toBeNull();
+    expect(screen.getAllByTestId(/^plan-/u).map((element) => element.props.testID)).toEqual([
+      'plan-free',
+      'plan-team',
+      'plan-pro',
+    ]);
+    expect(card('free').getByText('Free')).toBeTruthy();
+    expect(card('free').getByText('$0.00 per month')).toBeTruthy();
+    expect(card('team').getByText('Plus')).toBeTruthy();
+    expect(card('team').getByText('$5.00 per month')).toBeTruthy();
+    expect(card('pro').getByText('$10.00 per month')).toBeTruthy();
+    expect(card('team').getByText('Enrolled')).toBeTruthy();
+    expect(card('team').getByText('Status: past due')).toBeTruthy();
+    expect(screen.getAllByText('Enrolled')).toHaveLength(1);
+    // No capability lines: name and price only.
+    expect(screen.queryByText(/^Flows /u)).toBeNull();
+    expect(screen.queryByText(/Requests per minute/u)).toBeNull();
     android.restore();
   });
 
-  it('on iOS, opens the hosted checkout in the system browser, and nothing but https', async () => {
+  it('on Android offers no purchase control or call to action: a card does nothing', async () => {
+    const android = on('android');
+    const fake = route('owner');
+    await renderWithProviders(<BillingScreen />, sessionAs('owner'));
+    await fireEvent.press(await screen.findByText('Pro'));
+    await fireEvent.press(screen.getByText('Plus'));
+    expect(fake.to(CHECKOUT)).toHaveLength(0);
+    expect(fake.to(PORTAL)).toHaveLength(0);
+    expect(screen.queryByText('Manage billing')).toBeNull();
+    expect(screen.queryByText('Price shown at checkout')).toBeNull();
+    expect(openURL).not.toHaveBeenCalled();
+    android.restore();
+  });
+
+  it("on iOS, not paying: a paid plan's card opens the hosted checkout for THAT plan, and nothing but https", async () => {
     const ios = on('ios');
     const fake = route('owner');
-    fake.once('POST /v1/workspaces/{workspaceId}/billing/checkout', { url: 'https://checkout.stripe.com/c/abc', expiresAt: '2026-09-30T00:00:00Z' });
-    fake.once('POST /v1/workspaces/{workspaceId}/billing/checkout', { url: 'javascript:alert(1)', expiresAt: '2026-09-30T00:00:00Z' });
+    fake.once(CHECKOUT, { url: 'https://checkout.stripe.com/c/pro', expiresAt: '2026-09-30T00:00:00Z' });
+    fake.once(CHECKOUT, { url: 'https://checkout.stripe.com/c/plus', expiresAt: '2026-09-30T00:00:00Z' });
+    fake.once(CHECKOUT, { url: 'javascript:alert(1)', expiresAt: '2026-09-30T00:00:00Z' });
     await renderWithProviders(<BillingScreen />, sessionAs('owner'));
-    expect(await screen.findAllByText('Price shown at checkout')).toHaveLength(2);
+    // On the free floor: Free is the one enrolled, and there is nothing to manage yet.
+    expect(card('free').getByText('Enrolled')).toBeTruthy();
+    expect(screen.queryByText('Manage billing')).toBeNull();
 
-    const choose = screen.getAllByText('Choose plan');
-    await fireEvent.press(choose[0]!);
-    await waitFor(() => expect(openURL).toHaveBeenCalledWith('https://checkout.stripe.com/c/abc'));
-    expect(fake.to('POST /v1/workspaces/{workspaceId}/billing/checkout')[0]!.body).toEqual({ planId: 'team' });
+    await fireEvent.press(await screen.findByText('Pro'));
+    await waitFor(() => expect(openURL).toHaveBeenCalledWith('https://checkout.stripe.com/c/pro'));
+    expect(fake.to(CHECKOUT)[0]!.body).toEqual({ planId: 'pro' });
 
-    // Back from the browser: the controls are live again, and a bad address is refused.
+    // Back from the browser: the cards are live again.
     await act(async () => changed?.('active'));
-    await fireEvent.press((await screen.findAllByText('Choose plan'))[0]!);
+    await fireEvent.press(await screen.findByText('Plus'));
+    await waitFor(() => expect(openURL).toHaveBeenCalledWith('https://checkout.stripe.com/c/plus'));
+    expect(fake.to(CHECKOUT)[1]!.body).toEqual({ planId: 'team' });
+
+    await act(async () => changed?.('active'));
+    await fireEvent.press(await screen.findByText('Pro'));
     expect(await screen.findByText('The billing service answered an unusable address.')).toBeTruthy();
-    expect(openURL).toHaveBeenCalledTimes(1);
+    expect(openURL).toHaveBeenCalledTimes(2);
+    expect(fake.to(PORTAL)).toHaveLength(0);
     ios.restore();
   });
 
-  it('on iOS, sends a workspace with no billing account from the portal to a plan', async () => {
+  it('on iOS, paying: another card opens Manage billing — the portal — never a second checkout', async () => {
+    const ios = on('ios');
+    const fake = route('owner', ON_PLUS);
+    fake.always(PORTAL, { url: 'https://billing.stripe.com/p/session', expiresAt: '2026-09-30T00:00:00Z' });
+    await renderWithProviders(<BillingScreen />, sessionAs('owner'));
+    expect(await screen.findByText('Enrolled')).toBeTruthy();
+    expect(card('team').getByText('Enrolled')).toBeTruthy();
+    expect(card('team').getByText(/^Renews /u)).toBeTruthy();
+    expect(card('team').getByText('Manage billing')).toBeTruthy();
+
+    await fireEvent.press(screen.getByText('Pro'));
+    await waitFor(() => expect(openURL).toHaveBeenCalledWith('https://billing.stripe.com/p/session'));
+    await act(async () => changed?.('active'));
+    await fireEvent.press(await screen.findByText('Free'));
+    await waitFor(() => expect(fake.to(PORTAL)).toHaveLength(2));
+    await act(async () => changed?.('active'));
+    await fireEvent.press(await screen.findByText('Manage billing'));
+    await waitFor(() => expect(fake.to(PORTAL)).toHaveLength(3));
+    expect(fake.to(CHECKOUT)).toHaveLength(0);
+    ios.restore();
+  });
+
+  it('on iOS, a checkout refused because the workspace already has a plan (409 plan_exists) opens Manage billing', async () => {
     const ios = on('ios');
     const fake = route('owner');
-    fake.always('POST /v1/workspaces/{workspaceId}/billing/portal', () => {
+    fake.always(CHECKOUT, () => {
+      throw new PlatformError('Conflict', 409, 'CONFLICT', { reason: 'plan_exists' });
+    });
+    fake.always(PORTAL, { url: 'https://billing.stripe.com/p/session', expiresAt: '2026-09-30T00:00:00Z' });
+    await renderWithProviders(<BillingScreen />, sessionAs('owner'));
+    await fireEvent.press(await screen.findByText('Plus'));
+    await waitFor(() => expect(openURL).toHaveBeenCalledWith('https://billing.stripe.com/p/session'));
+    expect(fake.to(CHECKOUT)).toHaveLength(1);
+    expect(fake.to(PORTAL)).toHaveLength(1);
+    expect(screen.queryByText('Conflict')).toBeNull();
+    ios.restore();
+  });
+
+  it('on iOS, sends a workspace the portal has no billing account for to a plan', async () => {
+    const ios = on('ios');
+    const fake = route('owner', ON_PLUS);
+    fake.always(PORTAL, () => {
       throw new PlatformError('No billing account', 409);
     });
     await renderWithProviders(<BillingScreen />, sessionAs('owner'));
@@ -106,19 +184,27 @@ describe('Billing (24.6.1, ADR-0032 option B)', () => {
     const ios = on('ios');
     const fake = route('owner');
     await renderWithProviders(<BillingScreen />, sessionAs('owner'));
-    await screen.findByText('CURRENT PLAN');
+    await screen.findByText('Enrolled');
     const reads = fake.to('GET /v1/workspaces/{workspaceId}/billing').length;
     await act(async () => changed?.('active'));
     await waitFor(() => expect(fake.to('GET /v1/workspaces/{workspaceId}/billing').length).toBe(reads + 1));
     ios.restore();
   });
 
-  it("is an owner's or admin's: a member is told who manages it, and nothing is read", async () => {
+  it("shows a member the cards without actions and who manages billing; this workspace's billing is not read", async () => {
+    const ios = on('ios');
     const fake = route('member');
     await renderWithProviders(<BillingScreen />, sessionAs('member'));
     expect(await screen.findByText('Billing is managed by the owners and admins of this workspace.')).toBeTruthy();
+    expect(card('pro').getByText('$10.00 per month')).toBeTruthy();
+    expect(screen.queryByText('Enrolled')).toBeNull();
+    await fireEvent.press(screen.getByText('Pro'));
+    expect(fake.to(CHECKOUT)).toHaveLength(0);
+    expect(screen.queryByText('Manage billing')).toBeNull();
     expect(fake.to('GET /v1/workspaces/{workspaceId}/billing')).toHaveLength(0);
-    expect(fake.to('GET /v1/plans')).toHaveLength(0);
+    // The plans are anyone's to read; the workspace's plan and status are not.
+    expect(fake.to('GET /v1/plans')).toHaveLength(1);
+    ios.restore();
   });
 
   it('says billing is unavailable when no provider is configured, never a false plan', async () => {
@@ -128,5 +214,6 @@ describe('Billing (24.6.1, ADR-0032 option B)', () => {
     });
     await renderWithProviders(<BillingScreen />, sessionAs('owner'));
     expect(await screen.findByText('Billing is unavailable right now.')).toBeTruthy();
+    expect(screen.queryByTestId('plan-free')).toBeNull();
   });
 });

@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { MagnifyingGlass } from 'phosphor-react-native';
+import { FlowArrow, MagnifyingGlass } from 'phosphor-react-native';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,12 +8,12 @@ import { BackCircle } from '@/components/nocturne/back-circle';
 import { FilterChip } from '@/components/nocturne/filter-chip';
 import { IconTile } from '@/components/nocturne/icon-tile';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
-import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
-import { em, fonts, layout, status, withAlpha } from '@/constants/theme';
+import { ScreenEmpty, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
+import { em, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { useScope } from '@/hooks/use-scope';
 import { useTheme } from '@/hooks/use-theme';
-import { UNAVAILABLE_NOTE, errorTitleFor } from '@/lib/content/screen-states';
+import { CATALOG_EMPTY_BODY, CATALOG_EMPTY_TITLE, UNAVAILABLE_NOTE, errorTitleFor } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
 import { readProjects } from '@/lib/platform/projects';
 import { readSubscriptions, type Subscription } from '@/lib/platform/runs';
@@ -54,9 +54,9 @@ export default function AddFlowScreen() {
   const scopeProject = ready?.openProjects.find((project) => project.id === projectId);
   // '' is the whole workspace, as `Subscription.projectId` null is.
   const scopeKey = scopeProject ? scopeProject.id : '';
-  const scopeName = scopeProject ? scopeProject.name : 'your workspace';
+  const scopeName = scopeProject ? scopeProject.type : 'your workspace';
   const projectName = (id: string | null) =>
-    id === null ? 'your workspace' : (ready?.openProjects.find((project) => project.id === id)?.name ?? 'a team');
+    id === null ? 'your workspace' : (ready?.openProjects.find((project) => project.id === id)?.type ?? 'a team');
 
   const subscriptionsFor = (templateId: string): Subscription[] =>
     (ready?.subscriptions ?? []).filter((subscription) => subscription.templateId === templateId);
@@ -83,6 +83,19 @@ export default function AddFlowScreen() {
         title={errorTitleFor('add')}
         onRetry={catalog.reload}
         body={busyBody(catalog)}
+        onBack={() => router.back()}
+        topInset={insets.top}
+      />
+    );
+  }
+  if (solutions.length === 0) {
+    // Nothing in the catalog at all: the whole-screen standard (24.12). A
+    // category with nothing in it keeps its own line below.
+    return (
+      <ScreenEmpty
+        icon={<FlowArrow size={40} color={palette.accentRamp[300]} />}
+        title={CATALOG_EMPTY_TITLE}
+        body={CATALOG_EMPTY_BODY}
         onBack={() => router.back()}
         topInset={insets.top}
       />
@@ -166,7 +179,7 @@ export default function AddFlowScreen() {
                   <Text
                     style={{
                       fontFamily: fonts.medium,
-                      fontSize: 13,
+                      fontSize: typeScale.body.fontSize,
                       color: sol.available ? palette.accent : palette.neutral[400],
                     }}>
                     Add
@@ -205,14 +218,13 @@ const styles = StyleSheet.create({
   },
   h1: {
     fontFamily: fonts.medium,
-    fontSize: 22,
-    letterSpacing: em(-0.015, 22),
+    fontSize: typeScale.heading.fontSize,
+    letterSpacing: em(-0.015, typeScale.heading.fontSize),
   },
   sub: {
     marginTop: 3,
     fontFamily: fonts.regular,
-    fontSize: 13,
-    lineHeight: 13 * 1.5,
+    ...typeScale.body,
   },
   filters: {
     flexDirection: 'row',
@@ -233,21 +245,21 @@ const styles = StyleSheet.create({
   },
   cardName: {
     fontFamily: fonts.medium,
-    fontSize: 15,
+    fontSize: typeScale.lead.fontSize,
   },
   cardDesc: {
     marginTop: 2,
     fontFamily: fonts.regular,
-    fontSize: 12.5,
+    fontSize: typeScale.small.fontSize,
   },
   cardMeta: {
     marginTop: 4,
     fontFamily: fonts.regular,
-    fontSize: 11.5,
+    fontSize: typeScale.caption.fontSize,
   },
   added: {
     fontFamily: fonts.medium,
-    fontSize: 13,
+    fontSize: typeScale.body.fontSize,
   },
   addBtn: {
     height: 34,
@@ -264,7 +276,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontFamily: fonts.regular,
-    fontSize: 13.5,
+    fontSize: typeScale.body.fontSize,
     textAlign: 'center',
   },
 });

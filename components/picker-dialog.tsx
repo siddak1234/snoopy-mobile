@@ -3,7 +3,7 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
-import { fonts } from '@/constants/theme';
+import { fonts, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -53,6 +53,6 @@ const styles = StyleSheet.create({
   list: { maxHeight: 360 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, borderBottomWidth: 1 },
   body: { flex: 1, minWidth: 0 },
-  label: { fontFamily: fonts.medium, fontSize: 14 },
-  sub: { fontFamily: fonts.regular, fontSize: 12 },
+  label: { fontFamily: fonts.medium, fontSize: typeScale.label.fontSize },
+  sub: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
 });

@@ -7,7 +7,7 @@ import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { SettingsRow } from '@/components/settings/settings-row';
-import { fonts } from '@/constants/theme';
+import { fonts, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
@@ -19,6 +19,15 @@ import {
   type WorkspaceMember,
 } from '@/lib/platform/organization';
 import { relativeTimeAgo } from '@/lib/view/format';
+
+/**
+ * The person asking to join, by name or address (backend 24.12.4): an owner or
+ * admin approves a person, not an id. The id only when the platform sends
+ * neither, as one from before 24.12 does.
+ */
+function askerOf(request: JoinRequest): string {
+  return request.displayName || request.email || request.userId;
+}
 
 /**
  * The organization's members and its pending join requests (24.5.1) — the
@@ -89,8 +98,13 @@ export function OrgPeople({
               key={request.id}
               testID={`join-request-${request.id}`}
               icon={UserPlus}
-              title={request.userId}
-              sub={`Asked ${relativeTimeAgo(request.createdAt)}`}
+              title={askerOf(request)}
+              // Under a name, the address too, as Members draws it.
+              sub={
+                request.displayName && request.email
+                  ? `${request.email} · Asked ${relativeTimeAgo(request.createdAt)}`
+                  : `Asked ${relativeTimeAgo(request.createdAt)}`
+              }
               divider={index < pending.length - 1}
               onPress={() => setDeciding(request)}
               right={<CaretRight size={15} color={palette.neutral[500]} />}
@@ -177,7 +191,7 @@ function DecideDialog({
       testID="join-request-dialog"
       onRequestClose={busy ? () => undefined : onClose}
       title="Join request"
-      body={`${request.userId} asked ${relativeTimeAgo(request.createdAt)} to join this organization.`}
+      body={`${askerOf(request)} asked ${relativeTimeAgo(request.createdAt)} to join this organization.`}
       actions={
         <>
           <DialogButton label="Cancel" disabled={busy !== null} onPress={onClose} />
@@ -202,6 +216,6 @@ function DecideDialog({
 const styles = StyleSheet.create({
   card: { marginTop: 9 },
   right: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  role: { fontFamily: fonts.regular, fontSize: 12.5, textTransform: 'capitalize' },
-  empty: { fontFamily: fonts.regular, fontSize: 13, padding: 14 },
+  role: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize, textTransform: 'capitalize' },
+  empty: { fontFamily: fonts.regular, fontSize: typeScale.body.fontSize, padding: 14 },
 });

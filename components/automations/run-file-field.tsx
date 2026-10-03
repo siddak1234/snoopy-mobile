@@ -4,7 +4,7 @@ import { Paperclip } from 'phosphor-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { fonts, status } from '@/constants/theme';
+import { fonts, status, typeScale } from '@/constants/theme';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { UPLOAD_REFUSALS, WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   body: { flex: 1, minWidth: 0, gap: 2 },
-  title: { fontFamily: fonts.medium, fontSize: 14 },
-  sub: { fontFamily: fonts.regular, fontSize: 12 },
-  choose: { fontFamily: fonts.medium, fontSize: 13 },
+  title: { fontFamily: fonts.medium, fontSize: typeScale.label.fontSize },
+  sub: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
+  choose: { fontFamily: fonts.medium, fontSize: typeScale.body.fontSize },
 });

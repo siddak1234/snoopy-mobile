@@ -1,6 +1,8 @@
 import type { components } from '@/lib/generated/platform-contracts/platform';
 import { platformOperation } from './client';
+import { websiteOrigin } from './native-auth';
 import { collectPages } from './paging';
+import { changedWorkspaces } from './workspaces';
 
 /**
  * An organization: its name, members, domains and join requests, and finding
@@ -35,7 +37,7 @@ export function renameWorkspace(workspaceId: string, name: string, idempotencyKe
       body: { name },
       signal,
     }),
-  );
+  ).then(changedWorkspaces);
 }
 
 export function removeWorkspaceMember(workspaceId: string, userId: string, idempotencyKey: string) {
@@ -164,7 +166,7 @@ export function requestToJoin(workspaceId: string, idempotencyKey: string) {
       params: { path: { workspaceId }, header: { 'Idempotency-Key': idempotencyKey } },
       signal,
     }),
-  );
+  ).then(changedWorkspaces);
 }
 
 /** A new organization workspace, made active (the website's "Create organization"). */
@@ -175,5 +177,17 @@ export function createOrganization(name: string, idempotencyKey: string) {
       body: { name, type: 'organization', activate: true },
       signal,
     }),
-  );
+  ).then(changedWorkspaces);
+}
+
+/**
+ * The website's join page for this organization (24.12, the owner's decision 5
+ * of 2026-10-02): `/onboarding/join-org?w=`, on the origin the browser leg
+ * shares; null in a build with none. The platform accepts a request through it
+ * only from someone at the organization's verified email domain — today's rule,
+ * unchanged — and an owner or admin approves it here.
+ */
+export function joinLink(workspaceId: string): string | null {
+  const origin = websiteOrigin();
+  return origin ? `${origin}/onboarding/join-org?w=${encodeURIComponent(workspaceId)}` : null;
 }

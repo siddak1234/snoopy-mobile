@@ -18,7 +18,7 @@ import { OAuthButton } from '@/components/nocturne/oauth-button';
 import { Skeleton } from '@/components/nocturne/skeleton';
 import { OrDivider } from '@/components/nocturne/or-divider';
 import { PillButton } from '@/components/nocturne/pill-button';
-import { em, fonts, layout, radius, status } from '@/constants/theme';
+import { em, fonts, layout, radius, status, typeScale } from '@/constants/theme';
 import { useBiometricWording } from '@/hooks/use-biometric-wording';
 import { useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
@@ -164,7 +164,7 @@ export default function LoginScreen() {
               label={biometric.unlockLabel}
               variant="accent-ghost"
               height={48}
-              fontSize={15}
+              fontSize={typeScale.lead.fontSize}
               icon={UserFocus}
               iconSize={21}
               gap={9}
@@ -215,8 +215,8 @@ const styles = StyleSheet.create({
   title: {
     marginTop: 22,
     fontFamily: fonts.medium,
-    fontSize: 34,
-    letterSpacing: em(-0.015, 34),
+    fontSize: typeScale.hero.fontSize,
+    letterSpacing: em(-0.015, typeScale.hero.fontSize),
   },
   form: {
     marginTop: 44,
@@ -240,8 +240,7 @@ const styles = StyleSheet.create({
   errorText: {
     flex: 1,
     fontFamily: fonts.regular,
-    fontSize: 13,
-    lineHeight: 13 * 1.45,
+    ...typeScale.body,
     color: status.err,
   },
   oauthColumn: {
@@ -262,6 +261,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   rememberText: { flex: 1, minWidth: 0, gap: 2 },
-  rememberTitle: { fontFamily: fonts.medium, fontSize: 14 },
-  rememberSub: { fontFamily: fonts.regular, fontSize: 12 },
+  rememberTitle: { fontFamily: fonts.medium, fontSize: typeScale.label.fontSize },
+  rememberSub: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
 });

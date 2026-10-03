@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { PillButton } from '@/components/nocturne/pill-button';
-import { fonts } from '@/constants/theme';
+import { fonts, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
@@ -75,7 +75,7 @@ export function MoveVersion({
         label={`Move to v${to}`}
         variant="secondary"
         height={36}
-        fontSize={13}
+        fontSize={typeScale.body.fontSize}
         icon={ArrowCircleUp}
         iconSize={15}
         onPress={() => {
@@ -112,6 +112,6 @@ const styles = StyleSheet.create({
   },
   noteText: {
     fontFamily: fonts.regular,
-    fontSize: 12,
+    fontSize: typeScale.small.fontSize,
   },
 });

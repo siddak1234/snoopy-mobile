@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { fonts } from '@/constants/theme';
+import { fonts, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 /** The auth screens' "or" separator: hairline · label · hairline. */
@@ -29,6 +29,6 @@ const styles = StyleSheet.create({
   },
   label: {
     fontFamily: fonts.regular,
-    fontSize: 12.5,
+    fontSize: typeScale.small.fontSize,
   },
 });

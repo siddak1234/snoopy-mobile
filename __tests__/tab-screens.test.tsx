@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 
 import ActivityScreen from '@/app/(tabs)/activity/index';
 import ApprovalsScreen from '@/app/(tabs)/activity/approvals';
@@ -9,10 +9,15 @@ import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import HomeScreen from '@/app/(tabs)/(home)/index';
 import RunDetailScreen from '@/app/(tabs)/(home)/run';
 import SettingsScreen from '@/app/(tabs)/settings';
+import AppearanceScreen from '@/app/(tabs)/settings/appearance';
+import SettingsArchivedFlowsScreen from '@/app/(tabs)/settings/archived';
+import NotificationSettingsScreen from '@/app/(tabs)/settings/notifications';
+import SecurityScreen from '@/app/(tabs)/settings/security';
+import WorkspaceScreen from '@/app/(tabs)/settings/workspace';
 import SetupScreen from '@/app/(tabs)/flows/setup';
 import SolutionsScreen from '@/app/(tabs)/flows/add';
 import NotificationsScreen from '@/app/(tabs)/(home)/notifications';
-import RemovedFlowsScreen from '@/app/(tabs)/flows/removed';
+import ArchivedFlowsScreen from '@/app/(tabs)/flows/archived';
 import { nocturneDark, nocturneLight } from '@/constants/theme';
 import {
   TEST_WORKSPACE,
@@ -133,7 +138,7 @@ describe('Add a flow — the catalog inside Flows (24.9.3)', () => {
     });
   });
 
-  it('Added ✓ is not a button: the card opens the flow, where Pause and Remove live (feedback #3, #5)', async () => {
+  it('Added ✓ is not a button: the card opens the flow, where Pause and Archive live (feedback #3, #5)', async () => {
     const { getAllByText, queryByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
     await fireEvent.press(getAllByText('Added ✓')[0]);
     expect(queryByText('Pause Invoice triage?')).toBeNull();
@@ -185,6 +190,18 @@ describe('Add a flow — the catalog inside Flows (24.9.3)', () => {
     expect((await screen.findByTestId('added-elsewhere-tpl.0')).props.children.join('')).toMatch(/^Added in /u);
     expect(screen.getByTestId('add-tpl.0')).toBeTruthy();
     expect(screen.queryByTestId('added-tpl.0')).toBeNull();
+  });
+});
+
+describe('An empty catalog (24.12)', () => {
+  it('is the whole-screen empty standard, with its way back', async () => {
+    routePlatform(platformOperation, { '/automations': { automations: [], categories: ['All'] } });
+    await renderWithProviders(<SolutionsScreen />, signedInSession);
+    expect(await screen.findByTestId('screen-empty')).toBeTruthy();
+    expect(screen.getByText('No flows to add yet')).toBeTruthy();
+    expect(screen.getByText('More are on the way.')).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText('Back'));
+    expect(mockRouter.back).toHaveBeenCalled();
   });
 });
 
@@ -324,21 +341,23 @@ describe('Workflow detail', () => {
     expect(screen.getByText('Draft')).toBeTruthy();
   });
 
-  it('offers what the website offers for this flow: Set up for its settings, and Remove flow last (24.9.4)', async () => {
+  it('offers what the website offers for this flow: Set up for its settings, and Archive flow last (24.9.4, 24.12)', async () => {
     await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
     expect(await screen.findByTestId('manage-setup')).toBeTruthy();
-    expect(screen.getByTestId('remove-flow')).toBeTruthy();
-    expect(screen.getByText('Remove flow')).toBeTruthy();
+    expect(screen.getByTestId('archive-flow')).toBeTruthy();
+    expect(screen.getByText('Archive flow')).toBeTruthy();
     // Its pinned version declares no run input, so there is no form to offer.
     expect(screen.queryByText('Run')).toBeNull();
   });
 
-  it('returns to the Flows list after Remove, however the flow was reached', async () => {
+  it('returns to the Flows list after Archive, however the flow was reached', async () => {
     await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
-    await fireEvent.press(await screen.findByTestId('remove-flow'));
-    expect(await screen.findByText('Remove Invoice triage?')).toBeTruthy();
-    expect(screen.getByText('It stops and leaves your flows. Its runs stay in Activity, and you can add it again later.')).toBeTruthy();
-    const buttons = await screen.findAllByText('Remove');
+    await fireEvent.press(await screen.findByTestId('archive-flow'));
+    expect(await screen.findByText('Archive Invoice triage?')).toBeTruthy();
+    expect(
+      screen.getByText('It stops and moves to Archived flows. Its runs stay in Activity, and you can add it again later.'),
+    ).toBeTruthy();
+    const buttons = await screen.findAllByText('Archive');
     await fireEvent.press(buttons[buttons.length - 1]!);
     await waitFor(() => expect(mockRouter.dismissTo).toHaveBeenCalledWith('/(tabs)/flows'));
   });
@@ -666,39 +685,113 @@ describe('Notifications inbox (design sNotifs)', () => {
   });
 });
 
+describe('An empty inbox (24.12)', () => {
+  it('is the empty standard with its way back, since the inbox is a pushed screen', async () => {
+    routePlatform(platformOperation, { '/approvals': { approvals: [] }, '/runs': { runs: [] } });
+    await renderWithProviders(<NotificationsScreen />, signedInSession);
+    expect(await screen.findByText('Quiet, as designed')).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText('Back'));
+    expect(mockRouter.back).toHaveBeenCalled();
+  });
+});
+
 describe('Settings & security', () => {
-  it('shows the profile and section rows', async () => {
+  const CATEGORIES = [
+    ['account', 'Account', '/(tabs)/settings/account'],
+    ['security', 'Security', '/(tabs)/settings/security'],
+    ['connections', 'Connections', '/(tabs)/settings/connections'],
+    ['billing', 'Billing', '/(tabs)/settings/billing'],
+    ['workspace', 'Workspace', '/(tabs)/settings/workspace'],
+    ['notifications', 'Notifications', '/(tabs)/settings/notifications'],
+    ['appearance', 'Appearance', '/(tabs)/settings/appearance'],
+    ['help', 'Help', '/(tabs)/settings/support'],
+  ] as const;
+
+  it('is eight categories in the owner\'s order, then Sign out and the version — and reads nothing (24.12)', async () => {
     const { getByText, getAllByText, queryByText } = await renderWithProviders(<SettingsScreen />, signedInSession);
-    expect(getByText('alex@acme.co')).toBeTruthy();
-    expect(getByText('alex@acme.co · Acme Operations')).toBeTruthy();
+    // In this order, as drawn, each titled as the owner named it.
+    const rows = screen.getAllByTestId(/^settings-/u);
+    expect(rows.map((row) => row.props.testID)).toEqual(CATEGORIES.map(([key]) => `settings-${key}`));
+    expect(rows.map((row) => within(row).getAllByText(/./u)[0]!.props.children)).toEqual(
+      CATEGORIES.map(([, title]) => title),
+    );
+    expect(getByText('Sign out')).toBeTruthy();
+    expect(getByText(/^Autom8x for iOS · v/)).toBeTruthy();
+    // The old single screen's rows live on their pages now.
+    expect(queryByText('Face ID unlock')).toBeNull();
+    expect(queryByText('Export my data')).toBeNull();
+    expect(getAllByText('Billing')).toHaveLength(1);
+    // Each page reads what it draws; the index reads nothing.
+    expect(platformOperation).not.toHaveBeenCalled();
+  });
+
+  it('opens each category on its own page', async () => {
+    await renderWithProviders(<SettingsScreen />, signedInSession);
+    for (const [key, , path] of CATEGORIES) {
+      await fireEvent.press(screen.getByTestId(`settings-${key}`));
+      expect(mockRouter.push).toHaveBeenLastCalledWith(path);
+    }
+  });
+
+  it('keeps the Face ID unlock on the Security page, and nothing the website never had', async () => {
+    const { getByText, queryByText } = await renderWithProviders(<SecurityScreen />, signedInSession);
+    expect(getByText('Security')).toBeTruthy();
     expect(getByText('Face ID unlock')).toBeTruthy();
     // Removed 2026-10-02: two static rows the website never had and nobody could
     // act on (24.7.3 attempt 2, feedback #8 and #9).
     expect(queryByText('Passkeys')).toBeNull();
     expect(queryByText('Stay signed in')).toBeNull();
-    expect(getByText(/^Autom8x for iOS · v/)).toBeTruthy();
-    expect(getByText('In app')).toBeTruthy();
   });
 
-  it('shows Billing without the plan totals, and reads only what it draws (24.9.5)', async () => {
+  it("is the inbox itself on the Notifications page, in Settings' own stack: its rows, its Back, and its runs (24.12)", async () => {
+    routePlatform(platformOperation, { '/automations': flowCatalogPayload() });
+    const { getByText, getAllByText, queryByText } = await renderWithProviders(
+      <NotificationSettingsScreen />,
+      signedInSession,
+    );
+    // The inbox's own header and rows — not a row that pushes Home's copy across tabs.
+    expect(getByText('Notifications')).toBeTruthy();
+    expect(getAllByText('Run held for review').length).toBeGreaterThan(0);
+    expect(queryByText('Open inbox')).toBeNull();
+    // A failed run opens in the Settings stack, so Back returns to Settings.
+    await fireEvent.press(getByText('Run failed'));
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/settings/run', params: { runId: 'run-4' } });
+    // A held run still switches to Activity, where it is decided, as from Home.
+    await fireEvent.press(getAllByText('Run held for review')[0]);
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity');
+    // Its Back is the inbox's own: back to Settings, never into Home.
+    await fireEvent.press(screen.getByLabelText('Back'));
+    expect(mockRouter.back).toHaveBeenCalled();
+    expect(mockRouter.push).not.toHaveBeenCalledWith('/(tabs)/(home)/notifications');
+    expect(mockRouter.push).not.toHaveBeenCalledWith(expect.objectContaining({ pathname: '/(tabs)/(home)/run' }));
+  });
+
+  it('keeps the workspace on its page: the switcher row, the role, and its areas, reading nothing', async () => {
+    const { getByText } = await renderWithProviders(<WorkspaceScreen />, signedInSession);
+    expect(getByText('Acme Operations')).toBeTruthy();
+    expect(getByText('Your role')).toBeTruthy();
+    expect(getByText('owner')).toBeTruthy();
+    await fireEvent.press(getByText('Export my data'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/data');
+    await fireEvent.press(getByText('Teams'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/teams');
+    expect(platformOperation).not.toHaveBeenCalled();
+  });
+
+  it('shows Billing without the plan totals (24.9.5)', async () => {
     const { getByText, queryByText } = await renderWithProviders(<SettingsScreen />, signedInSession);
     expect(await screen.findByText('Billing')).toBeTruthy();
     expect(queryByText('Solutions total')).toBeNull();
     expect(queryByText('Manage solutions')).toBeNull();
     expect(queryByText('Visa ···· 4242')).toBeNull();
-    expect(getByText('Export my data')).toBeTruthy();
-    // Providers and the workspace's connections: no catalog, no subscriptions.
-    const paths: string[] = platformOperation.mock.calls.map(([path]: [string]) => path);
-    expect(paths.some((path) => path.includes('/automations'))).toBe(false);
-    expect(paths.some((path) => path.includes('/subscriptions'))).toBe(false);
     await fireEvent.press(getByText('Billing'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/billing');
   });
 
   it('switches the live theme from the appearance control', async () => {
-    const { getByText, getAllByText, queryByText } = await renderWithProviders(<SettingsScreen />, signedInSession);
+    const { getByText } = await renderWithProviders(<AppearanceScreen />, signedInSession);
     const title = () =>
-      (StyleSheet.flatten(getByText('Settings').props.style) as { color?: string }).color;
+      (StyleSheet.flatten(getByText('Appearance').props.style) as { color?: string }).color;
     expect(title()).toBe(nocturneDark.text);
     await fireEvent.press(getByText('Light'));
     expect(title()).toBe(nocturneLight.text);
@@ -961,6 +1054,31 @@ describe('Setup wizard (design sSetup)', () => {
     expect(screen.getByText('Watch inbox')).toBeTruthy();
     expect(screen.getByText('1 · CONNECTIONS')).toBeTruthy();
   });
+
+  /** The catalog with nothing to fill in, and the subscriptions `/subscriptions` answers. */
+  function routeUnmet(subscriptions: unknown[], subscription: unknown) {
+    const catalog = catalogPayload();
+    catalog.automations = catalog.automations.map((automation) => ({ ...automation, setup: [] }));
+    routePlatform(platformOperation, { '/automations': catalog, '/subscriptions': { subscriptions, subscription } });
+    setMockParams({ template: 'tpl.0' });
+  }
+
+  it('names the page an account is connected on — Settings › Connections — while one is missing (24.12)', async () => {
+    const waiting = { ...planSubscriptionsPayload().subscriptions[0]!, unmetConnections: ['hubspot'] };
+    routeUnmet([waiting], waiting);
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    expect(await screen.findByText('Connect HubSpot in Settings › Connections')).toBeTruthy();
+  });
+
+  it('names that page when the flow it just added still needs an account (24.12)', async () => {
+    const added = { ...planSubscriptionsPayload().subscriptions[0]!, unmetConnections: ['hubspot'] };
+    routeUnmet([], added);
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    await fireEvent.press(await screen.findByText('Activate solution'));
+    expect(
+      await screen.findByText('Connect the required providers in Settings › Connections, then return to activate.'),
+    ).toBeTruthy();
+  });
 });
 
 /* ------------------------------------------------- flow history: the tiles (24.11.9) */
@@ -1009,7 +1127,7 @@ describe('Flow history — the tiles open Activity (24.11.9)', () => {
   });
 });
 
-/* ------------------------------------------------- removed flows (24.11.8) */
+/* ------------------------------------------------ archived flows (24.11.8) */
 
 function withRemovedFlow(invoiceToo = false) {
   const base = subscriptionsPayload().subscriptions;
@@ -1021,39 +1139,60 @@ function withRemovedFlow(invoiceToo = false) {
   });
 }
 
-describe('Removed flows (24.11.8)', () => {
-  it('Flows offers the removed ones as a row with a count, which opens the page', async () => {
+describe('Archived flows (24.11.8; "Archived" since 24.12)', () => {
+  it('Flows offers the archived ones as a row with a count, which opens the page', async () => {
     withRemovedFlow();
     const { findByText, queryByText } = await renderWithProviders(<FlowsScreen />, signedInSession);
-    expect(await findByText('Removed flows (1)')).toBeTruthy();
+    expect(await findByText('Archived flows (1)')).toBeTruthy();
     expect(queryByText('Old intake')).toBeNull();
-    await fireEvent.press(screen.getByText('Removed flows (1)'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/removed');
+    await fireEvent.press(screen.getByTestId('flows-archived'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/archived');
   });
 
-  it('the Removed page lists them, read-only, and says so when there are none', async () => {
+  it('the Archived page lists them, read-only, and is the empty standard when there are none', async () => {
     withRemovedFlow();
-    const { findByText, getByText } = await renderWithProviders(<RemovedFlowsScreen />, signedInSession);
+    const { findByText, getByText } = await renderWithProviders(<ArchivedFlowsScreen />, signedInSession);
     expect(await findByText('Old intake')).toBeTruthy();
-    expect(getByText('Removed Sep 30, 2026')).toBeTruthy();
+    expect(getByText('Archived flows')).toBeTruthy();
+    expect(getByText('An archived flow keeps its history here. Add it again any time.')).toBeTruthy();
+    expect(getByText('Archived Sep 30, 2026')).toBeTruthy();
     await fireEvent.press(getByText('Old intake'));
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'gone' } });
 
     resetSnapshot();
     routePlatform(platformOperation, { '/automations': flowCatalogPayload() });
-    const empty = await renderWithProviders(<RemovedFlowsScreen />, signedInSession);
-    expect(await empty.findByText('Nothing removed here.')).toBeTruthy();
+    const empty = await renderWithProviders(<ArchivedFlowsScreen />, signedInSession);
+    expect(await empty.findByTestId('screen-empty')).toBeTruthy();
+    expect(empty.getByText('No archived flows')).toBeTruthy();
+    expect(empty.getByText('A flow you archive keeps its history here, and you can add it again.')).toBeTruthy();
+    await fireEvent.press(empty.getByLabelText('Back'));
+    expect(mockRouter.back).toHaveBeenCalled();
   });
 
-  it("a removed flow's page opens instead of \"Couldn't load\": no actions, its history, and Add it again", async () => {
+  it('the Settings copy opens an archived flow in the Settings stack, so Back returns to Settings', async () => {
+    withRemovedFlow();
+    const { findByText } = await renderWithProviders(<SettingsArchivedFlowsScreen />, signedInSession);
+    await fireEvent.press(await findByText('Old intake'));
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/settings/archived-flow', params: { flow: 'gone' } });
+
+    // With none, the Settings copy is the same empty standard, with its way back.
+    resetSnapshot();
+    routePlatform(platformOperation, { '/automations': flowCatalogPayload() });
+    const empty = await renderWithProviders(<SettingsArchivedFlowsScreen />, signedInSession);
+    expect(await empty.findByText('No archived flows')).toBeTruthy();
+    await fireEvent.press(empty.getByLabelText('Back'));
+    expect(mockRouter.back).toHaveBeenCalled();
+  });
+
+  it("an archived flow's page opens instead of \"Couldn't load\": no actions, its history, and Add it again", async () => {
     setMockParams({ flow: 'gone' });
     withRemovedFlow();
     const { findByText, queryByText, getByText } = await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
     expect(await findByText('Old intake')).toBeTruthy();
-    expect(getByText('Removed')).toBeTruthy();
-    expect(getByText(/^This flow was removed on Sep 30, 2026\. /u)).toBeTruthy();
+    expect(getByText('Archived')).toBeTruthy();
+    expect(getByText(/^This flow was archived on Sep 30, 2026\. /u)).toBeTruthy();
     expect(queryByText("Couldn't load this flow")).toBeNull();
-    expect(queryByText('Remove flow')).toBeNull();
+    expect(queryByText('Archive flow')).toBeNull();
     expect(queryByText('Pause')).toBeNull();
     await fireEvent.press(getByText('Add it again'));
     expect(mockRouter.push).toHaveBeenCalledWith({
@@ -1062,15 +1201,15 @@ describe('Removed flows (24.11.8)', () => {
     });
   });
 
-  it("a run whose flow was removed says so on its row", async () => {
+  it("a run whose flow was archived says so on its row", async () => {
     withRemovedFlow(true);
     const { findAllByText } = await renderWithProviders(<ActivityScreen />, signedInSession);
-    expect((await findAllByText(/Flow removed/)).length).toBeGreaterThan(0);
+    expect((await findAllByText(/Flow archived/)).length).toBeGreaterThan(0);
   });
 
-  it('Settings offers the Removed flows page', async () => {
-    const { findByText } = await renderWithProviders(<SettingsScreen />, signedInSession);
-    await fireEvent.press(await findByText('Removed flows'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/removed');
+  it("Settings › Workspace offers the Archived flows page, in Settings' own stack", async () => {
+    const { findByText } = await renderWithProviders(<WorkspaceScreen />, signedInSession);
+    await fireEvent.press(await findByText('Archived flows'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/archived');
   });
 });

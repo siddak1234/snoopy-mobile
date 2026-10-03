@@ -9,7 +9,7 @@ import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { SettingsRow } from '@/components/settings/settings-row';
-import { fonts, status } from '@/constants/theme';
+import { fonts, status, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useTheme } from '@/hooks/use-theme';
 import { refusalMessage } from '@/lib/content/refusals';
@@ -281,12 +281,12 @@ const styles = StyleSheet.create({
   card: { marginTop: 9 },
   pad: { padding: 14 },
   right: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  role: { fontFamily: fonts.regular, fontSize: 12.5, textTransform: 'capitalize' },
-  text: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17 },
+  role: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize, textTransform: 'capitalize' },
+  text: { fontFamily: fonts.regular, ...typeScale.small },
   add: { marginTop: 10 },
   list: { maxHeight: 320 },
   addRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderBottomWidth: 1 },
   addBody: { flex: 1, minWidth: 0 },
-  addName: { fontFamily: fonts.medium, fontSize: 14 },
-  addLink: { fontFamily: fonts.medium, fontSize: 13 },
+  addName: { fontFamily: fonts.medium, fontSize: typeScale.label.fontSize },
+  addLink: { fontFamily: fonts.medium, fontSize: typeScale.body.fontSize },
 });

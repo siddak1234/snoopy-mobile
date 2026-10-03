@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { SettingsRow } from '@/components/settings/settings-row';
-import { fonts, layout } from '@/constants/theme';
+import { fonts, layout, typeScale } from '@/constants/theme';
 import { useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { newIdempotencyKey } from '@/lib/platform/client';
@@ -190,6 +190,6 @@ const styles = StyleSheet.create({
   },
   note: {
     fontFamily: fonts.regular,
-    fontSize: 12.5,
+    fontSize: typeScale.small.fontSize,
   },
 });

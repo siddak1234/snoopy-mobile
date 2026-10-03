@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
-import { fonts } from '@/constants/theme';
+import { fonts, typeScale } from '@/constants/theme';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { WEBHOOK_ISSUE_REFUSALS, WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
@@ -159,11 +159,11 @@ export function WebhookAddressDialog({
 const styles = StyleSheet.create({
   label: {
     fontFamily: fonts.regular,
-    fontSize: 12,
+    fontSize: typeScale.small.fontSize,
   },
   value: {
     fontFamily: fonts.medium,
-    fontSize: 13,
+    fontSize: typeScale.body.fontSize,
     marginTop: 2,
   },
   secret: {

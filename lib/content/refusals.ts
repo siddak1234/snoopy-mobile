@@ -1,4 +1,4 @@
-import { PlatformError } from '@/lib/platform/problem';
+import { PlatformError, PlatformRateLimitedError } from '@/lib/platform/problem';
 
 /**
  * Refusals a person can act on, in words — BUILD-PLAN 24.3.6.
@@ -27,7 +27,7 @@ export const MOVE_REFUSALS: Readonly<Record<string, string>> = {
     'An approval for this flow is still waiting. Decide it first, then move.',
   runs_in_flight: 'A run of this flow is still going. Wait for it to finish, then move.',
   version_unavailable: 'That version is no longer available.',
-  subscription_archived: 'A removed flow cannot move.',
+  subscription_archived: 'An archived flow cannot move.',
   invalid_config: 'Its settings do not fit that version. Open Set up, fix them, then move.',
   unmet_connections:
     'That version needs an account this workspace has not connected. Connect it first, or pause the flow and move.',
@@ -38,8 +38,53 @@ export const MOVE_REFUSALS: Readonly<Record<string, string>> = {
 /** Issuing or rotating a webhook address (backend §12.1 #91, #109). */
 export const WEBHOOK_ISSUE_REFUSALS: Readonly<Record<string, string>> = {
   trigger_kind_mismatch: 'This flow is not started by a webhook.',
-  subscription_archived: 'A removed flow has no address.',
+  subscription_archived: 'An archived flow has no address.',
 };
+
+/**
+ * Unlinking a sign-in account (backend 24.11.1), by the reason the platform
+ * names. Its sentence is the problem's `detail`, which the transport does not
+ * keep — the error's message is the problem's TITLE ("Bad Request", "Not
+ * Found"), and the owner's build 9 showed exactly that (24.12).
+ */
+export const UNLINK_REFUSALS: Readonly<Record<string, string>> = {
+  primary: 'The account you signed up with stays linked.',
+  last: 'The last sign-in account stays linked.',
+  refused: 'This sign-in account cannot be unlinked.',
+};
+
+/**
+ * The words for a refused unlink — never a bare problem title. A 404 that names
+ * its method and path is the Edge's own "no such route": a platform from before
+ * the unlink route was promoted, so not available yet. Any other 404 is an
+ * account that is not linked. A 429 keeps its wait.
+ */
+export function unlinkRefusal(error: unknown): string {
+  if (error instanceof PlatformRateLimitedError) return error.message;
+  if (error instanceof PlatformError) {
+    if (error.status === 404) {
+      const route = typeof error.details?.method === 'string' && typeof error.details?.path === 'string';
+      return route ? "Unlinking isn't available yet." : 'That sign-in account is not linked.';
+    }
+    const reason = error.details?.reason;
+    if (typeof reason === 'string' && Object.prototype.hasOwnProperty.call(UNLINK_REFUSALS, reason)) {
+      return UNLINK_REFUSALS[reason]!;
+    }
+  }
+  return 'The account could not be unlinked.';
+}
+
+/**
+ * Creating a team (24.12): one team of each kind in a workspace (409, reason
+ * `team_kind_taken`), and in an organization only its owners and admins (403).
+ */
+export function teamCreateRefusal(error: unknown, kind: string): string {
+  if (error instanceof PlatformError && error.status === 409 && error.details?.reason === 'team_kind_taken') {
+    return `This workspace already has a team for ${kind}.`;
+  }
+  if (error instanceof PlatformError && error.status === 403) return 'Only an owner or admin can create a team here.';
+  return refusalMessage(error, {}, 'The team could not be created.');
+}
 
 /**
  * Adding an automation: the two reasons the subscription operation allowlists,

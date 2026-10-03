@@ -15,7 +15,7 @@ import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from 'react-nativ
 import { BrandMark } from '@/components/nocturne/brand-mark';
 import { GlowBackground } from '@/components/nocturne/glow-background';
 import { PillButton } from '@/components/nocturne/pill-button';
-import { fonts, radius } from '@/constants/theme';
+import { fonts, radius, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useBiometricWording } from '@/hooks/use-biometric-wording';
 import { useSession } from '@/hooks/use-session';
@@ -147,7 +147,7 @@ export default function FaceIdScreen() {
         <PillButton
           label="Use identity provider"
           height={44}
-          fontSize={14}
+          fontSize={typeScale.label.fontSize}
           onPress={() => router.replace('/')}
           style={styles.fallback}
         />
@@ -200,11 +200,11 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: fonts.medium,
-    fontSize: 19,
+    fontSize: typeScale.title.fontSize,
   },
   sub: {
     fontFamily: fonts.regular,
-    fontSize: 13.5,
+    fontSize: typeScale.body.fontSize,
   },
   brand: {
     position: 'absolute',

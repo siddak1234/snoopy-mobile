@@ -1,7 +1,7 @@
 import React from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { fonts, layout, status } from '@/constants/theme';
+import { fonts, layout, status, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -126,12 +126,11 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: fonts.medium,
-    fontSize: 18,
+    fontSize: typeScale.title.fontSize,
   },
   body: {
     fontFamily: fonts.regular,
-    fontSize: 13,
-    lineHeight: 19,
+    ...typeScale.body,
   },
   actions: {
     flexDirection: 'row',
@@ -154,6 +153,6 @@ const styles = StyleSheet.create({
   },
   buttonLabel: {
     fontFamily: fonts.medium,
-    fontSize: 13,
+    fontSize: typeScale.body.fontSize,
   },
 });

@@ -7,7 +7,7 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { TextField } from '@/components/nocturne/text-field';
 import { SettingsRow } from '@/components/settings/settings-row';
-import { fonts, status } from '@/constants/theme';
+import { fonts, status, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useTheme } from '@/hooks/use-theme';
 import { refusalMessage } from '@/lib/content/refusals';
@@ -213,5 +213,5 @@ const styles = StyleSheet.create({
   card: { marginTop: 9 },
   pad: { padding: 14, gap: 10 },
   found: { paddingBottom: 4 },
-  text: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18 },
+  text: { fontFamily: fonts.regular, ...typeScale.body },
 });

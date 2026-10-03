@@ -90,7 +90,7 @@ export function invalidateShared(scope: string, keys?: readonly string[]): void 
   }
 }
 
-/** Everything, every scope — sign-out, and each test's start. */
+/** Everything, every scope — a session ending or beginning (`hooks/use-session.tsx`), and each test's start. */
 export function resetSnapshot(): void {
   entries.clear();
 }

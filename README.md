@@ -48,6 +48,10 @@ The individual architecture gates are:
 
 - `audit:credentials`: no pinned demo credentials.
 - `audit:tokens`: no raw colour literals outside the theme.
+- `audit:type`: no font size outside the type scale — every `fontSize`,
+  `lineHeight` and `em()` size is a step of `typeScale` in
+  `constants/theme.ts`, followed through a `const`, a default or a local table
+  of sizes (24.12).
 - `audit:vocabulary`: no copy says "project" or "automation" — the app says
   team and flow; the code keeps the contract's names (24.11.7).
 - `audit:fixtures`: zero prototype fixture data inside the runtime roots — both
@@ -57,14 +61,18 @@ The individual architecture gates are:
   `app/`, `components/`, `constants/`, `hooks/` or `lib/` can reach it.
 - `audit:platform`: no raw network primitive, alternate network library,
   AsyncStorage, runtime console call, or `openapi-fetch` import outside the
-  transport boundary.
+  transport boundary; the transport's one signed upload and one native
+  download (`downloadFileAsync`, 24.12) are each budgeted to a single call.
 - `verify:platform-contracts`: regenerate from the sibling backend checkout,
   when present, and reject a generated declaration diff.
 
 The gate suites include negative tests that inject forbidden source and prove
 the audits fail. `__tests__/nocturne-visual.test.tsx` snapshots all 18 Nocturne
 components in dark and light palettes. Do not update those snapshots unless a
-visual change is explicitly authorized.
+visual change is explicitly authorized. One has been: the owner's bigger type
+(decision 11, 2026-10-02, "whole app — easy to read"), for which the snapshots
+were re-pinned once in build 10 (24.12) — 48 of the 64 Nocturne entries and 10
+of the 14 in `screen-state.test.tsx`; the other 20 set no font size.
 
 CI runs lint, typecheck, Jest, all architecture/dependency gates, contract
 verification, and both platform exports. Preview and production EAS values are
@@ -96,7 +104,10 @@ no Apple account name or password is written anywhere. The history is in
   said as "busy, try again in N seconds" from its `retry-after` and never as
   signed out. Its one raw `fetch` is `putFileToSignedUrl`, the credential-less
   PUT of a file's bytes to the URL the platform signed; `audit:platform` admits
-  exactly that one.
+  exactly that one. Since 24.12 its one native download is
+  `downloadSignedFile`, the credential-less save of the complete export's
+  signed link into the app's cache, which iOS then hands to the share sheet;
+  `audit:platform` admits exactly one `downloadFileAsync(`, there.
 - `lib/platform/*.ts` exposes typed reads and mutations. Screens do not call a
   network primitive.
 - `lib/platform/session-store.ts` stores access/refresh credentials only in
@@ -112,10 +123,13 @@ no Apple account name or password is written anywhere. The history is in
   `expo-auth-session` is deliberately not used because its `AuthRequest`
   models an app-owned OAuth authorization request with a required client ID,
   while this app is not the OAuth client.
-- `lib/platform/workspaces.ts` backs the Settings workspace switcher with the
-  two published operations the web switcher uses: `GET /v1/workspaces` and
-  `PATCH /v1/session/active-workspace`. The backend session owns "active"; the
-  app mutates, then re-reads `/v1/session` through `useSession().reload()`.
+- `lib/platform/workspaces.ts` backs the workspace switcher (Settings ›
+  Workspace and the scope control) with the two published operations the web
+  switcher uses: `GET /v1/workspaces` and `PATCH /v1/session/active-workspace`.
+  The backend session owns "active"; the app mutates, then re-reads
+  `/v1/session` through `useSession().reload()`. A rename, a new organization
+  and a join drop the shared snapshot's copy of the list, and the whole
+  snapshot is emptied when a session ends or begins (24.12).
 - `hooks/use-resource.tsx` and `components/screen-state.tsx` provide explicit
   loading, offline, platform-error, and empty states.
 - `lib/view/` performs the published wire-to-Nocturne mapping and owns no

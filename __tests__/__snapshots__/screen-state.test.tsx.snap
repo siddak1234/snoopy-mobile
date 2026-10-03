@@ -118,8 +118,8 @@ exports[`screen states — dark palette ActionFailure renders unchanged 1`] = `
           [
             {
               "fontFamily": "Inter_400Regular",
-              "fontSize": 13,
-              "lineHeight": 19.5,
+              "fontSize": 15,
+              "lineHeight": 22,
             },
             {
               "color": "#e9e9ed",
@@ -135,7 +135,7 @@ exports[`screen states — dark palette ActionFailure renders unchanged 1`] = `
           [
             {
               "fontFamily": "Inter_500Medium",
-              "fontSize": 13,
+              "fontSize": 15,
             },
             {
               "color": "#f87171",
@@ -287,8 +287,8 @@ exports[`screen states — dark palette ScreenEmpty/no-action renders unchanged 
           [
             {
               "fontFamily": "Inter_500Medium",
-              "fontSize": 22,
-              "letterSpacing": -0.32999999999999996,
+              "fontSize": 24,
+              "letterSpacing": -0.36,
               "marginTop": 8,
               "textAlign": "center",
             },
@@ -305,8 +305,8 @@ exports[`screen states — dark palette ScreenEmpty/no-action renders unchanged 
           [
             {
               "fontFamily": "Inter_400Regular",
-              "fontSize": 13.5,
-              "lineHeight": 20.925,
+              "fontSize": 15,
+              "lineHeight": 22,
               "maxWidth": 224,
               "textAlign": "center",
             },
@@ -459,8 +459,8 @@ exports[`screen states — dark palette ScreenEmpty/two-actions renders unchange
           [
             {
               "fontFamily": "Inter_500Medium",
-              "fontSize": 22,
-              "letterSpacing": -0.32999999999999996,
+              "fontSize": 24,
+              "letterSpacing": -0.36,
               "marginTop": 8,
               "textAlign": "center",
             },
@@ -477,8 +477,8 @@ exports[`screen states — dark palette ScreenEmpty/two-actions renders unchange
           [
             {
               "fontFamily": "Inter_400Regular",
-              "fontSize": 13.5,
-              "lineHeight": 20.925,
+              "fontSize": 15,
+              "lineHeight": 22,
               "maxWidth": 224,
               "textAlign": "center",
             },
@@ -618,7 +618,7 @@ exports[`screen states — dark palette ScreenEmpty/two-actions renders unchange
             {
               "color": "#9184d9",
               "fontFamily": "Inter_500Medium",
-              "fontSize": 14,
+              "fontSize": 16,
             }
           }
         >
@@ -680,7 +680,7 @@ exports[`screen states — dark palette ScreenEmpty/two-actions renders unchange
             {
               "color": "#e9e9ed",
               "fontFamily": "Inter_500Medium",
-              "fontSize": 14.5,
+              "fontSize": 16,
             }
           }
         >
@@ -946,8 +946,8 @@ exports[`screen states — dark palette ScreenError renders unchanged 1`] = `
           [
             {
               "fontFamily": "Inter_500Medium",
-              "fontSize": 20,
-              "letterSpacing": -0.2,
+              "fontSize": 21,
+              "letterSpacing": -0.21,
               "marginTop": 8,
               "textAlign": "center",
             },
@@ -964,8 +964,8 @@ exports[`screen states — dark palette ScreenError renders unchanged 1`] = `
           [
             {
               "fontFamily": "Inter_400Regular",
-              "fontSize": 13.5,
-              "lineHeight": 20.925,
+              "fontSize": 15,
+              "lineHeight": 22,
               "maxWidth": 224,
               "textAlign": "center",
             },
@@ -1105,7 +1105,7 @@ exports[`screen states — dark palette ScreenError renders unchanged 1`] = `
             {
               "color": "#9184d9",
               "fontFamily": "Inter_500Medium",
-              "fontSize": 14,
+              "fontSize": 16,
             }
           }
         >
@@ -1165,7 +1165,7 @@ exports[`screen states — dark palette ScreenError renders unchanged 1`] = `
             {
               "color": "#e9e9ed",
               "fontFamily": "Inter_500Medium",
-              "fontSize": 13.5,
+              "fontSize": 15,
             }
           }
         >
@@ -2349,8 +2349,8 @@ exports[`screen states — dark palette ScreenOffline renders unchanged 1`] = `
           [
             {
               "fontFamily": "Inter_500Medium",
-              "fontSize": 20,
-              "letterSpacing": -0.2,
+              "fontSize": 21,
+              "letterSpacing": -0.21,
               "marginTop": 8,
               "textAlign": "center",
             },
@@ -2367,8 +2367,8 @@ exports[`screen states — dark palette ScreenOffline renders unchanged 1`] = `
           [
             {
               "fontFamily": "Inter_400Regular",
-              "fontSize": 13.5,
-              "lineHeight": 20.925,
+              "fontSize": 15,
+              "lineHeight": 22,
               "maxWidth": 224,
               "textAlign": "center",
             },
@@ -2508,7 +2508,7 @@ exports[`screen states — dark palette ScreenOffline renders unchanged 1`] = `
             {
               "color": "#9184d9",
               "fontFamily": "Inter_500Medium",
-              "fontSize": 14,
+              "fontSize": 16,
             }
           }
         >
@@ -2638,8 +2638,8 @@ exports[`screen states — light palette ActionFailure renders unchanged 1`] = `
           [
             {
               "fontFamily": "Inter_400Regular",
-              "fontSize": 13,
-              "lineHeight": 19.5,
+              "fontSize": 15,
+              "lineHeight": 22,
             },
             {
               "color": "#20222f",
@@ -2655,7 +2655,7 @@ exports[`screen states — light palette ActionFailure renders unchanged 1`] = `
           [
             {
               "fontFamily": "Inter_500Medium",
-              "fontSize": 13,
+              "fontSize": 15,
             },
             {
               "color": "#f87171",
@@ -2807,8 +2807,8 @@ exports[`screen states — light palette ScreenEmpty/no-action renders unchanged
           [
             {
               "fontFamily": "Inter_500Medium",
-              "fontSize": 22,
-              "letterSpacing": -0.32999999999999996,
+              "fontSize": 24,
+              "letterSpacing": -0.36,
               "marginTop": 8,
               "textAlign": "center",
             },
@@ -2825,8 +2825,8 @@ exports[`screen states — light palette ScreenEmpty/no-action renders unchanged
           [
             {
               "fontFamily": "Inter_400Regular",
-              "fontSize": 13.5,
-              "lineHeight": 20.925,
+              "fontSize": 15,
+              "lineHeight": 22,
               "maxWidth": 224,
               "textAlign": "center",
             },
@@ -2979,8 +2979,8 @@ exports[`screen states — light palette ScreenEmpty/two-actions renders unchang
           [
             {
               "fontFamily": "Inter_500Medium",
-              "fontSize": 22,
-              "letterSpacing": -0.32999999999999996,
+              "fontSize": 24,
+              "letterSpacing": -0.36,
               "marginTop": 8,
               "textAlign": "center",
             },
@@ -2997,8 +2997,8 @@ exports[`screen states — light palette ScreenEmpty/two-actions renders unchang
           [
             {
               "fontFamily": "Inter_400Regular",
-              "fontSize": 13.5,
-              "lineHeight": 20.925,
+              "fontSize": 15,
+              "lineHeight": 22,
               "maxWidth": 224,
               "textAlign": "center",
             },
@@ -3138,7 +3138,7 @@ exports[`screen states — light palette ScreenEmpty/two-actions renders unchang
             {
               "color": "#6a5cc4",
               "fontFamily": "Inter_500Medium",
-              "fontSize": 14,
+              "fontSize": 16,
             }
           }
         >
@@ -3200,7 +3200,7 @@ exports[`screen states — light palette ScreenEmpty/two-actions renders unchang
             {
               "color": "#20222f",
               "fontFamily": "Inter_500Medium",
-              "fontSize": 14.5,
+              "fontSize": 16,
             }
           }
         >
@@ -3466,8 +3466,8 @@ exports[`screen states — light palette ScreenError renders unchanged 1`] = `
           [
             {
               "fontFamily": "Inter_500Medium",
-              "fontSize": 20,
-              "letterSpacing": -0.2,
+              "fontSize": 21,
+              "letterSpacing": -0.21,
               "marginTop": 8,
               "textAlign": "center",
             },
@@ -3484,8 +3484,8 @@ exports[`screen states — light palette ScreenError renders unchanged 1`] = `
           [
             {
               "fontFamily": "Inter_400Regular",
-              "fontSize": 13.5,
-              "lineHeight": 20.925,
+              "fontSize": 15,
+              "lineHeight": 22,
               "maxWidth": 224,
               "textAlign": "center",
             },
@@ -3625,7 +3625,7 @@ exports[`screen states — light palette ScreenError renders unchanged 1`] = `
             {
               "color": "#6a5cc4",
               "fontFamily": "Inter_500Medium",
-              "fontSize": 14,
+              "fontSize": 16,
             }
           }
         >
@@ -3685,7 +3685,7 @@ exports[`screen states — light palette ScreenError renders unchanged 1`] = `
             {
               "color": "#20222f",
               "fontFamily": "Inter_500Medium",
-              "fontSize": 13.5,
+              "fontSize": 15,
             }
           }
         >
@@ -4869,8 +4869,8 @@ exports[`screen states — light palette ScreenOffline renders unchanged 1`] = `
           [
             {
               "fontFamily": "Inter_500Medium",
-              "fontSize": 20,
-              "letterSpacing": -0.2,
+              "fontSize": 21,
+              "letterSpacing": -0.21,
               "marginTop": 8,
               "textAlign": "center",
             },
@@ -4887,8 +4887,8 @@ exports[`screen states — light palette ScreenOffline renders unchanged 1`] = `
           [
             {
               "fontFamily": "Inter_400Regular",
-              "fontSize": 13.5,
-              "lineHeight": 20.925,
+              "fontSize": 15,
+              "lineHeight": 22,
               "maxWidth": 224,
               "textAlign": "center",
             },
@@ -5028,7 +5028,7 @@ exports[`screen states — light palette ScreenOffline renders unchanged 1`] = `
             {
               "color": "#6a5cc4",
               "fontFamily": "Inter_500Medium",
-              "fontSize": 14,
+              "fontSize": 16,
             }
           }
         >

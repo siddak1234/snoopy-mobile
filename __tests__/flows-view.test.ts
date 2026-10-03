@@ -1,6 +1,6 @@
 import type { CatalogEntry } from '@/lib/platform/catalog';
 import type { RunSubscriptionCounts, Subscription } from '@/lib/platform/runs';
-import { toFlows, toSolutions } from '@/lib/view/catalog';
+import { scopeLabels, toFlows, toSolutions } from '@/lib/view/catalog';
 import {
   approvalTitle,
   composeNotifications,
@@ -105,6 +105,20 @@ describe('toFlows', () => {
   it('leaves an archived subscription out: it is not a workflow any more', () => {
     const flows = toFlows([sub(), sub({ id: 's2', status: 'archived' })], [entry()], [counts()]);
     expect(flows.map((flow) => flow.key)).toEqual(['s1']);
+  });
+
+  it('labels a flow by its team\'s kind — a team named before 24.12 too', () => {
+    const legacy = { id: 'p1', name: 'AP inbox', type: 'Finance', status: 'active' };
+    const labels = scopeLabels([legacy], [sub()]);
+    const [scoped, whole] = toFlows(
+      [sub({ projectId: 'p1' }), sub({ id: 's2', projectId: null })],
+      [entry()],
+      [counts()],
+      undefined,
+      labels,
+    );
+    expect(scoped.scope).toBe('Team: Finance');
+    expect(whole.scope).toBe('Whole workspace');
   });
 });
 

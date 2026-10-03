@@ -7,7 +7,7 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { TextField } from '@/components/nocturne/text-field';
 import { SettingsRow } from '@/components/settings/settings-row';
-import { fonts, status } from '@/constants/theme';
+import { fonts, status, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
@@ -279,12 +279,11 @@ const styles = StyleSheet.create({
   },
   connectLink: {
     fontFamily: fonts.medium,
-    fontSize: 13,
+    fontSize: typeScale.body.fontSize,
   },
   notice: {
     marginTop: 8,
     fontFamily: fonts.regular,
-    fontSize: 12,
-    lineHeight: 17,
+    ...typeScale.small,
   },
 });

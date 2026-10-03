@@ -6,7 +6,7 @@ import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { SettingsRow } from '@/components/settings/settings-row';
-import { fonts } from '@/constants/theme';
+import { fonts, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useTheme } from '@/hooks/use-theme';
 import { refusalMessage } from '@/lib/content/refusals';
@@ -138,5 +138,5 @@ function DecideDialog({
 
 const styles = StyleSheet.create({
   card: { marginTop: 9 },
-  empty: { fontFamily: fonts.regular, fontSize: 13, padding: 14 },
+  empty: { fontFamily: fonts.regular, fontSize: typeScale.body.fontSize, padding: 14 },
 });

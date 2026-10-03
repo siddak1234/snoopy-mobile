@@ -928,6 +928,7 @@ export interface paths {
          * @description Start a purchase (ADR-0025). Requires owner or admin. The platform creates a **provider-hosted** Checkout session and answers its URL; the client navigates there.
          *     **The platform never renders a card field and never receives a card number** — card data does not touch a platform server, which keeps the estate in PCI SAQ-A. The returned URL is a capability, not a credential: single-purpose, short-lived, and useless for reading or mutating anything the platform owns.
          *     The subscription becomes real when the provider's `checkout.session.completed` callback arrives at `POST /v1/billing/webhooks`, not when this call returns. A client should re-read `GET /v1/workspaces/{workspaceId}/billing` after the redirect rather than assuming the plan changed.
+         *     **A workspace that already holds a plan is refused (409)** — trialing, active or past due (BUILD-PLAN 24.12.3). Changing a plan happens in the portal; a second Checkout would open a second subscription, billed beside the first.
          */
         post: operations["createBillingCheckoutSession"];
         delete?: never;
@@ -1036,6 +1037,7 @@ export interface paths {
         /** @description The teams the person can see — a team is a project in this contract (24.11.5): a sub-organization with its own flows. A member sees the teams they are on; an owner or admin of the organization sees every team. */
         get: operations["listWorkspaceProjects"];
         put?: never;
+        /** @description Create a team — a project in this contract — in this workspace (BUILD-PLAN 24.12.1). **An owner or admin creates it**: a plain member of an organization is refused, and in a personal workspace the owner is the only member. A workspace holds one team of each kind (`type`) among its teams that are not archived, ignoring case; archiving a team frees its kind. */
         post: operations["createWorkspaceProject"];
         delete?: never;
         options?: never;
@@ -1250,6 +1252,7 @@ export interface components {
         OrganizationDomainMutationResponse: {
             domain: components["schemas"]["OrganizationDomain"];
         };
+        /** @description One person's request to join an organization. The list, a decision and a withdrawal name the requester — `displayName` when they have one, and `email` — so an owner or admin approves a person, not an id (BUILD-PLAN 24.12.4). */
         OrganizationJoinRequest: {
             /** Format: uuid */
             id: string;
@@ -1259,6 +1262,8 @@ export interface components {
             userId: string;
             /** @enum {string} */
             status: "pending" | "approved" | "rejected" | "cancelled";
+            displayName?: string;
+            email?: string;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -1319,12 +1324,13 @@ export interface components {
             /** Format: uuid */
             activeWorkspaceId: string;
         };
+        /** @description A new team, created by an owner or admin of the workspace (BUILD-PLAN 24.12.1). `type` is its kind, unique in the workspace among teams that are not archived, ignoring case. `name` and `description` stay as they are because older clients still send them; the apps send the kind as `name` too. */
         CreateProjectRequest: {
             name: string;
             type: string;
             description?: string;
         };
-        /** @description A team, as the person calls it — a project in this contract (24.11.5). `type` is the kind of team (HR, Accounting, Finance, Legal, Compliance, Data, Operations, Sales, Marketing, Customer Support, IT, Engineering, Product, Procurement, Administration, Research, or the person's own words). */
+        /** @description A team, as the person calls it — a project in this contract (24.11.5). `type` is the kind of team (HR, Accounting, Finance, Legal, Compliance, Data, Operations, Sales, Marketing, Customer Support, IT, Engineering, Product, Procurement, Administration, Research, or the person's own words). The kind is unique in the workspace among teams that are not archived, ignoring case, and a team is created by an owner or admin (BUILD-PLAN 24.12.1). */
         ProjectSummary: {
             /** Format: uuid */
             id: string;
@@ -1364,6 +1370,8 @@ export interface components {
             /** @enum {string} */
             provider: "google" | "microsoft" | "apple";
             primary: boolean;
+            /** @description The address that provider reports; absent when none (BUILD-PLAN 24.12.2). Shown so a person can tell linked accounts apart. */
+            email?: string;
         };
         LoginIdentitiesResponse: {
             identities: components["schemas"]["LoginIdentitySummary"][];
@@ -2714,7 +2722,15 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            /** @description Restoring an archived team onto a kind another team now holds: `details.reason` is `team_kind_taken` and `detail` is "This workspace already has a team of this kind" (BUILD-PLAN 24.12.1). An idempotency key reused with different input is the other conflict, and carries no reason. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
         };
     };
     listProjectMemberships: {
@@ -3708,6 +3724,15 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            /** @description The workspace already has a plan that is trialing, active or past due: `details.reason` is `plan_exists` and `detail` is "This workspace already has a plan. Change it in Manage billing." The client opens the portal (`createBillingPortalSession`) instead. No provider call was made. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
             502: components["responses"]["DependencyFailure"];
             503: components["responses"]["NotConfigured"];
         };
@@ -3944,8 +3969,25 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
+            /** @description The person is not an owner or admin of this workspace; also a cookie request from another origin, or an account that is not active. The refusal names no reason. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            /** @description The workspace already has a team of this kind that is not archived: `details.reason` is `team_kind_taken` and `detail` is "This workspace already has a team of this kind". An idempotency key reused with different input is the other conflict, and carries no reason. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiProblem"];
+                };
+            };
         };
     };
     listConnections: {

@@ -12,7 +12,7 @@ import { StatCard } from '@/components/nocturne/stat-card';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { StepCard } from '@/components/nocturne/step-card';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
-import { em, fonts, layout, status } from '@/constants/theme';
+import { em, fonts, layout, status, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ActionFailure, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
@@ -20,7 +20,7 @@ import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { roleIn, useSession, workspaceIfShown } from '@/hooks/use-session';
 import { statusAction, useWorkflows, type FlowStatus } from '@/hooks/use-workflows';
 import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
-import { ADD_AGAIN_LABEL, UNAVAILABLE_NOTE, errorTitleFor, removedFlowBody } from '@/lib/content/screen-states';
+import { ADD_AGAIN_LABEL, UNAVAILABLE_NOTE, archivedFlowBody, errorTitleFor } from '@/lib/content/screen-states';
 import { readCatalog, readConnectionProviders } from '@/lib/platform/catalog';
 import { updateSubscription } from '@/lib/platform/automations';
 import { readProjects } from '@/lib/platform/projects';
@@ -66,7 +66,7 @@ export default function WorkflowDetailScreen() {
     ]);
     const labels = scopeLabels(projects, subs.subscriptions);
     return {
-      // A removed flow is read here too (24.11.8): its page stays, read-only,
+      // An archived flow is read here too (24.11.8): its page stays, read-only,
       // so a run row that names it opens something rather than "Couldn't load".
       flows: [
         ...toFlows(
@@ -78,7 +78,7 @@ export default function WorkflowDetailScreen() {
         ),
         ...toRemovedFlows(removed.subscriptions, catalog.automations, stats.subscriptions, labels),
       ],
-      // A removed flow's own row too, so its page can say what it was.
+      // An archived flow's own row too, so its page can say what it was.
       subscriptions: [...subs.subscriptions, ...removed.subscriptions],
       automations: catalog.automations,
     };
@@ -195,7 +195,7 @@ export default function WorkflowDetailScreen() {
           </Text>
         </View>
         {def.removed ? (
-          <Text style={[styles.removedBadge, { color: palette.neutral[400] }]}>Removed</Text>
+          <Text style={[styles.removedBadge, { color: palette.neutral[400] }]}>Archived</Text>
         ) : (
           <StatusPill label={current} />
         )}
@@ -273,16 +273,16 @@ export default function WorkflowDetailScreen() {
       </View>
 
       {def.removed ? (
-        // Read-only (24.11.8): no status, no actions. The one thing to do with a
-        // removed flow is add it again, which is Setup for its template, in the
+        // Read-only (24.11.8): no status, no actions. The one thing to do with an
+        // archived flow is add it again, which is Setup for its template, in the
         // scope it had.
         <SurfaceCard style={styles.removedCard}>
-          <Text style={[styles.note, { color: palette.neutral[400] }]}>{removedFlowBody(def.removedOn)}</Text>
+          <Text style={[styles.note, { color: palette.neutral[400] }]}>{archivedFlowBody(def.removedOn)}</Text>
           <PillButton
             label={ADD_AGAIN_LABEL}
             variant="primary"
             height={44}
-            fontSize={14}
+            fontSize={typeScale.label.fontSize}
             onPress={() =>
               router.push({
                 pathname: '/(tabs)/flows/setup',
@@ -304,7 +304,6 @@ export default function WorkflowDetailScreen() {
         subscription={subscription}
         entry={entry}
         live={current === 'Live'}
-        scope={def.scope}
         shownWorkspaceId={flows.loadedFor}
         canAdminister={administers(roleIn(session, flows.loadedFor))}
         onChanged={flows.reload}
@@ -318,7 +317,7 @@ export default function WorkflowDetailScreen() {
               label={busy ? 'Saving…' : action.label}
               variant="secondary"
               height={46}
-              fontSize={14}
+              fontSize={typeScale.label.fontSize}
               icon={ActionIcon}
               iconSize={16}
               style={styles.actionBtn}
@@ -338,7 +337,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statPressable: { flex: 1 },
-  removedBadge: { fontFamily: fonts.regular, fontSize: 12.5 },
+  removedBadge: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
   removedCard: { padding: 14, gap: 12 },
   content: {
     paddingHorizontal: layout.screenX,
@@ -355,12 +354,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: fonts.medium,
-    fontSize: 21,
-    letterSpacing: em(-0.01, 21),
+    fontSize: typeScale.heading.fontSize,
+    letterSpacing: em(-0.01, typeScale.heading.fontSize),
   },
   subtitle: {
     fontFamily: fonts.regular,
-    fontSize: 12,
+    fontSize: typeScale.small.fontSize,
     marginTop: 1,
   },
   statsRow: {
@@ -383,15 +382,15 @@ const styles = StyleSheet.create({
   },
   connectionName: {
     fontFamily: fonts.medium,
-    fontSize: 14,
+    fontSize: typeScale.label.fontSize,
   },
   connectionSub: {
     fontFamily: fonts.regular,
-    fontSize: 12,
+    fontSize: typeScale.small.fontSize,
   },
   connectionStatus: {
     fontFamily: fonts.regular,
-    fontSize: 12,
+    fontSize: typeScale.small.fontSize,
   },
   pipeline: {
     marginTop: 10,
@@ -409,7 +408,7 @@ const styles = StyleSheet.create({
   },
   note: {
     fontFamily: fonts.regular,
-    fontSize: 12,
+    fontSize: typeScale.small.fontSize,
   },
   actionBtn: {
     flex: 1,

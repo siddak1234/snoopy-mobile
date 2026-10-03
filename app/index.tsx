@@ -16,7 +16,7 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { BrandMark } from '@/components/nocturne/brand-mark';
 import { GlowBackground } from '@/components/nocturne/glow-background';
 import { PillButton } from '@/components/nocturne/pill-button';
-import { em, fonts } from '@/constants/theme';
+import { em, fonts, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useSession } from '@/hooks/use-session';
 import { readFaceIdEnabled } from '@/lib/platform/session-store';
@@ -192,9 +192,9 @@ const styles = StyleSheet.create({
   },
   kicker: {
     fontFamily: fonts.regular,
-    fontSize: 12,
-    letterSpacing: em(0.36, 12),
-    paddingLeft: em(0.36, 12),
+    fontSize: typeScale.small.fontSize,
+    letterSpacing: em(0.36, typeScale.small.fontSize),
+    paddingLeft: em(0.36, typeScale.small.fontSize),
   },
   getStarted: {
     position: 'absolute',
