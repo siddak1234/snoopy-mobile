@@ -1,4 +1,5 @@
 import { createRun, decideApproval, updateSubscription } from '@/lib/platform/automations';
+import { openCheckout, openPortal, readBilling } from '@/lib/platform/billing';
 import { readCatalog } from '@/lib/platform/catalog';
 import { createOrganization, renameWorkspace, requestToJoin } from '@/lib/platform/organization';
 import { readAllApprovals, readRunStats, readRuns, readSubscriptions } from '@/lib/platform/runs';
@@ -78,5 +79,18 @@ describe('what an action invalidates', () => {
     const beforeRead = lists();
     await readWorkspaces();
     expect(lists()).toBe(beforeRead + 1);
+  });
+
+  it("a checkout or the portal opened drops the workspace's billing, which is otherwise shared (build 11)", async () => {
+    const reads = () => calls().filter((path) => path.endsWith('/billing')).length;
+    await readBilling(WS);
+    await readBilling(WS);
+    expect(reads()).toBe(1);
+    await openCheckout(WS, 'team');
+    await readBilling(WS);
+    expect(reads()).toBe(2);
+    await openPortal(WS);
+    await readBilling(WS);
+    expect(reads()).toBe(3);
   });
 });

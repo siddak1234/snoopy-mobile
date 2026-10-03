@@ -44,7 +44,7 @@ const FACE_ID: BiometricWording = {
   notEnabled: 'Face ID unlock was not enabled.',
   notSaved: 'Face ID preference could not be saved on this device.',
   offerTitle: 'Open with Face ID next time?',
-  offerBody: 'Unlock Autom8x with Face ID instead of signing in again. You can change this later in Settings › Security.',
+  offerBody: 'Unlock Autom8x with Face ID instead of signing in again. You can change this later in Settings.',
   offerAccept: 'Use Face ID',
 };
 
@@ -60,7 +60,7 @@ const TOUCH_ID: BiometricWording = {
   notEnabled: 'Touch ID unlock was not enabled.',
   notSaved: 'Touch ID preference could not be saved on this device.',
   offerTitle: 'Open with Touch ID next time?',
-  offerBody: 'Unlock Autom8x with Touch ID instead of signing in again. You can change this later in Settings › Security.',
+  offerBody: 'Unlock Autom8x with Touch ID instead of signing in again. You can change this later in Settings.',
   offerAccept: 'Use Touch ID',
 };
 
@@ -77,7 +77,7 @@ const BIOMETRIC: BiometricWording = {
   notEnabled: 'Biometric unlock was not enabled.',
   notSaved: 'Biometric unlock preference could not be saved on this device.',
   offerTitle: 'Open with biometrics next time?',
-  offerBody: 'Unlock Autom8x with biometrics instead of signing in again. You can change this later in Settings › Security.',
+  offerBody: 'Unlock Autom8x with biometrics instead of signing in again. You can change this later in Settings.',
   offerAccept: 'Use biometrics',
 };
 

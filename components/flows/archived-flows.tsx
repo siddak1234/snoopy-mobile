@@ -21,7 +21,7 @@ import {
 } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
 import { readProjects } from '@/lib/platform/projects';
-import { readRemovedSubscriptions, readRunStats, readSubscriptions } from '@/lib/platform/runs';
+import { readRemovedSubscriptions, readRunStats } from '@/lib/platform/runs';
 import { scopeLabels, toRemovedFlows } from '@/lib/view/catalog';
 import { inScope } from '@/lib/view/scope';
 
@@ -32,10 +32,12 @@ export type ArchivedFlowPath = '/(tabs)/flows/detail' | '/(tabs)/settings/archiv
  * The flows archived in this team, or in the whole workspace (BUILD-PLAN
  * 24.11.8; "Archived flows" since the owner's decision 4 of 2026-10-02, 24.12).
  * Archiving a flow stops it and moves it here: its runs stay in Activity and it
- * stays here, read-only, with "Add it again" on its page. The scope is the one
- * the person is looking at, as everywhere else.
+ * stays here, read-only, with "Add it again" on its page — or, once it has been
+ * added again in the same scope, "Open the live flow" (build 11, D3). The scope
+ * is the one the person is looking at, as everywhere else; every row says its
+ * team, or "Whole workspace" (D4).
  *
- * Reached from Flows and from Settings › Workspace, each in its own stack: a
+ * Reached from Flows' Archived button and from Settings, each in its own stack: a
  * flow opened from the Settings copy opens in Settings too, so Back returns to
  * Settings rather than switching to the Flows tab (the owner's build 9).
  */
@@ -46,8 +48,7 @@ export function ArchivedFlows({ detailPath }: { detailPath: ArchivedFlowPath }) 
   const { projectId } = useScope();
 
   const archived = useWorkspaceResource(async (workspaceId) => {
-    const [subs, archived, catalog, stats, projects] = await Promise.all([
-      readSubscriptions(workspaceId),
+    const [archived, catalog, stats, projects] = await Promise.all([
       readRemovedSubscriptions(workspaceId),
       readCatalog(workspaceId),
       readRunStats(workspaceId),
@@ -57,7 +58,7 @@ export function ArchivedFlows({ detailPath }: { detailPath: ArchivedFlowPath }) 
       archived.subscriptions,
       catalog.automations,
       stats.subscriptions,
-      scopeLabels(projects, subs.subscriptions),
+      scopeLabels(projects),
     );
   });
 
@@ -116,8 +117,10 @@ export function ArchivedFlows({ detailPath }: { detailPath: ArchivedFlowPath }) 
             <IconTile icon={def.icon} size={42} iconSize={21} borderRadius={12} bordered />
             <View style={styles.flowBody}>
               <Text style={[styles.flowName, { color: palette.text }]}>{def.name}</Text>
+              {/* Its team, or "Whole workspace", in every scope — a picked
+                  team's too (D4: every archived row; the build 11 review). */}
               <Text style={[styles.flowRuns, { color: palette.neutral[500] }]}>
-                {def.scope && projectId === null ? `${def.scope} · ${def.runs}` : def.runs}
+                {def.scope ? `${def.scope} · ${def.runs}` : def.runs}
               </Text>
             </View>
             <Text style={[styles.archived, { color: palette.neutral[400] }]}>

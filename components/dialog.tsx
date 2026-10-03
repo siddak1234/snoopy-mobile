@@ -1,6 +1,7 @@
 import React from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, View } from 'react-native';
 
+import { Pressable } from '@/components/pressable';
 import { fonts, layout, status, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 

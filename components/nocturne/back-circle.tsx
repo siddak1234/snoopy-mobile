@@ -1,7 +1,7 @@
 import React from 'react';
-import { Pressable } from 'react-native';
 import { CaretLeft } from 'phosphor-react-native';
 
+import { Pressable } from '@/components/pressable';
 import { withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 

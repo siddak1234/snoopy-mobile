@@ -54,6 +54,11 @@ The individual architecture gates are:
   of sizes (24.12).
 - `audit:vocabulary`: no copy says "project" or "automation" — the app says
   team and flow; the code keeps the contract's names (24.11.7).
+- `audit:haptics`: every press ticks through `components/pressable.tsx` (build
+  11, D7) — no Pressable, Touchable or Button imported from react-native
+  outside it, no default or namespace import of react-native, no expo-haptics
+  import elsewhere, and no Text/View/Image/ScrollView/Animated `onPress` (or
+  `onLongPress`, `onPressIn`, `onPressOut`) that is not `pressed(…)`.
 - `audit:fixtures`: zero prototype fixture data inside the runtime roots — both
   zero imports (static, dynamic, alias, side-effect and CommonJS forms, in every
   extension Metro resolves) and zero occurrences of the module itself. Design
@@ -111,7 +116,20 @@ no Apple account name or password is written anywhere. The history is in
 - `lib/platform/*.ts` exposes typed reads and mutations. Screens do not call a
   network primitive.
 - `lib/platform/session-store.ts` stores access/refresh credentials only in
-  `expo-secure-store` with `WHEN_UNLOCKED_THIS_DEVICE_ONLY`.
+  `expo-secure-store` with `WHEN_UNLOCKED_THIS_DEVICE_ONLY` — and beside them
+  push's device id and its "Not now", cleared with them.
+- Device push (build 11, D8; BUILD-PLAN 24.13.6): `expo-notifications` and
+  `expo-device` at the SDK 54 pins, and the `expo-notifications` plugin in
+  `app.json`, whose prebuild writes the `aps-environment` entitlement — none is
+  hand-written, which `__tests__/app-config.test.js` holds.
+  `lib/platform/devices.ts` registers the phone with `PUT /v1/session/devices`
+  and, on sign-out and before the logout, unregisters it with
+  `DELETE /v1/session/devices/{deviceId}`. `hooks/use-push-registration.tsx`
+  keeps an iOS phone that already allows notifications registered (every
+  sign-in, every token change), shows the banner in the foreground and opens a
+  tap's run or Activity; the inbox's card is the only ask. Android and a
+  simulator register nothing. The library's own request to Expo's token service
+  is the third credential-less exception of `CLAUDE.md` rule 5.
 - `hooks/use-session.tsx` resolves `/v1/session` before routing. Protected tabs
   fail closed unless that response positively establishes `signed-in`. A 401
   clears the local credential; an outage does not.
@@ -123,8 +141,8 @@ no Apple account name or password is written anywhere. The history is in
   `expo-auth-session` is deliberately not used because its `AuthRequest`
   models an app-owned OAuth authorization request with a required client ID,
   while this app is not the OAuth client.
-- `lib/platform/workspaces.ts` backs the workspace switcher (Settings ›
-  Workspace and the scope control) with the two published operations the web
+- `lib/platform/workspaces.ts` backs the workspace switcher (Settings'
+  WORKSPACE row and the scope control) with the two published operations the web
   switcher uses: `GET /v1/workspaces` and `PATCH /v1/session/active-workspace`.
   The backend session owns "active"; the app mutates, then re-reads
   `/v1/session` through `useSession().reload()`. A rename, a new organization

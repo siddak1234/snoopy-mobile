@@ -1,6 +1,7 @@
 import type { components } from '@/lib/generated/platform-contracts/platform';
 import { platformOperation } from './client';
 import { collectPages } from './paging';
+import { PlatformError } from './problem';
 import { invalidateShared, shared } from './snapshot';
 import { readWorkspaces, type WorkspaceSummary } from './workspaces';
 
@@ -155,7 +156,8 @@ export function removeProjectMember(workspaceId: string, projectId: string, user
 /**
  * The organization's team directory (backend 24.11.4): every open team, by name
  * and kind, and whether this person is on it, has asked, or may ask. Not kept in
- * the snapshot: one screen reads it, and an answer to Request is read back at once.
+ * the snapshot: Teams reads an answer to Request back at once, and Setup reads
+ * it only where there is no team to add a flow to (F84).
  */
 export function readTeamDirectory(workspaceId: string): Promise<TeamDirectoryEntry[]> {
   return collectPages(async (cursor) => {
@@ -167,6 +169,23 @@ export function readTeamDirectory(workspaceId: string): Promise<TeamDirectoryEnt
     );
     return { items: page.projects, nextCursor: page.nextCursor };
   });
+}
+
+/**
+ * The directory, where the platform has one. A platform from before the
+ * SEVENTEENTH promotion answers 404 for it: then there is nothing to list, and
+ * the screen that asked draws without it rather than failing on the part that
+ * is not there yet. Every other failure is the screen's. Shared by Teams and by
+ * Setup's no-team line (F84), as the website's `teamDirectoryIfThere` is by its
+ * Teams and Flows pages.
+ */
+export async function teamDirectoryIfThere(workspaceId: string): Promise<TeamDirectoryEntry[]> {
+  try {
+    return await readTeamDirectory(workspaceId);
+  } catch (error) {
+    if (error instanceof PlatformError && error.status === 404) return [];
+    throw error;
+  }
 }
 
 /**

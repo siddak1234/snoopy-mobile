@@ -1,7 +1,8 @@
-import { fireEvent, screen } from '@testing-library/react-native';
+import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import { StyleSheet } from 'react-native';
 
+import ArchivedFlowsScreen from '@/app/(tabs)/flows/archived';
 import FlowsScreen from '@/app/(tabs)/flows/index';
 import { ScopeControl } from '@/components/scope-control';
 import { fakePlatform } from '@/test/fake-platform';
@@ -72,9 +73,46 @@ describe('the scope control on Flows', () => {
     expect(await screen.findByLabelText('Team: Finance')).toBeTruthy();
     expect(screen.getByText('Invoice triage')).toBeTruthy();
     expect(screen.queryByText('Email triage')).toBeNull();
-    // Inside a team the scope label is not repeated on every row.
-    expect(screen.queryByText(/^Team: Finance · /u)).toBeNull();
+    // Inside a team each card still says its team: D4 is every card, in every
+    // scope (the build 11 review; until then the label was not repeated here).
+    expect(screen.getByText(/^Team: Finance · /u)).toBeTruthy();
     expect(writeScope).toHaveBeenCalledWith(expect.any(String), 'project-1');
+  });
+
+  it('says the team on every card and every archived row inside a picked team too — D4 has no All-teams exception (the build 11 review)', async () => {
+    mockStored.set(TEST_WORKSPACE, 'project-1');
+    const rows = subscriptionsPayload().subscriptions.map((row, index) =>
+      index === 0 ? { ...row, projectId: 'project-1' } : { ...row, projectId: null },
+    );
+    const archived = (id: string, name: string, projectId: string | null) => ({
+      ...rows[0]!,
+      id,
+      name,
+      projectId,
+      status: 'archived',
+      updatedAt: '2026-09-30T12:00:00Z',
+    });
+    routePlatform(platformOperation, {
+      '/automations': flowCatalogPayload(),
+      '/subscriptions': {
+        subscriptions: [...rows, archived('gone', 'Old intake', 'project-1'), archived('gone-too', 'Older intake', null)],
+      },
+      '/projects': projectsPayload('Finance'),
+    });
+
+    // Flows, in the team picked: its card says the team.
+    const flows = await renderWithProviders(<FlowsScreen />, signedInSession);
+    expect(await flows.findByLabelText('Team: Finance')).toBeTruthy();
+    expect(await flows.findByText('Team: Finance · 1,284 runs · 1,272 ok · 12 failed')).toBeTruthy();
+    expect(flows.queryByText('Email triage')).toBeNull();
+    await flows.unmount();
+
+    // Its archived flows, in the same team: the row says it too.
+    const page = await renderWithProviders(<ArchivedFlowsScreen />, signedInSession);
+    expect(await page.findByText('Old intake')).toBeTruthy();
+    // The team is the scope: the whole workspace's archived row is not listed.
+    await waitFor(() => expect(page.queryByText('Older intake')).toBeNull());
+    expect(page.getByText(/^Team: Finance · /u)).toBeTruthy();
   });
 
   it('restores the kept choice for the workspace on the next visit', async () => {

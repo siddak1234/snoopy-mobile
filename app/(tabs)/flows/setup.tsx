@@ -1,6 +1,7 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { Plus } from 'phosphor-react-native';
 import React, { useCallback, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -11,6 +12,7 @@ import {
 } from '@/components/setup-field';
 import { ChoiceChips } from '@/components/choice-chips';
 import { BackCircle } from '@/components/nocturne/back-circle';
+import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import {
@@ -19,20 +21,32 @@ import {
   ScreenLoading,
   ScreenOffline,
 } from '@/components/screen-state';
+import { Pressable } from '@/components/pressable';
+import { CreateTeamDialog } from '@/components/teams/create-team-dialog';
 import { em, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
-import { useSession, workspaceIfShown } from '@/hooks/use-session';
+import { roleIn, useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
 import { useTheme } from '@/hooks/use-theme';
 import { WORKSPACE_CHANGED, addRefusalMessage } from '@/lib/content/refusals';
-import { UNAVAILABLE_NOTE, errorTitleFor } from '@/lib/content/screen-states';
+import {
+  SETUP_ASK_TO_JOIN_A_TEAM_FIRST,
+  SETUP_CREATE_A_TEAM,
+  SETUP_CREATE_A_TEAM_FIRST,
+  SETUP_FIRST_TEAM_IS_AN_ADMINS,
+  SETUP_PICK_A_TEAM,
+  SETUP_SEE_TEAMS,
+  UNAVAILABLE_NOTE,
+  errorTitleFor,
+} from '@/lib/content/screen-states';
 import { createSubscription, updateSubscription } from '@/lib/platform/automations';
 import { readCatalog, readConnectionProviders, readConnections } from '@/lib/platform/catalog';
 import { newIdempotencyKey } from '@/lib/platform/client';
 import { PlatformNotConfiguredError } from '@/lib/platform/problem';
-import { readProjects } from '@/lib/platform/projects';
+import { readProjects, teamDirectoryIfThere } from '@/lib/platform/projects';
 import { readSubscriptions } from '@/lib/platform/runs';
 import { withoutArchived } from '@/lib/view/catalog';
+import { administers } from '@/lib/view/roles';
 
 /** One-time setup generated from the selected manifest. */
 export default function SetupScreen() {
@@ -48,11 +62,13 @@ export default function SetupScreen() {
   >(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  // Where it is added: '' is the whole workspace, else a team's id. The
-  // catalog passes the team the scope control had chosen (24.9.3), so it is
-  // not chosen twice; otherwise unset until the person chooses, and the first
-  // scope it is not in yet is the default.
+  // Where it is added: a team's id, always (build 11, D4 — the owner's build
+  // 10 item 7: "Each flow has to be in a team"); there is no whole-workspace
+  // choice. The catalog passes the team the scope control had chosen (24.9.3),
+  // so it is not chosen twice; under All teams, and for a whole-workspace flow
+  // added again, it is unset until the person picks one here.
   const [chosenScope, setChosenScope] = useState<string | undefined>(project || undefined);
+  const [creatingTeam, setCreatingTeam] = useState(false);
   const createKey = useRef(newIdempotencyKey('subscribe'));
   const updateKey = useRef(newIdempotencyKey('activate'));
   const hasFocused = useRef(false);
@@ -67,15 +83,26 @@ export default function SetupScreen() {
         readProjects(id),
         readConnections(id),
       ]);
+      // The teams a flow can be added to, so only the people who can see one
+      // see its flows (18.6.2); a flow is added to a team, never to the whole
+      // workspace (D4), as on the website.
+      const open = projects.filter((project) => project.status !== 'archived');
+      // With none, whether the organization has a team this person could ask
+      // to join: the directory lists one they are not on (F84, the website's
+      // `canAskToJoin`). Read only in that state. The role is not read here —
+      // this read is keyed on the template, so its closure would keep a stale
+      // one; an owner or admin, who sees every team, reads an empty directory,
+      // and their own line is drawn first anyway.
+      const askable =
+        open.length === 0 && (await teamDirectoryIfThere(id)).some((entry) => entry.access !== 'member');
       return {
         entry: catalog.automations.find((item) => item.templateId === template),
         // Its subscriptions, one per scope at most. An archived one is gone:
         // adding it again makes a new subscription.
         subscriptions: withoutArchived(subscriptions.subscriptions).filter((item) => item.templateId === template),
         providers: new Map(providers.providers.map((item) => [item.providerId, item.displayName])),
-        // An automation can be added to the whole workspace, or to one project
-        // so only the people who can see it see it (18.6.2), as on the website.
-        projects: projects.filter((project) => project.status !== 'archived'),
+        projects: open,
+        askable,
         // The accounts this workspace holds: the Connections step reads its state here.
         connected: new Set(
           connections.connections
@@ -118,7 +145,7 @@ export default function SetupScreen() {
     );
   }
 
-  const { entry, providers, projects, connected } = resource.data;
+  const { entry, providers, projects, askable, connected } = resource.data;
   // Step 1 is the accounts the automation needs, when it needs any (24.7.3
   // attempt 4, feedback #5: every step numbered 1…N, connections included). The
   // entry publishes them since 2026-10-02. A platform from before that date —
@@ -127,17 +154,17 @@ export default function SetupScreen() {
   // refuses an activation that lacks an account.
   const required = entry.requiredConnections ?? [];
   const sectionOffset = required.length > 0 ? 1 : 0;
-  const scopes = [
-    { value: '', label: 'Whole workspace' },
-    ...projects.map((project) => ({ value: project.id, label: `Team: ${project.type}` })),
-  ];
-  const inScope = (value: string) =>
-    resource.data.subscriptions.find((item) => (item.projectId ?? '') === value);
-  // A chosen team that has since gone (archived on a re-read) is no choice.
-  const stillOffered = chosenScope !== undefined && scopes.some((option) => option.value === chosenScope);
-  const scope = stillOffered ? chosenScope : (scopes.find((option) => !inScope(option.value))?.value ?? '');
-  const subscription = localSubscription ?? inScope(scope) ?? null;
+  const scopes = projects.map((project) => ({ value: project.id, label: `Team: ${project.type}` }));
+  const inScope = (value: string) => resource.data.subscriptions.find((item) => item.projectId === value);
+  // A chosen team that has since gone (archived on a re-read) is no choice; none is chosen for the person.
+  const scope =
+    chosenScope !== undefined && scopes.some((option) => option.value === chosenScope) ? chosenScope : undefined;
+  const subscription = localSubscription ?? (scope ? inScope(scope) : undefined) ?? null;
   const unmet = subscription?.unmetConnections ?? [];
+  // With no team yet, an owner or admin makes one here; a plain member cannot
+  // (in an organization its owners and admins create teams, 24.12), and asks
+  // to join one where the organization has one (`askable`, F84).
+  const canCreateTeam = administers(roleIn(session, resource.loadedFor));
 
   const setField = (key: string, value: unknown) => {
     setConfig((previous) => ({ ...previous, [key]: value }));
@@ -145,6 +172,11 @@ export default function SetupScreen() {
   };
 
   const activate = async () => {
+    // A team first (D4): nothing is sent without one.
+    if (!scope) {
+      setActionError(SETUP_PICK_A_TEAM);
+      return;
+    }
     if (unmet.length > 0) {
       router.push('/(tabs)/settings');
       return;
@@ -192,7 +224,7 @@ export default function SetupScreen() {
       if (!current) {
         const created = await createSubscription(
           workspaceId,
-          { templateId: entry.templateId, templateVersion: entry.version, ...(scope ? { projectId: scope } : {}) },
+          { templateId: entry.templateId, templateVersion: entry.version, projectId: scope },
           createKey.current,
         );
         current = created.subscription;
@@ -266,7 +298,7 @@ export default function SetupScreen() {
         <ChoiceChips
           label="Add to"
           options={scopes}
-          value={scope}
+          value={scope ?? ''}
           onChange={(next) => {
             // Another scope is another subscription: a new intent from the start.
             setChosenScope(next);
@@ -276,7 +308,36 @@ export default function SetupScreen() {
             updateKey.current = newIdempotencyKey('activate');
           }}
         />
-      ) : null}
+      ) : canCreateTeam ? (
+        <View style={styles.noTeam}>
+          <Text style={[styles.noTeamLine, { color: palette.neutral[400] }]}>{SETUP_CREATE_A_TEAM_FIRST}</Text>
+          <PillButton
+            label={SETUP_CREATE_A_TEAM}
+            variant="primary"
+            height={40}
+            fontSize={typeScale.body.fontSize}
+            icon={Plus}
+            iconSize={14}
+            gap={5}
+            onPress={() => setCreatingTeam(true)}
+          />
+        </View>
+      ) : askable ? (
+        // A plain member on no team, where the organization has one to ask
+        // onto: Teams is where they ask (F84, the website's words).
+        <View style={styles.noTeam}>
+          <Text style={[styles.noTeamLine, { color: palette.neutral[400] }]}>{SETUP_ASK_TO_JOIN_A_TEAM_FIRST}</Text>
+          <PillButton
+            label={SETUP_SEE_TEAMS}
+            variant="secondary"
+            height={40}
+            fontSize={typeScale.body.fontSize}
+            onPress={() => router.push('/(tabs)/settings/teams')}
+          />
+        </View>
+      ) : (
+        <Text style={[styles.noTeamLine, { color: palette.neutral[400] }]}>{SETUP_FIRST_TEAM_IS_AN_ADMINS}</Text>
+      )}
 
       {required.length > 0 ? (
         <View>
@@ -342,16 +403,34 @@ export default function SetupScreen() {
         <ActionFailure message={actionError} retryLabel="Try again" onRetry={activate} />
       ) : null}
 
-      <Pressable
-        disabled={busy}
-        onPress={activate}
-        style={({ pressed }) => [
-          styles.activateBtn,
-          { borderColor: palette.accent },
-          pressed && { backgroundColor: withAlpha(palette.accent, 0.12) },
-        ]}>
-        <Text style={[styles.activateLabel, { color: palette.accent }]}>{buttonLabel}</Text>
-      </Pressable>
+      {/* No Activate for a member with no team to add to: nothing can be sent. */}
+      {projects.length > 0 || canCreateTeam ? (
+        <Pressable
+          disabled={busy}
+          onPress={activate}
+          style={({ pressed }) => [
+            styles.activateBtn,
+            { borderColor: palette.accent },
+            pressed && { backgroundColor: withAlpha(palette.accent, 0.12) },
+          ]}>
+          <Text style={[styles.activateLabel, { color: palette.accent }]}>{buttonLabel}</Text>
+        </Pressable>
+      ) : null}
+
+      {creatingTeam ? (
+        <CreateTeamDialog
+          onClose={() => setCreatingTeam(false)}
+          onCreated={(team) => {
+            setCreatingTeam(false);
+            setActionError(null);
+            // Made in the workspace this setup loaded: it is the team the flow
+            // is added to. The create dropped the teams from the snapshot, so
+            // the re-read lists it, keeping what is on screen.
+            if (team.workspaceId === resource.loadedFor) setChosenScope(team.id);
+            resource.refresh();
+          }}
+        />
+      ) : null}
     </ScrollView>
   );
 }
@@ -370,6 +449,8 @@ const styles = StyleSheet.create({
     letterSpacing: em(-0.01, typeScale.heading.fontSize),
   },
   subtitle: { marginTop: 1, fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
+  noTeam: { gap: 10, alignItems: 'flex-start' },
+  noTeamLine: { fontFamily: fonts.regular, ...typeScale.body },
   sectionCard: { marginTop: 9 },
   connectionRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 14 },
   connectionText: { flex: 1, minWidth: 0, gap: 2 },

@@ -242,6 +242,23 @@ describe('the real static config, through the factory', () => {
     expect(resolved.ios.infoPlist.ITSAppUsesNonExemptEncryption).toBe(false);
   });
 
+  /**
+   * Build 11, D8 (BUILD-PLAN 24.13.6): device push. The `expo-notifications`
+   * config plugin writes the `aps-environment` entitlement at prebuild, so the
+   * entitlement is the plugin's and never hand-written here — a second copy in
+   * `ios.entitlements` would be a second thing to get wrong, and build 10's ipa
+   * carried none, which is why it could not receive a push.
+   */
+  it('applies the expo-notifications plugin, which owns aps-environment — never hand-written (build 11, D8)', () => {
+    setEnv({ ...RELEASE, EAS_BUILD_PROFILE: 'production' });
+
+    expect(appJson.expo.plugins).toContain('expo-notifications');
+    expect(appJson.expo.ios.entitlements).not.toHaveProperty('aps-environment');
+    const resolved = configFactory({ config: appJson.expo });
+    expect(resolved.plugins).toContain('expo-notifications');
+    expect(resolved.ios.entitlements).not.toHaveProperty('aps-environment');
+  });
+
   it('submits to the App Store Connect record by its public identifiers only', () => {
     const eas = require('../eas.json');
     expect(eas.submit).toEqual({

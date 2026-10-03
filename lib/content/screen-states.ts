@@ -121,6 +121,14 @@ export function archivedFlowBody(archivedOn?: string): string {
   return `This flow was archived${archivedOn ? ` on ${archivedOn}` : ''}. Its runs stay in Activity, and you can add it again — its setup starts fresh.`;
 }
 export const ADD_AGAIN_LABEL = 'Add it again';
+/**
+ * The archived flow has a live twin — added again in the same scope (build 11,
+ * D3): no "Add it again"; the twin's page is one tap away.
+ */
+export function archivedFlowAddedAgainBody(archivedOn?: string): string {
+  return `This flow was archived${archivedOn ? ` on ${archivedOn}` : ''}. Its runs stay in Activity. It has been added again, and the new copy is in Flows.`;
+}
+export const OPEN_LIVE_FLOW_LABEL = 'Open the live flow';
 /** A run row whose flow was archived says so (24.11.8). */
 export const RUN_FLOW_ARCHIVED = 'Flow archived';
 
@@ -147,6 +155,24 @@ export const ACTIVITY_EMPTY_BODY = 'Every run lands here the moment your first a
 export const ACTIVITY_SCOPE_EMPTY = 'No runs in this team yet.';
 /** The one way in, named for what it does (24.9.3): "Flows will be the name". */
 export const ADD_FLOW_LABEL = 'Add a flow';
+/** Under the first-run empty when archived flows exist in the scope (build 11, D6): the way to them. */
+export const ARCHIVED_FLOWS_LABEL = 'Archived flows';
+
+/**
+ * Setup's team (build 11, D4; the owner's build 10 item 7: "Each flow has to
+ * be in a team"): a flow is added to a team, never to the whole workspace, in
+ * both clients. With no team to add to, an owner or admin makes one first; a
+ * plain member asks to join one where the organization has a team they are not
+ * on — the team directory lists one — with See teams (F84: found by the
+ * website's change audit, 2026-10-03, where the member line was false), and
+ * otherwise waits for an owner or admin to make the first.
+ */
+export const SETUP_PICK_A_TEAM = 'Pick a team.';
+export const SETUP_CREATE_A_TEAM_FIRST = 'Create a team first.';
+export const SETUP_CREATE_A_TEAM = 'Create a team';
+export const SETUP_ASK_TO_JOIN_A_TEAM_FIRST = 'Ask to join a team first.';
+export const SETUP_SEE_TEAMS = 'See teams';
+export const SETUP_FIRST_TEAM_IS_AN_ADMINS = 'An owner or admin creates the first team.';
 
 /**
  * `notifsEmpty` — and note it is not an apology.
@@ -172,6 +198,33 @@ export const APPROVALS_EMPTY_BODY =
 export const NOTIFICATIONS_EMPTY_TITLE = 'Quiet, as designed';
 export const NOTIFICATIONS_EMPTY_BODY =
   'We only notify you for held runs and failures. Nothing needs you right now.';
+
+/**
+ * The Notifications card: the ask for device push (build 11, D8 — BUILD-PLAN
+ * 24.13.6, ADR-0035). It replaces "This build shows held runs and failures in
+ * this in-app inbox. Device push delivery is not configured.", the sentence the
+ * owner's build 10 item 13 asked about ("What do we need to do here?").
+ *
+ * The card is the only ask, and never a prompt at launch: iOS asks at the "Turn
+ * on" tap, the Face ID rule, and "Not now" holds for the session. A platform
+ * from before the devices route says so in words, never a problem title — the
+ * Unlink precedent (24.12).
+ */
+export const PUSH_CARD_TITLE = 'Know the moment something needs you';
+export const PUSH_CARD_BODY = 'Get a notification on this phone when a run is held or fails.';
+export const PUSH_TURN_ON_LABEL = 'Turn on';
+export const PUSH_NOT_NOW_LABEL = 'Not now';
+/** iOS will not ask again: only its Settings can turn notifications on. */
+export const PUSH_DENIED_BODY = 'Notifications for Autom8x are off in iOS Settings.';
+export const PUSH_OPEN_SETTINGS_LABEL = 'Open Settings';
+/** Android, or a simulator: build 11 registers nothing there (no FCM credential; backend §12.1 #211). */
+export const PUSH_LATER_BUILD_BODY = 'Notifications on this phone are coming in a later build.';
+/** The platform answered 404 or 503 for its devices route: it is from before the route. */
+export const PUSH_NOT_YET_BODY = "Notifications aren't available yet.";
+/** No push token on this build: no push entitlement, or the token service refused it. */
+export const PUSH_NOT_ON_BUILD_BODY = "Notifications aren't available on this build.";
+/** Any other failed registration, under the ask, which is offered again. */
+export const PUSH_FAILED = "Notifications couldn't be turned on. Try again.";
 
 /**
  * `soFail` — sign-out could not revoke the session.

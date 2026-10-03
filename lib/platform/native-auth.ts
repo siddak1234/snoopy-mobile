@@ -3,6 +3,7 @@ import * as WebBrowser from 'expo-web-browser';
 
 import type { components } from '@/lib/generated/platform-contracts/platform';
 import { platformOperation } from './client';
+import { endDeviceEpoch, settleDeviceRegistration, unregisterThisDevice } from './devices';
 import { backendApiOrigin } from './origin';
 import { createPkcePair } from './pkce';
 import { PlatformError, PlatformNotConfiguredError } from './problem';
@@ -283,16 +284,36 @@ export async function refreshSession(): Promise<RefreshOutcome> {
 }
 
 /**
+ * How long sign-out waits for a push registration still in flight before it
+ * goes on without it: long enough for a PUT the platform is answering, short
+ * enough that Sign out never seems to hang on one it is not.
+ */
+const DEVICE_SETTLE_MS = 5_000;
+
+/**
  * End the session on this device.
  *
  * The refresh token is what actually revokes upstream, so it is sent rather than
  * merely discarded. A 502 means revocation failed: the tokens in the enclave are
  * still live, and deleting them would strand a session nobody can reach. The
  * contract answers 502 rather than 204 precisely so a client can tell.
+ *
+ * Before the logout, this phone stops getting the person's pushes (build 11,
+ * D8): `DELETE /v1/session/devices/{deviceId}` needs the bearer the logout
+ * revokes. It never blocks the sign-out and logs nothing when it fails.
+ *
+ * A registration still in flight answers first, within `DEVICE_SETTLE_MS`, so
+ * the DELETE sends the id it answers rather than none (the build 11 review);
+ * one that has not answered by then keeps no id when it does, and stays the
+ * residual `lib/platform/devices.ts` records.
  */
 export async function signOut(): Promise<{ revoked: boolean }> {
   const stored = await readSession();
   if (!stored) return { revoked: true };
+
+  await settleDeviceRegistration(DEVICE_SETTLE_MS);
+  endDeviceEpoch();
+  await unregisterThisDevice();
 
   try {
     await platformOperation<null>('/v1/auth/logout', ({ platform }, signal) =>

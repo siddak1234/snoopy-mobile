@@ -1,8 +1,9 @@
 import { Check } from 'phosphor-react-native';
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
+import { Pressable } from '@/components/pressable';
 import { fonts, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 

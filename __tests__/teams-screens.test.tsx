@@ -8,11 +8,12 @@ import React, { useState } from 'react';
 
 import TeamScreen from '@/app/(tabs)/settings/team';
 import TeamsScreen from '@/app/(tabs)/settings/teams';
-import WorkspaceScreen from '@/app/(tabs)/settings/workspace';
+import SettingsScreen from '@/app/(tabs)/settings';
 import { CreateTeamDialog } from '@/components/teams/create-team-dialog';
 import { SessionContext, type SessionContextValue } from '@/hooks/use-session';
 import { WORKSPACE_CHANGED } from '@/lib/content/refusals';
 import { PlatformError } from '@/lib/platform/problem';
+import { teamDirectoryIfThere } from '@/lib/platform/projects';
 import { fakePlatform, type Sent } from '@/test/fake-platform';
 import { TEST_WORKSPACE, sessionAs, signedInSession } from '@/test/platform';
 import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
@@ -183,6 +184,28 @@ describe('Teams (24.11.7)', () => {
     expect(await screen.findByText('Finance')).toBeTruthy();
     expect(screen.queryByText('ASK TO JOIN')).toBeNull();
     expect(screen.queryByText("Couldn't load your teams")).toBeNull();
+  });
+
+  it("reads the directory through the one helper Setup shares: a 404 is nothing to list, any other failure is the screen's (F84)", async () => {
+    const fake = fakePlatform(platformOperation);
+    fake.always('GET /v1/workspaces/{workspaceId}/project-directory', () => {
+      throw new PlatformError('Not found', 404);
+    });
+    await expect(teamDirectoryIfThere(TEST_WORKSPACE)).resolves.toEqual([]);
+
+    const refused = new PlatformError('Service Unavailable', 503);
+    fake.always('GET /v1/workspaces/{workspaceId}/project-directory', () => {
+      throw refused;
+    });
+    await expect(teamDirectoryIfThere(TEST_WORKSPACE)).rejects.toBe(refused);
+
+    fake.always('GET /v1/workspaces/{workspaceId}/project-directory', { projects: [entry('p4', 'Legal', 'none')] });
+    await expect(teamDirectoryIfThere(TEST_WORKSPACE)).resolves.toEqual([entry('p4', 'Legal', 'none')]);
+    expect(fake.to('GET /v1/workspaces/{workspaceId}/project-directory').map((sent) => sent.values)).toEqual([
+      { workspaceId: TEST_WORKSPACE },
+      { workspaceId: TEST_WORKSPACE },
+      { workspaceId: TEST_WORKSPACE },
+    ]);
   });
 
   it('creates a team in the workspace the person is in: the kind only, sent as its name and its type (24.12)', async () => {
@@ -464,9 +487,9 @@ describe('One team (24.11.7)', () => {
   });
 });
 
-describe('Settings rows for the admin areas (24.3.8, 24.5, 24.11.7; Settings › Workspace since 24.12)', () => {
+describe('Settings rows for the admin areas (24.3.8, 24.5, 24.11.7; on the index again since build 11)', () => {
   it('always offers Organization and Teams — and no Projects row, and no organization-only Teams', async () => {
-    await renderWithProviders(<WorkspaceScreen />, signedInSession);
+    await renderWithProviders(<SettingsScreen />, signedInSession);
     expect(await screen.findByTestId('settings-organization')).toBeTruthy();
     expect(screen.queryByTestId('settings-projects')).toBeNull();
     await fireEvent.press(screen.getByTestId('settings-teams'));

@@ -7,6 +7,7 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-
 import React from 'react';
 import { AppState, Linking, Platform } from 'react-native';
 
+import SettingsScreen from '@/app/(tabs)/settings';
 import BillingScreen from '@/app/(tabs)/settings/billing';
 import { PlatformError } from '@/lib/platform/problem';
 import { fakePlatform } from '@/test/fake-platform';
@@ -191,6 +192,33 @@ describe('Billing (24.6.1, ADR-0032 option B; the cards since 24.12)', () => {
     ios.restore();
   });
 
+  it("reads the workspace's billing afresh at every visit — twice inside the 120 s window is two GETs — while the Settings index's plan line reads once through the snapshot (the build 11 review)", async () => {
+    const fake = route('owner', ON_PLUS);
+    const reads = () => fake.to('GET /v1/workspaces/{workspaceId}/billing').length;
+
+    // The index's quiet line (D1), opened twice: one request, shared.
+    for (let visit = 0; visit < 2; visit += 1) {
+      const index = await renderWithProviders(<SettingsScreen />, sessionAs('owner'));
+      expect(await index.findByText('Plus')).toBeTruthy();
+      await index.unmount();
+    }
+    expect(reads()).toBe(1);
+
+    // The page, opened twice inside the window: a real request each time, as at
+    // daef007 — a plan read before Stripe's webhook landed is not kept for it.
+    for (let visit = 0; visit < 2; visit += 1) {
+      const page = await renderWithProviders(<BillingScreen />, sessionAs('owner'));
+      expect(await page.findByText('Enrolled')).toBeTruthy();
+      await page.unmount();
+    }
+    expect(reads()).toBe(3);
+
+    // What the page read serves the line: no request of its own.
+    const index = await renderWithProviders(<SettingsScreen />, sessionAs('owner'));
+    expect(await index.findByText('Plus')).toBeTruthy();
+    expect(reads()).toBe(3);
+  });
+
   it("shows a member the cards without actions and who manages billing; this workspace's billing is not read", async () => {
     const ios = on('ios');
     const fake = route('member');
@@ -204,6 +232,100 @@ describe('Billing (24.6.1, ADR-0032 option B; the cards since 24.12)', () => {
     expect(fake.to('GET /v1/workspaces/{workspaceId}/billing')).toHaveLength(0);
     // The plans are anyone's to read; the workspace's plan and status are not.
     expect(fake.to('GET /v1/plans')).toHaveLength(1);
+    ios.restore();
+  });
+
+  // The platform lists Plus only — production until Pro's price exists: Pro is the app's, drawn at the owner's price.
+  const PLUS_ONLY = { plans: [PLANS.plans[1]!] };
+  const HOSTED = { url: 'https://checkout.stripe.com/c/x', expiresAt: '2026-09-30T00:00:00Z' };
+
+  it('draws Pro at $10.00 per month after Plus when the platform does not list it, and that card does nothing on iOS — not paying, it opens no checkout (build 11, D2)', async () => {
+    const ios = on('ios');
+    const fake = route('owner');
+    fake.always('GET /v1/plans', PLUS_ONLY);
+    fake.always(CHECKOUT, HOSTED);
+    fake.always(PORTAL, HOSTED);
+    await renderWithProviders(<BillingScreen />, sessionAs('owner'));
+    expect(await screen.findByText('Enrolled')).toBeTruthy();
+    expect(screen.getAllByTestId(/^plan-/u).map((element) => element.props.testID)).toEqual(['plan-free', 'plan-team', 'plan-pro']);
+    expect(card('pro').getByText('Pro')).toBeTruthy();
+    expect(card('pro').getByText('$10.00 per month')).toBeTruthy();
+    expect(card('pro').queryByText('Price shown at checkout')).toBeNull();
+    expect(screen.queryByText('No plans are available to purchase right now.')).toBeNull();
+    await fireEvent.press(screen.getByText('Pro'));
+    expect(fake.to(CHECKOUT)).toHaveLength(0);
+    expect(fake.to(PORTAL)).toHaveLength(0);
+    expect(openURL).not.toHaveBeenCalled();
+    // Plus, listed, still checks out: the drawn card is the only inert one.
+    await fireEvent.press(screen.getByText('Plus'));
+    await waitFor(() => expect(fake.to(CHECKOUT)).toHaveLength(1));
+    expect(fake.to(CHECKOUT)[0]!.body).toEqual({ planId: 'team' });
+    ios.restore();
+  });
+
+  it('the drawn Pro opens no portal while paying either — the portal has no Pro to switch to', async () => {
+    const ios = on('ios');
+    const fake = route('owner', ON_PLUS);
+    fake.always('GET /v1/plans', PLUS_ONLY);
+    fake.always(PORTAL, { url: 'https://billing.stripe.com/p/session', expiresAt: '2026-09-30T00:00:00Z' });
+    await renderWithProviders(<BillingScreen />, sessionAs('owner'));
+    expect(await screen.findByText('Manage billing')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Pro'));
+    expect(fake.to(PORTAL)).toHaveLength(0);
+    expect(openURL).not.toHaveBeenCalled();
+    // Free, a listed plan's rule: another card opens Manage billing.
+    await fireEvent.press(screen.getByText('Free'));
+    await waitFor(() => expect(fake.to(PORTAL)).toHaveLength(1));
+    ios.restore();
+  });
+
+  it('draws the Pro on Android too, inert like every card there', async () => {
+    const android = on('android');
+    const fake = route('owner');
+    fake.always('GET /v1/plans', PLUS_ONLY);
+    await renderWithProviders(<BillingScreen />, sessionAs('owner'));
+    expect(await screen.findByTestId('plan-pro')).toBeTruthy();
+    expect(card('pro').getByText('$10.00 per month')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Pro'));
+    expect(fake.to(CHECKOUT)).toHaveLength(0);
+    expect(fake.to(PORTAL)).toHaveLength(0);
+    android.restore();
+  });
+
+  it('draws the Pro for a member too, inert, with the workspace\'s billing still not read', async () => {
+    const ios = on('ios');
+    const fake = route('member');
+    fake.always('GET /v1/plans', PLUS_ONLY);
+    await renderWithProviders(<BillingScreen />, sessionAs('member'));
+    expect(await screen.findByText('Billing is managed by the owners and admins of this workspace.')).toBeTruthy();
+    expect(card('pro').getByText('$10.00 per month')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Pro'));
+    expect(fake.to(CHECKOUT)).toHaveLength(0);
+    expect(fake.to('GET /v1/workspaces/{workspaceId}/billing')).toHaveLength(0);
+    ios.restore();
+  });
+
+  it('a Pro the platform lists replaces the drawn one: three cards, the listed price, a real checkout', async () => {
+    const ios = on('ios');
+    const fake = route('owner');
+    fake.once(CHECKOUT, { url: 'https://checkout.stripe.com/c/pro', expiresAt: '2026-09-30T00:00:00Z' });
+    await renderWithProviders(<BillingScreen />, sessionAs('owner'));
+    expect(await screen.findByText('Enrolled')).toBeTruthy();
+    expect(screen.getAllByTestId(/^plan-/u)).toHaveLength(3);
+    expect(screen.getAllByText('Pro')).toHaveLength(1);
+    await fireEvent.press(screen.getByText('Pro'));
+    await waitFor(() => expect(openURL).toHaveBeenCalledWith('https://checkout.stripe.com/c/pro'));
+    expect(fake.to(CHECKOUT)[0]!.body).toEqual({ planId: 'pro' });
+    ios.restore();
+  });
+
+  it('with nothing listed: Free and the drawn Pro, and the line that nothing can be bought right now', async () => {
+    const ios = on('ios');
+    const fake = route('owner');
+    fake.always('GET /v1/plans', { plans: [] });
+    await renderWithProviders(<BillingScreen />, sessionAs('owner'));
+    expect(await screen.findByText('No plans are available to purchase right now.')).toBeTruthy();
+    expect(screen.getAllByTestId(/^plan-/u).map((element) => element.props.testID)).toEqual(['plan-free', 'plan-pro']);
     ios.restore();
   });
 

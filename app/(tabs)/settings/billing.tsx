@@ -27,20 +27,34 @@ import {
 } from '@/lib/platform/billing';
 import { PlatformError } from '@/lib/platform/problem';
 import { readWorkspaces } from '@/lib/platform/workspaces';
+import { FREE_PLAN_ID, accessEnded, enrolledPlanId } from '@/lib/view/billing';
 import { formatPlanPrice } from '@/lib/view/plan-price';
 import { administers } from '@/lib/view/roles';
 
-/** The platform's free floor: what a workspace that never paid reports, and never on the plan list. */
-const FREE_PLAN_ID = 'free';
 /** The owner's Free card (decision 7 of 2026-10-02): drawn by the app, at no cost. */
 const FREE_PRICE: PlanPrice = { amount: 0, currency: 'usd', interval: 'month' };
+/**
+ * Pro, drawn until the platform lists it (build 11, D2; the owner's build 10
+ * item 3: "I said free plus and pro"): the price the owner set, $10.00 a
+ * month, which Stripe has not stated yet — so the card is inert on every
+ * platform and for every role: a checkout for it would answer 404, and the
+ * portal has no Pro to switch to. A Pro the platform lists replaces it.
+ */
+const PRO_PLAN_ID = 'pro';
+const PRO_PRICE: PlanPrice = { amount: 1000, currency: 'usd', interval: 'month' };
 
-type PlanCard = { planId: string; name: string; price?: string };
+type PlanCard = {
+  planId: string;
+  name: string;
+  price?: string;
+  /** Drawn by the app, not listed by the platform: nothing to buy or manage. */
+  drawn?: true;
+};
 
 /**
  * The cards, in order: Free, then the platform's plans by price (today Plus —
- * the `team` plan, which the platform names Plus — and Pro once the platform
- * lists it). Each is its name and its price only.
+ * the `team` plan, which the platform names Plus), then Pro, drawn while the
+ * platform does not list it. Each is its name and its price only.
  */
 function planCards(plans: readonly PurchasablePlan[], state: WorkspaceBilling | null): PlanCard[] {
   const paid = plans
@@ -55,6 +69,9 @@ function planCards(plans: readonly PurchasablePlan[], state: WorkspaceBilling | 
       const price = plan.price ? formatPlanPrice(plan.price) : undefined;
       return { planId: plan.planId, name: plan.displayName, ...(price ? { price } : {}) };
     });
+  const pro: PlanCard[] = paid.some((plan) => plan.planId === PRO_PLAN_ID)
+    ? []
+    : [{ planId: PRO_PLAN_ID, name: 'Pro', price: formatPlanPrice(PRO_PRICE), drawn: true }];
   return [
     {
       planId: FREE_PLAN_ID,
@@ -62,6 +79,7 @@ function planCards(plans: readonly PurchasablePlan[], state: WorkspaceBilling | 
       price: formatPlanPrice(FREE_PRICE),
     },
     ...paid,
+    ...pro,
   ];
 }
 
@@ -83,9 +101,12 @@ async function checkoutOrPortal(workspaceId: string, planId: string): Promise<Ho
 
 /**
  * Settings → Billing (BUILD-PLAN 24.6.1, ADR-0032 option B; the cards since the
- * owner's decisions 7 and 8 of 2026-10-02, 24.12) — the plans as tall cards,
- * Free, Plus and Pro, each its name and price; the workspace's own says
- * "Enrolled", and a paid one adds its status. On iOS a card is the action:
+ * owner's decisions 7 and 8 of 2026-10-02, 24.12; compact since build 11, D2 —
+ * "the components dont need to be that big") — the plans as cards at their
+ * natural height, Free, Plus and Pro, each its name and price; the
+ * workspace's own says "Enrolled", and a paid one adds its status. Pro is
+ * drawn by the app until the platform lists it, and that card does nothing.
+ * On iOS a listed card is the action:
  * not paying, a paid plan's card opens the hosted checkout for that plan;
  * paying, any other card opens Manage billing (the hosted portal), since a
  * second checkout would start a second subscription. Both open in the SYSTEM
@@ -112,7 +133,9 @@ export default function BillingScreen() {
     const role = workspaces.find((workspace) => workspace.id === workspaceId)?.role;
     try {
       if (!administers(role)) return { kind: 'member' as const, plans: (await readPlans()).plans };
-      const [plans, state] = await Promise.all([readPlans(), readBilling(workspaceId)]);
+      // A real request at every visit, never the snapshot's answer: the plan
+      // shown here is the one acted on (the build 11 review).
+      const [plans, state] = await Promise.all([readPlans(), readBilling(workspaceId, { fresh: true })]);
       return { kind: 'ready' as const, plans: plans.plans, state };
     } catch (caught) {
       // No billing provider configured is an honest state, never a false plan.
@@ -197,18 +220,22 @@ export default function BillingScreen() {
           : null;
   const state = data.kind === 'ready' ? data.state : null;
   const cards = data.kind === 'ready' || data.kind === 'member' ? planCards(data.plans, state) : [];
-  // `canceled` and `unpaid` end access, which leaves the free floor; a
-  // subscription the provider still holds is changed in the portal, and a
-  // second checkout would start a second subscription (ADR-0025 §1).
-  const accessEnded = state?.status === 'canceled' || state?.status === 'unpaid';
+  // The enrolled plan is the shared rule's (`lib/view/billing.ts`): `canceled`
+  // and `unpaid` end access, which leaves the free floor; a subscription the
+  // provider still holds is changed in the portal, and a second checkout would
+  // start a second subscription (ADR-0025 §1).
+  const ended = state ? accessEnded(state) : false;
   const paying = state?.status !== undefined && state.status !== 'canceled';
-  const enrolled = state ? (accessEnded ? FREE_PLAN_ID : state.planId) : null;
+  const enrolled = state ? enrolledPlanId(state) : null;
+  // What the platform sells: the drawn Pro and the Free floor are not for sale.
+  const purchasable = cards.filter((card) => !card.drawn && card.planId !== FREE_PLAN_ID);
   const periodEnd = state?.currentPeriodEnd ? new Date(state.currentPeriodEnd).toLocaleDateString() : null;
   // The cards act only on iOS, and only for an owner or an admin.
   const acts = purchasing && data.kind === 'ready';
 
   const pressFor = (card: PlanCard): (() => void) | undefined => {
-    if (!acts || card.planId === enrolled) return undefined;
+    // The drawn Pro is inert everywhere: no checkout (a 404), no portal (no Pro there).
+    if (card.drawn || !acts || card.planId === enrolled) return undefined;
     if (paying) return () => void leave(card.planId, 'portal', openPortal);
     if (card.planId === FREE_PLAN_ID) return undefined;
     return () => void leave(card.planId, 'checkout', (workspaceId) => checkoutOrPortal(workspaceId, card.planId));
@@ -227,7 +254,7 @@ export default function BillingScreen() {
       {note ? <Text style={[styles.text, muted]}>{note}</Text> : null}
       {acts && needsCheckout ? (
         <Text style={[styles.text, muted]}>
-          {cards.length > 1
+          {purchasable.length > 0
             ? 'This workspace has no billing account yet. Choose a plan below to start one.'
             : 'This workspace has no billing account yet, and no plan can be bought right now.'}
         </Text>
@@ -239,7 +266,7 @@ export default function BillingScreen() {
             const isEnrolled = card.planId === enrolled;
             const paidPlan = isEnrolled && card.planId !== FREE_PLAN_ID;
             return (
-              <View key={card.planId} testID={`plan-${card.planId}`} style={styles.slot}>
+              <View key={card.planId} testID={`plan-${card.planId}`}>
                 <SurfaceCard
                   onPress={pressFor(card)}
                   style={[styles.planCard, isEnrolled && { borderWidth: 1, borderColor: palette.accent }]}>
@@ -253,7 +280,7 @@ export default function BillingScreen() {
                   {paidPlan && state?.status && state.status !== 'active' ? (
                     <Text style={[styles.text, muted]}>Status: {state.status.replace('_', ' ')}</Text>
                   ) : null}
-                  {paidPlan && periodEnd && !accessEnded ? (
+                  {paidPlan && periodEnd && !ended ? (
                     <Text style={[styles.text, muted]}>
                       {state?.cancelAtPeriodEnd ? 'Ends' : 'Renews'} {periodEnd}
                     </Text>
@@ -277,7 +304,7 @@ export default function BillingScreen() {
           })}
         </View>
       ) : null}
-      {data.kind === 'ready' && cards.length === 1 ? (
+      {data.kind === 'ready' && purchasable.length === 0 ? (
         <Text style={[styles.text, muted]}>No plans are available to purchase right now.</Text>
       ) : null}
       {error ? <Text style={[styles.text, { color: status.err }]}>{error}</Text> : null}
@@ -286,15 +313,14 @@ export default function BillingScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, paddingHorizontal: layout.screenX, paddingBottom: 32, gap: 18 },
+  content: { paddingHorizontal: layout.screenX, paddingBottom: 32, gap: 18 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   title: { fontFamily: fonts.medium, fontSize: typeScale.heading.fontSize, letterSpacing: em(-0.01, typeScale.heading.fontSize) },
-  // The cards share what is left of the screen, each at least this tall.
-  cards: { flex: 1, gap: 12 },
-  slot: { flex: 1 },
-  planCard: { flex: 1, minHeight: 136, justifyContent: 'center', gap: 8, padding: 20 },
+  // Compact (build 11, D2): each card is as tall as its name, price and status line, no taller.
+  cards: { gap: 12 },
+  planCard: { gap: 6, padding: layout.cardPad },
   planName: { fontFamily: fonts.medium, fontSize: typeScale.lead.fontSize },
-  planPrice: { fontFamily: fonts.medium, fontSize: typeScale.display.fontSize, letterSpacing: em(-0.015, typeScale.display.fontSize) },
+  planPrice: { fontFamily: fonts.medium, fontSize: typeScale.title.fontSize, letterSpacing: em(-0.01, typeScale.title.fontSize) },
   manage: { marginTop: 4 },
   text: { fontFamily: fonts.regular, ...typeScale.body },
   small: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },

@@ -2,6 +2,7 @@ import { Redirect, Tabs } from 'expo-router';
 import React from 'react';
 
 import { NocturneTabBar } from '@/components/nocturne/tab-bar';
+import { usePushRegistration } from '@/hooks/use-push-registration';
 import { useSession } from '@/hooks/use-session';
 
 /**
@@ -19,6 +20,10 @@ import { useSession } from '@/hooks/use-session';
  */
 export default function TabLayout() {
   const session = useSession();
+  // Device push for the signed-in person (build 11, D8): an allowed phone kept
+  // registered, the banner in the foreground, a tap's way in. Called before the
+  // guard, as every hook is, and idle until signed in; it never asks.
+  usePushRegistration(session.status === 'signed-in');
 
   if (session.status === 'restoring') return null;
 

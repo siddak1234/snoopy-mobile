@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -21,6 +21,7 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { Skeleton } from '@/components/nocturne/skeleton';
 import { StatCard } from '@/components/nocturne/stat-card';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { Pressable, pressed } from '@/components/pressable';
 import { ScopeControl } from '@/components/scope-control';
 import { em, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
@@ -38,8 +39,8 @@ import { scopeApprovals, scopeRuns, scopeStats } from '@/lib/view/scope';
 function HomeLoading({ paddingTop }: { paddingTop: number }) {
   return (
     <View style={[styles.content, { paddingTop }]}>
-      <View style={styles.headerRow}>
-        <BrandMark height={17} />
+      <View style={styles.headerRow} testID="home-header">
+        <BrandMark height={HOME_MARK_HEIGHT} testID="home-mark" />
         <View style={styles.headerActions}>
           <Skeleton width={38} height={38} borderRadius={999} />
           <Skeleton width={38} height={38} borderRadius={999} />
@@ -71,8 +72,8 @@ function HomeEmpty({ paddingTop, initials }: { paddingTop: number; initials: str
   const router = useRouter();
   return (
     <View style={[styles.stateRoot, { paddingTop, backgroundColor: palette.bg }]}>
-      <View style={styles.headerRow}>
-        <BrandMark height={17} />
+      <View style={styles.headerRow} testID="home-header">
+        <BrandMark height={HOME_MARK_HEIGHT} testID="home-mark" />
         <View style={styles.headerActions}>
           <View style={[styles.bellButton, { borderColor: palette.neutral[800] }]}>
             <Bell size={19} color={palette.neutral[300]} weight="regular" />
@@ -122,8 +123,8 @@ function HomeError({
   const { palette } = useTheme();
   return (
     <View style={[styles.stateRoot, { paddingTop, backgroundColor: palette.bg }]}>
-      <View style={styles.headerRow}>
-        <BrandMark height={17} />
+      <View style={styles.headerRow} testID="home-header">
+        <BrandMark height={HOME_MARK_HEIGHT} testID="home-mark" />
         <AvatarBadge initials={initials} />
       </View>
       <View style={styles.stateCenter}>
@@ -152,6 +153,15 @@ function HomeError({
 }
 
 /** The Activity chip each stat tile opens: a tone is an outcome here (24.11.9). */
+/**
+ * The mark fills its row (the owner's D9, 2026-10-03: "should fill up that empty
+ * space top left"): the row is as tall as the bell and the avatar, 38, so the
+ * mark is 38 — the design drew 17 — and nothing else moves. Wider than 38 would
+ * make the row taller and push everything below; the header test holds both
+ * this number and the room it leaves the two buttons at 320 pt.
+ */
+const HOME_MARK_HEIGHT = 38;
+
 const OUTCOME_FILTER: Record<StatTileView['tone'], 'All' | 'Success' | 'Failed'> = {
   text: 'All',
   ok: 'Success',
@@ -251,8 +261,8 @@ export default function HomeScreen() {
       ]}
       showsVerticalScrollIndicator={false}>
       {/* Header */}
-      <View style={styles.headerRow}>
-        <BrandMark height={17} />
+      <View style={styles.headerRow} testID="home-header">
+        <BrandMark height={HOME_MARK_HEIGHT} testID="home-mark" />
         <View style={styles.headerActions}>
           <Pressable
             onPress={() => router.push('/(tabs)/(home)/notifications')}
@@ -382,7 +392,7 @@ export default function HomeScreen() {
         <View style={styles.sectionHeader}>
           <SectionLabel>RECENT RUNS</SectionLabel>
           <Text
-            onPress={() => router.push('/(tabs)/activity')}
+            onPress={pressed(() => router.push('/(tabs)/activity'))}
             suppressHighlighting
             style={{
               fontFamily: fonts.regular,

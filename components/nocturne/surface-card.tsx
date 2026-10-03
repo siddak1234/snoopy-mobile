@@ -1,6 +1,7 @@
 import React from 'react';
-import { Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
+import { View, type StyleProp, type ViewStyle } from 'react-native';
 
+import { Pressable } from '@/components/pressable';
 import { radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 

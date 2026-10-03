@@ -9,16 +9,14 @@ import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import HomeScreen from '@/app/(tabs)/(home)/index';
 import RunDetailScreen from '@/app/(tabs)/(home)/run';
 import SettingsScreen from '@/app/(tabs)/settings';
-import AppearanceScreen from '@/app/(tabs)/settings/appearance';
 import SettingsArchivedFlowsScreen from '@/app/(tabs)/settings/archived';
+import SettingsArchivedFlowScreen from '@/app/(tabs)/settings/archived-flow';
 import NotificationSettingsScreen from '@/app/(tabs)/settings/notifications';
-import SecurityScreen from '@/app/(tabs)/settings/security';
-import WorkspaceScreen from '@/app/(tabs)/settings/workspace';
 import SetupScreen from '@/app/(tabs)/flows/setup';
 import SolutionsScreen from '@/app/(tabs)/flows/add';
 import NotificationsScreen from '@/app/(tabs)/(home)/notifications';
 import ArchivedFlowsScreen from '@/app/(tabs)/flows/archived';
-import { nocturneDark, nocturneLight } from '@/constants/theme';
+import { layout, nocturneDark, nocturneLight } from '@/constants/theme';
 import {
   TEST_WORKSPACE,
   approvalsPayload,
@@ -29,11 +27,13 @@ import {
   routePlatform,
   runDetailPayload,
   runsPayload,
+  sessionAs,
   signedInSession,
   subscriptionsPayload,
 } from '@/test/platform';
 import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
 import { resetSnapshot } from '@/lib/platform/snapshot';
+import { resetPushForTests } from '@/hooks/use-push-registration';
 
 jest.mock('@/lib/platform/client', () => ({
   platformOperation: jest.fn(),
@@ -52,6 +52,9 @@ beforeEach(() => {
   platformOperation.mockReset();
   newIdempotencyKey.mockReset().mockReturnValue('test-intent');
   routePlatform(platformOperation);
+  // The inbox card's "Not now" is shared by both inboxes for the session; one
+  // test's must not hide the next one's card.
+  resetPushForTests();
 });
 
 describe('Home dashboard', () => {
@@ -79,6 +82,22 @@ describe('Home dashboard', () => {
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows');
     await fireEvent.press(getByText('See all'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity');
+  });
+
+  it("ticks when the avatar, the bell or See all is tapped, then opens its page (the owner's build 10 item 10; D7)", async () => {
+    const Haptics = jest.requireMock('expo-haptics');
+    await renderWithProviders(<HomeScreen />, signedInSession);
+    await screen.findByText('Welcome back, Alex');
+    await fireEvent.press(screen.getByLabelText('Account and settings'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings');
+    expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
+    await fireEvent.press(screen.getByLabelText('Notifications'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/(home)/notifications');
+    expect(Haptics.selectionAsync).toHaveBeenCalledTimes(2);
+    // A Text's own handler, through pressed().
+    await fireEvent.press(screen.getByText('See all'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity');
+    expect(Haptics.selectionAsync).toHaveBeenCalledTimes(3);
   });
 
   it('opens Run detail from a recent-run row', async () => {
@@ -129,13 +148,15 @@ describe('Add a flow — the catalog inside Flows (24.9.3)', () => {
     expect(queryByText(/Solutions · \$/u)).toBeNull();
   });
 
-  it('Add opens Setup with the template, for the scope being looked at', async () => {
+  it('Add opens Setup with the template; under All teams no team is chosen for the person (D4)', async () => {
     const { getAllByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
     await fireEvent.press(getAllByText('Add')[0]);
     expect(mockRouter.push).toHaveBeenCalledWith({
       pathname: '/(tabs)/flows/setup',
       params: expect.objectContaining({ template: expect.any(String) }),
     });
+    const pushed = mockRouter.push.mock.calls[0]![0] as { params: Record<string, string> };
+    expect(pushed.params).not.toHaveProperty('project');
   });
 
   it('Added ✓ is not a button: the card opens the flow, where Pause and Archive live (feedback #3, #5)', async () => {
@@ -248,6 +269,8 @@ describe('Workflows', () => {
     await fireEvent.press(getByText('New'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/add');
     expect(mockRouter.push).not.toHaveBeenCalledWith(expect.stringContaining('templates'));
+    // Archived sits left of New, drawn with nothing archived too (build 11, D5).
+    expect(screen.getAllByText(/^(Archived|New)$/u).map((label) => label.props.children)).toEqual(['Archived', 'New']);
   });
 });
 
@@ -270,18 +293,32 @@ describe('Workflows search (design v4)', () => {
 });
 
 /* flow screens read the flow catalog */
-describe('Workflow scope (18.6.2)', () => {
-  it('labels each workflow with where it applies, once the workspace has a project', async () => {
+describe('Workflow scope (18.6.2; every flow says its team since build 11, D4)', () => {
+  it('labels each flow with its team or the whole workspace, once the workspace has a team', async () => {
     routePlatform(platformOperation, { '/automations': flowCatalogPayload(), '/projects': projectsPayload('Finance') });
     await renderWithProviders(<FlowsScreen />, signedInSession);
     expect(await screen.findByText('Whole workspace · 1,284 runs · 1,272 ok · 12 failed')).toBeTruthy();
   });
 
-  it('draws no scope where the workspace has no project', async () => {
+  it("says Whole workspace where the workspace has no team at all (the owner's build 10 item 7)", async () => {
+    // Until build 11 the label was drawn only once the workspace had a team, so a
+    // workspace with none could not answer "What team is that flow part of?".
     routePlatform(platformOperation, { '/automations': flowCatalogPayload() });
     await renderWithProviders(<FlowsScreen />, signedInSession);
-    expect(await screen.findByText('1,284 runs · 1,272 ok · 12 failed')).toBeTruthy();
-    expect(screen.queryByText(/Whole workspace/)).toBeNull();
+    expect(await screen.findByText('Whole workspace · 1,284 runs · 1,272 ok · 12 failed')).toBeTruthy();
+    expect(screen.queryByText('1,284 runs · 1,272 ok · 12 failed')).toBeNull();
+  });
+
+  it("a flow's page says it under the name, and an archived row says it too, with no team in the workspace", async () => {
+    setMockParams({ flow: 'invoice' });
+    routePlatform(platformOperation, { '/automations': flowCatalogPayload() });
+    await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
+    expect(await screen.findByText('Whole workspace · AP inbox → QuickBooks')).toBeTruthy();
+
+    resetSnapshot();
+    withRemovedFlow();
+    const archived = await renderWithProviders(<ArchivedFlowsScreen />, signedInSession);
+    expect(await archived.findByText(/^Whole workspace · /u)).toBeTruthy();
   });
 });
 
@@ -312,7 +349,8 @@ describe('Workflow detail', () => {
     setMockParams({ flow: 'kpi' });
     const { getByText, queryByText, getAllByText } = await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
     expect(getByText('Weekly KPI report')).toBeTruthy();
-    expect(getByText('Sheets → Slack digest')).toBeTruthy();
+    // Its team under its name — the whole workspace's, here — since build 11 (D4).
+    expect(getByText('Whole workspace · Sheets → Slack digest')).toBeTruthy();
     expect(getByText('Paused')).toBeTruthy();
     // FINDING 6: only `unmetConnections` is published, so a satisfied provider
     // cannot be listed. The paused workflow has none outstanding.
@@ -654,16 +692,21 @@ describe('Approvals inbox', () => {
 
 describe('Notifications inbox (design sNotifs)', () => {
   beforeEach(() => routePlatform(platformOperation, { '/automations': flowCatalogPayload() }));
-  it('states that the inbox is in-app only and dismisses the notice', async () => {
-    const { getByText, queryByText, getAllByText } = await renderWithProviders(<NotificationsScreen />, signedInSession);
-    expect(getByText('Know the moment something needs you')).toBeTruthy();
-    expect(
-      getByText(
-        'This build shows held runs and failures in this in-app inbox. Device push delivery is not configured.',
-      ),
-    ).toBeTruthy();
-    await fireEvent.press(getByText('Dismiss'));
+  it("asks for notifications on this phone, asks iOS nothing until Turn on, and Not now hides the ask (build 11, D8; the owner's build 10 item 13)", async () => {
+    // Decided flip: until build 11 this card said "This build shows held runs and
+    // failures in this in-app inbox. Device push delivery is not configured." and
+    // only dismissed ("Got it", "Dismiss"); the owner asked "What do we need to do
+    // here?" and decided to add push (D8).
+    const Notifications = jest.requireMock('expo-notifications');
+    const { getByText, queryByText, findByText } = await renderWithProviders(<NotificationsScreen />, signedInSession);
+    expect(await findByText('Know the moment something needs you')).toBeTruthy();
+    expect(getByText('Get a notification on this phone when a run is held or fails.')).toBeTruthy();
+    expect(getByText('Turn on')).toBeTruthy();
+    expect(queryByText(/Device push delivery is not configured/u)).toBeNull();
+    expect(Notifications.requestPermissionsAsync).not.toHaveBeenCalled();
+    await fireEvent.press(getByText('Not now'));
     expect(queryByText('Know the moment something needs you')).toBeNull();
+    expect(Notifications.requestPermissionsAsync).not.toHaveBeenCalled();
   });
 
   it('lists notifications and opens their targets', async () => {
@@ -695,52 +738,188 @@ describe('An empty inbox (24.12)', () => {
   });
 });
 
-describe('Settings & security', () => {
-  const CATEGORIES = [
-    ['account', 'Account', '/(tabs)/settings/account'],
-    ['security', 'Security', '/(tabs)/settings/security'],
-    ['connections', 'Connections', '/(tabs)/settings/connections'],
-    ['billing', 'Billing', '/(tabs)/settings/billing'],
-    ['workspace', 'Workspace', '/(tabs)/settings/workspace'],
-    ['notifications', 'Notifications', '/(tabs)/settings/notifications'],
-    ['appearance', 'Appearance', '/(tabs)/settings/appearance'],
-    ['help', 'Help', '/(tabs)/settings/support'],
+describe('Settings — one grouped page (build 11, D1)', () => {
+  /** The rows and the control, as drawn, in the build's order: each by its test id and its first words. */
+  const ROWS = [
+    ['settings-account', 'Account'],
+    ['settings-face-id', 'Face ID unlock'],
+    ['settings-connections', 'Connections'],
+    ['settings-billing', 'Billing'],
+    ['workspace-switcher-row', 'Acme Operations'],
+    ['settings-role', 'Your role'],
+    ['settings-organization', 'Organization'],
+    ['settings-teams', 'Teams'],
+    ['settings-archived-flows', 'Archived flows'],
+    ['settings-data', 'Export my data'],
+    ['settings-notifications', 'Notifications'],
+    ['settings-appearance', 'Auto'],
+    ['settings-help', 'Help'],
   ] as const;
+  /** Everything a person reads down the page, in order: the labels, the rows, the control's options, Sign out. */
+  const AS_DRAWN = [
+    'Account',
+    'SECURITY',
+    'Face ID unlock',
+    'Connections',
+    'Billing',
+    'WORKSPACE',
+    'Acme Operations',
+    'Your role',
+    'Organization',
+    'Teams',
+    'Archived flows',
+    'Export my data',
+    'Notifications',
+    'APPEARANCE',
+    'Auto',
+    'Dark',
+    'Light',
+    'Help',
+    'Sign out',
+  ];
+  /** The rows that open a page, and where. */
+  const PAGES = [
+    ['settings-account', '/(tabs)/settings/account'],
+    ['settings-connections', '/(tabs)/settings/connections'],
+    ['settings-billing', '/(tabs)/settings/billing'],
+    ['settings-organization', '/(tabs)/settings/organization'],
+    ['settings-teams', '/(tabs)/settings/teams'],
+    ['settings-archived-flows', '/(tabs)/settings/archived'],
+    ['settings-data', '/(tabs)/settings/data'],
+    ['settings-notifications', '/(tabs)/settings/notifications'],
+    ['settings-help', '/(tabs)/settings/support'],
+  ] as const;
+  const BILLING = `/v1/workspaces/${TEST_WORKSPACE}/billing`;
+  const ON_PLUS = { workspaceId: TEST_WORKSPACE, planId: 'team', displayName: 'Plus', status: 'active' };
 
-  it('is eight categories in the owner\'s order, then Sign out and the version — and reads nothing (24.12)', async () => {
-    const { getByText, getAllByText, queryByText } = await renderWithProviders(<SettingsScreen />, signedInSession);
-    // In this order, as drawn, each titled as the owner named it.
-    const rows = screen.getAllByTestId(/^settings-/u);
-    expect(rows.map((row) => row.props.testID)).toEqual(CATEGORIES.map(([key]) => `settings-${key}`));
-    expect(rows.map((row) => within(row).getAllByText(/./u)[0]!.props.children)).toEqual(
-      CATEGORIES.map(([, title]) => title),
-    );
-    expect(getByText('Sign out')).toBeTruthy();
-    expect(getByText(/^Autom8x for iOS · v/)).toBeTruthy();
-    // The old single screen's rows live on their pages now.
-    expect(queryByText('Face ID unlock')).toBeNull();
-    expect(queryByText('Export my data')).toBeNull();
-    expect(getAllByText('Billing')).toHaveLength(1);
-    // Each page reads what it draws; the index reads nothing.
-    expect(platformOperation).not.toHaveBeenCalled();
+  it("is the groups in the build's order, as drawn — the labels, the rows, the control — then Sign out and the version", async () => {
+    routePlatform(platformOperation, { [BILLING]: ON_PLUS });
+    await renderWithProviders(<SettingsScreen />, signedInSession);
+    expect(await screen.findByText('Plus')).toBeTruthy();
+    // In this order, as drawn, each titled as the build names it.
+    const rows = screen.getAllByTestId(/^(settings-|workspace-switcher-row$)/u);
+    expect(rows.map((row) => row.props.testID)).toEqual(ROWS.map(([id]) => id));
+    expect(rows.map((row) => within(row).getAllByText(/./u)[0]!.props.children)).toEqual(ROWS.map(([, first]) => first));
+    const drawn = screen.getAllByText(new RegExp(`^(${AS_DRAWN.join('|')})$`, 'u'));
+    expect(drawn.map((node) => node.props.children)).toEqual(AS_DRAWN);
+    expect(screen.getByText(/^Autom8x for iOS · v/u)).toBeTruthy();
+    // Roomier rows, on this page only (the owner's "vertically more roomy").
+    expect(StyleSheet.flatten(screen.getByTestId('settings-account').props.style).paddingVertical).toBe(layout.rowPadVRoomy);
+    // The three pages of 24.12 went: their content is here, and nothing is titled for them.
+    expect(screen.queryByText('Security')).toBeNull();
+    expect(screen.queryByText('Workspace')).toBeNull();
+    expect(screen.queryByText('Appearance')).toBeNull();
   });
 
-  it('opens each category on its own page', async () => {
+  it('reads only the plan, quietly: one billing read for an owner, said as the plan name under Billing; the email under Account', async () => {
+    routePlatform(platformOperation, { [BILLING]: ON_PLUS });
     await renderWithProviders(<SettingsScreen />, signedInSession);
-    for (const [key, , path] of CATEGORIES) {
-      await fireEvent.press(screen.getByTestId(`settings-${key}`));
+    expect(await screen.findByText('Plus')).toBeTruthy();
+    expect(within(screen.getByTestId('settings-billing')).getByText('Plus')).toBeTruthy();
+    expect(within(screen.getByTestId('settings-account')).getByText('alex@acme.co')).toBeTruthy();
+    // The one request: the workspace's billing — not the workspace list, not the plans, nothing for any other row.
+    expect(platformOperation.mock.calls.map(([path]: [string]) => path)).toEqual([BILLING]);
+  });
+
+  it('says Free on the free floor and for a subscription whose access has ended — the Billing page\'s own rule', async () => {
+    routePlatform(platformOperation, { [BILLING]: { workspaceId: TEST_WORKSPACE, planId: 'free', displayName: 'Free' } });
+    await renderWithProviders(<SettingsScreen />, signedInSession);
+    expect(await screen.findByText('Free')).toBeTruthy();
+
+    resetSnapshot();
+    routePlatform(platformOperation, { [BILLING]: { ...ON_PLUS, status: 'canceled' } });
+    const canceled = await renderWithProviders(<SettingsScreen />, signedInSession);
+    expect(await canceled.findByText('Free')).toBeTruthy();
+    expect(canceled.queryByText('Plus')).toBeNull();
+  });
+
+  it('never reads billing for a member, whose line says who manages it', async () => {
+    await renderWithProviders(<SettingsScreen />, sessionAs('member'));
+    expect(await screen.findByText('Managed by owners and admins')).toBeTruthy();
+    expect(within(screen.getByTestId('settings-billing')).getByText('Managed by owners and admins')).toBeTruthy();
+    expect(platformOperation).not.toHaveBeenCalled();
+    expect(screen.queryByText('Free')).toBeNull();
+  });
+
+  it('shows no plan line and no error screen when the billing read is refused or the platform is unreachable', async () => {
+    const { PlatformError, PlatformUnreachableError } = jest.requireActual('@/lib/platform/problem');
+    routePlatform(platformOperation);
+    const routed = platformOperation.getMockImplementation();
+    platformOperation.mockImplementation((path: string, ...rest: unknown[]) =>
+      path === BILLING ? Promise.reject(new PlatformError('Service Unavailable', 503)) : routed?.(path, ...rest),
+    );
+    await renderWithProviders(<SettingsScreen />, signedInSession);
+    expect(await screen.findByText('Settings')).toBeTruthy();
+    await waitFor(() => expect(platformOperation).toHaveBeenCalledWith(BILLING, expect.anything()));
+    expect(within(screen.getByTestId('settings-billing')).queryByText(/Free|Plus|Pro|Unavailable/u)).toBeNull();
+    expect(screen.queryByText("Couldn't load settings")).toBeNull();
+    expect(screen.getByText('Sign out')).toBeTruthy();
+
+    platformOperation.mockImplementation((path: string, ...rest: unknown[]) =>
+      path === BILLING ? Promise.reject(new PlatformUnreachableError()) : routed?.(path, ...rest),
+    );
+    const offline = await renderWithProviders(<SettingsScreen />, signedInSession);
+    expect(await offline.findByText('Settings')).toBeTruthy();
+    expect(offline.queryByText("You're offline")).toBeNull();
+    expect(within(offline.getByTestId('settings-billing')).queryByText(/Free|Plus|Pro/u)).toBeNull();
+  });
+
+  it("opens each page row on its page — Archived flows in Settings' own stack (the owner's build 9)", async () => {
+    await renderWithProviders(<SettingsScreen />, signedInSession);
+    for (const [id, path] of PAGES) {
+      await fireEvent.press(screen.getByTestId(id));
       expect(mockRouter.push).toHaveBeenLastCalledWith(path);
     }
+    expect(mockRouter.push).not.toHaveBeenCalledWith(expect.stringMatching(/settings\/(security|workspace|appearance)$/u));
+    expect(mockRouter.push).not.toHaveBeenCalledWith('/(tabs)/flows/archived');
   });
 
-  it('keeps the Face ID unlock on the Security page, and nothing the website never had', async () => {
-    const { getByText, queryByText } = await renderWithProviders(<SecurityScreen />, signedInSession);
-    expect(getByText('Security')).toBeTruthy();
+  it('keeps the Face ID unlock on the index, under SECURITY, and nothing the website never had', async () => {
+    const { getByText, queryByText } = await renderWithProviders(<SettingsScreen />, signedInSession);
+    expect(getByText('SECURITY')).toBeTruthy();
     expect(getByText('Face ID unlock')).toBeTruthy();
+    expect(getByText('Require Face ID when opening')).toBeTruthy();
     // Removed 2026-10-02: two static rows the website never had and nobody could
     // act on (24.7.3 attempt 2, feedback #8 and #9).
     expect(queryByText('Passkeys')).toBeNull();
     expect(queryByText('Stay signed in')).toBeNull();
+  });
+
+  it('says a failed Face ID enable right under its row, and keeps the page', async () => {
+    await renderWithProviders(<SettingsScreen />, signedInSession);
+    // The test device has no biometric hardware (test/jest-setup.js).
+    await fireEvent.press(screen.getByRole('switch'));
+    expect(await screen.findByText('Face ID is not available or enrolled on this device.')).toBeTruthy();
+    expect(screen.getByTestId('action-failure')).toBeTruthy();
+    expect(screen.getByText('Settings')).toBeTruthy();
+    expect(screen.getByText('Sign out')).toBeTruthy();
+  });
+
+  it('keeps the workspace rows on the index: the switcher row, the role, and its areas', async () => {
+    const { getByText } = await renderWithProviders(<SettingsScreen />, signedInSession);
+    expect(getByText('WORKSPACE')).toBeTruthy();
+    expect(getByText('Acme Operations')).toBeTruthy();
+    expect(getByText('Your role')).toBeTruthy();
+    expect(getByText('owner')).toBeTruthy();
+    await fireEvent.press(getByText('Export my data'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/data');
+    await fireEvent.press(getByText('Teams'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/teams');
+  });
+
+  it('switches the live theme from the control on the index — Auto, Dark, Light, in that order', async () => {
+    const { getByText } = await renderWithProviders(<SettingsScreen />, signedInSession);
+    expect(
+      within(screen.getByTestId('settings-appearance'))
+        .getAllByText(/./u)
+        .map((option) => option.props.children),
+    ).toEqual(['Auto', 'Dark', 'Light']);
+    const title = () => (StyleSheet.flatten(getByText('Settings').props.style) as { color?: string }).color;
+    expect(title()).toBe(nocturneDark.text);
+    await fireEvent.press(getByText('Light'));
+    expect(title()).toBe(nocturneLight.text);
+    await fireEvent.press(getByText('Dark'));
+    expect(title()).toBe(nocturneDark.text);
   });
 
   it("is the inbox itself on the Notifications page, in Settings' own stack: its rows, its Back, and its runs (24.12)", async () => {
@@ -766,18 +945,6 @@ describe('Settings & security', () => {
     expect(mockRouter.push).not.toHaveBeenCalledWith(expect.objectContaining({ pathname: '/(tabs)/(home)/run' }));
   });
 
-  it('keeps the workspace on its page: the switcher row, the role, and its areas, reading nothing', async () => {
-    const { getByText } = await renderWithProviders(<WorkspaceScreen />, signedInSession);
-    expect(getByText('Acme Operations')).toBeTruthy();
-    expect(getByText('Your role')).toBeTruthy();
-    expect(getByText('owner')).toBeTruthy();
-    await fireEvent.press(getByText('Export my data'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/data');
-    await fireEvent.press(getByText('Teams'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/teams');
-    expect(platformOperation).not.toHaveBeenCalled();
-  });
-
   it('shows Billing without the plan totals (24.9.5)', async () => {
     const { getByText, queryByText } = await renderWithProviders(<SettingsScreen />, signedInSession);
     expect(await screen.findByText('Billing')).toBeTruthy();
@@ -788,19 +955,8 @@ describe('Settings & security', () => {
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/billing');
   });
 
-  it('switches the live theme from the appearance control', async () => {
-    const { getByText } = await renderWithProviders(<AppearanceScreen />, signedInSession);
-    const title = () =>
-      (StyleSheet.flatten(getByText('Appearance').props.style) as { color?: string }).color;
-    expect(title()).toBe(nocturneDark.text);
-    await fireEvent.press(getByText('Light'));
-    expect(title()).toBe(nocturneLight.text);
-    await fireEvent.press(getByText('Dark'));
-    expect(title()).toBe(nocturneDark.text);
-  });
-
   it('signs out to the cover (24.11.6)', async () => {
-    const { getByText, getAllByText, queryByText } = await renderWithProviders(<SettingsScreen />, signedInSession);
+    const { getByText } = await renderWithProviders(<SettingsScreen />, signedInSession);
     await fireEvent.press(getByText('Sign out'));
     expect(mockRouter.replace).toHaveBeenCalledWith('/');
   });
@@ -916,6 +1072,71 @@ describe('Home data states (design sHomeLoad/Empty/Err)', () => {
   });
 });
 
+describe('Home header — the mark fills its row and draws nothing else (D9, 2026-10-03)', () => {
+  // The row is as tall as its two buttons; the mark takes that height and no more.
+  const ROW = 38;
+  const MARK_WIDTH = (ROW * 1800) / 879; // the PNG's aspect
+  const BUTTONS = 38 + 10 + 38; // the bell, the gap, the avatar
+
+  function expectMarkFillsTheRow(mark: { props: Record<string, unknown> }, tint: string | undefined) {
+    const style = StyleSheet.flatten(mark.props.style as never) as Record<string, unknown>;
+    expect(style.height).toBe(ROW);
+    expect(style.width).toBeCloseTo(MARK_WIDTH, 5);
+    expect(style.opacity).toBe(1);
+    expect(style.tintColor).toBe(tint);
+    // Just the mark: no tile, border, shadow or offset around it.
+    for (const key of ['backgroundColor', 'borderWidth', 'borderColor', 'shadowOpacity', 'elevation', 'position']) {
+      expect(style[key]).toBeUndefined();
+    }
+  }
+
+  it('fills the 38-pt row on the dashboard, beside the bell and the avatar it leaves untouched', async () => {
+    const { getByTestId, getByLabelText } = await renderWithProviders(<HomeScreen />, signedInSession);
+    expect(await screen.findByText('Welcome back, Alex')).toBeTruthy();
+    expectMarkFillsTheRow(getByTestId('home-mark'), undefined);
+    // The row sizes to its content: no fixed height that the mark could overflow.
+    const row = StyleSheet.flatten(getByTestId('home-header').props.style);
+    expect(row).toMatchObject({ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' });
+    expect(row.height).toBeUndefined();
+    // The two buttons keep their size, so the row stays 38 and nothing below moves.
+    expect(StyleSheet.flatten(getByLabelText('Notifications').props.style)).toMatchObject({ width: 38, height: 38 });
+    const [avatar] = getByLabelText('Account and settings').children;
+    expect(typeof avatar).not.toBe('string');
+    const avatarStyle = typeof avatar === 'string' ? undefined : avatar.props.style;
+    expect(StyleSheet.flatten(avatarStyle as never)).toMatchObject({ width: 38, height: 38 });
+    // And the mark leaves the buttons their room on the narrowest phone (320 pt, 20 a side).
+    expect(MARK_WIDTH + BUTTONS).toBeLessThanOrEqual(320 - 2 * layout.screenX);
+  });
+
+  it('is the same mark in the light palette, tinted as the design inverts it', async () => {
+    const { getByTestId } = await renderWithProviders(<HomeScreen />, signedInSession, 'light');
+    expect(await screen.findByText('Welcome back, Alex')).toBeTruthy();
+    expectMarkFillsTheRow(getByTestId('home-mark'), nocturneLight.brandTint);
+  });
+
+  it('is the same size while the dashboard loads', async () => {
+    platformOperation.mockImplementation(() => new Promise(() => {}));
+    const { getByTestId } = await renderWithProviders(<HomeScreen />, signedInSession);
+    expectMarkFillsTheRow(getByTestId('home-mark'), undefined);
+  });
+
+  it('is the same size on the first run', async () => {
+    const emptyCatalog = catalogPayload();
+    emptyCatalog.automations = emptyCatalog.automations.map((automation) => ({ ...automation, subscribed: false }));
+    routePlatform(platformOperation, { '/automations': emptyCatalog });
+    const { getByTestId } = await renderWithProviders(<HomeScreen />, signedInSession);
+    expect(await screen.findByText('Nothing automated. Yet.')).toBeTruthy();
+    expectMarkFillsTheRow(getByTestId('home-mark'), undefined);
+  });
+
+  it('is the same size when the platform is unreachable', async () => {
+    platformOperation.mockRejectedValue(new Error('offline'));
+    const { getByTestId } = await renderWithProviders(<HomeScreen />, signedInSession);
+    expect(await screen.findByText("Can't reach Autom8x")).toBeTruthy();
+    expectMarkFillsTheRow(getByTestId('home-mark'), undefined);
+  });
+});
+
 describe('Setup wizard (design sSetup)', () => {
   it('names the solution it is setting up', async () => {
     setMockParams({ template: 'tpl.3' });
@@ -978,8 +1199,8 @@ describe('Setup wizard (design sSetup)', () => {
       ...automation,
       setup: [{ ...sample, key: 'holdAboveAmount', title: 'Hold above', control: 'money', section: 'rules', required: false, defaultValue: 500 }],
     }));
-    routePlatform(platformOperation, { '/automations': catalog });
-    setMockParams({ template: 'tpl.0' });
+    routePlatform(platformOperation, { '/automations': catalog, '/projects': projectsPayload('Finance') });
+    setMockParams({ template: 'tpl.0', project: 'project-1' });
     const { getByLabelText, getByText } = await renderWithProviders(<SetupScreen />, signedInSession);
     const amount = await waitFor(() => getByLabelText('Hold above'));
     expect(amount.props.value).toBe('500.00');
@@ -999,11 +1220,13 @@ describe('Setup wizard (design sSetup)', () => {
     const archived = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'archived-0', status: 'archived' };
     routePlatform(platformOperation, {
       '/automations': catalog,
+      '/projects': projectsPayload('Finance'),
       '/subscriptions': { subscriptions: [archived], subscription: { ...archived, id: 'fresh-0', status: 'live' } },
     });
     setMockParams({ template: 'tpl.0' });
     await renderWithProviders(<SetupScreen />, signedInSession);
-    await fireEvent.press(await screen.findByText('Activate solution'));
+    await fireEvent.press(await screen.findByText('Team: Finance'));
+    await fireEvent.press(screen.getByText('Activate solution'));
     await waitFor(() =>
       expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'fresh-0' } }),
     );
@@ -1013,13 +1236,13 @@ describe('Setup wizard (design sSetup)', () => {
     expect(paths.some((path) => path.endsWith('/subscriptions/archived-0'))).toBe(false);
   });
 
-  it('adds an automation to the project chosen, where the workspace has projects (18.6.2)', async () => {
+  /** The catalog with nothing to fill in, the teams, and a client that keeps what a create sends. */
+  function routeTeams(projects: unknown, created: unknown[]) {
     const catalog = catalogPayload();
     catalog.automations = catalog.automations.map((automation) => ({ ...automation, setup: [] }));
-    const created: unknown[] = [];
     routePlatform(platformOperation, {
       '/automations': catalog,
-      '/projects': projectsPayload('Finance'),
+      '/projects': projects,
       '/subscriptions': { subscriptions: [], subscription: { ...planSubscriptionsPayload().subscriptions[0]!, id: 'scoped-0' } },
     });
     const routed = platformOperation.getMockImplementation();
@@ -1039,11 +1262,180 @@ describe('Setup wizard (design sSetup)', () => {
       return routed?.(path, execute);
     });
     setMockParams({ template: 'tpl.0' });
+  }
+
+  it('adds a flow to the team chosen — there is no whole-workspace choice, and nothing is sent until one is picked (D4)', async () => {
+    const created: unknown[] = [];
+    routeTeams(projectsPayload('Finance'), created);
     await renderWithProviders(<SetupScreen />, signedInSession);
-    expect(await screen.findByText('Whole workspace')).toBeTruthy();
+    expect(await screen.findByText('Team: Finance')).toBeTruthy();
+    expect(screen.queryByText('Whole workspace')).toBeNull();
+    // No team chosen for the person: Activate refuses in words and sends nothing.
+    await fireEvent.press(screen.getByText('Activate solution'));
+    expect(await screen.findByText('Pick a team.')).toBeTruthy();
+    expect(created).toHaveLength(0);
     await fireEvent.press(screen.getByText('Team: Finance'));
     await fireEvent.press(screen.getByText('Activate solution'));
-    await waitFor(() => expect(created.some((body) => (body as { projectId?: string }).projectId === 'project-1')).toBe(true));
+    await waitFor(() => expect(created).toHaveLength(1));
+    expect((created[0] as { projectId?: string }).projectId).toBe('project-1');
+  });
+
+  it('a team the catalog passed is chosen already, and sent (24.9.3)', async () => {
+    const created: unknown[] = [];
+    routeTeams(projectsPayload('Finance', 'Sales'), created);
+    setMockParams({ template: 'tpl.0', project: 'project-2' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    await fireEvent.press(await screen.findByText('Activate solution'));
+    await waitFor(() => expect(created).toHaveLength(1));
+    expect((created[0] as { projectId?: string }).projectId).toBe('project-2');
+    expect(screen.queryByText('Pick a team.')).toBeNull();
+  });
+
+  it('with no team yet, an owner or admin creates one first — from Setup — and it is the team chosen (D4)', async () => {
+    const created: unknown[] = [];
+    const finance = { ...projectsPayload('Finance').projects[0]!, id: 'p-new' };
+    let made = false;
+    routeTeams({ projects: [] }, created);
+    const routed = platformOperation.getMockImplementation();
+    platformOperation.mockImplementation(async (path: string, execute: Function) => {
+      if (path.endsWith('/projects')) {
+        const client = {
+          GET: async () => ({ data: { projects: made ? [finance] : [] } }),
+          POST: async () => {
+            made = true;
+            return { data: { project: finance } };
+          },
+        };
+        return (await execute({ platform: client })).data;
+      }
+      return routed?.(path, execute);
+    });
+    await renderWithProviders(<SetupScreen />, sessionAs('admin'));
+    expect(await screen.findByText('Create a team first.')).toBeTruthy();
+    expect(screen.queryByText('Add to')).toBeNull();
+    // Activate without one sends nothing.
+    await fireEvent.press(screen.getByText('Activate solution'));
+    expect(await screen.findByText('Pick a team.')).toBeTruthy();
+    expect(created).toHaveLength(0);
+
+    await fireEvent.press(screen.getByText('Create a team'));
+    expect(await screen.findByTestId('create-team-dialog')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('team-kind'));
+    await fireEvent.press(screen.getByTestId('team-kind-option-Finance'));
+    const create = await screen.findAllByText('Create team');
+    await fireEvent.press(create[create.length - 1]!);
+    await fireEvent.press(await screen.findByText('Done'));
+    // The team made is the chip, chosen: the flow is added to it.
+    expect(await screen.findByText('Team: Finance')).toBeTruthy();
+    expect(screen.queryByText('Create a team first.')).toBeNull();
+    expect(screen.queryByText('Pick a team.')).toBeNull();
+    await fireEvent.press(screen.getByText('Activate solution'));
+    await waitFor(() => expect(created).toHaveLength(1));
+    expect((created[0] as { projectId?: string }).projectId).toBe('p-new');
+  });
+
+  it('with no team yet, a plain member is told an owner or admin creates the first one, and has no Activate', async () => {
+    const created: unknown[] = [];
+    routeTeams({ projects: [] }, created);
+    await renderWithProviders(<SetupScreen />, sessionAs('member'));
+    expect(await screen.findByText('An owner or admin creates the first team.')).toBeTruthy();
+    expect(screen.queryByText('Create a team first.')).toBeNull();
+    expect(screen.queryByText('Create a team')).toBeNull();
+    expect(screen.queryByText('Activate solution')).toBeNull();
+    expect(created).toHaveLength(0);
+  });
+
+  /** A team in the organization's directory, and where this person stands with it. */
+  const listed = (id: string, kind: string, access: 'member' | 'requested' | 'none') => ({
+    id,
+    workspaceId: TEST_WORKSPACE,
+    name: kind,
+    type: kind,
+    status: 'active',
+    access,
+    createdAt: '2026-09-01T00:00:00Z',
+  });
+
+  /** The team directory's answer — or its refusal — over whatever the test routed already. */
+  function routeDirectory(answer: () => unknown) {
+    const routed = platformOperation.getMockImplementation();
+    platformOperation.mockImplementation(async (path: string, execute: Function) =>
+      path.endsWith('/project-directory') ? answer() : routed?.(path, execute),
+    );
+  }
+  const directoryReads = () =>
+    platformOperation.mock.calls.filter(([path]: [string]) => path.endsWith('/project-directory')).map(([path]: [string]) => path);
+
+  it('with no team yet, a plain member whose organization has a team to ask onto is told to ask to join one, with See teams — and has no Activate (F84)', async () => {
+    // Not on it and not asked yet, or asked already: either way a team they could be on.
+    for (const access of ['none', 'requested'] as const) {
+      platformOperation.mockReset();
+      mockRouter.push.mockClear();
+      const created: unknown[] = [];
+      routeTeams({ projects: [] }, created);
+      routeDirectory(() => ({ projects: [listed('p-ops', 'Operations', access)] }));
+      const view = await renderWithProviders(<SetupScreen />, sessionAs('member'));
+      expect(await screen.findByText('Ask to join a team first.')).toBeTruthy();
+      expect(directoryReads()).toEqual([`/v1/workspaces/${TEST_WORKSPACE}/project-directory`]);
+      expect(screen.queryByText('An owner or admin creates the first team.')).toBeNull();
+      expect(screen.queryByText('Create a team first.')).toBeNull();
+      expect(screen.queryByText('Activate solution')).toBeNull();
+      await fireEvent.press(screen.getByText('See teams'));
+      expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/teams');
+      expect(created).toHaveLength(0);
+      await view.unmount();
+    }
+  });
+
+  it('with no team yet, a plain member whose directory lists nothing to ask onto is still told an owner or admin creates the first one (F84)', async () => {
+    // An empty directory, and one listing only a team they can already see.
+    for (const directory of [[], [listed('p-ops', 'Operations', 'member')]]) {
+      platformOperation.mockReset();
+      routeTeams({ projects: [] }, []);
+      routeDirectory(() => ({ projects: directory }));
+      const view = await renderWithProviders(<SetupScreen />, sessionAs('member'));
+      expect(await screen.findByText('An owner or admin creates the first team.')).toBeTruthy();
+      expect(directoryReads()).toHaveLength(1);
+      expect(screen.queryByText('Ask to join a team first.')).toBeNull();
+      expect(screen.queryByText('See teams')).toBeNull();
+      expect(screen.queryByText('Activate solution')).toBeNull();
+      await view.unmount();
+    }
+  });
+
+  it('a platform with no directory yet (404) leaves a plain member the owner-or-admin line, and Setup still draws (F84)', async () => {
+    const { PlatformError } = jest.requireActual('@/lib/platform/problem');
+    routeTeams({ projects: [] }, []);
+    routeDirectory(() => Promise.reject(new PlatformError('Not found', 404)));
+    await renderWithProviders(<SetupScreen />, sessionAs('member'));
+    expect(await screen.findByText('An owner or admin creates the first team.')).toBeTruthy();
+    expect(screen.getByText('One-time setup')).toBeTruthy();
+    expect(screen.queryByText("Couldn't load this setup")).toBeNull();
+    expect(screen.queryByText('Ask to join a team first.')).toBeNull();
+  });
+
+  it('an owner or admin with no team is offered Create a team first, whatever the directory lists — their line comes first (F84)', async () => {
+    for (const role of ['owner', 'admin'] as const) {
+      platformOperation.mockReset();
+      routeTeams({ projects: [] }, []);
+      routeDirectory(() => ({ projects: [listed('p-ops', 'Operations', 'none')] }));
+      const view = await renderWithProviders(<SetupScreen />, sessionAs(role));
+      expect(await screen.findByText('Create a team first.')).toBeTruthy();
+      expect(screen.getByText('Create a team')).toBeTruthy();
+      expect(screen.getByText('Activate solution')).toBeTruthy();
+      expect(screen.queryByText('Ask to join a team first.')).toBeNull();
+      expect(screen.queryByText('See teams')).toBeNull();
+      await view.unmount();
+    }
+  });
+
+  it('reads the directory only where there is no team to add to: with a team, the chips and no directory read (F84)', async () => {
+    routeTeams(projectsPayload('Finance'), []);
+    routeDirectory(() => ({ projects: [listed('p-ops', 'Operations', 'none')] }));
+    await renderWithProviders(<SetupScreen />, sessionAs('member'));
+    expect(await screen.findByText('Team: Finance')).toBeTruthy();
+    expect(screen.queryByText('Ask to join a team first.')).toBeNull();
+    expect(directoryReads()).toEqual([]);
   });
 
   it('generates its sections from manifest.setup[]', async () => {
@@ -1064,8 +1456,14 @@ describe('Setup wizard (design sSetup)', () => {
   }
 
   it('names the page an account is connected on — Settings › Connections — while one is missing (24.12)', async () => {
-    const waiting = { ...planSubscriptionsPayload().subscriptions[0]!, unmetConnections: ['hubspot'] };
+    const waiting = { ...planSubscriptionsPayload().subscriptions[0]!, projectId: 'project-1', unmetConnections: ['hubspot'] };
     routeUnmet([waiting], waiting);
+    routePlatform(platformOperation, {
+      '/automations': { ...catalogPayload(), automations: catalogPayload().automations.map((automation) => ({ ...automation, setup: [] })) },
+      '/projects': projectsPayload('Finance'),
+      '/subscriptions': { subscriptions: [waiting], subscription: waiting },
+    });
+    setMockParams({ template: 'tpl.0', project: 'project-1' });
     await renderWithProviders(<SetupScreen />, signedInSession);
     expect(await screen.findByText('Connect HubSpot in Settings › Connections')).toBeTruthy();
   });
@@ -1073,6 +1471,12 @@ describe('Setup wizard (design sSetup)', () => {
   it('names that page when the flow it just added still needs an account (24.12)', async () => {
     const added = { ...planSubscriptionsPayload().subscriptions[0]!, unmetConnections: ['hubspot'] };
     routeUnmet([], added);
+    routePlatform(platformOperation, {
+      '/automations': { ...catalogPayload(), automations: catalogPayload().automations.map((automation) => ({ ...automation, setup: [] })) },
+      '/projects': projectsPayload('Finance'),
+      '/subscriptions': { subscriptions: [], subscription: added },
+    });
+    setMockParams({ template: 'tpl.0', project: 'project-1' });
     await renderWithProviders(<SetupScreen />, signedInSession);
     await fireEvent.press(await screen.findByText('Activate solution'));
     expect(
@@ -1140,13 +1544,21 @@ function withRemovedFlow(invoiceToo = false) {
 }
 
 describe('Archived flows (24.11.8; "Archived" since 24.12)', () => {
-  it('Flows offers the archived ones as a row with a count, which opens the page', async () => {
+  it('Flows offers Archived as a header button, left of New, which opens the page — no row on the page, under a no-match search either (build 11, D5)', async () => {
     withRemovedFlow();
     const { findByText, queryByText } = await renderWithProviders(<FlowsScreen />, signedInSession);
-    expect(await findByText('Archived flows (1)')).toBeTruthy();
+    expect(await findByText('Invoice triage')).toBeTruthy();
+    // As drawn: Archived, then New.
+    expect(screen.getAllByText(/^(Archived|New)$/u).map((label) => label.props.children)).toEqual(['Archived', 'New']);
+    expect(queryByText(/^Archived flows/u)).toBeNull();
     expect(queryByText('Old intake')).toBeNull();
     await fireEvent.press(screen.getByTestId('flows-archived'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/archived');
+    // Under a search with no match: the header, still; no row.
+    await fireEvent.changeText(screen.getByPlaceholderText('Search flows'), 'zzz');
+    expect(screen.getByText('No flows match "zzz".')).toBeTruthy();
+    expect(screen.getByTestId('flows-archived')).toBeTruthy();
+    expect(queryByText(/^Archived flows/u)).toBeNull();
   });
 
   it('the Archived page lists them, read-only, and is the empty standard when there are none', async () => {
@@ -1184,21 +1596,66 @@ describe('Archived flows (24.11.8; "Archived" since 24.12)', () => {
     expect(mockRouter.back).toHaveBeenCalled();
   });
 
-  it("an archived flow's page opens instead of \"Couldn't load\": no actions, its history, and Add it again", async () => {
+  it("an archived flow's page opens instead of \"Couldn't load\": no actions, its history, and Add it again where no live twin exists", async () => {
     setMockParams({ flow: 'gone' });
-    withRemovedFlow();
+    // The live 'invoice' row is archived too: nothing live holds this template in this scope.
+    withRemovedFlow(true);
     const { findByText, queryByText, getByText } = await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
     expect(await findByText('Old intake')).toBeTruthy();
     expect(getByText('Archived')).toBeTruthy();
-    expect(getByText(/^This flow was archived on Sep 30, 2026\. /u)).toBeTruthy();
+    expect(
+      getByText('This flow was archived on Sep 30, 2026. Its runs stay in Activity, and you can add it again — its setup starts fresh.'),
+    ).toBeTruthy();
     expect(queryByText("Couldn't load this flow")).toBeNull();
     expect(queryByText('Archive flow')).toBeNull();
     expect(queryByText('Pause')).toBeNull();
+    expect(queryByText('Open the live flow')).toBeNull();
     await fireEvent.press(getByText('Add it again'));
     expect(mockRouter.push).toHaveBeenCalledWith({
       pathname: '/(tabs)/flows/setup',
       params: { template: 'tplflow.invoice' },
     });
+  });
+
+  it("offers no Add it again once the flow is live again in the same scope: it says so and opens the live flow (build 11, D3; the owner's build 10 items 5, 6 and 11)", async () => {
+    setMockParams({ flow: 'gone' });
+    // `gone` shares its template and its scope (the whole workspace) with the LIVE 'invoice' row.
+    withRemovedFlow();
+    const { findByText, queryByText, getByText } = await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
+    expect(await findByText('Old intake')).toBeTruthy();
+    expect(getByText('Archived')).toBeTruthy();
+    expect(
+      getByText('This flow was archived on Sep 30, 2026. Its runs stay in Activity. It has been added again, and the new copy is in Flows.'),
+    ).toBeTruthy();
+    expect(queryByText('Add it again')).toBeNull();
+    expect(queryByText(/add it again — its setup starts fresh/u)).toBeNull();
+    await fireEvent.press(getByText('Open the live flow'));
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'invoice' } });
+    expect(mockRouter.push).not.toHaveBeenCalledWith(expect.objectContaining({ pathname: '/(tabs)/flows/setup' }));
+  });
+
+  it("still offers Add it again when the live copy is another team's: the whole workspace matches the whole workspace only", async () => {
+    setMockParams({ flow: 'gone' });
+    const base = subscriptionsPayload().subscriptions;
+    // The template is live again, but in a team: not this archived row's scope.
+    const rows = base.map((row) => (row.id === 'invoice' ? { ...row, projectId: 'project-1' } : row));
+    const gone = { ...base[0]!, id: 'gone', name: 'Old intake', status: 'archived', updatedAt: '2026-09-30T12:00:00Z' };
+    routePlatform(platformOperation, {
+      '/automations': flowCatalogPayload(),
+      '/projects': projectsPayload('Finance'),
+      '/subscriptions': { subscriptions: [...rows, gone], subscription: rows[0] },
+    });
+    const { findByText, queryByText } = await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
+    expect(await findByText('Add it again')).toBeTruthy();
+    expect(queryByText('Open the live flow')).toBeNull();
+  });
+
+  it('the Settings copy opens the live flow in the Settings stack, so Back returns to Settings', async () => {
+    setMockParams({ flow: 'gone' });
+    withRemovedFlow();
+    const { findByText } = await renderWithProviders(<SettingsArchivedFlowScreen />, signedInSession);
+    await fireEvent.press(await findByText('Open the live flow'));
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/settings/archived-flow', params: { flow: 'invoice' } });
   });
 
   it("a run whose flow was archived says so on its row", async () => {
@@ -1207,9 +1664,55 @@ describe('Archived flows (24.11.8; "Archived" since 24.12)', () => {
     expect((await findAllByText(/Flow archived/)).length).toBeGreaterThan(0);
   });
 
-  it("Settings › Workspace offers the Archived flows page, in Settings' own stack", async () => {
-    const { findByText } = await renderWithProviders(<WorkspaceScreen />, signedInSession);
+  it("Settings offers the Archived flows page, in Settings' own stack", async () => {
+    const { findByText } = await renderWithProviders(<SettingsScreen />, signedInSession);
     await fireEvent.press(await findByText('Archived flows'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/archived');
+  });
+});
+
+/* ------------------------------------------------ flows with no live flow (build 11, D6) */
+
+describe('Flows with no live flow (build 11, D6)', () => {
+  it("is the empty standard whatever is archived — Activity's format — with the way to the archived ones under Add a flow (the owner's build 10 items 8 and 9)", async () => {
+    const gone = { ...subscriptionsPayload().subscriptions[0]!, id: 'gone', name: 'Old intake', status: 'archived' };
+    routePlatform(platformOperation, { '/automations': flowCatalogPayload(), '/subscriptions': { subscriptions: [gone] } });
+    await renderWithProviders(<FlowsScreen />, signedInSession);
+    expect(await screen.findByTestId('screen-empty')).toBeTruthy();
+    expect(screen.getByText('No flows yet')).toBeTruthy();
+    expect(screen.getByText('Add a prebuilt flow — your first one can be live in minutes.')).toBeTruthy();
+    // Not the team's inline line, and not the old counted row.
+    expect(screen.queryByText('No flows in this team yet')).toBeNull();
+    expect(screen.queryByText(/^Archived flows \(/u)).toBeNull();
+    expect(screen.queryByText('Old intake')).toBeNull();
+    await fireEvent.press(screen.getByText('Add a flow'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/add');
+    await fireEvent.press(screen.getByText('Archived flows'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/archived');
+  });
+
+  it('offers no Archived flows button when nothing is archived', async () => {
+    routePlatform(platformOperation, { '/automations': flowCatalogPayload(), '/subscriptions': { subscriptions: [] } });
+    await renderWithProviders(<FlowsScreen />, signedInSession);
+    expect(await screen.findByTestId('screen-empty')).toBeTruthy();
+    expect(screen.getByText('Add a flow')).toBeTruthy();
+    expect(screen.queryByText('Archived flows')).toBeNull();
+  });
+
+  it('keeps the inline line for a team with no flow while the workspace has some, so the scope control stays', async () => {
+    const subscriptions = subscriptionsPayload();
+    subscriptions.subscriptions = subscriptions.subscriptions.map((row) => ({ ...row, projectId: null }));
+    routePlatform(platformOperation, {
+      '/automations': flowCatalogPayload(),
+      '/subscriptions': subscriptions,
+      '/projects': projectsPayload('Finance'),
+    });
+    await renderWithProviders(<FlowsScreen />, signedInSession);
+    await screen.findByText('Invoice triage');
+    await fireEvent.press(screen.getByLabelText('Team: All teams'));
+    await fireEvent.press(await screen.findByTestId('scope-option-project-1'));
+    expect(await screen.findByText('No flows in this team yet')).toBeTruthy();
+    expect(screen.queryByTestId('screen-empty')).toBeNull();
+    expect(screen.getByTestId('scope-control')).toBeTruthy();
   });
 });

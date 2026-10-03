@@ -1,7 +1,8 @@
 import React from 'react';
-import { Pressable, Text, type StyleProp, type ViewStyle } from 'react-native';
+import { Text, type StyleProp, type ViewStyle } from 'react-native';
 import type { Icon } from 'phosphor-react-native';
 
+import { Pressable } from '@/components/pressable';
 import { fonts, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -27,6 +28,7 @@ type Props = {
   /** Row gap between icon and label (design: 5–9 depending on size). */
   gap?: number;
   style?: StyleProp<ViewStyle>;
+  testID?: string;
 };
 
 export function PillButton({
@@ -40,6 +42,7 @@ export function PillButton({
   iconSize,
   gap = 7,
   style,
+  testID,
 }: Props) {
   const { palette } = useTheme();
   const size =
@@ -59,6 +62,7 @@ export function PillButton({
 
   return (
     <Pressable
+      testID={testID}
       onPress={onPress}
       disabled={disabled || undefined}
       accessibilityState={disabled ? { disabled: true } : undefined}

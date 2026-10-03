@@ -192,6 +192,8 @@ export const layout = {
   welcomeX: 28,
   cardPad: 15,
   rowPadV: 13,
+  /** A Settings-index row (build 11, the owner's "vertically more roomy"): the index only. */
+  rowPadVRoomy: 17,
   rowPadH: 14,
   statusArea: 59,
   designTop: { app: 74, auth: 78, onboarding: 82, welcome: 120 },

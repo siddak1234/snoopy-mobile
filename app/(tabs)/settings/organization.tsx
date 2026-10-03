@@ -197,7 +197,7 @@ export default function OrganizationScreen() {
           <Text style={[styles.text, muted]}>
             {data.active?.type === 'organization'
               ? `Only ${data.active.name}'s owners and admins manage it.`
-              : `You belong to ${data.organizations.map((entry) => entry.name).join(', ')}. Switch to it in Settings › Workspace; its owners and admins manage it there.`}
+              : `You belong to ${data.organizations.map((entry) => entry.name).join(', ')}. Switch to it in Settings; its owners and admins manage it there.`}
           </Text>
         </SurfaceCard>
       ) : (

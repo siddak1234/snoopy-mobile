@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   interpolate,
@@ -16,6 +16,7 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { BrandMark } from '@/components/nocturne/brand-mark';
 import { GlowBackground } from '@/components/nocturne/glow-background';
 import { PillButton } from '@/components/nocturne/pill-button';
+import { Pressable } from '@/components/pressable';
 import { em, fonts, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useSession } from '@/hooks/use-session';
@@ -133,7 +134,8 @@ export default function SplashScreen() {
   const showGetStarted = session.status !== 'restoring' && !signedIn;
 
   return (
-    <Pressable onPress={enterWorkspace} style={[styles.root, { backgroundColor: palette.bg }]}>
+    // Signed out, a tap does nothing, so it has no handler and gives no tick (D7).
+    <Pressable onPress={signedIn ? enterWorkspace : undefined} style={[styles.root, { backgroundColor: palette.bg }]}>
       <GlowBackground cx="50%" cy="40%" r="58%" />
       <View style={styles.markWrap}>
         <Animated.View

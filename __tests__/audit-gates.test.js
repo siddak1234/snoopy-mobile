@@ -9,6 +9,7 @@ const credentialAudit = resolve(__dirname, '../scripts/audit-credentials.mjs');
 const tokenAudit = resolve(__dirname, '../scripts/audit-tokens.mjs');
 const vocabularyAudit = resolve(__dirname, '../scripts/audit-vocabulary.mjs');
 const typeAudit = resolve(__dirname, '../scripts/audit-type.mjs');
+const hapticsAudit = resolve(__dirname, '../scripts/audit-haptics.mjs');
 let root;
 
 beforeEach(() => {
@@ -305,5 +306,56 @@ describe('the type audit (24.12)', () => {
       ].join('\n'),
     );
     expect(run(typeAudit).status).toBe(0);
+  });
+});
+
+describe('the haptics audit (build 11, D7)', () => {
+  it('fails a press that bypasses the shared pressable, in each form it is written, and passes the helper and what uses it', () => {
+    expect(run(hapticsAudit).status).toBe(0);
+
+    for (const [file, source, finding] of [
+      ['app/bad.tsx', "import { Pressable } from 'react-native';", 'Pressable is imported from react-native'],
+      ['components/bad.tsx', "import { Text, TouchableOpacity } from 'react-native';", 'TouchableOpacity is imported from react-native'],
+      ['hooks/bad.tsx', "import * as RN from 'react-native';", 'react-native is imported as a namespace'],
+      ['lib/bad.ts', "import RN from 'react-native';", 'react-native is imported as a default'],
+      ['lib/bad2.ts', "const RN = require('react-native');", 'react-native is required'],
+      ['app/haptic.tsx', "import * as Haptics from 'expo-haptics';", 'expo-haptics is imported outside components/pressable.tsx'],
+      ['app/haptic2.ts', "const Haptics = require('expo-haptics');", 'expo-haptics is called outside components/pressable.tsx'],
+      ['app/text.tsx', 'export const A = () => <Text onPress={() => go()}>See all</Text>;', 'onPress on <Text> is not pressed(…)'],
+      ['app/view.tsx', 'export const B = () => <View onLongPress={go} />;', 'onLongPress on <View> is not pressed(…)'],
+      ['app/anim.tsx', 'export const C = () => <Animated.View onPressIn={go} />;', 'onPressIn on <Animated.View> is not pressed(…)'],
+    ]) {
+      writeFileSync(join(root, file), source);
+      const result = run(hapticsAudit);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(file);
+      expect(result.stderr).toContain(finding);
+      rmSync(join(root, file));
+    }
+
+    // The helper is the one place that draws react-native's Pressable and
+    // calls expo-haptics; a screen presses through it, and a host element's
+    // handler goes through pressed(). A type import is not a call.
+    writeFileSync(
+      join(root, 'components/pressable.tsx'),
+      [
+        "import * as Haptics from 'expo-haptics';",
+        "import { Platform, Pressable as NativePressable, type PressableProps } from 'react-native';",
+        'export const pressed = (handler) => handler;',
+        'export const Pressable = NativePressable;',
+      ].join('\n'),
+    );
+    writeFileSync(
+      join(root, 'app/fine.tsx'),
+      [
+        "import { StyleSheet, Text, View, type ViewStyle } from 'react-native';",
+        "import type { PressableProps } from 'react-native';",
+        "import { Pressable, pressed } from '@/components/pressable';",
+        'export const D = () => <Pressable onPress={go}><Text onPress={pressed(go)}>See all</Text></Pressable>;',
+        'export const E = () => <View><Text>Static</Text></View>;',
+        'export const F = () => <Row onPress={go} />;',
+      ].join('\n'),
+    );
+    expect(run(hapticsAudit).status).toBe(0);
   });
 });

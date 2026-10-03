@@ -1,13 +1,15 @@
 import { useRouter } from 'expo-router';
 import { BellRinging, CheckCircle, CrownSimple, HandPalm, XCircle } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { Pressable, pressed } from '@/components/pressable';
 import { em, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
+import { usePushAsk } from '@/hooks/use-push-registration';
 import { useTheme } from '@/hooks/use-theme';
 import type { NotificationItem } from '@/lib/view/runs';
 import { readCatalog } from '@/lib/platform/catalog';
@@ -18,6 +20,16 @@ import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffli
 import {
   NOTIFICATIONS_EMPTY_BODY,
   NOTIFICATIONS_EMPTY_TITLE,
+  PUSH_CARD_BODY,
+  PUSH_CARD_TITLE,
+  PUSH_DENIED_BODY,
+  PUSH_FAILED,
+  PUSH_LATER_BUILD_BODY,
+  PUSH_NOT_NOW_LABEL,
+  PUSH_NOT_ON_BUILD_BODY,
+  PUSH_NOT_YET_BODY,
+  PUSH_OPEN_SETTINGS_LABEL,
+  PUSH_TURN_ON_LABEL,
   errorTitleFor,
 } from '@/lib/content/screen-states';
 
@@ -33,7 +45,8 @@ const NOTIFICATION_ICON = {
 } as const;
 
 /**
- * Notifications inbox (design `sNotifs`) with an in-app-only notice.
+ * Notifications inbox (design `sNotifs`), with the card that asks for device
+ * push (build 11, D8).
  *
  * Reached from Home's bell and from Settings › Notifications, each in its own
  * stack: a run opened from the Settings copy opens in Settings too, so Back
@@ -79,10 +92,6 @@ export function Inbox({ runPath }: { runPath: InboxRunPath }) {
       ? inbox.data.map((n) => ({ ...n, icon: NOTIFICATION_ICON[n.tone] }))
       : [];
 
-  // The platform publishes an in-app composition, not a device-push contract.
-  // This card says that plainly and is dismiss-only; it never imitates an OS
-  // permission grant.
-  const [askPush, setAskPush] = useState(true);
   // The rows "Mark all read" covered, by id: a row a later re-read brings in
   // is still unread.
   const [readIds, setReadIds] = useState<ReadonlySet<string>>(() => new Set());
@@ -115,12 +124,16 @@ export function Inbox({ runPath }: { runPath: InboxRunPath }) {
   }
   if (items.length === 0) {
     // Not an apology: an empty inbox is the product's rule working, which is why
-    // the design gives this state no action.
+    // the design gives this state no action. The push ask sits above it all the
+    // same (the owner, build 11, 2026-10-03: "Also on empty"): otherwise a person
+    // with nothing held or failed could not turn push on anywhere, Settings ›
+    // Notifications included. The design draws `pushAsk` above `notifsEmpty`.
     return (
       <ScreenEmpty
         icon={<BellRinging size={40} color={palette.accentRamp[300]} />}
         title={NOTIFICATIONS_EMPTY_TITLE}
         body={NOTIFICATIONS_EMPTY_BODY}
+        above={<PushCard />}
         // A pushed screen: the standard's way back (24.12).
         onBack={() => router.back()}
         topInset={insets.top}
@@ -163,52 +176,14 @@ export function Inbox({ runPath }: { runPath: InboxRunPath }) {
         <BackCircle onPress={() => router.back()} />
         <Text style={[styles.title, { color: palette.text }]}>Notifications</Text>
         <Text
-          onPress={() => setReadIds(new Set(items.map((item) => item.id)))}
+          onPress={pressed(() => setReadIds(new Set(items.map((item) => item.id))))}
           suppressHighlighting
           style={[styles.markAll, { color: palette.accentRamp[300] }]}>
           Mark all read
         </Text>
       </View>
 
-      {askPush ? (
-        <View
-          style={[
-            styles.pushCard,
-            {
-              borderColor: palette.accentRamp[700],
-              backgroundColor: withAlpha(palette.accent, 0.09),
-            },
-          ]}>
-          <View style={styles.pushHead}>
-            <BellRinging size={21} color={palette.accentRamp[300]} />
-            <Text style={[styles.pushTitle, { color: palette.text }]}>
-              Know the moment something needs you
-            </Text>
-          </View>
-          <Text style={[styles.pushBody, { color: palette.neutral[400] }]}>
-            This build shows held runs and failures in this in-app inbox. Device push delivery is
-            not configured.
-          </Text>
-          <View style={styles.pushActions}>
-            <PillButton
-              label="Got it"
-              variant="primary"
-              height={42}
-              fontSize={typeScale.body.fontSize}
-              onPress={() => setAskPush(false)}
-              style={styles.pushBtn}
-            />
-            <PillButton
-              label="Dismiss"
-              variant="plain"
-              height={42}
-              fontSize={typeScale.body.fontSize}
-              onPress={() => setAskPush(false)}
-              style={styles.pushBtn}
-            />
-          </View>
-        </View>
-      ) : null}
+      <PushCard />
 
       <SurfaceCard style={styles.list}>
         {items.map((item, i) => {
@@ -243,6 +218,83 @@ export function Inbox({ runPath }: { runPath: InboxRunPath }) {
         })}
       </SurfaceCard>
     </ScrollView>
+  );
+}
+
+/**
+ * The ask for device push (build 11, D8): the design's own card, in the
+ * owner's words. "Turn on" is the only place the app asks — iOS prompts at the
+ * tap — and "Not now" holds for the session. A phone that cannot be asked is
+ * told why, with nothing to turn on: Android or a simulator, a platform from
+ * before the devices route, a build with no push token. Registered, there is
+ * no card.
+ */
+function PushCard() {
+  const { palette } = useTheme();
+  const { ask, busy, turnOn, notNow, openSettings } = usePushAsk();
+  if (ask.kind === 'none') return null;
+
+  const body =
+    ask.kind === 'denied'
+      ? PUSH_DENIED_BODY
+      : ask.kind === 'unsupported'
+        ? PUSH_LATER_BUILD_BODY
+        : ask.kind === 'not-yet'
+          ? PUSH_NOT_YET_BODY
+          : ask.kind === 'no-build'
+            ? PUSH_NOT_ON_BUILD_BODY
+            : PUSH_CARD_BODY;
+
+  return (
+    <View
+      testID="push-card"
+      style={[
+        styles.pushCard,
+        {
+          borderColor: palette.accentRamp[700],
+          backgroundColor: withAlpha(palette.accent, 0.09),
+        },
+      ]}>
+      <View style={styles.pushHead}>
+        <BellRinging size={21} color={palette.accentRamp[300]} />
+        <Text style={[styles.pushTitle, { color: palette.text }]}>{PUSH_CARD_TITLE}</Text>
+      </View>
+      <Text style={[styles.pushBody, { color: palette.neutral[400] }]}>{body}</Text>
+      {ask.kind === 'ask' && ask.failed ? (
+        <Text style={[styles.pushFailed, { color: status.err }]}>{PUSH_FAILED}</Text>
+      ) : null}
+      <View style={styles.pushActions}>
+        {ask.kind === 'ask' ? (
+          <PillButton
+            label={PUSH_TURN_ON_LABEL}
+            variant="primary"
+            height={42}
+            fontSize={typeScale.body.fontSize}
+            disabled={busy}
+            onPress={() => void turnOn()}
+            style={styles.pushBtn}
+          />
+        ) : null}
+        {ask.kind === 'denied' ? (
+          <PillButton
+            label={PUSH_OPEN_SETTINGS_LABEL}
+            variant="primary"
+            height={42}
+            fontSize={typeScale.body.fontSize}
+            onPress={openSettings}
+            style={styles.pushBtn}
+          />
+        ) : null}
+        <PillButton
+          label={PUSH_NOT_NOW_LABEL}
+          variant="plain"
+          height={42}
+          fontSize={typeScale.body.fontSize}
+          onPress={() => void notNow()}
+          style={styles.pushBtn}
+        />
+      </View>
+    </View>
   );
 }
 
@@ -286,6 +338,10 @@ const styles = StyleSheet.create({
   pushBody: {
     fontFamily: fonts.regular,
     ...typeScale.body,
+  },
+  pushFailed: {
+    fontFamily: fonts.regular,
+    fontSize: typeScale.small.fontSize,
   },
   pushActions: {
     flexDirection: 'row',

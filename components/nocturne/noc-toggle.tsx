@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import { Pressable } from 'react-native';
 import Animated, {
   interpolateColor,
   useAnimatedStyle,
@@ -7,6 +6,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { Pressable } from '@/components/pressable';
 import { status } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 

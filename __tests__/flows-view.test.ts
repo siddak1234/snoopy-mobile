@@ -1,6 +1,6 @@
 import type { CatalogEntry } from '@/lib/platform/catalog';
 import type { RunSubscriptionCounts, Subscription } from '@/lib/platform/runs';
-import { scopeLabels, toFlows, toSolutions } from '@/lib/view/catalog';
+import { addedAgainAs, scopeLabels, toFlows, toSolutions } from '@/lib/view/catalog';
 import {
   approvalTitle,
   composeNotifications,
@@ -109,7 +109,7 @@ describe('toFlows', () => {
 
   it('labels a flow by its team\'s kind — a team named before 24.12 too', () => {
     const legacy = { id: 'p1', name: 'AP inbox', type: 'Finance', status: 'active' };
-    const labels = scopeLabels([legacy], [sub()]);
+    const labels = scopeLabels([legacy]);
     const [scoped, whole] = toFlows(
       [sub({ projectId: 'p1' }), sub({ id: 's2', projectId: null })],
       [entry()],
@@ -119,6 +119,32 @@ describe('toFlows', () => {
     );
     expect(scoped.scope).toBe('Team: Finance');
     expect(whole.scope).toBe('Whole workspace');
+  });
+
+  it('labels every flow — Whole workspace where the workspace has no team at all (build 11, D4)', () => {
+    const [whole] = toFlows([sub({ projectId: null })], [entry()], [counts()], undefined, scopeLabels([]));
+    expect(whole.scope).toBe('Whole workspace');
+  });
+});
+
+describe('addedAgainAs — an archived flow\'s live twin (build 11, D3)', () => {
+  const archived = sub({ id: 'old', status: 'archived', projectId: null });
+
+  it('is the non-archived subscription with the same template in the same scope, whatever its status', () => {
+    for (const status of ['live', 'paused', 'draft'] as const) {
+      expect(addedAgainAs(archived, [archived, sub({ id: 'again', status, projectId: null })])?.id).toBe('again');
+    }
+    // The whole workspace matches the whole workspace, written either way.
+    expect(addedAgainAs(archived, [sub({ id: 'again' })])?.id).toBe('again');
+  });
+
+  it("is none for another template, another team's copy, or an archived row — null matches null only", () => {
+    expect(addedAgainAs(archived, [sub({ id: 'other', templateId: 'acme.other' })])).toBeUndefined();
+    expect(addedAgainAs(archived, [sub({ id: 'team', projectId: 'p1' })])).toBeUndefined();
+    expect(addedAgainAs(sub({ projectId: 'p1' }), [sub({ id: 'whole', projectId: null })])).toBeUndefined();
+    expect(addedAgainAs(sub({ projectId: 'p1' }), [sub({ id: 'other-team', projectId: 'p2' })])).toBeUndefined();
+    expect(addedAgainAs(archived, [archived, sub({ id: 'gone', status: 'archived' })])).toBeUndefined();
+    expect(addedAgainAs(sub({ projectId: 'p1' }), [sub({ id: 'same-team', projectId: 'p1' })])?.id).toBe('same-team');
   });
 });
 
