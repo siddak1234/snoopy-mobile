@@ -272,7 +272,7 @@ describe('Move to a newer version (24.4.1, backend §12.1 #126)', () => {
 });
 
 describe('Archive (24.4.1, backend §12.1 #92; "Archive flow" since 24.12)', () => {
-  it('is reached only through its one-way confirmation', async () => {
+  it("is reached only through its one-way confirmation, which says it can be unarchived later (the owner's build 12 item 4)", async () => {
     await renderActions();
     expect(screen.getByLabelText('Archive Invoice triage')).toBeTruthy();
     expect(screen.getByText('Archive flow')).toBeTruthy();
@@ -280,7 +280,7 @@ describe('Archive (24.4.1, backend §12.1 #92; "Archive flow" since 24.12)', () 
     expect(await screen.findByText('Archive Invoice triage?')).toBeTruthy();
     expect(
       screen.getByText(
-        'It stops and moves to Archived flows. Its runs stay in Activity, and you can add it again later.',
+        'It stops and moves to Archived flows. Its runs stay in Activity, and you can unarchive it later.',
       ),
     ).toBeTruthy();
     await fireEvent.press(screen.getByText('Cancel'));

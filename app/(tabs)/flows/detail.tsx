@@ -22,8 +22,8 @@ import { roleIn, useSession, workspaceIfShown } from '@/hooks/use-session';
 import { statusAction, useWorkflows, type FlowStatus } from '@/hooks/use-workflows';
 import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
 import {
-  ADD_AGAIN_LABEL,
   OPEN_LIVE_FLOW_LABEL,
+  UNARCHIVE_LABEL,
   UNAVAILABLE_NOTE,
   archivedFlowAddedAgainBody,
   archivedFlowBody,
@@ -108,8 +108,9 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
     flows.status === 'ready' && subscription
       ? flows.data.automations.find((a) => a.templateId === subscription.templateId)
       : undefined;
-  // An archived flow added again in the same scope (D3): its live twin, from
-  // the live list already read here — no extra request.
+  // An archived flow the workspace holds again, in any team (D3; any team since
+  // the owner's build 12 item 9): its live twin, from the live list already
+  // read here — no extra request.
   const twin =
     flows.status === 'ready' && subscription?.status === 'archived'
       ? addedAgainAs(subscription, flows.data.subscriptions)
@@ -295,10 +296,10 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
 
       {def.removed ? (
         // Read-only (24.11.8): no status, no actions. The one thing to do with an
-        // archived flow is add it again, which is Setup for its template, in the
-        // team it had — or, once it has been (D3), open the live copy: the
-        // platform holds one live flow per template and scope, so a second add
-        // would only re-configure that one.
+        // archived flow is unarchive it — "Add it again" until the owner's build
+        // 12 item 4, the same action: Setup for its template, in the team it had,
+        // a fresh setup — or, once the workspace holds it again in any team (D3;
+        // item 9: one flow per workspace), open that copy instead.
         <SurfaceCard style={styles.removedCard}>
           {twin ? (
             <>
@@ -317,7 +318,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
             <>
               <Text style={[styles.note, { color: palette.neutral[400] }]}>{archivedFlowBody(def.removedOn)}</Text>
               <PillButton
-                label={ADD_AGAIN_LABEL}
+                label={UNARCHIVE_LABEL}
                 variant="primary"
                 height={44}
                 fontSize={typeScale.label.fontSize}

@@ -203,17 +203,20 @@ describe('Add a flow — the catalog inside Flows (24.9.3)', () => {
     expect(getAllByText('Add').length).toBeGreaterThan(0);
   });
 
-  it('says where a flow is already added, and offers Add for the scope it is not in yet (18.6.2)', async () => {
-    // Added to a project alone: the whole workspace — the scope looked at — is still free.
-    const inProjectOnly = { ...planSubscriptionsPayload().subscriptions[0]!, projectId: 'project-9' };
+  it('names where a flow is held — Added ✓ with its team, the card opens it — and offers no Add for another team (the owner\'s build 12 item 9: one flow per workspace; until build 13 "Added in …" and Add, 18.6.2)', async () => {
+    // Held in a team alone, looked at from All teams (the whole workspace): no second copy is offered.
+    const inTeamOnly = { ...planSubscriptionsPayload().subscriptions[0]!, projectId: 'project-1' };
     routePlatform(platformOperation, {
-      '/subscriptions': { subscriptions: [inProjectOnly] },
+      '/subscriptions': { subscriptions: [inTeamOnly] },
       '/projects': projectsPayload('Finance'),
     });
     await renderWithProviders(<SolutionsScreen />, signedInSession);
-    expect((await screen.findByTestId('added-elsewhere-tpl.0')).props.children.join('')).toMatch(/^Added in /u);
-    expect(screen.getByTestId('add-tpl.0')).toBeTruthy();
-    expect(screen.queryByTestId('added-tpl.0')).toBeNull();
+    expect((await screen.findByTestId('added-where-tpl.0')).props.children).toBe('Team: Finance');
+    expect(screen.getByTestId('added-tpl.0')).toBeTruthy();
+    expect(screen.queryByTestId('add-tpl.0')).toBeNull();
+    expect(screen.queryByText(/^Added in /u)).toBeNull();
+    await fireEvent.press(screen.getByTestId('added-tpl.0'));
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'solution-0' } });
   });
 });
 
@@ -399,12 +402,12 @@ describe('Workflow detail', () => {
     expect(screen.queryByText('Run')).toBeNull();
   });
 
-  it('returns to the Flows list after Archive, however the flow was reached', async () => {
+  it("returns to the Flows list after Archive, however the flow was reached — the confirmation saying it can be unarchived later (the owner's build 12 item 4)", async () => {
     await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
     await fireEvent.press(await screen.findByTestId('archive-flow'));
     expect(await screen.findByText('Archive Invoice triage?')).toBeTruthy();
     expect(
-      screen.getByText('It stops and moves to Archived flows. Its runs stay in Activity, and you can add it again later.'),
+      screen.getByText('It stops and moves to Archived flows. Its runs stay in Activity, and you can unarchive it later.'),
     ).toBeTruthy();
     const buttons = await screen.findAllByText('Archive');
     await fireEvent.press(buttons[buttons.length - 1]!);
@@ -1918,12 +1921,12 @@ describe('Archived flows (24.11.8; "Archived" since 24.12)', () => {
     expect(queryByText(/^Archived flows/u)).toBeNull();
   });
 
-  it('the Archived page lists them, read-only, and is the empty standard when there are none', async () => {
+  it("the Archived page lists them, read-only, and is the empty standard when there are none — each saying unarchive (the owner's build 12 item 4)", async () => {
     withRemovedFlow();
     const { findByText, getByText } = await renderWithProviders(<ArchivedFlowsScreen />, signedInSession);
     expect(await findByText('Old intake')).toBeTruthy();
     expect(getByText('Archived flows')).toBeTruthy();
-    expect(getByText('An archived flow keeps its history here. Add it again any time.')).toBeTruthy();
+    expect(getByText('An archived flow keeps its history here. Unarchive it any time.')).toBeTruthy();
     expect(getByText('Archived Sep 30, 2026')).toBeTruthy();
     await fireEvent.press(getByText('Old intake'));
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'gone' } });
@@ -1933,7 +1936,7 @@ describe('Archived flows (24.11.8; "Archived" since 24.12)', () => {
     const empty = await renderWithProviders(<ArchivedFlowsScreen />, signedInSession);
     expect(await empty.findByTestId('screen-empty')).toBeTruthy();
     expect(empty.getByText('No archived flows')).toBeTruthy();
-    expect(empty.getByText('A flow you archive keeps its history here, and you can add it again.')).toBeTruthy();
+    expect(empty.getByText('A flow you archive keeps its history here, and you can unarchive it.')).toBeTruthy();
     await fireEvent.press(empty.getByLabelText('Back'));
     expect(mockRouter.back).toHaveBeenCalled();
   });
@@ -1953,28 +1956,29 @@ describe('Archived flows (24.11.8; "Archived" since 24.12)', () => {
     expect(mockRouter.back).toHaveBeenCalled();
   });
 
-  it("an archived flow's page opens instead of \"Couldn't load\": no actions, its history, and Add it again where no live twin exists", async () => {
+  it("an archived flow's page opens instead of \"Couldn't load\": no actions, its history, and Unarchive where no live twin exists — Add it again renamed, still Setup for its flow (the owner's build 12 item 4)", async () => {
     setMockParams({ flow: 'gone' });
-    // The live 'invoice' row is archived too: nothing live holds this template in this scope.
+    // The live 'invoice' row is archived too: nothing live holds this template in the workspace.
     withRemovedFlow(true);
     const { findByText, queryByText, getByText } = await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
     expect(await findByText('Old intake')).toBeTruthy();
     expect(getByText('Archived')).toBeTruthy();
     expect(
-      getByText('This flow was archived on Sep 30, 2026. Its runs stay in Activity, and you can add it again — its setup starts fresh.'),
+      getByText('This flow was archived on Sep 30, 2026. Its runs stay in Activity, and you can unarchive it — its setup starts fresh.'),
     ).toBeTruthy();
     expect(queryByText("Couldn't load this flow")).toBeNull();
     expect(queryByText('Archive flow')).toBeNull();
     expect(queryByText('Pause')).toBeNull();
     expect(queryByText('Open the live flow')).toBeNull();
-    await fireEvent.press(getByText('Add it again'));
+    expect(queryByText('Add it again')).toBeNull();
+    await fireEvent.press(getByText('Unarchive'));
     expect(mockRouter.push).toHaveBeenCalledWith({
       pathname: '/(tabs)/flows/setup',
       params: { template: 'tplflow.invoice' },
     });
   });
 
-  it("offers no Add it again once the flow is live again in the same scope: it says so and opens the live flow (build 11, D3; the owner's build 10 items 5, 6 and 11)", async () => {
+  it("offers no Unarchive once the flow is live again in the same scope: it says so and opens the live flow (build 11, D3; the owner's build 10 items 5, 6 and 11; Unarchive since the owner's build 12 item 4)", async () => {
     setMockParams({ flow: 'gone' });
     // `gone` shares its template and its scope (the whole workspace) with the LIVE 'invoice' row.
     withRemovedFlow();
@@ -1984,17 +1988,17 @@ describe('Archived flows (24.11.8; "Archived" since 24.12)', () => {
     expect(
       getByText('This flow was archived on Sep 30, 2026. Its runs stay in Activity. It has been added again, and the new copy is in Flows.'),
     ).toBeTruthy();
-    expect(queryByText('Add it again')).toBeNull();
-    expect(queryByText(/add it again — its setup starts fresh/u)).toBeNull();
+    expect(queryByText('Unarchive')).toBeNull();
+    expect(queryByText(/unarchive it — its setup starts fresh/u)).toBeNull();
     await fireEvent.press(getByText('Open the live flow'));
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'invoice' } });
     expect(mockRouter.push).not.toHaveBeenCalledWith(expect.objectContaining({ pathname: '/(tabs)/flows/setup' }));
   });
 
-  it("still offers Add it again when the live copy is another team's: the whole workspace matches the whole workspace only", async () => {
+  it("offers no Unarchive when the live copy is another team's: that copy is the twin, and it opens (the owner's build 12 item 9: one flow per workspace; until build 13 the whole workspace matched the whole workspace only)", async () => {
     setMockParams({ flow: 'gone' });
     const base = subscriptionsPayload().subscriptions;
-    // The template is live again, but in a team: not this archived row's scope.
+    // The template is live again, in a team: not this archived row's scope, and still its twin.
     const rows = base.map((row) => (row.id === 'invoice' ? { ...row, projectId: 'project-1' } : row));
     const gone = { ...base[0]!, id: 'gone', name: 'Old intake', status: 'archived', updatedAt: '2026-09-30T12:00:00Z' };
     routePlatform(platformOperation, {
@@ -2003,8 +2007,12 @@ describe('Archived flows (24.11.8; "Archived" since 24.12)', () => {
       '/subscriptions': { subscriptions: [...rows, gone], subscription: rows[0] },
     });
     const { findByText, queryByText } = await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
-    expect(await findByText('Add it again')).toBeTruthy();
-    expect(queryByText('Open the live flow')).toBeNull();
+    expect(
+      await findByText('This flow was archived on Sep 30, 2026. Its runs stay in Activity. It has been added again, and the new copy is in Flows.'),
+    ).toBeTruthy();
+    expect(queryByText('Unarchive')).toBeNull();
+    await fireEvent.press(await findByText('Open the live flow'));
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'invoice' } });
   });
 
   it('the Settings copy opens the live flow in the Settings stack, so Back returns to Settings', async () => {

@@ -139,9 +139,9 @@ on, to Sign in. Signed in, the same screen is the splash and moves on by itself.
 | --- | --- |
 | Sign in | `GET /v1/auth/providers`; providers only — no password or reset surface is drawn (owner, 2026-09-08). **One screen since 2026-10-02**: the website's words ("Sign in with …"), a Remember me toggle, and the Face ID question once after a remembered sign-in; Welcome, Sign up and the Onboarding tour are gone. Reached from the cover's "Get started" (24.11.6) |
 | Home | session + catalog + `run-stats?since=<local midnight>` + runs + pending approvals. The three tiles are today's and say so once, TODAY over the row — Runs, Successes, Failures — and each opens Activity with its outcome and today, so its number is the rows it opens (the owner's build 12 item 1). Every stat tile, Home's and a flow page's, looks like the button it is: a caret and, pressed, the review banner's tint, drawn around the frozen StatCard (`components/stat-tile-button.tsx`) |
-| Flows/add (the catalog, "New") | workspace automation catalog and its server-supplied categories, plus subscriptions and projects — Added ✓ or Add per the scope looked at (24.9.3) |
+| Flows/add (the catalog, "New") | workspace automation catalog and its server-supplied categories, plus subscriptions and projects — a flow the workspace holds, in any team or the whole workspace, is Added ✓ with its team and opens it, whatever the scope looked at; Add for the rest, to the team the scope control chose (24.9.3; one flow per workspace since the owner's build 12 item 9 — ~~Added ✓ or Add per the scope looked at~~) |
 | Setup/configure | catalog `setup[]` and the matching subscription config |
-| Flows/detail | subscriptions + catalog + run stats; identity is subscription ID/template ID. Detail keeps the subscription (`runInput`, `triggerKind`, `templateVersion`) and its catalog entry for its actions; the webhook address is read when its dialog opens. An archived flow is read with the archived list and drawn read-only, with "Add it again" (24.11.8; "Archived" since 24.12) — or, once a non-archived subscription with the same template AND the same scope exists (`addedAgainAs`, the platform's own one-per-template-and-scope rule; null matches null only), the sentence that it has been added again and "Open the live flow", which opens the twin in the same stack (build 11, D3). Every flow page says its team, or "Whole workspace", under its name (D4). The Runs, Successes and Failures tiles open Activity for this flow and outcome (24.11.9) |
+| Flows/detail | subscriptions + catalog + run stats; identity is subscription ID/template ID. Detail keeps the subscription (`runInput`, `triggerKind`, `templateVersion`) and its catalog entry for its actions; the webhook address is read when its dialog opens. An archived flow is read with the archived list and drawn read-only, with "Unarchive" (24.11.8; "Archived" since 24.12; "Add it again" until the owner's build 12 item 4 — the same action, renamed: Setup for its flow, in the team it had, a fresh setup) — or, once a non-archived subscription with the same template exists in any team or the whole workspace (`addedAgainAs`; ~~the same scope only, the platform's one-per-template-and-scope rule~~ until the owner's build 12 item 9: a workspace holds a flow once), the sentence that it has been added again and "Open the live flow", which opens the twin in the same stack (build 11, D3). Every flow page says its team, or "Whole workspace", under its name (D4). The Runs, Successes and Failures tiles open Activity for this flow and outcome (24.11.9) |
 | Flows/archived | `GET …/subscriptions?status=archived` (backend §12.1 #203), only the archived rows kept, within the scope, each with the day it was archived (its `updatedAt`), and every row with its team or "Whole workspace" in every scope, a picked team's included (D4; the build 11 review); Flows reaches them through "Archived", a secondary button left of New in its header, always drawn, with no count (build 11, D5 — ~~one row with a count, 24.11.8~~), and from the empty standard's "Archived flows" button when any exist in the scope (D6). Settings has a copy in the Settings stack, whose flows open in Settings too, so Back stays there (24.12) |
 | ~~Builder~~ | **Removed 2026-10-02** with Templates and Configure, on the owner's direction: the website has no builder, and FR-25 is parity with the website. Flow detail draws `pipeline[]` itself |
 | Activity/run detail | runs/list/detail joined to catalog/subscription identity. Activity takes a flow and an outcome from a flow page's tile (24.11.9), and an outcome and today from Home's (the owner's build 12 item 1): the flow, or Today, is a chip that clears itself, on a row of its own above the four outcome chips; with Today on, only today's runs are listed, and none says "No runs today." / "No successful runs today." / "No failed runs today."; the tab bar arrives with nothing and changes nothing. A run of an archived flow says so. Run detail reads in the workspace it was opened in and leaves when the active one changes |
@@ -236,7 +236,8 @@ review" — the held queue — also list running, queued and cancelled runs.
   - Archive flow ("Remove flow" until 24.12, the owner's decision 4): patch
     `status: archived` behind its one-way confirmation — the last thing on the
     flow page, in red (24.9.4). It moves to Archived flows, keeps its runs in
-    Activity, and the flow can be added again; Pause keeps it listed.
+    Activity, and the flow can be unarchived ("added again" until the owner's
+    build 12 item 4); Pause keeps it listed.
   - Red (the owner's build 12 item 5): an action that removes or ends something
     and cannot be undone with a tap is drawn in `palette.danger` — dark #f87171
     (`status.err`), light #dc2626 (the website's light `--error-text`) — on its
@@ -294,7 +295,17 @@ review" — the held queue — also list running, queued and cancelled runs.
     which opens Teams, and otherwise "An owner or admin creates the first
     team."; neither has Activate. Existing whole-workspace flows
     stay, labelled "Whole workspace", under All teams; the platform is unchanged
-    (`projectId` null is still a visibility scope it accepts). Every flow card,
+    (`projectId` null is still a visibility scope it accepts). A workspace
+    holds a flow once — Personal is one workspace, each organization one (the
+    owner's build 12 item 9: "One flow per account type. Personal or org not
+    multiple of the same") — so a flow it holds, live, paused or draft, in any
+    team or the whole workspace (`heldAs`), is not added again: Add reads
+    "Added ✓" with its team and opens it, whatever the scope looked at, and
+    Setup, reached for it, shows "Added to" and its team — no team choice and
+    none of the lines above — and Activate configures that subscription. A
+    duplicate added before the rule stays, listed. The rule is the clients'
+    until the platform's own guard lands; the platform still accepts one copy
+    per team (18.6.2). Every flow card,
     archived row and flow page says "Team: {kind}" or "Whole workspace", the
     website's words, in every scope — inside a picked team too (the build 11
     review: ~~a card under All teams only; inside a picked team the card does

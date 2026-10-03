@@ -127,7 +127,7 @@ describe('toFlows', () => {
   });
 });
 
-describe('addedAgainAs — an archived flow\'s live twin (build 11, D3)', () => {
+describe('addedAgainAs — an archived flow\'s live twin (build 11, D3; in any team since the owner\'s build 12 item 9)', () => {
   const archived = sub({ id: 'old', status: 'archived', projectId: null });
 
   it('is the non-archived subscription with the same template in the same scope, whatever its status', () => {
@@ -138,12 +138,12 @@ describe('addedAgainAs — an archived flow\'s live twin (build 11, D3)', () => 
     expect(addedAgainAs(archived, [sub({ id: 'again' })])?.id).toBe('again');
   });
 
-  it("is none for another template, another team's copy, or an archived row — null matches null only", () => {
+  it("is none for another template or an archived row — another team's copy IS the twin (the owner's build 12 item 9: one flow per workspace; until build 13 null matched null only)", () => {
     expect(addedAgainAs(archived, [sub({ id: 'other', templateId: 'acme.other' })])).toBeUndefined();
-    expect(addedAgainAs(archived, [sub({ id: 'team', projectId: 'p1' })])).toBeUndefined();
-    expect(addedAgainAs(sub({ projectId: 'p1' }), [sub({ id: 'whole', projectId: null })])).toBeUndefined();
-    expect(addedAgainAs(sub({ projectId: 'p1' }), [sub({ id: 'other-team', projectId: 'p2' })])).toBeUndefined();
     expect(addedAgainAs(archived, [archived, sub({ id: 'gone', status: 'archived' })])).toBeUndefined();
+    expect(addedAgainAs(archived, [sub({ id: 'team', projectId: 'p1' })])?.id).toBe('team');
+    expect(addedAgainAs(sub({ projectId: 'p1' }), [sub({ id: 'whole', projectId: null })])?.id).toBe('whole');
+    expect(addedAgainAs(sub({ projectId: 'p1' }), [sub({ id: 'other-team', projectId: 'p2' })])?.id).toBe('other-team');
     expect(addedAgainAs(sub({ projectId: 'p1' }), [sub({ id: 'same-team', projectId: 'p1' })])?.id).toBe('same-team');
   });
 });
