@@ -74,18 +74,52 @@
   },
   "private": true,
   "jest": {
-    "preset": "jest-expo",
-    "clearMocks": true,
-    "setupFiles": [
-      "<rootDir>/test/jest-setup.js"
-    ],
-    "moduleNameMapper": {
-      "^expo-router$": "<rootDir>/test/mocks/expo-router.tsx",
-      "^@/(.*)$": "<rootDir>/$1"
-    },
-    "transformIgnorePatterns": [
-      "/node_modules/(?!(.pnpm|react-native|@react-native|@react-native-community|expo|@expo|@expo-google-fonts|react-navigation|@react-navigation|@sentry/react-native|native-base|phosphor-react-native))",
-      "/node_modules/react-native-reanimated/plugin/"
+    "projects": [
+      {
+        "displayName": "unit",
+        "preset": "jest-expo",
+        "clearMocks": true,
+        "setupFiles": [
+          "<rootDir>/test/jest-setup.js"
+        ],
+        "moduleNameMapper": {
+          "^expo-router$": "<rootDir>/test/mocks/expo-router.tsx",
+          "^@/(.*)$": "<rootDir>/$1"
+        },
+        "transformIgnorePatterns": [
+          "/node_modules/(?!(.pnpm|react-native|@react-native|@react-native-community|expo|@expo|@expo-google-fonts|react-navigation|@react-navigation|@sentry/react-native|native-base|phosphor-react-native))",
+          "/node_modules/react-native-reanimated/plugin/"
+        ],
+        "setupFilesAfterEnv": [
+          "<rootDir>/test/jest-after-env.js"
+        ],
+        "testPathIgnorePatterns": [
+          "/node_modules/",
+          "<rootDir>/__tests__/real-router/"
+        ]
+      },
+      {
+        "displayName": "real-router",
+        "preset": "jest-expo",
+        "clearMocks": true,
+        "setupFiles": [
+          "<rootDir>/test/jest-setup.js"
+        ],
+        "moduleNameMapper": {
+          "^@/(.*)$": "<rootDir>/$1"
+        },
+        "transformIgnorePatterns": [
+          "/node_modules/(?!(.pnpm|react-native|@react-native|@react-native-community|expo|@expo|@expo-google-fonts|react-navigation|@react-navigation|@sentry/react-native|native-base|phosphor-react-native))",
+          "/node_modules/react-native-reanimated/plugin/"
+        ],
+        "setupFilesAfterEnv": [
+          "<rootDir>/test/jest-after-env.js",
+          "<rootDir>/test/real-router-setup.ts"
+        ],
+        "testMatch": [
+          "<rootDir>/__tests__/real-router/**/*.test.tsx"
+        ]
+      }
     ],
     "collectCoverageFrom": [
       "app/**/*.tsx",
@@ -94,9 +128,6 @@
       "hooks/**/*.tsx",
       "lib/**/*.ts",
       "!app/**/_layout.tsx"
-    ],
-    "setupFilesAfterEnv": [
-      "<rootDir>/test/jest-after-env.js"
     ]
   }
 }

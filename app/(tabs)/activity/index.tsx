@@ -1,4 +1,5 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import type { NavigationProp } from '@react-navigation/native';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { CheckCircle } from 'phosphor-react-native';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -142,6 +143,8 @@ export default function ActivityScreen() {
   const { palette } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  // This screen's own navigation, typed with the params it takes.
+  const navigation = useNavigation<NavigationProp<{ index: ArrivalParams }>>();
   const { projectId } = useScope();
   const params = useLocalSearchParams<ArrivalParams>();
   const [filter, setFilter] = useState<ActivityFilter>(() => arrivedWith(params).filter);
@@ -158,6 +161,13 @@ export default function ActivityScreen() {
     setFilter(arrived.filter);
     setFlow(arrived.flow);
     setTodayOnly(arrived.todayOnly);
+    // Taken, and cleared from this screen's own route: the same tile pressed
+    // again sends the same params, and only a change re-runs this, so a
+    // selection cleared here and asked for again did not come back (build 13).
+    // Cleared, every press is a change. The screen's navigation object names
+    // its route; `router.setParams` goes to whatever is focused, which on the
+    // first arrival is still the tab, not this screen.
+    navigation.setParams({ flow: undefined, flowName: undefined, filter: undefined, period: undefined });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.flow, params.flowName, params.filter, params.period]);
 

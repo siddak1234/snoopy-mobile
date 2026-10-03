@@ -109,6 +109,17 @@ repository, stop.
     - `addedAgainAs()` (`lib/view/catalog.ts`): an archived flow's live twin —
       the same template in the same scope, null matching null only — and with
       one, no "Add it again" (D3). `scopeLabels()` labels every flow (D4).
+11. **Where a screen goes is proved under the real router** (build 13, the
+    owner's build 12 item 6). Jest runs two projects (`package.json`
+    `jest.projects`), and `npm test`, so `verify` and CI, runs both: `unit` maps
+    expo-router to `test/mocks/expo-router.tsx`, which records an href and runs
+    no navigator — how build 8–12's Sign out passed every test while it was
+    dropped on the phone — and `real-router` (`__tests__/real-router/`, harness
+    `test/real-router.tsx`) runs the app's own tree under the real expo-router.
+    A change to sign-in, sign-out, the guard, a redirect, or the params a screen
+    takes on arrival gets a test there. The auth boundary is the root layout's
+    `Stack.Protected`; nothing inside the tabs navigates to "/", which there
+    names Home, not the cover.
 
 ## Release configuration, pinned
 

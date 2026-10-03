@@ -113,18 +113,16 @@ export default function SettingsScreen() {
    * ADR-0017 §4 makes `POST /v1/auth/logout` answer **502** rather than 204 when
    * revocation fails, precisely so a client can tell. The session is still live
    * upstream at that point, so `signOut()` deliberately leaves the enclave
-   * intact — and this screen must not navigate away claiming a sign-out that did
-   * not happen. It says so inline instead and offers the action again.
+   * intact — and this screen must not claim a sign-out that did not happen. It
+   * says so inline instead and offers the action again.
+   *
+   * Signed out, the root layout's guard takes the tabs away and shows the cover
+   * (24.11.6). Nothing navigates from here: inside the tabs "/" is Home, and
+   * build 12's move to it was dropped (the owner's build 12 item 6).
    */
   const handleSignOut = async () => {
     const { revoked } = await signOut();
-    if (!revoked) {
-      setSignOutFailed(true);
-      return;
-    }
-    setSignOutFailed(false);
-    // Signed out is the cover (24.11.6); Sign in is one tap from it.
-    router.replace('/');
+    setSignOutFailed(!revoked);
   };
 
   const caret = <CaretRight size={15} color={palette.neutral[500]} />;

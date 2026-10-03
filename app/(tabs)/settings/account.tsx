@@ -24,7 +24,7 @@ import {
   deletionOutcome,
   type DeletionOutcome,
 } from '@/lib/content/deletion';
-import { errorTitleFor } from '@/lib/content/screen-states';
+import { SIGN_OUT_FAILED, errorTitleFor } from '@/lib/content/screen-states';
 import { deleteAccount, readIdentities, unlinkIdentity, type LoginIdentity } from '@/lib/platform/account';
 import { readCurrentSession, readLoginProviders } from '@/lib/platform/auth';
 import { linkIdentity } from '@/lib/platform/identity-link';
@@ -121,9 +121,12 @@ export default function AccountScreen() {
 
       <View>
         <SectionLabel>LINKED ACCOUNTS</SectionLabel>
+        {/* What linking does, and the one trap — a first sign-in with a provider not
+            yet linked can start a separate account (the owner's build 12 item 8). */}
         <Text style={[styles.text, styles.lead, muted]}>
-          Link additional sign-in options to this account. Provider credentials are handled by the Autom8x backend and
-          never reach this app.
+          Any account linked here signs you in to this same account, in the app and on the website. Link an account
+          before you first sign in with it. Provider credentials are handled by the Autom8x backend and never reach
+          this app.
         </Text>
         <SurfaceCard style={styles.card}>
           {account.data.providers.map((provider, index) => {
@@ -197,10 +200,6 @@ export default function AccountScreen() {
             router.replace('/(auth)/account-deleted');
             session.refresh();
           }}
-          onSignIn={() => {
-            setDeleting(false);
-            router.replace('/');
-          }}
           signOut={session.signOut}
         />
       ) : null}
@@ -212,12 +211,10 @@ export default function AccountScreen() {
 function DeleteAccountDialog({
   onClose,
   onDeleted,
-  onSignIn,
   signOut,
 }: {
   onClose: () => void;
   onDeleted: () => Promise<void>;
-  onSignIn: () => void;
   signOut: () => Promise<{ revoked: boolean }>;
 }) {
   const [busy, setBusy] = useState(false);
@@ -271,6 +268,26 @@ function DeleteAccountDialog({
     }
   };
 
+  /**
+   * "Sign in again", after an attempt the session's end stopped: this phone
+   * signs out through the session, and the root layout's guard shows the cover,
+   * where Get started is the way back in (24.11.6). It does not navigate: inside
+   * the tabs "/" is Home, and build 12's move to it was dropped — the button did
+   * nothing (the owner's build 12 item 6). A sign-out that could not be revoked
+   * keeps the dialog and says so, nothing cleared (ADR-0017 §4); the button
+   * tries again.
+   */
+  const signInAgain = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const { revoked } = await signOut();
+      if (!revoked) setOutcome({ kind: 'expired', message: SIGN_OUT_FAILED });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const message =
     outcome?.kind === 'deleted-not-revoked' ? DELETION_WORDS.notRevoked : (outcome?.message ?? null);
 
@@ -285,7 +302,7 @@ function DeleteAccountDialog({
         <>
           <DialogButton label="Cancel" disabled={busy} onPress={onClose} />
           {outcome?.kind === 'expired' ? (
-            <DialogButton tone="accent" label="Sign in again" onPress={onSignIn} />
+            <DialogButton tone="accent" label="Sign in again" disabled={busy} onPress={signInAgain} />
           ) : (
             <DialogButton
               tone="danger"

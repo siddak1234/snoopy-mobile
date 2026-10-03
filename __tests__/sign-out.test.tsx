@@ -46,6 +46,14 @@ const { kept } = jest.requireMock('expo-secure-store') as { kept: Map<string, st
  *
  * Before this was wired, the button called `router.replace('/(auth)/login')`
  * and never called `signOut()` at all, so the contract's whole point was unused.
+ *
+ * Nor does Settings navigate on a sign-out that succeeded (the owner's build 12
+ * item 6): the root layout's guard shows the cover once the session is signed
+ * out. These tests wait on the sign-out itself — its answer, the keychain — and
+ * the move to the cover is the real-router project's to prove
+ * (`__tests__/real-router/sign-out.test.tsx`): this project's router is a mock,
+ * which is how build 8–12's `router.replace('/')` passed here while it was
+ * dropped on the phone.
  */
 
 beforeEach(() => {
@@ -53,6 +61,17 @@ beforeEach(() => {
   routePlatform(platformOperation);
   kept.clear();
 });
+
+/** The real sign-out, watched: what it answered, once it has. */
+function watchedSignOut() {
+  const answers: { revoked: boolean }[] = [];
+  const signOut = jest.fn(async () => {
+    const answer = await signOutOfPlatform();
+    answers.push(answer);
+    return answer;
+  });
+  return { signOut, answers };
+}
 
 // Settings now reads the platform, so the screen only renders with a session.
 // Before the fixtures were deleted an unconfigured session was enough.
@@ -71,14 +90,16 @@ function sessionWith(signOut: SessionContextValue['signOut']): SessionContextVal
 }
 
 describe('Settings sign-out', () => {
-  it('leaves for the cover only when the session was actually revoked (24.11.6)', async () => {
+  it("signs out and leaves the cover to the root guard: Settings navigates nowhere (24.11.6; the owner's build 12 item 6)", async () => {
     const signOut = jest.fn(async () => ({ revoked: true }));
     await renderWithProviders(<SettingsScreen />, sessionWith(signOut));
 
     await fireEvent.press(await screen.findByText('Sign out'));
 
-    expect(signOut).toHaveBeenCalled();
-    expect(mockRouter.replace).toHaveBeenCalledWith('/');
+    await waitFor(() => expect(signOut).toHaveBeenCalledTimes(1));
+    await expect(signOut.mock.results[0]!.value).resolves.toEqual({ revoked: true });
+    // Inside the tabs "/" is Home: build 12's move to it was dropped.
+    expect(mockRouter.replace).not.toHaveBeenCalled();
     expect(screen.queryByTestId('action-failure')).toBeNull();
   });
 
@@ -107,7 +128,9 @@ describe('Settings sign-out', () => {
 
     await fireEvent.press(screen.getByText('Retry sign out'));
     expect(signOut).toHaveBeenCalledTimes(2);
-    expect(mockRouter.replace).toHaveBeenCalledWith('/');
+    await expect(signOut.mock.results[1]!.value).resolves.toEqual({ revoked: true });
+    await waitFor(() => expect(screen.queryByTestId('action-failure')).toBeNull());
+    expect(mockRouter.replace).not.toHaveBeenCalled();
   });
 });
 
@@ -149,11 +172,12 @@ describe('Sign-out unregisters this phone before the logout (build 11, D8)', () 
   it('sends DELETE for the device with the still-valid bearer BEFORE the logout, then clears it with the session', async () => {
     signedInOnThisPhone(DEVICE);
     const sent = answerSignOut(() => null);
-    await renderWithProviders(<SettingsScreen />, sessionWith(signOutOfPlatform));
+    const { signOut, answers } = watchedSignOut();
+    await renderWithProviders(<SettingsScreen />, sessionWith(signOut));
 
     await fireEvent.press(await screen.findByText('Sign out'));
 
-    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith('/'));
+    await waitFor(() => expect(answers).toEqual([{ revoked: true }]));
     expect(sent.map((entry) => entry.call)).toEqual([
       'DELETE /v1/session/devices/{deviceId}',
       'POST /v1/auth/logout',
@@ -174,10 +198,11 @@ describe('Sign-out unregisters this phone before the logout (build 11, D8)', () 
       jest.spyOn(console, method).mockImplementation(() => undefined),
     );
     try {
-      await renderWithProviders(<SettingsScreen />, sessionWith(signOutOfPlatform));
+      const { signOut, answers } = watchedSignOut();
+      await renderWithProviders(<SettingsScreen />, sessionWith(signOut));
       await fireEvent.press(await screen.findByText('Sign out'));
 
-      await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith('/'));
+      await waitFor(() => expect(answers).toEqual([{ revoked: true }]));
       expect(sent.map((entry) => entry.call)).toEqual([
         'DELETE /v1/session/devices/{deviceId}',
         'POST /v1/auth/logout',
@@ -194,12 +219,14 @@ describe('Sign-out unregisters this phone before the logout (build 11, D8)', () 
   it('sends only the logout when this phone never registered', async () => {
     signedInOnThisPhone(null);
     const sent = answerSignOut(() => null);
-    await renderWithProviders(<SettingsScreen />, sessionWith(signOutOfPlatform));
+    const { signOut, answers } = watchedSignOut();
+    await renderWithProviders(<SettingsScreen />, sessionWith(signOut));
 
     await fireEvent.press(await screen.findByText('Sign out'));
 
-    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith('/'));
+    await waitFor(() => expect(answers).toEqual([{ revoked: true }]));
     expect(sent.map((entry) => entry.call)).toEqual(['POST /v1/auth/logout']);
+    expect(kept.has('autom8x.access-token')).toBe(false);
   });
 });
 
@@ -252,15 +279,16 @@ describe('Sign-out waits for a push registration still in flight (the build 11 r
     kept.set('autom8x.refresh-token', 'refresh-1');
     kept.set('autom8x.access-expires-at', String(Date.now() + 3_600_000));
     const held = holdRegistration();
+    const { signOut, answers } = watchedSignOut();
     await renderWithProviders(
       <>
         <TabLayout />
         <SettingsScreen />
       </>,
-      sessionWith(signOutOfPlatform),
+      sessionWith(signOut),
     );
     await waitFor(() => expect(held.sent.map((entry) => entry.call)).toEqual(['PUT /v1/session/devices']));
-    return held;
+    return { ...held, answers };
   }
 
   beforeEach(() => {
@@ -279,15 +307,15 @@ describe('Sign-out waits for a push registration still in flight (the build 11 r
   });
 
   it('waits for a registration in flight when Sign out is pressed: the DELETE sends the id it answers, BEFORE the logout, then the keychain is cleared', async () => {
-    const { sent, answer } = await signedInWithRegistrationOut();
+    const { sent, answer, answers } = await signedInWithRegistrationOut();
 
     await fireEvent.press(await screen.findByText('Sign out'));
-    // Waiting for it: nothing else is sent while it is out.
+    // Waiting for it: nothing else is sent while it is out, and the sign-out has not answered.
     expect(sent.map((entry) => entry.call)).toEqual(['PUT /v1/session/devices']);
-    expect(mockRouter.replace).not.toHaveBeenCalled();
+    expect(answers).toEqual([]);
 
     await act(async () => answer(ANSWERED));
-    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith('/'));
+    await waitFor(() => expect(answers).toEqual([{ revoked: true }]));
     expect(sent.map((entry) => entry.call)).toEqual([
       'PUT /v1/session/devices',
       'DELETE /v1/session/devices/{deviceId}',
@@ -302,7 +330,7 @@ describe('Sign-out waits for a push registration still in flight (the build 11 r
 
   it('goes on after five seconds without a registration that has not answered: the logout is sent, and when it answers later no device id is kept', async () => {
     jest.useFakeTimers();
-    const { sent, answer } = await signedInWithRegistrationOut();
+    const { sent, answer, answers } = await signedInWithRegistrationOut();
 
     await fireEvent.press(await screen.findByText('Sign out'));
     await act(async () => {
@@ -310,13 +338,13 @@ describe('Sign-out waits for a push registration still in flight (the build 11 r
     });
     // Still waiting, and still signed in: nothing sent but the registration.
     expect(sent.map((entry) => entry.call)).toEqual(['PUT /v1/session/devices']);
-    expect(mockRouter.replace).not.toHaveBeenCalled();
+    expect(answers).toEqual([]);
     expect(kept.has('autom8x.refresh-token')).toBe(true);
 
     await act(async () => {
       await jest.advanceTimersByTimeAsync(1);
     });
-    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith('/'));
+    await waitFor(() => expect(answers).toEqual([{ revoked: true }]));
     // Five seconds, then on: the logout — with no id kept, nothing to DELETE.
     expect(sent.map((entry) => entry.call)).toEqual(['PUT /v1/session/devices', 'POST /v1/auth/logout']);
     expect(kept.has('autom8x.access-token')).toBe(false);

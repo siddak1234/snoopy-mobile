@@ -13,6 +13,11 @@ export const mockRouter = {
 
 export const useRouter = () => mockRouter;
 
+/** A screen's own navigation object: what a screen uses to change its own route's params. */
+export const mockNavigation = { setParams: jest.fn() };
+
+export const useNavigation = () => mockNavigation;
+
 export const useFocusEffect = (effect: React.EffectCallback) => React.useEffect(effect, [effect]);
 
 /** Route params for useLocalSearchParams — set via setMockParams before
@@ -56,7 +61,11 @@ export function Stack({ children }: { children?: React.ReactNode }) {
 }
 Stack.Screen = Screen;
 
+/** Records each time a layout draws its tab navigator: a guard's test says whether the tabs were drawn. */
+export const mockTabsDrawn = jest.fn();
+
 export function Tabs({ children }: { children?: React.ReactNode }) {
+  mockTabsDrawn();
   return <>{children}</>;
 }
 Tabs.Screen = Screen;

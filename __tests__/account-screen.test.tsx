@@ -17,6 +17,7 @@ import AccountScreen from '@/app/(tabs)/settings/account';
 import { nocturneDark, nocturneLight } from '@/constants/theme';
 import type { SessionContextValue } from '@/hooks/use-session';
 import { DELETE_ACCOUNT_BODY, DELETION_WORDS } from '@/lib/content/deletion';
+import { SIGN_OUT_FAILED } from '@/lib/content/screen-states';
 import { PlatformError } from '@/lib/platform/problem';
 import { fakePlatform } from '@/test/fake-platform';
 import { signedInSession } from '@/test/platform';
@@ -92,6 +93,17 @@ describe('Linked accounts (24.6.2, on 24.2.1)', () => {
     // Linked, but its provider reported no address; and not linked at all.
     expect(within(screen.getByTestId('identity-microsoft')).queryByText(/@/u)).toBeNull();
     expect(within(screen.getByTestId('identity-apple')).queryByText(/@/u)).toBeNull();
+  });
+
+  it("says what a linked account does, and to link one before its first sign-in, over the list; the credentials sentence stays (the owner's build 12 item 8)", async () => {
+    route();
+    await renderWithProviders(<AccountScreen />, session());
+    expect(
+      await screen.findByText(
+        'Any account linked here signs you in to this same account, in the app and on the website. Link an account before you first sign in with it. Provider credentials are handled by the Autom8x backend and never reach this app.',
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Link additional sign-in options to this account\./u)).toBeNull();
   });
 });
 
@@ -174,6 +186,29 @@ describe('Deleting the account (24.6.2, ADR-0028)', () => {
     expect(await screen.findByText(DELETION_WORDS.expired)).toBeTruthy();
     expect(screen.getByText('Sign in again')).toBeTruthy();
     expect(screen.queryByText('Try again')).toBeNull();
+  });
+
+  it("Sign in again signs this phone out through the session and navigates nowhere; a sign-out not revoked keeps the dialog and says so, and the button tries again (the owner's build 12 item 6)", async () => {
+    const fake = route();
+    fake.always('DELETE /v1/account', () => {
+      throw new PlatformError('Unauthenticated', 401);
+    });
+    const signOut = jest.fn(async () => ({ revoked: false }));
+    await renderWithProviders(<AccountScreen />, session(signOut));
+    await openDelete();
+    await fireEvent.press(await screen.findByText('Sign in again'));
+
+    await waitFor(() => expect(signOut).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText(SIGN_OUT_FAILED)).toBeTruthy();
+    expect(screen.getByText('Sign in again')).toBeTruthy();
+
+    signOut.mockResolvedValue({ revoked: true });
+    await fireEvent.press(screen.getByText('Sign in again'));
+    await waitFor(() => expect(signOut).toHaveBeenCalledTimes(2));
+    // Signed out, the root layout's guard shows the cover (the real-router
+    // project holds it): inside the tabs "/" is Home, and nothing navigates here.
+    expect(mockRouter.replace).not.toHaveBeenCalled();
+    expect(fake.to('DELETE /v1/account')).toHaveLength(1);
   });
 });
 

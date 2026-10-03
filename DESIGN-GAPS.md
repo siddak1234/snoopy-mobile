@@ -1257,9 +1257,9 @@ second:
 | 3 | "Just like how owner is written in organization on the right hand side can we put the organization name. That way the user knows as well before clicking. " | the index never worked out an organization value, though the session it already reads holds every workspace's name and type; the row passed only the arrow | **fixed (build 13, option A)**: Organization's value, from the session alone — one pure rule, `organizationValue` (`lib/view/organization.ts`): in an organization, its name, for any role; in a personal workspace, the one organization's name, "{n} organizations" for several, "None" for none, and nothing when the session's list is cut off (`workspacesTruncated`) without one. No request: the index still reads only the plan. Shown inside an organization too, though the switcher row above names it. Under a cut-off list that does show organizations, the name or the count is of those the session lists (its first 50). **NOT OBSERVED** on a device |
 | 4 | "Rather than add it again what if we say unarchive" | the platform cannot bring an archived subscription back: archiving is one-way on purpose (BUILD-PLAN 18.5.3, §12.1 #92 — a status change out of `archived` is 409, "subscribe again instead"), so both clients can only add a new subscription — a new id, empty settings, the newest version — while the archived row stays under Archived | in progress (build 13, part 2) |
 | 5 | "Could delete account be in red. Things like remove, sign out, stop, and such should be in red right" | PillButton had no red style (primary, secondary, plain, accent-ghost), so Delete Account was drawn `secondary` (`account.tsx:184`), as were Delete team / Leave team and Cancel run, while the buttons confirming them were red; red existed only where drawn by hand (Sign out, Archive flow) and in DialogButton's `danger`; and it was one value, #f87171, for both themes — 2.77:1 on a white card | **fixed (build 13, option A — the app's half)**: one rule — red marks an action that removes or ends something and cannot be undone with a tap. `palette.danger`, dark #f87171 (`status.err`, unchanged), light #dc2626 (the website's light `--error-text`, 4.83:1 on a card); PillButton's `danger` variant, the design's red pill (Screen.dc.html:450) — a 1-pt outline, label and icon in red, a tenth-strength tint pressed — on Delete Account, Delete team / Leave team and Cancel run; Unlink's text, Sign out, Archive flow and every DialogButton `danger` read `palette.danger` (dark as before). Withdraw's confirm is accent: asking again undoes it. Pause, Reject, Deny, Cancel request and Make a new secret are as they were. The four existing PillButton variants and the default render did not move; nocturne-visual gained `PillButton/danger` in both palettes, two snapshots added and the 64 byte-identical. In light, #dc2626 is 4.44:1 on the bare page background, where Cancel run, Delete/Leave team and Archive flow sit — a hair under 4.5:1, as the website's is. The website's half — the same list in `snoopy`, on its existing `danger` variant and `--error-text` — is that repository's. **NOT OBSERVED** on a device |
-| 6 | "Sign out was clicked and it hung on this screen untill i closed the app then it took me to get started. Sign out should sign out the user and take them to the get started page." | being found. The proxies' access logs show build 12's four logouts during the session (15:52:47Z–16:01:55Z) each answered `204` in 0.18–0.31 s, so the hang is in the app, after a sign-out that succeeded | in progress (build 13, part 2) |
+| 6 | "Sign out was clicked and it hung on this screen untill i closed the app then it took me to get started. Sign out should sign out the user and take them to the get started page." | the sign-out worked and the move to the cover did not. The proxies' logs show build 12's four logouts (15:52:47Z–16:01:55Z) each answered `204` in 0.18–0.31 s, and the app sent nothing more until a session read with no bearer — a relaunch. `"/"` named two screens, the cover (`app/index.tsx`) and Home (`app/(tabs)/(home)/index.tsx`): a group adds nothing to an address, and expo-router reads one from where the person is and prefers a screen in the same group, so from inside the tabs `"/"` meant Home. Settings' `router.replace('/')` became a replace sent to the tab bar, which cannot take one — dropped without a word in a release build — and once the session read signed out, the tab layout's `<Redirect href="/" />` replaced the tabs with a copy of themselves, which redirected again, without end. The keychain was already empty, so the next launch opened on the cover: what the owner saw. The same loop met a session that ended mid-use, and Delete account's "Sign in again" sent the same dropped `"/"`. Since `bda1136` (24.11.6, build 8's code), unchanged through build 12; unseen because the tests used a mocked router (`test/mocks/expo-router.tsx`), which records an href and runs no navigator | **fixed (build 13, option A; decision 2 yes)**: the root stack guards the tabs — `<Stack.Protected guard={session.status === 'signed-in'}>`, expo-router 6.0.24's protected routes, in `app/_layout.tsx` — and in any other state removes them and lands on its anchor, the cover, by name. The tab layout draws nothing until signed in and redirects nowhere; Settings' Sign out only signs out (a 502 still stays and says `SIGN_OUT_FAILED`); Delete account's "Sign in again" signs this phone out through the session (one not revoked keeps the dialog and says `SIGN_OUT_FAILED`, and the button tries again). No `router.replace('/')` or `href="/"` is left under `app/(tabs)/`; the Face ID lock and Account deleted, in `(auth)`, still leave for `"/"`, which from there is the cover. A second jest project runs the real expo-router (below): Sign out, an ended session, the owner's loop twice, a 502, Sign in again, a deleted account, the lock's fallback and the guard failing closed — each fails on `d77dd3a` but the 502's and the deleted account's, paths that were right there and are kept. **NOT OBSERVED** on a device |
 | 7 | "I clicked use identity provider when face id failed and it kept bringing up face id. It should allow the user to log back in using their account right" | "Use identity provider" (`faceid.tsx:151`) only replaced to `/`, which for a person still signed in is the splash — and the splash, the Face ID choice still on, replaced itself with the lock 2400 ms later: Face ID again, in a loop. `bda1136` (24.11.6, build 8's batch) applied "every route that left for Sign in leaves for the cover" (the fifth session's row 1) to a screen where the person is still signed in; build 7 had sent it to Sign in. It shipped in builds 9–12, unseen: no test returned a failed Face ID or pressed the fallback, and no session recorded one | **fixed (build 13, option A)**: the fallback is Settings › Sign out's. With a signed-in session it awaits `signOut()` and replaces to the cover only on `revoked: true` — this phone's session revoked (the web's stays), its push registration let go, the tokens and the Face ID choice cleared, so the next sign-in asks the Face ID question again; on `revoked: false` the lock stays and says `SIGN_OUT_FAILED`, nothing cleared, and the button tries again; with no signed-in session to unlock (an outage, nothing stored) it goes to the cover without a sign-out, as before. **NOT OBSERVED** on the phone: Face ID on, relaunch, cancel Face ID, Use identity provider — the cover, Get started, Sign in, the Face ID question, Home |
-| 8 | "Lets say i link microsoft and apple then log out the app. If i log back in will it let me use apple? " | a question, not a defect | in progress (build 13, part 2) |
+| 8 | "Lets say i link microsoft and apple then log out the app. If i log back in will it let me use apple? " | a question, not a defect, and the page did not answer it. Yes: a linked account signs in to this same account — one Supabase user, matched by the provider's own id for the person, not by email, so the same Access user, workspaces, teams and flows, in the app and on the website. The lead spoke of "sign-in options" and credentials; only the Unlink confirmation said a linked account signs in; nothing warned that a first sign-in with a provider not yet linked can start a separate account | **answered; fixed (build 13, option A — the app's half)**: the lead's first sentence is "Any account linked here signs you in to this same account, in the app and on the website. Link an account before you first sign in with it."; the credentials sentence stays. The website's half, the same sentence, is `snoopy`'s. **NOT OBSERVED**: the fact-finding asked for it to ship after the owner's Apple sign-in is seen (link Microsoft and Apple, sign out, sign in with Apple, the same account) — not yet run, and Apple has never completed a sign-in in production |
 | 9 | "Why do i have two of the same automations across teams. Teams cannot have the same flows. One flow per account type. Personal or org not multiple of the same in account type. This is a bug" | build 11 (D4) adds every flow to a team, and the platform's uniqueness — the one `addedAgainAs` reads — is one non-archived subscription per workspace, template and team, so one workspace can hold the same flow once in each of its teams (the seventh session's rows 5, 6, 11 and 7) | in progress (build 13, part 2) |
 
 Decided flips of pinned behaviour, each named in its test: `run-stats` "draws total,
@@ -1340,6 +1340,114 @@ are styles no test reads, so no break was run for them.
 | Withdraw's confirm is accent, not red | tone="accent" removed (red by default) | `teams-screens` "asks to join a team and reads the directory again; withdraws a request it made" |
 | Pause stays plain | Pause drawn as the red pill | `tab-screens` "keeps Pause plain — Resume undoes it in one tap — while Archive flow, last, is red (the owner's build 12 item 5)" |
 | Reject stays plain | Reject drawn in red | `tab-screens` "approves and rejects independently, matching the design done-states" |
+
+### Build 13, part 2: items 6 and 8, and a tile pressed again
+
+Items 6 and 8 as their rows above say, and one finding of the first part. Items 4 and 9
+wait on the platform (the unarchive route and one flow per workspace, `snoopy-backend`).
+
+**A tile pressed again** (found in the first part, fixed in this one): Activity applied a
+tile's selection only when the route's params changed, and the same tile sends the same
+params to the same mounted screen — clear "Today ✕", go back, press the same Home tile,
+and Activity stayed as it was left. A flow page's tile did the same with its flow since
+24.11.9: `d77dd3a` fails that test at the second press. Activity now takes a selection
+once and clears it from its own route — `navigation.setParams`, on the screen's own
+navigation object; `router.setParams` goes to the focused route, which on the first
+arrival is still the tab, and left the params in place — so every press is a change,
+from any tile, and the tab bar still changes nothing. **NOT OBSERVED** on a device.
+
+**The real-router project.** `package.json` runs two jest projects, and `npm test` — so
+`npm run verify` and CI's Test job — runs both: `unit`, which keeps
+`test/mocks/expo-router.tsx`, and `real-router` (`__tests__/real-router/`; its fakes in
+`test/real-router-setup.ts`, its harness in `test/real-router.tsx`), which runs the
+app's own tree under expo-router 6.0.24 with only the transport, the keychain and the
+provider's browser leg faked. Ported from the fact-finding's reproduction, with its
+harness rules: await the render and every press (overlapping act scopes gave false
+failures); a press runs as development, where a command no navigator handles is logged —
+a release build drops it, a test build throws; a redirect loop is cut off after a dozen
+replaces. Its thirteen tests, run on `d77dd3a`'s tree (`git archive d77dd3a`, with the
+project's tests, harness and config copied in): every sign-out test fails there but two,
+which pass, as they should — the 502's and the deleted account's (Account deleted sits
+in `(auth)`, where "/" was always the cover): those paths were right and are kept; the
+Face ID test fails there too, since `d77dd3a`'s fallback never signed out (item 7, fixed
+in part 1); the Home-tile and tab-bar tests fail there at their first press, before a
+Home tile carried today:
+
+| Test | On `d77dd3a` |
+| --- | --- |
+| real-router `sign-out` "Settings › Sign out: one logout, the keychain empty, and the cover at "/" with Get started — no command dropped, no loop" | failed |
+| real-router `sign-out` "a session that ends inside the tabs — a 401 the refresh cannot recover — reaches the cover" | failed |
+| real-router `sign-out` "the owner's loop, twice: the cover, Get started, Sign in with Google, Home, Settings, Sign out, the cover" | failed |
+| real-router `sign-out` "a logout that answers 502 keeps the session: Settings stays and says so, with Retry sign out, and nothing navigates" | passed |
+| real-router `sign-out` "Delete account's Sign in again, after an attempt the session's end stopped, signs out and reaches the cover" | failed |
+| real-router `sign-out` "a deleted account: Account deleted, signed out, and its Continue reaches the cover" | passed |
+| real-router `sign-out` "Use identity provider with a signed-in session signs out to the cover, and signing in again asks Face ID's question" | failed |
+| real-router `sign-out` "signed out (the session read answers 401): a tab address opens the cover, never the tab" | failed |
+| real-router `sign-out` "no backend configured: a tab address opens the cover, never the tab" | failed |
+| real-router `sign-out` "the platform unreachable: a tab address opens the cover, never the tab" | failed |
+| real-router `activity-selection` "the same Home tile pressed again, after its selection was cleared on Activity, opens Activity with it again" | failed |
+| real-router `activity-selection` "the same flow page tile pressed again, after its flow was cleared on Activity, opens Activity with it again" | failed |
+| real-router `activity-selection` "the tab bar changes nothing: after a tile visit and a clear, Activity opens from its tab as it was left" | failed |
+
+Decided flips of pinned behaviour, part 2, each named in its test — eleven mocked tests
+waited on `router.replace('/')` or `mockRedirect('/')`, which the fact-finding counted
+as ten (it did not run `tab-screens`): `sign-out` "leaves for the cover only when the
+session was actually revoked (24.11.6)" is "signs out and leaves the cover to the root
+guard: Settings navigates nowhere (24.11.6; the owner's build 12 item 6)", and its six
+other cases keep their names and wait on the sign-out's own answer and the keychain,
+every device-unregister, settle, epoch and no-log assertion kept; `auth-boundary`'s
+three redirect cases are "draws nothing for a signed-out visitor, and redirects nowhere:
+the root guard shows the cover (24.11.6; the owner's build 12 item 6)", "fails closed
+when no backend is configured: nothing drawn, no redirect" and "does not expose
+protected routes while the backend is unreachable: nothing drawn, no redirect" — where a
+closed guard lands is the real-router project's "the root guard fails closed"; and
+`tab-screens` "signs out to the cover (24.11.6)" is "signs out, and the root guard — not
+Settings — shows the cover (24.11.6; the owner's build 12 item 6)". The router mock
+gained `useNavigation` and a record of a drawn tab navigator (`mockTabsDrawn`). The 80
+snapshots are byte-identical.
+
+### Guards proved to bite, build 13, part 2
+
+Twenty-eight runs by one script, each against its own suite with the test's name as the
+filter — the test's status read from jest's own record — and the file restored byte for
+byte, its SHA-256 checked before and after; the working tree's hashes matched after its
+last restore. Twenty-six breaks failed their test. The three rows against `6850589` put
+back part 1's Activity whole: the two re-apply tests fail there, and the tab-bar test
+passes, as it should — the tab bar changed nothing then either. One break did not bite:
+the tab layout's `<Redirect href="/" />` put back left the real router's ended-session
+test passing — under the root guard the tabs are gone before their layout draws signed
+out — so the unit project's two tab-layout tests hold that line.
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| The root guard takes the tabs away when signed out | the guard always open (`guard={true}`) | real-router `sign-out` "Settings › Sign out: one logout, the keychain empty, and the cover at "/" with Get started — no command dropped, no loop" |
+| An ended session lands on the cover | the guard always open (`guard={true}`) | real-router `sign-out` "a session that ends inside the tabs — a 401 the refresh cannot recover — reaches the cover" |
+| Sign in again lands on the cover | the guard always open (`guard={true}`) | real-router `sign-out` "Delete account's Sign in again, after an attempt the session's end stopped, signs out and reaches the cover" |
+| Signed out at launch, a tab address opens the cover | the guard always open (`guard={true}`) | real-router `sign-out` "signed out (the session read answers 401): a tab address opens the cover, never the tab" |
+| Only signed-in passes: unconfigured fails closed | the guard open for anything but signed out (`status !== 'signed-out'`) | real-router `sign-out` "no backend configured: a tab address opens the cover, never the tab" |
+| Only signed-in passes: unreachable fails closed | the guard open for anything but signed out (`status !== 'signed-out'`) | real-router `sign-out` "the platform unreachable: a tab address opens the cover, never the tab" |
+| Signing in still reaches Home under the guard | the guard always shut (`guard={false}`) | real-router `sign-out` "the owner's loop, twice: the cover, Get started, Sign in with Google, Home, Settings, Sign out, the cover" |
+| Settings navigates nowhere after a sign-out | Settings' `router.replace('/')` put back after a revoked sign-out | `sign-out` "signs out and leaves the cover to the root guard: Settings navigates nowhere (24.11.6; the owner's build 12 item 6)" |
+| Settings navigates nowhere after a sign-out (tab-screens) | Settings' `router.replace('/')` put back after a revoked sign-out | `tab-screens` "signs out, and the root guard — not Settings — shows the cover (24.11.6; the owner's build 12 item 6)" |
+| Settings navigates nowhere after a sign-out (real router) | Settings' `router.replace('/')` put back after a revoked sign-out | real-router `sign-out` "Settings › Sign out: one logout, the keychain empty, and the cover at "/" with Get started — no command dropped, no loop" |
+| The tab layout draws nothing and redirects nowhere when signed out | the tab layout's `<Redirect href="/" />` put back | `auth-boundary` "draws nothing for a signed-out visitor, and redirects nowhere: the root guard shows the cover (24.11.6; the owner's build 12 item 6)" |
+| The tab layout draws nothing and redirects nowhere when unconfigured | the tab layout's `<Redirect href="/" />` put back | `auth-boundary` "fails closed when no backend is configured: nothing drawn, no redirect" |
+| The tab layout redirects nowhere (real router) | the tab layout's `<Redirect href="/" />` put back | none — real-router `sign-out` "a session that ends inside the tabs — a 401 the refresh cannot recover — reaches the cover" passed |
+| Sign in again signs out through the session | the sign-out skipped (taken as revoked) | real-router `sign-out` "Delete account's Sign in again, after an attempt the session's end stopped, signs out and reaches the cover" |
+| Sign in again: a sign-out not revoked keeps the dialog and says so | the `revoked: false` branch removed | `account-screen` "Sign in again signs this phone out through the session and navigates nowhere; a sign-out not revoked keeps the dialog and says so, and the button tries again (the owner's build 12 item 6)" |
+| A deleted account still reaches Account deleted, then the cover | the replace to Account deleted removed (the guard alone moves the person) | real-router `sign-out` "a deleted account: Account deleted, signed out, and its Continue reaches the cover" |
+| A sign-out not revoked keeps the session, so the guard keeps the tabs | the provider's sign-out signing out on any answer | real-router `sign-out` "a logout that answers 502 keeps the session: Settings stays and says so, with Retry sign out, and nothing navigates" |
+| A 502 is said on Settings | the failure never said (`setSignOutFailed(false)`) | real-router `sign-out` "a logout that answers 502 keeps the session: Settings stays and says so, with Retry sign out, and nothing navigates" |
+| A 502 is said on Settings (unit) | the failure never said (`setSignOutFailed(false)`) | `sign-out` "stays put and says so when revocation failed (502)" |
+| The Face ID lock leaves for the cover itself | the lock's replace to the cover after a revoked sign-out removed | real-router `sign-out` "Use identity provider with a signed-in session signs out to the cover, and signing in again asks Face ID's question" |
+| Linked accounts' lead says what linking does, and to link first | the old lead put back | `account-screen` "says what a linked account does, and to link one before its first sign-in, over the list; the credentials sentence stays (the owner's build 12 item 8)" |
+| The same Home tile pressed again re-applies | `activity/index.tsx` as it is at `6850589` (part 1) | real-router `activity-selection` "the same Home tile pressed again, after its selection was cleared on Activity, opens Activity with it again" |
+| The same flow page tile pressed again re-applies | `activity/index.tsx` as it is at `6850589` (part 1) | real-router `activity-selection` "the same flow page tile pressed again, after its flow was cleared on Activity, opens Activity with it again" |
+| The tab bar changes nothing (kept) | `activity/index.tsx` as it is at `6850589` (part 1) | none — real-router `activity-selection` "the tab bar changes nothing: after a tile visit and a clear, Activity opens from its tab as it was left" passed |
+| A selection is taken once and cleared from the route | the clearing `navigation.setParams` removed | real-router `activity-selection` "the same Home tile pressed again, after its selection was cleared on Activity, opens Activity with it again" |
+| A selection is taken once and cleared from the route (flow page) | the clearing `navigation.setParams` removed | real-router `activity-selection` "the same flow page tile pressed again, after its flow was cleared on Activity, opens Activity with it again" |
+| Cleared through the screen's own navigation | `router.setParams` (the focused route) in its place | real-router `activity-selection` "the same Home tile pressed again, after its selection was cleared on Activity, opens Activity with it again" |
+| The tab bar re-sends its tab's params as they are | the tab bar sending a copy of the tab's params | real-router `activity-selection` "the tab bar changes nothing: after a tile visit and a clear, Activity opens from its tab as it was left" |
 
 ### Guards proved to bite, 24.6
 

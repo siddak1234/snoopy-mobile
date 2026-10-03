@@ -1,4 +1,4 @@
-import { Redirect, Tabs } from 'expo-router';
+import { Tabs } from 'expo-router';
 import React from 'react';
 
 import { NocturneTabBar } from '@/components/nocturne/tab-bar';
@@ -9,14 +9,18 @@ import { useSession } from '@/hooks/use-session';
  * The protected half of the app.
  *
  * `DESIGN-CONTRACT.md` requires the auth boundary to be enforced "at the
- * route/layout level, not per screen", so it lives here: one check in front of
- * every tab, rather than a condition each screen could forget.
+ * route/layout level, not per screen". It is the root layout's
+ * (`app/_layout.tsx`): the root stack keeps these tabs only for `signed-in`,
+ * and in any other state removes them and shows the cover (BUILD-PLAN
+ * 24.11.6), whose "Get started" leads to Sign in. Being unconfigured or
+ * temporarily unreachable is not proof of identity and must not open customer
+ * data.
  *
- * `restoring` renders nothing so protected content never flashes. Every resolved
- * state other than `signed-in` returns to the cover (BUILD-PLAN 24.11.6), whose
- * "Get started" leads to Sign in. Being unconfigured or temporarily unreachable
- * is not proof of identity and must not open customer data—the auth screens can
- * render those honest states without weakening this boundary.
+ * Here, anything but `signed-in` draws nothing, so protected content never
+ * flashes while the root's guard takes the tabs away. It never navigates: from
+ * inside the tabs "/" names Home, not the cover, and the redirect to it that
+ * stood here replaced the tabs with themselves, again and again (the owner's
+ * build 12 item 6).
  */
 export default function TabLayout() {
   const session = useSession();
@@ -25,11 +29,7 @@ export default function TabLayout() {
   // guard, as every hook is, and idle until signed in; it never asks.
   usePushRegistration(session.status === 'signed-in');
 
-  if (session.status === 'restoring') return null;
-
-  if (session.status !== 'signed-in') {
-    return <Redirect href="/" />;
-  }
+  if (session.status !== 'signed-in') return null;
 
   return (
     <Tabs
