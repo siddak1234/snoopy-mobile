@@ -147,6 +147,25 @@ jobs:
       - run: npm run export:ios
       - run: npm run export:android
 
+  # The committed platform types against the contract the RUNNING platform
+  # serves: each generated file's sha256 header must equal the hash the public
+  # GET https://api.autom8x.ai/health/live reports for its document (the
+  # platform's deployed marker). Fails closed — an unreachable host or an
+  # answer with no marker is red, never a skip; platform-requirement.json is
+  # the one reviewed escape for a change that must land ahead of the platform
+  # (scripts/verify-deployed-contracts.mjs). Node's own fetch and no
+  # dependency, so no install; no secret.
+  contract-deployed:
+    name: Deployed contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: node scripts/verify-deployed-contracts.mjs
+
   # The one check a merge and a release read. Green only when EVERY job above
   # concluded success: a failure, a cancellation or a skip is red, because this
   # workflow has no job that is allowed to skip. The native export was never a
@@ -154,7 +173,7 @@ jobs:
   all-green:
     name: all-green
     if: always()
-    needs: [lint, typecheck, test, gates, export]
+    needs: [lint, typecheck, test, gates, export, contract-deployed]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
