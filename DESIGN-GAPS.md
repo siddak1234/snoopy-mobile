@@ -594,6 +594,30 @@ Written 2026-09-30, once the owner had completed 24.8.1, 24.8.2 and 24.8.6.
   PR #35 had to rewrite the same assertion in both; the copy is gone, and the
   press register already names `sign-out:93` and `real-router/sign-out:48`.
   934 → 933 tests locally, 269 of 269 presses, the 80 snapshots unchanged.
+- **The installed tree cached on Test, a trial (CI plan Wave 2 [A], branch
+  `ci-wave-2-cache`, 2026-10-03).** The plan dropped the export split — Test,
+  not the export, finishes last — and asked for a five-run baseline of the
+  current `ci.yml` before any speed work. The five (37165294352, 37165734326,
+  37169383053, 37177343458, 37165512267): wall 207 / 148 / 236 / 139 / 216 s;
+  Test 196 / 140 / 228 / 131 / 207 s, the critical path in four of five (the
+  native export 120–130 s); inside Test, `npm ci` 19 / 13 / 20 / 12 / 20 s
+  with `~/.npm` restored by `setup-node` every time (`added 1122 packages …
+  in 12s` on the fastest), `test:coverage` 169 / 120 / 198 / 111 / 179 s on
+  the same tree — the spread is runner speed, not the suite. The trial:
+  `actions/cache@v6` (v6.1.0) on the Test job only, `path: node_modules`,
+  key = the runner OS + the exact `package-lock.json` hash, no
+  `restore-keys`, so any other lockfile — Dependabot's #36 included — misses,
+  runs `npm ci` as before and never reads a stale tree; `npm ci` is skipped
+  only on the exact hit, and the tree is saved only when the job succeeds
+  (`post-if: success()`). Nothing the tests write lands in it: jest's cache
+  is the runner's tmpdir (no `cacheDirectory` is set, jest-expo sets none)
+  and `node_modules/.cache` does not exist after a full local `verify`. The
+  other four jobs, the job ids and names, and `all-green`'s needs are
+  unchanged. Measured over exactly two PR runs, cold (the save) then warm (an
+  empty commit, the restore): the ids, the before/after table and the keep-
+  or-drop reading against the plan's rule — keep only if the warm restore
+  beats `npm ci` by a clear margin — are in the PR; the decision is the
+  owner's.
 
 ### The sign-in sheet that would not open (24.7.3, attempt 1, 2026-10-01)
 
