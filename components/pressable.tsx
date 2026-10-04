@@ -42,5 +42,3 @@ function tick(): void {
 export const Pressable = forwardRef<View, PressableProps>(function Pressable({ onPress, ...rest }, ref) {
   return <NativePressable ref={ref} {...rest} onPress={pressed(onPress)} />;
 });
-
-export var ciWave1DeliberateFailure = 1;
