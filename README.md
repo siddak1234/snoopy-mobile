@@ -82,6 +82,12 @@ of the 14 in `screen-state.test.tsx`; the other 20 set no font size.
 CI runs lint, typecheck, Jest, all architecture/dependency gates, contract
 verification, and both platform exports; `all-green` is the one check that
 needs every one of them and is red on any failure, cancellation or skip.
+`npm run hooks:install` (once per clone; `git config core.hooksPath
+.githooks`) puts the same gate before every push: `.githooks/pre-push` runs
+`CI=1 npm run verify`, `audit:dependencies` and the salvaged-client-data scan
+— everything CI runs but the exports — and refuses the push at the first red
+gate, naming it (111 s to green, 3 s to refuse a lint error, measured
+2026-10-03); `git push --no-verify` is the bypass for a by-design red push.
 `npm run release:ios` (`scripts/release-ios.sh`; `--dry-run` rehearses the
 refusals) builds and submits only `origin/main`, clean, with `all-green`
 concluded success on HEAD and the live AASA naming the app, and only a build

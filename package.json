@@ -24,7 +24,8 @@
     "generate:platform-contracts": "node scripts/generate-platform-contracts.mjs",
     "verify:platform-contracts": "node scripts/verify-platform-contracts.mjs",
     "release:ios": "bash scripts/release-ios.sh",
-    "verify": "npm run lint && npm run typecheck && npm run audit:credentials && npm run audit:tokens && npm run audit:type && npm run audit:vocabulary && npm run audit:haptics && npm run audit:fixtures && npm run audit:platform && npm run verify:platform-contracts && npm run test:coverage && npm run audit:presses && node scripts/repo-facts.mjs --gate verify"
+    "hooks:install": "git config core.hooksPath .githooks",
+    "verify":"npm run lint && npm run typecheck && npm run audit:credentials && npm run audit:tokens && npm run audit:type && npm run audit:vocabulary && npm run audit:haptics && npm run audit:fixtures && npm run audit:platform && npm run verify:platform-contracts && npm run test:coverage && npm run audit:presses && node scripts/repo-facts.mjs --gate verify"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
