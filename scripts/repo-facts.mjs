@@ -10,13 +10,35 @@
 // close commits the emitted file into snoopy-backend as
 // docs/repo-facts/snoopy-mobile.json.
 import { execFileSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(import.meta.dirname, "..");
 /** Where `npm run verify` writes the file; gitignored. */
 export const FACTS_PATH = ".autom8x/repo-facts/snoopy-mobile.json";
+/**
+ * What `verify:platform-contracts` records beside the facts: whether it ran or
+ * skipped. Written by scripts/verify-platform-contracts.mjs on every run; read
+ * here, because facts claiming gate `verify` after a skipped contract check
+ * would be indistinguishable from a full run's (`snoopy` emits none either).
+ */
+export const CONTRACT_CHECK_FILE = "platform-contracts.json";
+
+export function recordContractCheck(result, dir = resolve(root, dirname(FACTS_PATH))) {
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(
+    join(dir, CONTRACT_CHECK_FILE),
+    `${JSON.stringify({ ...result, recordedAt: new Date().toISOString() }, null, 2)}\n`,
+  );
+}
+
+function recordedSkip(dir) {
+  const path = join(dir, CONTRACT_CHECK_FILE);
+  if (!existsSync(path)) return undefined;
+  const record = JSON.parse(readFileSync(path, "utf8"));
+  return record.skipped ? record : undefined;
+}
 
 // SYSTEM-MANIFEST §10's units, in its order, on ONE basis: the working tree
 // minus what .gitignore excludes — tracked and untracked alike, never
@@ -63,7 +85,22 @@ export function repoFacts({ gate } = {}) {
   };
 }
 
+/**
+ * Writes the facts, or — after a recorded contract-check skip — writes NOTHING,
+ * removes any stale facts beside the record, says why and returns null. Only a
+ * fully verified tree emits facts: the file is a claim the close copies into
+ * snoopy-backend as data.
+ */
 export function writeRepoFacts(outPath, options) {
+  const skip = recordedSkip(dirname(outPath));
+  if (skip) {
+    const stale = existsSync(outPath);
+    if (stale) rmSync(outPath);
+    console.log(
+      `repo-facts: facts NOT emitted — verify:platform-contracts skipped (${skip.reason ?? "no reason recorded"}); a facts file would claim gate "${options?.gate ?? "verify"}" for a run whose contract check did not run.${stale ? ` Removed the stale ${outPath}.` : ""}`,
+    );
+    return null;
+  }
   const facts = repoFacts(options);
   if (sh("git status --porcelain")) {
     console.warn(
@@ -81,5 +118,5 @@ if (resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) {
     return index === -1 ? undefined : process.argv[index + 1];
   };
   const facts = writeRepoFacts(resolve(root, flag("--out") ?? FACTS_PATH), { gate: flag("--gate") });
-  console.log(JSON.stringify(facts, null, 2));
+  if (facts) console.log(JSON.stringify(facts, null, 2));
 }

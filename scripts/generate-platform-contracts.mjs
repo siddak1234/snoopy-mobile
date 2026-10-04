@@ -15,15 +15,23 @@
  * would collide.
  */
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const backendRoot = resolve(root, "../snoopy-backend");
+// SNOOPY_BACKEND_ROOT points at another checkout of the platform — a worktree
+// at the deployed commit, say — and scripts/verify-platform-contracts.mjs reads
+// the same variable, resolved from the repository root as here, so both agree.
+// Empty means unset: the sibling checkout, as `snoopy` does.
+export const backendRoot = resolve(
+  root,
+  process.env.SNOOPY_BACKEND_ROOT || "../snoopy-backend",
+);
 const generator = join(root, "node_modules/.bin/openapi-typescript");
 
-const contracts = [
+export const contracts = [
   {
     input: join(backendRoot, "docs/openapi.yaml"),
     output: join(root, "lib/generated/platform-contracts/platform.d.ts"),
@@ -38,19 +46,38 @@ const contracts = [
   },
 ];
 
-if (!existsSync(generator)) {
-  throw new Error(
-    "openapi-typescript is not installed; run npm install before generating contracts",
-  );
+/** The first line of every generated file: which contract bytes it came from. */
+export const HEADER = /^\/\/ From snoopy-backend (\S+), sha256 ([0-9a-f]{64})\.$/mu;
+
+export function sha256(path) {
+  return createHash("sha256").update(readFileSync(path)).digest("hex");
 }
 
-for (const { input, output } of contracts) {
-  if (!existsSync(input)) {
-    throw new Error(`Required platform contract is unavailable: ${input}`);
+if (resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) {
+  if (!existsSync(generator)) {
+    throw new Error(
+      "openapi-typescript is not installed; run npm install before generating contracts",
+    );
   }
-  mkdirSync(dirname(output), { recursive: true });
-  execFileSync(generator, [input, "--output", output], {
-    cwd: root,
-    stdio: "inherit",
-  });
+
+  for (const { input, output } of contracts) {
+    if (!existsSync(input)) {
+      throw new Error(`Required platform contract is unavailable: ${input}`);
+    }
+    mkdirSync(dirname(output), { recursive: true });
+    execFileSync(generator, [input, "--output", output], {
+      cwd: root,
+      stdio: "inherit",
+    });
+    // Each file names the contract it came from by the hash of that contract's
+    // bytes, as `snoopy` writes it, so which version of the platform's contract
+    // the app was built against is read from the file — and compared with the
+    // deployed platform's — not recorded by hand beside it.
+    writeFileSync(
+      output,
+      `// From snoopy-backend ${relative(backendRoot, input)}, sha256 ${sha256(input)}.\n` +
+        "// Regenerate with `npm run generate:platform-contracts`; never edit by hand.\n" +
+        readFileSync(output, "utf8"),
+    );
+  }
 }

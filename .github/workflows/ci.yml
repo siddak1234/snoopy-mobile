@@ -8,10 +8,10 @@ on:
 jobs:
   lint:
     name: Lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -20,10 +20,10 @@ jobs:
 
   typecheck:
     name: Typecheck
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -32,10 +32,10 @@ jobs:
 
   test:
     name: Test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -56,10 +56,10 @@ jobs:
 
   gates:
     name: Architecture gates
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -121,13 +121,36 @@ jobs:
 
   export:
     name: Native bundle export
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run export:ios
       - run: npm run export:android
+
+  # The one check a merge and a release read. Green only when EVERY job above
+  # concluded success: a failure, a cancellation or a skip is red, because this
+  # workflow has no job that is allowed to skip. The native export was never a
+  # required check on its own; through this job it is.
+  all-green:
+    name: all-green
+    if: always()
+    needs: [lint, typecheck, test, gates, export]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Every job succeeded
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          not_success=$(echo "$NEEDS" | jq -r 'to_entries[] | select(.value.result != "success") | .key')
+          if [ -n "$not_success" ]; then
+            echo "all-green: FAIL — not success: $(echo "$not_success" | tr '\n' ' ')"
+            exit 1
+          fi
+          echo "all-green: every job succeeded"
