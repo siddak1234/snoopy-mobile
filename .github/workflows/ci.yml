@@ -39,7 +39,22 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      # A trial (CI plan Wave 2 [A]), on this job only because it is the critical
+      # path: the installed tree, keyed on the exact lockfile. An exact hit skips
+      # `npm ci` (12-20 s of this job over the five-run baseline); no restore-keys,
+      # so any other lockfile misses, runs `npm ci` as before and never reads a
+      # stale tree. Nothing the tests write lands in the tree: jest's cache is the
+      # runner's tmpdir (no cacheDirectory is set). The key carries the OS because
+      # the tree's prebuilt binaries (lightningcss, the unrs resolver) are chosen
+      # per OS and arch; they are N-API, so the Node version is not part of it.
+      - name: Restore node_modules
+        id: node-modules
+        uses: actions/cache@v6
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('package-lock.json') }}
+      - if: steps.node-modules.outputs.cache-hit != 'true'
+        run: npm ci
       # The suite as `npm run verify` runs it, one command for both. `--runInBand`:
       # without it CI ran the suite in a different concurrency mode from every
       # Gate 8 run, so a flake could appear in exactly one of the two places and
