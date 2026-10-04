@@ -82,6 +82,13 @@ of the 14 in `screen-state.test.tsx`; the other 20 set no font size.
 CI runs lint, typecheck, Jest, all architecture/dependency gates, contract
 verification, and both platform exports; `all-green` is the one check that
 needs every one of them and is red on any failure, cancellation or skip.
+`contract-deployed` (`scripts/verify-deployed-contracts.mjs`) compares each
+generated file's sha256 header with the hash the live
+`https://api.autom8x.ai/health/live` reports for its document and fails closed
+— an unreachable host or an answer with no marker is red;
+`platform-requirement.json` (`{"aheadOfDeployed": true}`) is the one reviewed
+escape for a change that must land before the platform's, and `release:ios`
+refuses any mismatch, escape or not.
 `npm run hooks:install` (once per clone; `git config core.hooksPath
 .githooks`) puts the same gate before every push: `.githooks/pre-push` runs
 `CI=1 npm run verify`, `audit:dependencies` and the salvaged-client-data scan
