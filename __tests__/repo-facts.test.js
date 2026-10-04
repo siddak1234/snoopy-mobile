@@ -1,5 +1,5 @@
 const { spawnSync } = require('node:child_process');
-const { existsSync, mkdtempSync, readFileSync, rmSync } = require('node:fs');
+const { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join, resolve } = require('node:path');
 
@@ -9,12 +9,14 @@ const { join, resolve } = require('node:path');
  * BUILD-PLAN 24.3.7). The shape is asserted here so a drift is caught by the
  * repository that emits it, not by the one that quotes it. The schema is read
  * from the backend checkout beside this one when present; absent, that part
- * skips, as `verify:platform-contracts` does.
+ * SKIPS VISIBLY — counted as skipped, never as passed — as `verify:platform-contracts`
+ * does.
  */
 
 const root = resolve(__dirname, '..');
 const script = join(root, 'scripts/repo-facts.mjs');
 const schemaPath = resolve(root, '../snoopy-backend/docs/repo-facts.schema.json');
+const schemaHere = existsSync(schemaPath);
 
 function emit() {
   const dir = mkdtempSync(join(tmpdir(), 'mobile-facts-'));
@@ -56,12 +58,39 @@ describe('repo facts', () => {
     expect(facts.counts.fixtureModules.value).toBe(0);
   });
 
-  it('carries only the keys the backend schema allows, when the schema is here', () => {
-    if (!existsSync(schemaPath)) return;
-    const schema = JSON.parse(readFileSync(schemaPath, 'utf8'));
-    expect(schema.properties.repository.enum).toContain('snoopy-mobile');
-    for (const key of schema.required) expect(facts).toHaveProperty(key);
-    for (const key of Object.keys(facts)) expect(Object.keys(schema.properties)).toContain(key);
+  (schemaHere ? it : it.skip)(
+    schemaHere
+      ? 'carries only the keys the backend schema allows'
+      : 'carries only the keys the backend schema allows — SKIPPED: ../snoopy-backend/docs/repo-facts.schema.json is not checked out beside this repository',
+    () => {
+      const schema = JSON.parse(readFileSync(schemaPath, 'utf8'));
+      expect(schema.properties.repository.enum).toContain('snoopy-mobile');
+      for (const key of schema.required) expect(facts).toHaveProperty(key);
+      for (const key of Object.keys(facts)) expect(Object.keys(schema.properties)).toContain(key);
+    },
+  );
+
+  it('emits nothing after a recorded contract-check skip, and removes stale facts beside the record', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'mobile-facts-'));
+    try {
+      const out = join(dir, 'facts.json');
+      writeFileSync(out, '{"stale":true}\n');
+      writeFileSync(
+        join(dir, 'platform-contracts.json'),
+        JSON.stringify({ skipped: true, reason: 'snoopy-backend is not checked out (test)' }),
+      );
+      const run = spawnSync(process.execPath, [script, '--out', out, '--gate', 'verify'], {
+        cwd: root,
+        encoding: 'utf8',
+      });
+      // The verify chain's exit code is unchanged: the skip is recorded, not fatal.
+      expect(run.status).toBe(0);
+      expect(run.stdout).toContain('facts NOT emitted');
+      expect(run.stdout).toContain('snoopy-backend is not checked out (test)');
+      expect(existsSync(out)).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it('is never committed here: .gitignore excludes where verify writes it', () => {

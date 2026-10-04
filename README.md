@@ -80,7 +80,13 @@ were re-pinned once in build 10 (24.12) — 48 of the 64 Nocturne entries and 10
 of the 14 in `screen-state.test.tsx`; the other 20 set no font size.
 
 CI runs lint, typecheck, Jest, all architecture/dependency gates, contract
-verification, and both platform exports. Preview and production EAS values are
+verification, and both platform exports; `all-green` is the one check that
+needs every one of them and is red on any failure, cancellation or skip.
+`npm run release:ios` (`scripts/release-ios.sh`; `--dry-run` rehearses the
+refusals) builds and submits only `origin/main`, clean, with `all-green`
+concluded success on HEAD and the live AASA naming the app, and only a build
+whose `gitCommitHash` is HEAD with the release's entitlements; `eas.json`
+`cli.requireCommit` refuses an uncommitted tree. Preview and production EAS values are
 supplied by the build environment; they are intentionally not committed to
 `eas.json`. Since Round 7.5 that means the EAS-hosted `preview` and
 `production` environments on the linked project (`@autom8x.ai/snoopy-mobile`):
