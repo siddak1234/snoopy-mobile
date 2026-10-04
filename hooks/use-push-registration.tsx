@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 import { AppState, Linking, Platform } from 'react-native';
 
 import { activeWorkspaceId, useSession, type SessionState } from '@/hooks/use-session';
+import type { components } from '@/lib/generated/platform-contracts/platform';
 import { newIdempotencyKey } from '@/lib/platform/client';
 import { registerDevice } from '@/lib/platform/devices';
 import { PlatformError } from '@/lib/platform/problem';
@@ -195,8 +196,17 @@ const RUN_ID = /^[A-Za-z0-9_-]{1,128}$/u;
 /** A workspace id from a push is a workspace id, as the platform writes one: a UUID. */
 const WORKSPACE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
+/**
+ * A push's `data` in the platform's own words: `PushNotificationData` in the
+ * contract the app generates from (docs/openapi.yaml), so an event or a field
+ * the platform does not send fails the typecheck rather than a tap. It is read
+ * from a notification, not validated, so every field is optional here and each
+ * is still checked before it is used.
+ */
+type PushData = Partial<components['schemas']['PushNotificationData']>;
+
 /** What a tap opens: a failed run's page, or Activity for a held one — nothing for anything else. */
-function targetOf(data: Record<string, unknown>): Href | null {
+function targetOf(data: PushData): Href | null {
   if (data.event === 'run-failed' && typeof data.runId === 'string' && RUN_ID.test(data.runId)) {
     return { pathname: '/(tabs)/(home)/run', params: { runId: data.runId } };
   }
@@ -211,7 +221,7 @@ function targetOf(data: Record<string, unknown>): Href | null {
  * before the platform named one: no id (every push until the NINETEENTH
  * promotion), an id of another shape, one that is not theirs, the active one.
  */
-function switchFor(named: unknown, state: SessionState): string | null {
+function switchFor(named: PushData['workspaceId'], state: SessionState): string | null {
   if (typeof named !== 'string' || !WORKSPACE_ID.test(named)) return null;
   if (state.status !== 'signed-in' || named === activeWorkspaceId(state)) return null;
   return state.session.workspaces.some((workspace) => workspace.id === named) ? named : null;
@@ -275,7 +285,8 @@ export function usePushRegistration(signedIn: boolean): void {
       const id = response.notification.request.identifier;
       if (id === openedResponse) return;
       openedResponse = id;
-      const data = response.notification.request.content.data ?? {};
+      // The published shape, unvalidated: targetOf and switchFor check each field.
+      const data = (response.notification.request.content.data ?? {}) as PushData;
       const target = targetOf(data);
       if (!target) return;
       const workspaceId = switchFor(data.workspaceId, drawn.current);

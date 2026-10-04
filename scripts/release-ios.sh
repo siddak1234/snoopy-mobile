@@ -6,8 +6,10 @@
 #
 # Refuses unless: HEAD is origin/main; the tree is clean; the `all-green` check
 # run from GitHub Actions on HEAD concluded success (selected by check NAME and
-# app id — a Dependabot check run on the same commit is not CI); and the live
-# AASA names this app in both applinks and webcredentials. After `eas build`:
+# app id — a Dependabot check run on the same commit is not CI); the live
+# AASA names this app in both applinks and webcredentials; and the deployed
+# platform's contract hashes (/health/live) equal the generated types' headers
+# (scripts/verify-deployed-contracts.mjs --release). After `eas build`:
 # the build's gitCommitHash is HEAD and the ipa carries the release's
 # entitlements. Only then does it submit. Any doubt refuses.
 #
@@ -74,6 +76,15 @@ print("live AASA applinks:", applinks)
 print("live AASA webcredentials:", web)
 sys.exit(0 if want in applinks and want in web else 1)
 ' "$APP_ID" || refuse "the live AASA at $AASA_URL does not list $APP_ID in both applinks and webcredentials"
+
+# The deployed contract: the platform this build will talk to serves the
+# contract its types were generated from — each generated file's sha256 header
+# equals the hash the live /health/live reports for its document. `--release`
+# reads no escape: a tree platform-requirement.json declares ahead of the
+# platform is refused here until that platform is promoted. An unreachable
+# host or an answer with no marker refuses too.
+node scripts/verify-deployed-contracts.mjs --release \
+  || refuse "the committed platform types are not the contract the deployed platform serves"
 
 if [ "$DRY_RUN" = 1 ]; then
   echo "DRY RUN: every gate passed on ${HEAD_SHA:0:7}; stopping before eas build."

@@ -618,6 +618,43 @@ Written 2026-09-30, once the owner had completed 24.8.1, 24.8.2 and 24.8.6.
   or-drop reading against the plan's rule — keep only if the warm restore
   beats `npm ci` by a clear margin — are in the PR; the decision is the
   owner's.
+- **The generated types against the deployed platform's contract, and the
+  push payload typed (CI plan Wave 1 [X], branch `ci-contract-deployed`,
+  2026-10-04).** Written once the platform's `/health/live` carries its
+  deployed marker (`snoopy-backend` #153, c6b8650: `commit` and `contracts`,
+  the sha256 of each public document), and pushed only after that marker is
+  promoted and read back. The types are regenerated from c6b8650's documents
+  with `SNOOPY_BACKEND_ROOT` at a worktree of it: `platform.d.ts` 7f9d1db7… →
+  92e14453… (`LiveHealthResponse.commit`/`contracts` and
+  `PushNotificationData`), `automations.d.ts` 0349e2cb… and
+  `connections.d.ts` ab70cb0f… unchanged — each header `shasum -a 256` of its
+  document at c6b8650. `scripts/verify-deployed-contracts.mjs` — the same file
+  as `snoopy`'s, byte for byte — reads the three headers, GETs
+  `https://api.autom8x.ai/health/live` (four attempts, 2, 4 and 8 s apart)
+  and passes only when each header's hash equals the `contracts` entry for
+  its document. It fails closed: an unreachable host, and an answer with no
+  `contracts` — today's — are red exactly as a mismatch is. The one escape is
+  `platform-requirement.json`, committed `{ "aheadOfDeployed": false }`:
+  `true` passes a mismatch loudly, for an app change that must land before the
+  platform's, and fails once nothing is ahead, so it cannot outlive its change.
+  CI's `contract-deployed` job (ubuntu-24.04, five minutes, Node 22, no
+  install, no secret) runs it, and `all-green` needs it. `release:ios` runs it
+  with `--release`, which reads no escape, after the AASA check and before
+  `--dry-run` stops: an app built against a platform that is not running is
+  refused. Rehearsed with `--dry-run`, the first gates stubbed to answer as on
+  main and the AASA from a fixture (production was not read): `REFUSED: the
+  committed platform types are not the contract the deployed platform serves`,
+  after the script's "no deployed marker" against today's `/health/live`.
+  `hooks/use-push-registration.tsx` reads a push's `data` as the generated
+  `PushNotificationData` (every field optional, each still checked before it
+  is used, so what a tap opens is unchanged): `'run-faild'` in `targetOf`
+  fails the typecheck (TS2367, no overlap with the published events), and so
+  does `data.runID` (TS2551). Held by
+  `__tests__/verify-deployed-contracts.test.js` (13 tests: match, mismatch,
+  unreachable, no marker, a marker short of a document, ahead, `--release`, a
+  stale escape, the retries, the headers, the requirement file), each of five
+  breaks of the script read red alone and restored from a kept copy. 946 tests,
+  80 snapshots, 269 of 269 presses.
 
 ### The sign-in sheet that would not open (24.7.3, attempt 1, 2026-10-01)
 
