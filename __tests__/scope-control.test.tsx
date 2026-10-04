@@ -5,6 +5,8 @@ import { StyleSheet } from 'react-native';
 import ArchivedFlowsScreen from '@/app/(tabs)/flows/archived';
 import FlowsScreen from '@/app/(tabs)/flows/index';
 import { ScopeControl } from '@/components/scope-control';
+import type { Subscription } from '@/lib/platform/automations';
+import type { Project } from '@/lib/platform/projects';
 import { fakePlatform } from '@/test/fake-platform';
 import { renderWithProviders } from '@/test/render';
 import {
@@ -84,7 +86,7 @@ describe('the scope control on Flows', () => {
     const rows = subscriptionsPayload().subscriptions.map((row, index) =>
       index === 0 ? { ...row, projectId: 'project-1' } : { ...row, projectId: null },
     );
-    const archived = (id: string, name: string, projectId: string | null) => ({
+    const archived = (id: string, name: string, projectId: string | null): Subscription => ({
       ...rows[0]!,
       id,
       name,
@@ -135,7 +137,7 @@ describe('the team pill (24.11.7)', () => {
     const fake = fakePlatform(platformOperation);
     let made = false;
     // A team is its kind (24.12): the kind is its name and its type.
-    const finance = {
+    const finance: Project = {
       id: 'p-new',
       workspaceId: TEST_WORKSPACE,
       name: 'Finance',

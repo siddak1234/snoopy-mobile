@@ -1,5 +1,6 @@
 import { fireEvent, screen } from 'expo-router/testing-library';
 
+import type { Run } from '@/lib/platform/automations';
 import { flowCatalogPayload, runsPayload } from '@/test/platform';
 import { answerPlatform, flush, launch, press, pressTab, signedInOnThisPhone } from '@/test/real-router';
 
@@ -24,7 +25,7 @@ function todayAndOlder() {
   const older = new Date(now);
   older.setDate(now.getDate() - 10);
   const base = runsPayload().runs[0]!;
-  const run = (id: string, status: string, at: Date) => ({
+  const run = (id: string, status: Run['status'], at: Date): Run => ({
     ...base,
     id,
     rootRunId: id,

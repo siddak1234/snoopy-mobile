@@ -18,7 +18,7 @@ const subscription = (id: string, projectId: string | null): Subscription =>
     createdByUserId: 'user-1',
     createdAt: '2026-10-01T00:00:00Z',
     updatedAt: '2026-10-01T00:00:00Z',
-  }) as Subscription;
+  });
 
 const subscriptions = [subscription('sub-ws', null), subscription('sub-a', 'project-a'), subscription('sub-b', 'project-b')];
 

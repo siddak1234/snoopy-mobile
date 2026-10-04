@@ -24,9 +24,11 @@ function entry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
     monthlyPriceUsd: 49,
     subscribed: false,
     available: true,
+    requiredConnections: [],
     setup: [],
+    pipeline: [],
     ...overrides,
-  } as CatalogEntry;
+  };
 }
 
 describe('AutomationCatalogEntry.available survives the mapping', () => {

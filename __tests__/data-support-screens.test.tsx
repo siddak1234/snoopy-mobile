@@ -15,6 +15,7 @@ import { Linking, Platform, Share } from 'react-native';
 
 import DataExportScreen from '@/app/(tabs)/settings/data';
 import SupportScreen from '@/app/(tabs)/settings/support';
+import type { ExportJob } from '@/lib/platform/exports';
 import { fakePlatform } from '@/test/fake-platform';
 import { TEST_WORKSPACE, sessionAs, signedInSession } from '@/test/platform';
 import { renderWithProviders } from '@/test/render';
@@ -31,7 +32,7 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-const job = (status: string, extra: Record<string, unknown> = {}) => ({
+const job = (status: ExportJob['status'], extra: Partial<ExportJob> = {}): ExportJob => ({
   id: 'export-1',
   status,
   createdAt: '2026-09-30T00:00:00Z',
@@ -62,7 +63,7 @@ describe('Data export (24.6.3)', () => {
       workspaceId: TEST_WORKSPACE,
       exportedAt: '2026-09-30T00:00:00Z',
       complete: true,
-      services: [{ service: 'runs', ok: true, data: { truncated: true } }],
+      services: [{ service: 'runs', ok: true, data: { runs: [], approvals: [], truncated: true } }],
     });
     await renderWithProviders(<DataExportScreen />, sessionAs('owner'));
     await fireEvent.press(await screen.findByText('Prepare export'));
@@ -137,7 +138,10 @@ describe('Data export (24.6.3)', () => {
 describe('Support (24.6.4)', () => {
   it('sends the contact form on the public operation, with what was filled in', async () => {
     const fake = fakePlatform(platformOperation);
-    fake.always('POST /v1/contact-requests', { id: 'c1' });
+    fake.always('POST /v1/contact-requests', {
+      contactRequestId: '00000000-0000-4000-8000-0000000000c1',
+      receivedAt: '2026-09-30T00:00:00Z',
+    });
     await renderWithProviders(<SupportScreen />, signedInSession);
 
     await fireEvent.press(screen.getByText('Send'));
