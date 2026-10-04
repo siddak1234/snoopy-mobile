@@ -22,7 +22,8 @@ import { OrgPeople } from '@/components/organization/org-people';
 import type { SessionContextValue } from '@/hooks/use-session';
 import { joinLinkLine } from '@/lib/content/join-link';
 import { WORKSPACE_CHANGED } from '@/lib/content/refusals';
-import type { OrganizationDomain } from '@/lib/platform/organization';
+import type { JoinRequest, OrganizationDomain, WorkspaceMember } from '@/lib/platform/organization';
+import type { WorkspaceSummary } from '@/lib/platform/workspaces';
 import { PlatformError } from '@/lib/platform/problem';
 import { resetSnapshot } from '@/lib/platform/snapshot';
 import { fakePlatform } from '@/test/fake-platform';
@@ -43,8 +44,8 @@ function session(email = 'alex@acme.co'): SessionContextValue {
   return { ...signedInSession, session: { ...signedInSession.session, user: { ...signedInSession.session.user, email } } };
 }
 
-const ORG = { id: TEST_WORKSPACE, name: 'Acme Operations', type: 'organization' };
-const member = (userId: string, role: string, displayName: string) => ({
+const ORG: Omit<WorkspaceSummary, 'role'> = { id: TEST_WORKSPACE, name: 'Acme Operations', type: 'organization' };
+const member = (userId: string, role: WorkspaceMember['role'], displayName: string): WorkspaceMember => ({
   workspaceId: TEST_WORKSPACE,
   userId,
   role,
@@ -52,7 +53,7 @@ const member = (userId: string, role: string, displayName: string) => ({
   email: `${displayName.toLowerCase()}@acme.co`,
   createdAt: '2026-09-01T00:00:00Z',
 });
-const DOMAIN = {
+const DOMAIN: OrganizationDomain = {
   id: 'domain-1',
   workspaceId: TEST_WORKSPACE,
   domain: 'acme.co',
@@ -129,7 +130,9 @@ describe('Organization — an owner or admin of the active organization manages 
 
   it('approves a join request', async () => {
     const fake = routeManage('owner');
-    fake.always('PATCH /v1/workspaces/{workspaceId}/join-requests/{joinRequestId}', { request: {} });
+    fake.always('PATCH /v1/workspaces/{workspaceId}/join-requests/{joinRequestId}', {
+      request: { id: 'jr-1', workspaceId: TEST_WORKSPACE, userId: 'u9', status: 'approved', createdAt: '2026-09-29T00:00:00Z' },
+    });
     await renderWithProviders(<OrganizationScreen />, session());
     await fireEvent.press(await screen.findByTestId('join-request-jr-1'));
     await pressLast('Approve');
@@ -139,7 +142,7 @@ describe('Organization — an owner or admin of the active organization manages 
 
   it('names the person asking to join — their name and address, the id only when the platform sends neither (24.12)', async () => {
     const fake = routeManage('owner');
-    const asked = (id: string, userId: string, who: { displayName?: string; email?: string }) => ({
+    const asked = (id: string, userId: string, who: { displayName?: string; email?: string }): JoinRequest => ({
       id,
       workspaceId: TEST_WORKSPACE,
       userId,
@@ -208,7 +211,9 @@ describe('Organization — everyone else', () => {
       workspaceId: 'org-9',
       request: { id: 'jr-7', workspaceId: 'org-9', userId: 'u1', status: 'pending', createdAt: '2026-09-29T00:00:00Z' },
     });
-    fake.always('DELETE /v1/workspaces/{workspaceId}/join-requests/{joinRequestId}', { request: {} });
+    fake.always('DELETE /v1/workspaces/{workspaceId}/join-requests/{joinRequestId}', {
+      request: { id: 'jr-7', workspaceId: 'org-9', userId: 'u1', status: 'cancelled', createdAt: '2026-09-29T00:00:00Z' },
+    });
     await renderWithProviders(<OrganizationScreen />, session());
 
     await fireEvent.press(await screen.findByText('Join Acme'));
@@ -335,7 +340,7 @@ describe('Organization — the join link (24.12, the owner\'s decision 5)', () =
   });
 
   /** The test domain — verified, shown for matching emails, approval — changed as a case says. */
-  const domain = (change: Partial<OrganizationDomain> = {}) => ({ ...DOMAIN, ...change }) as OrganizationDomain;
+  const domain = (change: Partial<OrganizationDomain> = {}): OrganizationDomain => ({ ...DOMAIN, ...change });
 
   it.each<[string, Partial<OrganizationDomain>, string]>([
     ['approval', {}, 'People at acme.co can ask to join. You approve them here.'],

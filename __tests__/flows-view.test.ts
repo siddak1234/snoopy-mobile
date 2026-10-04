@@ -28,12 +28,13 @@ const entry = (over: Partial<CatalogEntry> = {}): CatalogEntry =>
     monthlyPriceUsd: 39,
     subscribed: true,
     available: true,
+    requiredConnections: [],
     setup: [],
     pipeline: [
       { id: 'extract', kicker: 'AI STEP', title: 'Extract invoice fields', description: 'x' },
     ],
     ...over,
-  }) as CatalogEntry;
+  });
 
 const sub = (over: Partial<Subscription> = {}): Subscription =>
   ({
@@ -44,10 +45,12 @@ const sub = (over: Partial<Subscription> = {}): Subscription =>
     status: 'live',
     config: {},
     unmetConnections: [],
+    projectId: null,
+    createdByUserId: null,
     createdAt: '2026-08-17T00:00:00Z',
     updatedAt: '2026-08-17T00:00:00Z',
     ...over,
-  }) as Subscription;
+  });
 
 const counts = (over: Partial<RunSubscriptionCounts> = {}): RunSubscriptionCounts =>
   ({
@@ -60,7 +63,7 @@ const counts = (over: Partial<RunSubscriptionCounts> = {}): RunSubscriptionCount
     failed: 12,
     cancelled: 0,
     ...over,
-  }) as RunSubscriptionCounts;
+  });
 
 describe('toFlows', () => {
   it('draws the summary line from run-stats, grouped as the design writes it', () => {

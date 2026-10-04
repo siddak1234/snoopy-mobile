@@ -655,6 +655,53 @@ Written 2026-09-30, once the owner had completed 24.8.1, 24.8.2 and 24.8.6.
   stale escape, the retries, the headers, the requirement file), each of five
   breaks of the script read red alone and restored from a kept copy. 946 tests,
   80 snapshots, 269 of 269 presses.
+- **The fake platform answers as the platform publishes (fixture
+  conformance, the owner's item, branch `ci-fixture-conformance`,
+  2026-10-04).** Measured first: every body the mocked `platformOperation`
+  answered in one full jest run — 2,192 answers in 32 files — was validated
+  against `snoopy-backend` fc9d131's three documents (the hashes the generated
+  headers name) with a JSON-schema validator run from outside this repository.
+  Nothing was checked: `test/platform.tsx`'s builders had inferred types,
+  `routePlatform` took `Record<string, unknown>` and answered any path it did
+  not know with `{}`, `fakePlatform`'s replies were `unknown`, and the shared
+  session was cast `as unknown as SessionContextValue`. 492 answers were off
+  the contract's shape — every built subscription without `projectId` and
+  `createdByUserId`, 44 billing reads answered `{}`, the session without
+  `authenticated` and its workspace without `type`, decisions answered
+  `{ request: {} }` — and 625 more only on formats (ids that are not UUIDs).
+  Now `test/fake-platform.ts` types each route `METHOD /path` against the
+  generated `paths` and its reply with that operation's success body
+  (`Answer`); `test/platform.tsx`'s builders and `routePlatform`'s own answers
+  return those types; its overrides are typed by the operation each stands
+  for and given to that operation only (a list's answer no longer reaches a
+  decision or a cancel below it); billing and one team are answered as
+  published and a path it does not know is refused, never `{}` (no test
+  reaches it); the shared session, `test/real-router.tsx`'s and four tests'
+  own carry `authenticated` and a workspace `type` (an organization; the two
+  Settings-index tests that read a workspace with no type now read a personal
+  one, which draws what they assert); and the fixture helpers cast `as
+  CatalogEntry`, `as Subscription`, `as OrganizationDomain` are annotated
+  instead, which showed the missing `requiredConnections`, `pipeline`,
+  `projectId`, `createdByUserId`. One answer is off the contract on purpose —
+  the catalog from before `requiredConnections` (Setup without a Connections
+  step) — through the one named escape, `unpublishedAnswer`. After, of
+  2,441 answers (the real-router project measured too): 48 still off the
+  shape, every one handed straight to the mock in seven files
+  (`platform-mutations`, `snapshot-invalidation`, `automation-actions`,
+  `presses-patterns-dialog-close`, `tab-screens`, `presses-flows`,
+  `real-router/sign-out`), where no type reaches them, and 1,173 off only on
+  formats, which no type can express. Holding those is the
+  owner's call: one runtime check of every answer against the documents
+  needs a JSON-schema validator and a YAML parser this repository does not
+  have of its own (a new dependency), or those files move onto the typed
+  seams. Proved red by hand ten ways (`tsc --noEmit`, each file restored
+  byte-identical): a builder subscription without `createdByUserId`, the
+  billing answer without `planId`, the session without `authenticated`, a
+  kicker off the published enum, a reply's `deleted: 'yes'`, the route `GET
+  /v1/plan`, an override's `categories: 'All'`, an override for `/approval`,
+  a domain `status: 'verifed'`, a cast-before helper without `projectId`; on
+  main the same kind of drift passes typecheck five ways. 946 tests, 80
+  snapshots, 269 of 269 presses.
 
 ### The sign-in sheet that would not open (24.7.3, attempt 1, 2026-10-01)
 

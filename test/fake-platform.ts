@@ -5,6 +5,31 @@
  * that throws is the platform refusing. An unrouted call throws, so a test
  * cannot pass by a screen asking for something nobody expected.
  */
+import type { paths as AutomationPaths } from '@/lib/generated/platform-contracts/automations';
+import type { paths as ConnectionPaths } from '@/lib/generated/platform-contracts/connections';
+import type { paths as PlatformPaths } from '@/lib/generated/platform-contracts/platform';
+
+/**
+ * Every published operation, from the generated contracts: the automation and
+ * connection documents own their paths (the root document repeats them without
+ * bodies). A reply is typed with its operation's success body (`Answer`), so a
+ * reply the platform could not give fails `npm run typecheck`, not a phone.
+ */
+type Paths = Omit<PlatformPaths, keyof AutomationPaths | keyof ConnectionPaths> & AutomationPaths & ConnectionPaths;
+type Verb = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+type OperationAt<P extends keyof Paths, V extends Verb> = NonNullable<Paths[P][Lowercase<V> & keyof Paths[P]]>;
+export type Route = {
+  [P in keyof Paths & string]: { [V in Verb]: [OperationAt<P, V>] extends [never] ? never : `${V} ${P}` }[Verb];
+}[keyof Paths & string];
+/** What an operation answers on success: its 2xx JSON body, or null for one without a body. */
+type Ok = 200 | 201 | 202 | 204;
+type Success<O> = O extends { responses: infer R }
+  ? { [S in keyof R & Ok]: R[S] extends { content: { 'application/json': infer B } } ? B : null }[keyof R & Ok]
+  : never;
+export type Answer<R extends Route> = R extends `${infer V extends Verb} ${infer P extends keyof Paths & string}`
+  ? Success<OperationAt<P, V>>
+  : never;
+
 export type Sent = {
   method: string;
   path: string;
@@ -15,12 +40,12 @@ export type Sent = {
   body?: unknown;
 };
 
-type Reply = unknown | ((sent: Sent) => unknown);
+type Reply<R extends Route> = Answer<R> | ((sent: Sent) => Answer<R> | Promise<Answer<R>>);
 
 export function fakePlatform(platformOperation: jest.Mock) {
   const sent: Sent[] = [];
-  const queued: Record<string, Reply[]> = {};
-  const standing: Record<string, Reply> = {};
+  const queued: Record<string, unknown[]> = {};
+  const standing: Record<string, unknown> = {};
 
   const call =
     (method: string) =>
@@ -52,11 +77,11 @@ export function fakePlatform(platformOperation: jest.Mock) {
   return {
     sent,
     /** Every later call to this route answers so. */
-    always(route: string, reply: Reply) {
+    always<R extends Route>(route: R, reply: Reply<R>) {
       standing[route] = reply;
     },
     /** The next call to this route answers so, before any standing answer. */
-    once(route: string, reply: Reply) {
+    once<R extends Route>(route: R, reply: Reply<R>) {
       (queued[route] ??= []).push(reply);
     },
     /** The calls to one route, in order. */

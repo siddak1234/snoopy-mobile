@@ -15,8 +15,8 @@ import { nocturneDark } from '@/constants/theme';
 import { SessionContext, type SessionContextValue } from '@/hooks/use-session';
 import { WORKSPACE_CHANGED } from '@/lib/content/refusals';
 import { PlatformError } from '@/lib/platform/problem';
-import { teamDirectoryIfThere } from '@/lib/platform/projects';
-import { fakePlatform, type Sent } from '@/test/fake-platform';
+import { teamDirectoryIfThere, type AccessRequest, type Project, type TeamDirectoryEntry } from '@/lib/platform/projects';
+import { fakePlatform, type Answer, type Sent } from '@/test/fake-platform';
 import { TEST_WORKSPACE, sessionAs, signedInSession } from '@/test/platform';
 import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
 
@@ -36,7 +36,7 @@ beforeEach(() => {
  */
 
 const PERSONAL = 'ws-personal';
-const workspaces = (orgRole: 'owner' | 'admin' | 'member' = 'member') => ({
+const workspaces = (orgRole: 'owner' | 'admin' | 'member' = 'member'): Answer<'GET /v1/workspaces'> => ({
   workspaces: [
     { id: TEST_WORKSPACE, name: 'Acme Operations', type: 'organization', role: orgRole },
     { id: PERSONAL, name: 'Personal', type: 'personal', role: 'owner' },
@@ -44,7 +44,7 @@ const workspaces = (orgRole: 'owner' | 'admin' | 'member' = 'member') => ({
   activeWorkspaceId: TEST_WORKSPACE,
 });
 /** A team is its kind (24.12): the kind is its name and its type. A team made before keeps its own name. */
-const team = (id: string, workspaceId: string, kind: string, extra: Record<string, unknown> = {}) => ({
+const team = (id: string, workspaceId: string, kind: string, extra: Partial<Project> = {}): Project => ({
   id,
   workspaceId,
   name: kind,
@@ -54,7 +54,7 @@ const team = (id: string, workspaceId: string, kind: string, extra: Record<strin
   createdAt: '2026-09-01T00:00:00Z',
   ...extra,
 });
-const entry = (id: string, kind: string, access: 'member' | 'requested' | 'none') => ({
+const entry = (id: string, kind: string, access: 'member' | 'requested' | 'none'): TeamDirectoryEntry => ({
   id,
   workspaceId: TEST_WORKSPACE,
   name: kind,
@@ -92,7 +92,9 @@ const colorOf = (node: { props: { style?: unknown } }) => (StyleSheet.flatten(no
 
 describe('Teams (24.11.7)', () => {
   function routeList(
-    directory: unknown = { projects: [entry('p1', 'Finance', 'member'), entry('p4', 'Legal', 'none'), entry('p5', 'Data', 'requested')] },
+    directory: Answer<'GET /v1/workspaces/{workspaceId}/project-directory'> = {
+      projects: [entry('p1', 'Finance', 'member'), entry('p4', 'Legal', 'none'), entry('p5', 'Data', 'requested')],
+    },
     orgRole: 'owner' | 'admin' | 'member' = 'member',
   ) {
     const fake = fakePlatform(platformOperation);
@@ -151,11 +153,12 @@ describe('Teams (24.11.7)', () => {
 
   it('asks to join a team and reads the directory again; withdraws a request it made', async () => {
     const fake = routeList();
-    fake.always('POST /v1/workspaces/{workspaceId}/projects/{projectId}/access-requests', { request: {} });
-    fake.always('GET /v1/workspaces/{workspaceId}/projects/{projectId}/access-requests', {
-      requests: [{ id: 'r5', projectId: 'p5', workspaceId: TEST_WORKSPACE, userId: 'u1', status: 'pending', email: 'alex@acme.co', createdAt: '2026-10-02T00:00:00Z' }],
+    const mine: AccessRequest = { id: 'r5', projectId: 'p5', workspaceId: TEST_WORKSPACE, userId: 'u1', status: 'pending', email: 'alex@acme.co', createdAt: '2026-10-02T00:00:00Z' };
+    fake.always('POST /v1/workspaces/{workspaceId}/projects/{projectId}/access-requests', { request: mine });
+    fake.always('GET /v1/workspaces/{workspaceId}/projects/{projectId}/access-requests', { requests: [mine] });
+    fake.always('DELETE /v1/workspaces/{workspaceId}/projects/{projectId}/access-requests/{requestId}', {
+      request: { ...mine, status: 'cancelled' },
     });
-    fake.always('DELETE /v1/workspaces/{workspaceId}/projects/{projectId}/access-requests/{requestId}', { request: {} });
     await renderWithProviders(<TeamsScreen />, signedInSession);
     const reads = () => fake.to('GET /v1/workspaces/{workspaceId}/project-directory').length;
     await fireEvent.press(await screen.findByTestId('request-p4'));
@@ -402,7 +405,9 @@ describe('One team (24.11.7)', () => {
 
   it("deletes its owner's team in the team's own workspace, saying what becomes of its flows", async () => {
     const fake = routeTeam('owner', { workspaceId: PERSONAL });
-    fake.always('PATCH /v1/workspaces/{workspaceId}/projects/{projectId}', { project: {} });
+    fake.always('PATCH /v1/workspaces/{workspaceId}/projects/{projectId}', {
+      project: team('p1', PERSONAL, 'Finance', { status: 'archived' }),
+    });
     await renderWithProviders(<TeamScreen />, signedInSession);
     // Its title is its kind, said once (24.12).
     expect(await screen.findByText('Finance')).toBeTruthy();
@@ -453,7 +458,9 @@ describe('One team (24.11.7)', () => {
 
   it("changes a member's role and adds someone; an owner's row is not changed", async () => {
     const fake = routeTeam('owner');
-    fake.always('POST /v1/workspaces/{workspaceId}/projects/{projectId}/memberships', { membership: {} });
+    fake.always('POST /v1/workspaces/{workspaceId}/projects/{projectId}/memberships', {
+      membership: { projectId: 'p1', workspaceId: TEST_WORKSPACE, userId: 'u3', role: 'admin', displayName: 'Carol', email: 'carol@acme.co', createdAt: '2026-09-01T00:00:00Z' },
+    });
     await renderWithProviders(<TeamScreen />, signedInSession);
 
     await fireEvent.press(await screen.findByTestId('team-member-u2'));
@@ -473,7 +480,9 @@ describe('One team (24.11.7)', () => {
 
   it('shows a manager who is asking to join, and approves or denies them', async () => {
     const fake = routeTeam('admin');
-    fake.always('PATCH /v1/workspaces/{workspaceId}/projects/{projectId}/access-requests/{requestId}', { request: {} });
+    fake.always('PATCH /v1/workspaces/{workspaceId}/projects/{projectId}/access-requests/{requestId}', {
+      request: { id: 'r1', projectId: 'p1', workspaceId: TEST_WORKSPACE, userId: 'u5', status: 'approved', displayName: 'Erin', email: 'erin@acme.co', createdAt: '2026-10-02T00:00:00Z' },
+    });
     await renderWithProviders(<TeamScreen />, signedInSession);
     expect(await screen.findByText('ASKING TO JOIN · 1')).toBeTruthy();
     // Only what is still waiting: a denied request is not a decision to make.
