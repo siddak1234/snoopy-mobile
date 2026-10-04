@@ -544,6 +544,34 @@ Written 2026-09-30, once the owner had completed 24.8.1, 24.8.2 and 24.8.6.
   record. The `slug` stays `snoopy-mobile`: it names the EAS project.
 - Not done here: 24.2.2 (the Team ID into the AASA file) is `snoopy-backend`'s,
   and its deployment waits on production (§12.1 #156).
+- **The release gate, committed (CI plan Wave 1, branch `ci-wave-1`,
+  2026-10-03).** `scripts/release-ios.sh` (`npm run release:ios`; `--dry-run`
+  runs every refusal and stops before `eas build`) is build 13's script with
+  the scratchpad and nvm paths removed. It refuses unless HEAD is
+  `origin/main`, the tree is clean, the `all-green` check run from GitHub
+  Actions (app 15368, selected by check name — a Dependabot check run on the
+  same commit is not CI) on HEAD concluded success, and the live
+  `https://app.autom8x.ai/.well-known/apple-app-site-association` lists
+  `6WBHARQXCQ.ai.autom8x.snoopy` in both `applinks` and `webcredentials`.
+  After `eas build` the build's `gitCommitHash` must be HEAD and the ipa's
+  entitlements the release's (aps-environment production, applesignin, both
+  associated domains) before `eas submit`. `eas.json` `cli.requireCommit:
+  true` makes eas-cli itself refuse an uncommitted tree. In CI `all-green`
+  needs every job — the native export included, which was never a required
+  check — and is red on any failure, cancellation or skip; the runners are
+  pinned to `ubuntu-24.04` (`ubuntu-latest` moves to Ubuntu 26 on
+  2026-10-19) and `actions/checkout`, `actions/setup-node` are on v7. The
+  generated platform types carry `// From snoopy-backend <path>, sha256
+  <hash>.` as `snoopy` writes it, and `verify:platform-contracts` compares
+  those hashes with the source documents; generator and verifier read
+  `SNOOPY_BACKEND_ROOT` (default `../snoopy-backend`). A skipped contract
+  check is recorded beside the facts (`.autom8x/repo-facts/platform-contracts.json`),
+  `repo-facts` then emits NO facts and says why (exit code unchanged), and the
+  facts-schema test skips visibly instead of passing. Rehearsed on the branch:
+  `--dry-run` answered `REFUSED: the tree is not clean` with edits pending and
+  `REFUSED: HEAD … is not origin/main` once committed; the deliberate failure
+  (a lint error) turned Lint and `all-green` red, and its revert green — run
+  ids in the PR.
 
 ### The sign-in sheet that would not open (24.7.3, attempt 1, 2026-10-01)
 
