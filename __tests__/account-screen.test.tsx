@@ -110,7 +110,7 @@ describe('Linked accounts (24.6.2, on 24.2.1)', () => {
 describe('Deleting the account (24.6.2, ADR-0028)', () => {
   it('deleted: lets go of the session on this device and shows the signed-out screen', async () => {
     const fake = route();
-    fake.always('DELETE /v1/account', { deleted: true });
+    fake.always('DELETE /v1/account', { deleted: true, workspaces: [] });
     const current = session();
     await renderWithProviders(<AccountScreen />, current);
     await openDelete();
@@ -169,7 +169,7 @@ describe('Deleting the account (24.6.2, ADR-0028)', () => {
     fake.always('DELETE /v1/account', () => {
       throw new PlatformError('Dependency failure', 502, 'DEPENDENCY_FAILURE');
     });
-    fake.always('GET /v1/session', { user: { userId: 'u1', email: 'alex@acme.co' }, workspaces: [] });
+    fake.always('GET /v1/session', { authenticated: true, user: { userId: 'u1', email: 'alex@acme.co' }, workspaces: [] });
     await renderWithProviders(<AccountScreen />, session());
     await openDelete();
     expect(await screen.findByText(DELETION_WORDS.stillHere)).toBeTruthy();

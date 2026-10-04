@@ -24,7 +24,7 @@ const field = (over: Partial<SetupField>): SetupField =>
     control: 'toggle',
     required: false,
     ...over,
-  }) as SetupField;
+  });
 
 describe('bySection', () => {
   it('groups into the design’s four sections, in the design’s order', () => {

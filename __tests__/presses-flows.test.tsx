@@ -8,6 +8,7 @@ import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import FlowsScreen from '@/app/(tabs)/flows/index';
 import SetupScreen from '@/app/(tabs)/flows/setup';
 import { UNAVAILABLE_NOTE } from '@/lib/content/screen-states';
+import type { Subscription } from '@/lib/platform/automations';
 import { PlatformError, PlatformUnreachableError } from '@/lib/platform/problem';
 import {
   TEST_WORKSPACE,
@@ -229,7 +230,7 @@ describe('Setup — Activate (24.4: create, then patch its settings; 24.12: the 
   });
 
   it('while an account its flow needs is unconnected: the button says where to connect it, opens Settings, and sends nothing', async () => {
-    const held = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'held-0', projectId: 'project-1', status: 'paused', unmetConnections: ['hubspot'] };
+    const held: Subscription = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'held-0', projectId: 'project-1', status: 'paused', unmetConnections: ['hubspot'] };
     routePlatform(platformOperation, {
       '/automations': bareCatalog(),
       '/projects': projectsPayload('Finance'),

@@ -2,7 +2,8 @@ import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-librar
 import { router } from 'expo-router';
 
 import { PlatformError } from '@/lib/platform/problem';
-import { routePlatform } from '@/test/platform';
+import type { Answer } from '@/test/fake-platform';
+import { routePlatform, type RouteOverrides } from '@/test/platform';
 
 /**
  * The real-router project's harness (its fakes are `test/real-router-setup.ts`).
@@ -25,9 +26,10 @@ import { routePlatform } from '@/test/platform';
 export const WORKSPACE = '00000000-0000-4000-8000-000000000001';
 
 /** The session the platform answers while the keychain holds a token. */
-export const SESSION = {
+export const SESSION: Answer<'GET /v1/session'> = {
+  authenticated: true,
   user: { userId: 'u1', email: 'alex@acme.co', activeWorkspaceId: WORKSPACE },
-  workspaces: [{ id: WORKSPACE, name: 'Acme', role: 'owner' }],
+  workspaces: [{ id: WORKSPACE, name: 'Acme', type: 'organization', role: 'owner' }],
 };
 
 export const { platformOperation } = jest.requireMock('@/lib/platform/client') as { platformOperation: jest.Mock };
@@ -53,7 +55,7 @@ export function signedInOnThisPhone(extra: Record<string, string> = {}) {
  */
 export function answerPlatform(
   answers: Record<string, (path: string) => unknown> = {},
-  fixtures: Record<string, unknown> = {},
+  fixtures: RouteOverrides = {},
 ) {
   const calls: string[] = [];
   platformOperation.mockReset();

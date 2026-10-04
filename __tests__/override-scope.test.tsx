@@ -40,9 +40,9 @@ function signedIn(userId: string, workspaceId: string): SessionContextValue {
     session: {
       authenticated: true,
       user: { userId, email: `${userId}@example.test`, activeWorkspaceId: workspaceId },
-      workspaces: [{ id: workspaceId, name: 'Acme', role: 'owner' }],
+      workspaces: [{ id: workspaceId, name: 'Acme', type: 'organization', role: 'owner' }],
     },
-  } as unknown as SessionState);
+  });
 }
 
 const SIGNED_OUT = sessionFor({ status: 'signed-out' });

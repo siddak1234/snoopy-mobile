@@ -2,6 +2,7 @@ import React from 'react';
 import { screen } from '@testing-library/react-native';
 
 import type { SessionContextValue } from '@/hooks/use-session';
+import type { Answer } from '@/test/fake-platform';
 import { toPipelineStep, toPipelineSteps, type DeclaredStep } from '@/lib/view/pipeline';
 import { renderWithProviders, setMockParams } from '@/test/render';
 
@@ -24,10 +25,12 @@ const WORKSPACE = '22222222-2222-4222-8222-222222222222';
 
 const signedIn = {
   status: 'signed-in',
+  // The hook's members are stubbed (hence the cast); the platform's session is typed.
   session: {
+    authenticated: true,
     user: { userId: 'u1', email: 'd@e.com', activeWorkspaceId: WORKSPACE },
-    workspaces: [{ id: WORKSPACE, name: 'Acme', role: 'owner' }],
-  },
+    workspaces: [{ id: WORKSPACE, name: 'Acme', type: 'organization', role: 'owner' }],
+  } satisfies Answer<'GET /v1/session'>,
   refresh: () => {},
   reload: async () => ({ status: 'signed-in' as const }),
   signIn: async () => ({ status: 'unconfigured' as const, message: '' }),

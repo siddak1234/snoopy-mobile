@@ -5,6 +5,7 @@ import SolutionsScreen from '@/app/(tabs)/flows/add';
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import SetupScreen from '@/app/(tabs)/flows/setup';
 import SettingsScreen from '@/app/(tabs)/settings';
+import type { Subscription } from '@/lib/platform/automations';
 import { PlatformError } from '@/lib/platform/problem';
 import {
   TEST_WORKSPACE,
@@ -16,6 +17,7 @@ import {
   sessionAs,
   signedInSession,
   subscriptionsPayload,
+  type RouteOverrides,
 } from '@/test/platform';
 import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
 
@@ -59,7 +61,7 @@ describe("Unarchive — the word for Add it again (the owner's build 12 item 4)"
     const base = subscriptionsPayload().subscriptions;
     // Nothing else in the workspace holds its flow.
     const rows = base.filter((row) => row.id !== 'invoice');
-    const gone = {
+    const gone: Subscription = {
       ...base[0]!,
       id: 'gone',
       name: 'Old intake',
@@ -99,7 +101,7 @@ describe("Unarchive — the word for Add it again (the owner's build 12 item 4)"
 });
 
 /** The catalog with nothing to fill in, one subscription, and every write Setup sends, kept. */
-function routeSetup(held: Record<string, unknown>, projects: unknown) {
+function routeSetup(held: Subscription, projects: RouteOverrides['/projects']) {
   const catalog = catalogPayload();
   catalog.automations = catalog.automations.map((automation) => ({ ...automation, setup: [] }));
   routePlatform(platformOperation, {
@@ -168,7 +170,7 @@ describe("One flow per workspace (the owner's build 12 item 9)", () => {
   });
 
   it('Setup, for a flow the workspace holds, says where it is under Added to, offers no team, and Activate configures that subscription — nothing is added', async () => {
-    const held = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'held-0', projectId: 'project-1', status: 'paused' };
+    const held: Subscription = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'held-0', projectId: 'project-1', status: 'paused' };
     const writes = routeSetup(held, projectsPayload('Finance', 'Sales'));
     // Reached with another team chosen: it is still the one copy, where it is.
     setMockParams({ template: 'tpl.0', project: 'project-2' });
@@ -192,7 +194,7 @@ describe("One flow per workspace (the owner's build 12 item 9)", () => {
   });
 
   it('Setup, for a flow held for the whole workspace, needs no team: a plain member with none to add to still has Activate, and it configures that subscription', async () => {
-    const held = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'held-whole', projectId: null, status: 'paused' };
+    const held: Subscription = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'held-whole', projectId: null, status: 'paused' };
     const writes = routeSetup(held, { projects: [] });
     setMockParams({ template: 'tpl.0' });
     await renderWithProviders(<SetupScreen />, sessionAs('member'));

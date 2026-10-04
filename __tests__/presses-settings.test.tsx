@@ -55,8 +55,13 @@ import OrganizationScreen from '@/app/(tabs)/settings/organization';
 import TeamScreen from '@/app/(tabs)/settings/team';
 import TeamsScreen from '@/app/(tabs)/settings/teams';
 import { FaceIdRow } from '@/components/settings/face-id-row';
+import type { Connection, ConnectionProvider } from '@/lib/platform/connections';
+import type { WorkspaceExport } from '@/lib/platform/exports';
+import type { OrganizationDomain } from '@/lib/platform/organization';
 import { PlatformError } from '@/lib/platform/problem';
-import { fakePlatform, type Sent } from '@/test/fake-platform';
+import type { Project, ProjectMembership } from '@/lib/platform/projects';
+import type { WorkspaceSummary } from '@/lib/platform/workspaces';
+import { fakePlatform, type Answer, type Sent } from '@/test/fake-platform';
 import { TEST_WORKSPACE, sessionAs, signedInSession } from '@/test/platform';
 import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
 
@@ -99,11 +104,11 @@ const actionsOf = (testID: string) =>
     .map((label) => label.props.children);
 
 const PERSONAL = 'ws-personal';
-const ORG = { id: TEST_WORKSPACE, name: 'Acme Operations', type: 'organization' };
+const ORG: Omit<WorkspaceSummary, 'role'> = { id: TEST_WORKSPACE, name: 'Acme Operations', type: 'organization' };
 
 /* ───────────────────────────── Organization (24.5.1) ───────────────────────────── */
 
-const DOMAIN = {
+const DOMAIN: OrganizationDomain = {
   id: 'domain-1',
   workspaceId: TEST_WORKSPACE,
   domain: 'acme.co',
@@ -118,7 +123,7 @@ const DOMAINS_READ = 'GET /v1/workspaces/{workspaceId}/domains';
 const JOIN_REQUESTS_READ = 'GET /v1/workspaces/{workspaceId}/join-requests';
 
 /** The active organization, managed by its owner: one domain, one person asking to join. */
-function routeOrganization(domains: unknown[] = [DOMAIN]) {
+function routeOrganization(domains: OrganizationDomain[] = [DOMAIN]) {
   const fake = fakePlatform(platformOperation);
   fake.always('GET /v1/workspaces', { workspaces: [{ ...ORG, role: 'owner' }], activeWorkspaceId: TEST_WORKSPACE });
   fake.always('GET /v1/workspaces/{workspaceId}/members', { members: [] });
@@ -149,16 +154,16 @@ describe("Organization › a domain: its row, Revoke, Verify DNS, Save settings 
       said: 'Verified',
       offered: ['Close', 'Revoke', 'Save settings'],
       change: undefined,
-      route: 'DELETE /v1/workspaces/{workspaceId}/domains/{domainId}',
+      route: 'DELETE /v1/workspaces/{workspaceId}/domains/{domainId}' as const,
       body: undefined,
     },
     {
       action: 'Verify DNS',
-      domain: { ...DOMAIN, status: 'pending' },
+      domain: { ...DOMAIN, status: 'pending' } satisfies OrganizationDomain,
       said: 'Pending. Add the DNS record named _autom8x.acme.co, then verify this domain.',
       offered: ['Close', 'Revoke', 'Verify DNS', 'Save settings'],
       change: undefined,
-      route: 'POST /v1/workspaces/{workspaceId}/domains/{domainId}/verification',
+      route: 'POST /v1/workspaces/{workspaceId}/domains/{domainId}/verification' as const,
       body: undefined,
     },
     {
@@ -171,7 +176,7 @@ describe("Organization › a domain: its row, Revoke, Verify DNS, Save settings 
         await fireEvent.press(dialog.getByText('Automatic'));
         await fireEvent.press(dialog.getByRole('switch'));
       },
-      route: 'PATCH /v1/workspaces/{workspaceId}/domains/{domainId}',
+      route: 'PATCH /v1/workspaces/{workspaceId}/domains/{domainId}' as const,
       body: { joinPolicy: 'automatic', discoveryEnabled: false },
     },
   ])(
@@ -218,7 +223,9 @@ describe('Organization › a join request (org-people.tsx; DESIGN-CONTRACT 24.5:
   it("Reject answers that person's request with reject, then closes and reads the organization again", async () => {
     const fake = routeOrganization();
     const DECIDE = 'PATCH /v1/workspaces/{workspaceId}/join-requests/{joinRequestId}';
-    fake.always(DECIDE, { request: {} });
+    fake.always(DECIDE, {
+      request: { id: 'jr-1', workspaceId: TEST_WORKSPACE, userId: 'u9', status: 'rejected', createdAt: '2026-09-29T00:00:00Z' },
+    });
     await renderWithProviders(<OrganizationScreen />, signedInSession);
     await fireEvent.press(await screen.findByTestId('join-request-jr-1'));
     const dialog = within(await screen.findByTestId('join-request-dialog'));
@@ -237,7 +244,7 @@ describe('Organization › a join request (org-people.tsx; DESIGN-CONTRACT 24.5:
 /* ───────────────────────────── Teams (24.11.7) ───────────────────────────── */
 
 /** A team is its kind (24.12): the kind is its name and its type. */
-const team = (id: string, workspaceId: string, kind: string, extra: Record<string, unknown> = {}) => ({
+const team = (id: string, workspaceId: string, kind: string, extra: Partial<Project> = {}): Project => ({
   id,
   workspaceId,
   name: kind,
@@ -280,7 +287,7 @@ describe('Settings › Teams › a team row (teams.tsx; DESIGN-CONTRACT: "one te
 
 const MEMBERSHIPS_READ = 'GET /v1/workspaces/{workspaceId}/projects/{projectId}/memberships';
 const MEMBERSHIP_DELETE = 'DELETE /v1/workspaces/{workspaceId}/projects/{projectId}/memberships/{userId}';
-const membership = (userId: string, role: string, displayName: string) => ({
+const membership = (userId: string, role: ProjectMembership['role'], displayName: string): ProjectMembership => ({
   projectId: 'p1',
   workspaceId: TEST_WORKSPACE,
   userId,
@@ -309,7 +316,7 @@ function routeTeam(viewerRole: 'admin' | 'member') {
 describe('One team › its members (team-members.tsx; DESIGN-CONTRACT 24.5: "leave — typing DELETE, or confirming from one\'s own row; add members, change a role, remove")', () => {
   it("the person's own row asks first, then takes them off the team in the team's workspace and leaves its page — while that is sent the confirm reads Leaving… and sends once (confirm-dialog.tsx)", async () => {
     const fake = routeTeam('member');
-    let answer: (reply: unknown) => void = () => undefined;
+    let answer: (reply: Answer<typeof MEMBERSHIP_DELETE>) => void = () => undefined;
     fake.always(MEMBERSHIP_DELETE, () => new Promise((resolve) => (answer = resolve)));
     await renderWithProviders(<TeamScreen />, signedInSession);
 
@@ -371,7 +378,9 @@ describe('One team › its members (team-members.tsx; DESIGN-CONTRACT 24.5: "lea
     ['with nobody added, closes and reads nothing', false, 0],
   ] as const)('Add members › Done %s', async (_case, add, rereads) => {
     const fake = routeTeam('admin');
-    fake.always('POST /v1/workspaces/{workspaceId}/projects/{projectId}/memberships', { membership: {} });
+    fake.always('POST /v1/workspaces/{workspaceId}/projects/{projectId}/memberships', {
+      membership: membership('u4', 'member', 'Dana'),
+    });
     await renderWithProviders(<TeamScreen />, signedInSession);
     await fireEvent.press(await screen.findByText('Add members'));
     const dialog = within(await screen.findByTestId('add-team-members-dialog'));
@@ -392,11 +401,11 @@ describe('One team › its members (team-members.tsx; DESIGN-CONTRACT 24.5: "lea
 /* ───────────────────────────── Export my data (24.6.3) ───────────────────────────── */
 
 describe('Export my data › Share JSON (data.tsx; DESIGN-CONTRACT 24.6: "the bounded summary shared as a JSON file (iOS) or text (Android)")', () => {
-  const SUMMARY = {
+  const SUMMARY: WorkspaceExport = {
     workspaceId: TEST_WORKSPACE,
     exportedAt: '2026-09-30T00:00:00Z',
     complete: true,
-    services: [{ service: 'runs', ok: true, data: { truncated: false } }],
+    services: [{ service: 'runs', ok: true, data: { runs: [], approvals: [], truncated: false } }],
   };
   const JSON_TEXT = JSON.stringify(SUMMARY, null, 2);
   type Made = typeof FileSystem.File.made;
@@ -497,8 +506,8 @@ describe("SECURITY › the Face ID row's Try again (face-id-row.tsx; DESIGN-CONT
 /* ───────────────────────────── Connections (24.4.3) ───────────────────────────── */
 
 describe('Settings › Connections › the dialog\'s main button: Disconnect, and Connect with a key (connections-card.tsx; DESIGN-CONTRACT Mutations: "Disconnect: delete the stable connection ID", "API-key connection: generated credential fields → connection mutation with an idempotency key")', () => {
-  const GMAIL = { providerId: 'gmail', displayName: 'Gmail', description: 'Send mail as you.', scopes: [], authType: 'oauth2', icon: 'envelope' };
-  const TWILIO = {
+  const GMAIL: ConnectionProvider = { providerId: 'gmail', displayName: 'Gmail', description: 'Send mail as you.', scopes: [], authType: 'oauth2', icon: 'envelope' };
+  const TWILIO: ConnectionProvider = {
     providerId: 'twilio',
     displayName: 'Twilio',
     description: 'Send texts as you.',
@@ -510,7 +519,7 @@ describe('Settings › Connections › the dialog\'s main button: Disconnect, an
       { name: 'authToken', label: 'Auth token', secret: true, help: 'In the Twilio console' },
     ],
   };
-  const CONNECTED_GMAIL = {
+  const CONNECTED_GMAIL: Connection = {
     id: 'c1',
     providerId: 'gmail',
     workspaceId: TEST_WORKSPACE,
@@ -529,7 +538,8 @@ describe('Settings › Connections › the dialog\'s main button: Disconnect, an
       connections: [CONNECTED_GMAIL],
       title: 'Disconnect Gmail',
       fill: async (_dialog: ReturnType<typeof within>, _fake: ReturnType<typeof fakePlatform>) => undefined,
-      route: 'DELETE /v1/workspaces/{workspaceId}/connections/{connectionId}',
+      route: 'DELETE /v1/workspaces/{workspaceId}/connections/{connectionId}' as const,
+      answer: { connection: { ...CONNECTED_GMAIL, status: 'disconnected' } } satisfies Answer<'DELETE /v1/workspaces/{workspaceId}/connections/{connectionId}'>,
       values: { workspaceId: TEST_WORKSPACE, connectionId: 'c1' },
       body: undefined,
       key: undefined,
@@ -547,18 +557,21 @@ describe('Settings › Connections › the dialog\'s main button: Disconnect, an
         await fireEvent.changeText(dialog.getByPlaceholderText('Starts with AC'), ' AC123 ');
         await fireEvent.changeText(dialog.getByPlaceholderText('In the Twilio console'), 'secret-token');
       },
-      route: 'POST /v1/workspaces/{workspaceId}/connections/key',
+      route: 'POST /v1/workspaces/{workspaceId}/connections/key' as const,
+      answer: {
+        connection: { ...CONNECTED_GMAIL, id: 'c2', providerId: 'twilio', externalAccount: { id: 'AC123', displayName: 'AC123' }, usedByCount: 0 },
+      } satisfies Answer<'POST /v1/workspaces/{workspaceId}/connections/key'>,
       values: { workspaceId: TEST_WORKSPACE },
       body: { providerId: 'twilio', credentials: { accountSid: 'AC123', authToken: 'secret-token' } },
       key: 'connection-1',
     },
   ])(
     '$button sends its request for that connection, then closes the dialog and reads the connections again',
-    async ({ button, provider, connections, title, fill, route, values, body, key }) => {
+    async ({ button, provider, connections, title, fill, route, answer, values, body, key }) => {
       const fake = fakePlatform(platformOperation);
       fake.always('GET /v1/connections/providers', { providers: [provider] });
       fake.always(CONNECTIONS_READ, { connections });
-      fake.always(route, { connection: {} });
+      fake.always(route, answer);
       await renderWithProviders(<ConnectionsScreen />, sessionAs('owner'));
       await fireEvent.press(await screen.findByTestId(`connection-row-${provider.providerId}`));
       const dialog = within(await screen.findByTestId('connection-dialog'));

@@ -27,13 +27,18 @@ import {
   routePlatform,
   runDetailPayload,
   runsPayload,
+  personalSession,
   sessionAs,
   signedInSession,
   subscriptionsPayload,
+  unpublishedAnswer,
+  type RouteOverrides,
 } from '@/test/platform';
 import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
 import { touch } from '@/test/touch';
 import type { SessionContextValue } from '@/hooks/use-session';
+import type { Run, Subscription } from '@/lib/platform/automations';
+import type { WorkspaceBilling } from '@/lib/platform/billing';
 import { resetSnapshot } from '@/lib/platform/snapshot';
 import { resetPushForTests } from '@/hooks/use-push-registration';
 
@@ -567,8 +572,8 @@ describe('Activity', () => {
     // A run stays `held` after its approval, because the approval starts a new
     // run (FR-15). The first signed-in session saw five "held" rows from
     // September under Needs review with nothing to approve.
-    const held = { ...runsPayload().runs[0]!, id: 'held-decided', status: 'held' };
-    const continuation = {
+    const held: Run = { ...runsPayload().runs[0]!, id: 'held-decided', status: 'held' };
+    const continuation: Run = {
       ...runsPayload().runs[0]!,
       id: 'held-continued',
       status: 'succeeded',
@@ -806,11 +811,12 @@ describe('Settings — one grouped page (build 11, D1)', () => {
     ['settings-help', '/(tabs)/settings/support'],
   ] as const;
   const BILLING = `/v1/workspaces/${TEST_WORKSPACE}/billing`;
-  const ON_PLUS = { workspaceId: TEST_WORKSPACE, planId: 'team', displayName: 'Plus', status: 'active' };
+  const ON_PLUS: WorkspaceBilling = { workspaceId: TEST_WORKSPACE, planId: 'team', displayName: 'Plus', status: 'active' };
 
   it("is the groups in the build's order, as drawn — the labels, the rows, the control — then Sign out and the version", async () => {
     routePlatform(platformOperation, { [BILLING]: ON_PLUS });
-    await renderWithProviders(<SettingsScreen />, signedInSession);
+    // A personal workspace: an organization's row would also name it (the platform always says which).
+    await renderWithProviders(<SettingsScreen />, personalSession());
     expect(await screen.findByText('Plus')).toBeTruthy();
     // In this order, as drawn, each titled as the build names it.
     const rows = screen.getAllByTestId(/^(settings-|workspace-switcher-row$)/u);
@@ -998,7 +1004,7 @@ describe('Settings — one grouped page (build 11, D1)', () => {
   });
 
   it('keeps the workspace rows on the index: the switcher row, the role, and its areas', async () => {
-    const { getByText } = await renderWithProviders(<SettingsScreen />, signedInSession);
+    const { getByText } = await renderWithProviders(<SettingsScreen />, personalSession());
     expect(getByText('WORKSPACE')).toBeTruthy();
     expect(getByText('Acme Operations')).toBeTruthy();
     expect(getByText('Your role')).toBeTruthy();
@@ -1279,7 +1285,20 @@ describe('Setup wizard (design sSetup)', () => {
     routePlatform(platformOperation, {
       '/automations': catalog,
       // The workspace's connections, not the providers list (`/v1/connections/providers`).
-      [`${TEST_WORKSPACE}/connections`]: { connections: [{ id: 'c-google', providerId: 'google', status: 'connected' }] },
+      [`${TEST_WORKSPACE}/connections`]: {
+        connections: [
+          {
+            id: 'c-google',
+            providerId: 'google',
+            workspaceId: TEST_WORKSPACE,
+            externalAccount: { id: 'google-account', displayName: 'Google account' },
+            status: 'connected',
+            requiredScopes: [],
+            grantedScopes: [],
+            usedByCount: 0,
+          },
+        ],
+      },
     });
     setMockParams({ template: 'tpl.0' });
     const { getByText } = await renderWithProviders(<SetupScreen />, signedInSession);
@@ -1305,7 +1324,7 @@ describe('Setup wizard (design sSetup)', () => {
         return entry;
       }),
     };
-    routePlatform(platformOperation, { '/automations': catalog });
+    routePlatform(platformOperation, { '/automations': unpublishedAnswer<RouteOverrides['/automations']>(catalog) });
     setMockParams({ template: 'tpl.0' });
     const { queryByText } = await renderWithProviders(<SetupScreen />, signedInSession);
     expect(await screen.findByText('1 · REVIEW RULES')).toBeTruthy();
@@ -1337,7 +1356,7 @@ describe('Setup wizard (design sSetup)', () => {
   it('adds an archived automation afresh rather than reviving the archived subscription', async () => {
     const catalog = catalogPayload();
     catalog.automations = catalog.automations.map((automation) => ({ ...automation, setup: [] }));
-    const archived = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'archived-0', status: 'archived' };
+    const archived: Subscription = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'archived-0', status: 'archived' };
     routePlatform(platformOperation, {
       '/automations': catalog,
       '/projects': projectsPayload('Finance'),
@@ -1357,7 +1376,7 @@ describe('Setup wizard (design sSetup)', () => {
   });
 
   /** The catalog with nothing to fill in, the teams, and a client that keeps what a create sends. */
-  function routeTeams(projects: unknown, created: unknown[]) {
+  function routeTeams(projects: RouteOverrides['/projects'], created: unknown[]) {
     const catalog = catalogPayload();
     catalog.automations = catalog.automations.map((automation) => ({ ...automation, setup: [] }));
     routePlatform(platformOperation, {
@@ -1568,7 +1587,7 @@ describe('Setup wizard (design sSetup)', () => {
   });
 
   /** The catalog with nothing to fill in, and the subscriptions `/subscriptions` answers. */
-  function routeUnmet(subscriptions: unknown[], subscription: unknown) {
+  function routeUnmet(subscriptions: Subscription[], subscription: Subscription) {
     const catalog = catalogPayload();
     catalog.automations = catalog.automations.map((automation) => ({ ...automation, setup: [] }));
     routePlatform(platformOperation, { '/automations': catalog, '/subscriptions': { subscriptions, subscription } });
@@ -1680,7 +1699,7 @@ describe("Home's tiles count today, say so, and open today's runs (the owner's b
     const older = new Date(now);
     older.setDate(now.getDate() - 10);
     const base = runsPayload().runs[0]!;
-    const run = (id: string, status: string, at: Date) => ({
+    const run = (id: string, status: Run['status'], at: Date): Run => ({
       ...base,
       id,
       rootRunId: id,
@@ -1889,8 +1908,8 @@ describe("Home's tiles count today, say so, and open today's runs (the owner's b
 
 function withRemovedFlow(invoiceToo = false) {
   const base = subscriptionsPayload().subscriptions;
-  const rows = base.map((row) => (invoiceToo && row.id === 'invoice' ? { ...row, status: 'archived' } : row));
-  const gone = { ...base[0]!, id: 'gone', name: 'Old intake', status: 'archived', updatedAt: '2026-09-30T12:00:00Z' };
+  const rows = base.map((row): Subscription => (invoiceToo && row.id === 'invoice' ? { ...row, status: 'archived' } : row));
+  const gone: Subscription = { ...base[0]!, id: 'gone', name: 'Old intake', status: 'archived', updatedAt: '2026-09-30T12:00:00Z' };
   routePlatform(platformOperation, {
     '/automations': flowCatalogPayload(),
     '/subscriptions': { subscriptions: [...rows, gone], subscription: rows[0] },
@@ -1994,7 +2013,7 @@ describe('Archived flows (24.11.8; "Archived" since 24.12)', () => {
     const base = subscriptionsPayload().subscriptions;
     // The template is live again, in a team: not this archived row's scope, and still its twin.
     const rows = base.map((row) => (row.id === 'invoice' ? { ...row, projectId: 'project-1' } : row));
-    const gone = { ...base[0]!, id: 'gone', name: 'Old intake', status: 'archived', updatedAt: '2026-09-30T12:00:00Z' };
+    const gone: Subscription = { ...base[0]!, id: 'gone', name: 'Old intake', status: 'archived', updatedAt: '2026-09-30T12:00:00Z' };
     routePlatform(platformOperation, {
       '/automations': flowCatalogPayload(),
       '/projects': projectsPayload('Finance'),
@@ -2034,7 +2053,7 @@ describe('Archived flows (24.11.8; "Archived" since 24.12)', () => {
 
 describe('Flows with no live flow (build 11, D6)', () => {
   it("is the empty standard whatever is archived — Activity's format — with the way to the archived ones under Add a flow (the owner's build 10 items 8 and 9)", async () => {
-    const gone = { ...subscriptionsPayload().subscriptions[0]!, id: 'gone', name: 'Old intake', status: 'archived' };
+    const gone: Subscription = { ...subscriptionsPayload().subscriptions[0]!, id: 'gone', name: 'Old intake', status: 'archived' };
     routePlatform(platformOperation, { '/automations': flowCatalogPayload(), '/subscriptions': { subscriptions: [gone] } });
     await renderWithProviders(<FlowsScreen />, signedInSession);
     expect(await screen.findByTestId('screen-empty')).toBeTruthy();

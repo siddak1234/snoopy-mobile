@@ -10,6 +10,7 @@ import { ScopeControl } from '@/components/scope-control';
 import { nocturneDark } from '@/constants/theme';
 import { resetPushForTests } from '@/hooks/use-push-registration';
 import type { SessionContextValue } from '@/hooks/use-session';
+import type { Approval, Run } from '@/lib/platform/automations';
 import { PlatformError } from '@/lib/platform/problem';
 import { resetSnapshot } from '@/lib/platform/snapshot';
 import { fakePlatform, type Sent } from '@/test/fake-platform';
@@ -88,7 +89,7 @@ describe('the run page: its cancel dialog and View flow (24.4.2)', () => {
   /** run-1 of the flow `email`, running until the platform takes a cancel; the catalog and approvals its page joins. */
   function routeRunningRun() {
     const fake = fakePlatform(platformOperation);
-    let status = 'running';
+    let status: Run['status'] = 'running';
     const detail = (runId: string) => {
       const payload = runDetailPayload(runId);
       return { ...payload, run: { ...payload.run, subscriptionId: 'email', status } };
@@ -191,7 +192,7 @@ describe("Approvals: Approve and Reject post that approval's decision (DESIGN-CO
         throw new PlatformError('Service Unavailable', 503);
       });
       fake.always(DECISION, (sent: Sent) => ({
-        approval: { ...approvalsPayload().approvals[1]!, status: (sent.body as { decision: string }).decision },
+        approval: { ...approvalsPayload().approvals[1]!, status: (sent.body as { decision: Approval['status'] }).decision },
       }));
       await renderWithProviders(<ApprovalsScreen />, signedInSession);
 

@@ -5,6 +5,7 @@ import TabLayout from '@/app/(tabs)/_layout';
 import SettingsScreen from '@/app/(tabs)/settings';
 import { resetPushForTests } from '@/hooks/use-push-registration';
 import type { SessionContextValue } from '@/hooks/use-session';
+import type { Answer } from '@/test/fake-platform';
 import { SIGN_OUT_FAILED } from '@/lib/content/screen-states';
 import { signOut as signOutOfPlatform } from '@/lib/platform/native-auth';
 import { PlatformError } from '@/lib/platform/problem';
@@ -78,10 +79,12 @@ function watchedSignOut() {
 function sessionWith(signOut: SessionContextValue['signOut']): SessionContextValue {
   return {
     status: 'signed-in',
+    // The hook's members are stubbed (hence the cast); the platform's session is typed.
     session: {
+      authenticated: true,
       user: { userId: 'u1', email: 'alex@acme.co', activeWorkspaceId: '00000000-0000-4000-8000-000000000001' },
-      workspaces: [{ id: '00000000-0000-4000-8000-000000000001', name: 'Acme', role: 'owner' }],
-    },
+      workspaces: [{ id: '00000000-0000-4000-8000-000000000001', name: 'Acme', type: 'organization', role: 'owner' }],
+    } satisfies Answer<'GET /v1/session'>,
     refresh: () => {},
     reload: async () => ({ status: 'signed-in' as const }),
     signIn: async () => ({ status: 'unconfigured', message: 'no backend in tests' }),

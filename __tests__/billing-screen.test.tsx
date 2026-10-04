@@ -10,6 +10,7 @@ import { AppState, Linking, Platform } from 'react-native';
 import SettingsScreen from '@/app/(tabs)/settings';
 import BillingScreen from '@/app/(tabs)/settings/billing';
 import { PlatformError } from '@/lib/platform/problem';
+import type { PurchasablePlan, WorkspaceBilling } from '@/lib/platform/billing';
 import { fakePlatform } from '@/test/fake-platform';
 import { TEST_WORKSPACE, sessionAs } from '@/test/platform';
 import { renderWithProviders } from '@/test/render';
@@ -17,14 +18,14 @@ import { renderWithProviders } from '@/test/render';
 const { platformOperation } = jest.requireMock('@/lib/platform/client');
 
 // Listed as the platform orders them (by id): Pro before Plus. The cards go by price.
-const PLANS = {
+const PLANS: { plans: PurchasablePlan[] } = {
   plans: [
     { planId: 'pro', displayName: 'Pro', capabilities: { 'automation.subscribe': 20, 'workspace.rate': 240 }, price: { amount: 1000, currency: 'usd', interval: 'month' } },
     { planId: 'team', displayName: 'Plus', capabilities: { 'automation.subscribe': 5, 'workspace.rate': 120 }, price: { amount: 500, currency: 'usd', interval: 'month' } },
   ],
 };
-const FREE_FLOOR = { workspaceId: TEST_WORKSPACE, planId: 'free', displayName: 'Free' };
-const ON_PLUS = { workspaceId: TEST_WORKSPACE, planId: 'team', displayName: 'Plus', status: 'active', currentPeriodEnd: '2026-10-30T12:00:00Z' };
+const FREE_FLOOR: WorkspaceBilling = { workspaceId: TEST_WORKSPACE, planId: 'free', displayName: 'Free' };
+const ON_PLUS: WorkspaceBilling = { workspaceId: TEST_WORKSPACE, planId: 'team', displayName: 'Plus', status: 'active', currentPeriodEnd: '2026-10-30T12:00:00Z' };
 const CHECKOUT = 'POST /v1/workspaces/{workspaceId}/billing/checkout';
 const PORTAL = 'POST /v1/workspaces/{workspaceId}/billing/portal';
 
@@ -44,7 +45,7 @@ afterEach(() => {
   listen.mockRestore();
 });
 
-function route(role: 'owner' | 'member', billing: unknown = FREE_FLOOR) {
+function route(role: 'owner' | 'member', billing: WorkspaceBilling = FREE_FLOOR) {
   const fake = fakePlatform(platformOperation);
   fake.always('GET /v1/workspaces', {
     workspaces: [{ id: TEST_WORKSPACE, name: 'Acme', type: 'organization', role }],

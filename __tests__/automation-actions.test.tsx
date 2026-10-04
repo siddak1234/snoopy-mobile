@@ -92,12 +92,14 @@ function entry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
     monthlyPriceUsd: 39,
     subscribed: true,
     available: true,
+    requiredConnections: [],
     setup: [
       { section: 'source', key: 'inbox', title: 'Watch inbox', description: '', control: 'text', required: true },
       { section: 'notifications', key: 'alerts', title: 'Alerts', description: '', control: 'toggle', required: false },
     ],
+    pipeline: [],
     ...overrides,
-  } as CatalogEntry;
+  };
 }
 
 
