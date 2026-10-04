@@ -572,6 +572,28 @@ Written 2026-09-30, once the owner had completed 24.8.1, 24.8.2 and 24.8.6.
   `REFUSED: HEAD … is not origin/main` once committed; the deliberate failure
   (a lint error) turned Lint and `all-green` red, and its revert green — run
   ids in the PR.
+- **The push gated locally, and one duplicate test gone (CI plan Wave 2 and
+  Wave 3 [A], branch `ci-wave-2`, 2026-10-03).** `.githooks/pre-push`,
+  installed once per clone with `npm run hooks:install` (`git config
+  core.hooksPath .githooks`), runs what CI's jobs run, in CI's order, before
+  any commit leaves the machine: `CI=1 npm run verify` — lint, typecheck, the
+  seven architecture gates, the contract check, the tests with coverage, the
+  press audit, the facts — then `audit:dependencies` and the
+  salvaged-client-data scan, whose identifier pattern the hook reads from
+  `ci.yml` so the two never search for different names and the hook never
+  names them. The native exports (about two minutes each in CI) stay
+  CI-only. The first red gate refuses the push and is named; `git push
+  --no-verify` is the recorded bypass for the one by-design red push a CI
+  proof needs. Measured on the owner's Mac: 111 s to green (verify 106 s, the
+  dependency audit 5 s, the scan under a second); a committed `var` was
+  refused in 3 s at the first gate and never reached the throwaway bare
+  remote, whose refs listed only the green branch. The Settings sign-out test
+  at `__tests__/tab-screens.test.tsx:1070-1078` asserted a strict subset of
+  `__tests__/sign-out.test.tsx:93-104` — the same `SettingsScreen` under the
+  mock router, the same press, `signOut` once, `router.replace` never — and
+  PR #35 had to rewrite the same assertion in both; the copy is gone, and the
+  press register already names `sign-out:93` and `real-router/sign-out:48`.
+  934 → 933 tests locally, 269 of 269 presses, the 80 snapshots unchanged.
 
 ### The sign-in sheet that would not open (24.7.3, attempt 1, 2026-10-01)
 

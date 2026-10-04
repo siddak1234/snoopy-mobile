@@ -1066,16 +1066,6 @@ describe('Settings — one grouped page (build 11, D1)', () => {
     expect((StyleSheet.flatten(label.props.style) as { color?: string }).color).toBe(red);
     expect(screen.getByTestId(/^phosphor-react-native-sign-out-/u).props.color).toBe(red);
   });
-
-  it("signs out, and the root guard — not Settings — shows the cover (24.11.6; the owner's build 12 item 6)", async () => {
-    const signOut = jest.fn(async () => ({ revoked: true }));
-    const { getByText } = await renderWithProviders(<SettingsScreen />, { ...signedInSession, signOut });
-    await fireEvent.press(getByText('Sign out'));
-    await waitFor(() => expect(signOut).toHaveBeenCalledTimes(1));
-    // Inside the tabs "/" is Home; the move to the cover is the root guard's
-    // (`__tests__/real-router/sign-out.test.tsx`).
-    expect(mockRouter.replace).not.toHaveBeenCalled();
-  });
 });
 
 describe('Cancelling a run (24.4.2)', () => {
