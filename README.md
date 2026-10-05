@@ -118,6 +118,71 @@ the project, created by the owner through `eas credentials` on 2026-09-30, so
 no Apple account name or password is written anywhere. The history is in
 `ROUND-7.5-OBSERVATIONS.md`.
 
+## App Store listing (BUILD-PLAN 24.7.4)
+
+The text the owner pastes into App Store Connect, drafted from this repository on
+2026-10-05 and approved through its pull request. No tool pushes it: EAS Metadata
+has no App Privacy fields, and the demo account is typed into App Store Connect,
+never committed. The record already holds the category (Business), United States
+availability and a free price (BUILD-PLAN 24.8.6).
+
+| Field                  | Text                                                                                                                          |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Subtitle (30)          | Run and approve your workflows                                                                                                |
+| Promotional text (170) | Start your workflows, approve the ones that wait for you, and see every run, from your phone, on the same account as the web. |
+| Keywords (100)         | workflow,automation,approvals,invoices,documents,operations,business,teams,AI                                                 |
+| Support URL            | https://www.autom8x.ai/contact                                                                                                |
+| Marketing URL          | https://www.autom8x.ai                                                                                                        |
+| Privacy Policy URL     | https://www.autom8x.ai/privacy                                                                                                |
+| Screenshots            | iPhone and iPad sizes both: `app.json` sets `ios.supportsTablet`                                                              |
+
+**Description**
+
+> Autom8x runs the workflows your business sets up, such as checking invoices against
+> your rules, and puts them in your pocket.
+>
+> - Flows: add one from the catalog, set it up, and run it with its details and a file.
+>   Pause or archive it when you need to.
+> - Activity: every run and each of its steps. Approve or reject the runs that wait
+>   for a person.
+> - Notifications: a push when a run needs your approval or fails. Optional.
+> - Connections: connect the accounts a flow uses, such as Google.
+> - Teams and organization: create teams, approve requests to join, and verify your
+>   organization's email domain.
+> - Billing: see your plan. Upgrading or managing it opens our billing page in your
+>   browser.
+> - Account: sign in with Google, Microsoft or Apple and link them; export your data;
+>   delete your account.
+> - An optional Face ID lock.
+>
+> The same account works on autom8x.ai.
+
+**Review notes** (the demo Google account goes in Sign-In Information, never here)
+
+> Sign-in is with Google, Microsoft or Apple only; there is no email and password. The
+> demo account is a Google account, in Sign-In Information. The app is offered in the
+> United States only, and has no in-app purchase: Upgrade and Manage billing open our
+> billing page, run by Stripe, in the browser. Account deletion is in Settings ›
+> Account. Notifications are optional (Settings › Notifications). The demo workspace
+> has the flow Invoice check: run it with a vendor, an amount and a reference; an
+> amount above 500 waits for approval in Activity.
+
+**App Privacy answers.** Every answer is "linked to the user", "not used for
+tracking", purpose "App Functionality". No advertising or analytics SDK is among
+`package.json`'s dependencies, and nothing is shared with a data broker.
+
+| Apple's data type                                                                       | Answer                       | Why, in this code                                                                                                      |
+| --------------------------------------------------------------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Contact Info › Name                                                                     | Collected                    | Google, Microsoft or Apple return it at sign-in, to the platform account                                               |
+| Contact Info › Email Address                                                            | Collected                    | Sign-in, and the support form's one required field (`app/(tabs)/settings/support.tsx`, `lib/platform/support.ts`)      |
+| Identifiers › User ID                                                                   | Collected                    | The Autom8x account every request acts as                                                                              |
+| Identifiers › Device ID                                                                 | Collected (owner's call)     | The push token, sent to `PUT /v1/session/devices` (`lib/platform/devices.ts`); declaring it is the conservative answer |
+| User Content › Other User Content                                                       | Collected                    | Files given to a run (`components/automations/run-file-field.tsx`), a flow's setup, approval decisions                 |
+| User Content › Customer Support                                                         | Collected                    | The support form's text                                                                                                |
+| Diagnostics                                                                             | Not collected                | No crash-reporting or analytics SDK in `package.json`                                                                  |
+| Purchases                                                                               | Not collected (owner's call) | Stripe's checkout runs in the browser; the app only reads the plan the platform reports                                |
+| Location, Contacts, Health, Financial Info, Browsing and Search History, Sensitive Info | Not collected                | Nothing in the app reads them; Face ID stays on the device (`expo-local-authentication`)                               |
+
 ## Runtime architecture
 
 - `lib/generated/platform-contracts/` is generated from the Edge, automations,
