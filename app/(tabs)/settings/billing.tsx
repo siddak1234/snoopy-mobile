@@ -232,6 +232,9 @@ export default function BillingScreen() {
   const periodEnd = state?.currentPeriodEnd ? new Date(state.currentPeriodEnd).toLocaleDateString() : null;
   // The cards act only on iOS, and only for an owner or an admin.
   const acts = purchasing && data.kind === 'ready';
+  // Free is not a provider price, so the portal cannot list it: moving to Free is
+  // cancelling the paid plan there (the owner's build 13 decision 7c, feedback #12).
+  const enrolledName = cards.find((card) => card.planId === enrolled && card.planId !== FREE_PLAN_ID)?.name;
 
   const pressFor = (card: PlanCard): (() => void) | undefined => {
     // The drawn Pro is inert everywhere: no checkout (a 404), no portal (no Pro there).
@@ -296,6 +299,9 @@ export default function BillingScreen() {
                       onPress={() => void leave('portal', 'portal', openPortal)}
                       style={styles.manage}
                     />
+                  ) : null}
+                  {card.planId === FREE_PLAN_ID && acts && paying && enrolledName ? (
+                    <Text style={[styles.text, muted]}>To move to Free, cancel {enrolledName} in Manage billing.</Text>
                   ) : null}
                   {opening === card.planId ? <Text style={[styles.small, muted]}>Opening…</Text> : null}
                 </SurfaceCard>

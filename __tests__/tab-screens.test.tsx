@@ -119,6 +119,31 @@ describe('Home dashboard', () => {
   });
 });
 
+describe('Rows draw no border under the last one (the owner, build 13 #7)', () => {
+  const borderOf = (id: string) => {
+    const pressable = screen.getByTestId(id);
+    const style = pressable.props.style;
+    return (StyleSheet.flatten(typeof style === 'function' ? style({ pressed: false }) : style) ?? {}).borderBottomWidth;
+  };
+
+  it("Home's recent runs: every row but the last has its divider", async () => {
+    await renderWithProviders(<HomeScreen />, signedInSession);
+    await screen.findByText('Run #4821 · posted to QuickBooks');
+    const rows = screen.getAllByTestId(/^home-run-/u).map((row) => row.props.testID as string);
+    expect(rows.length).toBeGreaterThan(1);
+    rows.slice(0, -1).forEach((id) => expect(borderOf(id)).toBe(1));
+    expect(borderOf(rows[rows.length - 1]!)).toBeUndefined();
+  });
+
+  it("Activity: in each day's card, every row but the last has its divider", async () => {
+    await renderWithProviders(<ActivityScreen />, signedInSession);
+    const rows = (await screen.findAllByTestId(/^activity-row-/u)).map((row) => row.props.testID as string);
+    expect(rows.length).toBeGreaterThan(1);
+    expect(borderOf(rows[rows.length - 1]!)).toBeUndefined();
+    expect(rows.slice(0, -1).some((id) => borderOf(id) === 1)).toBe(true);
+  });
+});
+
 describe('Home approvals banner (feedback #5, #7)', () => {
   it('counts pending approvals only, though every approval is read for the run rows', async () => {
     routePlatform(platformOperation, {
@@ -133,6 +158,18 @@ describe('Home approvals banner (feedback #5, #7)', () => {
     const { getByText, queryByText } = await renderWithProviders(<HomeScreen />, signedInSession);
     expect(getByText('1 item needs your review')).toBeTruthy();
     expect(queryByText('3 items need your review')).toBeNull();
+  });
+
+  it('is not drawn when nothing waits (the owner, build 13 #3)', async () => {
+    routePlatform(platformOperation, {
+      '/approvals': {
+        approvals: [{ ...approvalsPayload().approvals[0]!, id: 'a-done', status: 'approved' }],
+      },
+    });
+    await renderWithProviders(<HomeScreen />, signedInSession);
+    await screen.findByText('Welcome back, Alex');
+    expect(screen.queryByText(/need(s)? your review/u)).toBeNull();
+    expect(screen.queryByText('Exceptions your agents held for judgment')).toBeNull();
   });
 });
 
@@ -1364,7 +1401,9 @@ describe('Setup wizard (design sSetup)', () => {
     });
     setMockParams({ template: 'tpl.0' });
     await renderWithProviders(<SetupScreen />, signedInSession);
-    await fireEvent.press(await screen.findByText('Team: Finance'));
+    // The team is a full-width dropdown since build 13 (#5): open it, then choose.
+    await fireEvent.press(await screen.findByTestId('setup-team'));
+    await fireEvent.press(screen.getByText('Team: Finance'));
     await fireEvent.press(screen.getByText('Activate solution'));
     await waitFor(() =>
       expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'fresh-0' } }),
@@ -1407,12 +1446,17 @@ describe('Setup wizard (design sSetup)', () => {
     const created: unknown[] = [];
     routeTeams(projectsPayload('Finance'), created);
     await renderWithProviders(<SetupScreen />, signedInSession);
-    expect(await screen.findByText('Team: Finance')).toBeTruthy();
+    // A full-width dropdown of the open teams (build 13 #5), nothing chosen yet.
+    expect(await screen.findByLabelText('Add to: Choose a team')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('setup-team'));
+    expect(screen.getByText('Team: Finance')).toBeTruthy();
     expect(screen.queryByText('Whole workspace')).toBeNull();
+    await fireEvent.press(screen.getByTestId('setup-team'));
     // No team chosen for the person: Activate refuses in words and sends nothing.
     await fireEvent.press(screen.getByText('Activate solution'));
     expect(await screen.findByText('Pick a team.')).toBeTruthy();
     expect(created).toHaveLength(0);
+    await fireEvent.press(screen.getByTestId('setup-team'));
     await fireEvent.press(screen.getByText('Team: Finance'));
     await fireEvent.press(screen.getByText('Activate solution'));
     await waitFor(() => expect(created).toHaveLength(1));
@@ -1572,7 +1616,7 @@ describe('Setup wizard (design sSetup)', () => {
     routeTeams(projectsPayload('Finance'), []);
     routeDirectory(() => ({ projects: [listed('p-ops', 'Operations', 'none')] }));
     await renderWithProviders(<SetupScreen />, sessionAs('member'));
-    expect(await screen.findByText('Team: Finance')).toBeTruthy();
+    expect(await screen.findByTestId('setup-team')).toBeTruthy();
     expect(screen.queryByText('Ask to join a team first.')).toBeNull();
     expect(directoryReads()).toEqual([]);
   });

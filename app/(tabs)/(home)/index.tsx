@@ -339,33 +339,36 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* Approvals banner */}
-      <Pressable
-        onPress={() => router.push('/(tabs)/activity/approvals')}
-        style={({ pressed }) => [
-          styles.approvalsBanner,
-          {
-            borderColor: palette.accentRamp[700],
-            backgroundColor: withAlpha(palette.accent, pressed ? 0.15 : 0.09),
-          },
-        ]}>
-        <IconTile icon={HandPalm} size={40} iconSize={21} borderRadius={12} tint={0.16} />
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontFamily: fonts.medium, fontSize: typeScale.label.fontSize, color: palette.text }}>
-            {approvalCount} {approvalCount === 1 ? 'item needs' : 'items need'} your review
-          </Text>
-          <Text
-            style={{
-              marginTop: 2,
-              fontFamily: fonts.regular,
-              fontSize: typeScale.small.fontSize,
-              color: palette.neutral[400],
-            }}>
-            Exceptions your agents held for judgment
-          </Text>
-        </View>
-        <CaretRight size={16} color={palette.neutral[500]} weight="regular" />
-      </Pressable>
+      {/* Approvals banner — only when something waits (the owner, build 13 #3). At 0
+          Approvals would show its own empty state, so nothing is lost. */}
+      {approvalCount > 0 ? (
+        <Pressable
+          onPress={() => router.push('/(tabs)/activity/approvals')}
+          style={({ pressed }) => [
+            styles.approvalsBanner,
+            {
+              borderColor: palette.accentRamp[700],
+              backgroundColor: withAlpha(palette.accent, pressed ? 0.15 : 0.09),
+            },
+          ]}>
+          <IconTile icon={HandPalm} size={40} iconSize={21} borderRadius={12} tint={0.16} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontFamily: fonts.medium, fontSize: typeScale.label.fontSize, color: palette.text }}>
+              {approvalCount} {approvalCount === 1 ? 'item needs' : 'items need'} your review
+            </Text>
+            <Text
+              style={{
+                marginTop: 2,
+                fontFamily: fonts.regular,
+                fontSize: typeScale.small.fontSize,
+                color: palette.neutral[400],
+              }}>
+              Exceptions your agents held for judgment
+            </Text>
+          </View>
+          <CaretRight size={16} color={palette.neutral[500]} weight="regular" />
+        </Pressable>
+      ) : null}
 
       {/* Quick actions */}
       <View style={styles.actionsRow}>
@@ -407,9 +410,10 @@ export default function HomeScreen() {
           </Text>
         </View>
         <SurfaceCard level="sm" style={styles.runsCard}>
-          {runRows.map((r) => (
+          {runRows.map((r, i) => (
             <Pressable
               key={r.runId}
+              testID={`home-run-${r.runId}`}
               onPress={() =>
                 router.push({
                   pathname: '/(tabs)/(home)/run',
@@ -418,7 +422,12 @@ export default function HomeScreen() {
               }
               style={({ pressed }) => [
                 styles.runRow,
-                { borderBottomColor: palette.divider },
+                // The last row draws no border: the card has no clip, so it would run
+                // square past the rounded corner (the owner, build 13 #7).
+                i < runRows.length - 1 && {
+                  borderBottomWidth: 1,
+                  borderBottomColor: palette.divider,
+                },
                 pressed && { backgroundColor: withAlpha(palette.text, 0.04) },
               ]}>
               <View
@@ -527,7 +536,6 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 12,
     paddingHorizontal: 14,
-    borderBottomWidth: 1,
   },
   runDot: {
     width: 8,

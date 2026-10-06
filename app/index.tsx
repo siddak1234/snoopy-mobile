@@ -20,6 +20,7 @@ import { Pressable } from '@/components/pressable';
 import { em, fonts, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useSession } from '@/hooks/use-session';
+import { coverPlaysEntrance } from '@/lib/view/cover-entrance';
 
 /** CSS `ease-out` (a8xPulse timing). */
 const easeOut = Easing.out(Easing.ease);
@@ -120,11 +121,14 @@ export default function SplashScreen() {
     };
   });
 
-  // Kicker group: a8xUp .9s ease .25s both.
-  const up = useSharedValue(0);
+  // Kicker group: a8xUp .9s ease .25s both — on a cold start. After a sign-out the
+  // cover is shown whole, at once (the owner's build 13 decision 1).
+  const playsEntrance = useRef(coverPlaysEntrance()).current;
+  const up = useSharedValue(playsEntrance ? 0 : 1);
   useEffect(() => {
+    if (!playsEntrance) return;
     up.value = withDelay(250, withTiming(1, { duration: 900, easing: easeCss }));
-  }, [up]);
+  }, [up, playsEntrance]);
   const upStyle = useAnimatedStyle(() => ({
     opacity: up.value,
     transform: [{ translateY: 14 * (1 - up.value) }],
@@ -162,7 +166,7 @@ export default function SplashScreen() {
         <Text style={[styles.kicker, { color: palette.neutral[400] }]}>AUTOMATION × AI</Text>
       </Animated.View>
       {showGetStarted ? (
-        <Animated.View style={[styles.getStarted, upStyle]}>
+        <Animated.View testID="cover-get-started" style={[styles.getStarted, upStyle]}>
           <PillButton label="Get started" variant="primary" height={52} onPress={getStarted} />
         </Animated.View>
       ) : null}

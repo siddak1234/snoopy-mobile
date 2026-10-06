@@ -33,7 +33,7 @@ import { scopeRuns } from '@/lib/view/scope';
  * One run. Opens its run detail, as Home's RECENT RUNS and the inbox already do
  * (ROUND-7.5-OBSERVATIONS finding 2, BUILD-PLAN 24.4.4) — the rows were inert.
  */
-function ActivityRow({ item }: { item: ActivityItem }) {
+function ActivityRow({ item, last }: { item: ActivityItem; last: boolean }) {
   const { palette } = useTheme();
   const router = useRouter();
   const IconCmp = item.icon;
@@ -54,7 +54,9 @@ function ActivityRow({ item }: { item: ActivityItem }) {
       onPress={() => router.push({ pathname: '/(tabs)/(home)/run', params: { runId: item.id } })}
       style={({ pressed }) => [
         styles.row,
-        { borderBottomColor: palette.divider },
+        // The last row draws no border: it would run square past the card's rounded
+        // corner (the owner, build 13 #7).
+        !last && { borderBottomWidth: 1, borderBottomColor: palette.divider },
         pressed && { opacity: 0.7 },
       ]}>
       <IconCmp size={19} color={toneColor[item.tone]} style={styles.rowIcon} />
@@ -72,8 +74,8 @@ function ActivitySection({ label, items }: { label: string; items: ActivityItem[
     <View>
       <SectionLabel>{label}</SectionLabel>
       <SurfaceCard style={styles.sectionCard}>
-        {items.map((item) => (
-          <ActivityRow key={item.id} item={item} />
+        {items.map((item, i) => (
+          <ActivityRow key={item.id} item={item} last={i === items.length - 1} />
         ))}
       </SurfaceCard>
     </View>
@@ -358,7 +360,6 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 12,
     paddingHorizontal: 14,
-    borderBottomWidth: 1,
   },
   rowIcon: {
     marginTop: 1,

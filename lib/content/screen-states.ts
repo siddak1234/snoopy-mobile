@@ -244,7 +244,6 @@ export const PUSH_FAILED = "Notifications couldn't be turned on. Try again.";
  */
 export const SIGN_OUT_FAILED =
   "Sign-out didn't complete — this session couldn't be revoked, so you're still signed in on this device. Nothing was cleared.";
-export const SIGN_OUT_RETRY = 'Retry sign out';
 
 /**
  * Design-owned chrome that was living in `lib/fixtures.ts`.
