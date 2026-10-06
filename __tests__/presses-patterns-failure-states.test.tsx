@@ -75,7 +75,7 @@ const SCREENS = {
   Team: { Screen: TeamScreen, params: { projectId: 'p1', workspaceId: TEST_WORKSPACE }, read: /^\/v1\/workspaces$/u },
   Teams: { Screen: TeamsScreen, read: /^\/v1\/workspaces$/u },
   'Archived flows': { Screen: ArchivedFlowsScreen, read: /\/subscriptions\?status=archived$/u },
-  Notifications: { Screen: NotificationsScreen, read: /\/approvals\?status=pending$/u },
+  Notifications: { Screen: NotificationsScreen, read: /\/notifications$/u },
 } satisfies Record<string, FetchingScreen>;
 
 /** How the read is refused, what the screen then draws, and what that state offers. */
@@ -135,9 +135,9 @@ const CASES: Case[] = [
   ['Archived flows', 'offline', 'components/flows/archived-flows.tsx:68', true],
   ['Archived flows', 'unavailable', 'components/flows/archived-flows.tsx:71', true],
   ['Archived flows', 'error', 'components/flows/archived-flows.tsx:77-79', true],
-  ['Notifications', 'offline', 'components/notifications/inbox.tsx:104', true],
-  ['Notifications', 'unavailable', 'components/notifications/inbox.tsx:110', true],
-  ['Notifications', 'error', 'components/notifications/inbox.tsx:119-120', true],
+  ['Notifications', 'offline', 'components/notifications/inbox.tsx:117', true],
+  ['Notifications', 'unavailable', 'components/notifications/inbox.tsx:123', true],
+  ['Notifications', 'error', 'components/notifications/inbox.tsx:132-133', true],
 ];
 
 /** The shared routing, with the screen's own read refused every time it is sent. */

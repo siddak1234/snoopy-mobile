@@ -770,17 +770,17 @@ describe('Notifications inbox (design sNotifs)', () => {
   it('lists notifications and opens their targets', async () => {
     const { getByText, getAllByText, queryByText } = await renderWithProviders(<NotificationsScreen />, signedInSession);
     expect(getAllByText('Run held for review').length).toBeGreaterThan(0);
-    // §12.1 #71: the inbox composes held approvals and failed runs only. A
+    // The platform's inbox lists held runs and failed runs only (decision 3A). A
     // billing notice has no source, so it is absent rather than invented.
     expect(queryByText('Invoice paid')).toBeNull();
     await fireEvent.press(getByText('Run failed'));
     expect(mockRouter.push).toHaveBeenCalledWith({
       pathname: '/(tabs)/(home)/run',
-      // A composed row points at the real run now, not a prototype variant.
+      // A row points at the real run, not a prototype variant.
       params: { runId: 'run-4' },
     });
-    // "Digest posted" was a prototype success notice. The composed inbox has
-    // only held approvals and failed runs, and a held row opens Activity.
+    // "Digest posted" was a prototype success notice. The inbox has only held
+    // runs and failed runs, and a held row opens Activity.
     await fireEvent.press(getAllByText('Run held for review')[0]);
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity');
   });
@@ -788,7 +788,7 @@ describe('Notifications inbox (design sNotifs)', () => {
 
 describe('An empty inbox (24.12)', () => {
   it('is the empty standard with its way back, since the inbox is a pushed screen', async () => {
-    routePlatform(platformOperation, { '/approvals': { approvals: [] }, '/runs': { runs: [] } });
+    routePlatform(platformOperation, { '/notifications': { items: [], unreadCount: 0 } });
     await renderWithProviders(<NotificationsScreen />, signedInSession);
     expect(await screen.findByText('Quiet, as designed')).toBeTruthy();
     await fireEvent.press(screen.getByLabelText('Back'));
