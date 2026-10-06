@@ -288,6 +288,8 @@ export type ActivityItem = {
   title: string;
   desc: string;
   time: string;
+  /** When the run was made, as published: the time range selects on it (the owner's build 13 decision 4). */
+  createdAt: string;
 };
 
 /** The approvals card's confirmation copy. */

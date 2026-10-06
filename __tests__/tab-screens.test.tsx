@@ -1236,10 +1236,12 @@ describe('Home data states (design sHomeLoad/Empty/Err)', () => {
 });
 
 describe('Home header — the mark fills its row and draws nothing else (D9, 2026-10-03)', () => {
-  // The row is as tall as its two buttons; the mark takes that height and no more.
+  // The row is as tall as its buttons; the mark takes that height and no more.
   const ROW = 38;
   const MARK_WIDTH = (ROW * 1800) / 879; // the PNG's aspect
-  const BUTTONS = 38 + 10 + 38; // the bell, the gap, the avatar
+  // The workspace, the team, the bell and the avatar, a gap between each: four
+  // since the scope became two icons beside the bell (the owner's build 13 decision 2).
+  const BUTTONS = 4 * 38 + 3 * 10;
 
   function expectMarkFillsTheRow(mark: { props: Record<string, unknown> }, tint: string | undefined) {
     const style = StyleSheet.flatten(mark.props.style as never) as Record<string, unknown>;
@@ -1253,7 +1255,7 @@ describe('Home header — the mark fills its row and draws nothing else (D9, 202
     }
   }
 
-  it('fills the 38-pt row on the dashboard, beside the bell and the avatar it leaves untouched', async () => {
+  it('fills the 38-pt row on the dashboard, beside the scope icons, the bell and the avatar it leaves untouched', async () => {
     const { getByTestId, getByLabelText } = await renderWithProviders(<HomeScreen />, signedInSession);
     expect(await screen.findByText('Welcome back, Alex')).toBeTruthy();
     expectMarkFillsTheRow(getByTestId('home-mark'), undefined);
@@ -1261,8 +1263,10 @@ describe('Home header — the mark fills its row and draws nothing else (D9, 202
     const row = StyleSheet.flatten(getByTestId('home-header').props.style);
     expect(row).toMatchObject({ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' });
     expect(row.height).toBeUndefined();
-    // The two buttons keep their size, so the row stays 38 and nothing below moves.
-    expect(StyleSheet.flatten(getByLabelText('Notifications').props.style)).toMatchObject({ width: 38, height: 38 });
+    // The buttons keep their size, so the row stays 38 and nothing below moves.
+    for (const label of ['Workspace: Acme Operations', 'Team: All teams', 'Notifications']) {
+      expect(StyleSheet.flatten(getByLabelText(label).props.style)).toMatchObject({ width: 38, height: 38 });
+    }
     const [avatar] = getByLabelText('Account and settings').children;
     expect(typeof avatar).not.toBe('string');
     const avatarStyle = typeof avatar === 'string' ? undefined : avatar.props.style;
@@ -1277,10 +1281,12 @@ describe('Home header — the mark fills its row and draws nothing else (D9, 202
     expectMarkFillsTheRow(getByTestId('home-mark'), nocturneLight.brandTint);
   });
 
-  it('is the same size while the dashboard loads', async () => {
+  it('is the same size while the dashboard loads, beside a circle for each of the four buttons to come', async () => {
     platformOperation.mockImplementation(() => new Promise(() => {}));
     const { getByTestId } = await renderWithProviders(<HomeScreen />, signedInSession);
     expectMarkFillsTheRow(getByTestId('home-mark'), undefined);
+    // The workspace, the team, the bell and the avatar (four since build 14): nothing moves when it loads.
+    expect(getByTestId('home-header-actions').children).toHaveLength(4);
   });
 
   it('is the same size on the first run', async () => {
@@ -1858,7 +1864,8 @@ describe("Home's tiles count today, say so, and open today's runs (the owner's b
     for (const { id, number, params } of opened) {
       setMockParams(params);
       const activity = await renderWithProviders(<ActivityScreen />, signedInSession);
-      expect(await activity.findByText('Today ✕')).toBeTruthy();
+      // Today, on the time range (the owner's build 13 decision 4; a Today ✕ chip until build 14).
+      expect(await activity.findByLabelText('Time range: Today')).toBeTruthy();
       const rows = activity.queryAllByTestId(/^activity-row-/u).map((row) => row.props.testID);
       // The number on the tile is the rows it opened — today's, nothing older.
       expect([id, String(rows.length)]).toEqual([id, number]);
@@ -1869,28 +1876,26 @@ describe("Home's tiles count today, say so, and open today's runs (the owner's b
     }
   });
 
-  it("Activity arriving with today and Failed lists only today's failed runs; Today ✕ sits on its own row above the outcomes, and clears back to every run", async () => {
+  it("Activity arriving with today and Failed lists only today's failed runs; the time range says Today, and choosing All time there lists every failed run again — and Today again after it (the owner's build 13 decision 4; until build 14 a Today ✕ chip on a row of its own, which could only clear)", async () => {
     routeRuns(todayAndOlder());
     setMockParams({ filter: 'Failed', period: 'today' });
     await renderWithProviders(<ActivityScreen />, signedInSession);
-    expect(await screen.findByText('Today ✕')).toBeTruthy();
+    expect(await screen.findByLabelText('Time range: Today')).toBeTruthy();
     expect(screen.queryAllByTestId(/^activity-row-/u).map((row) => row.props.testID)).toEqual(['activity-row-today-failed']);
-    // Its own row, above the four outcome chips — not a fifth chip beside them.
-    expect(within(screen.getByTestId('activity-selection')).getAllByText(/./u).map((node) => node.props.children)).toEqual([
-      'Today ✕',
-    ]);
+    // No chip for the day: the range is the button's word, and no selection row is drawn without a flow.
+    expect(screen.queryByText('Today ✕')).toBeNull();
+    expect(screen.queryByTestId('activity-selection')).toBeNull();
     expect(within(screen.getByTestId('activity-outcomes')).getAllByText(/./u).map((node) => node.props.children)).toEqual([
       'All',
       'Success',
       'Needs review',
       'Failed',
     ]);
-    const order = screen.getAllByText(/^(Today ✕|All|Success|Needs review|Failed)$/u).map((node) => node.props.children);
-    expect(order[0]).toBe('Today ✕');
 
-    await fireEvent.press(screen.getByText('Today ✕'));
-    expect(screen.queryByText('Today ✕')).toBeNull();
-    expect(screen.queryByTestId('activity-selection')).toBeNull();
+    await fireEvent.press(screen.getByLabelText('Time range: Today'));
+    await fireEvent.press(within(screen.getByTestId('activity-range-dialog')).getByTestId('activity-range-all'));
+    expect(screen.queryByTestId('activity-range-dialog')).toBeNull();
+    expect(screen.getByLabelText('Time range: All time')).toBeTruthy();
     // Every failed run again, under its day; the outcome stays as chosen.
     expect(screen.getByText('YESTERDAY')).toBeTruthy();
     expect(screen.getByText('EARLIER')).toBeTruthy();
@@ -1899,6 +1904,12 @@ describe("Home's tiles count today, say so, and open today's runs (the owner's b
       'activity-row-yesterday-failed',
       'activity-row-older-failed',
     ]);
+
+    // What the chip could never do: Today, chosen again.
+    await fireEvent.press(screen.getByLabelText('Time range: All time'));
+    await fireEvent.press(within(screen.getByTestId('activity-range-dialog')).getByTestId('activity-range-today'));
+    expect(screen.getByLabelText('Time range: Today')).toBeTruthy();
+    expect(screen.queryAllByTestId(/^activity-row-/u).map((row) => row.props.testID)).toEqual(['activity-row-today-failed']);
   });
 
   it('with no run today but older ones, each tile\'s list says so: No runs today. / No successful runs today. / No failed runs today.', async () => {
@@ -1927,8 +1938,8 @@ describe("Home's tiles count today, say so, and open today's runs (the owner's b
       'Invoice triage ✕',
     ]);
     expect(within(screen.getByTestId('activity-outcomes')).queryByText('Invoice triage ✕')).toBeNull();
-    expect(screen.queryByText('Today ✕')).toBeNull();
-    // Yesterday's failed run is listed: no day was chosen.
+    // All time: no day was chosen (the time range since the owner's build 13 decision 4), so yesterday's failed run is listed.
+    expect(screen.getByLabelText('Time range: All time')).toBeTruthy();
     expect(screen.getByText('YESTERDAY')).toBeTruthy();
   });
 
@@ -1936,13 +1947,13 @@ describe("Home's tiles count today, say so, and open today's runs (the owner's b
     routeRuns(todayAndOlder());
     setMockParams({ filter: 'Success', period: 'today' });
     const view = await renderWithProviders(<ActivityScreen />, signedInSession);
-    expect(await view.findByText('Today ✕')).toBeTruthy();
+    expect(await view.findByLabelText('Time range: Today')).toBeTruthy();
     expect(view.queryAllByTestId(/^activity-row-/u)).toHaveLength(2);
     // The tab bar arrives with nothing, and changes nothing: the screen draws again
     // with no params (an outcome chosen here), and today is still the day chosen.
     setMockParams({});
     await fireEvent.press(view.getByText('All'));
-    expect(view.getByText('Today ✕')).toBeTruthy();
+    expect(view.getByLabelText('Time range: Today')).toBeTruthy();
     expect(view.queryAllByTestId(/^activity-row-/u)).toHaveLength(4);
     expect(view.queryByText('YESTERDAY')).toBeNull();
   });

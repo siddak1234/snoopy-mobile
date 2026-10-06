@@ -2062,6 +2062,104 @@ One script made twenty-five runs. Each run made one exact break (two, in the one
 | Setup: what it added is where the flow is | `placed = held` | `build13-unarchive-and-one-flow` "a create still owed an account says where it is under Added to, with no team to pick again — no second copy can be sent" |
 | Setup: what it added is activated, never added again | `placed = held` | `build13-unarchive-and-one-flow` "a create whose activation failed stays Added to its team, and Activate again activates that copy — never a second" |
 
+### Build 13 feedback → build 14 decisions
+
+The owner's decisions of 2026-10-06 on TestFlight build 13's feedback. Part 1 (`5cc1ccf`:
+the sign-out confirm, the review banner only when something waits, no last-row hairline,
+Setup's team as a dropdown, the Free line, the same-email wording) is that commit's. This
+part is decisions 2, 4 and 5, on `round-16/b14-home`, verified against the code at
+`5cc1ccf`; the platform and the website are unchanged by it.
+
+| # | The owner's decision | What it was | Disposition |
+| --- | --- | --- | --- |
+| 2 | Home's scope control becomes icons only beside the bell — Home only; Flows and Activity keep their labelled pills. The workspace: Personal → `User`, an organization → `Buildings`. The team by its kind: HR → Users, Accounting → Calculator, Finance → Bank, Legal → Gavel, Compliance → ShieldCheck, Data → Database, Operations → Gear, Sales → Handshake, Marketing → Megaphone, Customer Support → Headset, IT → Desktop, Engineering → Code, Product → Cube, Procurement → ShoppingCart, Administration → Briefcase, Research → Flask, Other or any custom kind → UsersThree, All teams → SquaresFour. Both are buttons; either opens the card the scope control opens today, with the words, so selecting works as now; each named for what it is and what is chosen, since icons alone cannot show it | Home drew the scope control's two labelled pills on a row of their own under the header (24.9.2), as Flows and Activity do | **done (build 14)**: `ScopeIcons` (`components/scope-control.tsx`) — two 38-pt circles drawn as the bell, before it in Home's header — shares the pills' state and their cards (`ScopeCards`: the switcher, Show, Create a team), so a choice is made there exactly as from the pills; Flows and Activity keep `ScopeControl`, drawing what it drew. The map is `TEAM_TYPE_ICONS`, beside `TEAM_TYPES` in `lib/content/team-types.ts`, typed by the list so a kind added without an icon fails `npm run typecheck`, and read through `teamTypeIcon`: compared ignoring case, as the platform compares kinds (`CreateProjectRequest`: a kind is "unique in the workspace … ignoring case"), so "legal" is Legal's gavel, and through a Map, so a kind in a person's own words such as "constructor" finds no Object.prototype member. Read aloud as "Workspace: {name}", "Team: {kind}", "Team: All teams" — the pills' own labels. One choice the decision left open, taken from its words "Both are buttons": the workspace icon opens the switcher with one workspace too, since only the card can name the workspace and the header's other buttons always tick; the pill, which shows the name, stays a button only with two or more or a cut list (the switcher's rule, DESIGN-CONTRACT). The loading skeleton draws four circles, one for each button. The mark (77.8 pt) and the four buttons (182) fit the 280 a 320-pt phone leaves. **NOT OBSERVED** on a device |
+| 4 | Activity gets a time-range button: Today / Week / Month. Week the last 7 days, Month the last 30, Today since local midnight — the Home tiles' today. Activity opens on all runs; the tab bar changes nothing; a Home tile still selects Today (`period=today`); the outcome filters combine with it. In place of Today ✕, which could only clear, never select again | "Today ✕": a chip on a row of its own above the outcomes, set only by a Home tile's arrival, which cleared Today and could not choose it again (`activity/index.tsx` at `5cc1ccf`, ~121–131, ~157–172, ~294–308) | **done (build 14)**: one button beside the title — as Flows' header buttons sit beside its own — drawn as the scope's pills are (`ScopePill`, the pill drawn once for the scope's two and this), reading the range: All time, Today, Week, Month, and read aloud "Time range: {range}". It opens a card, "Time range", in the scope's Show pattern: the four as rows, each with what it spans ("Every run", "Since midnight", "The last 7 days", "The last 30 days"), the chosen one ticked; a row chooses and closes; Done closes. Chosen over the forms the decision offered: `SelectField` is a form's labelled box that opens in place inside a dialog, and four more chips would be a second chip row over the outcomes' four, which build 12 item 1 had kept to one row so it fits a phone's width. `rangeStart` (`lib/platform/runs.ts`, beside `localMidnight`): Today is `localMidnight()` itself, so a Home tile's number is still the rows it opens; Week and Month are the same clock time 7 and 30 calendar days back, whatever a daylight-saving change between did; All time has none. A run is in a range from its first moment (`createdAt >= start`). The range and the outcome select together; the flow chip keeps its row, alone on it now. An empty range says so: "No runs today.", "No runs in the last 7 days.", "No failed runs in the last 30 days.". A Home tile brings Today and a flow page's tile All time (its tiles count all time; it brought no day before); the tab bar brings nothing and changes nothing — held under the real router with a range chosen there (Week), not the one Activity opens on. One edge, from the contract: the runs list takes no window (`listRuns` has `subscriptionId` only) and answers up to 100 runs, so Week and Month select among the newest 100 — a busier week or month lists its newest 100, as a day of more than 100 does under Today (build 12 item 1). **NOT OBSERVED** on a device |
+| 5 | Home with no flows uses the normal layout: the header — the logo, the two icon buttons, the bell, the avatar, all real buttons, as when there are flows — the greeting, the TODAY tiles at 0, and where RECENT RUNS goes the empty message "Nothing automated. Yet." with its Add a flow action. No review banner at 0 (part 1) | `HomeEmpty`, design sHomeEmpty laid out whole: a header whose bell and avatar were Views drawn as buttons, not buttons, and the message centred on the screen — no greeting, no tiles, no scope | **done (build 14)**: one render path. `HomeHeader` (the mark, the scope's two icons, the bell with its dot, the avatar) draws for flows or none; with none set up, ever (the catalog's `subscribed`, archived ones counted, as before), the greeting and TODAY at the read's counts — 0, nothing having run — no review banner, and `HomeFirstRun` (the design's hero, "Nothing automated. Yet.", its line, Add a flow) in place of the quick actions and RECENT RUNS. The tiles are buttons here as with flows. One judgment, recorded so it can be reversed: the quick actions are not drawn with the first run — their Add a flow would sit just over its own, and the decision names the first run's. **NOT OBSERVED** on a device |
+
+Decided flips of pinned behaviour, each named in its test: `tab-screens` "Activity arriving
+with today and Failed lists only today's failed runs; Today ✕ sits on its own row above
+the outcomes, and clears back to every run" is "… the time range says Today, and choosing
+All time there lists every failed run again — and Today again after it (the owner's build
+13 decision 4; until build 14 a Today ✕ chip on a row of its own, which could only
+clear)" — build 13's guard rows "Today ✕ is on its own row, above the outcomes" and "Today
+✕ clears back to every run" name it by its old title; `tab-screens` "fills the 38-pt row
+on the dashboard, beside the bell and the avatar it leaves untouched" is "… beside the
+scope icons, the bell and the avatar …", its room at 320 pt counted for four buttons; and
+"is the same size while the dashboard loads" is "… beside a circle for each of the four
+buttons to come". Tests whose assertions moved from the chip to the button's label, their
+names kept: `tab-screens` "each Home tile's number is the rows it opens: …", "a flow
+page's chip sits on the same row, …" (now also holding All time) and "opening Activity
+from the tab bar after a tile visit leaves Today as it was"; and real-router
+`activity-selection`'s "the same Home tile pressed again, …" and "the tab bar changes
+nothing: …", which clear through the card's All time — the second now also leaves
+Activity on Week before the tab bar, so a range the tab bar reset would show. Home and
+Activity have no snapshots, and `ScopePill` draws the pills' tree as it was: no snapshot
+moved, and none was updated.
+
+The presses this part adds, each run by a test (`audit:presses` over the coverage of the
+eight files that press Home, Activity and the scope control: every press in the three
+changed files is run — Home 10 and a passthrough, Activity 9, the scope control 9 and a
+passthrough). Retired: `activity/index.tsx`'s Today ✕.
+
+| Press | Configured outcome | Test |
+| --- | --- | --- |
+| `scope-control.tsx:244` — Home's workspace icon | Switch workspace, with any number of workspaces; a choice is PATCH `/v1/session/active-workspace` `{workspaceId}`, keyed, then the session read again; the active one again sends nothing | `build14-home-scope-icons-and-first-run` "the workspace icon ticks and opens Switch workspace — …", "the workspace icon is a button with one workspace too — …" |
+| `scope-control.tsx:252` — Home's team icon | Show; a team chosen is the scope, kept for the workspace, the icon and its label follow and Home narrows to it; All teams back | `build14-home-scope-icons-and-first-run` "the team icon ticks and opens Show — …" |
+| `scope-control.tsx:202, :208` — the pills, through `ScopePill` | as before: the switcher with two or more (or a cut list); Show | `presses-home-activity` (the scope control's tables), `scope-control` |
+| `activity/index.tsx:341` — the time range | opens its card, the chosen range ticked | `build14-activity-range` "the button ticks and opens its card — …" |
+| `activity/index.tsx:359` — a range in the card | chooses it and closes; the list is that range's, with the outcome | `build14-activity-range` "Today, Week and Month list the runs …", "the range and the outcome select together, …"; `tab-screens` "Activity arriving with today and Failed …" |
+| `activity/index.tsx:349` — the card's Done | closes; the range and the list as they were; nothing read, nothing opened | `build14-activity-range` "the button ticks and opens its card — …" |
+| `(home)/index.tsx:144` — the first run's Add a flow | opens Add | `build14-home-scope-icons-and-first-run` "draws the header, the greeting and TODAY at 0, …" |
+| `(home)/index.tsx:88, :100` — the bell, the avatar (one header, flows or none) | Notifications; Settings | `tab-screens` "ticks when the avatar, the bell or See all is tapped, …"; `build14-home-scope-icons-and-first-run` "its bell, avatar and scope icons are buttons, …" |
+
+### Guards proved to bite, build 14 part 2
+
+Thirty-three runs by one script, each against its own suite with the test's name as the
+filter — the named test the one test the filter ran, its status read from jest's own
+record — and the file restored byte for byte, its SHA-256 checked before and after; the
+working tree's hashes matched after the last restore. Every break failed its test. The
+rows against `5cc1ccf` put part 1's Home or Activity back whole: the screen before this
+change. The range tests run with only `Date` fixed (Tuesday 6 October 2026, 3 pm local;
+every timer real), so each boundary is exact. The look — the icons' colour, the pill's
+place on the title's row, the first run's spacing — is styling no test reads, so no break
+was run for it.
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| Every kind has the owner's icon | Legal drawn as UsersThree | `build14-home-scope-icons-and-first-run` "gives every kind on the list an icon — the owner's, each its own — and Other, a kind in a person's own words and none chosen theirs" |
+| Kinds compared as the platform compares them, ignoring case | an exact, case-sensitive lookup | the same |
+| A kind in a person's own words finds no Object.prototype member | the record looked up in place of the Map | the same |
+| Home draws the scope as two icons beside the bell, no pills | Home as it is at `5cc1ccf` | `build14-home-scope-icons-and-first-run` "draws the workspace and the team as icons before the bell and the avatar — a building and four squares — each read aloud as what it is and what is chosen; the labelled pills are gone" |
+| All teams is four squares | All teams drawn as UsersThree | the same |
+| A personal workspace is a person | every workspace a building | `build14-home-scope-icons-and-first-run` "draws a personal workspace as a person" |
+| The team icon is its kind's | every team drawn as UsersThree | `build14-home-scope-icons-and-first-run` "draws the chosen team as its kind's icon, and a kind in a person's own words as the team icon" |
+| The team icon opens Show | the team icon opening the switcher | `build14-home-scope-icons-and-first-run` "the team icon ticks and opens Show — the team list, in words — and a team chosen there is the scope: kept, the icon and its label follow, and Home narrows to it" |
+| The workspace icon opens the switcher | the workspace icon opening Show | `build14-home-scope-icons-and-first-run` "the workspace icon ticks and opens Switch workspace — the workspaces, in words — and choosing another switches: the active workspace PATCHed with a key, then the session read again" |
+| The workspace icon is a button with one workspace | the pill's rule (a button with two or more only) | `build14-home-scope-icons-and-first-run` "the workspace icon is a button with one workspace too — the card is where its name is read — and choosing it sends nothing" |
+| No flow: the dashboard, the first run where the runs go | Home as it is at `5cc1ccf` | `build14-home-scope-icons-and-first-run` "draws the header, the greeting and TODAY at 0, and Nothing automated. Yet. with Add a flow where RECENT RUNS goes — no review banner, and no quick actions over it" |
+| No flow: no quick actions over the first run | a Flows quick action drawn over it | the same |
+| No flow: the bell and the avatar are buttons | Home as it is at `5cc1ccf` | `build14-home-scope-icons-and-first-run` "its bell, avatar and scope icons are buttons, as with flows: each ticks and opens its page or card" |
+| The header's buttons are 38 pt | the icons drawn at 34 | `tab-screens` "fills the 38-pt row on the dashboard, beside the scope icons, the bell and the avatar it leaves untouched" |
+| Loading: a circle for each of the four buttons | two circles, as at part 1 | `tab-screens` "is the same size while the dashboard loads, beside a circle for each of the four buttons to come" |
+| Today on arrival, then All time and Today again from the card | Activity as it is at `5cc1ccf` | `tab-screens` "Activity arriving with today and Failed lists only today's failed runs; the time range says Today, and choosing All time there lists every failed run again — and Today again after it (…)" |
+| A row of the card chooses its range | the row's `setRange` removed | the same |
+| A Home tile arrives with Today | `period` ignored on arrival | `tab-screens` "each Home tile's number is the rows it opens: today's runs by outcome, the older ones left out (All teams)" |
+| A flow page's tile brings All time | a flow tile bringing Today | `tab-screens` "a flow page's chip sits on the same row, above the outcomes, and its tiles bring no day: they count all time" |
+| A Home tile arrives with Today (the tab-bar case) | `period` ignored on arrival | `tab-screens` "opening Activity from the tab bar after a tile visit leaves Today as it was" |
+| Week is 7 days back | Week as 6 days | `build14-activity-range` "Today is the tiles' today — local midnight, localMidnight itself — Week 7 days back and Month 30, to the millisecond; All time has no beginning" |
+| Today is since local midnight, not the last 24 hours | Today as the last 24 hours | the same |
+| Activity opens on All time | Activity opening on Today | `build14-activity-range` "opens on All time — every run, under its day — and says so on the button beside the title" |
+| Activity opens on All time (the screen before) | Activity as it is at `5cc1ccf` | the same |
+| Done closes the card, changing nothing | Done keeping it open | `build14-activity-range` "the button ticks and opens its card — All time, Today, Week and Month, each saying what it spans, the one chosen ticked — and Done closes it, changing nothing" |
+| A range's boundary is in | `>` in place of `>=` | `build14-activity-range` "Today, Week and Month list the runs since local midnight, of the last 7 days and of the last 30 — each boundary in, a millisecond before it out — and All time every run again" |
+| The range selects | the range ignored | the same |
+| The range and the outcome select together | the outcome ignored under a range | `build14-activity-range` "the range and the outcome select together, each kept as the other changes" |
+| An empty range says its span | Week's words dropped | `build14-activity-range` "says the range when it holds no run: No runs today. / in the last 7 days. / in the last 30 days. — not the first-run empty" |
+| A Home tile arrives with Today, and the card chooses again | `period` ignored on arrival | `build14-activity-range` "arriving from a Home tile (period=today) selects Today with its outcome, and the card chooses another — and Today again" |
+| An arrival sets the range; none keeps it | the arrival's `setRange` removed | `build14-activity-range` "the tab bar changes nothing: drawn again with no params, the range chosen here stays; a flow page's tile brings All time with its flow" |
+| The tab bar changes nothing, the range included (real router) | the tab bar sending Activity `period: 'today'` | real-router `activity-selection` "the tab bar changes nothing: after a tile visit and a clear, Activity opens from its tab as it was left" |
+| A Home tile pressed again arrives with Today (real router) | `period` ignored on arrival | real-router `activity-selection` "the same Home tile pressed again, after its selection was cleared on Activity, opens Activity with it again" |
+
 ### Guards proved to bite, 24.6
 
 | Guard | Broken by | Test that failed |
