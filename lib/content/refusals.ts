@@ -97,6 +97,19 @@ const SUBSCRIPTION_REFUSALS: Readonly<Record<string, string>> = {
     'Subscriptions are unavailable while billing entitlements are not configured.',
 };
 
+/**
+ * Over the plan's flow allowance (decision 7a3), in the website's words: what
+ * the plan allows, what the workspace holds, and how many to archive. Paused and
+ * draft flows count, so the sentence says archive.
+ */
+export function overPlanSentence(allowed: number, live: number): string {
+  const flows = allowed === 1 ? 'flow' : 'flows';
+  return `Your plan allows ${allowed} ${flows}; this workspace has ${live}. No flow can start a run until you archive ${live - allowed}. Paused and draft flows count.`;
+}
+
+/** A run refused because billing entitlements are not configured: every start is, until they are. */
+export const RUNS_UNCONFIGURED = 'Runs are unavailable while billing entitlements are not configured.';
+
 /** Starting a run (backend FR-14, ADR-0030). */
 export const RUN_REFUSALS: Readonly<Record<string, string>> = {
   artifact_unavailable: 'That file can no longer be used. Choose it again.',
@@ -138,6 +151,19 @@ export function runRefusal(error: unknown): { message: string; fileGone: boolean
   }
   if (error instanceof PlatformError && error.status === 409) {
     return { message: 'This flow is not live, so it cannot run.', fileGone: false };
+  }
+  // Over the plan (decision 7a3): its numbers when the platform gave them; every
+  // other 403 is authorization and carries no reason.
+  if (error instanceof PlatformError && error.status === 403) {
+    const { reason, limit, live } = error.details ?? {};
+    if (reason === 'over_plan_limit') {
+      const counted = Number.isSafeInteger(limit) && Number.isSafeInteger(live) && (live as number) > (limit as number);
+      return {
+        message: counted ? overPlanSentence(limit as number, live as number) : SUBSCRIPTION_REFUSALS.over_plan_limit!,
+        fileGone: false,
+      };
+    }
+    if (reason === 'entitlements_not_configured') return { message: RUNS_UNCONFIGURED, fileGone: false };
   }
   return { message: refusalMessage(error, {}, 'The run was not started.'), fileGone: false };
 }

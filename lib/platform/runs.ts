@@ -73,6 +73,8 @@ export function localMidnight(now: Date = new Date()): Date {
 
 export type Approval = components['schemas']['Approval'];
 export type Subscription = components['schemas']['Subscription'];
+/** The plan's flow ceiling beside the workspace's count (decision 7a3); absent when the platform could not say. */
+export type FlowAllowance = components['schemas']['FlowAllowance'];
 
 /**
  * Approvals awaiting a decision.
@@ -116,7 +118,9 @@ export function readAllApprovals(workspaceId: string): Promise<{ approvals: Appr
 }
 
 /** The workspace's subscriptions — the middle hop of the approval-title join. */
-export function readSubscriptions(workspaceId: string): Promise<{ subscriptions: Subscription[] }> {
+export function readSubscriptions(
+  workspaceId: string,
+): Promise<{ subscriptions: Subscription[]; flowAllowance?: FlowAllowance }> {
   return shared(workspaceId, 'subscriptions', 'volatile', () =>
     platformOperation(`/v1/workspaces/${workspaceId}/subscriptions`, ({ automations }, signal) =>
       automations.GET('/v1/workspaces/{workspaceId}/subscriptions', {
