@@ -21,7 +21,7 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { Skeleton } from '@/components/nocturne/skeleton';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable, pressed } from '@/components/pressable';
-import { ScopeControl } from '@/components/scope-control';
+import { ScopeIcons } from '@/components/scope-control';
 import { StatTileButton } from '@/components/stat-tile-button';
 import { em, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
@@ -35,13 +35,19 @@ import { toStatTiles, type StatTileView } from '@/lib/view/catalog';
 import { catalogIndex, toRunRows } from '@/lib/view/runs';
 import { scopeApprovals, scopeRuns, scopeStats } from '@/lib/view/scope';
 
-/** Skeleton layout while the dashboard loads (design sHomeLoad). */
+/**
+ * Skeleton layout while the dashboard loads (design sHomeLoad): a circle for
+ * each of the header's four buttons — the workspace, the team, the bell and the
+ * avatar since build 14 — so nothing moves when it loads.
+ */
 function HomeLoading({ paddingTop }: { paddingTop: number }) {
   return (
     <View style={[styles.content, { paddingTop }]}>
       <View style={styles.headerRow} testID="home-header">
         <BrandMark height={HOME_MARK_HEIGHT} testID="home-mark" />
-        <View style={styles.headerActions}>
+        <View style={styles.headerActions} testID="home-header-actions">
+          <Skeleton width={38} height={38} borderRadius={999} />
+          <Skeleton width={38} height={38} borderRadius={999} />
           <Skeleton width={38} height={38} borderRadius={999} />
           <Skeleton width={38} height={38} borderRadius={999} />
         </View>
@@ -66,46 +72,78 @@ function HomeLoading({ paddingTop }: { paddingTop: number }) {
   );
 }
 
-/** First-run empty dashboard (design sHomeEmpty). */
-function HomeEmpty({ paddingTop, initials }: { paddingTop: number; initials: string }) {
+/**
+ * Home's header, with flows or none: the mark, then the scope as two icons (the
+ * owner's build 13 decision 2), the bell and the avatar — every one a button.
+ */
+function HomeHeader({ initials, hasAttention }: { initials: string; hasAttention: boolean }) {
   const { palette } = useTheme();
   const router = useRouter();
   return (
-    <View style={[styles.stateRoot, { paddingTop, backgroundColor: palette.bg }]}>
-      <View style={styles.headerRow} testID="home-header">
-        <BrandMark height={HOME_MARK_HEIGHT} testID="home-mark" />
-        <View style={styles.headerActions}>
-          <View style={[styles.bellButton, { borderColor: palette.neutral[800] }]}>
-            <Bell size={19} color={palette.neutral[300]} weight="regular" />
-          </View>
-          <AvatarBadge initials={initials} />
-        </View>
-      </View>
-      <View style={styles.stateCenter}>
-        <View
-          style={[
-            styles.emptyHero,
-            {
-              borderColor: palette.accentRamp[700],
-              backgroundColor: withAlpha(palette.accent, 0.1),
-            },
+    <View style={styles.headerRow} testID="home-header">
+      <BrandMark height={HOME_MARK_HEIGHT} testID="home-mark" />
+      <View style={styles.headerActions} testID="home-header-actions">
+        <ScopeIcons />
+        <Pressable
+          onPress={() => router.push('/(tabs)/(home)/notifications')}
+          accessibilityRole="button"
+          accessibilityLabel="Notifications"
+          style={({ pressed }) => [
+            styles.bellButton,
+            { borderColor: palette.neutral[800] },
+            pressed && { backgroundColor: withAlpha(palette.text, 0.07) },
           ]}>
-          <Sparkle size={40} color={palette.accentRamp[300]} />
-        </View>
-        <Text style={[styles.stateTitle, { color: palette.text }]}>Nothing automated. Yet.</Text>
-        <Text style={[styles.stateBody, { color: palette.neutral[400] }]}>
-          Add a prebuilt flow and your first agent is running in minutes — no building required.
-        </Text>
-        <PillButton
-          label={ADD_FLOW_LABEL}
-          variant="primary"
-          height={48}
-          icon={Plus}
-          iconSize={18}
-          onPress={() => router.push('/(tabs)/flows/add')}
-          style={styles.stateCta}
-        />
+          <Bell size={19} color={palette.neutral[300]} weight="regular" />
+          {hasAttention ? <View style={[styles.bellDot, { backgroundColor: palette.accent }]} /> : null}
+        </Pressable>
+        <Pressable
+          onPress={() => router.push('/(tabs)/settings')}
+          accessibilityRole="button"
+          accessibilityLabel="Account and settings"
+          style={({ pressed }) => pressed && { opacity: 0.85 }}>
+          <AvatarBadge initials={initials} />
+        </Pressable>
       </View>
+    </View>
+  );
+}
+
+/**
+ * The first run (design sHomeEmpty), where RECENT RUNS goes: since the owner's
+ * build 13 decision 5 the dashboard is drawn as it is with flows — the header's
+ * buttons, the greeting, TODAY at 0 — and this says there is nothing yet, with
+ * its one way in. Until then it was a screen of its own, whose bell and avatar
+ * were drawn but were not buttons. The quick actions are not drawn with it:
+ * their Add a flow would sit just over this one.
+ */
+function HomeFirstRun() {
+  const { palette } = useTheme();
+  const router = useRouter();
+  return (
+    <View style={styles.firstRun} testID="home-first-run">
+      <View
+        style={[
+          styles.emptyHero,
+          {
+            borderColor: palette.accentRamp[700],
+            backgroundColor: withAlpha(palette.accent, 0.1),
+          },
+        ]}>
+        <Sparkle size={40} color={palette.accentRamp[300]} />
+      </View>
+      <Text style={[styles.stateTitle, { color: palette.text }]}>Nothing automated. Yet.</Text>
+      <Text style={[styles.stateBody, { color: palette.neutral[400] }]}>
+        Add a prebuilt flow and your first agent is running in minutes — no building required.
+      </Text>
+      <PillButton
+        label={ADD_FLOW_LABEL}
+        variant="primary"
+        height={48}
+        icon={Plus}
+        iconSize={18}
+        onPress={() => router.push('/(tabs)/flows/add')}
+        style={styles.stateCta}
+      />
     </View>
   );
 }
@@ -158,7 +196,8 @@ function HomeError({
  * space top left"): the row is as tall as the bell and the avatar, 38, so the
  * mark is 38 — the design drew 17 — and nothing else moves. Wider than 38 would
  * make the row taller and push everything below; the header test holds both
- * this number and the room it leaves the two buttons at 320 pt.
+ * this number and the room it leaves the buttons at 320 pt — four since build
+ * 14, the scope's two icons beside the bell and the avatar.
  */
 const HOME_MARK_HEIGHT = 38;
 
@@ -235,11 +274,10 @@ export default function HomeScreen() {
   if (dashboard.status !== 'ready') {
     return <HomeError paddingTop={paddingTop} initials={initials} onRetry={() => dashboard.reload()} />;
   }
-  if (!dashboard.data.hasSubscriptions) {
-    return <HomeEmpty paddingTop={paddingTop} initials={initials} />;
-  }
 
-  const { stats, runs, index, approvals, subscriptions } = dashboard.data;
+  // With no flow set up, ever, the same dashboard: its counts are the read's —
+  // nothing has run — and the first run takes the place of the runs below.
+  const { stats, runs, index, approvals, subscriptions, hasSubscriptions } = dashboard.data;
   const counts = scopeStats(stats, subscriptions, projectId);
   const tiles: StatTileView[] = toStatTiles(counts);
   const scopedRuns = scopeRuns(runs, subscriptions, projectId);
@@ -260,34 +298,9 @@ export default function HomeScreen() {
         { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) },
       ]}
       showsVerticalScrollIndicator={false}>
-      {/* Header */}
-      <View style={styles.headerRow} testID="home-header">
-        <BrandMark height={HOME_MARK_HEIGHT} testID="home-mark" />
-        <View style={styles.headerActions}>
-          <Pressable
-            onPress={() => router.push('/(tabs)/(home)/notifications')}
-            accessibilityRole="button"
-            accessibilityLabel="Notifications"
-            style={({ pressed }) => [
-              styles.bellButton,
-              { borderColor: palette.neutral[800] },
-              pressed && { backgroundColor: withAlpha(palette.text, 0.07) },
-            ]}>
-            <Bell size={19} color={palette.neutral[300]} weight="regular" />
-            {hasAttention ? <View style={[styles.bellDot, { backgroundColor: palette.accent }]} /> : null}
-          </Pressable>
-          <Pressable
-            onPress={() => router.push('/(tabs)/settings')}
-            accessibilityRole="button"
-            accessibilityLabel="Account and settings"
-            style={({ pressed }) => pressed && { opacity: 0.85 }}>
-            <AvatarBadge initials={initials} />
-          </Pressable>
-        </View>
-      </View>
-
-      {/* The scope: the workspace, and the project looked at (24.9.2). */}
-      <ScopeControl />
+      {/* Header — the scope is its two icons now, beside the bell; the labelled
+          pills under it went (the owner's build 13 decision 2). */}
+      <HomeHeader initials={initials} hasAttention={hasAttention} />
 
       {/* Greeting */}
       <View>
@@ -370,101 +383,108 @@ export default function HomeScreen() {
         </Pressable>
       ) : null}
 
-      {/* Quick actions */}
-      <View style={styles.actionsRow}>
-        <PillButton
-          label={ADD_FLOW_LABEL}
-          variant="primary"
-          height={46}
-          fontSize={typeScale.label.fontSize}
-          icon={Plus}
-          iconSize={16}
-          onPress={() => router.push('/(tabs)/flows/add')}
-          style={{ flex: 1 }}
-        />
-        <PillButton
-          label="Flows"
-          variant="secondary"
-          height={46}
-          fontSize={typeScale.label.fontSize}
-          icon={FlowArrow}
-          iconSize={16}
-          onPress={() => router.push('/(tabs)/flows')}
-          style={{ flex: 1 }}
-        />
-      </View>
+      {hasSubscriptions ? (
+        <>
+          {/* Quick actions */}
+          <View style={styles.actionsRow}>
+            <PillButton
+              label={ADD_FLOW_LABEL}
+              variant="primary"
+              height={46}
+              fontSize={typeScale.label.fontSize}
+              icon={Plus}
+              iconSize={16}
+              onPress={() => router.push('/(tabs)/flows/add')}
+              style={{ flex: 1 }}
+            />
+            <PillButton
+              label="Flows"
+              variant="secondary"
+              height={46}
+              fontSize={typeScale.label.fontSize}
+              icon={FlowArrow}
+              iconSize={16}
+              onPress={() => router.push('/(tabs)/flows')}
+              style={{ flex: 1 }}
+            />
+          </View>
 
-      {/* Recent runs */}
-      <View>
-        <View style={styles.sectionHeader}>
-          <SectionLabel>RECENT RUNS</SectionLabel>
-          <Text
-            onPress={pressed(() => router.push('/(tabs)/activity'))}
-            suppressHighlighting
-            style={{
-              fontFamily: fonts.regular,
-              fontSize: typeScale.small.fontSize,
-              color: palette.accentRamp[300],
-            }}>
-            See all
-          </Text>
-        </View>
-        <SurfaceCard level="sm" style={styles.runsCard}>
-          {runRows.map((r, i) => (
-            <Pressable
-              key={r.runId}
-              testID={`home-run-${r.runId}`}
-              onPress={() =>
-                router.push({
-                  pathname: '/(tabs)/(home)/run',
-                  params: { runId: r.runId },
-                })
-              }
-              style={({ pressed }) => [
-                styles.runRow,
-                // The last row draws no border: the card has no clip, so it would run
-                // square past the rounded corner (the owner, build 13 #7).
-                i < runRows.length - 1 && {
-                  borderBottomWidth: 1,
-                  borderBottomColor: palette.divider,
-                },
-                pressed && { backgroundColor: withAlpha(palette.text, 0.04) },
-              ]}>
-              <View
-                style={[
-                  styles.runDot,
-                  { backgroundColor: r.tone === 'ok' ? status.ok : status.warnText },
-                ]}
-              />
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={{ fontFamily: fonts.medium, fontSize: typeScale.label.fontSize, color: palette.text }}>
-                  {r.name}
-                </Text>
-                <Text
-                  style={{
-                    marginTop: 1,
-                    fontFamily: fonts.regular,
-                    fontSize: typeScale.small.fontSize,
-                    color: palette.neutral[400],
-                  }}>
-                  {r.meta}
-                </Text>
-              </View>
+          {/* Recent runs */}
+          <View>
+            <View style={styles.sectionHeader}>
+              <SectionLabel>RECENT RUNS</SectionLabel>
               <Text
+                onPress={pressed(() => router.push('/(tabs)/activity'))}
+                suppressHighlighting
                 style={{
                   fontFamily: fonts.regular,
-                  fontSize: typeScale.caption.fontSize,
-                  color: palette.neutral[500],
+                  fontSize: typeScale.small.fontSize,
+                  color: palette.accentRamp[300],
                 }}>
-                {r.time}
+                See all
               </Text>
-            </Pressable>
-          ))}
-          {runRows.length === 0 ? (
-            <Text style={[styles.noRuns, { color: palette.neutral[500] }]}>No runs in this team yet.</Text>
-          ) : null}
-        </SurfaceCard>
-      </View>
+            </View>
+            <SurfaceCard level="sm" style={styles.runsCard}>
+              {runRows.map((r, i) => (
+                <Pressable
+                  key={r.runId}
+                  testID={`home-run-${r.runId}`}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/(tabs)/(home)/run',
+                      params: { runId: r.runId },
+                    })
+                  }
+                  style={({ pressed }) => [
+                    styles.runRow,
+                    // The last row draws no border: the card has no clip, so it would run
+                    // square past the rounded corner (the owner, build 13 #7).
+                    i < runRows.length - 1 && {
+                      borderBottomWidth: 1,
+                      borderBottomColor: palette.divider,
+                    },
+                    pressed && { backgroundColor: withAlpha(palette.text, 0.04) },
+                  ]}>
+                  <View
+                    style={[
+                      styles.runDot,
+                      { backgroundColor: r.tone === 'ok' ? status.ok : status.warnText },
+                    ]}
+                  />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={{ fontFamily: fonts.medium, fontSize: typeScale.label.fontSize, color: palette.text }}>
+                      {r.name}
+                    </Text>
+                    <Text
+                      style={{
+                        marginTop: 1,
+                        fontFamily: fonts.regular,
+                        fontSize: typeScale.small.fontSize,
+                        color: palette.neutral[400],
+                      }}>
+                      {r.meta}
+                    </Text>
+                  </View>
+                  <Text
+                    style={{
+                      fontFamily: fonts.regular,
+                      fontSize: typeScale.caption.fontSize,
+                      color: palette.neutral[500],
+                    }}>
+                    {r.time}
+                  </Text>
+                </Pressable>
+              ))}
+              {runRows.length === 0 ? (
+                <Text style={[styles.noRuns, { color: palette.neutral[500] }]}>No runs in this team yet.</Text>
+              ) : null}
+            </SurfaceCard>
+          </View>
+        </>
+      ) : (
+        // No flow yet (the owner's build 13 decision 5): the first run, where the runs go.
+        <HomeFirstRun />
+      )}
     </ScrollView>
   );
 }
@@ -559,6 +579,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 16,
     textAlign: 'center',
+    paddingHorizontal: 14,
+  },
+  // The first run's message, as the design centred it, in the runs' place on the page.
+  firstRun: {
+    alignItems: 'center',
+    gap: 16,
+    paddingTop: 12,
     paddingHorizontal: 14,
   },
   emptyHero: {
