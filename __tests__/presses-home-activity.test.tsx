@@ -321,6 +321,17 @@ describe('Notifications: read and dismissed on the platform (the owner\'s build 
     expect(fake.to(READ)).toHaveLength(1);
   });
 
+  it('Dismiss sits beside its row, not inside it, so a screen reader reaches it on its own', async () => {
+    routeInbox(inboxPayload());
+    await renderWithProviders(<NotificationsScreen />, signedInSession);
+    // The row is the nearest element a screen reader treats as one: everything in it is read as one.
+    let row = (await screen.findByText('Run failed')).parent;
+    while (row && row.props.accessible !== true) row = row.parent;
+    expect(row).toBeTruthy();
+    expect(within(row!).queryByTestId('dismiss-run:run-4')).toBeNull();
+    expect(screen.getByTestId('dismiss-run:run-4').props.accessibilityLabel).toBe('Dismiss: Run failed');
+  });
+
   it('Dismiss takes one row off the inbox on the platform, without opening it', async () => {
     const inbox = inboxPayload();
     const [first, ...rest] = inbox.items;

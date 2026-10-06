@@ -211,30 +211,34 @@ export function Inbox({ runPath }: { runPath: InboxRunPath }) {
           const IconCmp = item.icon;
           const unread = item.unread;
           return (
-            <Pressable
+            <View
               key={item.id}
-              onPress={() => open(item)}
-              style={({ pressed }) => [
-                styles.row,
+              style={[
+                styles.rowWrap,
                 i < items.length - 1 && {
                   borderBottomWidth: 1,
                   borderBottomColor: palette.divider,
                 },
-                pressed && { backgroundColor: withAlpha(palette.text, 0.04) },
               ]}>
-              <View
-                style={[
-                  styles.dot,
-                  { backgroundColor: unread ? palette.accent : 'transparent' },
-                ]}
-              />
-              <IconCmp size={19} color={toneColor(item.tone)} style={styles.rowIcon} />
-              <View style={styles.rowBody}>
-                <Text style={[styles.rowTitle, { color: palette.text }]}>{item.title}</Text>
-                <Text style={[styles.rowDesc, { color: palette.neutral[400] }]}>{item.desc}</Text>
-              </View>
-              <Text style={[styles.rowTime, { color: palette.neutral[500] }]}>{item.time}</Text>
-              {/* Dismiss, on the row itself (the owner, build 13 #4): it leaves the inbox on every device. */}
+              <Pressable
+                onPress={() => open(item)}
+                style={({ pressed }) => [styles.row, pressed && { backgroundColor: withAlpha(palette.text, 0.04) }]}>
+                <View
+                  style={[
+                    styles.dot,
+                    { backgroundColor: unread ? palette.accent : 'transparent' },
+                  ]}
+                />
+                <IconCmp size={19} color={toneColor(item.tone)} style={styles.rowIcon} />
+                <View style={styles.rowBody}>
+                  <Text style={[styles.rowTitle, { color: palette.text }]}>{item.title}</Text>
+                  <Text style={[styles.rowDesc, { color: palette.neutral[400] }]}>{item.desc}</Text>
+                </View>
+                <Text style={[styles.rowTime, { color: palette.neutral[500] }]}>{item.time}</Text>
+              </Pressable>
+              {/* Dismiss, beside the row rather than inside it (decision 3A): a press
+                  inside the row would be grouped into it, out of VoiceOver's reach.
+                  It leaves the inbox on every device. */}
               <Pressable
                 testID={`dismiss-${item.id}`}
                 accessibilityRole="button"
@@ -244,7 +248,7 @@ export function Inbox({ runPath }: { runPath: InboxRunPath }) {
                 style={styles.dismiss}>
                 <X size={15} color={palette.neutral[500]} />
               </Pressable>
-            </Pressable>
+            </View>
           );
         })}
       </SurfaceCard>
@@ -382,12 +386,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   list: {},
+  rowWrap: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
   row: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
     paddingVertical: 13,
-    paddingHorizontal: 14,
+    paddingLeft: 14,
+    paddingRight: 8,
   },
   dot: {
     width: 7,
@@ -416,7 +427,8 @@ const styles = StyleSheet.create({
     fontSize: typeScale.caption.fontSize,
   },
   dismiss: {
-    marginLeft: 4,
-    marginTop: 1,
+    paddingTop: 14,
+    paddingRight: 14,
+    paddingLeft: 4,
   },
 });
