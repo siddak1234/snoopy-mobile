@@ -40,6 +40,21 @@ export function renameWorkspace(workspaceId: string, name: string, idempotencyKe
   ).then(changedWorkspaces);
 }
 
+/**
+ * Turns the organization's domain-only setting on or off (decision 8B) —
+ * owners and admins. Turning it on is refused (409) without a verified domain
+ * or with a member signing in from outside one; turning it off always succeeds.
+ */
+export function setDomainOnly(workspaceId: string, domainOnly: boolean, idempotencyKey: string) {
+  return platformOperation(`/v1/workspaces/${workspaceId}`, ({ platform }, signal) =>
+    platform.PATCH('/v1/workspaces/{workspaceId}', {
+      params: { path: { workspaceId }, header: { 'Idempotency-Key': idempotencyKey } },
+      body: { domainOnly },
+      signal,
+    }),
+  ).then(changedWorkspaces);
+}
+
 export function removeWorkspaceMember(workspaceId: string, userId: string, idempotencyKey: string) {
   return platformOperation(`/v1/workspaces/${workspaceId}/members/${userId}`, ({ platform }, signal) =>
     platform.DELETE('/v1/workspaces/{workspaceId}/members/{userId}', {

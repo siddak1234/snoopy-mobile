@@ -320,6 +320,41 @@ describe('signInWithProvider', () => {
     expect((outcome as { message: string }).message).toBe('Sign-in could not be completed.');
   });
 
+  it.each([
+    ['access_denied', 'Sign-in was declined.'],
+    ['provider_disabled', "That sign-in provider isn't available."],
+    ['signup_disabled', 'New sign-ups are closed.'],
+    ['account_disabled', 'This account is disabled.'],
+    ['email_unverified', "That sign-in's email address isn't verified. Verify it with the provider, then try again."],
+    ['provider_refused', 'Sign-in could not be completed.'],
+    ['exchange_failed', 'Sign-in could not be completed.'],
+  ])('says the platform\'s %s in its own sentence (build 14, 10A)', async (reason, sentence) => {
+    openAuthSessionAsync.mockResolvedValue({
+      type: 'success',
+      url: `https://app.example.test/auth/native/callback?status=error&reason=${reason}#`,
+    });
+    await expect(signInWithProvider('google')).resolves.toEqual({ status: 'failed', message: sentence });
+    expect(platformOperation).not.toHaveBeenCalled();
+  });
+
+  it('accepts the explicit empty fragment every callback now ends with (build 14, 10A)', async () => {
+    openAuthSessionAsync.mockResolvedValue({
+      type: 'success',
+      url: 'https://app.example.test/auth/native/callback?code=c#',
+    });
+    platformOperation.mockResolvedValue({ tokenType: 'Bearer', accessToken: 'a', refreshToken: 'r', expiresIn: 3600 });
+    await expect(signInWithProvider('google')).resolves.toEqual({ status: 'signed-in' });
+    // A fragment with anything in it is still refused: only the empty one reads as none.
+    openAuthSessionAsync.mockResolvedValue({
+      type: 'success',
+      url: 'https://app.example.test/auth/native/callback?code=c#error=x',
+    });
+    await expect(signInWithProvider('google')).resolves.toEqual({
+      status: 'failed',
+      message: 'Sign-in returned to an unexpected address.',
+    });
+  });
+
   it('refuses a successful-looking callback from any other address', async () => {
     openAuthSessionAsync.mockResolvedValue({
       type: 'success',
