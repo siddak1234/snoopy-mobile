@@ -30,6 +30,7 @@ import { useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { ADD_FLOW_LABEL } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
+import { readInbox } from '@/lib/platform/notifications';
 import { localMidnight, readAllApprovals, readRunStats, readRuns, readSubscriptions } from '@/lib/platform/runs';
 import { toStatTiles, type StatTileView } from '@/lib/view/catalog';
 import { catalogIndex, toRunRows } from '@/lib/view/runs';
@@ -94,7 +95,9 @@ function HomeHeader({ initials, hasAttention }: { initials: string; hasAttention
             pressed && { backgroundColor: withAlpha(palette.text, 0.07) },
           ]}>
           <Bell size={19} color={palette.neutral[300]} weight="regular" />
-          {hasAttention ? <View style={[styles.bellDot, { backgroundColor: palette.accent }]} /> : null}
+          {hasAttention ? (
+            <View testID="home-bell-dot" style={[styles.bellDot, { backgroundColor: palette.accent }]} />
+          ) : null}
         </Pressable>
         <Pressable
           onPress={() => router.push('/(tabs)/settings')}
@@ -242,18 +245,25 @@ export default function HomeScreen() {
    * Home keeps its own bespoke loading and error states rather than the shared
    * ones. The five reads resolve atomically so no partial dashboard can combine
    * fresh counts with stale or absent activity; the scope then narrows what is
-   * shown, never what was read (24.9.2).
+   * shown, never what was read (24.9.2). Beside them, the inbox's unread count
+   * is the bell's alone (decision 3A): a refused read of it costs the dot, never
+   * the dashboard.
    */
   const dashboard = useWorkspaceResource(async (workspaceId) => {
-    const [stats, runs, catalog, approvals, subscriptions] = await Promise.all([
+    const [stats, runs, catalog, approvals, subscriptions, unread] = await Promise.all([
       readRunStats(workspaceId, localMidnight()),
       readRuns(workspaceId),
       readCatalog(workspaceId),
       readAllApprovals(workspaceId),
       readSubscriptions(workspaceId),
+      readInbox(workspaceId).then(
+        (inbox) => inbox.unreadCount,
+        () => 0,
+      ),
     ]);
     return {
       stats,
+      unread,
       runs: runs.runs,
       index: catalogIndex(catalog.automations),
       // Every approval is read so a held run's row can say how it was decided;
@@ -277,7 +287,7 @@ export default function HomeScreen() {
 
   // With no flow set up, ever, the same dashboard: its counts are the read's —
   // nothing has run — and the first run takes the place of the runs below.
-  const { stats, runs, index, approvals, subscriptions, hasSubscriptions } = dashboard.data;
+  const { stats, runs, index, approvals, subscriptions, hasSubscriptions, unread } = dashboard.data;
   const counts = scopeStats(stats, subscriptions, projectId);
   const tiles: StatTileView[] = toStatTiles(counts);
   const scopedRuns = scopeRuns(runs, subscriptions, projectId);
@@ -288,7 +298,10 @@ export default function HomeScreen() {
     projectId,
   );
   const approvalCount = pending.length;
-  const hasAttention = approvalCount > 0 || scopedRuns.some((run) => run.status === 'failed');
+  // The bell says the inbox holds something unread — the platform's read state,
+  // the same on every device (decision 3A), and the whole workspace's, as the
+  // inbox is — not merely that something is held or failed.
+  const hasAttention = unread > 0;
 
   return (
     <ScrollView

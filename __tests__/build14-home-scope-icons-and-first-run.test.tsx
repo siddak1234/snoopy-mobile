@@ -37,6 +37,7 @@ import {
   TEST_WORKSPACE,
   approvalsPayload,
   catalogPayload,
+  inboxPayload,
   personalSession,
   projectsPayload,
   runStatsPayload,
@@ -119,7 +120,7 @@ beforeEach(() => {
   mockStored.clear();
 });
 
-/** Home's five reads and the team list, answered; the switcher's read of the workspaces too. */
+/** Home's five reads, its bell's inbox and the team list, answered; the switcher's read of the workspaces too. */
 function routeHome(
   answers: {
     projects?: ReturnType<typeof projectsPayload>;
@@ -128,6 +129,7 @@ function routeHome(
     runs?: ReturnType<typeof runsPayload>;
     approvals?: ReturnType<typeof approvalsPayload>;
     subscriptions?: ReturnType<typeof subscriptionsPayload>;
+    inbox?: ReturnType<typeof inboxPayload>;
   } = {},
 ) {
   const fake = fakePlatform(platformOperation);
@@ -137,6 +139,7 @@ function routeHome(
   fake.always('GET /v1/workspaces/{workspaceId}/approvals', answers.approvals ?? approvalsPayload());
   fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', answers.subscriptions ?? subscriptionsPayload());
   fake.always('GET /v1/workspaces/{workspaceId}/projects', answers.projects ?? projectsPayload());
+  fake.always('GET /v1/workspaces/{workspaceId}/notifications', answers.inbox ?? inboxPayload());
   fake.always('GET /v1/workspaces', {
     workspaces: [
       { id: TEST_WORKSPACE, name: 'Acme Operations', type: 'organization', role: 'owner' },
@@ -158,6 +161,7 @@ function routeNothingYet() {
     runs: { runs: [] },
     approvals: { approvals: [] },
     subscriptions: { subscriptions: [] },
+    inbox: { items: [], unreadCount: 0 },
   });
 }
 
