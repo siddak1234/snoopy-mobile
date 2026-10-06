@@ -100,7 +100,7 @@ describe('Linked accounts (24.6.2, on 24.2.1)', () => {
     await renderWithProviders(<AccountScreen />, session());
     expect(
       await screen.findByText(
-        "Any account linked here signs you in to this same account, in the app and on the website. Signing in with Google, Microsoft or Apple at this account's email address joins this account too. To use one with a different email address, link it before you first sign in with it. Provider credentials are handled by the Autom8x backend and never reach this app.",
+        "Any account linked here signs you in to this same account, in the app and on the website. Signing in with Google, Microsoft or Apple at the same email address as this account joins this account too. To use one with a different email address, link it before you first sign in with it. Provider credentials are handled by the Autom8x backend and never reach this app.",
       ),
     ).toBeTruthy();
     expect(screen.queryByText(/Link additional sign-in options to this account\./u)).toBeNull();

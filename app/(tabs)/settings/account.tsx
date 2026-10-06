@@ -127,8 +127,8 @@ export default function AccountScreen() {
             account's joins this account (the owner's build 13 decision 9, feedback #16). */}
         <Text style={[styles.text, styles.lead, muted]}>
           Any account linked here signs you in to this same account, in the app and on the website. Signing in with
-          Google, Microsoft or Apple at this account&apos;s email address joins this account too. To use one with a
-          different email address, link it before you first sign in with it. Provider credentials are handled by the
+          Google, Microsoft or Apple at the same email address as this account joins this account too. To use one with
+          a different email address, link it before you first sign in with it. Provider credentials are handled by the
           Autom8x backend and never reach this app.
         </Text>
         <SurfaceCard style={styles.card}>
