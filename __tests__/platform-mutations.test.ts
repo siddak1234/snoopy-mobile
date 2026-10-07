@@ -237,6 +237,29 @@ describe('connection mutations', () => {
     expect(connectionsPost).toHaveBeenCalledTimes(1);
   });
 
+  it.each([
+    ['the provider reported an error', 'https://app.example.test/auth/native/callback?status=error&reason=denied'],
+    ['no code came back', 'https://app.example.test/auth/native/callback?state=attempt-1'],
+  ])('reads a return without the connection — %s — as incomplete, and exchanges nothing (Gate 24 parity: the website reads its status, never the reason)', async (_case, url) => {
+    connectionsPost.mockResolvedValueOnce({
+      data: { outcome: 'authorization-required', authorizationUrl: 'https://provider.example.test/authorize' },
+      response: { ok: true },
+    });
+    (WebBrowser.openAuthSessionAsync as jest.Mock).mockResolvedValue({ type: 'success', url });
+
+    await expect(
+      connectOAuthProvider('workspace-1', {
+        providerId: 'quickbooks',
+        displayName: 'QuickBooks',
+        description: 'Accounting',
+        authType: 'oauth2',
+        scopes: [],
+        icon: 'plugs',
+      }),
+    ).resolves.toEqual({ status: 'incomplete' });
+    expect(connectionsPost).toHaveBeenCalledTimes(1);
+  });
+
   it('sends pasted credentials once with idempotency and can disconnect by connection id', async () => {
     connectionsPost.mockResolvedValue({ data: { connection: { id: 'c1' } }, response: { ok: true } });
     await connectProviderWithKey('workspace-1', 'api-provider', { apiKey: 'secret' }, 'key-intent');

@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { Plugs } from 'phosphor-react-native';
-import React from 'react';
+import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -25,12 +25,18 @@ import { administers } from '@/lib/view/roles';
  * Driven by the provider list rather than the connection list: the connections
  * read omits a provider with no connection at all, and that row ("Slack · Not
  * connected") is drawn too.
+ *
+ * What a connect came back with — completed, or already connected — is said
+ * above the rows, as the website says it on the page a connect returns to. It
+ * is kept here rather than in the card: the re-read after a change draws the
+ * loading state in the card's place.
  */
 export default function ConnectionsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { palette } = useTheme();
   const session = useSession();
+  const [notice, setNotice] = useState<string | null>(null);
 
   const connections = useWorkspaceResource(async (workspaceId) => {
     const [providers, held] = await Promise.all([readConnectionProviders(), readConnections(workspaceId)]);
@@ -79,6 +85,8 @@ export default function ConnectionsScreen() {
         rows={connections.data.rows}
         loadedFor={connections.loadedFor}
         canManage={administers(roleIn(session, connections.loadedFor))}
+        notice={notice}
+        onNotice={setNotice}
         onChanged={connections.reload}
       />
     </ScrollView>

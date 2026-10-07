@@ -1,7 +1,7 @@
 import React from 'react';
 import { fireEvent, screen } from '@testing-library/react-native';
 
-import { SetupFieldRow, bySection, formatMoney, isEmailField, missingRequiredSetupFields, sectionLabel, type SetupField } from '@/components/setup-field';
+import { SetupFieldRow, bySection, formatMoney, isEmailField, missingRequiredSetupFields, notifiesLine, sectionLabel, type SetupField } from '@/components/setup-field';
 import { renderWithProviders } from '@/test/render';
 
 /**
@@ -27,7 +27,7 @@ const field = (over: Partial<SetupField>): SetupField =>
   });
 
 describe('bySection', () => {
-  it('groups into the design’s four sections, in the design’s order', () => {
+  it('groups in the manifest’s own order, as the website does — never the design’s fixed four (Gate 24 parity)', () => {
     const groups = bySection([
       field({ section: 'notifications', key: 'n' }),
       field({ section: 'connections', key: 'c' }),
@@ -35,10 +35,24 @@ describe('bySection', () => {
       field({ section: 'source', key: 's' }),
     ]);
     expect(groups.map((g) => g.section)).toEqual([
-      'connections',
-      'source',
-      'rules',
       'notifications',
+      'connections',
+      'rules',
+      'source',
+    ]);
+  });
+
+  it('never moves a field ahead of an earlier one: a section the manifest comes back to is a group again', () => {
+    const groups = bySection([
+      field({ section: 'source', key: 's1' }),
+      field({ section: 'source', key: 's2' }),
+      field({ section: 'rules', key: 'r' }),
+      field({ section: 'source', key: 's3' }),
+    ]);
+    expect(groups.map((g) => [g.section, g.fields.map((f) => f.key)])).toEqual([
+      ['source', ['s1', 's2']],
+      ['rules', ['r']],
+      ['source', ['s3']],
     ]);
   });
 
@@ -165,6 +179,34 @@ describe('SetupFieldRow — every control the union permits', () => {
       <SetupFieldRow field={field({ description: 'Pause when the amount differs' })} value={true} onChange={() => {}} divider={false} />,
     );
     expect(screen.getByText('Pause when the amount differs')).toBeTruthy();
+  });
+
+  it('says which notification a toggle controls, in the website’s words, under its description (Gate 24 parity)', async () => {
+    await renderWithProviders(
+      <SetupFieldRow
+        field={field({ section: 'notifications', title: 'Failure alerts', description: 'Email me', notifies: 'run-failed' })}
+        value={true}
+        onChange={() => {}}
+        divider={false}
+      />,
+    );
+    expect(screen.getByText('Email me')).toBeTruthy();
+    expect(screen.getByText('Controls the notification sent when a run fails.')).toBeTruthy();
+  });
+
+  it('draws no notification line for a field that switches none', async () => {
+    await renderWithProviders(<SetupFieldRow field={field({})} value={true} onChange={() => {}} divider={false} />);
+    expect(screen.queryByText(/Controls the notification/u)).toBeNull();
+  });
+
+  it('words every notification the contract names, and draws none for a value a newer platform adds', () => {
+    expect(notifiesLine({ notifies: 'approval-requested' })).toBe('Controls the notification sent when an approval is requested.');
+    expect(notifiesLine({ notifies: 'approval-expiring' })).toBe('Controls the notification sent when an approval is about to expire.');
+    expect(notifiesLine({ notifies: 'run-failed' })).toBe('Controls the notification sent when a run fails.');
+    expect(notifiesLine({ notifies: 'run-succeeded' })).toBe('Controls the notification sent when a run succeeds.');
+    expect(notifiesLine({ notifies: 'run-held' as never })).toBeNull();
+    expect(notifiesLine({ notifies: 'constructor' as never })).toBeNull();
+    expect(notifiesLine({})).toBeNull();
   });
 });
 

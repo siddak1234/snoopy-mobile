@@ -1847,8 +1847,8 @@ returns to its first. One table, `presses-patterns-dialog-close:511`, a row per 
 | `flows/add.tsx:166` — Add | Setup with the template and the scope's team; refused while not responding | `tab-screens:154`, `presses-flows:275` |
 | `flows/setup.tsx:335` — Create a team | the dialog; the new team is chosen | `tab-screens:1424` |
 | `flows/setup.tsx:348` — See teams | opens Settings › Teams | `tab-screens:1499` |
-| `flows/setup.tsx:378` — Connect › | opens Settings | `tab-screens:1278` |
-| `flows/setup.tsx:423` — Activate | POST subscribe `{templateId, templateVersion, projectId}` then PATCH `{config, status: 'live'}`, each keyed, then the flow page; a held flow configured, none added; refusals in words | `presses-flows:190`, `tab-screens:1397`, `build13-unarchive-and-one-flow:169`, `presses-flows:396` |
+| `flows/setup.tsx:378` — Connect › | opens Settings › Connections (Gate 24 parity, G9; ~~opens Settings~~) | `tab-screens:1278` |
+| `flows/setup.tsx:423` — Activate | POST subscribe `{templateId, templateVersion, projectId}` then PATCH `{config, status: 'live'}`, each keyed, then the flow page; a held flow configured, none added; refusals in words. Since Gate 24 parity (G10) the workspace's flows are read afresh before the POST, and a flow held since is refused — "This flow is already in this workspace.", nothing sent; with an account owed, Settings › Connections (G9) | `presses-flows:190`, `tab-screens:1397`, `build13-unarchive-and-one-flow:169`, `presses-flows:396`, `parity-flows` (G10) |
 | `flows/setup.tsx:416` — Try again | the same request, the same key | `presses-flows:355` |
 | `choice-chips.tsx:34` — a chip (Setup's team, a team role) | chooses it; the team is sent as `projectId` | `tab-screens:1397`, `teams-screens:463` |
 | `flows/detail.tsx:238` — Runs / Successes / Failures | Activity `{flow, flowName, filter}`, no day | `tab-screens:1638` |
@@ -1926,7 +1926,7 @@ returns to its first. One table, `presses-patterns-dialog-close:511`, a row per 
 | Press | Configured outcome | Test |
 | --- | --- | --- |
 | `connections-card.tsx:176` — a provider | its dialog | `settings-connections:66` |
-| `connections-card.tsx:242` — Connect / Disconnect | OAuth in the browser; DELETE `…/connections/{id}`; POST `…/connections/key` `{providerId, credentials}`, trimmed, keyed — then closes and reads again | `presses-settings:525` (2 cases), `settings-connections:66` |
+| `connections-card.tsx:242` — Connect / Disconnect (two buttons since Gate 24 parity: Connect's, and a held connection's Disconnect beside Reconnect — that section's table) | OAuth in the browser; DELETE `…/connections/{id}`; POST `…/connections/key` `{providerId, credentials}`, trimmed, keyed — then closes and reads again | `presses-settings:525` (2 cases), `settings-connections:66`, `parity-connections` |
 | `connections-card.tsx:233, :224` — Replace account; Replace account (confirm) | asks first; connects again in the browser, replacing that connection (`replaceConnectionId`) | `settings-connections:146`, `settings-connections:173` |
 | `workspace-switcher.tsx:165` — a workspace | PATCH `/v1/session/active-workspace`, keyed, then the session read again | `workspace-switcher:140` |
 | `workspace-switcher.tsx:146` — Reload session | reads the session again; the dialog closes | `workspace-switcher:203` |
@@ -2636,3 +2636,139 @@ empties between the two, as one test does for the next.
 | A deliberate sign-out owes nothing (G4) | `forgetOpenScreen` not called at a sign-out | real-router `session-ended` "a 401 landing while signing out on purpose owes nothing: signing in again opens Home" |
 | A refused pending read draws no banner, not a count from another read (G1) | the pending ones of every approval read counted when the pending read is refused | `parity-home` "is hidden when the platform lists nothing pending (the owner, build 13 #3), and when its read is refused" |
 | A refused teams read says so (G7) | a refused teams read as no teams | `parity-home` "a teams read that is refused says so, and the rest of Home still shows" |
+
+### Backlog: Set up draws the version the flow runs (backend §12.1 #185)
+
+The platform publishes `Subscription.setup` — the setup fields of the version a flow PINS —
+beside `runInput` and `triggerKind`, and validates `config` against them on every save
+(snoopy-backend `round-16/backlog-contract`). Set up drew the catalog's newest version, so
+once a newer version added, removed or retyped a field, a save sent keys or values the
+pinned version refuses, and a flow on invoice-intake v1 would have shown v3's "never your
+own mailbox" over a version that sends from the customer's Gmail. And a move refused
+`invalid_config` said "Open Set up, fix them, then move" — a dead end once Set up draws the
+pinned version, since nothing there can make settings fit another one.
+
+| What | Disposition |
+| --- | --- |
+| Set up's fields | `subscription.setup`, strictly: the release gate cuts a build only against a platform that publishes it, so its absence means the version declares none — no Set up, though the newest may declare some |
+| A move refused `invalid_config` | the dialog offers "Set them for v{N}", opening the setup dialog with v{N}'s fields (the catalog's: Move is offered only to the newest), seeded from what the flow holds; "Save and move to v{N}" sends `{ config, templateVersion }` in one PATCH, which the platform checks against v{N}. Any other refusal offers nothing more. The refusal now reads "Its settings do not fit that version. Set them for it to move." |
+| The fake platform | its subscriptions carry `setup`, as the platform answers (fixture conformance, #41) |
+
+### Guards proved to bite, §12.1 #185
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| Set up draws the pinned version | `entry?.setup` restored as the source | `automation-actions` "shows the pinned version's settings when a newer version changes them", "offers no Set up when the version it runs declares none, though the newest does" |
+| The misfit is offered for `invalid_config` only | `setMisfit` keyed on any refusal | "offers nothing to set for any other refusal" |
+| The new version's settings move it in one change | `templateVersion` dropped from the setup save | "offers that version's fields, seeded from what the flow holds, and saving moves it in one change" |
+| … seeded from what the flow holds | the dialog seeded from defaults only | the same |
+
+### Gate 24 parity: flows and connections (G8–G16)
+
+Round 16's close audit of Gate 24's parity line — "Every signed-in web feature present on
+mobile, checked against snoopy's page list screen by screen" (backend BUILD-PLAN 8583) —
+found 25 signed-in web features only partly on the phone. These nine are closed by doing
+what the website does, in its words — `snoopy` at `309717b`, its Flows page
+(`app/account/flows`) and its Connections page (`app/account/connections`) — drawn in the
+app's own design. On `round-16/backlog-contract` (#48), which this change follows.
+
+| G | What the website does | What the app did | Disposition |
+| --- | --- | --- | --- |
+| 8 | A catalog card says its version and its price, "Included" at \$0 (`page.tsx:313-326`) | "Finance · \$39/mo" | **done**: "Finance · v1 · \$39/mo", and "Included" for a flow at \$0 (`catalogPrice`, `lib/view/catalog.ts`) |
+| 9 | "Connect {providers} before going live.", the words a link to Connections (`page.tsx:349-360`) | the flow page's account rows could not be tapped, and a flow already added had no way there; Setup's Connect › and its Activate opened Settings | **done**: the flow page says it under CONNECTIONS, the words opening Settings › Connections — never for an archived flow, which goes live no more; Setup's Connect › and its Activate with an account owed open Settings › Connections, as the button's words always said |
+| 10 | Add reads the workspace's flows at the moment of the add and refuses a flow held: "This flow is already in this workspace." (`actions.ts:101, :120-128`) | Activate created from what Setup had read, which the snapshot keeps up to 15 s | **done**: Activate reads the flows afresh (`readSubscriptionsNow`, `lib/platform/runs.ts`) and refuses a flow held since — in any team or the whole workspace — in those words, sending nothing. The platform's own one-per-workspace guard is still deferred (MASTER-PLAN 304-307; BUILD-PLAN 8813), so this check is the guard until it lands; a copy in a team hidden from the person stays the platform's to refuse, as on the website |
+| 11 | Setup's sections in the manifest's order, never moved (`ManifestFields.tsx:21-63`); a toggle that switches a notification says which (`:186-208`) | the design's fixed order — connections, source, rules, notifications; `notifies` not read | **done**: `bySection` keeps the manifest's order, and a section it comes back to is a section again; "Controls the notification sent when a run fails." under the toggle's description (`notifiesLine`), in Setup and in the flow page's Set up |
+| 12 | Each connection says the account it acts as, its status, "Used by N live flows", and "This connection needs attention before it can be used." with an `errorCode` (`ConnectionsPanel.tsx:220-243`) | "Connected · used by N flows" | **done**: "alex@acme.co · Connected · used by 2 live flows", and the warning line in the warning colour |
+| 13 | Every provider's description, to everyone, and "Only providers configured for this deployment are shown." (`:279-305`) | a description only in an unconnected provider's dialog, which a member cannot open | **done**: each row's line under its name; the sentence under the rows, for everyone |
+| 14 | Reconnect for a provider the workspace holds a connection to — connected, or needing reauthorization (`:173-183, :313-318`) — and a `reused` answer said: "{Provider} is already connected as {account}, with everything it needs — there is nothing to authorize." (`:82-88`) | a connected provider's dialog offered Disconnect and Replace account only; a reused Connect closed the dialog and said nothing | **done**: a held connection's dialog, under the provider's name — Reconnect, Replace account (OAuth), Disconnect. Reconnect is Connect's own call with no `replaceConnectionId`, so the account is kept; a key provider takes its key again, in the same dialog. A row needing reauthorization says Reconnect. The reused answer is said above the rows |
+| 15 | A pasted key answered 409: "This request may still be in progress. …", "Retry verification" under the same key, and "Refresh connections"; the button "Verify and connect" (`:426-458`) | the refusal alone, and "Connect" | **done**, in those words. Refresh connections closes the dialog to read the rows again: on a phone the list sits under the dialog, not beside it |
+| 16 | Back from the provider: "Connection completed successfully.", or, on an error, whether the existing connection is still active, with "Try again or contact an owner." (`:196-212`) | nothing on success; a sentence per reason ("Connection permission was declined.") and nothing on what was still connected | **done**: the line above the rows after a Connect, a Reconnect or a Replace; back without the connection — the callback's error, or no code (`incomplete`) — the website's sentence for whether this provider was connected. The reason is not read, as the website reads only the status |
+
+**A finding, for a `snoopy` session:** the website's error line reads "your existing
+connection is still active" whenever the workspace has any connected provider
+(`ConnectionsPanel.tsx:167-172, :206-211` — the callback carries no provider), so a failed
+first connect of one provider says it while another is connected. The app knows the
+provider it asked for, and says it only for that one.
+
+**Decided flips of pinned behaviour**, each named in its test: `tab-screens` "lists the
+catalog with prices, …" is "lists the catalog with versions and prices, …"; `tab-screens`
+"numbers the accounts an automation needs as step 1, …", `presses-flows` "… opens Settings,
+and sends nothing" (now "… opens Settings › Connections, …") and
+`build13-unarchive-and-one-flow` "a create still owed an account …" expect Settings ›
+Connections; `setup-field` "groups into the design's four sections, in the design's order"
+is "groups in the manifest's own order, as the website does — never the design's fixed four
+(Gate 24 parity)"; `settings-connections` "stacks the three actions of a connected,
+replaceable connection, …" is "stacks the actions of a connected, replaceable connection —
+Reconnect, Replace account, Disconnect — …", and it and Replace's helper find the dialog by
+its actions, since its title is the provider's name ("Disconnect Gmail" until now);
+`settings-connections` "closes the dialog and re-reads the workspace connections" reads
+"alex@acme.co · Connected · used by 1 live flow"; its member test holds that no dialog opens
+(it held that "Disconnect Gmail" was not drawn, a title that no longer exists); and
+`presses-settings`'s table expects the dialog "Gmail" and the button "Verify and connect".
+No snapshot moved.
+
+The presses this change adds, each run by a test (`audit:presses`); Connect and Disconnect,
+one button until now, are two.
+
+| Press | Configured outcome | Test |
+| --- | --- | --- |
+| `connections-card.tsx:379` — Reconnect | OAuth: the provider asked again for the same account (no `replaceConnectionId`), what it came back with said — above the rows, or in the dialog when it came back without the connection; a key provider: its key fields, in the same dialog | `parity-connections` "a connected OAuth provider offers Reconnect …", "Reconnect answered reused …", "a key provider's Reconnect …", and G16's table |
+| `connections-card.tsx:386` — Disconnect | DELETE `…/connections/{id}`, for a connection connected or needing reauthorization; closes; reads again | `presses-settings:525`, `parity-connections` "… which disconnects it" |
+| `connections-card.tsx:393` — Connect / Verify and connect / Retry verification | OAuth in the browser, what it came back with said; the pasted key POSTed, keyed — again under the same key after a 409 | `presses-settings:525`, `settings-connections:66`, `parity-connections` (G15, G16) |
+| `connections-card.tsx:396` — Refresh connections | closes the dialog; reads the rows again; sends nothing | `parity-connections` "Refresh connections closes the dialog …" |
+| `flows/detail.tsx:289` — Connect {providers} | Settings › Connections | `parity-flows` "a flow page owed an account …" |
+
+### Guards proved to bite, Gate 24 parity (flows and connections)
+
+Forty-one runs by one script (`scratchpad/par-conn-bites.py`), each a single edit to the
+source — the script stops if the text to break is not there exactly once, or the file does
+not read back changed — the suites named beside it run, the failing tests read from jest's
+own JSON report, and the file restored from its saved copy, its SHA-256 checked; the working
+tree's hashes matched after the last restore. Every break failed the tests named. The first
+three re-prove the `reused` guard: its recorded bite (f451695's commit message, "`reused`
+(1)") was made against code that returned no `reused` flag, and 6f42275 has since added the
+flag and Replace's wording; both of its tests bite as written.
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| `reused` is said: a reused answer carries the flag | `reused: true` dropped from the answer (`lib/platform/connections.ts`) | `platform-mutations` "reads a reused answer as connected and opens no consent page (22.8.1)" |
+| `reused` is connected, with no consent page | the reused branch skipped, so the answer goes on to the browser | the same |
+| A Replace answered reused says nothing was replaced | Replace's reused branch removed (`connections-card.tsx`) | `settings-connections` "says so when the platform reused the connection instead" |
+| A Connect or Reconnect answered reused says already connected | the notice always "Connection completed successfully." | `parity-connections` "Reconnect answered reused …", "Connect answered reused …" |
+| Reconnect keeps the account | `replaceConnectionId` sent with Reconnect | `parity-connections` "a connected OAuth provider offers Reconnect … for the same account" |
+| A connection needing reauthorization is reconnected | `reconnectable` for `connected` only | `parity-connections` "a connection that needs reauthorization says Reconnect on its row, …", "Reconnect, with the connection needing reauthorization — …" |
+| A held connection offers Reconnect | the dialog's Reconnect removed | eight: `settings-connections` "stacks the actions of a connected, replaceable connection — …", and seven `parity-connections` |
+| A key provider's Reconnect takes its key again | its key fields never opened | `parity-connections` "a key provider's Reconnect asks for its key again …" |
+| Disconnect sends the delete | its connection guard inverted | `presses-settings` "Disconnect sends its request for that connection, …", `parity-connections` "… which disconnects it" |
+| A row names the account | the account dropped from the line | six: `settings-connections` "closes the dialog and re-reads the workspace connections", and five `parity-connections` |
+| The flows that use it are live ones | "live" dropped | the same six |
+| An error code needs attention | `attention` always false | `parity-connections` "a connection with an error code needs attention …" |
+| A connected provider says its description too | the description drawn only when not connected | `parity-connections` "to an owner: …", "to a member: …" |
+| A member sees every description | the description drawn for an owner or admin only | `parity-connections` "to a member: …" |
+| The configured-providers line | the line removed | `parity-connections` "to an owner: …", "to a member: …" |
+| A pasted key's 409 says it may be in progress | its state never set | `parity-connections` "says so in the website's words, and Retry verification …", "Refresh connections closes the dialog …" |
+| Retry verification keeps the key | the key settled on a 409 | `parity-connections` "… Retry verification sends the same values under the same key" |
+| Refresh connections reads the rows again | its re-read removed | `parity-connections` "Refresh connections closes the dialog and reads the rows again, sending nothing" |
+| The key button's words | "Verify and connect" read "Connect" | five: `presses-settings` "Verify and connect sends its request …", and four `parity-connections` |
+| Back without the connection says whether the account still is (Connect, Reconnect) | `connectionIncomplete(false)` always | `parity-connections` "Reconnect, with the account connected: …" |
+| … and Replace | the same, in Replace | `parity-connections` "Replace account, with the account connected: …" |
+| A connect that completes says so | its notice dropped | `parity-connections` "a Connect that completes says so above the rows", "a connected OAuth provider offers Reconnect …" |
+| A replace that completes says so | its notice dropped | `parity-connections` "a Replace that completes says so too" |
+| The callback's error is incomplete, its reason unread | `status=error` read as a failure in the reason's words | `platform-mutations` "reads a return without the connection — the provider reported an error — …" |
+| A return with no code is incomplete | no code read as a failure | `platform-mutations` "… — no code came back — …" |
+| Back without the connection keeps the dialog, saying so | the card's `incomplete` branch removed | three `parity-connections` "…: back without the connection, …" |
+| The screen keeps the notice across the re-read | the screen passing no notice | six `parity-connections` |
+| A card says the version Add pins | the version dropped from the line | `parity-flows` "says the version Add pins, …", `tab-screens` "lists the catalog with versions and prices, …" |
+| A flow at \$0 is Included | `catalogPrice` saying "\$0/mo" | `parity-flows` "says the version Add pins, and "Included" …", "reads the version from the catalog entry, and words the price the website's way" |
+| A flow page's owed account opens Settings › Connections | the words opening Settings | `parity-flows` "a flow page owed an account says to connect it before going live, …" |
+| An archived flow is owed nothing | the line drawn for an archived flow | `parity-flows` "an archived flow, which goes live no more, is owed nothing" |
+| Setup's Connect › opens Settings › Connections | it opening Settings | `tab-screens` "numbers the accounts an automation needs as step 1, …" |
+| Setup's Activate with an account owed opens Settings › Connections | it opening Settings | `presses-flows` "… opens Settings › Connections, and sends nothing", `build13-unarchive-and-one-flow` "a create still owed an account …" |
+| Activate reads the flows afresh | the snapshot's `readSubscriptions` in its place | `parity-flows` "refuses a copy added since Setup read the flows — …", "with nothing added since, the fresh read finds none …" |
+| The fresh read drops the snapshot first | `invalidateShared` removed from `readSubscriptionsNow` | the same two |
+| A flow held since is refused, nothing sent | the held check never true | `parity-flows` "refuses a copy added since Setup read the flows — …" |
+| An archived copy holds nothing | every copy counted, an archived one too | `parity-flows` "an archived copy holds nothing: the flow is added again" |
+| Sections in the manifest's order | the design's fixed order back | four: `setup-field` "groups in the manifest's own order, …", "never moves a field ahead of an earlier one: …", `parity-flows` "Setup: rules before source, …", "the flow page's Set up: …" |
+| A section the manifest comes back to is a section again | the group found by its section, not the last one | `setup-field` "never moves a field ahead of an earlier one: …" |
+| A toggle says which notification it controls | the line not drawn | `setup-field` "says which notification a toggle controls, …", `parity-flows` "Setup: rules before source, …", "the flow page's Set up: …" |
+| A value with no words is never drawn | the own-property check dropped | `setup-field` "words every notification the contract names, and draws none for a value a newer platform adds" |
