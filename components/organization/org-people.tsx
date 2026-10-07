@@ -11,7 +11,7 @@ import { fonts, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
-import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
+import { DECISION_REFUSALS, WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
 import {
   decideJoinRequest,
   removeWorkspaceMember,
@@ -179,7 +179,7 @@ function DecideDialog({
       keys.settle(decision);
       onDone();
     } catch (caught) {
-      setError(refusalMessage(caught, {}, 'The join request could not be updated.'));
+      setError(refusalMessage(caught, DECISION_REFUSALS, 'The join request could not be updated.'));
     } finally {
       setBusy(null);
     }

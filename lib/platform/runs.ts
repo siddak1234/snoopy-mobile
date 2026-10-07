@@ -71,8 +71,38 @@ export function localMidnight(now: Date = new Date()): Date {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
 }
 
+/** Activity's time range (the owner's build 13 decision 4): every run, or Today, Week or Month. */
+export type RunRange = 'all' | 'today' | 'week' | 'month';
+
+/**
+ * Where a time range begins, or `null` for all time.
+ *
+ * Today is the tiles' today — `localMidnight()`, so a Home tile's number is the
+ * rows it opens. Week and Month are the last 7 and the last 30 days, back from
+ * this moment on the local calendar: the same clock time that many days ago,
+ * whatever a daylight-saving change between them did. The runs list takes no
+ * window (`listRuns` has `subscriptionId` only), so Activity selects from the
+ * runs it read with this.
+ */
+export function rangeStart(range: RunRange, now: Date = new Date()): Date | null {
+  if (range === 'all') return null;
+  if (range === 'today') return localMidnight(now);
+  const days = range === 'week' ? 7 : 30;
+  return new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate() - days,
+    now.getHours(),
+    now.getMinutes(),
+    now.getSeconds(),
+    now.getMilliseconds(),
+  );
+}
+
 export type Approval = components['schemas']['Approval'];
 export type Subscription = components['schemas']['Subscription'];
+/** The plan's flow ceiling beside the workspace's count (decision 7a3); absent when the platform could not say. */
+export type FlowAllowance = components['schemas']['FlowAllowance'];
 
 /**
  * Approvals awaiting a decision.
@@ -116,7 +146,9 @@ export function readAllApprovals(workspaceId: string): Promise<{ approvals: Appr
 }
 
 /** The workspace's subscriptions — the middle hop of the approval-title join. */
-export function readSubscriptions(workspaceId: string): Promise<{ subscriptions: Subscription[] }> {
+export function readSubscriptions(
+  workspaceId: string,
+): Promise<{ subscriptions: Subscription[]; flowAllowance?: FlowAllowance }> {
   return shared(workspaceId, 'subscriptions', 'volatile', () =>
     platformOperation(`/v1/workspaces/${workspaceId}/subscriptions`, ({ automations }, signal) =>
       automations.GET('/v1/workspaces/{workspaceId}/subscriptions', {

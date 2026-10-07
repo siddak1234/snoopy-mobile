@@ -12,7 +12,8 @@ import { answerPlatform, flush, launch, press, pressTab, signedInOnThisPhone } f
  * go back, press the same tile, and Activity stayed as it was left. Found in
  * build 13's first part, which made Home's tiles open today (the owner's build 12
  * item 1). Only the real router keeps a screen and its params between visits, so
- * this is held here.
+ * this is held here. Since build 14 the day is the time range's (the owner's
+ * build 13 decision 4), and All time, chosen from its card, is the clear.
  */
 
 jest.setTimeout(60_000);
@@ -52,6 +53,15 @@ async function pressTile(testID: string) {
   await flush(1000);
 }
 
+/** Open Activity's time range and choose one from its card. */
+async function chooseRange(range: 'all' | 'today' | 'week' | 'month') {
+  await fireEvent.press(screen.getByTestId('activity-range'));
+  await flush(100);
+  await fireEvent.press(screen.getByTestId(`activity-range-${range}`));
+  await flush(100);
+  await flush(1000);
+}
+
 it('the same Home tile pressed again, after its selection was cleared on Activity, opens Activity with it again', async () => {
   signedInOnThisPhone();
   answerPlatform({}, { '/runs': { runs: todayAndOlder() } });
@@ -59,19 +69,19 @@ it('the same Home tile pressed again, after its selection was cleared on Activit
 
   await pressTile('stat-Failed');
   expect(view.getPathname()).toBe('/activity');
-  expect(screen.getByText('Today ✕')).toBeTruthy();
+  expect(screen.getByLabelText('Time range: Today')).toBeTruthy();
   expect(rows()).toEqual(['activity-row-today-failed']);
 
   // Widened on Activity: every day, every outcome.
-  await press('Today ✕');
+  await chooseRange('all');
   await press('All');
-  expect(screen.queryByText('Today ✕')).toBeNull();
+  expect(screen.getByLabelText('Time range: All time')).toBeTruthy();
   expect(rows()).toHaveLength(5);
 
   await pressTab('Home');
   await pressTile('stat-Failed');
   expect(view.getPathname()).toBe('/activity');
-  expect(screen.getByText('Today ✕')).toBeTruthy();
+  expect(screen.getByLabelText('Time range: Today')).toBeTruthy();
   expect(rows()).toEqual(['activity-row-today-failed']);
 });
 
@@ -111,14 +121,17 @@ it('the tab bar changes nothing: after a tile visit and a clear, Activity opens 
   const view = await launch();
 
   await pressTile('stat-Failed');
-  expect(screen.getByText('Today ✕')).toBeTruthy();
-  await press('Today ✕');
+  expect(screen.getByLabelText('Time range: Today')).toBeTruthy();
+  await chooseRange('all');
   await press('Success');
+  expect(rows()).toEqual(['activity-row-today-ok', 'activity-row-yesterday-ok']);
+  // And a range chosen here, not the one Activity opens on: the last 7 days.
+  await chooseRange('week');
   expect(rows()).toEqual(['activity-row-today-ok', 'activity-row-yesterday-ok']);
 
   await pressTab('Home');
   await pressTab('Activity');
   expect(view.getPathname()).toBe('/activity');
-  expect(screen.queryByText('Today ✕')).toBeNull();
+  expect(screen.getByLabelText('Time range: Week')).toBeTruthy();
   expect(rows()).toEqual(['activity-row-today-ok', 'activity-row-yesterday-ok']);
 });

@@ -13,7 +13,7 @@ jest.mock('expo-constants', () => ({
   },
 }));
 
-import { fireEvent, screen, waitFor, within } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import React from 'react';
 import { Platform, Share } from 'react-native';
 
@@ -400,5 +400,152 @@ describe('Organization — a rename shows at once (24.12, the owner\'s build 9)'
     expect(await screen.findByText('Acme Group')).toBeTruthy();
     expect(fake.to('PATCH /v1/workspaces/{workspaceId}')[0]!.body).toEqual({ name: 'Acme Group' });
     expect(fake.to('GET /v1/workspaces')).toHaveLength(2);
+  });
+});
+
+describe('Organization — verified domains only (the owner\'s build 13 decision 8B)', () => {
+  const PATCH = 'PATCH /v1/workspaces/{workspaceId}';
+  const toggle = () => within(screen.getByTestId('organization-domain-only')).getByRole('switch');
+  const checked = () => toggle().props.accessibilityState?.checked;
+
+  /** While set, the workspace list's next answer waits for it — to see the page during a re-read. */
+  let held: Promise<void> | null = null;
+  beforeEach(() => {
+    held = null;
+  });
+
+  /** An owner's organization; the workspace list answers `first`, then whatever the change made it. */
+  function routeSetting(first: boolean) {
+    const fake = routeManage('owner');
+    let on = first;
+    fake.always('GET /v1/workspaces', async () => {
+      if (held) await held;
+      return {
+        workspaces: [{ ...ORG, role: 'owner' as const, ...(on ? { domainOnly: true as const } : {}) }],
+        activeWorkspaceId: TEST_WORKSPACE,
+      };
+    });
+    fake.always(PATCH, (sent) => {
+      on = (sent.body as { domainOnly: boolean }).domainOnly;
+      return { workspace: { ...ORG, role: 'owner' as const, ...(on ? { domainOnly: true as const } : {}) } };
+    });
+    return fake;
+  }
+
+  it('turns on with its own key, reads the organization again in place, and turns off the same way', async () => {
+    const fake = routeSetting(false);
+    await renderWithProviders(<OrganizationScreen />, session());
+    expect(await screen.findByText('Verified domains only')).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Only people who sign in with addresses at your verified domains can join, and members can't link an account outside them.",
+      ),
+    ).toBeTruthy();
+    expect(checked()).toBe(false);
+
+    let release!: () => void;
+    held = new Promise<void>((resolve) => (release = resolve));
+    await fireEvent.press(toggle());
+    await waitFor(() => expect(fake.to(PATCH)).toHaveLength(1));
+    expect(fake.to(PATCH)[0]).toEqual({
+      method: 'PATCH',
+      path: '/v1/workspaces/{workspaceId}',
+      values: { workspaceId: TEST_WORKSPACE },
+      key: 'workspace-domain-only-1',
+      body: { domainOnly: true },
+    });
+    // Read again in place: while the re-read is out, the page and the moved toggle stay.
+    await waitFor(() => expect(fake.to('GET /v1/workspaces')).toHaveLength(2));
+    expect(screen.queryByTestId('screen-loading')).toBeNull();
+    expect(checked()).toBe(true);
+    held = null;
+    await act(async () => release());
+    await waitFor(() => expect(checked()).toBe(true));
+
+    await fireEvent.press(toggle());
+    await waitFor(() => expect(fake.to(PATCH)).toHaveLength(2));
+    expect(fake.to(PATCH)[1]).toEqual(expect.objectContaining({ key: 'workspace-domain-only-2', body: { domainOnly: false } }));
+    await waitFor(() => expect(checked()).toBe(false));
+
+    // Each change settled, so turning it on again is a new intent with a new key.
+    await fireEvent.press(toggle());
+    await waitFor(() => expect(fake.to(PATCH)).toHaveLength(3));
+    expect(fake.to(PATCH)[2]).toEqual(expect.objectContaining({ key: 'workspace-domain-only-3', body: { domainOnly: true } }));
+  });
+
+  it.each([
+    [{ reason: 'no_verified_domain' }, 'Verify a domain before limiting the organization to it.'],
+    [
+      { reason: 'members_outside_domain', count: 2 },
+      "2 members sign in with an address outside your verified domains, so this can't be turned on yet. Nobody is removed. A member who hasn't signed in since this setting arrived counts until they sign in again.",
+    ],
+    [
+      { reason: 'members_outside_domain', count: 1 },
+      "1 member signs in with an address outside your verified domains, so this can't be turned on yet. Nobody is removed. A member who hasn't signed in since this setting arrived counts until they sign in again.",
+    ],
+    [
+      { reason: 'members_outside_domain' },
+      "Some members sign in with an address outside your verified domains, so this can't be turned on yet. Nobody is removed. A member who hasn't signed in since this setting arrived counts until they sign in again.",
+    ],
+  ])('refused turning on (%j), says why under it and moves back; Try again asks again with the same key', async (details, sentence) => {
+    const fake = routeSetting(false);
+    fake.once(PATCH, () => {
+      throw new PlatformError('Conflict', 409, 'CONFLICT', details);
+    });
+    await renderWithProviders(<OrganizationScreen />, session());
+    await fireEvent.press(await screen.findByRole('switch'));
+    expect(await screen.findByText(sentence)).toBeTruthy();
+    expect(checked()).toBe(false);
+
+    // Fixed meanwhile (a domain verified, a member unlinked): the retry is the same intent.
+    await fireEvent.press(screen.getByText('Try again'));
+    await waitFor(() => expect(fake.to(PATCH)).toHaveLength(2));
+    expect(fake.to(PATCH).map((call) => call.key)).toEqual(['workspace-domain-only-1', 'workspace-domain-only-1']);
+    await waitFor(() => expect(checked()).toBe(true));
+    expect(screen.queryByText(sentence)).toBeNull();
+  });
+
+  it('a refused join says the organization admits only its verified domains', async () => {
+    const fake = fakePlatform(platformOperation);
+    fake.always('GET /v1/workspaces', {
+      workspaces: [{ id: TEST_WORKSPACE, name: 'Personal', type: 'personal', role: 'owner' }],
+      activeWorkspaceId: TEST_WORKSPACE,
+    });
+    fake.always('GET /v1/organization-discovery', {
+      organizations: [{ workspaceId: 'org-9', name: 'Acme', domain: 'acme.co', joinPolicy: 'approval', membershipState: 'none' }],
+    });
+    fake.always('POST /v1/organizations/{workspaceId}/join', () => {
+      throw new PlatformError("This account signs in with an address outside the organization's verified domains", 403, 'FORBIDDEN', {
+        reason: 'outside_org_domain',
+      });
+    });
+    await renderWithProviders(<OrganizationScreen />, session());
+    await fireEvent.press(await screen.findByText('Join Acme'));
+    expect(await screen.findByText('This organization admits only people who sign in with addresses at its verified domains.')).toBeTruthy();
+  });
+
+  it('a refused approval says the person signs in from outside, and leaves the request pending', async () => {
+    const fake = routeManage('owner');
+    fake.always('PATCH /v1/workspaces/{workspaceId}/join-requests/{joinRequestId}', () => {
+      throw new PlatformError("The requester signs in with an address outside the organization's verified domains", 409, 'CONFLICT', {
+        reason: 'outside_org_domain',
+      });
+    });
+    await renderWithProviders(<OrganizationScreen />, session());
+    await fireEvent.press(await screen.findByTestId('join-request-jr-1'));
+    await pressLast('Approve');
+    expect(
+      await screen.findByText(
+        "This person signs in with an address outside your verified domains, so they can't join while Verified domains only is on.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it('is not offered to someone who does not manage the organization', async () => {
+    const fake = fakePlatform(platformOperation);
+    fake.always('GET /v1/workspaces', { workspaces: [{ ...ORG, role: 'member' }], activeWorkspaceId: TEST_WORKSPACE });
+    await renderWithProviders(<OrganizationScreen />, session());
+    expect(await screen.findByText("Only Acme Operations's owners and admins manage it.")).toBeTruthy();
+    expect(screen.queryByTestId('organization-domain-only')).toBeNull();
   });
 });

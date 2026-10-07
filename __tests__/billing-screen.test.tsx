@@ -140,6 +140,8 @@ describe('Billing (24.6.1, ADR-0032 option B; the cards since 24.12)', () => {
     expect(card('team').getByText('Enrolled')).toBeTruthy();
     expect(card('team').getByText(/^Renews /u)).toBeTruthy();
     expect(card('team').getByText('Manage billing')).toBeTruthy();
+    // Free is cancelling the paid plan in the portal (build 13 decision 7c).
+    expect(card('free').getByText('To move to Free, cancel Plus in Manage billing.')).toBeTruthy();
 
     await fireEvent.press(screen.getByText('Pro'));
     await waitFor(() => expect(openURL).toHaveBeenCalledWith('https://billing.stripe.com/p/session'));

@@ -98,11 +98,52 @@ it('uses no code that came back to another address', async () => {
 });
 
 it('says a declined link in words, and keeps nothing', async () => {
+  // A link's own word since build 14: it is not a sign-in ("Sign-in was declined." before).
   openAuthSessionAsync.mockResolvedValue({
     type: 'success',
     url: 'https://app.example.test/auth/native/callback?status=error&reason=access_denied',
   });
-  await expect(linkIdentity('google')).resolves.toEqual({ status: 'failed', message: 'Sign-in was declined.' });
+  await expect(linkIdentity('google')).resolves.toEqual({ status: 'failed', message: 'Linking was declined.' });
+  expect(writeSession).not.toHaveBeenCalled();
+});
+
+it.each([
+  [
+    'identity_already_linked',
+    'That account is already linked, to this account or another. To link it here, unlink it from the other account first.',
+  ],
+  ['linking_disabled', "Account linking isn't enabled on this platform yet."],
+  ['provider_disabled', "That sign-in provider isn't available."],
+  ['signup_disabled', "That account can't be linked: new sign-ups are closed."],
+  ['account_disabled', 'That account is disabled.'],
+  ['email_unverified', "That account's email address isn't verified. Verify it with the provider, then try again."],
+  ['provider_refused', 'The account could not be linked. Try again.'],
+  ['exchange_failed', 'The account could not be linked. Try again.'],
+  ['__proto__', 'The account could not be linked. Try again.'],
+  ['constructor', 'The account could not be linked. Try again.'],
+])('says a link refused as %s in its own sentence, never merging and keeping nothing (build 13 #19, 10A)', async (reason, sentence) => {
+  openAuthSessionAsync.mockResolvedValue({
+    type: 'success',
+    url: `https://app.example.test/auth/native/callback?status=error&reason=${encodeURIComponent(reason)}#`,
+  });
+  await expect(linkIdentity('google')).resolves.toEqual({ status: 'failed', message: sentence });
+  expect(calls.some((call) => call.path === '/v1/auth/native/token')).toBe(false);
+  expect(writeSession).not.toHaveBeenCalled();
+});
+
+it("says a link a domain-only organization refused, and keeps this device's session (8B)", async () => {
+  const { PlatformError } = require('@/lib/platform/problem');
+  openAuthSessionAsync.mockResolvedValue({ type: 'success', url: 'https://app.example.test/auth/native/callback?code=one-time#' });
+  platformOperation.mockImplementation(async (key: string, execute: Function) => {
+    if (key === '/v1/auth/native/token') {
+      throw new PlatformError('Access is forbidden', 403, 'FORBIDDEN', { reason: 'outside_org_domain' });
+    }
+    return (await execute({ platform: { POST: async () => ({ data: { ticket: 't', expiresIn: 120 } }) } })).data;
+  });
+  await expect(linkIdentity('microsoft')).resolves.toEqual({
+    status: 'failed',
+    message: "That account wasn't linked: its address is outside your organization's verified domains.",
+  });
   expect(writeSession).not.toHaveBeenCalled();
 });
 

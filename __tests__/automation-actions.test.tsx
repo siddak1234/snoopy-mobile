@@ -204,6 +204,20 @@ describe('Run (24.4.1, ADR-0030)', () => {
     expect(await screen.findByText('This flow is not live, so it cannot run.')).toBeTruthy();
   });
 
+  it('says a run refused over the plan in its numbers (decision 7a3)', async () => {
+    answer(`POST ${RUNS_PATH}`, () => {
+      throw new PlatformError('Access is forbidden', 403, 'FORBIDDEN', { reason: 'over_plan_limit', limit: 2, live: 3 });
+    });
+    await renderActions();
+    await fireEvent.press(screen.getByText('Run'));
+    await pressLast('Start run');
+    expect(
+      await screen.findByText(
+        'Your plan allows 2 flows; this workspace has 3. No flow can start a run until you archive 1. Paused and draft flows count.',
+      ),
+    ).toBeTruthy();
+  });
+
   it('uploads a chosen file, waits for it, sends only its id — and empties it when the platform no longer takes it', async () => {
     (DocumentPicker.getDocumentAsync as jest.Mock).mockResolvedValue({
       canceled: false,

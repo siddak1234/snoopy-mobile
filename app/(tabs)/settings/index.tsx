@@ -22,7 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
-import { ActionFailure } from '@/components/screen-state';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { FaceIdRow } from '@/components/settings/face-id-row';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { WorkspaceSwitcher } from '@/components/settings/workspace-switcher';
@@ -30,7 +30,7 @@ import { em, fonts, layout, typeScale } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useSession } from '@/hooks/use-session';
 import { useTheme, type ThemeMode } from '@/hooks/use-theme';
-import { SIGN_OUT_FAILED, SIGN_OUT_RETRY } from '@/lib/content/screen-states';
+import { SIGN_OUT_FAILED } from '@/lib/content/screen-states';
 import { readBilling } from '@/lib/platform/billing';
 import { enrolledPlanName } from '@/lib/view/billing';
 import { organizationValue } from '@/lib/view/organization';
@@ -72,7 +72,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const session = useSession();
   const { signOut } = session;
-  const [signOutFailed, setSignOutFailed] = useState(false);
+  const [confirmingSignOut, setConfirmingSignOut] = useState(false);
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const platformName = Platform.OS === 'ios' ? 'iOS' : Platform.OS === 'android' ? 'Android' : 'native';
   const appVersion = Constants.expoConfig?.version ?? '—';
@@ -119,10 +119,16 @@ export default function SettingsScreen() {
    * Signed out, the root layout's guard takes the tabs away and shows the cover
    * (24.11.6). Nothing navigates from here: inside the tabs "/" is Home, and
    * build 12's move to it was dropped (the owner's build 12 item 6).
+   *
+   * Asked first, and said while it runs (the owner's build 13 decision 1): the
+   * confirm dialog reads "Signing out…" until the platform answers, and a failed
+   * revocation stays in the dialog, in the same words, with the action offered
+   * again — the cover is never shown for a session that is still live.
    */
   const handleSignOut = async () => {
     const { revoked } = await signOut();
-    setSignOutFailed(!revoked);
+    // The dialog says the thrown error's own words, so they are the sentence.
+    if (!revoked) throw new Error(SIGN_OUT_FAILED);
   };
 
   const caret = <CaretRight size={15} color={palette.neutral[500]} />;
@@ -305,15 +311,7 @@ export default function SettingsScreen() {
         />
       </SurfaceCard>
 
-      {signOutFailed ? (
-        <ActionFailure
-          message={SIGN_OUT_FAILED}
-          retryLabel={SIGN_OUT_RETRY}
-          onRetry={handleSignOut}
-        />
-      ) : null}
-
-      <SurfaceCard onPress={handleSignOut} style={styles.signOutCard}>
+      <SurfaceCard onPress={() => setConfirmingSignOut(true)} style={styles.signOutCard}>
         <SignOut size={20} color={palette.danger} />
         <Text style={[styles.signOutLabel, { color: palette.danger }]}>Sign out</Text>
       </SurfaceCard>
@@ -321,6 +319,20 @@ export default function SettingsScreen() {
       <Text style={[styles.version, { color: palette.neutral[600] }]}>
         Autom8x for {platformName} · v{appVersion}
       </Text>
+
+      {confirmingSignOut ? (
+        <ConfirmDialog
+          testID="sign-out-dialog"
+          title="Sign out?"
+          body="You'll need to sign in again to use Autom8x on this device."
+          confirmLabel="Sign out"
+          busyLabel="Signing out…"
+          fallback={SIGN_OUT_FAILED}
+          run={handleSignOut}
+          onClose={() => setConfirmingSignOut(false)}
+          onDone={() => setConfirmingSignOut(false)}
+        />
+      ) : null}
 
       <WorkspaceSwitcher open={switcherOpen} onClose={() => setSwitcherOpen(false)} />
     </ScrollView>

@@ -11,6 +11,7 @@ import {
   PlatformRateLimitedError,
 } from '@/lib/platform/problem';
 import { readWorkspaces } from '@/lib/platform/workspaces';
+import { coverPlaysEntrance, resetCoverEntranceForTests } from '@/lib/view/cover-entrance';
 
 /**
  * How a failed session request is classified.
@@ -327,6 +328,20 @@ describe('SessionProvider and the shared snapshot', () => {
     await screen.findByText('status:signed-out');
     await readWorkspaces();
     expect(listReads()).toBe(2);
+  });
+
+  it('marks the cover to be shown at once after a sign-out that revoked, and only then (build 13 decision 1)', async () => {
+    resetCoverEntranceForTests();
+    await signedInWithAList();
+    signOut.mockResolvedValueOnce({ revoked: false });
+    await fireEvent.press(screen.getByTestId('sign-out'));
+    await waitFor(() => expect(signOut).toHaveBeenCalledTimes(1));
+    expect(coverPlaysEntrance()).toBe(true);
+    signOut.mockResolvedValueOnce({ revoked: true });
+    await fireEvent.press(screen.getByTestId('sign-out'));
+    await screen.findByText('status:signed-out');
+    expect(coverPlaysEntrance()).toBe(false);
+    resetCoverEntranceForTests();
   });
 
   it('is emptied when a session ends by itself (a 401 on a re-read)', async () => {

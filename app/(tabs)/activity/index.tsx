@@ -1,16 +1,18 @@
 import type { NavigationProp } from '@react-navigation/native';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
-import { CheckCircle } from 'phosphor-react-native';
+import { CalendarBlank, Check, CheckCircle } from 'phosphor-react-native';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Dialog, DialogButton } from '@/components/dialog';
 import { FilterChip } from '@/components/nocturne/filter-chip';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
-import { ScopeControl } from '@/components/scope-control';
+import { ScopeControl, ScopePill } from '@/components/scope-control';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
+import { SettingsRow } from '@/components/settings/settings-row';
 import { em, fonts, layout, status, typeScale } from '@/constants/theme';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { useScope } from '@/hooks/use-scope';
@@ -25,7 +27,14 @@ import {
 } from '@/lib/content/screen-states';
 import { ACTIVITY_FILTERS, type ActivityItem } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
-import { readAllApprovals, readRemovedSubscriptionsOrNone, readRuns, readSubscriptions } from '@/lib/platform/runs';
+import {
+  rangeStart,
+  readAllApprovals,
+  readRemovedSubscriptionsOrNone,
+  readRuns,
+  readSubscriptions,
+  type RunRange,
+} from '@/lib/platform/runs';
 import { catalogIndex, needsReview, runIcon, splitByDay, toRunRow } from '@/lib/view/runs';
 import { scopeRuns } from '@/lib/view/scope';
 
@@ -33,7 +42,7 @@ import { scopeRuns } from '@/lib/view/scope';
  * One run. Opens its run detail, as Home's RECENT RUNS and the inbox already do
  * (ROUND-7.5-OBSERVATIONS finding 2, BUILD-PLAN 24.4.4) — the rows were inert.
  */
-function ActivityRow({ item }: { item: ActivityItem }) {
+function ActivityRow({ item, last }: { item: ActivityItem; last: boolean }) {
   const { palette } = useTheme();
   const router = useRouter();
   const IconCmp = item.icon;
@@ -54,7 +63,9 @@ function ActivityRow({ item }: { item: ActivityItem }) {
       onPress={() => router.push({ pathname: '/(tabs)/(home)/run', params: { runId: item.id } })}
       style={({ pressed }) => [
         styles.row,
-        { borderBottomColor: palette.divider },
+        // The last row draws no border: it would run square past the card's rounded
+        // corner (the owner, build 13 #7).
+        !last && { borderBottomWidth: 1, borderBottomColor: palette.divider },
         pressed && { opacity: 0.7 },
       ]}>
       <IconCmp size={19} color={toneColor[item.tone]} style={styles.rowIcon} />
@@ -72,8 +83,8 @@ function ActivitySection({ label, items }: { label: string; items: ActivityItem[
     <View>
       <SectionLabel>{label}</SectionLabel>
       <SurfaceCard style={styles.sectionCard}>
-        {items.map((item) => (
-          <ActivityRow key={item.id} item={item} />
+        {items.map((item, i) => (
+          <ActivityRow key={item.id} item={item} last={i === items.length - 1} />
         ))}
       </SurfaceCard>
     </View>
@@ -113,30 +124,52 @@ const isActivityFilter = (value: unknown): value is ActivityFilter =>
 type ArrivalParams = { flow?: string; flowName?: string; filter?: string; period?: string };
 
 /**
+ * The time range's choices, as its card lists them (the owner's build 13
+ * decision 4: "Today / Week / Month"), after All time — every run, which
+ * Activity opens on. A choice's name is the button's label; the line under it
+ * in the card says what it spans (`rangeStart`).
+ */
+const RANGES: readonly RunRange[] = ['all', 'today', 'week', 'month'];
+const RANGE_LABEL: Record<RunRange, string> = { all: 'All time', today: 'Today', week: 'Week', month: 'Month' };
+const RANGE_SPAN: Record<RunRange, string> = {
+  all: 'Every run',
+  today: 'Since midnight',
+  week: 'The last 7 days',
+  month: 'The last 30 days',
+};
+/** How an empty selection says its range. */
+const RANGE_WORDS: Record<RunRange, string> = {
+  all: '',
+  today: ' today',
+  week: ' in the last 7 days',
+  month: ' in the last 30 days',
+};
+
+/**
  * What a tile on Home or a flow page arrived with (24.11.9): an outcome, and
  * perhaps a flow — or, from Home, today (the owner's build 12 item 1): Home's
  * tiles count today's runs, so the list a tile opens is today's, and its number
- * is the rows it opens.
+ * is the rows it opens. A flow page's tiles count all time, and bring All time.
  */
 function arrivedWith(params: ArrivalParams): {
   filter: ActivityFilter;
   flow: { id: string; name: string } | null;
-  todayOnly: boolean;
+  range: RunRange;
 } {
   return {
     filter: isActivityFilter(params.filter) ? params.filter : 'All',
     flow: params.flow ? { id: params.flow, name: params.flowName || 'this flow' } : null,
-    todayOnly: params.period === 'today',
+    range: params.period === 'today' ? 'today' : 'all',
   };
 }
 
-/** What an empty selection says: the outcome, the flow, and the day, as chosen. */
-function emptyLine(filter: ActivityFilter, flow: { name: string } | null, todayOnly: boolean): string {
+/** What an empty selection says: the outcome, the flow, and the range, as chosen. */
+function emptyLine(filter: ActivityFilter, flow: { name: string } | null, range: RunRange): string {
   if (filter === 'All') {
-    if (flow) return `No runs for ${flow.name} ${todayOnly ? 'today' : 'yet'}.`;
-    return 'No runs today.';
+    if (flow) return `No runs for ${flow.name}${range === 'all' ? ' yet' : RANGE_WORDS[range]}.`;
+    return `No runs${RANGE_WORDS[range]}.`;
   }
-  return `No ${EMPTY_LABEL[filter]} runs${flow ? ` for ${flow.name}` : ''}${todayOnly ? ' today' : ''}.`;
+  return `No ${EMPTY_LABEL[filter]} runs${flow ? ` for ${flow.name}` : ''}${RANGE_WORDS[range]}.`;
 }
 
 export default function ActivityScreen() {
@@ -152,15 +185,18 @@ export default function ActivityScreen() {
   // flow and the outcome, and that selection replaces whatever was chosen here.
   // The chip clears it; the tab bar arrives with nothing and changes nothing.
   const [flow, setFlow] = useState<{ id: string; name: string } | null>(() => arrivedWith(params).flow);
-  // Today only (the owner's build 12 item 1): a Home tile arrives with it, a flow
-  // page's with none — its tiles count all time. Its chip clears it, as the flow's does.
-  const [todayOnly, setTodayOnly] = useState<boolean>(() => arrivedWith(params).todayOnly);
+  // The time range (the owner's build 13 decision 4): All time — every run — on
+  // opening; Today from a Home tile (build 12 item 1), All time from a flow
+  // page's, whose tiles count all time. Chosen again from its button at any time,
+  // where Today ✕ could only clear (build 13).
+  const [range, setRange] = useState<RunRange>(() => arrivedWith(params).range);
+  const [rangeOpen, setRangeOpen] = useState(false);
   useEffect(() => {
     if (!params.flow && !params.filter && !params.period) return;
     const arrived = arrivedWith(params);
     setFilter(arrived.filter);
     setFlow(arrived.flow);
-    setTodayOnly(arrived.todayOnly);
+    setRange(arrived.range);
     // Taken, and cleared from this screen's own route: the same tile pressed
     // again sends the same params, and only a change re-runs this, so a
     // selection cleared here and asked for again did not come back (build 13).
@@ -208,6 +244,7 @@ export default function ActivityScreen() {
         title: row.name,
         desc: removedFlows.has(run.subscriptionId) ? `${row.meta} · ${RUN_FLOW_ARCHIVED}` : row.meta,
         time: row.time,
+        createdAt: run.createdAt,
       };
     };
     return {
@@ -230,14 +267,18 @@ export default function ActivityScreen() {
   const sourceYesterday = inFlow(scopedYesterday);
   const sourceEarlier = inFlow(scopedEarlier);
 
-  const today = sourceToday.filter((i) => matchesFilter(i, filter));
-  // Today only, while a Home tile's chip is on: the runs its number counted.
-  const yesterday = todayOnly ? [] : sourceYesterday.filter((i) => matchesFilter(i, filter));
+  // The range and the outcome both select, each of the other (the owner's build
+  // 13 decision 4). Under Today, the runs a Home tile's number counted.
+  const since = rangeStart(range);
+  const selected = (item: ActivityItem) =>
+    (since === null || new Date(item.createdAt) >= since) && matchesFilter(item, filter);
+  const today = sourceToday.filter(selected);
+  const yesterday = sourceYesterday.filter(selected);
   // The website's Activity is every run in the workspace; the two day sections
   // are a grouping of it. Older runs sit under EARLIER rather than vanishing —
   // the first TestFlight build showed "No activity yet" to a workspace with 13
   // runs, all older than two days (24.7.3 attempt 1, feedback #3).
-  const earlier = todayOnly ? [] : sourceEarlier.filter((i) => matchesFilter(i, filter));
+  const earlier = sourceEarlier.filter(selected);
   const isEmpty = today.length === 0 && yesterday.length === 0 && earlier.length === 0;
   /** Nothing at all, as opposed to nothing matching a filter. */
   const hasNoRuns =
@@ -287,23 +328,49 @@ export default function ActivityScreen() {
       ]}
       showsVerticalScrollIndicator={false}>
       <ScopeControl />
-      <Text style={[styles.h1, { color: palette.text }]}>Activity</Text>
-      {/* What a tile chose — the flow, or today — on a row of its own above the
-          outcomes: a fifth chip beside the four runs off a phone's width
-          (the owner's build 12 item 1). Each clears itself. */}
-      {flow || todayOnly ? (
-        <View style={styles.filters} testID="activity-selection">
-          {flow ? (
-            <FilterChip
-              key="flow"
-              label={`${flow.name} ✕`}
-              active
-              onPress={() => setFlow(null)}
+      {/* The title, and the time range beside it as Flows' buttons sit beside
+          its own (the owner's build 13 decision 4): it says the range chosen and
+          opens the four, in a card as the team pill opens Show. */}
+      <View style={styles.titleRow}>
+        <Text style={[styles.h1, { color: palette.text }]}>Activity</Text>
+        <ScopePill
+          testID="activity-range"
+          icon={CalendarBlank}
+          label={RANGE_LABEL[range]}
+          accessibilityLabel={`Time range: ${RANGE_LABEL[range]}`}
+          onPress={() => setRangeOpen(true)}
+        />
+      </View>
+      <Dialog
+        visible={rangeOpen}
+        onRequestClose={() => setRangeOpen(false)}
+        testID="activity-range-dialog"
+        title="Time range"
+        actions={<DialogButton label="Done" onPress={() => setRangeOpen(false)} />}>
+        <View style={styles.rangeList}>
+          {RANGES.map((option, index) => (
+            <SettingsRow
+              key={option}
+              icon={CalendarBlank}
+              title={RANGE_LABEL[option]}
+              sub={RANGE_SPAN[option]}
+              divider={index < RANGES.length - 1}
+              testID={`activity-range-${option}`}
+              onPress={() => {
+                setRange(option);
+                setRangeOpen(false);
+              }}
+              right={option === range ? <Check size={16} color={palette.accent} testID="activity-range-chosen" /> : null}
             />
-          ) : null}
-          {todayOnly ? (
-            <FilterChip key="today" label="Today ✕" active onPress={() => setTodayOnly(false)} />
-          ) : null}
+          ))}
+        </View>
+      </Dialog>
+      {/* The flow a flow page's tile chose, on a row of its own above the
+          outcomes: a fifth chip beside the four runs off a phone's width (the
+          owner's build 12 item 1). It clears itself. */}
+      {flow ? (
+        <View style={styles.filters} testID="activity-selection">
+          <FilterChip key="flow" label={`${flow.name} ✕`} active onPress={() => setFlow(null)} />
         </View>
       ) : null}
       <View style={styles.filters} testID="activity-outcomes">
@@ -324,10 +391,10 @@ export default function ActivityScreen() {
           <CheckCircle size={38} color={palette.neutral[600]} />
           <Text style={[styles.emptyText, { color: palette.neutral[500] }]}>{ACTIVITY_SCOPE_EMPTY}</Text>
         </View>
-      ) : isEmpty && (filter !== 'All' || flow || todayOnly) ? (
+      ) : isEmpty && (filter !== 'All' || flow || range !== 'all') ? (
         <View style={styles.emptyWrap}>
           <CheckCircle size={38} color={palette.neutral[600]} />
-          <Text style={[styles.emptyText, { color: palette.neutral[500] }]}>{emptyLine(filter, flow, todayOnly)}</Text>
+          <Text style={[styles.emptyText, { color: palette.neutral[500] }]}>{emptyLine(filter, flow, range)}</Text>
         </View>
       ) : null}
     </ScrollView>
@@ -340,10 +407,19 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     gap: 14,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   h1: {
     fontFamily: fonts.medium,
     fontSize: typeScale.display.fontSize,
     letterSpacing: em(-0.015, typeScale.display.fontSize),
+  },
+  rangeList: {
+    marginHorizontal: -layout.rowPadH,
   },
   filters: {
     flexDirection: 'row',
@@ -358,7 +434,6 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 12,
     paddingHorizontal: 14,
-    borderBottomWidth: 1,
   },
   rowIcon: {
     marginTop: 1,

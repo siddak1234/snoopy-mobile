@@ -1,8 +1,8 @@
 import * as LocalAuthentication from 'expo-local-authentication';
-import { screen } from 'expo-router/testing-library';
+import { fireEvent, screen, within } from 'expo-router/testing-library';
 
 import { DELETION_WORDS } from '@/lib/content/deletion';
-import { SIGN_OUT_FAILED, SIGN_OUT_RETRY } from '@/lib/content/screen-states';
+import { SIGN_OUT_FAILED } from '@/lib/content/screen-states';
 import { PlatformError, PlatformNotConfiguredError, PlatformUnreachableError } from '@/lib/platform/problem';
 import { notifySessionEnded } from '@/lib/platform/session-recovery';
 import {
@@ -44,6 +44,14 @@ afterEach(() => {
 
 const logouts = (calls: string[]) => calls.filter((call) => call === '/v1/auth/logout');
 
+/** Sign out is asked first (the owner's build 13 decision 1): the card, then the dialog's red Sign out. */
+async function signOutFromSettings() {
+  await press('Sign out');
+  await fireEvent.press(within(screen.getByTestId('sign-out-dialog')).getByText('Sign out'));
+  await flush(100);
+  await flush(1000);
+}
+
 describe("signed out is the cover, from inside the tabs (the owner's build 12 item 6)", () => {
   it('Settings › Sign out: one logout, the keychain empty, and the cover at "/" with Get started — no command dropped, no loop', async () => {
     signedInOnThisPhone();
@@ -54,7 +62,7 @@ describe("signed out is the cover, from inside the tabs (the owner's build 12 it
     const { replaces, unhandled } = watchRouter();
 
     await asInProduction(async () => {
-      await press('Sign out');
+      await signOutFromSettings();
       await flush(3000);
     });
 
@@ -109,7 +117,7 @@ describe("signed out is the cover, from inside the tabs (the owner's build 12 it
         // Signing in still reaches Home under the guard.
         expect(where()).toEqual(['/', ['(tabs)', '(home)']]);
         await press('Settings');
-        await press('Sign out');
+        await signOutFromSettings();
         await flush(3000);
         expect(logouts(calls)).toHaveLength(round);
         expect(screen.getByText('Get started')).toBeTruthy();
@@ -122,7 +130,7 @@ describe("signed out is the cover, from inside the tabs (the owner's build 12 it
     expect(replaces).toEqual(['/(auth)/login', '/(tabs)/(home)', '/(auth)/login', '/(tabs)/(home)']);
   });
 
-  it('a logout that answers 502 keeps the session: Settings stays and says so, with Retry sign out, and nothing navigates', async () => {
+  it('a logout that answers 502 keeps the session: Settings stays and says so in its dialog, Sign out offered again, and nothing navigates', async () => {
     signedInOnThisPhone();
     const calls = answerPlatform({
       '/v1/auth/logout': () => {
@@ -134,13 +142,14 @@ describe("signed out is the cover, from inside the tabs (the owner's build 12 it
     const { replaces, unhandled } = watchRouter();
 
     await asInProduction(async () => {
-      await press('Sign out');
+      await signOutFromSettings();
       await flush(3000);
     });
 
     expect(logouts(calls)).toHaveLength(1);
-    expect(screen.getByText(SIGN_OUT_FAILED)).toBeTruthy();
-    expect(screen.getByText(SIGN_OUT_RETRY)).toBeTruthy();
+    // Said in the dialog, which stays — its Sign out is the action offered again (build 13 decision 1).
+    expect(within(screen.getByTestId('sign-out-dialog')).getByText(SIGN_OUT_FAILED)).toBeTruthy();
+    expect(within(screen.getByTestId('sign-out-dialog')).getByText('Sign out')).toBeTruthy();
     // ADR-0017 §4: nothing cleared for a session still live upstream.
     expect(kept.get('autom8x.refresh-token')).toBe('refresh-1');
     expect(view.getPathname()).toBe('/settings');

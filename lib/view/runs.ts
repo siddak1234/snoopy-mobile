@@ -2,6 +2,7 @@ import type { Icon } from 'phosphor-react-native';
 import { CheckCircle, CircleDashed, HandPalm, XCircle } from 'phosphor-react-native';
 
 import type { CatalogEntry } from '@/lib/platform/catalog';
+import type { InboxNotification } from '@/lib/platform/notifications';
 import type { Approval, Run } from '@/lib/platform/runs';
 import { EMPTY, relativeTime } from './format';
 import { statusLabel, statusTone, type StatusPillLabel, type StatusTone } from './status';
@@ -260,58 +261,47 @@ export type NotificationItem = {
   target: 'run' | 'activity' | 'settings';
 };
 
-export function composeNotifications(
-  approvals: { id: string; subscriptionId: string; stepId: string; reason: string; createdAt: string }[],
-  failedRuns: Run[],
-  subscriptions: Map<string, { templateId: string }>,
+/**
+ * The inbox's rows, from the platform's inbox (the owner's build 13 decision 3A):
+ * which items exist, their order (newest first) and whether this person has read
+ * each are the platform's; the words are drawn here from the catalog, as every
+ * other run row's are. An approval names its automation and the step that held,
+ * then why; a failed run names its automation, then why when it said.
+ */
+export function inboxRows(
+  items: readonly InboxNotification[],
   catalog: Map<string, CatalogEntry>,
   now: number = Date.now(),
-): {
-  id: string;
-  tone: 'ok' | 'warn' | 'err' | 'accent';
-  unread: boolean;
-  title: string;
-  desc: string;
-  time: string;
-  target: 'run' | 'activity' | 'settings';
-}[] {
-  const held = approvals.map((a) => ({
-    id: `approval:${a.id}`,
-    tone: 'warn' as const,
-    unread: true,
-    title: 'Run held for review',
-    desc: `${approvalTitle(a, subscriptions, catalog)} · ${a.reason}`,
-    time: relativeTime(a.createdAt, now),
-    target: 'activity' as const,
-  }));
-
-  const failed = failedRuns.map((run) => ({
-    id: `run:${run.id}`,
-    tone: 'err' as const,
-    unread: true,
-    title: 'Run failed',
-    desc: `${nameFor(run, catalog)} · ${metaFor(run)}`,
-    time: relativeTime(run.createdAt, now),
-    target: 'run' as const,
-    runId: run.id,
-  }));
-
-  // Newest first across both sources; the two reads are each newest-first on
-  // their own but say nothing about each other's order.
-  return [...held, ...failed].sort(
-    (a, b) => rank(a.time) - rank(b.time),
-  );
-}
-
-/** Order the compact relative strings the design draws: now < 2m < 3h < 4d. */
-function rank(relative: string): number {
-  if (relative === 'now') return 0;
-  const value = Number.parseInt(relative, 10);
-  if (Number.isNaN(value)) return Number.MAX_SAFE_INTEGER;
-  if (relative.endsWith('m')) return value;
-  if (relative.endsWith('h')) return value * 60;
-  if (relative.endsWith('d')) return value * 60 * 24;
-  return Number.MAX_SAFE_INTEGER;
+): Omit<NotificationItem, 'icon'>[] {
+  return items.map((item) => {
+    const entry = catalog.get(item.templateId);
+    const name = entry?.name ?? item.templateId;
+    const time = relativeTime(item.occurredAt, now);
+    if (item.kind === 'approval-requested') {
+      const step = item.stepId ? entry?.pipeline?.find((s) => s.id === item.stepId) : undefined;
+      const what = step ? `${name} · ${step.title}` : name;
+      return {
+        id: item.id,
+        tone: 'warn' as const,
+        unread: !item.read,
+        title: 'Run held for review',
+        desc: item.reason ? `${what} · ${item.reason}` : what,
+        time,
+        target: 'activity' as const,
+        runId: item.runId,
+      };
+    }
+    return {
+      id: item.id,
+      tone: 'err' as const,
+      unread: !item.read,
+      title: 'Run failed',
+      desc: `${name} · ${item.failureReason ?? statusLabel('failed')}`,
+      time,
+      target: 'run' as const,
+      runId: item.runId,
+    };
+  });
 }
 
 /** A run-detail timeline row, in the shape `RunTimelineItem` had. */

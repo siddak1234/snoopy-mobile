@@ -1,4 +1,5 @@
 import type { WorkspaceBilling } from '@/lib/platform/billing';
+import type { FlowAllowance } from '@/lib/platform/runs';
 
 /** The platform's free floor: what a workspace that never paid reports, and never on the plan list. */
 export const FREE_PLAN_ID = 'free';
@@ -32,4 +33,18 @@ export function enrolledPlanId(state: Pick<WorkspaceBilling, 'planId' | 'status'
 export function enrolledPlanName(state: Pick<WorkspaceBilling, 'planId' | 'displayName' | 'status'>): string {
   if (enrolledPlanId(state) === FREE_PLAN_ID) return state.planId === FREE_PLAN_ID ? state.displayName : 'Free';
   return state.displayName;
+}
+
+/**
+ * A workspace over its plan's flow allowance (the owner's build 13 decision
+ * 7a3): no flow starts a run until it is back within it. Null within the plan,
+ * on a plan without a ceiling (`allowed: null`), and when the platform could
+ * not say (no allowance): unknown is not over. `live` counts every flow not
+ * archived — paused and draft too — so archiving is the way back, never pausing.
+ */
+export function flowsOverPlan(
+  allowance: FlowAllowance | undefined,
+): { allowed: number; live: number } | null {
+  if (!allowance || allowance.allowed === null || allowance.live <= allowance.allowed) return null;
+  return { allowed: allowance.allowed, live: allowance.live };
 }

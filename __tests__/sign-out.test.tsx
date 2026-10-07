@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 
 import TabLayout from '@/app/(tabs)/_layout';
 import SettingsScreen from '@/app/(tabs)/settings';
@@ -92,47 +92,80 @@ function sessionWith(signOut: SessionContextValue['signOut']): SessionContextVal
   } as unknown as SessionContextValue;
 }
 
+/**
+ * Sign out is asked first (the owner's build 13 decision 1): Settings' card opens the
+ * confirm dialog, and its red Sign out runs the sign-out.
+ */
+async function confirmSignOut(): Promise<void> {
+  await fireEvent.press(await screen.findByText('Sign out'));
+  await fireEvent.press(within(screen.getByTestId('sign-out-dialog')).getByText('Sign out'));
+}
+
 describe('Settings sign-out', () => {
   it("signs out and leaves the cover to the root guard: Settings navigates nowhere (24.11.6; the owner's build 12 item 6)", async () => {
     const signOut = jest.fn(async () => ({ revoked: true }));
     await renderWithProviders(<SettingsScreen />, sessionWith(signOut));
 
-    await fireEvent.press(await screen.findByText('Sign out'));
+    await confirmSignOut();
 
     await waitFor(() => expect(signOut).toHaveBeenCalledTimes(1));
     await expect(signOut.mock.results[0]!.value).resolves.toEqual({ revoked: true });
     // Inside the tabs "/" is Home: build 12's move to it was dropped.
     expect(mockRouter.replace).not.toHaveBeenCalled();
-    expect(screen.queryByTestId('action-failure')).toBeNull();
+    await waitFor(() => expect(screen.queryByTestId('sign-out-dialog')).toBeNull());
   });
 
-  it('stays put and says so when revocation failed (502)', async () => {
-    const signOut = jest.fn(async () => ({ revoked: false }));
+  it('asks first: Cancel closes the dialog and signs nothing out (build 13 decision 1)', async () => {
+    const signOut = jest.fn(async () => ({ revoked: true }));
     await renderWithProviders(<SettingsScreen />, sessionWith(signOut));
 
     await fireEvent.press(await screen.findByText('Sign out'));
+    const dialog = screen.getByTestId('sign-out-dialog');
+    expect(within(dialog).getByText('Sign out?')).toBeTruthy();
+    await fireEvent.press(within(dialog).getByText('Cancel'));
+
+    expect(screen.queryByTestId('sign-out-dialog')).toBeNull();
+    expect(signOut).not.toHaveBeenCalled();
+  });
+
+  it('says "Signing out…" while the platform answers (build 13 decision 1)', async () => {
+    let finish: (value: { revoked: boolean }) => void = () => undefined;
+    const signOut = jest.fn(() => new Promise<{ revoked: boolean }>((resolve) => (finish = resolve)));
+    await renderWithProviders(<SettingsScreen />, sessionWith(signOut));
+
+    await confirmSignOut();
+    expect(within(screen.getByTestId('sign-out-dialog')).getByText('Signing out…')).toBeTruthy();
+    await act(async () => finish({ revoked: true }));
+    await waitFor(() => expect(screen.queryByTestId('sign-out-dialog')).toBeNull());
+  });
+
+  it('stays put and says so in the dialog when revocation failed (502)', async () => {
+    const signOut = jest.fn(async () => ({ revoked: false }));
+    await renderWithProviders(<SettingsScreen />, sessionWith(signOut));
+
+    await confirmSignOut();
 
     // The person is still signed in on this device, and the screen says both
     // halves of that: what did not happen, and that nothing was cleared.
     expect(mockRouter.replace).not.toHaveBeenCalled();
-    expect(screen.getByTestId('action-failure')).toBeTruthy();
-    expect(screen.getByText(SIGN_OUT_FAILED)).toBeTruthy();
+    expect(await within(screen.getByTestId('sign-out-dialog')).findByText(SIGN_OUT_FAILED)).toBeTruthy();
   });
 
-  it('offers the action again, and clears the callout once it succeeds', async () => {
+  it('offers the action again in the dialog, and closes it once it succeeds', async () => {
     const signOut = jest
       .fn<Promise<{ revoked: boolean }>, []>()
       .mockResolvedValueOnce({ revoked: false })
       .mockResolvedValueOnce({ revoked: true });
     await renderWithProviders(<SettingsScreen />, sessionWith(signOut));
 
-    await fireEvent.press(await screen.findByText('Sign out'));
-    expect(screen.getByTestId('action-failure')).toBeTruthy();
+    await confirmSignOut();
+    expect(await within(screen.getByTestId('sign-out-dialog')).findByText(SIGN_OUT_FAILED)).toBeTruthy();
 
-    await fireEvent.press(screen.getByText('Retry sign out'));
+    // The dialog stays, so its Sign out is the action offered again.
+    await fireEvent.press(within(screen.getByTestId('sign-out-dialog')).getByText('Sign out'));
     expect(signOut).toHaveBeenCalledTimes(2);
     await expect(signOut.mock.results[1]!.value).resolves.toEqual({ revoked: true });
-    await waitFor(() => expect(screen.queryByTestId('action-failure')).toBeNull());
+    await waitFor(() => expect(screen.queryByTestId('sign-out-dialog')).toBeNull());
     expect(mockRouter.replace).not.toHaveBeenCalled();
   });
 });
@@ -178,7 +211,7 @@ describe('Sign-out unregisters this phone before the logout (build 11, D8)', () 
     const { signOut, answers } = watchedSignOut();
     await renderWithProviders(<SettingsScreen />, sessionWith(signOut));
 
-    await fireEvent.press(await screen.findByText('Sign out'));
+    await confirmSignOut();
 
     await waitFor(() => expect(answers).toEqual([{ revoked: true }]));
     expect(sent.map((entry) => entry.call)).toEqual([
@@ -203,7 +236,7 @@ describe('Sign-out unregisters this phone before the logout (build 11, D8)', () 
     try {
       const { signOut, answers } = watchedSignOut();
       await renderWithProviders(<SettingsScreen />, sessionWith(signOut));
-      await fireEvent.press(await screen.findByText('Sign out'));
+      await confirmSignOut();
 
       await waitFor(() => expect(answers).toEqual([{ revoked: true }]));
       expect(sent.map((entry) => entry.call)).toEqual([
@@ -225,7 +258,7 @@ describe('Sign-out unregisters this phone before the logout (build 11, D8)', () 
     const { signOut, answers } = watchedSignOut();
     await renderWithProviders(<SettingsScreen />, sessionWith(signOut));
 
-    await fireEvent.press(await screen.findByText('Sign out'));
+    await confirmSignOut();
 
     await waitFor(() => expect(answers).toEqual([{ revoked: true }]));
     expect(sent.map((entry) => entry.call)).toEqual(['POST /v1/auth/logout']);
@@ -312,7 +345,7 @@ describe('Sign-out waits for a push registration still in flight (the build 11 r
   it('waits for a registration in flight when Sign out is pressed: the DELETE sends the id it answers, BEFORE the logout, then the keychain is cleared', async () => {
     const { sent, answer, answers } = await signedInWithRegistrationOut();
 
-    await fireEvent.press(await screen.findByText('Sign out'));
+    await confirmSignOut();
     // Waiting for it: nothing else is sent while it is out, and the sign-out has not answered.
     expect(sent.map((entry) => entry.call)).toEqual(['PUT /v1/session/devices']);
     expect(answers).toEqual([]);
@@ -335,7 +368,7 @@ describe('Sign-out waits for a push registration still in flight (the build 11 r
     jest.useFakeTimers();
     const { sent, answer, answers } = await signedInWithRegistrationOut();
 
-    await fireEvent.press(await screen.findByText('Sign out'));
+    await confirmSignOut();
     await act(async () => {
       await jest.advanceTimersByTimeAsync(4_999);
     });

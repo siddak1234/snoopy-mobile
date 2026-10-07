@@ -19,6 +19,7 @@ import {
   writeRememberSession,
 } from '@/lib/platform/session-store';
 import { resetSnapshot } from '@/lib/platform/snapshot';
+import { noteSignedOut } from '@/lib/view/cover-entrance';
 
 /**
  * Who is signed in, and whether the app is allowed past the auth stack.
@@ -252,7 +253,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     const result = await signOutOfPlatform();
     // A failed revocation leaves the tokens in place on purpose, so the state
     // stays signed-in rather than claiming a sign-out that did not happen.
-    if (result.revoked) setState(signedOut());
+    if (result.revoked) {
+      // The cover that follows is shown at once, not faded in (build 13 decision 1).
+      noteSignedOut();
+      setState(signedOut());
+    }
     return result;
   }, []);
 
