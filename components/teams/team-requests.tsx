@@ -51,7 +51,13 @@ export function TeamRequests({
             testID={`team-request-${request.id}`}
             icon={UserCircle}
             title={nameOf(request)}
-            sub={`Asked ${relativeTimeAgo(request.createdAt)}`}
+            // Under a name, the address too, as the website's list and the
+            // organization's join requests draw it (Gate 24's parity pass, G23).
+            sub={
+              request.displayName
+                ? `${request.email} · Asked ${relativeTimeAgo(request.createdAt)}`
+                : `Asked ${relativeTimeAgo(request.createdAt)}`
+            }
             divider={index < pending.length - 1}
             onPress={() => setDeciding(request)}
             right={<CaretRight size={15} color={palette.neutral[500]} />}

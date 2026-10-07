@@ -11,6 +11,8 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { StatCard } from '@/components/nocturne/stat-card';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
+import type { InboxRunPath } from '@/components/notifications/inbox';
+import { Pressable } from '@/components/pressable';
 import { em, fonts, layout, status, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { TimelineRowView as RunTimelineItem } from '@/lib/view/runs';
@@ -23,9 +25,17 @@ import { readCatalog } from '@/lib/platform/catalog';
 import { cancelRun } from '@/lib/platform/automations';
 import { readAllApprovals, readRun } from '@/lib/platform/runs';
 import { PlatformError, PlatformNotConfiguredError } from '@/lib/platform/problem';
-import { clockTime, duration } from '@/lib/view/format';
+import { dateTime, duration } from '@/lib/view/format';
 import { statusLabel, type StatusPillLabel } from '@/lib/view/status';
-import { RUN_REREAD_MS, metaFor, runLabel, toRunStats, toTimeline } from '@/lib/view/runs';
+import {
+  NO_STEPS_REPORTED,
+  RUN_REREAD_MS,
+  metaFor,
+  runLabel,
+  toRunFacts,
+  toRunStats,
+  toTimeline,
+} from '@/lib/view/runs';
 
 const TIMELINE_ICON_COLOR: Record<string, string | undefined> = {
   ok: status.ok,
@@ -36,6 +46,12 @@ const TIMELINE_ICON_COLOR: Record<string, string | undefined> = {
 } as const;
 
 
+/**
+ * One step: its title, its summary, a held step's reason beside it, and when it
+ * happened — the date and the time, on a line of its own, as the website's
+ * steps say it (Gate 24's parity pass, G18; until then the time alone, at the
+ * row's right).
+ */
 function TimelineRow({ item, divider }: { item: RunTimelineItem; divider: boolean }) {
   const { palette } = useTheme();
   const iconColor = TIMELINE_ICON_COLOR[item.tone] ?? palette.neutral[500];
@@ -61,15 +77,21 @@ function TimelineRow({ item, divider }: { item: RunTimelineItem; divider: boolea
           ]}>
           {item.sub}
         </Text>
+        {item.reason ? <Text style={[styles.timelineSub, { color: status.warnText }]}>{item.reason}</Text> : null}
+        {item.time ? (
+          <Text style={[styles.timelineTime, { color: palette.neutral[500] }]}>{item.time}</Text>
+        ) : null}
       </View>
-      {item.time ? (
-        <Text style={[styles.timelineTime, { color: palette.neutral[500] }]}>{item.time}</Text>
-      ) : null}
     </View>
   );
 }
 
-export default function RunDetailScreen() {
+/**
+ * A run's page. Registered in two stacks — Home's, and Settings' for its inbox
+ * (`app/(tabs)/settings/run.tsx`) — and `runPath` is the one it is in, so the
+ * run it continues opens in the same stack and Back returns here.
+ */
+export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { runPath?: InboxRunPath }) {
   const { palette } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -160,13 +182,12 @@ export default function RunDetailScreen() {
   const run = liveRun
     ? {
         title: runLabel(liveRun.detail.run),
-        // A held run says how it was decided; a continuation names the run it
-        // continues, as the website's run page does ("Continues …").
-        sub: `${liveRun.entry?.name ?? liveRun.detail.run.templateId} · ${metaFor(liveRun.detail.run, liveRun.approvals)}${
-          liveRun.detail.run.continuesRunId
-            ? ` · continues run ${liveRun.detail.run.continuesRunId.slice(0, 8)}`
-            : ''
-        }`,
+        // Its flow, the version it ran — the website's subheader — and how it
+        // ended; a held run says how it was decided.
+        sub: `${liveRun.entry?.name ?? liveRun.detail.run.templateId} · v${liveRun.detail.run.templateVersion} · ${metaFor(
+          liveRun.detail.run,
+          liveRun.approvals,
+        )}`,
         status: statusLabel(liveRun.detail.run.status) as StatusPillLabel,
         stats: toRunStats(
           // The steps that finished: a failed or held step is reported, not done.
@@ -174,10 +195,17 @@ export default function RunDetailScreen() {
           liveRun.entry?.pipeline?.length ?? 0,
           duration(liveRun.detail.run.startedAt, liveRun.detail.run.endedAt),
         ),
+        // Started, Ended, Trigger: the website's facts under its title.
+        facts: toRunFacts(liveRun.detail.run),
+        // The run a continuation continues, a tap away, as the website links "the
+        // run that was held" (until Gate 24's parity pass, its id's first eight
+        // characters, which nothing opened).
+        continues: liveRun.detail.run.continuesRunId,
+        reported: liveRun.detail.steps.length > 0,
         timeline: toTimeline(
           liveRun.detail.steps,
           liveRun.entry?.pipeline,
-          clockTime,
+          dateTime,
           liveRun.detail.run.status,
         ) as RunTimelineItem[],
         // No published run output, so no extracted-fields card.
@@ -247,6 +275,7 @@ export default function RunDetailScreen() {
       />
     );
   }
+  const continued = run.continues;
 
   return (
     <ScrollView
@@ -271,9 +300,45 @@ export default function RunDetailScreen() {
         ))}
       </View>
 
+      <SurfaceCard>
+        {run.facts.map((fact, i) => (
+          <View
+            key={fact.label}
+            testID={`run-fact-${fact.label}`}
+            style={[styles.fieldRow, i < run.facts.length - 1 && { borderBottomWidth: 1, borderBottomColor: palette.divider }]}>
+            <Text style={[styles.fieldKey, { color: palette.neutral[400] }]}>{fact.label}</Text>
+            <Text style={[styles.fieldValue, { color: palette.text }]}>{fact.value}</Text>
+          </View>
+        ))}
+      </SurfaceCard>
+
+      {continued ? (
+        <Pressable
+          testID="run-continues"
+          accessibilityRole="link"
+          onPress={() => router.push({ pathname: runPath, params: { runId: continued } })}
+          style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
+          <Text style={[styles.continues, { color: palette.neutral[400] }]}>
+            Continues <Text style={{ color: palette.accentRamp[300] }}>the run that was held</Text>.
+          </Text>
+        </Pressable>
+      ) : null}
+
       <View>
         <SectionLabel>TIMELINE</SectionLabel>
         <SurfaceCard style={styles.sectionCard}>
+          {/* The website's line while the run has reported nothing; the steps
+              its flow declares still follow it, waiting or not run. */}
+          {run.reported ? null : (
+            <Text
+              style={[
+                styles.noSteps,
+                { color: palette.neutral[400] },
+                run.timeline.length > 0 && { borderBottomWidth: 1, borderBottomColor: palette.divider },
+              ]}>
+              {NO_STEPS_REPORTED}
+            </Text>
+          )}
           {run.timeline.map((item, i) => (
             <TimelineRow key={item.id} item={item} divider={i < run.timeline.length - 1} />
           ))}
@@ -391,8 +456,19 @@ const styles = StyleSheet.create({
     fontSize: typeScale.small.fontSize,
   },
   timelineTime: {
+    marginTop: 2,
     fontFamily: fonts.regular,
     fontSize: typeScale.caption.fontSize,
+  },
+  continues: {
+    fontFamily: fonts.regular,
+    fontSize: typeScale.body.fontSize,
+  },
+  noSteps: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    fontFamily: fonts.regular,
+    fontSize: typeScale.body.fontSize,
   },
   fieldRow: {
     flexDirection: 'row',
