@@ -263,7 +263,7 @@ describe('inboxRows — the platform\'s inbox in words (decision 3A, reversing �
     read: true,
   };
 
-  it('names a held run by its automation and the step that held, then why, and opens Activity', () => {
+  it('names a held run by its automation and the step that held, then why, and opens Approvals (Gate 24\'s parity pass; Activity until then)', () => {
     const [row] = inboxRows([held], catalog, now);
     expect(row).toEqual({
       id: 'approval:a1',
@@ -272,7 +272,7 @@ describe('inboxRows — the platform\'s inbox in words (decision 3A, reversing �
       title: 'Run held for review',
       desc: 'Invoice triage · Extract invoice fields · Amount differs from PO',
       time: '12m',
-      target: 'activity',
+      target: 'approvals',
       runId: 'r0',
     });
   });

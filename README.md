@@ -211,7 +211,7 @@ tracking", purpose "App Functionality". No advertising or analytics SDK is among
   `DELETE /v1/session/devices/{deviceId}`. `hooks/use-push-registration.tsx`
   keeps an iOS phone that already allows notifications registered (every
   sign-in, every token change), shows the banner in the foreground and opens a
-  tap's run or Activity; the inbox's card is the only ask. Android and a
+  tap's run or Approvals; the inbox's card is the only ask. Android and a
   simulator register nothing. The library's own request to Expo's token service
   is the third credential-less exception of `CLAUDE.md` rule 5.
 - `hooks/use-session.tsx` resolves `/v1/session` before routing. Protected tabs

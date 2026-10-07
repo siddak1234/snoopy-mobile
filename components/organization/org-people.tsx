@@ -18,7 +18,7 @@ import {
   type JoinRequest,
   type WorkspaceMember,
 } from '@/lib/platform/organization';
-import { relativeTimeAgo } from '@/lib/view/format';
+import { calendarDate, relativeTimeAgo } from '@/lib/view/format';
 
 /**
  * The person asking to join, by name or address (backend 24.12.4): an owner or
@@ -34,6 +34,8 @@ function askerOf(request: JoinRequest): string {
  * website's `OrgMemberList` and `OrgJoinRequestList`. Anyone but an owner or
  * the person themselves can be removed, after a confirmation; a request is
  * approved or rejected. The Edge decides; this offers only what it allows.
+ * A member's row says the day they joined, as the website's does (Gate 24's
+ * parity pass, G24).
  */
 export function OrgPeople({
   orgName,
@@ -72,7 +74,9 @@ export function OrgPeople({
                 testID={`member-${member.userId}`}
                 icon={UserCircle}
                 title={`${nameOf(member)}${member.userId === viewerUserId ? ' (you)' : ''}`}
-                sub={member.displayName ? member.email : undefined}
+                sub={[member.displayName ? member.email : null, `Joined ${calendarDate(member.createdAt)}`]
+                  .filter(Boolean)
+                  .join(' · ')}
                 divider={index < members.length - 1}
                 onPress={removable ? () => setRemoving(member) : undefined}
                 right={

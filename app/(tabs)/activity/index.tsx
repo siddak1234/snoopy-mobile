@@ -41,6 +41,8 @@ import { scopeRuns } from '@/lib/view/scope';
 /**
  * One run. Opens its run detail, as Home's RECENT RUNS and the inbox already do
  * (ROUND-7.5-OBSERVATIONS finding 2, BUILD-PLAN 24.4.4) — the rows were inert.
+ * Under its line, the website's: the date and time it was made and the version
+ * it ran (Gate 24's parity pass, G17); the time beside it stays the design's.
  */
 function ActivityRow({ item, last }: { item: ActivityItem; last: boolean }) {
   const { palette } = useTheme();
@@ -72,6 +74,7 @@ function ActivityRow({ item, last }: { item: ActivityItem; last: boolean }) {
       <View style={styles.rowBody}>
         <Text style={[styles.rowTitle, { color: palette.text }]}>{item.title}</Text>
         <Text style={[styles.rowDesc, { color: palette.neutral[400] }]}>{item.desc}</Text>
+        <Text style={[styles.rowStamp, { color: palette.neutral[500] }]}>{item.stamp}</Text>
       </View>
       <Text style={[styles.rowTime, { color: palette.neutral[500] }]}>{item.time}</Text>
     </Pressable>
@@ -244,6 +247,7 @@ export default function ActivityScreen() {
         title: row.name,
         desc: removedFlows.has(run.subscriptionId) ? `${row.meta} · ${RUN_FLOW_ARCHIVED}` : row.meta,
         time: row.time,
+        stamp: row.stamp,
         createdAt: run.createdAt,
       };
     };
@@ -450,6 +454,11 @@ const styles = StyleSheet.create({
     marginTop: 1,
     fontFamily: fonts.regular,
     fontSize: typeScale.small.fontSize,
+  },
+  rowStamp: {
+    marginTop: 2,
+    fontFamily: fonts.regular,
+    fontSize: typeScale.caption.fontSize,
   },
   rowTime: {
     fontFamily: fonts.regular,

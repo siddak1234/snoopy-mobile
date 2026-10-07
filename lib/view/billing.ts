@@ -1,5 +1,6 @@
 import type { WorkspaceBilling } from '@/lib/platform/billing';
 import type { FlowAllowance } from '@/lib/platform/runs';
+import type { StatusPillLabel } from './status';
 
 /** The platform's free floor: what a workspace that never paid reports, and never on the plan list. */
 export const FREE_PLAN_ID = 'free';
@@ -23,6 +24,27 @@ export function accessEnded(state: Pick<WorkspaceBilling, 'status'>): boolean {
 
 export function enrolledPlanId(state: Pick<WorkspaceBilling, 'planId' | 'status'>): string {
   return accessEnded(state) ? FREE_PLAN_ID : state.planId;
+}
+
+/**
+ * The workspace's billing status, as the pill on its enrolled paid plan says it
+ * — the website's StatusPill (BillingPanel), drawn for every status while access
+ * lasts, `active` included, as ADR-0032 has every platform show the billing
+ * status (Gate 24's parity pass, G25; until then a line said the status only
+ * when it was not `active`, which no record asks for). The two that end access
+ * draw none: that plan is not enrolled any more, Free is.
+ */
+const BILLING_PILL: Record<NonNullable<WorkspaceBilling['status']>, StatusPillLabel | null> = {
+  active: 'Active',
+  trialing: 'Trialing',
+  past_due: 'Past due',
+  incomplete: 'Incomplete',
+  canceled: null,
+  unpaid: null,
+};
+
+export function billingStatusPill(status: WorkspaceBilling['status']): StatusPillLabel | null {
+  return status ? BILLING_PILL[status] : null;
 }
 
 /**

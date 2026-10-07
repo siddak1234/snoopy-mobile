@@ -780,9 +780,10 @@ describe('Notifications inbox (design sNotifs)', () => {
       params: { runId: 'run-4' },
     });
     // "Digest posted" was a prototype success notice. The inbox has only held
-    // runs and failed runs, and a held row opens Activity.
+    // runs and failed runs, and a held row opens Approvals, where it is decided
+    // (Gate 24's parity pass; Activity until then).
     await fireEvent.press(getAllByText('Run held for review')[0]);
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity');
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity/approvals');
   });
 });
 
@@ -1080,9 +1081,10 @@ describe('Settings — one grouped page (build 11, D1)', () => {
     // A failed run opens in the Settings stack, so Back returns to Settings.
     await fireEvent.press(getByText('Run failed'));
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/settings/run', params: { runId: 'run-4' } });
-    // A held run still switches to Activity, where it is decided, as from Home.
+    // A held run opens Approvals, where it is decided, as from Home (Gate 24's
+    // parity pass; Activity until then).
     await fireEvent.press(getAllByText('Run held for review')[0]);
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity');
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity/approvals');
     // Its Back is the inbox's own: back to Settings, never into Home.
     await fireEvent.press(screen.getByLabelText('Back'));
     expect(mockRouter.back).toHaveBeenCalled();

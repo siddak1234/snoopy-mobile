@@ -4,8 +4,9 @@ import { CheckCircle, CircleDashed, HandPalm, MinusCircle, XCircle } from 'phosp
 import type { CatalogEntry } from '@/lib/platform/catalog';
 import type { InboxNotification } from '@/lib/platform/notifications';
 import type { Approval, Run } from '@/lib/platform/runs';
-import { EMPTY, relativeTime } from './format';
-import { statusLabel, statusTone, type StatusPillLabel, type StatusTone } from './status';
+import { EMPTY, dateTime, expiresIn, relativeTime, relativeTimeAgo } from './format';
+import { decides, type WorkspaceRole } from './roles';
+import { runOriginLabel, statusLabel, statusTone, type StatusPillLabel, type StatusTone } from './status';
 
 /**
  * Runs, mapped to the rows the design draws.
@@ -28,6 +29,12 @@ export type RunRowView = {
   name: string;
   meta: string;
   time: string;
+  /**
+   * When the run was made, in full, and the version it ran: the website's line
+   * under a run's name (`formatWhen(createdAt) · v{templateVersion}`), which
+   * Activity draws under the row's own line (Gate 24's parity pass, G17).
+   */
+  stamp: string;
   tone: StatusTone;
   status: StatusPillLabel;
 };
@@ -53,9 +60,11 @@ export function nameFor(run: Run, catalog: Map<string, CatalogEntry>): string {
 export function metaFor(run: Run, approvals?: readonly Approval[]): string {
   // A continuation is part of the run it continues, as the website says beside
   // its name ("after approval"); a held run says how it was decided, because its
-  // status never changes after the decision (FR-15).
+  // status never changes after the decision (FR-15). A continuation held again
+  // says both: the website's tag sits beside the name whatever the status, and
+  // until Gate 24's parity pass a held one lost it here.
   const prefix = run.origin === 'approval-continuation' ? 'After approval · ' : '';
-  if (run.status === 'held' && approvals) return heldDecisionLine(run, approvals);
+  if (run.status === 'held' && approvals) return prefix + heldDecisionLine(run, approvals);
   if (run.status === 'succeeded' && run.resultSummary) return prefix + run.resultSummary;
   if (run.status === 'failed' && run.failureReason) return prefix + run.failureReason;
   return prefix + statusLabel(run.status);
@@ -103,6 +112,7 @@ export function toRunRow(
     name: nameFor(run, catalog),
     meta: metaFor(run, approvals),
     time: relativeTime(run.createdAt, now),
+    stamp: `${dateTime(run.createdAt)} · v${run.templateVersion}`,
     tone: statusTone(run.status),
     status: statusLabel(run.status) as StatusPillLabel,
   };
@@ -246,7 +256,62 @@ export function approvalWorkflowLabel(
  * devices, which is worse than the honest limitation.
  */
 /** An approvals-inbox card, after the three-hop join. */
-export type ApprovalItem = { id: string; workflow: string; title: string; why: string; time: string };
+export type ApprovalItem = {
+  id: string;
+  /** The held run, which "View the run" opens (the website's link beside the decision). */
+  runId: string;
+  workflow: string;
+  title: string;
+  why: string;
+  time: string;
+  /** How long it has left, as the website says it: "in 3h", "shortly". */
+  expires: string;
+  /** Its status, as the website's pill beside it says it; Pending, the one status this list holds. */
+  status: StatusPillLabel | null;
+  /** Whether this person's role is one the approval names: Approve and Reject only then. */
+  canDecide: boolean;
+  /** The roles it names, said to someone whose role it does not. */
+  deciders: readonly WorkspaceRole[];
+};
+
+/**
+ * An approval's status, as its pill says it. Approvals asks for pending ones
+ * only (`status=pending`), so Pending is the one word drawn; a status the list
+ * never holds draws no pill rather than a word the pill has no treatment for.
+ */
+const APPROVAL_PILL: Record<Approval['status'], StatusPillLabel | null> = {
+  pending: 'Pending',
+  approved: null,
+  rejected: null,
+  expired: null,
+};
+
+/**
+ * One approval as its card draws it — the website's row (`snoopy/app/account/
+ * approvals/page.tsx`) in the design's card (Gate 24's parity pass, G19, G20):
+ * its expiry, its status, the run it holds, and whether this person may decide
+ * it, by their role in the approval's workspace (`decides`).
+ */
+export function toApprovalItem(
+  approval: Approval,
+  subscriptions: Map<string, { templateId: string }>,
+  catalog: Map<string, CatalogEntry>,
+  role: WorkspaceRole | null | undefined,
+  now: number = Date.now(),
+): ApprovalItem {
+  return {
+    id: approval.id,
+    runId: approval.runId,
+    workflow: approvalWorkflowLabel(approval, subscriptions, catalog),
+    title: approvalTitle(approval, subscriptions, catalog),
+    why: approval.reason,
+    time: relativeTimeAgo(approval.createdAt, now),
+    expires: expiresIn(approval.expiresAt, now),
+    status: APPROVAL_PILL[approval.status] ?? null,
+    canDecide: decides(role, approval.eligibleRoles),
+    deciders: approval.eligibleRoles,
+  };
+}
 
 export type NotificationItem = {
   id: string;
@@ -258,7 +323,12 @@ export type NotificationItem = {
   title: string;
   desc: string;
   time: string;
-  target: 'run' | 'activity' | 'settings';
+  /**
+   * What opening the row opens: a failed run's page, or Approvals for a held
+   * run — where the website decides it (`/account/approvals`), and where a push
+   * for one opens too (Gate 24's parity pass; Activity until then).
+   */
+  target: 'run' | 'approvals' | 'settings';
 };
 
 /**
@@ -287,7 +357,7 @@ export function inboxRows(
         title: 'Run held for review',
         desc: item.reason ? `${what} · ${item.reason}` : what,
         time,
-        target: 'activity' as const,
+        target: 'approvals' as const,
         runId: item.runId,
       };
     }
@@ -311,11 +381,16 @@ export type TimelineRowView = {
   tone: 'ok' | 'warn' | 'err' | 'pending' | 'skipped';
   title: string;
   sub: string;
+  /** Why a held step held, under its summary, as the website draws it beside it. */
+  reason?: string;
   time?: string;
 };
 
 /** What a declared step the run never reported says once the run has ended. */
 export const STEP_NOT_RUN = 'Not run';
+
+/** What the timeline says while the run has reported no step, in the website's words. */
+export const NO_STEPS_REPORTED = 'No steps reported yet.';
 
 /** How long a run's page waits, while the run has not ended, before it reads the run again. */
 export const RUN_REREAD_MS = 2_000;
@@ -338,6 +413,10 @@ export const RUN_REREAD_MS = 2_000;
  * reported, and the failed run of 2026-09-03 showed its three unreached steps as
  * still to come. A succeeded, failed or cancelled run draws them as not run,
  * with what each would have done beside it.
+ *
+ * **A held step keeps its summary**, its reason beside it (Gate 24's parity
+ * pass, G18): the website draws both, and this drew the reason in place of the
+ * summary.
  */
 export function toTimeline(
   steps: {
@@ -360,7 +439,8 @@ export function toTimeline(
     icon: OUTCOME_ICON[step.outcome],
     tone: step.outcome === 'ok' ? 'ok' : step.outcome === 'held' ? 'warn' : 'err',
     title: titles.get(step.stepId)?.title ?? step.stepId,
-    sub: step.heldReason ?? step.summary,
+    sub: step.summary,
+    ...(step.heldReason ? { reason: step.heldReason } : {}),
     time: clock(step.occurredAt),
   }));
 
@@ -401,5 +481,21 @@ export function toRunStats(
     { value: durationText, label: 'Duration' },
     { value: declaredSteps > 0 ? `${finishedSteps} / ${declaredSteps}` : EMPTY, label: 'Steps done' },
     { value: EMPTY, label: 'Confidence' },
+  ];
+}
+
+/**
+ * The run's facts, as the website's run page lists them under its title
+ * (Gate 24's parity pass, G18): when it started and ended — the design's em
+ * dash for either it has not reached — and how it started, its Trigger, in the
+ * website's words (`runOriginLabel`).
+ */
+export function toRunFacts(
+  run: Pick<Run, 'startedAt' | 'endedAt' | 'origin'>,
+): { label: 'Started' | 'Ended' | 'Trigger'; value: string }[] {
+  return [
+    { label: 'Started', value: dateTime(run.startedAt) },
+    { label: 'Ended', value: dateTime(run.endedAt) },
+    { label: 'Trigger', value: runOriginLabel(run.origin) },
   ];
 }

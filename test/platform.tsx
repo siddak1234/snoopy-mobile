@@ -396,6 +396,7 @@ type Billing = Answer<'GET /v1/workspaces/{workspaceId}/billing'>;
  * those answer. A workspace's billing and connections are named by their path.
  */
 export type RouteOverrides = {
+  '/v1/workspaces'?: Answer<'GET /v1/workspaces'>;
   '/automations'?: Catalog;
   '/subscriptions'?: Subscriptions & Partial<OneSubscription>;
   '/projects'?: Answer<'GET /v1/workspaces/{workspaceId}/projects'>;
@@ -491,6 +492,15 @@ export function routePlatform(platformOperation: jest.Mock, overrides: RouteOver
     }
     if (path.endsWith('/notifications')) return Promise.resolve(inboxPayload());
     if (path.includes('/run-stats')) return Promise.resolve(runStatsPayload());
+    // The workspace collection, where a screen reads the person's role (Approvals,
+    // for an approval's eligible roles — Gate 24's parity pass): the signed-in
+    // session's one workspace, held as `signedInSession` holds it.
+    if (path === '/v1/workspaces') {
+      return Promise.resolve({
+        workspaces: [{ id: TEST_WORKSPACE, name: 'Acme Operations', type: 'organization', role: 'owner' }],
+        activeWorkspaceId: TEST_WORKSPACE,
+      } satisfies Answer<'GET /v1/workspaces'>);
+    }
     if (path.includes('/decision')) {
       return Promise.resolve({
         approval: approvalsPayload().approvals[0],

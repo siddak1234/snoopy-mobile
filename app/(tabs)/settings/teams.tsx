@@ -8,6 +8,7 @@ import { ConfirmDialog } from '@/components/confirm-dialog';
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel } from '@/components/nocturne/section-label';
+import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
 import { ScreenEmpty, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
@@ -31,8 +32,20 @@ import {
 } from '@/lib/platform/projects';
 import { readWorkspaces, type WorkspaceSummary } from '@/lib/platform/workspaces';
 import { administers } from '@/lib/view/roles';
+import type { StatusPillLabel } from '@/lib/view/status';
 
 const ROLE: Record<Project['viewerRole'], string> = { owner: 'Owner', admin: 'Admin', member: 'Member' };
+
+/**
+ * A team's status, as the website's pill beside its kind says it (ProjectList;
+ * Gate 24's parity pass, G21). An archived team is not listed, here or there.
+ */
+const STATUS: Record<Project['status'], StatusPillLabel> = {
+  active: 'Active',
+  paused: 'Paused',
+  draft: 'Draft',
+  archived: 'Archived',
+};
 
 /**
  * Settings → Teams (BUILD-PLAN 24.11.7). A team is a sub-organization with its
@@ -197,6 +210,7 @@ export default function TeamsScreen() {
                 }
                 right={
                   <View style={styles.right}>
+                    <StatusPill label={STATUS[project.status]} />
                     <Text style={[styles.role, { color: palette.neutral[500] }]}>{ROLE[project.viewerRole]}</Text>
                     <CaretRight size={15} color={palette.neutral[500]} />
                   </View>

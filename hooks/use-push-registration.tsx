@@ -205,12 +205,16 @@ const WORKSPACE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
  */
 type PushData = Partial<components['schemas']['PushNotificationData']>;
 
-/** What a tap opens: a failed run's page, or Activity for a held one — nothing for anything else. */
+/**
+ * What a tap opens: a failed run's page, or Approvals for a held one — where it
+ * is decided, the website's page for it, as the inbox's row opens (Gate 24's
+ * parity pass; Activity until then) — nothing for anything else.
+ */
 function targetOf(data: PushData): Href | null {
   if (data.event === 'run-failed' && typeof data.runId === 'string' && RUN_ID.test(data.runId)) {
     return { pathname: '/(tabs)/(home)/run', params: { runId: data.runId } };
   }
-  if (data.event === 'approval-requested') return '/(tabs)/activity';
+  if (data.event === 'approval-requested') return '/(tabs)/activity/approvals';
   return null;
 }
 
@@ -274,7 +278,7 @@ export function usePushRegistration(signedIn: boolean): void {
     };
   }, [signedIn]);
 
-  // A tap opens the inbox's own target: a failed run's page, or Activity for a
+  // A tap opens the inbox's own target: a failed run's page, or Approvals for a
   // held one — in the workspace the push names. While the app runs, and the tap
   // that opened it, once signed in.
   useEffect(() => {

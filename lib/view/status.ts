@@ -46,6 +46,13 @@ export type FlowStatus = 'Live' | 'Paused' | 'Draft';
  * Workflow states plus the three run outcomes it draws. Note `Success`, not
  * `Succeeded`: the pill keeps the design's word and `statusLabel` maps the
  * server's onto it.
+ *
+ * Since Gate 24's parity pass, the pills the website draws where the app drew
+ * none: a team's `Active` (Teams), an approval's `Pending` (Approvals), and the
+ * workspace's billing status while its plan lasts — `Active`, `Trialing`,
+ * `Past due`, `Incomplete` (Billing). Each takes a treatment the pill already
+ * had, the website's tone mapped as the design maps it: success is `ok`,
+ * warning `warn`, and the website's info — its running run — the accent.
  */
 export type StatusPillLabel =
   | FlowStatus
@@ -55,7 +62,12 @@ export type StatusPillLabel =
   | 'Failed'
   | 'Running'
   | 'Queued'
-  | 'Cancelled';
+  | 'Cancelled'
+  | 'Active'
+  | 'Pending'
+  | 'Trialing'
+  | 'Past due'
+  | 'Incomplete';
 
 const STATUS_TONE: Record<string, StatusTone> = {
   // Subscription — what the design calls a workflow's status.
@@ -123,7 +135,10 @@ export function statusLabel(status: string | null | undefined): string {
 }
 
 /**
- * Why a run exists, in the design's words.
+ * Why a run exists — its Trigger on the run page, in the website's words
+ * (`ORIGIN_LABEL`, `snoopy/app/account/runs/[runId]/page.tsx`; Gate 24's parity
+ * pass, where this said "Run manually", "Continued after approval" and
+ * "Retried" and no screen drew it).
  *
  * The prototype showed a "retried" run; the platform expresses that as a
  * continuation whose origin is `retry-continuation`, linked to its parent by
@@ -136,11 +151,11 @@ export function runOriginLabel(origin: string | null | undefined): string {
     case 'trigger':
       return 'Triggered';
     case 'manual':
-      return 'Run manually';
+      return 'Manual';
     case 'approval-continuation':
-      return 'Continued after approval';
+      return 'After approval';
     case 'retry-continuation':
-      return 'Retried';
+      return 'After retry';
     default:
       return statusLabel(origin);
   }

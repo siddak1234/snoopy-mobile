@@ -55,7 +55,8 @@ const NOTIFICATION_ICON = {
  * stack: a run opened from the Settings copy opens in Settings too, so Back
  * returns to Settings rather than switching to Home (24.12, the owner's
  * default: "Settings › Notifications shows the inbox itself"). A held run
- * opens Activity from either, as it always has.
+ * opens Approvals from either, where it is decided — the website's page for it
+ * — as a push for one does (Gate 24's parity pass; Activity until then).
  */
 export function Inbox({ runPath }: { runPath: InboxRunPath }) {
   const { palette } = useTheme();
@@ -198,8 +199,8 @@ export function Inbox({ runPath }: { runPath: InboxRunPath }) {
         // `runVariant` is gone with the fixtures.
         params: item.runId ? { runId: item.runId } : {},
       });
-    } else if (item.target === 'activity') {
-      router.push('/(tabs)/activity');
+    } else if (item.target === 'approvals') {
+      router.push('/(tabs)/activity/approvals');
     } else {
       router.push('/(tabs)/settings');
     }

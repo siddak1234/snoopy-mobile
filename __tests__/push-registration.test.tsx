@@ -432,7 +432,7 @@ describe('Device push: the signed-in tree (build 11, D8)', () => {
     expect(puts()).toHaveLength(2);
   });
 
-  it('a tap while the app runs opens what it names: a failed run’s page, or Activity for a held one', async () => {
+  it('a tap while the app runs opens what it names: a failed run’s page, or Approvals for a held one (Gate 24’s parity pass; Activity until then)', async () => {
     await renderWithProviders(<TabLayout />, signedInSession);
     await waitFor(() => expect(Notifications.addNotificationResponseReceivedListener).toHaveBeenCalled());
     const opened = Notifications.addNotificationResponseReceivedListener.mock.calls[0][0];
@@ -441,7 +441,7 @@ describe('Device push: the signed-in tree (build 11, D8)', () => {
     expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/(tabs)/(home)/run', params: { runId: 'run-7' } });
 
     await act(async () => opened(tap('n-2', { event: 'approval-requested', runId: 'run-8', approvalId: 'apr-8' })));
-    expect(mockRouter.push).toHaveBeenLastCalledWith('/(tabs)/activity');
+    expect(mockRouter.push).toHaveBeenLastCalledWith('/(tabs)/activity/approvals');
 
     // One tap opens one screen; a run id that is not an id opens nothing.
     await act(async () => opened(tap('n-2', { event: 'approval-requested', runId: 'run-8', approvalId: 'apr-8' })));
@@ -452,7 +452,7 @@ describe('Device push: the signed-in tree (build 11, D8)', () => {
   it('the tap that opened the app opens its screen once signed in, and not before', async () => {
     const cold = [
       [tap('n-cold-1', { event: 'run-failed', runId: 'run-9' }), { pathname: '/(tabs)/(home)/run', params: { runId: 'run-9' } }],
-      [tap('n-cold-2', { event: 'approval-requested', runId: 'run-10', approvalId: 'apr-10' }), '/(tabs)/activity'],
+      [tap('n-cold-2', { event: 'approval-requested', runId: 'run-10', approvalId: 'apr-10' }), '/(tabs)/activity/approvals'],
     ] as const;
     for (const [response, target] of cold) {
       resetPushForTests();
@@ -634,13 +634,13 @@ describe('Device push: a tap opens in its own workspace (build 11)', () => {
     expect(mockRouter.push).toHaveBeenCalledTimes(1);
   });
 
-  it('switches the same way for a held run, then opens Activity', async () => {
+  it('switches the same way for a held run, then opens Approvals', async () => {
     const { opened } = await signedInTree();
 
     await act(async () =>
       opened(tap('n-ws-2', { event: 'approval-requested', workspaceId: OTHER, runId: 'run-8', approvalId: 'apr-8' })),
     );
-    await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity'));
+    await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity/approvals'));
 
     expect(switches).toEqual([{ workspaceId: OTHER, key: 'test-intent' }]);
     expect(events).toEqual(['switch', 'reload', 'open']);

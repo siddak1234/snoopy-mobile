@@ -3,7 +3,9 @@ import {
   calendarDate,
   clockTime,
   count,
+  dateTime,
   duration,
+  expiresIn,
   money,
   relativeTime,
   relativeTimeAgo,
@@ -89,14 +91,14 @@ describe('run origin — not a status', () => {
     // The prototype's RunVariant included 'retried' alongside held/success/
     // failed. It is `origin: retry-continuation`; conflating the two is the
     // redefinition Gate 8 forbids.
-    expect(runOriginLabel('retry-continuation')).toBe('Retried');
+    expect(runOriginLabel('retry-continuation')).toBe('After retry');
     expect(statusTone('retried')).toBe('neutral');
   });
 
-  it('labels the other origins', () => {
+  it("labels the other origins, in the website's words for a run's Trigger (Gate 24's parity pass)", () => {
     expect(runOriginLabel('trigger')).toBe('Triggered');
-    expect(runOriginLabel('manual')).toBe('Run manually');
-    expect(runOriginLabel('approval-continuation')).toBe('Continued after approval');
+    expect(runOriginLabel('manual')).toBe('Manual');
+    expect(runOriginLabel('approval-continuation')).toBe('After approval');
   });
 
   it('knows which origins continue an earlier run', () => {
@@ -172,6 +174,37 @@ describe('clockTime', () => {
 
   it('renders the empty mark when absent', () => {
     expect(clockTime(undefined)).toBe('—');
+  });
+});
+
+describe("dateTime — a moment as the website's runs say one (Gate 24's parity pass)", () => {
+  it("says the day, then the time on a 12-hour clock, in the device's zone", () => {
+    expect(dateTime(new Date(2026, 9, 7, 21, 5).toISOString())).toBe('Oct 7, 2026, 9:05 PM');
+    expect(dateTime(new Date(2026, 0, 2, 0, 0).toISOString())).toBe('Jan 2, 2026, 12:00 AM');
+    expect(dateTime(new Date(2026, 6, 4, 12, 30).toISOString())).toBe('Jul 4, 2026, 12:30 PM');
+    expect(dateTime(new Date(2026, 6, 4, 9, 7).toISOString())).toBe('Jul 4, 2026, 9:07 AM');
+  });
+
+  it('renders the empty mark when absent or not a date', () => {
+    expect(dateTime(undefined)).toBe(EMPTY);
+    expect(dateTime('not-a-date')).toBe(EMPTY);
+  });
+});
+
+describe("expiresIn — how long an approval has left, in the website's words (Gate 24's parity pass)", () => {
+  const now = Date.parse('2026-10-07T12:00:00Z');
+  it('rounds to hours under a day and to days after, and says shortly once it is due', () => {
+    expect(expiresIn('2026-10-07T15:10:00Z', now)).toBe('in 3h');
+    expect(expiresIn('2026-10-08T11:00:00Z', now)).toBe('in 23h');
+    expect(expiresIn('2026-10-08T11:40:00Z', now)).toBe('in 1d');
+    expect(expiresIn('2026-10-09T13:00:00Z', now)).toBe('in 2d');
+    expect(expiresIn('2026-10-07T12:20:00Z', now)).toBe('shortly');
+    expect(expiresIn('2026-10-07T11:00:00Z', now)).toBe('shortly');
+  });
+
+  it('renders the empty mark when absent or not a date', () => {
+    expect(expiresIn(undefined, now)).toBe(EMPTY);
+    expect(expiresIn('not-a-date', now)).toBe(EMPTY);
   });
 });
 

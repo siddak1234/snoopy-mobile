@@ -161,6 +161,11 @@ describe("Approvals: Approve and Reject post that approval's decision (DESIGN-CO
     fake.always('GET /v1/workspaces/{workspaceId}/approvals', approvalsPayload());
     fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', subscriptionsPayload());
     fake.always('GET /v1/workspaces/{workspaceId}/automations', flowCatalogPayload());
+    // The person's role, which the approvals name as able to decide (Gate 24's parity pass, G20).
+    fake.always('GET /v1/workspaces', {
+      workspaces: [{ id: TEST_WORKSPACE, name: 'Acme Operations', type: 'organization', role: 'owner' }],
+      activeWorkspaceId: TEST_WORKSPACE,
+    });
     return fake;
   }
 

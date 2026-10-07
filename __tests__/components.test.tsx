@@ -196,6 +196,20 @@ describe('StatusPill', () => {
     const { getByText } = await renderWithProviders(<StatusPill label={label} />);
     expect(textColor(getByText(label))).toBe(color);
   });
+
+  // The website's pills the app drew none of until Gate 24's parity pass: each in
+  // the treatment its website tone maps to — success Live's, warning Paused's,
+  // and info the accent, as a running run's.
+  it.each([
+    ['Active', status.ok],
+    ['Pending', nocturneDark.accentRamp[300]],
+    ['Trialing', nocturneDark.accentRamp[300]],
+    ['Past due', status.warnText],
+    ['Incomplete', status.warnText],
+  ] as const)("tones the website's %s as its tone maps here", async (label, color) => {
+    const { getByText } = await renderWithProviders(<StatusPill label={label} />);
+    expect(textColor(getByText(label))).toBe(color);
+  });
 });
 
 describe('FilterChip', () => {

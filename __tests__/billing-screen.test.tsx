@@ -68,7 +68,8 @@ describe('Billing (24.6.1, ADR-0032 option B; the cards since 24.12)', () => {
     const android = on('android');
     route('owner', { ...ON_PLUS, status: 'past_due' });
     await renderWithProviders(<BillingScreen />, sessionAs('owner'));
-    expect(await screen.findByText('Status: past due')).toBeTruthy();
+    // The status is the website's pill (Gate 24's parity pass, G25; "Status: past due" until then).
+    expect(await screen.findByText('Past due')).toBeTruthy();
     expect(screen.getAllByTestId(/^plan-/u).map((element) => element.props.testID)).toEqual([
       'plan-free',
       'plan-team',
@@ -80,7 +81,7 @@ describe('Billing (24.6.1, ADR-0032 option B; the cards since 24.12)', () => {
     expect(card('team').getByText('$5.00 per month')).toBeTruthy();
     expect(card('pro').getByText('$10.00 per month')).toBeTruthy();
     expect(card('team').getByText('Enrolled')).toBeTruthy();
-    expect(card('team').getByText('Status: past due')).toBeTruthy();
+    expect(card('team').getByText('Past due')).toBeTruthy();
     expect(screen.getAllByText('Enrolled')).toHaveLength(1);
     // No capability lines: name and price only.
     expect(screen.queryByText(/^Flows /u)).toBeNull();
@@ -153,6 +154,58 @@ describe('Billing (24.6.1, ADR-0032 option B; the cards since 24.12)', () => {
     await waitFor(() => expect(fake.to(PORTAL)).toHaveLength(3));
     expect(fake.to(CHECKOUT)).toHaveLength(0);
     ios.restore();
+  });
+
+  it("says an active plan's status too, as the website's pill does — every status while the plan lasts (Gate 24's parity pass, G25)", async () => {
+    const android = on('android');
+    route('owner', ON_PLUS);
+    const active = await renderWithProviders(<BillingScreen />, sessionAs('owner'));
+    expect(await screen.findByText('Active')).toBeTruthy();
+    expect(card('team').getByText('Active')).toBeTruthy();
+    // Until G25 an active plan said no status, and any other said "Status: …".
+    expect(screen.queryByText(/^Status: /u)).toBeNull();
+    await active.unmount();
+
+    route('owner', { ...ON_PLUS, status: 'trialing' });
+    await renderWithProviders(<BillingScreen />, sessionAs('owner'));
+    expect(await screen.findByText('Trialing')).toBeTruthy();
+    expect(card('team').getByText('Trialing')).toBeTruthy();
+    android.restore();
+  });
+
+  it('unpaid: Free is enrolled and has Manage billing, which opens the portal, never a checkout; cancelled, nothing to manage; Android, no control (G25)', async () => {
+    const ios = on('ios');
+    const fake = route('owner', { ...ON_PLUS, status: 'unpaid' });
+    fake.always(PORTAL, { url: 'https://billing.stripe.com/p/session', expiresAt: '2026-09-30T00:00:00Z' });
+    const unpaid = await renderWithProviders(<BillingScreen />, sessionAs('owner'));
+    expect(await screen.findByText('Manage billing')).toBeTruthy();
+    // Access has ended, so Free is the enrolled card — the website's Free card, with Manage billing.
+    expect(card('free').getByText('Enrolled')).toBeTruthy();
+    expect(card('free').getByText('Manage billing')).toBeTruthy();
+    expect(card('team').queryByText('Enrolled')).toBeNull();
+    // No pill for a status that ended access, and no line about moving to Free.
+    expect(screen.queryByText(/^Unpaid$/iu)).toBeNull();
+    expect(screen.queryByText(/^To move to Free/u)).toBeNull();
+    await fireEvent.press(card('free').getByText('Manage billing'));
+    await waitFor(() => expect(openURL).toHaveBeenCalledWith('https://billing.stripe.com/p/session'));
+    expect(fake.to(PORTAL)).toHaveLength(1);
+    expect(fake.to(CHECKOUT)).toHaveLength(0);
+    await unpaid.unmount();
+
+    route('owner', { ...ON_PLUS, status: 'canceled' });
+    const cancelled = await renderWithProviders(<BillingScreen />, sessionAs('owner'));
+    expect(await screen.findByText('Enrolled')).toBeTruthy();
+    expect(card('free').getByText('Enrolled')).toBeTruthy();
+    expect(screen.queryByText('Manage billing')).toBeNull();
+    await cancelled.unmount();
+    ios.restore();
+
+    const android = on('android');
+    route('owner', { ...ON_PLUS, status: 'unpaid' });
+    await renderWithProviders(<BillingScreen />, sessionAs('owner'));
+    expect(await screen.findByText('Enrolled')).toBeTruthy();
+    expect(screen.queryByText('Manage billing')).toBeNull();
+    android.restore();
   });
 
   it('on iOS, a checkout refused because the workspace already has a plan (409 plan_exists) opens Manage billing', async () => {

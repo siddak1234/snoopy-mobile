@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
+import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { em, fonts, layout, status, typeScale } from '@/constants/theme';
@@ -27,7 +28,7 @@ import {
 } from '@/lib/platform/billing';
 import { PlatformError } from '@/lib/platform/problem';
 import { readWorkspaces } from '@/lib/platform/workspaces';
-import { FREE_PLAN_ID, accessEnded, enrolledPlanId } from '@/lib/view/billing';
+import { FREE_PLAN_ID, accessEnded, billingStatusPill, enrolledPlanId } from '@/lib/view/billing';
 import { formatPlanPrice } from '@/lib/view/plan-price';
 import { administers } from '@/lib/view/roles';
 
@@ -104,9 +105,10 @@ async function checkoutOrPortal(workspaceId: string, planId: string): Promise<Ho
  * owner's decisions 7 and 8 of 2026-10-02, 24.12; compact since build 11, D2 —
  * "the components dont need to be that big") — the plans as cards at their
  * natural height, Free, Plus and Pro, each its name and price; the
- * workspace's own says "Enrolled", and a paid one adds its status. Pro is
- * drawn by the app until the platform lists it, and that card does nothing.
- * On iOS a listed card is the action:
+ * workspace's own says "Enrolled", and a paid one adds its status, the
+ * website's pill, whatever it is — `active` too (Gate 24's parity pass, G25).
+ * Pro is drawn by the app until the platform lists it, and that card does
+ * nothing. On iOS a listed card is the action:
  * not paying, a paid plan's card opens the hosted checkout for that plan;
  * paying, any other card opens Manage billing (the hosted portal), since a
  * second checkout would start a second subscription. Both open in the SYSTEM
@@ -235,6 +237,7 @@ export default function BillingScreen() {
   // Free is not a provider price, so the portal cannot list it: moving to Free is
   // cancelling the paid plan there (the owner's build 13 decision 7c, feedback #12).
   const enrolledName = cards.find((card) => card.planId === enrolled && card.planId !== FREE_PLAN_ID)?.name;
+  const statusPill = state ? billingStatusPill(state.status) : null;
 
   const pressFor = (card: PlanCard): (() => void) | undefined => {
     // The drawn Pro is inert everywhere: no checkout (a 404), no portal (no Pro there).
@@ -280,8 +283,13 @@ export default function BillingScreen() {
                     <Text style={[styles.text, muted]}>Price shown at checkout</Text>
                   ) : null}
                   {isEnrolled ? <Text style={[styles.small, { color: status.ok }]}>Enrolled</Text> : null}
-                  {paidPlan && state?.status && state.status !== 'active' ? (
-                    <Text style={[styles.text, muted]}>Status: {state.status.replace('_', ' ')}</Text>
+                  {/* The status, every one while the plan lasts, as the website's pill says
+                      it (Gate 24's parity pass, G25; "Status: past due" until then, and
+                      nothing for an active plan). */}
+                  {paidPlan && statusPill ? (
+                    <View style={styles.pillRow}>
+                      <StatusPill label={statusPill} />
+                    </View>
                   ) : null}
                   {/* A cancelled plan says where the workspace goes after it (the owner's
                       build 14 feedback #11: "it should be your membership will go to free"). */}
@@ -290,7 +298,12 @@ export default function BillingScreen() {
                       {state?.cancelAtPeriodEnd ? `Ends ${periodEnd}, then Free` : `Renews ${periodEnd}`}
                     </Text>
                   ) : null}
-                  {paidPlan && acts && paying ? (
+                  {/* On the enrolled card whenever the provider holds a subscription — the
+                      Free card too while a plan is unpaid: access has ended, and the
+                      subscription is settled in the portal. The website's Manage billing
+                      (Gate 24's parity pass, G25; until then a paid card's only, so an
+                      unpaid plan had no labelled way there). */}
+                  {isEnrolled && acts && paying ? (
                     <PillButton
                       label={opening === 'portal' ? 'Opening…' : 'Manage billing'}
                       variant="secondary"
@@ -331,6 +344,8 @@ const styles = StyleSheet.create({
   planName: { fontFamily: fonts.medium, fontSize: typeScale.lead.fontSize },
   planPrice: { fontFamily: fonts.medium, fontSize: typeScale.title.fontSize, letterSpacing: em(-0.01, typeScale.title.fontSize) },
   manage: { marginTop: 4 },
+  // The pill at its own width, at the card's start, not stretched across it.
+  pillRow: { flexDirection: 'row' },
   text: { fontFamily: fonts.regular, ...typeScale.body },
   small: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
 });

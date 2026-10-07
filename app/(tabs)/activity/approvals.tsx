@@ -5,6 +5,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BackCircle } from '@/components/nocturne/back-circle';
+import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
@@ -24,23 +25,33 @@ import { readCatalog } from '@/lib/platform/catalog';
 import { decideApproval } from '@/lib/platform/automations';
 import { newIdempotencyKey } from '@/lib/platform/client';
 import { readApprovals, readSubscriptions } from '@/lib/platform/runs';
-import { relativeTimeAgo } from '@/lib/view/format';
-import { approvalTitle, approvalWorkflowLabel, catalogIndex, subscriptionIndex } from '@/lib/view/runs';
+import { readWorkspaces } from '@/lib/platform/workspaces';
+import { EMPTY } from '@/lib/view/format';
+import { decidersLine } from '@/lib/view/roles';
+import { catalogIndex, subscriptionIndex, toApprovalItem } from '@/lib/view/runs';
 
 type Decision = 'approved' | 'rejected';
 
+/**
+ * One approval, as the website's row says it (Gate 24's parity pass, G19, G20):
+ * the design's card, with the approval's status and its expiry, Approve and
+ * Reject only for a role the approval names — anyone else is told which roles
+ * do — and the run it holds, a tap away.
+ */
 function ApprovalCard({
   item,
   decision,
   busy,
   error,
   onDecide,
+  onView,
 }: {
   item: ApprovalItem;
   decision: Decision | undefined;
   busy: boolean;
   error?: string;
   onDecide: (d: Decision) => void;
+  onView: () => void;
 }) {
   const { palette } = useTheme();
   return (
@@ -49,15 +60,24 @@ function ApprovalCard({
         <Text style={[styles.kicker, { color: palette.accentRamp[300] }]}>{item.workflow}</Text>
         <Text style={[styles.time, { color: palette.neutral[500] }]}>{item.time}</Text>
       </View>
-      <Text style={[styles.title, { color: palette.text }]}>{item.title}</Text>
+      <View style={styles.titleRow}>
+        <Text style={[styles.title, { color: palette.text }]}>{item.title}</Text>
+        {item.status ? <StatusPill label={item.status} /> : null}
+      </View>
       <View style={styles.callout}>
         <Warning size={16} color={status.warnText} style={styles.calloutIcon} />
         <Text style={styles.calloutText}>{item.why}</Text>
       </View>
+      {item.expires !== EMPTY ? (
+        <Text style={[styles.note, { color: palette.neutral[400] }]}>Expires {item.expires}</Text>
+      ) : null}
       {decision ? (
         <Text style={[styles.doneNote, { color: palette.accentRamp[300] }]}>
           {approvalDoneText[decision]}
         </Text>
+      ) : !item.canDecide ? (
+        // The server would refuse it (403): no button, and who may decide.
+        <Text style={[styles.note, { color: palette.neutral[400] }]}>{decidersLine(item.deciders)}</Text>
       ) : (
         <View style={styles.actions}>
           <Pressable
@@ -83,6 +103,13 @@ function ApprovalCard({
         </View>
       )}
       {error ? <Text style={[styles.doneNote, { color: status.err }]}>{error}</Text> : null}
+      <Pressable
+        testID={`view-run-${item.id}`}
+        accessibilityRole="link"
+        onPress={() => onView()}
+        style={({ pressed }) => [styles.viewRun, pressed && { opacity: 0.7 }]}>
+        <Text style={[styles.viewRunLabel, { color: palette.accentRamp[300] }]}>View the run</Text>
+      </Pressable>
     </SurfaceCard>
   );
 }
@@ -110,22 +137,26 @@ export default function ApprovalsScreen() {
    * the step whose id matches. `reason` is always present and is the line a
    * person actually decides on, so a missing hop degrades the headline and never
    * blanks the card.
+   *
+   * And the workspace collection, for this person's role there — what an
+   * approval's `eligibleRoles` is compared with, as the website's Approvals
+   * reads it (`roleInWorkspace`, the collection; Gate 24's parity pass, G20).
+   * Not the session's own list: that is a bounded first page, and the contract
+   * says not to infer from it.
    */
   const inbox = useWorkspaceResource(async (workspaceId) => {
-    const [pendingApprovals, subs, catalog] = await Promise.all([
+    const [pendingApprovals, subs, catalog, { workspaces }] = await Promise.all([
       readApprovals(workspaceId, 'pending'),
       readSubscriptions(workspaceId),
       readCatalog(workspaceId),
+      readWorkspaces(),
     ]);
     const subIndex = subscriptionIndex(subs.subscriptions);
     const catIndex = catalogIndex(catalog.automations);
-    return pendingApprovals.approvals.map<ApprovalItem>((a) => ({
-      id: a.id,
-      workflow: approvalWorkflowLabel(a, subIndex, catIndex),
-      title: approvalTitle(a, subIndex, catIndex),
-      why: a.reason,
-      time: relativeTimeAgo(a.createdAt),
-    }));
+    const role = workspaces.find((workspace) => workspace.id === workspaceId)?.role;
+    return pendingApprovals.approvals.map<ApprovalItem>((approval) =>
+      toApprovalItem(approval, subIndex, catIndex, role),
+    );
   });
 
   const items = inbox.status === 'ready' ? inbox.data : [];
@@ -236,6 +267,8 @@ export default function ApprovalsScreen() {
           busy={busy[item.id] ?? false}
           error={errors[item.id]}
           onDecide={(decision) => submitDecision(item.id, decision)}
+          // The held run's page, where Activity's rows open a run (24.4.4).
+          onView={() => router.push({ pathname: '/(tabs)/(home)/run', params: { runId: item.runId } })}
         />
       ))}
     </ScrollView>
@@ -309,9 +342,30 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     fontSize: typeScale.caption.fontSize,
   },
+  // The title, and the approval's status pill at its right, as the website's row puts it.
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
   title: {
+    flex: 1,
     fontFamily: fonts.medium,
     fontSize: typeScale.lead.fontSize,
+  },
+  note: {
+    fontFamily: fonts.regular,
+    fontSize: typeScale.small.fontSize,
+    paddingHorizontal: 2,
+  },
+  viewRun: {
+    alignSelf: 'flex-start',
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+  },
+  viewRunLabel: {
+    fontFamily: fonts.medium,
+    fontSize: typeScale.body.fontSize,
   },
   callout: {
     flexDirection: 'row',

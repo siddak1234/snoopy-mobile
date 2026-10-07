@@ -108,6 +108,36 @@ describe('Linked accounts (24.6.2, on 24.2.1)', () => {
 });
 
 describe('Deleting the account (24.6.2, ADR-0028)', () => {
+  /**
+   * The confirmation's words, written here and not read from the constant the
+   * screen draws — so a change to them fails this test, as no other here can
+   * (the others compare the screen with `DELETE_ACCOUNT_BODY` itself). The
+   * website's `test/account-deletion-contract.test.mjs` "the confirmation says
+   * what the route removes, and promises no more", sentence for sentence (Gate
+   * 24's guard line).
+   */
+  it('the confirmation says what the route removes, and promises no more — in its own words', async () => {
+    route();
+    await renderWithProviders(<AccountScreen />, session());
+    await fireEvent.press(await screen.findByText('Delete Account'));
+    const textOf = (node: ReturnType<typeof screen.getByTestId>): string =>
+      node.children.map((child) => (typeof child === 'string' ? child : textOf(child))).join(' ');
+    const prose = textOf(await screen.findByTestId('delete-account-dialog')).replace(/\s+/gu, ' ');
+    for (const sentence of [
+      'every organization you are the only owner of',
+      'including organizations other people belong to',
+      'who lose them and everything in them',
+      'Organizations that have another owner are kept',
+      'Workspaces are removed one at a time',
+      'your account stays and you can try again',
+      'anything already removed stays removed',
+      'This cannot be undone',
+    ]) {
+      expect(prose).toContain(sentence);
+    }
+    expect(prose).not.toMatch(/all (your )?data|everything you own|every workspace you belong to/iu);
+  });
+
   it('deleted: lets go of the session on this device and shows the signed-out screen', async () => {
     const fake = route();
     fake.always('DELETE /v1/account', { deleted: true, workspaces: [] });
