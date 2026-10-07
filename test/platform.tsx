@@ -192,6 +192,8 @@ export function planSubscriptionsPayload(): Subscriptions & OneSubscription {
     status: 'live',
     config: {},
     unmetConnections: [],
+    // The version it pins is the catalog's v1, so its settings are that entry's (backend §12.1 #185).
+    setup: catalogPayload().automations[index]!.setup,
     // Workspace-wide, made by no one the fixture names (backend 18.6.1).
     projectId: null,
     createdByUserId: null,
@@ -219,6 +221,8 @@ export function subscriptionsPayload(): Subscriptions {
             : 'draft',
       config: {},
       unmetConnections: flowDefs[key].status === 'Draft' ? ['hubspot'] : [],
+      // Pinned at the flow catalog's v1, whose settings every entry shares (backend §12.1 #185).
+      setup: catalogPayload().automations[0]!.setup,
       projectId: null,
       createdByUserId: null,
       createdAt: '2026-08-17T09:00:00Z',

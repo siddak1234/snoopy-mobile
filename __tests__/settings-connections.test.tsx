@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 
 import ConnectionsScreen from '@/app/(tabs)/settings/connections';
 import { resetSnapshot } from '@/lib/platform/snapshot';
@@ -90,8 +90,8 @@ describe('an OAuth connect that comes back cancelled', () => {
     await waitFor(() =>
       expect(reads.filter((path) => path.endsWith('/connections')).length).toBe(readsBefore + 1),
     );
-    // The truth the re-read established, rendered from the published field.
-    expect(await screen.findByText('Connected · used by 1 flow')).toBeTruthy();
+    // The truth the re-read established, rendered from the published fields.
+    expect(await screen.findByText('alex@acme.co · Connected · used by 1 live flow')).toBeTruthy();
     expect(screen.queryByText('Not connected')).toBeNull();
   });
 
@@ -134,7 +134,7 @@ describe('who may change a connection (the Edge refuses a member 403)', () => {
     routeReads([[CONNECTED_GMAIL]]);
     await renderWithProviders(<ConnectionsScreen />, sessionAs('member'));
     await fireEvent.press(await screen.findByText('Gmail'));
-    expect(screen.queryByText('Disconnect Gmail')).toBeNull();
+    expect(screen.queryByTestId('connection-dialog')).toBeNull();
     expect(screen.queryByText('Connect')).toBeNull();
     expect(
       screen.getByText('Only an owner or admin of this workspace can connect or disconnect an account.'),
@@ -143,15 +143,15 @@ describe('who may change a connection (the Edge refuses a member 403)', () => {
 });
 
 describe('the connection dialog’s actions (feedback #2)', () => {
-  it('stacks the three actions of a connected, replaceable connection, and keeps two in a row', async () => {
+  it('stacks the actions of a connected, replaceable connection — Reconnect, Replace account, Disconnect — and keeps two in a row', async () => {
     // The first TestFlight build drew Cancel and Replace account on one line
     // and Disconnect alone on a second, right-aligned — a wrapped row read as
-    // broken. Three actions stack at full width; two still share a row.
+    // broken. Three actions or more stack at full width; two still share a row.
     const { StyleSheet } = jest.requireActual('react-native');
     routeReads([[CONNECTED_GMAIL], [CONNECTED_GMAIL]]);
     await renderWithProviders(<ConnectionsScreen />, sessionAs('owner'));
     await fireEvent.press(await screen.findByText('Gmail'));
-    expect(await screen.findByText('Disconnect Gmail')).toBeTruthy();
+    expect(within(await screen.findByTestId('connection-dialog')).getByText('Reconnect')).toBeTruthy();
     expect(StyleSheet.flatten(screen.getByTestId('connection-dialog-actions').props.style).flexDirection).toBe('column');
 
     await fireEvent.press(screen.getByText('Replace account'));
@@ -163,7 +163,7 @@ describe('the connection dialog’s actions (feedback #2)', () => {
 describe('replacing a connection’s account', () => {
   async function openReplace() {
     await fireEvent.press(await screen.findByText('Gmail'));
-    expect(await screen.findByText('Disconnect Gmail')).toBeTruthy();
+    expect(within(await screen.findByTestId('connection-dialog')).getByText('Disconnect')).toBeTruthy();
     await fireEvent.press(screen.getByText('Replace account'));
     expect(await screen.findByText('Replace alex@acme.co?')).toBeTruthy();
     const buttons = screen.getAllByText('Replace account');

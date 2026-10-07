@@ -12,9 +12,10 @@ export type SetupField = components['schemas']['AutomationSetupField'];
 /**
  * What a row draws of a manifest field. A setup field is one; so is a manual
  * run's input other than a file (ADR-0030), which shares the `text`, `money`
- * and `toggle` vocabulary — so the Run form draws the same rows (24.4.1).
+ * and `toggle` vocabulary — so the Run form draws the same rows (24.4.1). A
+ * run's input has no `notifies`: only a setting switches a notification.
  */
-export type FieldRowSpec = Pick<SetupField, 'key' | 'title' | 'description' | 'required' | 'control'>;
+export type FieldRowSpec = Pick<SetupField, 'key' | 'title' | 'description' | 'required' | 'control' | 'notifies'>;
 
 /**
  * One configuration row, generated from `manifest.setup[]`.
@@ -33,7 +34,7 @@ export type FieldRowSpec = Pick<SetupField, 'key' | 'title' | 'description' | 'r
  * are generated from that array, not hard-coded."
  */
 
-/** Section → the design's numbered heading, in the design's own order. */
+/** The four sections the contract closes `setup.section` at. */
 export const SECTION_ORDER = ['connections', 'source', 'rules', 'notifications'] as const;
 export type SetupSection = (typeof SECTION_ORDER)[number];
 
@@ -83,12 +84,47 @@ const CONTROL_ICON = {
   email: EnvelopeSimple,
 } as const;
 
-/** Group fields by section, preserving manifest order within each. */
+/**
+ * Group fields under their sections in the manifest's own order, as the
+ * website groups them (`SetupFields`): `setup` is published in manifest order,
+ * and the contract declares each field's section but no order of sections, so
+ * a group never moves a field ahead of an earlier one — the fields that follow
+ * one another in a section are its group, and a section the manifest comes back
+ * to is a group again. Until Gate 24's parity pass the design's fixed order
+ * (connections, source, rules, notifications) moved them.
+ */
 export function bySection(fields: SetupField[]): { section: SetupSection; fields: SetupField[] }[] {
-  return SECTION_ORDER.map((section) => ({
-    section,
-    fields: fields.filter((f) => f.section === section),
-  })).filter((group) => group.fields.length > 0);
+  const groups: { section: SetupSection; fields: SetupField[] }[] = [];
+  for (const field of fields) {
+    const last = groups[groups.length - 1];
+    if (last?.section === field.section) last.fields.push(field);
+    else groups.push({ section: field.section, fields: [field] });
+  }
+  return groups;
+}
+
+/**
+ * What a notifications toggle switches, in the website's words: the manifest
+ * allows `notifies` only on a toggle in the `notifications` section. Keyed by
+ * the generated enum, so a value the contract adds is a typecheck failure at
+ * the next regeneration rather than a wire token on screen.
+ */
+const NOTIFIES: Record<NonNullable<SetupField['notifies']>, string> = {
+  'approval-requested': 'an approval is requested',
+  'approval-expiring': 'an approval is about to expire',
+  'run-failed': 'a run fails',
+  'run-succeeded': 'a run succeeds',
+};
+
+/**
+ * The line under a field that switches a notification, or null for one that
+ * does not — and for a value a newer platform sends that this build has no
+ * words for, which is never drawn as its token.
+ */
+export function notifiesLine(field: Pick<FieldRowSpec, 'notifies'>): string | null {
+  const notifies = field.notifies;
+  if (!notifies || !Object.prototype.hasOwnProperty.call(NOTIFIES, notifies)) return null;
+  return `Controls the notification sent when ${NOTIFIES[notifies]}.`;
 }
 
 /** Mirrors the catalog service's required-config predicate exactly. */
@@ -149,6 +185,7 @@ export function SetupFieldRow({
   const { palette } = useTheme();
   const Glyph = CONTROL_ICON[field.control];
   const isMoney = field.control === 'money';
+  const notifies = notifiesLine(field);
   const externalValue = isMoney
     ? (() => {
         const cents = moneyCents(value);
@@ -209,6 +246,7 @@ export function SetupFieldRow({
         ) : null}
       </View>
       <Text style={[styles.rowSub, { color: palette.neutral[400] }]}>{field.description}</Text>
+      {notifies ? <Text style={[styles.rowSub, { color: palette.neutral[400] }]}>{notifies}</Text> : null}
       {field.control === 'toggle' ? null : (
         <View
           style={[

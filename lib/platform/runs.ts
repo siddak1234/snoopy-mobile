@@ -1,6 +1,6 @@
 import type { components } from '@/lib/generated/platform-contracts/automations';
 import { platformOperation } from './client';
-import { shared } from './snapshot';
+import { invalidateShared, shared } from './snapshot';
 
 /**
  * Run reads, including the aggregates Round 6.6 published.
@@ -157,6 +157,22 @@ export function readSubscriptions(
       }),
     ),
   );
+}
+
+/**
+ * The workspace's subscriptions as the platform holds them now, never an answer
+ * the snapshot kept: for a check that must not act on a list up to 15 s old —
+ * Activate's, that the workspace does not hold the flow already (the owner's
+ * build 12 item 9; the website's `subscribeToAutomation` reads the list at the
+ * moment of the add). The answer becomes the snapshot's, so every screen then
+ * reads what this one saw; the archived list goes with it, as it does with
+ * every re-read of the list.
+ */
+export function readSubscriptionsNow(
+  workspaceId: string,
+): Promise<{ subscriptions: Subscription[]; flowAllowance?: FlowAllowance }> {
+  invalidateShared(workspaceId, ['subscriptions']);
+  return readSubscriptions(workspaceId);
 }
 
 /**

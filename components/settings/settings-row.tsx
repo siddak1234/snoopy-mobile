@@ -24,12 +24,17 @@ export type SettingsRowSize = 'regular' | 'roomy';
  * index's value style. Title and value share one wrapping line, so a value that
  * does not fit beside the title moves under it, as an iOS value cell stacks,
  * and the title is never cut or squeezed. A row without `value` draws as before.
+ *
+ * `detail` is more under the line, for a row that says more than one thing —
+ * a Connections row says what the provider is for, then the connection's state
+ * and any warning (Gate 24 parity). A row without it draws as before.
  */
 export function SettingsRow({
   icon: IconCmp,
   title,
   sub,
   value,
+  detail,
   right,
   divider = false,
   onPress,
@@ -41,6 +46,8 @@ export function SettingsRow({
   sub?: string;
   /** Said on the title's line, before `right`; under the title when the two do not fit side by side. */
   value?: string;
+  /** Drawn under `sub`, in the row's body. */
+  detail?: React.ReactNode;
   right: React.ReactNode;
   divider?: boolean;
   onPress?: () => void;
@@ -71,6 +78,7 @@ export function SettingsRow({
         {sub ? (
           <Text style={[styles.rowSub, roomy && styles.rowSubRoomy, { color: palette.neutral[400] }]}>{sub}</Text>
         ) : null}
+        {detail}
       </View>
       {right}
     </>

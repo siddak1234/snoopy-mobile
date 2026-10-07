@@ -29,7 +29,7 @@ import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { roleIn, useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
 import { useTheme } from '@/hooks/use-theme';
-import { WORKSPACE_CHANGED, addRefusalMessage } from '@/lib/content/refusals';
+import { ALREADY_IN_WORKSPACE, WORKSPACE_CHANGED, addRefusalMessage } from '@/lib/content/refusals';
 import {
   SETUP_ADDED_TO,
   SETUP_ASK_TO_JOIN_A_TEAM_FIRST,
@@ -46,7 +46,7 @@ import { readCatalog, readConnectionProviders, readConnections } from '@/lib/pla
 import { newIdempotencyKey } from '@/lib/platform/client';
 import { PlatformNotConfiguredError } from '@/lib/platform/problem';
 import { readProjects, teamDirectoryIfThere } from '@/lib/platform/projects';
-import { readSubscriptions } from '@/lib/platform/runs';
+import { readSubscriptions, readSubscriptionsNow } from '@/lib/platform/runs';
 import { heldAs, scopeLabel, scopeLabels } from '@/lib/view/catalog';
 import { administers } from '@/lib/view/roles';
 
@@ -196,8 +196,10 @@ export default function SetupScreen() {
       setActionError(SETUP_PICK_A_TEAM);
       return;
     }
+    // Settings › Connections, where the button's words send the person — the
+    // website links its unmet connections to its Connections page.
     if (unmet.length > 0) {
-      router.push('/(tabs)/settings');
+      router.push('/(tabs)/settings/connections');
       return;
     }
     // Reachability is the platform's evidence, not this client's guess. The web
@@ -241,6 +243,17 @@ export default function SetupScreen() {
     try {
       let current = placed;
       if (!current) {
+        // A workspace holds each flow once (the owner's build 12 item 9), and
+        // the platform's own guard is still to land: a copy another person or
+        // screen added since this screen read the flows — in another team, say
+        // — is refused here, in the website's words, and nothing is sent. Read
+        // afresh: the snapshot's answer can be 15 s old. Only what this person
+        // may see is listed; a copy in a team hidden from them is the platform's.
+        const { subscriptions } = await readSubscriptionsNow(workspaceId);
+        if (heldAs(entry.templateId, subscriptions).length > 0) {
+          setActionError(ALREADY_IN_WORKSPACE);
+          return;
+        }
         const created = await createSubscription(
           workspaceId,
           { templateId: entry.templateId, templateVersion: entry.version, projectId: scope },
@@ -391,7 +404,7 @@ export default function SetupScreen() {
                     <Pressable
                       accessibilityRole="button"
                       accessibilityLabel={`Connect ${connection.displayName}`}
-                      onPress={() => router.push('/(tabs)/settings')}
+                      onPress={() => router.push('/(tabs)/settings/connections')}
                       style={({ pressed }) => [
                         styles.connectBtn,
                         { borderColor: palette.accent },
@@ -407,8 +420,9 @@ export default function SetupScreen() {
         </View>
       ) : null}
 
+      {/* In the manifest's order, as the website draws them; it can come back to a section, so its place keys it. */}
       {bySection(entry.setup).map(({ section, fields }, position) => (
-        <View key={section}>
+        <View key={`${section}-${position}`}>
           <SectionLabel>{sectionLabel(position + 1 + sectionOffset, section)}</SectionLabel>
           <SurfaceCard style={styles.sectionCard}>
             {fields.map((field, index) => (

@@ -193,13 +193,13 @@ describe('Add a flow — the catalog inside Flows (24.9.3)', () => {
     routePlatform(platformOperation, { '/subscriptions': planSubscriptionsPayload() });
   });
 
-  it('lists the catalog with prices, Added ✓ for what this scope holds and Add for the rest — no plan banner', async () => {
+  it('lists the catalog with versions and prices, Added ✓ for what this scope holds and Add for the rest — no plan banner', async () => {
     const { getByText, getAllByText, queryByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
     expect(await screen.findByText('Add a flow')).toBeTruthy();
     expect(getByText('Prebuilt flows, set up in minutes. Adding to your workspace.')).toBeTruthy();
     expect(getAllByText('Weekly KPI digest').length).toBeGreaterThan(0);
-    expect(getAllByText('Finance · $39/mo').length).toBeGreaterThan(0);
-    expect(getAllByText('Ops · $9/mo').length).toBeGreaterThan(0);
+    expect(getAllByText('Finance · v1 · $39/mo').length).toBeGreaterThan(0);
+    expect(getAllByText('Ops · v1 · $9/mo').length).toBeGreaterThan(0);
     expect(getAllByText('Added ✓')).toHaveLength(3);
     expect(getAllByText('Add').length).toBeGreaterThan(0);
     expect(queryByText(/plan and billing/u)).toBeNull();
@@ -1365,7 +1365,7 @@ describe('Setup wizard (design sSetup)', () => {
     expect(getByText('Post draft bills')).toBeTruthy();
     expect(getByText('2 · REVIEW RULES')).toBeTruthy();
     await fireEvent.press(screen.getByLabelText('Connect QuickBooks Online'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings');
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/connections');
   });
 
   it('draws no Connections step when the platform predates `requiredConnections` (the image before the SEVENTEENTH promotion)', async () => {

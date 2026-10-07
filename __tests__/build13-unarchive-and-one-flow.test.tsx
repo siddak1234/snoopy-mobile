@@ -282,7 +282,7 @@ describe("One flow per workspace: what Setup adds is held at once (the build 13 
     await fireEvent.press(screen.getByText('Connect HubSpot in Settings › Connections'));
     await fireEvent.press(screen.getByText('Try again'));
     expect(mockRouter.push).toHaveBeenCalledTimes(2);
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings');
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/connections');
     expect(writes).toHaveLength(1);
   });
 

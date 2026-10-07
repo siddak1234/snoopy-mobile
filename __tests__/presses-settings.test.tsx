@@ -536,7 +536,8 @@ describe('Settings › Connections › the dialog\'s main button: Disconnect, an
       button: 'Disconnect',
       provider: GMAIL,
       connections: [CONNECTED_GMAIL],
-      title: 'Disconnect Gmail',
+      // A held connection's actions, under its provider's name (Gate 24 parity: Reconnect beside them).
+      title: 'Gmail',
       fill: async (_dialog: ReturnType<typeof within>, _fake: ReturnType<typeof fakePlatform>) => undefined,
       route: 'DELETE /v1/workspaces/{workspaceId}/connections/{connectionId}' as const,
       answer: { connection: { ...CONNECTED_GMAIL, status: 'disconnected' } } satisfies Answer<'DELETE /v1/workspaces/{workspaceId}/connections/{connectionId}'>,
@@ -545,13 +546,14 @@ describe('Settings › Connections › the dialog\'s main button: Disconnect, an
       key: undefined,
     },
     {
-      button: 'Connect',
+      // The website's words for a pasted key's button (Gate 24 parity).
+      button: 'Verify and connect',
       provider: TWILIO,
       connections: [],
       title: 'Connect Twilio',
       // Every field the provider declares, or nothing is sent and it says so.
       fill: async (dialog: ReturnType<typeof within>, fake: ReturnType<typeof fakePlatform>) => {
-        await fireEvent.press(dialog.getByText('Connect'));
+        await fireEvent.press(dialog.getByText('Verify and connect'));
         expect(await dialog.findByText('Complete every credential field before connecting.')).toBeTruthy();
         expect(fake.to('POST /v1/workspaces/{workspaceId}/connections/key')).toHaveLength(0);
         await fireEvent.changeText(dialog.getByPlaceholderText('Starts with AC'), ' AC123 ');
