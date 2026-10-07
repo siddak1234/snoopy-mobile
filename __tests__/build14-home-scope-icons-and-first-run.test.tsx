@@ -352,7 +352,7 @@ describe("Home's scope: two icons beside the bell (the owner's build 13 decision
 });
 
 describe("Home with no flow is the dashboard (the owner's build 13 decision 5)", () => {
-  it('draws the header, the greeting and TODAY at 0, and Nothing automated. Yet. with Add a flow where RECENT RUNS goes — no review banner, and no quick actions over it', async () => {
+  it('draws the header, the greeting and TODAY at 0, and Nothing automated. Yet. with Add a flow where RECENT RUNS goes — no review banner, and no Add a flow or Flows pills over it', async () => {
     routeNothingYet();
     await renderWithProviders(<HomeScreen />, signedInSession);
 
@@ -380,7 +380,12 @@ describe("Home with no flow is the dashboard (the owner's build 13 decision 5)",
     ).toBeTruthy();
     expect(screen.queryByText('RECENT RUNS')).toBeNull();
     expect(screen.queryByText('See all')).toBeNull();
-    expect(screen.queryByText('Flows')).toBeNull();
+    // The quick actions' pills are not drawn over it; the website's other two
+    // quick actions are, as rows (Gate 24 parity, G5).
+    const quickActions = screen.getByTestId('home-quick-actions');
+    expect(within(quickActions).queryByText('Flows')).toBeNull();
+    expect(within(quickActions).getByText('Connect integration')).toBeTruthy();
+    expect(within(quickActions).getByText('View teams')).toBeTruthy();
     expect(screen.getAllByText('Add a flow')).toHaveLength(1);
     expect(screen.queryByText(/need(s)? your review/u)).toBeNull();
 

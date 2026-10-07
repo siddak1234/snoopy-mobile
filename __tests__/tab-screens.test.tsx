@@ -39,6 +39,8 @@ import { touch } from '@/test/touch';
 import type { SessionContextValue } from '@/hooks/use-session';
 import type { Run, Subscription } from '@/lib/platform/automations';
 import type { WorkspaceBilling } from '@/lib/platform/billing';
+import { PlatformUnreachableError } from '@/lib/platform/problem';
+import type { Approval } from '@/lib/platform/runs';
 import { resetSnapshot } from '@/lib/platform/snapshot';
 import { resetPushForTests } from '@/hooks/use-push-registration';
 
@@ -71,7 +73,8 @@ describe('Home dashboard', () => {
     expect(getByText('Your agents ran 128 tasks today.')).toBeTruthy();
     expect(getByText('128')).toBeTruthy();
     expect(getByText('124')).toBeTruthy();
-    expect(getByText('4')).toBeTruthy();
+    // The tiles' 4; the overview's Flows says 4 too (Gate 24 parity, G6).
+    expect(within(screen.getByTestId('home-stats')).getByText('4')).toBeTruthy();
     expect(getByText('Runs')).toBeTruthy();
     expect(getByText('Successes')).toBeTruthy();
     expect(getByText('Failures')).toBeTruthy();
@@ -86,7 +89,8 @@ describe('Home dashboard', () => {
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity/approvals');
     await fireEvent.press(getByText('Add a flow'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/add');
-    await fireEvent.press(getByText('Flows'));
+    // The quick action, not the overview's figure of the same name (Gate 24 parity, G6).
+    await fireEvent.press(within(screen.getByTestId('home-quick-actions')).getByText('Flows'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows');
     await fireEvent.press(getByText('See all'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity');
@@ -145,27 +149,36 @@ describe('Rows draw no border under the last one (the owner, build 13 #7)', () =
 });
 
 describe('Home approvals banner (feedback #5, #7)', () => {
-  it('counts pending approvals only, though every approval is read for the run rows', async () => {
-    routePlatform(platformOperation, {
-      '/approvals': {
-        approvals: [
-          { ...approvalsPayload().approvals[0]!, id: 'a-pending', runId: 'run-0', status: 'pending' },
-          { ...approvalsPayload().approvals[1]!, id: 'a-done', runId: 'run-1', status: 'approved' },
-          { ...approvalsPayload().approvals[2]!, id: 'a-no', runId: 'run-2', status: 'rejected' },
-        ],
-      },
+  /**
+   * The two approval reads Home makes, each answered as the platform answers it:
+   * every approval for the run rows, and `?status=pending` — what the banner
+   * counts, as Approvals lists it (Gate 24 parity, G1) — only the pending ones.
+   */
+  function routeApprovals(all: Approval[]) {
+    routePlatform(platformOperation);
+    const routed = platformOperation.getMockImplementation()!;
+    platformOperation.mockImplementation((path: string, ...rest: unknown[]) => {
+      if (path.endsWith('/approvals?status=pending')) {
+        return Promise.resolve({ approvals: all.filter((approval) => approval.status === 'pending') });
+      }
+      if (path.endsWith('/approvals')) return Promise.resolve({ approvals: all });
+      return routed(path, ...rest);
     });
+  }
+
+  it('counts pending approvals only, though every approval is read for the run rows', async () => {
+    routeApprovals([
+      { ...approvalsPayload().approvals[0]!, id: 'a-pending', runId: 'run-0', status: 'pending' },
+      { ...approvalsPayload().approvals[1]!, id: 'a-done', runId: 'run-1', status: 'approved' },
+      { ...approvalsPayload().approvals[2]!, id: 'a-no', runId: 'run-2', status: 'rejected' },
+    ]);
     const { getByText, queryByText } = await renderWithProviders(<HomeScreen />, signedInSession);
     expect(getByText('1 item needs your review')).toBeTruthy();
     expect(queryByText('3 items need your review')).toBeNull();
   });
 
   it('is not drawn when nothing waits (the owner, build 13 #3)', async () => {
-    routePlatform(platformOperation, {
-      '/approvals': {
-        approvals: [{ ...approvalsPayload().approvals[0]!, id: 'a-done', status: 'approved' }],
-      },
-    });
+    routeApprovals([{ ...approvalsPayload().approvals[0]!, id: 'a-done', status: 'approved' }]);
     await renderWithProviders(<HomeScreen />, signedInSession);
     await screen.findByText('Welcome back, Alex');
     expect(screen.queryByText(/need(s)? your review/u)).toBeNull();
@@ -1225,7 +1238,7 @@ describe('Home data states (design sHomeLoad/Empty/Err)', () => {
   });
 
   it('renders the connection-error state with Retry', async () => {
-    platformOperation.mockRejectedValue(new Error('offline'));
+    platformOperation.mockRejectedValue(new PlatformUnreachableError());
     const { getByText, getAllByText, queryByText } = await renderWithProviders(<HomeScreen />, signedInSession);
     expect(await screen.findByText("Can't reach Autom8x")).toBeTruthy();
     expect(
@@ -1301,7 +1314,7 @@ describe('Home header — the mark fills its row and draws nothing else (D9, 202
   });
 
   it('is the same size when the platform is unreachable', async () => {
-    platformOperation.mockRejectedValue(new Error('offline'));
+    platformOperation.mockRejectedValue(new PlatformUnreachableError());
     const { getByTestId } = await renderWithProviders(<HomeScreen />, signedInSession);
     expect(await screen.findByText("Can't reach Autom8x")).toBeTruthy();
     expectMarkFillsTheRow(getByTestId('home-mark'), undefined);

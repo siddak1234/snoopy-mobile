@@ -138,7 +138,11 @@ export async function launch(initialUrl = '/') {
   const view = renderRouter('./app', { initialUrl });
   // The helpers ride on the render's promise, which an async function would
   // unwrap on return: keep them before awaiting it.
-  const where = { getPathname: () => view.getPathname(), getSegments: () => view.getSegments() };
+  const where = {
+    getPathname: () => view.getPathname(),
+    getSegments: () => view.getSegments(),
+    getSearchParams: () => view.getSearchParams(),
+  };
   await (view as unknown as Promise<unknown>);
   await flush(0);
   await flush(2500);
