@@ -2232,3 +2232,40 @@ file restored and its SHA-256 checked. Every break failed the test named.
 | The export link read at the download | the earlier link opened | `data-support-screens` "moment of the download" |
 | Export for an owner or admin only | offered to a member | `data-support-screens` "member is told why" |
 | Contact needs the workflow and email | sent empty | `data-support-screens` "contact form" |
+
+### Build 14 feedback → fixes (2026-10-07)
+
+The owner's eleven TestFlight items on build 14, 03:00–03:14Z, each traced to its cause in
+the code or production's records before anything changed (backend BUILD-PLAN 24.14.14).
+
+| # | The owner said | The cause | Disposition |
+| --- | --- | --- | --- |
+| 1, 2 | "Where is the file uploaded to", "What is the schema that it uploads to the bucket" | — | answered: the platform's private Backblaze B2 bucket, its key `{workspaceId}/sealed-{uuid}`; the name, type, size and SHA-256 are the platform's database row, not the bucket's |
+| 3 | "It says running" | the run's page read the run once (`useResource`, which never polls); run `5acc41ac` succeeded four seconds after the read | **fixed**: the page reads the run again every 2 s until it has ended (`RUN_REREAD_MS`, `lib/view/runs.ts`) |
+| 4, 5 | "No email yet", "I got the email but its not checked" | the flow had no "Email the outcome to" address, so the step never ran; the email was the platform's own "An automation run completed". The page drew the unreported step as pending on a finished run | **fixed**: on a finished run a declared step it never reported reads "Not run · {what it does}" (`toTimeline`'s run status) |
+| 6 | "I clicked the link and it took me to a 404 page" | the platform links `/runs/{id}`; the website serves `/account/runs/{id}` | fixed on the website (`snoopy`'s redirects); backend §12.1 #234 |
+| 7 | "I want a dismiss button" | — | **asked of the owner**: Dismiss all beside Mark all read, or the ✕ of #10 |
+| 8 | "What do i do here just for auditing right now" | a failed run is a record; nothing is asked of a person there | answered; its page now says which steps never ran, and Steps done no longer counts its failed step ("1 / 4" before) |
+| 9 | "I dont see a needs approval at all" | nothing was held: \$30 is under the flow's \$500 threshold | answered: a run over the threshold holds, and Activity › Needs review lists it |
+| 10 | "I had to click the x three times for the notifications to go away but it worked" | the row stayed until the platform had answered and the inbox was read again — production's two dismissals landed 2.3 s apart — and the ✕'s box was 33 × 29 points with a 10-point slop reaching into the row | **fixed**: the row leaves at the tap and comes back if refused; a 44-point target, no slop |
+| 11 | "I cancelled it but it says renews 10/21 it should be your membership will go to free right" | the platform stored the portal's cancellation as renewing (backend §12.1 #233) | fixed on the platform; here "Ends {date}, then Free", and the Free card's cancel line gone once cancelled |
+
+### Guards proved to bite, build 14 feedback
+
+Ten runs by one script (`scratchpad/fb14-bite/mobile-bites.py`), each a single edit to the
+source, `__tests__/build14-feedback.test.tsx` run, the failing tests read from jest's own
+report, and the file restored. Every break failed the test named.
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| A run that has not ended is read again | the timer's read replaced with nothing | "moves from Running to Success …", "keeps reading after a refused read …" |
+| … only until it has ended | the end of the run not checked | the same two, and "reads a finished run once" |
+| … whichever way the last read settled | only a successful read counted | "keeps reading after a refused read, which leaves the page as it was" |
+| A step a finished run never reported says "Not run" | the run's status ignored | "a success with no address set: …", "a failure at its first step: …" |
+| Steps done counts the steps that finished | every reported step counted | "a failure at its first step: …", "a held run still shows what is left as waiting …" |
+| Dismiss takes the row away at the tap | the row kept until the platform answers | "gone before the platform answers, and gone after" |
+| A refused dismissal puts the row back | the row kept hidden | "refused, the row comes back with the reason" |
+| A 44-point target | the old 33 × 29 box | "is a 44-point target, reaching no further than itself" |
+| A cancelled plan says what follows | ", then Free" dropped | "cancelled: …, and the Free card no longer says to cancel" |
+| … and the Free card stops saying cancel | the cancelled check dropped | the same |
+

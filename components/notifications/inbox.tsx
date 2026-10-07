@@ -75,9 +75,11 @@ export function Inbox({ runPath }: { runPath: InboxRunPath }) {
     return inboxRows(read.items, catalogIndex(catalog.automations));
   });
 
+  // Rows dismissed here leave the screen at the tap, before the platform answers.
+  const [dismissed, setDismissed] = useState<ReadonlySet<string>>(() => new Set());
   const items: NotificationItem[] =
     inbox.status === 'ready'
-      ? inbox.data.map((n) => ({ ...n, icon: NOTIFICATION_ICON[n.tone] }))
+      ? inbox.data.filter((n) => !dismissed.has(n.id)).map((n) => ({ ...n, icon: NOTIFICATION_ICON[n.tone] }))
       : [];
 
   // What a read or dismissal answered, when it was refused.
@@ -91,15 +93,18 @@ export function Inbox({ runPath }: { runPath: InboxRunPath }) {
   // A save re-reads the inbox in place, keeping the rows on screen until the
   // platform answers (`refresh`, not `reload`: no skeleton to confirm a dot). The
   // save dropped the inbox from the snapshot, so the re-read is a real request.
-  const act = async (change: (workspaceId: string) => Promise<unknown>) => {
+  // Whether it saved: a dismissal puts its row back when it did not.
+  const act = async (change: (workspaceId: string) => Promise<unknown>): Promise<boolean> => {
     const workspaceId = shownWorkspace();
-    if (!workspaceId) return;
+    if (!workspaceId) return false;
     setActionError(null);
     try {
       await change(workspaceId);
       inbox.refresh();
+      return true;
     } catch (caught) {
       setActionError(refusalMessage(caught, {}, 'That did not save. Try again.'));
+      return false;
     }
   };
   // The rows on screen, by id, not "everything listed now": an item that arrives
@@ -109,8 +114,25 @@ export function Inbox({ runPath }: { runPath: InboxRunPath }) {
     if (unread.length === 0) return;
     void act((workspaceId) => markInboxRead(workspaceId, unread, newIdempotencyKey('notifications-read')));
   };
-  const dismiss = (item: NotificationItem) =>
-    void act((workspaceId) => dismissInboxItem(workspaceId, item.id, newIdempotencyKey('notification-dismiss')));
+  /**
+   * Dismiss takes the row away at the tap — the owner's build 14 feedback #10,
+   * "I had to click the x three times": the row stayed until the platform had
+   * answered and the inbox was read again, a second or two with nothing to show
+   * the tap had landed. Refused, the row comes back with the reason above the list.
+   */
+  const dismiss = (item: NotificationItem) => {
+    setDismissed((current) => new Set(current).add(item.id));
+    void act((workspaceId) => dismissInboxItem(workspaceId, item.id, newIdempotencyKey('notification-dismiss'))).then(
+      (saved) => {
+        if (saved) return;
+        setDismissed((current) => {
+          const next = new Set(current);
+          next.delete(item.id);
+          return next;
+        });
+      },
+    );
+  };
 
   // Every hook is above this line on purpose: the guards below return early, and
   // a hook called after them would run on some renders and not others.
@@ -238,14 +260,14 @@ export function Inbox({ runPath }: { runPath: InboxRunPath }) {
               </Pressable>
               {/* Dismiss, beside the row rather than inside it (decision 3A): a press
                   inside the row would be grouped into it, out of VoiceOver's reach.
-                  It leaves the inbox on every device. */}
+                  It leaves the inbox on every device. A 44-point square, the ✕ where
+                  it was drawn, and no slop reaching into the row it sits beside. */}
               <Pressable
                 testID={`dismiss-${item.id}`}
                 accessibilityRole="button"
                 accessibilityLabel={`Dismiss: ${item.title}`}
-                hitSlop={10}
                 onPress={() => dismiss(item)}
-                style={styles.dismiss}>
+                style={({ pressed }) => [styles.dismiss, pressed && { backgroundColor: withAlpha(palette.text, 0.06) }]}>
                 <X size={15} color={palette.neutral[500]} />
               </Pressable>
             </View>
@@ -426,9 +448,13 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     fontSize: typeScale.caption.fontSize,
   },
+  // Apple's 44-point minimum. The 15-point ✕ centred in it sits 14.5 from the top
+  // and the card's edge, where the padded ✕ was drawn.
   dismiss: {
-    paddingTop: 14,
-    paddingRight: 14,
-    paddingLeft: 4,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

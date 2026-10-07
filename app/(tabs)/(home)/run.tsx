@@ -1,6 +1,6 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { FlowArrow, StopCircle } from 'phosphor-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -25,19 +25,23 @@ import { readAllApprovals, readRun } from '@/lib/platform/runs';
 import { PlatformError, PlatformNotConfiguredError } from '@/lib/platform/problem';
 import { clockTime, duration } from '@/lib/view/format';
 import { statusLabel, type StatusPillLabel } from '@/lib/view/status';
-import { metaFor, runLabel, toRunStats, toTimeline } from '@/lib/view/runs';
+import { RUN_REREAD_MS, metaFor, runLabel, toRunStats, toTimeline } from '@/lib/view/runs';
 
 const TIMELINE_ICON_COLOR: Record<string, string | undefined> = {
   ok: status.ok,
   warn: status.warnText,
   err: status.err,
   pending: undefined,
+  skipped: undefined,
 } as const;
+
 
 function TimelineRow({ item, divider }: { item: RunTimelineItem; divider: boolean }) {
   const { palette } = useTheme();
   const iconColor = TIMELINE_ICON_COLOR[item.tone] ?? palette.neutral[500];
   const IconCmp = item.icon;
+  // A step still to come and a step that never ran are both drawn quieter than one that did.
+  const quiet = item.tone === 'pending' || item.tone === 'skipped';
   return (
     <View
       style={[styles.timelineRow, divider && { borderBottomWidth: 1, borderBottomColor: palette.divider }]}>
@@ -46,14 +50,14 @@ function TimelineRow({ item, divider }: { item: RunTimelineItem; divider: boolea
         <Text
           style={[
             styles.timelineTitle,
-            { color: item.tone === 'pending' ? palette.neutral[400] : palette.text },
+            { color: quiet ? palette.neutral[400] : palette.text },
           ]}>
           {item.title}
         </Text>
         <Text
           style={[
             styles.timelineSub,
-            { color: item.tone === 'pending' ? palette.neutral[500] : palette.neutral[400] },
+            { color: quiet ? palette.neutral[500] : palette.neutral[400] },
           ]}>
           {item.sub}
         </Text>
@@ -110,16 +114,47 @@ export default function RunDetailScreen() {
    * design's own em dash; the fields card is omitted, exactly as the design
    * already omits it on a failed run.
    */
+  // Reads that have settled, either way: what schedules the next one while the run goes on.
+  const [reads, setReads] = useState(0);
   const detail = useResource(async () => {
-    if (!runId || !openedIn) throw new PlatformNotConfiguredError();
-    const [run, catalog, approvals] = await Promise.all([
-      readRun(openedIn, runId),
-      readCatalog(openedIn),
-      readAllApprovals(openedIn),
-    ]);
-    const entry = catalog.automations.find((a) => a.templateId === run.run.templateId);
-    return { detail: run, entry, approvals: approvals.approvals };
+    try {
+      if (!runId || !openedIn) throw new PlatformNotConfiguredError();
+      const [run, catalog, approvals] = await Promise.all([
+        readRun(openedIn, runId),
+        readCatalog(openedIn),
+        readAllApprovals(openedIn),
+      ]);
+      const entry = catalog.automations.find((a) => a.templateId === run.run.templateId);
+      return { detail: run, entry, approvals: approvals.approvals };
+    } finally {
+      setReads((n) => n + 1);
+    }
   }, [runId, openedIn]);
+
+  /**
+   * A run that has not ended is read again until it has — the owner's build 14
+   * feedback #3, "It says running": the page read run `5acc41ac` once, Running at
+   * 0 / 4, and still said so after the run succeeded four seconds later. One read
+   * at a time: the next waits for the last to settle, either way, and none is
+   * made while another screen is in front of this one. Each re-read keeps the
+   * page on screen (`refresh`), as a return to it does.
+   */
+  const going =
+    detail.status === 'ready' &&
+    (detail.data.detail.run.status === 'pending' || detail.data.detail.run.status === 'running');
+  const [focused, setFocused] = useState(true);
+  useFocusEffect(
+    useCallback(() => {
+      setFocused(true);
+      return () => setFocused(false);
+    }, []),
+  );
+  const { refresh } = detail;
+  useEffect(() => {
+    if (!going || !focused) return;
+    const timer = setTimeout(refresh, RUN_REREAD_MS);
+    return () => clearTimeout(timer);
+  }, [going, focused, reads, refresh]);
 
   const liveRun = detail.status === 'ready' ? detail.data : null;
   const run = liveRun
@@ -134,7 +169,8 @@ export default function RunDetailScreen() {
         }`,
         status: statusLabel(liveRun.detail.run.status) as StatusPillLabel,
         stats: toRunStats(
-          liveRun.detail.steps.length,
+          // The steps that finished: a failed or held step is reported, not done.
+          liveRun.detail.steps.filter((step) => step.outcome === 'ok').length,
           liveRun.entry?.pipeline?.length ?? 0,
           duration(liveRun.detail.run.startedAt, liveRun.detail.run.endedAt),
         ),
@@ -142,6 +178,7 @@ export default function RunDetailScreen() {
           liveRun.detail.steps,
           liveRun.entry?.pipeline,
           clockTime,
+          liveRun.detail.run.status,
         ) as RunTimelineItem[],
         // No published run output, so no extracted-fields card.
         fields: false,
