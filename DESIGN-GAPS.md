@@ -2636,3 +2636,30 @@ empties between the two, as one test does for the next.
 | A deliberate sign-out owes nothing (G4) | `forgetOpenScreen` not called at a sign-out | real-router `session-ended` "a 401 landing while signing out on purpose owes nothing: signing in again opens Home" |
 | A refused pending read draws no banner, not a count from another read (G1) | the pending ones of every approval read counted when the pending read is refused | `parity-home` "is hidden when the platform lists nothing pending (the owner, build 13 #3), and when its read is refused" |
 | A refused teams read says so (G7) | a refused teams read as no teams | `parity-home` "a teams read that is refused says so, and the rest of Home still shows" |
+
+### Backlog: Set up draws the version the flow runs (backend §12.1 #185)
+
+The platform publishes `Subscription.setup` — the setup fields of the version a flow PINS —
+beside `runInput` and `triggerKind`, and validates `config` against them on every save
+(snoopy-backend `round-16/backlog-contract`). Set up drew the catalog's newest version, so
+once a newer version added, removed or retyped a field, a save sent keys or values the
+pinned version refuses, and a flow on invoice-intake v1 would have shown v3's "never your
+own mailbox" over a version that sends from the customer's Gmail. And a move refused
+`invalid_config` said "Open Set up, fix them, then move" — a dead end once Set up draws the
+pinned version, since nothing there can make settings fit another one.
+
+| What | Disposition |
+| --- | --- |
+| Set up's fields | `subscription.setup`, strictly: the release gate cuts a build only against a platform that publishes it, so its absence means the version declares none — no Set up, though the newest may declare some |
+| A move refused `invalid_config` | the dialog offers "Set them for v{N}", opening the setup dialog with v{N}'s fields (the catalog's: Move is offered only to the newest), seeded from what the flow holds; "Save and move to v{N}" sends `{ config, templateVersion }` in one PATCH, which the platform checks against v{N}. Any other refusal offers nothing more. The refusal now reads "Its settings do not fit that version. Set them for it to move." |
+| The fake platform | its subscriptions carry `setup`, as the platform answers (fixture conformance, #41) |
+
+### Guards proved to bite, §12.1 #185
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| Set up draws the pinned version | `entry?.setup` restored as the source | `automation-actions` "shows the pinned version's settings when a newer version changes them", "offers no Set up when the version it runs declares none, though the newest does" |
+| The misfit is offered for `invalid_config` only | `setMisfit` keyed on any refusal | "offers nothing to set for any other refusal" |
+| The new version's settings move it in one change | `templateVersion` dropped from the setup save | "offers that version's fields, seeded from what the flow holds, and saving moves it in one change" |
+| … seeded from what the flow holds | the dialog seeded from defaults only | the same |
+
