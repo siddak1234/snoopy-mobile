@@ -53,6 +53,17 @@ const RULES = [
     detail: `a file is downloaded only by ${TRANSPORT}'s credential-less downloadSignedFile`,
   },
   {
+    // Gate 24's security review of 24.3.4 (2026-10-07): expo-file-system's legacy
+    // network calls and Image.prefetch are the network too. A second upload
+    // through `uploadAsync` would carry whatever header it was given past the
+    // transport's one rule, and the gate stayed green on it.
+    name: "native network call",
+    roots: RUNTIME_ROOTS,
+    pattern: /\b(?:uploadAsync|createUploadTask|downloadAsync|createDownloadResumable|prefetch)\s*\(/,
+    allow: () => false,
+    detail: `expo-file-system's network calls and Image.prefetch are the network; only ${TRANSPORT}'s one PUT and one download are admitted`,
+  },
+  {
     // `const send = globalThis.fetch` then `send(url)` never writes `fetch(`,
     // so the call-shape rule above cannot see it. Binding the primitive is the
     // step that matters — what the alias is called afterwards is arbitrary — so

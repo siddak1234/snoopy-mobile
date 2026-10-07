@@ -28,7 +28,7 @@ describe('the Face ID offer', () => {
     await renderWithProviders(<FaceIdOfferScreen />, signedInSession);
     expect(screen.getByText('Open with Face ID next time?')).toBeTruthy();
     await fireEvent.press(screen.getByText('Use Face ID'));
-    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)/(home)'));
+    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)/(home)', { withAnchor: true }));
     expect(LocalAuthentication.authenticateAsync).toHaveBeenCalledTimes(1);
     expect(writeFaceIdEnabled).toHaveBeenCalledWith(true);
   });
@@ -36,7 +36,7 @@ describe('the Face ID offer', () => {
   it('"Not now" records an explicit no and opens the app without a prompt', async () => {
     await renderWithProviders(<FaceIdOfferScreen />, signedInSession);
     await fireEvent.press(screen.getByText('Not now'));
-    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)/(home)'));
+    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)/(home)', { withAnchor: true }));
     expect(LocalAuthentication.authenticateAsync).not.toHaveBeenCalled();
     expect(writeFaceIdEnabled).toHaveBeenCalledWith(false);
   });

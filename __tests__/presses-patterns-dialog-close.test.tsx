@@ -435,7 +435,7 @@ const CASES: DialogCase[] = [
   },
   {
     name: 'Flow › Move Invoice triage to v2?: Cancel',
-    site: 'components/automations/move-version.tsx:94',
+    site: 'components/automations/move-version.tsx:145',
     open: async () => {
       await flow();
       await press('Move to v2');

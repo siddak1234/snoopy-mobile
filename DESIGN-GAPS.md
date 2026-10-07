@@ -1784,7 +1784,7 @@ returns to its first. One table, `presses-patterns-dialog-close:511`, a row per 
 | `automation-actions.tsx:200` — Set up › Cancel | `:406` |
 | `automation-actions.tsx:208` — Webhook address › Close | `:416` |
 | `automation-actions.tsx:218` — Archive flow › Cancel | `:428` |
-| `move-version.tsx:94` — Move to vN › Cancel | `:438` |
+| `move-version.tsx:145` — Move to vN › Cancel | `:438` |
 | `(home)/run.tsx:288` — Cancel this run? › Keep it running | `presses-home-activity:107` |
 | `connections-card.tsx:228` — Connect › Cancel | `:448` |
 | `connections-card.tsx:223` — Replace account? › Cancel | `:459` |
@@ -1848,8 +1848,8 @@ returns to its first. One table, `presses-patterns-dialog-close:511`, a row per 
 | `flows/add.tsx:166` — Add | Setup with the template and the scope's team; refused while not responding | `tab-screens:154`, `presses-flows:275` |
 | `flows/setup.tsx:335` — Create a team | the dialog; the new team is chosen | `tab-screens:1424` |
 | `flows/setup.tsx:348` — See teams | opens Settings › Teams | `tab-screens:1499` |
-| `flows/setup.tsx:378` — Connect › | opens Settings › Connections (Gate 24 parity, G9; ~~opens Settings~~) | `tab-screens:1278` |
-| `flows/setup.tsx:423` — Activate | POST subscribe `{templateId, templateVersion, projectId}` then PATCH `{config, status: 'live'}`, each keyed, then the flow page; a held flow configured, none added; refusals in words. Since Gate 24 parity (G10) the workspace's flows are read afresh before the POST, and a flow held since is refused — "This flow is already in this workspace.", nothing sent; with an account owed, Settings › Connections (G9) | `presses-flows:190`, `tab-screens:1397`, `build13-unarchive-and-one-flow:169`, `presses-flows:396`, `parity-flows` (G10) |
+| `flows/setup.tsx:404` — Connect › | opens Settings › Connections (Gate 24 parity, G9; ~~opens Settings~~) | `tab-screens:1332` |
+| `flows/setup.tsx:451` — Activate | POST subscribe `{templateId, templateVersion, projectId}` then PATCH `{config, status: 'live'}`, each keyed, then the flow page; a held flow configured, none added; refusals in words. Since Gate 24 parity (G10) the workspace's flows are read afresh before the POST, and a flow held since is refused — "This flow is already in this workspace.", nothing sent; with an account owed, Settings › Connections (G9) | `presses-flows:190`, `tab-screens:1397`, `build13-unarchive-and-one-flow:169`, `presses-flows:396`, `parity-flows` (G10) |
 | `flows/setup.tsx:416` — Try again | the same request, the same key | `presses-flows:355` |
 | `choice-chips.tsx:34` — a chip (Setup's team, a team role) | chooses it; the team is sent as `projectId` | `tab-screens:1397`, `teams-screens:463` |
 | `flows/detail.tsx:238` — Runs / Successes / Failures | Activity `{flow, flowName, filter}`, no day | `tab-screens:1638` |
@@ -1861,11 +1861,11 @@ returns to its first. One table, `presses-patterns-dialog-close:511`, a row per 
 | `automation-actions.tsx:154` — Set up; Webhook address | their dialogs | `automation-actions:388`, `automation-actions:352` |
 | `automation-actions.tsx:168` — Archive flow | the one-way confirmation | `automation-actions:275` |
 | `automation-actions.tsx:222` — Archive | PATCH `{status: 'archived'}`, then the Flows list | `automation-actions:275`, `tab-screens:405` |
-| `move-version.tsx:81` — Move to vN | its confirmation | `automation-actions:246` |
-| `move-version.tsx:98` — Move to vN (confirm) | PATCH `{templateVersion}`; refusals in words | `automation-actions:246`, `automation-actions:260` |
+| `move-version.tsx:118` — Move to vN | its confirmation | `automation-actions:246` |
+| `move-version.tsx:156` — Move to vN (confirm) | PATCH `{templateVersion}`; refusals in words | `automation-actions:246`, `automation-actions:260` |
 | `run-dialog.tsx:105` — Start run | POST runs `{subscriptionId, input}`; closes; the run's page | `automation-actions:159`, `presses-flows:248` |
 | `run-file-field.tsx:142` — Choose file | uploads it; the run carries its id; a refusal in words | `automation-actions:205`, `presses-flows:418` |
-| `setup-dialog.tsx:77` — Save setup | PATCH `{config}` only | `automation-actions:388` |
+| `setup-dialog.tsx:63` — Save setup | PATCH `{config}` only | `automation-actions:388` |
 | `webhook-address-dialog.tsx:114` — Create address / Make a new secret | POST, no key; the secret shown once; a refusal in words | `automation-actions:352`, `presses-flows:413` |
 | `archived-flows.tsx:116` — an archived row | its page in the same stack | `tab-screens:1928` |
 | `select-field.tsx:55, :80` — the box; an option | opens the list in place; selects and closes it | `select-field:21` |
@@ -1927,7 +1927,7 @@ returns to its first. One table, `presses-patterns-dialog-close:511`, a row per 
 | Press | Configured outcome | Test |
 | --- | --- | --- |
 | `connections-card.tsx:176` — a provider | its dialog | `settings-connections:66` |
-| `connections-card.tsx:242` — Connect / Disconnect (two buttons since Gate 24 parity: Connect's, and a held connection's Disconnect beside Reconnect — that section's table) | OAuth in the browser; DELETE `…/connections/{id}`; POST `…/connections/key` `{providerId, credentials}`, trimmed, keyed — then closes and reads again | `presses-settings:525` (2 cases), `settings-connections:66`, `parity-connections` |
+| `connections-card.tsx:393, :386` — Connect / Disconnect (two buttons since Gate 24 parity: Connect's, and a held connection's Disconnect beside Reconnect — that section's table) | OAuth in the browser; DELETE `…/connections/{id}`; POST `…/connections/key` `{providerId, credentials}`, trimmed, keyed — then closes and reads again | `presses-settings:525` (2 cases), `settings-connections:66`, `parity-connections` |
 | `connections-card.tsx:233, :224` — Replace account; Replace account (confirm) | asks first; connects again in the browser, replacing that connection (`replaceConnectionId`) | `settings-connections:146`, `settings-connections:173` |
 | `workspace-switcher.tsx:165` — a workspace | PATCH `/v1/session/active-workspace`, keyed, then the session read again | `workspace-switcher:140` |
 | `workspace-switcher.tsx:146` — Reload session | reads the session again; the dialog closes | `workspace-switcher:203` |
@@ -1938,8 +1938,8 @@ returns to its first. One table, `presses-patterns-dialog-close:511`, a row per 
 | --- | --- | --- |
 | `app/index.tsx:138` — the cover | signed in, Home; signed out, nothing | `cover-haptics:26`, `splash-tap:18` |
 | `app/index.tsx:164` — Get started | opens Sign in, once | `splash-tap:18`, `real-router/sign-out:97` |
-| `(auth)/login.tsx:192` — Sign in with … | that provider's sign-in | `auth-screens:45` |
-| `(auth)/login.tsx:171` — Unlock with Face ID | opens the lock | `auth-screens:86` |
+| `(auth)/login.tsx:191` — Sign in with … | that provider's sign-in | `auth-screens:45` |
+| `(auth)/login.tsx:167` — Unlock with Face ID | opens the lock | `auth-screens:86` |
 | `(auth)/faceid-offer.tsx:98, :101` — Use Face ID; Not now | checks Face ID, records yes, opens Home; records no, opens Home | `faceid-offer:27`, `faceid-offer:36` |
 | `(auth)/faceid.tsx:181` — Use identity provider | signs this phone out, then the cover | `faceid-screen:70`, `real-router/sign-out:234` |
 | `(auth)/account-deleted.tsx:30` — Continue | the cover | `real-router/sign-out:181` |
@@ -2291,11 +2291,14 @@ from what the first request did: the current state if that still matches, otherw
 It never acts on the request a second time (backend `apps/catalog/src/postgres-shared.ts`).
 Two findings, left as they are:
 
-- `:337`, which re-mints the update key when another team is chosen, cannot fail a test.
-  The team choice is drawn only while nothing is added, so every activation after it goes
-  through the create, and `:261` mints the update key again before any PATCH. The key
-  `:337` mints is never sent. Removing the line would be the only change, and that is the
-  owner's call.
+- `:337` (`:350` since #49), which re-mints the update key when another team is chosen,
+  cannot fail a test that holds the rule: the key it replaces was never sent, so no replay
+  and no 409 can follow with or without it. The reason first written here — that every
+  activation after a team choice goes through the create, where `:261` mints the key again,
+  so the key `:337` mints is never sent — does not hold: a create refused, another team
+  chosen, and the flow found added on return (`placed` from `held`, `:180` since #49) sends
+  the PATCH under that key (the review of #47). Removing the line would be the only change,
+  and that is the owner's call.
 - The comment above `:261` gives a reason that does not hold. A retry after the create
   does not compute a different body: Catalog creates every subscription with `config`
   `{}` (backend `apps/catalog/src/postgres-subscriptions.ts`), so the retry falls back to
@@ -2544,7 +2547,7 @@ the owner's call), and a notification's tap (another session's).
 | G1 (Home) | The review banner counted the chosen team's pending approvals, from the newest hundred approvals of every status; Approvals lists every pending one in the workspace, as the website's Approvals does (`listApprovals(workspaceId, "pending")`) | **done**: Home reads `?status=pending` beside every approval (the run rows still need every one) and the banner counts it whole, whatever team is chosen — the number Approvals then lists. Hidden at 0, the owner's decision (build 13 #3, above), and when that read is refused: the banner says something waits, which is then not known — never a count from another read. `(home)/index.tsx` `approvalCount` |
 | G2 | Settings › Appearance returned to Dark at every cold launch; the website keeps its theme in the browser and applies it before first paint | **done**: `lib/platform/appearance-store.ts` keeps Auto, Dark or Light in the Keychain, this-device-only, as the scope is kept; `app/_layout.tsx` reads it before the first frame (the splash stays until it has) and mounts the theme in it; `NocturneThemeProvider`'s `onModeChange` keeps each choice. Dark when none is kept or one is unreadable. The device's preference, not the session's: a sign-out keeps it, as the website's outlives one. No owner decision was recorded |
 | G3 | Home's one failure said "Check your connection" for a 429, a refusal and an unresolved workspace alike, and stated no wait; no failed load anywhere said the person was still signed in (the website's `PlatformUnavailable`: "You have not been signed out, and nothing was lost.") | **done**: Home is its own failure only when none of its reads answered, worded by why — offline the design's words; a 429 "The platform is busy right now" and any other failure "The platform could not answer just now", each over "You have not been signed out, and nothing was lost. Try again in …" with a 429's stated wait; no backend or no workspace `UNAVAILABLE_BODY` and no Retry. `ERROR_BODY` is the website's body; a 429's failed load says "The platform is busy right now." before it (`busyLoadBody`, from the stated `retry-after`). No owner decision was recorded |
-| G4 | After a session ended in use, the cover said nothing of why, and the next sign-in landed on Home; the website's `SessionEnded` says "Your session has ended — Sign in again to carry on where you were", and its way back returns to the page | **done**, inside the owner's cover rule (BUILD-PLAN 24.11.6: the cover whenever signed out): the cover says the website's two lines over Get started, which still leads to Sign in; the sign-in — and the Face ID question, when it is asked — returns to the tab screen that was open, its params with it (`lib/view/return-to.ts`; `app/_layout.tsx` keeps the screen in front, its params from the navigation state, since a screen a sign-in replaced its way to has none in its address). Only when it ended on a tab screen (`SessionState`'s `ended`): a sign-out, a cold start, Sign in failing or the Face ID question say nothing and open Home. Owed once, to the same person: someone else signing in opens Home; a sign-out on purpose owes nothing, a 401 that lands during it included. In memory, not past a relaunch |
+| G4 | After a session ended in use, the cover said nothing of why, and the next sign-in landed on Home; the website's `SessionEnded` says "Your session has ended — Sign in again to carry on where you were", and its way back returns to the page | **done**, inside the owner's cover rule (BUILD-PLAN 24.11.6: the cover whenever signed out): the cover says the website's two lines over Get started, which still leads to Sign in; the sign-in — and the Face ID question, when it is asked — returns to the tab screen that was open, its params with it (`lib/view/return-to.ts`; `app/_layout.tsx` keeps the screen in front, its params from the navigation state, since a screen a sign-in replaced its way to has none in its address). Only when it ended on a tab screen (`SessionState`'s `ended`): a sign-out, a cold start or the Face ID question say nothing and open Home; Sign in failing keeps the return for the next sign-in that completes, as the website's `callbackUrl` outlives a failed attempt. Drawn as the screen was opened, its tab's first screen beneath it (`RETURN_OPTIONS`, `withAnchor`), so Back and the tab come home — the review of #51, below. Owed once, to the same person: someone else signing in opens Home; a sign-out on purpose owes nothing, a 401 that lands during it included. In memory, not past a relaunch |
 | G5 | Home had no Connect integration or View teams | **done**: both, flows or none, as rows under the quick actions' pills — "Connect integration" does not fit half a phone's width as a pill — opening Settings › Connections and Settings › Teams |
 | G6 | Home's overview had no Flows or Integrations figure, and one failed read failed all of Home | **done**: OVERVIEW under TODAY — Flows, the subscriptions not archived (the website's count), in the team chosen as the tiles are; Integrations, the connections that are connected — figures, as the website's are, not buttons. Each read stands alone (`Promise.allSettled`): one refused says so in its place — TODAY "Unavailable" and no "Your agents ran …"; a figure "Unavailable"; RECENT RUNS "Recent activity could not be read just now."; no review banner; a held run "Held" without every approval; no first run claimed without the catalog; with a team chosen and no subscriptions, its figures unavailable too — and the rest still show. A return whose re-read fails whole keeps what was on screen, as before; nothing stale is mixed with what was just read. TODAY stays today's (the owner's decision, above) |
 | G7 | Home had no Teams | **done**: TEAMS last — the first three teams this person can see across their workspaces, the deleted left out (`homeTeams`, the website's `listAccessibleProjects().slice(0, 3)`), each its kind, its status in the website's words and its workspace's name when they span several, opening its team page in its workspace; View all teams beside the label; none, "No teams yet." and Create a team, for an owner or admin, opening Teams, as the website links; a refused read "Your teams could not be read just now." (the app's words, in the website's pattern: its teams read has no figure of its own) |
@@ -2657,7 +2660,7 @@ pinned version, since nothing there can make settings fit another one.
 | What | Disposition |
 | --- | --- |
 | Set up's fields | `subscription.setup`, strictly: the release gate cuts a build only against a platform that publishes it, so its absence means the version declares none — no Set up, though the newest may declare some |
-| A move refused `invalid_config` | the dialog offers "Set them for v{N}", opening the setup dialog with v{N}'s fields (the catalog's: Move is offered only to the newest), seeded from what the flow holds; "Save and move to v{N}" sends `{ config, templateVersion }` in one PATCH, which the platform checks against v{N}. Any other refusal offers nothing more. The refusal now reads "Its settings do not fit that version. Set them for it to move." |
+| A move refused `invalid_config` | the dialog offers "Set them for v{N}", drawing v{N}'s fields (the catalog's: Move is offered only to the newest) in the same sheet — one dialog in two modes since the review of #49, as iOS presents no second modal while the first dismisses — seeded from what the flow holds; "Save and move to v{N}" sends `{ config, templateVersion }` in one PATCH, which the platform checks against v{N}. Any other refusal offers nothing more. The refusal now reads "Its settings do not fit that version. Set them for it to move." |
 | The fake platform | its subscriptions carry `setup`, as the platform answers (fixture conformance, #41) |
 
 ### Guards proved to bite, §12.1 #185
@@ -2778,3 +2781,65 @@ flag and Replace's wording; both of its tests bite as written.
 | A section the manifest comes back to is a section again | the group found by its section, not the last one | `setup-field` "never moves a field ahead of an earlier one: …" |
 | A toggle says which notification it controls | the line not drawn | `setup-field` "says which notification a toggle controls, …", `parity-flows` "Setup: rules before source, …", "the flow page's Set up: …" |
 | A value with no words is never drawn | the own-property check dropped | `setup-field` "words every notification the contract names, and draws none for a value a newer platform adds" |
+
+### Gate 24's review line, the app's PRs: #47, #49, #50, #51 (2026-10-07)
+
+The owner's decision at the close (2026-10-07): `/code-review` on every merged Round 16 PR,
+findings fixed before build 16. One independent reviewer per PR, each reading the whole diff
+and the merged tree, refuting its own findings before reporting them, with a security lens on
+every one (#47's reviewer read #49's `flows/setup.tsx` too). The app's four PRs: #47 one note;
+#49 one blocking, one should-fix, one note; #50 two notes; #51 one should-fix, two notes. Nine
+findings, each verified against the code here before anything moved: six fixed, three recorded.
+The security lens found nothing weakened in any of the four — the kept screen holds route
+params only, in memory; `decides` fails closed; the 401-only session end holds; credentials
+stay in component state; the appearance store's Keychain class is the siblings'.
+
+| PR | Finding | Disposition |
+| --- | --- | --- |
+| #51 | The sign-in after an ended session replaced its way to a nested tab screen without its anchor, so the screen was its stack's only route: its Back went nowhere, and the Home tab, pressed, stayed where it was until a relaunch (expo-router 6.0.24 sets `initial` on the nested payload only under `withAnchor`; React Navigation then mounts a nested `screen` alone). Traced through the installed sources, not seen on a device | **fixed**: `RETURN_OPTIONS` (`withAnchor: true`) on both replaces (`login.tsx`, `faceid-offer.tsx`); three real-router tests press Back and the Home tab after a return, through the Face ID question too |
+| #51 | The record said a failed sign-in ends the return; the code keeps it (the sign-in's 401 branch drops the cover's reason only, which no screen draws again) | **record amended** (DESIGN-CONTRACT, the G4 row): a sign-in that fails keeps the return for the next one that completes — the website's `callbackUrl` outlives a failed attempt; a real-router test holds it (a session read refused, then the next sign-in returns) |
+| #51 | A sign-out on purpose, with push registered and a dead credential, showed "Your session has ended" for one round trip: the device DELETE's 401 announced the end before the logout answered, and the test batched both updates | **fixed**: `use-session.tsx` treats an announcement during a sign-out as the sign-out's own — the cover at once, saying nothing, nothing owed; a real-router test holds the logout's answer open and reads the cover before it |
+| #50 | `incomplete: 'Incomplete'` (G25) had no test that would fail if it regressed: `billing-screen` fixtures the other statuses, and `components` pins the pill's tone only | **fixed**: `billing-screen` draws the Incomplete pill on the enrolled paid plan |
+| #50 | `draft: 'Draft'` (G21) had no test | **fixed**: `gate24-parity-activity` draws Draft on a draft team's row |
+| #49 | "Set them for vN" closed the Move dialog and mounted the settings dialog in the same render: iOS presents no second modal while the first is dismissing (the connections card's recorded rule, above), so the settings were never shown. Inferred from the record, not reproduced — the catalog publishes one version today, so no move is offered | **fixed**: one dialog in two modes — `move-version.tsx` draws `SetupFields` in its own sheet, its form state from `useSetupForm`, which `SetupDialog` shares; a test holds that the very element that asked draws the fields |
+| #49, web #42 | A misfit move to a version that declares no setup fields is a dead end in both clients: the carried keys are undeclared, so it is refused `invalid_config`, the words promise "Set them for it to move", and nothing is offered — the one write that would move it, `{ config: {}, templateVersion }`, is never sent | **recorded**: backend §12.1 #239, Round 17 (the clients, or the platform; the owner's call on the words). Unreachable today, one version in the catalog |
+| #49 | Press-register rows carried `file:line` citations that no longer held their presses (`flows/setup.tsx:378`, `:423`, `connections-card.tsx:242`, the test ref `tab-screens:1278`) — drift from before #49, which no test reads | **records**: corrected, with the rows this change moved (`move-version.tsx`, `setup-dialog.tsx`, `(auth)/login.tsx`) |
+| #47 | A record premise did not hold — the key the team change re-mints can be sent, after a create refused and a focus re-read finds the flow added — while its conclusion (the line cannot fail a test that holds the rule) did | **record amended** (the backlog section, above) |
+
+### Gate 24's security review line, the app's items (2026-10-07)
+
+`/security-review` on 24.2.1's app half, 24.3.3, 24.3.4, 24.4.1's webhook address, 24.6.1 and
+24.6.2 — two reviewers, each item's files whole and what they call, each finding refuted before
+it was reported, and each item's soundness stated with what was read. Nothing weakened. One
+should-fix, fixed here (B61); the platform half of 24.2.1 is backend §12.1 #221, the owner's
+decision; the notes are recorded, one as a hardened gate.
+
+| Item | Finding | Disposition |
+| --- | --- | --- |
+| 24.3.3 | A 401 whose one renewal the platform refused for a reason that says nothing about the credential — a 429 on the refresh route, a 502, a dropped connection — was rethrown as the original 401, which `reload`, the launch read, the post-sign-in read and the deletion check took as the credential's final answer: the keychain cleared and the cover up while the refresh token was good. The existing tests covered a 429 reaching the provider directly, not a 401 after a refused renewal | **fixed**: the renewal answers three ways (`renewed`, `refused`, `unavailable` with the refusal itself, `lib/platform/session-recovery.ts`) and the transport hands the caller the 429 with its wait or the outage, never the 401; `session-recovery` holds both |
+| 24.2.1 | The platform's link guard runs only at the exchange while Supabase links at its own callback, so a link whose exchange never happens keeps an outside-domain account (the platform's finding; §12.1 #221's premise corrected) | backend §12.1 #221, the owner's decision. The app half is sound: the ticket sealed and provider-bound, 120 s; the refresh token in bodies, never a URL; only the auth session's returned URL accepted; the same guard for web and device |
+| 24.3.4 | The upload PUT sends to the signed URL as the platform returned it, with no scheme or host check of its own; iOS ATS and Android's cleartext default refuse cleartext, and no credential can leave by it (`credentials: 'omit'`, no bearer) | recorded; no change — a development store may answer plain http, and the OS policy is the rule in a release build |
+| 24.3.4 | `audit:platform` did not name expo-file-system's legacy network calls (`uploadAsync`, `createUploadTask`, `downloadAsync`, `createDownloadResumable`) or `Image.prefetch`, so a second upload path through them passed the gate; its comment stripping ignores string literals (deliberate evasion only) | **hardened**: a rule for those names, with a negative test that writes each call and expects the audit to refuse it |
+| 24.4.1 | A lost answer to "Make a new secret" reads as a transport failure though Runs may already have rotated — no Idempotency-Key by contract, the old secret then fails closed; the website the same | backend §12.1 #240, Round 17. Sound: the secret only in the dialog's state, dropped at unmount, never stored, logged or copied; the role gating the platform's; the address bound to the workspace at open and at issue |
+| 24.6.1 | On iOS a paid card opens Stripe Checkout in Safari and the enrolled card the portal; Android draws the same cards inert — the App Store exposure ADR-0032 decision 2 took | recorded; the owner's standing decision. Sound: only platform-returned https URLs opened, the role read from the session, the checkout key server-side and purchase-stable |
+| 24.6.2 | `clearSession` clears seven keys; `autom8x.scope.<workspaceId>` entries (a project id per workspace, this-device-only, no credential) and the appearance outlive a deletion | recorded: UUIDs that name nothing after the purge |
+| 24.6.2 | The post-DELETE check reads a 401 as deleted: a 502 before Access with an independently dead refresh token would say Account deleted while the account remains — unlikely, as the Edge revokes only after `deleted` | recorded. Sound: deletion only from the explicit confirmation, bound to the session's actor; Unlink never leaves zero sign-in methods |
+
+### Guards proved to bite, the review
+
+Seven runs — six by one script (`scratchpad/review-bites/bites.py`), B61 by hand — each one exact edit to the source —
+one or two strings, the run aborted if any was not found exactly once — the named tests run with
+jest's JSON report, each one's status read from it, and the file restored from a saved copy, its
+SHA-256 checked against the one before; the working tree's hashes matched after every restore.
+B59's run wrote no report file, so it was run again by hand with its log kept, the same edit and
+the same restore. Every break failed the tests named; the clean tree passes them.
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| B54 · the return drawn with its tab's first screen beneath it | `withAnchor: false` | `real-router/session-ended` "is drawn as the run was opened — Home beneath it: Back comes home, with Home's rows drawn", "the Home tab, pressed on the returned run, comes home too", "through the Face ID question: answered, it returns to the screen the session ended on" |
+| B55 · a 401 during a sign-out on purpose is the sign-out's own end | the `leaving` branch removed from `endSession` | `real-router/session-ended` "a 401 met before the logout answers — the push device's DELETE on a dead credential — shows the cover as a sign-out from the first frame, never as an ended session" |
+| B56 · a sign-in that fails keeps the return | `forgetOpenScreen()` on the sign-in's 401 | `real-router/session-ended` "a sign-in whose session read is refused keeps the return: the next sign-in that completes returns" |
+| B57 · an incomplete plan says Incomplete | `incomplete: null` | `billing-screen` "incomplete: the pill says Incomplete on the enrolled paid plan" |
+| B58 · a draft team says Draft | `draft: 'Paused'` | `gate24-parity-activity` "draws Draft on a draft team's row" |
+| B59 · the settings drawn in the sheet that asked | a second `Dialog` mounted for the settings as the first hides | `automation-actions` "draws the new version's settings in the sheet that asked — no second modal", and "offers that version's fields, seeded from what the flow holds, and saving moves it in one change" |
+| B61 · a renewal the platform could not make is heard as itself, never as the 401 | the 401 handed on for `unavailable` (the transport as it was) | `session-recovery` "hands the caller a renewal the platform could not make — a 429 with its wait — never the 401 it stood in for", "the same for an outage on the refresh route: unreachable, never signed out" |

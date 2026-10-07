@@ -476,6 +476,25 @@ describe('a move whose settings do not fit is answered with the new version\'s s
     expect(callbacks.onChanged).not.toHaveBeenCalled();
   });
 
+  it("draws the new version's settings in the sheet that asked — no second modal, which iOS would not present while the first dismisses (the review of #49)", async () => {
+    answer(`PATCH ${SUB_PATH}`, () => {
+      throw new PlatformError('Unprocessable', 422, 'VALIDATION_FAILED', { reason: 'invalid_config' });
+    });
+    await renderActions({ sub: subscription({ setup: [INBOX] }), entry: entry({ version: 2, setup: [INBOX, DIGEST] }) });
+    await fireEvent.press(screen.getByText('Move to v2'));
+    await pressLast('Move to v2');
+    await screen.findByText('Set them for v2');
+    const sheet = screen.getByTestId('move-version-dialog');
+
+    await fireEvent.press(screen.getByText('Set them for v2'));
+    expect(await screen.findByText('Settings for v2')).toBeTruthy();
+    // The very element that asked now holds the fields — its id moved with its words — not
+    // a second sheet mounted as the first one left.
+    expect(screen.getByTestId('setup-dialog')).toBe(sheet);
+    expect(screen.queryByTestId('move-version-dialog')).toBeNull();
+    expect(screen.getByLabelText('Watch inbox').props.value).toBe('ap@acme.co');
+  });
+
   it('offers nothing to set for any other refusal', async () => {
     answer(`PATCH ${SUB_PATH}`, () => {
       throw new PlatformError('Conflict', 409, 'CONFLICT', { reason: 'runs_in_flight' });

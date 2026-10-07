@@ -173,6 +173,16 @@ describe('Billing (24.6.1, ADR-0032 option B; the cards since 24.12)', () => {
     android.restore();
   });
 
+  it('incomplete: the pill says Incomplete on the enrolled paid plan — the fourth status while a plan lasts (G25; the review of #50)', async () => {
+    const android = on('android');
+    route('owner', { ...ON_PLUS, status: 'incomplete' });
+    await renderWithProviders(<BillingScreen />, sessionAs('owner'));
+    expect(await screen.findByText('Incomplete')).toBeTruthy();
+    expect(card('team').getByText('Incomplete')).toBeTruthy();
+    expect(card('team').getByText('Enrolled')).toBeTruthy();
+    android.restore();
+  });
+
   it('unpaid: Free is enrolled and has Manage billing, which opens the portal, never a checkout; cancelled, nothing to manage; Android, no control (G25)', async () => {
     const ios = on('ios');
     const fake = route('owner', { ...ON_PLUS, status: 'unpaid' });

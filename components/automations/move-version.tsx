@@ -2,7 +2,7 @@ import { ArrowCircleUp } from 'phosphor-react-native';
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { SetupDialog } from '@/components/automations/setup-dialog';
+import { SetupFields, useSetupForm } from '@/components/automations/setup-dialog';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { fonts, typeScale } from '@/constants/theme';
@@ -28,6 +28,11 @@ import { PlatformError } from '@/lib/platform/problem';
  * §12.1 #185): refused `invalid_config`, the dialog offers that version's
  * fields — seeded from what the flow holds — and saving them moves the flow in
  * the same change. Set up cannot do it: it draws the version the flow runs.
+ *
+ * One dialog, two modes — the question, then the settings in the same sheet:
+ * iOS will not present a second modal while the first is still being
+ * dismissed, so a settings dialog swapped in for this one in a single render
+ * was never shown (the connections card's rule; the review of #49).
  */
 export function MoveVersion({
   name,
@@ -59,7 +64,25 @@ export function MoveVersion({
   const [error, setError] = useState<string | null>(null);
   // The settings do not fit `to`: offer to set them for it.
   const [misfit, setMisfit] = useState(false);
-  const [settingFor, setSettingFor] = useState(false);
+  const [mode, setMode] = useState<'move' | 'settings'>('move');
+  const form = useSetupForm({
+    subscriptionId,
+    shownWorkspaceId,
+    setup: targetSetup,
+    config,
+    moveTo: to,
+    onSaved: () => {
+      setOpen(false);
+      setMode('move');
+      setMisfit(false);
+      onMoved();
+    },
+  });
+
+  const close = () => {
+    setOpen(false);
+    setMode('move');
+  };
 
   const confirm = async () => {
     if (busy) return;
@@ -85,6 +108,8 @@ export function MoveVersion({
     }
   };
 
+  const working = mode === 'move' ? busy : form.busy;
+
   return (
     <View style={styles.note}>
       <Text style={[styles.noteText, { color: palette.neutral[400] }]}>
@@ -100,54 +125,65 @@ export function MoveVersion({
         onPress={() => {
           setError(null);
           setMisfit(false);
+          setMode('move');
           setOpen(true);
         }}
       />
       <Dialog
         visible={open}
-        testID="move-version-dialog"
-        onRequestClose={busy ? () => undefined : () => setOpen(false)}
-        title={`Move ${name} to v${to}?`}
-        body={`New runs use v${to}; runs v${from} already made are kept as they are. Its settings carry over and are checked against v${to} first.`}
+        testID={mode === 'move' ? 'move-version-dialog' : 'setup-dialog'}
+        onRequestClose={working ? () => undefined : close}
+        title={mode === 'move' ? `Move ${name} to v${to}?` : `Settings for v${to}`}
+        body={
+          mode === 'move'
+            ? `New runs use v${to}; runs v${from} already made are kept as they are. Its settings carry over and are checked against v${to} first.`
+            : `v${to} checks its settings differently. Set them for it; saving moves the flow.`
+        }
         actions={
-          <>
-            <DialogButton label="Cancel" disabled={busy} onPress={() => setOpen(false)} />
-            {misfit ? (
+          mode === 'move' ? (
+            <>
+              <DialogButton label="Cancel" disabled={busy} onPress={close} />
+              {misfit ? (
+                <DialogButton
+                  tone="accent"
+                  onPress={() => {
+                    form.reset();
+                    setMode('settings');
+                  }}
+                  label={`Set them for v${to}`}
+                />
+              ) : (
+                <DialogButton
+                  tone="accent"
+                  disabled={busy}
+                  onPress={confirm}
+                  label={busy ? 'Moving…' : `Move to v${to}`}
+                />
+              )}
+            </>
+          ) : (
+            <>
+              <DialogButton label="Cancel" disabled={form.busy} onPress={close} />
               <DialogButton
                 tone="accent"
-                onPress={() => {
-                  setOpen(false);
-                  setSettingFor(true);
-                }}
-                label={`Set them for v${to}`}
+                disabled={form.busy}
+                onPress={() => void form.save()}
+                label={form.busy ? 'Moving…' : `Save and move to v${to}`}
               />
-            ) : (
-              <DialogButton
-                tone="accent"
-                disabled={busy}
-                onPress={confirm}
-                label={busy ? 'Moving…' : `Move to v${to}`}
-              />
-            )}
-          </>
+            </>
+          )
         }>
-        {error ? <DialogText tone="error">{error}</DialogText> : null}
+        {mode === 'move' ? (
+          error ? (
+            <DialogText tone="error">{error}</DialogText>
+          ) : null
+        ) : (
+          <>
+            <SetupFields setup={targetSetup} values={form.values} onChange={form.change} />
+            {form.error ? <DialogText tone="error">{form.error}</DialogText> : null}
+          </>
+        )}
       </Dialog>
-      {settingFor ? (
-        <SetupDialog
-          subscriptionId={subscriptionId}
-          shownWorkspaceId={shownWorkspaceId}
-          setup={targetSetup}
-          config={config}
-          moveTo={to}
-          onClose={() => setSettingFor(false)}
-          onSaved={() => {
-            setSettingFor(false);
-            setMisfit(false);
-            onMoved();
-          }}
-        />
-      ) : null}
     </View>
   );
 }

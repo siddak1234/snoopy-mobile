@@ -6,7 +6,7 @@ import { platformOperation } from './client';
 import { endDeviceEpoch, settleDeviceRegistration, unregisterThisDevice } from './devices';
 import { backendApiOrigin } from './origin';
 import { createPkcePair } from './pkce';
-import { PlatformError, PlatformNotConfiguredError } from './problem';
+import { PlatformError, PlatformNotConfiguredError, PlatformUnreachableError } from './problem';
 import { notifySessionEnded, setSessionRecovery } from './session-recovery';
 import { clearSession, readSession, writeSession, type StoredSession } from './session-store';
 
@@ -234,24 +234,31 @@ export function matchesNativeCallback(returned: URL, configured: string): boolea
 export type RefreshOutcome =
   | { status: 'refreshed' }
   | { status: 'signed-out' }
-  | { status: 'unavailable'; message: string };
+  | { status: 'unavailable'; message: string; cause: Error };
 
 /**
  * Teach the transport how to renew, without letting it import this module.
  *
  * Registered at load rather than by a caller: `hooks/use-session.tsx` imports
  * this module and the root layout mounts that provider, so the slot is filled
- * before any screen can issue a request. `recoverSession()` answers `false`
+ * before any screen can issue a request. `recoverSession()` answers `refused`
  * when it is not, which rethrows the original 401 — the fail-closed direction.
  *
- * The boolean is deliberately narrow. Only `refreshed` is a renewal; `unavailable`
- * is an outage and must NOT be reported as a renewal, or the transport would
- * retry with the same expired token and turn one 401 into two.
+ * The answer is deliberately three-way. Only `refreshed` is a renewal;
+ * `unavailable` is a 429 or an outage and must NOT be reported as a renewal,
+ * or the transport would retry with the same expired token and turn one 401
+ * into two — nor as a refusal, or the transport would hand the caller the 401
+ * and a 429 on the refresh route would read as signed out (24.3.3; Gate 24's
+ * security review). It carries the refusal itself, for the caller to hear.
  */
 setSessionRecovery(async () => {
   const outcome = await refreshSession();
-  if (outcome.status === 'signed-out') notifySessionEnded();
-  return outcome.status === 'refreshed';
+  if (outcome.status === 'signed-out') {
+    notifySessionEnded();
+    return { status: 'refused' };
+  }
+  if (outcome.status === 'refreshed') return { status: 'renewed' };
+  return { status: 'unavailable', cause: outcome.cause };
 });
 
 export async function refreshSession(): Promise<RefreshOutcome> {
@@ -274,11 +281,14 @@ export async function refreshSession(): Promise<RefreshOutcome> {
       await clearSession();
       return { status: 'signed-out' };
     }
-    // Unreachable, 502, 503 — the credential may well still be good. Keep it,
-    // but do not immediately try the expired access token against `/v1/session`.
+    // Unreachable, 502, 503, a 429 — the credential may well still be good. Keep
+    // it, but do not immediately try the expired access token against
+    // `/v1/session`. The refusal itself travels with the answer: a 429's wait
+    // is said to the person, and never the 401 it stood in for.
     return {
       status: 'unavailable',
       message: error instanceof Error ? error.message : 'The platform could not be reached.',
+      cause: error instanceof Error ? error : new PlatformUnreachableError(),
     };
   }
 }
