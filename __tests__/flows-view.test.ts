@@ -3,8 +3,8 @@ import type { RunSubscriptionCounts, Subscription } from '@/lib/platform/runs';
 import { addedAgainAs, scopeLabels, toFlows, toSolutions } from '@/lib/view/catalog';
 import {
   approvalTitle,
-  composeNotifications,
   heldDecisionLine,
+  inboxRows,
   metaFor,
   needsReview,
   runLabel,
@@ -237,66 +237,75 @@ describe('splitByDay', () => {
   });
 });
 
-describe('composeNotifications — §12.1 #71', () => {
+describe('inboxRows — the platform\'s inbox in words (decision 3A, reversing §12.1 #71)', () => {
   const catalog = new Map([['acme.invoice', entry()]]);
-  const subs = subscriptionIndex([{ id: 's1', templateId: 'acme.invoice' }]);
   const now = Date.parse('2026-08-17T12:00:00Z');
+  const held = {
+    id: 'approval:a1',
+    kind: 'approval-requested' as const,
+    runId: 'r0',
+    approvalId: 'a1',
+    subscriptionId: 's1',
+    templateId: 'acme.invoice',
+    stepId: 'extract',
+    reason: 'Amount differs from PO',
+    occurredAt: '2026-08-17T11:48:00Z',
+    read: false,
+  };
+  const failed = {
+    id: 'run:r1',
+    kind: 'run-failed' as const,
+    runId: 'r1',
+    subscriptionId: 's1',
+    templateId: 'acme.invoice',
+    failureReason: 'Sheets auth expired',
+    occurredAt: '2026-08-17T11:00:00Z',
+    read: true,
+  };
 
-  it('draws from held approvals and failed runs, and nothing else', () => {
-    const rows = composeNotifications(
-      [
-        {
-          id: 'a1',
-          subscriptionId: 's1',
-          stepId: 'extract',
-          reason: 'Amount differs from PO',
-          createdAt: '2026-08-17T11:48:00Z',
-        },
-      ],
-      [
-        {
-          id: 'r1',
-          templateId: 'acme.invoice',
-          status: 'failed',
-          failureReason: 'Sheets auth expired',
-          createdAt: '2026-08-17T11:00:00Z',
-        } as never,
-      ],
-      subs,
-      catalog,
-      now,
-    );
-    expect(rows.map((r) => r.title)).toEqual(['Run held for review', 'Run failed']);
-    expect(rows[0].desc).toContain('Amount differs from PO');
+  it('names a held run by its automation and the step that held, then why, and opens Activity', () => {
+    const [row] = inboxRows([held], catalog, now);
+    expect(row).toEqual({
+      id: 'approval:a1',
+      tone: 'warn',
+      unread: true,
+      title: 'Run held for review',
+      desc: 'Invoice triage · Extract invoice fields · Amount differs from PO',
+      time: '12m',
+      target: 'activity',
+      runId: 'r0',
+    });
   });
 
-  it('reports every row unread, because read state is an unbuilt subsystem', () => {
-    const rows = composeNotifications(
-      [{ id: 'a1', subscriptionId: 's1', stepId: 'extract', reason: 'r', createdAt: '2026-08-17T11:00:00Z' }],
-      [],
-      subs,
-      catalog,
-      now,
-    );
-    expect(rows.every((r) => r.unread)).toBe(true);
+  it('names a failed run by its automation, then why, and opens the run', () => {
+    const [row] = inboxRows([failed], catalog, now);
+    expect(row).toEqual({
+      id: 'run:r1',
+      tone: 'err',
+      unread: false,
+      title: 'Run failed',
+      desc: 'Invoice triage · Sheets auth expired',
+      time: '1h',
+      target: 'run',
+      runId: 'r1',
+    });
   });
 
-  it('orders newest first across both sources', () => {
-    const rows = composeNotifications(
-      [{ id: 'a1', subscriptionId: 's1', stepId: 'extract', reason: 'r', createdAt: '2026-08-16T12:00:00Z' }],
-      [
-        {
-          id: 'r1',
-          templateId: 'acme.invoice',
-          status: 'failed',
-          createdAt: '2026-08-17T11:55:00Z',
-        } as never,
-      ],
-      subs,
-      catalog,
-      now,
+  it('keeps the platform\'s order and its read state, inventing neither', () => {
+    const rows = inboxRows([failed, held], catalog, now);
+    expect(rows.map((r) => r.id)).toEqual(['run:r1', 'approval:a1']);
+    expect(rows.map((r) => r.unread)).toEqual([false, true]);
+  });
+
+  it('degrades, never blanks: a failure without a reason says Failed; a step or automation the catalog lacks falls back', () => {
+    const { failureReason: _unsaid, ...silent } = failed;
+    expect(inboxRows([silent], catalog, now)[0]!.desc).toBe('Invoice triage · Failed');
+    expect(inboxRows([{ ...held, stepId: 'gone' }], catalog, now)[0]!.desc).toBe(
+      'Invoice triage · Amount differs from PO',
     );
-    expect(rows[0].title).toBe('Run failed');
+    expect(inboxRows([{ ...held, templateId: 'acme.gone' }], catalog, now)[0]!.desc).toBe(
+      'acme.gone · Amount differs from PO',
+    );
   });
 });
 

@@ -263,7 +263,8 @@ describe("One flow per workspace: what Setup adds is held at once (the build 13 
     setMockParams({ template: 'tpl.0' });
     await renderWithProviders(<SetupScreen />, signedInSession);
 
-    await fireEvent.press(await screen.findByText('Team: Finance'));
+    await fireEvent.press(await screen.findByTestId('setup-team'));
+    await fireEvent.press(screen.getByText('Team: Finance'));
     await fireEvent.press(screen.getByText('Activate solution'));
     await waitFor(() => expect(writes).toHaveLength(1));
     expect(writes[0]).toMatchObject({ method: 'POST', body: { templateId: 'tpl.0', projectId: 'project-1' } });
@@ -296,7 +297,8 @@ describe("One flow per workspace: what Setup adds is held at once (the build 13 
     setMockParams({ template: 'tpl.0' });
     await renderWithProviders(<SetupScreen />, signedInSession);
 
-    await fireEvent.press(await screen.findByText('Team: Finance'));
+    await fireEvent.press(await screen.findByTestId('setup-team'));
+    await fireEvent.press(screen.getByText('Team: Finance'));
     await fireEvent.press(screen.getByText('Activate solution'));
     await waitFor(() => expect(writes.map((write) => write.method)).toEqual(['POST', 'PATCH']));
     expect(await screen.findByTestId('action-failure')).toBeTruthy();

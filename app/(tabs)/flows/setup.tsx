@@ -10,7 +10,7 @@ import {
   bySection,
   missingRequiredSetupFields,
 } from '@/components/setup-field';
-import { ChoiceChips } from '@/components/choice-chips';
+import { SelectField } from '@/components/select-field';
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel } from '@/components/nocturne/section-label';
@@ -319,12 +319,16 @@ export default function SetupScreen() {
           <Text style={[styles.heldWhere, { color: palette.text }]}>{scopeLabel(placed.projectId, labels)}</Text>
         </View>
       ) : projects.length > 0 ? (
-        <ChoiceChips
+        // A full-width dropdown of the open teams (the owner, build 13 #5), as
+        // Create team's kind is chosen.
+        <SelectField
           label="Add to"
+          testID="setup-team"
           options={scopes}
-          value={scope ?? ''}
-          onChange={(next) => {
-            // Nothing is added yet — the chips go once it is — so another team
+          selected={scope ?? null}
+          placeholder="Choose a team"
+          onSelect={(next) => {
+            // Nothing is added yet — the choice goes once it is — so another team
             // is a new intent from the start: a create that failed for one
             // team is not replayed, under its key, for another.
             setChosenScope(next);

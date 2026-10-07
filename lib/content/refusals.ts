@@ -97,6 +97,19 @@ const SUBSCRIPTION_REFUSALS: Readonly<Record<string, string>> = {
     'Subscriptions are unavailable while billing entitlements are not configured.',
 };
 
+/**
+ * Over the plan's flow allowance (decision 7a3), in the website's words: what
+ * the plan allows, what the workspace holds, and how many to archive. Paused and
+ * draft flows count, so the sentence says archive.
+ */
+export function overPlanSentence(allowed: number, live: number): string {
+  const flows = allowed === 1 ? 'flow' : 'flows';
+  return `Your plan allows ${allowed} ${flows}; this workspace has ${live}. No flow can start a run until you archive ${live - allowed}. Paused and draft flows count.`;
+}
+
+/** A run refused because billing entitlements are not configured: every start is, until they are. */
+export const RUNS_UNCONFIGURED = 'Runs are unavailable while billing entitlements are not configured.';
+
 /** Starting a run (backend FR-14, ADR-0030). */
 export const RUN_REFUSALS: Readonly<Record<string, string>> = {
   artifact_unavailable: 'That file can no longer be used. Choose it again.',
@@ -139,8 +152,59 @@ export function runRefusal(error: unknown): { message: string; fileGone: boolean
   if (error instanceof PlatformError && error.status === 409) {
     return { message: 'This flow is not live, so it cannot run.', fileGone: false };
   }
+  // Over the plan (decision 7a3): its numbers when the platform gave them; every
+  // other 403 is authorization and carries no reason.
+  if (error instanceof PlatformError && error.status === 403) {
+    const { reason, limit, live } = error.details ?? {};
+    if (reason === 'over_plan_limit') {
+      const counted = Number.isSafeInteger(limit) && Number.isSafeInteger(live) && (live as number) > (limit as number);
+      return {
+        message: counted ? overPlanSentence(limit as number, live as number) : SUBSCRIPTION_REFUSALS.over_plan_limit!,
+        fileGone: false,
+      };
+    }
+    if (reason === 'entitlements_not_configured') return { message: RUNS_UNCONFIGURED, fileGone: false };
+  }
   return { message: refusalMessage(error, {}, 'The run was not started.'), fileGone: false };
 }
+
+/**
+ * The organization's domain-only setting (the owner's build 13 decision 8B): its
+ * name, what it does, and its refusals — the same words on the website.
+ */
+export const DOMAIN_ONLY_TITLE = 'Verified domains only';
+export const DOMAIN_ONLY_SUB =
+  "Only people who sign in with addresses at your verified domains can join, and members can't link an account outside them.";
+
+/**
+ * A refused change to the setting. Turning it on needs a verified domain and
+ * every member's sign-ins inside one; nobody is removed, and a member the
+ * platform has not seen since the setting arrived counts as outside until they
+ * sign in again (the platform cannot know their accounts before then).
+ */
+export function domainOnlyRefusal(error: unknown): string {
+  if (error instanceof PlatformError && error.status === 409) {
+    const { reason, count } = error.details ?? {};
+    if (reason === 'no_verified_domain') return 'Verify a domain before limiting the organization to it.';
+    if (reason === 'members_outside_domain') {
+      const counted = Number.isSafeInteger(count) && (count as number) > 0;
+      const who = !counted ? 'Some members sign' : count === 1 ? '1 member signs' : `${count} members sign`;
+      return `${who} in with an address outside your verified domains, so this can't be turned on yet. Nobody is removed. A member who hasn't signed in since this setting arrived counts until they sign in again.`;
+    }
+  }
+  return refusalMessage(error, {}, 'The setting could not be saved.');
+}
+
+/** Asking to join an organization that admits only its verified domains (8B). */
+export const JOIN_REFUSALS: Readonly<Record<string, string>> = {
+  outside_org_domain: 'This organization admits only people who sign in with addresses at its verified domains.',
+};
+
+/** Approving someone who signs in from outside them while the setting is on (8B). */
+export const DECISION_REFUSALS: Readonly<Record<string, string>> = {
+  outside_org_domain:
+    "This person signs in with an address outside your verified domains, so they can't join while Verified domains only is on.",
+};
 
 /** The words for a failed action: its listed reason, else the platform's message. */
 export function refusalMessage(

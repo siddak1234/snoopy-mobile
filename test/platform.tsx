@@ -316,6 +316,41 @@ export function approvalsPayload(): Answer<'GET /v1/workspaces/{workspaceId}/app
   };
 }
 
+/**
+ * The platform's inbox (the owner's build 13 decision 3A): the held runs
+ * `approvalsPayload` holds, then the failed run `runsPayload` holds, none read —
+ * the rows the inbox drew when it composed them from those two reads.
+ */
+export function inboxPayload(): Answer<'GET /v1/workspaces/{workspaceId}/notifications'> {
+  const templates = new Map(subscriptionsPayload().subscriptions.map((s) => [s.id, s.templateId]));
+  const held = approvalsPayload().approvals.map((approval) => ({
+    id: `approval:${approval.id}`,
+    kind: 'approval-requested' as const,
+    runId: approval.runId,
+    approvalId: approval.id,
+    subscriptionId: approval.subscriptionId,
+    templateId: templates.get(approval.subscriptionId) ?? 'tpl.0',
+    stepId: approval.stepId,
+    reason: approval.reason,
+    occurredAt: approval.createdAt,
+    read: false,
+  }));
+  const failed = runsPayload()
+    .runs.filter((run) => run.status === 'failed')
+    .map((run) => ({
+      id: `run:${run.id}`,
+      kind: 'run-failed' as const,
+      runId: run.id,
+      subscriptionId: run.subscriptionId,
+      templateId: run.templateId,
+      ...(run.failureReason ? { failureReason: run.failureReason } : {}),
+      occurredAt: run.updatedAt,
+      read: false,
+    }));
+  const items = [...held, ...failed];
+  return { items, unreadCount: items.length };
+}
+
 /** `RunDetail` — a different shape from the runs list, and easy to conflate. */
 export function runDetailPayload(runId: string): Answer<'GET /v1/workspaces/{workspaceId}/runs/{runId}'> {
   const all = runsPayload().runs;
@@ -368,6 +403,7 @@ export type RouteOverrides = {
   '/decision'?: Answer<'POST /v1/workspaces/{workspaceId}/approvals/{approvalId}/decision'>;
   '/runs'?: Answer<'GET /v1/workspaces/{workspaceId}/runs'>;
   '/run-stats'?: Answer<'GET /v1/workspaces/{workspaceId}/run-stats'>;
+  '/notifications'?: Answer<'GET /v1/workspaces/{workspaceId}/notifications'>;
 } & { [billing: `/v1/workspaces/${string}/billing`]: Billing } & {
   [connections: `${string}/connections`]: Answer<'GET /v1/workspaces/{workspaceId}/connections'>;
 };
@@ -444,6 +480,16 @@ export function routePlatform(platformOperation: jest.Mock, overrides: RouteOver
       const rows = subscriptionsPayload().subscriptions;
       return Promise.resolve({ subscriptions: rows, subscription: rows[0] } satisfies Subscriptions & OneSubscription);
     }
+    // The inbox (decision 3A): its list, and what a read or a dismissal of it answers.
+    if (/\/notifications\/read$/.test(path)) {
+      return Promise.resolve({ unreadCount: 0 } satisfies Answer<'POST /v1/workspaces/{workspaceId}/notifications/read'>);
+    }
+    if (/\/notifications\/[^/]+\/dismiss$/.test(path)) {
+      return Promise.resolve({
+        unreadCount: inboxPayload().unreadCount - 1,
+      } satisfies Answer<'POST /v1/workspaces/{workspaceId}/notifications/{notificationId}/dismiss'>);
+    }
+    if (path.endsWith('/notifications')) return Promise.resolve(inboxPayload());
     if (path.includes('/run-stats')) return Promise.resolve(runStatsPayload());
     if (path.includes('/decision')) {
       return Promise.resolve({

@@ -2062,6 +2062,159 @@ One script made twenty-five runs. Each run made one exact break (two, in the one
 | Setup: what it added is where the flow is | `placed = held` | `build13-unarchive-and-one-flow` "a create still owed an account says where it is under Added to, with no team to pick again — no second copy can be sent" |
 | Setup: what it added is activated, never added again | `placed = held` | `build13-unarchive-and-one-flow` "a create whose activation failed stays Added to its team, and Activate again activates that copy — never a second" |
 
+### Build 13 feedback → build 14 decisions
+
+The owner's decisions of 2026-10-06 on TestFlight build 13's feedback. Part 1 (`5cc1ccf`:
+the sign-out confirm, the review banner only when something waits, no last-row hairline,
+Setup's team as a dropdown, the Free line, the same-email wording) is that commit's. Part 2
+is decisions 2, 4 and 5, on `round-16/b14-home`, verified against the code at `5cc1ccf`.
+Part 3 is decisions 3, 7, 8 and 10 — each on the build 14 platform (`snoopy-backend`
+`round-16/build-14-platform`), whose contracts this repository regenerated: the inbox's
+read state, the over-limit rule, the domain-only setting and a link's refusals.
+
+| # | The owner's decision | What it was | Disposition |
+| --- | --- | --- | --- |
+| 2 | Home's scope control becomes icons only beside the bell — Home only; Flows and Activity keep their labelled pills. The workspace: Personal → `User`, an organization → `Buildings`. The team by its kind: HR → Users, Accounting → Calculator, Finance → Bank, Legal → Gavel, Compliance → ShieldCheck, Data → Database, Operations → Gear, Sales → Handshake, Marketing → Megaphone, Customer Support → Headset, IT → Desktop, Engineering → Code, Product → Cube, Procurement → ShoppingCart, Administration → Briefcase, Research → Flask, Other or any custom kind → UsersThree, All teams → SquaresFour. Both are buttons; either opens the card the scope control opens today, with the words, so selecting works as now; each named for what it is and what is chosen, since icons alone cannot show it | Home drew the scope control's two labelled pills on a row of their own under the header (24.9.2), as Flows and Activity do | **done (build 14)**: `ScopeIcons` (`components/scope-control.tsx`) — two 38-pt circles drawn as the bell, before it in Home's header — shares the pills' state and their cards (`ScopeCards`: the switcher, Show, Create a team), so a choice is made there exactly as from the pills; Flows and Activity keep `ScopeControl`, drawing what it drew. The map is `TEAM_TYPE_ICONS`, beside `TEAM_TYPES` in `lib/content/team-types.ts`, typed by the list so a kind added without an icon fails `npm run typecheck`, and read through `teamTypeIcon`: compared ignoring case, as the platform compares kinds (`CreateProjectRequest`: a kind is "unique in the workspace … ignoring case"), so "legal" is Legal's gavel, and through a Map, so a kind in a person's own words such as "constructor" finds no Object.prototype member. Read aloud as "Workspace: {name}", "Team: {kind}", "Team: All teams" — the pills' own labels. One choice the decision left open, taken from its words "Both are buttons": the workspace icon opens the switcher with one workspace too, since only the card can name the workspace and the header's other buttons always tick; the pill, which shows the name, stays a button only with two or more or a cut list (the switcher's rule, DESIGN-CONTRACT). The loading skeleton draws four circles, one for each button. The mark (77.8 pt) and the four buttons (182) fit the 280 a 320-pt phone leaves. **NOT OBSERVED** on a device |
+| 4 | Activity gets a time-range button: Today / Week / Month. Week the last 7 days, Month the last 30, Today since local midnight — the Home tiles' today. Activity opens on all runs; the tab bar changes nothing; a Home tile still selects Today (`period=today`); the outcome filters combine with it. In place of Today ✕, which could only clear, never select again | "Today ✕": a chip on a row of its own above the outcomes, set only by a Home tile's arrival, which cleared Today and could not choose it again (`activity/index.tsx` at `5cc1ccf`, ~121–131, ~157–172, ~294–308) | **done (build 14)**: one button beside the title — as Flows' header buttons sit beside its own — drawn as the scope's pills are (`ScopePill`, the pill drawn once for the scope's two and this), reading the range: All time, Today, Week, Month, and read aloud "Time range: {range}". It opens a card, "Time range", in the scope's Show pattern: the four as rows, each with what it spans ("Every run", "Since midnight", "The last 7 days", "The last 30 days"), the chosen one ticked; a row chooses and closes; Done closes. Chosen over the forms the decision offered: `SelectField` is a form's labelled box that opens in place inside a dialog, and four more chips would be a second chip row over the outcomes' four, which build 12 item 1 had kept to one row so it fits a phone's width. `rangeStart` (`lib/platform/runs.ts`, beside `localMidnight`): Today is `localMidnight()` itself, so a Home tile's number is still the rows it opens; Week and Month are the same clock time 7 and 30 calendar days back, whatever a daylight-saving change between did; All time has none. A run is in a range from its first moment (`createdAt >= start`). The range and the outcome select together; the flow chip keeps its row, alone on it now. An empty range says so: "No runs today.", "No runs in the last 7 days.", "No failed runs in the last 30 days.". A Home tile brings Today and a flow page's tile All time (its tiles count all time; it brought no day before); the tab bar brings nothing and changes nothing — held under the real router with a range chosen there (Week), not the one Activity opens on. One edge, from the contract: the runs list takes no window (`listRuns` has `subscriptionId` only) and answers up to 100 runs, so Week and Month select among the newest 100 — a busier week or month lists its newest 100, as a day of more than 100 does under Today (build 12 item 1). **NOT OBSERVED** on a device |
+| 5 | Home with no flows uses the normal layout: the header — the logo, the two icon buttons, the bell, the avatar, all real buttons, as when there are flows — the greeting, the TODAY tiles at 0, and where RECENT RUNS goes the empty message "Nothing automated. Yet." with its Add a flow action. No review banner at 0 (part 1) | `HomeEmpty`, design sHomeEmpty laid out whole: a header whose bell and avatar were Views drawn as buttons, not buttons, and the message centred on the screen — no greeting, no tiles, no scope | **done (build 14)**: one render path. `HomeHeader` (the mark, the scope's two icons, the bell with its dot, the avatar) draws for flows or none; with none set up, ever (the catalog's `subscribed`, archived ones counted, as before), the greeting and TODAY at the read's counts — 0, nothing having run — no review banner, and `HomeFirstRun` (the design's hero, "Nothing automated. Yet.", its line, Add a flow) in place of the quick actions and RECENT RUNS. The tiles are buttons here as with flows. One judgment, recorded so it can be reversed: the quick actions are not drawn with the first run — their Add a flow would sit just over its own, and the decision names the first run's. **NOT OBSERVED** on a device |
+
+| 3 | The inbox's read and dismissed state on the platform, per person and the same on every device: Mark all read, a dismiss on each row, and the bell lit only for what is unread (3A, reversing backend §12.1 #71) | An in-app composition of pending approvals and failed runs, every row unread (§12.1 #71: "read state is an unbuilt subsystem"); Mark all read a local flag the next read undid; no dismiss; the bell lit for any pending approval or failed run in scope | **done (build 14)**: `lib/platform/notifications.ts` reads `GET …/notifications` through the snapshot (volatile) and writes `…/read` and `…/{id}/dismiss`, each keyed, each dropping the inbox from the snapshot. `inboxRows` names each item from the catalog; the platform owns which items exist, their order and their read state. Mark all read names the unread rows on screen by id (an item that arrives after the inbox was drawn stays unread — the rule this register held for the local flag); opening an unread row reads it; Dismiss, beside each row — not inside it, where a screen reader would read it as part of the row — takes it off the inbox; a save re-reads in place (`refresh`, never a skeleton) and a refused one is said under the push card. Home's bell is lit while the inbox's `unreadCount` is above 0 — the whole workspace's, as the inbox is — and a refused read of it costs the dot, never the dashboard. **NOT OBSERVED** on a device |
+| 7 | a3: over the plan's flow allowance, no flow starts a run until the workspace archives down (on any flow); b1, d1, e2: the Stripe portal, by hand (BUILD-PLAN 24.12.24); c2: the Free line (part 1) | A run started whatever the plan, the allowance checked only at Add | **done (build 14)** for a3: a run start refused with 403 `over_plan_limit` says `overPlanSentence` with the platform's `limit` and `live` ("Your plan allows 2 flows; this workspace has 4. No flow can start a run until you archive 2. Paused and draft flows count."), the plan-limit line when the numbers are unusable, and `entitlements_not_configured` its own line; Flows draws the sentence as a warning above the list while `flowAllowance` says over (`flowsOverPlan`: a known ceiling passed; unlimited and unknown are not over), in every scope, since the rule is the workspace's. "Archive", never "pause": `live` counts every flow not archived. **NOT OBSERVED** on a device |
+| 8 | B: an organization can admit only its verified domains | No such setting | **done (build 14)**: `OrgDomainOnly`, "Verified domains only" under the domains, for an owner or admin (`PATCH /v1/workspaces/{id}` `domainOnly`). The toggle moves at the press and back if refused; the organization is read again in place. Refusals in words: no verified domain; members signing in from outside, with their count — nobody removed, and a member not seen since the setting arrived counts until they sign in again (the platform cannot know their accounts before). Each change is its own intent and key; Try again after fixing the cause reuses it (a refused update stores none). Joining refused for it and an approval refused for it say so (`JOIN_REFUSALS`, `DECISION_REFUSALS`). **NOT OBSERVED** on a device |
+| 10 | A: no merge; an account already linked elsewhere says to unlink it from the other account first (with TestFlight #19, the specific link error) | Every link refusal read "Sign-in could not be completed." or "Sign-in was declined." | **done (build 14)**: `describeLinkError`, one sentence per callback reason and nothing raw (own properties only, so `__proto__` finds nothing): `identity_already_linked` — "That account is already linked, to this account or another. To link it here, unlink it from the other account first." (the platform sends that one token for both cases) — and linking disabled, provider disabled, sign-ups closed, account disabled, email unverified; a link a domain-only organization refuses (403 `outside_org_domain`) says so, and the device keeps its session. A declined link reads "Linking was declined." Sign-in names the provider's refusals the platform now sends (provider disabled, sign-ups closed, account disabled, email unverified), and accepts the explicit empty fragment every callback now ends with — any other fragment is still refused. **NOT OBSERVED** on a device: the fragment's reading on Expo 54's URL is the device test's |
+
+Decided flips of pinned behaviour, each named in its test: `tab-screens` "Activity arriving
+with today and Failed lists only today's failed runs; Today ✕ sits on its own row above
+the outcomes, and clears back to every run" is "… the time range says Today, and choosing
+All time there lists every failed run again — and Today again after it (the owner's build
+13 decision 4; until build 14 a Today ✕ chip on a row of its own, which could only
+clear)" — build 13's guard rows "Today ✕ is on its own row, above the outcomes" and "Today
+✕ clears back to every run" name it by its old title; `tab-screens` "fills the 38-pt row
+on the dashboard, beside the bell and the avatar it leaves untouched" is "… beside the
+scope icons, the bell and the avatar …", its room at 320 pt counted for four buttons; and
+"is the same size while the dashboard loads" is "… beside a circle for each of the four
+buttons to come". Tests whose assertions moved from the chip to the button's label, their
+names kept: `tab-screens` "each Home tile's number is the rows it opens: …", "a flow
+page's chip sits on the same row, …" (now also holding All time) and "opening Activity
+from the tab bar after a tile visit leaves Today as it was"; and real-router
+`activity-selection`'s "the same Home tile pressed again, …" and "the tab bar changes
+nothing: …", which clear through the card's All time — the second now also leaves
+Activity on Week before the tab bar, so a range the tab bar reset would show. Home and
+Activity have no snapshots, and `ScopePill` draws the pills' tree as it was: no snapshot
+moved, and none was updated.
+
+The presses this part adds, each run by a test (`audit:presses` over the coverage of the
+eight files that press Home, Activity and the scope control: every press in the three
+changed files is run — Home 10 and a passthrough, Activity 9, the scope control 9 and a
+passthrough). Retired: `activity/index.tsx`'s Today ✕.
+
+| Press | Configured outcome | Test |
+| --- | --- | --- |
+| `scope-control.tsx:244` — Home's workspace icon | Switch workspace, with any number of workspaces; a choice is PATCH `/v1/session/active-workspace` `{workspaceId}`, keyed, then the session read again; the active one again sends nothing | `build14-home-scope-icons-and-first-run` "the workspace icon ticks and opens Switch workspace — …", "the workspace icon is a button with one workspace too — …" |
+| `scope-control.tsx:252` — Home's team icon | Show; a team chosen is the scope, kept for the workspace, the icon and its label follow and Home narrows to it; All teams back | `build14-home-scope-icons-and-first-run` "the team icon ticks and opens Show — …" |
+| `scope-control.tsx:202, :208` — the pills, through `ScopePill` | as before: the switcher with two or more (or a cut list); Show | `presses-home-activity` (the scope control's tables), `scope-control` |
+| `activity/index.tsx:341` — the time range | opens its card, the chosen range ticked | `build14-activity-range` "the button ticks and opens its card — …" |
+| `activity/index.tsx:359` — a range in the card | chooses it and closes; the list is that range's, with the outcome | `build14-activity-range` "Today, Week and Month list the runs …", "the range and the outcome select together, …"; `tab-screens` "Activity arriving with today and Failed …" |
+| `activity/index.tsx:349` — the card's Done | closes; the range and the list as they were; nothing read, nothing opened | `build14-activity-range` "the button ticks and opens its card — …" |
+| `(home)/index.tsx:144` — the first run's Add a flow | opens Add | `build14-home-scope-icons-and-first-run` "draws the header, the greeting and TODAY at 0, …" |
+| `(home)/index.tsx:89, :103` — the bell, the avatar (one header, flows or none) | Notifications; Settings | `tab-screens` "ticks when the avatar, the bell or See all is tapped, …"; `build14-home-scope-icons-and-first-run` "its bell, avatar and scope icons are buttons, …" |
+| `notifications/inbox.tsx:198` — Mark all read (part 3) | `POST …/notifications/read` with the unread rows on screen by id, keyed; nothing when none is unread; the inbox read again in place | `presses-home-activity` "Mark all read saves the rows on screen read, by id …", "Mark all read with every row read sends nothing", "a refused save says so …" |
+| `notifications/inbox.tsx:224` — a row (part 3) | opens its run or Activity, as before, and an unread row is read on the platform first | `presses-home-activity` "opening an unread row reads it on the platform and still opens it; a read row sends nothing" |
+| `notifications/inbox.tsx:247` — a row's Dismiss (part 3) | `POST …/notifications/{id}/dismiss`, keyed; the row leaves; nothing opens | `presses-home-activity` "Dismiss takes one row off the inbox on the platform, without opening it" |
+| `organization/org-domain-only.tsx` — Verified domains only, through `NocToggle` (part 3) | `PATCH /v1/workspaces/{id}` `{domainOnly}`, its own key per intent; back if refused, with why | `organization-screen` "turns on with its own key, reads the organization again in place, and turns off the same way", "refused turning on (…)" |
+| `organization/org-domain-only.tsx:80` — its Try again (part 3) | the attempted change again, with the same key | `organization-screen` "refused turning on (…) … Try again asks again with the same key" |
+
+### Guards proved to bite, build 14 part 2
+
+Thirty-three runs by one script, each against its own suite with the test's name as the
+filter — the named test the one test the filter ran, its status read from jest's own
+record — and the file restored byte for byte, its SHA-256 checked before and after; the
+working tree's hashes matched after the last restore. Every break failed its test. The
+rows against `5cc1ccf` put part 1's Home or Activity back whole: the screen before this
+change. The range tests run with only `Date` fixed (Tuesday 6 October 2026, 3 pm local;
+every timer real), so each boundary is exact. The look — the icons' colour, the pill's
+place on the title's row, the first run's spacing — is styling no test reads, so no break
+was run for it.
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| Every kind has the owner's icon | Legal drawn as UsersThree | `build14-home-scope-icons-and-first-run` "gives every kind on the list an icon — the owner's, each its own — and Other, a kind in a person's own words and none chosen theirs" |
+| Kinds compared as the platform compares them, ignoring case | an exact, case-sensitive lookup | the same |
+| A kind in a person's own words finds no Object.prototype member | the record looked up in place of the Map | the same |
+| Home draws the scope as two icons beside the bell, no pills | Home as it is at `5cc1ccf` | `build14-home-scope-icons-and-first-run` "draws the workspace and the team as icons before the bell and the avatar — a building and four squares — each read aloud as what it is and what is chosen; the labelled pills are gone" |
+| All teams is four squares | All teams drawn as UsersThree | the same |
+| A personal workspace is a person | every workspace a building | `build14-home-scope-icons-and-first-run` "draws a personal workspace as a person" |
+| The team icon is its kind's | every team drawn as UsersThree | `build14-home-scope-icons-and-first-run` "draws the chosen team as its kind's icon, and a kind in a person's own words as the team icon" |
+| The team icon opens Show | the team icon opening the switcher | `build14-home-scope-icons-and-first-run` "the team icon ticks and opens Show — the team list, in words — and a team chosen there is the scope: kept, the icon and its label follow, and Home narrows to it" |
+| The workspace icon opens the switcher | the workspace icon opening Show | `build14-home-scope-icons-and-first-run` "the workspace icon ticks and opens Switch workspace — the workspaces, in words — and choosing another switches: the active workspace PATCHed with a key, then the session read again" |
+| The workspace icon is a button with one workspace | the pill's rule (a button with two or more only) | `build14-home-scope-icons-and-first-run` "the workspace icon is a button with one workspace too — the card is where its name is read — and choosing it sends nothing" |
+| No flow: the dashboard, the first run where the runs go | Home as it is at `5cc1ccf` | `build14-home-scope-icons-and-first-run` "draws the header, the greeting and TODAY at 0, and Nothing automated. Yet. with Add a flow where RECENT RUNS goes — no review banner, and no quick actions over it" |
+| No flow: no quick actions over the first run | a Flows quick action drawn over it | the same |
+| No flow: the bell and the avatar are buttons | Home as it is at `5cc1ccf` | `build14-home-scope-icons-and-first-run` "its bell, avatar and scope icons are buttons, as with flows: each ticks and opens its page or card" |
+| The header's buttons are 38 pt | the icons drawn at 34 | `tab-screens` "fills the 38-pt row on the dashboard, beside the scope icons, the bell and the avatar it leaves untouched" |
+| Loading: a circle for each of the four buttons | two circles, as at part 1 | `tab-screens` "is the same size while the dashboard loads, beside a circle for each of the four buttons to come" |
+| Today on arrival, then All time and Today again from the card | Activity as it is at `5cc1ccf` | `tab-screens` "Activity arriving with today and Failed lists only today's failed runs; the time range says Today, and choosing All time there lists every failed run again — and Today again after it (…)" |
+| A row of the card chooses its range | the row's `setRange` removed | the same |
+| A Home tile arrives with Today | `period` ignored on arrival | `tab-screens` "each Home tile's number is the rows it opens: today's runs by outcome, the older ones left out (All teams)" |
+| A flow page's tile brings All time | a flow tile bringing Today | `tab-screens` "a flow page's chip sits on the same row, above the outcomes, and its tiles bring no day: they count all time" |
+| A Home tile arrives with Today (the tab-bar case) | `period` ignored on arrival | `tab-screens` "opening Activity from the tab bar after a tile visit leaves Today as it was" |
+| Week is 7 days back | Week as 6 days | `build14-activity-range` "Today is the tiles' today — local midnight, localMidnight itself — Week 7 days back and Month 30, to the millisecond; All time has no beginning" |
+| Today is since local midnight, not the last 24 hours | Today as the last 24 hours | the same |
+| Activity opens on All time | Activity opening on Today | `build14-activity-range` "opens on All time — every run, under its day — and says so on the button beside the title" |
+| Activity opens on All time (the screen before) | Activity as it is at `5cc1ccf` | the same |
+| Done closes the card, changing nothing | Done keeping it open | `build14-activity-range` "the button ticks and opens its card — All time, Today, Week and Month, each saying what it spans, the one chosen ticked — and Done closes it, changing nothing" |
+| A range's boundary is in | `>` in place of `>=` | `build14-activity-range` "Today, Week and Month list the runs since local midnight, of the last 7 days and of the last 30 — each boundary in, a millisecond before it out — and All time every run again" |
+| The range selects | the range ignored | the same |
+| The range and the outcome select together | the outcome ignored under a range | `build14-activity-range` "the range and the outcome select together, each kept as the other changes" |
+| An empty range says its span | Week's words dropped | `build14-activity-range` "says the range when it holds no run: No runs today. / in the last 7 days. / in the last 30 days. — not the first-run empty" |
+| A Home tile arrives with Today, and the card chooses again | `period` ignored on arrival | `build14-activity-range` "arriving from a Home tile (period=today) selects Today with its outcome, and the card chooses another — and Today again" |
+| An arrival sets the range; none keeps it | the arrival's `setRange` removed | `build14-activity-range` "the tab bar changes nothing: drawn again with no params, the range chosen here stays; a flow page's tile brings All time with its flow" |
+| The tab bar changes nothing, the range included (real router) | the tab bar sending Activity `period: 'today'` | real-router `activity-selection` "the tab bar changes nothing: after a tile visit and a clear, Activity opens from its tab as it was left" |
+| A Home tile pressed again arrives with Today (real router) | `period` ignored on arrival | real-router `activity-selection` "the same Home tile pressed again, after its selection was cleared on Activity, opens Activity with it again" |
+
+### Guards proved to bite, build 14 part 3
+
+Thirty-four runs by one script (`scratchpad/bite.py`), each a single edit to the source,
+the suites named beside it run, the failing tests read from jest's own report, and the
+file restored and its SHA-256 checked. Every break failed the test named.
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| Mark all read names the rows on screen | the call sending no ids (everything listed now) | `presses-home-activity` "Mark all read saves the rows on screen read, by id …" |
+| Nothing unread, nothing sent | the empty-list guard removed | `presses-home-activity` "Mark all read with every row read sends nothing" |
+| Opening an unread row reads it | the read on open removed | `presses-home-activity` "opening an unread row reads it …" |
+| A read row sends nothing on open | the read sent for every row | the same |
+| Dismiss beside its row, reachable by a screen reader | Dismiss nested back inside the row's press | `presses-home-activity` "Dismiss sits beside its row, not inside it, …" |
+| Dismiss reaches the platform | the dismiss call dropped | `presses-home-activity` "Dismiss takes one row off the inbox …" |
+| A refused save is said | the error state never set | `presses-home-activity` "a refused save says so and changes nothing on screen" |
+| A save re-reads the inbox | the re-read after a save removed | three: Mark all read, opening a row, Dismiss |
+| The re-read is in place, never a skeleton | `refresh` replaced by `reload` | `presses-home-activity` "Mark all read saves …" (the page held during a re-read held open) |
+| A save drops the snapshot's inbox | `invalidateShared(…, ['inbox'])` removed | three: Mark all read, opening a row, Dismiss |
+| A failed run's row is the platform's read state | `unread: true` | `flows-view` "inboxRows …" (two), and three press tests |
+| A held run's row is the platform's read state | `unread: true` | `presses-home-activity` "Mark all read saves …", "… sends nothing" |
+| Over is a known ceiling passed | `flowsOverPlan` never over | `build14-over-plan` "above the list, over the plan", "in a team too …", "is over only when …" |
+| Unknown is not over | no allowance read as over | `build14-over-plan` "not when the platform could not say", "is over only when …" |
+| A refused start says the plan | the 403 branch removed | `automation-actions` "says a run refused over the plan in its numbers", and three `build14-over-plan` cases |
+| No made-up count | the numbers unchecked | `build14-over-plan` "over the plan without usable numbers is the plan-limit line, never a made-up count" |
+| Flows draws the warning | the warning not drawn | `build14-over-plan` "above the list, over the plan", "in a team too …" |
+| Unconfigured entitlements are said | that line removed | `build14-over-plan` "with entitlements unconfigured, says runs are unavailable; …" |
+| The setting sends what was chosen | the body always `true` | `organization-screen` "turns on with its own key, … and turns off the same way" |
+| Its refusals in words | the 409 branch removed | `organization-screen` "refused turning on (…)" (four) |
+| The toggle moves back when refused | the pending value kept on failure | the same four |
+| Each change is a new intent | the key never settled | `organization-screen` "turns on with its own key, …" (a third press reused the first key) |
+| The organization is read again | the re-read removed | the same |
+| … in place | `refresh` replaced by `reload` | the same (the page held during a re-read held open) |
+| The count is said | the count ignored | `organization-screen` "refused turning on" (count 1 and 2) |
+| A refused join is said | `JOIN_REFUSALS` not passed | `organization-screen` "a refused join says the organization admits only its verified domains" |
+| A refused approval is said | `DECISION_REFUSALS` not passed | `organization-screen` "a refused approval says the person signs in from outside, …" |
+| A link's refusals in words | the reason map bypassed | `identity-link` "says a declined link in words, …" and six "says a link refused as …" |
+| Own properties only | `in` for `hasOwnProperty` | `identity-link` "says a link refused as __proto__ …", "… as constructor …" |
+| A link a domain-only organization refused | its 403 branch removed | `identity-link` "says a link a domain-only organization refused, and keeps this device's session (8B)" |
+| Sign-in names the provider's refusals | `email_unverified`'s case renamed | `native-auth` "says the platform's email_unverified in its own sentence (build 14, 10A)" |
+| The bell is the unread count | the bell lit for held or failed runs again | `build14-bell` "has none once everything is read, …", "a refused inbox read costs the dot, …" |
+| A refused inbox read costs the dot only | the read's refusal not caught | `build14-bell` "a refused inbox read costs the dot, never the dashboard" (and every Home test of part 2 that does not route the inbox — routed since) |
+| The bell is lit while unread | the dot never drawn | `build14-bell` "has its dot while the inbox holds something unread" |
+
 ### Guards proved to bite, 24.6
 
 | Guard | Broken by | Test that failed |

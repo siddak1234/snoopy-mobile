@@ -9,6 +9,7 @@ import { BackCircle } from '@/components/nocturne/back-circle';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { TextField } from '@/components/nocturne/text-field';
+import { OrgDomainOnly } from '@/components/organization/org-domain-only';
 import { OrgDomains } from '@/components/organization/org-domains';
 import { OrgJoin } from '@/components/organization/org-join';
 import { OrgPeople } from '@/components/organization/org-people';
@@ -172,6 +173,12 @@ export default function OrganizationScreen() {
             </SurfaceCard>
           </View>
           <OrgDomains domains={data.domains} shownWorkspaceId={org.loadedFor} onChanged={org.reload} />
+          {/* Read again in place: the toggle already shows the change (decision 8B). */}
+          <OrgDomainOnly
+            on={data.workspace.domainOnly === true}
+            shownWorkspaceId={org.loadedFor}
+            onChanged={() => org.refresh()}
+          />
           <OrgPeople
             orgName={data.workspace.name}
             viewerUserId={user?.userId ?? null}

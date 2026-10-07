@@ -248,7 +248,7 @@ describe('Device push: the ask, never at launch (build 11, D8)', () => {
 
 describe('Device push: the ask on an empty inbox too (the owner, build 11, 2026-10-03)', () => {
   /** An inbox with nothing held and nothing failed. */
-  const EMPTY = { '/approvals': { approvals: [] }, '/runs': { runs: [] } };
+  const EMPTY = { '/notifications': { items: [], unreadCount: 0 } };
   /** Every line a person reads, top to bottom. */
   const asRead = () => screen.getAllByText(/./).map((node) => String(node.props.children));
 

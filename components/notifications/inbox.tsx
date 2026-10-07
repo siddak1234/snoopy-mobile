@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { BellRinging, CheckCircle, CrownSimple, HandPalm, XCircle } from 'phosphor-react-native';
+import { BellRinging, CheckCircle, CrownSimple, HandPalm, X, XCircle } from 'phosphor-react-native';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,9 +13,12 @@ import { usePushAsk } from '@/hooks/use-push-registration';
 import { useTheme } from '@/hooks/use-theme';
 import type { NotificationItem } from '@/lib/view/runs';
 import { readCatalog } from '@/lib/platform/catalog';
-import { readApprovals, readRuns, readSubscriptions } from '@/lib/platform/runs';
-import { catalogIndex, composeNotifications, subscriptionIndex } from '@/lib/view/runs';
+import { newIdempotencyKey } from '@/lib/platform/client';
+import { dismissInboxItem, markInboxRead, readInbox } from '@/lib/platform/notifications';
+import { catalogIndex, inboxRows } from '@/lib/view/runs';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
+import { useSession, workspaceIfShown } from '@/hooks/use-session';
+import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import {
   NOTIFICATIONS_EMPTY_BODY,
@@ -60,31 +63,16 @@ export function Inbox({ runPath }: { runPath: InboxRunPath }) {
   const insets = useSafeAreaInsets();
 
   /**
-   * There is no notifications route, so the inbox is composed.
-   *
-   * §12.1 #71 refuses one and names the composition: held runs awaiting a
-   * decision, plus failed runs. That is exactly what the product notifies on,
-   * and the design's own empty state says so — "We only notify you for held runs
-   * and failures."
-   *
-   * It cannot remember what was already seen: read state is an unbuilt
-   * subsystem, so every row reports itself unread. Keeping a local read flag
-   * would make two devices disagree about the same inbox, which is worse than
-   * the honest limitation.
+   * The platform's inbox (the owner's build 13 decision 3A, reversing §12.1 #71):
+   * held runs awaiting a decision and failed runs — what the product notifies on,
+   * as the design's own empty state says — each with whether this person has read
+   * it, and nothing they dismissed. Read and dismissed are the platform's, so every
+   * device and the bell agree.
    */
+  const session = useSession();
   const inbox = useWorkspaceResource(async (workspaceId) => {
-    const [approvals, runs, subs, catalog] = await Promise.all([
-      readApprovals(workspaceId, 'pending'),
-      readRuns(workspaceId),
-      readSubscriptions(workspaceId),
-      readCatalog(workspaceId),
-    ]);
-    return composeNotifications(
-      approvals.approvals,
-      runs.runs.filter((r) => r.status === 'failed'),
-      subscriptionIndex(subs.subscriptions),
-      catalogIndex(catalog.automations),
-    );
+    const [read, catalog] = await Promise.all([readInbox(workspaceId), readCatalog(workspaceId)]);
+    return inboxRows(read.items, catalogIndex(catalog.automations));
   });
 
   const items: NotificationItem[] =
@@ -92,9 +80,37 @@ export function Inbox({ runPath }: { runPath: InboxRunPath }) {
       ? inbox.data.map((n) => ({ ...n, icon: NOTIFICATION_ICON[n.tone] }))
       : [];
 
-  // The rows "Mark all read" covered, by id: a row a later re-read brings in
-  // is still unread.
-  const [readIds, setReadIds] = useState<ReadonlySet<string>>(() => new Set());
+  // What a read or dismissal answered, when it was refused.
+  const [actionError, setActionError] = useState<string | null>(null);
+  // The workspace the rows on screen were read for: what an action binds to.
+  const shownWorkspace = () => {
+    const workspaceId = workspaceIfShown(session, inbox.loadedFor);
+    if (!workspaceId) setActionError(WORKSPACE_CHANGED);
+    return workspaceId;
+  };
+  // A save re-reads the inbox in place, keeping the rows on screen until the
+  // platform answers (`refresh`, not `reload`: no skeleton to confirm a dot). The
+  // save dropped the inbox from the snapshot, so the re-read is a real request.
+  const act = async (change: (workspaceId: string) => Promise<unknown>) => {
+    const workspaceId = shownWorkspace();
+    if (!workspaceId) return;
+    setActionError(null);
+    try {
+      await change(workspaceId);
+      inbox.refresh();
+    } catch (caught) {
+      setActionError(refusalMessage(caught, {}, 'That did not save. Try again.'));
+    }
+  };
+  // The rows on screen, by id, not "everything listed now": an item that arrives
+  // after the inbox was drawn is still unread (DESIGN-GAPS).
+  const markAllRead = () => {
+    const unread = items.filter((item) => item.unread).map((item) => item.id);
+    if (unread.length === 0) return;
+    void act((workspaceId) => markInboxRead(workspaceId, unread, newIdempotencyKey('notifications-read')));
+  };
+  const dismiss = (item: NotificationItem) =>
+    void act((workspaceId) => dismissInboxItem(workspaceId, item.id, newIdempotencyKey('notification-dismiss')));
 
   // Every hook is above this line on purpose: the guards below return early, and
   // a hook called after them would run on some renders and not others.
@@ -150,6 +166,9 @@ export function Inbox({ runPath }: { runPath: InboxRunPath }) {
           : palette.accentRamp[300];
 
   const open = (item: NotificationItem) => {
+    // Opening an item reads it, as a notification does anywhere: saved on the
+    // platform, without holding the way on.
+    if (item.unread) void act((workspaceId) => markInboxRead(workspaceId, [item.id], newIdempotencyKey('notifications-read')));
     if (item.target === 'run') {
       router.push({
         pathname: runPath,
@@ -176,7 +195,7 @@ export function Inbox({ runPath }: { runPath: InboxRunPath }) {
         <BackCircle onPress={() => router.back()} />
         <Text style={[styles.title, { color: palette.text }]}>Notifications</Text>
         <Text
-          onPress={pressed(() => setReadIds(new Set(items.map((item) => item.id))))}
+          onPress={pressed(markAllRead)}
           suppressHighlighting
           style={[styles.markAll, { color: palette.accentRamp[300] }]}>
           Mark all read
@@ -185,35 +204,51 @@ export function Inbox({ runPath }: { runPath: InboxRunPath }) {
 
       <PushCard />
 
+      {actionError ? <Text style={[styles.rowDesc, { color: status.err }]}>{actionError}</Text> : null}
+
       <SurfaceCard style={styles.list}>
         {items.map((item, i) => {
           const IconCmp = item.icon;
-          const unread = item.unread && !readIds.has(item.id);
+          const unread = item.unread;
           return (
-            <Pressable
+            <View
               key={item.id}
-              onPress={() => open(item)}
-              style={({ pressed }) => [
-                styles.row,
+              style={[
+                styles.rowWrap,
                 i < items.length - 1 && {
                   borderBottomWidth: 1,
                   borderBottomColor: palette.divider,
                 },
-                pressed && { backgroundColor: withAlpha(palette.text, 0.04) },
               ]}>
-              <View
-                style={[
-                  styles.dot,
-                  { backgroundColor: unread ? palette.accent : 'transparent' },
-                ]}
-              />
-              <IconCmp size={19} color={toneColor(item.tone)} style={styles.rowIcon} />
-              <View style={styles.rowBody}>
-                <Text style={[styles.rowTitle, { color: palette.text }]}>{item.title}</Text>
-                <Text style={[styles.rowDesc, { color: palette.neutral[400] }]}>{item.desc}</Text>
-              </View>
-              <Text style={[styles.rowTime, { color: palette.neutral[500] }]}>{item.time}</Text>
-            </Pressable>
+              <Pressable
+                onPress={() => open(item)}
+                style={({ pressed }) => [styles.row, pressed && { backgroundColor: withAlpha(palette.text, 0.04) }]}>
+                <View
+                  style={[
+                    styles.dot,
+                    { backgroundColor: unread ? palette.accent : 'transparent' },
+                  ]}
+                />
+                <IconCmp size={19} color={toneColor(item.tone)} style={styles.rowIcon} />
+                <View style={styles.rowBody}>
+                  <Text style={[styles.rowTitle, { color: palette.text }]}>{item.title}</Text>
+                  <Text style={[styles.rowDesc, { color: palette.neutral[400] }]}>{item.desc}</Text>
+                </View>
+                <Text style={[styles.rowTime, { color: palette.neutral[500] }]}>{item.time}</Text>
+              </Pressable>
+              {/* Dismiss, beside the row rather than inside it (decision 3A): a press
+                  inside the row would be grouped into it, out of VoiceOver's reach.
+                  It leaves the inbox on every device. */}
+              <Pressable
+                testID={`dismiss-${item.id}`}
+                accessibilityRole="button"
+                accessibilityLabel={`Dismiss: ${item.title}`}
+                hitSlop={10}
+                onPress={() => dismiss(item)}
+                style={styles.dismiss}>
+                <X size={15} color={palette.neutral[500]} />
+              </Pressable>
+            </View>
           );
         })}
       </SurfaceCard>
@@ -351,12 +386,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   list: {},
+  rowWrap: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
   row: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
     paddingVertical: 13,
-    paddingHorizontal: 14,
+    paddingLeft: 14,
+    paddingRight: 8,
   },
   dot: {
     width: 7,
@@ -383,5 +425,10 @@ const styles = StyleSheet.create({
   rowTime: {
     fontFamily: fonts.regular,
     fontSize: typeScale.caption.fontSize,
+  },
+  dismiss: {
+    paddingTop: 14,
+    paddingRight: 14,
+    paddingLeft: 4,
   },
 });

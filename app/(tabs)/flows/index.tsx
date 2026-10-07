@@ -2,14 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Archive, FlowArrow, MagnifyingGlass, Plus } from 'phosphor-react-native';
+import { Archive, FlowArrow, MagnifyingGlass, Plus, Warning } from 'phosphor-react-native';
 
 import { IconTile } from '@/components/nocturne/icon-tile';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { ScopeControl } from '@/components/scope-control';
-import { em, fonts, layout, radius, typeScale, withAlpha } from '@/constants/theme';
+import { em, fonts, layout, radius, status, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
@@ -24,9 +24,11 @@ import {
   FLOWS_SCOPE_EMPTY_TITLE,
   errorTitleFor,
 } from '@/lib/content/screen-states';
+import { overPlanSentence } from '@/lib/content/refusals';
 import { readCatalog } from '@/lib/platform/catalog';
 import { readProjects } from '@/lib/platform/projects';
 import { readRemovedSubscriptionsOrNone, readRunStats, readSubscriptions } from '@/lib/platform/runs';
+import { flowsOverPlan } from '@/lib/view/billing';
 import { scopeLabels, toFlows, toRemovedFlows, type FlowView } from '@/lib/view/catalog';
 import { inScope } from '@/lib/view/scope';
 
@@ -72,10 +74,13 @@ export default function FlowsScreen() {
       // Archived flows are a page of their own (24.11.8); read here only to
       // know whether the empty screen has any to offer (D6).
       removed: toRemovedFlows(removed.subscriptions, catalog.automations, stats.subscriptions, labels),
+      // Over the plan's flow allowance, the whole workspace's (decision 7a3).
+      overPlan: flowsOverPlan(subs.flowAllowance),
     };
   });
 
   const live: FlowView[] | null = flows.status === 'ready' ? flows.data.flows : null;
+  const overPlan = flows.status === 'ready' ? flows.data.overPlan : null;
   const removedInScope: FlowView[] =
     flows.status === 'ready' ? flows.data.removed.filter((flow) => inScope(flow, projectId)) : [];
   // What detail recorded holds only until this list reads the platform again.
@@ -165,6 +170,15 @@ export default function FlowsScreen() {
           />
         </View>
       </View>
+
+      {/* Over the plan (decision 7a3): every flow is held from starting a run, in
+          any scope, so this says so above the list, whatever the team. */}
+      {overPlan ? (
+        <View testID="flows-over-plan" style={styles.overPlan}>
+          <Warning size={16} color={status.warnText} style={styles.overPlanIcon} />
+          <Text style={styles.overPlanText}>{overPlanSentence(overPlan.allowed, overPlan.live)}</Text>
+        </View>
+      ) : null}
 
       <View
         style={[
@@ -263,6 +277,26 @@ const styles = StyleSheet.create({
   },
   headerPill: {
     paddingHorizontal: 14,
+  },
+  overPlan: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: status.warnCalloutBg,
+    borderWidth: 1,
+    borderColor: status.warnCalloutBorder,
+    borderRadius: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+  },
+  overPlanIcon: {
+    marginTop: 1,
+  },
+  overPlanText: {
+    flex: 1,
+    fontFamily: fonts.regular,
+    ...typeScale.body,
+    color: status.warnText,
   },
   search: {
     height: 44,

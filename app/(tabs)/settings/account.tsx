@@ -122,11 +122,14 @@ export default function AccountScreen() {
       <View>
         <SectionLabel>LINKED ACCOUNTS</SectionLabel>
         {/* What linking does, and the one trap — a first sign-in with a provider not
-            yet linked can start a separate account (the owner's build 12 item 8). */}
+            yet linked can start a separate account (the owner's build 12 item 8). And
+            the rule Supabase applies on its own: a sign-in whose verified email is this
+            account's joins this account (the owner's build 13 decision 9, feedback #16). */}
         <Text style={[styles.text, styles.lead, muted]}>
-          Any account linked here signs you in to this same account, in the app and on the website. Link an account
-          before you first sign in with it. Provider credentials are handled by the Autom8x backend and never reach
-          this app.
+          Any account linked here signs you in to this same account, in the app and on the website. Signing in with
+          Google, Microsoft or Apple at the same email address as this account joins this account too. To use one with
+          a different email address, link it before you first sign in with it. Provider credentials are handled by the
+          Autom8x backend and never reach this app.
         </Text>
         <SurfaceCard style={styles.card}>
           {account.data.providers.map((provider, index) => {

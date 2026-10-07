@@ -373,6 +373,15 @@ export function describeCallbackError(reason: string | null): string {
       return 'Sign-in was declined.';
     case 'not_configured':
       return 'Sign-in is not available yet.';
+    // The provider's own refusals, named by the platform since build 14 (10A).
+    case 'provider_disabled':
+      return "That sign-in provider isn't available.";
+    case 'signup_disabled':
+      return 'New sign-ups are closed.';
+    case 'account_disabled':
+      return 'This account is disabled.';
+    case 'email_unverified':
+      return "That sign-in's email address isn't verified. Verify it with the provider, then try again.";
     default:
       return 'Sign-in could not be completed.';
   }

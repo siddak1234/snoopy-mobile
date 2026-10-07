@@ -10,7 +10,7 @@ import { SettingsRow } from '@/components/settings/settings-row';
 import { fonts, status, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useTheme } from '@/hooks/use-theme';
-import { refusalMessage } from '@/lib/content/refusals';
+import { JOIN_REFUSALS, refusalMessage } from '@/lib/content/refusals';
 import {
   cancelJoinRequest,
   claimDomain,
@@ -88,7 +88,7 @@ function FoundOrganization({
       if (answer.outcome === 'joined') onJoined();
       else setRequestId(answer.request?.id ?? null);
     } catch (caught) {
-      setError(refusalMessage(caught, {}, 'The organization could not be joined.'));
+      setError(refusalMessage(caught, JOIN_REFUSALS, 'The organization could not be joined.'));
     } finally {
       setBusy(false);
     }

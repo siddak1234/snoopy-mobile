@@ -75,7 +75,7 @@ const SCREENS = {
   Team: { Screen: TeamScreen, params: { projectId: 'p1', workspaceId: TEST_WORKSPACE }, read: /^\/v1\/workspaces$/u },
   Teams: { Screen: TeamsScreen, read: /^\/v1\/workspaces$/u },
   'Archived flows': { Screen: ArchivedFlowsScreen, read: /\/subscriptions\?status=archived$/u },
-  Notifications: { Screen: NotificationsScreen, read: /\/approvals\?status=pending$/u },
+  Notifications: { Screen: NotificationsScreen, read: /\/notifications$/u },
 } satisfies Record<string, FetchingScreen>;
 
 /** How the read is refused, what the screen then draws, and what that state offers. */
@@ -89,23 +89,23 @@ type Case = [name: keyof typeof SCREENS, state: keyof typeof STATES, site: strin
 
 const CASES: Case[] = [
   // Home's one combined failure state (DESIGN-CONTRACT's carve-out): Retry only.
-  ['Home', 'offline', 'app/(tabs)/(home)/index.tsx:236', false],
+  ['Home', 'offline', 'app/(tabs)/(home)/index.tsx:285', false],
   ['Run', 'offline', 'app/(tabs)/(home)/run.tsx:189', true],
   ['Run', 'unavailable', 'app/(tabs)/(home)/run.tsx:198', true],
   ['Run', 'error', 'app/(tabs)/(home)/run.tsx:207-208', true],
   ['Approvals', 'offline', 'app/(tabs)/activity/approvals.tsx:174', true],
   ['Approvals', 'unavailable', 'app/(tabs)/activity/approvals.tsx:180', true],
   ['Approvals', 'error', 'app/(tabs)/activity/approvals.tsx:189-190', true],
-  ['Activity', 'offline', 'app/(tabs)/activity/index.tsx:251', false],
-  ['Activity', 'error', 'app/(tabs)/activity/index.tsx:260', false],
+  ['Activity', 'offline', 'app/(tabs)/activity/index.tsx:292', false],
+  ['Activity', 'error', 'app/(tabs)/activity/index.tsx:301', false],
   ['Add a flow', 'offline', 'app/(tabs)/flows/add.tsx:71', true],
   ['Add a flow', 'unavailable', 'app/(tabs)/flows/add.tsx:74', true],
   ['Add a flow', 'error', 'app/(tabs)/flows/add.tsx:80-82', true],
   ['Flow detail', 'offline', 'app/(tabs)/flows/detail.tsx:171', true],
   ['Flow detail', 'unavailable', 'app/(tabs)/flows/detail.tsx:180', true],
   ['Flow detail', 'error', 'app/(tabs)/flows/detail.tsx:189-190', true],
-  ['Flows', 'offline', 'app/(tabs)/flows/index.tsx:96', false],
-  ['Flows', 'error', 'app/(tabs)/flows/index.tsx:103', false],
+  ['Flows', 'offline', 'app/(tabs)/flows/index.tsx:101', false],
+  ['Flows', 'error', 'app/(tabs)/flows/index.tsx:108', false],
   ['Setup', 'offline', 'app/(tabs)/flows/setup.tsx:140', true],
   ['Setup', 'error', 'app/(tabs)/flows/setup.tsx:146-147', true],
   // An unconfigured read is the unavailable state on Setup as on every other
@@ -123,9 +123,9 @@ const CASES: Case[] = [
   ['Export my data', 'offline', 'app/(tabs)/settings/data.tsx:192', true],
   ['Export my data', 'unavailable', 'app/(tabs)/settings/data.tsx:195', true],
   ['Export my data', 'error', 'app/(tabs)/settings/data.tsx:199', true],
-  ['Organization', 'offline', 'app/(tabs)/settings/organization.tsx:88', true],
-  ['Organization', 'unavailable', 'app/(tabs)/settings/organization.tsx:91', true],
-  ['Organization', 'error', 'app/(tabs)/settings/organization.tsx:97-99', true],
+  ['Organization', 'offline', 'app/(tabs)/settings/organization.tsx:89', true],
+  ['Organization', 'unavailable', 'app/(tabs)/settings/organization.tsx:92', true],
+  ['Organization', 'error', 'app/(tabs)/settings/organization.tsx:98-100', true],
   ['Team', 'offline', 'app/(tabs)/settings/team.tsx:78', true],
   ['Team', 'unavailable', 'app/(tabs)/settings/team.tsx:81', true],
   ['Team', 'error', 'app/(tabs)/settings/team.tsx:87-89', true],
@@ -135,9 +135,9 @@ const CASES: Case[] = [
   ['Archived flows', 'offline', 'components/flows/archived-flows.tsx:68', true],
   ['Archived flows', 'unavailable', 'components/flows/archived-flows.tsx:71', true],
   ['Archived flows', 'error', 'components/flows/archived-flows.tsx:77-79', true],
-  ['Notifications', 'offline', 'components/notifications/inbox.tsx:104', true],
-  ['Notifications', 'unavailable', 'components/notifications/inbox.tsx:110', true],
-  ['Notifications', 'error', 'components/notifications/inbox.tsx:119-120', true],
+  ['Notifications', 'offline', 'components/notifications/inbox.tsx:120', true],
+  ['Notifications', 'unavailable', 'components/notifications/inbox.tsx:126', true],
+  ['Notifications', 'error', 'components/notifications/inbox.tsx:135-136', true],
 ];
 
 /** The shared routing, with the screen's own read refused every time it is sent. */
