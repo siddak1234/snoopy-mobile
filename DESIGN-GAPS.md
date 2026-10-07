@@ -2539,14 +2539,14 @@ website at `309717b`; its gaps G1–G25 went to separate sessions. This one clos
 G5, G6, G7 and Home's half of G1, each by doing what the website does, in its words, drawn
 with this app's own components. The owner had recorded no decision on G2 or G3 — each was
 recorded here as undecided (above, under "Still open") — so both now follow the website, and
-the owner can object. Not here: where a permanent way into Approvals goes (G1's other half,
+the owner can object — **decided since: the owner, 2026-10-07 (~19:40Z), "lets go with the recommended" — the recommendation being to keep G2, G3 and G25 as built, following the website** (recorded at Round 16's close). Not here: where a permanent way into Approvals goes (G1's other half,
 the owner's call), and a notification's tap (another session's).
 
 | G | What was absent (the website's) | Disposition |
 | --- | --- | --- |
 | G1 (Home) | The review banner counted the chosen team's pending approvals, from the newest hundred approvals of every status; Approvals lists every pending one in the workspace, as the website's Approvals does (`listApprovals(workspaceId, "pending")`) | **done**: Home reads `?status=pending` beside every approval (the run rows still need every one) and the banner counts it whole, whatever team is chosen — the number Approvals then lists. Hidden at 0, the owner's decision (build 13 #3, above), and when that read is refused: the banner says something waits, which is then not known — never a count from another read. `(home)/index.tsx` `approvalCount` |
-| G2 | Settings › Appearance returned to Dark at every cold launch; the website keeps its theme in the browser and applies it before first paint | **done**: `lib/platform/appearance-store.ts` keeps Auto, Dark or Light in the Keychain, this-device-only, as the scope is kept; `app/_layout.tsx` reads it before the first frame (the splash stays until it has) and mounts the theme in it; `NocturneThemeProvider`'s `onModeChange` keeps each choice. Dark when none is kept or one is unreadable. The device's preference, not the session's: a sign-out keeps it, as the website's outlives one. No owner decision was recorded |
-| G3 | Home's one failure said "Check your connection" for a 429, a refusal and an unresolved workspace alike, and stated no wait; no failed load anywhere said the person was still signed in (the website's `PlatformUnavailable`: "You have not been signed out, and nothing was lost.") | **done**: Home is its own failure only when none of its reads answered, worded by why — offline the design's words; a 429 "The platform is busy right now" and any other failure "The platform could not answer just now", each over "You have not been signed out, and nothing was lost. Try again in …" with a 429's stated wait; no backend or no workspace `UNAVAILABLE_BODY` and no Retry. `ERROR_BODY` is the website's body; a 429's failed load says "The platform is busy right now." before it (`busyLoadBody`, from the stated `retry-after`). No owner decision was recorded |
+| G2 | Settings › Appearance returned to Dark at every cold launch; the website keeps its theme in the browser and applies it before first paint | **done**: `lib/platform/appearance-store.ts` keeps Auto, Dark or Light in the Keychain, this-device-only, as the scope is kept; `app/_layout.tsx` reads it before the first frame (the splash stays until it has) and mounts the theme in it; `NocturneThemeProvider`'s `onModeChange` keeps each choice. Dark when none is kept or one is unreadable. The device's preference, not the session's: a sign-out keeps it, as the website's outlives one. No owner decision was recorded — then decided: the owner, 2026-10-07 (~19:40Z), "lets go with the recommended" — the recommendation being to keep G2, G3 and G25 as built, following the website |
+| G3 | Home's one failure said "Check your connection" for a 429, a refusal and an unresolved workspace alike, and stated no wait; no failed load anywhere said the person was still signed in (the website's `PlatformUnavailable`: "You have not been signed out, and nothing was lost.") | **done**: Home is its own failure only when none of its reads answered, worded by why — offline the design's words; a 429 "The platform is busy right now" and any other failure "The platform could not answer just now", each over "You have not been signed out, and nothing was lost. Try again in …" with a 429's stated wait; no backend or no workspace `UNAVAILABLE_BODY` and no Retry. `ERROR_BODY` is the website's body; a 429's failed load says "The platform is busy right now." before it (`busyLoadBody`, from the stated `retry-after`). No owner decision was recorded — then decided: the owner, 2026-10-07 (~19:40Z), "lets go with the recommended" — the recommendation being to keep G2, G3 and G25 as built, following the website |
 | G4 | After a session ended in use, the cover said nothing of why, and the next sign-in landed on Home; the website's `SessionEnded` says "Your session has ended — Sign in again to carry on where you were", and its way back returns to the page | **done**, inside the owner's cover rule (BUILD-PLAN 24.11.6: the cover whenever signed out): the cover says the website's two lines over Get started, which still leads to Sign in; the sign-in — and the Face ID question, when it is asked — returns to the tab screen that was open, its params with it (`lib/view/return-to.ts`; `app/_layout.tsx` keeps the screen in front, its params from the navigation state, since a screen a sign-in replaced its way to has none in its address). Only when it ended on a tab screen (`SessionState`'s `ended`): a sign-out, a cold start or the Face ID question say nothing and open Home; Sign in failing keeps the return for the next sign-in that completes, as the website's `callbackUrl` outlives a failed attempt. Drawn as the screen was opened, its tab's first screen beneath it (`RETURN_OPTIONS`, `withAnchor`), so Back and the tab come home — the review of #51, below. Owed once, to the same person: someone else signing in opens Home; a sign-out on purpose owes nothing, a 401 that lands during it included. In memory, not past a relaunch |
 | G5 | Home had no Connect integration or View teams | **done**: both, flows or none, as rows under the quick actions' pills — "Connect integration" does not fit half a phone's width as a pill — opening Settings › Connections and Settings › Teams |
 | G6 | Home's overview had no Flows or Integrations figure, and one failed read failed all of Home | **done**: OVERVIEW under TODAY — Flows, the subscriptions not archived (the website's count), in the team chosen as the tiles are; Integrations, the connections that are connected — figures, as the website's are, not buttons. Each read stands alone (`Promise.allSettled`): one refused says so in its place — TODAY "Unavailable" and no "Your agents ran …"; a figure "Unavailable"; RECENT RUNS "Recent activity could not be read just now."; no review banner; a held run "Held" without every approval; no first run claimed without the catalog; with a team chosen and no subscriptions, its figures unavailable too — and the rest still show. A return whose re-read fails whole keeps what was on screen, as before; nothing stale is mixed with what was just read. TODAY stays today's (the owner's decision, above) |
@@ -2843,3 +2843,98 @@ the same restore. Every break failed the tests named; the clean tree passes them
 | B58 · a draft team says Draft | `draft: 'Paused'` | `gate24-parity-activity` "draws Draft on a draft team's row" |
 | B59 · the settings drawn in the sheet that asked | a second `Dialog` mounted for the settings as the first hides | `automation-actions` "draws the new version's settings in the sheet that asked — no second modal", and "offers that version's fields, seeded from what the flow holds, and saving moves it in one change" |
 | B61 · a renewal the platform could not make is heard as itself, never as the 401 | the 401 handed on for `unavailable` (the transport as it was) | `session-recovery` "hands the caller a renewal the platform could not make — a 429 with its wait — never the 401 it stood in for", "the same for an outage on the refresh route: unreachable, never signed out" |
+
+### Build 16: the owner's device pass, and Round 16's close (2026-10-07)
+
+Build 16 — CFBundleVersion 16, EAS build `7dbd1b52-1c3e-4e71-a867-959b4dfa07f8` of `main`
+`dea844a` (#53), submission `43e731a1-acc3-43ad-8dce-019d1c53333d`, VALID in App Store Connect,
+uploaded 2026-10-07T15:06:14-07:00 (read through the App Store Connect API by the close session,
+22:46Z) — is the build the owner tested. The owner's statement, 2026-10-07 ~22:12Z, on the device
+list below: **"Observed all 1 is complete."** — every item of the list observed on build 16, with
+no per-item detail. Recorded here as the owner's, at that time; nothing in it was observed by the
+close session, which wrote none of Round 16 and re-ran Gate 24 by command from a clean clone.
+
+The list the owner was given:
+
+- build 14's feedback fixes (backend BUILD-PLAN 24.14.14; "Build 14 feedback → fixes" above):
+  billing "Ends ‹date›, then Free" after a cancel-again in the portal (#11); mailed links open
+  their run or approvals page; a running run moves on; a finished run's never-reported step reads
+  "Not run" and "Steps done" counts; dismiss takes the row away at the tap; the Free card's line
+  after a cancel;
+- the "open on build 14" boxes 24.14.1–24.14.5 and 24.14.7–24.14.10: the inbox's read and
+  dismissed state on the platform and the bell's unread count; the over-limit sentence and the
+  Flows banner; invoice-intake v3's email control; the domain-only organization setting; link
+  errors in words; Home's workspace and team icon buttons;
+- Gate 24's phone lines: 24.7.3 (Google, Apple and Microsoft sign-in against production),
+  24.12.26 (the build 10 test), 24.13.8 (a push arrives: Turn on → Allow), 24.14.13 (the build 14
+  test), and the 24.11.13 remainder;
+- the Approvals row at the top of Activity (#52), and a session-ended return whose Back comes
+  home (#53).
+
+What it closes is recorded in the backend (BUILD-PLAN Gate 24 and the boxes it names, each
+quoting the statement). Not covered by it, and said so there: the database read-back of each
+outcome that 24.7.3 and 24.14.13 ask for (production reads are the owner's), and 24.14.6's
+`pg_stat_activity` re-read. The round closed that day; a further change here is a re-entry the
+owner approves (MASTER-PLAN §4).
+
+### Gate 24's parity line, re-checked at the close (the website at `7accdba`, the app at `dea844a`)
+
+The close session listed the website's signed-in pages by command — `git ls-files
+'app/account/**/page.tsx'` in `snoopy` at `7accdba`, twelve, and `app/connections/page.tsx` —
+and mapped each to this app's screens (`git ls-files 'app/**/*.tsx'` here, 35) and to the parity
+rows above (G1–G25, closed by #50, #51, #49 and #52). The website's sidebar
+(`components/dashboard/DashboardNav.tsx`) links Home, Flows, Connections, Activity, Approvals,
+Teams, Billing, Settings and Support, with Organization beside them. Since the parity audit's base
+`309717b` the website merged three times (#40, #42, #43); each change with an app half has it,
+named in its row.
+
+| The website's page | What it offers, signed in | The app's screen | Parity rows | At the close |
+| --- | --- | --- | --- | --- |
+| `/account` (Home) | the review banner with its count; today's tiles; the overview (Flows, Integrations); the quick actions and Connect integration; recent runs; the first three teams, View all teams, Create a team | `(tabs)/(home)/index.tsx` | G1 (Home), G5, G6, G7 | present (#51) |
+| the sidebar's Approvals link, with its count | a permanent way into Approvals | `(tabs)/activity/index.tsx`: "Approvals · N waiting" above the runs, present at 0 | G1 (the entry) | present (#52, the owner's decision) |
+| `/account/flows` | the flows with their status, Set up (the version the flow runs), Move to a newer version, Run with a file, Pause / Go live, Archive, the webhook address; the catalog with versions and prices; Add to a team; "Connect {providers} before going live."; Archived | `(tabs)/flows/index.tsx`, `add.tsx`, `detail.tsx`, `setup.tsx`, `archived.tsx`; `components/automations/` | G8–G11; 24.4; backend §12.1 #185 (#49 ↔ `snoopy` #42) | present |
+| `/account/runs` (Activity) | each run's name, "after approval", when it was made and its version, the status pill; the time range | `(tabs)/activity/index.tsx` | G17; 24.14.9 | present |
+| `/account/runs/[runId]` | the version, Started, Ended, Trigger; the continued run; each step's summary, reason and time; "No steps reported yet."; a run read again until it ends; a never-reported step "Not run" | `(tabs)/(home)/run.tsx`, `(tabs)/settings/run.tsx` | G18; 24.14.14 (3), (4) | present; the website's mailed `/runs/:id` link now redirects (`snoopy` #40) — the app opens the run from the push and the inbox |
+| `/account/approvals` | the reason, the expiry, the status pill, View the run; Approve and Reject for the eligible roles only | `(tabs)/activity/approvals.tsx` | G19, G20 | present |
+| `/account/connections` | each connection's account, status and use; every provider's description; Connect / Verify and connect / Retry verification, Reconnect, Replace account, Disconnect, Refresh connections; the `reused` sentence; the return's sentence | `(tabs)/settings/connections.tsx`, `components/settings/connections-card.tsx` | G12–G16; 22.8.1 | present; the website's F100 (`snoopy` #43: "still active" said only for the provider that was asked) was already this app's rule |
+| `/connections` | the landing a provider's consent returns to | the auth session's returned URL, read in `connections-card.tsx` | G16 | present (no page: the app is its own landing) |
+| `/account/organization` | the name; the email domain and its DNS value; members and their roles; requests to join; the join link; domain-only | `(tabs)/settings/organization.tsx`, `components/organization/` | 24.5; 24.11; 24.14.10 (domain-only) | present |
+| `/account/teams` | the teams with their status pill; Create a team (owners and admins); requests to join | `(tabs)/settings/teams.tsx` | G21; 24.11, 24.12 | present; the website's F96 (the Create dialog held while pending, `snoopy` #43) — `create-team-dialog.tsx` holds while `busy` |
+| `/account/teams/[id]` | the members with "Joined", the picker, requests with the address, Delete team, Leave team after typing DELETE | `(tabs)/settings/team.tsx`, `components/teams/` | G22, G23; B3, B4, B43–B45 | present; the website's F97 (the picker held while adding) — `team-members.tsx` holds while `addingId` |
+| `/account/billing` | the plans by price; the enrolled plan's status pill; Manage billing; the checkout; "Ends ‹date›, then Free" and the Free card's line | `(tabs)/settings/billing.tsx` | G25; 24.6.1; 24.14.14 (6) (#46 ↔ `snoopy` #40) | present, on ADR-0032's option B: the checkout and the portal open on iOS only; G25 kept as built, following the website — the owner, 2026-10-07 (~19:40Z), "lets go with the recommended" — not a gap |
+| `/account/settings` | the linked sign-in accounts (link, unlink); the workspace export; Delete account in ADR-0028's words | `(tabs)/settings/account.tsx`, `(tabs)/settings/data.tsx` | 24.6.2, 24.6.3; 24.11.1 | present |
+| `/account/support` | the contact form; Privacy and Terms | `(tabs)/settings/support.tsx` | 24.6.4 | present |
+| the theme toggle (`components/theme/ThemeToggle.tsx`, kept in the browser) | Auto, Dark, Light, kept across launches | Settings › Appearance, kept in the Keychain | G2 | present; follows the website, kept as built — the owner, 2026-10-07 (~19:40Z), "lets go with the recommended" |
+| `SessionEnded` and `PlatformUnavailable` (the account layout) | "Your session has ended"; "You have not been signed out, and nothing was lost." with a 429's wait | the cover's two lines; `ERROR_BODY`, `busyLoadBody` | G3, G4 | present; G3 follows the website, kept as built — the owner, 2026-10-07 (~19:40Z), "lets go with the recommended" |
+| `/onboarding/setup-org`, `/onboarding/join-org` | set up an organization; join by a link that names it | the Organization screen: set up on a company domain; join by discovery, which takes no parameter | 24.5's findings | by design: the app has no onboarding step |
+
+App-only, by the owner's decisions: `(tabs)/settings/notifications.tsx` (device push, ADR-0035),
+`(auth)/faceid.tsx` and `(auth)/faceid-offer.tsx`, Settings › Archived flows
+(`(tabs)/settings/archived.tsx`, `archived-flow.tsx`), and the Face ID lock. Nothing on the
+website's twelve pages is absent from the app; G2, G3 and G25 follow the website, kept as built on the owner's
+decision of 2026-10-07 (~19:40Z) — "lets go with the recommended", the recommendation being to keep them
+as built — exceptions, not gaps.
+
+### Guards proved to bite, Round 16's close (Gate 24's bites line)
+
+Eight runs by one script in the close session's scratchpad (`close-bites/bites.py`, its
+`results.md` and the jest JSON reports beside it) at `dea844a`: each one exact edit to the source
+(C4 two strings in one file — an import and the call), the named jest project run on the named
+file with `--json`, each named test's status read from the report, the file restored from a saved
+copy and its SHA-256 checked against the one taken before the edit, `git status --porcelain` empty
+after every restore. Every break failed the test named and nothing else; the clean tree passes the
+seven files (110 tests). The first run listed a third test for C8, `billing-screen` "draws the Pro
+on Android too, inert like every card there", which passed with the guard broken — the Pro card
+the app draws from its own list has no control on any platform — so it is not a guard for this
+line and was dropped; the run was repeated whole.
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| C1 · Role gating: the webhook address for an owner or admin only (`components/automations/automation-actions.tsx`) | `canAdminister` dropped | `automation-actions` "is offered to an owner or admin of a webhook-started automation, and to no one else" |
+| C2 · A 429 is not a sign-out: the launch read keeps the stored credential (`hooks/use-session.tsx`) | a 429 at the launch read taken as a 401 | `session-provider` "does not mistake a 429 for a sign-out, and keeps the stored credential" |
+| C3 · `reused`: a reused answer is read as connected, and says so (`lib/platform/connections.ts`) | `reused: true` dropped from the answer | `platform-mutations` "reads a reused answer as connected and opens no consent page (22.8.1)" |
+| C4 · The webhook secret is stored nowhere (`components/automations/webhook-address-dialog.tsx`) | a `SecureStore.setItemAsync` of the secret | `automation-actions` "shows the secret once, in the dialog, and stores it nowhere" |
+| C5 · The upload's exact size (`lib/platform/run-file.ts`) | the length check removed, so bytes of another length are PUT | `run-file` "sends nothing when the bytes read are not the size the platform signed" |
+| C6 · Workspace binding: Archive acts on the loaded workspace only while it is still active (`automation-actions.tsx`) | the shown workspace used without asking whether it is still the active one | `automation-actions` "is refused in words, and sends nothing, once another workspace is active" |
+| C7 · The deletion wording: a partial deletion keeps the account and says anything removed is gone (`lib/content/deletion.ts`, ADR-0028) | a 409 answered with the refusal's words, which a partial deletion makes false | `deletion` "keeps the account on a partial deletion, and says anything removed is gone"; `account-screen` "a partial deletion keeps the account and this device signed in" |
+| C8 · The billing link on iOS only: Android draws the cards inert (`app/(tabs)/settings/billing.tsx`, ADR-0032) | the iOS check dropped | `billing-screen` "on Android offers no purchase control or call to action: a card does nothing", "unpaid: … Android, no control (G25)" |
