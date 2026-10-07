@@ -1,5 +1,5 @@
 import type { Icon } from 'phosphor-react-native';
-import { CheckCircle, CircleDashed, HandPalm, XCircle } from 'phosphor-react-native';
+import { CheckCircle, CircleDashed, HandPalm, MinusCircle, XCircle } from 'phosphor-react-native';
 
 import type { CatalogEntry } from '@/lib/platform/catalog';
 import type { InboxNotification } from '@/lib/platform/notifications';
@@ -308,11 +308,17 @@ export function inboxRows(
 export type TimelineRowView = {
   id: string;
   icon: Icon;
-  tone: 'ok' | 'warn' | 'err' | 'pending';
+  tone: 'ok' | 'warn' | 'err' | 'pending' | 'skipped';
   title: string;
   sub: string;
   time?: string;
 };
+
+/** What a declared step the run never reported says once the run has ended. */
+export const STEP_NOT_RUN = 'Not run';
+
+/** How long a run's page waits, while the run has not ended, before it reads the run again. */
+export const RUN_REREAD_MS = 2_000;
 
 /**
  * The run timeline: reported steps, titled from the manifest.
@@ -325,6 +331,13 @@ export type TimelineRowView = {
  * Steps the manifest declares but the run never reported are drawn as pending,
  * which is how the design shows a held run's remaining work ("Post to QuickBooks
  * · Waiting on your approval"). Without that, a held run would look complete.
+ *
+ * **Once the run has ended, such a step never ran, and says so** — the owner's
+ * build 14 feedback #4 and #5: run `5acc41ac` succeeded with "Email the outcome"
+ * still drawn as pending, because no address was set and the step was never
+ * reported, and the failed run of 2026-09-03 showed its three unreached steps as
+ * still to come. A succeeded, failed or cancelled run draws them as not run,
+ * with what each would have done beside it.
  */
 export function toTimeline(
   steps: {
@@ -336,7 +349,9 @@ export function toTimeline(
   }[],
   declared: { id: string; title: string; description: string }[] | undefined,
   clock: (iso: string) => string,
+  runStatus?: 'pending' | 'running' | 'held' | 'succeeded' | 'failed' | 'cancelled',
 ): TimelineRowView[] {
+  const ended = runStatus === 'succeeded' || runStatus === 'failed' || runStatus === 'cancelled';
   const reported = new Map(steps.map((s) => [s.stepId, s]));
   const titles = new Map((declared ?? []).map((d) => [d.id, d]));
 
@@ -351,13 +366,11 @@ export function toTimeline(
 
   const remaining = (declared ?? [])
     .filter((d) => !reported.has(d.id))
-    .map<TimelineRowView>((d) => ({
-      id: `pending:${d.id}`,
-      icon: CircleDashed,
-      tone: 'pending',
-      title: d.title,
-      sub: d.description,
-    }));
+    .map<TimelineRowView>((d) =>
+      ended
+        ? { id: `not-run:${d.id}`, icon: MinusCircle, tone: 'skipped', title: d.title, sub: `${STEP_NOT_RUN} · ${d.description}` }
+        : { id: `pending:${d.id}`, icon: CircleDashed, tone: 'pending', title: d.title, sub: d.description },
+    );
 
   return [...rows, ...remaining];
 }
@@ -374,17 +387,19 @@ const OUTCOME_ICON: Record<'ok' | 'held' | 'failed', Icon> = {
  * Two of the three are derivable and the third is not. **Confidence is refused**
  * — §12.1 #73a places it in that run's output, which no published shape carries —
  * so it renders the design's own em dash, which the design already draws for runs
- * that have no confidence to report. `Steps done` is reported-versus-declared,
+ * that have no confidence to report. `Steps done` is finished-versus-declared —
+ * a failed or held step is reported but not done (the failed run of 2026-09-03
+ * read "1 / 4" for its one failed step, the owner's build 14 feedback #8) —
  * which is why the manifest pipeline is needed here too.
  */
 export function toRunStats(
-  reportedSteps: number,
+  finishedSteps: number,
   declaredSteps: number,
   durationText: string,
 ): { value: string; label: string }[] {
   return [
     { value: durationText, label: 'Duration' },
-    { value: declaredSteps > 0 ? `${reportedSteps} / ${declaredSteps}` : EMPTY, label: 'Steps done' },
+    { value: declaredSteps > 0 ? `${finishedSteps} / ${declaredSteps}` : EMPTY, label: 'Steps done' },
     { value: EMPTY, label: 'Confidence' },
   ];
 }

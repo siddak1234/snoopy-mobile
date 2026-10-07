@@ -283,9 +283,11 @@ export default function BillingScreen() {
                   {paidPlan && state?.status && state.status !== 'active' ? (
                     <Text style={[styles.text, muted]}>Status: {state.status.replace('_', ' ')}</Text>
                   ) : null}
+                  {/* A cancelled plan says where the workspace goes after it (the owner's
+                      build 14 feedback #11: "it should be your membership will go to free"). */}
                   {paidPlan && periodEnd && !ended ? (
                     <Text style={[styles.text, muted]}>
-                      {state?.cancelAtPeriodEnd ? 'Ends' : 'Renews'} {periodEnd}
+                      {state?.cancelAtPeriodEnd ? `Ends ${periodEnd}, then Free` : `Renews ${periodEnd}`}
                     </Text>
                   ) : null}
                   {paidPlan && acts && paying ? (
@@ -300,7 +302,8 @@ export default function BillingScreen() {
                       style={styles.manage}
                     />
                   ) : null}
-                  {card.planId === FREE_PLAN_ID && acts && paying && enrolledName ? (
+                  {/* Not once the plan is cancelled: the move to Free is already under way. */}
+                  {card.planId === FREE_PLAN_ID && acts && paying && enrolledName && !state?.cancelAtPeriodEnd ? (
                     <Text style={[styles.text, muted]}>To move to Free, cancel {enrolledName} in Manage billing.</Text>
                   ) : null}
                   {opening === card.planId ? <Text style={[styles.small, muted]}>Opening…</Text> : null}
