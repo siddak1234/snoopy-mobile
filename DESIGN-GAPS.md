@@ -1819,6 +1819,7 @@ returns to its first. One table, `presses-patterns-dialog-close:511`, a row per 
 | `(home)/run.tsx:293` — Cancel run (confirm) | POST `…/runs/{runId}/cancel` in its workspace; closes; reads the run again; a 404 in words | `presses-home-activity:121`, `tab-screens:1115` |
 | `(home)/run.tsx:271` — View flow | the flow page `{flow: subscriptionId}` | `presses-home-activity:142` |
 | `activity/index.tsx:54` — a row | the run page with THAT row's `runId` | `presses-home-activity:155` |
+| `activity/index.tsx:388` — Approvals · N waiting | opens Approvals; drawn at 0 (Gate 24 parity, G1) | `gate24-parity-activity` "draws an Approvals row with how many wait, and opens Approvals when pressed" |
 | `activity/index.tsx:301` — the flow chip ✕ | clears the flow | `tab-screens:1655`, `real-router/activity-selection:95` |
 | `activity/index.tsx:305` — Today ✕ | clears today, back to every run | `tab-screens:1819` |
 | `activity/index.tsx:315` — an outcome chip | lists that published status | `tab-screens:555` |
@@ -2396,7 +2397,8 @@ The read-only audit of Gate 24's parity line (2026-10-07; the website at `309717
 `round-16/parity-activity`, closes nine of them, G17 to G25, and the notification half of G1 —
 each by doing on the phone what the website does, in its words, drawn in the app's own
 components. G1's other half is not this part's: Home's banner is Home's, and where a permanent
-way into Approvals goes beside four tabs is the owner's to decide.
+way into Approvals goes beside four tabs is the owner's to decide. **Decided 2026-10-07 at Gate 24's
+close: a row at the top of Activity**, "Approvals · N waiting", present at 0 — the row below.
 
 | G | The website | The app until now | Disposition |
 | --- | --- | --- | --- |
@@ -2410,6 +2412,7 @@ way into Approvals goes beside four tabs is the owner's to decide.
 | G24 | Organization's members (`OrgMemberList`): "Joined {date}" | the name, the address under it | **done** (`org-people.tsx:77`): as G22 |
 | G25 | Billing (`app/account/billing/BillingPanel.tsx`): the enrolled paid plan's status pill whatever it is, `active` included; Manage billing on the enrolled card while the provider holds a subscription — the Free card when unpaid | "Status: past due", and only when not `active` (since daef007, build 10 — a record, the implementer's line, and no owner's decision: the owner's "the name and price only", decision 7, is about the cards); Manage billing on a paid card only, so an unpaid plan had none | **done, to match the website — for the owner to see**: the website's pill (`billingStatusPill`, `lib/view/billing.ts:46`), every status while the plan lasts — Active, Trialing, Past due, Incomplete — and none for the two that end access; Manage billing on the enrolled card while the provider holds a subscription (`settings/billing.tsx:306`), the Free card while a plan is unpaid. ADR-0032 has every platform show the billing status. iOS only, as before: Android shows neither control |
 | G1, the notification half | A held run is decided on Approvals (`/account/approvals`) | a push for a held run, and its row in the inbox, opened Activity | **done**: both open Approvals (`/(tabs)/activity/approvals`: `use-push-registration.tsx:217`, `notifications/inbox.tsx:203`, the row's target `runs.ts:360`), the screen Home's banner opens — proved under the real router too (`real-router/held-run-opens-approvals`) |
+| G1, the entry | The sidebar's permanent "Approvals" link with its count (`/account/approvals`) | only Home's banner, hidden at 0 | **done** (the owner's decision 2026-10-07): a row above Activity's runs, "Approvals · N waiting", N from `?status=pending` as Home's banner counts, drawn at 0, opening Approvals (`activity/index.tsx:388`) |
 
 Three choices, recorded so they can be reversed. **The zone**: the website says a date in UTC,
 because its pages render on its server; the app says it in the phone's own zone, as its day
@@ -2521,6 +2524,9 @@ confirmation says what the route removes, and promises no more".
 | B48 · DG:1345, the same: one tap opens one screen | the tap not remembered | `push-registration` "a tap while the app runs opens what it names: a failed run’s page, or Approvals for a held one (Gate 24’s parity pass; Activity until then)"; `push-registration` "switches and opens once for one tap, though it is heard twice — as it arrives and as the tap that opened the app" |
 | B49 · DG:1346, the same: a failed run opens its page in the Home stack | the run opened in the Settings stack | 7 tests in `push-registration`, among them `push-registration` "a tap while the app runs opens what it names: a failed run’s page, or Approvals for a held one (Gate 24’s parity pass; Activity until then)" |
 | B50 · DG:1375, its test renamed: a held run from another workspace switches too, then opens Approvals | the switch made for a failed run only | `push-registration` "switches the same way for a held run, then opens Approvals"; `push-registration` "opens nothing when the platform refuses the switch, or the session cannot be read again — the person stays where they are" |
+| B51 · G1: the Approvals row is there at 0 | the card drawn only while something waits | `gate24-parity-activity` "is there with nothing waiting — the one entry that never hides, unlike Home's banner" |
+| B52 · G1: the row opens Approvals | the row pushing Activity itself | `gate24-parity-activity` "draws an Approvals row with how many wait, and opens Approvals when pressed" |
+| B53 · G1: the row says how many wait | the count dropped from the value | the same |
 
 ### Gate 24 parity: Home, the appearance, the busy words, an ended session (2026-10-07)
 

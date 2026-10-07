@@ -1,6 +1,6 @@
 import type { NavigationProp } from '@react-navigation/native';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
-import { CalendarBlank, Check, CheckCircle } from 'phosphor-react-native';
+import { CalendarBlank, CaretRight, Check, CheckCircle, HandPalm } from 'phosphor-react-native';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,6 +30,7 @@ import { readCatalog } from '@/lib/platform/catalog';
 import {
   rangeStart,
   readAllApprovals,
+  readApprovals,
   readRemovedSubscriptionsOrNone,
   readRuns,
   readSubscriptions,
@@ -223,12 +224,15 @@ export default function ActivityScreen() {
    * sections and a person's own midnight decides them.
    */
   const activity = useWorkspaceResource(async (workspaceId) => {
-    const [runs, catalog, approvals, subscriptions, removed] = await Promise.all([
+    const [runs, catalog, approvals, subscriptions, removed, pending] = await Promise.all([
       readRuns(workspaceId),
       readCatalog(workspaceId),
       readAllApprovals(workspaceId),
       readSubscriptions(workspaceId),
       readRemovedSubscriptionsOrNone(workspaceId),
+      // What Approvals lists, and what the website's sidebar counts — the
+      // whole workspace's, whatever team is chosen, as Home's banner counts (G1).
+      readApprovals(workspaceId, 'pending'),
     ]);
     const index = catalogIndex(catalog.automations);
     const grouped = splitByDay(runs.runs);
@@ -256,6 +260,7 @@ export default function ActivityScreen() {
       yesterday: grouped.yesterday.map(toRow),
       earlier: grouped.earlier.map(toRow),
       subscriptions: subscriptions.subscriptions,
+      pending: pending.approvals.length,
     };
   });
 
@@ -369,6 +374,20 @@ export default function ActivityScreen() {
           ))}
         </View>
       </Dialog>
+      {/* The permanent way into Approvals (the owner's decision at Gate 24's
+          close, G1): the website's sidebar link with its count, here a row
+          above the runs, drawn at 0 too — Home's banner shows only while
+          something waits, so this is the one entry that is always there. */}
+      <SurfaceCard style={styles.approvalsCard}>
+        <SettingsRow
+          icon={HandPalm}
+          title="Approvals"
+          value={`${live?.pending ?? 0} waiting`}
+          right={<CaretRight size={15} color={palette.neutral[500]} />}
+          testID="activity-approvals"
+          onPress={() => router.push('/(tabs)/activity/approvals')}
+        />
+      </SurfaceCard>
       {/* The flow a flow page's tile chose, on a row of its own above the
           outcomes: a fifth chip beside the four runs off a phone's width (the
           owner's build 12 item 1). It clears itself. */}
@@ -424,6 +443,9 @@ const styles = StyleSheet.create({
   },
   rangeList: {
     marginHorizontal: -layout.rowPadH,
+  },
+  approvalsCard: {
+    marginBottom: 12,
   },
   filters: {
     flexDirection: 'row',
