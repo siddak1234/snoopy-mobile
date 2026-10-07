@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, screen, waitFor, within } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 
@@ -41,6 +41,21 @@ jest.mock('@/lib/platform/scope-store', () => ({
 
 const { platformOperation, newIdempotencyKey } = jest.requireMock('@/lib/platform/client');
 
+/** Every focus callback, so a test can leave a screen and come back to it as a person does. */
+const mockFocusEffects: (() => void | (() => void))[] = [];
+jest.mock('expo-router', () => {
+  const actual = jest.requireActual('@/test/mocks/expo-router');
+  const ReactActual = jest.requireActual('react');
+  return {
+    ...actual,
+    useFocusEffect: (effect: () => void | (() => void)) =>
+      ReactActual.useEffect(() => {
+        mockFocusEffects.push(effect);
+        return effect();
+      }, [effect]),
+  };
+});
+
 /**
  * Build 13's button audit (B9), the flows' own presses: each test presses one
  * and holds what the recorded decisions say it does — the screen and params it
@@ -54,6 +69,7 @@ const WS = `/v1/workspaces/${TEST_WORKSPACE}`;
 
 beforeEach(() => {
   mockStored.clear();
+  mockFocusEffects.length = 0;
   platformOperation.mockReset();
   let n = 0;
   newIdempotencyKey.mockImplementation((prefix: string) => `${prefix}-${++n}`);
@@ -242,6 +258,176 @@ describe('Setup — Activate (24.4: create, then patch its settings; 24.12: the 
     await fireEvent.press(await screen.findByText('Connect HubSpot in Settings › Connections'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings');
     expect(writes).toEqual([]);
+  });
+});
+
+/**
+ * Setup's two keys, held where a key is spent (backend manifest §12.2 #20: the
+ * re-mints were written by hand and no test stood behind them). Catalog keys a
+ * request on the workspace and the key alone, and answers a key it has seen
+ * from what the first request did — or with a 409 — never acting again. So a
+ * key goes with one intent: a retry keeps it, and a changed body or a success
+ * spends it (DESIGN-CONTRACT, "An idempotency key is the identity of one
+ * intent").
+ */
+describe("Setup — each request's key (DESIGN-CONTRACT: a retry keeps it; a changed body or a success spends it)", () => {
+  /** tpl.0 with one field, filled by default: Activate sends at once, and an edit changes what it sends. */
+  const inboxCatalog = () =>
+    bareCatalog(() => ({
+      setup: [
+        { section: 'source', key: 'inbox', title: 'Watch inbox', description: 'Where invoices arrive', control: 'text', required: true, defaultValue: 'ap@acme.co' },
+      ],
+    }));
+
+  /** What a create answers: a draft in the Finance team that owes no account. */
+  const draft = (id: string): Subscription => ({
+    ...planSubscriptionsPayload().subscriptions[0]!,
+    id,
+    status: 'draft',
+    projectId: 'project-1',
+  });
+
+  const refused = (): never => {
+    throw new PlatformError('Service Unavailable', 503);
+  };
+
+  /** Setup for tpl.0, held nowhere, in the teams named, the first chosen by the catalog. */
+  async function openSetup(answers: Record<string, () => unknown>, kinds = ['Finance']) {
+    routePlatform(platformOperation, {
+      '/automations': inboxCatalog(),
+      '/projects': projectsPayload(...kinds),
+      '/subscriptions': { subscriptions: [] },
+    });
+    const writes = keepWrites(answers);
+    setMockParams({ template: 'tpl.0', project: 'project-1' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    return writes;
+  }
+
+  const opened = (flow: string) => ({ pathname: '/(tabs)/flows/detail', params: { flow } });
+
+  it('a refused create, tried again, keeps its key, and so does the refused activation of the copy it added — the same request sent again', async () => {
+    let creates = 0;
+    let activations = 0;
+    const writes = await openSetup({
+      [`POST ${WS}/subscriptions`]: () => (++creates === 1 ? refused() : { subscription: draft('new-0') }),
+      [`PATCH ${WS}/subscriptions/new-0`]: () =>
+        ++activations === 1 ? refused() : { subscription: { ...draft('new-0'), status: 'live' } },
+    });
+    await fireEvent.press(await screen.findByText('Activate solution'));
+    await fireEvent.press(within(await screen.findByTestId('action-failure')).getByText('Try again'));
+    await waitFor(() => expect(writes.map((write) => write.method)).toEqual(['POST', 'POST', 'PATCH']));
+    // The create began the copy from nothing (Catalog stores `{}`), so the
+    // activation tried again sends what the refused one sent: a retry, not a
+    // new intent.
+    await fireEvent.press(within(await screen.findByTestId('action-failure')).getByText('Try again'));
+    await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith(opened('new-0')));
+    const [create, createAgain, activate, activateAgain] = writes;
+    expect(createAgain).toEqual(create);
+    expect(activateAgain).toEqual(activate);
+  });
+
+  it('added, its activation lost, then archived on the website: adding it again sends a new create key, and its activation a new key — the spent ones would answer for the first copy', async () => {
+    let listed: Subscription[] = [];
+    let creates = 0;
+    const writes = await openSetup({
+      [`GET ${WS}/subscriptions`]: () => ({ subscriptions: listed }),
+      [`POST ${WS}/subscriptions`]: () => ({ subscription: draft(`new-${creates++}`) }),
+      [`PATCH ${WS}/subscriptions/new-0`]: () => {
+        throw new PlatformUnreachableError();
+      },
+      [`PATCH ${WS}/subscriptions/new-1`]: () => ({ subscription: { ...draft('new-1'), status: 'live' } }),
+    });
+    await fireEvent.press(await screen.findByText('Activate solution'));
+    expect(await screen.findByText('The platform is unreachable')).toBeTruthy();
+
+    // The person leaves and comes back; meanwhile the copy was archived. The
+    // return drops the local draft and re-reads: nothing is held, so the team
+    // is offered again.
+    listed = [{ ...draft('new-0'), status: 'archived' }];
+    await act(async () => {
+      for (const effect of mockFocusEffects) effect();
+    });
+    expect(await screen.findByLabelText('Add to: Team: Finance')).toBeTruthy();
+    expect(screen.queryByTestId('setup-held')).toBeNull();
+
+    await fireEvent.press(screen.getByText('Activate solution'));
+    await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith(opened('new-1')));
+    expect(writes.map((write) => [write.method, write.path])).toEqual([
+      ['POST', `${WS}/subscriptions`],
+      ['PATCH', `${WS}/subscriptions/new-0`],
+      ['POST', `${WS}/subscriptions`],
+      ['PATCH', `${WS}/subscriptions/new-1`],
+    ]);
+    const [create, activate, createAgain, activateAgain] = writes;
+    expect(createAgain!.key).not.toBe(create!.key);
+    expect(activateAgain!.key).not.toBe(activate!.key);
+  });
+
+  it('a field edited after a refused activation is a new intent: the new settings go with a new key, never under the refused one', async () => {
+    const held: Subscription = { ...draft('held-0'), status: 'paused' };
+    routePlatform(platformOperation, {
+      '/automations': inboxCatalog(),
+      '/projects': projectsPayload('Finance'),
+      '/subscriptions': { subscriptions: [held], subscription: held },
+    });
+    let activations = 0;
+    const writes = keepWrites({
+      [`PATCH ${WS}/subscriptions/held-0`]: () =>
+        ++activations === 1 ? refused() : { subscription: { ...held, status: 'live' } },
+    });
+    setMockParams({ template: 'tpl.0' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    await fireEvent.press(await screen.findByText('Activate solution'));
+    const failure = await screen.findByTestId('action-failure');
+
+    await fireEvent.changeText(screen.getByLabelText('Watch inbox'), 'billing@acme.co');
+    await fireEvent.press(within(failure).getByText('Try again'));
+    await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith(opened('held-0')));
+    expect(writes.map((write) => write.body)).toEqual([
+      { config: { inbox: 'ap@acme.co' }, status: 'live' },
+      { config: { inbox: 'billing@acme.co' }, status: 'live' },
+    ]);
+    expect(writes[1]!.key).not.toBe(writes[0]!.key);
+  });
+
+  it('another team chosen after a refused create is a new intent: the create for that team goes with a new key', async () => {
+    let creates = 0;
+    const forSales = { ...draft('new-0'), projectId: 'project-2' };
+    const writes = await openSetup(
+      {
+        [`POST ${WS}/subscriptions`]: () => (++creates === 1 ? refused() : { subscription: forSales }),
+        [`PATCH ${WS}/subscriptions/new-0`]: () => ({ subscription: { ...forSales, status: 'live' } }),
+      },
+      ['Finance', 'Sales'],
+    );
+    await fireEvent.press(await screen.findByText('Activate solution'));
+    expect(await screen.findByTestId('action-failure')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('setup-team'));
+    await fireEvent.press(screen.getByText('Team: Sales'));
+    await fireEvent.press(screen.getByText('Activate solution'));
+    await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith(opened('new-0')));
+    const [first, second] = writes;
+    expect(first).toMatchObject({ method: 'POST', body: { projectId: 'project-1' } });
+    expect(second).toMatchObject({ method: 'POST', body: { projectId: 'project-2' } });
+    expect(second!.key).not.toBe(first!.key);
+  });
+
+  it('made live, the activation is spent: Activate again on the same screen is a new intent with a new key — never a replay of the one that succeeded', async () => {
+    const writes = await openSetup({
+      [`POST ${WS}/subscriptions`]: () => ({ subscription: draft('new-0') }),
+      [`PATCH ${WS}/subscriptions/new-0`]: () => ({ subscription: { ...draft('new-0'), status: 'live' } }),
+    });
+    await fireEvent.press(await screen.findByText('Activate solution'));
+    await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith(opened('new-0')));
+
+    // On a phone the screen is dismissed by now; the unit router opens nothing,
+    // so it stays, and the rule is held here.
+    await fireEvent.press(screen.getByText('Activate solution'));
+    await waitFor(() => expect(writes.map((write) => write.method)).toEqual(['POST', 'PATCH', 'PATCH']));
+    expect(writes[2]!.body).toEqual(writes[1]!.body);
+    expect(writes[2]!.key).not.toBe(writes[1]!.key);
   });
 });
 

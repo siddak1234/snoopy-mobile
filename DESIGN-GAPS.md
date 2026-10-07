@@ -2269,3 +2269,118 @@ report, and the file restored. Every break failed the test named.
 | A cancelled plan says what follows | ", then Free" dropped | "cancelled: …, and the Free card no longer says to cancel" |
 | … and the Free card stops saying cancel | the cancelled check dropped | the same |
 
+### The backlog: manifest §12.2 #20 and #21, and the part of §12.1 #195 that needs no owner decision (2026-10-07)
+
+Three rows the backend's manifest holds against this repository, worked down here.
+
+**§12.2 #20, Setup's keys.** No test turned red when a re-mint in
+`app/(tabs)/flows/setup.tsx` (`:189`, `:254`, `:261`, `:280`, `:336`, `:337`) was deleted:
+the tests checked a key's prefix or mocked one fixed key. Each deletion was run against
+`main`'s six test files that render Setup, and all 228 of their tests stayed green. Of
+the row's two sites, `flows/configure.tsx` was deleted in Round 16 (24.7.3 attempt 3),
+and `solutions/setup.tsx` is this file (24.9). Five screen tests in
+`__tests__/presses-flows.test.tsx` ("Setup — each request's key") now hold the contract's
+rule (a retry keeps its key; a changed body or a success spends it) as Catalog applies it.
+Catalog keys a request on the workspace and the key alone, and answers a key it has seen
+from what the first request did: the current state if that still matches, otherwise a 409.
+It never acts on the request a second time (backend `apps/catalog/src/postgres-shared.ts`).
+Two findings, left as they are:
+
+- `:337`, which re-mints the update key when another team is chosen, cannot fail a test.
+  The team choice is drawn only while nothing is added, so every activation after it goes
+  through the create, and `:261` mints the update key again before any PATCH. The key
+  `:337` mints is never sent. Removing the line would be the only change, and that is the
+  owner's call.
+- The comment above `:261` gives a reason that does not hold. A retry after the create
+  does not compute a different body: Catalog creates every subscription with `config`
+  `{}` (backend `apps/catalog/src/postgres-subscriptions.ts`), so the retry falls back to
+  the same defaults. The first test proves the retried activation is the same request
+  under the same key. The re-mint also runs before this attempt's PATCH, so it could not
+  separate the two anyway. What `:261` does hold is the second test's case: a copy that
+  was added, lost, archived elsewhere and then added again must not have its activation
+  reuse the spent key.
+
+Setup was not moved onto `useIntentKeys()`. Its six re-mints would become six
+`keyFor`/`settle` calls, not fewer.
+
+**§12.2 #21, the gates' reach.** `audit:tokens` and `audit:credentials` walked `app`,
+`components`, `hooks` and `lib`, and `.ts`/`.tsx` files only. Both now also walk
+`constants/` and every extension Metro bundles as code (`ts`, `tsx`, `js`, `jsx`, `mjs`,
+`cjs`), as `audit:type`, `audit:platform` and `audit:fixtures` already did.
+`audit:vocabulary` and `audit:haptics` had the same lists and were widened too. Neither
+names any exclusion except the generated contracts; copy and presses are the same thing
+in any file Metro bundles; and both pass on today's tree. Both now let TypeScript choose
+how to parse a file from its extension, since `.js` and `.jsx` files carry JSX. The token
+sheet's exemption could never apply while `constants/` went unscanned, so it is now pinned
+by a test. `__tests__/audit-gates.test.js` has twenty injection cases and that one
+counter-case. Recorded only: no gate reads `.json`, which Metro also bundles.
+
+**§12.1 #195, the Dependabot alerts that need no owner decision.** Ten alerts were open
+before this change (`gh api 'repos/siddak1234/snoopy-mobile/dependabot/alerts?state=open'`).
+
+- `js-yaml` 4.3.1 (high, GHSA-2883-xcg3-v3hh). `@redocly/openapi-core` 1.34.20 falls
+  inside openapi-typescript 7.13.0's `^1.34.6`, pins `js-yaml` 4.3.2, and differs from
+  1.34.19 in nothing else. The lockfile now names both. The single deduplicated `js-yaml`
+  4.x, which `@eslint/eslintrc` and `@expo/xcpretty` (`expo` → `@expo/cli`) also use, is
+  now 4.3.2. No override was needed. The contracts gate regenerated all three files byte
+  for byte from the same backend documents. The `js-yaml` 3.15.2 under
+  `@istanbuljs/load-nyc-config` is flagged only through `argparse` → `sprintf-js`, which
+  is waiting on the owner. Alert #38 should close once this is on main, since no `js-yaml`
+  4.x below 4.3.2 is left in the lockfile. Not observed yet: Dependabot reads main.
+- `decode-uri-component` 0.2.2 (moderate, GHSA-vcc3-ghjq-m6fr): **not forced.** Its only
+  fixed release, 0.5.0, is an ES module (`"type": "module"`, `export default`).
+  query-string 7.1.3, which expo-router 6.0.24 (the last 6.0 release) requires, calls
+  `require('decode-uri-component')` as a function. For the proof, 0.5.0 was put in
+  `node_modules` and then restored byte for byte. Node's `require` handed back
+  `{ __esModule, default }`, and `queryString.parse` threw `decodeComponent is not a
+  function`. Metro's transform (babel-preset-expo) turns it into `exports.default`, which
+  throws the same way when called. jest could not load it. As for reach, the module is
+  bundled: expo-router's `getPathFromState` requires query-string, which requires the
+  decoder as it loads. But the one call that reaches the decoder, `queryString.parse` in
+  react-navigation's own `getStateFromPath`, is not on the app's path. expo-router gives
+  react-navigation its own parser, which reads a query with `URL`.
+  `__tests__/deep-link-query.test.ts` holds the current behaviour. The alert closes once
+  expo-router no longer uses query-string 7, which means an Expo SDK major, as with
+  `image-size`.
+- Not touched: `image-size`, `uuid`, `braces`, `node-forge` and `sprintf-js` (the
+  owner's to decide), and `source-map-js` and `compression`, which are open as
+  Dependabot's #44 and #45.
+
+`npm audit` counted 68 before (18 moderate, 50 high) and 67 after (19 moderate, 48 high).
+With `--omit=dev` it counted 63 both times, with `js-yaml` moving from high to moderate.
+`npm run audit:dependencies` exits 0.
+
+### Guards proved to bite, the backlog
+
+One script (`scratchpad/bl-bite/bite.py`) made nineteen runs. Each run made a single edit
+to the source, ran the test file named beside it, read the failing tests from jest's own
+report, then restored the file and checked its SHA-256. A twentieth run was done by hand
+(below the table). Every break failed the test named except `:337`'s, which cannot (see
+above).
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| A field edited after a refusal is a new intent | `:189` deleted | `presses-flows` "a field edited after a refused activation is a new intent: …" |
+| A create that succeeded is spent | `:254` deleted | `presses-flows` "added, its activation lost, then archived on the website: …" |
+| An activation after a create never reuses a spent key | `:261` deleted | the same |
+| An activation that succeeded is spent | `:280` deleted | `presses-flows` "made live, the activation is spent: …" |
+| Another team is a new intent | `:336` deleted | `presses-flows` "another team chosen after a refused create is a new intent: …" |
+| — | `:337` deleted | none: the key it mints is never sent |
+| A refused create keeps its key | a create re-mint added on refusal | `presses-flows` "a refused create, tried again, keeps its key, …", and "Activate, on Setup, lost on the way: …" |
+| A refused activation keeps its key | an update re-mint added on refusal | `presses-flows` "a refused create, tried again, keeps its key, …" |
+| audit:tokens reads `constants/` | `constants` taken out of its roots | `audit-gates` "audit:tokens fails what is written in constants/brand.ts" |
+| … and every module Metro bundles | `.ts`/`.tsx` only | its four cases: `.js`, `.jsx`, `.mjs`, `.cjs` |
+| The token sheet is still the one place | its skip removed | `audit-gates` "keeps the token sheet the one place in constants/ a colour is literal" |
+| audit:credentials reads `constants/` | `constants` taken out | `audit-gates` "audit:credentials fails what is written in constants/demo.ts" |
+| … and every module Metro bundles | `.ts`/`.tsx` only | its four cases |
+| audit:vocabulary reads `constants/` | `constants` taken out | `audit-gates` "audit:vocabulary fails what is written in constants/copy.ts" |
+| … and every module Metro bundles | `.ts`/`.tsx` only | its four cases |
+| … and parses JSX in a `.js` file | every file parsed as TS or TSX | `audit-gates` "audit:vocabulary fails what is written in app/screen.js" |
+| audit:haptics reads `constants/` | `constants` taken out | `audit-gates` "audit:haptics fails what is written in constants/press.ts" |
+| … and every module Metro bundles | `.ts`/`.tsx` only | its four cases |
+| … and parses JSX in a `.jsx` file | every file parsed as TS or TSX | `audit-gates` "audit:haptics fails what is written in components/text.jsx" |
+
+By hand: `decode-uri-component` 0.5.0 was put in place of 0.2.2 in `node_modules`, with
+the lockfile untouched. `deep-link-query` could not load (`SyntaxError: Unexpected token
+'export'`). After the restore, the tree's hash matched and the test passed.
+

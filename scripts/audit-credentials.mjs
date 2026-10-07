@@ -17,7 +17,10 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { extname, join, relative } from "node:path";
 
 const root = process.cwd();
-const sourceRoots = ["app", "components", "hooks", "lib"];
+// Every runtime root, `constants/` with them, and every module Metro bundles as
+// code: a credential pinned in `constants/`, or in a `.js` file, walked past
+// this gate until backend manifest §12.2 #21.
+const sourceRoots = ["app", "components", "constants", "hooks", "lib"];
 
 /** Empty, and it stays empty. Adding a row here needs a reason in review. */
 const knownDemoCredentials = new Set();
@@ -125,6 +128,6 @@ function walk(path) {
   return entries.flatMap((entry) => {
     const full = join(path, entry);
     if (statSync(full).isDirectory()) return walk(full);
-    return [".ts", ".tsx"].includes(extname(full)) ? [full] : [];
+    return [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"].includes(extname(full)) ? [full] : [];
   });
 }
