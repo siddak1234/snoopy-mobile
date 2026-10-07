@@ -22,7 +22,10 @@ import { extname, join, relative } from "node:path";
 import ts from "typescript";
 
 const root = process.cwd();
-const sourceRoots = ["app", "components", "hooks", "lib"];
+// Every runtime root and every module Metro bundles as code, as audit:tokens and
+// audit:credentials since backend manifest §12.2 #21: copy is copy wherever it
+// is written.
+const sourceRoots = ["app", "components", "constants", "hooks", "lib"];
 const GENERATED = "lib/generated/";
 
 /** The retired names, as words. */
@@ -42,13 +45,9 @@ for (const dir of sourceRoots) {
   for (const file of walk(join(root, dir))) {
     const path = relative(root, file);
     if (path.startsWith(GENERATED)) continue;
-    const source = ts.createSourceFile(
-      path,
-      readFileSync(file, "utf8"),
-      ts.ScriptTarget.Latest,
-      true,
-      extname(file) === ".tsx" ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
-    );
+    // The kind follows the extension: `.tsx`, `.jsx` and the plain JavaScript
+    // ones parse JSX, as Metro reads them; `.ts` does not.
+    const source = ts.createSourceFile(path, readFileSync(file, "utf8"), ts.ScriptTarget.Latest, true);
     visit(source, source, path);
   }
 }
@@ -103,6 +102,6 @@ function walk(path) {
   return entries.flatMap((entry) => {
     const full = join(path, entry);
     if (statSync(full).isDirectory()) return walk(full);
-    return [".ts", ".tsx"].includes(extname(full)) ? [full] : [];
+    return [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"].includes(extname(full)) ? [full] : [];
   });
 }

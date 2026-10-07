@@ -359,3 +359,47 @@ describe('the haptics audit (build 11, D7)', () => {
     expect(run(hapticsAudit).status).toBe(0);
   });
 });
+
+/**
+ * The gates' reach (backend manifest §12.2 #21). The 2026-08-18 audit put a
+ * colour and a credential in `constants/` and in a `.js` file and watched
+ * audit:tokens and audit:credentials pass both, and audit:vocabulary and
+ * audit:haptics walked the same four roots and two extensions. Each gate now
+ * walks every runtime root and every module Metro bundles as code: one
+ * violation per root and extension, each in a form its gate already knows.
+ */
+describe("the gates' reach: constants/, and every module Metro bundles (backend manifest §12.2 #21)", () => {
+  it.each([
+    ['audit:tokens', 'constants/brand.ts', tokenAudit, "export const brand = { color: '#12e3aa' };"],
+    ['audit:tokens', 'app/screen.js', tokenAudit, "export const style = { backgroundColor: '#abcdef' };"],
+    ['audit:tokens', 'components/card.jsx', tokenAudit, "export const C = () => <View style={{ borderColor: '#abcdef' }} />;"],
+    ['audit:tokens', 'hooks/tint.mjs', tokenAudit, "export const tint = { tintColor: 'rgba(0, 0, 0, 0.5)' };"],
+    ['audit:tokens', 'lib/shade.cjs', tokenAudit, "module.exports = { shadowColor: '#000000' };"],
+    ['audit:credentials', 'constants/demo.ts', credentialAudit, "export const DEMO_PASSWORD = 'hunter2x';"],
+    ['audit:credentials', 'app/login.js', credentialAudit, "export const D = { token: 'eyJhbGciOiJIUzI1' };"],
+    ['audit:credentials', 'components/form.jsx', credentialAudit, "const [password, setPassword] = useState('prototype-secret');"],
+    ['audit:credentials', 'hooks/seed.mjs', credentialAudit, "export const API_SECRET = 'not-a-real-secret';"],
+    ['audit:credentials', 'lib/seed.cjs', credentialAudit, "const DEMO_PASSWORD = 'hunter2x';\nmodule.exports = { DEMO_PASSWORD };"],
+    ['audit:vocabulary', 'constants/copy.ts', vocabularyAudit, "export const EMPTY = 'No automations yet';"],
+    ['audit:vocabulary', 'app/screen.js', vocabularyAudit, 'export const A = () => <Text>Your projects</Text>;'],
+    ['audit:vocabulary', 'components/row.jsx', vocabularyAudit, 'export const B = () => <Row title="Create a project" />;'],
+    ['audit:vocabulary', 'hooks/label.mjs', vocabularyAudit, "export const D = 'Automations';"],
+    ['audit:vocabulary', 'lib/words.cjs', vocabularyAudit, 'module.exports = { title: `This automation is ${state}.` };'],
+    ['audit:haptics', 'constants/press.ts', hapticsAudit, "import { Pressable } from 'react-native';"],
+    ['audit:haptics', 'app/bad.js', hapticsAudit, "import { TouchableOpacity } from 'react-native';"],
+    ['audit:haptics', 'components/text.jsx', hapticsAudit, 'export const A = () => <Text onPress={() => go()}>See all</Text>;'],
+    ['audit:haptics', 'hooks/haptic.mjs', hapticsAudit, "import * as Haptics from 'expo-haptics';"],
+    ['audit:haptics', 'lib/rn.cjs', hapticsAudit, "const RN = require('react-native');"],
+  ])('%s fails what is written in %s', (_gate, file, script, source) => {
+    writeFileSync(join(root, file), source);
+    const result = run(script);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(file);
+  });
+
+  it('keeps the token sheet the one place in constants/ a colour is literal', () => {
+    // The exemption could never apply while `constants/` went unscanned.
+    writeFileSync(join(root, 'constants/theme.ts'), "export const palette = { accent: '#12e3aa' };");
+    expect(run(tokenAudit).status).toBe(0);
+  });
+});
