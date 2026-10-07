@@ -22,7 +22,10 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { extname, join, relative } from "node:path";
 
 const root = process.cwd();
-const sourceRoots = ["app", "components", "hooks", "lib"];
+// Every runtime root, `constants/` with them, and every module Metro bundles as
+// code: a colour in `constants/` outside the sheet, or in a `.js` file, walked
+// past this gate until backend manifest §12.2 #21.
+const sourceRoots = ["app", "components", "constants", "hooks", "lib"];
 
 /** The token sheet is where colour is allowed to be literal. */
 const TOKEN_SHEET = "constants/theme.ts";
@@ -93,6 +96,6 @@ function walk(path) {
   return entries.flatMap((entry) => {
     const full = join(path, entry);
     if (statSync(full).isDirectory()) return walk(full);
-    return [".ts", ".tsx"].includes(extname(full)) ? [full] : [];
+    return [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"].includes(extname(full)) ? [full] : [];
   });
 }
