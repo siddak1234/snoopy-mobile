@@ -1,3 +1,5 @@
+import { tryAgainIn } from '@/lib/platform/retry-after';
+
 /**
  * The words the shared data states render, transcribed from the design.
  *
@@ -65,9 +67,70 @@ export function errorTitleFor(screen: ScreenKey | string | undefined): string {
   return ERROR_TITLES[screen as ScreenKey] ?? FALLBACK_ERROR_TITLE;
 }
 
-/** Shared body copy — identical on every screen, so it is written once. */
-export const ERROR_BODY =
-  "Nothing was lost — it's safe in the cloud. Retry now or come back in a moment.";
+/**
+ * Shared body copy — identical on every screen, so it is written once.
+ *
+ * The website's words since Gate 24 (`snoopy/components/dashboard/
+ * PlatformUnavailable.tsx`): a load that failed is never a sign-out, and says
+ * so. Only a 401 ends a session (`hooks/use-session.tsx`), and that shows the
+ * cover, not a failed load — so a person reading one is still signed in. Until
+ * Gate 24 the design's "Nothing was lost — it's safe in the cloud. Retry now or
+ * come back in a moment.", which never said it.
+ */
+export const SESSION_KEPT = 'You have not been signed out, and nothing was lost.';
+
+/** The website's body: kept, then "Try again in 30 seconds." for a stated wait, or "in a moment". */
+export function sessionKeptBody(retryAfterSeconds?: number): string {
+  return `${SESSION_KEPT} ${tryAgainIn(retryAfterSeconds)}`;
+}
+
+export const ERROR_BODY = sessionKeptBody();
+
+/** The website's two titles for the platform refusing or failing (`PlatformUnavailable`). */
+export const PLATFORM_BUSY_TITLE = 'The platform is busy right now';
+export const PLATFORM_FAILED_TITLE = 'The platform could not answer just now';
+
+/**
+ * A failed load's body after a 429 (`busyBody`, BUILD-PLAN 24.3.3). The shared
+ * state keeps its screen's own title ("Couldn't load approvals"), so the
+ * website's busy title leads the body, then its body with the wait.
+ */
+export function busyLoadBody(retryAfterSeconds?: number): string {
+  return `${PLATFORM_BUSY_TITLE}. ${sessionKeptBody(retryAfterSeconds)}`;
+}
+
+/**
+ * Home's own failure (design sHomeErr), drawn only when nothing on Home could
+ * be read, and worded by what happened (Gate 24 parity, G3): offline, the
+ * design's connectivity words; busy or failed, the website's titles over
+ * `sessionKeptBody`; no backend or no workspace, `UNAVAILABLE_BODY`. Until
+ * Gate 24 every failure — a 429, a refusal, an unresolved workspace — said
+ * "Check your connection".
+ */
+export const HOME_OFFLINE_TITLE = "Can't reach Autom8x";
+export const HOME_OFFLINE_BODY =
+  "Check your connection. Your agents keep running in the cloud and will sync when you're back.";
+
+/**
+ * A figure on Home the platform refused or could not answer (Gate 24 parity,
+ * G6): it says so on its own and the rest still show, as the website's
+ * dashboard does (`readOverview`: "Unavailable"; "Recent activity could not be
+ * read just now."). The teams line is the app's, in that sentence's pattern:
+ * the website's teams read has no figure of its own.
+ */
+export const FIGURE_UNAVAILABLE = 'Unavailable';
+export const RECENT_RUNS_UNAVAILABLE = 'Recent activity could not be read just now.';
+export const TEAMS_UNAVAILABLE = 'Your teams could not be read just now.';
+/** Home's teams with none to list, in the website's words (its dashboard's Teams). */
+export const HOME_NO_TEAMS = 'No teams yet.';
+
+/**
+ * The cover after a session ended while it was in use (Gate 24 parity, G4), in
+ * the website's words (`SessionEnded`): why, and that signing in again carries
+ * on where the person was.
+ */
+export const SESSION_ENDED_TITLE = 'Your session has ended';
+export const SESSION_ENDED_BODY = 'Sign in again to carry on where you were.';
 
 export const OFFLINE_TITLE = "You're offline";
 export const OFFLINE_BODY =
@@ -76,8 +139,8 @@ export const OFFLINE_BODY =
 /**
  * What an unconfigured build or an unresolved workspace says.
  *
- * Deliberately offers nothing to retry. `ERROR_BODY` promises "Retry now or
- * come back in a moment", which is true of a platform that refused and false of
+ * Deliberately offers nothing to retry. `ERROR_BODY` says "Try again in a
+ * moment", which is true of a platform that refused and false of
  * a build with no backend origin — a second attempt runs the same impossible
  * request. Naming the two conditions is what lets a person tell whether to wait
  * or to go and fix something.

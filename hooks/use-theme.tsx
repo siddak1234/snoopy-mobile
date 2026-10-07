@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
 
 import {
@@ -24,24 +24,35 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
  *  with Light and Auto selectable.
  *
  *  `initialMode` exists so a caller can mount straight into an appearance
- *  rather than mounting dark and switching. The visual-regression suite needs
- *  that to capture both palettes; the app never passes it, so the default is
- *  unchanged. */
+ *  rather than mounting dark and switching: the visual-regression suite, to
+ *  capture both palettes, and since Gate 24 the app, with the appearance this
+ *  device kept (`app/_layout.tsx`, read before the first frame). `onModeChange`
+ *  is told each choice, which the app keeps (`lib/platform/appearance-store.ts`;
+ *  Gate 24 parity, G2) — until then every cold launch returned to Dark. */
 export function NocturneThemeProvider({
   children,
   initialMode = 'dark',
+  onModeChange,
 }: {
   children: React.ReactNode;
   initialMode?: ThemeMode;
+  onModeChange?: (mode: ThemeMode) => void;
 }) {
   const system = useColorScheme();
-  const [mode, setMode] = useState<ThemeMode>(initialMode);
+  const [mode, setChosenMode] = useState<ThemeMode>(initialMode);
+  const setMode = useCallback(
+    (next: ThemeMode) => {
+      setChosenMode(next);
+      onModeChange?.(next);
+    },
+    [onModeChange],
+  );
 
   const value = useMemo(() => {
     const resolved = mode === 'auto' ? (system === 'light' ? 'light' : 'dark') : mode;
     const palette = resolved === 'light' ? nocturneLight : nocturneDark;
     return { mode, setMode, palette, elevation: elevation(palette) };
-  }, [mode, system]);
+  }, [mode, setMode, system]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

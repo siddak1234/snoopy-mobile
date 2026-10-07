@@ -183,8 +183,8 @@ export function ScreenError({
  *
  * Distinct from `gErr` because Retry is a lie here. A `PlatformNotConfiguredError`
  * means either no backend origin is configured or no workspace has resolved —
- * neither of which a second attempt changes, so offering "Retry now or come
- * back in a moment" invites a person to press a button that can never succeed.
+ * neither of which a second attempt changes, so offering Retry and "Try again
+ * in a moment" invites a person to press a button that can never succeed.
  * The design has no fourth failure hero, so this reuses `gErr`'s treatment and
  * changes only what it says and what it offers.
  */

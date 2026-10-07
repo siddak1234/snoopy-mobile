@@ -173,13 +173,17 @@ The audit's own "still open" list was worked down rather than carried forward:
   saw fail.
 
 
-- **Home's failure state is one state, not three.** The design (`Screen.dc.html`,
+- **Home's failure state is one state, not three — closed by Gate 24's parity line
+  (G3), 2026-10-07, below: Home now says what happened, and that nobody was signed
+  out, in the website's words.** The design (`Screen.dc.html`,
   `sHomeErr`) draws a single connectivity-worded failure for Home, so a platform
   refusal and an unresolved workspace both read "Check your connection". The
   client is faithful to the design; splitting it is a design decision, not a
   client one. `DESIGN-CONTRACT.md` states the carve-out instead of claiming
   uniformity.
-- **The appearance preference is not persisted**; Settings → Appearance returns
+- **The appearance preference is not persisted — closed by Gate 24's parity line
+  (G2), 2026-10-07, below: kept on the device, as the website keeps its theme**;
+  Settings → Appearance returned
   to Dark on every cold launch. No published contract covers it and the design
   does not say it should survive a launch, so it is recorded rather than decided
   here.
@@ -2517,3 +2521,118 @@ confirmation says what the route removes, and promises no more".
 | B48 · DG:1345, the same: one tap opens one screen | the tap not remembered | `push-registration` "a tap while the app runs opens what it names: a failed run’s page, or Approvals for a held one (Gate 24’s parity pass; Activity until then)"; `push-registration` "switches and opens once for one tap, though it is heard twice — as it arrives and as the tap that opened the app" |
 | B49 · DG:1346, the same: a failed run opens its page in the Home stack | the run opened in the Settings stack | 7 tests in `push-registration`, among them `push-registration` "a tap while the app runs opens what it names: a failed run’s page, or Approvals for a held one (Gate 24’s parity pass; Activity until then)" |
 | B50 · DG:1375, its test renamed: a held run from another workspace switches too, then opens Approvals | the switch made for a failed run only | `push-registration` "switches the same way for a held run, then opens Approvals"; `push-registration` "opens nothing when the platform refuses the switch, or the session cannot be read again — the person stays where they are" |
+
+### Gate 24 parity: Home, the appearance, the busy words, an ended session (2026-10-07)
+
+Gate 24's parity line (backend BUILD-PLAN: "Every signed-in web feature present on mobile,
+checked against snoopy's page list screen by screen") was audited read-only against the
+website at `309717b`; its gaps G1–G25 went to separate sessions. This one closed G2, G3, G4,
+G5, G6, G7 and Home's half of G1, each by doing what the website does, in its words, drawn
+with this app's own components. The owner had recorded no decision on G2 or G3 — each was
+recorded here as undecided (above, under "Still open") — so both now follow the website, and
+the owner can object. Not here: where a permanent way into Approvals goes (G1's other half,
+the owner's call), and a notification's tap (another session's).
+
+| G | What was absent (the website's) | Disposition |
+| --- | --- | --- |
+| G1 (Home) | The review banner counted the chosen team's pending approvals, from the newest hundred approvals of every status; Approvals lists every pending one in the workspace, as the website's Approvals does (`listApprovals(workspaceId, "pending")`) | **done**: Home reads `?status=pending` beside every approval (the run rows still need every one) and the banner counts it whole, whatever team is chosen — the number Approvals then lists. Hidden at 0, the owner's decision (build 13 #3, above), and when that read is refused: the banner says something waits, which is then not known — never a count from another read. `(home)/index.tsx` `approvalCount` |
+| G2 | Settings › Appearance returned to Dark at every cold launch; the website keeps its theme in the browser and applies it before first paint | **done**: `lib/platform/appearance-store.ts` keeps Auto, Dark or Light in the Keychain, this-device-only, as the scope is kept; `app/_layout.tsx` reads it before the first frame (the splash stays until it has) and mounts the theme in it; `NocturneThemeProvider`'s `onModeChange` keeps each choice. Dark when none is kept or one is unreadable. The device's preference, not the session's: a sign-out keeps it, as the website's outlives one. No owner decision was recorded |
+| G3 | Home's one failure said "Check your connection" for a 429, a refusal and an unresolved workspace alike, and stated no wait; no failed load anywhere said the person was still signed in (the website's `PlatformUnavailable`: "You have not been signed out, and nothing was lost.") | **done**: Home is its own failure only when none of its reads answered, worded by why — offline the design's words; a 429 "The platform is busy right now" and any other failure "The platform could not answer just now", each over "You have not been signed out, and nothing was lost. Try again in …" with a 429's stated wait; no backend or no workspace `UNAVAILABLE_BODY` and no Retry. `ERROR_BODY` is the website's body; a 429's failed load says "The platform is busy right now." before it (`busyLoadBody`, from the stated `retry-after`). No owner decision was recorded |
+| G4 | After a session ended in use, the cover said nothing of why, and the next sign-in landed on Home; the website's `SessionEnded` says "Your session has ended — Sign in again to carry on where you were", and its way back returns to the page | **done**, inside the owner's cover rule (BUILD-PLAN 24.11.6: the cover whenever signed out): the cover says the website's two lines over Get started, which still leads to Sign in; the sign-in — and the Face ID question, when it is asked — returns to the tab screen that was open, its params with it (`lib/view/return-to.ts`; `app/_layout.tsx` keeps the screen in front, its params from the navigation state, since a screen a sign-in replaced its way to has none in its address). Only when it ended on a tab screen (`SessionState`'s `ended`): a sign-out, a cold start, Sign in failing or the Face ID question say nothing and open Home. Owed once, to the same person: someone else signing in opens Home; a sign-out on purpose owes nothing, a 401 that lands during it included. In memory, not past a relaunch |
+| G5 | Home had no Connect integration or View teams | **done**: both, flows or none, as rows under the quick actions' pills — "Connect integration" does not fit half a phone's width as a pill — opening Settings › Connections and Settings › Teams |
+| G6 | Home's overview had no Flows or Integrations figure, and one failed read failed all of Home | **done**: OVERVIEW under TODAY — Flows, the subscriptions not archived (the website's count), in the team chosen as the tiles are; Integrations, the connections that are connected — figures, as the website's are, not buttons. Each read stands alone (`Promise.allSettled`): one refused says so in its place — TODAY "Unavailable" and no "Your agents ran …"; a figure "Unavailable"; RECENT RUNS "Recent activity could not be read just now."; no review banner; a held run "Held" without every approval; no first run claimed without the catalog; with a team chosen and no subscriptions, its figures unavailable too — and the rest still show. A return whose re-read fails whole keeps what was on screen, as before; nothing stale is mixed with what was just read. TODAY stays today's (the owner's decision, above) |
+| G7 | Home had no Teams | **done**: TEAMS last — the first three teams this person can see across their workspaces, the deleted left out (`homeTeams`, the website's `listAccessibleProjects().slice(0, 3)`), each its kind, its status in the website's words and its workspace's name when they span several, opening its team page in its workspace; View all teams beside the label; none, "No teams yet." and Create a team, for an owner or admin, opening Teams, as the website links; a refused read "Your teams could not be read just now." (the app's words, in the website's pattern: its teams read has no figure of its own) |
+
+Decided flips of pinned behaviour, each named in its test: `build14-home-scope-icons-and-first-run`
+"… no review banner, and no quick actions over it" is "… no review banner, and no Add a flow
+or Flows pills over it", and now holds the two rows drawn over the first run — build 14 part
+2's guard rows above name it by its old title. Assertions that moved, their names kept:
+`tab-screens` "shows greeting, stats and recent runs from the fixtures" reads the tiles' 4
+within them (Flows says 4 too) and "routes every affordance per the design flow map" presses
+the quick action Flows, not the figure; its banner tests answer `?status=pending` with the
+pending approvals, as the platform does; "renders the connection-error state with Retry" and
+"is the same size when the platform is unreachable" refuse with `PlatformUnreachableError` —
+a plain `Error` is now the failed state; `run-stats` "uses its OWN error state on failure,
+not the shared one" expects the failed title; `use-resource` "says a 429 load in words with
+its wait, …" expects the busy body; `presses-patterns-failure-states` refuses all of Home's
+reads, with rows for Home's error and unavailable states. The `screen-state` snapshots of
+ScreenError, dark and light, were updated for `ERROR_BODY`'s words, their only change; the
+Nocturne snapshots did not move.
+
+The presses this adds, each run by a test:
+
+| Press | Configured outcome | Test |
+| --- | --- | --- |
+| `(home)/index.tsx` — Connect integration | opens Settings › Connections, flows or none; Back comes home | `parity-home` "with flows: …", "with none set up yet: Connect integration opens Settings › Connections, and View teams opens Settings › Teams"; real-router `home-links` "Connect integration opens its Settings page, and Back comes home" |
+| `(home)/index.tsx` — View teams | opens Settings › Teams, flows or none; Back comes home | the same two; real-router `home-links` "View teams opens …" |
+| `(home)/index.tsx` — a team | its team page, `{projectId, workspaceId}` in its own workspace | `parity-home` "lists the first three teams across the workspaces, …"; real-router `home-links` "a team opens its page in the Settings tab, with the team and the workspace it takes on arrival" |
+| `(home)/index.tsx` — View all teams | opens Settings › Teams; Back comes home | `parity-home` "lists the first three teams …"; real-router `home-links` "View all teams opens …" |
+| `(home)/index.tsx` — Create a team (none yet) | opens Settings › Teams; an owner or admin only | `parity-home` "with none: No teams yet., and Create a team — opening Teams — for an owner or admin only" |
+| `(home)/index.tsx` — Home's failure, Retry | reads Home again; none when unconfigured | `presses-patterns-failure-states` "Home, offline", "Home, error", "Home, unavailable" |
+
+**NOT OBSERVED** on a device: the overview, the shortcuts, the teams block, the failure words,
+the kept appearance and the ended session's return.
+
+### Guards proved to bite, Gate 24 parity (Home)
+
+Forty-six runs by one script (`scratchpad/par-home-bites.py`), each a single edit to the
+source — one or two strings, the run aborted if any was not found exactly once — the named
+tests run with jest's JSON report and each one's status read from it, and the file restored
+from a saved copy, its SHA-256 checked against the one before; the working tree's hashes
+matched after every last restore. Every break failed the tests named. The first pass of
+forty-four left one standing — the first frame drawn before the kept appearance is read —
+because the test's Keychain answered before the fonts had loaded; the test now answers the
+appearance after them, and that break and the other four against the same test were run
+again, and failed. The last two guards came from this change's own review (a deliberate
+sign-out owes nothing; a refused pending read draws no banner); the second first passed
+because its test's second render was served from the shared snapshot, which the test now
+empties between the two, as one test does for the next.
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| The banner counts the pending read — what Approvals lists (G1) | the pending ones of every approval read (the newest hundred) counted | `parity-home` "counts every pending approval in the workspace, as the website's Approvals does — …" |
+| … whatever team is chosen (G1) | the pending read narrowed to the team chosen | `parity-home` "counts every pending approval in the workspace, as the website's Approvals does — …" |
+| Home's busy failure states the wait (G3) | the stated wait dropped from Home's busy body | `parity-home` "every read refused 429: the platform is busy, the wait it stated, not signed out — …" |
+| Home's failure is titled by its cause (G3) | every failure titled "Can't reach Autom8x" | `parity-home` "every read refused 429: the platform is busy, the wait it stated, not signed out — …"; `parity-home` "every read failing 503: the platform could not answer just now, and not signed out" |
+| "Check your connection" only offline (G3) | every failure's body "Check your connection …" | `parity-home` "every read failing 503: the platform could not answer just now, and not signed out"; `parity-home` "no backend: the unavailable words, and no Retry that could not succeed" |
+| No backend: no Retry (G3) | Retry drawn with no backend | `parity-home` "no backend: the unavailable words, and no Retry that could not succeed"; `presses-patterns-failure-states` "Home, unavailable (…)" |
+| Worded by the busiest answer: a 429 first (G3) | the 429 not put first | `parity-home` "is worded by the busiest answer: …" |
+| The shared failed load says the person was not signed out (G3) | `SESSION_KEPT` "Nothing was lost." | `parity-home` "the shared failed load says the person was not signed out, in the website's words, …"; `use-resource` "says a 429 load in words with its wait, never as a plain failure (24.3.3)" |
+| The busy body says busy, not signed out, and the wait (G3) | `busyBody` the refusal's own message, as before | `use-resource` "says a 429 load in words with its wait, never as a plain failure (24.3.3)" |
+| The choice is kept (G2) | the theme told nobody of a choice (`onModeChange` not passed) | real-router `appearance` "Light chosen on Settings is kept this-device-only, and the next launch opens in Light from its first frame — …" |
+| A launch opens in the kept appearance (G2) | the theme mounted Dark whatever was kept | real-router `appearance` "Light chosen on Settings is kept this-device-only, and the next launch opens in Light from its first frame — …" |
+| … read before its first frame (G2) | the first frame drawn before the kept appearance is read | real-router `appearance` "Light chosen on Settings is kept this-device-only, and the next launch opens in Light from its first frame — …" |
+| The provider tells each choice (G2) | the provider not telling `onModeChange` | real-router `appearance` "Light chosen on Settings is kept this-device-only, and the next launch opens in Light from its first frame — …" |
+| An unknown stored appearance is Dark (G2) | any stored text taken as the appearance | real-router `appearance` "with one the app does not know, a launch opens in Dark, the design's default" |
+| The cover says why the session ended (G4) | the reason never drawn | real-router `session-ended` "on a run's page: the cover says why, over Get started, and signing in again returns to that run — …" |
+| … only when it ended in use (G4) | the reason drawn for every signed-out cover | real-router `session-ended` "Sign out on purpose: the cover says nothing of an ended session, …"; real-router `session-ended` "a cold start whose stored session is refused opens the cover with no reason: …" |
+| Sign in returns to the screen (G4) | Sign in always opening Home | real-router `session-ended` "on a run's page: the cover says why, over Get started, and signing in again returns to that run — …" |
+| … through the Face ID question (G4) | the Face ID question always opening Home | real-router `session-ended` "through the Face ID question: answered, it returns to the screen the session ended on" |
+| The session's end notes the screen in front (G4) | the end noting no screen (`signedOut(false)`) | real-router `session-ended` "on a run's page: the cover says why, over Get started, and signing in again returns to that run — …" |
+| Owed only to the same person (G4) | `settleReturn` not called | real-router `session-ended` "someone else signing in after it opens Home, …" |
+| Owed once (G4) | the screen not cleared once returned to | real-router `session-ended` "is owed once: signing out and in again after it opens Home" |
+| The screen's own params, not the address's (G4) | the nested `{ screen, params }` not followed | real-router `session-ended` "on a run's page: the cover says why, over Get started, and signing in again returns to that run — …" |
+| Only a tab screen is kept (G4) | every screen kept, not only a tab screen | real-router `session-ended` "ended on the Face ID question — no tab screen in front — …" |
+| A second announcement keeps what the first said (G4) | the second announcement replacing the first's state | real-router `session-ended` "told twice — the transport, then the re-read that met it — …" |
+| Connect integration opens Connections (G5) | Connect integration opening Settings | `parity-home` "with flows / with none set up yet: Connect integration opens Settings › Connections, and View teams opens Settings › Teams" |
+| View teams opens Teams (G5) | View teams opening Settings | `parity-home` "with flows / with none set up yet: Connect integration opens Settings › Connections, and View teams opens Settings › Teams" |
+| … with no flow too (G5) | the rows drawn only with flows | `parity-home` "with none set up yet: Connect integration opens …"; `build14-home-scope-icons-and-first-run` "draws the header, the greeting and TODAY at 0, … no Add a flow or Flows pills over it" |
+| Each figure on its own (G6) | any refused read failing all of Home | `parity-home` "today's counts refused: says so in its place, and the rest of Home still shows"; `parity-home` "the integrations refused: …" |
+| Flows: not archived (G6) | archived flows counted | `parity-home` "says the workspace's flows that are not archived — in the team chosen, as the tiles are — and its connected integrations" |
+| Flows: in the team chosen (G6) | the team ignored | `parity-home` "says the workspace's flows that are not archived — in the team chosen, as the tiles are — and its connected integrations" |
+| Integrations: connected only (G6) | every connection counted | `parity-home` "says the workspace's flows that are not archived — in the team chosen, as the tiles are — and its connected integrations" |
+| A team narrows through the subscriptions (G6) | a chosen team's figures drawn without the subscriptions | `parity-home` "with a team chosen and the flows refused, the team's figures cannot be told: …" |
+| Without every approval a held run says Held (G6) | an empty list for a refused approvals read | `parity-home` "the approvals refused: …" |
+| No first run claimed without the catalog (G6) | a refused catalog read as no flow set up | `parity-home` "the catalog refused: …" |
+| Today's counts say Unavailable (G6) | TODAY's line emptied | `parity-home` "today's counts refused: says so in its place, and the rest of Home still shows" |
+| The runs say they could not be read (G6) | RECENT RUNS' line emptied | `parity-home` "the runs refused: …" |
+| The first three (G7) | four teams | `parity-home` "lists the first three teams across the workspaces, the deleted left out — …" |
+| Deleted teams left out (G7) | deleted teams listed | `parity-home` "lists the first three teams across the workspaces, the deleted left out — …" |
+| Its workspace only when they span several (G7) | the workspace always named | `parity-home` "teams of one workspace do not name it" |
+| A team's status in the website's words (G7) | Paused said as Active | `parity-home` "lists the first three teams across the workspaces, the deleted left out — …" |
+| Each opens its page in its own workspace (G7) | the active workspace for every team | `parity-home` "lists the first three teams across the workspaces, the deleted left out — …" |
+| Create a team for an owner or admin only (G7) | Create a team for every role | `parity-home` "with none: No teams yet., and Create a team — opening Teams — for an owner or admin only" |
+| View all teams opens Teams (G7) | View all teams opening Settings | `parity-home` "lists the first three teams across the workspaces, the deleted left out — …" |
+| A deliberate sign-out owes nothing (G4) | `forgetOpenScreen` not called at a sign-out | real-router `session-ended` "a 401 landing while signing out on purpose owes nothing: signing in again opens Home" |
+| A refused pending read draws no banner, not a count from another read (G1) | the pending ones of every approval read counted when the pending read is refused | `parity-home` "is hidden when the platform lists nothing pending (the owner, build 13 #3), and when its read is refused" |
+| A refused teams read says so (G7) | a refused teams read as no teams | `parity-home` "a teams read that is refused says so, and the rest of Home still shows" |
