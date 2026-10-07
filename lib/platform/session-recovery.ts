@@ -16,12 +16,25 @@
  *
  * `hooks/use-session.tsx` imports `native-auth` and is mounted by the root
  * layout, so registration always happens before any screen can issue a request.
- * If it somehow has not, `recoverSession()` answers `false` and the 401 is
+ * If it somehow has not, `recoverSession()` answers `refused` and the 401 is
  * rethrown unchanged — the fail-closed direction.
  */
 
-/** Renew the stored credential. `true` only when a fresh one was stored. */
-type SessionRecovery = () => Promise<boolean>;
+/**
+ * What a renewal came to. Three answers, because two of them look alike from
+ * the transport and are not: `refused` is the platform's word that the
+ * credential is dead (the 401 stands); `unavailable` is a renewal that could
+ * not be made — a 429 with its wait, an outage — which says nothing about the
+ * credential, so the caller hears that refusal and never the 401 it would read
+ * as a sign-out (BUILD-PLAN 24.3.3; Gate 24's security review).
+ */
+export type RecoveryOutcome =
+  | { status: 'renewed' }
+  | { status: 'refused' }
+  | { status: 'unavailable'; cause: Error };
+
+/** Renew the stored credential: `renewed` only when a fresh one was stored. */
+type SessionRecovery = () => Promise<RecoveryOutcome>;
 
 /** Told when a credential is proven dead, so the route guard can fail closed. */
 type SessionEndedListener = () => void;
@@ -43,10 +56,10 @@ export function setSessionRecovery(next: SessionRecovery | null): void {
  * provider invalidates the earlier refresh tokens. Every caller in one burst
  * therefore awaits the same promise and sees the same answer.
  */
-let inFlight: Promise<boolean> | null = null;
+let inFlight: Promise<RecoveryOutcome> | null = null;
 
-export function recoverSession(): Promise<boolean> {
-  if (!recovery) return Promise.resolve(false);
+export function recoverSession(): Promise<RecoveryOutcome> {
+  if (!recovery) return Promise.resolve({ status: 'refused' });
   if (!inFlight) {
     const fn = recovery;
     inFlight = fn().finally(() => {
@@ -69,7 +82,7 @@ export function notifySessionEnded(): void {
   for (const listener of listeners) listener();
 }
 
-/** Test-only reset, so one suite's registration cannot leak into the next. */
+/** For tests: a fresh module. */
 export function resetSessionRecoveryForTests(): void {
   recovery = null;
   listeners = [];

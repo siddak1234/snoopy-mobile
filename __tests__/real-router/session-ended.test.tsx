@@ -4,7 +4,7 @@ import { act, fireEvent, screen, within } from 'expo-router/testing-library';
 import { PlatformError } from '@/lib/platform/problem';
 import { notifySessionEnded } from '@/lib/platform/session-recovery';
 import type { Answer } from '@/test/fake-platform';
-import { SESSION, answerPlatform, asInProduction, flush, kept, launch, press, signedInOnThisPhone } from '@/test/real-router';
+import { SESSION, answerPlatform, asInProduction, flush, kept, launch, press, pressTab, signedInOnThisPhone } from '@/test/real-router';
 
 /**
  * A session that ended while it was in use (Gate 24 parity, G4), under the REAL
@@ -50,6 +50,21 @@ function expectTheRun(view: Awaited<ReturnType<typeof launch>>) {
   expect(screen.getByText('Run req-0')).toBeTruthy();
   // The run's subheader: its flow, the version it ran (Gate 24 parity, G18), and how it ended.
   expect(screen.getByText(/^Invoice triage · v\d+ · Run #4821 · posted to QuickBooks$/)).toBeTruthy();
+}
+
+/** The run page's own Back, as a release build presses it. */
+async function pressBack() {
+  await asInProduction(async () => {
+    await fireEvent.press(screen.getAllByLabelText('Back')[0]!);
+    await flush(100);
+    await flush(1000);
+  });
+}
+
+/** Home, at the tabs' root: its address, its groups, and its recent runs drawn. */
+function expectHome(view: Awaited<ReturnType<typeof launch>>) {
+  expect([view.getPathname(), view.getSegments()]).toEqual(['/', ['(tabs)', '(home)']]);
+  expect(screen.getByText('Run #4821 · posted to QuickBooks')).toBeTruthy();
 }
 
 /** The session another person's sign-in reads: theirs, not the one before. */
@@ -143,10 +158,86 @@ describe('a session that ends while it is in use (Gate 24 parity, G4)', () => {
         await press('Not now');
       });
       expectTheRun(view);
+      // Drawn as it was opened: Home beneath it (the review of #51).
+      await pressBack();
+      expectHome(view);
     } finally {
       Biometrics.hasHardwareAsync.mockImplementation(before[0] as never);
       Biometrics.isEnrolledAsync.mockImplementation(before[1] as never);
     }
+  });
+
+  it("is drawn as the run was opened — Home beneath it: Back comes home, with Home's rows drawn (the review of #51)", async () => {
+    signedInOnThisPhone();
+    answerPlatform();
+    const view = await launch();
+    await openTheRun(view);
+
+    await asInProduction(async () => {
+      await endTheSession();
+      await press('Get started');
+      await press('Sign in with Google');
+    });
+    expectTheRun(view);
+
+    // Replaced into the tabs without its anchor, the run was its stack's only
+    // route: this Back went nowhere, and the dashboard was out of reach.
+    await pressBack();
+    expectHome(view);
+  });
+
+  it('the Home tab, pressed on the returned run, comes home too', async () => {
+    signedInOnThisPhone();
+    answerPlatform();
+    const view = await launch();
+    await openTheRun(view);
+
+    await asInProduction(async () => {
+      await endTheSession();
+      await press('Get started');
+      await press('Sign in with Google');
+    });
+    expectTheRun(view);
+
+    await asInProduction(async () => {
+      await pressTab('Home');
+    });
+    expectHome(view);
+  });
+
+  it("a sign-in whose session read is refused keeps the return: the next sign-in that completes returns (the website's link carries the page across a failed attempt)", async () => {
+    signedInOnThisPhone();
+    let refusals = 0;
+    answerPlatform({
+      '/v1/session': () => {
+        if (!kept.has('autom8x.access-token')) throw new PlatformError('Sign in is required.', 401, 'UNAUTHENTICATED');
+        if (kept.get('autom8x.access-token') === 'access-signed-in' && refusals === 0) {
+          // The fresh session's first read refused, the refresh it asked for too: cleared, announced, refused.
+          refusals += 1;
+          kept.clear();
+          notifySessionEnded();
+          throw new PlatformError('Sign in is required.', 401, 'UNAUTHENTICATED');
+        }
+        return SESSION;
+      },
+    });
+    const view = await launch();
+    await openTheRun(view);
+
+    await asInProduction(async () => {
+      await endTheSession();
+      await press('Get started');
+      await press('Sign in with Google');
+    });
+    // Refused: Sign in stays, and says so.
+    expect(view.getSegments()).toEqual(['(auth)', 'login']);
+    expect(screen.getByText('Sign in is required.')).toBeTruthy();
+    expect(refusals).toBe(1);
+
+    await asInProduction(async () => {
+      await press('Sign in with Google');
+    });
+    expectTheRun(view);
   });
 
   it('is owed once: signing out and in again after it opens Home', async () => {
@@ -274,6 +365,51 @@ describe('no reason where the session did not end in use', () => {
       await press('Settings');
       await press('Sign out');
       await fireEvent.press(within(screen.getByTestId('sign-out-dialog')).getByText('Sign out'));
+      await flush(1000);
+    });
+    expect(screen.getByText('Get started')).toBeTruthy();
+    expect(screen.queryByText(ENDED_TITLE)).toBeNull();
+
+    await asInProduction(async () => {
+      await press('Get started');
+      await press('Sign in with Google');
+    });
+    expect([view.getPathname(), view.getSegments()]).toEqual(['/', ['(tabs)', '(home)']]);
+  });
+
+  it("a 401 met before the logout answers — the push device's DELETE on a dead credential — shows the cover as a sign-out from the first frame, never as an ended session", async () => {
+    signedInOnThisPhone({ 'autom8x.device-id': 'device-1' });
+    let answerLogout: (() => void) | undefined;
+    answerPlatform({
+      '/v1/session/devices/device-1': () => {
+        // The DELETE's 401, and the refresh it asked for refused: cleared, announced, refused.
+        kept.clear();
+        notifySessionEnded();
+        throw new PlatformError('Sign in is required.', 401, 'UNAUTHENTICATED');
+      },
+      '/v1/auth/logout': () =>
+        new Promise<null>((resolve) => {
+          answerLogout = () => resolve(null);
+        }),
+    });
+    const view = await launch();
+    await openTheRun(view);
+
+    await asInProduction(async () => {
+      await press('Settings');
+      await press('Sign out');
+      await fireEvent.press(within(screen.getByTestId('sign-out-dialog')).getByText('Sign out'));
+      await flush(1000);
+    });
+    // The logout has not answered; the cover is already up, as a sign-out's.
+    expect(answerLogout).toBeDefined();
+    expect(screen.getByText('Get started')).toBeTruthy();
+    expect(screen.queryByText(ENDED_TITLE)).toBeNull();
+
+    await asInProduction(async () => {
+      await act(async () => {
+        answerLogout!();
+      });
       await flush(1000);
     });
     expect(screen.getByText('Get started')).toBeTruthy();

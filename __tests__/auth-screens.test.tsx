@@ -49,7 +49,7 @@ describe('Log in', () => {
     expect(signIn).toHaveBeenCalledWith('google', { remember: true });
     await screen.findByText('Sign in');
     expect(mockRouter.replace).toHaveBeenCalledWith('/(auth)/faceid-offer');
-    expect(mockRouter.replace).not.toHaveBeenCalledWith('/(tabs)/(home)');
+    expect(mockRouter.replace.mock.calls.map((call: unknown[]) => call[0])).not.toContain('/(tabs)/(home)');
   });
 
   it('goes straight in when the question was already answered, or when there is no biometrics', async () => {
@@ -58,7 +58,7 @@ describe('Log in', () => {
     const { findByText } = await renderWithProviders(<LoginScreen />, { ...signedInSession, signIn });
     await fireEvent.press(await findByText('Sign in with Google'));
     await screen.findByText('Sign in');
-    expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)/(home)');
+    expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)/(home)', { withAnchor: true });
     expect(mockRouter.replace).not.toHaveBeenCalledWith('/(auth)/faceid-offer');
   });
 
@@ -70,7 +70,7 @@ describe('Log in', () => {
     await fireEvent.press(screen.getByText('Sign in with Google'));
     expect(signIn).toHaveBeenCalledWith('google', { remember: false });
     await screen.findByText('Sign in');
-    expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)/(home)');
+    expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)/(home)', { withAnchor: true });
   });
 
   it('offers no Face ID unlock when this device holds no session (feedback #10, #12)', async () => {
@@ -94,7 +94,7 @@ describe('Log in', () => {
     expect(queryByText('Stay logged in')).toBeNull();
     expect(queryByText('Forgot?')).toBeNull();
     expect(queryByText('Log In')).toBeNull();
-    expect(mockRouter.replace).not.toHaveBeenCalledWith('/(tabs)/(home)');
+    expect(mockRouter.replace.mock.calls.map((call: unknown[]) => call[0])).not.toContain('/(tabs)/(home)');
     // The unlock is offered because this device holds a session to unlock.
     await fireEvent.press(await screen.findByText('Unlock with Face ID'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(auth)/faceid');

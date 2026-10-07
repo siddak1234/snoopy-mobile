@@ -26,7 +26,7 @@ import { useResource } from '@/hooks/use-resource';
 import { readLoginProviders } from '@/lib/platform/auth';
 import { readFaceIdChoice, readSession } from '@/lib/platform/session-store';
 import type { LoginProvider } from '@/lib/platform/native-auth';
-import { afterSignIn } from '@/lib/view/return-to';
+import { RETURN_OPTIONS, afterSignIn } from '@/lib/view/return-to';
 
 /**
  * Whether to ask the Face ID question after this sign-in: a remembered session,
@@ -113,7 +113,8 @@ export default function LoginScreen() {
     try {
       const outcome = await signIn(provider, { remember });
       if (outcome.status === 'signed-in') {
-        router.replace((await offersFaceId(remember)) ? '/(auth)/faceid-offer' : afterSignIn());
+        if (await offersFaceId(remember)) router.replace('/(auth)/faceid-offer');
+        else router.replace(afterSignIn(), RETURN_OPTIONS);
         return;
       }
       if (outcome.status === 'cancelled') return;

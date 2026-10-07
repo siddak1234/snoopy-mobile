@@ -17,10 +17,13 @@ import { updateSubscription } from '@/lib/platform/automations';
  *
  * **With `moveTo`, the settings are the version it moves to, and saving moves
  * it** (backend §12.1 #185): a move refused because the settings do not fit
- * that version (`invalid_config`) is answered here, with that version's fields
- * seeded from what the flow holds, sent with the move in one change — Set up
- * itself draws the version the flow runs, so it could never fix a mismatch with
- * another one.
+ * that version (`invalid_config`) is answered with that version's fields seeded
+ * from what the flow holds, sent with the move in one change — Set up itself
+ * draws the version the flow runs, so it could never fix a mismatch with
+ * another one. The Move dialog draws that form itself, in its own sheet
+ * (`useSetupForm`, `SetupFields`): iOS will not present a second modal while
+ * the first is still being dismissed, so a second dialog swapped in for the
+ * Move one was never shown (the connections card's rule; the review of #49).
  */
 export function SetupDialog({
   subscriptionId,
@@ -41,16 +44,73 @@ export function SetupDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const form = useSetupForm({ subscriptionId, shownWorkspaceId, setup, config, moveTo, onSaved });
+
+  return (
+    <Dialog
+      visible
+      testID="setup-dialog"
+      onRequestClose={form.busy ? () => undefined : onClose}
+      title={moveTo === undefined ? 'Flow setup' : `Settings for v${moveTo}`}
+      body={
+        moveTo === undefined
+          ? 'Complete the settings supplied by this flow.'
+          : `v${moveTo} checks its settings differently. Set them for it; saving moves the flow.`
+      }
+      actions={
+        <>
+          <DialogButton label="Cancel" disabled={form.busy} onPress={onClose} />
+          <DialogButton
+            tone="accent"
+            disabled={form.busy}
+            onPress={() => void form.save()}
+            label={moveTo === undefined ? (form.busy ? 'Saving…' : 'Save setup') : form.busy ? 'Moving…' : `Save and move to v${moveTo}`}
+          />
+        </>
+      }>
+      <SetupFields setup={setup} values={form.values} onChange={form.change} />
+      {form.error ? <DialogText tone="error">{form.error}</DialogText> : null}
+    </Dialog>
+  );
+}
+
+/**
+ * The form's state and its one write: the values, seeded from what the flow
+ * holds (`reset` seeds them again), and the save — the settings alone, or with
+ * `moveTo` the settings and the move in one change, under a key spent by a
+ * success or a changed value.
+ */
+export function useSetupForm({
+  subscriptionId,
+  shownWorkspaceId,
+  setup,
+  config,
+  moveTo,
+  onSaved,
+}: {
+  subscriptionId: string;
+  shownWorkspaceId: string | null;
+  setup: SetupField[];
+  config: Record<string, unknown>;
+  moveTo?: number;
+  onSaved: () => void;
+}) {
   const session = useSession();
   const keys = useIntentKeys(moveTo === undefined ? 'subscription-config' : `version-config-${moveTo}`);
-  const [values, setValues] = useState<Record<string, unknown>>(() =>
-    Object.fromEntries(setup.map((field) => [field.key, config[field.key] ?? field.defaultValue])),
-  );
+  const seed = () => Object.fromEntries(setup.map((field) => [field.key, config[field.key] ?? field.defaultValue]));
+  const [values, setValues] = useState<Record<string, unknown>>(seed);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const change = (key: string, value: unknown) => {
     setValues((previous) => ({ ...previous, [key]: value }));
+    keys.settle();
+  };
+
+  /** Seeded again from what the flow holds now, nothing said: the form as it first opens. */
+  const reset = () => {
+    setValues(seed());
+    setError(null);
     keys.settle();
   };
 
@@ -79,47 +139,37 @@ export function SetupDialog({
     }
   };
 
+  return { values, change, reset, save, busy, error };
+}
+
+/** The fields, by section, in the manifest's order; about a screen of them scroll. */
+export function SetupFields({
+  setup,
+  values,
+  onChange,
+}: {
+  setup: SetupField[];
+  values: Record<string, unknown>;
+  onChange: (key: string, value: unknown) => void;
+}) {
   return (
-    <Dialog
-      visible
-      testID="setup-dialog"
-      onRequestClose={busy ? () => undefined : onClose}
-      title={moveTo === undefined ? 'Flow setup' : `Settings for v${moveTo}`}
-      body={
-        moveTo === undefined
-          ? 'Complete the settings supplied by this flow.'
-          : `v${moveTo} checks its settings differently. Set them for it; saving moves the flow.`
-      }
-      actions={
-        <>
-          <DialogButton label="Cancel" disabled={busy} onPress={onClose} />
-          <DialogButton
-            tone="accent"
-            disabled={busy}
-            onPress={save}
-            label={moveTo === undefined ? (busy ? 'Saving…' : 'Save setup') : busy ? 'Moving…' : `Save and move to v${moveTo}`}
-          />
-        </>
-      }>
-      <ScrollView style={styles.fields} keyboardShouldPersistTaps="handled">
-        {bySection(setup).map(({ section, fields }, position) => (
-          // The manifest's order can come back to a section, so its place keys it.
-          <View key={`${section}-${position}`}>
-            <SectionLabel>{sectionLabel(position + 1, section)}</SectionLabel>
-            {fields.map((field, index) => (
-              <SetupFieldRow
-                key={field.key}
-                field={field}
-                value={values[field.key]}
-                onChange={(next) => change(field.key, next)}
-                divider={index < fields.length - 1}
-              />
-            ))}
-          </View>
-        ))}
-      </ScrollView>
-      {error ? <DialogText tone="error">{error}</DialogText> : null}
-    </Dialog>
+    <ScrollView style={styles.fields} keyboardShouldPersistTaps="handled">
+      {bySection(setup).map(({ section, fields }, position) => (
+        // The manifest's order can come back to a section, so its place keys it.
+        <View key={`${section}-${position}`}>
+          <SectionLabel>{sectionLabel(position + 1, section)}</SectionLabel>
+          {fields.map((field, index) => (
+            <SetupFieldRow
+              key={field.key}
+              field={field}
+              value={values[field.key]}
+              onChange={(next) => onChange(field.key, next)}
+              divider={index < fields.length - 1}
+            />
+          ))}
+        </View>
+      ))}
+    </ScrollView>
   );
 }
 

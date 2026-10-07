@@ -1,12 +1,13 @@
 import { readCurrentSession } from '@/lib/platform/auth';
 import { platformOperation, resetPlatformClientsForTests } from '@/lib/platform/client';
-import { PlatformError } from '@/lib/platform/problem';
+import { PlatformError, PlatformRateLimitedError, PlatformUnreachableError } from '@/lib/platform/problem';
 import {
   notifySessionEnded,
   onSessionEnded,
   recoverSession,
   resetSessionRecoveryForTests,
   setSessionRecovery,
+  type RecoveryOutcome,
 } from '@/lib/platform/session-recovery';
 
 /**
@@ -61,7 +62,7 @@ describe('401 renewal in the transport', () => {
   it('renews once and retries once, so an expired token is not a dead end', async () => {
     const renew = jest.fn(async () => {
       readAccessToken.mockResolvedValue('fresh-token');
-      return true;
+      return { status: 'renewed' as const };
     });
     setSessionRecovery(renew);
     fetchMock
@@ -78,7 +79,7 @@ describe('401 renewal in the transport', () => {
   });
 
   it('gives up after one retry rather than looping on a token the Edge keeps refusing', async () => {
-    setSessionRecovery(async () => true);
+    setSessionRecovery(async () => ({ status: 'renewed' }));
     // A new Response per call: a body can only be read once, and reusing one
     // would surface as a transport failure rather than the second 401.
     fetchMock.mockImplementation(async () =>
@@ -89,8 +90,8 @@ describe('401 renewal in the transport', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it('does not retry when renewal fails, and surfaces the original 401', async () => {
-    const renew = jest.fn(async () => false);
+  it('does not retry when the renewal is refused, and surfaces the original 401', async () => {
+    const renew = jest.fn(async () => ({ status: 'refused' as const }));
     setSessionRecovery(renew);
     fetchMock.mockResolvedValue(jsonResponse(401, { title: 'Authentication Required' }));
 
@@ -99,8 +100,34 @@ describe('401 renewal in the transport', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("hands the caller a renewal the platform could not make — a 429 with its wait — never the 401 it stood in for (24.3.3; Gate 24's security review)", async () => {
+    const busy = new PlatformRateLimitedError('The platform is busy right now. Try again in 30 seconds.', 30);
+    const renew = jest.fn(async () => ({ status: 'unavailable' as const, cause: busy }));
+    setSessionRecovery(renew);
+    fetchMock.mockResolvedValue(jsonResponse(401, { title: 'Authentication Required' }));
+
+    const error = await readCurrentSession().catch((caught: unknown) => caught);
+
+    // The 429 itself, with its wait: a screen reads it as busy. Handed the 401
+    // instead, `reload` took it as the credential's final answer and cleared
+    // the keychain while the refresh token was good.
+    expect(error).toBe(busy);
+    expect(renew).toHaveBeenCalledTimes(1);
+    // One request: no retry with the expired token.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('the same for an outage on the refresh route: unreachable, never signed out', async () => {
+    const down = new PlatformUnreachableError();
+    setSessionRecovery(async () => ({ status: 'unavailable', cause: down }));
+    fetchMock.mockResolvedValue(jsonResponse(401, { title: 'Authentication Required' }));
+
+    await expect(readCurrentSession()).rejects.toBe(down);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('never renews on the credential routes, or a dead refresh token would renew itself forever', async () => {
-    const renew = jest.fn(async () => true);
+    const renew = jest.fn(async () => ({ status: 'renewed' as const }));
     setSessionRecovery(renew);
     fetchMock.mockResolvedValue(jsonResponse(401, { title: 'Authentication Required' }));
 
@@ -115,7 +142,7 @@ describe('401 renewal in the transport', () => {
   });
 
   it('leaves an outage alone: only 401 renews, so 502 and 503 never spend a refresh', async () => {
-    const renew = jest.fn(async () => true);
+    const renew = jest.fn(async () => ({ status: 'renewed' as const }));
     setSessionRecovery(renew);
     for (const status of [500, 502, 503]) {
       fetchMock.mockReset();
@@ -135,26 +162,26 @@ describe('401 renewal in the transport', () => {
 
 describe('recoverSession is single-flight', () => {
   it('collapses a burst of concurrent 401s into one renewal', async () => {
-    let resolveRenew: (value: boolean) => void = () => {};
+    let resolveRenew: (value: RecoveryOutcome) => void = () => {};
     const renew = jest.fn(
       () =>
-        new Promise<boolean>((resolve) => {
+        new Promise<RecoveryOutcome>((resolve) => {
           resolveRenew = resolve;
         }),
     );
     setSessionRecovery(renew);
 
     const all = Promise.all([recoverSession(), recoverSession(), recoverSession()]);
-    resolveRenew(true);
+    resolveRenew({ status: 'renewed' });
 
-    expect(await all).toEqual([true, true, true]);
+    expect(await all).toEqual([{ status: 'renewed' }, { status: 'renewed' }, { status: 'renewed' }]);
     // Three screens mounting three parallel reads must not race three refreshes
     // against a provider that invalidates each previous refresh token.
     expect(renew).toHaveBeenCalledTimes(1);
   });
 
   it('starts a fresh attempt once the previous one has settled', async () => {
-    const renew = jest.fn(async () => true);
+    const renew = jest.fn(async () => ({ status: 'renewed' as const }));
     setSessionRecovery(renew);
 
     await recoverSession();

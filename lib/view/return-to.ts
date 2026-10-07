@@ -60,6 +60,17 @@ export function afterSignIn(): Href {
   return target ? ({ pathname: target.pathname, params: target.params } as Href) : '/(tabs)/(home)';
 }
 
+/**
+ * How the sign-in replaces its way there: with the tab's own first screen
+ * beneath the returned one (`withAnchor`), as the screen had when it was opened
+ * from there — so its Back comes home, and its tab, pressed, does too. A replace
+ * without it mounts the returned screen as its stack's only route: Back has
+ * nowhere to go, and the tab's root is out of reach until a relaunch (the
+ * review of #51). Home itself, the other answer, is its stack's first screen
+ * either way.
+ */
+export const RETURN_OPTIONS = { withAnchor: true } as const;
+
 /** For tests: a fresh process. */
 export function resetReturnForTests(): void {
   open = null;

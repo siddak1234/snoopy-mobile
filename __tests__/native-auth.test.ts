@@ -391,22 +391,28 @@ describe('refreshSession — the split that matters', () => {
     // Treating this as a dead credential would sign out every user who opened
     // the app during a provider outage.
     readSession.mockResolvedValue(LIVE_SESSION);
-    platformOperation.mockRejectedValue(new PlatformError('The platform is unreachable', 502));
+    const outage = new PlatformError('The platform is unreachable', 502);
+    platformOperation.mockRejectedValue(outage);
 
+    // The refusal itself travels with the answer, for the transport to hand on
+    // in place of the 401 it renewed for (24.3.3; Gate 24's security review).
     await expect(refreshSession()).resolves.toEqual({
       status: 'unavailable',
       message: 'The platform is unreachable',
+      cause: outage,
     });
     expect(clearSession).not.toHaveBeenCalled();
   });
 
   it('keeps the session when the deployment is unconfigured', async () => {
     readSession.mockResolvedValue(LIVE_SESSION);
-    platformOperation.mockRejectedValue(new PlatformError('not configured', 503));
+    const unconfigured = new PlatformError('not configured', 503);
+    platformOperation.mockRejectedValue(unconfigured);
 
     await expect(refreshSession()).resolves.toEqual({
       status: 'unavailable',
       message: 'not configured',
+      cause: unconfigured,
     });
     expect(clearSession).not.toHaveBeenCalled();
   });

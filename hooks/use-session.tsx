@@ -61,9 +61,9 @@ export type SessionState =
   | { status: 'signed-in'; session: SessionResponse }
   /**
    * `ended`: the session ended while it was in use — a tab screen in front —
-   * not by a sign-out, at a cold start, or in a sign-in that failed. The cover
-   * says so, and the next sign-in returns to that screen (Gate 24 parity, G4;
-   * `lib/view/return-to.ts`).
+   * not by a sign-out or at a cold start. The cover says so, and the next
+   * sign-in that completes returns to that screen (Gate 24 parity, G4;
+   * `lib/view/return-to.ts`); one that fails keeps the return for the next.
    */
   | { status: 'signed-out'; ended?: true }
   | { status: 'unconfigured' }
@@ -206,8 +206,20 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
    * is owed to the next sign-in (Gate 24 parity, G4). The same end can be told
    * twice — the transport's announcement, then the re-read that met it
    * (`reload`) — and the second keeps what the first said.
+   *
+   * Told while a sign-out is in flight — the push device's DELETE met a dead
+   * credential before the logout answered — it is the sign-out's own end: the
+   * cover at once, saying nothing of it, nothing owed; the logout's answer then
+   * finds the state already there (the review of #51).
    */
+  const leaving = useRef(false);
   const endSession = useCallback(() => {
+    if (leaving.current) {
+      noteSignedOut();
+      forgetOpenScreen();
+      setState((previous) => (previous.status === 'signed-out' && !previous.ended ? previous : signedOut()));
+      return;
+    }
     const next = signedOut(noteSessionEnded());
     setState((previous) => (previous.status === 'signed-out' ? previous : next));
   }, []);
@@ -269,7 +281,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, [endSession]);
 
   const signOut = useCallback(async () => {
-    const result = await signOutOfPlatform();
+    leaving.current = true;
+    let result: Awaited<ReturnType<typeof signOutOfPlatform>>;
+    try {
+      result = await signOutOfPlatform();
+    } finally {
+      leaving.current = false;
+    }
     // A failed revocation leaves the tokens in place on purpose, so the state
     // stays signed-in rather than claiming a sign-out that did not happen.
     if (result.revoked) {
