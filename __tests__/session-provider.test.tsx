@@ -273,6 +273,73 @@ describe('SessionProvider.reload', () => {
 });
 
 /**
+ * A 429 is the platform asking to be left for a while, never an answer about
+ * the credential (BUILD-PLAN 24.3.3, backend §12.1 #114): only a 401 ends a
+ * session. The rule is written three times — the launch's restore, a re-read,
+ * and a sign-in's session read — and "does not mistake a 429 for a sign-out"
+ * above holds the first. Gate 24's guard line found the other two held by
+ * nothing: a 429 read as a sign-out there failed no test until these.
+ */
+describe('a 429 never ends a session, wherever the session is read (24.3.3)', () => {
+  const BUSY = 'The platform is busy right now. Try again in 30 seconds.';
+  const answered: unknown[] = [];
+  beforeEach(() => {
+    answered.length = 0;
+  });
+
+  function BusyProbe() {
+    const session = useSession();
+    return (
+      <>
+        <Text>{`status:${session.status}`}</Text>
+        <Pressable testID="reload" onPress={() => void session.reload().then((o) => answered.push(o))}>
+          <Text>reload</Text>
+        </Pressable>
+        <Pressable testID="sign-in" onPress={() => void session.signIn('google').then((o) => answered.push(o))}>
+          <Text>sign in</Text>
+        </Pressable>
+      </>
+    );
+  }
+
+  it('a re-read answered 429 keeps the session signed in and the stored credential, and says the wait', async () => {
+    platformOperation.mockResolvedValue(sessionFor('ws-1'));
+    await render(
+      <SessionProvider>
+        <BusyProbe />
+      </SessionProvider>,
+    );
+    await screen.findByText('status:signed-in');
+    platformOperation.mockRejectedValue(new PlatformRateLimitedError(BUSY, 30));
+
+    await fireEvent.press(screen.getByTestId('reload'));
+
+    await waitFor(() => expect(answered).toEqual([{ status: 'unavailable', message: BUSY }]));
+    expect(screen.getByText('status:signed-in')).toBeTruthy();
+    expect(clearSession).not.toHaveBeenCalled();
+  });
+
+  it('a sign-in whose session read is answered 429 keeps the credential it just stored, and says the wait', async () => {
+    // Launch with nothing stored and the platform down: unavailable, nothing cleared.
+    platformOperation.mockRejectedValue(new PlatformError('The platform is unreachable', 502));
+    await render(
+      <SessionProvider>
+        <BusyProbe />
+      </SessionProvider>,
+    );
+    await screen.findByText('status:unavailable');
+    signInWithProvider.mockResolvedValue({ status: 'signed-in' });
+    platformOperation.mockRejectedValue(new PlatformRateLimitedError(BUSY, 30));
+
+    await fireEvent.press(screen.getByTestId('sign-in'));
+
+    await waitFor(() => expect(answered).toEqual([{ status: 'failed', message: BUSY }]));
+    expect(clearSession).not.toHaveBeenCalled();
+    expect(screen.queryByText('status:signed-out')).toBeNull();
+  });
+});
+
+/**
  * The shared snapshot (24.9.1) belongs to one session (24.12). Its global
  * entries — the workspace list, the providers — would otherwise answer the next
  * account on this device for up to their 120 s window: it is emptied when a

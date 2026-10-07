@@ -466,14 +466,14 @@ fail, and the file restored and checked byte-identical by SHA-256:
 | One organization, however often Create is pressed | the made one forgotten | `organization-screen` "creates the organization once" |
 | Member removal bound to the loaded workspace | the active workspace used directly | `organization-screen` "once another workspace is active" |
 | The DNS value seen before the re-read | re-read at once | `organization-screen` "DNS verification value" |
-| A project deleted in its own workspace | the active workspace used | `projects-screens` "own workspace" |
-| Leave only after typing DELETE | no word asked | `projects-screens` "typing DELETE" |
-| A team project only in the loaded organization | the binding dropped | `projects-screens` "no longer the active workspace" |
-| An owner's row not changed | both its guards removed | `projects-screens` "owner's row is not changed" |
-| Teams created by owners and admins | anyone offered Create | `teams-screens` "offered no Create" |
-| Team members read by its managers, owners and admins | anyone reading | `teams-screens` "read only by its managers" |
-| A team name of two characters at least | one allowed | `teams-screens` "two-letter name" |
-| The Teams row only in an organization | shown in any workspace | `teams-screens` "Teams only in an organization" |
+| A project deleted in its own workspace | the active workspace used | ~~`projects-screens` "own workspace"~~ — a team since 24.11.7, and the file gone with Projects (bda1136): `teams-screens` "deletes its owner's team in the team's own workspace, saying what becomes of its flows", re-proved at Gate 24 (B43, below) |
+| Leave only after typing DELETE | no word asked | ~~`projects-screens` "typing DELETE"~~ `teams-screens` "lets a member leave only after typing DELETE, and shows them no requests", re-proved at Gate 24 (B44, below) |
+| ~~A team project only in the loaded organization~~ | ~~the binding dropped~~ | ~~`projects-screens` "no longer the active workspace"~~ — superseded: Create a team acts on the workspace it was opened in, build 10's "Create a team is refused once another workspace is active" (below) |
+| An owner's row not changed | both its guards removed | ~~`projects-screens` "owner's row is not changed"~~ `teams-screens` "changes a member's role and adds someone; an owner's row is not changed", re-proved at Gate 24 (B45, below) |
+| ~~Teams created by owners and admins~~ | ~~anyone offered Create~~ | ~~`teams-screens` "offered no Create"~~ — superseded by build 10's "A plain organization member is not offered Create a team (Teams)" (below) |
+| ~~Team members read by its managers, owners and admins~~ | ~~anyone reading~~ | ~~`teams-screens` "read only by its managers"~~ — the team page's manager gate since 24.11.7 (`settings/team.tsx:67`), proved at Gate 24 (B3, B4, below) |
+| ~~A team name of two characters at least~~ | ~~one allowed~~ | ~~`teams-screens` "two-letter name"~~ — superseded by build 10's "Other is 2 to 60 characters" (below) |
+| ~~The Teams row only in an organization~~ | ~~shown in any workspace~~ | ~~`teams-screens` "Teams only in an organization"~~ — retired by the owner's build 9 decision 2 (teams in the personal workspace too): Teams is offered in every workspace (24.11.7) |
 | Add to… wherever a scope remains | hidden without projects | `tab-screens` "Add to…" |
 | The chosen project sent with the create | dropped | `tab-screens` "project chosen" |
 | No scope drawn without projects | always drawn | `tab-screens` "no scope where" |
@@ -1002,7 +1002,7 @@ and the contract names this app reads (409 `team_kind_taken`, the 403 for a plai
 | 10 | "Linked microsoft then trued unlinking apple and it said not found. See why and is that error message good and descriptive to the user?" | production runs an image from before the unlink route (backend #138), so the Edge answered its own 404 for a route it does not have, and the app showed that problem's title, "Not Found" | **fixed (24.12)**: an unlink refusal is a sentence by its reason — "Unlinking isn't available yet." for a route the platform does not have; the not-linked, primary, last and refused sentences; otherwise "The account could not be unlinked." — never a title. The route goes live with the SEVENTEENTH promotion. This corrects the fifth session's row 5 |
 | 11 | "Also which account is linked i dont even know from here whT accounts are there." | `LoginIdentitySummary` is `{provider, primary}`: the contract names no account | ~~**waits for the backend contract** (24.12: an optional `email`); the row shows it once the contract carries it~~ **fixed (24.12)**, once backend #142 (`866a557`) put the optional `email` in the contract: each linked account shows the address its provider reports, a muted line under its name — none when it reports none, never on an account that is not linked. Production sends it from the SEVENTEENTH promotion, which carries 24.12 |
 | 12 | "I dont see the linked accounts on connections. Also shouldnt connections basically take me to a page… third party integrations the user connects to" | Settings drew the integrations card inline; the sign-in accounts are Account's | **fixed (24.12)**: Settings › Connections is a page of its own, third-party integrations only (decision 9) |
-| 13 | "This needs to be revamped. Think of free, plus, pro plans. Monthly in component cards." | a CURRENT PLAN card and a PLANS list with capability lines | **fixed (24.12)**: ~~tall cards~~ **Corrected in build 11 (D2):** compact cards at their natural height — the tallness was the implementer's reading (the draft checklist's "filling the screen"), not the owner's words, which said only "Monthly in component cards"; and Pro is drawn at the owner's $10.00 per month until the platform lists it (the seventh session, item 3). The rest stands: Free (the app's, $0.00 per month, since the platform lists only what can be bought), then the platform's plans by price, today Plus and Pro once it is listed — each its name and price; the workspace's own says "Enrolled" with its renewal or past-due line. On iOS, not paying, a card opens the checkout for its plan; paying, another card opens Manage billing, as does a checkout refused with 409 `plan_exists`; a member sees the cards without actions; Android shows the prices only |
+| 13 | "This needs to be revamped. Think of free, plus, pro plans. Monthly in component cards." | a CURRENT PLAN card and a PLANS list with capability lines | **fixed (24.12)**: ~~tall cards~~ **Corrected in build 11 (D2):** compact cards at their natural height — the tallness was the implementer's reading (the draft checklist's "filling the screen"), not the owner's words, which said only "Monthly in component cards"; and Pro is drawn at the owner's $10.00 per month until the platform lists it (the seventh session, item 3). The rest stands: Free (the app's, $0.00 per month, since the platform lists only what can be bought), then the platform's plans by price, today Plus and Pro once it is listed — each its name and price; the workspace's own says "Enrolled" with its renewal or past-due line. **Corrected at Gate 24 (the parity pass, G25):** the status is the website's pill whatever it is, `active` too — a line for past due alone was the implementer's reading, which no record asks for — and an unpaid plan's Free card says Enrolled with Manage billing, as the website's does. On iOS, not paying, a card opens the checkout for its plan; paying, another card opens Manage billing, as does a checkout refused with 409 `plan_exists`; a member sees the cards without actions; Android shows the prices only |
 | 14 | "Why is everything so small and why is everything listed in settings…" | one long Settings screen; the design's sizes | **fixed (24.12)** — the categories read again in build 11 as one grouped page, the seventh session's items 1, 2 and 4: Settings is eight categories — Account, Security, Connections, Billing, Workspace, Notifications, Appearance, Help — each its own page, then Sign out and the version (decision 10). And the bigger type (decision 11, "whole app — easy to read"): every font size, line height and tracked size is a step of the app's type scale, `typeScale` in `constants/theme.ts` — about 2 pt over the design's text sizes and 3 over its titles, 12 at the smallest, where the tab labels were 10 — and `audit:type` fails a size written anywhere else; the scope pills wrap rather than cut a name short. The Nocturne and screen-state snapshots were re-pinned once for it: 58 of their 78 entries, the other 20 setting no font size. NOT OBSERVED on a device yet, the largest text sizes included |
 | — | the shared snapshot outlived a session | its global entries — the workspace list, the providers — could answer the next account on this device for up to 120 s | **fixed (24.12)**: emptied when a session ends and when one begins |
 | — | Settings › Notifications was one row, "Open inbox", that pushed Home's inbox | a push across tabs — item 7's defect again — so Back returned to Home | **fixed (24.12, the owner's default: "Settings › Notifications shows the inbox itself, so Back returns to Settings")**: the page is the inbox itself, a copy in the Settings stack as Archived flows is; a failed run opens there too (`settings/run`, the Home tab's run page), so Back returns to Settings; a held run still opens Activity, as from Home |
@@ -1341,9 +1341,9 @@ icon colour was in build 10, so no break was run for the card's height.
 | Any other failure asks again, in words | every other failure read as not yet | `push-registration` "any other failed registration asks again, in words, and a second Turn on registers" |
 | A changed token registers again | the listener ignoring every token | `push-registration` "registers again when the token changes — the first token heard is a registration’s own echo" |
 | The first token heard is an echo, not a change | the baseline taken as a change | `push-registration` "registers again when the token changes — the first token heard is a registration’s own echo" |
-| A run id from a push is an id | the run id pattern dropped | `push-registration` "a tap while the app runs opens what it names: a failed run’s page, or Activity for a held one" |
-| One tap opens one screen | the tap not remembered | `push-registration` "a tap while the app runs opens what it names: a failed run’s page, or Activity for a held one" |
-| A failed run opens its page in the Home stack | the run opened in the Settings stack | `push-registration` "a tap while the app runs opens what it names: a failed run’s page, or Activity for a held one" |
+| A run id from a push is an id | the run id pattern dropped | `push-registration` "a tap while the app runs opens what it names: a failed run’s page, or Approvals for a held one (Gate 24’s parity pass; Activity until then)" — ~~"… or Activity for a held one"~~ until Gate 24, which re-proved this row (B47, below) |
+| One tap opens one screen | the tap not remembered | `push-registration` "a tap while the app runs opens what it names: a failed run’s page, or Approvals for a held one (Gate 24’s parity pass; Activity until then)" — ~~"… or Activity for a held one"~~ until Gate 24, which re-proved this row (B48, below) |
+| A failed run opens its page in the Home stack | the run opened in the Settings stack | `push-registration` "a tap while the app runs opens what it names: a failed run’s page, or Approvals for a held one (Gate 24’s parity pass; Activity until then)" — ~~"… or Activity for a held one"~~ until Gate 24, which re-proved this row (B49, below) |
 | The tap that opened the app opens its screen | the last response never read | `push-registration` "the tap that opened the app opens its screen once signed in, and not before" |
 | …and not before the session is signed in | the signed-in gate dropped from the tap effect | `push-registration` "the tap that opened the app opens its screen once signed in, and not before" |
 | The banner shows in the foreground | the banner turned off | `push-registration` "shows a push’s banner while the app is open, and only while someone is signed in" |
@@ -1372,7 +1372,7 @@ icon colour was in build 10, so no break was run for the card's height.
 | Switched as the switcher does: the `workspace-activate` key | another key prefix | `push-registration` "switches to another of the person’s workspaces as the switcher does — the switch, then the session read — and opens the run there once that session is drawn" |
 | The session is read after the switch, not before | the read moved before the switch | `push-registration` "switches to another of the person’s workspaces as the switcher does — the switch, then the session read — and opens the run there once that session is drawn" |
 | A switched tap opens once the switched session is drawn | the target opened as soon as the read returned | `push-registration` "switches to another of the person’s workspaces as the switcher does — the switch, then the session read — and opens the run there once that session is drawn" |
-| A held run from another workspace switches too, then opens Activity | the switch made for a failed run only | `push-registration` "switches the same way for a held run, then opens Activity" |
+| A held run from another workspace switches too, then opens ~~Activity~~ Approvals (Gate 24) | the switch made for a failed run only | `push-registration` "switches the same way for a held run, then opens Approvals" — ~~"… then opens Activity"~~ until Gate 24, which re-proved this row (B50, below) |
 | The active workspace named: opened at once, no switch | the active-workspace check dropped | `push-registration` "opens at once, with no switch, when the push names the active workspace" |
 | A workspace id from a push is a UUID | the shape check dropped | `push-registration` "opens in the active workspace, as before, when the push names none, one not theirs, or an id of another shape" |
 | Only one of the person's own workspaces is switched to | the session's list not consulted | `push-registration` "opens in the active workspace, as before, when the push names none, one not theirs, or an id of another shape" |
@@ -2219,9 +2219,9 @@ file restored and its SHA-256 checked. Every break failed the test named.
 
 | Guard | Broken by | Test that failed |
 | --- | --- | --- |
-| The billing link on iOS only | offered on every platform | `billing-screen` "Android no purchase control" |
+| ~~The billing link on iOS only~~ | ~~offered on every platform~~ | ~~`billing-screen` "Android no purchase control"~~ — superseded by build 10's "Billing: Android shows prices only" (above), its test renamed in daef007 |
 | Only an https hosted address opened | any address | `billing-screen` "nothing but https" |
-| Billing read for an owner or admin only | read for a member | `billing-screen` "member is told" |
+| Billing read for an owner or admin only | read for a member | ~~`billing-screen` "member is told"~~ `billing-screen` "shows a member the cards without actions and who manages billing; this workspace's billing is not read" — the test build 10's "Billing: a member sees the cards without actions" names (daef007), re-proved for this guard at Gate 24 (B46, below) |
 | Billing read again on return | no re-read | `billing-screen` "comes back" |
 | A partial deletion keeps the account | 409 read as deleted | `deletion`, `account-screen` |
 | A lost answer checks the session | 5xx read as deleted | `deletion`, `account-screen` |
@@ -2384,3 +2384,136 @@ By hand: `decode-uri-component` 0.5.0 was put in place of 0.2.2 in `node_modules
 the lockfile untouched. `deep-link-query` could not load (`SyntaxError: Unexpected token
 'export'`). After the restore, the tree's hash matched and the test passed.
 
+
+### Gate 24's parity pass: Activity, the run page, Approvals, teams, members and billing (2026-10-07)
+
+The read-only audit of Gate 24's parity line (2026-10-07; the website at `309717b`, the app at
+`f00895f`) found 25 of 87 signed-in web features only partly on mobile. This part, on
+`round-16/parity-activity`, closes nine of them, G17 to G25, and the notification half of G1 —
+each by doing on the phone what the website does, in its words, drawn in the app's own
+components. G1's other half is not this part's: Home's banner is Home's, and where a permanent
+way into Approvals goes beside four tabs is the owner's to decide.
+
+| G | The website | The app until now | Disposition |
+| --- | --- | --- | --- |
+| G17 | Activity's row (`app/account/runs/page.tsx`): the name, "after approval" beside a continuation, then `formatWhen(createdAt) · v{templateVersion}`, the status pill | the name, the result line, the design's relative time — no date, no version — and a continuation held again lost "After approval" (`metaFor` returned the held line before its prefix) | **done**: a third line under the row's own, the date and time it was made and the version it ran ("Oct 7, 2026, 9:05 PM · v3"; `dateTime`, `lib/view/format.ts:110`; the row's `stamp`, `lib/view/runs.ts:115`, drawn at `activity/index.tsx:77`); the relative time stays; "After approval · " prefixes the held line too (`runs.ts:67`), so Home's recent runs follow — the one rule |
+| G18 | The run page (`app/account/runs/[runId]/page.tsx`): `{templateId} · v{templateVersion}`; Started, Ended and Trigger (Triggered, Manual, After approval, After retry); "Continues the run that was held.", linking it; a step's summary, its held reason, its `formatWhen`; "No steps reported yet." | the run's label and its flow's name — no version, no Started or Ended; `runOriginLabel` in other words, drawn nowhere; a continuation said "continues run 1a2b3c4d", which opened nothing; a held step's reason in place of its summary; a step's clock time alone; with nothing reported, an empty card | **done** (`(home)/run.tsx`): the version beside the flow's name; Started, Ended and Trigger in a card under the tiles (`toRunFacts`, `runs.ts:493`; the em dash for a moment not reached), `runOriginLabel` in the website's words (`lib/view/status.ts:150-158`); "Continues the run that was held." opens that run in the stack the page is in — Home's, or Settings', whose route now passes its `runPath` (`settings/run.tsx`); a held step's summary with its reason under it, in the warning colour; each step's date and time under it; "No steps reported yet." first in the card while none is, the flow's declared steps after it, waiting or not run |
+| G19 | Approvals' row (`app/account/approvals/page.tsx`): the reason, "expires in 3h / in 2d / shortly", the approval's status pill, "View the run" | the flow, the step, the reason, when it was asked — no expiry, no status, no way to the run | **done** (`toApprovalItem`, `runs.ts:295`): the Pending pill beside the title; "Expires in 3h" (`expiresIn`, `format.ts:125`, the website's `formatExpiry`); "View the run", which opens the run it holds where Activity's rows open runs |
+| G20 | Approve and Reject only when the person's role there — read from the workspace collection (`roleInWorkspace`) — is one the approval's `eligibleRoles` names; else "Only {roles} can decide this." | both buttons for every role; `eligibleRoles` read nowhere but the test fixture | **done**: `decides` (`lib/view/roles.ts:27`), the website's rule by name; the role from `GET /v1/workspaces` (`activity/approvals.tsx:156`), as the website reads it — not the session's own list, a bounded first page the contract says not to infer from; anyone else is told the website's sentence (`decidersLine`) and offered nothing to press. The Edge still decides (403) |
+| G21 | Teams (`components/dashboard/ProjectList.tsx`): each team's status pill beside its kind | the kind, the role, the caret | **done**: the pill before the role (`settings/teams.tsx:213`) — Active, Paused, Draft |
+| G22 | A team's members (`ProjectMemberList`): the address under a name, then "Joined {date}" | the name, the address under it | **done** (`team-members.tsx:87`): "ben@acme.co · Joined Sep 1, 2026"; "Joined …" alone under a member with no name |
+| G23 | A team's requests to join (`TeamAccessRequests`): the address under a requester who has a name | the name, then "Asked 2d ago" | **done** (`team-requests.tsx:57`): "erin@acme.co · Asked 2d ago", as the organization's join requests already said it |
+| G24 | Organization's members (`OrgMemberList`): "Joined {date}" | the name, the address under it | **done** (`org-people.tsx:77`): as G22 |
+| G25 | Billing (`app/account/billing/BillingPanel.tsx`): the enrolled paid plan's status pill whatever it is, `active` included; Manage billing on the enrolled card while the provider holds a subscription — the Free card when unpaid | "Status: past due", and only when not `active` (since daef007, build 10 — a record, the implementer's line, and no owner's decision: the owner's "the name and price only", decision 7, is about the cards); Manage billing on a paid card only, so an unpaid plan had none | **done, to match the website — for the owner to see**: the website's pill (`billingStatusPill`, `lib/view/billing.ts:46`), every status while the plan lasts — Active, Trialing, Past due, Incomplete — and none for the two that end access; Manage billing on the enrolled card while the provider holds a subscription (`settings/billing.tsx:306`), the Free card while a plan is unpaid. ADR-0032 has every platform show the billing status. iOS only, as before: Android shows neither control |
+| G1, the notification half | A held run is decided on Approvals (`/account/approvals`) | a push for a held run, and its row in the inbox, opened Activity | **done**: both open Approvals (`/(tabs)/activity/approvals`: `use-push-registration.tsx:217`, `notifications/inbox.tsx:203`, the row's target `runs.ts:360`), the screen Home's banner opens — proved under the real router too (`real-router/held-run-opens-approvals`) |
+
+Three choices, recorded so they can be reversed. **The zone**: the website says a date in UTC,
+because its pages render on its server; the app says it in the phone's own zone, as its day
+sections, its clock and its archived-flow date already do, so a run under YESTERDAY never reads
+as tomorrow's. **The pill**: the Nocturne StatusPill gained five of the website's labels —
+Active (a team, a plan), Pending (an approval), Trialing, Past due and Incomplete (a plan) — each
+on a treatment it already had, the website's tone mapped as the design maps it: success is
+Live's, warning Paused's, and the website's info — its running run's tone — Running's accent. The
+existing labels' renders and the Nocturne snapshots did not move, as when Archived joined
+(bda1136); `components` pins the five tones. **The stacks**: View the run and a held run's
+notification open where the app already opened such things — a run in Home's stack, as
+Activity's rows do (24.4.4), and Approvals in Activity's, as Home's banner does.
+
+Decided flips of pinned behaviour, each named in its test: `push-registration` "a tap while the
+app runs opens what it names: a failed run’s page, or Activity for a held one" is "… or Approvals
+for a held one (Gate 24’s parity pass; Activity until then)", and "switches the same way for a
+held run, then opens Activity" is "… then opens Approvals" — build 11's four guard rows that name
+them are updated above, each re-proved (B47–B50, below); `flows-view` "names a held run by its
+automation and the step that held, then why, and opens Activity" is "… and opens Approvals (…)";
+`tab-screens` "lists notifications and opens their targets" and "is the inbox itself on the
+Notifications page, …" assert Approvals, their names kept; `view-mapping` "labels the other
+origins" is "… in the website's words for a run's Trigger (…)" — "Run manually", "Continued after
+approval" and "Retried" are "Manual", "After approval" and "After retry"; `billing-screen` "shows
+Free, Plus and Pro in that order, …" reads the pill "Past due" where it read "Status: past due",
+its name kept. Records written when a held run's notification opened Activity — 24.12's Settings ›
+Notifications row in the sixth session, build 11's push paragraph, the build 13 press register's
+inbox row and build 14 part 2's — say what was true then; DESIGN-CONTRACT, the README and the code
+say Approvals. Approvals also reads the workspace collection now, so `routePlatform`
+(`test/platform.tsx`) answers `GET /v1/workspaces` with the signed-in session's one workspace, and
+`presses-home-activity`'s own routing answers it too.
+
+The presses this part adds or changes, each run by a test (`audit:presses`, in the gate):
+
+| Press | Configured outcome | Test |
+| --- | --- | --- |
+| `activity/approvals.tsx:109` — View the run (the card's `onView`, `:271`) | the run page `{runId}` of the run the approval holds; nothing sent | `gate24-parity-activity` "draws each one’s Pending pill and the time it has left, and View the run opens the run it holds", "a role it does not name is told which roles can decide, …" |
+| `activity/approvals.tsx:85, :95` — Approve, Reject | drawn only for a role the approval names; otherwise as before | `gate24-parity-activity` (G20's three), `presses-home-activity` "Approve on the second card posts …", "Reject on the second card posts …" |
+| `(home)/run.tsx:319` — Continues the run that was held | that run's page, `{runId: continuesRunId}`, in the stack the page is in | `gate24-parity-activity` "links a continuation to the run that was held, in the stack it is in — Home’s, and Settings’ from its inbox" |
+| `notifications/inbox.tsx:247` — a held run's row | Approvals (Activity until now) | `tab-screens` "lists notifications and opens their targets", "is the inbox itself on the Notifications page, …"; real-router `held-run-opens-approvals` |
+| `settings/billing.tsx:314` — Manage billing, on the Free card too while a plan is unpaid | the hosted portal, never a checkout | `billing-screen` "unpaid: Free is enrolled and has Manage billing, which opens the portal, never a checkout; cancelled, nothing to manage; Android, no control (G25)" |
+
+### Guards proved to bite, Gate 24's parity pass
+
+The guard line's owed bites on mobile that are this part's — role gating's Connections member
+gate and team page manager gate; a 429 against the session's 401-only rule; deletion wording,
+first a literal-sentence test — and every guard this part adds. (`reused`, also owed, is not
+this part's.) 54 runs by one script (`scratchpad/par-activity-bites/bites.py`), each one exact
+edit to the source — two for B45 — that must match once or the script stops before anything
+runs; the named suites run with jest's own JSON report and the failing tests are read from it;
+each file is restored from the copy read before the edit, its SHA-256 checked, and the tree's
+hashes were identical before the first run and after the last. Every break failed the test
+named. Four more ran against the test files as they were on main, for the record of why tests
+were added: a 429 read as a sign-out at `hooks/use-session.tsx:217` or `:240` failed none of
+`session-provider`'s 23 tests (B6x, B7x) — its 429 test held the launch's rule alone, which it
+failed (B5x) — so the two tests below were added; and "This can be undone." in the confirmation
+failed none of `account-screen`'s 19 (B8x), each comparing the screen with the constant it
+draws, so the literal test was added, after the website's `account-deletion-contract` "the
+confirmation says what the route removes, and promises no more".
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| B1 · Role gating: Connections offers a member nothing to press (`settings/connections.tsx:81`) | `canManage` always true | `settings-connections` "offers a member nothing to press, and says who can change it" |
+| B2 · … and an owner or admin Connect, Disconnect and Replace (the same line) | `canManage` always false | 6 tests in `settings-connections`, among them `settings-connections` "closes the dialog and re-reads the workspace connections" |
+| B3 · Role gating: a team's people to add and its requests to join are read for its owner or admin only (`settings/team.tsx:67`) | `canManage` always true | `teams-screens` "lets a member leave only after typing DELETE, and shows them no requests" |
+| B4 · … its admin as well as its owner | `canManage` for the owner alone | `teams-screens` "shows a manager who is asking to join, and approves or denies them"; `teams-screens` "lets an organization admin who is not on the team see it and decide, with nothing to leave (24.11.3)" |
+| B5 · A 429 at launch is not a sign-out (`hooks/use-session.tsx:172`) | a 429 read as a 401 there | `session-provider` "does not mistake a 429 for a sign-out, and keeps the stored credential" |
+| B6 · A 429 on a sign-in's session read is not a sign-out (`:217`) | a 429 read as a 401 there | `session-provider` "a sign-in whose session read is answered 429 keeps the credential it just stored, and says the wait" |
+| B7 · A 429 on a re-read is not a sign-out (`:240`) | a 429 read as a 401 there | `session-provider` "a re-read answered 429 keeps the session signed in and the stored credential, and says the wait" |
+| B8 · Deletion wording: the confirmation's sentences, written in the test | "This cannot be undone." made "This can be undone." | `account-screen` "the confirmation says what the route removes, and promises no more — in its own words" |
+| B9 · Deletion wording promises no more than the route | "This removes all your data, …" in the confirmation | `account-screen` "the confirmation says what the route removes, and promises no more — in its own words" |
+| B10 · G20: Approve and Reject only for a role the approval names | `decides` always true | 3 tests in `gate24-parity-activity`, among them `gate24-parity-activity` "a role it does not name is told which roles can decide, and offered nothing to press — its role read from the workspace collection, as the website reads it" |
+| B11 · … a role it names, not any role | `decides` true for any role | `gate24-parity-activity` "a role it does not name is told which roles can decide, and offered nothing to press — its role read from the workspace collection, as the website reads it"; `gate24-parity-activity` "an admin an owner-only approval does not name is not offered it; an admin it names decides" |
+| B12 · … and a role it names decides | `decides` always false | 7 tests in `gate24-parity-activity`, `presses-home-activity`, `tab-screens`, among them `gate24-parity-activity` "a role it does not name is told which roles can decide, and offered nothing to press — its role read from the workspace collection, as the website reads it" |
+| B13 · … the role read from the workspace collection, not the session's bounded list | the role taken from the session's list | 3 tests in `gate24-parity-activity`, among them `gate24-parity-activity` "a role it does not name is told which roles can decide, and offered nothing to press — its role read from the workspace collection, as the website reads it" |
+| B14 · … the card draws no answer for a role it does not name | the card's `canDecide` branch skipped | 3 tests in `gate24-parity-activity`, among them `gate24-parity-activity` "a role it does not name is told which roles can decide, and offered nothing to press — its role read from the workspace collection, as the website reads it" |
+| B15 · G19: an approval's expiry | the line not drawn | `gate24-parity-activity` "draws each one’s Pending pill and the time it has left, and View the run opens the run it holds" |
+| B16 · G19: an approval's status pill | the pill not drawn | `gate24-parity-activity` "draws each one’s Pending pill and the time it has left, and View the run opens the run it holds" |
+| B17 · G19: View the run opens the run the approval holds | the approval's id sent as the run's | `gate24-parity-activity` "draws each one’s Pending pill and the time it has left, and View the run opens the run it holds"; `gate24-parity-activity` "a role it does not name is told which roles can decide, and offered nothing to press — its role read from the workspace collection, as the website reads it" |
+| B18 · G19: hours under a day, then days (`expiresIn`) | hours up to 48 | `view-mapping` "rounds to hours under a day and to days after, and says shortly once it is due" |
+| B19 · G17: the version beside the date | the version dropped from the stamp | `gate24-parity-activity` "draws the date and time each run was made and the version it ran, under its line" |
+| B20 · G17: Activity draws the stamp | the stamp's line removed | `gate24-parity-activity` "draws the date and time each run was made and the version it ran, under its line" |
+| B21 · G17: a continuation held again keeps "After approval" | the held line without its prefix, as before | `gate24-parity-activity` "keeps "After approval" on a continuation held again, beside where its approval stands — the tag a held one lost" |
+| B22 · G17, G18: the website's 12-hour clock (`dateTime`) | the hour on a 24-hour clock | 3 tests in `gate24-parity-activity`, `view-mapping`, among them `view-mapping` "says the day, then the time on a 12-hour clock, in the device's zone" |
+| B23 · G18: the version it ran | the version dropped from the subtitle | `gate24-parity-activity` "names the version it ran, then when it started and ended and how it started: the website’s facts" |
+| B24 · G18: Started, Ended, Trigger | no facts | 3 tests in `gate24-parity-activity`, among them `gate24-parity-activity` "names the version it ran, then when it started and ended and how it started: the website’s facts" |
+| B25 · G18: the website's Trigger words | "Manual" put back to "Run manually" | `view-mapping` "labels the other origins, in the website's words for a run's Trigger (Gate 24's parity pass)"; `gate24-parity-activity` "says a run that has not started or ended with the em dash, and a manual start as the website does" |
+| B26 · G18: the run it continues opens in the stack the page is in | Home's stack always | `gate24-parity-activity` "links a continuation to the run that was held, in the stack it is in — Home’s, and Settings’ from its inbox" |
+| B27 · G18: Settings' copy names its own stack | Settings' route passing no `runPath` | `gate24-parity-activity` "links a continuation to the run that was held, in the stack it is in — Home’s, and Settings’ from its inbox" |
+| B28 · G18: a held step keeps its summary | the reason in place of the summary, as before | `gate24-parity-activity` "keeps a held step’s summary, its reason beside it, and says when each step happened — its date and its time" |
+| B29 · G18: a held step's reason beside it | the reason not drawn | `gate24-parity-activity` "keeps a held step’s summary, its reason beside it, and says when each step happened — its date and its time" |
+| B30 · G18: each step's date with its time | the time alone | `gate24-parity-activity` "keeps a held step’s summary, its reason beside it, and says when each step happened — its date and its time" |
+| B31 · G18: No steps reported yet. | the line never drawn | `gate24-parity-activity` "says No steps reported yet. while the run has reported none, and its flow’s steps still follow, waiting" |
+| B32 · G21: a team's status pill | the pill removed | `gate24-parity-activity` "draws Active and Paused on their rows; an archived team is not listed" |
+| B33 · G22: a team member's joined date | the date dropped | `gate24-parity-activity` "a team member: under the address beside a name, and alone under an address" |
+| B34 · G23: the address under a named requester | the address dropped | `gate24-parity-activity` "beside when they asked; an address alone is said once" |
+| B35 · G24: an organization member's joined date | the date dropped | `gate24-parity-activity` "an organization member: under the address beside a name, and alone under an address" |
+| B36 · G25: an active plan's status | `active` mapped to no pill | `billing-screen` "says an active plan's status too, as the website's pill does — every status while the plan lasts (Gate 24's parity pass, G25)" |
+| B37 · G25: Manage billing on the Free card while a plan is unpaid | Manage billing on a paid card only, as before | `billing-screen` "unpaid: Free is enrolled and has Manage billing, which opens the portal, never a checkout; cancelled, nothing to manage; Android, no control (G25)" |
+| B38 · G25: no Manage billing on Android, unpaid included (ADR-0032) | the iOS check dropped | `billing-screen` "unpaid: Free is enrolled and has Manage billing, which opens the portal, never a checkout; cancelled, nothing to manage; Android, no control (G25)" |
+| B39 · The pill's Active tone | Active drawn neutral | `components` "tones the website's Active as its tone maps here"; `gate24-parity-activity` "draws Active and Paused on their rows; an archived team is not listed" |
+| B40 · G1: a push for a held run opens Approvals | the push opening Activity, as before | 4 tests in `push-registration`, `real-router/held-run-opens-approvals`, among them `real-router/held-run-opens-approvals` "a push for a held run, tapped while the app runs, opens Approvals, not Activity" |
+| B41 · G1: a held run's row in the inbox opens Approvals | the row opening Activity, as before | 3 tests in `real-router/held-run-opens-approvals`, `tab-screens`, among them `real-router/held-run-opens-approvals` "a held run's row in the inbox opens Approvals, not Activity" |
+| B42 · G1: a held run's row targets Approvals (`inboxRows`) | the row's target Activity, as before | 3 tests in `flows-view`, `tab-screens`, among them `flows-view` "names a held run by its automation and the step that held, then why, and opens Approvals (Gate 24's parity pass; Activity until then)" |
+| B43 · R3, DG:469: a team deleted in its own workspace | the active workspace used | `teams-screens` "deletes its owner's team in the team's own workspace, saying what becomes of its flows" |
+| B44 · R3, DG:470: Leave only after typing DELETE | no word asked | `teams-screens` "lets a member leave only after typing DELETE, and shows them no requests" |
+| B45 · R3, DG:472: an owner's row not changed | both its guards removed | `teams-screens` "changes a member's role and adds someone; an owner's row is not changed" |
+| B46 · R3, DG:2224: billing read for an owner or admin only | read for a member | `billing-screen` "shows a member the cards without actions and who manages billing; this workspace's billing is not read"; `billing-screen` "draws the Pro for a member too, inert, with the workspace's billing still not read" |
+| B47 · DG:1344, its test renamed: a run id from a push is an id | the run id pattern dropped | `push-registration` "a tap while the app runs opens what it names: a failed run’s page, or Approvals for a held one (Gate 24’s parity pass; Activity until then)" |
+| B48 · DG:1345, the same: one tap opens one screen | the tap not remembered | `push-registration` "a tap while the app runs opens what it names: a failed run’s page, or Approvals for a held one (Gate 24’s parity pass; Activity until then)"; `push-registration` "switches and opens once for one tap, though it is heard twice — as it arrives and as the tap that opened the app" |
+| B49 · DG:1346, the same: a failed run opens its page in the Home stack | the run opened in the Settings stack | 7 tests in `push-registration`, among them `push-registration` "a tap while the app runs opens what it names: a failed run’s page, or Approvals for a held one (Gate 24’s parity pass; Activity until then)" |
+| B50 · DG:1375, its test renamed: a held run from another workspace switches too, then opens Approvals | the switch made for a failed run only | `push-registration` "switches the same way for a held run, then opens Approvals"; `push-registration` "opens nothing when the platform refuses the switch, or the session cannot be read again — the person stays where they are" |

@@ -99,6 +99,38 @@ export function calendarDate(iso: string | null | undefined): string {
   return `${MONTHS[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
 }
 
+/**
+ * A moment, as the website's runs say one (`formatWhen`, en-US medium date and
+ * short time): `'Oct 7, 2026, 9:05 PM'`.
+ *
+ * In the device's zone. The website renders on its server, in UTC; the app's
+ * day sections and its clock are the phone's own, so a run under YESTERDAY
+ * never reads as tomorrow's.
+ */
+export function dateTime(iso: string | null | undefined): string {
+  const at = parseInstant(iso);
+  if (at === null) return EMPTY;
+  const date = new Date(at);
+  const hours = date.getHours();
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${calendarDate(iso)}, ${hours % 12 || 12}:${minutes} ${hours < 12 ? 'AM' : 'PM'}`;
+}
+
+/**
+ * How long an approval has left, as the website's Approvals says it
+ * (`formatExpiry`): `'in 3h'`, `'in 2d'`, or `'shortly'` once it is due. An
+ * approval expires and its work is abandoned, so the time left is what changes
+ * what someone does next.
+ */
+export function expiresIn(iso: string | null | undefined, now: number = Date.now()): string {
+  const at = parseInstant(iso);
+  if (at === null) return EMPTY;
+  const hours = Math.round((at - now) / 3_600_000);
+  if (hours <= 0) return 'shortly';
+  if (hours < 24) return `in ${hours}h`;
+  return `in ${Math.round(hours / 24)}d`;
+}
+
 function parseInstant(iso: string | null | undefined): number | null {
   if (typeof iso !== 'string' || iso.trim() === '') return null;
   const parsed = Date.parse(iso);

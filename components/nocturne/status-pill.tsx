@@ -34,6 +34,24 @@ export function StatusPill({ label }: { label: StatusPillLabel }) {
     Cancelled: neutral,
     // A removed flow (24.11.8) reads as Draft does: kept, not live.
     Archived: neutral,
+    // The website's pills the app drew none of until Gate 24's parity pass, each
+    // in the treatment its website tone maps to (`lib/view/status.ts`): an
+    // active team or plan, Live's; an approval waiting and a trial — the
+    // website's info, its running run's tone — Running's; a plan past due or
+    // incomplete, Paused's.
+    Active: { color: status.ok, bg: status.okBg, border: status.okBorder },
+    Pending: {
+      color: palette.accentRamp[300],
+      bg: withAlpha(palette.accent, 0.12),
+      border: palette.accentRamp[700],
+    },
+    Trialing: {
+      color: palette.accentRamp[300],
+      bg: withAlpha(palette.accent, 0.12),
+      border: palette.accentRamp[700],
+    },
+    'Past due': { color: status.warnText, bg: status.warnBg, border: status.warnBorder },
+    Incomplete: { color: status.warnText, bg: status.warnBg, border: status.warnBorder },
   } as const;
   const t = tones[label];
   return (

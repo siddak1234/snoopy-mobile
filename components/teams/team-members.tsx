@@ -21,6 +21,7 @@ import {
   type ProjectMembership,
   type ProjectRole,
 } from '@/lib/platform/projects';
+import { calendarDate } from '@/lib/view/format';
 
 const ROLES = [
   { value: 'member', label: 'Member' },
@@ -32,7 +33,8 @@ const ROLES = [
  * website's member list and picker, by its rules: an owner's row is not changed;
  * a person leaves from their own row; an owner or admin removes others, an owner
  * changes any role, an admin only a member's. Everything acts on the team's own
- * workspace.
+ * workspace. Each row says the day they joined, under the address the website
+ * shows beneath a name (Gate 24's parity pass, G22).
  */
 export function TeamMembers({
   workspaceId,
@@ -82,7 +84,9 @@ export function TeamMembers({
               testID={`team-member-${member.userId}`}
               icon={UserCircle}
               title={`${nameOf(member)}${own ? ' (you)' : ''}`}
-              sub={member.displayName ? member.email : undefined}
+              sub={[member.displayName ? member.email : null, `Joined ${calendarDate(member.createdAt)}`]
+                .filter(Boolean)
+                .join(' · ')}
               divider={index < members.length - 1}
               onPress={ownerRow ? undefined : own ? () => setLeaving(true) : manageable ? () => setOpen(member) : undefined}
               right={

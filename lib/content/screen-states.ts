@@ -288,6 +288,8 @@ export type ActivityItem = {
   title: string;
   desc: string;
   time: string;
+  /** Its date and time and the version it ran, the website's line ("Oct 7, 2026, 9:05 PM · v3"; Gate 24's parity pass). */
+  stamp: string;
   /** When the run was made, as published: the time range selects on it (the owner's build 13 decision 4). */
   createdAt: string;
 };
