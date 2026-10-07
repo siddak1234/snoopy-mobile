@@ -103,7 +103,8 @@ export function SetupDialog({
       }>
       <ScrollView style={styles.fields} keyboardShouldPersistTaps="handled">
         {bySection(setup).map(({ section, fields }, position) => (
-          <View key={section}>
+          // The manifest's order can come back to a section, so its place keys it.
+          <View key={`${section}-${position}`}>
             <SectionLabel>{sectionLabel(position + 1, section)}</SectionLabel>
             {fields.map((field, index) => (
               <SetupFieldRow

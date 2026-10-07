@@ -18,7 +18,7 @@ import { CATALOG_EMPTY_BODY, CATALOG_EMPTY_TITLE, UNAVAILABLE_NOTE, errorTitleFo
 import { readCatalog } from '@/lib/platform/catalog';
 import { readProjects } from '@/lib/platform/projects';
 import { readSubscriptions } from '@/lib/platform/runs';
-import { heldAs, scopeLabel, scopeLabels, toSolutions, withoutArchived } from '@/lib/view/catalog';
+import { catalogPrice, heldAs, scopeLabel, scopeLabels, toSolutions, withoutArchived } from '@/lib/view/catalog';
 
 /**
  * "New" — the catalog, inside Flows (BUILD-PLAN 24.9.3; the owner's feedback 4
@@ -137,8 +137,9 @@ export default function AddFlowScreen() {
               <View style={styles.cardBody}>
                 <Text style={[styles.cardName, { color: palette.text }]}>{sol.name}</Text>
                 <Text style={[styles.cardDesc, { color: palette.neutral[400] }]}>{sol.desc}</Text>
+                {/* The version Add pins and the price, as the website's card says them. */}
                 <Text style={[styles.cardMeta, { color: palette.neutral[500] }]}>
-                  {sol.cat} · ${sol.price}/mo
+                  {sol.cat} · v{sol.version} · {catalogPrice(sol.price)}
                 </Text>
                 {/* The platform probed this automation and it did not answer.
                     Saying so beats an Add button that fails at the first run —

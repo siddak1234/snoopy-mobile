@@ -21,6 +21,39 @@ export const REPLACEMENT_WAS_STALE =
 export const CONNECTIONS_MANAGED_BY =
   'Only an owner or admin of this workspace can connect or disconnect an account.';
 
+/**
+ * The rest of the website's Connections page (`ConnectionsPanel.tsx`): under
+ * the providers, which ones are listed; a connection with an `errorCode`; and a
+ * pasted key answered 409 — the key reused with other values, or its first
+ * request still verifying — where retrying with the same key is the way on.
+ */
+export const PROVIDERS_CONFIGURED = 'Only providers configured for this deployment are shown.';
+export const CONNECTION_NEEDS_ATTENTION = 'This connection needs attention before it can be used.';
+export const KEY_REQUEST_IN_PROGRESS =
+  'This request may still be in progress. Retry with the same details or refresh the connection list; a new connection request was not created.';
+
+/** A connect that came back from the provider with the connection (the website's `status=connected`). */
+export const CONNECTION_COMPLETED = 'Connection completed successfully.';
+
+/**
+ * Connect or Reconnect answered `reused`: the live connection already holds
+ * every permission the provider asks for, so nothing was asked of anyone.
+ */
+export function alreadyConnected(provider: string, account: string): string {
+  return `${provider} is already connected as ${account}, with everything it needs — there is nothing to authorize.`;
+}
+
+/**
+ * A connect that came back from the provider without the connection (the
+ * website's `status=error`): nothing changed, and a live connection, when the
+ * provider has one, still works.
+ */
+export function connectionIncomplete(stillConnected: boolean): string {
+  return stillConnected
+    ? "The new authorization didn't complete, so nothing changed — your existing connection is still active. Try again or contact an owner."
+    : 'The connection could not be completed. Try again or contact an owner.';
+}
+
 /** Moving a subscription to another version (backend §12.1 #126). */
 export const MOVE_REFUSALS: Readonly<Record<string, string>> = {
   approvals_pending:
@@ -127,6 +160,12 @@ export const UPLOAD_REFUSALS: Readonly<Record<string, string>> = {
   no_object: 'The file did not arrive. Choose it again.',
   too_large: 'The file is larger than this flow accepts.',
 };
+
+/**
+ * Activate, for a flow the workspace came to hold since Setup read its flows —
+ * a second copy, which a workspace never holds (the owner's build 12 item 9).
+ */
+export const ALREADY_IN_WORKSPACE = 'This flow is already in this workspace.';
 
 /** The words for a refused Add. */
 export function addRefusalMessage(error: unknown, fallback: string): string {

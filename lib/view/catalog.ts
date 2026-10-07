@@ -30,6 +30,8 @@ export type SolutionView = {
   desc: string;
   cat: string;
   price: number;
+  /** The version Add pins: the card says "v{N}", as the website's card does. */
+  version: number;
   /**
    * Drives Add versus Added: the workspace holds a subscription to it that is
    * not archived (`withoutArchived`), rather than the catalog's own
@@ -80,6 +82,14 @@ export type ConnectionView = {
    * Ported from the website's `ConnectionsPanel` rule.
    */
   replaceable: boolean;
+  /**
+   * A connection the workspace holds that Reconnect renews or repairs:
+   * connected, or needing reauthorization (backend §12.1 #175) — the website's
+   * `reconnectableProviderIds`, where its button reads "Reconnect".
+   */
+  reconnectable: boolean;
+  /** It has an `errorCode`: the website says it needs attention before it can be used. */
+  attention: boolean;
 };
 
 /**
@@ -155,10 +165,16 @@ export function toSolution(entry: CatalogEntry, subscribed: boolean): SolutionVi
     desc: entry.description,
     cat: entry.category,
     price: entry.monthlyPriceUsd,
+    version: entry.version,
     subscribed,
     available: entry.available,
     templateId: entry.templateId,
   };
+}
+
+/** A catalog card's price, in the website's words: "Included" for a flow that costs nothing, else "$39/mo". */
+export function catalogPrice(monthlyPriceUsd: number): string {
+  return monthlyPriceUsd === 0 ? 'Included' : `$${monthlyPriceUsd}/mo`;
 }
 
 export function toTemplate(entry: CatalogEntry): TemplateView {
@@ -222,17 +238,24 @@ export function toConnectionRows(
       replaceable: Boolean(
         connection && connection.status !== 'disconnected' && provider.authType === 'oauth2',
       ),
+      reconnectable: connection?.status === 'connected' || connection?.status === 'reauthorization-required',
+      attention: Boolean(connection?.errorCode),
     };
   });
 }
 
-/** `Connected · used by 2 flows`, `Reauthorization required`, `Not connected`. */
+/**
+ * `alex@acme.co · Connected · used by 2 live flows`, `alex@acme.co ·
+ * Reauthorization required`, `Not connected`: the account it acts as, as the
+ * website names each connection, and "live" because `usedByCount` counts only
+ * live flows — a draft is being set up, not running.
+ */
 function connectionSubtitle(connection: Connection | undefined): string {
   if (!connection) return 'Not connected';
-  const state = statusLabel(connection.status);
+  const state = `${connection.externalAccount.displayName} · ${statusLabel(connection.status)}`;
   const used = connection.usedByCount;
   if (typeof used !== 'number' || used < 1) return state;
-  return `${state} · used by ${used} ${used === 1 ? 'flow' : 'flows'}`;
+  return `${state} · used by ${used} live ${used === 1 ? 'flow' : 'flows'}`;
 }
 
 /** A Home stat tile, in the shape `homeStats` had. */

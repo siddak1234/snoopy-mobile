@@ -12,6 +12,7 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { StepCard } from '@/components/nocturne/step-card';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { pressed } from '@/components/pressable';
 import { StatTileButton } from '@/components/stat-tile-button';
 import { em, fonts, layout, status, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -278,6 +279,21 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
             );
           })}
         </SurfaceCard>
+        {/* The way to the accounts it is owed, as the website links each card's
+            unmet connections to its Connections page. An archived flow goes
+            live no more, so it is owed nothing. */}
+        {!def.removed && def.connections.length > 0 ? (
+          <Text style={[styles.owed, { color: status.warnText }]}>
+            <Text
+              accessibilityRole="link"
+              onPress={pressed(() => router.push('/(tabs)/settings/connections'))}
+              suppressHighlighting
+              style={[styles.owedLink, { color: palette.accentRamp[300] }]}>
+              Connect {def.connections.map((c) => c.name).join(', ')}
+            </Text>{' '}
+            before going live.
+          </Text>
+        ) : null}
       </View>
 
       <View>
@@ -436,6 +452,14 @@ const styles = StyleSheet.create({
   connectionStatus: {
     fontFamily: fonts.regular,
     fontSize: typeScale.small.fontSize,
+  },
+  owed: {
+    marginTop: 8,
+    fontFamily: fonts.regular,
+    ...typeScale.small,
+  },
+  owedLink: {
+    fontFamily: fonts.medium,
   },
   pipeline: {
     marginTop: 10,

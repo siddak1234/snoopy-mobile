@@ -12,6 +12,13 @@ export type ConnectionOutcome =
   /** `reused`: the live connection already held everything; no consent was asked. */
   | { status: 'connected'; connection: ConnectionState; reused?: true }
   | { status: 'cancelled' }
+  /**
+   * Back from the provider without the connection — it reported an error, or
+   * returned no code: nothing changed. The caller says so in the website's
+   * words, which turn on whether the provider still has a live connection
+   * (`connectionIncomplete`).
+   */
+  | { status: 'incomplete' }
   | { status: 'failed'; message: string };
 
 /**
@@ -66,11 +73,10 @@ export async function connectOAuthProvider(
   if (!matchesNativeCallback(returned, returnTo)) {
     return { status: 'failed', message: 'The connection returned to an unexpected address.' };
   }
-  if (returned.searchParams.get('status') === 'error') {
-    return { status: 'failed', message: connectionFailure(returned.searchParams.get('reason')) };
-  }
+  // The website reads only `status` here, never the reason (`app/connections`).
+  if (returned.searchParams.get('status') === 'error') return { status: 'incomplete' };
   const code = returned.searchParams.get('code');
-  if (!code) return { status: 'failed', message: 'The connection did not complete.' };
+  if (!code) return { status: 'incomplete' };
 
   const completed = await platformOperation('/v1/connections/native/complete', ({ connections }, signal) =>
     connections.POST('/v1/connections/native/complete', {
@@ -112,15 +118,4 @@ export function disconnectConnection(
         signal,
       }),
   );
-}
-
-function connectionFailure(reason: string | null): string {
-  switch (reason) {
-    case 'denied':
-      return 'Connection permission was declined.';
-    case 'missing_code':
-      return 'The provider did not return an authorization code.';
-    default:
-      return 'The connection did not complete.';
-  }
 }
