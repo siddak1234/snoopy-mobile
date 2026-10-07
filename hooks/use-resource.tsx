@@ -2,6 +2,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { activeWorkspaceId, useSession } from '@/hooks/use-session';
+import { busyLoadBody } from '@/lib/content/screen-states';
 import {
   PlatformError,
   PlatformNotConfiguredError,
@@ -47,14 +48,15 @@ import { invalidateShared } from '@/lib/platform/snapshot';
  * - `error` with `busy` is a 429: the platform asked to be left a while
  *   (backend §12.1 #114, BUILD-PLAN 24.3.3). The failed-load state then says
  *   the wait in words (`busyBody`) instead of the generic body, as the web's
- *   busy panel does — never "signed out".
+ *   busy panel does — never "signed out": since Gate 24 it says the person was
+ *   not signed out, in the web's words, as the generic body does.
  * - `401` is not handled here. It is the session's business, and
  *   `hooks/use-session.tsx` owns the route guard that answers it.
  */
 export type ResourceState<T> =
   | { status: 'loading' }
   | { status: 'ready'; data: T }
-  | { status: 'error'; message: string; busy?: true }
+  | { status: 'error'; message: string; busy?: true; retryAfterSeconds?: number }
   | { status: 'offline' }
   | { status: 'unconfigured' };
 
@@ -125,7 +127,14 @@ export function useResource<T>(read: () => Promise<T>, deps: unknown[] = []): Re
         } else if (error instanceof PlatformUnreachableError) {
           setState(keep({ status: 'offline' }));
         } else if (error instanceof PlatformRateLimitedError) {
-          setState(keep({ status: 'error', message: error.message, busy: true }));
+          setState(
+            keep({
+              status: 'error',
+              message: error.message,
+              busy: true,
+              ...(error.retryAfterSeconds === undefined ? {} : { retryAfterSeconds: error.retryAfterSeconds }),
+            }),
+          );
         } else if (error instanceof PlatformError) {
           setState(keep({ status: 'error', message: error.message }));
         } else {
@@ -146,9 +155,9 @@ export function useResource<T>(read: () => Promise<T>, deps: unknown[] = []): Re
   return { ...state, reload, refresh };
 }
 
-/** A failed load's words when it was a 429 — the wait it stated — else none. */
+/** A failed load's words when it was a 429 — busy, not signed out, and the wait it stated — else none. */
 export function busyBody(state: ResourceState<unknown>): string | undefined {
-  return state.status === 'error' && state.busy ? state.message : undefined;
+  return state.status === 'error' && state.busy ? busyLoadBody(state.retryAfterSeconds) : undefined;
 }
 
 /**

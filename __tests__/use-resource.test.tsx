@@ -93,7 +93,12 @@ describe('useResource', () => {
       return <ScreenError title="Couldn't load this" body={busyBody(state)} onRetry={state.reload} />;
     }
     await renderWithProviders(<Busy />);
-    expect(await screen.findByText('The platform is busy right now. Try again in 30 seconds.')).toBeTruthy();
+    // Busy, not signed out, and the wait it stated — the website's words (Gate 24 parity, G3).
+    expect(
+      await screen.findByText(
+        'The platform is busy right now. You have not been signed out, and nothing was lost. Try again in 30 seconds.',
+      ),
+    ).toBeTruthy();
     expect(screen.queryByText(ERROR_BODY)).toBeNull();
   });
 

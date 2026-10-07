@@ -38,7 +38,9 @@ const { platformOperation } = jest.requireMock('@/lib/platform/client');
 /**
  * The failure states every fetching screen shares (`gErr`, `gOff`, and the
  * unavailable state of DESIGN-CONTRACT's data states), and Home's own
- * `sHomeErr`, pressed on every screen that draws them (build 13, B9).
+ * `sHomeErr`, pressed on every screen that draws them (build 13, B9). Home
+ * draws its own only when none of its reads answered — one refused read is
+ * that figure's alone (Gate 24 parity, G6) — so all of them are refused there.
  *
  * - Retry reads the screen again: the read that failed is sent a second time.
  * - Back — the circle, and Go back where a failed load draws it — goes back.
@@ -56,10 +58,16 @@ type FetchingScreen = {
   params?: Record<string, string>;
   /** The screen's read, by its request: the one refused here, and the one Retry sends again. */
   read: RegExp;
+  /** Every read refused, where that is more than `read`: Home's, each a figure of its own. */
+  refused?: RegExp;
 };
 
 const SCREENS = {
-  Home: { Screen: HomeScreen, read: /\/run-stats\?since=/u },
+  Home: {
+    Screen: HomeScreen,
+    read: /\/run-stats\?since=/u,
+    refused: /^\/v1\/workspaces\/[^/]+\/(run-stats|runs|automations|approvals|subscriptions|connections)(\?|$)/u,
+  },
   Run: { Screen: RunDetailScreen, params: { runId: 'run-0' }, read: /\/runs\/run-0$/u },
   Approvals: { Screen: ApprovalsScreen, read: /\/approvals\?status=pending$/u },
   Activity: { Screen: ActivityScreen, read: /\/runs$/u },
@@ -88,8 +96,11 @@ const STATES = {
 type Case = [name: keyof typeof SCREENS, state: keyof typeof STATES, site: string, back: boolean];
 
 const CASES: Case[] = [
-  // Home's one combined failure state (DESIGN-CONTRACT's carve-out): Retry only.
-  ['Home', 'offline', 'app/(tabs)/(home)/index.tsx:285', false],
+  // Home's own failure state, a tab's, worded by what happened (G3): Retry, but
+  // none when no backend or no workspace could make it succeed.
+  ['Home', 'offline', 'app/(tabs)/(home)/index.tsx:361', false],
+  ['Home', 'unavailable', 'app/(tabs)/(home)/index.tsx:361', false],
+  ['Home', 'error', 'app/(tabs)/(home)/index.tsx:361', false],
   ['Run', 'offline', 'app/(tabs)/(home)/run.tsx:189', true],
   ['Run', 'unavailable', 'app/(tabs)/(home)/run.tsx:198', true],
   ['Run', 'error', 'app/(tabs)/(home)/run.tsx:207-208', true],
@@ -152,9 +163,16 @@ function refuse(read: RegExp, refusal: Error) {
 /** How many times the read was sent. */
 const sent = (read: RegExp) => platformOperation.mock.calls.filter(([key]: [string]) => read.test(key)).length;
 
+/** Home's own failure, by the state it is in. */
+const HOME_FAILURE: Record<Case[1], string> = {
+  offline: 'home-failure-offline',
+  error: 'home-failure-error',
+  unavailable: 'home-failure-unconfigured',
+};
+
 /** The failure state the screen draws: Home's own, or the shared one by its test id. */
 const drawn = (name: Case[0], state: Case[1]) =>
-  name === 'Home' ? screen.findByText("Can't reach Autom8x") : screen.findByTestId(STATES[state].testID);
+  screen.findByTestId(name === 'Home' ? HOME_FAILURE[state] : STATES[state].testID);
 
 beforeEach(() => {
   platformOperation.mockReset();
@@ -162,10 +180,10 @@ beforeEach(() => {
 
 describe('the failure states: Retry reads the screen again, Back goes back', () => {
   it.each(CASES)('%s, %s (%s)', async (name, state, _site, back) => {
-    const { Screen, params, read }: FetchingScreen = SCREENS[name];
+    const { Screen, params, read, refused }: FetchingScreen = SCREENS[name];
     const { refusal, retry, goBack } = STATES[state];
     setMockParams(params ?? {});
-    refuse(read, refusal());
+    refuse(refused ?? read, refusal());
     await renderWithProviders(<Screen />, signedInSession);
     expect(await drawn(name, state)).toBeTruthy();
     expect(sent(read)).toBe(1);

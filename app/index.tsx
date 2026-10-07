@@ -20,6 +20,7 @@ import { Pressable } from '@/components/pressable';
 import { em, fonts, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useSession } from '@/hooks/use-session';
+import { SESSION_ENDED_BODY, SESSION_ENDED_TITLE } from '@/lib/content/screen-states';
 import { coverPlaysEntrance } from '@/lib/view/cover-entrance';
 
 /** CSS `ease-out` (a8xPulse timing). */
@@ -42,7 +43,10 @@ const PULSE_RING2_DELAY_MS = 1400;
  * the cover: it stays, and "Get started" is the one way on, to Sign in (the
  * owner, build 7: "anytime they have to sign in they see the cover page";
  * BUILD-PLAN 24.11.6). Every route that used to leave for Sign in leaves for
- * here instead, so the cover is what being signed out looks like.
+ * here instead, so the cover is what being signed out looks like. A session
+ * that ended while it was in use says so over Get started, in the website's
+ * words — and the sign-in that follows returns to the screen that was open
+ * (Gate 24 parity, G4; `lib/view/return-to.ts`).
  */
 export default function SplashScreen() {
   const { palette } = useTheme();
@@ -138,10 +142,15 @@ export default function SplashScreen() {
   // being restored (a flash of "Get started" for a person who is signed in), and
   // not for a person who is.
   const showGetStarted = session.status !== 'restoring' && !signedIn;
+  // Why the person is here, when their session ended under them (G4).
+  const ended = session.status === 'signed-out' && session.ended === true;
 
   return (
     // Signed out, a tap does nothing, so it has no handler and gives no tick (D7).
-    <Pressable onPress={signedIn ? enterWorkspace : undefined} style={[styles.root, { backgroundColor: palette.bg }]}>
+    <Pressable
+      testID="cover"
+      onPress={signedIn ? enterWorkspace : undefined}
+      style={[styles.root, { backgroundColor: palette.bg }]}>
       <GlowBackground cx="50%" cy="40%" r="58%" />
       <View style={styles.markWrap}>
         <Animated.View
@@ -165,6 +174,12 @@ export default function SplashScreen() {
         </Svg>
         <Text style={[styles.kicker, { color: palette.neutral[400] }]}>AUTOMATION × AI</Text>
       </Animated.View>
+      {ended ? (
+        <Animated.View testID="cover-session-ended" accessibilityRole="alert" style={[styles.ended, upStyle]}>
+          <Text style={[styles.endedTitle, { color: palette.text }]}>{SESSION_ENDED_TITLE}</Text>
+          <Text style={[styles.endedBody, { color: palette.neutral[400] }]}>{SESSION_ENDED_BODY}</Text>
+        </Animated.View>
+      ) : null}
       {showGetStarted ? (
         <Animated.View testID="cover-get-started" style={[styles.getStarted, upStyle]}>
           <PillButton label="Get started" variant="primary" height={52} onPress={getStarted} />
@@ -209,5 +224,24 @@ const styles = StyleSheet.create({
     left: 28,
     right: 28,
     bottom: 64,
+  },
+  // Over Get started (52 tall at 64 from the bottom), clear of the mark above.
+  ended: {
+    position: 'absolute',
+    left: 28,
+    right: 28,
+    bottom: 140,
+    alignItems: 'center',
+    gap: 6,
+  },
+  endedTitle: {
+    fontFamily: fonts.medium,
+    fontSize: typeScale.lead.fontSize,
+    textAlign: 'center',
+  },
+  endedBody: {
+    fontFamily: fonts.regular,
+    ...typeScale.body,
+    textAlign: 'center',
   },
 });

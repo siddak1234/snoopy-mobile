@@ -132,8 +132,9 @@ describe('Home stats row', () => {
     platformOperation.mockRejectedValue(new Error('boom'));
     await renderWithProviders(<HomeScreen />, signedIn);
     // Home keeps sHomeErr rather than the shared ScreenError — the design gives
-    // it bespoke states and the frozen-UI rule says to use them.
-    expect(await screen.findByText("Can't reach Autom8x")).toBeTruthy();
+    // it bespoke states and the frozen-UI rule says to use them. A failure that
+    // is not a lost connection says so in the website's words (Gate 24 parity, G3).
+    expect(await screen.findByText('The platform could not answer just now')).toBeTruthy();
     expect(screen.queryByTestId('screen-error')).toBeNull();
   });
 });

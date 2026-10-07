@@ -975,7 +975,7 @@ exports[`screen states — dark palette ScreenError renders unchanged 1`] = `
           ]
         }
       >
-        Nothing was lost — it's safe in the cloud. Retry now or come back in a moment.
+        You have not been signed out, and nothing was lost. Try again in a moment.
       </Text>
       <View
         accessibilityState={
@@ -3495,7 +3495,7 @@ exports[`screen states — light palette ScreenError renders unchanged 1`] = `
           ]
         }
       >
-        Nothing was lost — it's safe in the cloud. Retry now or come back in a moment.
+        You have not been signed out, and nothing was lost. Try again in a moment.
       </Text>
       <View
         accessibilityState={

@@ -11,6 +11,7 @@ import { em, fonts, layout, status, typeScale } from '@/constants/theme';
 import { useBiometricWording } from '@/hooks/use-biometric-wording';
 import { useTheme } from '@/hooks/use-theme';
 import { writeFaceIdEnabled } from '@/lib/platform/session-store';
+import { afterSignIn } from '@/lib/view/return-to';
 
 /**
  * The one-time Face ID question, asked right after a remembered sign-in.
@@ -21,6 +22,8 @@ import { writeFaceIdEnabled } from '@/lib/platform/session-store';
  * now (which is when iOS asks its permission), "Not now" records the answer so
  * the question is not asked again. Either way the session is already signed in;
  * biometrics never create one (ADR-0017). Settings keeps the toggle for later.
+ * Answered, it goes where the sign-in would have: the screen an ended session
+ * left, or Home (Gate 24 parity, G4).
  */
 export default function FaceIdOfferScreen() {
   const router = useRouter();
@@ -30,7 +33,7 @@ export default function FaceIdOfferScreen() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const finish = () => router.replace('/(tabs)/(home)');
+  const finish = () => router.replace(afterSignIn());
 
   const enable = async () => {
     if (busy) return;

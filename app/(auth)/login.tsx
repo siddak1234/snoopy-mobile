@@ -26,6 +26,7 @@ import { useResource } from '@/hooks/use-resource';
 import { readLoginProviders } from '@/lib/platform/auth';
 import { readFaceIdChoice, readSession } from '@/lib/platform/session-store';
 import type { LoginProvider } from '@/lib/platform/native-auth';
+import { afterSignIn } from '@/lib/view/return-to';
 
 /**
  * Whether to ask the Face ID question after this sign-in: a remembered session,
@@ -100,7 +101,9 @@ export default function LoginScreen() {
    *
    * A cancelled sheet clears the callout rather than reporting anything — the
    * person closed it on purpose. Only a real refusal is worth a message, and it
-   * renders in the callout the design already draws.
+   * renders in the callout the design already draws. Signed in, the person goes
+   * where they were when their session ended, or Home (`afterSignIn`; Gate 24
+   * parity, G4) — through the Face ID question first, where it is asked.
    */
   const startSignIn = async (provider: LoginProvider) => {
     if (signInInFlight.current) return;
@@ -110,7 +113,7 @@ export default function LoginScreen() {
     try {
       const outcome = await signIn(provider, { remember });
       if (outcome.status === 'signed-in') {
-        router.replace((await offersFaceId(remember)) ? '/(auth)/faceid-offer' : '/(tabs)/(home)');
+        router.replace((await offersFaceId(remember)) ? '/(auth)/faceid-offer' : afterSignIn());
         return;
       }
       if (outcome.status === 'cancelled') return;

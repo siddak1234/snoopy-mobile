@@ -20,6 +20,7 @@ import {
 } from '@/lib/platform/session-store';
 import { resetSnapshot } from '@/lib/platform/snapshot';
 import { noteSignedOut } from '@/lib/view/cover-entrance';
+import { forgetOpenScreen, noteSessionEnded, settleReturn } from '@/lib/view/return-to';
 
 /**
  * Who is signed in, and whether the app is allowed past the auth stack.
@@ -50,15 +51,21 @@ const EXPIRY_SKEW_MS = 30_000;
  * would otherwise answer the next account on this device for up to their
  * window (24.12).
  */
-function signedOut(): SessionState {
+function signedOut(ended = false): SessionState {
   resetSnapshot();
-  return { status: 'signed-out' };
+  return ended ? { status: 'signed-out', ended: true } : { status: 'signed-out' };
 }
 
 export type SessionState =
   | { status: 'restoring' }
   | { status: 'signed-in'; session: SessionResponse }
-  | { status: 'signed-out' }
+  /**
+   * `ended`: the session ended while it was in use — a tab screen in front —
+   * not by a sign-out, at a cold start, or in a sign-in that failed. The cover
+   * says so, and the next sign-in returns to that screen (Gate 24 parity, G4;
+   * `lib/view/return-to.ts`).
+   */
+  | { status: 'signed-out'; ended?: true }
   | { status: 'unconfigured' }
   | { status: 'unavailable'; message: string };
 
@@ -194,8 +201,18 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
    * signed-out on the platform. Moving to `signed-out` is what makes the
    * layout's fail-closed rule apply to a session that expired mid-use, not
    * only to one that was already gone at launch.
+   *
+   * Ended on a tab screen, it is `ended`: the cover says why, and that screen
+   * is owed to the next sign-in (Gate 24 parity, G4). The same end can be told
+   * twice — the transport's announcement, then the re-read that met it
+   * (`reload`) — and the second keeps what the first said.
    */
-  useEffect(() => onSessionEnded(() => setState(signedOut())), []);
+  const endSession = useCallback(() => {
+    const next = signedOut(noteSessionEnded());
+    setState((previous) => (previous.status === 'signed-out' ? previous : next));
+  }, []);
+
+  useEffect(() => onSessionEnded(endSession), [endSession]);
 
   const signIn = useCallback(
     async (provider: LoginProvider, options?: { remember?: boolean }) => {
@@ -207,8 +224,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           // Resolve the protected projection before returning success. Routing
           // first would race the fail-closed tab guard and bounce a valid login.
           const session = await readCurrentSession();
-          // A new session begins: nothing an earlier one read answers it.
+          // A new session begins: nothing an earlier one read answers it, and
+          // a screen an ended one left is owed only to its own person (G4).
           resetSnapshot();
+          settleReturn(session.user.userId);
           // A sign-in is its own proof: whatever a cold start locked is open.
           lockDecided.current = true;
           setLocked(false);
@@ -239,7 +258,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       // 401 reaches here, so it is the credential's final answer.
       if (error instanceof PlatformError && error.status === 401) {
         await clearSession();
-        setState(signedOut());
+        endSession();
         return { status: 'signed-out' };
       }
       return {
@@ -247,7 +266,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         message: error instanceof Error ? error.message : 'The platform could not be reached.',
       };
     }
-  }, []);
+  }, [endSession]);
 
   const signOut = useCallback(async () => {
     const result = await signOutOfPlatform();
@@ -256,6 +275,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     if (result.revoked) {
       // The cover that follows is shown at once, not faded in (build 13 decision 1).
       noteSignedOut();
+      // Signed out on purpose, nothing is owed: not even a screen a 401 that
+      // landed during the sign-out noted (G4).
+      forgetOpenScreen();
       setState(signedOut());
     }
     return result;
