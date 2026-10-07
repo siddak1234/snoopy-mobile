@@ -91,6 +91,37 @@ describe('Activity says a run as the website does: when, the version it ran, and
   });
 });
 
+/* ------------------------------------------- the way into Approvals, G1 */
+
+describe("Activity offers a permanent way into Approvals, as the website's sidebar link does (G1, the owner's decision at Gate 24's close)", () => {
+  const waiting = (id: string): Approval => ({ ...approvalsPayload().approvals[0]!, id, status: 'pending' });
+
+  it('draws an Approvals row with how many wait, and opens Approvals when pressed', async () => {
+    routePlatform(platformOperation, {
+      '/automations': flowCatalogPayload(),
+      '/runs': runsPayload(),
+      '/approvals': { approvals: [waiting('a-1'), waiting('a-2')] },
+    });
+    await renderWithProviders(<ActivityScreen />, signedInSession);
+    const row = await screen.findByTestId('activity-approvals');
+    expect(within(row).getByText('Approvals')).toBeTruthy();
+    expect(within(row).getByText('2 waiting')).toBeTruthy();
+    await fireEvent.press(row);
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity/approvals');
+  });
+
+  it('is there with nothing waiting — the one entry that never hides, unlike Home\'s banner', async () => {
+    routePlatform(platformOperation, {
+      '/automations': flowCatalogPayload(),
+      '/runs': runsPayload(),
+      '/approvals': { approvals: [] },
+    });
+    await renderWithProviders(<ActivityScreen />, signedInSession);
+    const row = await screen.findByTestId('activity-approvals');
+    expect(within(row).getByText('0 waiting')).toBeTruthy();
+  });
+});
+
 /* ----------------------------------------------------------- the run page, G18 */
 
 /** Two declared steps, as a flow's manifest names them. */
