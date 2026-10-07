@@ -109,8 +109,14 @@ export async function platformOperation<T>(
     // Only a 401 reaches here, and only 401 proves the credential dead. An
     // outage is a 502 and never gets this far, so an unreachable platform can
     // never cost a person their session.
-    if (!(await recoverSession())) throw error;
-    return await sendOnce(execute);
+    const renewal = await recoverSession();
+    if (renewal.status === 'renewed') return await sendOnce(execute);
+    // A renewal the platform could not make — a 429 with its wait, an outage —
+    // says nothing about the credential: the caller hears that refusal, never
+    // the 401 it would read as a sign-out (24.3.3; Gate 24's security review,
+    // which found a 429 on the refresh route clearing the keychain this way).
+    if (renewal.status === 'unavailable') throw renewal.cause;
+    throw error;
   }
 }
 

@@ -11,7 +11,7 @@ import { em, fonts, layout, status, typeScale } from '@/constants/theme';
 import { useBiometricWording } from '@/hooks/use-biometric-wording';
 import { useTheme } from '@/hooks/use-theme';
 import { writeFaceIdEnabled } from '@/lib/platform/session-store';
-import { afterSignIn } from '@/lib/view/return-to';
+import { RETURN_OPTIONS, afterSignIn } from '@/lib/view/return-to';
 
 /**
  * The one-time Face ID question, asked right after a remembered sign-in.
@@ -33,7 +33,7 @@ export default function FaceIdOfferScreen() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const finish = () => router.replace(afterSignIn());
+  const finish = () => router.replace(afterSignIn(), RETURN_OPTIONS);
 
   const enable = async () => {
     if (busy) return;

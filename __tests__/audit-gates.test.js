@@ -180,6 +180,23 @@ describe('architecture audit scripts', () => {
     expect(elsewhere.stderr).toContain('lib/upload.ts');
   });
 
+  it("refuses expo-file-system's legacy network calls and Image.prefetch anywhere (Gate 24's security review of 24.3.4)", () => {
+    mkdirSync(join(root, 'lib/platform'), { recursive: true });
+    writeFileSync(join(root, 'lib/platform/client.ts'), '');
+    for (const call of [
+      'FileSystem.uploadAsync(url, uri)',
+      'FileSystem.createUploadTask(url, uri)',
+      'FileSystem.downloadAsync(url, uri)',
+      'FileSystem.createDownloadResumable(url, uri)',
+      'Image.prefetch(url)',
+    ]) {
+      writeFileSync(join(root, 'lib/upload.ts'), `export const go = (url, uri) => ${call};`);
+      const result = run(platformAudit);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('native network call');
+    }
+  });
+
   it('allows the transport ONE native download, the signed export, and nothing more (24.12)', () => {
     mkdirSync(join(root, 'lib/platform'), { recursive: true });
     const transport = join(root, 'lib/platform/client.ts');

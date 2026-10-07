@@ -386,6 +386,18 @@ describe("Teams says each team's status, as the website's pill beside it does (G
     expect(within(screen.getByTestId('team-p2')).getByText('Paused')).toBeTruthy();
     expect(screen.queryByTestId('team-p3')).toBeNull();
   });
+
+  it("draws Draft on a draft team's row — the website's third pill (the review of #50)", async () => {
+    const fake = fakePlatform(platformOperation);
+    fake.always('GET /v1/workspaces', {
+      workspaces: [{ id: TEST_WORKSPACE, name: 'Acme Operations', type: 'organization', role: 'owner' }],
+      activeWorkspaceId: TEST_WORKSPACE,
+    });
+    fake.always('GET /v1/workspaces/{workspaceId}/projects', { projects: [team('p4', 'Ops', 'draft')] });
+    fake.always('GET /v1/workspaces/{workspaceId}/project-directory', { projects: [] });
+    await renderWithProviders(<TeamsScreen />, signedInSession);
+    expect(within(await screen.findByTestId('team-p4')).getByText('Draft')).toBeTruthy();
+  });
 });
 
 /** A day at noon in the device's zone, as the platform would send it. */
