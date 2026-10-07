@@ -78,7 +78,10 @@ export function AutomationActions({
 
   const runInput = subscription.runInput ?? [];
   const canRun = live && runInput.length > 0 && entry?.available === true;
-  const setup = entry?.setup ?? [];
+  // The settings of the version this flow RUNS, which the platform checks a save
+  // against — not the catalog's newest, which differs once a version changes a
+  // field (backend §12.1 #185). Absent when that version declares none.
+  const setup = subscription.setup ?? [];
   const newer = entry && subscription.templateVersion < entry.version ? entry.version : null;
   const webhook = subscription.triggerKind === 'webhook' && canAdminister;
   const close = () => setOpen(null);
@@ -136,6 +139,9 @@ export function AutomationActions({
           shownWorkspaceId={shownWorkspaceId}
           from={subscription.templateVersion}
           to={newer}
+          config={subscription.config}
+          // Move is offered only to the catalog's newest, so its fields are the target's.
+          targetSetup={entry?.setup ?? []}
           onMoved={onChanged}
         />
       ) : null}

@@ -25,6 +25,7 @@ import { useSolutions } from '@/hooks/use-solutions';
 import { WORKSPACE_CHANGED } from '@/lib/content/refusals';
 import type { AutomationRunInputField, Subscription } from '@/lib/platform/automations';
 import type { CatalogEntry } from '@/lib/platform/catalog';
+import type { SetupField } from '@/components/setup-field';
 import { PlatformError, PlatformUnreachableError } from '@/lib/platform/problem';
 import { TEST_WORKSPACE, sessionAs } from '@/test/platform';
 import { renderWithProviders } from '@/test/render';
@@ -60,6 +61,9 @@ const RUNS_PATH = '/v1/workspaces/{workspaceId}/runs';
 const WEBHOOK_PATH = '/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/webhook';
 
 const NOTE: AutomationRunInputField = { key: 'note', title: 'Note', description: 'What to do', control: 'text', required: true };
+const INBOX: SetupField = { section: 'source', key: 'inbox', title: 'Watch inbox', description: '', control: 'text', required: true };
+const ALERTS: SetupField = { section: 'notifications', key: 'alerts', title: 'Alerts', description: '', control: 'toggle', required: false };
+const DIGEST: SetupField = { section: 'notifications', key: 'digest', title: 'Daily digest to', description: '', control: 'email', required: false };
 const RECEIPT: AutomationRunInputField = { key: 'receipt', title: 'Receipt', description: 'The file to read', control: 'artifact', required: true };
 
 function subscription(overrides: Partial<Subscription> = {}): Subscription {
@@ -72,6 +76,8 @@ function subscription(overrides: Partial<Subscription> = {}): Subscription {
     config: { inbox: 'ap@acme.co' },
     unmetConnections: [],
     runInput: [NOTE],
+    // The pinned version's settings (backend §12.1 #185): what Set up draws.
+    setup: [INBOX, ALERTS],
     triggerKind: 'manual',
     projectId: null,
     createdByUserId: null,
@@ -93,10 +99,7 @@ function entry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
     subscribed: true,
     available: true,
     requiredConnections: [],
-    setup: [
-      { section: 'source', key: 'inbox', title: 'Watch inbox', description: '', control: 'text', required: true },
-      { section: 'notifications', key: 'alerts', title: 'Alerts', description: '', control: 'toggle', required: false },
-    ],
+    setup: [INBOX, ALERTS],
     pipeline: [],
     ...overrides,
   };
@@ -414,6 +417,74 @@ describe('Set up (24.4.1)', () => {
         body: { config: { inbox: 'invoices@acme.co', alerts: false } },
       }),
     ]);
+  });
+});
+
+describe('Set up draws the version the flow runs, not the newest (backend §12.1 #185)', () => {
+  it("shows the pinned version's settings when a newer version changes them", async () => {
+    await renderActions({ sub: subscription({ setup: [INBOX] }), entry: entry({ version: 2, setup: [INBOX, ALERTS, DIGEST] }) });
+    await fireEvent.press(screen.getByTestId('manage-setup'));
+    expect(screen.getByLabelText('Watch inbox')).toBeTruthy();
+    expect(screen.queryByText('Alerts')).toBeNull();
+    expect(screen.queryByText('Daily digest to')).toBeNull();
+    await pressLast('Save setup');
+    await waitFor(() => expect(callbacks.onChanged).toHaveBeenCalled());
+    expect(sent).toEqual([expect.objectContaining({ body: { config: { inbox: 'ap@acme.co' } } })]);
+  });
+
+  it('offers no Set up when the version it runs declares none, though the newest does', async () => {
+    await renderActions({ sub: subscription({ setup: undefined }), entry: entry({ version: 2 }) });
+    expect(screen.queryByTestId('manage-setup')).toBeNull();
+  });
+});
+
+describe('a move whose settings do not fit is answered with the new version\'s settings (backend §12.1 #185)', () => {
+  it('offers that version\'s fields, seeded from what the flow holds, and saving moves it in one change', async () => {
+    answer(`PATCH ${SUB_PATH}`, () => {
+      throw new PlatformError('Unprocessable', 422, 'VALIDATION_FAILED', { reason: 'invalid_config' });
+    });
+    await renderActions({ sub: subscription({ setup: [INBOX] }), entry: entry({ version: 2, setup: [INBOX, ALERTS, DIGEST] }) });
+    await fireEvent.press(screen.getByText('Move to v2'));
+    await pressLast('Move to v2');
+    expect(await screen.findByText('Its settings do not fit that version. Set them for it to move.')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Set them for v2'));
+
+    expect(await screen.findByText('Settings for v2')).toBeTruthy();
+    // The new version's fields, the flow's own value carried over.
+    expect(screen.getByLabelText('Watch inbox').props.value).toBe('ap@acme.co');
+    await fireEvent.changeText(screen.getByLabelText('Daily digest to'), 'ops@acme.co');
+    await pressLast('Save and move to v2');
+    await waitFor(() => expect(callbacks.onChanged).toHaveBeenCalled());
+    expect(sent.map((call) => call.body)).toEqual([
+      { templateVersion: 2 },
+      { config: { inbox: 'ap@acme.co', alerts: false, digest: 'ops@acme.co' }, templateVersion: 2 },
+    ]);
+  });
+
+  it('cancelling the new version\'s settings sends nothing and leaves the flow where it is', async () => {
+    answer(`PATCH ${SUB_PATH}`, () => {
+      throw new PlatformError('Unprocessable', 422, 'VALIDATION_FAILED', { reason: 'invalid_config' });
+    });
+    await renderActions({ sub: subscription({ setup: [INBOX] }), entry: entry({ version: 2, setup: [INBOX, DIGEST] }) });
+    await fireEvent.press(screen.getByText('Move to v2'));
+    await pressLast('Move to v2');
+    await fireEvent.press(await screen.findByText('Set them for v2'));
+    expect(await screen.findByText('Settings for v2')).toBeTruthy();
+    await pressLast('Cancel');
+    await waitFor(() => expect(screen.queryByText('Settings for v2')).toBeNull());
+    expect(sent.map((call) => call.body)).toEqual([{ templateVersion: 2 }]);
+    expect(callbacks.onChanged).not.toHaveBeenCalled();
+  });
+
+  it('offers nothing to set for any other refusal', async () => {
+    answer(`PATCH ${SUB_PATH}`, () => {
+      throw new PlatformError('Conflict', 409, 'CONFLICT', { reason: 'runs_in_flight' });
+    });
+    await renderActions({ entry: entry({ version: 2 }) });
+    await fireEvent.press(screen.getByText('Move to v2'));
+    await pressLast('Move to v2');
+    expect(await screen.findByText('A run of this flow is still going. Wait for it to finish, then move.')).toBeTruthy();
+    expect(screen.queryByText('Set them for v2')).toBeNull();
   });
 });
 

@@ -28,7 +28,9 @@ export const MOVE_REFUSALS: Readonly<Record<string, string>> = {
   runs_in_flight: 'A run of this flow is still going. Wait for it to finish, then move.',
   version_unavailable: 'That version is no longer available.',
   subscription_archived: 'An archived flow cannot move.',
-  invalid_config: 'Its settings do not fit that version. Open Set up, fix them, then move.',
+  // Answered with that version's fields in the move dialog (backend §12.1 #185):
+  // Set up draws the version the flow runs, so it could not fix a mismatch.
+  invalid_config: 'Its settings do not fit that version. Set them for it to move.',
   unmet_connections:
     'That version needs an account this workspace has not connected. Connect it first, or pause the flow and move.',
   setup_incomplete:
