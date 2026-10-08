@@ -1,5 +1,14 @@
 # `snoopy-mobile` — session instructions
 
+**Round 17 — one change here, 25.8.1 (2026-10-08).** Round 17 opened in `snoopy-backend` on
+2026-10-08 (BUILD-PLAN Phase 25, `a9e13ae`) on the owner's four requirements for automations; its
+25.8 is this repository's one box — "A control the app does not know renders as the website does
+… `resource-picker` gets its control; an error boundary around the Setup and Run dialogs …
+Nothing else in the app changes" — made once so that no app change is needed per automation
+(requirement 1), then 25.8.2's one TestFlight build, the owner's. The record is DESIGN-GAPS
+"Round 17 — the app, once"; a further change here in Round 17 is a re-entry the owner approves
+(MASTER-PLAN §4), and §0.1 names this repository for 25.8 only.
+
 **Round 16 CLOSED 2026-10-07** — Gate 24 re-run by command by a fresh `snoopy-backend` session that wrote none of it; its record here is DESIGN-GAPS "Build 16: the owner's device pass, and Round 16's close". Open from 2026-09-29 (BUILD-PLAN Phase 24, ADR-0032): the mobile app offers
 every signed-in feature the website offers, on the same published operations,
 and ships to Apple first. This repository owns 24.3–24.7 and, since the owner's build 6 feedback of 2026-10-02, 24.9 (the flows design pass: one Flows tab, a project scope, a shared workspace snapshot) and, since build 7's, 24.11.6–24.11.10 (the cover when signed out, Teams in place of Projects, Archived flows (Removed flows until 24.12), Unlink, flow history), and, since build 9's (the owner's decisions of 2026-10-02), the app's part of 24.12 (a team is its kind, the archive wording, Settings by category, the billing cards, the join link, the export to the share sheet, Unlink in words, the empty-screen standard, the bigger type), and, since build 10's (the owner's decisions of 2026-10-03, build 11), Settings as one grouped page, compact billing cards with a drawn Pro, an archived flow's live twin, a team on and for every flow, the Archived header button and the Flows empty standard, and a tick on every press, one phase per session:
@@ -14,7 +23,8 @@ approves (MASTER-PLAN §4). Earlier rounds' records stay in
 
 Read `../snoopy-backend/docs/platform/AUTOM8X-MASTER-PLAN.md` §0.1, then the
 Round 16 card in `AUTOM8X-ROUND-PLAYBOOK.md`, BUILD-PLAN Phase 24 and
-`docs/adr/0032-mobile-offers-every-web-feature.md`, then this repository's
+`docs/adr/0032-mobile-offers-every-web-feature.md` — for Round 17's 25.8, Phase 25's intro
+and its 25.8 — then this repository's
 `DESIGN-CONTRACT.md` and `DESIGN-GAPS.md`. The sibling governance repository is
 read-only from a mobile session.
 

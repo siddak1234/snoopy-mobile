@@ -152,6 +152,29 @@ export const RETRY_LABEL = 'Retry';
 export const BACK_LABEL = 'Go back';
 
 /**
+ * The Setup and Run dialogs' boundary (BUILD-PLAN 25.8.1, the owner's
+ * requirement 1 of 2026-10-08: no app change per automation). A form the app
+ * could not draw says so in the failed-load grammar — the thing that failed in
+ * the title, `ERROR_BODY`'s kept session — and offers "Try again", the app's
+ * word for repeating a failed action (`ActionFailure`), beside Cancel; never a
+ * white screen. The Setup dialog's title is `errorTitleFor('setup')`; a run's
+ * form is no fetching screen, so its title is named here, the thing and not the
+ * mechanism.
+ */
+export const RUN_FORM_ERROR_TITLE = "Couldn't load this run's form";
+export const TRY_AGAIN_LABEL = 'Try again';
+
+/**
+ * A field whose control this build does not know (25.8.1): a platform newer
+ * than this build may publish a control the closed union here has no row for.
+ * The row is the website's — a text input
+ * (`snoopy/app/account/flows/ManifestFields.tsx`) — and this line says why, so
+ * a person is not left guessing at a box with no explanation. One sentence for
+ * a setting and a run's input alike; never the wire token.
+ */
+export const NEWER_CONTROL_NOTE = 'This field is newer than this build of the app. Enter it as text.';
+
+/**
  * What an unreachable automation says, in one sentence.
  *
  * `AutomationCatalogEntry.available` is "evidence from a reachability probe,
