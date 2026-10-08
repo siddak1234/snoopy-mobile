@@ -1,4 +1,6 @@
+import { FLOW_QUEUE_FULL, runRefusal } from '@/lib/content/refusals';
 import { readCurrentSession } from '@/lib/platform/auth';
+import { createRun } from '@/lib/platform/automations';
 import {
   downloadSignedFile,
   platformOperation,
@@ -165,6 +167,34 @@ describe('generated platform transport', () => {
       status: 429,
       message: 'The platform is busy right now. Try again in a moment.',
     });
+  });
+
+  it("keeps a 429's public details, so a run refused at a flow whose queue is full is said in the flow's words (backend 25.2.10)", async () => {
+    // The contract's 429 on createRun: `details.reason` max_concurrent_runs, the limit as a string, no retry-after.
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          status: 429,
+          code: 'TOO_MANY_REQUESTS',
+          title: 'The automation is at capacity',
+          details: { reason: 'max_concurrent_runs', limit: '2' },
+        }),
+        { status: 429, headers: { 'content-type': 'application/problem+json' } },
+      ),
+    );
+
+    const error = await createRun('ws-1', 'sub-1', 'run-0123456789abcdef', { note: 'x' }).catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(PlatformRateLimitedError);
+    expect(error).toMatchObject({
+      status: 429,
+      details: { reason: 'max_concurrent_runs', limit: '2' },
+      // Every other screen still says the platform's busy words.
+      message: 'The platform is busy right now. Try again in a moment.',
+    });
+    expect(runRefusal(error)).toEqual({ message: FLOW_QUEUE_FULL, fileGone: false });
+    expect(FLOW_QUEUE_FULL).toBe('This flow is busy and its queue is full. Try again once a run has ended.');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('PUTs a file to its signed URL with no credential, even when signed in (24.3.4)', async () => {
