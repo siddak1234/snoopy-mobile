@@ -18,10 +18,11 @@ import { renderWithProviders } from '@/test/render';
 const { platformOperation } = jest.requireMock('@/lib/platform/client');
 
 // Listed as the platform orders them (by id): Pro before Plus. The cards go by price.
+// Each carries the model allowance every plan has since Round 17 (backend 25.2.4, `model.calls`).
 const PLANS: { plans: PurchasablePlan[] } = {
   plans: [
-    { planId: 'pro', displayName: 'Pro', capabilities: { 'automation.subscribe': 20, 'workspace.rate': 240 }, price: { amount: 1000, currency: 'usd', interval: 'month' } },
-    { planId: 'team', displayName: 'Plus', capabilities: { 'automation.subscribe': 5, 'workspace.rate': 120 }, price: { amount: 500, currency: 'usd', interval: 'month' } },
+    { planId: 'pro', displayName: 'Pro', capabilities: { 'automation.subscribe': 20, 'workspace.rate': 240, 'model.calls': 2500 }, price: { amount: 1000, currency: 'usd', interval: 'month' } },
+    { planId: 'team', displayName: 'Plus', capabilities: { 'automation.subscribe': 5, 'workspace.rate': 120, 'model.calls': 250 }, price: { amount: 500, currency: 'usd', interval: 'month' } },
   ],
 };
 const FREE_FLOOR: WorkspaceBilling = { workspaceId: TEST_WORKSPACE, planId: 'free', displayName: 'Free' };
@@ -86,6 +87,9 @@ describe('Billing (24.6.1, ADR-0032 option B; the cards since 24.12)', () => {
     // No capability lines: name and price only.
     expect(screen.queryByText(/^Flows /u)).toBeNull();
     expect(screen.queryByText(/Requests per minute/u)).toBeNull();
+    // Nor the model allowance (backend 25.2.4): no key drawn unlabelled, and no figure.
+    expect(screen.queryByText(/model|calls/iu)).toBeNull();
+    expect(screen.queryByText(/\b2,?500\b|\b250\b/u)).toBeNull();
     android.restore();
   });
 

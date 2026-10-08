@@ -150,6 +150,16 @@ export const RUN_REFUSALS: Readonly<Record<string, string>> = {
   artifact_unavailable: 'That file can no longer be used. Choose it again.',
 };
 
+/**
+ * A run refused 429 because its flow is at capacity AND the flow's queue is
+ * full (backend BUILD-PLAN 25.2.10, `details.reason` `max_concurrent_runs`): as
+ * many runs are going as the flow runs at once, and as many again are waiting
+ * their turn — a run that waits is created and drawn Queued. Nothing was
+ * created and the person did nothing wrong; the contract's advice is to try
+ * again once a run has ended, which the platform's "busy right now" does not say.
+ */
+export const FLOW_QUEUE_FULL = 'This flow is busy and its queue is full. Try again once a run has ended.';
+
 /** A file for a run (FR-14): opening the upload, and completing it. */
 export const UPLOAD_REFUSALS: Readonly<Record<string, string>> = {
   content_type_not_accepted: 'This flow does not accept that type of file.',
@@ -176,7 +186,9 @@ export function addRefusalMessage(error: unknown, fallback: string): string {
 /**
  * The words for a refused run, and whether its files must be chosen again. The
  * input is exactly what the pinned version declares, so a 422 is "check the
- * values", not a platform failure; a 409 is a subscription that is not live.
+ * values", not a platform failure; a 409 is a subscription that is not live; a
+ * 429 naming `max_concurrent_runs` is a flow whose queue is full (25.2.10), and
+ * any other 429 keeps the platform's busy words and its wait.
  */
 export function runRefusal(error: unknown): { message: string; fileGone: boolean } {
   if (error instanceof PlatformError && error.status === 422) {
@@ -205,6 +217,9 @@ export function runRefusal(error: unknown): { message: string; fileGone: boolean
       };
     }
     if (reason === 'entitlements_not_configured') return { message: RUNS_UNCONFIGURED, fileGone: false };
+  }
+  if (error instanceof PlatformRateLimitedError && error.details?.reason === 'max_concurrent_runs') {
+    return { message: FLOW_QUEUE_FULL, fileGone: false };
   }
   return { message: refusalMessage(error, {}, 'The run was not started.'), fileGone: false };
 }

@@ -134,19 +134,29 @@ export async function readWebhookAddress(
 /**
  * Issues the address, or gives it a new secret (`rotated: true`). The secret is
  * in THIS answer and never again: the caller shows it once and stores it
- * nowhere — not state that outlives the dialog, not the Keychain. Not
- * replayable, so it carries no idempotency key: a retry rotates again, and the
- * secret last shown is the one that works.
+ * nowhere — not state that outlives the dialog, not the Keychain.
+ *
+ * **Replayable by key** (backend §12.1 #240, BUILD-PLAN 25.2.12 — the app's
+ * half). The contract's `Idempotency-Key` is optional here, the one operation
+ * where it is: the platform derives the secret from the key, so a retry that
+ * carries the same key is answered with the secret the lost answer carried and
+ * rotates nothing. The caller sends a fresh key per press and the same key on
+ * each retry of it (`useIntentKeys`). A platform from before the TWENTY-THIRD
+ * promotion does not read the header on this route and rotates as it did.
  */
 export function issueWebhookAddress(
   workspaceId: string,
   subscriptionId: string,
+  idempotencyKey: string,
 ): Promise<IssuedWebhookEndpoint> {
   return platformOperation(
     `/v1/workspaces/${workspaceId}/subscriptions/${subscriptionId}/webhook`,
     ({ automations }, signal) =>
       automations.POST('/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/webhook', {
-        params: { path: { workspaceId, subscriptionId } },
+        params: {
+          path: { workspaceId, subscriptionId },
+          header: { 'Idempotency-Key': idempotencyKey },
+        },
         signal,
       }),
   );

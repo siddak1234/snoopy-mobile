@@ -26,7 +26,7 @@ import { WORKSPACE_CHANGED } from '@/lib/content/refusals';
 import type { AutomationRunInputField, Subscription } from '@/lib/platform/automations';
 import type { CatalogEntry } from '@/lib/platform/catalog';
 import type { SetupField } from '@/components/setup-field';
-import { PlatformError, PlatformUnreachableError } from '@/lib/platform/problem';
+import { PlatformError, PlatformRateLimitedError, PlatformUnreachableError } from '@/lib/platform/problem';
 import { TEST_WORKSPACE, sessionAs } from '@/test/platform';
 import { renderWithProviders } from '@/test/render';
 
@@ -221,6 +221,31 @@ describe('Run (24.4.1, ADR-0030)', () => {
     ).toBeTruthy();
   });
 
+  it("says a run refused because the flow and its queue are full in the flow's words; any other 429 keeps the platform's (backend 25.2.10)", async () => {
+    answer(
+      `POST ${RUNS_PATH}`,
+      () => {
+        // As the transport projects the contract's 429: its busy words, and the reason beside them.
+        throw new PlatformRateLimitedError('The platform is busy right now. Try again in a moment.', undefined, {
+          reason: 'max_concurrent_runs',
+          limit: '2',
+        });
+      },
+      () => {
+        throw new PlatformRateLimitedError('The platform is busy right now. Try again in 30 seconds.', 30, {
+          reason: 'over_workspace_quota',
+        });
+      },
+    );
+    await renderActions();
+    await fireEvent.press(screen.getByText('Run'));
+    await pressLast('Start run');
+    expect(await screen.findByText('This flow is busy and its queue is full. Try again once a run has ended.')).toBeTruthy();
+    await pressLast('Start run');
+    expect(await screen.findByText('The platform is busy right now. Try again in 30 seconds.')).toBeTruthy();
+    expect(callbacks.onRunStarted).not.toHaveBeenCalled();
+  });
+
   it('uploads a chosen file, waits for it, sends only its id — and empties it when the platform no longer takes it', async () => {
     (DocumentPicker.getDocumentAsync as jest.Mock).mockResolvedValue({
       canceled: false,
@@ -393,13 +418,48 @@ describe('Webhook address (24.4.1, backend §12.1 #91, #109)', () => {
     await fireEvent.press(screen.getByText('Create address'));
     expect(await screen.findByText('whsec_shown_once')).toBeTruthy();
     expect(screen.getByText('Secret — shown this once. Copy it now.')).toBeTruthy();
-    expect(sent.find((s) => s.method === 'POST')!.key).toBeUndefined();
+    // The press's own key (backend §12.1 #240; no key until Round 17).
+    expect(sent.find((s) => s.method === 'POST')!.key).toBe('webhook-1');
 
     await fireEvent.press(screen.getByText('Close'));
     await fireEvent.press(screen.getByTestId('manage-webhook'));
     expect(await screen.findByText('https://hooks.example.test/e/endpoint-1')).toBeTruthy();
     expect(screen.queryByText('whsec_shown_once')).toBeNull();
     expect(SecureStore.setItemAsync).not.toHaveBeenCalled();
+  });
+
+  it('sends a press an Idempotency-Key of the published shape, the same one on its retry after a lost answer, and a new one for the next press (backend §12.1 #240)', async () => {
+    // The real key, so its shape is the one the Edge holds a key to.
+    newIdempotencyKey.mockImplementation(jest.requireActual('@/lib/platform/client').newIdempotencyKey);
+    const address = { endpointId: 'endpoint-1', url: 'https://hooks.example.test/e/endpoint-1', createdAt: '2026-09-29T00:00:00Z' };
+    answer(`GET ${WEBHOOK_PATH}`, () => address);
+    answer(
+      `POST ${WEBHOOK_PATH}`,
+      // The answer is lost: the platform may already have stopped the old secret.
+      () => {
+        throw new PlatformUnreachableError();
+      },
+      // Pressed again, under the same key: the secret the lost answer carried.
+      () => ({ ...address, secret: 'whsec_the_lost_answers', rotated: true }),
+      // A later press is a new secret.
+      () => ({ ...address, secret: 'whsec_the_next', rotated: true }),
+    );
+    await renderActions({ sub: subscription({ triggerKind: 'webhook' }) });
+    await fireEvent.press(screen.getByTestId('manage-webhook'));
+
+    await fireEvent.press(await screen.findByText('Make a new secret'));
+    expect(await screen.findByText('The platform is unreachable')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Make a new secret'));
+    expect(await screen.findByText('whsec_the_lost_answers')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Make a new secret'));
+    expect(await screen.findByText('whsec_the_next')).toBeTruthy();
+
+    const keys = sent.filter((s) => s.method === 'POST' && s.path === WEBHOOK_PATH).map((s) => s.key);
+    expect(keys).toHaveLength(3);
+    // The contract's shape: 16-128 letters, numbers, dot, underscore, tilde, colon or hyphen.
+    for (const key of keys) expect(key).toMatch(/^[A-Za-z0-9._~:-]{16,128}$/u);
+    expect(keys[1]).toBe(keys[0]);
+    expect(keys[2]).not.toBe(keys[1]);
   });
 });
 
