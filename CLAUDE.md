@@ -1,7 +1,8 @@
 # `snoopy-mobile` — session instructions
 
-**Round 17 — three changes here (2026-10-08): 25.8.1; the app's halves of 25.2.12 and 25.2.10;
-and their words and webhook key made the website's.** Round 17 opened in `snoopy-backend` on
+**Round 17 — four changes here (2026-10-08): 25.8.1; the app's halves of 25.2.12 and 25.2.10;
+their words and webhook key made the website's; and the release's local build (`release:ios -- --local`,
+for 25.8.2).** Round 17 opened in `snoopy-backend` on
 2026-10-08 (BUILD-PLAN Phase 25, `a9e13ae`) on
 the owner's four requirements for automations; its 25.8 is this repository's one box — "A control
 the app does not know renders as the website does … `resource-picker` gets its control; an error

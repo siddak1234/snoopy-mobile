@@ -99,7 +99,13 @@ gate, naming it (111 s to green, 3 s to refuse a lint error, measured
 refusals) builds and submits only `origin/main`, clean, with `all-green`
 concluded success on HEAD and the live AASA naming the app, and only a build
 whose `gitCommitHash` is HEAD with the release's entitlements; `eas.json`
-`cli.requireCommit` refuses an uncommitted tree. Preview and production EAS values are
+`cli.requireCommit` refuses an uncommitted tree.
+`npm run release:ios -- --local` (Round 17, 2026-10-08) builds the same release on
+this Mac instead of EAS's cloud — `eas build --local`, with Xcode, CocoaPods and
+fastlane, which it refuses without — and so uses no EAS build quota; every gate
+above still applies, nothing moves HEAD or the tree during the build, the ipa's
+entitlements are checked as the cloud build's are, and it is submitted with
+`eas submit --path`. `--local --dry-run` proves the Mac's toolchain as well. Preview and production EAS values are
 supplied by the build environment; they are intentionally not committed to
 `eas.json`. Since Round 7.5 that means the EAS-hosted `preview` and
 `production` environments on the linked project (`@autom8x.ai/snoopy-mobile`):
