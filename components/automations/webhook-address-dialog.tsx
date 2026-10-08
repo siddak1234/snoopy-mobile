@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { fonts, typeScale } from '@/constants/theme';
-import { useIntentKeys } from '@/hooks/use-intent-keys';
+import type { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { WEBHOOK_ISSUE_REFUSALS, WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
@@ -14,6 +14,8 @@ import {
   type WebhookEndpoint,
 } from '@/lib/platform/automations';
 import { relativeTimeAgo } from '@/lib/view/format';
+
+type IntentKeys = ReturnType<typeof useIntentKeys>;
 
 /**
  * Where a vendor sends the events that start this automation (backend §12.1
@@ -33,24 +35,29 @@ import { relativeTimeAgo } from '@/lib/view/format';
  * is lost — the 10 s abort, a dropped connection — the platform may already
  * have stopped the old secret; pressing again with the same key is answered
  * with the secret that lost answer carried, not a second rotation. The key is
- * the intent's (`useIntentKeys`): minted at the press, kept through a refusal
- * or a lost answer, spent once a secret is shown, so the next press is a new
- * secret under a new key. Closing the dialog ends the intent with it. The
- * re-entry guard (`issuing`) still keeps one press from sending twice.
+ * minted at the press and kept through a refusal, a lost answer and the dialog
+ * closing, as the website keeps it (`WebhookAddressButton`'s `issueKey`); it is
+ * spent once a secret is shown, so the next press is a new secret under a new
+ * key. This dialog is mounted only while open, so the key is held by its opener
+ * (`keys`, from `AutomationActions`), in memory only — never stored — and
+ * scoped to this flow in the workspace the press acts on. The re-entry guard
+ * (`issuing`) still keeps one press from sending twice.
  */
 export function WebhookAddressDialog({
   subscriptionId,
   shownWorkspaceId,
+  keys,
   onClose,
 }: {
   subscriptionId: string;
   /** The workspace the screen loaded; both calls are refused once it is not active. */
   shownWorkspaceId: string | null;
+  /** The issue's keys, held by the opener so that a lost answer's key outlives this dialog. */
+  keys: IntentKeys;
   onClose: () => void;
 }) {
   const { palette } = useTheme();
   const session = useSession();
-  const keys = useIntentKeys('webhook');
   // `undefined` until read; `null` when no address has been made yet.
   const [endpoint, setEndpoint] = useState<WebhookEndpoint | null | undefined>(undefined);
   const [issued, setIssued] = useState<IssuedWebhookEndpoint | null>(null);
@@ -87,10 +94,12 @@ export function WebhookAddressDialog({
     }
     setIssuing(true);
     setError(null);
+    // This flow's, in this workspace: no other flow's press ever carries it.
+    const scope = `${workspaceId}/${subscriptionId}`;
     try {
-      const made = await issueWebhookAddress(workspaceId, subscriptionId, keys.keyFor(subscriptionId));
+      const made = await issueWebhookAddress(workspaceId, subscriptionId, keys.keyFor(scope));
       // Shown: the next press is a new secret, with a new key.
-      keys.settle(subscriptionId);
+      keys.settle(scope);
       setIssued(made);
       setEndpoint({
         endpointId: made.endpointId,

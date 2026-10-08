@@ -105,7 +105,9 @@ function RunDialogBody({ name, subscriptionId, shownWorkspaceId, runInput, onClo
       testID="run-dialog"
       onRequestClose={busy ? () => undefined : onClose}
       title={`Run ${name}`}
-      body="Enter what this run needs. It starts as soon as you submit, and its page shows each step as it happens."
+      // The website's sentence (`snoopy/app/account/flows/AutomationActions.tsx`): a run
+      // at a busy flow is created and waits its turn (backend 25.2.10).
+      body="Enter what this run needs. It starts when you submit, or waits its turn if this flow is busy, and its page shows each step as it happens."
       actions={
         <>
           <DialogButton label="Cancel" disabled={busy} onPress={onClose} />

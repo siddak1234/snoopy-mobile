@@ -1780,10 +1780,10 @@ returns to its first. One table, `presses-patterns-dialog-close:511`, a row per 
 | `team-requests.tsx:68` — Request to join › Cancel | `:366` |
 | `settings/teams.tsx:125` — Create a team › Cancel | `:376` |
 | `settings/teams.tsx:262` — Withdraw request › Cancel | `:386` |
-| `automation-actions.tsx:187` — Run › Cancel | `:396` |
-| `automation-actions.tsx:200` — Set up › Cancel | `:406` |
-| `automation-actions.tsx:208` — Webhook address › Close | `:416` |
-| `automation-actions.tsx:218` — Archive flow › Cancel | `:428` |
+| `automation-actions.tsx:197` — Run › Cancel | `:396` |
+| `automation-actions.tsx:210` — Set up › Cancel | `:406` |
+| `automation-actions.tsx:222` — Webhook address › Close | `:416` |
+| `automation-actions.tsx:233` — Archive flow › Cancel | `:428` |
 | `move-version.tsx:145` — Move to vN › Cancel | `:438` |
 | `(home)/run.tsx:288` — Cancel this run? › Keep it running | `presses-home-activity:107` |
 | `connections-card.tsx:228` — Connect › Cancel | `:448` |
@@ -1857,18 +1857,18 @@ returns to its first. One table, `presses-patterns-dialog-close:511`, a row per 
 | `flows/detail.tsx:325` — Unarchive | Setup with the template and the team it had | `build13-unarchive-and-one-flow:56` |
 | `flows/detail.tsx:366` — Pause / Resume / Publish | PATCH `{status}`; refused while not responding | `tab-screens:460`, `presses-flows:301` |
 | `flows/detail.tsx:340` — Try again | the same change, the same key | `presses-flows:328` |
-| `automation-actions.tsx:128` — Run | the Run dialog with the declared fields | `automation-actions:159` |
-| `automation-actions.tsx:154` — Set up; Webhook address | their dialogs | `automation-actions:388`, `automation-actions:352` |
-| `automation-actions.tsx:168` — Archive flow | the one-way confirmation | `automation-actions:275` |
-| `automation-actions.tsx:222` — Archive | PATCH `{status: 'archived'}`, then the Flows list | `automation-actions:275`, `tab-screens:405` |
-| `move-version.tsx:118` — Move to vN | its confirmation | `automation-actions:246` |
-| `move-version.tsx:156` — Move to vN (confirm) | PATCH `{templateVersion}`; refusals in words | `automation-actions:246`, `automation-actions:260` |
-| `run-dialog.tsx:115` — Start run | POST runs `{subscriptionId, input}`; closes; the run's page | `automation-actions:159`, `presses-flows:248` |
-| `run-file-field.tsx:142` — Choose file | uploads it; the run carries its id; a refusal in words | `automation-actions:205`, `presses-flows:418` |
-| `setup-dialog.tsx:75` — Save setup | PATCH `{config}` only | `automation-actions:388` |
+| `automation-actions.tsx:135` — Run | the Run dialog with the declared fields | `automation-actions:166` |
+| `automation-actions.tsx:164` — Set up; Webhook address | their dialogs | `automation-actions:645`, `automation-actions:481` |
+| `automation-actions.tsx:178` — Archive flow | the one-way confirmation | `automation-actions:350` |
+| `automation-actions.tsx:237` — Archive | PATCH `{status: 'archived'}`, then the Flows list | `automation-actions:350`, `tab-screens:405` |
+| `move-version.tsx:118` — Move to vN | its confirmation | `automation-actions:321` |
+| `move-version.tsx:156` — Move to vN (confirm) | PATCH `{templateVersion}`; refusals in words | `automation-actions:321`, `automation-actions:335` |
+| `run-dialog.tsx:117` — Start run | POST runs `{subscriptionId, input}`; closes; the run's page | `automation-actions:166`, `presses-flows:248` |
+| `run-file-field.tsx:142` — Choose file | uploads it; the run carries its id; a refusal in words | `automation-actions:280`, `presses-flows:418` |
+| `setup-dialog.tsx:75` — Save setup | PATCH `{config}` only | `automation-actions:645` |
 | `dialog-boundary.tsx:59` — Cancel, on the failed dialog (Round 17, 25.8.1) | closes: the dialog's own `onClose`, the caller's; nothing sent | `dialog-boundary:88`, `dialog-boundary:205` |
 | `dialog-boundary.tsx:60` — Try again, on the failed dialog (Round 17, 25.8.1) | draws the dialog again: a child that no longer throws is shown, one that still throws fails to the same words; nothing sent | `dialog-boundary:107`, `dialog-boundary:121`, `dialog-boundary:258` |
-| `webhook-address-dialog.tsx:128` — Create address / Make a new secret | POST with an `Idempotency-Key` — the same one on a retry of the press, a new one once a secret is shown (§12.1 #240, Round 17; no key until then); the secret shown once; a refusal in words | `automation-actions:396`, `automation-actions:431`, `presses-flows:600` |
+| `webhook-address-dialog.tsx:137` — Create address / Make a new secret | POST with an `Idempotency-Key` — the same one on a retry of the press, after the dialog is closed and opened again too (Round 17, the website's lifetime), a new one once a secret is shown (§12.1 #240, Round 17; no key until then); the secret shown once; a refusal in words | `automation-actions:481`, `automation-actions:516`, `automation-actions:554`, `automation-actions:578`, `automation-actions:596`, `presses-flows:600` |
 | `archived-flows.tsx:116` — an archived row | its page in the same stack | `tab-screens:1928` |
 | `select-field.tsx:55, :80` — the box; an option | opens the list in place; selects and closes it | `select-field:21` |
 
@@ -3150,11 +3150,14 @@ changes.
    lost answer, so pressing again after "The platform is unreachable" sends the same key and the
    platform answers with the secret the lost answer carried. It is spent once a secret is shown
    (`:93`), so the next press makes a new secret under a new key. The re-entry guard is unchanged
-   (`:82`).
+   (`:82`). **Corrected after the review of #56 (below):** the key is now held by the dialog's
+   opener, `AutomationActions`, scoped to the flow in its workspace, so it is kept through the
+   dialog closing too, as the website keeps it.
 3. **25.2.10's words.** The transport keeps a 429's public details (`lib/platform/client.ts:149-158`,
    `lib/platform/problem.ts:58-67`), and every screen still shows the busy words with the wait.
    `runRefusal` says a 429 naming `max_concurrent_runs` in the flow's words — `FLOW_QUEUE_FULL`,
-   "This flow is busy and its queue is full. Try again once a run has ended."
+   ~~"This flow is busy and its queue is full. Try again once a run has ended."~~ (**corrected
+   after the review of #56, below:** the website's sentence, verbatim)
    (`lib/content/refusals.ts:161`, `:221`); `audit:vocabulary` scans it. Nothing changed for a run
    that waits: Queued, Started's em dash and "No steps reported yet." already describe it.
 4. **`model.calls`: nothing drawn, nothing changed.** `billing-screen`'s plans now carry it (Plus 250,
@@ -3172,10 +3175,13 @@ changes.
 
 **The narrowest readings, said so.**
 
-- "A fresh key per press, the same key on every retry": a retry is pressing again in the same
-  opening of the dialog after a refusal or a lost answer; a press after a secret is shown is a new
-  press. The dialog is mounted only while open, so closing it ends the intent, and a press after
-  reopening makes a new rotation, as every press did before #240. The app now always sends a key,
+- "A fresh key per press, the same key on every retry": a retry is pressing again ~~in the same
+  opening of the dialog~~ after a refusal or a lost answer; a press after a secret is shown is a new
+  press. ~~The dialog is mounted only while open, so closing it ends the intent, and a press after
+  reopening makes a new rotation, as every press did before #240.~~ **Corrected after the review
+  of #56 (below):** that reading was narrower than the website, whose key outlives its dialog
+  (`snoopy` #44, `WebhookAddressButton.tsx:45`, `:91-95`); the app's opener now holds the key, so
+  a press after closing and reopening the dialog is the same retry. The app now always sends a key,
   and a platform started without `RUNS_WEBHOOK_SECRET_KEY` refuses a keyed issue 503
   (`webhook_secret_key`). No promoted platform can be in that state: production cannot start
   without the key (`deploy/compose.prod.yml:899`, `${WORKER_CALLER_SECRET:?}`), and local Compose
@@ -3185,10 +3191,14 @@ changes.
   not be taken within three seconds, not a full queue, so the full-queue sentence would not be true
   of it. Both tell the person to try again.
 - The Run dialog's lead, "It starts as soon as you submit, and its page shows each step as it
-  happens" (`run-dialog.tsx:108`), is also the website's sentence
-  (`snoopy/app/account/flows/AutomationActions.tsx:319`). It is no longer true of a run at a busy
-  flow, which waits its turn. It is not changed here, because it is the website's sentence and the
-  box speaks of where pending is worded; it is recorded as the owner's question for both clients.
+  happens" (`run-dialog.tsx:108`), ~~is also the website's sentence
+  (`snoopy/app/account/flows/AutomationActions.tsx:319`)~~ was the website's sentence at `7accdba`.
+  It is no longer true of a run at a busy flow, which waits its turn. ~~It is not changed here,
+  because it is the website's sentence and the box speaks of where pending is worded; it is
+  recorded as the owner's question for both clients.~~ **Corrected after the review of #56
+  (below):** `snoopy` #44, merged beside this PR, changed the website's sentence
+  (`AutomationActions.tsx:319-321` at `ec9a757`), so the two clients said different things; the
+  app now says the website's.
 - The run page reads the run again every 2 s until it ends (`RUN_REREAD_MS`, `lib/view/runs.ts:396`,
   the owner's build 14 feedback #3), a queued run included. A run that waits minutes now keeps an
   open page there. That costs about 34 requests a minute: the run every 2 s, plus approvals at most
@@ -3224,10 +3234,14 @@ did not move.
   allowlists, gave `{ status: 502, code: DEPENDENCY_FAILURE, details: null }`. No Edge test sends an
   upstream 429. The app's words (and the website's) wait on a 429 branch there that allowlists
   `max_concurrent_runs` (and `creation_contended`) and `limit`. Until then a person at a full flow
-  reads the 502's title.
-- For `snoopy`: #240's web half (a fresh key per press, the same key on each retry, in
+  reads the 502's title. **Filed as §12.1 #241; `snoopy-backend` #181 fixes it (open at `fda96d5`,
+  its record naming the TWENTY-FOURTH promotion).**
+- ~~For `snoopy`: #240's web half (a fresh key per press, the same key on each retry, in
   `WebhookAddressButton.tsx`); the same full-queue sentence for the 429 on a run's start; and the
-  Run dialog's lead sentence, the owner's question for both clients.
+  Run dialog's lead sentence, the owner's question for both clients.~~ **Corrected after the review
+  of #56 (below):** `snoopy` #44 (`ec9a757`), merged beside this PR, made all three in its own
+  words; the app now ports its full-queue sentence, its Run dialog lead and its key's lifetime, so
+  nothing remains for `snoopy` here.
 
 ### Guards proved to bite, 25.2.12 and 25.2.10 (the app's halves)
 
@@ -3247,3 +3261,128 @@ changes after every restore. Every break failed the tests named and nothing else
 | Q1 · A run refused because its flow and its queue are full says so (`lib/content/refusals.ts:221`) | the branch removed | `automation-actions` "says a run refused because the flow and its queue are full…"; `platform-request` "keeps a 429's public details…" |
 | Q2 · The transport keeps a 429's public details (`lib/platform/client.ts:157`) | the details left off the error | `platform-request` "keeps a 429's public details…" |
 | P1 · No plan capability is drawn unlabelled (the cards, `app/(tabs)/settings/billing.tsx:60-71`) | each card drawing its plan's capabilities as `key value` lines | `billing-screen` "shows Free, Plus and Pro in that order, each its name and price only…", at the new `model.calls` assertion |
+
+### The app's words and the webhook key, as the website has them (Round 17, after the review of #56; 2026-10-08)
+
+**Why.** `snoopy` #44 (`11ef3a7`, merged as `ec9a757`) and this repository's #56 (`230fc52`,
+merged as `4fc5ddd`) merged within a minute of each other on 2026-10-08, after the TWENTY-THIRD
+promotion's read-back. A review of #56 after both merged found the two clients saying different
+things for the same platform answer, while this app's rule is that refusals are the website's
+words, ported verbatim (`lib/content/refusals.ts:3-10`), and the owner's requirement is mobile =
+web parity. A re-entry (MASTER-PLAN §4) on that finding, riding 25.8.2's build. Nothing else in
+the app changes: no contract change, no new dependency.
+
+**What was read, by command** (`snoopy-mobile` `main` `4fc5ddd`; `snoopy` `main` `ec9a757`, read
+only):
+
+- **The full-queue refusal.** The website says "This flow is busy and its queue is full, so the run
+  was not started. Try again once one of its runs has ended." (`FLOW_QUEUE_FULL`,
+  `snoopy/app/account/flows/actions.ts:217-218`; said on a 429 naming `max_concurrent_runs`,
+  `:276-278`; held by `e2e/public-edge-fixture.spec.ts:454`). The app said "This flow is busy and
+  its queue is full. Try again once a run has ended." (`lib/content/refusals.ts:161` at `4fc5ddd`).
+- **`creation_contended` keeps the busy words in both clients.** The website's branch names
+  `max_concurrent_runs` only (`actions.ts:276`); any other 429 returns the error's message
+  (`:301`), which is `busyMessage` (`lib/platform-server.ts:131-138`, `lib/retry-after.ts:30`).
+  The app's branch names it only (`lib/content/refusals.ts:226`); any other 429 is the transport's
+  `busyMessage` (`lib/platform/client.ts:155-157`, `lib/platform/retry-after.ts:28`). With no wait
+  stated, as `snoopy-backend` #181 relays none, both read "The platform is busy right now. Try
+  again in a moment." Nothing to change; a test now holds it here.
+- **The Run dialog's lead.** The website says "Enter what this run needs. It starts when you
+  submit, or waits its turn if this flow is busy, and its page shows each step as it happens."
+  (`AutomationActions.tsx:319-321`; held by `e2e/public-edge-fixture.spec.ts:444`). The app said
+  "… It starts as soon as you submit, and its page shows each step as it happens."
+  (`components/automations/run-dialog.tsx:108` at `4fc5ddd`).
+- **The webhook key's lifetime.** The website's key is a ref, `issueKey`, of
+  `WebhookAddressButton` (`WebhookAddressButton.tsx:45`) — the component that draws the button
+  and its dialog, one per flow on the Flows page (`page.tsx:389-396`, in the rows keyed by
+  subscription id, `:336-339`). A press makes it unless a press before it is unanswered (`:69`),
+  a secret shown spends it (`:81`), and closing the dialog leaves it (`close`, `:91-95`). Its
+  browser test presses after a lost answer, a close and a reopen, and is answered with the lost
+  answer's secret under the same key (`e2e/public-edge-fixture.spec.ts:958-1015`; `keys[4]` equals
+  `keys[3]` at `:1013`). The app's key was the dialog's own (`useIntentKeys('webhook')`,
+  `webhook-address-dialog.tsx:53` at `4fc5ddd`), and the dialog is mounted only while open
+  (`automation-actions.tsx:213-215` at `4fc5ddd`), so closing it ended the key.
+- **What a person at a full flow sees today.** Neither client's sentence: the deployed Edge
+  (`ccc10e4`) turns `createRun`'s 429 into 502 `DEPENDENCY_FAILURE`
+  (`snoopy-backend/apps/api/src/modules/upstream.ts:199`), whose problem title is "Dependency
+  Failure" (`packages/http/src/index.ts:360`), and the app shows a problem's title
+  (`lib/platform/client.ts:159-164`). `snoopy-backend` #181 (open at `fda96d5`; §12.1 #241) relays
+  the 429 with its reason; its record names the TWENTY-FOURTH promotion.
+
+**What changed** — this PR:
+
+1. **The full-queue refusal is the website's sentence**, verbatim: `FLOW_QUEUE_FULL`
+   (`lib/content/refusals.ts:165-166`), compared byte for byte with `actions.ts:218`.
+   `audit:vocabulary` scans it.
+2. **The Run dialog's lead is the website's sentence**, verbatim (`run-dialog.tsx:110`), compared
+   byte for byte with `AutomationActions.tsx:319-321` as JSX joins them.
+3. **The webhook key outlives its dialog, as the website's does.** `AutomationActions`, the
+   dialog's opener, holds the issue's keys (`useIntentKeys('webhook')`,
+   `automation-actions.tsx:78`) and hands them to the dialog (`:221`). The dialog scopes the key to
+   the flow in the workspace the press acts on (`` `${workspaceId}/${subscriptionId}` ``,
+   `webhook-address-dialog.tsx:98`): minted at the press (`:100`), kept through a refusal, a lost
+   answer and the dialog closing, spent once a secret is shown (`:102`). In memory only — a React
+   ref, never the Keychain. The re-entry guard is unchanged (`:89`).
+4. **Tests.** `__tests__/automation-actions.test.tsx`: the full-queue words, now the website's
+   (`:226`); `creation_contended` keeps the busy words and never the full-queue sentence (`:255`);
+   the Run dialog says the website's lead (`:270`); a lost answer, the dialog closed and opened
+   again, then the next press sends the same key and shows the lost answer's secret, and nothing is
+   written to the Keychain (`:554`); a secret shown spends the key across a close and a reopen
+   (`:578`); the actions showing another flow, or the same flow's id in another workspace, make
+   that one its own key, and the first flow's press still carries its own (`:596`, its harness
+   `ActionsInTurn` at `:438`). The fake client now records a request's path ids (`:37`, `:49`).
+   `__tests__/platform-request.test.ts:196-198`: the constant, now the website's sentence. The
+   press register's rows this change moved cite their lines again (they had drifted since #49),
+   and its Create address / Make a new secret row names the close and reopen and the new tests.
+
+**How the app's key differs from the website's, said exactly.** Both are in memory, per flow, and
+outlive the dialog. The website's is a client component's ref on the Flows page, so it lives as
+long as that component: a revalidation of the page after an action keeps it (the row is keyed by
+subscription id, `page.tsx:336-339`), and leaving or reloading the page ends it. The app's lives as
+long as the flow's own page draws its actions — the Webhook address row is on the flow's page, not
+on the list. Leaving the flow's page ends it. So does that page reading again from `loading` —
+after Set up is saved, after a move (`onChanged`, `app/(tabs)/flows/detail.tsx:366`), or after a
+workspace switch — which redraws the actions (`hooks/use-resource.tsx:31-36`), where the website's
+page keeps its controls through a save or a move. Signing out ends both, and in the app the Face ID
+lock does too, since it removes the tabs (`app/_layout.tsx:96`). After any of these, a press makes
+a new key and a new rotation, as every press did before #240; the lost answer's secret was never
+shown. The app also scopes the key by the workspace the press acts on; the website's button never
+changes workspace, and a press there after a switch is refused before its key is sent. The prefixes
+differ (`webhook-` here, `webhook-secret-` there); both keys are the contract's shape and name
+nothing.
+
+**The gate**, on the committed tree, after `npm ci`: `CI=1 npm run verify` exit 0 — 87 suites /
+1203 tests / 80 snapshots across the two jest projects (1198 at `main`; five tests added), lint,
+typecheck, the seven audits, the contract check against the backend's `68e1be4` (whose
+`docs/openapi` is `ccc10e4`'s, `automations.yaml` `150d8654…`) and the press audit green (292
+presses, every one run by a test), the facts file emitted; `npm run audit:dependencies` exit 0 (61
+advisories, 19 moderate and 42 high, none critical; no dependency changed). The 80 snapshots did
+not move, and nothing was regenerated.
+
+**Findings for other repositories** (for a `snoopy-backend` session to file):
+
+- BUILD-PLAN 25.2.10 and 25.2.12: "the app's words and key lifetime aligned with the website in
+  `snoopy-mobile` #‹n› ‹sha›; rides 25.8.2's build". The PR carries the number and sha.
+
+### Guards proved to bite, the app's words and the webhook key (Round 17)
+
+Eight runs by one script (`bites-web-parity/bites.py` in the session's scratchpad, with its
+`results.json` and the nine jest JSON reports beside it) on this branch's tree. The clean tree
+first: eight suites, 244 tests, all passing (`automation-actions`, `platform-request`,
+`presses-flows`, `presses-patterns-dialog-close`, `build14-over-plan`, `tab-screens`,
+`dialog-boundary`, `presses-home-activity` — every suite that drives the Run or the webhook
+dialog). Then each run made one exact edit to the source and ran the same eight suites with
+`--json`. The failed tests were read from the report, the file was restored from a copy saved
+before the edit and its SHA-256 compared equal, and `git status --porcelain` matched the intended
+changes after every restore. Every break failed the tests named and nothing else.
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| Q1 · The full-queue refusal is the website's sentence (`lib/content/refusals.ts:165-166`) | the sentence #56 shipped restored | `automation-actions` "says a run refused because the flow and its queue are full in the flow's words…"; `platform-request` "keeps a 429's public details…" |
+| C1 · `creation_contended` keeps the busy words (`lib/content/refusals.ts:226`, the branch names `max_concurrent_runs` only) | the branch widened to `creation_contended` | `automation-actions` "keeps the platform's busy words for a run refused because the flow's runs could not be counted in time…" |
+| L1 · The Run dialog's lead is the website's sentence (`components/automations/run-dialog.tsx:110`) | the lead #56 shipped restored | `automation-actions` "says, before a run starts, that it may wait its turn at a busy flow…" |
+| W1 · The key outlives the dialog (held by the opener, `automation-actions.tsx:78`, `:221`) | the key ended when the dialog closes, as #56 shipped it (an unmount effect settling it) | `automation-actions` "keeps a press's key through the dialog closing…", "never sends one flow's key for another…" |
+| W2 · A secret shown spends the key (`webhook-address-dialog.tsx:102`) | the key never spent | `automation-actions` "spends a key once its secret is shown, though the dialog is closed and opened again…", "sends a press an Idempotency-Key…" |
+| W3 · The key is the flow's (`webhook-address-dialog.tsx:98`, the scope names `subscriptionId`) | the scope without the flow | `automation-actions` "never sends one flow's key for another…" |
+| W4 · …in its workspace (`:98`, the scope names `workspaceId`) | the scope without the workspace | `automation-actions` "never sends one flow's key for another…" |
+| W5 · The key is held in memory only (`:100`, nothing stored) | the key written to the Keychain at the press | `automation-actions` "keeps a press's key through the dialog closing…", "shows the secret once, in the dialog, and stores it nowhere" |
