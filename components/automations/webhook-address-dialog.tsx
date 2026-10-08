@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { fonts, typeScale } from '@/constants/theme';
+import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { WEBHOOK_ISSUE_REFUSALS, WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
@@ -26,6 +27,16 @@ import { relativeTimeAgo } from '@/lib/view/format';
  * rule 6). Selectable, so it can be copied. Making a new one keeps the address
  * and stops the old secret at once. Mounted only while open, so each opening
  * reads the address afresh.
+ *
+ * **A press carries an `Idempotency-Key`, and every retry of it the same one**
+ * (backend §12.1 #240, BUILD-PLAN 25.2.12 — the app's half). When the answer
+ * is lost — the 10 s abort, a dropped connection — the platform may already
+ * have stopped the old secret; pressing again with the same key is answered
+ * with the secret that lost answer carried, not a second rotation. The key is
+ * the intent's (`useIntentKeys`): minted at the press, kept through a refusal
+ * or a lost answer, spent once a secret is shown, so the next press is a new
+ * secret under a new key. Closing the dialog ends the intent with it. The
+ * re-entry guard (`issuing`) still keeps one press from sending twice.
  */
 export function WebhookAddressDialog({
   subscriptionId,
@@ -39,6 +50,7 @@ export function WebhookAddressDialog({
 }) {
   const { palette } = useTheme();
   const session = useSession();
+  const keys = useIntentKeys('webhook');
   // `undefined` until read; `null` when no address has been made yet.
   const [endpoint, setEndpoint] = useState<WebhookEndpoint | null | undefined>(undefined);
   const [issued, setIssued] = useState<IssuedWebhookEndpoint | null>(null);
@@ -76,7 +88,9 @@ export function WebhookAddressDialog({
     setIssuing(true);
     setError(null);
     try {
-      const made = await issueWebhookAddress(workspaceId, subscriptionId);
+      const made = await issueWebhookAddress(workspaceId, subscriptionId, keys.keyFor(subscriptionId));
+      // Shown: the next press is a new secret, with a new key.
+      keys.settle(subscriptionId);
       setIssued(made);
       setEndpoint({
         endpointId: made.endpointId,

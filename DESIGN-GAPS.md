@@ -1868,7 +1868,7 @@ returns to its first. One table, `presses-patterns-dialog-close:511`, a row per 
 | `setup-dialog.tsx:75` — Save setup | PATCH `{config}` only | `automation-actions:388` |
 | `dialog-boundary.tsx:59` — Cancel, on the failed dialog (Round 17, 25.8.1) | closes: the dialog's own `onClose`, the caller's; nothing sent | `dialog-boundary:88`, `dialog-boundary:205` |
 | `dialog-boundary.tsx:60` — Try again, on the failed dialog (Round 17, 25.8.1) | draws the dialog again: a child that no longer throws is shown, one that still throws fails to the same words; nothing sent | `dialog-boundary:107`, `dialog-boundary:121`, `dialog-boundary:258` |
-| `webhook-address-dialog.tsx:114` — Create address / Make a new secret | POST, no key; the secret shown once; a refusal in words | `automation-actions:352`, `presses-flows:413` |
+| `webhook-address-dialog.tsx:128` — Create address / Make a new secret | POST with an `Idempotency-Key` — the same one on a retry of the press, a new one once a secret is shown (§12.1 #240, Round 17; no key until then); the secret shown once; a refusal in words | `automation-actions:396`, `automation-actions:431`, `presses-flows:600` |
 | `archived-flows.tsx:116` — an archived row | its page in the same stack | `tab-screens:1928` |
 | `select-field.tsx:55, :80` — the box; an option | opens the list in place; selects and closes it | `select-field:21` |
 
@@ -3081,3 +3081,169 @@ passes both files (34 tests).
 | B6 · The Run dialog is inside its boundary (`run-dialog.tsx:39-45`) | the boundary removed from around the dialog | `dialog-boundary` the Run dialog's "is inside its boundary…" |
 | B7 · The Setup dialog is inside its boundary (`setup-dialog.tsx:47-53`) | the boundary removed from around the dialog | `dialog-boundary` the Setup dialog's "is inside its boundary…" |
 | B8 · An unknown control's value is sent as the string the website sends (`declaredValues`) | the string branch limited to controls this build knows | `setup-field` "sends an unknown control's value as the string the website sends…"; `dialog-boundary` the two "…sends / saves the typed string as declared" |
+
+### 25.2.12 and 25.2.10, the app's halves, with the contract they came in (2026-10-08)
+
+**Why a second change in a round with one app change.** 25.2.12 as the owner approved it at
+Round 17's open (backend `949dc8d`, "lets go with the recommended") ends "Both clients change with
+the platform where the words do", and its built line (`ccc10e4`) names the clients' half of §12.1
+#240 — "sending a fresh key per press and the same key on each retry" — as a finding for `snoopy`
+and this repository. 25.2.10's built line publishes `createRun`'s 429 and the run that waits as
+`pending`. Both reached the platform's contract at `ccc10e4`, so this is the app's side of them: a
+re-entry inside the approved round plan (MASTER-PLAN §4), beside 25.8.1. MASTER-PLAN §0.1 names
+this repository for 25.8; the clients' halves are 25.2.12's own words. Nothing else in the app
+changes.
+
+**What was read, by command** (`snoopy-mobile` `main` `f2f19c1`; `snoopy-backend` `main`
+`ccc10e4`; the deployed platform `c731492`, the TWENTY-SECOND promotion):
+
+- **The contract.** Between `c731492` and `ccc10e4` only `docs/openapi/automations.yaml` changed
+  (sha256 `6584ffe4…` → `150d8654…`; `openapi.yaml` `93fd335c…` and `connections.yaml`
+  `ab70cb0f…` unchanged). `issueWebhookEndpoint` takes an OPTIONAL `Idempotency-Key` header,
+  16-128 characters of the `IdempotencyKey` shape. `createRun`'s 201 says a run at a busy
+  automation is created `pending` and HELD BACK, and a 429 is documented: `details.reason`
+  `max_concurrent_runs`, `details.limit` a string, and `creation_contended` beside it with "the
+  same advice". `RunStatus` and the run event's `payload` gain descriptions (`run-created` may
+  carry `queued: max_concurrent_runs`), the callback enum gains `mail`, and the callback's 403 and
+  422 gain descriptions. No type a screen reads changed shape.
+- **The key at the Edge.** It is validated when present by `idempotencyKeyFrom`, against
+  `/^[A-Za-z0-9._~:-]{16,128}$/` (`snoopy-backend/packages/http/src/index.ts:7`), and carried to Runs
+  (`apps/api/src/modules/automations/routes.ts:360-377`). The deployed Edge at `c731492` reads no
+  key on this route (`routes.ts:360-369` there): until the TWENTY-THIRD promotion a keyed issue
+  rotates as an unkeyed one does.
+- **The app's key.** `newIdempotencyKey('webhook')` is `webhook-` and a UUID: 44 characters of
+  `[a-z0-9-]` (`lib/platform/client.ts:249-251`).
+- **Where a run that waits is worded.** `pending` draws **Queued** (`lib/view/status.ts:120`, held by
+  `__tests__/view-mapping.test.ts:35`) on Home's recent runs, in Activity, and in the run page's
+  pill and second line (`metaFor`, `lib/view/runs.ts:60`). The run page's Started is the em dash
+  until the platform dispatches the run (`toRunFacts`, `:493`; the backend sets `started_at` at
+  dispatch, `apps/runs/src/postgres-dispatch.ts:96`), and its timeline says "No steps reported
+  yet." (`:393`) above the declared steps, still to come. The Run dialog closes on its 201 and
+  opens that page (`components/automations/run-dialog.tsx:84-86`,
+  `components/automations/automation-actions.tsx:194-197`), so its post-create state is that
+  page. No screen reads a run's events or a payload (`grep -rn "\.events\|payload" app components
+  lib hooks` finds comments only), so `queued` has nothing to draw.
+- **A 429 in the transport.** Every 429 became `PlatformRateLimitedError` with the busy words and
+  no details (`lib/platform/client.ts:152-155` at `main`), and `runRefusal` had no 429 branch: a
+  full flow's 429 would have read "The platform is busy right now. Try again in a moment."
+- **Billing.** A card is its plan's name and price (`planCards`, `app/(tabs)/settings/billing.tsx:60-71`);
+  no app code reads `capabilities` (the grep finds comments only). The platform lists only plans
+  with a provider price, and keeps only numeric capabilities
+  (`snoopy-backend/apps/entitlements/src/postgres-customer-billing.ts:96-118`). So Free's
+  `model.calls` 25 never reaches the app, and Plus's 250 and Pro's 2,500 arrive in a map that no
+  card draws.
+- **§12.1 #239.** `components/automations/move-version.tsx` is unchanged since `dea844a` (sha256
+  `4bd63595…`). The move sends `{ templateVersion }` alone (`:98`) and offers the new version's
+  settings only on `invalid_config` with `targetSetup.length > 0` (`:105`). Catalog now drops the
+  carried settings when the target declares none (backend 25.2.12), so the move the app already
+  sends succeeds and needs no words.
+
+**What changed** — this PR:
+
+1. **The contract, regenerated.** `npm run generate:platform-contracts` with `SNOOPY_BACKEND_ROOT`
+   at the backend's `ccc10e4` changed `lib/generated/platform-contracts/automations.d.ts` only,
+   header `150d8654…`. `verify:platform-contracts` passes against that root.
+2. **§12.1 #240, the app's half.** `issueWebhookAddress` takes the key and sends it as the
+   `Idempotency-Key` header (`lib/platform/automations.ts:147-163`). The dialog's key belongs to the
+   intent (`useIntentKeys('webhook')`, `components/automations/webhook-address-dialog.tsx:53`),
+   scoped to its subscription. It is minted at the press (`:91`) and kept through a refusal or a
+   lost answer, so pressing again after "The platform is unreachable" sends the same key and the
+   platform answers with the secret the lost answer carried. It is spent once a secret is shown
+   (`:93`), so the next press makes a new secret under a new key. The re-entry guard is unchanged
+   (`:82`).
+3. **25.2.10's words.** The transport keeps a 429's public details (`lib/platform/client.ts:149-158`,
+   `lib/platform/problem.ts:58-67`), and every screen still shows the busy words with the wait.
+   `runRefusal` says a 429 naming `max_concurrent_runs` in the flow's words — `FLOW_QUEUE_FULL`,
+   "This flow is busy and its queue is full. Try again once a run has ended."
+   (`lib/content/refusals.ts:161`, `:221`); `audit:vocabulary` scans it. Nothing changed for a run
+   that waits: Queued, Started's em dash and "No steps reported yet." already describe it.
+4. **`model.calls`: nothing drawn, nothing changed.** `billing-screen`'s plans now carry it (Plus 250,
+   Pro 2500). The test that says a card is its name and price only now also checks that no key or
+   figure of it is drawn (`__tests__/billing-screen.test.tsx:90-92`).
+5. **§12.1 #239: nothing changed**, recorded above.
+6. **Tests.** `__tests__/automation-actions.test.tsx:431`: a press sends a key of the contract's
+   shape (the real `newIdempotencyKey`), its retry after a lost answer sends the same key and shows
+   the secret, and the next press sends a new key. `:396`: the secret test's key line now expects
+   the press's key ("no key" until now). `:224`: the Run dialog says a full flow in the flow's
+   words, and an over-quota 429 keeps the platform's. `__tests__/platform-request.test.ts:172`: the
+   real transport keeps the 429's details from `createRun`, and `runRefusal` turns them into the
+   words. The press register's row for Create address / Make a new secret now names the key and
+   cites these tests at their current lines.
+
+**The narrowest readings, said so.**
+
+- "A fresh key per press, the same key on every retry": a retry is pressing again in the same
+  opening of the dialog after a refusal or a lost answer; a press after a secret is shown is a new
+  press. The dialog is mounted only while open, so closing it ends the intent, and a press after
+  reopening makes a new rotation, as every press did before #240. The app now always sends a key,
+  and a platform started without `RUNS_WEBHOOK_SECRET_KEY` refuses a keyed issue 503
+  (`webhook_secret_key`). No promoted platform can be in that state: production cannot start
+  without the key (`deploy/compose.prod.yml:899`, `${WORKER_CALLER_SECRET:?}`), and local Compose
+  carries a fixture (`compose.yml:476`).
+- `creation_contended` is documented beside `max_concurrent_runs` with "the same advice", but keeps
+  the platform's busy words ("… Try again in a moment."). Its cause is a capacity count that could
+  not be taken within three seconds, not a full queue, so the full-queue sentence would not be true
+  of it. Both tell the person to try again.
+- The Run dialog's lead, "It starts as soon as you submit, and its page shows each step as it
+  happens" (`run-dialog.tsx:108`), is also the website's sentence
+  (`snoopy/app/account/flows/AutomationActions.tsx:319`). It is no longer true of a run at a busy
+  flow, which waits its turn. It is not changed here, because it is the website's sentence and the
+  box speaks of where pending is worded; it is recorded as the owner's question for both clients.
+- The run page reads the run again every 2 s until it ends (`RUN_REREAD_MS`, `lib/view/runs.ts:396`,
+  the owner's build 14 feedback #3), a queued run included. A run that waits minutes now keeps an
+  open page there. That costs about 34 requests a minute: the run every 2 s, plus approvals at most
+  every 15 s and the catalog every 120 s from the snapshot. Every plan's `workspace.rate` is 120 a
+  minute (backend `scripts/seed-team-plan.sql:50`, `scripts/seed-pro-plan.sql:38`,
+  `apps/entitlements/migrations/0001_entitlements_baseline.sql:273`). Not changed — a cadence, not
+  words — and recorded as an observation for the owner.
+
+**CI, red by design.** The Deployed-contract job compares each generated file's header with what
+`https://api.autom8x.ai/health/live` reports. The deployed platform is the TWENTY-SECOND promotion
+(`c731492`), whose `automations.yaml` is `6584ffe4…`, and this tree names `150d8654…`. So the job,
+and `all-green` with it, is red until the TWENTY-THIRD promotion is read back.
+`platform-requirement.json` stays `{"aheadOfDeployed": false}`: the escape is not used. The PR is
+mergeable after that read-back, and rides 25.8.2's build.
+
+**The gate**, on the committed tree: `CI=1 npm run verify` exit 0 — 87 suites / 1198 tests / 80
+snapshots across the two jest projects (1195 at `main`; three tests added), lint, typecheck, the
+seven audits, the contract check against the backend's `ccc10e4` and the press audit green (292
+presses, every one run by a test), the facts file emitted; `npm run audit:dependencies` exit 0
+(61 advisories, 19 moderate and 42 high, none critical; no dependency changed). The 80 snapshots
+did not move.
+
+**Findings for other repositories** (for a `snoopy-backend` session to file):
+
+- BUILD-PLAN 25.2.12 and 25.2.10, the app's halves: "BUILT 2026-10-08 in `snoopy-mobile` #‹n›
+  ‹sha›; mergeable after the TWENTY-THIRD promotion's read-back; rides 25.8.2's build". The PR
+  carries the number and sha.
+- **`createRun`'s documented 429 never reaches a client.** `apps/api/src/modules/upstream.ts`'s
+  `upstreamError` keeps 400, 403, 404, 409, 422 and 503, and turns every other status into a 502
+  `DEPENDENCY_FAILURE` "An upstream service failed" with no details. This was shown by command at
+  `ccc10e4`: a stub hop answering Runs' own 429 (`{ reason: 'max_concurrent_runs', templateId,
+  limit: '2' }`, `apps/runs/src/postgres-runs.ts:185`) through `callService`, with `createRun`'s
+  allowlists, gave `{ status: 502, code: DEPENDENCY_FAILURE, details: null }`. No Edge test sends an
+  upstream 429. The app's words (and the website's) wait on a 429 branch there that allowlists
+  `max_concurrent_runs` (and `creation_contended`) and `limit`. Until then a person at a full flow
+  reads the 502's title.
+- For `snoopy`: #240's web half (a fresh key per press, the same key on each retry, in
+  `WebhookAddressButton.tsx`); the same full-queue sentence for the 429 on a run's start; and the
+  Run dialog's lead sentence, the owner's question for both clients.
+
+### Guards proved to bite, 25.2.12 and 25.2.10 (the app's halves)
+
+Seven runs by one script (`mobile-d/bites/bites.py` in the session's scratchpad, with its
+`results.json` and the seven jest JSON reports beside it) on this branch's tree. Each run made one
+exact edit to the source and ran `jest --selectProjects unit --testPathPattern <suite>` with
+`--json`. The failed tests were read from the report, the file was restored from a copy saved
+before the edit and its SHA-256 compared equal, and `git status --porcelain` matched the intended
+changes after every restore. Every break failed the tests named and nothing else.
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| K1 · The issue carries the press's key as `Idempotency-Key` (`lib/platform/automations.ts:158`) | the header dropped from the request | `automation-actions` "sends a press an Idempotency-Key of the published shape…", "shows the secret once, in the dialog, and stores it nowhere" |
+| K2 · A retry keeps its press's key (`components/automations/webhook-address-dialog.tsx:93`, spent only once a secret is shown) | the key spent on a refusal too (`keys.settle` in the catch) | `automation-actions` "sends a press an Idempotency-Key…" |
+| K3 · The next press gets a new key (`:93`) | the key never spent | `automation-actions` "sends a press an Idempotency-Key…" |
+| K4 · The key has the contract's shape (`:53`, `useIntentKeys('webhook')`) | a prefix the Edge refuses, `'webhook secret'` | `automation-actions` "sends a press an Idempotency-Key…", "shows the secret once…" |
+| Q1 · A run refused because its flow and its queue are full says so (`lib/content/refusals.ts:221`) | the branch removed | `automation-actions` "says a run refused because the flow and its queue are full…"; `platform-request` "keeps a 429's public details…" |
+| Q2 · The transport keeps a 429's public details (`lib/platform/client.ts:157`) | the details left off the error | `platform-request` "keeps a 429's public details…" |
+| P1 · No plan capability is drawn unlabelled (the cards, `app/(tabs)/settings/billing.tsx:60-71`) | each card drawing its plan's capabilities as `key value` lines | `billing-screen` "shows Free, Plus and Pro in that order, each its name and price only…", at the new `model.calls` assertion |

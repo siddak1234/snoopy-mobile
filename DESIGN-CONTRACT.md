@@ -324,8 +324,11 @@ review" — the held queue — also list running, queued and cancelled runs.
     can ask again — Withdraw's confirm is accent), Make a new secret, and every
     Cancel, Close and Not now.
   - Webhook address: owner or admin, webhook-started only. The address is read
-    on each opening; a secret is issued with no idempotency key, shown once in
-    the dialog and kept nowhere else.
+    on each opening; a secret is issued with an idempotency key — a new one per
+    press, the same one on each retry of that press until a secret is shown, so
+    a lost answer is answered again rather than rotated twice (backend §12.1
+    #240, Round 17; ~~with no idempotency key~~ until then) — shown once in the
+    dialog and kept nowhere else.
   - Cancel run: pending or running only, confirmed first.
   - Replace account: the OAuth connect with the connection it replaces; a
     `reused` answer is said as nothing replaced. Completed, it says
@@ -519,7 +522,11 @@ mobile-only shape.
   403) and unlinking a sign-in account — by reason, and "Unlinking isn't
   available yet." for a platform without the route; since Gate 24's parity
   pass, a second copy of a flow the workspace holds, and what a connect or a
-  pasted key comes back with.
+  pasted key comes back with. Since Round 17 a run refused because its flow and
+  the flow's queue are full (429 `max_concurrent_runs`, backend 25.2.10) says
+  "This flow is busy and its queue is full. Try again once a run has ended." —
+  the app's words until the website says the same (a finding); any other 429
+  keeps the platform's busy words and its wait.
 - A manifest control this build does not know (Round 17, 25.8.1 — the owner's
   requirement 1 of 2026-10-08, no app change per automation) is not a crash and
   not a guess: the row is the website's text input (`ManifestFields.tsx` draws

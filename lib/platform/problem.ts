@@ -55,8 +55,16 @@ export class PlatformRateLimitedError extends PlatformError {
     message: string,
     /** The wait the platform asked for (`retry-after`), when it stated one. */
     public readonly retryAfterSeconds?: number,
+    /**
+     * The problem's public `details`, when it carried any. A 429 is not always
+     * the platform asking to be left: a run refused because its flow and the
+     * flow's queue are full names `max_concurrent_runs` (backend BUILD-PLAN
+     * 25.2.10), which the Run dialog says in the flow's words (`runRefusal`).
+     * As for every problem, callers whitelist what they read.
+     */
+    details?: Record<string, unknown>,
   ) {
-    super(message, 429, 'TOO_MANY_REQUESTS');
+    super(message, 429, 'TOO_MANY_REQUESTS', details);
     this.name = 'PlatformRateLimitedError';
   }
 }
