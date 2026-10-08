@@ -3386,3 +3386,29 @@ changes after every restore. Every break failed the tests named and nothing else
 | W3 · The key is the flow's (`webhook-address-dialog.tsx:98`, the scope names `subscriptionId`) | the scope without the flow | `automation-actions` "never sends one flow's key for another…" |
 | W4 · …in its workspace (`:98`, the scope names `workspaceId`) | the scope without the workspace | `automation-actions` "never sends one flow's key for another…" |
 | W5 · The key is held in memory only (`:100`, nothing stored) | the key written to the Keychain at the press | `automation-actions` "keeps a press's key through the dialog closing…", "shows the secret once, in the dialog, and stores it nowhere" |
+
+### The local release build (Round 17, for 25.8.2; 2026-10-08)
+
+EAS's free plan builds 15 iOS releases a month, and build 16 (2026-10-07) used the last of
+October's; the next cloud build waits for 2026-11-01 or a paid plan. The owner chose the free
+path: build on the owner's Mac. `npm run release:ios -- --local` keeps every gate of the cloud
+path — `origin/main`, a clean tree, `all-green` on HEAD, the live association file naming the
+app in `applinks` and `webcredentials`, the deployed contract — and refuses a Mac without
+Xcode, CocoaPods or fastlane before anything is built, so `--local --dry-run` proves the
+toolchain too. It then runs `eas build --local`, which fetches the project's credentials and
+its EAS `production` environment as the cloud build does and bumps the same remote build
+number. Nothing is registered as an EAS build, so the cloud path's check that the build's
+`gitCommitHash` is HEAD has no record to read; in its place, the gates' clean HEAD ==
+`origin/main`, `eas.json`'s `cli.requireCommit`, and a check that HEAD and the tree did not
+move during the build. The ipa's entitlements are read and refused exactly as the cloud
+build's (`applinks` and `webcredentials` on `app.autom8x.ai`, Sign in with Apple, push in
+production), and it is submitted with `eas submit --path`.
+
+Measured first by hand, on `main` `4fc5ddd`, 16:30–16:36Z: fastlane 2.240.1 installed with
+Homebrew (the one tool missing; Xcode 26.1.1 and CocoaPods 1.17.0 were present), the build
+exited 0 in 5.5 minutes, the EAS `production` environment's three `EXPO_PUBLIC_*` values
+loaded, the entitlements read `ENTITLEMENTS_OK`, CFBundleVersion 17, and the ipa's
+`EXConstants.bundle/app.config` carried the same `backendApiOrigin`, `nativeRedirectUri` and
+`nativeAuthBaseUrl` as cloud build 16's. That ipa was not uploaded; the build number it used
+is spent, so the next release is 18.
+

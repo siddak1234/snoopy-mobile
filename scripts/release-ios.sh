@@ -1,8 +1,21 @@
 #!/bin/bash
 # Builds and submits the iOS app from main — and refuses everything else.
 #
-#   npm run release:ios              build, check, submit
-#   npm run release:ios -- --dry-run  run every refusal, then stop before `eas build`
+#   npm run release:ios                      build in EAS's cloud, check, submit
+#   npm run release:ios -- --local           build on this Mac instead (free, no EAS
+#                                            build quota), check, submit
+#   npm run release:ios -- --dry-run         run every refusal, then stop before the build
+#   npm run release:ios -- --local --dry-run also refuse a Mac that cannot build
+#
+# --local (Round 17, 2026-10-08): `eas build --local` runs the same build on this
+# Mac with Xcode, CocoaPods and fastlane, fetching the project's credentials and
+# its EAS "production" environment as the cloud build does; it bumps the same
+# remote build number. Nothing is registered as an EAS build, so the cloud path's
+# `gitCommitHash` read has no record to read: the gates' clean HEAD == origin/main
+# and `cli.requireCommit` are what bind the archive to HEAD. The ipa's
+# entitlements are checked exactly as the cloud build's, and it is submitted with
+# `eas submit --path`. Measured 2026-10-08 on main 4fc5ddd: 5.5 minutes, ENTITLEMENTS_OK,
+# `EXConstants.bundle/app.config` identical to cloud build 16's.
 #
 # Refuses unless: HEAD is origin/main; the tree is clean; the `all-green` check
 # run from GitHub Actions on HEAD concluded success (selected by check NAME and
@@ -21,10 +34,12 @@ set -u
 cd "$(dirname "$0")/.." || exit 1
 
 DRY_RUN=0
+LOCAL=0
 for arg in "$@"; do
   case "$arg" in
     --dry-run) DRY_RUN=1 ;;
-    *) echo "usage: $0 [--dry-run]"; exit 2 ;;
+    --local) LOCAL=1 ;;
+    *) echo "usage: $0 [--local] [--dry-run]"; exit 2 ;;
   esac
 done
 
@@ -86,11 +101,21 @@ sys.exit(0 if want in applinks and want in web else 1)
 node scripts/verify-deployed-contracts.mjs --release \
   || refuse "the committed platform types are not the contract the deployed platform serves"
 
+# --local: the Mac must be able to build. A missing tool refuses before anything
+# is built, so a dry run with --local proves the toolchain too.
+if [ "$LOCAL" = 1 ]; then
+  xcodebuild -version >/dev/null 2>&1 || refuse "--local needs Xcode (xcodebuild)"
+  command -v pod >/dev/null 2>&1 || refuse "--local needs CocoaPods (pod)"
+  command -v fastlane >/dev/null 2>&1 || refuse "--local needs fastlane (brew install fastlane)"
+  echo "local toolchain: $(xcodebuild -version | head -1), CocoaPods $(pod --version), $(fastlane --version 2>/dev/null | grep -oE 'fastlane [0-9.]+' | head -1)"
+fi
+
 if [ "$DRY_RUN" = 1 ]; then
-  echo "DRY RUN: every gate passed on ${HEAD_SHA:0:7}; stopping before eas build."
+  echo "DRY RUN: every gate passed on ${HEAD_SHA:0:7}; stopping before the build."
   exit 0
 fi
 
+if [ "$LOCAL" = 0 ]; then
 # --- build -------------------------------------------------------------------
 echo "=== eas build (full client output in $WORK/build-client.log) ==="
 npx eas-cli build --platform ios --profile production --non-interactive --no-wait --json > "$WORK/build-start.json" 2> "$WORK/build-client.log"
@@ -114,14 +139,33 @@ for i in $(seq 1 60); do
   sleep 45
 done
 [ "$st" = "FINISHED" ] || { echo "BUILD DID NOT FINISH: $st"; view | python3 -c 'import sys,json; print(json.load(sys.stdin).get("error"))'; exit 1; }
+fi
+
+# --- build on this Mac -----------------------------------------------------------
+if [ "$LOCAL" = 1 ]; then
+echo "=== eas build --local (full output in $WORK/local-build.log) ==="
+rm -rf "$WORK/local" && mkdir -p "$WORK/local" || exit 1
+npx eas-cli build --platform ios --profile production --local --non-interactive --output "$WORK/local/app.ipa" > "$WORK/local-build.log" 2>&1 \
+  || { echo "LOCAL BUILD FAILED — log tail:"; tail -30 "$WORK/local-build.log"; exit 1; }
+[ -s "$WORK/local/app.ipa" ] || refuse "the local build wrote no ipa"
+# Still HEAD, still clean: nothing moved under the build.
+[ "$(git rev-parse HEAD)" = "$HEAD_SHA" ] || refuse "HEAD moved during the local build"
+[ -z "$(git status --porcelain)" ] || refuse "the tree changed during the local build"
+echo "built locally from HEAD ${HEAD_SHA:0:7}: $WORK/local/app.ipa"
+fi
 
 # --- the ipa's entitlements, before anything is submitted --------------------
 echo "=== verify the ipa's entitlements before submitting ==="
-FINISHED=$(view)
-BUILD_SHA=$(printf '%s' "$FINISHED" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("gitCommitHash") or "")')
-[ "$BUILD_SHA" = "$HEAD_SHA" ] || refuse "finished build $BID reports commit '${BUILD_SHA:-unknown}', not HEAD $HEAD_SHA"
-URL=$(printf '%s' "$FINISHED" | python3 -c 'import sys,json; print(json.load(sys.stdin)["artifacts"]["applicationArchiveUrl"])')
-rm -rf "$WORK/ipa" && mkdir -p "$WORK/ipa" && curl -s -L -m 300 -o "$WORK/ipa/app.ipa" "$URL" && (cd "$WORK/ipa" && unzip -q -o app.ipa 'Payload/*')
+rm -rf "$WORK/ipa" && mkdir -p "$WORK/ipa" || exit 1
+if [ "$LOCAL" = 1 ]; then
+  cp "$WORK/local/app.ipa" "$WORK/ipa/app.ipa" && (cd "$WORK/ipa" && unzip -q -o app.ipa 'Payload/*')
+else
+  FINISHED=$(view)
+  BUILD_SHA=$(printf '%s' "$FINISHED" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("gitCommitHash") or "")')
+  [ "$BUILD_SHA" = "$HEAD_SHA" ] || refuse "finished build $BID reports commit '${BUILD_SHA:-unknown}', not HEAD $HEAD_SHA"
+  URL=$(printf '%s' "$FINISHED" | python3 -c 'import sys,json; print(json.load(sys.stdin)["artifacts"]["applicationArchiveUrl"])')
+  curl -s -L -m 300 -o "$WORK/ipa/app.ipa" "$URL" && (cd "$WORK/ipa" && unzip -q -o app.ipa 'Payload/*')
+fi
 APP=$(ls -d "$WORK"/ipa/Payload/*.app | head -1)
 [ -n "$APP" ] || refuse "no .app in the downloaded archive"
 codesign -d --entitlements :- "$APP" 2>/dev/null | python3 -c '
@@ -140,7 +184,8 @@ plutil -extract CFBundleVersion raw "$APP/Info.plist" | sed 's/^/build number: /
 
 # --- submit ------------------------------------------------------------------
 echo "=== submit ==="
-npx eas-cli submit --platform ios --profile production --id "$BID" --non-interactive --no-wait 2>&1 | sed 's/\x1b\[[0-9;]*[A-Za-z]//g' | grep -v "^\s*$" | tail -6 | tee "$WORK/submit-client.log"
+if [ "$LOCAL" = 1 ]; then SUBMIT_FROM=(--path "$WORK/ipa/app.ipa"); else SUBMIT_FROM=(--id "$BID"); fi
+npx eas-cli submit --platform ios --profile production "${SUBMIT_FROM[@]}" --non-interactive --no-wait 2>&1 | sed 's/\x1b\[[0-9;]*[A-Za-z]//g' | grep -v "^\s*$" | tail -6 | tee "$WORK/submit-client.log"
 SID=$(grep -o -E "submissions/[0-9a-f-]{36}" "$WORK/submit-client.log" | head -1 | cut -d/ -f2)
 echo "submission id: $SID"
 [ -n "$SID" ] || exit 1
@@ -158,4 +203,4 @@ for i in $(seq 1 80); do
   case "$st" in FINISHED*|ERRORED*|CANCELED*) break;; esac
   sleep 60
 done
-echo "DONE: build $BID submission $SID -> $st"
+echo "DONE: build ${BID:-local} submission $SID -> $st"
