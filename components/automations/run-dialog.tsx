@@ -3,11 +3,23 @@ import { ScrollView, StyleSheet } from 'react-native';
 
 import { RunFileField } from '@/components/automations/run-file-field';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
-import { SetupFieldRow, declaredValues, type FieldRowSpec } from '@/components/setup-field';
+import { DialogBoundary } from '@/components/dialog-boundary';
+import { SetupFieldRow, declaredValues } from '@/components/setup-field';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { WORKSPACE_CHANGED, runRefusal } from '@/lib/content/refusals';
+import { RUN_FORM_ERROR_TITLE } from '@/lib/content/screen-states';
 import { createRun, type AutomationRunInputField } from '@/lib/platform/automations';
+
+type RunDialogProps = {
+  name: string;
+  subscriptionId: string;
+  /** The workspace the screen loaded; the run is refused once it is not active. */
+  shownWorkspaceId: string | null;
+  runInput: AutomationRunInputField[];
+  onClose: () => void;
+  onStarted: (runId: string) => void;
+};
 
 /**
  * Start a run from what the subscription's PINNED version declares (backend
@@ -18,23 +30,21 @@ import { createRun, type AutomationRunInputField } from '@/lib/platform/automati
  * a value changes, so only a resubmission of the same values — after a lost
  * answer — reuses it, and the platform returns the run it already started
  * instead of starting a second.
+ *
+ * Inside `DialogBoundary` (BUILD-PLAN 25.8.1): the rows are drawn from a
+ * manifest the platform may publish after this build shipped, and a row that
+ * cannot be drawn ends in the failed dialog's words, never a white screen. The
+ * boundary is around the whole dialog, its hooks included.
  */
-export function RunDialog({
-  name,
-  subscriptionId,
-  shownWorkspaceId,
-  runInput,
-  onClose,
-  onStarted,
-}: {
-  name: string;
-  subscriptionId: string;
-  /** The workspace the screen loaded; the run is refused once it is not active. */
-  shownWorkspaceId: string | null;
-  runInput: AutomationRunInputField[];
-  onClose: () => void;
-  onStarted: (runId: string) => void;
-}) {
+export function RunDialog(props: RunDialogProps) {
+  return (
+    <DialogBoundary title={RUN_FORM_ERROR_TITLE} onClose={props.onClose}>
+      <RunDialogBody {...props} />
+    </DialogBoundary>
+  );
+}
+
+function RunDialogBody({ name, subscriptionId, shownWorkspaceId, runInput, onClose, onStarted }: RunDialogProps) {
   const session = useSession();
   const keys = useIntentKeys('run');
   const [values, setValues] = useState<Record<string, unknown>>(() => declaredDefaults(runInput));
@@ -123,8 +133,8 @@ export function RunDialog({
           ) : (
             <SetupFieldRow
               key={field.key}
-              // Not a file, by the branch: text, money or a toggle.
-              field={field as FieldRowSpec}
+              // Not a file, by the branch: text, money, a toggle, an address — or a control newer than this build (25.8.1).
+              field={field}
               value={values[field.key]}
               onChange={(next) => change(field.key, next)}
               divider={divider}

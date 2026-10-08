@@ -2,12 +2,26 @@ import React, { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
+import { DialogBoundary } from '@/components/dialog-boundary';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { sectionLabel, SetupFieldRow, bySection, declaredValues, type SetupField } from '@/components/setup-field';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { MOVE_REFUSALS, WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
+import { errorTitleFor } from '@/lib/content/screen-states';
 import { updateSubscription } from '@/lib/platform/automations';
+
+type SetupDialogProps = {
+  subscriptionId: string;
+  /** The workspace the screen loaded; the save is refused once it is not active. */
+  shownWorkspaceId: string | null;
+  setup: SetupField[];
+  config: Record<string, unknown>;
+  /** The version the save moves the flow to, whose fields `setup` are. */
+  moveTo?: number;
+  onClose: () => void;
+  onSaved: () => void;
+};
 
 /**
  * Change an existing subscription's settings (BUILD-PLAN 24.4.1) — the
@@ -24,26 +38,21 @@ import { updateSubscription } from '@/lib/platform/automations';
  * (`useSetupForm`, `SetupFields`): iOS will not present a second modal while
  * the first is still being dismissed, so a second dialog swapped in for the
  * Move one was never shown (the connections card's rule; the review of #49).
+ *
+ * Inside `DialogBoundary` (BUILD-PLAN 25.8.1): the rows are drawn from a
+ * manifest the platform may publish after this build shipped, and a row that
+ * cannot be drawn ends in "Couldn't load this setup" with Try again, never a
+ * white screen. The boundary is around the whole dialog, its hooks included.
  */
-export function SetupDialog({
-  subscriptionId,
-  shownWorkspaceId,
-  setup,
-  config,
-  moveTo,
-  onClose,
-  onSaved,
-}: {
-  subscriptionId: string;
-  /** The workspace the screen loaded; the save is refused once it is not active. */
-  shownWorkspaceId: string | null;
-  setup: SetupField[];
-  config: Record<string, unknown>;
-  /** The version the save moves the flow to, whose fields `setup` are. */
-  moveTo?: number;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
+export function SetupDialog(props: SetupDialogProps) {
+  return (
+    <DialogBoundary title={errorTitleFor('setup')} onClose={props.onClose}>
+      <SetupDialogBody {...props} />
+    </DialogBoundary>
+  );
+}
+
+function SetupDialogBody({ subscriptionId, shownWorkspaceId, setup, config, moveTo, onClose, onSaved }: SetupDialogProps) {
   const form = useSetupForm({ subscriptionId, shownWorkspaceId, setup, config, moveTo, onSaved });
 
   return (

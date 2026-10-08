@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
-import { EnvelopeSimple, HandPalm, Sliders, Tray } from 'phosphor-react-native';
+import { EnvelopeSimple, HandPalm, Sliders, Tray, type Icon } from 'phosphor-react-native';
 
 import { NocToggle } from '@/components/nocturne/noc-toggle';
 import { fonts, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { NEWER_CONTROL_NOTE } from '@/lib/content/screen-states';
 import type { components } from '@/lib/generated/platform-contracts/automations';
 
 export type SetupField = components['schemas']['AutomationSetupField'];
@@ -14,8 +15,15 @@ export type SetupField = components['schemas']['AutomationSetupField'];
  * run's input other than a file (ADR-0030), which shares the `text`, `money`
  * and `toggle` vocabulary — so the Run form draws the same rows (24.4.1). A
  * run's input has no `notifies`: only a setting switches a notification.
+ *
+ * `control` is a string here, not the generated union: a platform newer than
+ * this build may publish a control the union does not name, and the row draws
+ * it as the website does — a text input, with a note (BUILD-PLAN 25.8.1, the
+ * owner's requirement 1) — instead of looking it up and crashing the dialog.
  */
-export type FieldRowSpec = Pick<SetupField, 'key' | 'title' | 'description' | 'required' | 'control' | 'notifies'>;
+export type FieldRowSpec = Pick<SetupField, 'key' | 'title' | 'description' | 'required' | 'notifies'> & {
+  control: string;
+};
 
 /**
  * One configuration row, generated from `manifest.setup[]`.
@@ -29,6 +37,11 @@ export type FieldRowSpec = Pick<SetupField, 'key' | 'title' | 'description' | 'r
  * is frozen". So these four rows are not a convenience — they are the contract's
  * own justification for being closed, and a screen with hardcoded rows breaks the
  * promise that adding an automation is a data change.
+ *
+ * Since 25.8.1 (Round 17, the owner's requirement 1 of 2026-10-08) the promise
+ * holds for a control the union does not name yet: the row falls back to the
+ * website's text input with a note, so a newer platform's manifest never
+ * crashes a dialog, and no app build is needed per automation.
  *
  * The web implemented the same thing in Snoopy PR #4 (BUILD-PLAN 4.5.3): "Rows
  * are generated from that array, not hard-coded."
@@ -68,21 +81,50 @@ export function moneyCents(value: unknown): number | null {
 }
 
 /**
- * Control → glyph.
+ * Control → glyph, keyed by the generated union so a control the contract adds
+ * is a typecheck failure at the next regeneration — a session then gives it a
+ * row — rather than a wire token on screen.
  *
  * `AutomationSetupField` publishes no icon — unlike `AutomationCatalogEntry`,
- * which requires one — so the glyph is keyed by what the row *does*. Four
+ * which requires one — so the glyph is keyed by what the row *does*. Five
  * controls is few enough that this reads rather than being a lookup table
- * standing in for missing data.
+ * standing in for missing data. `resource-picker` is the contract's control for
+ * a string that names a resource at the connected service — an inbox label, a
+ * channel — which no published operation lists (backend ADR-0030 §1; the
+ * validator holds its value to a string), so its row is the website's text
+ * input (`ManifestFields.tsx`), under the text glyph: a control this build
+ * knows, never the newer-than-this-build fallback below (25.8.1).
  */
-const CONTROL_ICON = {
+export type KnownControl = SetupField['control'];
+
+const CONTROL_ICON: Record<KnownControl, Icon> = {
   toggle: HandPalm,
   money: Sliders,
   text: Tray,
   'resource-picker': Tray,
   // The address control (backend, 2026-10-02): the email keyboard, an envelope.
   email: EnvelopeSimple,
-} as const;
+};
+
+/**
+ * Whether this build has a row for a control (25.8.1). Own keys only, so a
+ * manifest naming `constructor` is as unknown as one naming `date-range`.
+ */
+export function isKnownControl(control: string): control is KnownControl {
+  return Object.prototype.hasOwnProperty.call(CONTROL_ICON, control);
+}
+
+/**
+ * The line under a field whose control this build does not know, or null for
+ * one it draws (25.8.1): the website falls back to a text input for any control
+ * but `toggle` and `money` (`ManifestFieldInput`), and this app does the same,
+ * saying why — so a new automation needs no app build (the owner's requirement
+ * 1) and a person is not left guessing at a box with no explanation. The note
+ * is one sentence from `lib/content`, never the wire token.
+ */
+export function controlNote(field: Pick<FieldRowSpec, 'control'>): string | null {
+  return isKnownControl(field.control) ? null : NEWER_CONTROL_NOTE;
+}
 
 /**
  * Group fields under their sections in the manifest's own order, as the
@@ -183,9 +225,11 @@ export function SetupFieldRow({
   divider: boolean;
 }) {
   const { palette } = useTheme();
-  const Glyph = CONTROL_ICON[field.control];
+  // A control this build does not know draws under the text glyph, as its text input (25.8.1).
+  const Glyph = isKnownControl(field.control) ? CONTROL_ICON[field.control] : CONTROL_ICON.text;
   const isMoney = field.control === 'money';
   const notifies = notifiesLine(field);
+  const newer = controlNote(field);
   const externalValue = isMoney
     ? (() => {
         const cents = moneyCents(value);
@@ -247,6 +291,7 @@ export function SetupFieldRow({
       </View>
       <Text style={[styles.rowSub, { color: palette.neutral[400] }]}>{field.description}</Text>
       {notifies ? <Text style={[styles.rowSub, { color: palette.neutral[400] }]}>{notifies}</Text> : null}
+      {newer ? <Text style={[styles.rowSub, { color: palette.neutral[400] }]}>{newer}</Text> : null}
       {field.control === 'toggle' ? null : (
         <View
           style={[
@@ -280,7 +325,9 @@ export function SetupFieldRow({
 
   // The public contract has no resource-list operation or resource kind. Match
   // the completed web client: accept its opaque string value in a text input
-  // instead of inventing a provider-specific picker.
+  // instead of inventing a provider-specific picker — `resource-picker` is a
+  // known control drawn that way (25.8.1), and a control this build does not
+  // know is drawn that way too, with `controlNote`'s line under it.
   return <View style={rowStyle}>{body}</View>;
 }
 
