@@ -1,7 +1,20 @@
 import React from 'react';
 import { fireEvent, screen } from '@testing-library/react-native';
 
-import { SetupFieldRow, bySection, formatMoney, isEmailField, missingRequiredSetupFields, notifiesLine, sectionLabel, type SetupField } from '@/components/setup-field';
+import {
+  SetupFieldRow,
+  bySection,
+  controlNote,
+  declaredValues,
+  formatMoney,
+  isEmailField,
+  isKnownControl,
+  missingRequiredSetupFields,
+  notifiesLine,
+  sectionLabel,
+  type SetupField,
+} from '@/components/setup-field';
+import { NEWER_CONTROL_NOTE } from '@/lib/content/screen-states';
 import { renderWithProviders } from '@/test/render';
 
 /**
@@ -257,5 +270,53 @@ describe('an amount is typed from the right, as currency (24.7.3 attempt 4, feed
     expect(sectionLabel(1, 'rules')).toBe('1 · REVIEW RULES');
     expect(sectionLabel(2, 'notifications')).toBe('2 · NOTIFICATIONS');
     expect(sectionLabel(1, 'connections')).toBe('1 · CONNECTIONS');
+  });
+});
+
+describe('a control this build does not know (BUILD-PLAN 25.8.1, the owner\'s requirement 1)', () => {
+  /** A control a newer platform publishes: the generated union is closed, so the row's own type takes the string. */
+  const newer = { key: 'window', title: 'Review window', description: 'Which days to read', required: true, control: 'date-range' };
+
+  it('renders as the website does — a text input — with the note that it is newer than this build, and reports the typed string', async () => {
+    const onChange = jest.fn();
+    await renderWithProviders(<SetupFieldRow field={newer} value="2026-10-01..2026-10-07" onChange={onChange} divider={false} />);
+    expect(screen.getByText('Review window')).toBeTruthy();
+    expect(screen.getByText('Which days to read')).toBeTruthy();
+    expect(screen.getByText(NEWER_CONTROL_NOTE)).toBeTruthy();
+    const input = screen.getByLabelText('Review window');
+    expect(input.props.value).toBe('2026-10-01..2026-10-07');
+    expect(input.props.keyboardType).toBe('default');
+    fireEvent.changeText(input, 'last week');
+    expect(onChange).toHaveBeenCalledWith('last week');
+    // The text input, whatever the control's name suggests: no switch, no amount.
+    expect(screen.queryByRole('switch')).toBeNull();
+    expect(screen.queryByText('$')).toBeNull();
+  });
+
+  it('never draws the wire token: the note is one sentence from lib/content, the same for every unknown control', () => {
+    expect(controlNote({ control: 'date-range' })).toBe(NEWER_CONTROL_NOTE);
+    expect(controlNote({ control: 'colour' })).toBe(NEWER_CONTROL_NOTE);
+    expect(NEWER_CONTROL_NOTE).not.toMatch(/date-range|colour/u);
+    expect(controlNote({ control: 'text' })).toBeNull();
+  });
+
+  it('knows the contract\'s five controls and nothing else — not a prototype name, not the run form\'s file, which RunFileField draws', () => {
+    for (const control of ['toggle', 'money', 'text', 'email', 'resource-picker']) expect(isKnownControl(control)).toBe(true);
+    for (const control of ['date-range', 'artifact', 'constructor', 'hasOwnProperty', 'toString', '']) expect(isKnownControl(control)).toBe(false);
+  });
+
+  it('draws a resource-picker as a control it knows: the text input the website draws, holding the configured name, with no note', async () => {
+    await renderWithProviders(
+      <SetupFieldRow field={field({ control: 'resource-picker', title: 'Watch inbox' })} value="AP-Invoices" onChange={jest.fn()} divider={false} />,
+    );
+    expect(screen.getByLabelText('Watch inbox').props.value).toBe('AP-Invoices');
+    expect(screen.queryByText(NEWER_CONTROL_NOTE)).toBeNull();
+    expect(controlNote({ control: 'resource-picker' })).toBeNull();
+  });
+
+  it("sends an unknown control's value as the string the website sends, and leaves an empty one out for the platform to judge", () => {
+    expect(declaredValues([{ key: 'window', control: 'date-range' }], { window: 'last week' })).toEqual({ window: 'last week' });
+    expect(declaredValues([{ key: 'window', control: 'date-range' }], { window: '  ' })).toEqual({});
+    expect(declaredValues([{ key: 'window', control: 'date-range' }], {})).toEqual({});
   });
 });

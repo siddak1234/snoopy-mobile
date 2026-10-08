@@ -1863,9 +1863,11 @@ returns to its first. One table, `presses-patterns-dialog-close:511`, a row per 
 | `automation-actions.tsx:222` — Archive | PATCH `{status: 'archived'}`, then the Flows list | `automation-actions:275`, `tab-screens:405` |
 | `move-version.tsx:118` — Move to vN | its confirmation | `automation-actions:246` |
 | `move-version.tsx:156` — Move to vN (confirm) | PATCH `{templateVersion}`; refusals in words | `automation-actions:246`, `automation-actions:260` |
-| `run-dialog.tsx:105` — Start run | POST runs `{subscriptionId, input}`; closes; the run's page | `automation-actions:159`, `presses-flows:248` |
+| `run-dialog.tsx:115` — Start run | POST runs `{subscriptionId, input}`; closes; the run's page | `automation-actions:159`, `presses-flows:248` |
 | `run-file-field.tsx:142` — Choose file | uploads it; the run carries its id; a refusal in words | `automation-actions:205`, `presses-flows:418` |
-| `setup-dialog.tsx:63` — Save setup | PATCH `{config}` only | `automation-actions:388` |
+| `setup-dialog.tsx:75` — Save setup | PATCH `{config}` only | `automation-actions:388` |
+| `dialog-boundary.tsx:59` — Cancel, on the failed dialog (Round 17, 25.8.1) | closes: the dialog's own `onClose`, the caller's; nothing sent | `dialog-boundary:88`, `dialog-boundary:205` |
+| `dialog-boundary.tsx:60` — Try again, on the failed dialog (Round 17, 25.8.1) | draws the dialog again: a child that no longer throws is shown, one that still throws fails to the same words; nothing sent | `dialog-boundary:107`, `dialog-boundary:121`, `dialog-boundary:258` |
 | `webhook-address-dialog.tsx:114` — Create address / Make a new secret | POST, no key; the secret shown once; a refusal in words | `automation-actions:352`, `presses-flows:413` |
 | `archived-flows.tsx:116` — an archived row | its page in the same stack | `tab-screens:1928` |
 | `select-field.tsx:55, :80` — the box; an option | opens the list in place; selects and closes it | `select-field:21` |
@@ -2938,3 +2940,144 @@ line and was dropped; the run was repeated whole.
 | C6 · Workspace binding: Archive acts on the loaded workspace only while it is still active (`automation-actions.tsx`) | the shown workspace used without asking whether it is still the active one | `automation-actions` "is refused in words, and sends nothing, once another workspace is active" |
 | C7 · The deletion wording: a partial deletion keeps the account and says anything removed is gone (`lib/content/deletion.ts`, ADR-0028) | a 409 answered with the refusal's words, which a partial deletion makes false | `deletion` "keeps the account on a partial deletion, and says anything removed is gone"; `account-screen` "a partial deletion keeps the account and this device signed in" |
 | C8 · The billing link on iOS only: Android draws the cards inert (`app/(tabs)/settings/billing.tsx`, ADR-0032) | the iOS check dropped | `billing-screen` "on Android offers no purchase control or call to action: a card does nothing", "unpaid: … Android, no control (G25)" |
+
+## Round 17 — the app, once (BUILD-PLAN 25.8; the owner's requirement 1 of 2026-10-08)
+
+Round 16 closed 2026-10-07 and Round 17 opened the next morning in `snoopy-backend` (BUILD-PLAN
+Phase 25, `a9e13ae`, on the owner's four requirements for automations and "lets go with the
+recommended"). Its 25.8 is this repository's one change, made once so that no change here is
+needed per automation — requirement 1: "app stays the same, no new build or update randomly per
+automation. we update automations repo and that updates the app." A re-entry on the owner's
+approval of the round plan (MASTER-PLAN §4; the order of attack 25.1 → 25.8 → 25.2 → …), recorded
+in the backend's Phase 25 intro and §0.1 ("with one app change (25.8)"). Nothing else in the app
+changes.
+
+### 25.8.1 — the control the app does not know (2026-10-08)
+
+**What was read, by command, before the change** (`main` `1ea6875`):
+
+- `components/setup-field.tsx:186` looked `field.control` up in a five-key map (`CONTROL_ICON`,
+  `:78-85`) and drew the result as an element at `:239`. A control the map did not hold was an
+  `undefined` element type: React threw while drawing the row, and with no boundary in the
+  app's own code (`grep -rn "getDerivedStateFromError\|componentDidCatch\|ErrorBoundary" app
+  components lib hooks` → nothing) the Setup and Run dialogs crashed, taking their screen.
+  `resource-picker` fell through to the plain `TextInput` branch (`:250-271`); the Run dialog
+  routed every non-file field to the row (`components/automations/run-dialog.tsx:124`, `field
+  as FieldRowSpec`).
+- The website falls back (`snoopy/app/account/flows/ManifestFields.tsx:122-176`): `toggle` is a
+  checkbox, `money` a number input, **every other control a text input**, with no note. Its
+  comment at `:182-184`: "The contract provides no resource-list endpoint, so a `resource-picker`
+  accepts the supplied opaque value as text without inventing a provider-specific list."
+- The contract (`snoopy-backend/packages/contracts/src/index.ts`): `AutomationSetupField.control`
+  is `'toggle' | 'money' | 'text' | 'email' | 'resource-picker'` (`:1175`);
+  `AutomationRunInputField.control` is `'toggle' | 'money' | 'text' | 'email' | 'artifact'`
+  (`:1131`) — "no `notifies` or `resource-picker`, because neither means anything for a single
+  run" (`:1118-1120`). The validator holds a `resource-picker` value to a string
+  (`manifest-validation.ts:380`, `:770`); ADR-0030 §1: "It has no `resource-picker`, because no
+  contract lists resources for one run"; the fixtures name an inbox label and a Slack channel
+  (`test/automation-manifest.test.ts:68`, `:94`, `:162`); no registered manifest under
+  `manifests/` uses it (`grep -rn resource-picker manifests/` → nothing). No published operation
+  lists resources.
+
+**What changed** — this PR, and nothing else in the app:
+
+1. **A control the app does not know draws as the website does, with a note.** `FieldRowSpec.control`
+   is a string (`components/setup-field.tsx:24-26`), not the generated union, so the row accepts
+   what a newer platform publishes. `isKnownControl` (`:113`) answers for the contract's five by
+   the own keys of `CONTROL_ICON` (`:100`), which is typed `Record<KnownControl, Icon>` over the
+   generated union — a control the contract adds fails `typecheck` at the next regeneration, so
+   a session gives it a row, rather than reaching a phone unnamed. The glyph falls back to the
+   text glyph (`:229`), the control to the text input, and `controlNote` (`:125`) puts one
+   sentence under the description (`:294`): `NEWER_CONTROL_NOTE`, "This field is newer than
+   this build of the app. Enter it as text." (`lib/content/screen-states.ts:175`;
+   `audit:vocabulary` scans it). The value reaches the platform as the string the website sends
+   (`declaredValues`, unchanged) and the platform stays the validator. The Run dialog's cast is
+   gone (`run-dialog.tsx:126`, `field={field}`).
+2. **`resource-picker` gets its control — the reading.** The contract gives the picker a string
+   value and nothing to pick from (above), so "gets its control" is read as: the control the
+   contract defines — a string naming a resource at the connected service — drawn as the website
+   draws it, a text input, and now a control the app NAMES (`KnownControl`,
+   `CONTROL_ICON['resource-picker']`, `setup-field.tsx:98-107`) rather than the fall-through it
+   was, so the newer-than-this-build note never fires for it and a test holds that
+   (`setup-field:308`). No picker, no list, no resource kind is invented (rule 7;
+   `DESIGN-CONTRACT.md`'s ceiling bullet says so). A later contract that lists resources gives the
+   picker a list then; that is a contract change, not this box.
+3. **An error boundary around the Setup and Run dialogs.** `components/dialog-boundary.tsx`:
+   `DialogBoundary` (`:27`) wraps `Catch` (`:70`), the class React requires of a boundary
+   (`getDerivedStateFromError`, `:73`), which draws `FailedDialog` (`:49`) once a child has
+   thrown — the shared `Dialog` in the failed-load grammar: the thing that failed in its title,
+   `ERROR_BODY` ("You have not been signed out, and nothing was lost. Try again in a moment."),
+   Cancel (the dialog's own close) and Try again (`TRY_AGAIN_LABEL`, `screen-states.ts:165`;
+   `retry`, `:40`, keys a new `Catch`, so the children are drawn again). Each dialog is wrapped
+   whole, its hooks included: `RunDialog` (`run-dialog.tsx:39-45`, title `RUN_FORM_ERROR_TITLE`
+   "Couldn't load this run's form", `screen-states.ts:164` — a run's form is no fetching screen,
+   so it has no `ScreenKey`) and `SetupDialog` (`setup-dialog.tsx:47-53`, title
+   `errorTitleFor('setup')`, "Couldn't load this setup"). Not a Nocturne primitive — it composes
+   `Dialog`; the 18 and their 80 snapshots are unchanged. No log of a value (rule 6), no
+   analytics; React reports the caught error in development as it does any.
+4. **Tests** — `__tests__/setup-field.test.tsx:276-322` (5) and `__tests__/dialog-boundary.test.tsx`
+   (8): the unknown control renders the fallback and reports the typed string (`setup-field:280`);
+   the note is one sentence, never the wire token (`:296`); the five known controls and nothing
+   else, prototype names and `artifact` included (`:303`); `resource-picker` is known, no note
+   (`:308`); `declaredValues` sends the string and leaves an empty one out (`:317`); the boundary
+   catches a throwing child and offers Cancel and Try again (`dialog-boundary:88`), Try again
+   draws the children again (`:107`) or fails to the same words (`:121`), and the children are
+   untouched while nothing throws (`:134`); the Run dialog draws the fallback and POSTs
+   `{ subscriptionId, input: { window: 'last week' } }` (`:177`) and is inside its boundary
+   (`:205`, its file field made to throw); the Setup dialog draws the fallback beside the picker
+   and PATCHes `{ config: { window, inbox } }` (`:230`) and is inside its boundary, Try again
+   drawing it again once it can (`:258`, a section label made to throw). The dialogs are made to
+   throw by mocking a child they draw, never by changing their code. `audit:presses`: the
+   boundary's Try again (`dialog-boundary.tsx:60` → `retry`) and Cancel (`:59`, the caller's
+   `onClose`) are run by those tests; the register above has their rows, and the Start run and
+   Save setup rows cite their moved lines (`run-dialog.tsx:115`, `setup-dialog.tsx:75`).
+
+**The narrowest reading, said so.** The box names "the Setup and Run dialogs"; the boundary is
+around those two. Two other surfaces draw the same rows and are covered by (1), the fallback, not
+by a boundary: the Setup screen (`app/(tabs)/flows/setup.tsx:429`) and the Move dialog
+(`components/automations/move-version.tsx:182`, `SetupFields` for the version a flow moves to —
+where a newer control is likeliest to appear first). With (1) neither can throw on a control;
+wrapping them is a separate decision, not taken here ("Nothing else in the app changes"). A
+`section` the app does not know is not a crash — `sectionLabel` reads `SECTION_NAME[section]` and
+would print "1 · undefined" — and is left as found: the contract closes sections at four with "UI
+is frozen" (BUILD-PLAN 4.5.3), and the box speaks of controls. The words are the app's: "field"
+and "build" for both a setting and a run's input, "Try again" for repeating a failed action
+(`ActionFailure`'s word; Retry is a failed load's).
+
+**The gate**, on this tree: `CI=1 npm run verify` exit 0 — 87 suites / 1195 tests / 80 snapshots
+across the two jest projects, the audits and the press audit green, the facts file emitted;
+`npm run audit:dependencies` exit 0. Nothing regenerated: the platform contract is unchanged, and
+no dependency was added.
+
+**Findings for other repositories** (for a `snoopy-backend` session to file):
+
+- BUILD-PLAN 25.8.1, the box text: "BUILT 2026-10-08 in `snoopy-mobile` #‹n› ‹sha›; closes with
+  25.8.2's build" — the PR carries the number and sha.
+- A contract observation, no change asked: `AutomationSetupField.control` and
+  `AutomationRunInputField.control` are closed unions, so a client generated from them cannot
+  type a control it does not know; this app's row takes a string for that reason. When the
+  platform means a new control to reach shipped apps, `CONTROLS` / `RUN_INPUT_CONTROLS`
+  (`packages/contracts/src/manifest-validation.ts:80`, `:86`) is where it widens, and this
+  fallback is what draws it until a build names it.
+- 25.8.2 OWNER: this change is what that one TestFlight build carries.
+
+### Guards proved to bite, 25.8.1
+
+Eight runs by one script (`bites-25.8.1/bites.py` in the session's scratchpad, its `results.md`
+and the eight jest JSON reports beside it) on this branch's tree: each one exact edit to the
+source, `jest --selectProjects unit --testPathPattern 'dialog-boundary|setup-field'` with
+`--json`, each named test's status read from the report, the file restored from a copy saved
+before the edit and its SHA-256 compared equal, `git status --porcelain` identical to the intended
+changes after every restore. Every break failed the tests named and nothing else; the clean tree
+passes both files (34 tests).
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| B1 · An unknown control draws the website's text input, not an undefined element (`components/setup-field.tsx:229`) | the direct `CONTROL_ICON[field.control]` lookup restored — the shipped code | `setup-field` "renders as the website does — a text input — with the note that it is newer than this build…"; `dialog-boundary` the Run and the Setup dialog's "draws a control newer than this build…" |
+| B2 · The note under an unknown control (`controlNote`, `:125`) | `controlNote` answering null for every control | `setup-field` "…with the note…", "never draws the wire token…"; `dialog-boundary` the two "draws a control newer than this build…" |
+| B3 · `resource-picker` is a control the app knows: its text input, no note (`isKnownControl`, `:113`) | `resource-picker` dropped from the known controls | `setup-field` "knows the contract's five controls and nothing else…", "draws a resource-picker as a control it knows…"; `dialog-boundary` the Setup dialog's "…beside the resource-picker it knows…" |
+| B4 · The boundary catches a throwing child (`components/dialog-boundary.tsx:73`) | the caught error no longer marks the boundary failed | `dialog-boundary` "catches a child that throws…", "Try again draws the children again…", "Try again on a child that still throws…", the Run and the Setup dialog's "is inside its boundary…" |
+| B5 · Try again draws the children again (`retry`, `:40`) | Try again doing nothing | `dialog-boundary` "Try again draws the children again…", the Setup dialog's "…Try again draws the dialog again once it can" |
+| B6 · The Run dialog is inside its boundary (`run-dialog.tsx:39-45`) | the boundary removed from around the dialog | `dialog-boundary` the Run dialog's "is inside its boundary…" |
+| B7 · The Setup dialog is inside its boundary (`setup-dialog.tsx:47-53`) | the boundary removed from around the dialog | `dialog-boundary` the Setup dialog's "is inside its boundary…" |
+| B8 · An unknown control's value is sent as the string the website sends (`declaredValues`) | the string branch limited to controls this build knows | `setup-field` "sends an unknown control's value as the string the website sends…"; `dialog-boundary` the two "…sends / saves the typed string as declared" |
