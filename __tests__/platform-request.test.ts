@@ -193,7 +193,9 @@ describe('generated platform transport', () => {
       message: 'The platform is busy right now. Try again in a moment.',
     });
     expect(runRefusal(error)).toEqual({ message: FLOW_QUEUE_FULL, fileGone: false });
-    expect(FLOW_QUEUE_FULL).toBe('This flow is busy and its queue is full. Try again once a run has ended.');
+    expect(FLOW_QUEUE_FULL).toBe(
+      'This flow is busy and its queue is full, so the run was not started. Try again once one of its runs has ended.',
+    );
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 

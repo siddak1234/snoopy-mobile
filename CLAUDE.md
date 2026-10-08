@@ -1,7 +1,8 @@
 # `snoopy-mobile` — session instructions
 
-**Round 17 — two changes here (2026-10-08): 25.8.1, and the app's halves of 25.2.12 and
-25.2.10.** Round 17 opened in `snoopy-backend` on 2026-10-08 (BUILD-PLAN Phase 25, `a9e13ae`) on
+**Round 17 — three changes here (2026-10-08): 25.8.1; the app's halves of 25.2.12 and 25.2.10;
+and their words and webhook key made the website's.** Round 17 opened in `snoopy-backend` on
+2026-10-08 (BUILD-PLAN Phase 25, `a9e13ae`) on
 the owner's four requirements for automations; its 25.8 is this repository's one box — "A control
 the app does not know renders as the website does … `resource-picker` gets its control; an error
 boundary around the Setup and Run dialogs … Nothing else in the app changes" — made once so that no
@@ -9,9 +10,13 @@ app change is needed per automation (requirement 1), then 25.8.2's one TestFligh
 owner's. The second is the approved round plan's own: 25.2.12 ends "Both clients change with the
 platform where the words do" (backend `949dc8d`), and with the contract of `ccc10e4` the app sends
 the webhook issue's `Idempotency-Key` (§12.1 #240) and says a run refused at a full flow in words
-(25.2.10) — mergeable after the TWENTY-THIRD promotion's read-back, riding 25.8.2's build. The
-record is DESIGN-GAPS "Round 17 — the app, once"; any further change here in Round 17 is a
-re-entry the owner approves (MASTER-PLAN §4), and §0.1 names this repository for 25.8.
+(25.2.10) — merged as `4fc5ddd` after the TWENTY-THIRD promotion's read-back, riding 25.8.2's
+build. The third is a re-entry for the owner's mobile = web parity: a review of #56, after it and
+`snoopy` #44 merged, found the two clients saying different things for the same answer, so the app
+now says the website's full-queue sentence and Run dialog lead verbatim and keeps the webhook
+issue's key through its dialog closing, as the website does — riding the same build. The record
+is DESIGN-GAPS "Round 17 — the app, once"; any further change here in Round 17 is a re-entry the
+owner approves (MASTER-PLAN §4), and §0.1 names this repository for 25.8.
 
 **Round 16 CLOSED 2026-10-07** — Gate 24 re-run by command by a fresh `snoopy-backend` session that wrote none of it; its record here is DESIGN-GAPS "Build 16: the owner's device pass, and Round 16's close". Open from 2026-09-29 (BUILD-PLAN Phase 24, ADR-0032): the mobile app offers
 every signed-in feature the website offers, on the same published operations,

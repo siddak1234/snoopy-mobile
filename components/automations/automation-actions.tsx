@@ -72,6 +72,10 @@ export function AutomationActions({
   const session = useSession();
   const { forget } = useSolutions();
   const archiveKeys = useIntentKeys('archive');
+  // A webhook secret's key, held here because its dialog is mounted only while
+  // open: a press whose answer was lost is retried with its key after the dialog
+  // is closed and opened again, as on the website (backend §12.1 #240).
+  const webhookKeys = useIntentKeys('webhook');
   const [open, setOpen] = useState<Open>(null);
   const [archiving, setArchiving] = useState(false);
   const [archiveError, setArchiveError] = useState<string | null>(null);
@@ -211,7 +215,12 @@ export function AutomationActions({
         />
       ) : null}
       {open === 'webhook' ? (
-        <WebhookAddressDialog subscriptionId={subscription.id} shownWorkspaceId={shownWorkspaceId} onClose={close} />
+        <WebhookAddressDialog
+          subscriptionId={subscription.id}
+          shownWorkspaceId={shownWorkspaceId}
+          keys={webhookKeys}
+          onClose={close}
+        />
       ) : null}
       <Dialog
         visible={open === 'archive'}
