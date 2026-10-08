@@ -325,10 +325,12 @@ review" — the held queue — also list running, queued and cancelled runs.
     Cancel, Close and Not now.
   - Webhook address: owner or admin, webhook-started only. The address is read
     on each opening; a secret is issued with an idempotency key — a new one per
-    press, the same one on each retry of that press until a secret is shown, so
-    a lost answer is answered again rather than rotated twice (backend §12.1
-    #240, Round 17; ~~with no idempotency key~~ until then) — shown once in the
-    dialog and kept nowhere else.
+    press, the same one on each retry of that press until a secret is shown,
+    the dialog closed and opened again included (the website's lifetime: held in
+    memory by the flow's actions, scoped to the flow and its workspace, never
+    stored), so a lost answer is answered again rather than rotated twice
+    (backend §12.1 #240, Round 17; ~~with no idempotency key~~ until then) —
+    shown once in the dialog and kept nowhere else.
   - Cancel run: pending or running only, confirmed first.
   - Replace account: the OAuth connect with the connection it replaces; a
     `reused` answer is said as nothing replaced. Completed, it says
@@ -524,9 +526,13 @@ mobile-only shape.
   pass, a second copy of a flow the workspace holds, and what a connect or a
   pasted key comes back with. Since Round 17 a run refused because its flow and
   the flow's queue are full (429 `max_concurrent_runs`, backend 25.2.10) says
-  "This flow is busy and its queue is full. Try again once a run has ended." —
-  the app's words until the website says the same (a finding); any other 429
-  keeps the platform's busy words and its wait.
+  the website's sentence, "This flow is busy and its queue is full, so the run
+  was not started. Try again once one of its runs has ended."; any other 429,
+  `creation_contended` included, keeps the platform's busy words and its wait,
+  as on the website. A person reads that sentence only once the Edge relays
+  `createRun`'s 429 (backend §12.1 #241, `snoopy-backend` #181): until that is
+  promoted the Edge answers a full queue 502 `DEPENDENCY_FAILURE`, and the Run
+  dialog shows that problem's title, "Dependency Failure".
 - A manifest control this build does not know (Round 17, 25.8.1 — the owner's
   requirement 1 of 2026-10-08, no app change per automation) is not a crash and
   not a guess: the row is the website's text input (`ManifestFields.tsx` draws

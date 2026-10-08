@@ -155,10 +155,15 @@ export const RUN_REFUSALS: Readonly<Record<string, string>> = {
  * full (backend BUILD-PLAN 25.2.10, `details.reason` `max_concurrent_runs`): as
  * many runs are going as the flow runs at once, and as many again are waiting
  * their turn — a run that waits is created and drawn Queued. Nothing was
- * created and the person did nothing wrong; the contract's advice is to try
- * again once a run has ended, which the platform's "busy right now" does not say.
+ * created and the person did nothing wrong. The website's sentence, verbatim
+ * (`snoopy/app/account/flows/actions.ts`, its `FLOW_QUEUE_FULL`): the run was
+ * not started, and only a run of this flow ending makes room, which the
+ * platform's "busy right now" does not say. `creation_contended` (the count not
+ * taken in time, so the queue is not known to be full) keeps the busy words, as
+ * on the website.
  */
-export const FLOW_QUEUE_FULL = 'This flow is busy and its queue is full. Try again once a run has ended.';
+export const FLOW_QUEUE_FULL =
+  'This flow is busy and its queue is full, so the run was not started. Try again once one of its runs has ended.';
 
 /** A file for a run (FR-14): opening the upload, and completing it. */
 export const UPLOAD_REFUSALS: Readonly<Record<string, string>> = {

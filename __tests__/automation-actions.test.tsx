@@ -21,8 +21,9 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { AutomationActions } from '@/components/automations/automation-actions';
 import { nocturneDark, nocturneLight } from '@/constants/theme';
+import { SessionContext, type SessionContextValue } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
-import { WORKSPACE_CHANGED } from '@/lib/content/refusals';
+import { FLOW_QUEUE_FULL, WORKSPACE_CHANGED } from '@/lib/content/refusals';
 import type { AutomationRunInputField, Subscription } from '@/lib/platform/automations';
 import type { CatalogEntry } from '@/lib/platform/catalog';
 import type { SetupField } from '@/components/setup-field';
@@ -32,8 +33,8 @@ import { renderWithProviders } from '@/test/render';
 
 const { platformOperation, newIdempotencyKey, putFileToSignedUrl } = jest.requireMock('@/lib/platform/client');
 
-/** Every request the actions sent: its method, path, key and body. */
-let sent: { method: string; path: string; key?: string; body?: unknown }[];
+/** Every request the actions sent: its method, path (and the ids in it), key and body. */
+let sent: { method: string; path: string; ids?: Record<string, string>; key?: string; body?: unknown }[];
 /** Answers by `METHOD path`, in order; a function throws or answers per call. */
 let answers: Record<string, (() => unknown)[]>;
 
@@ -43,8 +44,9 @@ beforeEach(() => {
   let n = 0;
   newIdempotencyKey.mockImplementation((prefix: string) => `${prefix}-${++n}`);
   putFileToSignedUrl.mockResolvedValue(undefined);
-  const call = (method: string) => async (path: string, init: { params?: { header?: Record<string, string> }; body?: unknown }) => {
-    sent.push({ method, path, key: init.params?.header?.['Idempotency-Key'], body: init.body });
+  type Init = { params?: { path?: Record<string, string>; header?: Record<string, string> }; body?: unknown };
+  const call = (method: string) => async (path: string, init: Init) => {
+    sent.push({ method, path, ids: init.params?.path, key: init.params?.header?.['Idempotency-Key'], body: init.body });
     const next = answers[`${method} ${path}`]?.shift();
     return { data: next ? next() : {} };
   };
@@ -240,10 +242,39 @@ describe('Run (24.4.1, ADR-0030)', () => {
     await renderActions();
     await fireEvent.press(screen.getByText('Run'));
     await pressLast('Start run');
-    expect(await screen.findByText('This flow is busy and its queue is full. Try again once a run has ended.')).toBeTruthy();
+    expect(
+      await screen.findByText(
+        'This flow is busy and its queue is full, so the run was not started. Try again once one of its runs has ended.',
+      ),
+    ).toBeTruthy();
     await pressLast('Start run');
     expect(await screen.findByText('The platform is busy right now. Try again in 30 seconds.')).toBeTruthy();
     expect(callbacks.onRunStarted).not.toHaveBeenCalled();
+  });
+
+  it("keeps the platform's busy words for a run refused because the flow's runs could not be counted in time — never the full-queue sentence, as on the website (backend 25.2.10, creation_contended)", async () => {
+    answer(`POST ${RUNS_PATH}`, () => {
+      // As the transport projects the contract's 429: its busy words, no wait stated, and the reason beside them.
+      throw new PlatformRateLimitedError('The platform is busy right now. Try again in a moment.', undefined, {
+        reason: 'creation_contended',
+      });
+    });
+    await renderActions();
+    await fireEvent.press(screen.getByText('Run'));
+    await pressLast('Start run');
+    expect(await screen.findByText('The platform is busy right now. Try again in a moment.')).toBeTruthy();
+    expect(screen.queryByText(FLOW_QUEUE_FULL)).toBeNull();
+    expect(callbacks.onRunStarted).not.toHaveBeenCalled();
+  });
+
+  it("says, before a run starts, that it may wait its turn at a busy flow — the website's sentence (backend 25.2.10)", async () => {
+    await renderActions();
+    await fireEvent.press(screen.getByText('Run'));
+    expect(
+      within(screen.getByTestId('run-dialog')).getByText(
+        'Enter what this run needs. It starts when you submit, or waits its turn if this flow is busy, and its page shows each step as it happens.',
+      ),
+    ).toBeTruthy();
   });
 
   it('uploads a chosen file, waits for it, sends only its id — and empties it when the platform no longer takes it', async () => {
@@ -378,6 +409,60 @@ describe('Archive and the plan', () => {
   });
 });
 
+/** A second workspace the same person owns. */
+const OTHER_WORKSPACE = '00000000-0000-4000-8000-000000000002';
+
+/** The signed-in owner, with `workspaceId` the active workspace — the one the screen loaded. */
+function ownerIn(workspaceId: string): SessionContextValue {
+  const owner = sessionAs('owner');
+  if (owner.status !== 'signed-in') throw new Error('fixture');
+  return {
+    ...owner,
+    session: {
+      ...owner.session,
+      user: { ...owner.session.user, activeWorkspaceId: workspaceId },
+      workspaces: [
+        ...owner.session.workspaces,
+        { id: OTHER_WORKSPACE, name: 'Acme Labs', type: 'organization', role: 'owner' },
+      ],
+    },
+  };
+}
+
+/**
+ * One flow's actions, which hold its webhook secret's key, showing each of
+ * `flows` in turn in place (`show-next`): the flow they show next — another
+ * one, or the same id in another workspace — must never be sent the key of the
+ * flow before it.
+ */
+function ActionsInTurn({ flows }: { flows: Subscription[] }) {
+  const [turn, setTurn] = React.useState(0);
+  const flow = flows[turn % flows.length]!;
+  return (
+    <SessionContext.Provider value={ownerIn(flow.workspaceId)}>
+      <Pressable testID="show-next" onPress={() => setTurn((n) => n + 1)}>
+        <Text>Show the next flow</Text>
+      </Pressable>
+      <AutomationActions
+        name="Invoice triage"
+        subscription={flow}
+        entry={entry()}
+        live
+        shownWorkspaceId={flow.workspaceId}
+        canAdminister
+        statusRow={null}
+        {...callbacks}
+      />
+    </SessionContext.Provider>
+  );
+}
+
+/** Opens the Webhook address dialog and presses Make a new secret. */
+async function makeANewSecret() {
+  await fireEvent.press(screen.getByTestId('manage-webhook'));
+  await fireEvent.press(await screen.findByText('Make a new secret'));
+}
+
 describe('Webhook address (24.4.1, backend §12.1 #91, #109)', () => {
   it('is offered to an owner or admin of a webhook-started automation, and to no one else', async () => {
     const webhookSub = subscription({ triggerKind: 'webhook' });
@@ -460,6 +545,99 @@ describe('Webhook address (24.4.1, backend §12.1 #91, #109)', () => {
     for (const key of keys) expect(key).toMatch(/^[A-Za-z0-9._~:-]{16,128}$/u);
     expect(keys[1]).toBe(keys[0]);
     expect(keys[2]).not.toBe(keys[1]);
+  });
+
+  const ADDRESS = { endpointId: 'endpoint-1', url: 'https://hooks.example.test/e/endpoint-1', createdAt: '2026-09-29T00:00:00Z' };
+  /** The key each Make a new secret sent, in order. */
+  const issueKeys = () => sent.filter((s) => s.method === 'POST' && s.path === WEBHOOK_PATH).map((s) => s.key);
+
+  it("keeps a press's key through the dialog closing, as the website does: after a lost answer, a close and a reopen, the next press sends the same key and shows the secret the lost answer carried — the key never stored (backend §12.1 #240)", async () => {
+    answer(`GET ${WEBHOOK_PATH}`, () => ADDRESS, () => ADDRESS);
+    answer(
+      `POST ${WEBHOOK_PATH}`,
+      // The answer is lost: the platform may already have stopped the old secret.
+      () => {
+        throw new PlatformUnreachableError();
+      },
+      // Pressed again under the same key, in a new opening: the secret the lost answer carried.
+      () => ({ ...ADDRESS, secret: 'whsec_the_lost_answers', rotated: true }),
+    );
+    await renderActions({ sub: subscription({ triggerKind: 'webhook' }) });
+
+    await makeANewSecret();
+    expect(await screen.findByText('The platform is unreachable')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Close'));
+    expect(screen.queryByTestId('webhook-dialog')).toBeNull();
+    await makeANewSecret();
+    expect(await screen.findByText('whsec_the_lost_answers')).toBeTruthy();
+
+    expect(issueKeys()).toEqual(['webhook-1', 'webhook-1']);
+    expect(SecureStore.setItemAsync).not.toHaveBeenCalled();
+  });
+
+  it('spends a key once its secret is shown, though the dialog is closed and opened again: the next press is a new secret under a new key (backend §12.1 #240)', async () => {
+    answer(`GET ${WEBHOOK_PATH}`, () => ADDRESS, () => ADDRESS);
+    answer(
+      `POST ${WEBHOOK_PATH}`,
+      () => ({ ...ADDRESS, secret: 'whsec_shown', rotated: true }),
+      () => ({ ...ADDRESS, secret: 'whsec_the_next', rotated: true }),
+    );
+    await renderActions({ sub: subscription({ triggerKind: 'webhook' }) });
+
+    await makeANewSecret();
+    expect(await screen.findByText('whsec_shown')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Close'));
+    await makeANewSecret();
+    expect(await screen.findByText('whsec_the_next')).toBeTruthy();
+
+    expect(issueKeys()).toEqual(['webhook-1', 'webhook-2']);
+  });
+
+  it("never sends one flow's key for another: shown another flow, or the same flow's id in another workspace, the actions make that one its own key, and the first flow's press still carries its own (backend §12.1 #240)", async () => {
+    answer(`GET ${WEBHOOK_PATH}`, () => ADDRESS, () => ADDRESS, () => ADDRESS, () => ADDRESS);
+    answer(
+      `POST ${WEBHOOK_PATH}`,
+      () => {
+        throw new PlatformUnreachableError();
+      },
+      () => ({ ...ADDRESS, secret: 'whsec_another_flow', rotated: true }),
+      () => ({ ...ADDRESS, secret: 'whsec_another_workspace', rotated: true }),
+      () => ({ ...ADDRESS, secret: 'whsec_the_lost_answers', rotated: true }),
+    );
+    await renderWithProviders(
+      <ActionsInTurn
+        flows={[
+          subscription({ triggerKind: 'webhook' }),
+          subscription({ id: 'sub-2', triggerKind: 'webhook' }),
+          subscription({ workspaceId: OTHER_WORKSPACE, triggerKind: 'webhook' }),
+        ]}
+      />,
+      sessionAs('owner'),
+    );
+
+    // The first flow's press, its answer lost.
+    await makeANewSecret();
+    expect(await screen.findByText('The platform is unreachable')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Close'));
+    // Another flow, then the first one's id in another workspace: each its own press.
+    for (const secret of ['whsec_another_flow', 'whsec_another_workspace']) {
+      await fireEvent.press(screen.getByTestId('show-next'));
+      await makeANewSecret();
+      expect(await screen.findByText(secret)).toBeTruthy();
+      await fireEvent.press(screen.getByText('Close'));
+    }
+    // The first flow again: its own key, kept, so the lost answer's secret.
+    await fireEvent.press(screen.getByTestId('show-next'));
+    await makeANewSecret();
+    expect(await screen.findByText('whsec_the_lost_answers')).toBeTruthy();
+
+    const presses = sent.filter((s) => s.method === 'POST' && s.path === WEBHOOK_PATH);
+    expect(presses.map(({ ids, key }) => ({ ...ids, key }))).toEqual([
+      { workspaceId: TEST_WORKSPACE, subscriptionId: 'sub-1', key: 'webhook-1' },
+      { workspaceId: TEST_WORKSPACE, subscriptionId: 'sub-2', key: 'webhook-2' },
+      { workspaceId: OTHER_WORKSPACE, subscriptionId: 'sub-1', key: 'webhook-3' },
+      { workspaceId: TEST_WORKSPACE, subscriptionId: 'sub-1', key: 'webhook-1' },
+    ]);
   });
 });
 
