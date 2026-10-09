@@ -3412,3 +3412,15 @@ loaded, the entitlements read `ENTITLEMENTS_OK`, CFBundleVersion 17, and the ipa
 `nativeAuthBaseUrl` as cloud build 16's. That ipa was not uploaded; the build number it used
 is spent, so the next release is 18.
 
+
+### The contract from `1e5ab5b`, live with the TWENTY-EIGHTH promotion (Round 17; 2026-10-09)
+
+The platform's AI path (BUILD-PLAN 25.2.14–25.2.16, `snoopy-backend` #190 at `1e5ab5b`) reached
+production with the TWENTY-EIGHTH promotion, read back 2026-10-09 16:36:44Z. Run against
+`a7965e8`, whose `snoopy-backend/docs/openapi/automations.yaml` is `1e5ab5b`'s,
+`npm run generate:platform-contracts` changed `lib/generated/platform-contracts/automations.d.ts`
+only: sha256 `69a65b05…`, was `150d8654…`, and one description, the model callback's — an
+automation may name `models`, one to three model ids. No path, schema or status the app reads
+changed; `platform.d.ts` and `connections.d.ts` stay `93fd335c…` and `ab70cb0f…`.
+`scripts/release-ios.sh` refuses a build whose contract differs from production's, so this lands
+before 25.8.4's build.
