@@ -3525,7 +3525,7 @@ owner approved (MASTER-PLAN §4); it rides 25.8.4's build.
    image, resized only when its long side is over 2,576 px — to 2,576 on that side, the other kept in
    proportion, never enlarged (`boundedResize`) — rendered, and saved once as a JPEG at 0.9; every
    native image and the context are released, and a failure is one sentence, `IMAGE_NOT_READ`
-   ("The image could not be read. Try again."), nothing sent. It is sent as `image/jpeg`: a photo as
+   ("The image could not be read. Try another." — the website's sentence, 25.8.5), nothing sent. It is sent as `image/jpeg`: a photo as
    `photo.jpg` (never the field's title, which may hold a separator the platform refuses — "A label,
    not a path"), an upload under its own name with `.jpg`. A PDF is sent as it is, its own name and
    type, never re-encoded.

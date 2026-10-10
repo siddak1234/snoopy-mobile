@@ -18,7 +18,7 @@ export const JPEG_QUALITY = 0.9;
 export const PHOTO_NAME = 'photo.jpg';
 
 /** Said when an image could not be re-encoded: it is not sent at all. */
-export const IMAGE_NOT_READ = 'The image could not be read. Try again.';
+export const IMAGE_NOT_READ = 'The image could not be read. Try another.';
 
 /**
  * Whether a file the person chose is an image, which is sent re-encoded: by the
