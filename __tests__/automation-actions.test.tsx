@@ -3,8 +3,6 @@ jest.mock('@/lib/platform/client', () => ({
   newIdempotencyKey: jest.fn(),
   putFileToSignedUrl: jest.fn(),
 }));
-jest.mock('expo-document-picker', () => ({ getDocumentAsync: jest.fn() }));
-jest.mock('expo-file-system', () => ({ File: jest.fn() }));
 jest.mock('expo-secure-store', () => ({
   setItemAsync: jest.fn(),
   getItemAsync: jest.fn(),
@@ -13,8 +11,6 @@ jest.mock('expo-secure-store', () => ({
 }));
 
 import { fireEvent, screen, waitFor, within } from '@testing-library/react-native';
-import * as DocumentPicker from 'expo-document-picker';
-import { File } from 'expo-file-system';
 import * as SecureStore from 'expo-secure-store';
 import React from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
@@ -23,11 +19,11 @@ import { AutomationActions } from '@/components/automations/automation-actions';
 import { nocturneDark, nocturneLight } from '@/constants/theme';
 import { SessionContext, type SessionContextValue } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
-import { FLOW_QUEUE_FULL, WORKSPACE_CHANGED } from '@/lib/content/refusals';
+import { WORKSPACE_CHANGED } from '@/lib/content/refusals';
 import type { AutomationRunInputField, Subscription } from '@/lib/platform/automations';
 import type { CatalogEntry } from '@/lib/platform/catalog';
 import type { SetupField } from '@/components/setup-field';
-import { PlatformError, PlatformRateLimitedError, PlatformUnreachableError } from '@/lib/platform/problem';
+import { PlatformError, PlatformUnreachableError } from '@/lib/platform/problem';
 import { TEST_WORKSPACE, sessionAs } from '@/test/platform';
 import { renderWithProviders } from '@/test/render';
 
@@ -59,14 +55,12 @@ function answer(route: string, ...replies: (() => unknown)[]) {
 }
 
 const SUB_PATH = '/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}';
-const RUNS_PATH = '/v1/workspaces/{workspaceId}/runs';
 const WEBHOOK_PATH = '/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/webhook';
 
 const NOTE: AutomationRunInputField = { key: 'note', title: 'Note', description: 'What to do', control: 'text', required: true };
 const INBOX: SetupField = { section: 'source', key: 'inbox', title: 'Watch inbox', description: '', control: 'text', required: true };
 const ALERTS: SetupField = { section: 'notifications', key: 'alerts', title: 'Alerts', description: '', control: 'toggle', required: false };
 const DIGEST: SetupField = { section: 'notifications', key: 'digest', title: 'Daily digest to', description: '', control: 'email', required: false };
-const RECEIPT: AutomationRunInputField = { key: 'receipt', title: 'Receipt', description: 'The file to read', control: 'artifact', required: true };
 
 function subscription(overrides: Partial<Subscription> = {}): Subscription {
   return {
@@ -108,13 +102,12 @@ function entry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
 }
 
 
-const callbacks = { onChanged: jest.fn(), onArchived: jest.fn(), onRunStarted: jest.fn() };
+const callbacks = { onChanged: jest.fn(), onArchived: jest.fn() };
 
 async function renderActions(
   props: {
     sub?: Subscription;
     entry?: CatalogEntry | undefined;
-    live?: boolean;
     shown?: string;
     role?: 'owner' | 'admin' | 'member';
     before?: React.ReactNode;
@@ -129,7 +122,6 @@ async function renderActions(
       name="Invoice triage"
       subscription={sub}
       entry={'entry' in props ? props.entry : entry()}
-      live={props.live ?? sub.status === 'live'}
       shownWorkspaceId={props.shown ?? TEST_WORKSPACE}
       canAdminister={(props.role ?? 'owner') !== 'member'}
       statusRow={null}
@@ -147,173 +139,17 @@ async function pressLast(label: string) {
   await fireEvent.press(buttons[buttons.length - 1]!);
 }
 
-describe('Run (24.4.1, ADR-0030)', () => {
-  it('is offered only on a live, available subscription whose pinned version declares input', async () => {
-    const cases: [string, Parameters<typeof renderActions>[0], boolean][] = [
-      ['live, declared, available', {}, true],
-      ['paused', { sub: subscription({ status: 'paused' }) }, false],
-      ['declares nothing', { sub: subscription({ runInput: undefined }) }, false],
-      ['not answering its probe', { entry: entry({ available: false }) }, false],
-      ['withdrawn from the catalog', { entry: undefined }, false],
-    ];
-    for (const [, props, offered] of cases) {
-      const view = await renderActions(props);
-      expect(screen.queryByText('Run') !== null).toBe(offered);
-      await view.unmount();
-    }
-  });
-
-  it('starts a run with the declared values; the same values resubmitted reuse the key, a change is a new run', async () => {
-    answer(
-      `POST ${RUNS_PATH}`,
-      () => {
-        throw new PlatformUnreachableError();
-      },
-      () => {
-        throw new PlatformUnreachableError();
-      },
-      () => ({ run: { id: 'run-9' } }),
-    );
+describe('Run (24.4.1, ADR-0030; the flow page\'s start controls since 25.8.3)', () => {
+  it('is not offered here: a flow that can run starts from the start controls at the top of its page (`StartRun`), not a Run button and its dialog at the bottom', async () => {
+    // Live, available, and its pinned version declares a note: everything Run was offered for.
     await renderActions();
-    await fireEvent.press(screen.getByText('Run'));
-    await fireEvent.changeText(screen.getByLabelText('Note'), 'Pay the Acme invoice');
-    await pressLast('Start run');
-    expect(await screen.findByText('The platform is unreachable')).toBeTruthy();
-    await pressLast('Start run');
-    await waitFor(() => expect(sent.filter((s) => s.path === RUNS_PATH)).toHaveLength(2));
-    await fireEvent.changeText(screen.getByLabelText('Note'), 'Pay the Acme invoice today');
-    await pressLast('Start run');
-    await waitFor(() => expect(callbacks.onRunStarted).toHaveBeenCalledWith('run-9'));
-
-    const runs = sent.filter((s) => s.path === RUNS_PATH);
-    expect(runs[0]!.key).toBe(runs[1]!.key);
-    expect(runs[2]!.key).not.toBe(runs[1]!.key);
-    expect(runs[2]!.body).toEqual({ subscriptionId: 'sub-1', input: { note: 'Pay the Acme invoice today' } });
-  });
-
-  it('says a refused run in words: a 422 is "check the values", a 409 is "not live"', async () => {
-    answer(
-      `POST ${RUNS_PATH}`,
-      () => {
-        throw new PlatformError('Unprocessable', 422, 'VALIDATION', { reason: 'undeclared_key' });
-      },
-      () => {
-        throw new PlatformError('Conflict', 409);
-      },
-    );
-    await renderActions();
-    await fireEvent.press(screen.getByText('Run'));
-    await pressLast('Start run');
-    expect(await screen.findByText('The run was not started. Check each value and try again.')).toBeTruthy();
-    await pressLast('Start run');
-    expect(await screen.findByText('This flow is not live, so it cannot run.')).toBeTruthy();
-  });
-
-  it('says a run refused over the plan in its numbers (decision 7a3)', async () => {
-    answer(`POST ${RUNS_PATH}`, () => {
-      throw new PlatformError('Access is forbidden', 403, 'FORBIDDEN', { reason: 'over_plan_limit', limit: 2, live: 3 });
-    });
-    await renderActions();
-    await fireEvent.press(screen.getByText('Run'));
-    await pressLast('Start run');
-    expect(
-      await screen.findByText(
-        'Your plan allows 2 flows; this workspace has 3. No flow can start a run until you archive 1. Paused and draft flows count.',
-      ),
-    ).toBeTruthy();
-  });
-
-  it("says a run refused because the flow and its queue are full in the flow's words; any other 429 keeps the platform's (backend 25.2.10)", async () => {
-    answer(
-      `POST ${RUNS_PATH}`,
-      () => {
-        // As the transport projects the contract's 429: its busy words, and the reason beside them.
-        throw new PlatformRateLimitedError('The platform is busy right now. Try again in a moment.', undefined, {
-          reason: 'max_concurrent_runs',
-          limit: '2',
-        });
-      },
-      () => {
-        throw new PlatformRateLimitedError('The platform is busy right now. Try again in 30 seconds.', 30, {
-          reason: 'over_workspace_quota',
-        });
-      },
-    );
-    await renderActions();
-    await fireEvent.press(screen.getByText('Run'));
-    await pressLast('Start run');
-    expect(
-      await screen.findByText(
-        'This flow is busy and its queue is full, so the run was not started. Try again once one of its runs has ended.',
-      ),
-    ).toBeTruthy();
-    await pressLast('Start run');
-    expect(await screen.findByText('The platform is busy right now. Try again in 30 seconds.')).toBeTruthy();
-    expect(callbacks.onRunStarted).not.toHaveBeenCalled();
-  });
-
-  it("keeps the platform's busy words for a run refused because the flow's runs could not be counted in time — never the full-queue sentence, as on the website (backend 25.2.10, creation_contended)", async () => {
-    answer(`POST ${RUNS_PATH}`, () => {
-      // As the transport projects the contract's 429: its busy words, no wait stated, and the reason beside them.
-      throw new PlatformRateLimitedError('The platform is busy right now. Try again in a moment.', undefined, {
-        reason: 'creation_contended',
-      });
-    });
-    await renderActions();
-    await fireEvent.press(screen.getByText('Run'));
-    await pressLast('Start run');
-    expect(await screen.findByText('The platform is busy right now. Try again in a moment.')).toBeTruthy();
-    expect(screen.queryByText(FLOW_QUEUE_FULL)).toBeNull();
-    expect(callbacks.onRunStarted).not.toHaveBeenCalled();
-  });
-
-  it("says, before a run starts, that it may wait its turn at a busy flow — the website's sentence (backend 25.2.10)", async () => {
-    await renderActions();
-    await fireEvent.press(screen.getByText('Run'));
-    expect(
-      within(screen.getByTestId('run-dialog')).getByText(
-        'Enter what this run needs. It starts when you submit, or waits its turn if this flow is busy, and its page shows each step as it happens.',
-      ),
-    ).toBeTruthy();
-  });
-
-  it('uploads a chosen file, waits for it, sends only its id — and empties it when the platform no longer takes it', async () => {
-    (DocumentPicker.getDocumentAsync as jest.Mock).mockResolvedValue({
-      canceled: false,
-      assets: [{ uri: 'file:///cache/invoice.pdf', name: 'invoice.pdf', mimeType: 'application/pdf' }],
-    });
-    (File as unknown as jest.Mock).mockImplementation(() => ({ size: 5, bytes: async () => new Uint8Array(5) }));
-    let arrive: () => void = () => undefined;
-    answer(`POST /v1/workspaces/{workspaceId}/uploads`, () => ({
-      uploadSessionId: 'upload-1',
-      uploadUrl: 'https://store.example.test/put',
-      expiresAt: '2026-09-29T12:00:00Z',
-      maximumSizeBytes: 100,
-    }));
-    putFileToSignedUrl.mockImplementation(() => new Promise<void>((resolve) => (arrive = resolve)));
-    answer(`POST /v1/workspaces/{workspaceId}/uploads/{uploadSessionId}/complete`, () => ({
-      artifact: { artifactId: 'artifact-1', filename: 'invoice.pdf', contentType: 'application/pdf', sizeBytes: 5 },
-    }));
-    answer(`POST ${RUNS_PATH}`, () => {
-      throw new PlatformError('Unprocessable', 422, 'VALIDATION', { reason: 'artifact_unavailable' });
-    });
-
-    await renderActions({ sub: subscription({ runInput: [RECEIPT] }) });
-    await fireEvent.press(screen.getByText('Run'));
-    await fireEvent.press(screen.getByTestId('run-file-receipt'));
-    expect(await screen.findByText('Uploading invoice.pdf…')).toBeTruthy();
-    expect(screen.getByText('Uploading…')).toBeTruthy();
-    arrive();
-    expect(await screen.findByText('Ready: invoice.pdf (5 bytes)')).toBeTruthy();
-    expect(putFileToSignedUrl.mock.calls[0][1].byteLength).toBe(5);
-
-    await pressLast('Start run');
-    expect(await screen.findByText('That file can no longer be used. Choose it again.')).toBeTruthy();
-    expect(sent.find((s) => s.path === RUNS_PATH)!.body).toEqual({
-      subscriptionId: 'sub-1',
-      input: { receipt: 'artifact-1' },
-    });
-    expect(screen.queryByText('Ready: invoice.pdf (5 bytes)')).toBeNull();
+    expect(screen.queryByText('Run')).toBeNull();
+    expect(screen.queryByText('Start run')).toBeNull();
+    expect(screen.queryByLabelText('Note')).toBeNull();
+    expect(screen.queryByTestId('run-dialog')).toBeNull();
+    // What the actions still offer is here, Archive flow last.
+    expect(screen.getByTestId('manage-setup')).toBeTruthy();
+    expect(screen.getByTestId('archive-flow')).toBeTruthy();
   });
 });
 
@@ -447,7 +283,6 @@ function ActionsInTurn({ flows }: { flows: Subscription[] }) {
         name="Invoice triage"
         subscription={flow}
         entry={entry()}
-        live
         shownWorkspaceId={flow.workspaceId}
         canAdminister
         statusRow={null}

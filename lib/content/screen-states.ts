@@ -152,14 +152,16 @@ export const RETRY_LABEL = 'Retry';
 export const BACK_LABEL = 'Go back';
 
 /**
- * The Setup and Run dialogs' boundary (BUILD-PLAN 25.8.1, the owner's
- * requirement 1 of 2026-10-08: no app change per automation). A form the app
- * could not draw says so in the failed-load grammar — the thing that failed in
- * the title, `ERROR_BODY`'s kept session — and offers "Try again", the app's
- * word for repeating a failed action (`ActionFailure`), beside Cancel; never a
- * white screen. The Setup dialog's title is `errorTitleFor('setup')`; a run's
- * form is no fetching screen, so its title is named here, the thing and not the
- * mechanism.
+ * The boundary around the Setup dialog and the run's form (BUILD-PLAN 25.8.1,
+ * the owner's requirement 1 of 2026-10-08: no app change per automation). A
+ * form the app could not draw says so in the failed-load grammar — the thing
+ * that failed in the title, `ERROR_BODY`'s kept session — and offers "Try
+ * again", the app's word for repeating a failed action (`ActionFailure`),
+ * beside Cancel in a dialog; never a white screen. The Setup dialog's title is
+ * `errorTitleFor('setup')`; a run's form is no fetching screen, so its title is
+ * named here, the thing and not the mechanism. Since 25.8.3 the run's form is
+ * the flow page's start controls, drawn on the page, and the same words take
+ * its place there (`InlineBoundary`).
  */
 export const RUN_FORM_ERROR_TITLE = "Couldn't load this run's form";
 export const TRY_AGAIN_LABEL = 'Try again';
@@ -173,6 +175,18 @@ export const TRY_AGAIN_LABEL = 'Try again';
  * a setting and a run's input alike; never the wire token.
  */
 export const NEWER_CONTROL_NOTE = 'This field is newer than this build of the app. Enter it as text.';
+
+/**
+ * A run's file field (BUILD-PLAN 25.8.3, the flow page's start controls): Take
+ * photo beside Upload. The camera is asked for at the press; a person who has
+ * turned it off is told where it is turned on again, and that Upload still
+ * works — a sentence in the field, never a crash. The words are this app's: the
+ * website has no camera of its own until 25.8.5.
+ */
+export const TAKE_PHOTO_LABEL = 'Take photo';
+export const UPLOAD_LABEL = 'Upload';
+export const CAMERA_OFF = 'Camera access for Autom8x is off in Settings. Turn it on there, or use Upload.';
+export const CAMERA_NOT_OPENED = 'The camera could not be opened. Try again.';
 
 /**
  * What an unreachable automation says, in one sentence.
