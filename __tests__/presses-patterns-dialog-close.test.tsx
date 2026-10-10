@@ -155,8 +155,8 @@ async function account() {
 }
 
 /**
- * Invoice triage's page with every action its flow can offer: a run form
- * (it declares a note), Move to v2 (the catalog has a newer version), a webhook
+ * Invoice triage's page with every action its flow can offer: start controls on
+ * the page (a note; 25.8.3), Move to v2 (the catalog has a newer version), a webhook
  * address (webhook-started, seen by an owner) — none issued yet — and Set up.
  */
 async function flow() {
@@ -392,18 +392,8 @@ const CASES: DialogCase[] = [
     close: 'Cancel',
   },
   {
-    name: 'Flow › Run Invoice triage: Cancel',
-    site: 'components/automations/automation-actions.tsx:187',
-    open: async () => {
-      await flow();
-      await press('Run');
-    },
-    dialog: 'run-dialog',
-    close: 'Cancel',
-  },
-  {
     name: 'Flow › Set up: Cancel',
-    site: 'components/automations/automation-actions.tsx:200',
+    site: 'components/automations/automation-actions.tsx:177',
     open: async () => {
       await flow();
       await pressId('manage-setup');
@@ -413,7 +403,7 @@ const CASES: DialogCase[] = [
   },
   {
     name: 'Flow › Webhook address: Close',
-    site: 'components/automations/automation-actions.tsx:208',
+    site: 'components/automations/automation-actions.tsx:189',
     open: async () => {
       await flow();
       await pressId('manage-webhook');
@@ -425,7 +415,7 @@ const CASES: DialogCase[] = [
   },
   {
     name: 'Flow › Archive Invoice triage?: Cancel',
-    site: 'components/automations/automation-actions.tsx:218',
+    site: 'components/automations/automation-actions.tsx:200',
     open: async () => {
       await flow();
       await pressId('archive-flow');

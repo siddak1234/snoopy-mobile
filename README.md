@@ -183,6 +183,7 @@ tracking", purpose "App Functionality". No advertising or analytics SDK is among
 | Contact Info › Email Address                                                            | Collected                    | Sign-in, and the support form's one required field (`app/(tabs)/settings/support.tsx`, `lib/platform/support.ts`)      |
 | Identifiers › User ID                                                                   | Collected                    | The Autom8x account every request acts as                                                                              |
 | Identifiers › Device ID                                                                 | Collected (owner's call)     | The push token, sent to `PUT /v1/session/devices` (`lib/platform/devices.ts`); declaring it is the conservative answer |
+| User Content › Photos or Videos                                                         | Collected (owner's call)     | Take photo (25.8.3): a camera photo, re-encoded as a JPEG, is uploaded as a run's file; declaring it is the conservative answer |
 | User Content › Other User Content                                                       | Collected                    | Files given to a run (`components/automations/run-file-field.tsx`), a flow's setup, approval decisions                 |
 | User Content › Customer Support                                                         | Collected                    | The support form's text                                                                                                |
 | Diagnostics                                                                             | Not collected                | No crash-reporting or analytics SDK in `package.json`                                                                  |
@@ -220,6 +221,15 @@ tracking", purpose "App Functionality". No advertising or analytics SDK is among
   tap's run or Approvals; the inbox's card is the only ask. Android and a
   simulator register nothing. The library's own request to Expo's token service
   is the third credential-less exception of `CLAUDE.md` rule 5.
+- A run's file (BUILD-PLAN 25.8.3): `expo-image-picker` and
+  `expo-image-manipulator` at the SDK 54 pins. Take photo is the camera, asked
+  for at the press; Upload is `expo-document-picker`, held to a PDF, a JPEG or
+  a PNG. Every image is re-encoded once on the phone — upright, its long side
+  at most 2,576 px, a JPEG at 0.9 (`lib/platform/run-image.ts`) — and sent by
+  the same signed upload as any file; neither library makes a request. The
+  `expo-image-picker` plugin in `app.json` gives the camera the app's own
+  sentence and turns the microphone and the photo library off, which
+  `__tests__/app-config.test.js` holds through Expo's own mod compiler.
 - `hooks/use-session.tsx` resolves `/v1/session` before routing. Protected tabs
   fail closed unless that response positively establishes `signed-in`. A 401
   clears the local credential; an outage does not.

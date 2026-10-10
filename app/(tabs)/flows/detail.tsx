@@ -5,6 +5,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AutomationActions } from '@/components/automations/automation-actions';
+import { StartRun, canStartRun } from '@/components/automations/start-run';
 import type { ArchivedFlowPath } from '@/components/flows/archived-flows';
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
@@ -67,7 +68,8 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
    * that can name a workspace's actual workflows. The three reads are the same
    * join the list makes — subscription for status, catalog for name and
    * `pipeline`, `run-stats` for the counters. The subscription and its catalog
-   * entry are kept as read, for the actions (`AutomationActions`).
+   * entry are kept as read, for the start controls (`StartRun`) and the actions
+   * (`AutomationActions`).
    */
   const flows = useWorkspaceResource(async (workspaceId) => {
     const [subs, catalog, stats, providers, projects, removed] = await Promise.all([
@@ -222,6 +224,19 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
         )}
       </View>
 
+      {/* The start controls, first under the name (BUILD-PLAN 25.8.3): the run's
+          fields and Start run, where the Run button at the bottom was, offered
+          where it was. A new version's fields are a new form. */}
+      {!def.removed && canStartRun(subscription, entry, current === 'Live') ? (
+        <StartRun
+          key={`${subscription.id}:${subscription.templateVersion}`}
+          subscriptionId={subscription.id}
+          shownWorkspaceId={flows.loadedFor}
+          runInput={subscription.runInput ?? []}
+          onStarted={(runId) => router.push({ pathname: '/(tabs)/(home)/run', params: { runId } })}
+        />
+      ) : null}
+
       {/* The three tiles open Activity for this flow and that outcome, over all time (24.11.9);
           each looks like the button it is (the owner's build 12 item 1). */}
       <View style={styles.statsRow}>
@@ -360,14 +375,12 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
         name={def.name}
         subscription={subscription}
         entry={entry}
-        live={current === 'Live'}
         shownWorkspaceId={flows.loadedFor}
         canAdminister={administers(roleIn(session, flows.loadedFor))}
         onChanged={flows.reload}
         // To the list, whichever way detail was reached — a cross-tab replace
         // from Setup leaves nothing to go back to.
         onArchived={() => router.dismissTo('/(tabs)/flows')}
-        onRunStarted={(runId) => router.push({ pathname: '/(tabs)/(home)/run', params: { runId } })}
         statusRow={
           <View style={styles.actions}>
             <PillButton

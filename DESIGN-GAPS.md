@@ -1714,7 +1714,7 @@ D2 are rows of it.
 | Approvals | `activity/approvals.tsx:174` Retry, Back · `:180` Back · `:189` Retry · `:190` Back | `:96`, `:97` (D1), `:98` |
 | Activity, a tab (Retry only) | `activity/index.tsx:251` Retry · `:260` Retry | `:99`, `:100` |
 | Add a flow | `flows/add.tsx:71` Retry, Back · `:74` Back · `:80` Retry · `:82` Back | `:101`, `:102` (D1), `:103` |
-| Flow page | `flows/detail.tsx:171` Retry, Back · `:180` Back · `:189` Retry · `:190` Back | `:104`, `:105` (D1), `:106` |
+| Flow page | `flows/detail.tsx:174` Retry, Back · `:183` Back · `:192` Retry · `:193` Back | `:104`, `:105` (D1), `:106` |
 | Flows, a tab (Retry only) | `flows/index.tsx:96` Retry · `:103` Retry | `:107`, `:108` |
 | Setup | `flows/setup.tsx:140` Retry, Back · `:146` Retry · `:147` Back | `:109`, `:113` (D2), `:110` |
 | Account | `settings/account.tsx:92` Retry, Back · `:95` Back · `:101` Retry · `:103` Back | `:114`, `:115` (D1), `:116` |
@@ -1738,7 +1738,7 @@ Back and the inbox's own were already held.
 | `activity/approvals.tsx:217` | `:93` |
 | `flows/add.tsx:110` | `:99` |
 | `flows/add.tsx:95` — empty catalog | `tab-screens:230` |
-| `flows/detail.tsx:210` | `:106` |
+| `flows/detail.tsx:213` | `:106` |
 | `flows/setup.tsx:298` | `:114` |
 | `settings/account.tsx:118` | `:121` |
 | `settings/billing.tsx:250` | `:128` |
@@ -1758,7 +1758,7 @@ Back and the inbox's own were already held.
 
 **A dialog's Cancel or Close (table-driven).** Configured: the dialog closes, nothing is
 sent — no change and no read — and nothing navigates; a Cancel on a dialog's second step
-returns to its first. One table, `presses-patterns-dialog-close:511`, a row per dialog
+returns to its first. One table, `presses-patterns-dialog-close:501`, a row per dialog
 (`:N` below); three are held in the feature files.
 
 | Press | Test |
@@ -1780,17 +1780,17 @@ returns to its first. One table, `presses-patterns-dialog-close:511`, a row per 
 | `team-requests.tsx:68` — Request to join › Cancel | `:366` |
 | `settings/teams.tsx:125` — Create a team › Cancel | `:376` |
 | `settings/teams.tsx:262` — Withdraw request › Cancel | `:386` |
-| `automation-actions.tsx:197` — Run › Cancel | `:396` |
-| `automation-actions.tsx:210` — Set up › Cancel | `:406` |
-| `automation-actions.tsx:222` — Webhook address › Close | `:416` |
-| `automation-actions.tsx:233` — Archive flow › Cancel | `:428` |
-| `move-version.tsx:145` — Move to vN › Cancel | `:438` |
+| ~~`automation-actions.tsx:197` — Run › Cancel~~ — gone with the Run dialog (25.8.3): the run's form is on the flow page, with nothing to close | — |
+| `automation-actions.tsx:177` — Set up › Cancel | `:396` |
+| `automation-actions.tsx:189` — Webhook address › Close | `:406` |
+| `automation-actions.tsx:200` — Archive flow › Cancel | `:418` |
+| `move-version.tsx:145` — Move to vN › Cancel | `:428` |
 | `(home)/run.tsx:288` — Cancel this run? › Keep it running | `presses-home-activity:107` |
-| `connections-card.tsx:228` — Connect › Cancel | `:448` |
-| `connections-card.tsx:223` — Replace account? › Cancel | `:459` |
-| `workspace-switcher.tsx:140` — Switch workspace › Cancel | `:472` |
+| `connections-card.tsx:228` — Connect › Cancel | `:438` |
+| `connections-card.tsx:223` — Replace account? › Cancel | `:449` |
+| `workspace-switcher.tsx:140` — Switch workspace › Cancel | `:462` |
 | `scope-control.tsx:95` — Show › Done | `presses-home-activity:316` |
-| `scope-control.tsx:138` — Show › Create a team › Cancel | `:494` |
+| `scope-control.tsx:138` — Show › Create a team › Cancel | `:484` |
 
 **The empty standard's action.**
 
@@ -1852,23 +1852,25 @@ returns to its first. One table, `presses-patterns-dialog-close:511`, a row per 
 | `flows/setup.tsx:451` — Activate | POST subscribe `{templateId, templateVersion, projectId}` then PATCH `{config, status: 'live'}`, each keyed, then the flow page; a held flow configured, none added; refusals in words. Since Gate 24 parity (G10) the workspace's flows are read afresh before the POST, and a flow held since is refused — "This flow is already in this workspace.", nothing sent; with an account owed, Settings › Connections (G9) | `presses-flows:190`, `tab-screens:1397`, `build13-unarchive-and-one-flow:169`, `presses-flows:396`, `parity-flows` (G10) |
 | `flows/setup.tsx:416` — Try again | the same request, the same key | `presses-flows:355` |
 | `choice-chips.tsx:34` — a chip (Setup's team, a team role) | chooses it; the team is sent as `projectId` | `tab-screens:1397`, `teams-screens:463` |
-| `flows/detail.tsx:238` — Runs / Successes / Failures | Activity `{flow, flowName, filter}`, no day | `tab-screens:1638` |
-| `flows/detail.tsx:314` — Open the live flow | the twin's page, same stack | `tab-screens:1985` |
-| `flows/detail.tsx:325` — Unarchive | Setup with the template and the team it had | `build13-unarchive-and-one-flow:56` |
-| `flows/detail.tsx:366` — Pause / Resume / Publish | PATCH `{status}`; refused while not responding | `tab-screens:460`, `presses-flows:301` |
-| `flows/detail.tsx:340` — Try again | the same change, the same key | `presses-flows:328` |
-| `automation-actions.tsx:135` — Run | the Run dialog with the declared fields | `automation-actions:166` |
-| `automation-actions.tsx:164` — Set up; Webhook address | their dialogs | `automation-actions:645`, `automation-actions:481` |
-| `automation-actions.tsx:178` — Archive flow | the one-way confirmation | `automation-actions:350` |
-| `automation-actions.tsx:237` — Archive | PATCH `{status: 'archived'}`, then the Flows list | `automation-actions:350`, `tab-screens:405` |
-| `move-version.tsx:118` — Move to vN | its confirmation | `automation-actions:321` |
-| `move-version.tsx:156` — Move to vN (confirm) | PATCH `{templateVersion}`; refusals in words | `automation-actions:321`, `automation-actions:335` |
-| `run-dialog.tsx:117` — Start run | POST runs `{subscriptionId, input}`; closes; the run's page | `automation-actions:166`, `presses-flows:248` |
-| `run-file-field.tsx:142` — Choose file | uploads it; the run carries its id; a refusal in words | `automation-actions:280`, `presses-flows:418` |
-| `setup-dialog.tsx:75` — Save setup | PATCH `{config}` only | `automation-actions:645` |
-| `dialog-boundary.tsx:59` — Cancel, on the failed dialog (Round 17, 25.8.1) | closes: the dialog's own `onClose`, the caller's; nothing sent | `dialog-boundary:88`, `dialog-boundary:205` |
-| `dialog-boundary.tsx:60` — Try again, on the failed dialog (Round 17, 25.8.1) | draws the dialog again: a child that no longer throws is shown, one that still throws fails to the same words; nothing sent | `dialog-boundary:107`, `dialog-boundary:121`, `dialog-boundary:258` |
-| `webhook-address-dialog.tsx:137` — Create address / Make a new secret | POST with an `Idempotency-Key` — the same one on a retry of the press, after the dialog is closed and opened again too (Round 17, the website's lifetime), a new one once a secret is shown (§12.1 #240, Round 17; no key until then); the secret shown once; a refusal in words | `automation-actions:481`, `automation-actions:516`, `automation-actions:554`, `automation-actions:578`, `automation-actions:596`, `presses-flows:600` |
+| `flows/detail.tsx:254` — Runs / Successes / Failures | Activity `{flow, flowName, filter}`, no day | `tab-screens:1639` |
+| `flows/detail.tsx:345` — Open the live flow | the twin's page, same stack | `tab-screens:1986` |
+| `flows/detail.tsx:356` — Unarchive | Setup with the template and the team it had | `build13-unarchive-and-one-flow:56` |
+| `flows/detail.tsx:395` — Pause / Resume / Publish | PATCH `{status}`; refused while not responding | `tab-screens:461`, `presses-flows:297` |
+| `flows/detail.tsx:371` — Try again | the same change, the same key | `presses-flows:324` |
+| ~~`automation-actions.tsx:135` — Run~~ — gone (25.8.3): the run's fields and Start run are the flow page's start controls, below | — | — |
+| `automation-actions.tsx:144` — Set up; Webhook address | their dialogs | `automation-actions:480`, `automation-actions:316` |
+| `automation-actions.tsx:158` — Archive flow | the one-way confirmation | `automation-actions:186` |
+| `automation-actions.tsx:204` — Archive | PATCH `{status: 'archived'}`, then the Flows list | `automation-actions:186`, `tab-screens:405` |
+| `move-version.tsx:118` — Move to vN | its confirmation | `automation-actions:157` |
+| `move-version.tsx:156` — Move to vN (confirm) | PATCH `{templateVersion}`; refusals in words | `automation-actions:157`, `automation-actions:171` |
+| `start-run.tsx:186` — Start run, the flow page's start controls (25.8.3; ~~`run-dialog.tsx:117`, in the Run dialog~~) | POST runs `{subscriptionId, input}` with the declared values, its key kept for a resubmission and renewed by a change; the run's page; the box drawn anew — the defaults, the files emptied, a new key; held while a file uploads; refusals in words, `artifact_unavailable` emptying the files; refused, and nothing sent, once another workspace is active | `start-run:292`, `start-run:339`, `start-run:366`, `start-run:384`, `start-run:397`, `start-run:421`, `start-run:434`, `start-run:471`, `start-run:495`, `presses-flows:431`, `dialog-boundary:203` |
+| `run-file-field.tsx:188` — Take photo (25.8.3) | the camera asked for at the press, images only; refused, a sentence in the field and nothing opened; the photo re-encoded once — upright, its long side at most 2,576 px, a JPEG at 0.9 — and uploaded as `image/jpeg`, `photo.jpg`; the run carries its id; a camera that cannot open says so; refused, and nothing asked, once another workspace is active | `start-run:596`, `start-run:634`, `start-run:651`, `start-run:495` |
+| `run-file-field.tsx:196` — Upload (25.8.3; ~~`run-file-field.tsx:142` — Choose file~~) | the document picker, held to a PDF, a JPEG or a PNG; a PDF uploaded as it is, an image re-encoded once and uploaded as `image/jpeg` under a `.jpg` name; the run carries its id; an image that cannot be re-encoded is not sent; a refusal in words | `start-run:523`, `start-run:538`, `start-run:553`, `start-run:579`, `start-run:669`, `start-run:434`, `presses-flows:599` |
+| `setup-dialog.tsx:75` — Save setup | PATCH `{config}` only | `automation-actions:480` |
+| `dialog-boundary.tsx:65` — Cancel, on the failed dialog (Round 17, 25.8.1) | closes: the dialog's own `onClose`, the caller's; nothing sent | `dialog-boundary:90` |
+| `dialog-boundary.tsx:66` — Try again, on the failed dialog (Round 17, 25.8.1) | draws the dialog again: a child that no longer throws is shown, one that still throws fails to the same words; nothing sent | `dialog-boundary:109`, `dialog-boundary:123`, `dialog-boundary:292` |
+| `dialog-boundary.tsx:106` — Try again, on the failed card in the start controls' place (25.8.3) | draws the form again: a form that no longer throws is shown; nothing sent | `dialog-boundary:150`, `dialog-boundary:224` |
+| `webhook-address-dialog.tsx:137` — Create address / Make a new secret | POST with an `Idempotency-Key` — the same one on a retry of the press, after the dialog is closed and opened again too (Round 17, the website's lifetime), a new one once a secret is shown (§12.1 #240, Round 17; no key until then); the secret shown once; a refusal in words | `automation-actions:316`, `automation-actions:351`, `automation-actions:389`, `automation-actions:413`, `automation-actions:431`, `presses-flows:594` |
 | `archived-flows.tsx:116` — an archived row | its page in the same stack | `tab-screens:1928` |
 | `select-field.tsx:55, :80` — the box; an option | opens the list in place; selects and closes it | `select-field:21` |
 
@@ -3424,3 +3426,219 @@ automation may name `models`, one to three model ids. No path, schema or status 
 changed; `platform.d.ts` and `connections.d.ts` stay `93fd335c…` and `ab70cb0f…`.
 `scripts/release-ios.sh` refuses a build whose contract differs from production's, so this lands
 before 25.8.4's build.
+
+### 25.8.3 — the flow page's start controls, and Take photo (Round 17; 2026-10-10)
+
+BUILD-PLAN 25.8.3 (added 2026-10-09 for the first automation, Invoice Processing, 25.7.2; approved
+by the owner 2026-10-10): "The flow page's start controls at its top: the run's fields and Start
+run, in place of the Run button at the bottom, and a file field offering Take photo beside Upload;
+the rest of the page as it is. Drawn from the manifest's run fields, so no automation needs an app
+change." The placement is the owner's "i like the suggested lets do that". The owner's decision 1
+of 2026-10-10: "Take photo through `expo-image-picker`'s camera, with its camera permission text;
+every image the field takes, from the camera or the library, re-encoded once with
+`expo-image-manipulator` — upright, JPEG, its long side at most 2,576 px; the pickers limited to
+PDF, JPEG and PNG in code, because a run-input field carries no list of types." A re-entry the
+owner approved (MASTER-PLAN §4); it rides 25.8.4's build.
+
+**What was read, by command, before the change** (`main` `dffb0bc`):
+
+- The flow page drew the run's controls at its bottom: `AutomationActions` offered a Run button
+  (`components/automations/automation-actions.tsx:127-137`) where `canRun` held — live, run input
+  declared, the catalog entry available (`:84`) — opening `RunDialog`
+  (`components/automations/run-dialog.tsx`, its form `RunDialogBody`: the declared defaults, the
+  key renewed on every change, the upload-busy set, `createRun`, `runRefusal` with `fileGone`,
+  `WORKSPACE_CHANGED`; inside `DialogBoundary` since 25.8.1). Nothing else imported `run-dialog`.
+- The file field had one action, "Choose file": `DocumentPicker.getDocumentAsync({
+  copyToCacheDirectory: true, multiple: false })` with no type (`run-file-field.tsx:75`), any file
+  sent as picked.
+- A run's input field carries no list of types: `AutomationRunInputField` is a key, title,
+  description, control, `required` and an optional `defaultValue`
+  (`lib/generated/platform-contracts/automations.d.ts`). The platform checks a file's type against
+  the flow's manifest only when its upload opens (backend `apps/artifacts/src/routes.ts:248-255`,
+  `content_type_not_accepted`).
+- SDK 54's pins (`node_modules/expo/bundledNativeModules.json:51-52`): `expo-image-manipulator`
+  `~14.0.8`, `expo-image-picker` `~17.0.11`; `npx expo install` added exactly those (14.0.8 and
+  17.0.11, with `expo-image-loader` 6.0.0 under both), and `npx expo install --check` answers
+  "Dependencies are up to date".
+- `expo-image-picker`'s config plugin (`plugin/build/withImagePicker.js`, 17.0.11) takes
+  `photosPermission`, `cameraPermission` and `microphonePermission`: a string is the iOS usage
+  sentence, `false` deletes the key and, for the camera and the microphone, blocks the Android
+  permission (`tools:node="remove"`). Installed, the library is one Expo's prebuild configures on
+  its own: `npx expo config --type introspect` on this tree with `main`'s `app.json` gives
+  `NSCameraUsageDescription`, `NSMicrophoneUsageDescription` and `NSPhotoLibraryUsageDescription`
+  in Expo's generic words ("Allow $(PRODUCT_NAME) to access your camera") and Android
+  `RECORD_AUDIO`. The library's own Android manifest declares `CAMERA` and
+  `READ`/`WRITE_EXTERNAL_STORAGE`, and `launchCameraAsync` asks `WRITE_EXTERNAL_STORAGE` with the
+  camera below Android 10 (`android/.../ImagePickerModule.kt:271-294`), so those are left as
+  declared.
+- How each library makes an image upright, read in SDK 54's source — **not observed on a
+  device**: `expo-image-picker`'s iOS camera result is drawn upright before it is written
+  (`ios/ImageUtils.swift:50-52`, `fixOrientation()`), and its Android camera result is the file the
+  camera app wrote, its EXIF orientation kept (`exporters/RawImageExporter.kt`).
+  `expo-image-manipulator` 14.0.8 makes every image it loads upright: on iOS `manipulate` adds
+  `ImageFixOrientationTransformer` before anything else (`ios/ImageManipulatorModule.swift:27-28`;
+  the transformer redraws the pixels as displayed and drops the flag), and on Android the bitmap is
+  decoded by Glide through `expo-image-loader` (`ImageLoaderModule.kt`,
+  `loadImageForManipulationFromURL`), which applies the EXIF orientation, and `Bitmap.compress`
+  writes none. So the app reads no EXIF and rotates nothing: a rotation by the tag on top of that
+  would turn the image twice.
+
+**What changed** — this PR:
+
+1. **The start controls, at the top of the flow page.** `components/automations/start-run.tsx`
+   (new): `StartRun` draws them under the label NEW RUN, the website's lead sentence under it
+   (unchanged, `snoopy/app/account/flows/AutomationActions.tsx`), the fields in a `SurfaceCard` (the
+   page's CONNECTIONS and PIPELINE grammar), a refusal in red under the card, and Start run, the
+   primary pill the Run button was. Its form, `StartRunForm`, is `RunDialogBody` moved whole — the
+   declared defaults, the key renewed on every change, the upload-busy set, `createRun`,
+   `runRefusal` with `fileGone`, `WORKSPACE_CHANGED` — less the dialog. `canStartRun` is `canRun`,
+   moved: live, run input declared, the entry available. `app/(tabs)/flows/detail.tsx` draws the box
+   directly under the header row and above the tiles, where `canStartRun` holds and the flow is not
+   archived (the actions were never drawn for an archived flow either); after a start it opens the
+   run's page as before (`onStarted` → `/(tabs)/(home)/run`). Nothing else on the page moved.
+2. **Fresh after each start.** `StartRun` draws its form anew after a start (`key={started}`), so
+   the next run starts from the declared defaults, empty file fields and a new key — what opening
+   the dialog again gave. The page keys the box by the flow and its pinned version, so a flow moved
+   to a version with other fields draws those.
+3. **25.8.1's guarantee, kept.** The form sits inside `InlineBoundary`
+   (`components/dialog-boundary.tsx`), `DialogBoundary`'s sibling on the same `Catch`: a row that
+   cannot be drawn is replaced, in the box, by a card in the same words — `RUN_FORM_ERROR_TITLE`
+   ("Couldn't load this run's form"), `ERROR_BODY` — with Try again, which draws the form again; no
+   Cancel, as nothing was opened that could be closed. The rest of the page is drawn as ever.
+4. **Run leaves `AutomationActions`.** The Run button, `RunDialog`, `live` and `onRunStarted` are
+   gone from it; `components/automations/run-dialog.tsx` is deleted (nothing else used it). The
+   Go live / Pause row now comes first in the actions.
+5. **Take photo beside Upload.** `components/automations/run-file-field.tsx`: two outlined pills
+   under the field's description, Take photo and Upload, each named for its field to a screen
+   reader ("Take a photo for Invoice"), both held while an upload is in flight. Take photo asks
+   `requestCameraPermissionsAsync()` at the press; refused, the field says `CAMERA_OFF`, "Camera
+   access for Autom8x is off in Settings. Turn it on there, or use Upload.", and opens nothing;
+   then `launchCameraAsync({ mediaTypes: ['images'], quality: 1 })` — full quality, so the one lossy
+   encode is the re-encode — and a camera that cannot open says `CAMERA_NOT_OPENED`, "The camera
+   could not be opened. Try again." Upload is the document picker held to `RUN_FILE_TYPES`,
+   `['application/pdf', 'image/jpeg', 'image/png']`. Closing either keeps what the field held. The
+   upload itself is unchanged: abort when the field goes, busy reported under its key, refusals in
+   the website's words.
+6. **Every image re-encoded once.** `lib/platform/run-image.ts` (new): an image — a photo, or a JPEG
+   or PNG from Upload (`isImage`: by the type the picker names, by the name when it names none) — goes
+   through `reencodeImage`: `ImageManipulator.manipulate(uri)`, rendered once to measure the upright
+   image, resized only when its long side is over 2,576 px — to 2,576 on that side, the other kept in
+   proportion, never enlarged (`boundedResize`) — rendered, and saved once as a JPEG at 0.9; every
+   native image and the context are released, and a failure is one sentence, `IMAGE_NOT_READ`
+   ("The image could not be read. Try again."), nothing sent. It is sent as `image/jpeg`: a photo as
+   `photo.jpg` (never the field's title, which may hold a separator the platform refuses — "A label,
+   not a path"), an upload under its own name with `.jpg`. A PDF is sent as it is, its own name and
+   type, never re-encoded.
+7. **The camera's sentence, and nothing else.** `app.json` lists `expo-image-picker` with
+   `cameraPermission` "Autom8x uses the camera to photograph a document a flow should read, such as
+   an invoice.", `microphonePermission: false` and `photosPermission: false` (Upload is the document
+   picker, which needs no photo-library access). Read back with `npx expo config --type
+   introspect`: the Info.plist carries `NSCameraUsageDescription` with that sentence and neither
+   `NSMicrophoneUsageDescription` nor `NSPhotoLibraryUsageDescription`; the Android manifest marks
+   `RECORD_AUDIO` `tools:node="remove"`. Two native modules and an Info.plist key: this ships in a
+   native build only (25.8.4), not an update.
+8. **Words.** `lib/content/screen-states.ts`: `TAKE_PHOTO_LABEL`, `UPLOAD_LABEL`, `CAMERA_OFF`,
+   `CAMERA_NOT_OPENED`; the boundary's note names the start controls. `audit:vocabulary` scans them.
+   The app's own words: the website has no camera until 25.8.5.
+9. **Tests.** `__tests__/start-run.test.tsx` (new, 45): on the flow page, the box drawn first under
+   the name, above the tiles, the rest in its order, no Run button and no dialog (`:243`); offered
+   exactly where Run was — six cases (`:266`), not on an archived flow (`:286`); Start run POSTs the
+   declared values, opens the run's page, and the box is fresh — the note empty, the amount its
+   default, the same values next time under a new key (`:292`). The form as the dialog was: the
+   website's lead (`:334`), the key kept for a resubmission and renewed by a change (`:339`), a 422 /
+   409 (`:366`), over the plan (`:384`), the full queue and other 429s (`:397`), `creation_contended`
+   (`:421`), a file uploaded at once with Start run held, only its id sent, and emptied by
+   `artifact_unavailable` with a new key (`:434`), the box fresh after a start, the file emptied
+   (`:471`), and `WORKSPACE_CHANGED` for Start run, Take photo and Upload, nothing sent (`:495`). The
+   file field: both actions, named (`:512`); Upload asks for exactly the three types (`:523`); a PDF
+   not re-encoded (`:538`); a PNG, a JPEG and an untyped image by name re-encoded — never enlarged, a
+   JPEG at 0.9 — and sent as `image/jpeg` under a `.jpg` name (`:553`), a large one bounded at 2,576
+   (`:579`); a photo, sideways and upright, bounded on its long side and sent as `image/jpeg`, the
+   run carrying only its id (`:596`); a refused camera says the sentence and opens nothing (`:634`);
+   a closed camera keeps the field, one that cannot open says so (`:651`); an image that cannot be
+   re-encoded is not sent (`:669`); `boundedResize`, `jpegName`, `isImage` and the releases
+   (`:686`–`:718`). `__tests__/dialog-boundary.test.tsx`: `InlineBoundary`'s card, no Cancel, Try
+   again (`:150`); the start controls draw a newer control as the website does (`:203`), are inside
+   their boundary with Try again (`:224`), and on the flow page cost only the box (`:246`) — the Run
+   dialog's two tests became these. `__tests__/app-config.test.js`: the plugin entry, through the
+   factory, and its result through Expo's own mod compiler, introspecting — the camera's sentence,
+   no microphone or photo-library key, `RECORD_AUDIO` removed (`:276`). Moved or changed:
+   `automation-actions` (the Run block moved to `start-run`; one test that no Run is offered there,
+   `:143`), `presses-flows` (Start run from the box, `:431`; Upload refused
+   `content_type_not_accepted`, a PDF, `:599`), `presses-patterns-dialog-close` (the Run dialog's
+   Cancel case gone), `tab-screens` (no start controls for a flow that declares no input, `:451`).
+   The 80 snapshots did not move.
+
+**The gate**, on the committed tree: `CI=1 npm run verify` exit 0 — lint, typecheck, the seven
+audits, the contract check against `snoopy-backend` `a7965e8`'s `docs/openapi` (whose
+`automations.yaml` is `69a65b05…`, what production serves; `SNOOPY_BACKEND_ROOT`), 88 suites / 1,243
+tests (1,242 passed; one skipped, `repo-facts`' schema check, the backend not checked out beside this
+worktree) / 80 snapshots across the two jest projects — 1,203 at `main`: 45 added in `start-run`,
+two in `dialog-boundary`, one in `app-config`, the Run dialog's eight in `automation-actions` become
+one and its Cancel case in `presses-patterns-dialog-close` gone — and the press audit green (292
+presses, every one run by a test; 42 passthroughs audited at their callers), the facts file
+emitted. `npm run audit:dependencies` exit 0 (61 advisories, 19 moderate and 42 high, none critical
+and none in the new packages — the counts at `main`); `npx expo install --check`: "Dependencies are
+up to date". The 80 snapshots did not move; nothing was regenerated. No native build was made.
+
+**Not done, said so.** Android's `getPendingResultAsync` — a photo lost if the system ends the
+app's activity while the camera is open — is not handled; Android ships no build. A PNG's
+transparent area has no JPEG equivalent; invoices are opaque (read, not run). The camera's file,
+the picked copy and the re-encoded copy stay in the app's cache, as a picked file's copy always
+has; the system clears it.
+
+**Findings for other repositories** (for a `snoopy-backend` session to file):
+
+- BUILD-PLAN 25.8.3, the box text: "BUILT 2026-10-10 in `snoopy-mobile` #‹n› ‹sha›; rides 25.8.4's
+  build" — the PR carries the number and sha.
+- 25.8.4 OWNER: two native modules and an Info.plist key — a native build, as planned. Before the
+  next App Store submission, App Store Connect's App Privacy gains User Content › Photos or Videos
+  (README's table, "owner's call"): Take photo uploads a camera photo.
+- 25.8.5 (`snoopy`): the app's words are "Take photo" and "Upload"; the website's file input takes
+  any type (`snoopy/app/account/flows/RunFileField.tsx:137-144`, no `accept`) and sends it as
+  picked. Whether the website also holds the picker to PDF, JPEG and PNG and re-encodes is 25.8.5's
+  parity question.
+- 25.8.6: `snoopy-backend` `main` `49c9fac` (#193) moved `docs/openapi/automations.yaml` to
+  `fb8e574e…` from `69a65b05…`; production serves `69a65b05…` since the TWENTY-EIGHTH, and this
+  gate checked the app's contract against `a7965e8`'s documents. The app regenerates when a
+  promotion serves `fb8e574e…`, before 25.8.4's build if that comes first.
+
+### Guards proved to bite, 25.8.3
+
+Twenty-three runs by one script (`bites-25.8.3/bites.py` in the session's scratchpad, with its
+`results.json`, `run.log` and the twenty-four jest JSON reports beside it) on this branch's tree. The
+clean tree first: seven suites, 254 tests, all passing (`start-run`, `dialog-boundary`,
+`app-config`, `presses-flows`, `automation-actions`, `tab-screens`, `presses-patterns-dialog-close`
+— every suite that draws the flow page, the run's form or the app config). Then each run made one
+exact edit to the source (B2 two: the box cut from its place and pasted after the tiles) and ran
+the same seven suites with `--json`. The failed tests were read from the report, the file was
+restored from a copy saved before the edit and its SHA-256 compared equal, and `git status
+--porcelain` matched the intended changes after every restore. Every break failed the tests named
+and nothing else. Upright is not among them: it is the libraries' own loading (above), which no
+jest run executes.
+
+| Guard | Broken by | Test that failed |
+| --- | --- | --- |
+| B1 · The start controls are offered where Run was, and only there (`canStartRun`, `components/automations/start-run.tsx:36`) | `live` dropped from the rule | `start-run` "are offered only where the Run button was — paused", "— a draft" |
+| B2 · Drawn first under the flow's name, above the tiles (`app/(tabs)/flows/detail.tsx:227-238`) | the box moved after the tiles | `start-run` "are drawn first under the flow's name — above the tiles, the rest of the page in its order…" |
+| B3 · Fresh after each start: the form drawn anew (`start-run.tsx:69`, `key={started}`) | the key removed | `start-run` "Start run starts this flow's run with the declared values, opens the run's page, and leaves the box fresh…", "leave the box fresh after a start…"; `presses-flows` "Start run starts this flow's run with what was entered, opens the run's page, and leaves the box empty for the next" |
+| B4 · The form inside its boundary (`start-run.tsx:67-78`) | `InlineBoundary` removed from around the form | `dialog-boundary` the start controls' "is inside its boundary…", "on the flow page, a form that cannot be drawn costs the box alone…" |
+| B5 · Try again on the failed card draws the form again (`retry`, `components/dialog-boundary.tsx:84`) | Try again doing nothing | `dialog-boundary` "InlineBoundary … catches a child that throws and draws the failed card…", the start controls' "is inside its boundary… Try again draws the form again once it can" |
+| B6 · Upload offers a PDF, a JPEG or a PNG only (`components/automations/run-file-field.tsx:117`, `RUN_FILE_TYPES`, `lib/platform/run-image.ts:9`) | the picker offered any file | `start-run` "Upload asks the picker for a PDF, a JPEG or a PNG — exactly those three…" |
+| B7 · An image from Upload is re-encoded (`run-file-field.tsx:127`, `isImage`) | an image sent as it is | `start-run` "re-encodes a PNG / a JPEG / an image … the picker could not type…", "re-encodes a large image chosen by Upload…", "sends nothing for an image that cannot be re-encoded…" |
+| B8 · A photo is re-encoded (`run-file-field.tsx:109`) | the photo sent as the camera wrote it | `start-run` "takes a photo held sideways…", "takes a photo held upright…" |
+| B9 · Never enlarged (`run-image.ts:44`) | every image resized to the bound | `start-run` the three "re-encodes … never enlarged…", "bounds 2576 × 1932 / 1932 × 2576 / 800 × 600 to null…" |
+| B10 · The long side is bounded, either way up (`run-image.ts:45`) | the width bound whichever side is long | `start-run` "takes a photo held upright…", "bounds 3024 × 4032 to {"height": 2576}…" |
+| B11 · Saved as a JPEG at 0.9, once (`run-image.ts:77`) | saved as a PNG | `start-run` the three "re-encodes … a JPEG at 0.9…", "re-encodes a large image…", the two "takes a photo…" |
+| B12 · Sent as `image/jpeg` (`run-file-field.tsx:246`) | the re-encoded image sent without its type | `start-run` the three "re-encodes … sends it as image/jpeg…", the two "takes a photo…" |
+| B13 · Under a `.jpg` name (`run-file-field.tsx:128`, `jpegName`) | an uploaded image sent under its own name | `start-run` the three "re-encodes … under a .jpg name" |
+| B14 · The camera asked for first; refused, a sentence and nothing opened (`run-file-field.tsx:96-99`) | the camera opened whatever the permission answered | `start-run` "asks for the camera at the press; refused, the field says where to turn it on…" |
+| B15 · A camera that cannot open says so in the app's words (`run-file-field.tsx:103`) | the native message said instead | `start-run` "keeps what the field held when the camera is closed, and says so when the camera cannot open" |
+| B16 · A failed re-encode is one sentence, nothing sent (`run-image.ts:80`) | the native module's message thrown on | `start-run` "sends nothing for an image that cannot be re-encoded…", "releases the context and every native image, and answers only its own sentence…" |
+| B17 · Every native image and the context released (`run-image.ts:82-83`) | the images never released | `start-run` the three "re-encodes …", the two "takes a photo…", "releases the context and every native image…" |
+| B18 · Take photo and Upload act only on the workspace the page loaded (`run-file-field.tsx:84-86`) | the shown workspace used without asking whether it is still active | `start-run` "are refused in words, and send nothing, once another workspace is active — Start run, Take photo and Upload alike" |
+| B19 · A file the platform no longer takes is emptied (`start-run.tsx:136`) | the file kept in its field | `start-run` "upload a file at once, hold Start run while it uploads… and empty it when the platform no longer takes it…" |
+| B20 · The microphone off (`app.json:53`) | the line removed (Expo's default) | `app-config` "applies the expo-image-picker plugin with the camera's own sentence, and the microphone and the photo library off (25.8.3)" |
+| B21 · The photo library off (`app.json:54`) | the line removed (Expo's default) | `app-config` the same |
+| B22 · The camera's own sentence (`app.json:52`) | the line removed (Expo's generic words) | `app-config` the same |
+| B23 · Take photo is offered beside Upload (`run-file-field.tsx:182-189`) | Take photo not drawn | `start-run` "offers both…", the two "takes a photo…", "asks for the camera…", "keeps what the field held…", "are refused in words…"; `dialog-boundary` the start controls' "is inside its boundary…" |

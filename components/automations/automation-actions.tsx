@@ -1,13 +1,11 @@
-import { Archive, CaretRight, PlayCircle, SlidersHorizontal, WebhooksLogo, type Icon } from 'phosphor-react-native';
+import { Archive, CaretRight, SlidersHorizontal, WebhooksLogo, type Icon } from 'phosphor-react-native';
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { MoveVersion } from '@/components/automations/move-version';
-import { RunDialog } from '@/components/automations/run-dialog';
 import { SetupDialog } from '@/components/automations/setup-dialog';
 import { WebhookAddressDialog } from '@/components/automations/webhook-address-dialog';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
-import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
@@ -21,15 +19,12 @@ import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
 import { updateSubscription, type Subscription } from '@/lib/platform/automations';
 import type { CatalogEntry } from '@/lib/platform/catalog';
 
-type Open = 'run' | 'setup' | 'webhook' | 'archive' | null;
+type Open = 'setup' | 'webhook' | 'archive' | null;
 
 /**
  * What a person can do with one flow, on the website's operations and by
  * its rules (BUILD-PLAN 24.4.1, `snoopy/app/account/automations`):
  *
- * - **Run** only where it can be honest: live, available, and a pinned version
- *   that declares what a run needs (ADR-0030). One that declares nothing gets
- *   no form, because the platform could not check one.
  * - **Set up** when the automation declares settings.
  * - **Move to vN** when the catalog has a newer version than the one pinned.
  * - **Webhook address** for a webhook-started version, owner or admin only.
@@ -40,33 +35,31 @@ type Open = 'run' | 'setup' | 'webhook' | 'archive' | null;
  *   Activity, and the flow can be unarchived later (the owner's build 12 item
  *   4: the word for adding it again). Pause keeps it listed.
  *
+ * Run is not here since BUILD-PLAN 25.8.3: the run's fields and Start run are
+ * the flow page's start controls, at its top (`StartRun`).
+ *
  * Every action acts on the workspace the screen loaded (`shownWorkspaceId`).
- * `statusRow` is the screen's own Go live / Pause row, placed after Run.
+ * `statusRow` is the screen's own Go live / Pause row, placed first.
  */
 export function AutomationActions({
   name,
   subscription,
   entry,
-  live,
   shownWorkspaceId,
   canAdminister,
   statusRow,
   onChanged,
   onArchived,
-  onRunStarted,
 }: {
   name: string;
   subscription: Subscription;
   /** The catalog's entry for its template; absent once the template is withdrawn. */
   entry: CatalogEntry | undefined;
-  /** Whether it is live now, as the screen shows it. */
-  live: boolean;
   shownWorkspaceId: string | null;
   canAdminister: boolean;
   statusRow: React.ReactNode;
   onChanged: () => void;
   onArchived: () => void;
-  onRunStarted: (runId: string) => void;
 }) {
   const { palette } = useTheme();
   const session = useSession();
@@ -80,8 +73,6 @@ export function AutomationActions({
   const [archiving, setArchiving] = useState(false);
   const [archiveError, setArchiveError] = useState<string | null>(null);
 
-  const runInput = subscription.runInput ?? [];
-  const canRun = live && runInput.length > 0 && entry?.available === true;
   // The settings of the version this flow RUNS, which the platform checks a save
   // against — not the catalog's newest, which differs once a version changes a
   // field (backend §12.1 #185). Absent when that version declares none.
@@ -124,17 +115,6 @@ export function AutomationActions({
 
   return (
     <View style={styles.stack}>
-      {canRun ? (
-        <PillButton
-          label="Run"
-          variant="primary"
-          height={46}
-          fontSize={typeScale.label.fontSize}
-          icon={PlayCircle}
-          iconSize={16}
-          onPress={() => setOpen('run')}
-        />
-      ) : null}
       {statusRow}
       {newer !== null ? (
         <MoveVersion
@@ -188,19 +168,6 @@ export function AutomationActions({
         <Text style={[styles.archiveLabel, { color: palette.danger }]}>Archive flow</Text>
       </Pressable>
 
-      {open === 'run' ? (
-        <RunDialog
-          name={name}
-          subscriptionId={subscription.id}
-          shownWorkspaceId={shownWorkspaceId}
-          runInput={runInput}
-          onClose={close}
-          onStarted={(runId) => {
-            close();
-            onRunStarted(runId);
-          }}
-        />
-      ) : null}
       {open === 'setup' ? (
         <SetupDialog
           subscriptionId={subscription.id}

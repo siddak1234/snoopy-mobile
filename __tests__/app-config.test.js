@@ -31,6 +31,9 @@ const RELEASE = {
 
 const EAS_PROJECT_ID = 'cb806193-8885-4b5c-b1d6-850da3f162a2';
 
+/** The camera's usage sentence (25.8.3): what iOS shows when Take photo first asks. */
+const CAMERA_SENTENCE = 'Autom8x uses the camera to photograph a document a flow should read, such as an invoice.';
+
 function setEnv(values) {
   for (const name of ENV) {
     if (values[name] === undefined) delete process.env[name];
@@ -257,6 +260,46 @@ describe('the real static config, through the factory', () => {
     const resolved = configFactory({ config: appJson.expo });
     expect(resolved.plugins).toContain('expo-notifications');
     expect(resolved.ios.entitlements).not.toHaveProperty('aps-environment');
+  });
+
+  /**
+   * BUILD-PLAN 25.8.3 (the owner's decision 1 of 2026-10-10): Take photo, through
+   * expo-image-picker's camera, with the app's own sentence for the camera. The
+   * library, once installed, is one of the modules Expo's prebuild configures
+   * by default — the camera, microphone and photo-library usage strings and
+   * Android's RECORD_AUDIO, each in Expo's generic words — and the app uses the
+   * camera alone: Upload is the document picker, which needs none. So the plugin
+   * is listed with the camera's sentence and the other two off, and its result is
+   * read here through Expo's own mod compiler, introspecting: no native project,
+   * nothing written, no build.
+   */
+  it("applies the expo-image-picker plugin with the camera's own sentence, and the microphone and the photo library off (25.8.3)", async () => {
+    const entry = appJson.expo.plugins.find((plugin) => Array.isArray(plugin) && plugin[0] === 'expo-image-picker');
+    expect(entry).toEqual([
+      'expo-image-picker',
+      { cameraPermission: CAMERA_SENTENCE, microphonePermission: false, photosPermission: false },
+    ]);
+    setEnv({ ...RELEASE, EAS_BUILD_PROFILE: 'production' });
+    expect(configFactory({ config: appJson.expo }).plugins).toContainEqual(entry);
+
+    const { compileModsAsync } = require('expo/config-plugins');
+    const withImagePicker = require('expo-image-picker/app.plugin').default;
+    const configured = withImagePicker({ name: 'Autom8x', slug: 'snoopy-mobile', ios: {}, android: {} }, entry[1]);
+    const compiled = await compileModsAsync(configured, {
+      // Never created: introspection reads Expo's templates and writes nothing.
+      projectRoot: `${__dirname}/no-native-project`,
+      introspect: true,
+      platforms: ['ios', 'android'],
+      assertMissingModProviders: false,
+    });
+
+    const infoPlist = compiled._internal.modResults.ios.infoPlist;
+    expect(infoPlist.NSCameraUsageDescription).toBe(CAMERA_SENTENCE);
+    expect(infoPlist).not.toHaveProperty('NSMicrophoneUsageDescription');
+    expect(infoPlist).not.toHaveProperty('NSPhotoLibraryUsageDescription');
+    // Android: the camera's permission is the library's own; the microphone's is removed.
+    const permissions = compiled._internal.modResults.android.manifest.manifest['uses-permission'].map((permission) => permission.$);
+    expect(permissions).toContainEqual({ 'android:name': 'android.permission.RECORD_AUDIO', 'tools:node': 'remove' });
   });
 
   it('submits to the App Store Connect record by its public identifiers only', () => {
