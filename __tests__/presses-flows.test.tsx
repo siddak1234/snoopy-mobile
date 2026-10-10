@@ -107,12 +107,6 @@ function keepWrites(answers: Record<string, () => unknown> = {}): Write[] {
   return writes;
 }
 
-/** The dialog's own button of that name — the last one on screen. */
-async function pressLast(label: string) {
-  const buttons = await screen.findAllByText(label);
-  await fireEvent.press(buttons[buttons.length - 1]!);
-}
-
 /** The catalog with nothing to fill in, `change` applied to each entry. */
 function bareCatalog(change: (automation: ReturnType<typeof catalogPayload>['automations'][number]) => object = () => ({})) {
   const catalog = catalogPayload();
@@ -167,11 +161,14 @@ async function createAddressRefusedWith(error: PlatformError) {
   await fireEvent.press(await screen.findByText('Create address'));
 }
 
-/** The flow page's Run, for a flow that takes a file: Choose file, the upload refused with `error`. */
-async function chooseFileRefusedWith(error: PlatformError) {
+/**
+ * The flow page's start controls, for a flow that takes a file: Upload, a PDF
+ * the flow does not take, the upload refused with `error`.
+ */
+async function uploadRefusedWith(error: PlatformError) {
   (DocumentPicker.getDocumentAsync as jest.Mock).mockResolvedValue({
     canceled: false,
-    assets: [{ uri: 'file:///cache/notes.exe', name: 'notes.exe', mimeType: 'application/x-msdownload' }],
+    assets: [{ uri: 'file:///cache/notes.pdf', name: 'notes.pdf', mimeType: 'application/pdf' }],
   });
   (File as unknown as jest.Mock).mockImplementation(() => ({ size: 5, bytes: async () => new Uint8Array(5) }));
   await openInvoicePage(
@@ -182,8 +179,7 @@ async function chooseFileRefusedWith(error: PlatformError) {
       },
     },
   );
-  await fireEvent.press(screen.getByText('Run'));
-  await fireEvent.press(await screen.findByTestId('run-file-receipt'));
+  await fireEvent.press(await screen.findByTestId('run-file-receipt-upload'));
 }
 
 describe("Flows, in a team with no flow while the workspace has some (build 11, D6: the team's own line)", () => {
@@ -431,16 +427,14 @@ describe("Setup — each request's key (DESIGN-CONTRACT: a retry keeps it; a cha
   });
 });
 
-describe("The flow page's Run (24.4.1: the run's page shows each step as it happens)", () => {
-  it("Start run starts this flow's run with what was entered, closes the dialog and opens the run's page", async () => {
+describe("The flow page's start controls (24.4.1: the run's page shows each step as it happens; at the top of the page since 25.8.3)", () => {
+  it("Start run starts this flow's run with what was entered, opens the run's page, and leaves the box empty for the next", async () => {
     const writes = await openInvoicePage(
       { runInput: [{ key: 'note', title: 'Note', description: 'What to do', control: 'text', required: true }] },
       { [`POST ${WS}/runs`]: () => ({ run: { id: 'run-42' } }) },
     );
-    await fireEvent.press(screen.getByText('Run'));
-    expect(await screen.findByTestId('run-dialog')).toBeTruthy();
-    await fireEvent.changeText(screen.getByLabelText('Note'), 'Pay the Acme invoice');
-    await pressLast('Start run');
+    await fireEvent.changeText(within(screen.getByTestId('start-run')).getByLabelText('Note'), 'Pay the Acme invoice');
+    await fireEvent.press(screen.getByText('Start run'));
     await waitFor(() =>
       expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/(home)/run', params: { runId: 'run-42' } }),
     );
@@ -452,7 +446,7 @@ describe("The flow page's Run (24.4.1: the run's page shows each step as it happ
         body: { subscriptionId: 'invoice', input: { note: 'Pay the Acme invoice' } },
       },
     ]);
-    expect(screen.queryByTestId('run-dialog')).toBeNull();
+    await waitFor(() => expect(screen.getByLabelText('Note').props.value).toBe(''));
   });
 });
 
@@ -602,8 +596,8 @@ describe("A refusal a person can act on is said in the website's words (DESIGN-C
       says: 'This flow is not started by a webhook.',
     },
     {
-      press: "Choose file, the upload refused content_type_not_accepted",
-      refuse: () => chooseFileRefusedWith(new PlatformError('Unsupported Media Type', 415, 'UNSUPPORTED_MEDIA_TYPE', { reason: 'content_type_not_accepted' })),
+      press: 'Upload, the upload refused content_type_not_accepted',
+      refuse: () => uploadRefusedWith(new PlatformError('Unsupported Media Type', 415, 'UNSUPPORTED_MEDIA_TYPE', { reason: 'content_type_not_accepted' })),
       says: 'This flow does not accept that type of file.',
     },
   ])('$press says "$says", and stays', async ({ refuse, says }) => {

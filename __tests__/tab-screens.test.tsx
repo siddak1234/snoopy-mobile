@@ -453,8 +453,9 @@ describe('Workflow detail', () => {
     expect(await screen.findByTestId('manage-setup')).toBeTruthy();
     expect(screen.getByTestId('archive-flow')).toBeTruthy();
     expect(screen.getByText('Archive flow')).toBeTruthy();
-    // Its pinned version declares no run input, so there is no form to offer.
-    expect(screen.queryByText('Run')).toBeNull();
+    // Its pinned version declares no run input, so there is no form to offer: no start controls (25.8.3).
+    expect(screen.queryByTestId('start-run')).toBeNull();
+    expect(screen.queryByText('Start run')).toBeNull();
   });
 
   it("returns to the Flows list after Archive, however the flow was reached — the confirmation saying it can be unarchived later (the owner's build 12 item 4)", async () => {

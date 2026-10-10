@@ -47,6 +47,14 @@
       "expo-secure-store",
       "expo-notifications",
       [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Autom8x uses the camera to photograph a document a flow should read, such as an invoice.",
+          "microphonePermission": false,
+          "photosPermission": false
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "ios": {

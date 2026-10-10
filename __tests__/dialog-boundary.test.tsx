@@ -2,9 +2,10 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react-nativ
 import React from 'react';
 import { Text } from 'react-native';
 
-import { RunDialog } from '@/components/automations/run-dialog';
+import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import { SetupDialog } from '@/components/automations/setup-dialog';
-import { DialogBoundary } from '@/components/dialog-boundary';
+import { StartRun } from '@/components/automations/start-run';
+import { DialogBoundary, InlineBoundary } from '@/components/dialog-boundary';
 import type { SetupField } from '@/components/setup-field';
 import {
   ERROR_BODY,
@@ -14,8 +15,8 @@ import {
   errorTitleFor,
 } from '@/lib/content/screen-states';
 import type { AutomationRunInputField } from '@/lib/platform/automations';
-import { TEST_WORKSPACE, signedInSession } from '@/test/platform';
-import { renderWithProviders } from '@/test/render';
+import { TEST_WORKSPACE, flowCatalogPayload, routePlatform, signedInSession, subscriptionsPayload } from '@/test/platform';
+import { renderWithProviders, setMockParams } from '@/test/render';
 
 jest.mock('@/lib/platform/client', () => ({
   platformOperation: jest.fn(),
@@ -27,9 +28,9 @@ jest.mock('expo-document-picker', () => ({ getDocumentAsync: jest.fn() }));
 jest.mock('expo-file-system', () => ({ File: jest.fn(), Paths: { cache: {} } }));
 
 /**
- * Two children the dialogs draw, made to throw on a flag: how each dialog is
- * proved to be INSIDE its boundary, with nothing in the dialog's own code made
- * to fail. Read at render, never at module load.
+ * Two children the forms draw, made to throw on a flag: how the Setup dialog
+ * and the run's form are each proved to be INSIDE a boundary, with nothing in
+ * their own code made to fail. Read at render, never at module load.
  */
 const mockThrow = { section: false, file: false };
 jest.mock('@/components/nocturne/section-label', () => {
@@ -59,10 +60,11 @@ const { platformOperation } = jest.requireMock('@/lib/platform/client');
 
 /**
  * BUILD-PLAN 25.8.1 (Round 17, the owner's requirement 1 of 2026-10-08: no app
- * change per automation). The boundary around the Setup and Run dialogs: a
+ * change per automation). The boundary around the Setup dialog and the run's
+ * form — the Run dialog until 25.8.3, the flow page's start controls since: a
  * child that cannot be drawn ends in the failed-load words with Try again,
  * never a white screen — and a control newer than this build, the one failure
- * a new manifest could cause, is no failure at all inside either dialog: the
+ * a new manifest could cause, is no failure at all inside either form: the
  * website's text input, the note, and the typed string sent as declared.
  */
 
@@ -144,7 +146,31 @@ describe('DialogBoundary (25.8.1)', () => {
   });
 });
 
-/* ───────────────────────── the two dialogs, inside it ───────────────────────── */
+describe('InlineBoundary (25.8.3: the same words, on the page)', () => {
+  it('catches a child that throws and draws the failed card in its place — the title, the kept session and Try again, no Cancel — and Try again draws the children again', async () => {
+    broken = true;
+    await renderWithProviders(
+      <InlineBoundary title="Couldn't load this run's form">
+        <Fragile />
+      </InlineBoundary>,
+    );
+    const failed = await screen.findByTestId('form-failed');
+    expect(within(failed).getByText("Couldn't load this run's form")).toBeTruthy();
+    expect(within(failed).getByText(ERROR_BODY)).toBeTruthy();
+    expect(within(failed).getByText(TRY_AGAIN_LABEL)).toBeTruthy();
+    // Nothing was opened, so there is nothing to cancel.
+    expect(within(failed).queryByText('Cancel')).toBeNull();
+    expect(screen.queryByTestId('dialog-failed')).toBeNull();
+    expect(consoleError).toHaveBeenCalled();
+
+    broken = false;
+    await fireEvent.press(within(failed).getByText(TRY_AGAIN_LABEL));
+    expect(await screen.findByText('Drawn after all')).toBeTruthy();
+    expect(screen.queryByTestId('form-failed')).toBeNull();
+  });
+});
+
+/* ───────────────────────── the two forms, inside it ───────────────────────── */
 
 /** Every request a dialog sent: its method, path, key and body — the way automation-actions reads them. */
 let sent: { method: string; path: string; key?: string; body?: unknown }[];
@@ -173,28 +199,21 @@ const RECEIPT: AutomationRunInputField = { key: 'receipt', title: 'Receipt', des
 const WINDOW_SETTING: SetupField = { section: 'source', key: 'window', title: 'Review window', description: 'Which days to read', control: NEWER, required: true };
 const INBOX: SetupField = { section: 'source', key: 'inbox', title: 'Watch inbox', description: 'Which label to watch', control: 'resource-picker', required: true };
 
-describe('the Run dialog (25.8.1)', () => {
+describe("the run's form — the flow page's start controls since 25.8.3 (25.8.1)", () => {
   it('draws a control newer than this build as the website does — a text input with the note — and sends the typed string as declared', async () => {
     answers[`POST ${RUNS_PATH}`] = [{ run: { id: 'run-1' } }];
     const onStarted = jest.fn();
     await renderWithProviders(
-      <RunDialog
-        name="Invoice triage"
-        subscriptionId="sub-1"
-        shownWorkspaceId={TEST_WORKSPACE}
-        runInput={[WINDOW, NOTE]}
-        onClose={jest.fn()}
-        onStarted={onStarted}
-      />,
+      <StartRun subscriptionId="sub-1" shownWorkspaceId={TEST_WORKSPACE} runInput={[WINDOW, NOTE]} onStarted={onStarted} />,
       signedInSession,
     );
-    const dialog = screen.getByTestId('run-dialog');
-    expect(within(dialog).getByText('Review window')).toBeTruthy();
-    expect(within(dialog).getByText(NEWER_CONTROL_NOTE)).toBeTruthy();
+    const box = screen.getByTestId('start-run');
+    expect(within(box).getByText('Review window')).toBeTruthy();
+    expect(within(box).getByText(NEWER_CONTROL_NOTE)).toBeTruthy();
     // One note: the text field beside it is a control this build knows.
-    expect(within(dialog).getAllByText(NEWER_CONTROL_NOTE)).toHaveLength(1);
-    await fireEvent.changeText(within(dialog).getByLabelText('Review window'), 'last week');
-    await fireEvent.press(within(dialog).getByText('Start run'));
+    expect(within(box).getAllByText(NEWER_CONTROL_NOTE)).toHaveLength(1);
+    await fireEvent.changeText(within(box).getByLabelText('Review window'), 'last week');
+    await fireEvent.press(within(box).getByText('Start run'));
     await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-1'));
     expect(sent).toEqual([
       { method: 'POST', path: RUNS_PATH, key: 'intent-key', body: { subscriptionId: 'sub-1', input: { window: 'last week' } } },
@@ -202,27 +221,42 @@ describe('the Run dialog (25.8.1)', () => {
     expect(consoleError).not.toHaveBeenCalled();
   });
 
-  it("is inside its boundary: a row it cannot draw becomes the failed dialog in the run form's words, and Cancel is the dialog's own close", async () => {
+  it("is inside its boundary: a row it cannot draw becomes the failed card in the run form's words, and Try again draws the form again once it can", async () => {
     mockThrow.file = true;
-    const onClose = jest.fn();
     await renderWithProviders(
-      <RunDialog
-        name="Invoice triage"
-        subscriptionId="sub-1"
-        shownWorkspaceId={TEST_WORKSPACE}
-        runInput={[RECEIPT]}
-        onClose={onClose}
-        onStarted={jest.fn()}
-      />,
+      <StartRun subscriptionId="sub-1" shownWorkspaceId={TEST_WORKSPACE} runInput={[RECEIPT, NOTE]} onStarted={jest.fn()} />,
       signedInSession,
     );
-    const failed = await screen.findByTestId('dialog-failed');
+    const failed = await screen.findByTestId('form-failed');
     expect(within(failed).getByText(RUN_FORM_ERROR_TITLE)).toBeTruthy();
     expect(within(failed).getByText(ERROR_BODY)).toBeTruthy();
-    expect(screen.queryByTestId('run-dialog')).toBeNull();
+    // In the box's place, under its label: no Start run on a form that is not drawn.
+    expect(within(screen.getByTestId('start-run')).getByTestId('form-failed')).toBe(failed);
+    expect(screen.queryByText('Start run')).toBeNull();
     expect(sent).toEqual([]);
-    await fireEvent.press(within(failed).getByText('Cancel'));
-    expect(onClose).toHaveBeenCalledTimes(1);
+
+    mockThrow.file = false;
+    await fireEvent.press(within(failed).getByText(TRY_AGAIN_LABEL));
+    expect(await screen.findByText('Start run')).toBeTruthy();
+    expect(screen.getByTestId('run-file-receipt-photo')).toBeTruthy();
+    expect(screen.queryByTestId('form-failed')).toBeNull();
+    expect(sent).toEqual([]);
+  });
+
+  it("on the flow page, a form that cannot be drawn costs the box alone: the flow's name, its tiles, steps and actions are drawn as ever", async () => {
+    mockThrow.file = true;
+    const subscriptions = subscriptionsPayload().subscriptions.map((row) => (row.id === 'invoice' ? { ...row, runInput: [RECEIPT] } : row));
+    routePlatform(platformOperation, { '/automations': flowCatalogPayload(), '/subscriptions': { subscriptions } });
+    setMockParams({ flow: 'invoice' });
+    await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
+    expect(await screen.findByTestId('form-failed')).toBeTruthy();
+    expect(screen.getByText(RUN_FORM_ERROR_TITLE)).toBeTruthy();
+    expect(screen.getByText('Invoice triage')).toBeTruthy();
+    expect(screen.getByTestId('flow-stat-All')).toBeTruthy();
+    expect(screen.getByText('PIPELINE')).toBeTruthy();
+    expect(screen.getByText('Pause')).toBeTruthy();
+    expect(screen.getByTestId('archive-flow')).toBeTruthy();
+    expect(screen.queryByTestId('dialog-failed')).toBeNull();
   });
 });
 

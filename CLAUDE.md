@@ -1,8 +1,8 @@
 # `snoopy-mobile` — session instructions
 
-**Round 17 — four changes here (2026-10-08): 25.8.1; the app's halves of 25.2.12 and 25.2.10;
-their words and webhook key made the website's; and the release's local build (`release:ios -- --local`,
-for 25.8.2).** Round 17 opened in `snoopy-backend` on
+**Round 17 — five changes here (2026-10-08 to 2026-10-10): 25.8.1; the app's halves of 25.2.12 and 25.2.10;
+their words and webhook key made the website's; the release's local build (`release:ios -- --local`,
+for 25.8.2); and 25.8.3, the flow page's start controls with Take photo (2026-10-10).** Round 17 opened in `snoopy-backend` on
 2026-10-08 (BUILD-PLAN Phase 25, `a9e13ae`) on
 the owner's four requirements for automations; its 25.8 is this repository's one box — "A control
 the app does not know renders as the website does … `resource-picker` gets its control; an error
@@ -15,9 +15,15 @@ the webhook issue's `Idempotency-Key` (§12.1 #240) and says a run refused at a 
 build. The third is a re-entry for the owner's mobile = web parity: a review of #56, after it and
 `snoopy` #44 merged, found the two clients saying different things for the same answer, so the app
 now says the website's full-queue sentence and Run dialog lead verbatim and keeps the webhook
-issue's key through its dialog closing, as the website does — riding the same build. The record
-is DESIGN-GAPS "Round 17 — the app, once"; any further change here in Round 17 is a re-entry the
-owner approves (MASTER-PLAN §4), and §0.1 names this repository for 25.8.
+issue's key through its dialog closing, as the website does — riding the same build. The fifth is
+25.8.3, added 2026-10-09 for the first automation (Invoice Processing, 25.7.2) and approved by the
+owner ("i like the suggested lets do that"): the run's fields and Start run at the top of the flow
+page in place of the Run button and its dialog, inside the same boundary's words, and a file field
+offering Take photo beside Upload — every image re-encoded once with `expo-image-manipulator`
+(upright, its long side at most 2,576 px, a JPEG at 0.9), the pickers held to a PDF, a JPEG or a PNG
+(the owner's decision 1 of 2026-10-10); it rides 25.8.4's build. The record is DESIGN-GAPS "Round
+17 — the app, once"; any further change here in Round 17 is a re-entry the owner approves
+(MASTER-PLAN §4), and §0.1 names this repository for 25.8.
 
 **Round 16 CLOSED 2026-10-07** — Gate 24 re-run by command by a fresh `snoopy-backend` session that wrote none of it; its record here is DESIGN-GAPS "Build 16: the owner's device pass, and Round 16's close". Open from 2026-09-29 (BUILD-PLAN Phase 24, ADR-0032): the mobile app offers
 every signed-in feature the website offers, on the same published operations,
