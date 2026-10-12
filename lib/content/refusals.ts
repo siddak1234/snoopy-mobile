@@ -165,7 +165,13 @@ export const RUN_REFUSALS: Readonly<Record<string, string>> = {
 export const FLOW_QUEUE_FULL =
   'This flow is busy and its queue is full, so the run was not started. Try again once one of its runs has ended.';
 
-/** A file for a run (FR-14): opening the upload, and completing it. */
+/**
+ * A file for a run (FR-14): opening the upload, and completing it. Since the
+ * platform measures a file when its upload is sealed (backend BUILD-PLAN 25.2.28),
+ * a flow that declares page or pixel limits refuses one that breaks them, or one
+ * that is not what it says, before any run exists: the last five reasons. The
+ * website's sentences, verbatim (`snoopy/app/account/flows/upload-refusals.ts`).
+ */
 export const UPLOAD_REFUSALS: Readonly<Record<string, string>> = {
   content_type_not_accepted: 'This flow does not accept that type of file.',
   file_too_large: 'The file is larger than this flow accepts.',
@@ -174,7 +180,46 @@ export const UPLOAD_REFUSALS: Readonly<Record<string, string>> = {
   session_expired: 'The upload took too long. Choose the file again.',
   no_object: 'The file did not arrive. Choose it again.',
   too_large: 'The file is larger than this flow accepts.',
+  file_too_many_pages: 'This PDF has more pages than this flow reads.',
+  file_image_too_large: 'This image is larger than this flow takes.',
+  file_content_mismatch: "This file's contents don't match its type. Choose the original file again.",
+  file_encrypted: 'This PDF is password-protected. Remove the password and upload it again.',
+  file_unreadable: 'This file could not be read. Choose it again, or try another copy.',
 };
+
+/** A whole number from a refusal's details — the platform sends each as a string of digits — or nothing. */
+function wholeNumber(details: Record<string, unknown> | undefined, key: string): string | undefined {
+  const value = details?.[key];
+  if (typeof value === 'string' && /^[0-9]{1,9}$/u.test(value)) return String(Number(value));
+  if (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0) return String(value);
+  return undefined;
+}
+
+/**
+ * The words for a refused upload. The two measured refusals say their numbers
+ * when the platform sends them as whole numbers; a value that is not one is
+ * never shown, and the sentence without numbers is said instead, as on the
+ * website. A reason not named here keeps the platform's own words.
+ */
+export function uploadRefusalMessage(error: unknown, fallback: string): string {
+  if (error instanceof PlatformError) {
+    const details = error.details;
+    if (details?.reason === 'file_too_many_pages') {
+      const pages = wholeNumber(details, 'pageCount');
+      const most = wholeNumber(details, 'maximumPdfPages');
+      if (pages && most) return `This PDF has ${pages} pages. This flow reads at most ${most}.`;
+    }
+    if (details?.reason === 'file_image_too_large') {
+      const width = wholeNumber(details, 'widthPixels');
+      const height = wholeNumber(details, 'heightPixels');
+      const most = wholeNumber(details, 'maximumImageSidePixels');
+      if (width && height && most) {
+        return `This image is ${width} × ${height} pixels. This flow takes images up to ${most} pixels on a side.`;
+      }
+    }
+  }
+  return refusalMessage(error, UPLOAD_REFUSALS, fallback);
+}
 
 /**
  * Activate, for a flow the workspace came to hold since Setup read its flows —

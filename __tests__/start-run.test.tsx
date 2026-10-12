@@ -551,6 +551,69 @@ describe('a run\'s file field: Take photo beside Upload (25.8.3; the owner\'s de
   });
 
   it.each([
+    [
+      'a PDF over the flow\'s page limit, in its numbers',
+      'invoice.pdf',
+      'application/pdf',
+      { reason: 'file_too_many_pages', pageCount: '14', maximumPdfPages: '10' },
+      'This PDF has 14 pages. This flow reads at most 10.',
+    ],
+    [
+      'an image over the flow\'s pixel limit, in its numbers',
+      'scan.png',
+      'image/png',
+      { reason: 'file_image_too_large', widthPixels: '9000', heightPixels: '120', maximumImageSidePixels: '8000' },
+      'This image is 9000 × 120 pixels. This flow takes images up to 8000 pixels on a side.',
+    ],
+    [
+      'a PDF over the page limit with a count that is not a whole number, never shown',
+      'invoice.pdf',
+      'application/pdf',
+      { reason: 'file_too_many_pages', pageCount: '1e3', maximumPdfPages: '10' },
+      'This PDF has more pages than this flow reads.',
+    ],
+    [
+      'a file unlike its type',
+      'invoice.pdf',
+      'application/pdf',
+      { reason: 'file_content_mismatch' },
+      "This file's contents don't match its type. Choose the original file again.",
+    ],
+    [
+      'a password-protected PDF',
+      'invoice.pdf',
+      'application/pdf',
+      { reason: 'file_encrypted' },
+      'This PDF is password-protected. Remove the password and upload it again.',
+    ],
+    [
+      'a file the platform could not read',
+      'invoice.pdf',
+      'application/pdf',
+      { reason: 'file_unreadable' },
+      'This file could not be read. Choose it again, or try another copy.',
+    ],
+  ])('says %s, refused when its upload is sealed (backend BUILD-PLAN 25.2.28), and holds no file', async (_what, name, mimeType, details, says) => {
+    manipulator(1600, 1200);
+    pickerGives(name, mimeType);
+    filesOf(4096);
+    answer(`POST ${UPLOADS_PATH}`, () => ({
+      uploadSessionId: 'upload-1',
+      uploadUrl: 'https://store.example.test/put',
+      expiresAt: '2026-10-10T12:00:00Z',
+      maximumSizeBytes: 10_000_000,
+    }));
+    answer(`POST ${COMPLETE_PATH}`, () => {
+      throw new PlatformError('Bad Request', 400, 'BAD_REQUEST', details);
+    });
+    await renderBox([RECEIPT]);
+    await fireEvent.press(screen.getByTestId('run-file-receipt-upload'));
+    expect(await screen.findByText(says)).toBeTruthy();
+    expect(screen.queryByText(/^Ready:/)).toBeNull();
+    expect(sent.filter((request) => request.path === COMPLETE_PATH)).toHaveLength(1);
+  });
+
+  it.each([
     ['a PNG chosen by Upload', 'statement.png', 'image/png', 'statement.jpg'],
     ['a JPEG chosen by Upload', 'receipt.jpeg', 'image/jpeg', 'receipt.jpg'],
     ['an image chosen by Upload that the picker could not type, known by its name', 'scan.PNG', undefined, 'scan.jpg'],
