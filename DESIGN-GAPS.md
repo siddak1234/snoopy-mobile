@@ -3642,3 +3642,48 @@ jest run executes.
 | B21 · The photo library off (`app.json:54`) | the line removed (Expo's default) | `app-config` the same |
 | B22 · The camera's own sentence (`app.json:52`) | the line removed (Expo's generic words) | `app-config` the same |
 | B23 · Take photo is offered beside Upload (`run-file-field.tsx:182-189`) | Take photo not drawn | `start-run` "offers both…", the two "takes a photo…", "asks for the camera…", "keeps what the field held…", "are refused in words…"; `dialog-boundary` the start controls' "is inside its boundary…" |
+
+### The contract from `bf06166`, live with the TWENTY-NINTH promotion, and the five upload refusals in words (Round 17; 2026-10-12)
+
+Bills & Receipts' platform half (backend BUILD-PLAN 25.2.17–25.2.33, `snoopy-backend` #197–#200 at
+`bf06166`) reached production with the TWENTY-NINTH promotion, read back 2026-10-12 06:20:31Z. Run
+against `c721984`, whose `snoopy-backend/docs/openapi/automations.yaml` is `bf06166`'s,
+`npm run generate:platform-contracts` changed `lib/generated/platform-contracts/automations.d.ts`
+only: sha256 `62201275…`, was `69a65b05…`, and descriptions alone — the upload's completion
+measures a file at seal and names five refusals, the two measured ones with their numbers in
+`details`; the model callback sends the run's own file, asks one model per attempt and may leave
+out a model's maker (`excludeModelAuthors`, `no_model_left`); the `artifact` callback's answer
+carries the file's measurements. No path, schema or status the app reads changed; `platform.d.ts`
+and `connections.d.ts` stay `93fd335c…` and `ab70cb0f…`. `scripts/release-ios.sh` refuses a build
+whose contract differs from production's, so this lands before 25.8.4's build.
+
+**The five refusals in words** (backend 25.2.28, its finding for this repository: "each shows its
+problem's title, 'Bad Request'"). A flow that limits a PDF's pages or an image's sides refuses,
+at the upload's completion, a file over either, unlike its declared type, password-protected or
+unreadable: `file_too_many_pages`, `file_image_too_large`, `file_content_mismatch`,
+`file_encrypted` and `file_unreadable`. `UPLOAD_REFUSALS` (`lib/content/refusals.ts`) names
+them in the website's sentences, verbatim (`snoopy/app/account/flows/upload-refusals.ts`), and
+`uploadRefusalMessage` says the two measured ones with their numbers when the platform sends
+them as whole numbers — a value that is not one is never shown, and the sentence without
+numbers is said instead, the website's rule. The file field says every refused upload through
+it (`components/automations/run-file-field.tsx`). Tests: `__tests__/upload-refusals.test.ts`
+(the sentences, the numbers, the rule, every named reason, the list), and six cases in
+`__tests__/start-run.test.tsx` — each refusal at the upload's completion, its sentence drawn and
+no file held.
+
+### Guards proved to bite, the five upload refusals
+
+Five runs by one script (`c29/bites.py` in the session's scratchpad, with its rows and results
+beside it) on this branch's tree: the clean tree first — `__tests__/upload-refusals.test.ts` and
+`__tests__/start-run.test.tsx`, 62 tests, all passing — then each run made one exact edit, ran
+the same two suites, restored the file from a copy saved before the edit and compared its
+SHA-256 equal. Every break failed the tests named and nothing else; `git status --porcelain`
+matched the intended changes after the last restore.
+
+| Guard | Broken by | Tests that failed |
+| --- | --- | --- |
+| U1 · The measured reasons are named (`UPLOAD_REFUSALS`, `lib/content/refusals.ts`) | `file_too_many_pages` removed | `upload-refusals` "never shows a page count that is not a whole number" (all seven values), "names the five reasons…"; `start-run` "says a PDF over the page limit with a count that is not a whole number…" |
+| U2 · A PDF's page numbers are said (`uploadRefusalMessage`) | the numbered sentence skipped | `upload-refusals` "names a measured file's numbers…"; `start-run` "says a PDF over the flow's page limit, in its numbers…" |
+| U3 · An image's numbers are said (`uploadRefusalMessage`) | the numbered sentence skipped | `upload-refusals` "names a measured file's numbers…"; `start-run` "says an image over the flow's pixel limit, in its numbers…" |
+| U4 · A number that is not whole is never shown (`wholeNumber`) | any text taken as a number | `upload-refusals` "never shows a page count that is not a whole number" ("14 pages", "-3", "1e3", "<b>14</b>", …) |
+| U5 · The file field says the upload's words (`components/automations/run-file-field.tsx`) | the error's own message shown | `start-run` the six "says … refused when its upload is sealed…" |

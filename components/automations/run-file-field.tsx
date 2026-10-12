@@ -9,7 +9,7 @@ import { Pressable } from '@/components/pressable';
 import { fonts, status, typeScale, withAlpha } from '@/constants/theme';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
-import { UPLOAD_REFUSALS, WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
+import { WORKSPACE_CHANGED, uploadRefusalMessage } from '@/lib/content/refusals';
 import { CAMERA_NOT_OPENED, CAMERA_OFF, TAKE_PHOTO_LABEL, UPLOAD_LABEL } from '@/lib/content/screen-states';
 import type { AutomationRunInputField } from '@/lib/platform/automations';
 import { sendRunFile, type ChosenFile } from '@/lib/platform/run-file';
@@ -147,7 +147,7 @@ export function RunFileField({
     } catch (failure) {
       if (sending.signal.aborted) return;
       setState({ kind: 'empty' });
-      setError(refusalMessage(failure, UPLOAD_REFUSALS, 'The file could not be sent.'));
+      setError(uploadRefusalMessage(failure, 'The file could not be sent.'));
     } finally {
       if (inFlight.current === sending) {
         inFlight.current = null;
