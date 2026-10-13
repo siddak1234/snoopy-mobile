@@ -2,6 +2,7 @@ import { PlayCircle } from 'phosphor-react-native';
 import React, { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { AiConsentDialog } from '@/components/automations/ai-consent-dialog';
 import { RunFileField } from '@/components/automations/run-file-field';
 import { InlineBoundary } from '@/components/dialog-boundary';
 import { PillButton } from '@/components/nocturne/pill-button';
@@ -14,6 +15,7 @@ import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { WORKSPACE_CHANGED, runRefusal } from '@/lib/content/refusals';
 import { RUN_FORM_ERROR_TITLE } from '@/lib/content/screen-states';
+import { readAiConsent, writeAiConsent } from '@/lib/platform/ai-consent-store';
 import { createRun, type AutomationRunInputField, type Subscription } from '@/lib/platform/automations';
 import type { CatalogEntry } from '@/lib/platform/catalog';
 
@@ -52,6 +54,9 @@ export function canStartRun(subscription: Subscription, entry: CatalogEntry | un
  * Each start leaves the box fresh for the next run: the form is drawn anew —
  * the declared defaults, empty file fields and a new idempotency key — as the
  * dialog was by opening again.
+ *
+ * A run that carries a file asks the person first, once on this phone, before
+ * AI reads the file (`AiConsentDialog`, Apple's Guideline 5.1.2(i)).
  */
 export function StartRun({ subscriptionId, shownWorkspaceId, runInput, onStarted }: StartRunProps) {
   const { palette } = useTheme();
@@ -84,10 +89,13 @@ export function StartRun({ subscriptionId, shownWorkspaceId, runInput, onStarted
  * The form: the declared defaults, a key renewed whenever a value changes — so
  * only a resubmission of the same values, after a lost answer, reuses it and
  * the platform returns the run it already started instead of starting a second
- * — and Start run held while a file is uploading.
+ * — and Start run held while a file is uploading, or while the consent before
+ * AI reads the run's file is open.
  */
 function StartRunForm({ subscriptionId, shownWorkspaceId, runInput, onStarted }: StartRunProps) {
   const session = useSession();
+  // The person whose consent to AI reading a run's file is asked for and kept on this phone.
+  const userId = session.status === 'signed-in' ? session.session.user.userId : null;
   const keys = useIntentKeys('run');
   const [values, setValues] = useState<Record<string, unknown>>(() => declaredDefaults(runInput));
   const [uploading, setUploading] = useState<ReadonlySet<string>>(() => new Set());
@@ -95,6 +103,8 @@ function StartRunForm({ subscriptionId, shownWorkspaceId, runInput, onStarted }:
   const [fileRound, setFileRound] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // The consent is open: no run starts until it is answered.
+  const [asking, setAsking] = useState(false);
 
   const change = useCallback(
     (key: string, value: unknown) => {
@@ -113,14 +123,13 @@ function StartRunForm({ subscriptionId, shownWorkspaceId, runInput, onStarted }:
     });
   }, []);
 
-  const start = async () => {
-    if (busy || uploading.size > 0) return;
+  /** The run, with what the form holds — what Start run sent before the consent, unchanged. */
+  const begin = async () => {
     const workspaceId = workspaceIfShown(session, shownWorkspaceId);
     if (!workspaceId) {
       setError(WORKSPACE_CHANGED);
       return;
     }
-    setBusy(true);
     setError(null);
     try {
       const { run } = await createRun(workspaceId, subscriptionId, keys.keyFor(), declaredValues(runInput, values));
@@ -136,6 +145,40 @@ function StartRunForm({ subscriptionId, shownWorkspaceId, runInput, onStarted }:
         setFileRound((round) => round + 1);
         keys.settle();
       }
+    }
+  };
+
+  /**
+   * Start run. A run that carries a file asks first, once per person on this
+   * phone, before AI reads the file (`AiConsentDialog`; Apple's Guideline
+   * 5.1.2(i)): the catalog does not say which flows have AI read their files,
+   * so every file asks. A consent the Keychain cannot read is none — asked,
+   * never assumed. A run without a file starts as it always did.
+   */
+  const start = async () => {
+    if (busy || asking || uploading.size > 0) return;
+    setBusy(true);
+    try {
+      if (carriesFile(runInput, values) && !(await readAiConsent(userId))) {
+        setAsking(true);
+        return;
+      }
+      await begin();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /**
+   * "Agree and start": the consent kept for this person on this phone, then the
+   * run. One that could not be kept still starts this run; the next one asks again.
+   */
+  const agree = async () => {
+    setAsking(false);
+    setBusy(true);
+    try {
+      await writeAiConsent(userId);
+      await begin();
     } finally {
       setBusy(false);
     }
@@ -181,12 +224,19 @@ function StartRunForm({ subscriptionId, shownWorkspaceId, runInput, onStarted }:
         fontSize={typeScale.label.fontSize}
         icon={PlayCircle}
         iconSize={16}
-        disabled={busy || uploading.size > 0}
+        disabled={busy || asking || uploading.size > 0}
         style={styles.start}
         onPress={start}
       />
+      {asking ? <AiConsentDialog onAgree={agree} onCancel={() => setAsking(false)} /> : null}
     </>
   );
+}
+
+/** Whether the run's input carries a file: a file field holding the id of the one given, as `declaredValues` sends it. */
+function carriesFile(runInput: AutomationRunInputField[], values: Record<string, unknown>): boolean {
+  const input = declaredValues(runInput, values);
+  return runInput.some((field) => field.control === 'artifact' && field.key in input);
 }
 
 /** Each field starts at the default its manifest declares; a file has none. */

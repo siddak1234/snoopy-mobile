@@ -308,7 +308,17 @@ review" — the held queue — also list running, queued and cancelled runs.
     uploads when given: `openUpload` for the file's size on disk, then the
     bytes are read and must be exactly that many, then the credential-less
     `PUT` to the signed URL with the type it was opened for, and
-    `completeUpload`; the run's input carries only the file's id.
+    `completeUpload`; the run's input carries only the file's id. **A run
+    that carries a file asks first** (Round 17; Apple's App Review Guideline
+    5.1.2(i)): "AI reads this file", naming OpenRouter and linking the Privacy
+    Policy, in words kept in one module for the website to say byte for byte
+    (`lib/content/ai-consent.ts`) — once per person on this phone and per
+    version of the words, kept in the Keychain this-device-only
+    (`lib/platform/ai-consent-store.ts`). The catalog does not say which flows
+    have AI read a file, so any file asks. A Keychain that cannot be read asks;
+    a consent that cannot be kept still starts its run and is asked for again
+    next time. Cancel starts and keeps nothing, the form as it was; Start run
+    is held while it is open; a run without a file never asks.
   - Set up: patch `config` only; going live stays its own action.
   - Go live: offered only with no unmet connection and an available
     automation. Detail shows the status as read; the Flows list shows the

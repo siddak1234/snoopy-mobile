@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { pressed } from '@/components/pressable';
 import { em, fonts, layout, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { websiteOrigin } from '@/lib/platform/native-auth';
@@ -36,7 +37,7 @@ export default function AccountDeletedScreen() {
               style={styles.link}
               accessibilityRole="link"
               testID="account-deleted-privacy"
-              onPress={() => void Linking.openURL(`${site}/privacy`)}>
+              onPress={pressed(() => void Linking.openURL(`${site}/privacy`))}>
               Privacy Policy
             </Text>
           ) : (

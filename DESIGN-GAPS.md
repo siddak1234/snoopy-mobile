@@ -1759,7 +1759,7 @@ Back and the inbox's own were already held.
 **A dialog's Cancel or Close (table-driven).** Configured: the dialog closes, nothing is
 sent — no change and no read — and nothing navigates; a Cancel on a dialog's second step
 returns to its first. One table, `presses-patterns-dialog-close:501`, a row per dialog
-(`:N` below); three are held in the feature files.
+(`:N` below); four are held in the feature files.
 
 | Press | Test |
 | --- | --- |
@@ -1785,6 +1785,7 @@ returns to its first. One table, `presses-patterns-dialog-close:501`, a row per 
 | `automation-actions.tsx:189` — Webhook address › Close | `:406` |
 | `automation-actions.tsx:200` — Archive flow › Cancel | `:418` |
 | `move-version.tsx:145` — Move to vN › Cancel | `:428` |
+| `start-run.tsx:231` — AI reads this file › Cancel (Round 17, Apple 5.1.2(i)): nothing started and nothing kept, the note and the file as they were, and the next Start run asks again | `start-run:972` |
 | `(home)/run.tsx:288` — Cancel this run? › Keep it running | `presses-home-activity:107` |
 | `connections-card.tsx:228` — Connect › Cancel | `:438` |
 | `connections-card.tsx:223` — Replace account? › Cancel | `:449` |
@@ -1863,9 +1864,11 @@ returns to its first. One table, `presses-patterns-dialog-close:501`, a row per 
 | `automation-actions.tsx:204` — Archive | PATCH `{status: 'archived'}`, then the Flows list | `automation-actions:186`, `tab-screens:405` |
 | `move-version.tsx:118` — Move to vN | its confirmation | `automation-actions:157` |
 | `move-version.tsx:156` — Move to vN (confirm) | PATCH `{templateVersion}`; refusals in words | `automation-actions:157`, `automation-actions:171` |
-| `start-run.tsx:186` — Start run, the flow page's start controls (25.8.3; ~~`run-dialog.tsx:117`, in the Run dialog~~) | POST runs `{subscriptionId, input}` with the declared values, its key kept for a resubmission and renewed by a change; the run's page; the box drawn anew — the defaults, the files emptied, a new key; held while a file uploads; refusals in words, `artifact_unavailable` emptying the files; refused, and nothing sent, once another workspace is active | `start-run:292`, `start-run:339`, `start-run:366`, `start-run:384`, `start-run:397`, `start-run:421`, `start-run:434`, `start-run:471`, `start-run:495`, `presses-flows:431`, `dialog-boundary:203` |
-| `run-file-field.tsx:188` — Take photo (25.8.3) | the camera asked for at the press, images only; refused, a sentence in the field and nothing opened; the photo re-encoded once — upright, its long side at most 2,576 px, a JPEG at 0.9 — and uploaded as `image/jpeg`, `photo.jpg`; the run carries its id; a camera that cannot open says so; refused, and nothing asked, once another workspace is active | `start-run:596`, `start-run:634`, `start-run:651`, `start-run:495` |
-| `run-file-field.tsx:196` — Upload (25.8.3; ~~`run-file-field.tsx:142` — Choose file~~) | the document picker, held to a PDF, a JPEG or a PNG; a PDF uploaded as it is, an image re-encoded once and uploaded as `image/jpeg` under a `.jpg` name; the run carries its id; an image that cannot be re-encoded is not sent; a refusal in words | `start-run:523`, `start-run:538`, `start-run:553`, `start-run:579`, `start-run:669`, `start-run:434`, `presses-flows:599` |
+| `start-run.tsx:229` — Start run, the flow page's start controls (25.8.3; ~~`run-dialog.tsx:117`, in the Run dialog~~) | POST runs `{subscriptionId, input}` with the declared values, its key kept for a resubmission and renewed by a change; the run's page; the box drawn anew — the defaults, the files emptied, a new key; held while a file uploads; refusals in words, `artifact_unavailable` emptying the files; refused, and nothing sent, once another workspace is active. A run that carries a file asks first, AI reads this file, once per person on this phone and version of its words (Round 17, Apple 5.1.2(i)) — held while it is open, asked when the Keychain cannot be read; a run without a file never asks | `start-run:337`, `start-run:384`, `start-run:411`, `start-run:429`, `start-run:442`, `start-run:466`, `start-run:479`, `start-run:516`, `start-run:540`, `start-run:908`, `start-run:929`, `start-run:991`, `start-run:1006`, `start-run:1015`, `presses-flows:431`, `dialog-boundary:203` |
+| `run-file-field.tsx:188` — Take photo (25.8.3) | the camera asked for at the press, images only; refused, a sentence in the field and nothing opened; the photo re-encoded once — upright, its long side at most 2,576 px, a JPEG at 0.9 — and uploaded as `image/jpeg`, `photo.jpg`; the run carries its id; a camera that cannot open says so; refused, and nothing asked, once another workspace is active | `start-run:704`, `start-run:742`, `start-run:759`, `start-run:540` |
+| `run-file-field.tsx:196` — Upload (25.8.3; ~~`run-file-field.tsx:142` — Choose file~~) | the document picker, held to a PDF, a JPEG or a PNG; a PDF uploaded as it is, an image re-encoded once and uploaded as `image/jpeg` under a `.jpg` name; the run carries its id; an image that cannot be re-encoded is not sent; a refusal in words | `start-run:568`, `start-run:583`, `start-run:661`, `start-run:687`, `start-run:777`, `start-run:479`, `presses-flows:599` |
+| `start-run.tsx:231` — AI reads this file › Agree and start (Round 17, Apple 5.1.2(i)) | keeps the consent — `agreed` under `autom8x.ai-consent.v{version}.{userId}`, this-device-only — before the run is sent, then POSTs the run, once; the next run with a file is not asked; a consent that cannot be kept still starts the run, and the next asks again | `start-run:943`, `start-run:991`, `start-run:1027` |
+| `ai-consent-dialog.tsx:48` — Privacy Policy, in AI reads this file (Round 17) | opens the website's `/privacy`; the dialog stays, nothing started or kept; plain words, no press, without the website's origin | `start-run:1041`, `start-run:1051` |
 | `setup-dialog.tsx:75` — Save setup | PATCH `{config}` only | `automation-actions:480` |
 | `dialog-boundary.tsx:65` — Cancel, on the failed dialog (Round 17, 25.8.1) | closes: the dialog's own `onClose`, the caller's; nothing sent | `dialog-boundary:90` |
 | `dialog-boundary.tsx:66` — Try again, on the failed dialog (Round 17, 25.8.1) | draws the dialog again: a child that no longer throws is shown, one that still throws fails to the same words; nothing sent | `dialog-boundary:109`, `dialog-boundary:123`, `dialog-boundary:292` |
@@ -1946,7 +1949,8 @@ returns to its first. One table, `presses-patterns-dialog-close:501`, a row per 
 | `(auth)/login.tsx:167` — Unlock with Face ID | opens the lock | `auth-screens:86` |
 | `(auth)/faceid-offer.tsx:98, :101` — Use Face ID; Not now | checks Face ID, records yes, opens Home; records no, opens Home | `faceid-offer:27`, `faceid-offer:36` |
 | `(auth)/faceid.tsx:181` — Use identity provider | signs this phone out, then the cover | `faceid-screen:70`, `real-router/sign-out:234` |
-| `(auth)/account-deleted.tsx:30` — Continue | the cover | `real-router/sign-out:181` |
+| `(auth)/account-deleted.tsx:49` — Continue | the cover | `real-router/sign-out:181` |
+| `(auth)/account-deleted.tsx:40` — Privacy Policy (Round 17, backend 25.7.4; through `pressed()` since the consent) | opens the website's `/privacy` | `account-deleted:35` |
 | `text-field.tsx:76` — Show / Hide password | shows or hides it | `components:223` |
 | `picker-dialog.tsx:39` — a row (no screen draws PickerDialog since build 8) | picks that row's value; the picker closes | `presses-close:51` |
 
@@ -3687,3 +3691,161 @@ matched the intended changes after the last restore.
 | U3 · An image's numbers are said (`uploadRefusalMessage`) | the numbered sentence skipped | `upload-refusals` "names a measured file's numbers…"; `start-run` "says an image over the flow's pixel limit, in its numbers…" |
 | U4 · A number that is not whole is never shown (`wholeNumber`) | any text taken as a number | `upload-refusals` "never shows a page count that is not a whole number" ("14 pages", "-3", "1e3", "<b>14</b>", …) |
 | U5 · The file field says the upload's words (`components/automations/run-file-field.tsx`) | the error's own message shown | `start-run` the six "says … refused when its upload is sealed…" |
+
+### The consent before AI reads a run's file (Round 17; 2026-10-13)
+
+Apple's App Review Guideline 5.1.2(i): "You must clearly disclose where personal data will be
+shared with third parties, including with third-party AI, and obtain explicit permission before
+doing so." Bills & Receipts sends the file given to its run to OpenRouter, which passes it to an AI
+model's provider (the Privacy Policy's "Documents read by AI",
+`snoopy/app/(marketing)/privacy/page.tsx:129` at `b749b84`). The website's privacy re-check
+recorded this app's half as its item 7 — "A one-time consent before a document first goes to AI,
+naming OpenRouter and its model providers and linking this policy" — due with the OpenRouter key
+(backend 25.7.1), since this app already starts a run with a file for any flow in the catalog
+(`snoopy/docs/audits/2026-08-11-round-5-phase-1-status.md:2732-2744`, `b749b84`). The words, the
+gate and the store below were set for this change; nothing here records them as the owner's.
+
+**What was read, by command, before the change** (this branch at `c6574ef`):
+
+- One place starts a run: `StartRunForm`'s `start` (`components/automations/start-run.tsx:116-142`)
+  POSTs `declaredValues(runInput, values)`, and a file field's value is the id of the file uploaded
+  to the platform's store when it was given (`components/automations/run-file-field.tsx:133-157`).
+  The file reaches a model only when a run of a flow that has AI read it runs.
+- The catalog does not say which flows have AI read a file: `AutomationCatalogEntry`
+  (`lib/generated/platform-contracts/automations.d.ts:448-473`) carries no required capabilities,
+  and a declared step's `kicker` ("AI STEP") is the manifest's label for drawing the step, not where
+  a file goes. So the gate is a run whose input carries a file.
+- A question before an action is the shared `Dialog` (`components/dialog.tsx`): Sign out asks
+  through `ConfirmDialog` (`app/(tabs)/settings/index.tsx:324-335`), whose body is one string
+  (`components/confirm-dialog.tsx:29`); Delete account through `Dialog` itself, its second
+  paragraph a `DialogText` under the body (`app/(tabs)/settings/account.tsx:298-321`) — Cancel
+  first, the way on last. A line holding a link needs the second form.
+- The Keychain is the app's one store: `lib/platform/appearance-store.ts` keeps the appearance with
+  `WHEN_UNLOCKED_THIS_DEVICE_ONLY`, a read that fails answering the default and a write that fails
+  swallowed. The person is `session.user.userId`, a UUID
+  (`lib/generated/platform-contracts/platform.d.ts:1539-1540`), as `app/_layout.tsx:139` and
+  `app/(tabs)/settings/team.tsx:59` read it; a SecureStore key takes letters, digits, `.`, `-` and
+  `_` (`node_modules/expo-secure-store/build/SecureStore.js:151-153`), which a UUID is.
+- `npm run audit:haptics` failed on this branch as committed — "app/(auth)/account-deleted.tsx:39:
+  onPress on <Text> is not pressed(…)", `c6574ef`'s Privacy Policy link — so `npm run verify`
+  failed at `c6574ef`.
+
+**What changed:**
+
+1. **The words, in one module** — `lib/content/ai-consent.ts`, for the website to say byte for
+   byte: `AI_CONSENT_TITLE` "AI reads this file"; `AI_CONSENT_BODY` "To read the file you give this
+   run, Autom8x sends it to OpenRouter, which passes it to an AI model provider in the United
+   States, using only endpoints that OpenRouter lists as zero data retention."; `AI_CONSENT_POLICY`,
+   the second line around its link, "Our Privacy Policy names the providers and explains what may
+   be kept."; `AI_CONSENT_AGREE` "Agree and start" and `AI_CONSENT_CANCEL` "Cancel"; and
+   `AI_CONSENT_VERSION`, 1, which names them. `audit:vocabulary` scans them.
+2. **Kept once per person on this phone, per version** — `lib/platform/ai-consent-store.ts`, as
+   `appearance-store` keeps the appearance: `expo-secure-store`, `WHEN_UNLOCKED_THIS_DEVICE_ONLY`
+   (`:19-21`), the value `agreed` under `autom8x.ai-consent.v{version}.{userId}` (`aiConsentKey`,
+   `:26-28`). Another person on this phone, or words of a new version, find no key and are asked. A
+   read that fails is no consent (`readAiConsent`, `:30-37`); a write that fails is swallowed
+   (`writeAiConsent`, `:39-46`), so the run it was given for starts and the next run asks again.
+   Nothing clears it: it is the person's on this phone, so a sign-out leaves it.
+3. **The dialog** — `components/automations/ai-consent-dialog.tsx`, `AiConsentDialog`: the shared
+   `Dialog` as Delete account draws it — the title, the body, the second line a `DialogText`, then
+   Cancel and "Agree and start" in the accent (agreeing removes nothing, so not red). "Privacy
+   Policy" opens `${websiteOrigin()}/privacy` through `pressed()` (`:48`) where the origin is known,
+   and is plain words where it is not, as Account deleted's link is. Closing it any other way
+   (Android's back) is Cancel. Mounted only while open; not a Nocturne primitive.
+4. **Asked by Start run** — `components/automations/start-run.tsx`: `start` (`:158-170`) reads the
+   consent only when `carriesFile` (`:237-240`) — a file field holding an id in what
+   `declaredValues` sends — and, none kept, opens the dialog and starts nothing (`asking`, `:107`).
+   Start run is held while it is open (`:159`, `:227`). Cancel (`:231`) closes it: no run, nothing
+   kept, the form as it was. "Agree and start" (`agree`, `:176-185`) keeps the consent, then
+   `begin` (`:127-150`) — the request Start run sent before, unchanged: the workspace check,
+   `createRun` with the form's key, the refusals. A run without a file never reads the Keychain.
+5. **Account deleted's link ticks** — `app/(auth)/account-deleted.tsx:40`: its press goes through
+   `pressed()`, as every host `Text` press does (build 11, D7), which `audit:haptics` requires.
+   Nothing else on that screen moved.
+6. **Tests** — `__tests__/start-run.test.tsx`, eleven new (`:851-1059`): asked on the first Start
+   run with a file, in its words, the Keychain read for this person and version, Start run held
+   behind it (`:908`); never asked, nor the Keychain read, for a run with no file field or with its
+   file field left empty (`:929`, two cases); Agree and start keeps `agreed` under the key,
+   this-device-only, before the run is sent, starts it once, and the next run with a file is not
+   asked (`:943`); Cancel starts and keeps nothing, the note and the file as they were, and the
+   next Start run asks again (`:972`); another person on the phone is asked (`:991`); a consent to
+   the words before these is none (`:1006`); a Keychain that cannot be read asks (`:1015`); a
+   consent that cannot be kept still starts the run, and the next asks (`:1027`); Privacy Policy
+   opens the website's `/privacy`, the dialog staying (`:1041`), and is plain words without the
+   origin (`:1051`). The words are written out in the test, not imported, so a change to them
+   fails it. The file's keychain mock keeps this person's consent from each test's start, so its
+   three tests that start a run with a file — `:479`, `:516`, `:704` — run as before; the
+   consent's own tests start with none. The 80 snapshots did not move.
+7. **Records** — the press register above: Start run's row says the consent; rows for Agree and
+   start, Cancel (held in the feature file, as Keep it running is) and the two Privacy Policy
+   links, the consent's and Account deleted's; Start run's, Take photo's and Upload's tests and
+   Account deleted's Continue at today's lines (the test file's new mocks moved every line of it).
+   `DESIGN-CONTRACT.md`'s Run bullet says the consent.
+
+**The gate**, on this tree, inside the session's gate lock: `CI=1 npm run verify` exit 0 — lint,
+typecheck, the seven audits, the contract check against `snoopy-backend` `62284de`'s documents
+(`SNOOPY_BACKEND_ROOT`; "Generated platform types are current."), 90 suites / 1,274 tests (1,273
+passed; one skipped, `repo-facts`' schema check, the backend not checked out beside this worktree)
+/ 80 snapshots across the two jest projects, eleven of the tests added here — and the press audit
+green: 296 presses, every one run by a test, 44 passthroughs audited at their callers (the
+dialog's Cancel and Agree and start, audited where `start-run.tsx:231` gives them). `npm run
+audit:dependencies` exit 0 (61 advisories, 19 moderate and 42 high, none critical; `package.json`
+and the lockfile untouched). Nothing regenerated, no native build made.
+
+**Not done, said so.**
+
+- The upload is not gated: a file goes to the platform's store when it is given, as before, and the
+  consent is asked when the run that hands it to AI starts — the gate set for this change.
+- Every run with a file asks, a flow whose file no AI reads included: the catalog cannot say which.
+- The consent lives on the phone only: each phone asks once, the platform keeps no record of it,
+  and the website asks for itself (below). The app has no control to withdraw it.
+- After an account deletion the item stays in the Keychain under the deleted account's id; nothing
+  reads it.
+
+**Findings for other repositories** (for a `snoopy-backend` session to file):
+
+- `snoopy`: the website's Run window asks nothing before a file goes to AI (item 7 above). Its
+  words, byte for byte, are `lib/content/ai-consent.ts`'s.
+- 25.7.1, the OpenRouter key: the consent reaches a phone only in a build made from this change —
+  the app has no over-the-air update (`expo-updates` is not among `package.json`'s dependencies)
+  — and a phone on an earlier build starts a run with a file without being asked. Item 7 dates the
+  consent with the key, so the key waits for a build carrying this change.
+- OWNER: README's App Store review notes could say that a run given a file asks first; the
+  listing's text is the owner's.
+
+### Guards proved to bite, the consent before AI reads a run's file
+
+Twenty-one runs by one script (`bites-ai-consent/bites.py` in the session's scratchpad, with its
+`results.json`, `run.log`, the twenty jest JSON reports and the three `audit:haptics` outputs
+beside it) on this branch's tree. The clean tree first: five suites, 118 tests, all passing
+(`start-run`, `account-deleted`, `dialog-boundary`, `presses-flows`,
+`presses-patterns-dialog-close` — every suite that draws the start controls or Account deleted),
+and `audit:haptics` passing. Then each run made one exact edit to the source (C4 two, C14 three)
+and ran the same five suites with `--json` — C20 and C21 ran `audit:haptics` instead — the failed
+tests read from the report, the file restored from a copy saved before the edit and its SHA-256
+compared equal, and `git status --porcelain` matched the intended changes after every restore.
+Every break failed the tests named and nothing else.
+
+| Guard | Broken by | Tests that failed |
+| --- | --- | --- |
+| C1 · Asked before a run that carries a file (`components/automations/start-run.tsx:162`) | the consent never read: a run with a file started at once | `start-run` the nine that open the consent: "is asked on the first Start run with a file…", "Agree and start keeps…", "Cancel starts nothing…", "is asked again of another person…", "…once its words are a new version…", "…when the Keychain cannot be read…", "starts the run when the consent cannot be kept…", "opens the website's Privacy Policy…", "says "Privacy Policy" in plain words…" |
+| C2 · Only a run that carries a file is asked (`carriesFile`, `start-run.tsx:237-240`) | every run asked, a file or none | `start-run` "is never asked for a run that carries no file — no file field…", "— its file field left empty…"; `presses-flows` "Start run starts this flow's run with what was entered…"; `dialog-boundary` "draws a control newer than this build as the website does…" (neither file keeps a consent, so the dialog opened and no run started) |
+| C3 · A file field left empty carries no file (`start-run.tsx:239`) | the field counted, empty or not | `start-run` "is never asked for a run that carries no file — its file field left empty…" |
+| C4 · Start run held while the consent is open (`start-run.tsx:159`, `:227`) | `asking` dropped from the guard and from `disabled` | `start-run` "is asked on the first Start run with a file… — Start run held behind it" |
+| C5 · Agree keeps the consent (`start-run.tsx:180`) | the write removed | `start-run` "Agree and start keeps the consent…", "is asked again of another person…" |
+| C6 · Kept before the run is sent (`start-run.tsx:180-181`) | the run first, then the write | `start-run` "Agree and start keeps the consent… then starts the run once…" |
+| C7 · Agree starts the run (`start-run.tsx:181`) | `begin` removed from `agree` | `start-run` "Agree and start keeps the consent…", "is asked again of another person…", "starts the run when the consent cannot be kept…" |
+| C8 · Cancel starts and keeps nothing (`start-run.tsx:231`) | Cancel doing Agree's work | `start-run` "Cancel starts nothing and keeps nothing…" |
+| C9 · Cancel leaves the form as it was (`start-run.tsx:231`) | Cancel emptying the note and the file | `start-run` "Cancel starts nothing and keeps nothing…" |
+| C10 · The key names the person (`lib/platform/ai-consent-store.ts:27`) | the person left out of the key | `start-run` "is asked on the first Start run with a file…", "Agree and start keeps the consent…", "is asked again of another person…" |
+| C11 · The key names the version (`ai-consent-store.ts:27`) | the version left out of the key | `start-run` "is asked on the first Start run with a file…", "Agree and start keeps the consent…", "is asked again once its words are a new version…" |
+| C12 · A read that fails asks (`ai-consent-store.ts:35`) | a failed read taken as agreed | `start-run` "is asked when the Keychain cannot be read…" |
+| C13 · A write that fails still starts the run (`ai-consent-store.ts:44`) | the failure thrown on | `start-run` "starts the run when the consent cannot be kept…" |
+| C14 · Asked again after a write that failed: the Keychain the only memory (`ai-consent-store.ts:30-46`) | the consent remembered in the app's memory as well | `start-run` "starts the run when the consent cannot be kept, and asks again…", and the six later tests a consent remembered from an earlier one answered ("Cancel starts nothing…", "…another person…", "…a new version…", "…cannot be read…", "opens the website's Privacy Policy…", "…in plain words…") |
+| C15 · This-device-only (`ai-consent-store.ts:20`) | `AFTER_FIRST_UNLOCK` | `start-run` "is asked on the first Start run with a file…", "Agree and start keeps the consent… this-device-only…", "is asked again of another person…", "is asked when the Keychain cannot be read…" |
+| C16 · The body, word for word (`lib/content/ai-consent.ts:17-18`) | "zero data retention" made "zero retention" | `start-run` "is asked on the first Start run with a file, in its words…" |
+| C17 · The second line, word for word (`ai-consent.ts:24`) | "names the providers and" dropped | `start-run` "is asked on the first Start run with a file, in its words…", "says "Privacy Policy" in plain words…" |
+| C18 · Privacy Policy opens `/privacy` (`components/automations/ai-consent-dialog.tsx:48`) | it opened `/terms` | `start-run` "opens the website's Privacy Policy…" |
+| C19 · Plain words where the website's origin is not known (`ai-consent-dialog.tsx:43`) | the link drawn whatever the origin | `start-run` "says "Privacy Policy" in plain words where the app does not know the website" |
+| C20 · The consent's link ticks (`ai-consent-dialog.tsx:48`) | its press not through `pressed()` | `audit:haptics` "components/automations/ai-consent-dialog.tsx:48: onPress on <Text> is not pressed(…)" |
+| C21 · Account deleted's link ticks (`app/(auth)/account-deleted.tsx:40`) | `c6574ef`'s bare press restored | `audit:haptics` "app/(auth)/account-deleted.tsx:40: onPress on <Text> is not pressed(…)" |
