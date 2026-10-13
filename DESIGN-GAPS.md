@@ -1945,8 +1945,9 @@ returns to its first. One table, `presses-patterns-dialog-close:501`, a row per 
 | --- | --- | --- |
 | `app/index.tsx:138` — the cover | signed in, Home; signed out, nothing | `cover-haptics:26`, `splash-tap:18` |
 | `app/index.tsx:164` — Get started | opens Sign in, once | `splash-tap:18`, `real-router/sign-out:97` |
-| `(auth)/login.tsx:191` — Sign in with … | that provider's sign-in | `auth-screens:45` |
-| `(auth)/login.tsx:167` — Unlock with Face ID | opens the lock | `auth-screens:86` |
+| `(auth)/login.tsx:199` — Sign in with … | that provider's sign-in | `auth-screens:58` |
+| `(auth)/login.tsx:178` — Unlock with Face ID | opens the lock | `auth-screens:99` |
+| `(auth)/login.tsx:216, :228` — Terms of Service; Privacy Policy (Round 17, the owner's decision of 2026-10-13; through `pressed()`) | opens the website's `/terms`; its `/privacy` | `auth-screens:173` |
 | `(auth)/faceid-offer.tsx:98, :101` — Use Face ID; Not now | checks Face ID, records yes, opens Home; records no, opens Home | `faceid-offer:27`, `faceid-offer:36` |
 | `(auth)/faceid.tsx:181` — Use identity provider | signs this phone out, then the cover | `faceid-screen:70`, `real-router/sign-out:234` |
 | `(auth)/account-deleted.tsx:49` — Continue | the cover | `real-router/sign-out:181` |
@@ -3963,3 +3964,59 @@ every restore. Every break failed the tests named and nothing else.
 | M2 · Its words, word for word (`refusals.ts:197`) | "Nothing was lost." made "Nothing was refused." | `upload-refusals` "says a file with no place yet to be measured…"; `platform-request` "keeps an upload completion's 429 details…"; `start-run` "says a file with no place yet to be measured…" |
 | M3 · The file field says the upload's words (`components/automations/run-file-field.tsx:150`) | the error's own message shown | `start-run` "says a file with no place yet to be measured…" and the six "says … refused when its upload is sealed…" |
 | M4 · The transport keeps a 429's details (`lib/platform/client.ts:157`) | the details dropped | `platform-request` "keeps an upload completion's 429 details…", "keeps a 429's public details, so a run refused at a flow whose queue is full…" |
+
+### The line under the sign-in buttons (Round 17; 2026-10-13)
+
+The owner's decision of 2026-10-13, 18:07Z: "by continuing you agree is better … we want it to be
+easy for users to sign up and access flows not make it complicated for no absolute reason. we do
+want to stay compliant but that does not mean make it harder" — one line directly under the sign-in
+buttons, the same words in both clients, "By continuing, you agree to our Terms of Service and
+Privacy Policy.", "Terms of Service" opening the website's `/terms` and "Privacy Policy" its
+`/privacy`: no checkbox, no extra screen, no extra tap, nothing else on the screen changed. The
+owner approved the round's plan that carries it with "go" the same day.
+
+`app/(auth)/login.tsx:204-235` draws it between the providers' column and Remember me, in this
+screen's secondary text as Remember me's own line is drawn — `typeScale.small`,
+`palette.neutral[400]`, the regular face — and the two pages as links that look like links:
+underlined, in the accent the app's other links in a sentence take (`palette.accentRamp[300]`, as
+`app/(tabs)/flows/detail.tsx:306`), `accessibilityRole="link"`. Each opens the website through
+`websiteOrigin()` (`lib/platform/native-auth.ts:74-83`), as Account deleted's Privacy Policy does
+(`app/(auth)/account-deleted.tsx:35-45`), and presses through `pressed()`, so it ticks; where the
+app does not know the website's origin the words are plain, as there. The website's line is the
+same words, under its buttons in its muted text with its links in the accent, underlined
+(`snoopy/app/(auth)/login/LoginForm.tsx`, its builder's change of the same day, read on its branch
+before it was committed). Signing in is as it was: a provider's button signs in at one press, and
+Remember me is still the screen's one switch.
+
+Tests, in `__tests__/auth-screens.test.tsx`, which now mocks `expo-constants` for the website's
+origin as `account-deleted.test.tsx` does: `:137` (the words; the providers, the line and Remember
+me in that order; the line's size and colour Remember me's line's; the links underlined and named
+links; one switch; a provider still one press), `:173` (the two pages, in order), `:182` (plain
+words without the website's origin). Run alone: 9 tests, all passing. `audit:presses`, read
+against coverage from that file alone (`--collectCoverageFrom` the screen, in the scratchpad):
+the two presses resolve to their arrows (`login.tsx:216`, `:228`) and run; the register's rows
+above. No real-router test: the links open the system browser and move no route (CLAUDE.md rule
+11 is where a screen goes). Not run in this step, read instead: the other suites that draw this
+screen — `sign-out`, `cover-haptics`, `splash-tap`, and the real-router `sign-out` and
+`session-ended` — none of which asks for words the line could now answer. The full gate was not
+run in this step; it runs before the push.
+
+### Guards proved to bite, the line under the sign-in buttons
+
+Nine runs by the same script (`spec-b6.json`, `run-b6.log` and `out-b6/` beside it). The clean tree
+first — `auth-screens`, 9 tests, all passing, and `audit:haptics` passing — then each run made one
+exact edit to `app/(auth)/login.tsx`, ran `auth-screens` alone (S8 `audit:haptics` instead),
+restored the file from its saved copy, its SHA-256 equal, and `git status --porcelain` was as
+before. Every break failed the tests named and nothing else.
+
+| Guard | Broken by | Tests that failed |
+| --- | --- | --- |
+| S1 · The line is drawn (`app/(auth)/login.tsx:204-235`) | the line removed | `auth-screens` the three "the line under the sign-in buttons" tests |
+| S2 · Terms of Service opens `/terms` (`login.tsx:216`) | it opened `/privacy` | `auth-screens` "opens the website's Terms of Service and Privacy Policy" |
+| S3 · Privacy Policy opens `/privacy` (`login.tsx:228`) | it opened `/terms` | the same |
+| S4 · Plain words where the website's origin is not known (`login.tsx:211`) | the link drawn whatever the origin | `auth-screens` "says the same words, plain, where the app does not know the website" |
+| S5 · Never smaller (`login.tsx:294-298`, `agreement`) | `typeScale.caption` | `auth-screens` "says the website's words under the buttons…" (14 expected, 13 drawn) |
+| S6 · Never fainter (`login.tsx:209`) | `palette.neutral[500]` | the same (Remember me's line's colour expected) |
+| S7 · Under the buttons, above Remember me | the line moved below Remember me | the same (the order) |
+| S8 · The links tick (`login.tsx:216`) | Terms of Service's press not through `pressed()` | `audit:haptics` "app/(auth)/login.tsx:216: onPress on <Text> is not pressed(…)" |
+| S9 · Links that look like links (`login.tsx:299`, `link`) | the underline removed | `auth-screens` "says the website's words under the buttons…" |
