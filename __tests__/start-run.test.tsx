@@ -1056,4 +1056,16 @@ describe("the consent before AI reads a run's file (Apple's App Review Guideline
     expect(within(consent).queryByTestId('ai-consent-privacy')).toBeNull();
     expect(openURL).not.toHaveBeenCalled();
   });
+
+  it("is closed by Android's back as by Cancel: nothing started, nothing kept, the file as it was", async () => {
+    await renderBox([RECEIPT]);
+    const consent = await startWithFile();
+    // Android's back asks the Modal to close: its onRequestClose, which the event reaches from the dialog's card.
+    await fireEvent(consent, 'requestClose');
+    await waitFor(() => expect(screen.queryByTestId('ai-consent-dialog')).toBeNull());
+    expect(runsSent()).toEqual([]);
+    expect(onStarted).not.toHaveBeenCalled();
+    expect(Keychain.setItemAsync).not.toHaveBeenCalled();
+    expect(screen.getByText('Ready: invoice.pdf (5 bytes)')).toBeTruthy();
+  });
 });

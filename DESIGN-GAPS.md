@@ -3824,7 +3824,8 @@ and `audit:haptics` passing. Then each run made one exact edit to the source (C4
 and ran the same five suites with `--json` — C20 and C21 ran `audit:haptics` instead — the failed
 tests read from the report, the file restored from a copy saved before the edit and its SHA-256
 compared equal, and `git status --porcelain` matched the intended changes after every restore.
-Every break failed the tests named and nothing else.
+Every break failed the tests named and nothing else. C22 is the review's (below), run after them
+by a second script in the same way.
 
 | Guard | Broken by | Tests that failed |
 | --- | --- | --- |
@@ -3849,3 +3850,39 @@ Every break failed the tests named and nothing else.
 | C19 · Plain words where the website's origin is not known (`ai-consent-dialog.tsx:43`) | the link drawn whatever the origin | `start-run` "says "Privacy Policy" in plain words where the app does not know the website" |
 | C20 · The consent's link ticks (`ai-consent-dialog.tsx:48`) | its press not through `pressed()` | `audit:haptics` "components/automations/ai-consent-dialog.tsx:48: onPress on <Text> is not pressed(…)" |
 | C21 · Account deleted's link ticks (`app/(auth)/account-deleted.tsx:40`) | `c6574ef`'s bare press restored | `audit:haptics` "app/(auth)/account-deleted.tsx:40: onPress on <Text> is not pressed(…)" |
+| C22 · Android's back is Cancel (`ai-consent-dialog.tsx:32`) | `onRequestClose={onAgree}`: the back keeping the consent and starting the run | `start-run` "is closed by Android's back as by Cancel…" |
+
+### The consent's review (Round 17; 2026-10-13)
+
+The review of this branch at `0c621a5`, before it was pushed, reported one finding, should-fix. It
+was verified against the code here before anything moved, and fixed.
+
+| Finding | Disposition |
+| --- | --- |
+| The record says closing the consent any other way — Android's back — is Cancel (item 3 above), and no test held it: no test in `__tests__/` or `test/` fired a dialog's `onRequestClose`. With `ai-consent-dialog.tsx:32` made `onRequestClose={onAgree}`, Android's back keeps the consent and starts the run, the file going to AI unasked, and every test passed | **fixed**: `start-run` "is closed by Android's back as by Cancel: nothing started, nothing kept, the file as it was" (`__tests__/start-run.test.tsx:1060`) fires `requestClose` at the open consent — React Native Testing Library hands it up from the dialog's card to the `Modal`'s `onRequestClose` — and holds that the consent closes, no run is sent, nothing is kept and the file is still given; C22 above |
+
+Verified by command, by `bites-ai-consent-review/bites.py` in the session's scratchpad (its two
+logs, `results-before.json`, `results-after.json` and the four jest JSON reports beside it). On
+`0c621a5` as committed, the five suites the bites above run passed, 118 tests, and with the edit
+the same 118 passed: the gap. On this tree, with the test, 119 passed, and with the edit the new
+test alone failed — the run POSTed with the file, `{ subscriptionId: 'sub-1', input: { receipt:
+'artifact-1' } }`. After each edit the file was restored from its saved copy, its SHA-256 equal,
+and `git status --porcelain` was as before.
+
+Only Android reaches it today. React Native calls a `Modal`'s `onRequestClose` for Android's back
+and, on iOS, only when a sheet is swiped to dismiss (`node_modules/react-native/Libraries/Modal/Modal.js:89`;
+the New Architecture's `React/Fabric/Mounting/ComponentViews/Modal/RCTModalHostViewComponentView.mm:306-322`,
+on by `app.json:10`). `Dialog`'s modal is `transparent` (`components/dialog.tsx:47`), so it is
+presented `overFullScreen` (`Modal.js:300-305`), which no swipe dismisses.
+
+**The gate**, on this tree, inside the session's gate lock: `CI=1 npm run verify` exit 0 — lint,
+typecheck, the seven audits, the contract check against `snoopy-backend` `62284de`'s documents
+(`SNOOPY_BACKEND_ROOT`; "Generated platform types are current."), 90 suites / 1,275 tests (1,274
+passed; one skipped, `repo-facts`' schema check, as before) / 80 snapshots across the two jest
+projects, the test added here among them — and the press audit green: 296 presses, every one run
+by a test. `npm run audit:dependencies` exit 0 (61 advisories, 19 moderate and 42 high, none
+critical). Only the test file and this record changed; the record's gate line was written after
+the gate, which reads no record.
+
+**Not done, said so.** No other dialog's `onRequestClose` is run by a test either: the other 22 in
+`app/` and `components/`. That is outside this change.
