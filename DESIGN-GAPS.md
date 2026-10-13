@@ -3692,6 +3692,28 @@ matched the intended changes after the last restore.
 | U4 · A number that is not whole is never shown (`wholeNumber`) | any text taken as a number | `upload-refusals` "never shows a page count that is not a whole number" ("14 pages", "-3", "1e3", "<b>14</b>", …) |
 | U5 · The file field says the upload's words (`components/automations/run-file-field.tsx`) | the error's own message shown | `start-run` the six "says … refused when its upload is sealed…" |
 
+### The account-deleted words (Round 17; 2026-10-13)
+
+`app/(auth)/account-deleted.tsx` said "Your account and data have been permanently removed" and "You
+can come back anytime — your first sign-in creates a new account". Neither held: backups, each deleted
+file's record and the Supabase sign-in record outlive a deletion (the Privacy Policy's limits,
+`snoopy` `b749b84`), and deletion signs out only the device that asked, so another signed-in device's
+next `/v1/session` makes a new account without a sign-in (`snoopy-backend`
+`apps/api/src/app.ts:504-507`, `apps/api/src/modules/auth/identity.ts:898-900`). The screen now says
+the website's `/account-deleted` words (`b749b84`): "Sorry to see you go. Your account, your personal
+workspace and every organization you alone owned have been deleted. Our Privacy Policy says what
+deletion does not remove." and "You can come back anytime with a new account." — "Privacy Policy"
+opening the website's `/privacy` when the app knows its origin, plain words when it does not.
+`__tests__/account-deleted.test.tsx` holds the words, the link and Continue; bites (`c6574ef`'s
+message): the old "permanently removed" back → RED; the link pointed at `/terms` → RED; restored →
+GREEN. Its press reaches the haptics audit through `pressed()` since the consent's commit.
+
+**Re-entry (MASTER-PLAN §4).** CLAUDE.md holds Round 17 here to five changes, any further one a
+re-entry the owner approves. This change and the consent below were put to the owner on 2026-10-13
+(the session's message: the app's deletion screen overstated, and "Apple requires a one-time consent
+before a document goes to the AI … I'll add it to the mobile PR"); the owner's approval is the merge
+of their pull request, and nothing here records them as approved before it.
+
 ### The consent before AI reads a run's file (Round 17; 2026-10-13)
 
 Apple's App Review Guideline 5.1.2(i): "You must clearly disclose where personal data will be
