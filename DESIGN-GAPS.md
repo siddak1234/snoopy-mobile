@@ -3756,7 +3756,7 @@ gate and the store below were set for this change; nothing here records them as 
 
 1. **The words, in one module** — `lib/content/ai-consent.ts`, for the website to say byte for
    byte: `AI_CONSENT_TITLE` "AI reads this file"; `AI_CONSENT_BODY` "To read the file you give this
-   run, Autom8x sends it to OpenRouter, which passes it to an AI model provider in the United
+   run, Autom8x sends it to OpenRouter, which passes it to AI model providers in the United
    States, using only endpoints that OpenRouter lists as zero data retention."; `AI_CONSENT_POLICY`,
    the second line around its link, "Our Privacy Policy names the providers and explains what may
    be kept."; `AI_CONSENT_AGREE` "Agree and start" and `AI_CONSENT_CANCEL` "Cancel"; and

@@ -862,7 +862,7 @@ describe('the re-encode itself (lib/platform/run-image.ts)', () => {
 /** The consent's words, as a person reads them — the website says them byte for byte. */
 const CONSENT = {
   title: 'AI reads this file',
-  body: 'To read the file you give this run, Autom8x sends it to OpenRouter, which passes it to an AI model provider in the United States, using only endpoints that OpenRouter lists as zero data retention.',
+  body: 'To read the file you give this run, Autom8x sends it to OpenRouter, which passes it to AI model providers in the United States, using only endpoints that OpenRouter lists as zero data retention.',
   policy: 'Our Privacy Policy names the providers and explains what may be kept.',
   agree: 'Agree and start',
   cancel: 'Cancel',

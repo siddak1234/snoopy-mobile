@@ -15,7 +15,7 @@ export const AI_CONSENT_VERSION = 1;
 
 export const AI_CONSENT_TITLE = 'AI reads this file';
 export const AI_CONSENT_BODY =
-  'To read the file you give this run, Autom8x sends it to OpenRouter, which passes it to an AI model provider in the United States, using only endpoints that OpenRouter lists as zero data retention.';
+  'To read the file you give this run, Autom8x sends it to OpenRouter, which passes it to AI model providers in the United States, using only endpoints that OpenRouter lists as zero data retention.';
 /**
  * The second line, around its link: "Privacy Policy" opens the website's
  * `/privacy` where the app knows the website's origin, and is plain words where
