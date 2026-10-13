@@ -169,8 +169,17 @@ export const FLOW_QUEUE_FULL =
  * A file for a run (FR-14): opening the upload, and completing it. Since the
  * platform measures a file when its upload is sealed (backend BUILD-PLAN 25.2.28),
  * a flow that declares page or pixel limits refuses one that breaks them, or one
- * that is not what it says, before any run exists: the last five reasons. The
- * website's sentences, verbatim (`snoopy/app/account/flows/upload-refusals.ts`).
+ * that is not what it says, before any run exists: the five reasons from
+ * `file_too_many_pages` to `file_unreadable`. The website's sentences, verbatim
+ * (`snoopy/app/account/flows/upload-refusals.ts`).
+ *
+ * `measurement_busy` is not a refusal (backend BUILD-PLAN 25.2.39, SYSTEM-MANIFEST
+ * §12.1 #272): files are measured in turn, a workspace's one at a time, and a
+ * completion that finds no place yet is answered 429 at once, nothing measured
+ * and nothing lost. The transport words every 429 as the platform being busy;
+ * this one says what happened, in the website's sentence. The field is emptied
+ * as after any refusal and the upload is not completed again here, so the
+ * sentence asks for the file again in a moment.
  */
 export const UPLOAD_REFUSALS: Readonly<Record<string, string>> = {
   content_type_not_accepted: 'This flow does not accept that type of file.',
@@ -185,6 +194,7 @@ export const UPLOAD_REFUSALS: Readonly<Record<string, string>> = {
   file_content_mismatch: "This file's contents don't match its type. Choose the original file again.",
   file_encrypted: 'This PDF is password-protected. Remove the password and upload it again.',
   file_unreadable: 'This file could not be read. Choose it again, or try another copy.',
+  measurement_busy: 'Files are checked one at a time. Nothing was lost. Choose the file again in a moment.',
 };
 
 /** A whole number from a refusal's details — the platform sends each as a string of digits — or nothing. */

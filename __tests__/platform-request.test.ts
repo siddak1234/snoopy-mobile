@@ -1,6 +1,6 @@
-import { FLOW_QUEUE_FULL, runRefusal } from '@/lib/content/refusals';
+import { FLOW_QUEUE_FULL, runRefusal, uploadRefusalMessage } from '@/lib/content/refusals';
 import { readCurrentSession } from '@/lib/platform/auth';
-import { createRun } from '@/lib/platform/automations';
+import { completeUpload, createRun } from '@/lib/platform/automations';
 import {
   downloadSignedFile,
   platformOperation,
@@ -196,6 +196,35 @@ describe('generated platform transport', () => {
     expect(FLOW_QUEUE_FULL).toBe(
       'This flow is busy and its queue is full, so the run was not started. Try again once one of its runs has ended.',
     );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps an upload completion's 429 details, so a file with no place yet to be measured is said in the website's words (backend 25.2.39)", async () => {
+    // The contract's 429 on completeUpload: `details.reason` measurement_busy, no retry-after.
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          status: 429,
+          code: 'TOO_MANY_REQUESTS',
+          title: 'The file is waiting to be measured',
+          details: { reason: 'measurement_busy' },
+        }),
+        { status: 429, headers: { 'content-type': 'application/problem+json' } },
+      ),
+    );
+
+    const error = await completeUpload('ws-1', '0b7c5f0e-6a1d-4c39-9d0e-3f5a2b1c4d6e').catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(PlatformRateLimitedError);
+    expect(error).toMatchObject({
+      status: 429,
+      details: { reason: 'measurement_busy' },
+      message: 'The platform is busy right now. Try again in a moment.',
+    });
+    expect(uploadRefusalMessage(error, 'The file could not be sent.')).toBe(
+      'Files are checked one at a time. Nothing was lost. Choose the file again in a moment.',
+    );
+    // Asked once: the app never completes it again by itself; the person chooses the file again.
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 

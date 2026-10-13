@@ -3908,3 +3908,58 @@ the gate, which reads no record.
 
 **Not done, said so.** No other dialog's `onRequestClose` is run by a test either: the other 22 in
 `app/` and `components/`. That is outside this change.
+
+### The contract of backend #207, and a file with no place yet to be measured in words (Round 17; 2026-10-13)
+
+Backend BUILD-PLAN 25.8.8: `snoopy-backend` #207 moves `docs/openapi/automations.yaml` from
+`62201275…`, the contract production serves (`bf06166`'s), to `cceee630…` at its head `41917a3`, so
+both clients regenerate against it, the app's before 25.8.4's build. Run with `SNOOPY_BACKEND_ROOT`
+at a read-only extract of `41917a3`'s `docs/openapi.yaml` and `docs/openapi/`,
+`npm run generate:platform-contracts` changed `lib/generated/platform-contracts/automations.d.ts`
+only: sha256 `cceee630…`, was `62201275…`. `completeUpload` gains a 429 (`:1177-1185`): the file has
+no place yet to be measured (backend 25.2.39), `details.reason` `measurement_busy`, "nothing was
+refused and nothing was lost — the upload stays open, and completing it again shortly measures it".
+The rest is descriptions, backend 25.2.41's first in, first out: `createRun`'s 201 and 429,
+`RunStatus` and the `run-created` payload. `platform.d.ts` and `connections.d.ts` stay `93fd335c…`
+and `ab70cb0f…`. `npm run verify:platform-contracts` against the same extract: "Generated platform
+types are current." Production serves `62201275…` until the promotion that carries #207, and the
+Deployed contract check compares this file with production's, so this lands after that promotion's
+read-back, not before.
+
+**`measurement_busy` in words** (backend SYSTEM-MANIFEST §12.1 #272, with 25.8.8). Until now the app
+said the platform's busy words for it, as for every 429 (`lib/platform/client.ts:155-157`): "The
+platform is busy right now. Try again in a moment." — not the problem's title, as #272 has it for
+both clients. Nothing here completes an upload again: `sendRunFile` completes it once
+(`lib/platform/run-file.ts:53`), and the file field empties itself after any failure and says why
+(`components/automations/run-file-field.tsx:147-150`). So there was no retry to reuse, and none was
+added. `UPLOAD_REFUSALS` (`lib/content/refusals.ts:184-198`) names it after the five reasons of the
+refresh before (25.8.6), the same way, in the website's sentence: "Files are checked one at a time.
+Nothing was lost. Choose the file again in a moment." (`snoopy/app/account/flows/upload-refusals.ts`,
+its builder's change of the same day, read on its branch before it was committed; the two must land
+word for word alike). Choosing the file again opens a new upload, whose completion is
+measured; the first stays pending with its bytes until the platform lets it expire.
+`FLOW_QUEUE_FULL`, the website's sentence for a full queue, is unchanged: 25.2.41 changes when a run
+waits, not the advice the contract gives ("try again once a run has ended").
+
+Tests: `__tests__/upload-refusals.test.ts:55` and `:67` (the sentence for a 429 that names it, any
+other 429 keeping the busy words and its wait; the list), `__tests__/start-run.test.tsx:661` (the
+field says it and holds no file, and the same press a moment later sends a new upload that
+completes), `__tests__/platform-request.test.ts:202` (the transport keeps the completion's 429
+details, and the words follow from them). Each file run alone: 12, 17 and 64 tests, all passing.
+The full gate was not run in this step; it runs before the push.
+
+### Guards proved to bite, the busy measurement
+
+Four runs by one script (`bites-b5b6/bites.py` in the session's scratchpad, with `spec-b5.json`,
+`run-b5.log` and the jest JSON reports in `out-b5/` beside it) on this branch's tree. The clean tree
+first — `upload-refusals`, `platform-request` and `start-run`, 93 tests, all passing — then each run
+made one exact edit, ran the suites named, each alone, restored the file from a copy saved before
+the edit and compared its SHA-256 equal; `git status --porcelain` matched the intended changes after
+every restore. Every break failed the tests named and nothing else.
+
+| Guard | Broken by | Tests that failed |
+| --- | --- | --- |
+| M1 · `measurement_busy` is named (`lib/content/refusals.ts:197`) | the entry removed | `upload-refusals` "says a file with no place yet to be measured…", "names the five reasons… and the busy measurement after them"; `platform-request` "keeps an upload completion's 429 details…"; `start-run` "says a file with no place yet to be measured…" |
+| M2 · Its words, word for word (`refusals.ts:197`) | "Nothing was lost." made "Nothing was refused." | `upload-refusals` "says a file with no place yet to be measured…"; `platform-request` "keeps an upload completion's 429 details…"; `start-run` "says a file with no place yet to be measured…" |
+| M3 · The file field says the upload's words (`components/automations/run-file-field.tsx:150`) | the error's own message shown | `start-run` "says a file with no place yet to be measured…" and the six "says … refused when its upload is sealed…" |
+| M4 · The transport keeps a 429's details (`lib/platform/client.ts:157`) | the details dropped | `platform-request` "keeps an upload completion's 429 details…", "keeps a 429's public details, so a run refused at a flow whose queue is full…" |

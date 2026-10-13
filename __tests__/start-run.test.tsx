@@ -658,6 +658,44 @@ describe('a run\'s file field: Take photo beside Upload (25.8.3; the owner\'s de
     expect(sent.filter((request) => request.path === COMPLETE_PATH)).toHaveLength(1);
   });
 
+  it("says a file with no place yet to be measured in the website's words, never the platform's busy words — and choosing it again a moment later sends it afresh (backend BUILD-PLAN 25.2.39)", async () => {
+    pickerGives('invoice.pdf', 'application/pdf');
+    filesOf(4096);
+    const ticket = (uploadSessionId: string) => () => ({
+      uploadSessionId,
+      uploadUrl: 'https://store.example.test/put',
+      expiresAt: '2026-10-10T12:00:00Z',
+      maximumSizeBytes: 10_000_000,
+    });
+    answer(`POST ${UPLOADS_PATH}`, ticket('upload-1'), ticket('upload-2'));
+    answer(
+      `POST ${COMPLETE_PATH}`,
+      () => {
+        // As the transport projects the contract's 429: its busy words, and the reason beside them.
+        throw new PlatformRateLimitedError('The platform is busy right now. Try again in a moment.', undefined, {
+          reason: 'measurement_busy',
+        });
+      },
+      () => ({ artifact: { artifactId: 'artifact-2', filename: 'invoice.pdf', contentType: 'application/pdf', sizeBytes: 4096 } }),
+    );
+    await renderBox([RECEIPT]);
+    await fireEvent.press(screen.getByTestId('run-file-receipt-upload'));
+    expect(
+      await screen.findByText('Files are checked one at a time. Nothing was lost. Choose the file again in a moment.'),
+    ).toBeTruthy();
+    expect(screen.queryByText('The platform is busy right now. Try again in a moment.')).toBeNull();
+    expect(screen.queryByText(/^Ready:/)).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('run-file-receipt-upload'));
+    expect(await screen.findByText('Ready: invoice.pdf (4 KB)')).toBeTruthy();
+    expect(screen.queryByText(/^Files are checked one at a time\./)).toBeNull();
+    // A new upload each time; the app never completes one again by itself.
+    expect(sent.filter((request) => request.path === COMPLETE_PATH).map((request) => request.ids?.uploadSessionId)).toEqual([
+      'upload-1',
+      'upload-2',
+    ]);
+  });
+
   it.each([
     ['a PNG chosen by Upload', 'statement.png', 'image/png', 'statement.jpg'],
     ['a JPEG chosen by Upload', 'receipt.jpeg', 'image/jpeg', 'receipt.jpg'],

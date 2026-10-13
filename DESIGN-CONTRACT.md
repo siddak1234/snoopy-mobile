@@ -552,7 +552,12 @@ mobile-only shape.
   `createRun`'s 429 (backend §12.1 #241, `snoopy-backend` #181): until that is
   promoted the Edge answers a full queue 502 `DEPENDENCY_FAILURE`, and the
   start controls show that problem's title, "Dependency Failure" (the Run
-  dialog did until 25.8.3).
+  dialog did until 25.8.3). Since the contract of backend #207 (25.2.39, 25.8.8)
+  a run's file whose upload is completed while the platform has no place yet
+  to measure it (429 `measurement_busy`) says the website's sentence, "Files
+  are checked one at a time. Nothing was lost. Choose the file again in a
+  moment.", never the platform's busy words: nothing was refused, the field is
+  emptied as after any refusal, and choosing the file again sends it afresh.
 - A manifest control this build does not know (Round 17, 25.8.1 — the owner's
   requirement 1 of 2026-10-08, no app change per automation) is not a crash and
   not a guess: the row is the website's text input (`ManifestFields.tsx` draws
