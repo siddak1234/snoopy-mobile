@@ -11,6 +11,31 @@ jest.mock('expo-image-manipulator', () => ({
   ImageManipulator: { manipulate: jest.fn() },
   SaveFormat: { JPEG: 'jpeg', PNG: 'png', WEBP: 'webp' },
 }));
+// A keychain that keeps what it is given: where a person's consent to AI reading a run's file is kept.
+jest.mock('expo-secure-store', () => {
+  const kept = new Map<string, string>();
+  return {
+    WHEN_UNLOCKED_THIS_DEVICE_ONLY: 'WHEN_UNLOCKED_THIS_DEVICE_ONLY',
+    kept,
+    getItemAsync: jest.fn(async (key: string) => kept.get(key) ?? null),
+    setItemAsync: jest.fn(async (key: string, value: string) => {
+      kept.set(key, value);
+    }),
+    deleteItemAsync: jest.fn(async (key: string) => {
+      kept.delete(key);
+    }),
+  };
+});
+// The website's origin, for the consent's Privacy Policy: the browser leg's base, as Support uses it.
+const mockExtra: { nativeAuthBaseUrl?: string } = {};
+jest.mock('expo-constants', () => ({
+  __esModule: true,
+  default: {
+    get expoConfig() {
+      return { extra: mockExtra };
+    },
+  },
+}));
 
 import { fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import * as DocumentPicker from 'expo-document-picker';
@@ -18,11 +43,15 @@ import { File } from 'expo-file-system';
 import { ImageManipulator } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import React from 'react';
+import { Linking } from 'react-native';
 
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import { StartRun } from '@/components/automations/start-run';
+import type { SessionContextValue } from '@/hooks/use-session';
+import { AI_CONSENT_VERSION } from '@/lib/content/ai-consent';
 import { FLOW_QUEUE_FULL, WORKSPACE_CHANGED } from '@/lib/content/refusals';
 import { CAMERA_NOT_OPENED, CAMERA_OFF } from '@/lib/content/screen-states';
+import { aiConsentKey } from '@/lib/platform/ai-consent-store';
 import type { AutomationRunInputField } from '@/lib/platform/automations';
 import { PlatformError, PlatformRateLimitedError, PlatformUnreachableError } from '@/lib/platform/problem';
 import { IMAGE_NOT_READ, boundedResize, isImage, jpegName, reencodeImage } from '@/lib/platform/run-image';
@@ -30,6 +59,13 @@ import { TEST_WORKSPACE, flowCatalogPayload, routePlatform, sessionAs, signedInS
 import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
 
 const { platformOperation, newIdempotencyKey, putFileToSignedUrl } = jest.requireMock('@/lib/platform/client');
+const Keychain = jest.requireMock('expo-secure-store') as {
+  kept: Map<string, string>;
+  getItemAsync: jest.Mock;
+  setItemAsync: jest.Mock;
+};
+/** The person `sessionAs` signs in (`test/platform.tsx`). */
+const PERSON = 'u1';
 
 /**
  * BUILD-PLAN 25.8.3 (Round 17; the owner's "i like the suggested lets do that",
@@ -61,6 +97,11 @@ beforeEach(() => {
   };
   const clients = { automations: { GET: call('GET'), POST: call('POST'), PATCH: call('PATCH') } };
   platformOperation.mockImplementation(async (_key: string, execute: Function) => (await execute(clients)).data);
+  // This person agreed before, on this phone, to AI reading a run's file, so a run that
+  // carries one starts as it did before the consent. The consent's own tests start with none.
+  Keychain.kept.clear();
+  Keychain.kept.set(aiConsentKey(PERSON), 'agreed');
+  mockExtra.nativeAuthBaseUrl = 'https://www.example.test/api/platform';
 });
 
 function answer(route: string, ...replies: (() => unknown)[]) {
@@ -91,10 +132,14 @@ const onStarted = jest.fn();
 type FakeContext = { renderAsync: jest.Mock; resize: jest.Mock; release: jest.Mock };
 
 /** The start controls alone, for flow `sub-1` in the workspace the screen loaded. */
-async function renderBox(runInput: AutomationRunInputField[] = [NOTE], shown: string = TEST_WORKSPACE) {
+async function renderBox(
+  runInput: AutomationRunInputField[] = [NOTE],
+  shown: string = TEST_WORKSPACE,
+  session: SessionContextValue = sessionAs('owner'),
+) {
   return renderWithProviders(
     <StartRun subscriptionId="sub-1" shownWorkspaceId={shown} runInput={runInput} onStarted={onStarted} />,
-    sessionAs('owner'),
+    session,
   );
 }
 
@@ -800,5 +845,227 @@ describe('the re-encode itself (lib/platform/run-image.ts)', () => {
     expect(upright.release).toHaveBeenCalledTimes(1);
     expect(bounded.release).toHaveBeenCalledTimes(1);
     expect(context.release).toHaveBeenCalledTimes(1);
+  });
+});
+
+/* ───────────────────────── the consent before AI reads a run's file ───────────────────────── */
+
+/**
+ * Apple's App Review Guideline 5.1.2(i): "You must clearly disclose where personal
+ * data will be shared with third parties, including with third-party AI, and obtain
+ * explicit permission before doing so." A run's file that AI reads goes to
+ * OpenRouter and on to a model's provider; the catalog does not say which flows do
+ * that, so Start run asks before any run that carries a file — once per person on
+ * this phone, for this version of the words.
+ */
+
+/** The consent's words, as a person reads them — the website says them byte for byte. */
+const CONSENT = {
+  title: 'AI reads this file',
+  body: 'To read the file you give this run, Autom8x sends it to OpenRouter, which passes it to AI model providers in the United States, using only endpoints that OpenRouter lists as zero data retention.',
+  policy: 'Our Privacy Policy names the providers and explains what may be kept.',
+  agree: 'Agree and start',
+  cancel: 'Cancel',
+};
+const KEPT_THIS_DEVICE_ONLY = { keychainAccessible: 'WHEN_UNLOCKED_THIS_DEVICE_ONLY' };
+const RECEIPT_OPTIONAL: AutomationRunInputField = { ...RECEIPT, required: false };
+
+/** The runs the box asked the platform to start. */
+const runsSent = () => sent.filter((request) => request.path === RUNS_PATH);
+
+/** Someone else, signed in on this phone. */
+function signedInAs(userId: string): SessionContextValue {
+  const owner = sessionAs('owner');
+  if (owner.status !== 'signed-in') throw new Error('fixture');
+  return { ...owner, session: { ...owner.session, user: { ...owner.session.user, userId, email: `${userId}@acme.co` } } };
+}
+
+/** A PDF given to the receipt field: uploaded, and ready to start. */
+async function giveFile() {
+  pickerGives('invoice.pdf', 'application/pdf');
+  filesOf(5);
+  answerUpload('invoice.pdf', 'application/pdf', 5);
+  await fireEvent.press(screen.getByTestId('run-file-receipt-upload'));
+  expect(await screen.findByText('Ready: invoice.pdf (5 bytes)')).toBeTruthy();
+}
+
+/** Start run, with a file given: the consent, once it is open. */
+async function startWithFile() {
+  await giveFile();
+  await fireEvent.press(screen.getByText('Start run'));
+  return screen.findByTestId('ai-consent-dialog');
+}
+
+describe("the consent before AI reads a run's file (Apple's App Review Guideline 5.1.2(i))", () => {
+  let openURL: jest.SpyInstance;
+  beforeEach(() => {
+    // Nobody has agreed on this phone yet.
+    Keychain.kept.clear();
+    openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+  });
+  afterEach(() => openURL.mockRestore());
+
+  it('is asked on the first Start run with a file, in its words, and nothing starts while it is open — Start run held behind it', async () => {
+    await renderBox([NOTE, RECEIPT]);
+    await fireEvent.changeText(screen.getByLabelText('Note'), 'Pay it');
+    const consent = await startWithFile();
+    expect(within(consent).getByText(CONSENT.title)).toBeTruthy();
+    expect(within(consent).getByText(CONSENT.body)).toBeTruthy();
+    expect(within(consent).getByText(CONSENT.policy)).toBeTruthy();
+    expect(within(consent).getByText(CONSENT.agree)).toBeTruthy();
+    expect(within(consent).getByText(CONSENT.cancel)).toBeTruthy();
+    // The Keychain was asked for this person's consent to these words, and holds none.
+    expect(Keychain.getItemAsync).toHaveBeenCalledWith(`autom8x.ai-consent.v${AI_CONSENT_VERSION}.${PERSON}`, KEPT_THIS_DEVICE_ONLY);
+    expect(runsSent()).toEqual([]);
+
+    // Held while it is open: Start run behind it starts nothing.
+    expect(screen.getByTestId('start-run-button').props.accessibilityState?.disabled).toBe(true);
+    await fireEvent.press(screen.getByText('Start run'));
+    expect(screen.getAllByTestId('ai-consent-dialog')).toHaveLength(1);
+    expect(runsSent()).toEqual([]);
+    expect(onStarted).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['no file field', [NOTE]],
+    ['its file field left empty', [NOTE, RECEIPT_OPTIONAL]],
+  ])('is never asked for a run that carries no file — %s — nor read from the Keychain', async (_case, runInput) => {
+    answer(`POST ${RUNS_PATH}`, () => ({ run: { id: 'run-1' } }));
+    await renderBox(runInput);
+    await fireEvent.changeText(screen.getByLabelText('Note'), 'Pay it');
+    await fireEvent.press(screen.getByText('Start run'));
+    await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-1'));
+    expect(screen.queryByTestId('ai-consent-dialog')).toBeNull();
+    expect(Keychain.getItemAsync.mock.calls.filter(([key]) => String(key).startsWith('autom8x.ai-consent'))).toEqual([]);
+    expect(runsSent().map((request) => request.body)).toEqual([{ subscriptionId: 'sub-1', input: { note: 'Pay it' } }]);
+  });
+
+  it('Agree and start keeps the consent for this person on this phone, this-device-only, then starts the run once; the next run with a file is not asked', async () => {
+    answer(`POST ${RUNS_PATH}`, () => ({ run: { id: 'run-1' } }), () => ({ run: { id: 'run-2' } }));
+    // Kept first, then the run: how many runs had been sent when it was kept.
+    let runsWhenKept: number | null = null;
+    Keychain.setItemAsync.mockImplementationOnce(async (key: string, value: string) => {
+      runsWhenKept = runsSent().length;
+      Keychain.kept.set(key, value);
+    });
+    await renderBox([NOTE, RECEIPT]);
+    await fireEvent.changeText(screen.getByLabelText('Note'), 'Pay it');
+    await fireEvent.press(within(await startWithFile()).getByText(CONSENT.agree));
+    await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-1'));
+    expect(screen.queryByTestId('ai-consent-dialog')).toBeNull();
+    expect(Keychain.setItemAsync.mock.calls).toEqual([[`autom8x.ai-consent.v${AI_CONSENT_VERSION}.${PERSON}`, 'agreed', KEPT_THIS_DEVICE_ONLY]]);
+    expect(runsWhenKept).toBe(0);
+    expect(runsSent().map((request) => request.body)).toEqual([
+      { subscriptionId: 'sub-1', input: { note: 'Pay it', receipt: 'artifact-1' } },
+    ]);
+
+    // The box is fresh, and the next run that carries a file starts without asking.
+    await waitFor(() => expect(screen.queryByText('Ready: invoice.pdf (5 bytes)')).toBeNull());
+    await giveFile();
+    await fireEvent.press(screen.getByText('Start run'));
+    await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-2'));
+    expect(screen.queryByTestId('ai-consent-dialog')).toBeNull();
+    expect(Keychain.setItemAsync).toHaveBeenCalledTimes(1);
+    expect(runsSent()).toHaveLength(2);
+  });
+
+  it('Cancel starts nothing and keeps nothing: the consent closes, the form keeps what was entered and the file given, and the next Start run asks again', async () => {
+    await renderBox([NOTE, RECEIPT]);
+    await fireEvent.changeText(screen.getByLabelText('Note'), 'Pay it');
+    await fireEvent.press(within(await startWithFile()).getByText(CONSENT.cancel));
+    await waitFor(() => expect(screen.queryByTestId('ai-consent-dialog')).toBeNull());
+    expect(runsSent()).toEqual([]);
+    expect(onStarted).not.toHaveBeenCalled();
+    expect(Keychain.setItemAsync).not.toHaveBeenCalled();
+    expect(Keychain.kept.has(aiConsentKey(PERSON))).toBe(false);
+    // The form as it was, and Start run offered again.
+    expect(screen.getByLabelText('Note').props.value).toBe('Pay it');
+    expect(screen.getByText('Ready: invoice.pdf (5 bytes)')).toBeTruthy();
+    expect(screen.getByTestId('start-run-button').props.accessibilityState?.disabled).not.toBe(true);
+
+    await fireEvent.press(screen.getByText('Start run'));
+    expect(await screen.findByTestId('ai-consent-dialog')).toBeTruthy();
+    expect(runsSent()).toEqual([]);
+  });
+
+  it("is asked again of another person on this phone: a consent is the person's, not the phone's", async () => {
+    answer(`POST ${RUNS_PATH}`, () => ({ run: { id: 'run-1' } }));
+    const first = await renderBox([RECEIPT]);
+    await fireEvent.press(within(await startWithFile()).getByText(CONSENT.agree));
+    await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-1'));
+    expect(Keychain.kept.has(aiConsentKey(PERSON))).toBe(true);
+    await first.unmount();
+
+    await renderBox([RECEIPT], TEST_WORKSPACE, signedInAs('u2'));
+    const consent = await startWithFile();
+    expect(within(consent).getByText(CONSENT.title)).toBeTruthy();
+    expect(Keychain.getItemAsync).toHaveBeenCalledWith(aiConsentKey('u2'), KEPT_THIS_DEVICE_ONLY);
+    expect(runsSent()).toHaveLength(1);
+  });
+
+  it('is asked again once its words are a new version: a consent is to the words it was given for', async () => {
+    // This person agreed on this phone to the words before these.
+    Keychain.kept.set(aiConsentKey(PERSON, AI_CONSENT_VERSION - 1), 'agreed');
+    await renderBox([RECEIPT]);
+    const consent = await startWithFile();
+    expect(within(consent).getByText(CONSENT.title)).toBeTruthy();
+    expect(runsSent()).toEqual([]);
+  });
+
+  it('is asked when the Keychain cannot be read: a consent is never assumed', async () => {
+    // Agreed before, but the Keychain will not say so.
+    Keychain.kept.set(aiConsentKey(PERSON), 'agreed');
+    await renderBox([RECEIPT]);
+    await giveFile();
+    Keychain.getItemAsync.mockRejectedValueOnce(new Error('The keychain could not be read'));
+    await fireEvent.press(screen.getByText('Start run'));
+    expect(await screen.findByTestId('ai-consent-dialog')).toBeTruthy();
+    expect(Keychain.getItemAsync).toHaveBeenLastCalledWith(aiConsentKey(PERSON), KEPT_THIS_DEVICE_ONLY);
+    expect(runsSent()).toEqual([]);
+  });
+
+  it('starts the run when the consent cannot be kept, and asks again before the next run with a file', async () => {
+    answer(`POST ${RUNS_PATH}`, () => ({ run: { id: 'run-1' } }));
+    Keychain.setItemAsync.mockRejectedValueOnce(new Error('The keychain could not be written'));
+    await renderBox([RECEIPT]);
+    await fireEvent.press(within(await startWithFile()).getByText(CONSENT.agree));
+    await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-1'));
+    expect(runsSent().map((request) => request.body)).toEqual([{ subscriptionId: 'sub-1', input: { receipt: 'artifact-1' } }]);
+
+    await waitFor(() => expect(screen.queryByText('Ready: invoice.pdf (5 bytes)')).toBeNull());
+    const consent = await startWithFile();
+    expect(within(consent).getByText(CONSENT.title)).toBeTruthy();
+    expect(runsSent()).toHaveLength(1);
+  });
+
+  it("opens the website's Privacy Policy, which names the providers — the consent stays open, nothing started or kept", async () => {
+    await renderBox([RECEIPT]);
+    const consent = await startWithFile();
+    await fireEvent.press(within(consent).getByTestId('ai-consent-privacy'));
+    expect(openURL).toHaveBeenCalledWith('https://www.example.test/privacy');
+    expect(screen.getByTestId('ai-consent-dialog')).toBeTruthy();
+    expect(runsSent()).toEqual([]);
+    expect(Keychain.setItemAsync).not.toHaveBeenCalled();
+  });
+
+  it('says "Privacy Policy" in plain words where the app does not know the website', async () => {
+    delete mockExtra.nativeAuthBaseUrl;
+    await renderBox([RECEIPT]);
+    const consent = await startWithFile();
+    expect(within(consent).getByText(CONSENT.policy)).toBeTruthy();
+    expect(within(consent).queryByTestId('ai-consent-privacy')).toBeNull();
+    expect(openURL).not.toHaveBeenCalled();
+  });
+
+  it("is closed by Android's back as by Cancel: nothing started, nothing kept, the file as it was", async () => {
+    await renderBox([RECEIPT]);
+    const consent = await startWithFile();
+    // Android's back asks the Modal to close: its onRequestClose, which the event reaches from the dialog's card.
+    await fireEvent(consent, 'requestClose');
+    await waitFor(() => expect(screen.queryByTestId('ai-consent-dialog')).toBeNull());
+    expect(runsSent()).toEqual([]);
+    expect(onStarted).not.toHaveBeenCalled();
+    expect(Keychain.setItemAsync).not.toHaveBeenCalled();
+    expect(screen.getByText('Ready: invoice.pdf (5 bytes)')).toBeTruthy();
   });
 });
