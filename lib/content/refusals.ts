@@ -176,10 +176,10 @@ export const FLOW_QUEUE_FULL =
  * `measurement_busy` is not a refusal (backend BUILD-PLAN 25.2.39, SYSTEM-MANIFEST
  * §12.1 #272): files are measured in turn, a workspace's one at a time, and a
  * completion that finds no place yet is answered 429 at once, nothing measured
- * and nothing lost. The transport words every 429 as the platform being busy;
- * this one says what happened, in the website's sentence. The field is emptied
- * as after any refusal and the upload is not completed again here, so the
- * sentence asks for the file again in a moment.
+ * and nothing lost. `sendRunFile` completes the same upload again by itself, at
+ * most four more times; only a file still waiting after the last is said, in
+ * the website's sentence, never the transport's busy words. The field is then
+ * emptied as after any refusal, so the sentence asks for the file again.
  */
 export const UPLOAD_REFUSALS: Readonly<Record<string, string>> = {
   content_type_not_accepted: 'This flow does not accept that type of file.',

@@ -8,6 +8,7 @@ import {
   resetPlatformClientsForTests,
 } from '@/lib/platform/client';
 import { PlatformError, PlatformRateLimitedError } from '@/lib/platform/problem';
+import { sendRunFile } from '@/lib/platform/run-file';
 
 jest.mock('expo-constants', () => ({
   __esModule: true,
@@ -224,8 +225,66 @@ describe('generated platform transport', () => {
     expect(uploadRefusalMessage(error, 'The file could not be sent.')).toBe(
       'Files are checked one at a time. Nothing was lost. Choose the file again in a moment.',
     );
-    // Asked once: the app never completes it again by itself; the person chooses the file again.
+    // The transport asks once. Completing the same upload again is the upload's own
+    // (`sendRunFile`, below), and these words are said only when that has not measured it.
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('completes the same upload again after the wait its 429 states — the transport reads the wait, the upload keeps it (backend 25.2.39)', async () => {
+    const ticket = {
+      uploadSessionId: '0b7c5f0e-6a1d-4c39-9d0e-3f5a2b1c4d6e',
+      uploadUrl: 'https://store.example.test/put?signature=abc',
+      expiresAt: '2026-10-13T12:15:00Z',
+      maximumSizeBytes: 1_000_000,
+    };
+    const artifact = { artifactId: 'artifact-1', filename: 'invoice.pdf', contentType: 'application/pdf', sizeBytes: 3 };
+    // The contract's 429 on completeUpload, stating a wait of 3 s; then the file, measured.
+    const completions = [
+      () =>
+        new Response(
+          JSON.stringify({
+            status: 429,
+            code: 'TOO_MANY_REQUESTS',
+            title: 'The file is waiting to be measured',
+            details: { reason: 'measurement_busy' },
+          }),
+          { status: 429, headers: { 'content-type': 'application/problem+json', 'retry-after': '3' } },
+        ),
+      () => jsonResponse(200, { artifact }),
+    ];
+    const asked: string[] = [];
+    fetchMock.mockImplementation(async (input: Request | string, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.url;
+      asked.push(`${typeof input === 'string' ? init?.method : input.method} ${url}`);
+      if (url.endsWith('/complete')) return completions.shift()!();
+      if (url === ticket.uploadUrl) return new Response(null, { status: 200 });
+      return jsonResponse(201, ticket);
+    });
+    const completed = () => asked.filter((request) => request.endsWith('/complete')).length;
+
+    jest.useFakeTimers();
+    try {
+      const sent = sendRunFile('ws-1', 'sub-1', {
+        name: 'invoice.pdf',
+        mimeType: 'application/pdf',
+        sizeBytes: 3,
+        read: async () => new Uint8Array([1, 2, 3]),
+      });
+      await jest.advanceTimersByTimeAsync(0);
+      expect(completed()).toBe(1);
+      await jest.advanceTimersByTimeAsync(2_999);
+      expect(completed()).toBe(1);
+      await jest.advanceTimersByTimeAsync(1);
+      await expect(sent).resolves.toEqual(artifact);
+      expect(asked).toEqual([
+        'POST https://api.example.test/v1/workspaces/ws-1/uploads',
+        'PUT https://store.example.test/put?signature=abc',
+        'POST https://api.example.test/v1/workspaces/ws-1/uploads/0b7c5f0e-6a1d-4c39-9d0e-3f5a2b1c4d6e/complete',
+        'POST https://api.example.test/v1/workspaces/ws-1/uploads/0b7c5f0e-6a1d-4c39-9d0e-3f5a2b1c4d6e/complete',
+      ]);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('PUTs a file to its signed URL with no credential, even when signed in (24.3.4)', async () => {
