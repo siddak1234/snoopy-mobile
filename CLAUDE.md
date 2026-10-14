@@ -3,9 +3,9 @@
 **Round 17 — five changes here (2026-10-08 to 2026-10-10): 25.8.1; the app's halves of 25.2.12 and 25.2.10;
 their words and webhook key made the website's; the release's local build (`release:ios -- --local`,
 for 25.8.2); and 25.8.3, the flow page's start controls with Take photo (2026-10-10) — and two more
-put to the owner as a re-entry on 2026-10-13, waiting for the owner's approval (the merge of their pull
-request): Account deleted in the website's words (backend 25.7.4), and the one-time consent before AI
-reads a run's file (Apple 5.1.2(i)).** Round 17 opened in `snoopy-backend` on
+put to the owner as a re-entry on 2026-10-13 and approved by the owner's merge of #62 (`fa33f61`,
+2026-10-13 13:58:48Z): Account deleted in the website's words (backend 25.7.4), and the one-time
+consent before AI reads a run's file (Apple 5.1.2(i)).** Round 17 opened in `snoopy-backend` on
 2026-10-08 (BUILD-PLAN Phase 25, `a9e13ae`) on
 the owner's four requirements for automations; its 25.8 is this repository's one box — "A control
 the app does not know renders as the website does … `resource-picker` gets its control; an error
@@ -28,7 +28,8 @@ offering Take photo beside Upload — every image re-encoded once with `expo-ima
 17 — the app, once"; any further change here in Round 17 is a re-entry the owner approves
 (MASTER-PLAN §4), and §0.1 names this repository for 25.8. The two of 2026-10-13 are recorded in
 DESIGN-GAPS "The account-deleted words (Round 17; 2026-10-13)" and "The consent before AI reads a
-run's file (Round 17; 2026-10-13)"; neither is the owner's until the owner approves it.
+run's file (Round 17; 2026-10-13)"; both were approved by the owner's merge of #62 (`fa33f61`,
+2026-10-13 13:58:48Z).
 
 **Round 16 CLOSED 2026-10-07** — Gate 24 re-run by command by a fresh `snoopy-backend` session that wrote none of it; its record here is DESIGN-GAPS "Build 16: the owner's device pass, and Round 16's close". Open from 2026-09-29 (BUILD-PLAN Phase 24, ADR-0032): the mobile app offers
 every signed-in feature the website offers, on the same published operations,

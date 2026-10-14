@@ -1,12 +1,14 @@
 import { UPLOAD_REFUSALS, uploadRefusalMessage } from '@/lib/content/refusals';
-import { PlatformError } from '@/lib/platform/problem';
+import { PlatformError, PlatformRateLimitedError } from '@/lib/platform/problem';
+import { busyMessage } from '@/lib/platform/retry-after';
 
 /**
  * A run's file refused by the platform, in words (FR-14), including the five
  * reasons it gives since it measures a file when its upload is sealed (backend
  * BUILD-PLAN 25.2.28) — the website's sentences and its rule for the numbers
  * (`snoopy/test/upload-refusals.test.mjs`). The field showing them is held by
- * `start-run.test.tsx`.
+ * `start-run.test.tsx`. And since backend BUILD-PLAN 25.2.39, the completion
+ * that finds no place yet to measure its file: a 429, said in the website's words.
  */
 
 const refused = (details: Record<string, unknown>) => new PlatformError('Bad Request', 400, 'BAD_REQUEST', details);
@@ -50,7 +52,19 @@ describe('a refused upload, in words', () => {
     expect(uploadRefusalMessage(new Error(''), FALLBACK)).toBe(FALLBACK);
   });
 
-  it('names the five reasons the platform added, beside the seven before them', () => {
+  it("says a file with no place yet to be measured in the website's words — nothing lost, choose it again in a moment — never the platform's busy words (backend 25.2.39)", () => {
+    // As the transport projects the contract's 429 on completeUpload: its busy words, the reason beside them.
+    const busy = new PlatformRateLimitedError(busyMessage(undefined), undefined, { reason: 'measurement_busy' });
+    expect(uploadRefusalMessage(busy, FALLBACK)).toBe(
+      'Files are checked one at a time. Nothing was lost. Choose the file again in a moment.',
+    );
+    // Any other 429 keeps the platform's busy words and its wait.
+    expect(uploadRefusalMessage(new PlatformRateLimitedError(busyMessage(30), 30), FALLBACK)).toBe(
+      'The platform is busy right now. Try again in 30 seconds.',
+    );
+  });
+
+  it('names the five reasons the platform added, beside the seven before them, and the busy measurement after them', () => {
     expect(Object.keys(UPLOAD_REFUSALS)).toEqual([
       'content_type_not_accepted',
       'file_too_large',
@@ -64,6 +78,7 @@ describe('a refused upload, in words', () => {
       'file_content_mismatch',
       'file_encrypted',
       'file_unreadable',
+      'measurement_busy',
     ]);
   });
 });
