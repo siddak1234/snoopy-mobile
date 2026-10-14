@@ -7,6 +7,8 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { TextField } from '@/components/nocturne/text-field';
 import { SettingsRow } from '@/components/settings/settings-row';
+import { VendorConnectButton, VendorLogo } from '@/components/vendor-logo';
+import { pressed } from '@/components/pressable';
 import { fonts, status, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
@@ -16,7 +18,6 @@ import {
   CONNECTION_NEEDS_ATTENTION,
   CONNECTIONS_MANAGED_BY,
   KEY_REQUEST_IN_PROGRESS,
-  PROVIDERS_CONFIGURED,
   REPLACEMENT_WAS_STALE,
   WORKSPACE_CHANGED,
   alreadyConnected,
@@ -25,6 +26,7 @@ import {
 } from '@/lib/content/refusals';
 import { connectOAuthProvider, connectProviderWithKey, disconnectConnection } from '@/lib/platform/connections';
 import { PlatformError } from '@/lib/platform/problem';
+import { brandLogoFor, disconnectLabelFor } from '@/lib/view/brand-logos';
 import type { ConnectionView } from '@/lib/view/catalog';
 
 /** The action under way, so only its button says "Working…". */
@@ -62,6 +64,12 @@ type Working = 'connect' | 'reconnect' | 'disconnect' | 'replace';
  *   in words.
  * - **Every action acts on the workspace these rows were read for**
  *   (`workspaceIfShown`); after a switch elsewhere it is refused, not sent.
+ * - **A vendor with its own logo and Connect button** (QuickBooks; the Invoice
+ *   Processing update, Intuit's technical requirement 1.1): its logo in place of
+ *   the icon and name; not connected, Intuit's own "Connect to QuickBooks"
+ *   button under it, which connects at once — no text Connect anywhere for it;
+ *   connected, "Disconnect from QuickBooks" in its place, which opens the
+ *   connection's actions, where Disconnect says the same words.
  * - **One dialog, three modes** — a held connection's actions, Connect, and
  *   Replace's confirmation — the same sheet with other words: iOS will not
  *   present a second modal while the first is still being dismissed, so
@@ -101,6 +109,8 @@ export function ConnectionsCard({
   const [credentials, setCredentials] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<Working | null>(null);
+  // A vendor's own Connect button connects from its row, with no dialog: what it came back with, under that row.
+  const [rowError, setRowError] = useState<{ providerId: string; message: string } | null>(null);
   // A pasted key's key follows its values: the same values resubmitted reuse it.
   const keys = useIntentKeys('connection');
 
@@ -168,6 +178,45 @@ export function ConnectionsCard({
     // the app sees `cancelled`. Re-reading is the only honest answer.
     close();
     onChanged();
+  };
+
+  /**
+   * A vendor's own Connect button (Intuit's "Connect to QuickBooks"): through the
+   * provider at once, as Connect in the dialog does, on the workspace these rows
+   * were read for; what it came back with is said under its row.
+   */
+  const connectNow = async (row: ConnectionView) => {
+    if (busy) return;
+    const workspaceId = workspaceIfShown(session, loadedFor);
+    if (!workspaceId) {
+      setRowError({ providerId: row.providerId, message: WORKSPACE_CHANGED });
+      return;
+    }
+    setBusy('connect');
+    setRowError(null);
+    onNotice(null);
+    try {
+      const outcome = await connectOAuthProvider(workspaceId, row.provider);
+      if (outcome.status === 'failed') {
+        setRowError({ providerId: row.providerId, message: outcome.message });
+        return;
+      }
+      if (outcome.status === 'incomplete') {
+        setRowError({ providerId: row.providerId, message: connectionIncomplete(row.connected) });
+        return;
+      }
+      if (outcome.status === 'connected') {
+        onNotice(
+          outcome.reused ? alreadyConnected(row.name, outcome.connection.externalAccount.displayName) : CONNECTION_COMPLETED,
+        );
+      }
+      // `cancelled` may still have connected at the website (§12.1 #79): read again.
+      onChanged();
+    } catch (caught) {
+      setRowError({ providerId: row.providerId, message: refusalMessage(caught, {}, 'The connection was not changed.') });
+    } finally {
+      setBusy(null);
+    }
   };
 
   /** Connect's own button: through the provider, or with the pasted key. */
@@ -256,6 +305,8 @@ export function ConnectionsCard({
     }
   };
 
+  // A vendor with its own logo and buttons (QuickBooks): its Disconnect says its words.
+  const selectedBrand = brandLogoFor(selected?.provider.icon);
   // A connection the workspace holds opens its actions; Reconnect for a key
   // provider turns the dialog into its key fields.
   const held = !replacing && Boolean(selected?.reconnectable) && !rekeying;
@@ -292,47 +343,75 @@ export function ConnectionsCard({
       ) : null}
       <SectionLabel>CONNECTIONS</SectionLabel>
       <SurfaceCard style={styles.sectionCard}>
-        {rows.map((c, i) => (
-          <SettingsRow
-            key={c.providerId}
-            icon={c.icon}
-            title={c.name}
-            sub={c.provider.description}
-            detail={
-              <>
-                <Text style={[styles.rowLine, { color: palette.neutral[400] }]}>{c.sub}</Text>
-                {c.attention ? (
-                  <Text style={[styles.rowLine, { color: status.warnText }]}>{CONNECTION_NEEDS_ATTENTION}</Text>
-                ) : null}
-              </>
-            }
-            divider={i < rows.length - 1}
-            testID={`connection-row-${c.providerId}`}
-            onPress={
-              canManage
-                ? () => {
-                    setSelected(c);
-                    setError(null);
-                    onNotice(null);
-                  }
-                : undefined
-            }
-            right={
-              c.connected ? (
-                <View style={styles.connectedRight}>
-                  <View style={[styles.greenDot, { backgroundColor: status.ok }]} />
-                  {canManage ? <CaretRight size={15} color={palette.neutral[500]} /> : null}
-                </View>
-              ) : canManage ? (
-                <Text style={[styles.connectLink, { color: palette.accentRamp[300] }]}>
-                  {c.reconnectable ? 'Reconnect' : 'Connect'}
-                </Text>
-              ) : null
-            }
-          />
-        ))}
+        {rows.map((c, i) => {
+          const brand = brandLogoFor(c.provider.icon);
+          const open = () => {
+            setSelected(c);
+            setError(null);
+            setRowError(null);
+            onNotice(null);
+          };
+          // A vendor's own button is its Connect: its row opens only a connection it holds.
+          const opens = canManage && (!brand || c.reconnectable);
+          return (
+            <SettingsRow
+              key={c.providerId}
+              icon={c.icon}
+              title={c.name}
+              brand={brand ? <VendorLogo brand={brand} testID={`connection-logo-${c.providerId}`} /> : undefined}
+              sub={c.provider.description}
+              detail={
+                <>
+                  <Text style={[styles.rowLine, { color: palette.neutral[400] }]}>{c.sub}</Text>
+                  {c.attention ? (
+                    <Text style={[styles.rowLine, { color: status.warnText }]}>{CONNECTION_NEEDS_ATTENTION}</Text>
+                  ) : null}
+                  {brand && canManage && !c.connected ? (
+                    <View style={styles.brandAction}>
+                      <VendorConnectButton
+                        brand={brand}
+                        testID={`connect-brand-${c.providerId}`}
+                        disabled={busy !== null}
+                        onPress={() => connectNow(c)}
+                      />
+                    </View>
+                  ) : null}
+                  {brand && canManage && c.connected ? (
+                    <Text
+                      testID={`disconnect-brand-${c.providerId}`}
+                      accessibilityRole="link"
+                      onPress={pressed(open)}
+                      suppressHighlighting
+                      style={[styles.brandLink, { color: palette.accentRamp[300] }]}>
+                      {brand.disconnectLabel}
+                    </Text>
+                  ) : null}
+                  {rowError?.providerId === c.providerId ? (
+                    <Text accessibilityRole="alert" style={[styles.rowLine, { color: status.err }]}>
+                      {rowError.message}
+                    </Text>
+                  ) : null}
+                </>
+              }
+              divider={i < rows.length - 1}
+              testID={`connection-row-${c.providerId}`}
+              onPress={opens ? open : undefined}
+              right={
+                c.connected ? (
+                  <View style={styles.connectedRight}>
+                    <View style={[styles.greenDot, { backgroundColor: status.ok }]} />
+                    {canManage ? <CaretRight size={15} color={palette.neutral[500]} /> : null}
+                  </View>
+                ) : canManage && !brand ? (
+                  <Text style={[styles.connectLink, { color: palette.accentRamp[300] }]}>
+                    {c.reconnectable ? 'Reconnect' : 'Connect'}
+                  </Text>
+                ) : null
+              }
+            />
+          );
+        })}
       </SurfaceCard>
-      <Text style={[styles.notice, { color: palette.neutral[400] }]}>{PROVIDERS_CONFIGURED}</Text>
       {canManage ? null : (
         <Text style={[styles.notice, { color: palette.neutral[400] }]}>{CONNECTIONS_MANAGED_BY}</Text>
       )}
@@ -373,18 +452,21 @@ export function ConnectionsCard({
           ) : held ? (
             <>
               <DialogButton label="Cancel" onPress={close} />
-              <DialogButton
-                tone="accent"
-                disabled={busy !== null}
-                onPress={reconnect}
-                label={busy === 'reconnect' ? 'Working…' : 'Reconnect'}
-              />
+              {/* A vendor's own Connect button reconnects from its row; no text button stands in for it. */}
+              {selectedBrand ? null : (
+                <DialogButton
+                  tone="accent"
+                  disabled={busy !== null}
+                  onPress={reconnect}
+                  label={busy === 'reconnect' ? 'Working…' : 'Reconnect'}
+                />
+              )}
               {replaceOffered ? replaceButton : null}
               <DialogButton
                 tone="danger"
                 disabled={busy !== null}
                 onPress={disconnect}
-                label={busy === 'disconnect' ? 'Working…' : 'Disconnect'}
+                label={busy === 'disconnect' ? 'Working…' : disconnectLabelFor(selected?.provider.icon)}
               />
             </>
           ) : (
@@ -436,6 +518,15 @@ const styles = StyleSheet.create({
     borderRadius: 99,
   },
   connectLink: {
+    fontFamily: fonts.medium,
+    fontSize: typeScale.body.fontSize,
+  },
+  // The vendor's own button, at its size, with the logo's clear space above it.
+  brandAction: {
+    marginTop: 12,
+  },
+  brandLink: {
+    marginTop: 8,
     fontFamily: fonts.medium,
     fontSize: typeScale.body.fontSize,
   },

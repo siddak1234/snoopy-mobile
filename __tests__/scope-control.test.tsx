@@ -6,7 +6,6 @@ import ArchivedFlowsScreen from '@/app/(tabs)/flows/archived';
 import FlowsScreen from '@/app/(tabs)/flows/index';
 import { ScopeControl } from '@/components/scope-control';
 import type { Subscription } from '@/lib/platform/automations';
-import type { Project } from '@/lib/platform/projects';
 import { fakePlatform } from '@/test/fake-platform';
 import { renderWithProviders } from '@/test/render';
 import {
@@ -133,40 +132,23 @@ describe('the team pill (24.11.7)', () => {
     writeScope.mockClear();
   });
 
-  it('is there before any team exists, and Create a team makes one and makes it the scope', async () => {
-    const fake = fakePlatform(platformOperation);
-    let made = false;
-    // A team is its kind (24.12): the kind is its name and its type.
-    const finance: Project = {
-      id: 'p-new',
-      workspaceId: TEST_WORKSPACE,
-      name: 'Finance',
-      type: 'Finance',
-      status: 'active',
-      viewerRole: 'owner',
-      createdAt: '2026-10-02T00:00:00Z',
-    };
-    fake.always('GET /v1/workspaces/{workspaceId}/projects', () => ({ projects: made ? [finance] : [] }));
-    fake.always('GET /v1/workspaces', {
-      workspaces: [{ id: TEST_WORKSPACE, name: 'Acme', type: 'organization', role: 'owner' }],
-      activeWorkspaceId: TEST_WORKSPACE,
-    });
-    fake.always('POST /v1/workspaces/{workspaceId}/projects', () => {
-      made = true;
-      return { project: finance };
-    });
-    await renderWithProviders(<ScopeControl />, signedInSession);
-    await fireEvent.press(await screen.findByLabelText('Team: All teams'));
-    await fireEvent.press(await screen.findByTestId('scope-create-team'));
-    await fireEvent.press(await screen.findByTestId('team-kind'));
-    await fireEvent.press(screen.getByTestId('team-kind-option-Finance'));
-    const create = await screen.findAllByText('Create team');
-    await fireEvent.press(create[create.length - 1]!);
-    await fireEvent.press(await screen.findByText('Done'));
-    expect(await screen.findByLabelText('Team: Finance')).toBeTruthy();
-    expect(writeScope).toHaveBeenCalledWith(TEST_WORKSPACE, 'p-new');
-    expect(fake.to('POST /v1/workspaces/{workspaceId}/projects')[0]!.body).toEqual({ name: 'Finance', type: 'Finance' });
-  });
+  it.each(['owner', 'admin', 'member'] as const)(
+    'is there before any team exists, with All teams and no Create a team for an organization %s (ADR-0036)',
+    async (role) => {
+      const fake = fakePlatform(platformOperation);
+      fake.always('GET /v1/workspaces/{workspaceId}/projects', { projects: [] });
+      fake.always('GET /v1/workspaces', {
+        workspaces: [{ id: TEST_WORKSPACE, name: 'Acme', type: 'organization', role }],
+        activeWorkspaceId: TEST_WORKSPACE,
+      });
+      await renderWithProviders(<ScopeControl />, sessionAs(role));
+      await fireEvent.press(await screen.findByLabelText('Team: All teams'));
+      expect(await screen.findByTestId('scope-option-all')).toBeTruthy();
+      expect(screen.queryByTestId('scope-create-team')).toBeNull();
+      expect(screen.queryByText('Create a team')).toBeNull();
+      expect(fake.to('POST /v1/workspaces/{workspaceId}/projects')).toHaveLength(0);
+    },
+  );
 
   it('lists a team by its kind, once, and offers a plain member no Create a team (24.12)', async () => {
     const fake = fakePlatform(platformOperation);

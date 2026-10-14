@@ -82,7 +82,7 @@ function sessionWith(signOut: SessionContextValue['signOut']): SessionContextVal
     // The hook's members are stubbed (hence the cast); the platform's session is typed.
     session: {
       authenticated: true,
-      user: { userId: 'u1', email: 'alex@acme.co', activeWorkspaceId: '00000000-0000-4000-8000-000000000001' },
+      user: { userId: 'u1', email: 'alex@acme.co', activeWorkspaceId: '00000000-0000-4000-8000-000000000001', aiDocumentReading: 'allowed' },
       workspaces: [{ id: '00000000-0000-4000-8000-000000000001', name: 'Acme', type: 'organization', role: 'owner' }],
     } satisfies Answer<'GET /v1/session'>,
     refresh: () => {},

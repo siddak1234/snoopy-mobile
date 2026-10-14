@@ -10,11 +10,16 @@ import { IconTile } from '@/components/nocturne/icon-tile';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
 import { ScreenEmpty, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
-import { em, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
+import { em, fonts, iconSize, layout, status, typeScale, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
-import { useScope } from '@/hooks/use-scope';
 import { useTheme } from '@/hooks/use-theme';
-import { CATALOG_EMPTY_BODY, CATALOG_EMPTY_TITLE, UNAVAILABLE_NOTE, errorTitleFor } from '@/lib/content/screen-states';
+import {
+  CATALOG_EMPTY_BODY,
+  CATALOG_EMPTY_TITLE,
+  CATALOG_SUBTITLE,
+  UNAVAILABLE_NOTE,
+  errorTitleFor,
+} from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
 import { readProjects } from '@/lib/platform/projects';
 import { readSubscriptions } from '@/lib/platform/runs';
@@ -25,19 +30,19 @@ import { catalogPrice, heldAs, scopeLabel, scopeLabels, toSolutions, withoutArch
  * and 5 of 2026-10-02: "name them flows… the new gives us a list of all flows
  * and which one to pick up or add then what project to assign it to").
  *
- * The scope control chooses the team a flow is added to: Setup is told it, so
- * the person does not choose it twice. A workspace holds a flow once (the
+ * A flow goes to the team of its category (backend ADR-0036; the owner,
+ * 2026-10-14: "when a person goes to flows to add this it will already be in a
+ * accounting category … theres no choose a team"): Add opens Setup for it, and
+ * no team is chosen anywhere. Each card says its category and its price — the
+ * version is gone from it (the spec's S9). A workspace holds a flow once (the
  * owner's build 12 item 9: "Teams cannot have the same flows"): one it holds,
- * in any team or the whole workspace, reads "Added ✓" with where it is and
- * opens itself, whatever the scope control shows — no Add for another team.
- * Until build 13 a flow could be added once per scope, the platform's rule
- * (18.6.2), which it keeps until its own guard lands; this one is the app's.
+ * in any team or the whole workspace, reads "Added ✓" with its team and opens
+ * itself.
  */
 export default function AddFlowScreen() {
   const { palette } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { projectId } = useScope();
   const [category, setCategory] = useState('All');
 
   const catalog = useWorkspaceResource(async (id) => {
@@ -49,17 +54,12 @@ export default function AddFlowScreen() {
     return {
       catalog: catalogResponse,
       subscriptions: withoutArchived(subscriptions.subscriptions),
-      openProjects: projects.filter((project) => project.status !== 'archived'),
       // Every team's name, an archived team's too: a flow held there says where.
       labels: scopeLabels(projects),
     };
   });
 
   const ready = catalog.status === 'ready' ? catalog.data : null;
-  const scopeProject = ready?.openProjects.find((project) => project.id === projectId);
-  // '' is the whole workspace, as `Subscription.projectId` null is.
-  const scopeKey = scopeProject ? scopeProject.id : '';
-  const scopeName = scopeProject ? scopeProject.type : 'your workspace';
 
   const solutions = ready ? toSolutions(ready.catalog, ready.subscriptions) : [];
   const chips = ready ? ready.catalog.categories : [];
@@ -110,9 +110,7 @@ export default function AddFlowScreen() {
         <BackCircle onPress={() => router.back()} />
         <View style={styles.headerText}>
           <Text style={[styles.h1, { color: palette.text }]}>Add a flow</Text>
-          <Text style={[styles.sub, { color: palette.neutral[400] }]}>
-            Prebuilt flows, set up in minutes. Adding to {scopeName}.
-          </Text>
+          <Text style={[styles.sub, { color: palette.neutral[400] }]}>{CATALOG_SUBTITLE}</Text>
         </View>
       </View>
 
@@ -133,13 +131,13 @@ export default function AddFlowScreen() {
             : undefined;
           return (
             <SurfaceCard key={sol.templateId} style={styles.card} onPress={openFlow}>
-              <IconTile icon={sol.icon} size={42} iconSize={21} borderRadius={12} bordered />
+              <IconTile icon={sol.icon} size={42} iconSize={iconSize.row} borderRadius={12} bordered />
               <View style={styles.cardBody}>
                 <Text style={[styles.cardName, { color: palette.text }]}>{sol.name}</Text>
                 <Text style={[styles.cardDesc, { color: palette.neutral[400] }]}>{sol.desc}</Text>
-                {/* The version Add pins and the price, as the website's card says them. */}
+                {/* Its category — the team it goes to — and its price (spec §3.A). */}
                 <Text style={[styles.cardMeta, { color: palette.neutral[500] }]}>
-                  {sol.cat} · v{sol.version} · {catalogPrice(sol.price)}
+                  {sol.cat} · {catalogPrice(sol.price)}
                 </Text>
                 {/* The platform probed this automation and it did not answer.
                     Saying so beats an Add button that fails at the first run —
@@ -165,10 +163,7 @@ export default function AddFlowScreen() {
                   disabled={!sol.available}
                   accessibilityState={{ disabled: !sol.available }}
                   onPress={() =>
-                    router.push({
-                      pathname: '/(tabs)/flows/setup',
-                      params: { template: sol.templateId, ...(scopeKey ? { project: scopeKey } : {}) },
-                    })
+                    router.push({ pathname: '/(tabs)/flows/setup', params: { template: sol.templateId } })
                   }
                   style={({ pressed }) => [
                     styles.addBtn,

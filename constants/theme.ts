@@ -180,6 +180,14 @@ export const typeScale = {
   hero: { fontSize: 37, lineHeight: 46 },
 } as const;
 
+/**
+ * Icon sizes (the Invoice Processing update, 2026-10-14; the owner's build 19
+ * item 8: "Small icons"): 24 for anything that labels a row, a field, a vendor,
+ * a step group or a detail, 20 inside a button. A screen takes its glyph size
+ * from here, never a number of its own.
+ */
+export const iconSize = { row: 24, button: 20 } as const;
+
 /** DS radius scale + the specific radii the screens are drawn with. */
 export const radius = {
   sm: 4,

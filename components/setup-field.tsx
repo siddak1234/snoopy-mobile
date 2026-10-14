@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
-import { EnvelopeSimple, HandPalm, Sliders, Tray, type Icon } from 'phosphor-react-native';
+import { EnvelopeSimple, HandPalm, PlugsConnected, Sliders, Tray, type Icon } from 'phosphor-react-native';
 
 import { NocToggle } from '@/components/nocturne/noc-toggle';
-import { fonts, typeScale } from '@/constants/theme';
+import { SectionLabel } from '@/components/nocturne/section-label';
+import { fonts, iconSize, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { NEWER_CONTROL_NOTE } from '@/lib/content/screen-states';
 import type { components } from '@/lib/generated/platform-contracts/automations';
@@ -51,11 +52,16 @@ export type FieldRowSpec = Pick<SetupField, 'key' | 'title' | 'description' | 'r
 export const SECTION_ORDER = ['connections', 'source', 'rules', 'notifications'] as const;
 export type SetupSection = (typeof SECTION_ORDER)[number];
 
+/**
+ * Each section's name, in the spec's words (the Invoice Processing update, §3.B;
+ * the owner's build 19 item 8: "So much ai slop wording … No numbered category
+ * steps"): ~~CONNECTIONS, REVIEW RULES, NOTIFICATIONS~~ until 2026-10-14.
+ */
 export const SECTION_NAME: Record<SetupSection, string> = {
-  connections: 'CONNECTIONS',
+  connections: 'CONNECT',
   source: 'SOURCE',
-  rules: 'REVIEW RULES',
-  notifications: 'NOTIFICATIONS',
+  rules: 'SETTINGS',
+  notifications: 'EMAIL',
 };
 
 /**
@@ -66,6 +72,47 @@ export const SECTION_NAME: Record<SetupSection, string> = {
  */
 export function sectionLabel(position: number, section: SetupSection): string {
   return `${position} · ${SECTION_NAME[section]}`;
+}
+
+/**
+ * A numbered section's heading, as the design contract draws a step of a form
+ * (spec §3.0 rule 1): "1 · CONNECT", at the label size, in the text colour — a
+ * step to take, not a quiet kicker.
+ */
+export function NumberedSectionLabel({ children, testID }: { children: string; testID?: string }) {
+  const { palette } = useTheme();
+  return (
+    <View testID={testID}>
+      <SectionLabel fontSize={typeScale.label.fontSize} color={palette.text}>
+        {children}
+      </SectionLabel>
+    </View>
+  );
+}
+
+/**
+ * The flow's vendor choice (backend ADR-0037): the one setup field with
+ * `control: connection`, or none. Its value is `none` or the `providerId` of
+ * one of the flow's optional connections, and it is chosen on the flow's
+ * Connect vendor page, never typed in a row.
+ */
+export function connectionField<T extends { control: string }>(setup: readonly T[]): T | undefined {
+  return setup.find((field) => field.control === 'connection');
+}
+
+/** The fields a form draws as rows: every field but the vendor choice, which has a page of its own. */
+export function rowFields<T extends { control: string }>(setup: readonly T[]): T[] {
+  return setup.filter((field) => field.control !== 'connection');
+}
+
+/** What a flow's vendor choice holds now: its saved value, else its default, else None. */
+export function chosenVendor(
+  field: { key: string; defaultValue?: unknown } | undefined,
+  config: Record<string, unknown> | undefined,
+): string {
+  if (!field) return 'none';
+  const value = config?.[field.key] ?? field.defaultValue;
+  return typeof value === 'string' && value !== '' ? value : 'none';
 }
 
 /** Whole dollars with thousands separators, and two cents: what a money field shows. */
@@ -104,6 +151,9 @@ const CONTROL_ICON: Record<KnownControl, Icon> = {
   'resource-picker': Tray,
   // The address control (backend, 2026-10-02): the email keyboard, an envelope.
   email: EnvelopeSimple,
+  // The vendor choice (backend ADR-0037): never a row of its own — its page is
+  // Connect vendor — but known, so no screen says it is newer than this build.
+  connection: PlugsConnected,
 };
 
 /**
@@ -280,7 +330,7 @@ export function SetupFieldRow({
   const body = (
     <>
       <View style={styles.titleLine}>
-        <Glyph size={20} color={palette.accentRamp[300]} />
+        <Glyph size={iconSize.row} color={palette.accentRamp[300]} />
         <Text style={[styles.rowTitle, { color: palette.text }]}>{field.title}</Text>
         {!field.required ? (
           <Text style={[styles.optional, { color: palette.neutral[500] }]}>Optional</Text>
@@ -340,7 +390,8 @@ const styles = StyleSheet.create({
   titleLine: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   rowTitle: { flex: 1, minWidth: 0, fontFamily: fonts.medium, fontSize: typeScale.label.fontSize },
   optional: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
-  rowSub: { fontFamily: fonts.regular, ...typeScale.small, paddingLeft: 30 },
+  // Under the title, past the glyph and its gap.
+  rowSub: { fontFamily: fonts.regular, ...typeScale.small, paddingLeft: iconSize.row + 10 },
   inputWrap: {
     alignSelf: 'stretch',
     marginTop: 4,

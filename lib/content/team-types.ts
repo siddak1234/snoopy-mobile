@@ -20,12 +20,19 @@ import {
   type Icon,
 } from 'phosphor-react-native';
 
+import type { components } from '@/lib/generated/platform-contracts/automations';
+
+/** The platform's fixed list of categories, each a team kind (backend ADR-0036). */
+type CatalogCategory = components['schemas']['AutomationCatalogEntry']['category'];
+
 /**
- * The kinds of team a person picks from when creating one (the owner, build 7:
- * "project types should just be teams or departments" — the list confirmed
- * 2026-10-02; BUILD-PLAN 24.11.7). "Other" opens a field for their own words.
- * The platform stores the kind as text (`ProjectSummary.type`, 1–120
- * characters), so a kind not on this list is still a team's own.
+ * The kinds of team (the owner, build 7: "project types should just be teams or
+ * departments" — the list confirmed 2026-10-02; BUILD-PLAN 24.11.7). Since the
+ * Invoice Processing update (backend ADR-0036, 2026-10-14) they are the
+ * platform's fixed list of flow categories too: a flow goes to the team of its
+ * category, which the platform makes when first needed, so no one here creates
+ * a team or picks one. Typed against the generated category union both ways, so
+ * a kind the platform adds, drops or respells fails `npm run typecheck`.
  */
 export const TEAM_TYPES = [
   'HR',
@@ -44,11 +51,12 @@ export const TEAM_TYPES = [
   'Procurement',
   'Administration',
   'Research',
-] as const;
-
-export const OTHER_TEAM_TYPE = 'Other';
+] as const satisfies readonly CatalogCategory[];
 
 export type TeamType = (typeof TEAM_TYPES)[number];
+
+/** Every category the platform publishes is a kind on this list: `true` only while the two agree. */
+export const TEAM_TYPES_COVER_EVERY_CATEGORY: [CatalogCategory] extends [TeamType] ? true : never = true;
 
 /**
  * Each kind's icon (the owner's build 13 decision 2, 2026-10-06): Home's team

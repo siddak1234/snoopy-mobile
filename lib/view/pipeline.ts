@@ -74,3 +74,26 @@ export function toPipelineSteps(steps: DeclaredStep[] | undefined): PipelineStep
   if (!steps) return [];
   return steps.map((step, i) => toPipelineStep(step, i === steps.length - 1));
 }
+
+export type StepGroup = components['schemas']['AutomationStepGroup'];
+
+/** One row of a flow page's STEPS: "1 · Received", and what happens in it. */
+export type FlowStepRow = { id: string; label: string; sub: string };
+
+/**
+ * A flow page's STEPS (the Invoice Processing update, spec §3.D; the owner's
+ * build 19 item 7: "This flow is so long and messed up"): numbered rows, the
+ * number in the label — one per visible group where the manifest declares them
+ * (backend ADR-0037: "Received · Read · Checked · Done · Emailed" for Invoice
+ * Processing v2), else one per step — each with what it does under it. No
+ * kickers ("TRIGGER", "AI STEP", "ACTION"), no step cards.
+ */
+export function flowStepRows(
+  steps: readonly DeclaredStep[] | undefined,
+  groups: readonly StepGroup[] | undefined,
+): FlowStepRow[] {
+  if (groups && groups.length > 0) {
+    return groups.map((group, index) => ({ id: group.id, label: `${index + 1} · ${group.title}`, sub: group.description }));
+  }
+  return (steps ?? []).map((step, index) => ({ id: step.id, label: `${index + 1} · ${step.title}`, sub: step.description }));
+}

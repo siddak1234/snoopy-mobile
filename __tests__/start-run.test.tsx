@@ -11,22 +11,7 @@ jest.mock('expo-image-manipulator', () => ({
   ImageManipulator: { manipulate: jest.fn() },
   SaveFormat: { JPEG: 'jpeg', PNG: 'png', WEBP: 'webp' },
 }));
-// A keychain that keeps what it is given: where a person's consent to AI reading a run's file is kept.
-jest.mock('expo-secure-store', () => {
-  const kept = new Map<string, string>();
-  return {
-    WHEN_UNLOCKED_THIS_DEVICE_ONLY: 'WHEN_UNLOCKED_THIS_DEVICE_ONLY',
-    kept,
-    getItemAsync: jest.fn(async (key: string) => kept.get(key) ?? null),
-    setItemAsync: jest.fn(async (key: string, value: string) => {
-      kept.set(key, value);
-    }),
-    deleteItemAsync: jest.fn(async (key: string) => {
-      kept.delete(key);
-    }),
-  };
-});
-// The website's origin, for the consent's Privacy Policy: the browser leg's base, as Support uses it.
+// The website's origin, for the card's Privacy Policy: the browser leg's base, as Support uses it.
 const mockExtra: { nativeAuthBaseUrl?: string } = {};
 jest.mock('expo-constants', () => ({
   __esModule: true,
@@ -47,11 +32,10 @@ import { Linking } from 'react-native';
 
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import { StartRun } from '@/components/automations/start-run';
+import { forgetSavedAiReading } from '@/hooks/use-ai-reading';
 import type { SessionContextValue } from '@/hooks/use-session';
-import { AI_CONSENT_VERSION } from '@/lib/content/ai-consent';
 import { FLOW_QUEUE_FULL, WORKSPACE_CHANGED } from '@/lib/content/refusals';
 import { CAMERA_NOT_OPENED, CAMERA_OFF } from '@/lib/content/screen-states';
-import { aiConsentKey } from '@/lib/platform/ai-consent-store';
 import type { AutomationRunInputField } from '@/lib/platform/automations';
 import { PlatformError, PlatformRateLimitedError, PlatformUnreachableError } from '@/lib/platform/problem';
 import { busyMessage } from '@/lib/platform/retry-after';
@@ -60,13 +44,6 @@ import { TEST_WORKSPACE, flowCatalogPayload, routePlatform, sessionAs, signedInS
 import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
 
 const { platformOperation, newIdempotencyKey, putFileToSignedUrl } = jest.requireMock('@/lib/platform/client');
-const Keychain = jest.requireMock('expo-secure-store') as {
-  kept: Map<string, string>;
-  getItemAsync: jest.Mock;
-  setItemAsync: jest.Mock;
-};
-/** The person `sessionAs` signs in (`test/platform.tsx`). */
-const PERSON = 'u1';
 
 /**
  * BUILD-PLAN 25.8.3 (Round 17; the owner's "i like the suggested lets do that",
@@ -96,12 +73,14 @@ beforeEach(() => {
     const next = answers[`${method} ${path}`]?.shift();
     return { data: next ? next() : {} };
   };
-  const clients = { automations: { GET: call('GET'), POST: call('POST'), PATCH: call('PATCH') } };
+  const clients = {
+    automations: { GET: call('GET'), POST: call('POST'), PATCH: call('PATCH') },
+    // The account's answer to "AI reads your documents" (backend ADR-0038).
+    platform: { PUT: call('PUT') },
+  };
   platformOperation.mockImplementation(async (_key: string, execute: Function) => (await execute(clients)).data);
-  // This person agreed before, on this phone, to AI reading a run's file, so a run that
-  // carries one starts as it did before the consent. The consent's own tests start with none.
-  Keychain.kept.clear();
-  Keychain.kept.set(aiConsentKey(PERSON), 'agreed');
+  // Nothing an earlier test saved on the account answers this one.
+  forgetSavedAiReading();
   mockExtra.nativeAuthBaseUrl = 'https://www.example.test/api/platform';
 });
 
@@ -124,8 +103,8 @@ const HOLD: AutomationRunInputField = {
   defaultValue: 500,
 };
 
-const LEAD =
-  'Enter what this run needs. It starts when you submit, or waits its turn if this flow is busy, and its page shows each step as it happens.';
+/** One line (spec §3.D), in place of the 28-word lead. */
+const LEAD = 'Fill this in, then start the run.';
 
 const onStarted = jest.fn();
 
@@ -139,7 +118,7 @@ async function renderBox(
   session: SessionContextValue = sessionAs('owner'),
 ) {
   return renderWithProviders(
-    <StartRun subscriptionId="sub-1" shownWorkspaceId={shown} runInput={runInput} onStarted={onStarted} />,
+    <StartRun subscriptionId="sub-1" shownWorkspaceId={shown} runInput={runInput} usesAi={false} onStarted={onStarted} />,
     session,
   );
 }
@@ -297,9 +276,8 @@ describe("the flow page's start controls (25.8.3)", () => {
     // The header, then the box, then the tiles, then the page as it was.
     expect(at('text:Invoice triage')).toBeLessThan(at('start-run'));
     expect(at('start-run')).toBeLessThan(at('flow-stat-All'));
-    expect(at('flow-stat-All')).toBeLessThan(at('text:CONNECTIONS'));
-    expect(at('text:CONNECTIONS')).toBeLessThan(at('text:PIPELINE'));
-    expect(at('text:PIPELINE')).toBeLessThan(at('text:Pause'));
+    expect(at('flow-stat-All')).toBeLessThan(at('text:STEPS'));
+    expect(at('text:STEPS')).toBeLessThan(at('text:Pause'));
     expect(at('text:Pause')).toBeLessThan(at('archive-flow'));
     // The box holds the run's fields and Start run; nothing at the bottom opens a dialog any more.
     const box = screen.getByTestId('start-run');
@@ -1038,33 +1016,36 @@ describe('the re-encode itself (lib/platform/run-image.ts)', () => {
 /* ───────────────────────── the consent before AI reads a run's file ───────────────────────── */
 
 /**
- * Apple's App Review Guideline 5.1.2(i): "You must clearly disclose where personal
- * data will be shared with third parties, including with third-party AI, and obtain
- * explicit permission before doing so." A run's file that AI reads goes to
- * OpenRouter and on to a model's provider; the catalog does not say which flows do
- * that, so Start run asks before any run that carries a file — once per person on
- * this phone, for this version of the words.
+ * The account's answer to "AI reads your documents" (backend ADR-0038; spec
+ * §3.G, §3.H; the owner's build 19 item 4): a run with a file, on a flow that
+ * uses AI (`usesAi`), starts when the account allowed it; never asked, the
+ * card asks first, and Allow starts the run; declined, "AI reading is off."
+ * with Turn on under Start run. The per-run "AI reads this file" dialog of
+ * 2026-10-13 is gone.
  */
 
-/** The consent's words, as a person reads them — the website says them byte for byte. */
-const CONSENT = {
-  title: 'AI reads this file',
-  body: 'To read the file you give this run, Autom8x sends it to OpenRouter, which passes it to AI model providers in the United States, using only endpoints that OpenRouter lists as zero data retention.',
-  policy: 'Our Privacy Policy names the providers and explains what may be kept.',
-  agree: 'Agree and start',
-  cancel: 'Cancel',
+/** The card's words, as a person reads them — the website says them byte for byte. */
+const CARD = {
+  title: 'AI reads your documents',
+  body: "Some flows send a document you add to AI models, through OpenRouter, to read it. They don't keep it.",
+  policy: 'See our Privacy Policy.',
+  allow: 'Allow',
+  notNow: 'Not now',
+  failed: 'Could not save your choice. Try again.',
 };
-const KEPT_THIS_DEVICE_ONLY = { keychainAccessible: 'WHEN_UNLOCKED_THIS_DEVICE_ONLY' };
 const RECEIPT_OPTIONAL: AutomationRunInputField = { ...RECEIPT, required: false };
+const CONSENT_PATH = '/v1/session/ai-document-reading';
 
 /** The runs the box asked the platform to start. */
 const runsSent = () => sent.filter((request) => request.path === RUNS_PATH);
+/** The answers the box saved on the account. */
+const choicesSent = () => sent.filter((request) => request.path === CONSENT_PATH);
 
-/** Someone else, signed in on this phone. */
-function signedInAs(userId: string): SessionContextValue {
+/** The signed-in owner, whose account answered `choice` (null: never asked). */
+function answeredAs(choice: 'allowed' | 'declined' | null): SessionContextValue {
   const owner = sessionAs('owner');
   if (owner.status !== 'signed-in') throw new Error('fixture');
-  return { ...owner, session: { ...owner.session, user: { ...owner.session.user, userId, email: `${userId}@acme.co` } } };
+  return { ...owner, session: { ...owner.session, user: { ...owner.session.user, aiDocumentReading: choice } } };
 }
 
 /** A PDF given to the receipt field: uploaded, and ready to start. */
@@ -1076,183 +1057,179 @@ async function giveFile() {
   expect(await screen.findByText('Ready: invoice.pdf (5 bytes)')).toBeTruthy();
 }
 
-/** Start run, with a file given: the consent, once it is open. */
-async function startWithFile() {
-  await giveFile();
-  await fireEvent.press(screen.getByText('Start run'));
-  return screen.findByTestId('ai-consent-dialog');
+/** The start controls of a flow that uses AI, for an account that answered `choice`. */
+async function renderAiBox(runInput: AutomationRunInputField[], choice: 'allowed' | 'declined' | null) {
+  return renderWithProviders(
+    <StartRun subscriptionId="sub-1" shownWorkspaceId={TEST_WORKSPACE} runInput={runInput} usesAi onStarted={onStarted} />,
+    answeredAs(choice),
+  );
 }
 
-describe("the consent before AI reads a run's file (Apple's App Review Guideline 5.1.2(i))", () => {
+describe('the account\'s answer to "AI reads your documents" gates a run with a file on a flow that uses AI (backend ADR-0038)', () => {
   let openURL: jest.SpyInstance;
   beforeEach(() => {
-    // Nobody has agreed on this phone yet.
-    Keychain.kept.clear();
     openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
   });
   afterEach(() => openURL.mockRestore());
 
-  it('is asked on the first Start run with a file, in its words, and nothing starts while it is open — Start run held behind it', async () => {
-    await renderBox([NOTE, RECEIPT]);
-    await fireEvent.changeText(screen.getByLabelText('Note'), 'Pay it');
-    const consent = await startWithFile();
-    expect(within(consent).getByText(CONSENT.title)).toBeTruthy();
-    expect(within(consent).getByText(CONSENT.body)).toBeTruthy();
-    expect(within(consent).getByText(CONSENT.policy)).toBeTruthy();
-    expect(within(consent).getByText(CONSENT.agree)).toBeTruthy();
-    expect(within(consent).getByText(CONSENT.cancel)).toBeTruthy();
-    // The Keychain was asked for this person's consent to these words, and holds none.
-    expect(Keychain.getItemAsync).toHaveBeenCalledWith(`autom8x.ai-consent.v${AI_CONSENT_VERSION}.${PERSON}`, KEPT_THIS_DEVICE_ONLY);
+  it('starts the run at once when the account allowed it: no card, nothing saved', async () => {
+    answer(`POST ${RUNS_PATH}`, () => ({ run: { id: 'run-1' } }));
+    await renderAiBox([RECEIPT], 'allowed');
+    await giveFile();
+    await fireEvent.press(screen.getByText('Start run'));
+    await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-1'));
+    expect(screen.queryByTestId('ai-reading-card')).toBeNull();
+    expect(choicesSent()).toEqual([]);
+    expect(runsSent().map((request) => request.body)).toEqual([{ subscriptionId: 'sub-1', input: { receipt: 'artifact-1' } }]);
+  });
+
+  it('never asked: Start run with a file opens the card in its words, nothing starts while it is open, and the per-run dialog is gone', async () => {
+    await renderAiBox([RECEIPT], null);
+    await giveFile();
+    await fireEvent.press(screen.getByText('Start run'));
+    const card = await screen.findByTestId('ai-reading-card');
+    expect(within(card).getByText(CARD.title)).toBeTruthy();
+    expect(within(card).getByText(CARD.body)).toBeTruthy();
+    expect(within(card).getByText(CARD.allow)).toBeTruthy();
+    expect(within(card).getByText(CARD.notNow)).toBeTruthy();
+    expect(screen.queryByText('AI reads this file')).toBeNull();
+    expect(screen.queryByText('Agree and start')).toBeNull();
+    expect(screen.getByTestId('start-run-button').props.accessibilityState?.disabled).toBe(true);
+    expect(runsSent()).toEqual([]);
+    expect(choicesSent()).toEqual([]);
+  });
+
+  it('Allow saves "allowed" on the account, then starts the run once; the next run with a file is not asked', async () => {
+    answer(`PUT ${CONSENT_PATH}`, () => ({ aiDocumentReading: 'allowed', decidedAt: '2026-10-14T20:00:00Z' }));
+    answer(`POST ${RUNS_PATH}`, () => ({ run: { id: 'run-1' } }), () => ({ run: { id: 'run-2' } }));
+    await renderAiBox([RECEIPT], null);
+    await giveFile();
+    await fireEvent.press(screen.getByText('Start run'));
+    await fireEvent.press(within(await screen.findByTestId('ai-reading-card')).getByText(CARD.allow));
+    await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-1'));
+    expect(choicesSent().map((request) => [request.method, request.body])).toEqual([['PUT', { choice: 'allowed' }]]);
+    expect(screen.queryByTestId('ai-reading-card')).toBeNull();
+    expect(runsSent()).toHaveLength(1);
+
+    // The box is fresh; the next run with a file starts with no card.
+    await giveFile();
+    await fireEvent.press(screen.getByText('Start run'));
+    await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-2'));
+    expect(screen.queryByTestId('ai-reading-card')).toBeNull();
+    expect(choicesSent()).toHaveLength(1);
+  });
+
+  it('Not now saves "declined" and starts nothing; "AI reading is off." with Turn on follows, and Turn on allows it and starts the run', async () => {
+    answer(`PUT ${CONSENT_PATH}`, () => ({ aiDocumentReading: 'declined', decidedAt: '2026-10-14T20:00:00Z' }));
+    answer(`PUT ${CONSENT_PATH}`, () => ({ aiDocumentReading: 'allowed', decidedAt: '2026-10-14T20:01:00Z' }));
+    answer(`POST ${RUNS_PATH}`, () => ({ run: { id: 'run-1' } }));
+    await renderAiBox([RECEIPT], null);
+    await giveFile();
+    await fireEvent.press(screen.getByText('Start run'));
+    await fireEvent.press(within(await screen.findByTestId('ai-reading-card')).getByText(CARD.notNow));
+    await waitFor(() => expect(screen.queryByTestId('ai-reading-card')).toBeNull());
+    expect(choicesSent().map((request) => request.body)).toEqual([{ choice: 'declined' }]);
+    expect(runsSent()).toEqual([]);
+    const off = await screen.findByTestId('ai-reading-off');
+    expect(within(off).getByText('AI reading is off.')).toBeTruthy();
+
+    // Declined, Start run with the file starts nothing and asks nothing.
+    await fireEvent.press(screen.getByText('Start run'));
+    expect(screen.queryByTestId('ai-reading-card')).toBeNull();
     expect(runsSent()).toEqual([]);
 
-    // Held while it is open: Start run behind it starts nothing.
-    expect(screen.getByTestId('start-run-button').props.accessibilityState?.disabled).toBe(true);
+    await fireEvent.press(within(off).getByText('Turn on'));
+    await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-1'));
+    expect(choicesSent().map((request) => request.body)).toEqual([{ choice: 'declined' }, { choice: 'allowed' }]);
+    expect(screen.queryByTestId('ai-reading-off')).toBeNull();
+  });
+
+  it('declined from the start: the line is drawn under Start run, and Turn on with no file only allows it', async () => {
+    answer(`PUT ${CONSENT_PATH}`, () => ({ aiDocumentReading: 'allowed', decidedAt: '2026-10-14T20:00:00Z' }));
+    await renderAiBox([RECEIPT_OPTIONAL], 'declined');
+    const off = screen.getByTestId('ai-reading-off');
+    await fireEvent.press(within(off).getByTestId('ai-reading-turn-on'));
+    await waitFor(() => expect(screen.queryByTestId('ai-reading-off')).toBeNull());
+    expect(choicesSent().map((request) => request.body)).toEqual([{ choice: 'allowed' }]);
+    expect(runsSent()).toEqual([]);
+  });
+
+  it('says so when Turn on could not be saved, and starts nothing', async () => {
+    answer(`PUT ${CONSENT_PATH}`, () => {
+      throw new PlatformError('The account service did not answer.', 502);
+    });
+    await renderAiBox([RECEIPT], 'declined');
+    await giveFile();
+    await fireEvent.press(screen.getByTestId('ai-reading-turn-on'));
+    expect(await screen.findByText('Could not save. Try again.')).toBeTruthy();
+    expect(runsSent()).toEqual([]);
+    expect(screen.getByTestId('ai-reading-off')).toBeTruthy();
+  });
+
+  it('says so in the card when the answer could not be saved: the card stays and nothing starts', async () => {
+    answer(`PUT ${CONSENT_PATH}`, () => {
+      throw new PlatformError('The account service did not answer.', 502);
+    });
+    await renderAiBox([RECEIPT], null);
+    await giveFile();
     await fireEvent.press(screen.getByText('Start run'));
-    expect(screen.getAllByTestId('ai-consent-dialog')).toHaveLength(1);
+    const card = await screen.findByTestId('ai-reading-card');
+    await fireEvent.press(within(card).getByText(CARD.allow));
+    expect(await within(card).findByText(CARD.failed)).toBeTruthy();
     expect(runsSent()).toEqual([]);
     expect(onStarted).not.toHaveBeenCalled();
   });
 
   it.each([
-    ['no file field', [NOTE]],
-    ['its file field left empty', [NOTE, RECEIPT_OPTIONAL]],
-  ])('is never asked for a run that carries no file — %s — nor read from the Keychain', async (_case, runInput) => {
+    ['a flow that does not use AI, with a file', [RECEIPT], false, true],
+    ['no file field', [NOTE], true, false],
+    ['its file field left empty', [NOTE, RECEIPT_OPTIONAL], true, false],
+  ] as const)('is never asked for %s — the run starts as it always did', async (_case, runInput, usesAi, withFile) => {
     answer(`POST ${RUNS_PATH}`, () => ({ run: { id: 'run-1' } }));
-    await renderBox(runInput);
-    await fireEvent.changeText(screen.getByLabelText('Note'), 'Pay it');
+    await renderWithProviders(
+      <StartRun subscriptionId="sub-1" shownWorkspaceId={TEST_WORKSPACE} runInput={[...runInput]} usesAi={usesAi} onStarted={onStarted} />,
+      answeredAs(null),
+    );
+    if (withFile) await giveFile();
+    else await fireEvent.changeText(screen.getByLabelText('Note'), 'Pay it');
     await fireEvent.press(screen.getByText('Start run'));
     await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-1'));
-    expect(screen.queryByTestId('ai-consent-dialog')).toBeNull();
-    expect(Keychain.getItemAsync.mock.calls.filter(([key]) => String(key).startsWith('autom8x.ai-consent'))).toEqual([]);
-    expect(runsSent().map((request) => request.body)).toEqual([{ subscriptionId: 'sub-1', input: { note: 'Pay it' } }]);
+    expect(screen.queryByTestId('ai-reading-card')).toBeNull();
+    expect(choicesSent()).toEqual([]);
   });
 
-  it('Agree and start keeps the consent for this person on this phone, this-device-only, then starts the run once; the next run with a file is not asked', async () => {
-    answer(`POST ${RUNS_PATH}`, () => ({ run: { id: 'run-1' } }), () => ({ run: { id: 'run-2' } }));
-    // Kept first, then the run: how many runs had been sent when it was kept.
-    let runsWhenKept: number | null = null;
-    Keychain.setItemAsync.mockImplementationOnce(async (key: string, value: string) => {
-      runsWhenKept = runsSent().length;
-      Keychain.kept.set(key, value);
-    });
-    await renderBox([NOTE, RECEIPT]);
-    await fireEvent.changeText(screen.getByLabelText('Note'), 'Pay it');
-    await fireEvent.press(within(await startWithFile()).getByText(CONSENT.agree));
-    await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-1'));
-    expect(screen.queryByTestId('ai-consent-dialog')).toBeNull();
-    expect(Keychain.setItemAsync.mock.calls).toEqual([[`autom8x.ai-consent.v${AI_CONSENT_VERSION}.${PERSON}`, 'agreed', KEPT_THIS_DEVICE_ONLY]]);
-    expect(runsWhenKept).toBe(0);
-    expect(runsSent().map((request) => request.body)).toEqual([
-      { subscriptionId: 'sub-1', input: { note: 'Pay it', receipt: 'artifact-1' } },
-    ]);
-
-    // The box is fresh, and the next run that carries a file starts without asking.
-    await waitFor(() => expect(screen.queryByText('Ready: invoice.pdf (5 bytes)')).toBeNull());
+  it("opens the website's Privacy Policy from the card — the card stays open, nothing started or saved", async () => {
+    await renderAiBox([RECEIPT], null);
     await giveFile();
     await fireEvent.press(screen.getByText('Start run'));
-    await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-2'));
-    expect(screen.queryByTestId('ai-consent-dialog')).toBeNull();
-    expect(Keychain.setItemAsync).toHaveBeenCalledTimes(1);
-    expect(runsSent()).toHaveLength(2);
-  });
-
-  it('Cancel starts nothing and keeps nothing: the consent closes, the form keeps what was entered and the file given, and the next Start run asks again', async () => {
-    await renderBox([NOTE, RECEIPT]);
-    await fireEvent.changeText(screen.getByLabelText('Note'), 'Pay it');
-    await fireEvent.press(within(await startWithFile()).getByText(CONSENT.cancel));
-    await waitFor(() => expect(screen.queryByTestId('ai-consent-dialog')).toBeNull());
-    expect(runsSent()).toEqual([]);
-    expect(onStarted).not.toHaveBeenCalled();
-    expect(Keychain.setItemAsync).not.toHaveBeenCalled();
-    expect(Keychain.kept.has(aiConsentKey(PERSON))).toBe(false);
-    // The form as it was, and Start run offered again.
-    expect(screen.getByLabelText('Note').props.value).toBe('Pay it');
-    expect(screen.getByText('Ready: invoice.pdf (5 bytes)')).toBeTruthy();
-    expect(screen.getByTestId('start-run-button').props.accessibilityState?.disabled).not.toBe(true);
-
-    await fireEvent.press(screen.getByText('Start run'));
-    expect(await screen.findByTestId('ai-consent-dialog')).toBeTruthy();
-    expect(runsSent()).toEqual([]);
-  });
-
-  it("is asked again of another person on this phone: a consent is the person's, not the phone's", async () => {
-    answer(`POST ${RUNS_PATH}`, () => ({ run: { id: 'run-1' } }));
-    const first = await renderBox([RECEIPT]);
-    await fireEvent.press(within(await startWithFile()).getByText(CONSENT.agree));
-    await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-1'));
-    expect(Keychain.kept.has(aiConsentKey(PERSON))).toBe(true);
-    await first.unmount();
-
-    await renderBox([RECEIPT], TEST_WORKSPACE, signedInAs('u2'));
-    const consent = await startWithFile();
-    expect(within(consent).getByText(CONSENT.title)).toBeTruthy();
-    expect(Keychain.getItemAsync).toHaveBeenCalledWith(aiConsentKey('u2'), KEPT_THIS_DEVICE_ONLY);
-    expect(runsSent()).toHaveLength(1);
-  });
-
-  it('is asked again once its words are a new version: a consent is to the words it was given for', async () => {
-    // This person agreed on this phone to the words before these.
-    Keychain.kept.set(aiConsentKey(PERSON, AI_CONSENT_VERSION - 1), 'agreed');
-    await renderBox([RECEIPT]);
-    const consent = await startWithFile();
-    expect(within(consent).getByText(CONSENT.title)).toBeTruthy();
-    expect(runsSent()).toEqual([]);
-  });
-
-  it('is asked when the Keychain cannot be read: a consent is never assumed', async () => {
-    // Agreed before, but the Keychain will not say so.
-    Keychain.kept.set(aiConsentKey(PERSON), 'agreed');
-    await renderBox([RECEIPT]);
-    await giveFile();
-    Keychain.getItemAsync.mockRejectedValueOnce(new Error('The keychain could not be read'));
-    await fireEvent.press(screen.getByText('Start run'));
-    expect(await screen.findByTestId('ai-consent-dialog')).toBeTruthy();
-    expect(Keychain.getItemAsync).toHaveBeenLastCalledWith(aiConsentKey(PERSON), KEPT_THIS_DEVICE_ONLY);
-    expect(runsSent()).toEqual([]);
-  });
-
-  it('starts the run when the consent cannot be kept, and asks again before the next run with a file', async () => {
-    answer(`POST ${RUNS_PATH}`, () => ({ run: { id: 'run-1' } }));
-    Keychain.setItemAsync.mockRejectedValueOnce(new Error('The keychain could not be written'));
-    await renderBox([RECEIPT]);
-    await fireEvent.press(within(await startWithFile()).getByText(CONSENT.agree));
-    await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-1'));
-    expect(runsSent().map((request) => request.body)).toEqual([{ subscriptionId: 'sub-1', input: { receipt: 'artifact-1' } }]);
-
-    await waitFor(() => expect(screen.queryByText('Ready: invoice.pdf (5 bytes)')).toBeNull());
-    const consent = await startWithFile();
-    expect(within(consent).getByText(CONSENT.title)).toBeTruthy();
-    expect(runsSent()).toHaveLength(1);
-  });
-
-  it("opens the website's Privacy Policy, which names the providers — the consent stays open, nothing started or kept", async () => {
-    await renderBox([RECEIPT]);
-    const consent = await startWithFile();
-    await fireEvent.press(within(consent).getByTestId('ai-consent-privacy'));
+    const card = await screen.findByTestId('ai-reading-card');
+    expect(within(card).getByText(CARD.policy)).toBeTruthy();
+    await fireEvent.press(within(card).getByTestId('ai-reading-privacy'));
     expect(openURL).toHaveBeenCalledWith('https://www.example.test/privacy');
-    expect(screen.getByTestId('ai-consent-dialog')).toBeTruthy();
+    expect(screen.getByTestId('ai-reading-card')).toBeTruthy();
     expect(runsSent()).toEqual([]);
-    expect(Keychain.setItemAsync).not.toHaveBeenCalled();
+    expect(choicesSent()).toEqual([]);
   });
 
   it('says "Privacy Policy" in plain words where the app does not know the website', async () => {
     delete mockExtra.nativeAuthBaseUrl;
-    await renderBox([RECEIPT]);
-    const consent = await startWithFile();
-    expect(within(consent).getByText(CONSENT.policy)).toBeTruthy();
-    expect(within(consent).queryByTestId('ai-consent-privacy')).toBeNull();
-    expect(openURL).not.toHaveBeenCalled();
+    await renderAiBox([RECEIPT], null);
+    await giveFile();
+    await fireEvent.press(screen.getByText('Start run'));
+    const card = await screen.findByTestId('ai-reading-card');
+    expect(within(card).getByText(CARD.policy)).toBeTruthy();
+    expect(within(card).queryByTestId('ai-reading-privacy')).toBeNull();
   });
 
-  it("is closed by Android's back as by Cancel: nothing started, nothing kept, the file as it was", async () => {
-    await renderBox([RECEIPT]);
-    const consent = await startWithFile();
-    // Android's back asks the Modal to close: its onRequestClose, which the event reaches from the dialog's card.
-    await fireEvent(consent, 'requestClose');
-    await waitFor(() => expect(screen.queryByTestId('ai-consent-dialog')).toBeNull());
+  it("is closed by Android's back: nothing started, nothing saved, the file as it was", async () => {
+    await renderAiBox([RECEIPT], null);
+    await giveFile();
+    await fireEvent.press(screen.getByText('Start run'));
+    const card = await screen.findByTestId('ai-reading-card');
+    await fireEvent(card, 'requestClose');
+    await waitFor(() => expect(screen.queryByTestId('ai-reading-card')).toBeNull());
     expect(runsSent()).toEqual([]);
-    expect(onStarted).not.toHaveBeenCalled();
-    expect(Keychain.setItemAsync).not.toHaveBeenCalled();
+    expect(choicesSent()).toEqual([]);
     expect(screen.getByText('Ready: invoice.pdf (5 bytes)')).toBeTruthy();
   });
 });

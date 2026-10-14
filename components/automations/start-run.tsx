@@ -2,20 +2,21 @@ import { PlayCircle } from 'phosphor-react-native';
 import React, { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { AiConsentDialog } from '@/components/automations/ai-consent-dialog';
+import { AiReadingCard } from '@/components/ai-reading-card';
 import { RunFileField } from '@/components/automations/run-file-field';
 import { InlineBoundary } from '@/components/dialog-boundary';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { SetupFieldRow, declaredValues } from '@/components/setup-field';
-import { fonts, status, typeScale } from '@/constants/theme';
+import { fonts, iconSize, status, typeScale } from '@/constants/theme';
+import { useAiReading } from '@/hooks/use-ai-reading';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { WORKSPACE_CHANGED, runRefusal } from '@/lib/content/refusals';
-import { RUN_FORM_ERROR_TITLE } from '@/lib/content/screen-states';
-import { readAiConsent, writeAiConsent } from '@/lib/platform/ai-consent-store';
+import { AI_READING_OFF, AI_READING_SETTING_FAILED, AI_READING_TURN_ON } from '@/lib/content/ai-reading';
+import { RUN_FORM_ERROR_TITLE, START_RUN_LEAD } from '@/lib/content/screen-states';
 import { createRun, type AutomationRunInputField, type Subscription } from '@/lib/platform/automations';
 import type { CatalogEntry } from '@/lib/platform/catalog';
 
@@ -24,6 +25,11 @@ type StartRunProps = {
   /** The workspace the screen loaded; the run is refused once it is not active. */
   shownWorkspaceId: string | null;
   runInput: AutomationRunInputField[];
+  /**
+   * The flow may send a run's file to AI (`AutomationCatalogEntry.usesAi`,
+   * backend ADR-0038): a run with a file asks the account's answer first.
+   */
+  usesAi: boolean;
   onStarted: (runId: string) => void;
 };
 
@@ -55,26 +61,27 @@ export function canStartRun(subscription: Subscription, entry: CatalogEntry | un
  * the declared defaults, empty file fields and a new idempotency key — as the
  * dialog was by opening again.
  *
- * A run that carries a file asks the person first, once on this phone, before
- * AI reads the file (`AiConsentDialog`, Apple's Guideline 5.1.2(i)).
+ * A run that carries a file, on a flow that uses AI, follows the account's
+ * answer to "AI reads your documents" (backend ADR-0038; the spec's §3.H): it
+ * starts when allowed; never asked, the card asks first, and Allow starts it;
+ * declined, "AI reading is off." with Turn on under Start run. The per-run
+ * dialog of 2026-10-13 is gone with it (the owner's build 19 item 4).
  */
-export function StartRun({ subscriptionId, shownWorkspaceId, runInput, onStarted }: StartRunProps) {
+export function StartRun({ subscriptionId, shownWorkspaceId, runInput, usesAi, onStarted }: StartRunProps) {
   const { palette } = useTheme();
   const [started, setStarted] = useState(0);
   return (
     <View testID="start-run">
       <SectionLabel>NEW RUN</SectionLabel>
-      {/* The website's sentence (`snoopy/app/account/flows/AutomationActions.tsx`): a run
-          at a busy flow is created and waits its turn (backend 25.2.10). */}
-      <Text style={[styles.lead, { color: palette.neutral[400] }]}>
-        Enter what this run needs. It starts when you submit, or waits its turn if this flow is busy, and its page shows each step as it happens.
-      </Text>
+      {/* One line (spec §3.D; ~~the 28-word lead~~ until 2026-10-14). */}
+      <Text style={[styles.lead, { color: palette.neutral[400] }]}>{START_RUN_LEAD}</Text>
       <InlineBoundary title={RUN_FORM_ERROR_TITLE}>
         <StartRunForm
           key={started}
           subscriptionId={subscriptionId}
           shownWorkspaceId={shownWorkspaceId}
           runInput={runInput}
+          usesAi={usesAi}
           onStarted={(runId) => {
             setStarted((count) => count + 1);
             onStarted(runId);
@@ -89,13 +96,13 @@ export function StartRun({ subscriptionId, shownWorkspaceId, runInput, onStarted
  * The form: the declared defaults, a key renewed whenever a value changes — so
  * only a resubmission of the same values, after a lost answer, reuses it and
  * the platform returns the run it already started instead of starting a second
- * — and Start run held while a file is uploading, or while the consent before
- * AI reads the run's file is open.
+ * — and Start run held while a file is uploading, or while the card asking the
+ * account about AI is open.
  */
-function StartRunForm({ subscriptionId, shownWorkspaceId, runInput, onStarted }: StartRunProps) {
+function StartRunForm({ subscriptionId, shownWorkspaceId, runInput, usesAi, onStarted }: StartRunProps) {
+  const { palette } = useTheme();
   const session = useSession();
-  // The person whose consent to AI reading a run's file is asked for and kept on this phone.
-  const userId = session.status === 'signed-in' ? session.session.user.userId : null;
+  const reading = useAiReading();
   const keys = useIntentKeys('run');
   const [values, setValues] = useState<Record<string, unknown>>(() => declaredDefaults(runInput));
   const [uploading, setUploading] = useState<ReadonlySet<string>>(() => new Set());
@@ -148,37 +155,53 @@ function StartRunForm({ subscriptionId, shownWorkspaceId, runInput, onStarted }:
     }
   };
 
+  // The account's answer gates only a run that gives AI a file on a flow that uses it.
+  const gated = usesAi && carriesFile(runInput, values);
+  const off = usesAi && reading.choice === 'declined';
+
   /**
-   * Start run. A run that carries a file asks first, once per person on this
-   * phone, before AI reads the file (`AiConsentDialog`; Apple's Guideline
-   * 5.1.2(i)): the catalog does not say which flows have AI read their files,
-   * so every file asks. A consent the Keychain cannot read is none — asked,
-   * never assumed. A run without a file starts as it always did.
+   * Start run. A run with a file, on a flow that uses AI, follows the account's
+   * answer: allowed, it starts; never asked, the card asks first; declined, it
+   * does not start — the line under the button says why, with Turn on. Any
+   * other run starts as it always did.
    */
   const start = async () => {
     if (busy || asking || uploading.size > 0) return;
+    if (gated && reading.choice === null) {
+      setAsking(true);
+      return;
+    }
+    if (gated && reading.choice === 'declined') return;
     setBusy(true);
     try {
-      if (carriesFile(runInput, values) && !(await readAiConsent(userId))) {
-        setAsking(true);
-        return;
-      }
       await begin();
     } finally {
       setBusy(false);
     }
   };
 
-  /**
-   * "Agree and start": the consent kept for this person on this phone, then the
-   * run. One that could not be kept still starts this run; the next one asks again.
-   */
-  const agree = async () => {
+  /** The card answered: Allow starts the run; Not now leaves the form as it is. */
+  const answered = async (choice: 'allowed' | 'declined') => {
     setAsking(false);
+    if (choice !== 'allowed') return;
     setBusy(true);
     try {
-      await writeAiConsent(userId);
       await begin();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** "Turn on" under a declined answer: AI reading allowed on the account, then the run, when it has a file. */
+  const turnOn = async () => {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await reading.save('allowed');
+      if (gated) await begin();
+    } catch {
+      setError(AI_READING_SETTING_FAILED);
     } finally {
       setBusy(false);
     }
@@ -223,12 +246,26 @@ function StartRunForm({ subscriptionId, shownWorkspaceId, runInput, onStarted }:
         height={46}
         fontSize={typeScale.label.fontSize}
         icon={PlayCircle}
-        iconSize={16}
+        iconSize={iconSize.button}
         disabled={busy || asking || uploading.size > 0}
         style={styles.start}
         onPress={start}
       />
-      {asking ? <AiConsentDialog onAgree={agree} onCancel={() => setAsking(false)} /> : null}
+      {off ? (
+        <View testID="ai-reading-off" style={styles.off}>
+          <Text style={[styles.offLine, { color: palette.neutral[400] }]}>{AI_READING_OFF}</Text>
+          <PillButton
+            testID="ai-reading-turn-on"
+            label={AI_READING_TURN_ON}
+            variant="secondary"
+            height={40}
+            fontSize={typeScale.body.fontSize}
+            disabled={busy}
+            onPress={turnOn}
+          />
+        </View>
+      ) : null}
+      {asking ? <AiReadingCard onAnswered={answered} onDismiss={() => setAsking(false)} /> : null}
     </>
   );
 }
@@ -259,4 +296,6 @@ const styles = StyleSheet.create({
   card: { marginTop: 9 },
   error: { marginTop: 10, fontFamily: fonts.regular, ...typeScale.small },
   start: { marginTop: 12 },
+  off: { marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  offLine: { flex: 1, fontFamily: fonts.regular, ...typeScale.small },
 });

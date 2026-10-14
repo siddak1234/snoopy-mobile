@@ -266,10 +266,11 @@ describe('an amount is typed from the right, as currency (24.7.3 attempt 4, feed
     expect(screen.getByText('Optional')).toBeTruthy();
   });
 
-  it('numbers sections by their place on the screen, not by the design\'s fixed four', () => {
-    expect(sectionLabel(1, 'rules')).toBe('1 · REVIEW RULES');
-    expect(sectionLabel(2, 'notifications')).toBe('2 · NOTIFICATIONS');
-    expect(sectionLabel(1, 'connections')).toBe('1 · CONNECTIONS');
+  it('numbers sections by their place on the screen, not by the design\'s fixed four, in the spec\'s words (§3.B)', () => {
+    expect(sectionLabel(1, 'rules')).toBe('1 · SETTINGS');
+    expect(sectionLabel(2, 'notifications')).toBe('2 · EMAIL');
+    expect(sectionLabel(1, 'connections')).toBe('1 · CONNECT');
+    expect(sectionLabel(3, 'source')).toBe('3 · SOURCE');
   });
 });
 

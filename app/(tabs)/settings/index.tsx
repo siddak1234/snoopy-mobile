@@ -23,6 +23,7 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { AiReadingRow } from '@/components/settings/ai-reading-row';
 import { FaceIdRow } from '@/components/settings/face-id-row';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { WorkspaceSwitcher } from '@/components/settings/workspace-switcher';
@@ -160,6 +161,7 @@ export default function SettingsScreen() {
       <View>
         <SectionLabel>SECURITY</SectionLabel>
         <FaceIdRow size="roomy" testID="settings-face-id" />
+        <AiReadingRow size="roomy" testID="settings-ai-reading" />
       </View>
 
       <SurfaceCard>

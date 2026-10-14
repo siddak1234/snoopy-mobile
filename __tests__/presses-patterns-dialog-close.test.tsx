@@ -2,20 +2,20 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-
 import React from 'react';
 
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
-import SetupScreen from '@/app/(tabs)/flows/setup';
+import ConnectVendorScreen from '@/app/(tabs)/flows/vendor';
 import SettingsScreen from '@/app/(tabs)/settings';
 import AccountScreen from '@/app/(tabs)/settings/account';
 import ConnectionsScreen from '@/app/(tabs)/settings/connections';
 import OrganizationScreen from '@/app/(tabs)/settings/organization';
 import TeamScreen from '@/app/(tabs)/settings/team';
 import TeamsScreen from '@/app/(tabs)/settings/teams';
-import { ScopeControl } from '@/components/scope-control';
 import type { SessionContextValue } from '@/hooks/use-session';
 import { PlatformError } from '@/lib/platform/problem';
 import {
   TEST_WORKSPACE,
   flowCatalogPayload,
-  projectsPayload,
+  invoiceProcessingEntry,
+  providersWithQuickBooks,
   routePlatform,
   signedInSession,
   subscriptionsPayload,
@@ -227,15 +227,36 @@ type DialogCase = {
 
 const CASES: DialogCase[] = [
   {
-    name: 'Setup › Create a team: Cancel',
-    site: 'app/(tabs)/flows/setup.tsx:435',
+    // The flow's vendor page (the Invoice Processing update, spec §3.C): Disconnect, confirmed first.
+    name: 'Connect vendor › Disconnect from QuickBooks?: Cancel',
+    site: 'app/(tabs)/flows/vendor.tsx',
     open: async () => {
-      route();
-      setMockParams({ template: 'tpl.3' });
-      await renderWithProviders(<SetupScreen />, signedInSession);
-      await press('Create a team');
+      route(
+        [/\/automations$/u, { automations: [invoiceProcessingEntry()], categories: ['All', 'Accounting'] }],
+        [/\/connections\/providers$/u, providersWithQuickBooks()],
+        [
+          /\/workspaces\/[^/]+\/connections$/u,
+          {
+            connections: [
+              {
+                id: 'c-qb',
+                providerId: 'quickbooks',
+                workspaceId: TEST_WORKSPACE,
+                externalAccount: { id: 'realm-1', displayName: 'Acme Books' },
+                status: 'connected',
+                requiredScopes: [],
+                grantedScopes: [],
+                usedByCount: 0,
+              },
+            ],
+          },
+        ],
+      );
+      setMockParams({ template: 'invoice-processing' });
+      await renderWithProviders(<ConnectVendorScreen />, signedInSession);
+      await pressId('vendor-disconnect-quickbooks');
     },
-    dialog: 'create-team-dialog',
+    dialog: 'vendor-disconnect-dialog',
     close: 'Cancel',
   },
   {
@@ -372,16 +393,6 @@ const CASES: DialogCase[] = [
     close: 'Cancel',
   },
   {
-    name: 'Teams › Create a team: Cancel',
-    site: 'app/(tabs)/settings/teams.tsx:125',
-    open: async () => {
-      await teams();
-      await press('Create a team');
-    },
-    dialog: 'create-team-dialog',
-    close: 'Cancel',
-  },
-  {
     name: 'Teams › Withdraw your request to join Data?: Cancel',
     site: 'app/(tabs)/settings/teams.tsx:262',
     open: async () => {
@@ -477,18 +488,6 @@ const CASES: DialogCase[] = [
       await screen.findByTestId(`workspace-option-${PERSONAL}`);
     },
     dialog: 'workspace-switcher-dialog',
-    close: 'Cancel',
-  },
-  {
-    name: 'Scope › Show › Create a team: Cancel',
-    site: 'components/scope-control.tsx:138',
-    open: async () => {
-      route([/\/projects$/u, projectsPayload('Finance')]);
-      await renderWithProviders(<ScopeControl />, signedInSession);
-      await fireEvent.press(await screen.findByLabelText('Team: All teams'));
-      await pressId('scope-create-team');
-    },
-    dialog: 'create-team-dialog',
     close: 'Cancel',
   },
 ];

@@ -27,7 +27,6 @@ import type { SessionContextValue } from '@/hooks/use-session';
 import {
   ALL_TEAMS_ICON,
   OTHER_TEAM_ICON,
-  OTHER_TEAM_TYPE,
   TEAM_TYPES,
   TEAM_TYPE_ICONS,
   teamTypeIcon,
@@ -218,7 +217,7 @@ describe("the kinds' icons, beside the list (the owner's build 13 decision 2)", 
 
     // Other, and any kind off the list, is the team icon; none chosen is All teams'.
     expect(OTHER_TEAM_ICON).toBe(UsersThree);
-    for (const kind of [OTHER_TEAM_TYPE, 'Facilities', 'constructor', 'toString']) {
+    for (const kind of ['Other', 'Facilities', 'constructor', 'toString']) {
       expect([kind, teamTypeIcon(kind) === UsersThree]).toEqual([kind, true]);
     }
     expect(ALL_TEAMS_ICON).toBe(SquaresFour);

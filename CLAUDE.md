@@ -34,6 +34,17 @@ DESIGN-GAPS "The account-deleted words (Round 17; 2026-10-13)" and "The consent 
 run's file (Round 17; 2026-10-13)"; both were approved by the owner's merge of #62 (`fa33f61`,
 2026-10-13 13:58:48Z).
 
+**And the Invoice Processing update's shared screens (2026-10-14), a re-entry on the owner's words
+after build 19** — "continue and complete. U2 is going to be in accounting. … theres no choose a
+team. there will be pre existing teams depending on which flows are added." (~16:40Z), "approve.
+complete" (~16:35Z), "ensure web is also updated accordingly" (~16:42Z) and "go" (~18:15Z): no team
+picker and no Create a team (a flow goes to its category's team, backend ADR-0036); the Connect
+vendor page, with QuickBooks's own logo and button and None; the account's answer to "AI reads your
+documents" in place of the per-run consent (ADR-0038), removed in the same change; a run's progress
+by its flow's step groups and its saved details (ADR-0037); and these screens held to the design
+contract — numbered sections, icons 24 and 20 in buttons, plain words. Backend 25.4.13–25.4.26; the
+record is DESIGN-GAPS "The Invoice Processing update's shared screens (Round 17; 2026-10-14)".
+
 **Round 16 CLOSED 2026-10-07** — Gate 24 re-run by command by a fresh `snoopy-backend` session that wrote none of it; its record here is DESIGN-GAPS "Build 16: the owner's device pass, and Round 16's close". Open from 2026-09-29 (BUILD-PLAN Phase 24, ADR-0032): the mobile app offers
 every signed-in feature the website offers, on the same published operations,
 and ships to Apple first. This repository owns 24.3–24.7 and, since the owner's build 6 feedback of 2026-10-02, 24.9 (the flows design pass: one Flows tab, a project scope, a shared workspace snapshot) and, since build 7's, 24.11.6–24.11.10 (the cover when signed out, Teams in place of Projects, Archived flows (Removed flows until 24.12), Unlink, flow history), and, since build 9's (the owner's decisions of 2026-10-02), the app's part of 24.12 (a team is its kind, the archive wording, Settings by category, the billing cards, the join link, the export to the share sheet, Unlink in words, the empty-screen standard, the bigger type), and, since build 10's (the owner's decisions of 2026-10-03, build 11), Settings as one grouped page, compact billing cards with a drawn Pro, an archived flow's live twin, a team on and for every flow, the Archived header button and the Flows empty standard, and a tick on every press, one phase per session:

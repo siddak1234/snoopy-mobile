@@ -1763,7 +1763,8 @@ returns to its first. One table, `presses-patterns-dialog-close:501`, a row per 
 
 | Press | Test |
 | --- | --- |
-| `flows/setup.tsx:435` — Create a team › Cancel | `:231` |
+| ~~`flows/setup.tsx:435` — Create a team › Cancel~~ (gone with the Invoice Processing update, 2026-10-14: no client creates a team, backend ADR-0036) | — |
+| `flows/vendor.tsx` — Disconnect from QuickBooks? › Cancel (the Invoice Processing update) | `presses-patterns-dialog-close`, its row |
 | `settings/account.tsx:176` — Unlink › Cancel | `:243` |
 | `settings/account.tsx:195` — Delete account › Cancel | `:253` |
 | `settings/organization.tsx:187` — Organization name › Cancel | `:263` |
@@ -1778,7 +1779,7 @@ returns to its first. One table, `presses-patterns-dialog-close:501`, a row per 
 | `team-members.tsx:127` — own row, Leave this team? › Cancel | `:356` |
 | `team-members.tsx:260` — Add members › Done: reads the team again only if someone was added | `presses-settings:369` |
 | `team-requests.tsx:68` — Request to join › Cancel | `:366` |
-| `settings/teams.tsx:125` — Create a team › Cancel | `:376` |
+| ~~`settings/teams.tsx:125` — Create a team › Cancel~~ (gone with the Invoice Processing update, 2026-10-14: no client creates a team, backend ADR-0036) | — |
 | `settings/teams.tsx:262` — Withdraw request › Cancel | `:386` |
 | ~~`automation-actions.tsx:197` — Run › Cancel~~ — gone with the Run dialog (25.8.3): the run's form is on the flow page, with nothing to close | — |
 | `automation-actions.tsx:177` — Set up › Cancel | `:396` |
@@ -1791,7 +1792,7 @@ returns to its first. One table, `presses-patterns-dialog-close:501`, a row per 
 | `connections-card.tsx:223` — Replace account? › Cancel | `:449` |
 | `workspace-switcher.tsx:140` — Switch workspace › Cancel | `:462` |
 | `scope-control.tsx:95` — Show › Done | `presses-home-activity:316` |
-| `scope-control.tsx:138` — Show › Create a team › Cancel | `:484` |
+| ~~`scope-control.tsx:138` — Show › Create a team › Cancel~~ (gone with the Invoice Processing update, 2026-10-14: no client creates a team, backend ADR-0036) | — |
 
 **The empty standard's action.**
 
@@ -1802,7 +1803,7 @@ returns to its first. One table, `presses-patterns-dialog-close:501`, a row per 
 | `activity/approvals.tsx:202` — Go back | back, nothing pushed | `presses-patterns-empty-actions:28` |
 | `flows/index.tsx:119` — Add a flow | opens Add | `tab-screens:2057` |
 | `flows/index.tsx:122` — Archived flows | opens Archived (`/(tabs)/flows/archived`) | `tab-screens:2059` |
-| `settings/teams.tsx:141` — Create a team | opens the Create a team dialog | `teams-screens:326` |
+| ~~`settings/teams.tsx:141` — Create a team~~ (gone with the Invoice Processing update, 2026-10-14: no client creates a team, backend ADR-0036) | the empty state has no action | `teams-screens`, "is the empty-state standard with nothing to list, with no action" |
 
 **Home, the run page, Activity, Approvals, the inbox, the scope control, the tab bar.**
 
@@ -1834,7 +1835,7 @@ returns to its first. One table, `presses-patterns-dialog-close:501`, a row per 
 | `scope-control.tsx:75` — the team pill | opens Show | `scope-control:68` |
 | `scope-control.tsx:102` — All teams | scope all, kept as none, closes | `presses-home-activity:316` |
 | `scope-control.tsx:115` — a team | scope that team, kept, closes | `presses-home-activity:316`, `scope-control:68` |
-| `scope-control.tsx:129` — Create a team | the dialog; the new team is the scope | `scope-control:134` |
+| ~~`scope-control.tsx:129` — Create a team~~ (gone with the Invoice Processing update, 2026-10-14: no client creates a team, backend ADR-0036) | — | `scope-control`, "is there before any team exists, with All teams and no Create a team…" |
 | `tab-bar.tsx:80` — a tab | opens that tab, changing nothing on it | `tab-bar:29`, `real-router/activity-selection:107` |
 
 **Flows: the list, Add, Setup, a flow page and its actions.**
@@ -1847,16 +1848,19 @@ returns to its first. One table, `presses-patterns-dialog-close:501`, a row per 
 | `flows/add.tsx:121` — a category | narrows the catalog | `tab-screens:172` |
 | `flows/add.tsx:135` — an Added ✓ card | opens that flow's page (the first copy) | `tab-screens:165`, `build13-unarchive-and-one-flow:129` |
 | `flows/add.tsx:166` — Add | Setup with the template and the scope's team; refused while not responding | `tab-screens:154`, `presses-flows:275` |
-| `flows/setup.tsx:335` — Create a team | the dialog; the new team is chosen | `tab-screens:1424` |
-| `flows/setup.tsx:348` — See teams | opens Settings › Teams | `tab-screens:1499` |
-| `flows/setup.tsx:404` — Connect › | opens Settings › Connections (Gate 24 parity, G9; ~~opens Settings~~) | `tab-screens:1332` |
-| `flows/setup.tsx:451` — Activate | POST subscribe `{templateId, templateVersion, projectId}` then PATCH `{config, status: 'live'}`, each keyed, then the flow page; a held flow configured, none added; refusals in words. Since Gate 24 parity (G10) the workspace's flows are read afresh before the POST, and a flow held since is refused — "This flow is already in this workspace.", nothing sent; with an account owed, Settings › Connections (G9) | `presses-flows:190`, `tab-screens:1397`, `build13-unarchive-and-one-flow:169`, `presses-flows:396`, `parity-flows` (G10) |
+| ~~`flows/setup.tsx:335` — Create a team~~ (gone with the Invoice Processing update, 2026-10-14: no client creates a team, backend ADR-0036) | — | — |
+| ~~`flows/setup.tsx:348` — See teams~~ (gone with Setup's team picker, the Invoice Processing update) | — | — |
+| `flows/setup.tsx` — Connect vendor › (the Invoice Processing update) | the flow's vendor page `{template, vendor}` for a flow not added yet, `{template, flow}` for one it holds | `tab-screens` "draws the vendor choice as None…", "configures a flow the workspace holds where it is…"; `real-router/connect-vendor` |
+| `flows/setup.tsx:404` — Connect › | opens Settings › Connections (Gate 24 parity, G9; ~~opens Settings~~) | `tab-screens` "says an account the flow cannot run without…" |
+| `flows/setup.tsx:451` — Turn on (~~Activate~~; the Invoice Processing update: POST subscribe `{templateId, templateVersion}` with **no `projectId`**, then PATCH `{config, status: 'live'}` with the vendor choice; refused in the spec's words, nothing sent: `tab-screens` "Setup (design sSetup; …)", `presses-flows`, `parity-flows` G10, `build13-unarchive-and-one-flow`) — until then: Activate | POST subscribe `{templateId, templateVersion, projectId}` then PATCH `{config, status: 'live'}`, each keyed, then the flow page; a held flow configured, none added; refusals in words. Since Gate 24 parity (G10) the workspace's flows are read afresh before the POST, and a flow held since is refused — "This flow is already in this workspace.", nothing sent; with an account owed, Settings › Connections (G9) | `presses-flows:190`, `tab-screens:1397`, `build13-unarchive-and-one-flow:169`, `presses-flows:396`, `parity-flows` (G10) |
 | `flows/setup.tsx:416` — Try again | the same request, the same key | `presses-flows:355` |
-| `choice-chips.tsx:34` — a chip (Setup's team, a team role) | chooses it; the team is sent as `projectId` | `tab-screens:1397`, `teams-screens:463` |
+| `choice-chips.tsx:34` — a chip (a team role; ~~Setup's team~~, gone with the Invoice Processing update) | chooses it | `teams-screens:463` |
 | `flows/detail.tsx:254` — Runs / Successes / Failures | Activity `{flow, flowName, filter}`, no day | `tab-screens:1639` |
 | `flows/detail.tsx:345` — Open the live flow | the twin's page, same stack | `tab-screens:1986` |
-| `flows/detail.tsx:356` — Unarchive | Setup with the template and the team it had | `build13-unarchive-and-one-flow:56` |
-| `flows/detail.tsx:395` — Pause / Resume / Publish | PATCH `{status}`; refused while not responding | `tab-screens:461`, `presses-flows:297` |
+| `flows/detail.tsx:356` — Unarchive | Setup with the template (~~and the team it had~~: no team is sent since the Invoice Processing update) | `build13-unarchive-and-one-flow:56` |
+| `flows/detail.tsx` — Connect vendor ›; "Connect {name} first, or choose None." (the Invoice Processing update) | the flow's vendor page `{template, flow}` | `invoice-processing-screens` "CONNECT: None…", "CONNECT: QuickBooks chosen but not connected…" |
+| `flows/detail.tsx` — "Connect {names} first." (~~"Connect … before going live."~~) | Settings › Connections | `parity-flows` G9 |
+| `flows/detail.tsx:395` — Pause / Turn on (~~Resume / Publish~~, the Invoice Processing update) | PATCH `{status}`; refused while not responding | `tab-screens:461`, `presses-flows:297` |
 | `flows/detail.tsx:371` — Try again | the same change, the same key | `presses-flows:324` |
 | ~~`automation-actions.tsx:135` — Run~~ — gone (25.8.3): the run's fields and Start run are the flow page's start controls, below | — | — |
 | `automation-actions.tsx:144` — Set up; Webhook address | their dialogs | `automation-actions:480`, `automation-actions:316` |
@@ -1867,9 +1871,18 @@ returns to its first. One table, `presses-patterns-dialog-close:501`, a row per 
 | `start-run.tsx:229` — Start run, the flow page's start controls (25.8.3; ~~`run-dialog.tsx:117`, in the Run dialog~~) | POST runs `{subscriptionId, input}` with the declared values, its key kept for a resubmission and renewed by a change; the run's page; the box drawn anew — the defaults, the files emptied, a new key; held while a file uploads, a file waiting to be measured and completed again included (backend 25.2.39); refusals in words, `artifact_unavailable` emptying the files; refused, and nothing sent, once another workspace is active. A run that carries a file asks first, AI reads this file, once per person on this phone and version of its words (Round 17, Apple 5.1.2(i)) — held while it is open, asked when the Keychain cannot be read; a run without a file never asks | `start-run:338`, `start-run:385`, `start-run:412`, `start-run:430`, `start-run:443`, `start-run:467`, `start-run:480`, `start-run:517`, `start-run:541`, `start-run:711`, `start-run:1090`, `start-run:1111`, `start-run:1173`, `start-run:1188`, `start-run:1197`, `presses-flows:431`, `dialog-boundary:203` |
 | `run-file-field.tsx:188` — Take photo (25.8.3) | the camera asked for at the press, images only; refused, a sentence in the field and nothing opened; the photo re-encoded once — upright, its long side at most 2,576 px, a JPEG at 0.9 — and uploaded as `image/jpeg`, `photo.jpg`; the run carries its id; a camera that cannot open says so; refused, and nothing asked, once another workspace is active | `start-run:886`, `start-run:924`, `start-run:941`, `start-run:541` |
 | `run-file-field.tsx:196` — Upload (25.8.3; ~~`run-file-field.tsx:142` — Choose file~~) | the document picker, held to a PDF, a JPEG or a PNG; a PDF uploaded as it is, an image re-encoded once and uploaded as `image/jpeg` under a `.jpg` name; the run carries its id; an image that cannot be re-encoded is not sent; a refusal in words; a file waiting to be measured completed again by itself — the same upload, after the wait the answer states (5 s at most) or 1.5 s, at most four more times, nothing new on screen meanwhile — and the website's sentence only when it still waits, any other answer said at once (backend 25.2.39) | `start-run:569`, `start-run:584`, `start-run:843`, `start-run:869`, `start-run:959`, `start-run:480`, `start-run:711`, `start-run:739`, `start-run:769`, `start-run:808`, `start-run:821`, `start-run:832`, `presses-flows:599` |
-| `start-run.tsx:231` — AI reads this file › Agree and start (Round 17, Apple 5.1.2(i)) | keeps the consent — `agreed` under `autom8x.ai-consent.v{version}.{userId}`, this-device-only — before the run is sent, then POSTs the run, once; the next run with a file is not asked; a consent that cannot be kept still starts the run, and the next asks again | `start-run:1125`, `start-run:1173`, `start-run:1209` |
-| `ai-consent-dialog.tsx:48` — Privacy Policy, in AI reads this file (Round 17) | opens the website's `/privacy`; the dialog stays, nothing started or kept; plain words, no press, without the website's origin | `start-run:1223`, `start-run:1233` |
-| `setup-dialog.tsx:75` — Save setup | PATCH `{config}` only | `automation-actions:480` |
+| ~~`start-run.tsx:231` — AI reads this file › Agree and start (Round 17, Apple 5.1.2(i))~~ — gone with the per-run dialog (the Invoice Processing update; below, the account's card) | keeps the consent — `agreed` under `autom8x.ai-consent.v{version}.{userId}`, this-device-only — before the run is sent, then POSTs the run, once; the next run with a file is not asked; a consent that cannot be kept still starts the run, and the next asks again | `start-run:1125`, `start-run:1173`, `start-run:1209` |
+| ~~`ai-consent-dialog.tsx:48` — Privacy Policy, in AI reads this file (Round 17)~~ — gone with the file | opens the website's `/privacy`; the dialog stays, nothing started or kept; plain words, no press, without the website's origin | `start-run:1223`, `start-run:1233` |
+| `setup-dialog.tsx:75` — Save (~~Save setup~~, the Invoice Processing update) | PATCH `{config}` only, the vendor choice kept as the flow holds it | `automation-actions:480` |
+| `ai-reading-card.tsx` — AI reads your documents › Allow; Not now (the Invoice Processing update, backend ADR-0038) | PUT `/v1/session/ai-document-reading` `{choice: 'allowed' \| 'declined'}`, then the session read again; from Start run, Allow starts the run once, Not now starts nothing; a failed save in words, the card staying | `ai-reading` "%s saves…", "says a save that failed…"; `start-run` "Allow saves…", "Not now saves…", "says so in the card…" |
+| `ai-reading-card.tsx` — Privacy Policy, in the card | opens the website's `/privacy`; the card stays, nothing started or saved; plain words, no press, without the website's origin | `ai-reading` "asks in its words…"; `start-run` "opens the website's Privacy Policy…", "says \"Privacy Policy\" in plain words…" |
+| `start-run.tsx` — Turn on, under "AI reading is off." | PUT `{choice: 'allowed'}`, then the run when it has a file; a failed save "Could not save. Try again." | `start-run` "Not now saves…", "declined from the start…", "says so when Turn on could not be saved…" |
+| `flows/vendor.tsx` — a vendor row; None | chooses a connected vendor, or None; a vendor not connected is not chosen by its row | `vendor-page` "chooses with a tap…", "not connected, an owner or admin gets…" |
+| `flows/vendor.tsx` — Connect to QuickBooks (Intuit's button); Connect (a vendor with no logo) | connects through the provider, then chooses it; what it came back with in the connections words | `vendor-page` "not connected, an owner or admin gets…", "a connect that came back %s…", "a connect the platform refused…", "a vendor with no logo bundled…" |
+| `flows/vendor.tsx` — Disconnect from QuickBooks; its confirm's Disconnect | the confirmation, then DELETE the connection, the choice back to None | `vendor-page` "connected, an owner or admin can disconnect it…" |
+| `flows/vendor.tsx` — Done; Save | Done: back to Set up with `{template, vendor}` (`dismissTo`); Save: PATCH `{config}` with the choice, the rest kept, then Back — unchanged, nothing sent; refused, "Could not save. Try again." | `vendor-page` "chooses with a tap…", "for an added flow: Save…" (both), "says a save that failed…"; `real-router/connect-vendor` |
+| `vendor-logo.tsx` — the vendor's Connect button (a passthrough) | its caller's handler | `vendor-logos` "Intuit's Connect button…" |
+| `connections-card.tsx` — Connect to QuickBooks; Disconnect from QuickBooks (Settings › Connections) | connects at once, no dialog, what it came back with under its row; the connection's actions, Disconnect in Intuit's words, no Reconnect | `connections-quickbooks` |
 | `dialog-boundary.tsx:65` — Cancel, on the failed dialog (Round 17, 25.8.1) | closes: the dialog's own `onClose`, the caller's; nothing sent | `dialog-boundary:90` |
 | `dialog-boundary.tsx:66` — Try again, on the failed dialog (Round 17, 25.8.1) | draws the dialog again: a child that no longer throws is shown, one that still throws fails to the same words; nothing sent | `dialog-boundary:109`, `dialog-boundary:123`, `dialog-boundary:292` |
 | `dialog-boundary.tsx:106` — Try again, on the failed card in the start controls' place (25.8.3) | draws the form again: a form that no longer throws is shown; nothing sent | `dialog-boundary:150`, `dialog-boundary:224` |
@@ -2585,7 +2598,7 @@ The presses this adds, each run by a test:
 | `(home)/index.tsx` — View teams | opens Settings › Teams, flows or none; Back comes home | the same two; real-router `home-links` "View teams opens …" |
 | `(home)/index.tsx` — a team | its team page, `{projectId, workspaceId}` in its own workspace | `parity-home` "lists the first three teams across the workspaces, …"; real-router `home-links` "a team opens its page in the Settings tab, with the team and the workspace it takes on arrival" |
 | `(home)/index.tsx` — View all teams | opens Settings › Teams; Back comes home | `parity-home` "lists the first three teams …"; real-router `home-links` "View all teams opens …" |
-| `(home)/index.tsx` — Create a team (none yet) | opens Settings › Teams; an owner or admin only | `parity-home` "with none: No teams yet., and Create a team — opening Teams — for an owner or admin only" |
+| ~~`(home)/index.tsx` — Create a team (none yet)~~ (gone with the Invoice Processing update, 2026-10-14: no client creates a team, backend ADR-0036) | "No teams yet." alone, for every role | `parity-home` "with none: No teams yet., and no Create a team for an organization %s…" |
 | `(home)/index.tsx` — Home's failure, Retry | reads Home again; none when unconfigured | `presses-patterns-failure-states` "Home, offline", "Home, error", "Home, unavailable" |
 
 **NOT OBSERVED** on a device: the overview, the shortcuts, the teams block, the failure words,
@@ -4142,3 +4155,102 @@ status, said at once in its words (`refusals.ts:197`), after one completion — 
 `run-file.ts:108` widened to any `PlatformError` failed that row alone (`start-run` 73 of 74;
 `platform-request` 18, `upload-refusals` 12 and `run-file` 5, all passing), and restored, its
 SHA-256 equal, all 74 pass.
+
+### The Invoice Processing update's shared screens (Round 17; 2026-10-14)
+
+**Why.** The owner's nine TestFlight items on build 19 (2026-10-14 16:08–16:16Z, read by the ASC
+API; the session's memory `build-19-feedback-2026-10-14`), among them, verbatim: "All our
+automations are assigned to a team. Not randomly we select. … Quickbooks is optional. There should
+be a connect vendor button and takes it to a page specific for this flows vendors. If already
+connected you can choose which vendor or just a none." (1); "Why is this notification here.
+Shouldnt this happen at the time of signing up for the account on autom8x." (4); "Look at this no
+one would want to use this at all" (6, a timeline of "Not run" lookups); "So much ai slop wording.
+Small icons. No numbered category steps." (8); "Add the quickbooks logo. Every connection should
+have a logo for the vendor. Then there should be an option for none" (9). The owner then:
+"continue and complete. U2 is going to be in accounting. … theres no choose a team. there will be
+pre existing teams depending on which flows are added." (~16:40Z), "approve. complete" (~16:35Z,
+given before the plan, as approval to build it with each decision's recommended answer — recorded
+as the session's recommendations, never as the owner's own choices), "ensure web is also updated
+accordingly" (~16:42Z), and "go" (~18:15Z: stage B, ONE app and website update for the shared
+screens). This is a re-entry here, approved by those words (MASTER-PLAN §4); backend 25.4.13 records
+it in Round 17. Every word drawn is the spec's §3 (`ip-update/spec.md`, the session's), the
+website's byte for byte; where §3 is silent, the owner's plain-words rule decided, and those lines are
+listed below as this session's.
+
+**The contract** is backend `57eac70` (#210, merged 2026-10-14 19:05:21Z), regenerated from a
+read-only `git archive` of its `docs/` (`automations.yaml` sha256 `ca1fd0eb…`, `openapi.yaml`
+`ab30738d…`, `connections.yaml` `bf50b980…`): `AutomationCatalogEntry.category` a closed list of
+team kinds, `usesAi`, `groups`, `requiredConnections[].optional`; `AutomationDeclaredStep.group`;
+the `connection` setup control; `RunDetail.details`; `SessionResponse.user.aiDocumentReading` and
+`PUT /v1/session/ai-document-reading`; `createSubscription`'s `projectId` deprecated and ignored.
+The Deployed contract check (CI's `contract-deployed`) is red until the promotion serves it — by
+design; `platform-requirement.json` is unchanged.
+
+**What changed** (each with its tests; the register above has every new press):
+
+1. **U2 — a flow goes to its category's team; no picker, no Create a team.** Add opens Setup with
+   the template only; Setup says "Team: {category}" (a held flow its own team) and sends no
+   `projectId`; Create a team is gone from Teams, its empty state, the scope control, Home and Setup
+   (`components/teams/create-team-dialog.tsx`, `teamCreateRefusal` and `createProject` deleted).
+   `TEAM_TYPES` is typed against the generated category union both ways
+   (`lib/content/team-types.ts`), so a kind the platform changes fails typecheck.
+2. **U4/U5 — Connect vendor.** `app/(tabs)/flows/vendor.tsx` (registered in the Flows stack): the
+   flow's optional connections as logos, then None; the choice is the flow's `connection` setting —
+   Done carries it back to Setup (`router.dismissTo`, the one Setup, its params updated, proved under
+   the real router), Save patches an added flow. QuickBooks is drawn by Intuit's own files
+   (`assets/vendors/`, each sha256 held by `__tests__/vendor-logos.test.tsx`; registry
+   `lib/view/brand-logos.ts`, component `components/vendor-logo.tsx`, snapshot-pinned in both
+   palettes): the full logo at 24 pt, the reversed one on dark, Intuit's Connect to QuickBooks button
+   at 274 × 48, and "Disconnect from QuickBooks" — on the vendor page, Setup's and the flow page's
+   CONNECT, and Settings › Connections (where the button connects at once and no text Connect or
+   Reconnect stands in for it). The flow page's owed account is drawn by the provider's own icon
+   (~~`iconFor(providerId)`~~, the blank of build 19).
+3. **U8 — the account's AI answer.** `components/ai-reading-card.tsx` on Home while
+   `aiDocumentReading` is null; `components/settings/ai-reading-row.tsx` in Settings › SECURITY;
+   `hooks/use-ai-reading.tsx` the one answer every screen reads (the session's, or what this app
+   saved since, per person); Start run gates a run with a file on a `usesAi` flow by it. In the same
+   change the per-run dialog went: `components/automations/ai-consent-dialog.tsx`,
+   `lib/platform/ai-consent-store.ts` and `lib/content/ai-consent.ts` deleted (a Keychain entry
+   `autom8x.ai-consent.v1.{userId}` already on a phone is now read by nothing).
+4. **U9 — a run's progress by groups.** `toProgress` (`lib/view/runs.ts`) in place of `toTimeline`:
+   one row per group with a reported step, never "Not run", never a step id, "Working…" last while
+   going; Steps done is rows done over rows shown; Confidence gone; the result on its own line.
+5. **U3 — a run's saved details.** DETAILS draws `RunDetail.details`, label and value.
+6. **U11 — the design contract on these screens.** Numbered section headings at the label size in
+   the text colour (`NumberedSectionLabel`), CONNECT/SOURCE/SETTINGS/EMAIL; `iconSize`
+   (`constants/theme.ts`) — 24 for a row's label (Settings rows, setup fields, the file field,
+   vendors, progress rows), 20 in buttons; "Turn on" for Activate/Publish/Resume/Go live; one-line
+   leads; "Only providers configured for this deployment are shown." removed; `audit:vocabulary`
+   retires "solution(s)" and "pipeline(s)".
+
+**Lines §3 does not name, this session's** (the plain-words rule): the vendor page's disconnect
+confirm, "Disconnect from QuickBooks?" (a non-brand vendor "Disconnect {name}?") with "You can
+connect it again any time." and Cancel / Disconnect / Disconnecting…; the flow page's line for an
+account it cannot run without, "Connect {names} first." (~~"Connect … before going live."~~), and
+Setup's refusal of the same; a draft flow's count line "Not turned on yet" (~~"Not yet
+published"~~); the upload refusal "Turn it on first; a paused flow takes no files." (~~"Go live
+first; …"~~); a failed vendor page load "Couldn't load this flow's vendors"; the vendor page's
+member line and checks as the spec draws them; M keeps Add as a link to Setup, so "Adding…" (§3.A,
+the website's button) has no M state; a brand vendor's chosen-vendor row draws the logo alone, as
+§3.C says a logo carries the name.
+
+### Guards proved to bite, the Invoice Processing update
+
+Eleven runs by one script (`ip-app-gate/bites.py`, its jest logs and `bites.json` in the
+session's scratchpad), inside the gate lock, Node 22.23.2, on the final tree: each made one exact
+edit, ran the tests named, restored the file from its saved copy — its SHA-256 equal every time —
+and `git status --porcelain` was as before. Every break failed the tests named.
+
+| Guard | Broken by | What failed |
+| --- | --- | --- |
+| M1 · `audit:vocabulary` retires "solution" and "pipeline" (`scripts/audit-vocabulary.mjs`) | `RETIRED` back to project and automation | `audit-gates` "fails copy that says project or automation…" (its three new rows) |
+| M2 · Intuit's files, byte for byte (`assets/vendors/quickbooks-logo.png`) | one byte appended | `vendor-logos` "quickbooks-logo.png is the file Intuit provides, byte for byte" |
+| M3 · The card only while never answered (`components/ai-reading-card.tsx`) | drawn whatever the answer | `ai-reading`: Allow / Not now hide it, a failed save, never drawn for allowed or declined (5) |
+| M3 · The run gate only on a flow that uses AI (`components/automations/start-run.tsx`) | every file gated | `start-run` "is never asked for a flow that does not use AI, with a file" |
+| M4 · "Working…" only while the run goes on (`lib/view/runs.ts`) | drawn on every run | `invoice-processing-screens` (2), `build14-feedback` (3) |
+| M4 · A row per group, not per step (`lib/view/runs.ts`) | groups ignored | `invoice-processing-screens` PROGRESS, the second read, running, the view (4) |
+| U2 · No team sent on an add (`app/(tabs)/flows/setup.tsx`) | `projectId` sent | `tab-screens` (2), `parity-flows` G10, `presses-flows` Turn on |
+| U4 · Done carries the choice back to Setup (`app/(tabs)/flows/vendor.tsx`) | `vendor` dropped | `vendor-page` "chooses with a tap…", `real-router/connect-vendor` |
+| U2 · Team kinds typed against the platform's categories (`lib/content/team-types.ts`) | "Other" added to `TEAM_TYPES` | `tsc --noEmit`: four errors, the first at `team-types.ts` |
+| U5 · Intuit's button where QuickBooks is not connected (`components/settings/connections-card.tsx`) | never drawn | `connections-quickbooks` (6) |
+| U11 · Icons 24 on a row (`constants/theme.ts`) | `iconSize.row` 20 | `vendor-logos` (4), `invoice-processing-screens` (4), `ai-reading` the sparkle |

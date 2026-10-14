@@ -41,6 +41,7 @@ import {
 // The view models these fixtures populate are owned by `lib/view`, so the
 // components that render them do not depend on this module. Re-exported here
 // because the prototype's screens still import them from one place.
+import type { TeamType } from '@/lib/content/team-types';
 import type { PipelineStep } from '@/lib/view/pipeline';
 import type { FlowStatus } from '@/lib/view/status';
 
@@ -194,13 +195,13 @@ export const approvals: ApprovalItem[] = [
   { workflow: 'VENDOR ONBOARDING', title: 'New vendor: Northwind Ltd', why: 'No W-9 on file — needs confirmation before setup.', time: '3h ago' },
 ];
 
-export const templates: { icon: Icon; name: string; cat: string }[] = [
-  { icon: EnvelopeSimple, name: 'Email triage', cat: 'Ops' },
+export const templates: { icon: Icon; name: string; cat: TeamType }[] = [
+  { icon: EnvelopeSimple, name: 'Email triage', cat: 'Operations' },
   { icon: Receipt, name: 'Invoice capture', cat: 'Finance' },
-  { icon: ChartLine, name: 'Weekly report digest', cat: 'Reporting' },
+  { icon: ChartLine, name: 'Weekly report digest', cat: 'Data' },
   { icon: UserPlus, name: 'Lead enrichment', cat: 'Sales' },
   { icon: Camera, name: 'Receipt OCR', cat: 'Finance' },
-  { icon: BellRinging, name: 'Slack alerts', cat: 'Ops' },
+  { icon: BellRinging, name: 'Slack alerts', cat: 'Operations' },
 ];
 
 /** Solutions marketplace (design: solDefs). Prices are monthly USD numbers so
@@ -209,15 +210,16 @@ export type SolutionDef = {
   icon: Icon;
   name: string;
   desc: string;
-  cat: string;
+  /** A team kind, as every catalog category is since the platform's ADR-0036. */
+  cat: TeamType;
   price: number;
 };
 
 export const solutionDefs: SolutionDef[] = [
   { icon: Receipt, name: 'Invoice triage', desc: 'AP inbox to ledger, exceptions held for you', cat: 'Finance', price: 39 },
-  { icon: EnvelopeSimple, name: 'Email triage', desc: 'Route, draft and escalate support mail', cat: 'Ops', price: 29 },
+  { icon: EnvelopeSimple, name: 'Email triage', desc: 'Route, draft and escalate support mail', cat: 'Operations', price: 29 },
   { icon: Camera, name: 'Receipt OCR', desc: 'Snap receipts into expense entries', cat: 'Finance', price: 19 },
-  { icon: ChartLine, name: 'Weekly KPI digest', desc: 'Metrics to Slack every Monday morning', cat: 'Reporting', price: 19 },
+  { icon: ChartLine, name: 'Weekly KPI digest', desc: 'Metrics to Slack every Monday morning', cat: 'Data', price: 19 },
   { icon: UserPlus, name: 'Lead enrichment', desc: 'Enrich, score and route new leads', cat: 'Sales', price: 49 },
-  { icon: BellRinging, name: 'Slack alerts', desc: 'Threshold alerts from any data source', cat: 'Ops', price: 9 },
+  { icon: BellRinging, name: 'Slack alerts', desc: 'Threshold alerts from any data source', cat: 'Operations', price: 9 },
 ];

@@ -11,11 +11,12 @@ import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { StatusPill } from '@/components/nocturne/status-pill';
-import { StepCard } from '@/components/nocturne/step-card';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
-import { pressed } from '@/components/pressable';
+import { Pressable, pressed } from '@/components/pressable';
+import { chosenVendor, connectionField } from '@/components/setup-field';
 import { StatTileButton } from '@/components/stat-tile-button';
-import { em, fonts, layout, status, typeScale } from '@/constants/theme';
+import { NoVendorMark, VendorMark } from '@/components/vendor-logo';
+import { em, fonts, iconSize, layout, status, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ActionFailure, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
@@ -24,11 +25,15 @@ import { roleIn, useSession, workspaceIfShown } from '@/hooks/use-session';
 import { statusAction, useWorkflows, type FlowStatus } from '@/hooks/use-workflows';
 import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
 import {
+  CONNECT_VENDOR,
   OPEN_LIVE_FLOW_LABEL,
   UNARCHIVE_LABEL,
   UNAVAILABLE_NOTE,
+  VENDOR_NOT_CONNECTED,
   archivedFlowAddedAgainBody,
   archivedFlowBody,
+  connectFirst,
+  connectFirstOrNone,
   errorTitleFor,
 } from '@/lib/content/screen-states';
 import { readCatalog, readConnectionProviders } from '@/lib/platform/catalog';
@@ -36,6 +41,7 @@ import { updateSubscription } from '@/lib/platform/automations';
 import { readProjects } from '@/lib/platform/projects';
 import { readRemovedSubscriptionsOrNone, readRunStats, readSubscriptions } from '@/lib/platform/runs';
 import { addedAgainAs, scopeLabels, toFlows, toRemovedFlows, type FlowView } from '@/lib/view/catalog';
+import { flowStepRows } from '@/lib/view/pipeline';
 import { administers } from '@/lib/view/roles';
 import { statusLabel } from '@/lib/view/status';
 
@@ -81,6 +87,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
       readRemovedSubscriptionsOrNone(workspaceId),
     ]);
     const labels = scopeLabels(projects);
+    const byProvider = new Map(providers.providers.map((p) => [p.providerId, p]));
     return {
       // An archived flow is read here too (24.11.8): its page stays, read-only,
       // so a run row that names it opens something rather than "Couldn't load".
@@ -89,7 +96,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
           subs.subscriptions,
           catalog.automations,
           stats.subscriptions,
-          new Map(providers.providers.map((p) => [p.providerId, p])),
+          byProvider,
           labels,
         ),
         ...toRemovedFlows(removed.subscriptions, catalog.automations, stats.subscriptions, labels),
@@ -97,6 +104,8 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
       // An archived flow's own row too, so its page can say what it was.
       subscriptions: [...subs.subscriptions, ...removed.subscriptions],
       automations: catalog.automations,
+      // Each account's own icon and name: the vendor row draws its logo.
+      providers: byProvider,
     };
   });
 
@@ -201,6 +210,31 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
   const connectionTone = (tone: 'ok' | 'warn' | 'neutral') =>
     tone === 'ok' ? status.ok : tone === 'warn' ? status.warnText : palette.neutral[500];
 
+  // CONNECT (spec §3.D): the vendor choice, where the flow has one (backend
+  // ADR-0037), then each account it cannot run without that is not connected.
+  // The version it runs says what it holds; the catalog's, absent that.
+  const vendorField = connectionField(subscription.setup ?? entry?.setup ?? []);
+  const chosen = chosenVendor(vendorField, subscription.config);
+  const optional = new Set(
+    (entry?.requiredConnections ?? []).filter((c) => c.optional).map((c) => c.providerId),
+  );
+  const chosenProvider = flows.data.providers.get(chosen);
+  const connectRows = {
+    vendorField,
+    chosen,
+    chosenIcon: chosenProvider?.icon,
+    chosenName:
+      entry?.requiredConnections.find((c) => c.providerId === chosen)?.displayName ??
+      chosenProvider?.displayName ??
+      chosen,
+    // The platform counts the chosen vendor among what the flow is owed.
+    vendorOwed: chosen !== 'none' && subscription.unmetConnections.includes(chosen),
+    owed: def.connections.filter((c) => !optional.has(c.id) && !(vendorField && c.id === chosen)),
+  };
+  const openVendors = () =>
+    router.push({ pathname: '/(tabs)/flows/vendor', params: { template: def.templateId, flow: def.key } });
+  const stepRows = flowStepRows(entry?.pipeline, entry?.groups);
+
   return (
     <ScrollView
       style={styles.root}
@@ -213,9 +247,13 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
         <BackCircle onPress={() => router.back()} />
         <View style={styles.headerText}>
           <Text style={[styles.title, { color: palette.text }]}>{def.name}</Text>
-          <Text style={[styles.subtitle, { color: palette.neutral[400] }]}>
-            {def.scope ? `${def.scope} · ${def.desc}` : def.desc}
-          </Text>
+          {/* Its team on a line of its own, then what it does (spec §3.D). */}
+          {def.scope ? (
+            <Text testID="flow-team" style={[styles.team, { color: palette.text }]}>
+              {def.scope}
+            </Text>
+          ) : null}
+          <Text style={[styles.subtitle, { color: palette.neutral[400] }]}>{def.desc}</Text>
         </View>
         {def.removed ? (
           <Text style={[styles.removedBadge, { color: palette.neutral[400] }]}>Archived</Text>
@@ -233,6 +271,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
           subscriptionId={subscription.id}
           shownWorkspaceId={flows.loadedFor}
           runInput={subscription.runInput ?? []}
+          usesAi={entry?.usesAi === true}
           onStarted={(runId) => router.push({ pathname: '/(tabs)/(home)/run', params: { runId } })}
         />
       ) : null}
@@ -265,64 +304,99 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
         ))}
       </View>
 
-      <View>
-        <SectionLabel>CONNECTIONS</SectionLabel>
-        <SurfaceCard style={styles.connectionsCard}>
-          {def.connections.map((c, i) => {
-            const IconCmp = c.icon;
-            return (
+      {connectRows.vendorField || connectRows.owed.length > 0 ? (
+        <View testID="flow-connect">
+          <SectionLabel>CONNECT</SectionLabel>
+          <SurfaceCard style={styles.connectionsCard}>
+            {connectRows.vendorField ? (
+              <View
+                testID="flow-vendor"
+                style={[
+                  styles.connectionRow,
+                  connectRows.owed.length > 0 && { borderBottomWidth: 1, borderBottomColor: palette.divider },
+                ]}>
+                <View style={styles.connectionBody}>
+                  {connectRows.chosen === 'none' ? (
+                    <NoVendorMark />
+                  ) : (
+                    <VendorMark icon={connectRows.chosenIcon} name={connectRows.chosenName} />
+                  )}
+                  {connectRows.vendorOwed ? (
+                    <Text style={[styles.connectionSub, { color: status.warnText }]}>{VENDOR_NOT_CONNECTED}</Text>
+                  ) : null}
+                </View>
+                {def.removed ? null : (
+                  <Pressable
+                    testID="flow-connect-vendor"
+                    accessibilityRole="button"
+                    accessibilityLabel={`Connect vendor for ${def.name}`}
+                    onPress={openVendors}
+                    style={({ pressed: down }) => [
+                      styles.connectBtn,
+                      { borderColor: palette.accent },
+                      down && { backgroundColor: withAlpha(palette.accent, 0.12) },
+                    ]}>
+                    <Text style={[styles.connectLabel, { color: palette.accent }]}>{CONNECT_VENDOR}</Text>
+                  </Pressable>
+                )}
+              </View>
+            ) : null}
+            {connectRows.owed.map((c, i) => (
               <View
                 key={c.id}
                 style={[
                   styles.connectionRow,
-                  i < def.connections.length - 1 && {
-                    borderBottomWidth: 1,
-                    borderBottomColor: palette.divider,
-                  },
+                  i < connectRows.owed.length - 1 && { borderBottomWidth: 1, borderBottomColor: palette.divider },
                 ]}>
-                <IconCmp size={20} color={palette.accentRamp[300]} />
                 <View style={styles.connectionBody}>
-                  <Text style={[styles.connectionName, { color: palette.text }]}>{c.name}</Text>
-                  <Text style={[styles.connectionSub, { color: palette.neutral[400] }]}>
-                    {c.sub}
-                  </Text>
+                  <VendorMark icon={c.iconName} name={c.name} />
                 </View>
-                <Text style={[styles.connectionStatus, { color: connectionTone(c.tone) }]}>
-                  {c.status}
-                </Text>
+                <Text style={[styles.connectionStatus, { color: connectionTone(c.tone) }]}>{c.status}</Text>
               </View>
-            );
-          })}
-        </SurfaceCard>
-        {/* The way to the accounts it is owed, as the website links each card's
-            unmet connections to its Connections page. An archived flow goes
-            live no more, so it is owed nothing. */}
-        {!def.removed && def.connections.length > 0 ? (
-          <Text style={[styles.owed, { color: status.warnText }]}>
+            ))}
+          </SurfaceCard>
+          {/* The way to what it is owed, as the website links a card's unmet
+              connections: the vendor page for its vendor, Settings ›
+              Connections for an account it cannot run without. An archived
+              flow goes live no more, so it is owed nothing. */}
+          {!def.removed && connectRows.vendorOwed ? (
             <Text
+              testID="flow-vendor-owed"
+              accessibilityRole="link"
+              onPress={pressed(openVendors)}
+              suppressHighlighting
+              style={[styles.owed, styles.owedLink, { color: palette.accentRamp[300] }]}>
+              {connectFirstOrNone(connectRows.chosenName)}
+            </Text>
+          ) : null}
+          {!def.removed && connectRows.owed.length > 0 ? (
+            <Text
+              testID="flow-owed"
               accessibilityRole="link"
               onPress={pressed(() => router.push('/(tabs)/settings/connections'))}
               suppressHighlighting
-              style={[styles.owedLink, { color: palette.accentRamp[300] }]}>
-              Connect {def.connections.map((c) => c.name).join(', ')}
-            </Text>{' '}
-            before going live.
-          </Text>
-        ) : null}
-      </View>
+              style={[styles.owed, styles.owedLink, { color: palette.accentRamp[300] }]}>
+              {connectFirst(connectRows.owed.map((c) => c.name).join(', '))}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
 
-      <View>
-        <SectionLabel>PIPELINE</SectionLabel>
-        <View style={styles.pipeline}>
-          {def.steps.map((st) => (
-            <View key={st.id}>
-              <StepCard step={st} />
-              {st.more ? (
-                <View style={[styles.connector, { borderColor: palette.accentRamp[700] }]} />
-              ) : null}
+      <View testID="flow-steps">
+        <SectionLabel>STEPS</SectionLabel>
+        <SurfaceCard style={styles.connectionsCard}>
+          {stepRows.map((row, i) => (
+            <View
+              key={row.id}
+              style={[
+                styles.stepRow,
+                i < stepRows.length - 1 && { borderBottomWidth: 1, borderBottomColor: palette.divider },
+              ]}>
+              <Text style={[styles.stepLabel, { color: palette.text }]}>{row.label}</Text>
+              <Text style={[styles.connectionSub, { color: palette.neutral[400] }]}>{row.sub}</Text>
             </View>
           ))}
-        </View>
+        </SurfaceCard>
       </View>
 
       {def.removed ? (
@@ -353,12 +427,8 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
                 variant="primary"
                 height={44}
                 fontSize={typeScale.label.fontSize}
-                onPress={() =>
-                  router.push({
-                    pathname: '/(tabs)/flows/setup',
-                    params: { template: def.templateId, ...(def.projectId ? { project: def.projectId } : {}) },
-                  })
-                }
+                // Setup for its flow, a fresh setup; it goes to its category's team (ADR-0036).
+                onPress={() => router.push({ pathname: '/(tabs)/flows/setup', params: { template: def.templateId } })}
               />
             </>
           )}
@@ -373,6 +443,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
       {def.removed ? null : (
       <AutomationActions
         name={def.name}
+        team={def.scope}
         subscription={subscription}
         entry={entry}
         shownWorkspaceId={flows.loadedFor}
@@ -384,12 +455,12 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
         statusRow={
           <View style={styles.actions}>
             <PillButton
-              label={busy ? 'Saving…' : action.label}
+              label={busy ? 'Working…' : action.label}
               variant="secondary"
               height={46}
               fontSize={typeScale.label.fontSize}
               icon={ActionIcon}
-              iconSize={16}
+              iconSize={iconSize.button}
               style={styles.actionBtn}
               disabled={busy || (goingLive && !canGoLive)}
               onPress={changeStatus}
@@ -453,6 +524,8 @@ const styles = StyleSheet.create({
   connectionBody: {
     flex: 1,
     minWidth: 0,
+    gap: 6,
+    alignItems: 'flex-start',
   },
   connectionName: {
     fontFamily: fonts.medium,
@@ -474,15 +547,21 @@ const styles = StyleSheet.create({
   owedLink: {
     fontFamily: fonts.medium,
   },
-  pipeline: {
-    marginTop: 10,
+  team: {
+    fontFamily: fonts.medium,
+    fontSize: typeScale.body.fontSize,
+    marginTop: 1,
   },
-  connector: {
-    width: 1.5,
-    height: 20,
-    marginLeft: 32,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
+  connectBtn: { borderWidth: 1, borderRadius: 999, paddingVertical: 7, paddingHorizontal: 14 },
+  connectLabel: { fontFamily: fonts.medium, fontSize: typeScale.body.fontSize },
+  stepRow: {
+    gap: 2,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  stepLabel: {
+    fontFamily: fonts.medium,
+    fontSize: typeScale.label.fontSize,
   },
   actions: {
     flexDirection: 'row',

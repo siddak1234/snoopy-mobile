@@ -10,7 +10,6 @@ import { StyleSheet } from 'react-native';
 import TeamScreen from '@/app/(tabs)/settings/team';
 import TeamsScreen from '@/app/(tabs)/settings/teams';
 import SettingsScreen from '@/app/(tabs)/settings';
-import { CreateTeamDialog } from '@/components/teams/create-team-dialog';
 import { nocturneDark } from '@/constants/theme';
 import { SessionContext, type SessionContextValue } from '@/hooks/use-session';
 import { WORKSPACE_CHANGED } from '@/lib/content/refusals';
@@ -219,157 +218,29 @@ describe('Teams (24.11.7)', () => {
     ]);
   });
 
-  it('creates a team in the workspace the person is in: the kind only, sent as its name and its type (24.12)', async () => {
-    const fake = routeList({ projects: [] }, 'admin');
-    await renderWithProviders(<TeamsScreen />, orgSession('admin'));
-    await fireEvent.press(await screen.findByText('Create a team'));
-    // Named, not picked: no organization picker, no name, no description.
-    expect(await screen.findByText('In Acme Operations.')).toBeTruthy();
-    expect(screen.queryByLabelText(/^Organization:/u)).toBeNull();
-    expect(screen.queryByText('Team name')).toBeNull();
-    expect(screen.queryByText('Description (optional)')).toBeNull();
-    await pressLast('Create team');
-    expect(await screen.findByText('Pick the kind of team.')).toBeTruthy();
-    expect(fake.to('POST /v1/workspaces/{workspaceId}/projects')).toHaveLength(0);
+  it.each(['owner', 'admin', 'member'] as const)(
+    'offers no Create a team to an organization %s: the platform makes a flow\'s team, of its category, when first needed (backend ADR-0036)',
+    async (role) => {
+      const fake = routeList(undefined, role);
+      await renderWithProviders(<TeamsScreen />, orgSession(role));
+      expect(await screen.findByText('Finance')).toBeTruthy();
+      expect(screen.queryByText('Create a team')).toBeNull();
+      expect(screen.queryByTestId('create-team-dialog')).toBeNull();
+      expect(fake.to('POST /v1/workspaces/{workspaceId}/projects')).toHaveLength(0);
+    },
+  );
 
-    await fireEvent.press(screen.getByTestId('team-kind'));
-    expect(screen.getByTestId('team-kind-option-Customer Support')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('team-kind-option-Finance'));
-    await pressLast('Create team');
-    await waitFor(() => expect(fake.to('POST /v1/workspaces/{workspaceId}/projects')).toHaveLength(1));
-    const [created] = fake.to('POST /v1/workspaces/{workspaceId}/projects');
-    expect(created!.values).toEqual({ workspaceId: TEST_WORKSPACE });
-    expect(created!.body).toEqual({ name: 'Finance', type: 'Finance' });
-
-    expect(await screen.findByText('Your team is ready. Add people on its page.')).toBeTruthy();
-    await fireEvent.press(screen.getByText('Done'));
-    expect(mockRouter.push).toHaveBeenCalledWith({
-      pathname: '/(tabs)/settings/team',
-      params: { projectId: 'p9', workspaceId: TEST_WORKSPACE },
-    });
-  });
-
-  it("sends Other's own words, trimmed, as the name and the type", async () => {
-    const fake = routeList({ projects: [] }, 'owner');
-    await renderWithProviders(<TeamsScreen />, orgSession('owner'));
-    await fireEvent.press(await screen.findByText('Create a team'));
-    await fireEvent.press(await screen.findByTestId('team-kind'));
-    await fireEvent.press(screen.getByTestId('team-kind-option-Other'));
-    await fireEvent.changeText(screen.getByPlaceholderText('Facilities'), '  Treasury ');
-    await pressLast('Create team');
-    await waitFor(() => expect(fake.to('POST /v1/workspaces/{workspaceId}/projects')).toHaveLength(1));
-    expect(fake.to('POST /v1/workspaces/{workspaceId}/projects')[0]!.body).toEqual({ name: 'Treasury', type: 'Treasury' });
-  });
-
-  it('creates one in the personal workspace when that is the one the person is in', async () => {
-    const fake = routeList({ projects: [] });
-    await renderWithProviders(<TeamsScreen />, personalSession());
-    await fireEvent.press(await screen.findByText('Create a team'));
-    expect(await screen.findByText('In your personal workspace.')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('team-kind'));
-    await fireEvent.press(screen.getByTestId('team-kind-option-HR'));
-    await pressLast('Create team');
-    await waitFor(() => expect(fake.to('POST /v1/workspaces/{workspaceId}/projects')).toHaveLength(1));
-    const [created] = fake.to('POST /v1/workspaces/{workspaceId}/projects');
-    expect(created!.values).toEqual({ workspaceId: PERSONAL });
-    expect(created!.body).toEqual({ name: 'HR', type: 'HR' });
-    // A personal team has only its owner: there is nobody to add.
-    expect(await screen.findByText('Your team is ready.')).toBeTruthy();
-  });
-
-  it('refuses an empty Other and words outside 2 to 60 characters, sending nothing', async () => {
-    const fake = routeList({ projects: [] }, 'admin');
-    await renderWithProviders(<TeamsScreen />, orgSession('admin'));
-    await fireEvent.press(await screen.findByText('Create a team'));
-    await fireEvent.press(await screen.findByTestId('team-kind'));
-    await fireEvent.press(screen.getByTestId('team-kind-option-Other'));
-    for (const words of ['', ' ', 'X', 'x'.repeat(61)]) {
-      await fireEvent.changeText(screen.getByPlaceholderText('Facilities'), words);
-      await pressLast('Create team');
-      expect(await screen.findByText('Say what kind of team it is, in 2 to 60 characters.')).toBeTruthy();
-    }
-    expect(fake.to('POST /v1/workspaces/{workspaceId}/projects')).toHaveLength(0);
-  });
-
-  it('says a second team of a kind in words — never "Conflict" — and a refusal to a member as the rule', async () => {
-    const fake = routeList({ projects: [] }, 'admin');
-    fake.once('POST /v1/workspaces/{workspaceId}/projects', () => {
-      throw new PlatformError('Conflict', 409, 'CONFLICT', { reason: 'team_kind_taken' });
-    });
-    fake.once('POST /v1/workspaces/{workspaceId}/projects', () => {
-      throw new PlatformError('Forbidden', 403, 'FORBIDDEN');
-    });
-    await renderWithProviders(<TeamsScreen />, orgSession('admin'));
-    await fireEvent.press(await screen.findByText('Create a team'));
-    await fireEvent.press(await screen.findByTestId('team-kind'));
-    await fireEvent.press(screen.getByTestId('team-kind-option-Finance'));
-    await pressLast('Create team');
-    expect(await screen.findByText('This workspace already has a team for Finance.')).toBeTruthy();
-    expect(screen.queryByText('Conflict')).toBeNull();
-    await pressLast('Create team');
-    expect(await screen.findByText('Only an owner or admin can create a team here.')).toBeTruthy();
-    expect(screen.queryByText('Forbidden')).toBeNull();
-  });
-
-  it('does not offer Create a team to a plain member of the organization (24.12)', async () => {
-    routeList();
-    await renderWithProviders(<TeamsScreen />, orgSession('member'));
-    expect(await screen.findByText('Finance')).toBeTruthy();
-    expect(screen.queryByText('Create a team')).toBeNull();
-  });
-
-  it('is the empty-state standard with nothing to list: Create a team opens the dialog, and Back leaves (24.12)', async () => {
+  it('is the empty-state standard with nothing to list, with no action — Back leaves (24.12; ADR-0036)', async () => {
     routeNone('admin');
     await renderWithProviders(<TeamsScreen />, orgSession('admin'));
     expect(await screen.findByTestId('screen-empty')).toBeTruthy();
     expect(screen.getByText('No teams yet')).toBeTruthy();
     expect(screen.getByText('A team has its own flows and its own people.')).toBeTruthy();
+    expect(screen.queryByText('Create a team')).toBeNull();
     await fireEvent.press(screen.getByLabelText('Back'));
     expect(mockRouter.back).toHaveBeenCalled();
-    await fireEvent.press(screen.getByText('Create a team'));
-    expect(await screen.findByTestId('create-team-dialog')).toBeTruthy();
   });
 
-  it("empty for a plain member, it offers no Create a team", async () => {
-    routeNone('member');
-    await renderWithProviders(<TeamsScreen />, orgSession('member'));
-    expect(await screen.findByText('No teams yet')).toBeTruthy();
-    expect(screen.queryByText('Create a team')).toBeNull();
-  });
-});
-
-describe('Create a team acts on the workspace it was opened in (24.12, CLAUDE.md rule 10)', () => {
-  /** The session the dialog sees, switchable mid-test as the switcher does. */
-  let switchTo: (next: SessionContextValue) => void = () => undefined;
-  function Switchable({ children }: { children: React.ReactNode }) {
-    const [session, setSession] = useState<SessionContextValue>(orgSession('admin'));
-    switchTo = setSession;
-    return <SessionContext.Provider value={session}>{children}</SessionContext.Provider>;
-  }
-
-  it('keeps naming that workspace, and refuses Create in words — sending nothing — once another is active', async () => {
-    const fake = fakePlatform(platformOperation);
-    fake.always('POST /v1/workspaces/{workspaceId}/projects', (sent: Sent) => ({
-      project: team('p9', sent.values.workspaceId!, (sent.body as { type: string }).type),
-    }));
-    await renderWithProviders(
-      <Switchable>
-        <CreateTeamDialog onClose={() => undefined} onCreated={() => undefined} />
-      </Switchable>,
-      orgSession('admin'),
-    );
-    expect(screen.getByText('In Acme Operations.')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('team-kind'));
-    await fireEvent.press(screen.getByTestId('team-kind-option-Finance'));
-
-    // The scope control keeps the dialog open while another workspace becomes active.
-    await act(async () => switchTo(personalSession()));
-    expect(screen.getByText('In Acme Operations.')).toBeTruthy();
-    expect(screen.queryByText('In your personal workspace.')).toBeNull();
-    await pressLast('Create team');
-    expect(await screen.findByText(WORKSPACE_CHANGED)).toBeTruthy();
-    expect(fake.to('POST /v1/workspaces/{workspaceId}/projects')).toHaveLength(0);
-  });
 });
 
 describe('One team (24.11.7)', () => {

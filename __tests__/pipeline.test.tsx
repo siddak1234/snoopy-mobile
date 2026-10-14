@@ -28,7 +28,7 @@ const signedIn = {
   // The hook's members are stubbed (hence the cast); the platform's session is typed.
   session: {
     authenticated: true,
-    user: { userId: 'u1', email: 'd@e.com', activeWorkspaceId: WORKSPACE },
+    user: { userId: 'u1', email: 'd@e.com', activeWorkspaceId: WORKSPACE, aiDocumentReading: 'allowed' },
     workspaces: [{ id: WORKSPACE, name: 'Acme', type: 'organization', role: 'owner' }],
   } satisfies Answer<'GET /v1/session'>,
   refresh: () => {},

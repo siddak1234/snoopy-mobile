@@ -1,5 +1,6 @@
 /**
- * Fails when the app's copy says "project" or "automation" (BUILD-PLAN 24.11.7).
+ * Fails when the app's copy says "project", "automation", "solution" or
+ * "pipeline" (BUILD-PLAN 24.11.7; the Invoice Processing update, 2026-10-14).
  *
  * The owner's words: a team is the sub-organization with its own flows — what
  * the platform's contract calls a project — and "Flows will be the name we use
@@ -28,8 +29,13 @@ const root = process.cwd();
 const sourceRoots = ["app", "components", "constants", "hooks", "lib"];
 const GENERATED = "lib/generated/";
 
-/** The retired names, as words. */
-const RETIRED = /\b(projects?|automations?)\b/iu;
+/**
+ * The retired names, as words. "Solution" and "pipeline" joined them with the
+ * Invoice Processing update (2026-10-14; the owner's build 19 item 8: "So much
+ * ai slop wording … you just randomly out wird jargon in each place"): a person
+ * reads flows and steps.
+ */
+const RETIRED = /\b(projects?|automations?|solutions?|pipelines?)\b/iu;
 
 /** The brand line under the mark (design source, the cover and Home). */
 const BRAND_LINE = "AUTOMATION × AI";
@@ -84,13 +90,13 @@ function visit(node, source, path) {
 
 if (findings.length > 0) {
   console.error(
-    'Vocabulary audit failed. The app says "team" and "flow" — a project and an automation are the contract\'s names, not copy:\n',
+    'Vocabulary audit failed. The app says "team", "flow" and "steps" — a project, an automation, a solution and a pipeline are not copy:\n',
   );
   for (const finding of findings) console.error(`  ${finding}`);
   process.exit(1);
 }
 
-console.log('Vocabulary audit passed. No copy says "project" or "automation".');
+console.log('Vocabulary audit passed. No copy says "project", "automation", "solution" or "pipeline".');
 
 function walk(path) {
   let entries;

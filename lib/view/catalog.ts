@@ -329,10 +329,12 @@ export type FlowView = {
 export type FlowConnectionView = {
   /** Stable provider identity from `unmetConnections`. */
   id: string;
+  /** The provider's own icon name (`ConnectionProvider.icon`): a brand logo's, or the icon set's. */
+  iconName?: string;
   icon: Icon;
   name: string;
-  sub: string;
   tone: 'ok' | 'warn' | 'neutral';
+  /** "Not connected", the one line (spec §3.D; ~~"Required before publishing"~~ until 2026-10-14). */
   status: string;
 };
 
@@ -404,22 +406,29 @@ function flowFrom(
       name: sub.name ?? entry?.name ?? sub.templateId,
       desc: entry?.description ?? '',
       status: statusLabel(sub.status) as StatusPillLabel,
-      // A Draft has never run, and the design writes that as words, not zeroes.
+      // A Draft has never run, and the design writes that as words, not zeroes —
+      // "turned on", as its button says it (~~"Not yet published"~~ until 2026-10-14).
       runs: isDraft
-        ? 'Not yet published'
+        ? 'Not turned on yet'
         : `${count(c?.total ?? 0)} runs · ${count(c?.succeeded ?? 0)} ok · ${count(c?.failed ?? 0)} failed`,
       runCount: isDraft ? EMPTY : count(c?.total ?? 0),
       okCount: isDraft ? EMPTY : count(c?.succeeded ?? 0),
       failCount: isDraft ? EMPTY : count(c?.failed ?? 0),
       steps: toPipelineSteps(entry?.pipeline),
-      connections: sub.unmetConnections.map((providerId) => ({
-        id: providerId,
-        icon: iconFor(providerId),
-        name: providers?.get(providerId)?.displayName ?? providerId,
-        sub: 'Required before publishing',
-        tone: 'neutral' as const,
-        status: 'Not connected',
-      })),
+      // Each account it is owed, drawn by the provider's own icon — never looked
+      // up by its id, which drew a blank (the spec's U5; `iconFor(providerId)`
+      // until 2026-10-14).
+      connections: sub.unmetConnections.map((providerId) => {
+        const provider = providers?.get(providerId);
+        return {
+          id: providerId,
+          ...(provider ? { iconName: provider.icon } : {}),
+          icon: iconFor(provider?.icon),
+          name: provider?.displayName ?? providerId,
+          tone: 'neutral' as const,
+          status: 'Not connected',
+        };
+      }),
       ...(projectNames ? { scope: scopeLabel(sub.projectId, projectNames) } : {}),
     };
   }

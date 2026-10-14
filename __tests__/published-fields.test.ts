@@ -20,6 +20,7 @@ function entry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
     name: 'Invoice triage',
     description: 'Reads invoices and posts them.',
     category: 'Finance',
+    usesAi: false,
     icon: 'receipt',
     monthlyPriceUsd: 49,
     subscribed: false,

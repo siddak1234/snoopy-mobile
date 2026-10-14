@@ -48,8 +48,9 @@ async function openTheRun(view: Awaited<ReturnType<typeof launch>>) {
 function expectTheRun(view: Awaited<ReturnType<typeof launch>>) {
   expect(view.getSegments()).toEqual(['(tabs)', '(home)', 'run']);
   expect(screen.getByText('Run req-0')).toBeTruthy();
-  // The run's subheader: its flow, the version it ran (Gate 24 parity, G18), and how it ended.
-  expect(screen.getByText(/^Invoice triage · v\d+ · Run #4821 · posted to QuickBooks$/)).toBeTruthy();
+  // The run's subheader: its flow and the version it ran (Gate 24 parity, G18); how it ended on its own line (spec §3.E).
+  expect(screen.getByText(/^Invoice triage · v\d+$/)).toBeTruthy();
+  expect(screen.getByTestId('run-result').props.children).toBe('Run #4821 · posted to QuickBooks');
 }
 
 /** The run page's own Back, as a release build presses it. */

@@ -11,6 +11,7 @@ import ArchivedFlowsScreen from '@/app/(tabs)/flows/archived';
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import FlowsScreen from '@/app/(tabs)/flows/index';
 import SetupScreen from '@/app/(tabs)/flows/setup';
+import ConnectVendorScreen from '@/app/(tabs)/flows/vendor';
 import AccountScreen from '@/app/(tabs)/settings/account';
 import BillingScreen from '@/app/(tabs)/settings/billing';
 import ConnectionsScreen from '@/app/(tabs)/settings/connections';
@@ -75,6 +76,7 @@ const SCREENS = {
   'Flow detail': { Screen: WorkflowDetailScreen, params: { flow: 'invoice' }, read: /\/subscriptions$/u },
   Flows: { Screen: FlowsScreen, read: /\/subscriptions$/u },
   Setup: { Screen: SetupScreen, params: { template: 'tpl.0' }, read: /\/automations$/u },
+  'Connect vendor': { Screen: ConnectVendorScreen, params: { template: 'invoice-processing' }, read: /\/automations$/u },
   Account: { Screen: AccountScreen, read: /^\/v1\/auth\/identities$/u },
   Billing: { Screen: BillingScreen, read: /^\/v1\/workspaces$/u },
   Connections: { Screen: ConnectionsScreen, read: /\/connections$/u },
@@ -122,6 +124,10 @@ const CASES: Case[] = [
   // An unconfigured read is the unavailable state on Setup as on every other
   // fetching screen: Back, and no Retry that cannot succeed.
   ['Setup', 'unavailable', 'app/(tabs)/flows/setup.tsx:142-151', true],
+  // The flow's vendor page (the Invoice Processing update), as every fetching screen.
+  ['Connect vendor', 'offline', 'app/(tabs)/flows/vendor.tsx:100', true],
+  ['Connect vendor', 'unavailable', 'app/(tabs)/flows/vendor.tsx:103', true],
+  ['Connect vendor', 'error', 'app/(tabs)/flows/vendor.tsx:111-113', true],
   ['Account', 'offline', 'app/(tabs)/settings/account.tsx:92', true],
   ['Account', 'unavailable', 'app/(tabs)/settings/account.tsx:95', true],
   ['Account', 'error', 'app/(tabs)/settings/account.tsx:101-103', true],

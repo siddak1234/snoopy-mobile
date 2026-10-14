@@ -24,6 +24,7 @@ const entry = (over: Partial<CatalogEntry> = {}): CatalogEntry =>
     name: 'Invoice triage',
     description: 'AP inbox to ledger',
     category: 'Finance',
+    usesAi: false,
     icon: 'receipt',
     monthlyPriceUsd: 39,
     subscribed: true,
@@ -83,7 +84,7 @@ describe('toFlows', () => {
 
   it('writes a Draft’s counters as the design’s em dash, never as zeroes', () => {
     const [flow] = toFlows([sub({ status: 'draft' })], [entry()], []);
-    expect(flow.runs).toBe('Not yet published');
+    expect(flow.runs).toBe('Not turned on yet');
     expect(flow.runCount).toBe('—');
     expect(flow.okCount).toBe('—');
   });

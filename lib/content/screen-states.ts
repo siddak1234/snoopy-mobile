@@ -35,7 +35,8 @@ export type ScreenKey =
   | 'team'
   | 'billing'
   | 'account'
-  | 'data';
+  | 'data'
+  | 'vendor';
 
 /** `gErrTitle` — the design names the thing that failed, never the mechanism. */
 const ERROR_TITLES: Record<ScreenKey, string> = {
@@ -57,6 +58,7 @@ const ERROR_TITLES: Record<ScreenKey, string> = {
   billing: "Couldn't load billing",
   account: "Couldn't load your account",
   data: "Couldn't load data export",
+  vendor: "Couldn't load this flow's vendors",
 };
 
 /** The design's own fallback for a screen not in the map. */
@@ -263,23 +265,68 @@ export const ADD_FLOW_LABEL = 'Add a flow';
 export const ARCHIVED_FLOWS_LABEL = 'Archived flows';
 
 /**
- * Setup's team (build 11, D4; the owner's build 10 item 7: "Each flow has to
- * be in a team"): a flow is added to a team, never to the whole workspace, in
- * both clients. With no team to add to, an owner or admin makes one first; a
- * plain member asks to join one where the organization has a team they are not
- * on — the team directory lists one — with See teams (F84: found by the
- * website's change audit, 2026-10-03, where the member line was false), and
- * otherwise waits for an owner or admin to make the first. A flow the
- * workspace already holds is not added again (the owner's build 12 item 9):
- * Setup says where it is, under "Added to", and offers no team.
+ * The Invoice Processing update's words (2026-10-14; the spec's §3 — final, and
+ * the website's too). A flow goes to the team of its category, made by the
+ * platform when first needed (backend ADR-0036; the owner: "theres no choose a
+ * team"), so ~~"Add to", "Choose a team", "Pick a team.", "Create a team
+ * first.", "Create a team", "Ask to join a team first.", "See teams" and "An
+ * owner or admin creates the first team."~~ are gone with the team picker.
  */
-export const SETUP_ADDED_TO = 'Added to';
-export const SETUP_PICK_A_TEAM = 'Pick a team.';
-export const SETUP_CREATE_A_TEAM_FIRST = 'Create a team first.';
-export const SETUP_CREATE_A_TEAM = 'Create a team';
-export const SETUP_ASK_TO_JOIN_A_TEAM_FIRST = 'Ask to join a team first.';
-export const SETUP_SEE_TEAMS = 'See teams';
-export const SETUP_FIRST_TEAM_IS_AN_ADMINS = 'An owner or admin creates the first team.';
+/** The catalog's line under "Add a flow" (§3.A). */
+export const CATALOG_SUBTITLE = 'Ready-made flows for your teams.';
+/** Where a flow is, or will be: its team, by its kind (§3.A, §3.B, §3.D). */
+export function teamLine(kind: string): string {
+  return `Team: ${kind}`;
+}
+/** Setup's button (§3.B). */
+export const SETUP_TURN_ON = 'Turn on';
+export const SETUP_TURNING_ON = 'Turning on…';
+/** The flow's vendor choice on Set up and its page (§3.B, §3.D). */
+export const CONNECT_VENDOR = 'Connect vendor ›';
+export const VENDOR_NOT_CONNECTED = 'Not connected';
+/** Setup's refusals, nothing sent (§3.B). */
+export function connectFirstOrNone(displayName: string): string {
+  return `Connect ${displayName} first, or choose None.`;
+}
+export function connectFirst(names: string): string {
+  return `Connect ${names} first.`;
+}
+export function fillIn(titles: string): string {
+  return `Fill in: ${titles}.`;
+}
+export function enterAnAmount(titles: string): string {
+  return `Enter an amount for ${titles}.`;
+}
+export const SETUP_ADD_FAILED = 'Could not add this flow. Try again.';
+export const SETUP_TURN_ON_FAILED = 'Could not turn it on. Try again.';
+/** The flow page's Set up dialog (§3.B: the website's modal words). */
+export const SETUP_SAVE = 'Save';
+export const SETUP_SAVING = 'Saving…';
+export const SETUP_SAVE_FAILED = 'Could not save. Try again.';
+
+/** Connect vendor (§3.C). */
+export const VENDOR_TITLE = 'Connect vendor';
+export function vendorFor(flowName: string): string {
+  return `For ${flowName}`;
+}
+export const VENDOR_CONNECTED = 'Connected';
+export const VENDOR_ASK_ADMIN = 'Ask an owner or admin to connect it.';
+export const VENDOR_NONE_SUB = 'Save the details only.';
+export const VENDOR_DONE = 'Done';
+export const VENDOR_SAVE = 'Save';
+export const VENDOR_SAVING = 'Saving…';
+export const VENDOR_SAVE_FAILED = 'Could not save. Try again.';
+/** Under "Disconnect from QuickBooks?" — the spec names the link, not its confirm; the plainest true line. */
+export const VENDOR_DISCONNECT_BODY = 'You can connect it again any time.';
+
+/** The flow page's start controls (§3.D): one line in place of the 28-word lead. */
+export const START_RUN_LEAD = 'Fill this in, then start the run.';
+
+/** A run's page (§3.E). */
+export const PROGRESS_LABEL = 'PROGRESS';
+export const DETAILS_LABEL = 'DETAILS';
+export const RUN_WORKING = 'Working…';
+export const RUN_WAITING_FOR_APPROVAL = 'Waiting for approval.';
 
 /**
  * `notifsEmpty` — and note it is not an apology.
