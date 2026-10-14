@@ -178,12 +178,12 @@ release that carries BUILD-PLAN 25.4.5 (the two test automations retired the day
 Invoice Processing is live), so these notes are redrafted before submission (24.7.4).
 
 **App Privacy answers.** As published in App Store Connect by the owner on 2026-10-13,
-in two publishes, both from answers a session recommended that day. The first, at about
-16:02Z, gave the Privacy Policy URL https://www.autom8x.ai/privacy, Yes to "Do you or
-your third-party partners collect data from this app?", and nine types, each for "App
+in three publishes, the first and the last from answers a session recommended that day. The
+first, at about 16:02Z, gave the Privacy Policy URL https://www.autom8x.ai/privacy, Yes to "Do
+you or your third-party partners collect data from this app?", and nine types, each for "App
 Functionality" only, "Linked to the user's identity" and not used for tracking. The
-second, at about 17:53Z (after an intermediate publish at about 17:46Z that the owner
-corrected), after a review of this record, added Payment Info and Purchase
+second, at about 17:46Z, was an intermediate publish that the owner corrected. The last, at
+about 17:53Z, after a review of this record, added Payment Info and Purchase
 History on the same terms, and Analytics as a second purpose of Other Diagnostic Data:
 the eleven types below. After it, the owner's screenshot of App Store Connect's product
 page preview shows six categories under "Data Linked to You" (User Content,

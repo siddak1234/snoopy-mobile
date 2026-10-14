@@ -5,7 +5,10 @@ their words and webhook key made the website's; the release's local build (`rele
 for 25.8.2); and 25.8.3, the flow page's start controls with Take photo (2026-10-10) — and two more
 put to the owner as a re-entry on 2026-10-13 and approved by the owner's merge of #62 (`fa33f61`,
 2026-10-13 13:58:48Z): Account deleted in the website's words (backend 25.7.4), and the one-time
-consent before AI reads a run's file (Apple 5.1.2(i)).** Round 17 opened in `snoopy-backend` on
+consent before AI reads a run's file (Apple 5.1.2(i)); and two more approved by the owner's merge of
+#63 (`fcc2f79`, 2026-10-14 05:11:18Z): the "By continuing, you agree…" line under the sign-in buttons
+(the owner's decision of 2026-10-13), and the automatic re-complete of an upload answered
+`measurement_busy` (applied by the session under the owner's "keep it easy" rule).** Round 17 opened in `snoopy-backend` on
 2026-10-08 (BUILD-PLAN Phase 25, `a9e13ae`) on
 the owner's four requirements for automations; its 25.8 is this repository's one box — "A control
 the app does not know renders as the website does … `resource-picker` gets its control; an error
