@@ -4080,7 +4080,13 @@ this path: Start run has no clock, and is held while the field uploads.
 
 **The website.** Its builder makes the same change on its branch the same day, with the same five
 completions, the same 1.5 s and the same 5 s bound (`snoopy/app/account/flows/upload-completion.ts`,
-read on its branch before it was committed); the two must land alike.
+read on its branch before it was committed); the two must land alike. One difference is accepted
+(the independent review of #63): the website re-checks the active workspace at every completion
+(`completeRunUpload`, `snoopy/app/account/flows/upload-actions.ts:83-84`, on its branch), and the
+app does not — it checks it once, when the file is chosen
+(`components/automations/run-file-field.tsx:84-86`), and completes in that workspace — so a switch
+during the waits ends 'Ready', Start run then refuses in `WORKSPACE_CHANGED`'s words
+(`components/automations/start-run.tsx:128-130`), and nothing crosses workspaces.
 
 Tests, with fake timers: `__tests__/start-run.test.tsx:662`, a block of ten in place of the test
 that held the opposite (that the app never completes an upload again by itself) — the same upload
@@ -4128,3 +4134,11 @@ before. Every break failed the tests named and nothing else.
 | M1r · `measurement_busy` is named (`lib/content/refusals.ts:197`), against the new block | the entry removed | `start-run` "says the website's words only when the file still waits at the fifth completion…", "never waits out a stated wait over 5 s…" |
 | M2r · Its words, word for word (`refusals.ts:197`) | "Nothing was lost." made "Nothing was refused." | the same two |
 | M3r · The file field says the upload's words (`components/automations/run-file-field.tsx:150`) | the error's own message shown | `start-run` the same two, the six "says … refused when its upload is sealed…", and "never completes again for any other answer — a refusal when the upload is sealed…" |
+
+**Since then** (the independent review of #63, approved with no blockers): the block at
+`start-run.test.tsx:769` gains a fifth row, a 400 naming `measurement_busy` — the reason on another
+status, said at once in its words (`refusals.ts:197`), after one completion — so the block holds eleven tests,
+`start-run` 74, and the three after it sit at `:813`, `:826` and `:837`. Bitten as R3 was:
+`run-file.ts:108` widened to any `PlatformError` failed that row alone (`start-run` 73 of 74;
+`platform-request` 18, `upload-refusals` 12 and `run-file` 5, all passing), and restored, its
+SHA-256 equal, all 74 pass.
