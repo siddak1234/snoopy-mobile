@@ -28,7 +28,7 @@ export const WORKSPACE = '00000000-0000-4000-8000-000000000001';
 /** The session the platform answers while the keychain holds a token. */
 export const SESSION: Answer<'GET /v1/session'> = {
   authenticated: true,
-  user: { userId: 'u1', email: 'alex@acme.co', activeWorkspaceId: WORKSPACE },
+  user: { userId: 'u1', email: 'alex@acme.co', activeWorkspaceId: WORKSPACE, aiDocumentReading: 'allowed' },
   workspaces: [{ id: WORKSPACE, name: 'Acme', type: 'organization', role: 'owner' }],
 };
 

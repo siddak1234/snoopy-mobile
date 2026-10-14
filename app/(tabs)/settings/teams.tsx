@@ -1,23 +1,20 @@
 import { useRouter } from 'expo-router';
-import { CaretRight, Plus, UsersThree } from 'phosphor-react-native';
+import { CaretRight, UsersThree } from 'phosphor-react-native';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { BackCircle } from '@/components/nocturne/back-circle';
-import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
 import { ScreenEmpty, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { SettingsRow } from '@/components/settings/settings-row';
-import { CreateTeamDialog } from '@/components/teams/create-team-dialog';
 import { em, fonts, layout, status, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { busyBody, useWorkspaceResource } from '@/hooks/use-resource';
-import { activeWorkspaceId, roleIn, useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { refusalMessage } from '@/lib/content/refusals';
 import { TEAMS_EMPTY_BODY, TEAMS_EMPTY_TITLE, errorTitleFor } from '@/lib/content/screen-states';
@@ -31,7 +28,6 @@ import {
   type TeamDirectoryEntry,
 } from '@/lib/platform/projects';
 import { readWorkspaces, type WorkspaceSummary } from '@/lib/platform/workspaces';
-import { administers } from '@/lib/view/roles';
 import type { StatusPillLabel } from '@/lib/view/status';
 
 const ROLE: Record<Project['viewerRole'], string> = { owner: 'Owner', admin: 'Admin', member: 'Member' };
@@ -51,20 +47,21 @@ const STATUS: Record<Project['status'], StatusPillLabel> = {
  * Settings → Teams (BUILD-PLAN 24.11.7). A team is a sub-organization with its
  * own flows — a project, in the platform's contract. Every team this person is
  * on, in every workspace they are in, grouped by workspace (an organization's
- * owners and admins see all of its teams); Create a team; and, in each
- * organization, the teams they could ask to join, with Request, or Requested
- * and a way to withdraw. A deleted (archived) team is not listed. A team is
- * named by its kind (24.12). Create makes one in the active workspace, and is
- * not offered to a plain member of an organization. With nothing to list, the
- * screen is the empty-state standard (the owner's build 9).
+ * owners and admins see all of its teams); and, in each organization, the
+ * teams they could ask to join, with Request, or Requested and a way to
+ * withdraw. A deleted (archived) team is not listed. A team is named by its
+ * kind (24.12). No one creates a team here since the Invoice Processing update
+ * (backend ADR-0036; the owner, 2026-10-14: "theres no choose a team. there
+ * will be pre existing teams depending on which flows are added"): the
+ * platform makes a flow's team, of its category, when the first flow of that
+ * kind is added. With nothing to list, the screen is the empty-state standard
+ * (the owner's build 9).
  */
 export default function TeamsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { palette } = useTheme();
-  const session = useSession();
   const keys = useIntentKeys('team-access');
-  const [creating, setCreating] = useState(false);
   const [asking, setAsking] = useState<string | null>(null);
   const [askError, setAskError] = useState<string | null>(null);
   const [withdrawing, setWithdrawing] = useState<{ workspace: WorkspaceSummary; entry: TeamDirectoryEntry } | null>(
@@ -127,36 +124,17 @@ export default function TeamsScreen() {
   const { groups } = teams.data;
   const shown = groups.filter((group) => group.mine.length > 0 || group.askable.length > 0);
   const organizations = groups.filter((group) => group.workspace.type === 'organization').length;
-  const active = activeWorkspaceId(session);
-  const canCreate = administers(
-    groups.find((group) => group.workspace.id === active)?.workspace.role ?? roleIn(session, active),
-  );
   const muted = { color: palette.neutral[400] };
-
-  const createDialog = creating ? (
-    <CreateTeamDialog
-      onClose={() => setCreating(false)}
-      onCreated={(team) => {
-        setCreating(false);
-        teams.reload();
-        router.push({ pathname: '/(tabs)/settings/team', params: { projectId: team.id, workspaceId: team.workspaceId } });
-      }}
-    />
-  ) : null;
 
   if (shown.length === 0) {
     return (
-      <>
-        <ScreenEmpty
-          icon={<UsersThree size={40} color={palette.accentRamp[300]} />}
-          title={TEAMS_EMPTY_TITLE}
-          body={TEAMS_EMPTY_BODY}
-          {...(canCreate ? { action: { label: 'Create a team', icon: Plus, onPress: () => setCreating(true) } } : {})}
-          onBack={() => router.back()}
-          topInset={insets.top}
-        />
-        {createDialog}
-      </>
+      <ScreenEmpty
+        icon={<UsersThree size={40} color={palette.accentRamp[300]} />}
+        title={TEAMS_EMPTY_TITLE}
+        body={TEAMS_EMPTY_BODY}
+        onBack={() => router.back()}
+        topInset={insets.top}
+      />
     );
   }
 
@@ -174,17 +152,6 @@ export default function TeamsScreen() {
           </Text>
         </View>
       </View>
-
-      {canCreate ? (
-        <PillButton
-          label="Create a team"
-          variant="primary"
-          height={46}
-          icon={Plus}
-          iconSize={16}
-          onPress={() => setCreating(true)}
-        />
-      ) : null}
 
       {askError ? <Text style={[styles.text, { color: status.err }]}>{askError}</Text> : null}
 
@@ -253,7 +220,6 @@ export default function TeamsScreen() {
         </View>
       ))}
 
-      {createDialog}
       {withdrawing ? (
         <ConfirmDialog
           testID="withdraw-request-dialog"

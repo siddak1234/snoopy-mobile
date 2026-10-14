@@ -4,13 +4,14 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { MoveVersion } from '@/components/automations/move-version';
 import { SetupDialog } from '@/components/automations/setup-dialog';
+import { rowFields } from '@/components/setup-field';
 import { WebhookAddressDialog } from '@/components/automations/webhook-address-dialog';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
 import { SettingsRow } from '@/components/settings/settings-row';
-import { fonts, layout, typeScale, withAlpha } from '@/constants/theme';
+import { fonts, iconSize, layout, typeScale, withAlpha } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
@@ -43,6 +44,7 @@ type Open = 'setup' | 'webhook' | 'archive' | null;
  */
 export function AutomationActions({
   name,
+  team,
   subscription,
   entry,
   shownWorkspaceId,
@@ -52,6 +54,8 @@ export function AutomationActions({
   onArchived,
 }: {
   name: string;
+  /** Its team, as the flow page says it — Set up says it under its title. */
+  team?: string;
   subscription: Subscription;
   /** The catalog's entry for its template; absent once the template is withdrawn. */
   entry: CatalogEntry | undefined;
@@ -105,7 +109,8 @@ export function AutomationActions({
   };
 
   const rows: { key: string; icon: Icon; title: string; sub: string; open: Exclude<Open, null> }[] = [
-    ...(setup.length > 0
+    // The vendor choice has its own page (CONNECT on the flow page), so Set up is offered for the rest.
+    ...(rowFields(setup).length > 0
       ? [{ key: 'setup', icon: SlidersHorizontal, title: 'Set up', sub: 'The settings it runs with', open: 'setup' as const }]
       : []),
     ...(webhook
@@ -164,12 +169,14 @@ export function AutomationActions({
           { borderColor: palette.danger },
           pressed && { backgroundColor: withAlpha(palette.danger, 0.08) },
         ]}>
-        <Archive size={18} color={palette.danger} />
+        <Archive size={iconSize.button} color={palette.danger} />
         <Text style={[styles.archiveLabel, { color: palette.danger }]}>Archive flow</Text>
       </Pressable>
 
       {open === 'setup' ? (
         <SetupDialog
+          name={name}
+          team={team}
           subscriptionId={subscription.id}
           shownWorkspaceId={shownWorkspaceId}
           setup={setup}

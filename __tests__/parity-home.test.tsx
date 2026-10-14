@@ -470,20 +470,17 @@ describe("G7 — the website's Teams on Home", () => {
     expect(within(screen.getByTestId('home-team-sales')).queryByText('Acme Operations')).toBeNull();
   });
 
-  it('with none: No teams yet., and Create a team — opening Teams — for an owner or admin only', async () => {
-    routeHome();
-    const view = await renderWithProviders(<HomeScreen />, sessionAs('member'));
-    expect(await screen.findByText('No teams yet.')).toBeTruthy();
-    expect(screen.queryByTestId('home-create-team')).toBeNull();
-    expect(screen.queryByText('View all teams')).toBeNull();
-    await view.unmount();
-
-    routeHome();
-    await renderWithProviders(<HomeScreen />, sessionAs('admin'));
-    expect(await screen.findByText('No teams yet.')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('home-create-team'));
-    expect(mockRouter.push.mock.calls).toEqual([['/(tabs)/settings/teams']]);
-  });
+  it.each(['member', 'admin', 'owner'] as const)(
+    'with none: No teams yet., and no Create a team for an organization %s — the platform makes a flow\'s team when first needed (ADR-0036)',
+    async (role) => {
+      routeHome();
+      await renderWithProviders(<HomeScreen />, sessionAs(role));
+      expect(await screen.findByText('No teams yet.')).toBeTruthy();
+      expect(screen.queryByTestId('home-create-team')).toBeNull();
+      expect(screen.queryByText('Create a team')).toBeNull();
+      expect(screen.queryByText('View all teams')).toBeNull();
+    },
+  );
 
   it('a teams read that is refused says so, and the rest of Home still shows', async () => {
     const fake = routeHome();

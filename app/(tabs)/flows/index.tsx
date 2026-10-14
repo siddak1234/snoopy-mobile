@@ -9,7 +9,7 @@ import { PillButton } from '@/components/nocturne/pill-button';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { ScopeControl } from '@/components/scope-control';
-import { em, fonts, layout, radius, status, typeScale, withAlpha } from '@/constants/theme';
+import { em, fonts, iconSize, layout, radius, status, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
@@ -211,7 +211,7 @@ export default function FlowsScreen() {
                 router.push({ pathname: '/(tabs)/flows/detail', params: { flow: key } })
               }
               style={styles.flowCard}>
-              <IconTile icon={def.icon} size={42} iconSize={21} borderRadius={12} bordered />
+              <IconTile icon={def.icon} size={42} iconSize={iconSize.row} borderRadius={12} bordered />
               <View style={styles.flowBody}>
                 <Text style={[styles.flowName, { color: palette.text }]}>{def.name}</Text>
                 <Text style={[styles.flowDesc, { color: palette.neutral[400] }]}>{def.desc}</Text>

@@ -25,10 +25,17 @@ function changed<T>(workspaceId: string, keys: readonly string[]): (answer: T) =
   };
 }
 
+/**
+ * Adds a flow. No team is sent: the platform puts it in its category's team,
+ * making that team when the workspace has none, and puts the person who added
+ * it on the team once the add commits (backend ADR-0036). So an add can change
+ * the teams this person sees too — the teams are read again next time, and the
+ * flow's page says "Team: Accounting" at once, never "a team" from a list read
+ * before the team existed (the review of the Invoice Processing screens).
+ */
 export function createSubscription(
   workspaceId: string,
-  /** `projectId` scopes it to one project (18.6.2); without one it is workspace-wide. */
-  input: { templateId: string; templateVersion?: number; name?: string; projectId?: string },
+  input: { templateId: string; templateVersion?: number; name?: string },
   idempotencyKey: string,
 ): Promise<{ subscription: Subscription }> {
   return platformOperation(`/v1/workspaces/${workspaceId}/subscriptions`, ({ automations }, signal) =>
@@ -40,7 +47,7 @@ export function createSubscription(
       body: input,
       signal,
     }),
-  ).then(changed(workspaceId, ['subscriptions', 'catalog']));
+  ).then(changed(workspaceId, ['subscriptions', 'catalog', 'projects']));
 }
 
 export function updateSubscription(

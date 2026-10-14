@@ -3,15 +3,26 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { DialogBoundary } from '@/components/dialog-boundary';
-import { SectionLabel } from '@/components/nocturne/section-label';
-import { sectionLabel, SetupFieldRow, bySection, declaredValues, type SetupField } from '@/components/setup-field';
+import {
+  NumberedSectionLabel,
+  SetupFieldRow,
+  bySection,
+  declaredValues,
+  rowFields,
+  sectionLabel,
+  type SetupField,
+} from '@/components/setup-field';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { MOVE_REFUSALS, WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
-import { errorTitleFor } from '@/lib/content/screen-states';
+import { SETUP_SAVE, SETUP_SAVE_FAILED, SETUP_SAVING, errorTitleFor } from '@/lib/content/screen-states';
 import { updateSubscription } from '@/lib/platform/automations';
 
 type SetupDialogProps = {
+  /** The flow's name: "Set up Invoice Processing". */
+  name: string;
+  /** Its team, as the flow page says it: "Team: Accounting". */
+  team?: string;
   subscriptionId: string;
   /** The workspace the screen loaded; the save is refused once it is not active. */
   shownWorkspaceId: string | null;
@@ -52,7 +63,7 @@ export function SetupDialog(props: SetupDialogProps) {
   );
 }
 
-function SetupDialogBody({ subscriptionId, shownWorkspaceId, setup, config, moveTo, onClose, onSaved }: SetupDialogProps) {
+function SetupDialogBody({ name, team, subscriptionId, shownWorkspaceId, setup, config, moveTo, onClose, onSaved }: SetupDialogProps) {
   const form = useSetupForm({ subscriptionId, shownWorkspaceId, setup, config, moveTo, onSaved });
 
   return (
@@ -60,10 +71,11 @@ function SetupDialogBody({ subscriptionId, shownWorkspaceId, setup, config, move
       visible
       testID="setup-dialog"
       onRequestClose={form.busy ? () => undefined : onClose}
-      title={moveTo === undefined ? 'Flow setup' : `Settings for v${moveTo}`}
+      // The spec's §3.B (~~"Flow setup", "Complete the settings supplied by this flow."~~ until 2026-10-14).
+      title={moveTo === undefined ? `Set up ${name}` : `Settings for v${moveTo}`}
       body={
         moveTo === undefined
-          ? 'Complete the settings supplied by this flow.'
+          ? team
           : `v${moveTo} checks its settings differently. Set them for it; saving moves the flow.`
       }
       actions={
@@ -73,7 +85,7 @@ function SetupDialogBody({ subscriptionId, shownWorkspaceId, setup, config, move
             tone="accent"
             disabled={form.busy}
             onPress={() => void form.save()}
-            label={moveTo === undefined ? (form.busy ? 'Saving…' : 'Save setup') : form.busy ? 'Moving…' : `Save and move to v${moveTo}`}
+            label={moveTo === undefined ? (form.busy ? SETUP_SAVING : SETUP_SAVE) : form.busy ? 'Moving…' : `Save and move to v${moveTo}`}
           />
         </>
       }>
@@ -139,9 +151,7 @@ export function useSetupForm({
       onSaved();
     } catch (caught) {
       setError(
-        moveTo === undefined
-          ? refusalMessage(caught, {}, 'The setup was not saved.')
-          : refusalMessage(caught, MOVE_REFUSALS, 'The flow was not moved.'),
+        moveTo === undefined ? SETUP_SAVE_FAILED : refusalMessage(caught, MOVE_REFUSALS, 'The flow was not moved.'),
       );
     } finally {
       setBusy(false);
@@ -151,7 +161,11 @@ export function useSetupForm({
   return { values, change, reset, save, busy, error };
 }
 
-/** The fields, by section, in the manifest's order; about a screen of them scroll. */
+/**
+ * The fields, by section, in the manifest's order, each section a numbered
+ * step; about a screen of them scroll. The vendor choice is not a row — it has
+ * its own page (Connect vendor) — and is saved as the flow holds it.
+ */
 export function SetupFields({
   setup,
   values,
@@ -163,10 +177,10 @@ export function SetupFields({
 }) {
   return (
     <ScrollView style={styles.fields} keyboardShouldPersistTaps="handled">
-      {bySection(setup).map(({ section, fields }, position) => (
+      {bySection(rowFields(setup)).map(({ section, fields }, position) => (
         // The manifest's order can come back to a section, so its place keys it.
         <View key={`${section}-${position}`}>
-          <SectionLabel>{sectionLabel(position + 1, section)}</SectionLabel>
+          <NumberedSectionLabel>{sectionLabel(position + 1, section)}</NumberedSectionLabel>
           {fields.map((field, index) => (
             <SetupFieldRow
               key={field.key}

@@ -199,7 +199,7 @@ describe('Deleting the account (24.6.2, ADR-0028)', () => {
     fake.always('DELETE /v1/account', () => {
       throw new PlatformError('Dependency failure', 502, 'DEPENDENCY_FAILURE');
     });
-    fake.always('GET /v1/session', { authenticated: true, user: { userId: 'u1', email: 'alex@acme.co' }, workspaces: [] });
+    fake.always('GET /v1/session', { authenticated: true, user: { userId: 'u1', email: 'alex@acme.co', aiDocumentReading: 'allowed' }, workspaces: [] });
     await renderWithProviders(<AccountScreen />, session());
     await openDelete();
     expect(await screen.findByText(DELETION_WORDS.stillHere)).toBeTruthy();

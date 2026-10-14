@@ -6,6 +6,7 @@ import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import SetupScreen from '@/app/(tabs)/flows/setup';
 import type { SetupField } from '@/components/setup-field';
 import type { Subscription } from '@/lib/platform/automations';
+import { PlatformError, PlatformUnreachableError } from '@/lib/platform/problem';
 import { catalogPrice, toSolution } from '@/lib/view/catalog';
 import { fakePlatform } from '@/test/fake-platform';
 import {
@@ -38,18 +39,19 @@ beforeEach(() => {
   routePlatform(platformOperation);
 });
 
-describe('G8 — a catalog card says its version and its price as the website does', () => {
-  it('says the version Add pins, and "Included" for a flow that costs nothing', async () => {
+describe('G8 — a catalog card says its category and its price as the website does — no version (the spec\'s S9)', () => {
+  it('says its category — the team it goes to — and "Included" for a flow that costs nothing', async () => {
     const catalog = catalogPayload();
-    // Weekly KPI digest, a Reporting flow: its third version, at no charge.
+    // Weekly KPI digest, a Data flow: its third version, at no charge.
     catalog.automations = catalog.automations.map((entry, index) =>
       index === 3 ? { ...entry, version: 3, monthlyPriceUsd: 0 } : entry,
     );
     routePlatform(platformOperation, { '/automations': catalog, '/subscriptions': planSubscriptionsPayload() });
     await renderWithProviders(<SolutionsScreen />, signedInSession);
-    expect(await screen.findByText('Reporting · v3 · Included')).toBeTruthy();
-    expect(screen.getAllByText('Finance · v1 · $39/mo').length).toBeGreaterThan(0);
-    expect(screen.getByText('Sales · v1 · $49/mo')).toBeTruthy();
+    expect(await screen.findByText('Data · Included')).toBeTruthy();
+    expect(screen.getAllByText('Finance · $39/mo').length).toBeGreaterThan(0);
+    expect(screen.getByText('Sales · $49/mo')).toBeTruthy();
+    expect(screen.queryByText(/ · v\d+ · /u)).toBeNull();
     expect(screen.queryByText(/\$0\/mo/u)).toBeNull();
   });
 
@@ -62,11 +64,14 @@ describe('G8 — a catalog card says its version and its price as the website do
 });
 
 describe('G9 — the accounts a flow is owed link to Settings › Connections', () => {
-  it('a flow page owed an account says to connect it before going live, and the words open Settings › Connections', async () => {
+  it('a flow page owed an account says to connect it first, and the words open Settings › Connections', async () => {
     setMockParams({ flow: 'lead' });
     await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
-    expect(await screen.findByText('Connect HubSpot before going live.')).toBeTruthy();
-    await fireEvent.press(screen.getByText('Connect HubSpot'));
+    expect(await screen.findByText('Connect HubSpot first.')).toBeTruthy();
+    // One line, "Not connected" (spec §3.D): ~~"Required before publishing"~~.
+    expect(screen.getByText('Not connected')).toBeTruthy();
+    expect(screen.queryByText('Required before publishing')).toBeNull();
+    await fireEvent.press(screen.getByText('Connect HubSpot first.'));
     expect(mockRouter.push).toHaveBeenCalledTimes(1);
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/connections');
   });
@@ -79,14 +84,15 @@ describe('G9 — the accounts a flow is owed link to Settings › Connections', 
     setMockParams({ flow: 'lead' });
     await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
     // Slack has no provider listed here, so it keeps its id, as the row above it does.
-    expect(await screen.findByText('Connect HubSpot, slack before going live.')).toBeTruthy();
+    expect(await screen.findByText('Connect HubSpot, slack first.')).toBeTruthy();
   });
 
   it('a flow owed nothing says nothing of it', async () => {
     setMockParams({ flow: 'invoice' });
     await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
     expect(await screen.findByText('Invoice triage')).toBeTruthy();
-    expect(screen.queryByText(/before going live/u)).toBeNull();
+    expect(screen.queryByText(/^Connect .* first\./u)).toBeNull();
+    expect(screen.queryByTestId('flow-connect')).toBeNull();
   });
 
   it('an archived flow, which goes live no more, is owed nothing', async () => {
@@ -106,16 +112,16 @@ describe('G9 — the accounts a flow is owed link to Settings › Connections', 
     setMockParams({ flow: 'gone' });
     await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
     expect(await screen.findByText('Old intake')).toBeTruthy();
-    expect(screen.queryByText(/before going live/u)).toBeNull();
+    expect(screen.queryByText(/^Connect .* first\./u)).toBeNull();
   });
 });
 
-describe('G10 — Activate reads the workspace’s flows again before it adds one (the owner’s build 12 item 9)', () => {
+describe('G10 — Turn on reads the workspace’s flows again before it adds one (the owner’s build 12 item 9)', () => {
   const SUBSCRIPTIONS = 'GET /v1/workspaces/{workspaceId}/subscriptions';
   const CREATE = 'POST /v1/workspaces/{workspaceId}/subscriptions';
   const SAVE = 'PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}';
 
-  /** Setup for tpl.0 with nothing to fill in, two teams, and the flows it first reads: none. */
+  /** Setup for tpl.0 with nothing to fill in, and the flows it first reads: none. No team is chosen (ADR-0036). */
   function routeSetupReads() {
     const fake = fakePlatform(platformOperation);
     const catalog = catalogPayload();
@@ -126,7 +132,7 @@ describe('G10 — Activate reads the workspace’s flows again before it adds on
     fake.always('GET /v1/workspaces/{workspaceId}/connections', { connections: [] });
     fake.once(SUBSCRIPTIONS, { subscriptions: [] });
     const made = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'made-here', status: 'draft' as const };
-    fake.always(CREATE, (sent) => ({ subscription: { ...made, projectId: (sent.body as { projectId: string }).projectId } }));
+    fake.always(CREATE, { subscription: { ...made, projectId: 'project-1' } });
     fake.always(SAVE, { subscription: { ...made, projectId: 'project-1', status: 'live' } });
     return fake;
   }
@@ -134,9 +140,7 @@ describe('G10 — Activate reads the workspace’s flows again before it adds on
   async function activateInFinance() {
     setMockParams({ template: 'tpl.0' });
     await renderWithProviders(<SetupScreen />, signedInSession);
-    await fireEvent.press(await screen.findByTestId('setup-team'));
-    await fireEvent.press(screen.getByText('Team: Finance'));
-    await fireEvent.press(screen.getByText('Activate solution'));
+    await fireEvent.press(await screen.findByText('Turn on'));
   }
 
   it('refuses a copy added since Setup read the flows — in another team — in the website’s words, and sends nothing', async () => {
@@ -155,7 +159,7 @@ describe('G10 — Activate reads the workspace’s flows again before it adds on
     expect(mockRouter.dismissTo).not.toHaveBeenCalled();
   });
 
-  it('with nothing added since, the fresh read finds none and Activate adds it to the team chosen', async () => {
+  it('with nothing added since, the fresh read finds none and Turn on adds it — no team sent', async () => {
     const fake = routeSetupReads();
     fake.always(SUBSCRIPTIONS, { subscriptions: [] });
     await activateInFinance();
@@ -164,9 +168,47 @@ describe('G10 — Activate reads the workspace’s flows again before it adds on
       expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'made-here' } }),
     );
     expect(fake.to(SUBSCRIPTIONS)).toHaveLength(2);
-    expect(fake.to(CREATE).map((sent) => sent.body)).toEqual([{ templateId: 'tpl.0', templateVersion: 1, projectId: 'project-1' }]);
+    expect(fake.to(CREATE).map((sent) => sent.body)).toEqual([{ templateId: 'tpl.0', templateVersion: 1 }]);
     expect(fake.to(SAVE)).toHaveLength(1);
     expect(screen.queryByText('This flow is already in this workspace.')).toBeNull();
+  });
+
+  it('an add whose answer was lost: Try again replays it with the same key — never "already in this workspace" for its own copy — then turns it on', async () => {
+    const fake = routeSetupReads();
+    fake.always(SUBSCRIPTIONS, { subscriptions: [] });
+    const made: Subscription = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'made-here', status: 'draft', projectId: 'project-1' };
+    // The add commits, and its answer never arrives: the next read lists the flow.
+    fake.once(CREATE, () => {
+      fake.always(SUBSCRIPTIONS, { subscriptions: [made] });
+      throw new PlatformUnreachableError();
+    });
+    await activateInFinance();
+    expect(await screen.findByText('Could not add this flow. Try again.')).toBeTruthy();
+
+    await fireEvent.press(screen.getByText('Try again'));
+    await waitFor(() =>
+      expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'made-here' } }),
+    );
+    const adds = fake.to(CREATE);
+    expect(adds).toHaveLength(2);
+    expect(adds[1]!.key).toBe(adds[0]!.key);
+    expect(fake.to(SAVE)).toHaveLength(1);
+    expect(screen.queryByText('This flow is already in this workspace.')).toBeNull();
+  });
+
+  it('an add the platform refused in words is not replayed: the next press reads the flows afresh again', async () => {
+    const fake = routeSetupReads();
+    fake.always(SUBSCRIPTIONS, { subscriptions: [] });
+    fake.once(CREATE, () => {
+      throw new PlatformError('Not found', 404);
+    });
+    await activateInFinance();
+    expect(await screen.findByText('Could not add this flow. Try again.')).toBeTruthy();
+    const elsewhere: Subscription = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'added-elsewhere', projectId: 'project-2', status: 'draft' };
+    fake.always(SUBSCRIPTIONS, { subscriptions: [elsewhere] });
+    await fireEvent.press(screen.getByText('Try again'));
+    expect(await screen.findByText('This flow is already in this workspace.')).toBeTruthy();
+    expect(fake.to(CREATE)).toHaveLength(1);
   });
 
   it('an archived copy holds nothing: the flow is added again', async () => {
@@ -202,7 +244,7 @@ describe('G11 — setup draws the manifest’s sections in its order, and says w
     setMockParams({ template: 'tpl.5' });
     await renderWithProviders(<SetupScreen />, signedInSession);
     expect(await screen.findByText('Failure alerts')).toBeTruthy();
-    expect(headings()).toEqual(['1 · REVIEW RULES', '2 · SOURCE', '3 · NOTIFICATIONS']);
+    expect(headings()).toEqual(['1 · SETTINGS', '2 · SOURCE', '3 · EMAIL']);
     expect(screen.getByText('Controls the notification sent when a run fails.')).toBeTruthy();
   });
 
@@ -216,9 +258,9 @@ describe('G11 — setup draws the manifest’s sections in its order, and says w
     await fireEvent.press(await screen.findByTestId('manage-setup'));
     const dialog = within(await screen.findByTestId('setup-dialog'));
     expect(dialog.getAllByText(/^\d+ · /u).map((label) => label.props.children as string)).toEqual([
-      '1 · NOTIFICATIONS',
+      '1 · EMAIL',
       '2 · SOURCE',
-      '3 · REVIEW RULES',
+      '3 · SETTINGS',
     ]);
     expect(dialog.getByText('Controls the notification sent when a run fails.')).toBeTruthy();
   });

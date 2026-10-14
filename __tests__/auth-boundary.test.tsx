@@ -41,6 +41,7 @@ const signedInState: SessionState = {
     user: {
       userId: 'c1a9e7d2-4f30-4b8a-9e51-77c0d3f21a08',
       email: 'dana@northwind.example',
+      aiDocumentReading: 'allowed',
       activeWorkspaceId: '5e4d1b90-2c77-4f16-8a03-9d61e4b7c520',
     },
     workspaces: [
@@ -108,7 +109,7 @@ describe('activeWorkspaceId', () => {
       status: 'signed-in',
       session: {
         authenticated: true,
-        user: { userId: 'u1', email: 'dana@northwind.example' },
+        user: { userId: 'u1', email: 'dana@northwind.example', aiDocumentReading: 'allowed' },
         workspaces: [
           { id: 'w1', name: 'Personal', type: 'personal', role: 'owner' },
           { id: 'w2', name: 'Northwind', type: 'organization', role: 'member' },
@@ -128,7 +129,7 @@ describe('activeWorkspaceId', () => {
       status: 'signed-in',
       session: {
         authenticated: true,
-        user: { userId: 'u1', email: 'dana@northwind.example' },
+        user: { userId: 'u1', email: 'dana@northwind.example', aiDocumentReading: 'allowed' },
         workspaces: [],
       },
     });

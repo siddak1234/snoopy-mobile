@@ -16,14 +16,16 @@ import SetupScreen from '@/app/(tabs)/flows/setup';
 import SolutionsScreen from '@/app/(tabs)/flows/add';
 import NotificationsScreen from '@/app/(tabs)/(home)/notifications';
 import ArchivedFlowsScreen from '@/app/(tabs)/flows/archived';
-import { layout, nocturneDark, nocturneLight } from '@/constants/theme';
+import { layout, nocturneDark, nocturneLight, typeScale } from '@/constants/theme';
 import {
   TEST_WORKSPACE,
   approvalsPayload,
   catalogPayload,
   flowCatalogPayload,
+  invoiceProcessingEntry,
   planSubscriptionsPayload,
   projectsPayload,
+  providersWithQuickBooks,
   routePlatform,
   runDetailPayload,
   runsPayload,
@@ -193,13 +195,15 @@ describe('Add a flow — the catalog inside Flows (24.9.3)', () => {
     routePlatform(platformOperation, { '/subscriptions': planSubscriptionsPayload() });
   });
 
-  it('lists the catalog with versions and prices, Added ✓ for what this scope holds and Add for the rest — no plan banner', async () => {
+  it('lists the catalog with categories and prices — no version (the spec\'s S9) — Added ✓ for what the workspace holds and Add for the rest, no plan banner', async () => {
     const { getByText, getAllByText, queryByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
     expect(await screen.findByText('Add a flow')).toBeTruthy();
-    expect(getByText('Prebuilt flows, set up in minutes. Adding to your workspace.')).toBeTruthy();
+    expect(getByText('Ready-made flows for your teams.')).toBeTruthy();
+    expect(queryByText(/Prebuilt flows|Adding to/u)).toBeNull();
     expect(getAllByText('Weekly KPI digest').length).toBeGreaterThan(0);
-    expect(getAllByText('Finance · v1 · $39/mo').length).toBeGreaterThan(0);
-    expect(getAllByText('Ops · v1 · $9/mo').length).toBeGreaterThan(0);
+    expect(getAllByText('Finance · $39/mo').length).toBeGreaterThan(0);
+    expect(getAllByText('Operations · $9/mo').length).toBeGreaterThan(0);
+    expect(queryByText(/ · v1 · /u)).toBeNull();
     expect(getAllByText('Added ✓')).toHaveLength(3);
     expect(getAllByText('Add').length).toBeGreaterThan(0);
     expect(queryByText(/plan and billing/u)).toBeNull();
@@ -231,7 +235,7 @@ describe('Add a flow — the catalog inside Flows (24.9.3)', () => {
     expect(getByText('Receipt OCR')).toBeTruthy();
     expect(queryByText('Email triage')).toBeNull();
     expect(queryByText('Slack alerts')).toBeNull();
-    await fireEvent.press(getByText('Ops'));
+    await fireEvent.press(getByText('Operations'));
     expect(getByText('Email triage')).toBeTruthy();
     expect(queryByText('Invoice triage')).toBeNull();
   });
@@ -288,13 +292,14 @@ describe('An empty catalog (24.12)', () => {
 });
 
 describe('Run detail', () => {
-  it('shows a run from RunDetail, without the fields card the platform refuses', async () => {
+  it('shows a run from RunDetail, without the fields card the platform refuses and without Confidence (the spec\'s U11)', async () => {
     setMockParams({ runId: 'run-1' });
     await renderWithProviders(<RunDetailScreen />, signedInSession);
-    // §12.1 #67 refuses run output, so the extracted-fields card is gone and
-    // confidence is the design's own em dash. §12.1 #69 refuses a run number.
+    // §12.1 #67 refuses raw run output, so no extracted-fields card; Confidence,
+    // which no published shape fills, is gone. §12.1 #69 refuses a run number.
     expect(await screen.findByText('Duration')).toBeTruthy();
-    expect(screen.getByText('Confidence')).toBeTruthy();
+    expect(screen.getByText('Steps done')).toBeTruthy();
+    expect(screen.queryByText('Confidence')).toBeNull();
     expect(screen.queryByText('Beacon Supply Co')).toBeNull();
     expect(screen.queryByText('Run #4820')).toBeNull();
   });
@@ -374,7 +379,9 @@ describe('Workflow scope (18.6.2; every flow says its team since build 11, D4)',
     setMockParams({ flow: 'invoice' });
     routePlatform(platformOperation, { '/automations': flowCatalogPayload() });
     await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
-    expect(await screen.findByText('Whole workspace · AP inbox → QuickBooks')).toBeTruthy();
+    // Its team on a line of its own, then what it does (spec §3.D).
+    expect(await screen.findByText('Whole workspace')).toBeTruthy();
+    expect(screen.getByText('AP inbox → QuickBooks')).toBeTruthy();
 
     resetSnapshot();
     withRemovedFlow();
@@ -388,16 +395,19 @@ describe('Workflow detail', () => {
     setMockParams({ flow: 'invoice' });
     routePlatform(platformOperation, { '/automations': flowCatalogPayload() });
   });
-  it('shows stats and the four pipeline steps', async () => {
-    const { getByText, getAllByText, queryByText } = await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
+  it('shows stats and its four steps, numbered, with no kickers (spec §3.D: a manifest with no groups)', async () => {
+    const { getByText, queryByText } = await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
     expect(getByText('1,284')).toBeTruthy();
     expect(getByText('1,272')).toBeTruthy();
     expect(getByText('12')).toBeTruthy();
     expect(getByText('Invoice triage')).toBeTruthy();
-    expect(getByText('New email in AP inbox')).toBeTruthy();
-    expect(getByText('Extract invoice fields')).toBeTruthy();
-    expect(getByText('Classify & GL-code')).toBeTruthy();
-    expect(getByText('Post to QuickBooks')).toBeTruthy();
+    expect(getByText('STEPS')).toBeTruthy();
+    expect(queryByText('PIPELINE')).toBeNull();
+    expect(getByText('1 · New email in AP inbox')).toBeTruthy();
+    expect(getByText('2 · Extract invoice fields')).toBeTruthy();
+    expect(getByText('3 · Classify & GL-code')).toBeTruthy();
+    expect(getByText('4 · Post to QuickBooks')).toBeTruthy();
+    for (const kicker of ['TRIGGER', 'AI STEP', 'ACTION']) expect(queryByText(kicker)).toBeNull();
   });
 
   it("keeps Pause plain — Resume undoes it in one tap — while Archive flow, last, is red (the owner's build 12 item 5)", async () => {
@@ -419,31 +429,33 @@ describe('Workflow detail', () => {
     const { getByText, queryByText, getAllByText } = await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
     expect(getByText('Weekly KPI report')).toBeTruthy();
     // Its team under its name — the whole workspace's, here — since build 11 (D4).
-    expect(getByText('Whole workspace · Sheets → Slack digest')).toBeTruthy();
+    expect(getByText('Whole workspace')).toBeTruthy();
+    expect(getByText('Sheets → Slack digest')).toBeTruthy();
     expect(getByText('Paused')).toBeTruthy();
     // FINDING 6: only `unmetConnections` is published, so a satisfied provider
     // cannot be listed. The paused workflow has none outstanding.
     expect(queryByText('Google Sheets')).toBeNull();
     // FINDING 6: a satisfied/broken provider's detail is not published.
     expect(queryByText('Auth expired — tap to reconnect')).toBeNull();
-    expect(getByText('Every Monday, 9:00 AM')).toBeTruthy();
-    expect(queryByText('New email in AP inbox')).toBeNull();
+    expect(getByText('1 · Every Monday, 9:00 AM')).toBeTruthy();
+    expect(queryByText('1 · New email in AP inbox')).toBeNull();
   });
 
-  it('shows a Draft with em-dash stats and a Publish action', async () => {
+  it('shows a Draft with em-dash stats and a Turn on action (spec §3.D: ~~Publish~~)', async () => {
     setMockParams({ flow: 'lead' });
     const { getByText, getAllByText, queryByText } = await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
     expect(getByText('Lead enrichment')).toBeTruthy();
     expect(getByText('Draft')).toBeTruthy();
     expect(getAllByText('—').length).toBeGreaterThanOrEqual(3);
     expect(getByText('HubSpot')).toBeTruthy();
-    expect(getByText('Publish')).toBeTruthy();
+    expect(getByText('Turn on')).toBeTruthy();
+    expect(queryByText('Publish')).toBeNull();
   });
 
-  it('holds Publish back while an account is unconnected, as the website holds Go live', async () => {
+  it('holds Turn on back while an account is unconnected, as the website holds it', async () => {
     setMockParams({ flow: 'lead' });
     await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
-    await fireEvent.press(await screen.findByText('Publish'));
+    await fireEvent.press(await screen.findByText('Turn on'));
     expect(platformOperation.mock.calls.some(([path]: [string]) => /\/subscriptions\/lead$/.test(path))).toBe(false);
     expect(screen.getByText('Draft')).toBeTruthy();
   });
@@ -506,9 +518,9 @@ describe('Workflow detail', () => {
 
     // Saving the settings re-reads: the Pause had landed, so the button now resumes.
     await fireEvent.press(screen.getByTestId('manage-setup'));
-    const save = await screen.findAllByText('Save setup');
+    const save = await screen.findAllByText('Save');
     await fireEvent.press(save[save.length - 1]!);
-    await fireEvent.press(await screen.findByText('Resume'));
+    await fireEvent.press(await screen.findByText('Turn on'));
     await waitFor(() => expect(statusKeys).toHaveLength(2));
     expect(statusKeys[1]).not.toBe(statusKeys[0]);
   });
@@ -535,8 +547,8 @@ describe('Workflow detail', () => {
     expect(await screen.findByText('Live')).toBeTruthy();
     await fireEvent.press(screen.getByText('Pause'));
     expect(await screen.findByText('Paused')).toBeTruthy();
-    expect(screen.getByText('Resume')).toBeTruthy();
-    await fireEvent.press(screen.getByText('Resume'));
+    expect(screen.getByText('Turn on')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Turn on'));
     expect(await screen.findByText('Live')).toBeTruthy();
   });
 
@@ -573,14 +585,14 @@ describe('Workflow detail', () => {
     // lands — and the page stays: the name, no skeleton, and never the old label
     // again (24.7.3 attempt 2: "it switches back, then to the right state").
     expect(await screen.findByText('Paused')).toBeTruthy();
-    expect(screen.getByText('Resume')).toBeTruthy();
+    expect(screen.getByText('Turn on')).toBeTruthy();
     await waitFor(() => expect(listReads).toBeGreaterThan(1));
     expect(screen.queryByTestId('screen-loading')).toBeNull();
     expect(screen.getByText('Invoice triage')).toBeTruthy();
     expect(screen.queryByText('Pause')).toBeNull();
     // The re-read lands and agrees; nothing flips.
     releaseReread?.();
-    await waitFor(() => expect(screen.getByText('Resume')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Turn on')).toBeTruthy());
     expect(screen.queryByText('Pause')).toBeNull();
     expect(screen.queryByTestId('screen-loading')).toBeNull();
   });
@@ -816,6 +828,8 @@ describe('Settings — one grouped page (build 11, D1)', () => {
   const ROWS = [
     ['settings-account', 'Account'],
     ['settings-face-id', 'Face ID unlock'],
+    // The account's answer to "AI reads your documents", below Face ID (spec §3.H).
+    ['settings-ai-reading', 'AI reads documents'],
     ['settings-connections', 'Connections'],
     ['settings-billing', 'Billing'],
     ['workspace-switcher-row', 'Acme Operations'],
@@ -833,6 +847,7 @@ describe('Settings — one grouped page (build 11, D1)', () => {
     'Account',
     'SECURITY',
     'Face ID unlock',
+    'AI reads documents',
     'Connections',
     'Billing',
     'WORKSPACE',
@@ -1047,8 +1062,8 @@ describe('Settings — one grouped page (build 11, D1)', () => {
 
   it('says a failed Face ID enable right under its row, and keeps the page', async () => {
     await renderWithProviders(<SettingsScreen />, signedInSession);
-    // The test device has no biometric hardware (test/jest-setup.js).
-    await fireEvent.press(screen.getByRole('switch'));
+    // The test device has no biometric hardware (test/jest-setup.js). Face ID's is the first of SECURITY's switches.
+    await fireEvent.press(within(screen.getByTestId('settings-face-id')).getByRole('switch'));
     expect(await screen.findByText('Face ID is not available or enrolled on this device.')).toBeTruthy();
     expect(screen.getByTestId('action-failure')).toBeTruthy();
     expect(screen.getByText('Settings')).toBeTruthy();
@@ -1322,54 +1337,213 @@ describe('Home header — the mark fills its row and draws nothing else (D9, 202
   });
 });
 
-describe('Setup wizard (design sSetup)', () => {
-  it('names the solution it is setting up', async () => {
-    setMockParams({ template: 'tpl.3' });
-    await renderWithProviders(<SetupScreen />, signedInSession);
-    // Item 3's first case: each solution opens its OWN setup.
-    expect(await screen.findByText(/Weekly KPI digest/)).toBeTruthy();
+describe('Setup (design sSetup; the Invoice Processing update, spec §3.B)', () => {
+  /** A write Setup sent: its method, path and body. */
+  type SetupWrite = { method: string; path: string; body?: unknown };
+
+  /**
+   * Setup over the routed fixture, every write kept — a create answered with
+   * `created`, a PATCH with `patched` — and `refuse` thrown for the write it names.
+   */
+  function routeSetup(
+    overrides: RouteOverrides,
+    options: { created?: Subscription; refuse?: { method: string; error: unknown } } = {},
+  ): SetupWrite[] {
+    routePlatform(platformOperation, overrides);
+    const writes: SetupWrite[] = [];
+    const routed = platformOperation.getMockImplementation();
+    platformOperation.mockImplementation(async (path: string, execute: Function) => {
+      let write: SetupWrite | undefined;
+      const call = (method: string) => async (_route: string, init?: { body?: unknown }) => {
+        if (method !== 'GET') write = { method, path, body: init?.body };
+        return { data: {} };
+      };
+      const client = { GET: call('GET'), POST: call('POST'), PATCH: call('PATCH'), PUT: call('PUT') };
+      await execute({ automations: client, platform: client, connections: client }).catch(() => undefined);
+      if (write) {
+        writes.push(write);
+        if (options.refuse?.method === write.method) throw options.refuse.error;
+        if (write.method === 'POST' && options.created) return { subscription: options.created };
+        if (write.method === 'PATCH') {
+          const base = options.created ?? planSubscriptionsPayload().subscriptions[0]!;
+          return { subscription: { ...base, status: 'live', config: (write.body as { config?: Record<string, unknown> }).config ?? {} } };
+        }
+      }
+      return routed?.(path, execute);
+    });
+    return writes;
+  }
+
+  /** The workspace holding QuickBooks, connected. */
+  const QUICKBOOKS_CONNECTED: RouteOverrides[`${string}/connections`] = {
+    connections: [
+      {
+        id: 'c-qb',
+        providerId: 'quickbooks',
+        workspaceId: TEST_WORKSPACE,
+        externalAccount: { id: 'realm-1', displayName: 'Acme Books' },
+        status: 'connected',
+        requiredScopes: [],
+        grantedScopes: [],
+        usedByCount: 0,
+      },
+    ],
+  };
+
+  /** Invoice Processing in the catalog, with QuickBooks among the providers. */
+  const invoiceProcessing = (connected = false): RouteOverrides => ({
+    '/automations': { automations: [invoiceProcessingEntry()], categories: ['All', 'Accounting'] },
+    '/subscriptions': { subscriptions: [] },
+    '/connections/providers': providersWithQuickBooks(),
+    ...(connected ? { [`${TEST_WORKSPACE}/connections`]: QUICKBOOKS_CONNECTED } : {}),
   });
 
-  it('numbers the accounts an automation needs as step 1, Connected or Connect, before the fields (feedback #5)', async () => {
+  /** A new subscription the create answers: a draft of Invoice Processing in its Accounting team. */
+  const draft = (): Subscription => ({
+    ...planSubscriptionsPayload().subscriptions[0]!,
+    id: 'ip-1',
+    templateId: 'invoice-processing',
+    templateVersion: 2,
+    status: 'draft',
+    projectId: 'project-1',
+    config: {},
+  });
+
+  it('names the flow it sets up, and the team it goes to — its category\'s, chosen by no one (ADR-0036)', async () => {
+    routeSetup(invoiceProcessing());
+    setMockParams({ template: 'invoice-processing' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    expect(await screen.findByText('Set up Invoice Processing')).toBeTruthy();
+    expect(screen.getByTestId('setup-team').props.children).toBe('Team: Accounting');
+    for (const gone of ['One-time setup', 'Add to', 'Choose a team', 'Create a team', 'Create a team first.', 'See teams']) {
+      expect(screen.queryByText(gone)).toBeNull();
+    }
+    expect(screen.queryByLabelText(/^Add to/u)).toBeNull();
+  });
+
+  it('numbers its steps — 1 · CONNECT, 2 · SETTINGS, 3 · EMAIL — at the label size, in the text colour, with the manifest\'s help lines and Optional', async () => {
+    routeSetup(invoiceProcessing());
+    setMockParams({ template: 'invoice-processing' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    const labels = ['1 · CONNECT', '2 · SETTINGS', '3 · EMAIL'];
+    for (const label of labels) {
+      const node = await screen.findByText(label);
+      const style = StyleSheet.flatten(node.props.style) as { fontSize?: number; color?: string };
+      expect([label, style.fontSize, style.color]).toEqual([label, typeScale.label.fontSize, nocturneDark.text]);
+    }
+    expect(screen.getByText('Approval limit')).toBeTruthy();
+    expect(screen.getByText('Amounts over this wait for approval.')).toBeTruthy();
+    expect(screen.getByLabelText('Approval limit').props.value).toBe('500.00');
+    expect(screen.getByText('Also email')).toBeTruthy();
+    expect(screen.getByText('Gets a short summary of each one.')).toBeTruthy();
+    expect(screen.getAllByText('Optional')).toHaveLength(2);
+    // The vendor choice is not a row of its own: its page is Connect vendor.
+    expect(screen.queryByText('Where the details go.')).toBeNull();
+    for (const gone of ['CONNECTIONS', 'REVIEW RULES', 'NOTIFICATIONS']) expect(screen.queryByText(new RegExp(gone, 'u'))).toBeNull();
+  });
+
+  it('draws the vendor choice as None until one is chosen, and Connect vendor › opens the flow\'s vendor page with it', async () => {
+    routeSetup(invoiceProcessing());
+    setMockParams({ template: 'invoice-processing' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    const vendor = await screen.findByTestId('setup-vendor');
+    expect(within(vendor).getByText('None')).toBeTruthy();
+    expect(within(vendor).queryByText('Not connected')).toBeNull();
+    await fireEvent.press(within(vendor).getByText('Connect vendor ›'));
+    expect(mockRouter.push).toHaveBeenCalledWith({
+      pathname: '/(tabs)/flows/vendor',
+      params: { template: 'invoice-processing', vendor: 'none' },
+    });
+  });
+
+  it('turns on with None: adds the flow with no team sent, then saves the settings and the choice, and opens it', async () => {
+    const writes = routeSetup(invoiceProcessing(), { created: draft() });
+    setMockParams({ template: 'invoice-processing' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    await fireEvent.press(await screen.findByText('Turn on'));
+    await waitFor(() =>
+      expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'ip-1' } }),
+    );
+    expect(mockRouter.dismissTo).toHaveBeenCalledWith('/(tabs)/flows');
+    expect(writes.map(({ method, body }) => [method, body])).toEqual([
+      ['POST', { templateId: 'invoice-processing', templateVersion: 2 }],
+      ['PATCH', { config: { vendor: 'none', holdAboveAmount: 500, notifyEmail: undefined }, status: 'live' }],
+    ]);
+  });
+
+  it('brings QuickBooks back from Connect vendor: its logo, "Not connected" while it is not, and Turn on refused in words with nothing sent', async () => {
+    const writes = routeSetup(invoiceProcessing(), { created: draft() });
+    setMockParams({ template: 'invoice-processing', vendor: 'quickbooks' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    const vendor = await screen.findByTestId('setup-vendor');
+    expect(within(vendor).getByLabelText('QuickBooks')).toBeTruthy();
+    expect(within(vendor).queryByText('QuickBooks Online')).toBeNull();
+    expect(within(vendor).getByText('Not connected')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Turn on'));
+    expect(await screen.findByText('Connect QuickBooks Online first, or choose None.')).toBeTruthy();
+    expect(writes).toEqual([]);
+  });
+
+  it('turns on with QuickBooks once it is connected, the choice sent as the flow\'s setting', async () => {
+    const writes = routeSetup(invoiceProcessing(true), { created: draft() });
+    setMockParams({ template: 'invoice-processing', vendor: 'quickbooks' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    expect(within(await screen.findByTestId('setup-vendor')).queryByText('Not connected')).toBeNull();
+    await fireEvent.press(screen.getByText('Turn on'));
+    await waitFor(() => expect(writes).toHaveLength(2));
+    expect((writes[1]!.body as { config: Record<string, unknown> }).config.vendor).toBe('quickbooks');
+  });
+
+  it('configures a flow the workspace holds where it is: its own team, and Connect vendor saves on the vendor page', async () => {
+    const held: Subscription = { ...draft(), status: 'live', config: { vendor: 'none', holdAboveAmount: 750 } };
+    routeSetup({
+      ...invoiceProcessing(),
+      '/subscriptions': { subscriptions: [held] },
+      '/projects': projectsPayload('Accounting'),
+    });
+    setMockParams({ template: 'invoice-processing' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    await waitFor(() => expect(screen.getByLabelText('Approval limit').props.value).toBe('750.00'));
+    expect(screen.getByTestId('setup-team').props.children).toBe('Team: Accounting');
+    await fireEvent.press(screen.getByTestId('setup-connect-vendor'));
+    expect(mockRouter.push).toHaveBeenCalledWith({
+      pathname: '/(tabs)/flows/vendor',
+      params: { template: 'invoice-processing', flow: 'ip-1' },
+    });
+  });
+
+  it('says an account the flow cannot run without, Connected ✓ or Connect › to Settings › Connections — no purpose line — and refuses Turn on until it is connected', async () => {
     const catalog = catalogPayload();
     const sample = catalog.automations[0]!.setup[0]!;
     catalog.automations = catalog.automations.map((automation) => ({
       ...automation,
       requiredConnections: [
-        { providerId: 'google', displayName: 'Google', purpose: 'Read the invoices' },
-        { providerId: 'quickbooks', displayName: 'QuickBooks Online', purpose: 'Post draft bills' },
+        { providerId: 'google', displayName: 'Google', purpose: 'Read the invoices', optional: false },
+        { providerId: 'hubspot', displayName: 'HubSpot', purpose: 'Post draft bills', optional: false },
       ],
       setup: [{ ...sample, key: 'holdAboveAmount', title: 'Hold above', control: 'money', section: 'rules', required: false, defaultValue: 500 }],
     }));
-    routePlatform(platformOperation, {
+    const writes = routeSetup({
       '/automations': catalog,
-      // The workspace's connections, not the providers list (`/v1/connections/providers`).
+      '/subscriptions': { subscriptions: [] },
       [`${TEST_WORKSPACE}/connections`]: {
-        connections: [
-          {
-            id: 'c-google',
-            providerId: 'google',
-            workspaceId: TEST_WORKSPACE,
-            externalAccount: { id: 'google-account', displayName: 'Google account' },
-            status: 'connected',
-            requiredScopes: [],
-            grantedScopes: [],
-            usedByCount: 0,
-          },
-        ],
+        connections: [{ ...QUICKBOOKS_CONNECTED.connections[0]!, id: 'c-google', providerId: 'google' }],
       },
     });
     setMockParams({ template: 'tpl.0' });
-    const { getByText } = await renderWithProviders(<SetupScreen />, signedInSession);
-    expect(await screen.findByText('1 · CONNECTIONS')).toBeTruthy();
-    expect(getByText('Connected ✓')).toBeTruthy();
-    expect(getByText('Post draft bills')).toBeTruthy();
-    expect(getByText('2 · REVIEW RULES')).toBeTruthy();
-    await fireEvent.press(screen.getByLabelText('Connect QuickBooks Online'));
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    expect(await screen.findByText('1 · CONNECT')).toBeTruthy();
+    expect(screen.getByText('Connected ✓')).toBeTruthy();
+    expect(screen.queryByText('Post draft bills')).toBeNull();
+    expect(screen.getByText('2 · SETTINGS')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Turn on'));
+    expect(await screen.findByText('Connect HubSpot first.')).toBeTruthy();
+    expect(writes).toEqual([]);
+    await fireEvent.press(screen.getByLabelText('Connect HubSpot'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/connections');
   });
 
-  it('draws no Connections step when the platform predates `requiredConnections` (the image before the SEVENTEENTH promotion)', async () => {
+  it('draws no CONNECT step when the platform predates `requiredConnections` (the image before the SEVENTEENTH promotion)', async () => {
     const base = catalogPayload();
     const sample = base.automations[0]!.setup[0]!;
     const catalog = {
@@ -1386,261 +1560,77 @@ describe('Setup wizard (design sSetup)', () => {
     routePlatform(platformOperation, { '/automations': unpublishedAnswer<RouteOverrides['/automations']>(catalog) });
     setMockParams({ template: 'tpl.0' });
     const { queryByText } = await renderWithProviders(<SetupScreen />, signedInSession);
-    expect(await screen.findByText('1 · REVIEW RULES')).toBeTruthy();
-    expect(queryByText(/CONNECTIONS/u)).toBeNull();
+    expect(await screen.findByText('1 · SETTINGS')).toBeTruthy();
+    expect(queryByText(/CONNECT/u)).toBeNull();
   });
 
-  it('keeps a cleared amount cleared, and asks for a number before activating (feedback #4)', async () => {
-    const catalog = catalogPayload();
-    const sample = catalog.automations[0]!.setup[0]!;
-    catalog.automations = catalog.automations.map((automation) => ({
-      ...automation,
-      setup: [{ ...sample, key: 'holdAboveAmount', title: 'Hold above', control: 'money', section: 'rules', required: false, defaultValue: 500 }],
-    }));
-    routePlatform(platformOperation, { '/automations': catalog, '/projects': projectsPayload('Finance') });
-    setMockParams({ template: 'tpl.0', project: 'project-1' });
-    const { getByLabelText, getByText } = await renderWithProviders(<SetupScreen />, signedInSession);
-    const amount = await waitFor(() => getByLabelText('Hold above'));
-    expect(amount.props.value).toBe('500.00');
-    // Rules and notifications only: numbered 1 and 2, not 3 and 4 (feedback #5).
-    expect(screen.getByText('1 · REVIEW RULES')).toBeTruthy();
+  it('keeps a cleared amount cleared, and asks for an amount before turning on (feedback #4)', async () => {
+    const writes = routeSetup(invoiceProcessing(), { created: draft() });
+    setMockParams({ template: 'invoice-processing' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    const amount = await screen.findByLabelText('Approval limit');
     await fireEvent.changeText(amount, '');
     // The default does not come back under the thumb.
-    expect(getByLabelText('Hold above').props.value).toBe('');
-    await fireEvent.press(getByText('Activate solution'));
-    expect(await screen.findByText('Enter a number for Hold above.')).toBeTruthy();
-    expect(platformOperation.mock.calls.some(([path]: [string]) => /\/subscriptions/.test(path) && false)).toBe(false);
+    expect(screen.getByLabelText('Approval limit').props.value).toBe('');
+    await fireEvent.press(screen.getByText('Turn on'));
+    expect(await screen.findByText('Enter an amount for Approval limit.')).toBeTruthy();
+    expect(writes).toEqual([]);
   });
 
-  it('adds an archived automation afresh rather than reviving the archived subscription', async () => {
+  it('asks for a required setting by name before turning on: "Fill in: …"', async () => {
     const catalog = catalogPayload();
-    catalog.automations = catalog.automations.map((automation) => ({ ...automation, setup: [] }));
-    const archived: Subscription = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'archived-0', status: 'archived' };
-    routePlatform(platformOperation, {
-      '/automations': catalog,
-      '/projects': projectsPayload('Finance'),
-      '/subscriptions': { subscriptions: [archived], subscription: { ...archived, id: 'fresh-0', status: 'live' } },
-    });
+    const sample = catalog.automations[0]!.setup[1]!;
+    catalog.automations = catalog.automations.map((automation) => ({ ...automation, setup: [{ ...sample }] }));
+    const writes = routeSetup({ '/automations': catalog, '/subscriptions': { subscriptions: [] } });
     setMockParams({ template: 'tpl.0' });
     await renderWithProviders(<SetupScreen />, signedInSession);
-    // The team is a full-width dropdown since build 13 (#5): open it, then choose.
-    await fireEvent.press(await screen.findByTestId('setup-team'));
-    await fireEvent.press(screen.getByText('Team: Finance'));
-    await fireEvent.press(screen.getByText('Activate solution'));
+    await fireEvent.press(await screen.findByText('Turn on'));
+    expect(await screen.findByText('Fill in: Watch inbox.')).toBeTruthy();
+    expect(writes).toEqual([]);
+  });
+
+  it.each([
+    ['the workspace or its team not found (404)', 404, 'POST', 'Could not add this flow. Try again.'],
+    ['the team service not answering (502)', 502, 'POST', 'Could not add this flow. Try again.'],
+    ['anything else on the add', 500, 'POST', 'Could not turn it on. Try again.'],
+    ['the settings refused', 422, 'PATCH', 'Could not turn it on. Try again.'],
+  ] as const)('says a refused Turn on in plain words — %s', async (_case, status, method, words) => {
+    const { PlatformError } = jest.requireActual('@/lib/platform/problem');
+    routeSetup(invoiceProcessing(), { created: draft(), refuse: { method, error: new PlatformError('Refused', status) } });
+    setMockParams({ template: 'invoice-processing' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    await fireEvent.press(await screen.findByText('Turn on'));
+    expect(await screen.findByText(words)).toBeTruthy();
+    expect(screen.queryByText('Refused')).toBeNull();
+  });
+
+  it('says the plan\'s own words for an add refused over the plan', async () => {
+    const { PlatformError } = jest.requireActual('@/lib/platform/problem');
+    routeSetup(invoiceProcessing(), {
+      refuse: { method: 'POST', error: new PlatformError('Forbidden', 403, 'FORBIDDEN', { reason: 'over_plan_limit' }) },
+    });
+    setMockParams({ template: 'invoice-processing' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    await fireEvent.press(await screen.findByText('Turn on'));
+    expect(await screen.findByText('This workspace has reached its current plan limit.')).toBeTruthy();
+  });
+
+  it('adds an archived flow afresh rather than reviving the archived subscription — a member too, with no team to pick', async () => {
+    const archived: Subscription = { ...draft(), id: 'archived-0', status: 'archived' };
+    const writes = routeSetup(
+      { ...invoiceProcessing(), '/subscriptions': { subscriptions: [archived] } },
+      { created: { ...draft(), id: 'fresh-0' } },
+    );
+    setMockParams({ template: 'invoice-processing' });
+    await renderWithProviders(<SetupScreen />, sessionAs('member'));
+    await fireEvent.press(await screen.findByText('Turn on'));
     await waitFor(() =>
       expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'fresh-0' } }),
     );
-    // Solutions is left at its root first, so Back never shows Setup again.
-    expect(mockRouter.dismissTo).toHaveBeenCalledWith('/(tabs)/flows');
-    const paths: string[] = platformOperation.mock.calls.map(([path]: [string]) => path);
-    expect(paths.some((path) => path.endsWith('/subscriptions/archived-0'))).toBe(false);
-  });
-
-  /** The catalog with nothing to fill in, the teams, and a client that keeps what a create sends. */
-  function routeTeams(projects: RouteOverrides['/projects'], created: unknown[]) {
-    const catalog = catalogPayload();
-    catalog.automations = catalog.automations.map((automation) => ({ ...automation, setup: [] }));
-    routePlatform(platformOperation, {
-      '/automations': catalog,
-      '/projects': projects,
-      '/subscriptions': { subscriptions: [], subscription: { ...planSubscriptionsPayload().subscriptions[0]!, id: 'scoped-0' } },
-    });
-    const routed = platformOperation.getMockImplementation();
-    // Each call to the subscriptions collection also runs against a client that
-    // keeps what a create sends; the routed fixture then answers it.
-    platformOperation.mockImplementation(async (path: string, execute: Function) => {
-      if (/\/subscriptions$/.test(path)) {
-        const client = {
-          GET: async () => ({ data: {} }),
-          POST: async (_p: string, init: { body: unknown }) => {
-            created.push(init.body);
-            return { data: {} };
-          },
-        };
-        await execute({ automations: client }).catch(() => undefined);
-      }
-      return routed?.(path, execute);
-    });
-    setMockParams({ template: 'tpl.0' });
-  }
-
-  it('adds a flow to the team chosen — there is no whole-workspace choice, and nothing is sent until one is picked (D4)', async () => {
-    const created: unknown[] = [];
-    routeTeams(projectsPayload('Finance'), created);
-    await renderWithProviders(<SetupScreen />, signedInSession);
-    // A full-width dropdown of the open teams (build 13 #5), nothing chosen yet.
-    expect(await screen.findByLabelText('Add to: Choose a team')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('setup-team'));
-    expect(screen.getByText('Team: Finance')).toBeTruthy();
-    expect(screen.queryByText('Whole workspace')).toBeNull();
-    await fireEvent.press(screen.getByTestId('setup-team'));
-    // No team chosen for the person: Activate refuses in words and sends nothing.
-    await fireEvent.press(screen.getByText('Activate solution'));
-    expect(await screen.findByText('Pick a team.')).toBeTruthy();
-    expect(created).toHaveLength(0);
-    await fireEvent.press(screen.getByTestId('setup-team'));
-    await fireEvent.press(screen.getByText('Team: Finance'));
-    await fireEvent.press(screen.getByText('Activate solution'));
-    await waitFor(() => expect(created).toHaveLength(1));
-    expect((created[0] as { projectId?: string }).projectId).toBe('project-1');
-  });
-
-  it('a team the catalog passed is chosen already, and sent (24.9.3)', async () => {
-    const created: unknown[] = [];
-    routeTeams(projectsPayload('Finance', 'Sales'), created);
-    setMockParams({ template: 'tpl.0', project: 'project-2' });
-    await renderWithProviders(<SetupScreen />, signedInSession);
-    await fireEvent.press(await screen.findByText('Activate solution'));
-    await waitFor(() => expect(created).toHaveLength(1));
-    expect((created[0] as { projectId?: string }).projectId).toBe('project-2');
-    expect(screen.queryByText('Pick a team.')).toBeNull();
-  });
-
-  it('with no team yet, an owner or admin creates one first — from Setup — and it is the team chosen (D4)', async () => {
-    const created: unknown[] = [];
-    const finance = { ...projectsPayload('Finance').projects[0]!, id: 'p-new' };
-    let made = false;
-    routeTeams({ projects: [] }, created);
-    const routed = platformOperation.getMockImplementation();
-    platformOperation.mockImplementation(async (path: string, execute: Function) => {
-      if (path.endsWith('/projects')) {
-        const client = {
-          GET: async () => ({ data: { projects: made ? [finance] : [] } }),
-          POST: async () => {
-            made = true;
-            return { data: { project: finance } };
-          },
-        };
-        return (await execute({ platform: client })).data;
-      }
-      return routed?.(path, execute);
-    });
-    await renderWithProviders(<SetupScreen />, sessionAs('admin'));
-    expect(await screen.findByText('Create a team first.')).toBeTruthy();
-    expect(screen.queryByText('Add to')).toBeNull();
-    // Activate without one sends nothing.
-    await fireEvent.press(screen.getByText('Activate solution'));
-    expect(await screen.findByText('Pick a team.')).toBeTruthy();
-    expect(created).toHaveLength(0);
-
-    await fireEvent.press(screen.getByText('Create a team'));
-    expect(await screen.findByTestId('create-team-dialog')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('team-kind'));
-    await fireEvent.press(screen.getByTestId('team-kind-option-Finance'));
-    const create = await screen.findAllByText('Create team');
-    await fireEvent.press(create[create.length - 1]!);
-    await fireEvent.press(await screen.findByText('Done'));
-    // The team made is the chip, chosen: the flow is added to it.
-    expect(await screen.findByText('Team: Finance')).toBeTruthy();
-    expect(screen.queryByText('Create a team first.')).toBeNull();
-    expect(screen.queryByText('Pick a team.')).toBeNull();
-    await fireEvent.press(screen.getByText('Activate solution'));
-    await waitFor(() => expect(created).toHaveLength(1));
-    expect((created[0] as { projectId?: string }).projectId).toBe('p-new');
-  });
-
-  it('with no team yet, a plain member is told an owner or admin creates the first one, and has no Activate', async () => {
-    const created: unknown[] = [];
-    routeTeams({ projects: [] }, created);
-    await renderWithProviders(<SetupScreen />, sessionAs('member'));
-    expect(await screen.findByText('An owner or admin creates the first team.')).toBeTruthy();
-    expect(screen.queryByText('Create a team first.')).toBeNull();
-    expect(screen.queryByText('Create a team')).toBeNull();
-    expect(screen.queryByText('Activate solution')).toBeNull();
-    expect(created).toHaveLength(0);
-  });
-
-  /** A team in the organization's directory, and where this person stands with it. */
-  const listed = (id: string, kind: string, access: 'member' | 'requested' | 'none') => ({
-    id,
-    workspaceId: TEST_WORKSPACE,
-    name: kind,
-    type: kind,
-    status: 'active',
-    access,
-    createdAt: '2026-09-01T00:00:00Z',
-  });
-
-  /** The team directory's answer — or its refusal — over whatever the test routed already. */
-  function routeDirectory(answer: () => unknown) {
-    const routed = platformOperation.getMockImplementation();
-    platformOperation.mockImplementation(async (path: string, execute: Function) =>
-      path.endsWith('/project-directory') ? answer() : routed?.(path, execute),
-    );
-  }
-  const directoryReads = () =>
-    platformOperation.mock.calls.filter(([path]: [string]) => path.endsWith('/project-directory')).map(([path]: [string]) => path);
-
-  it('with no team yet, a plain member whose organization has a team to ask onto is told to ask to join one, with See teams — and has no Activate (F84)', async () => {
-    // Not on it and not asked yet, or asked already: either way a team they could be on.
-    for (const access of ['none', 'requested'] as const) {
-      platformOperation.mockReset();
-      mockRouter.push.mockClear();
-      const created: unknown[] = [];
-      routeTeams({ projects: [] }, created);
-      routeDirectory(() => ({ projects: [listed('p-ops', 'Operations', access)] }));
-      const view = await renderWithProviders(<SetupScreen />, sessionAs('member'));
-      expect(await screen.findByText('Ask to join a team first.')).toBeTruthy();
-      expect(directoryReads()).toEqual([`/v1/workspaces/${TEST_WORKSPACE}/project-directory`]);
-      expect(screen.queryByText('An owner or admin creates the first team.')).toBeNull();
-      expect(screen.queryByText('Create a team first.')).toBeNull();
-      expect(screen.queryByText('Activate solution')).toBeNull();
-      await fireEvent.press(screen.getByText('See teams'));
-      expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/teams');
-      expect(created).toHaveLength(0);
-      await view.unmount();
-    }
-  });
-
-  it('with no team yet, a plain member whose directory lists nothing to ask onto is still told an owner or admin creates the first one (F84)', async () => {
-    // An empty directory, and one listing only a team they can already see.
-    for (const directory of [[], [listed('p-ops', 'Operations', 'member')]]) {
-      platformOperation.mockReset();
-      routeTeams({ projects: [] }, []);
-      routeDirectory(() => ({ projects: directory }));
-      const view = await renderWithProviders(<SetupScreen />, sessionAs('member'));
-      expect(await screen.findByText('An owner or admin creates the first team.')).toBeTruthy();
-      expect(directoryReads()).toHaveLength(1);
-      expect(screen.queryByText('Ask to join a team first.')).toBeNull();
-      expect(screen.queryByText('See teams')).toBeNull();
-      expect(screen.queryByText('Activate solution')).toBeNull();
-      await view.unmount();
-    }
-  });
-
-  it('a platform with no directory yet (404) leaves a plain member the owner-or-admin line, and Setup still draws (F84)', async () => {
-    const { PlatformError } = jest.requireActual('@/lib/platform/problem');
-    routeTeams({ projects: [] }, []);
-    routeDirectory(() => Promise.reject(new PlatformError('Not found', 404)));
-    await renderWithProviders(<SetupScreen />, sessionAs('member'));
-    expect(await screen.findByText('An owner or admin creates the first team.')).toBeTruthy();
-    expect(screen.getByText('One-time setup')).toBeTruthy();
-    expect(screen.queryByText("Couldn't load this setup")).toBeNull();
-    expect(screen.queryByText('Ask to join a team first.')).toBeNull();
-  });
-
-  it('an owner or admin with no team is offered Create a team first, whatever the directory lists — their line comes first (F84)', async () => {
-    for (const role of ['owner', 'admin'] as const) {
-      platformOperation.mockReset();
-      routeTeams({ projects: [] }, []);
-      routeDirectory(() => ({ projects: [listed('p-ops', 'Operations', 'none')] }));
-      const view = await renderWithProviders(<SetupScreen />, sessionAs(role));
-      expect(await screen.findByText('Create a team first.')).toBeTruthy();
-      expect(screen.getByText('Create a team')).toBeTruthy();
-      expect(screen.getByText('Activate solution')).toBeTruthy();
-      expect(screen.queryByText('Ask to join a team first.')).toBeNull();
-      expect(screen.queryByText('See teams')).toBeNull();
-      await view.unmount();
-    }
-  });
-
-  it('reads the directory only where there is no team to add to: with a team, the chips and no directory read (F84)', async () => {
-    routeTeams(projectsPayload('Finance'), []);
-    routeDirectory(() => ({ projects: [listed('p-ops', 'Operations', 'none')] }));
-    await renderWithProviders(<SetupScreen />, sessionAs('member'));
-    expect(await screen.findByTestId('setup-team')).toBeTruthy();
-    expect(screen.queryByText('Ask to join a team first.')).toBeNull();
-    expect(directoryReads()).toEqual([]);
+    expect(writes.map(({ path }) => path).some((path) => path.endsWith('/subscriptions/archived-0'))).toBe(false);
+    expect(writes[0]!.body).toEqual({ templateId: 'invoice-processing', templateVersion: 2 });
+    // No team directory is read: there is no team to ask onto, or to pick.
+    expect(platformOperation.mock.calls.some(([path]: [string]) => path.endsWith('/project-directory'))).toBe(false);
   });
 
   it('generates its sections from manifest.setup[]', async () => {
@@ -1649,44 +1639,8 @@ describe('Setup wizard (design sSetup)', () => {
     // Generated, not hardcoded — BUILD-PLAN 4.5.3.
     expect(await screen.findByText('QuickBooks Online')).toBeTruthy();
     expect(screen.getByText('Watch inbox')).toBeTruthy();
-    expect(screen.getByText('1 · CONNECTIONS')).toBeTruthy();
-  });
-
-  /** The catalog with nothing to fill in, and the subscriptions `/subscriptions` answers. */
-  function routeUnmet(subscriptions: Subscription[], subscription: Subscription) {
-    const catalog = catalogPayload();
-    catalog.automations = catalog.automations.map((automation) => ({ ...automation, setup: [] }));
-    routePlatform(platformOperation, { '/automations': catalog, '/subscriptions': { subscriptions, subscription } });
-    setMockParams({ template: 'tpl.0' });
-  }
-
-  it('names the page an account is connected on — Settings › Connections — while one is missing (24.12)', async () => {
-    const waiting = { ...planSubscriptionsPayload().subscriptions[0]!, projectId: 'project-1', unmetConnections: ['hubspot'] };
-    routeUnmet([waiting], waiting);
-    routePlatform(platformOperation, {
-      '/automations': { ...catalogPayload(), automations: catalogPayload().automations.map((automation) => ({ ...automation, setup: [] })) },
-      '/projects': projectsPayload('Finance'),
-      '/subscriptions': { subscriptions: [waiting], subscription: waiting },
-    });
-    setMockParams({ template: 'tpl.0', project: 'project-1' });
-    await renderWithProviders(<SetupScreen />, signedInSession);
-    expect(await screen.findByText('Connect HubSpot in Settings › Connections')).toBeTruthy();
-  });
-
-  it('names that page when the flow it just added still needs an account (24.12)', async () => {
-    const added = { ...planSubscriptionsPayload().subscriptions[0]!, unmetConnections: ['hubspot'] };
-    routeUnmet([], added);
-    routePlatform(platformOperation, {
-      '/automations': { ...catalogPayload(), automations: catalogPayload().automations.map((automation) => ({ ...automation, setup: [] })) },
-      '/projects': projectsPayload('Finance'),
-      '/subscriptions': { subscriptions: [], subscription: added },
-    });
-    setMockParams({ template: 'tpl.0', project: 'project-1' });
-    await renderWithProviders(<SetupScreen />, signedInSession);
-    await fireEvent.press(await screen.findByText('Activate solution'));
-    expect(
-      await screen.findByText('Connect the required providers in Settings › Connections, then return to activate.'),
-    ).toBeTruthy();
+    expect(screen.getByText('1 · CONNECT')).toBeTruthy();
+    expect(screen.getByText('2 · SOURCE')).toBeTruthy();
   });
 });
 

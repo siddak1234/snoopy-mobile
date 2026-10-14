@@ -119,7 +119,9 @@ describe('a run that has not ended is read again until it has (feedback #3)', ()
     setMockParams({ runId: 'run-1' });
     await renderWithProviders(<RunDetailScreen />, signedInSession);
     expect(await screen.findByText('Running')).toBeTruthy();
-    expect(within(steps()).getByText('0 / 4')).toBeTruthy();
+    // Nothing reported yet: no count to give, and the run's last row says it is working (spec §3.E).
+    expect(within(steps()).getByText('—')).toBeTruthy();
+    expect(screen.getByText('Working…')).toBeTruthy();
 
     // Read again; while that read is unanswered, no other is made.
     await waitFor(() => expect(fake.to(RUN)).toHaveLength(2));
@@ -127,13 +129,14 @@ describe('a run that has not ended is read again until it has (feedback #3)', ()
     expect(fake.to(RUN)).toHaveLength(2);
 
     await act(async () => second.release());
-    expect(await screen.findByText('1 / 4')).toBeTruthy();
+    expect(await screen.findByText('1 / 1')).toBeTruthy();
     expect(screen.getByText('Running')).toBeTruthy();
 
     await waitFor(() => expect(fake.to(RUN)).toHaveLength(3));
     await act(async () => third.release());
     expect(await screen.findByText('Success')).toBeTruthy();
-    expect(within(steps()).getByText('3 / 4')).toBeTruthy();
+    expect(within(steps()).getByText('3 / 3')).toBeTruthy();
+    expect(screen.queryByText('Working…')).toBeNull();
     expect(screen.queryByText('Cancel run')).toBeNull();
 
     // Ended: no further read, however long the page stays open.
@@ -169,35 +172,42 @@ describe('a run that has not ended is read again until it has (feedback #3)', ()
   });
 });
 
-describe('a finished run says which steps never ran (feedback #4, #5, #8)', () => {
-  it('a success with no address set: "Email the outcome" did not run, and three of four steps are done', async () => {
+describe('a finished run shows what it did, never what it did not (spec §3.E; the owner\'s build 19 item 6, after build 14\'s #4, #5, #8)', () => {
+  it('a success with no address set: its three steps, done — no "Not run" row for the email it did not send', async () => {
     routeRun(detail('succeeded', [['receive', 'ok'], ['validate', 'ok'], ['post', 'ok']]));
     setMockParams({ runId: 'run-1' });
     await renderWithProviders(<RunDetailScreen />, signedInSession);
     expect(await screen.findByText('Success')).toBeTruthy();
-    expect(screen.getByText('Not run · Emails the decision from automations@autom8x.ai, when an address is set.')).toBeTruthy();
-    expect(screen.getByTestId(/^phosphor-react-native-minus-circle-/u)).toBeTruthy();
+    expect(screen.queryByText(/Not run/u)).toBeNull();
+    expect(screen.queryByText('Email the outcome')).toBeNull();
+    expect(screen.queryByTestId(/^phosphor-react-native-minus-circle-/u)).toBeNull();
     expect(screen.queryByTestId(/^phosphor-react-native-circle-dashed-/u)).toBeNull();
-    expect(within(steps()).getByText('3 / 4')).toBeTruthy();
+    expect(screen.getAllByTestId(/^phosphor-react-native-check-circle-/u)).toHaveLength(3);
+    expect(within(steps()).getByText('3 / 3')).toBeTruthy();
   });
 
-  it('a failure at its first step: the three after it did not run, and none is done', async () => {
+  it('a failure at its first step: that step, failed, and nothing after it', async () => {
     routeRun(detail('failed', [['receive', 'failed']]));
     setMockParams({ runId: 'run-1' });
     await renderWithProviders(<RunDetailScreen />, signedInSession);
     expect(await screen.findByText('Failed')).toBeTruthy();
-    expect(screen.getAllByText(/^Not run · /u)).toHaveLength(3);
-    expect(within(steps()).getByText('0 / 4')).toBeTruthy();
+    expect(screen.getByText('Invoice received')).toBeTruthy();
+    expect(screen.queryByText(/Not run/u)).toBeNull();
+    expect(screen.queryByText('Check the amount')).toBeNull();
+    expect(screen.getByTestId(/^phosphor-react-native-warning-circle-/u)).toBeTruthy();
+    expect(within(steps()).getByText('0 / 1')).toBeTruthy();
   });
 
-  it('a held run still shows what is left as waiting, as the design draws it', async () => {
+  it('a held run: what it did, the held step with its hand — and no rows for what is left', async () => {
     routeRun(detail('held', [['receive', 'ok'], ['validate', 'held']]));
     setMockParams({ runId: 'run-1' });
     await renderWithProviders(<RunDetailScreen />, signedInSession);
-    expect(await screen.findByText('Records the invoice once it is within threshold or has been approved.')).toBeTruthy();
-    expect(screen.queryByText(/^Not run · /u)).toBeNull();
-    expect(screen.getAllByTestId(/^phosphor-react-native-circle-dashed-/u)).toHaveLength(2);
-    expect(within(steps()).getByText('1 / 4')).toBeTruthy();
+    expect(await screen.findByText('Check the amount')).toBeTruthy();
+    expect(screen.queryByText('Records the invoice once it is within threshold or has been approved.')).toBeNull();
+    expect(screen.queryByText(/Not run/u)).toBeNull();
+    expect(screen.queryByTestId(/^phosphor-react-native-circle-dashed-/u)).toBeNull();
+    expect(screen.getByTestId(/^phosphor-react-native-hand-palm-/u)).toBeTruthy();
+    expect(within(steps()).getByText('1 / 2')).toBeTruthy();
   });
 });
 

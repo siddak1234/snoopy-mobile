@@ -253,6 +253,10 @@ describe('the vocabulary audit (24.11.7)', () => {
       ['components/row.tsx', 'export const B = () => <Row title="Create a project" />;'],
       ['lib/words.ts', 'export const C = `This automation is ${state}.`;'],
       ['hooks/label.ts', "export const D = 'Automations';"],
+      // The Invoice Processing update's two (the owner's build 19 item 8).
+      ['app/setup.tsx', "export const E = () => <Text>Activate solution</Text>;"],
+      ['components/steps.tsx', 'export const F = () => <SectionLabel>PIPELINE</SectionLabel>;'],
+      ['lib/lead.ts', "export const G = 'Solutions, set up in minutes';"],
     ]) {
       writeFileSync(join(root, file), source);
       const result = run(vocabularyAudit);
@@ -267,6 +271,8 @@ describe('the vocabulary audit (24.11.7)', () => {
         "import { readProjects } from '@/lib/platform/projects';",
         "export const path = '/v1/workspaces/{workspaceId}/projects';",
         "export const scope = { kind: 'project', projectId: 'p-1' };",
+        "import { useSolutions } from '@/hooks/use-solutions';",
+        'export const rows = toPipelineSteps(entry.pipeline);',
         'export const id = `project-${scope.projectId}`;',
         'export const Mark = () => <Text testID="automation-row">AUTOMATION × AI</Text>;',
         '// a project in the contract is a team on screen',

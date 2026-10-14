@@ -107,16 +107,16 @@ describe('G12 — a row says the account, its state, the live flows that use it,
   });
 });
 
-describe('G13 — every provider says what it is for, to everyone, and the list says which providers it shows', () => {
+describe('G13 — every provider says what it is for, to everyone (the configured-providers line gone, spec §3.I)', () => {
   it.each([
     { role: 'owner' as const, who: 'an owner' },
     { role: 'member' as const, who: 'a member' },
-  ])('to $who: a connected provider’s description and an unconnected one’s, and the configured-providers line', async ({ role }) => {
+  ])('to $who: a connected provider’s description and an unconnected one’s, and no configured-providers line', async ({ role }) => {
     route([[CONNECTED_GMAIL]]);
     await renderWithProviders(<ConnectionsScreen />, sessionAs(role));
     expect(within(await screen.findByTestId('connection-row-gmail')).getByText('Send mail as you.')).toBeTruthy();
     expect(within(screen.getByTestId('connection-row-twilio')).getByText('Send texts as you.')).toBeTruthy();
-    expect(screen.getByText('Only providers configured for this deployment are shown.')).toBeTruthy();
+    expect(screen.queryByText('Only providers configured for this deployment are shown.')).toBeNull();
     expect(screen.queryByText('Only an owner or admin of this workspace can connect or disconnect an account.') !== null).toBe(
       role === 'member',
     );

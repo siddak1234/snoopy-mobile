@@ -8,7 +8,7 @@ import { BackCircle } from '@/components/nocturne/back-circle';
 import { IconTile } from '@/components/nocturne/icon-tile';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { ScreenEmpty, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
-import { em, fonts, layout, typeScale } from '@/constants/theme';
+import { em, fonts, iconSize, layout, typeScale } from '@/constants/theme';
 import { busyBody, useWorkspaceResource } from '@/hooks/use-resource';
 import { useScope } from '@/hooks/use-scope';
 import { useTheme } from '@/hooks/use-theme';
@@ -115,7 +115,7 @@ export function ArchivedFlows({ detailPath }: { detailPath: ArchivedFlowPath }) 
             key={def.key}
             onPress={() => router.push({ pathname: detailPath, params: { flow: def.key } })}
             style={styles.flowCard}>
-            <IconTile icon={def.icon} size={42} iconSize={21} borderRadius={12} bordered />
+            <IconTile icon={def.icon} size={42} iconSize={iconSize.row} borderRadius={12} bordered />
             <View style={styles.flowBody}>
               <Text style={[styles.flowName, { color: palette.text }]}>{def.name}</Text>
               {/* Its team, or "Whole workspace", in every scope — a picked

@@ -7,6 +7,7 @@ import AddFlowScreen from '@/app/(tabs)/flows/add';
 import ArchivedFlowsScreen from '@/app/(tabs)/flows/archived';
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import SetupScreen from '@/app/(tabs)/flows/setup';
+import ConnectVendorScreen from '@/app/(tabs)/flows/vendor';
 import AccountScreen from '@/app/(tabs)/settings/account';
 import BillingScreen from '@/app/(tabs)/settings/billing';
 import ConnectionsScreen from '@/app/(tabs)/settings/connections';
@@ -18,7 +19,9 @@ import TeamsScreen from '@/app/(tabs)/settings/teams';
 import {
   TEST_WORKSPACE,
   flowCatalogPayload,
+  invoiceProcessingEntry,
   planSubscriptionsPayload,
+  providersWithQuickBooks,
   routePlatform,
   signedInSession,
   subscriptionsPayload,
@@ -99,7 +102,7 @@ const PAGES: {
     site: 'app/(tabs)/flows/add.tsx:110',
     Screen: AddFlowScreen,
     routes: [[/\/subscriptions$/u, planSubscriptionsPayload()]],
-    loaded: () => screen.findByText(/^Prebuilt flows, set up in minutes\./u),
+    loaded: () => screen.findByText('Ready-made flows for your teams.'),
   },
   {
     page: 'Flow detail',
@@ -114,7 +117,18 @@ const PAGES: {
     site: 'app/(tabs)/flows/setup.tsx:298',
     Screen: SetupScreen,
     params: { template: 'tpl.3' },
-    loaded: () => screen.findByText('One-time setup'),
+    loaded: () => screen.findByText('Set up Weekly KPI digest'),
+  },
+  {
+    page: 'Connect vendor',
+    site: 'app/(tabs)/flows/vendor.tsx',
+    Screen: ConnectVendorScreen,
+    params: { template: 'invoice-processing' },
+    routes: [
+      [/\/automations$/u, { automations: [invoiceProcessingEntry()], categories: ['All', 'Accounting'] }],
+      [/\/connections\/providers$/u, providersWithQuickBooks()],
+    ],
+    loaded: () => screen.findByText('For Invoice Processing'),
   },
   {
     page: 'Account',

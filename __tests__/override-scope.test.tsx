@@ -39,7 +39,7 @@ function signedIn(userId: string, workspaceId: string): SessionContextValue {
     status: 'signed-in',
     session: {
       authenticated: true,
-      user: { userId, email: `${userId}@example.test`, activeWorkspaceId: workspaceId },
+      user: { userId, email: `${userId}@example.test`, activeWorkspaceId: workspaceId, aiDocumentReading: 'allowed' },
       workspaces: [{ id: workspaceId, name: 'Acme', type: 'organization', role: 'owner' }],
     },
   });

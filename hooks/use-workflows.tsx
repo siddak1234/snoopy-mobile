@@ -79,9 +79,13 @@ export function useWorkflows(): WorkflowsContextValue {
   return ctx;
 }
 
-/** Detail action per status (design dBtn / dBtnIcon). */
+/**
+ * Detail action per status (design dBtn / dBtnIcon), in the spec's words since
+ * the Invoice Processing update (§3.D: ~~Go live~~, ~~Publish~~, ~~Resume~~ →
+ * "Turn on", as Setup's button says it).
+ */
 export function statusAction(status: FlowStatus): { label: string; icon: 'pause' | 'play' | 'rocket' } {
   if (status === 'Live') return { label: 'Pause', icon: 'pause' };
-  if (status === 'Paused') return { label: 'Resume', icon: 'play' };
-  return { label: 'Publish', icon: 'rocket' };
+  if (status === 'Paused') return { label: 'Turn on', icon: 'play' };
+  return { label: 'Turn on', icon: 'rocket' };
 }

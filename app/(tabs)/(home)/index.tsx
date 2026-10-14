@@ -24,13 +24,14 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { Skeleton } from '@/components/nocturne/skeleton';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable, pressed } from '@/components/pressable';
+import { AiReadingCardOnce } from '@/components/ai-reading-card';
 import { ScopeIcons } from '@/components/scope-control';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { StatTileButton } from '@/components/stat-tile-button';
 import { em, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource, type ResourceState } from '@/hooks/use-resource';
 import { useScope } from '@/hooks/use-scope';
-import { activeWorkspaceId, roleIn, useSession } from '@/hooks/use-session';
+import { useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import {
   ADD_FLOW_LABEL,
@@ -59,7 +60,6 @@ import {
 } from '@/lib/platform/runs';
 import { toStatTiles, type StatTileView } from '@/lib/view/catalog';
 import { flowsFigure, homeFailure, homeTeams, integrationsFigure } from '@/lib/view/home';
-import { administers } from '@/lib/view/roles';
 import { catalogIndex, toRunRows } from '@/lib/view/runs';
 import { scopeRuns, scopeStats } from '@/lib/view/scope';
 
@@ -388,8 +388,6 @@ export default function HomeScreen() {
   // be read claims nothing — the first run takes the place of the runs below.
   const firstRun = catalog !== null && !catalog.some((automation) => automation.subscribed);
   const teamRows = teams === null ? null : homeTeams(teams);
-  // Only an owner or admin makes a team (backend 24.12.1), so the website offers Create to them alone.
-  const canCreateTeam = administers(roleIn(session, activeWorkspaceId(session)));
   // The bell says the inbox holds something unread — the platform's read state,
   // the same on every device (decision 3A), and the whole workspace's, as the
   // inbox is — not merely that something is held or failed.
@@ -673,18 +671,6 @@ export default function HomeScreen() {
           {teamRows !== null && teamRows.length === 0 ? (
             <View style={styles.noTeams}>
               <Text style={[styles.noTeamsText, { color: palette.neutral[500] }]}>{HOME_NO_TEAMS}</Text>
-              {canCreateTeam ? (
-                <PillButton
-                  label="Create a team"
-                  variant="secondary"
-                  height={40}
-                  fontSize={typeScale.body.fontSize}
-                  icon={Plus}
-                  iconSize={15}
-                  testID="home-create-team"
-                  onPress={() => router.push('/(tabs)/settings/teams')}
-                />
-              ) : null}
             </View>
           ) : null}
           {(teamRows ?? []).map((team, i, rows) => (
@@ -707,6 +693,8 @@ export default function HomeScreen() {
           ))}
         </SurfaceCard>
       </View>
+      {/* "AI reads your documents", once, until the account answers (backend ADR-0038). */}
+      <AiReadingCardOnce />
     </ScrollView>
   );
 }
@@ -794,7 +782,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 16,
   },
-  // No team yet: the line, and Create a team under it for an owner or admin.
+  // No team yet: the line. A team is made by the platform when a flow of its
+  // kind is first added (backend ADR-0036), so there is nothing to create here.
   noTeams: {
     alignItems: 'center',
     gap: 12,

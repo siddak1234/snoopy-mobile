@@ -67,20 +67,6 @@ export async function readProject(workspaceId: string, projectId: string): Promi
   return found.project;
 }
 
-export function createProject(
-  workspaceId: string,
-  body: { name: string; type: string; description?: string },
-  idempotencyKey: string,
-) {
-  return platformOperation(`/v1/workspaces/${workspaceId}/projects`, ({ platform }, signal) =>
-    platform.POST('/v1/workspaces/{workspaceId}/projects', {
-      params: { path: { workspaceId }, header: { 'Idempotency-Key': idempotencyKey } },
-      body,
-      signal,
-    }),
-  ).then(changedProjects(workspaceId));
-}
-
 /**
  * The teams this person can see changed: the next read of the list is a real
  * request, and so is the next read of the flows, which follow what is visible.

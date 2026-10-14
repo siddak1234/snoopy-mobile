@@ -5,7 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { SetupFields, useSetupForm } from '@/components/automations/setup-dialog';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { PillButton } from '@/components/nocturne/pill-button';
-import { fonts, typeScale } from '@/constants/theme';
+import { fonts, iconSize, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
@@ -121,7 +121,7 @@ export function MoveVersion({
         height={36}
         fontSize={typeScale.body.fontSize}
         icon={ArrowCircleUp}
-        iconSize={15}
+        iconSize={iconSize.button}
         onPress={() => {
           setError(null);
           setMisfit(false);

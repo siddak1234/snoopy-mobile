@@ -13,14 +13,14 @@ import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import type { InboxRunPath } from '@/components/notifications/inbox';
 import { Pressable } from '@/components/pressable';
-import { em, fonts, layout, status, typeScale } from '@/constants/theme';
+import { em, fonts, iconSize, layout, status, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { TimelineRowView as RunTimelineItem } from '@/lib/view/runs';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { useResource, busyBody } from '@/hooks/use-resource';
 import { activeWorkspaceId, useSession, workspaceIfShown } from '@/hooks/use-session';
 import { refusalMessage, WORKSPACE_CHANGED } from '@/lib/content/refusals';
-import { errorTitleFor } from '@/lib/content/screen-states';
+import { DETAILS_LABEL, PROGRESS_LABEL, errorTitleFor } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
 import { cancelRun } from '@/lib/platform/automations';
 import { readAllApprovals, readRun } from '@/lib/platform/runs';
@@ -30,11 +30,11 @@ import { statusLabel, type StatusPillLabel } from '@/lib/view/status';
 import {
   NO_STEPS_REPORTED,
   RUN_REREAD_MS,
-  metaFor,
   runLabel,
+  runResultLine,
+  toProgress,
   toRunFacts,
   toRunStats,
-  toTimeline,
 } from '@/lib/view/runs';
 
 const TIMELINE_ICON_COLOR: Record<string, string | undefined> = {
@@ -42,26 +42,25 @@ const TIMELINE_ICON_COLOR: Record<string, string | undefined> = {
   warn: status.warnText,
   err: status.err,
   pending: undefined,
-  skipped: undefined,
 } as const;
 
 
 /**
- * One step: its title, its summary, a held step's reason beside it, and when it
- * happened — the date and the time, on a line of its own, as the website's
- * steps say it (Gate 24's parity pass, G18; until then the time alone, at the
- * row's right).
+ * One row of PROGRESS — a group of the flow's steps, or a step — its title, the
+ * latest summary in it, a held step's reason beside it, and when it happened —
+ * the date and the time, on a line of its own, as the website's steps say it
+ * (Gate 24's parity pass, G18). Its icon is 24 (spec §3.0 rule 2).
  */
 function TimelineRow({ item, divider }: { item: RunTimelineItem; divider: boolean }) {
   const { palette } = useTheme();
   const iconColor = TIMELINE_ICON_COLOR[item.tone] ?? palette.neutral[500];
   const IconCmp = item.icon;
-  // A step still to come and a step that never ran are both drawn quieter than one that did.
-  const quiet = item.tone === 'pending' || item.tone === 'skipped';
+  // The run still going is drawn quieter than what it did.
+  const quiet = item.tone === 'pending';
   return (
     <View
       style={[styles.timelineRow, divider && { borderBottomWidth: 1, borderBottomColor: palette.divider }]}>
-      <IconCmp size={19} color={iconColor} style={styles.timelineIcon} />
+      <IconCmp size={iconSize.row} color={iconColor} style={styles.timelineIcon} />
       <View style={styles.timelineBody}>
         <Text
           style={[
@@ -70,13 +69,15 @@ function TimelineRow({ item, divider }: { item: RunTimelineItem; divider: boolea
           ]}>
           {item.title}
         </Text>
-        <Text
-          style={[
-            styles.timelineSub,
-            { color: quiet ? palette.neutral[500] : palette.neutral[400] },
-          ]}>
-          {item.sub}
-        </Text>
+        {item.sub ? (
+          <Text
+            style={[
+              styles.timelineSub,
+              { color: quiet ? palette.neutral[500] : palette.neutral[400] },
+            ]}>
+            {item.sub}
+          </Text>
+        ) : null}
         {item.reason ? <Text style={[styles.timelineSub, { color: status.warnText }]}>{item.reason}</Text> : null}
         {item.time ? (
           <Text style={[styles.timelineTime, { color: palette.neutral[500] }]}>{item.time}</Text>
@@ -129,12 +130,10 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
    * declares, so the human title comes from that manifest's `pipeline` — the
    * intended join, not a workaround.
    *
-   * Two tiles the design draws have no source and are refused rather than
-   * invented: **confidence** lives in the run's output (§12.1 #73a) and the
-   * extracted-fields card needs that same output (§12.1 #67), which no published
-   * shape carries — terminal event payloads are `{}`. Confidence renders the
-   * design's own em dash; the fields card is omitted, exactly as the design
-   * already omits it on a failed run.
+   * What a succeeded run saved is its DETAILS (backend ADR-0037, §12.1 #67 as
+   * amended 2026-10-14): the label and value lines its automation wrote for
+   * people, on this one-run read only — never the raw output. ~~Confidence~~,
+   * which no published shape carries (§12.1 #73a), is no longer drawn.
    */
   // Reads that have settled, either way: what schedules the next one while the run goes on.
   const [reads, setReads] = useState(0);
@@ -179,38 +178,42 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
   }, [going, focused, reads, refresh]);
 
   const liveRun = detail.status === 'ready' ? detail.data : null;
+  // What it did, by the flow's visible groups where its manifest declares them
+  // (spec §3.E) — the catalog's groups only for a run of the version they were
+  // declared for; a run of another version is drawn step by step, as the
+  // website draws it (the review of the Invoice Processing screens).
+  const progress = liveRun
+    ? toProgress(
+        liveRun.detail.steps,
+        liveRun.entry?.pipeline,
+        liveRun.entry?.version === liveRun.detail.run.templateVersion ? liveRun.entry.groups : undefined,
+        dateTime,
+        liveRun.detail.run.status,
+      )
+    : [];
   const run = liveRun
     ? {
         title: runLabel(liveRun.detail.run),
-        // Its flow, the version it ran — the website's subheader — and how it
-        // ended; a held run says how it was decided.
-        sub: `${liveRun.entry?.name ?? liveRun.detail.run.templateId} · v${liveRun.detail.run.templateVersion} · ${metaFor(
-          liveRun.detail.run,
-          liveRun.approvals,
-        )}`,
+        // Its flow — the website's subheader, which no longer says the version
+        // it ran (the Invoice Processing update; the spec's S9, the version gone
+        // from the catalog card too).
+        sub: liveRun.entry?.name ?? liveRun.detail.run.templateId,
+        // How it went, on a line of its own (spec §3.E).
+        result: runResultLine(liveRun.detail.run, liveRun.approvals),
         status: statusLabel(liveRun.detail.run.status) as StatusPillLabel,
-        stats: toRunStats(
-          // The steps that finished: a failed or held step is reported, not done.
-          liveRun.detail.steps.filter((step) => step.outcome === 'ok').length,
-          liveRun.entry?.pipeline?.length ?? 0,
-          duration(liveRun.detail.run.startedAt, liveRun.detail.run.endedAt),
-        ),
+        stats: toRunStats(progress, duration(liveRun.detail.run.startedAt, liveRun.detail.run.endedAt)),
         // Started, Ended, Trigger: the website's facts under its title.
         facts: toRunFacts(liveRun.detail.run),
         // The run a continuation continues, a tap away, as the website links "the
         // run that was held" (until Gate 24's parity pass, its id's first eight
         // characters, which nothing opened).
         continues: liveRun.detail.run.continuesRunId,
-        reported: liveRun.detail.steps.length > 0,
-        timeline: toTimeline(
-          liveRun.detail.steps,
-          liveRun.entry?.pipeline,
-          dateTime,
-          liveRun.detail.run.status,
-        ) as RunTimelineItem[],
-        // No published run output, so no extracted-fields card.
-        fields: false,
-        action: undefined,
+        // "No steps reported yet." while nothing is drawn, whatever was reported.
+        reported: progress.some((row) => row.id !== 'working'),
+        timeline: progress as RunTimelineItem[],
+        // What a succeeded run saved, as its automation wrote it for people
+        // (backend ADR-0037; the one-run read only). Absent, no section.
+        details: liveRun.detail.details ?? [],
         subscriptionId: liveRun.detail.run.subscriptionId,
         id: liveRun.detail.run.id,
         // The two states the platform cancels (BUILD-PLAN 24.4.2).
@@ -294,6 +297,12 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
         <StatusPill label={run.status} />
       </View>
 
+      {run.result ? (
+        <Text testID="run-result" style={[styles.result, { color: palette.text }]}>
+          {run.result}
+        </Text>
+      ) : null}
+
       <View style={styles.statsRow}>
         {run.stats.map((s) => (
           <StatCard key={s.label} value={s.value} label={s.label} size="sm" />
@@ -324,11 +333,11 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
         </Pressable>
       ) : null}
 
-      <View>
-        <SectionLabel>TIMELINE</SectionLabel>
+      <View testID="run-progress">
+        <SectionLabel>{PROGRESS_LABEL}</SectionLabel>
         <SurfaceCard style={styles.sectionCard}>
-          {/* The website's line while the run has reported nothing; the steps
-              its flow declares still follow it, waiting or not run. */}
+          {/* The website's line while the run has reported nothing; "Working…"
+              follows it while the run goes on. */}
           {run.reported ? null : (
             <Text
               style={[
@@ -345,6 +354,25 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
         </SurfaceCard>
       </View>
 
+      {run.details.length > 0 ? (
+        <View testID="run-details">
+          <SectionLabel>{DETAILS_LABEL}</SectionLabel>
+          <SurfaceCard style={styles.sectionCard}>
+            {run.details.map((line, i) => (
+              <View
+                key={`${line.label}-${i}`}
+                style={[
+                  styles.detailRow,
+                  i < run.details.length - 1 && { borderBottomWidth: 1, borderBottomColor: palette.divider },
+                ]}>
+                <Text style={[styles.fieldKey, { color: palette.neutral[400] }]}>{line.label}</Text>
+                <Text style={[styles.detailValue, { color: palette.text }]}>{line.value}</Text>
+              </View>
+            ))}
+          </SurfaceCard>
+        </View>
+      ) : null}
+
       <View style={styles.actions}>
         {/* It stops the run, which is not resumed: red (the owner's build 12 item 5, "stop"). */}
         {run.cancellable ? (
@@ -354,7 +382,7 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
             height={46}
             fontSize={typeScale.label.fontSize}
             icon={StopCircle}
-            iconSize={16}
+            iconSize={iconSize.button}
             style={styles.actionBtn}
             onPress={() => {
               setCancelError(null);
@@ -368,7 +396,7 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
           height={46}
           fontSize={typeScale.label.fontSize}
           icon={FlowArrow}
-          iconSize={16}
+          iconSize={iconSize.button}
           style={styles.actionBtn}
           onPress={() =>
             router.push({
@@ -483,6 +511,23 @@ const styles = StyleSheet.create({
   fieldValue: {
     fontFamily: fonts.medium,
     fontSize: typeScale.body.fontSize,
+  },
+  result: {
+    fontFamily: fonts.regular,
+    ...typeScale.body,
+  },
+  // A label and its value on one line; a long value wraps under its own column.
+  detailRow: {
+    flexDirection: 'row',
+    gap: 16,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+  },
+  detailValue: {
+    flex: 1,
+    textAlign: 'right',
+    fontFamily: fonts.medium,
+    ...typeScale.body,
   },
   actions: {
     flexDirection: 'row',

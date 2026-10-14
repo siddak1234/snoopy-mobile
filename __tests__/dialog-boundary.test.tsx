@@ -204,7 +204,7 @@ describe("the run's form — the flow page's start controls since 25.8.3 (25.8.1
     answers[`POST ${RUNS_PATH}`] = [{ run: { id: 'run-1' } }];
     const onStarted = jest.fn();
     await renderWithProviders(
-      <StartRun subscriptionId="sub-1" shownWorkspaceId={TEST_WORKSPACE} runInput={[WINDOW, NOTE]} onStarted={onStarted} />,
+      <StartRun subscriptionId="sub-1" shownWorkspaceId={TEST_WORKSPACE} runInput={[WINDOW, NOTE]} usesAi={false} onStarted={onStarted} />,
       signedInSession,
     );
     const box = screen.getByTestId('start-run');
@@ -224,7 +224,7 @@ describe("the run's form — the flow page's start controls since 25.8.3 (25.8.1
   it("is inside its boundary: a row it cannot draw becomes the failed card in the run form's words, and Try again draws the form again once it can", async () => {
     mockThrow.file = true;
     await renderWithProviders(
-      <StartRun subscriptionId="sub-1" shownWorkspaceId={TEST_WORKSPACE} runInput={[RECEIPT, NOTE]} onStarted={jest.fn()} />,
+      <StartRun subscriptionId="sub-1" shownWorkspaceId={TEST_WORKSPACE} runInput={[RECEIPT, NOTE]} usesAi={false} onStarted={jest.fn()} />,
       signedInSession,
     );
     const failed = await screen.findByTestId('form-failed');
@@ -253,7 +253,7 @@ describe("the run's form — the flow page's start controls since 25.8.3 (25.8.1
     expect(screen.getByText(RUN_FORM_ERROR_TITLE)).toBeTruthy();
     expect(screen.getByText('Invoice triage')).toBeTruthy();
     expect(screen.getByTestId('flow-stat-All')).toBeTruthy();
-    expect(screen.getByText('PIPELINE')).toBeTruthy();
+    expect(screen.getByText('STEPS')).toBeTruthy();
     expect(screen.getByText('Pause')).toBeTruthy();
     expect(screen.getByTestId('archive-flow')).toBeTruthy();
     expect(screen.queryByTestId('dialog-failed')).toBeNull();
@@ -266,6 +266,7 @@ describe('the Setup dialog (25.8.1)', () => {
     const onSaved = jest.fn();
     await renderWithProviders(
       <SetupDialog
+        name="Invoice triage"
         subscriptionId="sub-1"
         shownWorkspaceId={TEST_WORKSPACE}
         setup={[WINDOW_SETTING, INBOX]}
@@ -281,7 +282,7 @@ describe('the Setup dialog (25.8.1)', () => {
     // The picker is a control this build knows: its text input holds the configured name, and carries no note.
     expect(within(dialog).getByLabelText('Watch inbox').props.value).toBe('AP-Invoices');
     await fireEvent.changeText(within(dialog).getByLabelText('Review window'), 'last week');
-    await fireEvent.press(within(dialog).getByText('Save setup'));
+    await fireEvent.press(within(dialog).getByText('Save'));
     await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
     expect(sent).toEqual([
       { method: 'PATCH', path: SUB_PATH, key: 'intent-key', body: { config: { window: 'last week', inbox: 'AP-Invoices' } } },
@@ -293,6 +294,7 @@ describe('the Setup dialog (25.8.1)', () => {
     mockThrow.section = true;
     await renderWithProviders(
       <SetupDialog
+        name="Invoice triage"
         subscriptionId="sub-1"
         shownWorkspaceId={TEST_WORKSPACE}
         setup={[INBOX]}

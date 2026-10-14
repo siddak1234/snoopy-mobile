@@ -1,5 +1,7 @@
 import type { Icon } from 'phosphor-react-native';
-import { CheckCircle, CircleDashed, HandPalm, MinusCircle, XCircle } from 'phosphor-react-native';
+import { CheckCircle, CircleDashed, HandPalm, WarningCircle, XCircle } from 'phosphor-react-native';
+
+import { RUN_WAITING_FOR_APPROVAL, RUN_WORKING } from '@/lib/content/screen-states';
 
 import type { CatalogEntry } from '@/lib/platform/catalog';
 import type { InboxNotification } from '@/lib/platform/notifications';
@@ -374,114 +376,151 @@ export function inboxRows(
   });
 }
 
-/** A run-detail timeline row, in the shape `RunTimelineItem` had. */
+/** A run's PROGRESS row (the shape `RunTimelineItem` had). */
 export type TimelineRowView = {
   id: string;
   icon: Icon;
-  tone: 'ok' | 'warn' | 'err' | 'pending' | 'skipped';
+  tone: 'ok' | 'warn' | 'err' | 'pending';
   title: string;
+  /** The latest summary in it; empty for the last row of a run still going. */
   sub: string;
   /** Why a held step held, under its summary, as the website draws it beside it. */
   reason?: string;
   time?: string;
 };
 
-/** What a declared step the run never reported says once the run has ended. */
-export const STEP_NOT_RUN = 'Not run';
-
-/** What the timeline says while the run has reported no step, in the website's words. */
+/** What PROGRESS says while the run has reported no step, in the website's words. */
 export const NO_STEPS_REPORTED = 'No steps reported yet.';
 
 /** How long a run's page waits, while the run has not ended, before it reads the run again. */
 export const RUN_REREAD_MS = 2_000;
 
+type ReportedStep = {
+  stepId: string;
+  outcome: 'ok' | 'held' | 'failed';
+  summary: string;
+  heldReason?: string;
+  occurredAt: string;
+};
+
 /**
- * The run timeline: reported steps, titled from the manifest.
+ * A run's PROGRESS (the Invoice Processing update, spec §3.E; the owner's build
+ * 19 items 6 and 7: "Look at this no one would want to use this at all" — a
+ * timeline of ten "Not run" lookups — and "This flow is so long"): what the run
+ * did, never what it did not.
  *
- * `RunStep` carries a `stepId` and a one-line `summary`, and the spec is explicit
- * that `stepId` is "always a step the pinned manifest declares". So the human
- * title comes from that manifest's `pipeline` — the join is the intended one, not
- * a workaround — and `summary` is the second line.
- *
- * Steps the manifest declares but the run never reported are drawn as pending,
- * which is how the design shows a held run's remaining work ("Post to QuickBooks
- * · Waiting on your approval"). Without that, a held run would look complete.
- *
- * **Once the run has ended, such a step never ran, and says so** — the owner's
- * build 14 feedback #4 and #5: run `5acc41ac` succeeded with "Email the outcome"
- * still drawn as pending, because no address was set and the step was never
- * reported, and the failed run of 2026-09-03 showed its three unreached steps as
- * still to come. A succeeded, failed or cancelled run draws them as not run,
- * with what each would have done beside it.
- *
- * **A held step keeps its summary**, its reason beside it (Gate 24's parity
- * pass, G18): the website draws both, and this drew the reason in place of the
- * summary.
+ * **A manifest that declares groups** (backend ADR-0037; Invoice Processing v2:
+ * Received · Read · Checked · Done · Emailed) is drawn one row per group that
+ * has a reported step, in the groups' order: the group's title, the latest
+ * reported step's summary in it, its outcome's icon and its time — a held one
+ * with its reason; a reported step no group holds follows them, by its title,
+ * never dropped. The caller passes the catalog's groups only for a run of the
+ * version they were declared for. **Without groups**, each reported step,
+ * titled from the pipeline (`stepId` is "always a step the pinned manifest
+ * declares"). Either
+ * way: **no row for a step that did not run** — ~~"Not run"~~ and the pending
+ * rows of every declared step are gone — **never a step id**, and while the run
+ * is still going, a last row "Working…".
  */
-export function toTimeline(
-  steps: {
-    stepId: string;
-    outcome: 'ok' | 'held' | 'failed';
-    summary: string;
-    heldReason?: string;
-    occurredAt: string;
-  }[],
-  declared: { id: string; title: string; description: string }[] | undefined,
+export function toProgress(
+  steps: readonly ReportedStep[],
+  declared: readonly { id: string; title: string; group?: string }[] | undefined,
+  groups: readonly { id: string; title: string }[] | undefined,
   clock: (iso: string) => string,
   runStatus?: 'pending' | 'running' | 'held' | 'succeeded' | 'failed' | 'cancelled',
 ): TimelineRowView[] {
-  const ended = runStatus === 'succeeded' || runStatus === 'failed' || runStatus === 'cancelled';
-  const reported = new Map(steps.map((s) => [s.stepId, s]));
+  const going = runStatus === 'pending' || runStatus === 'running';
+  // In the order they happened; the platform's own order breaks a tie.
+  const ordered = steps
+    .map((step, index) => ({ step, index }))
+    .sort((a, b) => Date.parse(a.step.occurredAt) - Date.parse(b.step.occurredAt) || a.index - b.index)
+    .map(({ step }) => step);
   const titles = new Map((declared ?? []).map((d) => [d.id, d]));
-
-  const rows: TimelineRowView[] = steps.map((step) => ({
-    id: `reported:${step.stepId}`,
+  const row = (id: string, title: string, step: ReportedStep): TimelineRowView => ({
+    id,
     icon: OUTCOME_ICON[step.outcome],
-    tone: step.outcome === 'ok' ? 'ok' : step.outcome === 'held' ? 'warn' : 'err',
-    title: titles.get(step.stepId)?.title ?? step.stepId,
+    tone: OUTCOME_TONE[step.outcome],
+    title,
     sub: step.summary,
     ...(step.heldReason ? { reason: step.heldReason } : {}),
     time: clock(step.occurredAt),
-  }));
+  });
 
-  const remaining = (declared ?? [])
-    .filter((d) => !reported.has(d.id))
-    .map<TimelineRowView>((d) =>
-      ended
-        ? { id: `not-run:${d.id}`, icon: MinusCircle, tone: 'skipped', title: d.title, sub: `${STEP_NOT_RUN} · ${d.description}` }
-        : { id: `pending:${d.id}`, icon: CircleDashed, tone: 'pending', title: d.title, sub: d.description },
-    );
+  const stepRow = (step: ReportedStep): TimelineRowView => {
+    const title = titles.get(step.stepId)?.title;
+    // A step the manifest does not name is titled by what it said, never by its id.
+    return title ? row(`reported:${step.stepId}`, title, step) : { ...row(`reported:${step.stepId}`, step.summary, step), sub: '' };
+  };
 
-  return [...rows, ...remaining];
+  let rows: TimelineRowView[];
+  if (groups && groups.length > 0) {
+    const latest = new Map<string, ReportedStep>();
+    const ungrouped: ReportedStep[] = [];
+    for (const step of ordered) {
+      const group = titles.get(step.stepId)?.group;
+      if (group && groups.some((candidate) => candidate.id === group)) latest.set(group, step);
+      else ungrouped.push(step);
+    }
+    rows = groups.flatMap((group) => {
+      const step = latest.get(group.id);
+      return step ? [row(`group:${group.id}`, group.title, step)] : [];
+    });
+    // A reported step the groups do not hold is still drawn after them, never
+    // dropped — as the website draws it (the review of the Invoice Processing
+    // screens).
+    rows.push(...ungrouped.map(stepRow));
+  } else {
+    rows = ordered.map(stepRow);
+  }
+  if (going) rows.push({ id: 'working', icon: CircleDashed, tone: 'pending', title: RUN_WORKING, sub: '' });
+  return rows;
 }
 
 const OUTCOME_ICON: Record<'ok' | 'held' | 'failed', Icon> = {
   ok: CheckCircle,
   held: HandPalm,
-  failed: XCircle,
+  failed: WarningCircle,
+};
+
+const OUTCOME_TONE: Record<'ok' | 'held' | 'failed', TimelineRowView['tone']> = {
+  ok: 'ok',
+  held: 'warn',
+  failed: 'err',
 };
 
 /**
- * The run-detail stat tiles.
- *
- * Two of the three are derivable and the third is not. **Confidence is refused**
- * — §12.1 #73a places it in that run's output, which no published shape carries —
- * so it renders the design's own em dash, which the design already draws for runs
- * that have no confidence to report. `Steps done` is finished-versus-declared —
- * a failed or held step is reported but not done (the failed run of 2026-09-03
- * read "1 / 4" for its one failed step, the owner's build 14 feedback #8) —
- * which is why the manifest pipeline is needed here too.
+ * The run-detail stat tiles: Duration, and Steps done — the rows PROGRESS
+ * shows that finished, over the rows it shows (spec §3.E: "{groups done} /
+ * {groups shown}"), so a run never reads "1 / 24" for the steps it did not
+ * need. A failed or held row is shown, not done (the owner's build 14 feedback
+ * #8). ~~Confidence~~, an em dash that no published shape could fill, is gone
+ * (the spec's U11).
  */
 export function toRunStats(
-  finishedSteps: number,
-  declaredSteps: number,
+  progress: readonly TimelineRowView[],
   durationText: string,
 ): { value: string; label: string }[] {
+  const shown = progress.filter((item) => item.id !== 'working');
+  const done = shown.filter((item) => item.tone === 'ok').length;
   return [
     { value: durationText, label: 'Duration' },
-    { value: declaredSteps > 0 ? `${finishedSteps} / ${declaredSteps}` : EMPTY, label: 'Steps done' },
-    { value: EMPTY, label: 'Confidence' },
+    { value: shown.length > 0 ? `${done} / ${shown.length}` : EMPTY, label: 'Steps done' },
   ];
+}
+
+/**
+ * The line under a run's name that says how it went (spec §3.E): a succeeded
+ * run's `resultSummary`, a failed one's `failureReason`, a held one waiting
+ * "Waiting for approval." — or, decided, how it was — and nothing for a run
+ * still going or one that said nothing.
+ */
+export function runResultLine(run: Run, approvals: readonly Approval[]): string | null {
+  if (run.status === 'succeeded') return run.resultSummary ?? null;
+  if (run.status === 'failed') return run.failureReason ?? null;
+  if (run.status === 'held') {
+    return needsReview(run, approvals) ? RUN_WAITING_FOR_APPROVAL : heldDecisionLine(run, approvals);
+  }
+  return null;
 }
 
 /**
