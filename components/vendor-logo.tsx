@@ -63,8 +63,10 @@ export function NoVendorMark({ testID }: { testID?: string }) {
 /**
  * The vendor's own Connect button, drawn at its size and never altered
  * (Intuit's technical requirement 1.3: "All Intuit and QuickBooks logos and
- * buttons in your app use the approved and provided images"). Read aloud as the
- * words on it.
+ * buttons in your app use the approved and provided images"; its brand rules:
+ * "Do not modify the appearance of any button graphics") — so not dimmed when
+ * pressed or busy either: a press ticks, and while it connects the provider's
+ * sign-in is in front of it. Read aloud as the words on it.
  */
 export function VendorConnectButton({
   brand,
@@ -85,7 +87,7 @@ export function VendorConnectButton({
       accessibilityState={{ disabled: Boolean(disabled) }}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [styles.connect, (pressed || disabled) && { opacity: 0.7 }]}>
+      style={styles.connect}>
       <Image
         testID={testID ? `${testID}-image` : undefined}
         source={brand.connectButton}

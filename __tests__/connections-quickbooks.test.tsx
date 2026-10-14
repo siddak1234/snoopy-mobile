@@ -1,5 +1,6 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import React from 'react';
+import { StyleSheet } from 'react-native';
 
 import ConnectionsScreen from '@/app/(tabs)/settings/connections';
 import { PlatformError } from '@/lib/platform/problem';
@@ -72,6 +73,15 @@ describe("QuickBooks's row in Settings › Connections (spec §3.I)", () => {
     // Another provider keeps its words.
     expect(within(screen.getByTestId('connection-row-gmail')).getByText('Connect')).toBeTruthy();
     expect(screen.queryByText('Only providers configured for this deployment are shown.')).toBeNull();
+  });
+
+  it("keeps the logo's clear space — 12 pt, Intuit's half the symbol's height — to its description under it", async () => {
+    routeReads([]);
+    await renderWithProviders(<ConnectionsScreen />, signedInSession);
+    const row = await screen.findByTestId('connection-row-quickbooks');
+    const brand = within(row).getByTestId('brand-of-connection-row-quickbooks');
+    expect(within(brand).getByTestId('connection-logo-quickbooks')).toBeTruthy();
+    expect(StyleSheet.flatten(brand.props.style)).toMatchObject({ marginBottom: 12 });
   });
 
   it('the button connects at once — no dialog — says it completed, and the row reads it again as connected', async () => {

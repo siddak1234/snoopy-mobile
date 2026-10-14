@@ -43,7 +43,9 @@ vendor page, with QuickBooks's own logo and button and None; the account's answe
 documents" in place of the per-run consent (ADR-0038), removed in the same change; a run's progress
 by its flow's step groups and its saved details (ADR-0037); and these screens held to the design
 contract — numbered sections, icons 24 and 20 in buttons, plain words. Backend 25.4.13–25.4.26; the
-record is DESIGN-GAPS "The Invoice Processing update's shared screens (Round 17; 2026-10-14)".
+record is DESIGN-GAPS "The Invoice Processing update's shared screens (Round 17; 2026-10-14)", and
+its independent review's findings, fixed on the same branch, DESIGN-GAPS "The review of the Invoice
+Processing screens (Round 17; 2026-10-14)".
 
 **Round 16 CLOSED 2026-10-07** — Gate 24 re-run by command by a fresh `snoopy-backend` session that wrote none of it; its record here is DESIGN-GAPS "Build 16: the owner's device pass, and Round 16's close". Open from 2026-09-29 (BUILD-PLAN Phase 24, ADR-0032): the mobile app offers
 every signed-in feature the website offers, on the same published operations,

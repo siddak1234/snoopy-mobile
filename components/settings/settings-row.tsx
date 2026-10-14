@@ -30,7 +30,8 @@ export type SettingsRowSize = 'regular' | 'roomy';
  * and any warning (Gate 24 parity). A row without it draws as before.
  *
  * `brand` is a vendor's own logo, drawn in place of the icon and the title: the
- * logo carries the vendor's name (the Invoice Processing update, 2026-10-14).
+ * logo carries the vendor's name (the Invoice Processing update, 2026-10-14),
+ * with its clear space — 12 pt — to the lines under it.
  * The icon is 24, as every row's label is since then (`iconSize.row`).
  */
 export function SettingsRow({
@@ -71,7 +72,10 @@ export function SettingsRow({
       {brand ? null : <IconCmp size={iconSize.row} color={palette.accentRamp[300]} />}
       <View style={styles.rowBody}>
         {brand ? (
-          brand
+          // The logo's clear space (Intuit: half its symbol's height; 12 here) to what is under it.
+          <View testID={testID ? `brand-of-${testID}` : undefined} style={sub || detail ? styles.brandClear : undefined}>
+            {brand}
+          </View>
         ) : value ? (
           <View style={styles.titleLine}>
             {titleText}
@@ -127,6 +131,9 @@ const styles = StyleSheet.create({
   },
   rowBody: {
     flex: 1,
+  },
+  brandClear: {
+    marginBottom: 12,
   },
   rowTitle: {
     fontFamily: fonts.medium,

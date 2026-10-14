@@ -178,12 +178,15 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
   }, [going, focused, reads, refresh]);
 
   const liveRun = detail.status === 'ready' ? detail.data : null;
-  // What it did, by the flow's visible groups where its manifest declares them (spec §3.E).
+  // What it did, by the flow's visible groups where its manifest declares them
+  // (spec §3.E) — the catalog's groups only for a run of the version they were
+  // declared for; a run of another version is drawn step by step, as the
+  // website draws it (the review of the Invoice Processing screens).
   const progress = liveRun
     ? toProgress(
         liveRun.detail.steps,
         liveRun.entry?.pipeline,
-        liveRun.entry?.groups,
+        liveRun.entry?.version === liveRun.detail.run.templateVersion ? liveRun.entry.groups : undefined,
         dateTime,
         liveRun.detail.run.status,
       )
@@ -191,8 +194,10 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
   const run = liveRun
     ? {
         title: runLabel(liveRun.detail.run),
-        // Its flow and the version it ran — the website's subheader.
-        sub: `${liveRun.entry?.name ?? liveRun.detail.run.templateId} · v${liveRun.detail.run.templateVersion}`,
+        // Its flow — the website's subheader, which no longer says the version
+        // it ran (the Invoice Processing update; the spec's S9, the version gone
+        // from the catalog card too).
+        sub: liveRun.entry?.name ?? liveRun.detail.run.templateId,
         // How it went, on a line of its own (spec §3.E).
         result: runResultLine(liveRun.detail.run, liveRun.approvals),
         status: statusLabel(liveRun.detail.run.status) as StatusPillLabel,
@@ -203,7 +208,8 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
         // run that was held" (until Gate 24's parity pass, its id's first eight
         // characters, which nothing opened).
         continues: liveRun.detail.run.continuesRunId,
-        reported: liveRun.detail.steps.length > 0,
+        // "No steps reported yet." while nothing is drawn, whatever was reported.
+        reported: progress.some((row) => row.id !== 'working'),
         timeline: progress as RunTimelineItem[],
         // What a succeeded run saved, as its automation wrote it for people
         // (backend ADR-0037; the one-run read only). Absent, no section.

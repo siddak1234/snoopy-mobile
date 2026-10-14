@@ -53,7 +53,7 @@ it("Done on Connect vendor returns to the flow's Set up with the vendor chosen",
   expect(view.getSearchParams()).toMatchObject({ template: 'invoice-processing', vendor: 'none' });
   expect(screen.getByText('For Invoice Processing')).toBeTruthy();
 
-  await fireEvent.press(screen.getByTestId('vendor-quickbooks'));
+  await fireEvent.press(screen.getByTestId('vendor-quickbooks-choice'));
   await flush(100);
   await press('Done');
   expect(view.getPathname()).toBe('/flows/setup');

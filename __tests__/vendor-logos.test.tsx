@@ -127,4 +127,11 @@ describe.each<ThemeMode>(['dark', 'light'])('the marks — %s palette (snapshot-
     expect(onPress).toHaveBeenCalledTimes(1);
     expect(toJSON()).toMatchSnapshot();
   });
+
+  it("Intuit's Connect button is never dimmed — busy or pressed, its graphic as Intuit made it", async () => {
+    await renderWithProviders(<VendorConnectButton brand={quickbooks} onPress={() => {}} disabled testID="connect" />, undefined, mode);
+    const button = screen.getByTestId('connect');
+    expect(button.props.accessibilityState).toMatchObject({ disabled: true });
+    expect(StyleSheet.flatten(button.props.style)).not.toHaveProperty('opacity');
+  });
 });

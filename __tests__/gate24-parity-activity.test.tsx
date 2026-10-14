@@ -170,7 +170,7 @@ const fact = (label: 'Started' | 'Ended' | 'Trigger') =>
     .map((node) => node.props.children);
 
 describe("a run's page says what the website's says (G18)", () => {
-  it('names the version it ran, then when it started and ended and how it started: the website’s facts', async () => {
+  it('names its flow — no version beside it since the Invoice Processing update, as the website says it — then when it started and ended and how it started: the website’s facts', async () => {
     routeRun(
       detail(
         {
@@ -185,7 +185,8 @@ describe("a run's page says what the website's says (G18)", () => {
     );
     setMockParams({ runId: 'run-1' });
     await renderWithProviders(<RunDetailScreen />, signedInSession);
-    expect(await screen.findByText('Invoice check · v4')).toBeTruthy();
+    expect(await screen.findByText('Invoice check')).toBeTruthy();
+    expect(screen.queryByText('Invoice check · v4')).toBeNull();
     // How it went, on a line of its own (spec §3.E).
     expect(screen.getByTestId('run-result').props.children).toBe('Recorded INV-7');
     expect(fact('Started')).toEqual(['Started', 'Oct 7, 2026, 9:05 AM']);

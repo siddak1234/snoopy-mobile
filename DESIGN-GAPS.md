@@ -1874,11 +1874,11 @@ returns to its first. One table, `presses-patterns-dialog-close:501`, a row per 
 | ~~`start-run.tsx:231` — AI reads this file › Agree and start (Round 17, Apple 5.1.2(i))~~ — gone with the per-run dialog (the Invoice Processing update; below, the account's card) | keeps the consent — `agreed` under `autom8x.ai-consent.v{version}.{userId}`, this-device-only — before the run is sent, then POSTs the run, once; the next run with a file is not asked; a consent that cannot be kept still starts the run, and the next asks again | `start-run:1125`, `start-run:1173`, `start-run:1209` |
 | ~~`ai-consent-dialog.tsx:48` — Privacy Policy, in AI reads this file (Round 17)~~ — gone with the file | opens the website's `/privacy`; the dialog stays, nothing started or kept; plain words, no press, without the website's origin | `start-run:1223`, `start-run:1233` |
 | `setup-dialog.tsx:75` — Save (~~Save setup~~, the Invoice Processing update) | PATCH `{config}` only, the vendor choice kept as the flow holds it | `automation-actions:480` |
-| `ai-reading-card.tsx` — AI reads your documents › Allow; Not now (the Invoice Processing update, backend ADR-0038) | PUT `/v1/session/ai-document-reading` `{choice: 'allowed' \| 'declined'}`, then the session read again; from Start run, Allow starts the run once, Not now starts nothing; a failed save in words, the card staying | `ai-reading` "%s saves…", "says a save that failed…"; `start-run` "Allow saves…", "Not now saves…", "says so in the card…" |
+| `ai-reading-card.tsx` — AI reads your documents › Allow; Not now (the Invoice Processing update, backend ADR-0038) | PUT `/v1/session/ai-document-reading` `{choice: 'allowed' \| 'declined'}`, then the session read again; from Start run, Allow starts the run once, Not now starts nothing; a failed save in words, the card staying — Allow tries again, and Not now then closes it, saving nothing, the account still unasked (the review of the Invoice Processing screens: iOS gives the dialog no back gesture) | `ai-reading` "%s saves…", "says a save that failed…", "after a failed save, Not now closes the card…"; `start-run` "Allow saves…", "Not now saves…", "says so in the card…", "after a failed save, Not now closes the card…" |
 | `ai-reading-card.tsx` — Privacy Policy, in the card | opens the website's `/privacy`; the card stays, nothing started or saved; plain words, no press, without the website's origin | `ai-reading` "asks in its words…"; `start-run` "opens the website's Privacy Policy…", "says \"Privacy Policy\" in plain words…" |
 | `start-run.tsx` — Turn on, under "AI reading is off." | PUT `{choice: 'allowed'}`, then the run when it has a file; a failed save "Could not save. Try again." | `start-run` "Not now saves…", "declined from the start…", "says so when Turn on could not be saved…" |
-| `flows/vendor.tsx` — a vendor row; None | chooses a connected vendor, or None; a vendor not connected is not chosen by its row | `vendor-page` "chooses with a tap…", "not connected, an owner or admin gets…" |
-| `flows/vendor.tsx` — Connect to QuickBooks (Intuit's button); Connect (a vendor with no logo) | connects through the provider, then chooses it; what it came back with in the connections words | `vendor-page` "not connected, an owner or admin gets…", "a connect that came back %s…", "a connect the platform refused…", "a vendor with no logo bundled…" |
+| `flows/vendor.tsx` — a vendor's radio (its mark and the check; `vendor-{id}-choice` since the review of the Invoice Processing screens, its actions outside it); None | chooses a connected vendor, or None; a vendor not connected is not chosen by its radio | `vendor-page` "chooses with a tap…", "not connected, an owner or admin gets…", "VoiceOver reaches…" |
+| `flows/vendor.tsx` — Connect to QuickBooks (Intuit's button); Connect (a vendor with no logo) | connects through the provider, then chooses it; what it came back with in the connections words; a vendor that takes a pasted key opens Settings › Connections instead (the review of the Invoice Processing screens) | `vendor-page` "not connected, an owner or admin gets…", "a connect that came back %s…", "a connect the platform refused…", "a vendor with no logo bundled…", "a vendor that takes a pasted key…" |
 | `flows/vendor.tsx` — Disconnect from QuickBooks; its confirm's Disconnect | the confirmation, then DELETE the connection, the choice back to None | `vendor-page` "connected, an owner or admin can disconnect it…" |
 | `flows/vendor.tsx` — Done; Save | Done: back to Set up with `{template, vendor}` (`dismissTo`); Save: PATCH `{config}` with the choice, the rest kept, then Back — unchanged, nothing sent; refused, "Could not save. Try again." | `vendor-page` "chooses with a tap…", "for an added flow: Save…" (both), "says a save that failed…"; `real-router/connect-vendor` |
 | `vendor-logo.tsx` — the vendor's Connect button (a passthrough) | its caller's handler | `vendor-logos` "Intuit's Connect button…" |
@@ -4208,13 +4208,17 @@ design; `platform-requirement.json` is unchanged.
 3. **U8 — the account's AI answer.** `components/ai-reading-card.tsx` on Home while
    `aiDocumentReading` is null; `components/settings/ai-reading-row.tsx` in Settings › SECURITY;
    `hooks/use-ai-reading.tsx` the one answer every screen reads (the session's, or what this app
-   saved since, per person); Start run gates a run with a file on a `usesAi` flow by it. In the same
+   saved over the session read in hand — until the next read, the account's word — per person);
+   Start run gates a run with a file on a `usesAi` flow by it. In the same
    change the per-run dialog went: `components/automations/ai-consent-dialog.tsx`,
    `lib/platform/ai-consent-store.ts` and `lib/content/ai-consent.ts` deleted (a Keychain entry
    `autom8x.ai-consent.v1.{userId}` already on a phone is now read by nothing).
 4. **U9 — a run's progress by groups.** `toProgress` (`lib/view/runs.ts`) in place of `toTimeline`:
    one row per group with a reported step, never "Not run", never a step id, "Working…" last while
-   going; Steps done is rows done over rows shown; Confidence gone; the result on its own line.
+   going; Steps done is rows done over rows shown; Confidence gone; the result on its own line. The
+   catalog's groups only for a run of the version they were declared for, and a reported step no
+   group holds after them, never dropped, as the website draws it; the header its flow's name alone
+   (the review of the Invoice Processing screens, below).
 5. **U3 — a run's saved details.** DETAILS draws `RunDetail.details`, label and value.
 6. **U11 — the design contract on these screens.** Numbered section headings at the label size in
    the text colour (`NumberedSectionLabel`), CONNECT/SOURCE/SETTINGS/EMAIL; `iconSize`
@@ -4254,3 +4258,90 @@ and `git status --porcelain` was as before. Every break failed the tests named.
 | U2 · Team kinds typed against the platform's categories (`lib/content/team-types.ts`) | "Other" added to `TEAM_TYPES` | `tsc --noEmit`: four errors, the first at `team-types.ts` |
 | U5 · Intuit's button where QuickBooks is not connected (`components/settings/connections-card.tsx`) | never drawn | `connections-quickbooks` (6) |
 | U11 · Icons 24 on a row (`constants/theme.ts`) | `iconSize.row` 20 | `vendor-logos` (4), `invoice-processing-screens` (4), `ai-reading` the sparkle |
+
+### The review of the Invoice Processing screens (Round 17; 2026-10-14)
+
+An independent single-pass review of `4532a42` (the screens above, not pushed) found 1 blocker, 6
+should-fix and 7 nits. Each was checked against the code before anything changed; all held. Fixed
+in one commit on the same branch, each with a test that fails without it (the table below):
+
+1. **Blocker — the first add of a category's flow said "Team: a team".** An add can make the
+   category's team and put the adder on it (backend ADR-0036), but `createSubscription` re-read only
+   the flows and the catalog, so the teams read seconds before (kept 120 s) named no Accounting team:
+   the flow page said "Team: a team", and Home's teams and the team picker missed it.
+   `lib/platform/automations.ts`: an add reads the teams again; its input no longer takes a
+   `projectId`.
+2. **The AI card could not be closed on iOS while its save failed** (offline, a 5xx, a platform
+   without the route): the dialog has no back gesture there. `components/ai-reading-card.tsx`: after
+   a failed save, Not now closes it without saving — the account still unasked, so Home asks again
+   next time and a run with a file still asks first.
+3. **A saved AI answer outlived the account's.** `hooks/use-ai-reading.tsx` kept what the app saved
+   over every later session read, so an answer turned off on the website was not followed until the
+   app restarted. What was saved now stands only over the session read it was saved against; the
+   next read — the one behind the save, any later one, a sign-in — is the account's word.
+4. **VoiceOver could not reach Connect to QuickBooks or Disconnect from QuickBooks**: both sat
+   inside the vendor's radio, one accessible element. `app/(tabs)/flows/vendor.tsx`: the radio is
+   the vendor's mark and the check; what to do about the vendor sits under it, outside it.
+5. **The QuickBooks logo's clear space** (Intuit: half the symbol's height; 12 pt here) was 6 pt on
+   Setup's and the flow page's CONNECT row and none in Settings › Connections: 12 pt in all three
+   (`setup.tsx`, `detail.tsx`, `components/settings/settings-row.tsx`).
+6. **A flow or run on an older version was drawn by the newest one** (Invoice Processing v1, live
+   until the owner retires it): the flow page took QuickBooks as optional from v2's catalog entry,
+   so a v1 flow owed it lost its CONNECT row and Turn on was greyed out with no reason; STEPS and
+   PROGRESS used v2's groups, dropping v1's `find-payer`; Setup sent v2's `vendor` key to a held v1
+   flow, which the platform refuses. Now a connection is optional only where the flow's own version
+   has the choice; groups are drawn only for their own version (a flow or run of another version by
+   its steps, as an ungrouped manifest is drawn); a reported step no group holds is drawn after the
+   groups, never dropped (`lib/view/runs.ts`, as the website's `lib/run-progress.ts`); "No steps
+   reported yet." follows the rows drawn; and Setup sets up a held flow on another version with that
+   version's own settings (`Subscription.setup`).
+7. **An add whose answer was lost could not be tried again**: Try again re-read the flows, found
+   its own copy and said "This flow is already in this workspace." Now an add that went unanswered
+   (offline, a 5xx) is replayed by Try again with the same key — the platform answers with the flow
+   it made — and any other answer leaves the next press to read the flows afresh.
+
+Nits fixed: a `vendor` the link brings is taken only when it is None or one of the flow's vendors
+(Setup and the vendor page); Intuit's Connect button is never dimmed, pressed or busy ("Do not
+modify the appearance of any button graphics"); the vendor page says nothing of a vendor this
+deployment does not list, and sends a vendor that takes a pasted key to Settings › Connections; a
+test named for the old lead renamed. **This session's choice**: the run page's header says its
+flow's name alone (~~"Invoice Processing · v2"~~) — the website's run page no longer says the
+version either, and S9 took it off the catalog card; Activity's rows keep "· v{N}", as the
+website's runs list does.
+
+Not changed: Add stays a link to Setup and a brand vendor's chosen row draws the logo alone (the
+review accepted both as this session's choices, recorded above); a 502 or offline add says "Could
+not add this flow. Try again." as §3.A asks; the per-run consent's old Keychain entries
+(`autom8x.ai-consent.v1.{userId}`, "agreed" only) stay unread rather than gaining a launch-time
+delete; "Turn on" under "AI reading is off." keeps its visible words as its label — `PillButton` is
+a frozen Nocturne primitive with no label prop, and VoiceOver reads the line before it.
+
+### Guards proved to bite, the review of the Invoice Processing screens
+
+Nineteen runs by one script (`ip-app-fix/bite.py`, its specs and jest logs in the session's
+scratchpad), inside the gate lock, Node 22.23.2, on the final tree: each made one exact edit, ran
+the tests named, restored the file from its saved copy — its SHA-256 equal every time — and the
+working tree's diff hash and `git status --porcelain` were as before. Every break failed the tests
+named; with the file restored, all pass.
+
+| Guard | Broken by | What failed |
+| --- | --- | --- |
+| 1 · An add reads the teams again (`lib/platform/automations.ts`) | `'projects'` dropped from the add's re-read | `invoice-processing-screens` "reads the teams again once the add made the team…" |
+| 2 · Not now closes the card after a failed save (`components/ai-reading-card.tsx`) | the branch removed | `ai-reading` and `start-run` "after a failed save, Not now closes the card…" (2) |
+| 3 · A saved answer only over its own session read (`hooks/use-ai-reading.tsx`) | the saved answer over any read | `ai-reading` "Allow, then turned off on the website…" |
+| 4 · The vendor's actions outside its radio (`app/(tabs)/flows/vendor.tsx`) | the row made one accessible element | `vendor-page` "VoiceOver reaches Connect to QuickBooks…" |
+| 5 · Clear space on Setup's CONNECT (`setup.tsx`) | gap 6 | `invoice-processing-screens` "CONNECT keeps the logo's clear space…" (Setup) |
+| 5 · Clear space on the flow page's CONNECT (`detail.tsx`) | gap 6 | the same, the flow page |
+| 5 · Clear space in Settings › Connections (`settings-row.tsx`) | no margin | `connections-quickbooks` "keeps the logo's clear space…" |
+| 6 · Optional only where the version has the choice (`detail.tsx`) | the catalog's optional for every version | `invoice-processing-screens` "still needs QuickBooks…" |
+| 6 · STEPS' groups only for their version (`detail.tsx`) | the catalog's groups for every version | `invoice-processing-screens` "STEPS: its steps by title…" |
+| 6 · PROGRESS' groups only for their version (`run.tsx`) | the catalog's groups for every run | `invoice-processing-screens` "a run of an older version is drawn step by step…" |
+| 6 · A reported step never dropped (`lib/view/runs.ts`) | the ungrouped steps not drawn | `invoice-processing-screens` "never drops a reported step…" |
+| 6 · Setup with a held older version's own settings (`setup.tsx`) | the catalog's settings always | `invoice-processing-screens` "draws and sends that version's own settings…" |
+| 7 · An unanswered add replayed (`setup.tsx`) | the fresh read always | `parity-flows` "an add whose answer was lost…" |
+| nit · The link's vendor checked, Setup (`setup.tsx`) | taken as given | `vendor-page` "a choice brought by the link…" |
+| nit · The link's vendor checked, the vendor page (`vendor.tsx`) | taken as given | the same |
+| nit · Intuit's button never dimmed (`components/vendor-logo.tsx`) | opacity 0.7 pressed or busy | `vendor-logos` "Intuit's Connect button is never dimmed…" (2) |
+| nit · The run's header without the version (`run.tsx`) | "· v{N}" back | `invoice-processing-screens` "names its flow…" |
+| nit · Nothing said of a vendor not offered (`vendor.tsx`) | "Ask an owner or admin…" for it | `vendor-page` "a vendor this deployment does not offer…" |
+| nit · A pasted-key vendor to Settings › Connections (`vendor.tsx`) | the browser sign-in for it | `vendor-page` "a vendor that takes a pasted key…" |

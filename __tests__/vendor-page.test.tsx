@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react-nativ
 import React from 'react';
 import { StyleSheet } from 'react-native';
 
+import SetupScreen from '@/app/(tabs)/flows/setup';
 import ConnectVendorScreen from '@/app/(tabs)/flows/vendor';
 import { iconSize } from '@/constants/theme';
 import type { Subscription } from '@/lib/platform/automations';
@@ -113,7 +114,7 @@ describe('Connect vendor (spec §3.C)', () => {
     route({ connected: true });
     setMockParams({ template: 'invoice-processing' });
     await renderWithProviders(<ConnectVendorScreen />, signedInSession);
-    await fireEvent.press(await screen.findByTestId('vendor-quickbooks'));
+    await fireEvent.press(await screen.findByTestId('vendor-quickbooks-choice'));
     expect(within(screen.getByTestId('vendor-quickbooks')).getByTestId('vendor-chosen')).toBeTruthy();
     await fireEvent.press(screen.getByText('Done'));
     expect(mockRouter.dismissTo).toHaveBeenCalledWith({
@@ -146,7 +147,7 @@ describe('Connect vendor (spec §3.C)', () => {
     await renderWithProviders(<ConnectVendorScreen />, sessionAs('admin'));
     const row = await screen.findByTestId('vendor-quickbooks');
     // Not connected is no choice yet: the row does not choose it.
-    await fireEvent.press(row);
+    await fireEvent.press(within(row).getByTestId('vendor-quickbooks-choice'));
     expect(within(row).queryByTestId('vendor-chosen')).toBeNull();
     // Intuit's tall green button, its own image, at its own size (274 × 48 pt).
     expect(within(row).getByLabelText('Connect to QuickBooks')).toBeTruthy();
@@ -215,7 +216,7 @@ describe('Connect vendor (spec §3.C)', () => {
     fake.always(SAVE, { subscription: added({ vendor: 'quickbooks', holdAboveAmount: 500 }) });
     setMockParams({ template: 'invoice-processing', flow: 'ip-1' });
     await renderWithProviders(<ConnectVendorScreen />, signedInSession);
-    await fireEvent.press(await screen.findByTestId('vendor-quickbooks'));
+    await fireEvent.press(await screen.findByTestId('vendor-quickbooks-choice'));
     await fireEvent.press(screen.getByText('Save'));
     await waitFor(() => expect(mockRouter.back).toHaveBeenCalled());
     expect(fake.to('PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}')).toEqual([
@@ -244,7 +245,7 @@ describe('Connect vendor (spec §3.C)', () => {
     });
     setMockParams({ template: 'invoice-processing', flow: 'ip-1' });
     await renderWithProviders(<ConnectVendorScreen />, signedInSession);
-    await fireEvent.press(await screen.findByTestId('vendor-quickbooks'));
+    await fireEvent.press(await screen.findByTestId('vendor-quickbooks-choice'));
     await fireEvent.press(screen.getByText('Save'));
     expect(await screen.findByText('Could not save. Try again.')).toBeTruthy();
     expect(screen.queryByText('Unprocessable')).toBeNull();
@@ -265,6 +266,86 @@ describe('Connect vendor (spec §3.C)', () => {
     expect(within(row).getByText('HubSpot')).toBeTruthy();
     await fireEvent.press(within(row).getByText('Connect'));
     await waitFor(() => expect(connectOAuthProvider).toHaveBeenCalledWith(TEST_WORKSPACE, providersPayload().providers[0]));
+  });
+
+  it("VoiceOver reaches Connect to QuickBooks and Disconnect from QuickBooks: neither sits inside the vendor's radio, which still says the vendor and whether it is chosen", async () => {
+    /** Whether an element is inside another that VoiceOver reads as one element (an accessible ancestor). */
+    const insideOne = (node: ReturnType<typeof screen.getByTestId>) => {
+      for (let up = node.parent; up; up = up.parent) if (up.props.accessible === true) return true;
+      return false;
+    };
+    const fake = route();
+    connectOAuthProvider.mockImplementation(async () => {
+      fake.always(CONNECTIONS, { connections: [qbConnection] });
+      return { status: 'connected', connection: { ...qbConnection } };
+    });
+    setMockParams({ template: 'invoice-processing' });
+    await renderWithProviders(<ConnectVendorScreen />, signedInSession);
+    const connect = await screen.findByTestId('vendor-connect-quickbooks');
+    expect(connect.props.accessibilityLabel).toBe('Connect to QuickBooks');
+    expect(insideOne(connect)).toBe(false);
+    const radio = screen.getByTestId('vendor-quickbooks-choice');
+    expect(radio.props).toMatchObject({ accessibilityRole: 'radio', accessibilityLabel: 'QuickBooks Online' });
+    expect(radio.props.accessibilityState).toMatchObject({ selected: false, disabled: true });
+
+    await fireEvent.press(connect);
+    const disconnect = await screen.findByTestId('vendor-disconnect-quickbooks');
+    expect(insideOne(disconnect)).toBe(false);
+    expect(screen.getByTestId('vendor-quickbooks-choice').props.accessibilityState).toMatchObject({ selected: true, disabled: false });
+  });
+
+  it('a choice brought by the link that is not one of this flow\'s is ignored: the page opens on None, and Set up sends None', async () => {
+    const fake = route({ connected: true });
+    setMockParams({ template: 'invoice-processing', vendor: 'made-up' });
+    const page = await renderWithProviders(<ConnectVendorScreen />, signedInSession);
+    expect(within(await screen.findByTestId('vendor-none')).getByTestId('vendor-chosen')).toBeTruthy();
+    expect(screen.queryByText('made-up')).toBeNull();
+    await page.unmount();
+
+    const draft: Subscription = { ...added(), status: 'draft', projectId: 'project-1' };
+    fake.always('GET /v1/workspaces/{workspaceId}/projects', { projects: [] });
+    fake.always('POST /v1/workspaces/{workspaceId}/subscriptions', { subscription: draft });
+    fake.always(SAVE, (sent) => ({ subscription: { ...draft, status: 'live', config: (sent.body as { config: Record<string, unknown> }).config } }));
+    setMockParams({ template: 'invoice-processing', vendor: 'made-up' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    const row = await screen.findByTestId('setup-vendor');
+    expect(within(row).getByText('None')).toBeTruthy();
+    expect(screen.queryByText(/made-up/u)).toBeNull();
+    await fireEvent.press(screen.getByText('Turn on'));
+    await waitFor(() => expect(fake.to(SAVE)).toHaveLength(1));
+    expect(fake.to(SAVE)[0]!.body).toMatchObject({ config: { vendor: 'none' }, status: 'live' });
+  });
+
+  it('a vendor this deployment does not offer: nothing said of it to an owner — no "Ask an owner or admin", no Connect', async () => {
+    const fake = route();
+    fake.always(PROVIDERS, providersPayload());
+    setMockParams({ template: 'invoice-processing' });
+    await renderWithProviders(<ConnectVendorScreen />, signedInSession);
+    const row = await screen.findByTestId('vendor-quickbooks');
+    expect(within(row).queryByText('Ask an owner or admin to connect it.')).toBeNull();
+    expect(within(row).queryByTestId('vendor-connect-quickbooks')).toBeNull();
+    expect(within(row).getByText('QuickBooks Online')).toBeTruthy();
+  });
+
+  it('a vendor that takes a pasted key is connected in Settings › Connections, where its key is pasted — never the browser sign-in', async () => {
+    const entry = invoiceProcessingEntry();
+    entry.requiredConnections = [
+      ...entry.requiredConnections,
+      { providerId: 'keyed', displayName: 'Keyed Books', purpose: 'Records bills.', optional: true },
+    ];
+    const fake = route({ entry });
+    fake.always(PROVIDERS, {
+      providers: [
+        ...providersPayload().providers,
+        QUICKBOOKS_PROVIDER,
+        { providerId: 'keyed', displayName: 'Keyed Books', description: '', scopes: [], authType: 'api-key', icon: 'key', credentialFields: [] },
+      ],
+    });
+    setMockParams({ template: 'invoice-processing' });
+    await renderWithProviders(<ConnectVendorScreen />, signedInSession);
+    await fireEvent.press(within(await screen.findByTestId('vendor-keyed')).getByText('Connect'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/connections');
+    expect(connectOAuthProvider).not.toHaveBeenCalled();
   });
 
   it('is unavailable with no flow named, and a failed load for a flow that is not there', async () => {

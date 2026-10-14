@@ -121,7 +121,10 @@ export default function ConnectVendorScreen() {
   const field = connectionField(subscription?.setup ?? entry.setup);
   const vendors = (entry.requiredConnections ?? []).filter((connection) => connection.optional);
   const saved = chosenVendor(field, subscription?.config);
-  const choice = picked ?? (vendor && !subscription ? vendor : saved);
+  // The choice Set up brought counts only when it is one of this page's: None or
+  // one of the flow's vendors — never a name a link made up.
+  const brought = vendor && (vendor === NONE || vendors.some((connection) => connection.providerId === vendor)) ? vendor : undefined;
+  const choice = picked ?? (brought && !subscription ? brought : saved);
   const canManage = administers(roleIn(session, resource.loadedFor));
   const connectedId = (providerId: string) =>
     connections.find((connection) => connection.providerId === providerId && connection.status === 'connected')?.id;
@@ -134,6 +137,11 @@ export default function ConnectVendorScreen() {
   /** Connect a vendor not connected yet, then choose it once it is (the spec: "chosen after its connect returns"). */
   const connect = async (provider: ConnectionProvider) => {
     if (busy) return;
+    // A vendor that takes a pasted key is connected where its key is pasted: Settings › Connections.
+    if (provider.authType !== 'oauth2') {
+      router.push('/(tabs)/settings/connections');
+      return;
+    }
     const workspaceId = workspaceIfShown(session, resource.loadedFor);
     if (!workspaceId) {
       setError(WORKSPACE_CHANGED);
@@ -213,59 +221,82 @@ export default function ConnectVendorScreen() {
           const connectionId = connectedId(connection.providerId);
           const brand = brandLogoFor(provider?.icon);
           const chosen = choice === connection.providerId;
+          // What to do about it: connected, it says so; not connected, an owner
+          // or admin connects it with the vendor's own button, and a member is
+          // told who does. A vendor this deployment does not offer can be
+          // connected by no one here, so nothing is said of it.
+          let state: React.ReactNode = null;
+          if (connectionId) {
+            state = <Text style={[styles.line, { color: status.ok }]}>{VENDOR_CONNECTED}</Text>;
+          } else if (provider && canManage) {
+            state =
+              brand && provider.authType === 'oauth2' ? (
+                <VendorConnectButton
+                  brand={brand}
+                  testID={`vendor-connect-${connection.providerId}`}
+                  disabled={busy !== null}
+                  onPress={() => connect(provider)}
+                />
+              ) : (
+                <PillButton
+                  testID={`vendor-connect-${connection.providerId}`}
+                  label="Connect"
+                  variant="secondary"
+                  height={40}
+                  fontSize={typeScale.body.fontSize}
+                  disabled={busy !== null}
+                  style={styles.connectPill}
+                  onPress={() => connect(provider)}
+                />
+              );
+          } else if (provider) {
+            state = <Text style={[styles.line, { color: palette.neutral[400] }]}>{VENDOR_ASK_ADMIN}</Text>;
+          }
+          // Connected, an owner or admin can disconnect it, in the vendor's own words.
+          const disconnect =
+            connectionId && canManage && provider ? (
+              <Text
+                testID={`vendor-disconnect-${connection.providerId}`}
+                accessibilityRole="link"
+                suppressHighlighting
+                onPress={pressed(() => setDisconnecting({ provider, connectionId }))}
+                style={[styles.link, { color: palette.accentRamp[300] }]}>
+                {brand?.disconnectLabel ?? 'Disconnect'}
+              </Text>
+            ) : null;
+          const follows = state !== null || disconnect !== null;
           return (
-            <Pressable
+            // Two things for VoiceOver: the radio — the vendor's mark and the
+            // check — and, outside it, what to do about the vendor. A button
+            // inside the radio was one element with it, and could not be
+            // reached (the review of the Invoice Processing screens).
+            <View
               key={connection.providerId}
               testID={`vendor-${connection.providerId}`}
-              accessibilityRole="radio"
-              accessibilityLabel={connection.displayName}
-              accessibilityState={{ selected: chosen, disabled: !connectionId }}
-              onPress={connectionId ? () => choose(connection.providerId) : undefined}
-              style={({ pressed: down }) => [
-                styles.row,
-                { borderBottomWidth: 1, borderBottomColor: palette.divider },
-                down && connectionId ? { opacity: 0.7 } : null,
-              ]}>
-              <View style={styles.rowBody}>
-                <VendorMark icon={provider?.icon} name={connection.displayName} />
-                {connectionId ? (
-                  <Text style={[styles.line, { color: status.ok }]}>{VENDOR_CONNECTED}</Text>
-                ) : canManage && provider ? (
-                  brand ? (
-                    <VendorConnectButton
-                      brand={brand}
-                      testID={`vendor-connect-${connection.providerId}`}
-                      disabled={busy !== null}
-                      onPress={() => connect(provider)}
-                    />
-                  ) : (
-                    <PillButton
-                      testID={`vendor-connect-${connection.providerId}`}
-                      label="Connect"
-                      variant="secondary"
-                      height={40}
-                      fontSize={typeScale.body.fontSize}
-                      disabled={busy !== null}
-                      style={styles.connectPill}
-                      onPress={() => connect(provider)}
-                    />
-                  )
-                ) : (
-                  <Text style={[styles.line, { color: palette.neutral[400] }]}>{VENDOR_ASK_ADMIN}</Text>
-                )}
-                {connectionId && canManage && provider ? (
-                  <Text
-                    testID={`vendor-disconnect-${connection.providerId}`}
-                    accessibilityRole="link"
-                    suppressHighlighting
-                    onPress={pressed(() => setDisconnecting({ provider, connectionId }))}
-                    style={[styles.link, { color: palette.accentRamp[300] }]}>
-                    {brand?.disconnectLabel ?? 'Disconnect'}
-                  </Text>
-                ) : null}
-              </View>
-              {check(chosen)}
-            </Pressable>
+              style={{ borderBottomWidth: 1, borderBottomColor: palette.divider }}>
+              <Pressable
+                testID={`vendor-${connection.providerId}-choice`}
+                accessibilityRole="radio"
+                accessibilityLabel={connection.displayName}
+                accessibilityState={{ selected: chosen, disabled: !connectionId }}
+                onPress={connectionId ? () => choose(connection.providerId) : undefined}
+                style={({ pressed: down }) => [
+                  styles.choice,
+                  follows && styles.choiceFollowed,
+                  down && connectionId ? { opacity: 0.7 } : null,
+                ]}>
+                <View style={styles.mark}>
+                  <VendorMark icon={provider?.icon} name={connection.displayName} />
+                </View>
+                {check(chosen)}
+              </Pressable>
+              {follows ? (
+                <View style={styles.rowActions}>
+                  {state}
+                  {disconnect}
+                </View>
+              ) : null}
+            </View>
           );
         })}
         <Pressable
@@ -340,6 +371,12 @@ const styles = StyleSheet.create({
   // The logo's clear space (Intuit: half its symbol's height; 12 here) on every side.
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16, paddingHorizontal: 14 },
   rowBody: { flex: 1, minWidth: 0, gap: 12, alignItems: 'flex-start' },
+  // A vendor's row: the radio — its padding the press area and the logo's
+  // clear space — then, under it, what to do about the vendor.
+  choice: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16, paddingHorizontal: 14 },
+  choiceFollowed: { paddingBottom: 12 },
+  mark: { flex: 1, minWidth: 0, alignItems: 'flex-start' },
+  rowActions: { paddingHorizontal: 14, paddingBottom: 16, gap: 12, alignItems: 'flex-start' },
   line: { fontFamily: fonts.regular, ...typeScale.small },
   link: { fontFamily: fonts.medium, fontSize: typeScale.body.fontSize },
   connectPill: { paddingHorizontal: 18 },

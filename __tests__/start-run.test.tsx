@@ -355,7 +355,7 @@ describe("the flow page's start controls (25.8.3)", () => {
 /* ───────────────────────────── the form ───────────────────────────── */
 
 describe('the start controls, as the Run dialog was (24.4.1, ADR-0030)', () => {
-  it("say, before a run starts, that it may wait its turn at a busy flow — the website's sentence (backend 25.2.10)", async () => {
+  it('say, before a run starts, what to do in one line: "Fill this in, then start the run." (spec §3.D, the 28-word lead gone)', async () => {
     await renderBox();
     expect(within(screen.getByTestId('start-run')).getByText(LEAD)).toBeTruthy();
   });
@@ -1178,6 +1178,27 @@ describe('the account\'s answer to "AI reads your documents" gates a run with a 
     expect(await within(card).findByText(CARD.failed)).toBeTruthy();
     expect(runsSent()).toEqual([]);
     expect(onStarted).not.toHaveBeenCalled();
+  });
+
+  it('after a failed save, Not now closes the card — nothing saved, nothing started — and the next Start run with the file asks again', async () => {
+    answer(`PUT ${CONSENT_PATH}`, () => {
+      throw new PlatformError('The account service did not answer.', 502);
+    });
+    await renderAiBox([RECEIPT], null);
+    await giveFile();
+    await fireEvent.press(screen.getByText('Start run'));
+    const card = await screen.findByTestId('ai-reading-card');
+    await fireEvent.press(within(card).getByText(CARD.allow));
+    expect(await within(card).findByText(CARD.failed)).toBeTruthy();
+    await fireEvent.press(within(card).getByText(CARD.notNow));
+    await waitFor(() => expect(screen.queryByTestId('ai-reading-card')).toBeNull());
+    expect(choicesSent().map((request) => request.body)).toEqual([{ choice: 'allowed' }]);
+    expect(runsSent()).toEqual([]);
+    expect(screen.queryByTestId('ai-reading-off')).toBeNull();
+    // Still never answered: a run with the file asks first again.
+    await fireEvent.press(screen.getByText('Start run'));
+    expect(await screen.findByTestId('ai-reading-card')).toBeTruthy();
+    expect(runsSent()).toEqual([]);
   });
 
   it.each([

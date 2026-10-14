@@ -212,11 +212,15 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
 
   // CONNECT (spec §3.D): the vendor choice, where the flow has one (backend
   // ADR-0037), then each account it cannot run without that is not connected.
-  // The version it runs says what it holds; the catalog's, absent that.
+  // The version it runs says what it holds; the catalog's, absent that. A
+  // connection is optional only where that version has the choice: a flow on
+  // an older version without it (Invoice Processing v1) still needs QuickBooks,
+  // and says so, rather than Turn on greyed out with no reason (the review of
+  // the Invoice Processing screens).
   const vendorField = connectionField(subscription.setup ?? entry?.setup ?? []);
   const chosen = chosenVendor(vendorField, subscription.config);
   const optional = new Set(
-    (entry?.requiredConnections ?? []).filter((c) => c.optional).map((c) => c.providerId),
+    vendorField ? (entry?.requiredConnections ?? []).filter((c) => c.optional).map((c) => c.providerId) : [],
   );
   const chosenProvider = flows.data.providers.get(chosen);
   const connectRows = {
@@ -233,7 +237,13 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
   };
   const openVendors = () =>
     router.push({ pathname: '/(tabs)/flows/vendor', params: { template: def.templateId, flow: def.key } });
-  const stepRows = flowStepRows(entry?.pipeline, entry?.groups);
+  // STEPS by the catalog's groups only for the version they were declared for;
+  // a flow on another version gets its steps by title, as an ungrouped
+  // manifest draws them (spec §3.D) — never another version's groups.
+  const stepRows = flowStepRows(
+    entry?.pipeline,
+    entry?.version === subscription.templateVersion ? entry.groups : undefined,
+  );
 
   return (
     <ScrollView
@@ -521,10 +531,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 14,
   },
+  // The logo's clear space (Intuit: half its symbol's height; 12 here) to the line under it.
   connectionBody: {
     flex: 1,
     minWidth: 0,
-    gap: 6,
+    gap: 12,
     alignItems: 'flex-start',
   },
   connectionName: {

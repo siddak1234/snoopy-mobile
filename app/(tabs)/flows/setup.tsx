@@ -46,7 +46,7 @@ import {
 import { createSubscription, updateSubscription } from '@/lib/platform/automations';
 import { readCatalog, readConnectionProviders, readConnections } from '@/lib/platform/catalog';
 import { newIdempotencyKey } from '@/lib/platform/client';
-import { PlatformNotConfiguredError } from '@/lib/platform/problem';
+import { PlatformError, PlatformNotConfiguredError } from '@/lib/platform/problem';
 import { readProjects } from '@/lib/platform/projects';
 import { readSubscriptions, readSubscriptionsNow } from '@/lib/platform/runs';
 import { heldAs, scopeLabel, scopeLabels } from '@/lib/view/catalog';
@@ -83,6 +83,11 @@ export default function SetupScreen() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const createKey = useRef(newIdempotencyKey('subscribe'));
+  // An add was sent and no answer came back — offline, or a 5xx: it may have
+  // been made. Try again replays it with the same key, and the platform answers
+  // with the flow it made, rather than this screen refusing a flow it added
+  // itself as "already in this workspace".
+  const addUnanswered = useRef(false);
   const updateKey = useRef(newIdempotencyKey('activate'));
   const hasFocused = useRef(false);
 
@@ -157,16 +162,29 @@ export default function SetupScreen() {
   // one this screen added — held from that moment, a draft still owed an
   // account or one whose activation failed: Setup configures it, where it is.
   const placed = localSubscription ?? resource.data.subscriptions[0];
+  // The catalog's settings — the version Turn on adds, and the one a held flow
+  // on that version runs — but a held flow on another version keeps its own:
+  // the newest version's keys are refused as undeclared (the review of the
+  // Invoice Processing screens).
+  const setup =
+    placed && placed.templateVersion !== entry.version ? (placed.setup ?? entry.setup) : entry.setup;
   // The accounts the flow names. An `optional` one is the flow's to choose, or
-  // not (backend ADR-0037); the rest it cannot run without. A platform from
-  // before the field sent none of it: then nothing is drawn, and the platform
-  // still refuses an activation that lacks an account.
+  // not (backend ADR-0037) — where its version has the choice; the rest it
+  // cannot run without. A platform from before the field sent none of it: then
+  // nothing is drawn, and the platform still refuses an activation that lacks
+  // an account.
+  const vendorField = connectionField(setup);
   const connections = entry.requiredConnections ?? [];
-  const required = connections.filter((connection) => !connection.optional);
-  const vendorField = connectionField(entry.setup);
+  const optional = new Set(
+    vendorField ? connections.filter((connection) => connection.optional).map((c) => c.providerId) : [],
+  );
+  const required = connections.filter((connection) => !optional.has(connection.providerId));
+  // What Connect vendor brought back counts only when it is one of this flow's
+  // choices — None or one of its vendors — never a name a link made up.
+  const brought = vendor && (vendor === 'none' || optional.has(vendor)) ? vendor : undefined;
   // The vendor chosen: what Connect vendor brought back for a flow not added
   // yet, else what the flow holds, else its default — None.
-  const chosen = !placed && vendor ? vendor : chosenVendor(vendorField, placed?.config);
+  const chosen = !placed && brought ? brought : chosenVendor(vendorField, placed?.config);
   const chosenName =
     connections.find((connection) => connection.providerId === chosen)?.displayName ??
     providers.get(chosen)?.displayName ??
@@ -179,7 +197,7 @@ export default function SetupScreen() {
     updateKey.current = newIdempotencyKey('activate');
   };
 
-  const valueOf = (field: (typeof entry.setup)[number]) =>
+  const valueOf = (field: (typeof setup)[number]) =>
     field === vendorField
       ? chosen
       : field.key in config
@@ -201,7 +219,6 @@ export default function SetupScreen() {
     // Every account it cannot run without that is not connected: what the
     // catalog names, and what a flow it holds is still owed — a platform from
     // before `requiredConnections` names none, and the subscription still says.
-    const optional = new Set(connections.filter((connection) => connection.optional).map((c) => c.providerId));
     const owed = new Map(
       required
         .filter((connection) => !connected.has(connection.providerId))
@@ -218,15 +235,15 @@ export default function SetupScreen() {
     }
     // A field this person cleared stays cleared: `??` read a cleared field as
     // untouched and put the default back under their thumb (24.7.3 attempt 2).
-    const configured = Object.fromEntries(entry.setup.map((field) => [field.key, valueOf(field)]));
-    const missing = missingRequiredSetupFields(entry.setup, configured);
+    const configured = Object.fromEntries(setup.map((field) => [field.key, valueOf(field)]));
+    const missing = missingRequiredSetupFields(setup, configured);
     if (missing.length > 0) {
       setActionError(fillIn(missing.map((field) => field.title).join(', ')));
       return;
     }
     // A money field holds a number or nothing can be turned on: an empty amount
     // would silently fall back to the flow's own default.
-    const blankMoney = entry.setup.filter(
+    const blankMoney = setup.filter(
       (field) =>
         field.control === 'money' && (configured[field.key] === undefined || configured[field.key] === ''),
     );
@@ -248,11 +265,15 @@ export default function SetupScreen() {
         // A workspace holds each flow once (the owner's build 12 item 9): a copy
         // another person or screen added since this screen read the flows is
         // refused here, in the website's words, and nothing is sent. Read
-        // afresh: the snapshot's answer can be 15 s old.
-        const { subscriptions } = await readSubscriptionsNow(workspaceId);
-        if (heldAs(entry.templateId, subscriptions).length > 0) {
-          setActionError(ALREADY_IN_WORKSPACE);
-          return;
+        // afresh: the snapshot's answer can be 15 s old. Not after an add that
+        // went unanswered: the copy found may be that add's own, and its replay
+        // (the same key) is what says so.
+        if (!addUnanswered.current) {
+          const { subscriptions } = await readSubscriptionsNow(workspaceId);
+          if (heldAs(entry.templateId, subscriptions).length > 0) {
+            setActionError(ALREADY_IN_WORKSPACE);
+            return;
+          }
         }
         // No team is sent: the platform puts the flow in its category's team
         // (backend ADR-0036) and puts this person on it.
@@ -263,6 +284,7 @@ export default function SetupScreen() {
           createKey.current,
         );
         adding = false;
+        addUnanswered.current = false;
         current = created.subscription;
         setLocalSubscription(current);
         // Spent: a later Turn on here — after this subscription is archived,
@@ -300,6 +322,9 @@ export default function SetupScreen() {
       router.dismissTo('/(tabs)/flows');
       router.push({ pathname: '/(tabs)/flows/detail', params: { flow: updated.subscription.id } });
     } catch (error) {
+      // No answer to the add (offline, a 5xx): Try again replays it. Any other
+      // answer was the platform's word, and the next press checks afresh.
+      if (adding) addUnanswered.current = !(error instanceof PlatformError) || error.status >= 500;
       setActionError(turnOnRefusal(error, adding));
     } finally {
       setBusy(false);
@@ -316,7 +341,7 @@ export default function SetupScreen() {
       },
     });
 
-  const sections = bySection(rowFields(entry.setup));
+  const sections = bySection(rowFields(setup));
 
   return (
     <ScrollView
@@ -456,7 +481,8 @@ const styles = StyleSheet.create({
   subtitle: { marginTop: 1, fontFamily: fonts.regular, fontSize: typeScale.body.fontSize },
   sectionCard: { marginTop: 9 },
   connectionRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 14 },
-  connectionText: { flex: 1, minWidth: 0, gap: 6, alignItems: 'flex-start' },
+  // The logo's clear space (Intuit: half its symbol's height; 12 here) to the line under it.
+  connectionText: { flex: 1, minWidth: 0, gap: 12, alignItems: 'flex-start' },
   connectionLine: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
   connectionState: { fontFamily: fonts.medium, fontSize: typeScale.body.fontSize },
   connectBtn: { borderWidth: 1, borderRadius: 999, paddingVertical: 7, paddingHorizontal: 14 },

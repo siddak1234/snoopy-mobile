@@ -20,8 +20,15 @@ import { websiteOrigin } from '@/lib/platform/native-auth';
  * ADR-0038; the spec's §3.G): Allow or Not now, saved on the account for every
  * workspace and every device. Drawn as the app's other dialogs are; Allow in
  * the accent. "Privacy Policy" opens the website's, which names the providers,
- * where the app knows the website's origin. A save that fails says so and the
- * card stays; `onAnswered` follows a saved answer.
+ * where the app knows the website's origin. `onAnswered` follows a saved
+ * answer.
+ *
+ * A save that fails says so, and the card stays: Allow tries again. Not now
+ * then closes it without saving (`onDismiss`) — the account is still never
+ * asked, so Home asks again next time and a run with a file still asks first.
+ * On iOS this dialog has no back gesture, so without that a save that cannot
+ * land — offline, the account service down, a platform without the route —
+ * held the app behind the card (the review of the Invoice Processing screens).
  */
 export function AiReadingCard({
   onAnswered,
@@ -29,7 +36,7 @@ export function AiReadingCard({
   testID = 'ai-reading-card',
 }: {
   onAnswered?: (choice: AiDocumentReadingChoice) => void;
-  /** Closed without an answer (the system back gesture): nothing is saved. */
+  /** Closed without an answer — Android's back, or Not now after a failed save: nothing is saved. */
   onDismiss?: () => void;
   testID?: string;
 }) {
@@ -41,6 +48,11 @@ export function AiReadingCard({
 
   const answer = async (choice: AiDocumentReadingChoice) => {
     if (busy) return;
+    // After a failed save, Not now leaves the question for later: nothing is sent.
+    if (choice === 'declined' && error !== null && onDismiss) {
+      onDismiss();
+      return;
+    }
     setBusy(choice);
     setError(null);
     try {
@@ -89,8 +101,8 @@ export function AiReadingCard({
 /**
  * The card once, on Home, while the account has never answered
  * (`aiDocumentReading` null) — a new sign-in or an existing account alike. Once
- * answered it is not drawn again; closed with the back gesture, it waits for
- * the next time Home is opened.
+ * answered it is not drawn again; closed without an answer — the back gesture,
+ * or Not now after a failed save — it waits for the next time Home is opened.
  */
 export function AiReadingCardOnce() {
   const { choice, signedIn } = useAiReading();

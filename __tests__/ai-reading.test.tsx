@@ -1,21 +1,25 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react-native';
-import React from 'react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
+import React, { useEffect, useState } from 'react';
 import { Linking } from 'react-native';
 
 import HomeScreen from '@/app/(tabs)/(home)/index';
 import SettingsScreen from '@/app/(tabs)/settings';
+import { StartRun } from '@/components/automations/start-run';
 import { forgetSavedAiReading } from '@/hooks/use-ai-reading';
-import type { SessionContextValue } from '@/hooks/use-session';
+import { SessionContext, type SessionContextValue } from '@/hooks/use-session';
 import { PlatformError } from '@/lib/platform/problem';
 import { resetSnapshot } from '@/lib/platform/snapshot';
 import { resetPushForTests } from '@/hooks/use-push-registration';
-import { routePlatform, sessionAs } from '@/test/platform';
+import { TEST_WORKSPACE, routePlatform, sessionAs } from '@/test/platform';
 import { renderWithProviders } from '@/test/render';
 
 jest.mock('@/lib/platform/client', () => ({
   platformOperation: jest.fn(),
   newIdempotencyKey: jest.fn(() => 'key'),
 }));
+// Start run's file field reads the document picker and the file system; nothing here picks a file.
+jest.mock('expo-document-picker', () => ({ getDocumentAsync: jest.fn() }));
+jest.mock('expo-file-system', () => ({ File: jest.fn(), Paths: { cache: {} } }));
 // The website's origin, for the card's Privacy Policy: the browser leg's base.
 jest.mock('expo-constants', () => ({
   __esModule: true,
@@ -115,6 +119,20 @@ describe('the card on Home, once, while the account has never answered (spec §3
     expect(bodies).toEqual([{ choice: 'allowed' }, { choice: 'allowed' }]);
   });
 
+  it("after a failed save, Not now closes the card and saves nothing — still unasked, Home asks again next time (iOS has no back gesture to close it)", async () => {
+    const bodies = keepChoices(true);
+    const home = await renderWithProviders(<HomeScreen />, answeredAs(null));
+    const card = await screen.findByTestId('ai-reading-card');
+    await fireEvent.press(within(card).getByText('Allow'));
+    expect(await within(card).findByText('Could not save your choice. Try again.')).toBeTruthy();
+    await fireEvent.press(within(card).getByText('Not now'));
+    await waitFor(() => expect(screen.queryByTestId('ai-reading-card')).toBeNull());
+    expect(bodies).toEqual([{ choice: 'allowed' }]);
+    await home.unmount();
+    await renderWithProviders(<HomeScreen />, answeredAs(null));
+    expect(await screen.findByTestId('ai-reading-card')).toBeTruthy();
+  });
+
   it('closed with the back gesture saves nothing, and waits for the next time Home opens', async () => {
     const bodies = keepChoices();
     await renderWithProviders(<HomeScreen />, answeredAs(null));
@@ -167,5 +185,57 @@ describe('the switch in Settings › SECURITY, below Face ID (spec §3.H)', () =
     await waitFor(() => expect(toggle().props.accessibilityState).toMatchObject({ checked: true }));
     expect(bodies).toEqual([{ choice: 'allowed' }, { choice: 'allowed' }]);
     expect(screen.queryByText('Could not save. Try again.')).toBeNull();
+  });
+});
+
+describe('what this app saved stands only until the session is read again (the review of the Invoice Processing screens)', () => {
+  /** The latest read's reload: the next session read, as a return to the app makes one. */
+  let readAgain: () => Promise<unknown> = async () => undefined;
+
+  /** The session as `SessionProvider` holds it: each read a new answer, what the account says then. */
+  function SessionReadAgain({ says, children }: { says: () => 'allowed' | 'declined' | null; children: React.ReactNode }) {
+    const [value, setValue] = useState<SessionContextValue | null>(null);
+    useEffect(() => {
+      const read = async () => {
+        setValue(answeredAs(says(), jest.fn(read)));
+        return { status: 'signed-in' as const };
+      };
+      readAgain = read;
+      void read();
+    }, [says]);
+    return value ? <SessionContext.Provider value={value}>{children}</SessionContext.Provider> : null;
+  }
+
+  it("Allow, then turned off on the website: the next read is the account's word — the switch off, and Start run says AI reading is off", async () => {
+    const bodies = keepChoices() as { choice: 'allowed' | 'declined' }[];
+    let website: 'declined' | undefined;
+    // The account says what was saved last, until the website changes it.
+    const says = () => website ?? bodies.at(-1)?.choice ?? null;
+    await renderWithProviders(
+      <SessionReadAgain says={says}>
+        <SettingsScreen />
+        <StartRun
+          subscriptionId="sub-1"
+          shownWorkspaceId={TEST_WORKSPACE}
+          runInput={[{ key: 'invoiceFile', title: 'Document', description: 'A PDF or photo.', control: 'artifact', required: false }]}
+          usesAi
+          onStarted={() => {}}
+        />
+      </SessionReadAgain>,
+      answeredAs(null),
+    );
+    const toggle = () => within(screen.getByTestId('settings-ai-reading')).getByRole('switch');
+    await screen.findByTestId('settings-ai-reading');
+    await fireEvent.press(toggle());
+    await waitFor(() => expect(toggle().props.accessibilityState).toMatchObject({ checked: true }));
+    expect(bodies).toEqual([{ choice: 'allowed' }]);
+    expect(screen.queryByTestId('ai-reading-off')).toBeNull();
+
+    // Turned off on the website; this phone reads the session again.
+    website = 'declined';
+    await act(() => readAgain());
+    await waitFor(() => expect(toggle().props.accessibilityState).toMatchObject({ checked: false }));
+    expect(within(screen.getByTestId('ai-reading-off')).getByText('AI reading is off.')).toBeTruthy();
+    expect(bodies).toHaveLength(1);
   });
 });

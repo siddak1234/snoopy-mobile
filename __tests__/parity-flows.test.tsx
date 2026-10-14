@@ -6,6 +6,7 @@ import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import SetupScreen from '@/app/(tabs)/flows/setup';
 import type { SetupField } from '@/components/setup-field';
 import type { Subscription } from '@/lib/platform/automations';
+import { PlatformError, PlatformUnreachableError } from '@/lib/platform/problem';
 import { catalogPrice, toSolution } from '@/lib/view/catalog';
 import { fakePlatform } from '@/test/fake-platform';
 import {
@@ -170,6 +171,44 @@ describe('G10 — Turn on reads the workspace’s flows again before it adds one
     expect(fake.to(CREATE).map((sent) => sent.body)).toEqual([{ templateId: 'tpl.0', templateVersion: 1 }]);
     expect(fake.to(SAVE)).toHaveLength(1);
     expect(screen.queryByText('This flow is already in this workspace.')).toBeNull();
+  });
+
+  it('an add whose answer was lost: Try again replays it with the same key — never "already in this workspace" for its own copy — then turns it on', async () => {
+    const fake = routeSetupReads();
+    fake.always(SUBSCRIPTIONS, { subscriptions: [] });
+    const made: Subscription = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'made-here', status: 'draft', projectId: 'project-1' };
+    // The add commits, and its answer never arrives: the next read lists the flow.
+    fake.once(CREATE, () => {
+      fake.always(SUBSCRIPTIONS, { subscriptions: [made] });
+      throw new PlatformUnreachableError();
+    });
+    await activateInFinance();
+    expect(await screen.findByText('Could not add this flow. Try again.')).toBeTruthy();
+
+    await fireEvent.press(screen.getByText('Try again'));
+    await waitFor(() =>
+      expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'made-here' } }),
+    );
+    const adds = fake.to(CREATE);
+    expect(adds).toHaveLength(2);
+    expect(adds[1]!.key).toBe(adds[0]!.key);
+    expect(fake.to(SAVE)).toHaveLength(1);
+    expect(screen.queryByText('This flow is already in this workspace.')).toBeNull();
+  });
+
+  it('an add the platform refused in words is not replayed: the next press reads the flows afresh again', async () => {
+    const fake = routeSetupReads();
+    fake.always(SUBSCRIPTIONS, { subscriptions: [] });
+    fake.once(CREATE, () => {
+      throw new PlatformError('Not found', 404);
+    });
+    await activateInFinance();
+    expect(await screen.findByText('Could not add this flow. Try again.')).toBeTruthy();
+    const elsewhere: Subscription = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'added-elsewhere', projectId: 'project-2', status: 'draft' };
+    fake.always(SUBSCRIPTIONS, { subscriptions: [elsewhere] });
+    await fireEvent.press(screen.getByText('Try again'));
+    expect(await screen.findByText('This flow is already in this workspace.')).toBeTruthy();
+    expect(fake.to(CREATE)).toHaveLength(1);
   });
 
   it('an archived copy holds nothing: the flow is added again', async () => {

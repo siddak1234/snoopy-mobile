@@ -413,8 +413,11 @@ type ReportedStep = {
  * Received · Read · Checked · Done · Emailed) is drawn one row per group that
  * has a reported step, in the groups' order: the group's title, the latest
  * reported step's summary in it, its outcome's icon and its time — a held one
- * with its reason. **Without groups**, each reported step, titled from the
- * pipeline (`stepId` is "always a step the pinned manifest declares"). Either
+ * with its reason; a reported step no group holds follows them, by its title,
+ * never dropped. The caller passes the catalog's groups only for a run of the
+ * version they were declared for. **Without groups**, each reported step,
+ * titled from the pipeline (`stepId` is "always a step the pinned manifest
+ * declares"). Either
  * way: **no row for a step that did not run** — ~~"Not run"~~ and the pending
  * rows of every declared step are gone — **never a step id**, and while the run
  * is still going, a last row "Working…".
@@ -443,23 +446,31 @@ export function toProgress(
     time: clock(step.occurredAt),
   });
 
+  const stepRow = (step: ReportedStep): TimelineRowView => {
+    const title = titles.get(step.stepId)?.title;
+    // A step the manifest does not name is titled by what it said, never by its id.
+    return title ? row(`reported:${step.stepId}`, title, step) : { ...row(`reported:${step.stepId}`, step.summary, step), sub: '' };
+  };
+
   let rows: TimelineRowView[];
   if (groups && groups.length > 0) {
     const latest = new Map<string, ReportedStep>();
+    const ungrouped: ReportedStep[] = [];
     for (const step of ordered) {
       const group = titles.get(step.stepId)?.group;
-      if (group) latest.set(group, step);
+      if (group && groups.some((candidate) => candidate.id === group)) latest.set(group, step);
+      else ungrouped.push(step);
     }
     rows = groups.flatMap((group) => {
       const step = latest.get(group.id);
       return step ? [row(`group:${group.id}`, group.title, step)] : [];
     });
+    // A reported step the groups do not hold is still drawn after them, never
+    // dropped — as the website draws it (the review of the Invoice Processing
+    // screens).
+    rows.push(...ungrouped.map(stepRow));
   } else {
-    rows = ordered.map((step) => {
-      const title = titles.get(step.stepId)?.title;
-      // A step the manifest does not name is titled by what it said, never by its id.
-      return title ? row(`reported:${step.stepId}`, title, step) : { ...row(`reported:${step.stepId}`, step.summary, step), sub: '' };
-    });
+    rows = ordered.map(stepRow);
   }
   if (going) rows.push({ id: 'working', icon: CircleDashed, tone: 'pending', title: RUN_WORKING, sub: '' });
   return rows;

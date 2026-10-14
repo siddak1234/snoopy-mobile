@@ -1,15 +1,18 @@
-import { fireEvent, screen, within } from '@testing-library/react-native';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import React from 'react';
+import { StyleSheet } from 'react-native';
 
 import RunDetailScreen from '@/app/(tabs)/(home)/run';
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
+import SetupScreen from '@/app/(tabs)/flows/setup';
 import type { Subscription } from '@/lib/platform/automations';
+import { readProjects, type Project } from '@/lib/platform/projects';
 import { resetSnapshot } from '@/lib/platform/snapshot';
 import { flowStepRows } from '@/lib/view/pipeline';
 import { toProgress, toRunStats } from '@/lib/view/runs';
 import { toFlows } from '@/lib/view/catalog';
 import { resetPushForTests } from '@/hooks/use-push-registration';
-import type { Answer } from '@/test/fake-platform';
+import { fakePlatform, type Answer } from '@/test/fake-platform';
 import {
   QUICKBOOKS_PROVIDER,
   TEST_WORKSPACE,
@@ -57,6 +60,18 @@ function added(config: Record<string, unknown>, unmet: string[] = []): Subscript
     setup: invoiceProcessingEntry().setup,
     runInput: [{ key: 'invoiceFile', title: 'Document', description: 'A PDF or photo of a bill or receipt.', control: 'artifact', required: false }],
     projectId: 'project-1',
+  };
+}
+
+/** Invoice Processing v1 as a workspace still holds it: QuickBooks required, its own settings, no vendor choice. */
+function heldV1(unmet: string[]): Subscription {
+  return {
+    ...added({ holdAboveAmount: 500, expenseAccount: 'Office' }, unmet),
+    templateVersion: 1,
+    setup: [
+      { section: 'rules', key: 'holdAboveAmount', title: 'Hold above', description: 'Larger ones wait.', control: 'money', defaultValue: 500, required: false },
+      { section: 'rules', key: 'expenseAccount', title: 'Default category', description: 'Where costs go.', control: 'text', required: true },
+    ],
   };
 }
 
@@ -138,6 +153,135 @@ describe("the flow page (spec §3.D)", () => {
     expect(await screen.findByText('Turn on')).toBeTruthy();
     expect(screen.queryByText('Go live')).toBeNull();
     expect(screen.queryByText('Resume')).toBeNull();
+  });
+
+  it("CONNECT keeps the logo's clear space — 12 pt — to the line under it", async () => {
+    await openFlow(added({ vendor: 'quickbooks' }, ['quickbooks']));
+    const vendor = await screen.findByTestId('flow-vendor');
+    expect(StyleSheet.flatten(within(vendor).getByText('Not connected').parent!.props.style)).toMatchObject({ gap: 12 });
+  });
+});
+
+describe('a flow on an older version (Invoice Processing v1, held until the owner retires it; the review of the Invoice Processing screens)', () => {
+  it('still needs QuickBooks — its version has no vendor choice — and says so, where Turn on would otherwise be greyed out with no reason', async () => {
+    await openFlow({ ...heldV1(['quickbooks']), status: 'paused' });
+    const connect = await screen.findByTestId('flow-connect');
+    expect(within(connect).queryByTestId('flow-vendor')).toBeNull();
+    expect(within(connect).getByLabelText('QuickBooks')).toBeTruthy();
+    expect(within(connect).getByText('Not connected')).toBeTruthy();
+    expect(screen.getByTestId('flow-owed').props.children).toBe('Connect QuickBooks Online first.');
+  });
+
+  it("STEPS: its steps by title, as an ungrouped manifest draws them — never another version's groups", async () => {
+    await openFlow(heldV1([]));
+    const steps = await screen.findByTestId('flow-steps');
+    expect(within(steps).getByText('1 · Document received')).toBeTruthy();
+    expect(within(steps).queryByText('1 · Received')).toBeNull();
+  });
+});
+
+describe("Turn on, the first add of a category's flow (U2; the review of the Invoice Processing screens)", () => {
+  const ACCOUNTING: Project = {
+    id: 'project-1',
+    workspaceId: TEST_WORKSPACE,
+    name: 'Accounting',
+    type: 'Accounting',
+    status: 'active',
+    viewerRole: 'member',
+    createdAt: '2026-10-14T20:00:00Z',
+  };
+
+  it('reads the teams again once the add made the team: the flow page says "Team: Accounting", never "a team", and the teams list holds it', async () => {
+    const fake = fakePlatform(platformOperation);
+    // Before the add the workspace has no Accounting team: the platform makes it,
+    // and puts this person on it, with the add (backend ADR-0036).
+    let teams: Project[] = [];
+    let held: Subscription[] = [];
+    const draft: Subscription = { ...added({ vendor: 'none' }), status: 'draft' };
+    fake.always('GET /v1/workspaces/{workspaceId}/automations', { automations: [invoiceProcessingEntry()], categories: ['All', 'Accounting'] });
+    fake.always('GET /v1/connections/providers', providersWithQuickBooks());
+    fake.always('GET /v1/workspaces/{workspaceId}/connections', { connections: [] });
+    fake.always('GET /v1/workspaces/{workspaceId}/run-stats', {
+      workspace: { total: 0, pending: 0, running: 0, held: 0, succeeded: 0, failed: 0, cancelled: 0 },
+      subscriptions: [],
+    });
+    fake.always('GET /v1/workspaces/{workspaceId}/projects', () => ({ projects: teams }));
+    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', () => ({ subscriptions: held }));
+    fake.always('POST /v1/workspaces/{workspaceId}/subscriptions', () => {
+      teams = [ACCOUNTING];
+      held = [draft];
+      return { subscription: draft };
+    });
+    fake.always('PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}', () => {
+      held = [{ ...draft, status: 'live' }];
+      return { subscription: held[0]! };
+    });
+
+    setMockParams({ template: 'invoice-processing' });
+    const setup = await renderWithProviders(<SetupScreen />, signedInSession);
+    await fireEvent.press(await screen.findByText('Turn on'));
+    await waitFor(() =>
+      expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'ip-1' } }),
+    );
+    await setup.unmount();
+
+    setMockParams({ flow: 'ip-1' });
+    await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
+    expect((await screen.findByTestId('flow-team')).props.children).toBe('Team: Accounting');
+    // Home's teams, the team picker and the Flows cards read the same list.
+    await expect(readProjects(TEST_WORKSPACE)).resolves.toEqual([ACCOUNTING]);
+    expect(fake.to('GET /v1/workspaces/{workspaceId}/projects')).toHaveLength(2);
+  });
+});
+
+describe('Set up for a flow the workspace holds on an older version (the review of the Invoice Processing screens)', () => {
+  it("draws and sends that version's own settings — no vendor key, which it would refuse — and the QuickBooks it needs", async () => {
+    const fake = fakePlatform(platformOperation);
+    const v1 = { ...heldV1([]), status: 'paused' as const };
+    fake.always('GET /v1/workspaces/{workspaceId}/automations', { automations: [invoiceProcessingEntry()], categories: ['All', 'Accounting'] });
+    fake.always('GET /v1/connections/providers', providersWithQuickBooks());
+    fake.always('GET /v1/workspaces/{workspaceId}/connections', {
+      connections: [
+        {
+          id: 'c-qb',
+          providerId: 'quickbooks',
+          workspaceId: TEST_WORKSPACE,
+          externalAccount: { id: 'realm-1', displayName: 'Acme Books' },
+          status: 'connected',
+          requiredScopes: [],
+          grantedScopes: [],
+          usedByCount: 1,
+        },
+      ],
+    });
+    fake.always('GET /v1/workspaces/{workspaceId}/projects', { projects: [] });
+    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', { subscriptions: [v1] });
+    fake.always('PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}', { subscription: { ...v1, status: 'live' } });
+    setMockParams({ template: 'invoice-processing' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    expect(await screen.findByText('Default category')).toBeTruthy();
+    expect(screen.queryByTestId('setup-vendor')).toBeNull();
+    expect(screen.getByText('Connected ✓')).toBeTruthy();
+    expect(screen.queryByText('Approval limit')).toBeNull();
+    await fireEvent.press(screen.getByText('Turn on'));
+    await waitFor(() => expect(fake.to('PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}')).toHaveLength(1));
+    const { config } = fake.to('PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}')[0]!.body as { config: Record<string, unknown> };
+    expect(config).toEqual({ holdAboveAmount: 500, expenseAccount: 'Office' });
+    expect(Object.keys(config)).not.toContain('vendor');
+    expect(fake.to('POST /v1/workspaces/{workspaceId}/subscriptions')).toEqual([]);
+  });
+
+  it("CONNECT keeps the logo's clear space — 12 pt — to the line under it", async () => {
+    const fake = fakePlatform(platformOperation);
+    fake.always('GET /v1/workspaces/{workspaceId}/automations', { automations: [invoiceProcessingEntry()], categories: ['All', 'Accounting'] });
+    fake.always('GET /v1/connections/providers', providersWithQuickBooks());
+    fake.always('GET /v1/workspaces/{workspaceId}/connections', { connections: [] });
+    fake.always('GET /v1/workspaces/{workspaceId}/projects', { projects: [] });
+    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', { subscriptions: [] });
+    setMockParams({ template: 'invoice-processing', vendor: 'quickbooks' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    const vendor = await screen.findByTestId('setup-vendor');
+    expect(StyleSheet.flatten(within(vendor).getByText('Not connected').parent!.props.style)).toMatchObject({ gap: 12 });
   });
 });
 
@@ -296,6 +440,34 @@ describe("a run's page (spec §3.E)", () => {
     expect(within(screen.getByText('Steps done').parent!).getByText('1 / 1')).toBeTruthy();
   });
 
+  it("a run of an older version is drawn step by step — never another version's groups — and a step the newest version does not name is drawn by what it said", async () => {
+    await openRun(
+      ipRun(
+        'succeeded',
+        [
+          ['receive', 'ok', 'Photo', 0],
+          ['find-payer', 'ok', 'Paid with the company card', 1],
+          ['extract', 'ok', 'Read: receipt from Blue Bottle, $14.50', 2],
+        ],
+        {},
+        { templateVersion: 1 },
+      ),
+    );
+    const progress = await screen.findByTestId('run-progress');
+    expect(within(progress).getByText('Document received')).toBeTruthy();
+    expect(within(progress).getByText('Paid with the company card')).toBeTruthy();
+    expect(within(progress).getByText('Document read')).toBeTruthy();
+    expect(within(progress).queryByText('Received')).toBeNull();
+    expect(within(progress).queryByText('find-payer')).toBeNull();
+    expect(within(screen.getByText('Steps done').parent!).getByText('3 / 3')).toBeTruthy();
+  });
+
+  it('names its flow, as the website does — no version beside it', async () => {
+    await openRun(ipRun('succeeded', NONE_PATH));
+    expect(await screen.findByText('Invoice Processing')).toBeTruthy();
+    expect(screen.queryByText(/ · v\d+/u)).toBeNull();
+  });
+
   it("DETAILS: what the run saved, label and value, in the automation's order — and no section when it saved none", async () => {
     const view = await openRun(
       ipRun('succeeded', NONE_PATH, {
@@ -368,6 +540,23 @@ describe('the progress view (lib/view/runs.ts)', () => {
       ['Working…', ''],
     ]);
     expect(rows.some((row) => row.title === 'mystery-step')).toBe(false);
+  });
+
+  it('never drops a reported step the groups do not hold: it follows the groups, by its title or what it said', () => {
+    const rows = toProgress(
+      steps([
+        ['receive', 'ok', 'Photo', 0],
+        ['mystery-step', 'failed', 'Could not look it up', 1],
+      ]),
+      entry.pipeline,
+      entry.groups,
+      clock,
+      'failed',
+    );
+    expect(rows.map((row) => [row.title, row.sub])).toEqual([
+      ['Received', 'Photo'],
+      ['Could not look it up', ''],
+    ]);
   });
 
   it('counts the rows done over the rows shown, Working… not among them; none shown is the em dash', () => {

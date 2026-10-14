@@ -45,12 +45,9 @@ exports[`the marks — dark palette (snapshot-pinned, spec §4.3) Intuit's Conne
     onResponderTerminationRequest={[Function]}
     onStartShouldSetResponder={[Function]}
     style={
-      [
-        {
-          "alignSelf": "flex-start",
-        },
-        undefined,
-      ]
+      {
+        "alignSelf": "flex-start",
+      }
     }
     testID="connect"
   >
@@ -379,12 +376,9 @@ exports[`the marks — light palette (snapshot-pinned, spec §4.3) Intuit's Conn
     onResponderTerminationRequest={[Function]}
     onStartShouldSetResponder={[Function]}
     style={
-      [
-        {
-          "alignSelf": "flex-start",
-        },
-        undefined,
-      ]
+      {
+        "alignSelf": "flex-start",
+      }
     }
     testID="connect"
   >
