@@ -1,3 +1,4 @@
+import { SETUP_ADD_FAILED, SETUP_TURN_ON_FAILED } from '@/lib/content/screen-states';
 import { PlatformError, PlatformRateLimitedError } from '@/lib/platform/problem';
 
 /**
@@ -22,12 +23,13 @@ export const CONNECTIONS_MANAGED_BY =
   'Only an owner or admin of this workspace can connect or disconnect an account.';
 
 /**
- * The rest of the website's Connections page (`ConnectionsPanel.tsx`): under
- * the providers, which ones are listed; a connection with an `errorCode`; and a
- * pasted key answered 409 — the key reused with other values, or its first
- * request still verifying — where retrying with the same key is the way on.
+ * The rest of the website's Connections page (`ConnectionsPanel.tsx`): a
+ * connection with an `errorCode`; and a pasted key answered 409 — the key
+ * reused with other values, or its first request still verifying — where
+ * retrying with the same key is the way on. (~~"Only providers configured for
+ * this deployment are shown."~~ — gone from both clients with the Invoice
+ * Processing update, spec §3.I.)
  */
-export const PROVIDERS_CONFIGURED = 'Only providers configured for this deployment are shown.';
 export const CONNECTION_NEEDS_ATTENTION = 'This connection needs attention before it can be used.';
 export const KEY_REQUEST_IN_PROGRESS =
   'This request may still be in progress. Retry with the same details or refresh the connection list; a new connection request was not created.';
@@ -110,18 +112,6 @@ export function unlinkRefusal(error: unknown): string {
 }
 
 /**
- * Creating a team (24.12): one team of each kind in a workspace (409, reason
- * `team_kind_taken`), and in an organization only its owners and admins (403).
- */
-export function teamCreateRefusal(error: unknown, kind: string): string {
-  if (error instanceof PlatformError && error.status === 409 && error.details?.reason === 'team_kind_taken') {
-    return `This workspace already has a team for ${kind}.`;
-  }
-  if (error instanceof PlatformError && error.status === 403) return 'Only an owner or admin can create a team here.';
-  return refusalMessage(error, {}, 'The team could not be created.');
-}
-
-/**
  * Adding an automation: the two reasons the subscription operation allowlists,
  * and only on a 403 — every other 403 is authorization, not a pricing signal
  * (`snoopy/lib/subscription-entitlements.ts`).
@@ -184,7 +174,7 @@ export const FLOW_QUEUE_FULL =
 export const UPLOAD_REFUSALS: Readonly<Record<string, string>> = {
   content_type_not_accepted: 'This flow does not accept that type of file.',
   file_too_large: 'The file is larger than this flow accepts.',
-  subscription_not_live: 'Go live first; a paused flow takes no files.',
+  subscription_not_live: 'Turn it on first; a paused flow takes no files.',
   no_file_input: 'This flow does not take a file.',
   session_expired: 'The upload took too long. Choose the file again.',
   no_object: 'The file did not arrive. Choose it again.',
@@ -241,6 +231,29 @@ export const ALREADY_IN_WORKSPACE = 'This flow is already in this workspace.';
 export function addRefusalMessage(error: unknown, fallback: string): string {
   const pricing = error instanceof PlatformError && error.status === 403 ? SUBSCRIPTION_REFUSALS : {};
   return refusalMessage(error, pricing, fallback);
+}
+
+/**
+ * Set up's Turn on, refused (the Invoice Processing update, spec §3.B): the
+ * plan's own words where the platform names a plan reason; an add it could not
+ * make — the workspace or the flow's team not found (404), or the team service
+ * not answering (502) — "Could not add this flow. Try again."; anything else
+ * "Could not turn it on. Try again." Plain words, never the platform's own
+ * sentence (the owner's build 19 item 8).
+ */
+export function turnOnRefusal(error: unknown, adding: boolean): string {
+  if (error instanceof PlatformError) {
+    const reason = error.details?.reason;
+    if (
+      error.status === 403 &&
+      typeof reason === 'string' &&
+      Object.prototype.hasOwnProperty.call(SUBSCRIPTION_REFUSALS, reason)
+    ) {
+      return SUBSCRIPTION_REFUSALS[reason]!;
+    }
+    if (adding && (error.status === 404 || error.status === 502)) return SETUP_ADD_FAILED;
+  }
+  return SETUP_TURN_ON_FAILED;
 }
 
 /**

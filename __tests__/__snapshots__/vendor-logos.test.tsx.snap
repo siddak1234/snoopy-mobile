@@ -1,0 +1,663 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`the marks — dark palette (snapshot-pinned, spec §4.3) Intuit's Connect button: its own image, at its size, read aloud as its words; a press runs it 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    accessibilityLabel="Connect to QuickBooks"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": false,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      {
+        "alignSelf": "flex-start",
+      }
+    }
+    testID="connect"
+  >
+    <Image
+      resizeMode="contain"
+      source={
+        {
+          "testUri": "../../../assets/vendors/connect-to-quickbooks.png",
+        }
+      }
+      style={
+        {
+          "height": 48,
+          "width": 274,
+        }
+      }
+      testID="connect-image"
+    />
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`the marks — dark palette (snapshot-pinned, spec §4.3) a vendor with no logo bundled: its icon at 24 and its name; None: the prohibit sign and None 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "alignItems": "center",
+        "flexDirection": "row",
+        "flexShrink": 1,
+        "gap": 12,
+      }
+    }
+  >
+    <RNSVGSvgView
+      align="xMidYMid"
+      bbHeight={24}
+      bbWidth={24}
+      className="circle-dashed-undefined__svg-icon-phosphor"
+      color="#d2cefd"
+      fill="currentColor"
+      focusable={false}
+      height={24}
+      meetOrSlice={0}
+      minX={0}
+      minY={0}
+      style={
+        [
+          {
+            "backgroundColor": "transparent",
+            "borderWidth": 0,
+          },
+          [
+            undefined,
+            undefined,
+            {},
+          ],
+          {
+            "flex": 0,
+            "height": 24,
+            "width": 24,
+          },
+        ]
+      }
+      testID="phosphor-react-native-circle-dashed-undefined"
+      vbHeight={256}
+      vbWidth={256}
+      width={24}
+    >
+      <RNSVGGroup
+        fill={
+          {
+            "type": 2,
+          }
+        }
+        propList={
+          [
+            "fill",
+          ]
+        }
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4292005629,
+              "type": 0,
+            }
+          }
+          propList={
+            [
+              "fill",
+            ]
+          }
+        >
+          <RNSVGPath
+            d="M96.26 37.05a8 8 0 0 1 5.74-9.76 104.1 104.1 0 0 1 52 0 8 8 0 0 1-2 15.75 8.2 8.2 0 0 1-2-.26 88.1 88.1 0 0 0-44 0 8 8 0 0 1-9.74-5.73M53.79 55.14a104.05 104.05 0 0 0-26 45 8 8 0 0 0 15.42 4.27 88 88 0 0 1 22-38.09 8 8 0 0 0-11.42-11.18m-10.58 96.41a8 8 0 1 0-15.42 4.28 104.1 104.1 0 0 0 26 45 8 8 0 0 0 11.41-11.22 88.14 88.14 0 0 1-21.99-38.06M150 213.22a88 88 0 0 1-44 0 8 8 0 1 0-4 15.49 104.1 104.1 0 0 0 52 0 8 8 0 0 0-4-15.49M222.65 146a8 8 0 0 0-9.85 5.58 87.9 87.9 0 0 1-22 38.08 8 8 0 1 0 11.42 11.21 104 104 0 0 0 26-45 8 8 0 0 0-5.57-9.87m-9.86-41.54a8 8 0 0 0 15.42-4.28 104 104 0 0 0-26-45A8 8 0 1 0 190.8 66.4a88 88 0 0 1 21.99 38.05Z"
+            fill={
+              {
+                "payload": 4278190080,
+                "type": 0,
+              }
+            }
+          />
+        </RNSVGGroup>
+      </RNSVGGroup>
+    </RNSVGSvgView>
+    <Text
+      style={
+        [
+          {
+            "flexShrink": 1,
+            "fontFamily": "Inter_500Medium",
+            "fontSize": 16,
+          },
+          {
+            "color": "#e9e9ed",
+          },
+        ]
+      }
+    >
+      Gmail
+    </Text>
+  </View>
+  <Image
+    accessibilityLabel="QuickBooks"
+    accessibilityRole="image"
+    resizeMode="contain"
+    source={
+      {
+        "testUri": "../../../assets/vendors/quickbooks-logo-reversed.png",
+      }
+    }
+    style={
+      {
+        "height": 24,
+        "width": 93.8,
+      }
+    }
+  />
+  <View
+    style={
+      {
+        "alignItems": "center",
+        "flexDirection": "row",
+        "flexShrink": 1,
+        "gap": 12,
+      }
+    }
+  >
+    <RNSVGSvgView
+      align="xMidYMid"
+      bbHeight={24}
+      bbWidth={24}
+      className="prohibit-undefined__svg-icon-phosphor"
+      color="#d2cefd"
+      fill="currentColor"
+      focusable={false}
+      height={24}
+      meetOrSlice={0}
+      minX={0}
+      minY={0}
+      style={
+        [
+          {
+            "backgroundColor": "transparent",
+            "borderWidth": 0,
+          },
+          [
+            undefined,
+            undefined,
+            {},
+          ],
+          {
+            "flex": 0,
+            "height": 24,
+            "width": 24,
+          },
+        ]
+      }
+      testID="phosphor-react-native-prohibit-undefined"
+      vbHeight={256}
+      vbWidth={256}
+      width={24}
+    >
+      <RNSVGGroup
+        fill={
+          {
+            "type": 2,
+          }
+        }
+        propList={
+          [
+            "fill",
+          ]
+        }
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4292005629,
+              "type": 0,
+            }
+          }
+          propList={
+            [
+              "fill",
+            ]
+          }
+        >
+          <RNSVGPath
+            d="M128 24a104 104 0 1 0 104 104A104.11 104.11 0 0 0 128 24m88 104a87.56 87.56 0 0 1-20.41 56.28L71.72 60.4A88 88 0 0 1 216 128m-176 0a87.56 87.56 0 0 1 20.41-56.28L184.28 195.6A88 88 0 0 1 40 128"
+            fill={
+              {
+                "payload": 4278190080,
+                "type": 0,
+              }
+            }
+          />
+        </RNSVGGroup>
+      </RNSVGGroup>
+    </RNSVGSvgView>
+    <Text
+      style={
+        [
+          {
+            "flexShrink": 1,
+            "fontFamily": "Inter_500Medium",
+            "fontSize": 16,
+          },
+          {
+            "color": "#e9e9ed",
+          },
+        ]
+      }
+    >
+      None
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`the marks — dark palette (snapshot-pinned, spec §4.3) the logo: 24 pt tall, in proportion, on no tile — the reversed one on dark, the preferred one on light 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <Image
+    accessibilityLabel="QuickBooks"
+    accessibilityRole="image"
+    resizeMode="contain"
+    source={
+      {
+        "testUri": "../../../assets/vendors/quickbooks-logo-reversed.png",
+      }
+    }
+    style={
+      {
+        "height": 24,
+        "width": 93.8,
+      }
+    }
+    testID="logo"
+  />
+</RNCSafeAreaProvider>
+`;
+
+exports[`the marks — light palette (snapshot-pinned, spec §4.3) Intuit's Connect button: its own image, at its size, read aloud as its words; a press runs it 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    accessibilityLabel="Connect to QuickBooks"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": false,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      {
+        "alignSelf": "flex-start",
+      }
+    }
+    testID="connect"
+  >
+    <Image
+      resizeMode="contain"
+      source={
+        {
+          "testUri": "../../../assets/vendors/connect-to-quickbooks.png",
+        }
+      }
+      style={
+        {
+          "height": 48,
+          "width": 274,
+        }
+      }
+      testID="connect-image"
+    />
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`the marks — light palette (snapshot-pinned, spec §4.3) a vendor with no logo bundled: its icon at 24 and its name; None: the prohibit sign and None 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "alignItems": "center",
+        "flexDirection": "row",
+        "flexShrink": 1,
+        "gap": 12,
+      }
+    }
+  >
+    <RNSVGSvgView
+      align="xMidYMid"
+      bbHeight={24}
+      bbWidth={24}
+      className="circle-dashed-undefined__svg-icon-phosphor"
+      color="#5548ab"
+      fill="currentColor"
+      focusable={false}
+      height={24}
+      meetOrSlice={0}
+      minX={0}
+      minY={0}
+      style={
+        [
+          {
+            "backgroundColor": "transparent",
+            "borderWidth": 0,
+          },
+          [
+            undefined,
+            undefined,
+            {},
+          ],
+          {
+            "flex": 0,
+            "height": 24,
+            "width": 24,
+          },
+        ]
+      }
+      testID="phosphor-react-native-circle-dashed-undefined"
+      vbHeight={256}
+      vbWidth={256}
+      width={24}
+    >
+      <RNSVGGroup
+        fill={
+          {
+            "type": 2,
+          }
+        }
+        propList={
+          [
+            "fill",
+          ]
+        }
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4283779243,
+              "type": 0,
+            }
+          }
+          propList={
+            [
+              "fill",
+            ]
+          }
+        >
+          <RNSVGPath
+            d="M96.26 37.05a8 8 0 0 1 5.74-9.76 104.1 104.1 0 0 1 52 0 8 8 0 0 1-2 15.75 8.2 8.2 0 0 1-2-.26 88.1 88.1 0 0 0-44 0 8 8 0 0 1-9.74-5.73M53.79 55.14a104.05 104.05 0 0 0-26 45 8 8 0 0 0 15.42 4.27 88 88 0 0 1 22-38.09 8 8 0 0 0-11.42-11.18m-10.58 96.41a8 8 0 1 0-15.42 4.28 104.1 104.1 0 0 0 26 45 8 8 0 0 0 11.41-11.22 88.14 88.14 0 0 1-21.99-38.06M150 213.22a88 88 0 0 1-44 0 8 8 0 1 0-4 15.49 104.1 104.1 0 0 0 52 0 8 8 0 0 0-4-15.49M222.65 146a8 8 0 0 0-9.85 5.58 87.9 87.9 0 0 1-22 38.08 8 8 0 1 0 11.42 11.21 104 104 0 0 0 26-45 8 8 0 0 0-5.57-9.87m-9.86-41.54a8 8 0 0 0 15.42-4.28 104 104 0 0 0-26-45A8 8 0 1 0 190.8 66.4a88 88 0 0 1 21.99 38.05Z"
+            fill={
+              {
+                "payload": 4278190080,
+                "type": 0,
+              }
+            }
+          />
+        </RNSVGGroup>
+      </RNSVGGroup>
+    </RNSVGSvgView>
+    <Text
+      style={
+        [
+          {
+            "flexShrink": 1,
+            "fontFamily": "Inter_500Medium",
+            "fontSize": 16,
+          },
+          {
+            "color": "#20222f",
+          },
+        ]
+      }
+    >
+      Gmail
+    </Text>
+  </View>
+  <Image
+    accessibilityLabel="QuickBooks"
+    accessibilityRole="image"
+    resizeMode="contain"
+    source={
+      {
+        "testUri": "../../../assets/vendors/quickbooks-logo.png",
+      }
+    }
+    style={
+      {
+        "height": 24,
+        "width": 93.8,
+      }
+    }
+  />
+  <View
+    style={
+      {
+        "alignItems": "center",
+        "flexDirection": "row",
+        "flexShrink": 1,
+        "gap": 12,
+      }
+    }
+  >
+    <RNSVGSvgView
+      align="xMidYMid"
+      bbHeight={24}
+      bbWidth={24}
+      className="prohibit-undefined__svg-icon-phosphor"
+      color="#5548ab"
+      fill="currentColor"
+      focusable={false}
+      height={24}
+      meetOrSlice={0}
+      minX={0}
+      minY={0}
+      style={
+        [
+          {
+            "backgroundColor": "transparent",
+            "borderWidth": 0,
+          },
+          [
+            undefined,
+            undefined,
+            {},
+          ],
+          {
+            "flex": 0,
+            "height": 24,
+            "width": 24,
+          },
+        ]
+      }
+      testID="phosphor-react-native-prohibit-undefined"
+      vbHeight={256}
+      vbWidth={256}
+      width={24}
+    >
+      <RNSVGGroup
+        fill={
+          {
+            "type": 2,
+          }
+        }
+        propList={
+          [
+            "fill",
+          ]
+        }
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4283779243,
+              "type": 0,
+            }
+          }
+          propList={
+            [
+              "fill",
+            ]
+          }
+        >
+          <RNSVGPath
+            d="M128 24a104 104 0 1 0 104 104A104.11 104.11 0 0 0 128 24m88 104a87.56 87.56 0 0 1-20.41 56.28L71.72 60.4A88 88 0 0 1 216 128m-176 0a87.56 87.56 0 0 1 20.41-56.28L184.28 195.6A88 88 0 0 1 40 128"
+            fill={
+              {
+                "payload": 4278190080,
+                "type": 0,
+              }
+            }
+          />
+        </RNSVGGroup>
+      </RNSVGGroup>
+    </RNSVGSvgView>
+    <Text
+      style={
+        [
+          {
+            "flexShrink": 1,
+            "fontFamily": "Inter_500Medium",
+            "fontSize": 16,
+          },
+          {
+            "color": "#20222f",
+          },
+        ]
+      }
+    >
+      None
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`the marks — light palette (snapshot-pinned, spec §4.3) the logo: 24 pt tall, in proportion, on no tile — the reversed one on dark, the preferred one on light 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <Image
+    accessibilityLabel="QuickBooks"
+    accessibilityRole="image"
+    resizeMode="contain"
+    source={
+      {
+        "testUri": "../../../assets/vendors/quickbooks-logo.png",
+      }
+    }
+    style={
+      {
+        "height": 24,
+        "width": 93.8,
+      }
+    }
+    testID="logo"
+  />
+</RNCSafeAreaProvider>
+`;

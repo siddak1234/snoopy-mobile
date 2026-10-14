@@ -3,7 +3,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Pressable } from '@/components/pressable';
-import { fonts, layout, typeScale } from '@/constants/theme';
+import { fonts, iconSize, layout, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 /** A row's height: the lists' own, or the Settings index's roomier one (build 11). */
@@ -28,6 +28,11 @@ export type SettingsRowSize = 'regular' | 'roomy';
  * `detail` is more under the line, for a row that says more than one thing —
  * a Connections row says what the provider is for, then the connection's state
  * and any warning (Gate 24 parity). A row without it draws as before.
+ *
+ * `brand` is a vendor's own logo, drawn in place of the icon and the title: the
+ * logo carries the vendor's name (the Invoice Processing update, 2026-10-14),
+ * with its clear space — 12 pt — to the lines under it.
+ * The icon is 24, as every row's label is since then (`iconSize.row`).
  */
 export function SettingsRow({
   icon: IconCmp,
@@ -40,6 +45,7 @@ export function SettingsRow({
   onPress,
   testID,
   size = 'regular',
+  brand,
 }: {
   icon: Icon;
   title: string;
@@ -53,6 +59,8 @@ export function SettingsRow({
   onPress?: () => void;
   testID?: string;
   size?: SettingsRowSize;
+  /** A vendor's logo, in place of the icon and the title (`components/vendor-logo.tsx`). */
+  brand?: React.ReactNode;
 }) {
   const { palette } = useTheme();
   const roomy = size === 'roomy';
@@ -61,9 +69,14 @@ export function SettingsRow({
   );
   const body = (
     <>
-      <IconCmp size={20} color={palette.accentRamp[300]} />
+      {brand ? null : <IconCmp size={iconSize.row} color={palette.accentRamp[300]} />}
       <View style={styles.rowBody}>
-        {value ? (
+        {brand ? (
+          // The logo's clear space (Intuit: half its symbol's height; 12 here) to what is under it.
+          <View testID={testID ? `brand-of-${testID}` : undefined} style={sub || detail ? styles.brandClear : undefined}>
+            {brand}
+          </View>
+        ) : value ? (
           <View style={styles.titleLine}>
             {titleText}
             <Text
@@ -118,6 +131,9 @@ const styles = StyleSheet.create({
   },
   rowBody: {
     flex: 1,
+  },
+  brandClear: {
+    marginBottom: 12,
   },
   rowTitle: {
     fontFamily: fonts.medium,

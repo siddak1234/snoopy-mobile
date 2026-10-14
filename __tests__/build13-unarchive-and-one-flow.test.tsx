@@ -86,7 +86,8 @@ describe("Unarchive — the word for Add it again (the owner's build 12 item 4)"
     await fireEvent.press(screen.getByText('Unarchive'));
     expect(mockRouter.push).toHaveBeenCalledWith({
       pathname: '/(tabs)/flows/setup',
-      params: { template: 'tplflow.invoice', project: 'project-1' },
+      // Its team is its category's: none is sent (ADR-0036).
+      params: { template: 'tplflow.invoice' },
     });
     // The archived row itself is never written: the platform's archive is one-way.
     const paths: string[] = platformOperation.mock.calls.map(([path]: [string]) => path);
@@ -129,7 +130,7 @@ function routeSetup(held: Subscription, projects: RouteOverrides['/projects']) {
 }
 
 describe("One flow per workspace (the owner's build 12 item 9)", () => {
-  it('Add reads a flow held for the whole workspace as Added ✓ · Whole workspace inside a picked team too — whatever the scope control shows — with no Add, and the card opens it', async () => {
+  it('Add reads a flow held for the whole workspace as Added ✓ · Whole workspace inside a picked team too — whatever the scope control shows — with no Add, and the card opens it; Add sends no team', async () => {
     mockStored.set(TEST_WORKSPACE, 'project-1');
     const whole = { ...planSubscriptionsPayload().subscriptions[0]!, projectId: null };
     routePlatform(platformOperation, {
@@ -137,16 +138,13 @@ describe("One flow per workspace (the owner's build 12 item 9)", () => {
       '/projects': projectsPayload('Finance'),
     });
     await renderWithProviders(<SolutionsScreen />, signedInSession);
-    expect(await screen.findByText('Prebuilt flows, set up in minutes. Adding to Finance.')).toBeTruthy();
+    expect(await screen.findByText('Ready-made flows for your teams.')).toBeTruthy();
     expect(screen.getByTestId('added-where-tpl.0').props.children).toBe('Whole workspace');
     expect(screen.getByTestId('added-tpl.0')).toBeTruthy();
     expect(screen.queryByTestId('add-tpl.0')).toBeNull();
-    // A flow the workspace does not hold is still added, to the team chosen.
+    // A flow the workspace does not hold is still added — to its category's team, whatever the scope shows.
     await fireEvent.press(screen.getByTestId('add-tpl.1'));
-    expect(mockRouter.push).toHaveBeenCalledWith({
-      pathname: '/(tabs)/flows/setup',
-      params: { template: 'tpl.1', project: 'project-1' },
-    });
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/setup', params: { template: 'tpl.1' } });
     await fireEvent.press(screen.getByTestId('added-tpl.0'));
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'solution-0' } });
   });
@@ -169,18 +167,16 @@ describe("One flow per workspace (the owner's build 12 item 9)", () => {
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'copy-team' } });
   });
 
-  it('Setup, for a flow the workspace holds, says where it is under Added to, offers no team, and Activate configures that subscription — nothing is added', async () => {
+  it('Setup, for a flow the workspace holds, says its team, offers no team, and Turn on configures that subscription — nothing is added', async () => {
     const held: Subscription = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'held-0', projectId: 'project-1', status: 'paused' };
     const writes = routeSetup(held, projectsPayload('Finance', 'Sales'));
     // Reached with another team chosen: it is still the one copy, where it is.
     setMockParams({ template: 'tpl.0', project: 'project-2' });
     await renderWithProviders(<SetupScreen />, signedInSession);
-    const where = await screen.findByTestId('setup-held');
-    expect(within(where).getByText('Added to')).toBeTruthy();
-    expect(within(where).getByText('Team: Finance')).toBeTruthy();
+    await waitFor(() => expect(screen.getByTestId('setup-team').props.children).toBe('Team: Finance'));
     expect(screen.queryByText('Add to')).toBeNull();
     expect(screen.queryByText('Team: Sales')).toBeNull();
-    await fireEvent.press(screen.getByText('Activate solution'));
+    await fireEvent.press(screen.getByText('Turn on'));
     await waitFor(() =>
       expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'held-0' } }),
     );
@@ -193,14 +189,14 @@ describe("One flow per workspace (the owner's build 12 item 9)", () => {
     ]);
   });
 
-  it('Setup, for a flow held for the whole workspace, needs no team: a plain member with none to add to still has Activate, and it configures that subscription', async () => {
+  it('Setup, for a flow held for the whole workspace, needs no team: a plain member still has Turn on, and it configures that subscription', async () => {
     const held: Subscription = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'held-whole', projectId: null, status: 'paused' };
     const writes = routeSetup(held, { projects: [] });
     setMockParams({ template: 'tpl.0' });
     await renderWithProviders(<SetupScreen />, sessionAs('member'));
-    expect(within(await screen.findByTestId('setup-held')).getByText('Whole workspace')).toBeTruthy();
+    await waitFor(() => expect(screen.getByTestId('setup-team').props.children).toBe('Whole workspace'));
     expect(screen.queryByText('An owner or admin creates the first team.')).toBeNull();
-    await fireEvent.press(screen.getByText('Activate solution'));
+    await fireEvent.press(screen.getByText('Turn on'));
     await waitFor(() => expect(writes).toHaveLength(1));
     expect(writes[0]).toEqual({
       method: 'PATCH',
@@ -237,7 +233,8 @@ function routeCreate(created: Record<string, unknown>, activation: () => unknown
     }
     if (method === 'GET') return { subscriptions: [] };
     writes.push({ method, path, body });
-    if (method === 'POST') return { subscription: { ...created, projectId: body.projectId } };
+    // The platform puts it in its category's team (ADR-0036): Finance's, here.
+    if (method === 'POST') return { subscription: { ...created, projectId: 'project-1' } };
     return activation();
   });
   return writes;
@@ -250,7 +247,7 @@ function routeCreate(created: Record<string, unknown>, activation: () => unknown
  * What Setup adds is held from that moment, as the copy a workspace held is.
  */
 describe("One flow per workspace: what Setup adds is held at once (the build 13 review; the owner's build 12 item 9)", () => {
-  it('a create still owed an account says where it is under Added to, with no team to pick again — no second copy can be sent', async () => {
+  it('a create still owed an account says so, and its team — no second copy can be sent', async () => {
     const created = {
       ...planSubscriptionsPayload().subscriptions[0]!,
       id: 'added-0',
@@ -263,30 +260,22 @@ describe("One flow per workspace: what Setup adds is held at once (the build 13 
     setMockParams({ template: 'tpl.0' });
     await renderWithProviders(<SetupScreen />, signedInSession);
 
-    await fireEvent.press(await screen.findByTestId('setup-team'));
-    await fireEvent.press(screen.getByText('Team: Finance'));
-    await fireEvent.press(screen.getByText('Activate solution'));
+    await fireEvent.press(await screen.findByText('Turn on'));
     await waitFor(() => expect(writes).toHaveLength(1));
-    expect(writes[0]).toMatchObject({ method: 'POST', body: { templateId: 'tpl.0', projectId: 'project-1' } });
-    expect(
-      await screen.findByText('Connect the required providers in Settings › Connections, then return to activate.'),
-    ).toBeTruthy();
-
-    const where = screen.getByTestId('setup-held');
-    expect(within(where).getByText('Added to')).toBeTruthy();
-    expect(within(where).getByText('Team: Finance')).toBeTruthy();
+    expect(writes[0]).toMatchObject({ method: 'POST', body: { templateId: 'tpl.0' } });
+    expect(writes[0]!.body).not.toHaveProperty('projectId');
+    expect(await screen.findByText('Connect HubSpot first.')).toBeTruthy();
+    expect(screen.getByTestId('setup-team').props.children).toBe('Team: Finance');
     expect(screen.queryByText('Add to')).toBeNull();
-    expect(screen.queryByText('Team: Sales')).toBeNull();
 
-    // Its one way on is the account it is owed; Try again is the same. Nothing is added again.
-    await fireEvent.press(screen.getByText('Connect HubSpot in Settings › Connections'));
+    // Try again and Turn on say the same until it is connected. Nothing is added again.
     await fireEvent.press(screen.getByText('Try again'));
-    expect(mockRouter.push).toHaveBeenCalledTimes(2);
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/connections');
+    await fireEvent.press(screen.getByText('Turn on'));
+    expect(await screen.findByText('Connect HubSpot first.')).toBeTruthy();
     expect(writes).toHaveLength(1);
   });
 
-  it('a create whose activation failed stays Added to its team, and Activate again activates that copy — never a second', async () => {
+  it('a create whose activation failed stays in its team, and Turn on again turns on that copy — never a second', async () => {
     const created = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'added-0', status: 'draft', unmetConnections: [] };
     let activations = 0;
     const writes = routeCreate(created, () => {
@@ -297,15 +286,12 @@ describe("One flow per workspace: what Setup adds is held at once (the build 13 
     setMockParams({ template: 'tpl.0' });
     await renderWithProviders(<SetupScreen />, signedInSession);
 
-    await fireEvent.press(await screen.findByTestId('setup-team'));
-    await fireEvent.press(screen.getByText('Team: Finance'));
-    await fireEvent.press(screen.getByText('Activate solution'));
+    await fireEvent.press(await screen.findByText('Turn on'));
     await waitFor(() => expect(writes.map((write) => write.method)).toEqual(['POST', 'PATCH']));
     expect(await screen.findByTestId('action-failure')).toBeTruthy();
-    expect(within(screen.getByTestId('setup-held')).getByText('Team: Finance')).toBeTruthy();
-    expect(screen.queryByText('Team: Sales')).toBeNull();
+    expect(screen.getByTestId('setup-team').props.children).toBe('Team: Finance');
 
-    await fireEvent.press(screen.getByText('Activate solution'));
+    await fireEvent.press(screen.getByText('Turn on'));
     await waitFor(() =>
       expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'added-0' } }),
     );

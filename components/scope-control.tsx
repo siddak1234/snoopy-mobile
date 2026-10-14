@@ -1,4 +1,4 @@
-import { Buildings, CaretDown, Check, Plus, Stack, User, UsersThree, type Icon } from 'phosphor-react-native';
+import { Buildings, CaretDown, Check, Stack, User, UsersThree, type Icon } from 'phosphor-react-native';
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -6,15 +6,13 @@ import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { Pressable } from '@/components/pressable';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { WorkspaceSwitcher } from '@/components/settings/workspace-switcher';
-import { CreateTeamDialog } from '@/components/teams/create-team-dialog';
 import { fonts, layout, typeScale, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useScope } from '@/hooks/use-scope';
-import { activeWorkspaceId, useSession } from '@/hooks/use-session';
+import { useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { ALL_TEAMS_ICON, teamTypeIcon } from '@/lib/content/team-types';
 import { readProjects } from '@/lib/platform/projects';
-import { administers } from '@/lib/view/roles';
 
 /**
  * What the scope control reads and which of its cards is open, shared by its two
@@ -26,7 +24,7 @@ import { administers } from '@/lib/view/roles';
 function useScopeChoices() {
   const session = useSession();
   const { projectId, setProjectId } = useScope();
-  const [open, setOpen] = useState<'workspace' | 'team' | 'create' | null>(null);
+  const [open, setOpen] = useState<'workspace' | 'team' | null>(null);
 
   const currentSession = session.status === 'signed-in' ? session.session : null;
   const activeWorkspace =
@@ -35,7 +33,6 @@ function useScopeChoices() {
   const canSwitchWorkspace =
     currentSession !== null &&
     (currentSession.workspaces.length >= 2 || currentSession.workspacesTruncated === true);
-  const canCreateTeam = administers(activeWorkspace?.role);
 
   const teams = useWorkspaceResource(async (workspaceId) =>
     (await readProjects(workspaceId)).filter((project) => project.status !== 'archived'),
@@ -55,7 +52,6 @@ function useScopeChoices() {
     activeWorkspace,
     workspaceLabel,
     canSwitchWorkspace,
-    canCreateTeam,
     teams,
     openTeams,
     chosen,
@@ -66,13 +62,14 @@ function useScopeChoices() {
 type ScopeChoices = ReturnType<typeof useScopeChoices>;
 
 /**
- * The cards both forms open: the workspace switcher, Show (the team list), and
- * Create a team. One set, so a choice made from Home's icons is made exactly as
- * from the pills.
+ * The cards both forms open: the workspace switcher and Show (the team list).
+ * One set, so a choice made from Home's icons is made exactly as from the
+ * pills. No Create a team since the Invoice Processing update (backend
+ * ADR-0036): the platform makes a flow's team when it is first needed.
  */
 function ScopeCards({ scope }: { scope: ScopeChoices }) {
   const { palette } = useTheme();
-  const { session, projectId, setProjectId, open, setOpen, canCreateTeam, teams, openTeams, chosen } = scope;
+  const { projectId, setProjectId, open, setOpen, teams, openTeams, chosen } = scope;
   return (
     <>
       <WorkspaceSwitcher open={open === 'workspace'} onClose={() => setOpen(null)} />
@@ -87,7 +84,7 @@ function ScopeCards({ scope }: { scope: ScopeChoices }) {
           <SettingsRow
             icon={Stack}
             title="All teams"
-            divider={openTeams.length > 0 || canCreateTeam}
+            divider={openTeams.length > 0}
             testID="scope-option-all"
             onPress={() => {
               setProjectId(null);
@@ -100,7 +97,7 @@ function ScopeCards({ scope }: { scope: ScopeChoices }) {
               key={project.id}
               icon={UsersThree}
               title={project.type}
-              divider={canCreateTeam || index < openTeams.length - 1}
+              divider={index < openTeams.length - 1}
               testID={`scope-option-${project.id}`}
               onPress={() => {
                 setProjectId(project.id);
@@ -109,31 +106,9 @@ function ScopeCards({ scope }: { scope: ScopeChoices }) {
               right={project.id === projectId ? <Check size={16} color={palette.accent} /> : null}
             />
           ))}
-          {canCreateTeam ? (
-            <SettingsRow
-              icon={Plus}
-              title="Create a team"
-              testID="scope-create-team"
-              // The picker closes first: a dialog shown over another is not
-              // presented reliably on iOS.
-              onPress={() => setOpen('create')}
-              right={null}
-            />
-          ) : null}
         </View>
         {teams.status === 'error' ? <DialogText tone="error">{teams.message}</DialogText> : null}
       </Dialog>
-      {open === 'create' ? (
-        <CreateTeamDialog
-          onClose={() => setOpen(null)}
-          onCreated={(team) => {
-            setOpen(null);
-            teams.reload();
-            // Made in the workspace being looked at: it is the scope now.
-            if (team.workspaceId === activeWorkspaceId(session)) setProjectId(team.id);
-          }}
-        />
-      ) : null}
     </>
   );
 }
@@ -181,12 +156,10 @@ export function ScopePill({
 /**
  * The scope control at the top of Flows and Activity (BUILD-PLAN 24.9.2;
  * teams since 24.11.7): the workspace, then "All teams" or one team. The
- * workspace pill opens the switcher. The team pill is always there — with no
- * team yet it still offers "Create a team", which is where a person starts one
- * (the owner, build 7) — and a team made from it is the scope at once. A team
- * is named by its kind (24.12). Creating one is an owner's or an admin's in an
- * organization, so a plain member is not offered it; in a personal workspace
- * the person is its owner. Home draws the same control as two icons
+ * workspace pill opens the switcher. The team pill is always there, with All
+ * teams and every team this person can see. A team is named by its kind
+ * (24.12), and the platform makes it when the first flow of its kind is added
+ * (backend ADR-0036). Home draws the same control as two icons
  * (`ScopeIcons`, the owner's build 13 decision 2).
  */
 export function ScopeControl() {

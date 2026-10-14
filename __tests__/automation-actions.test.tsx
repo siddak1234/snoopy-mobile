@@ -90,6 +90,7 @@ function entry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
     name: 'Invoice triage',
     description: '',
     category: 'Finance',
+    usesAi: false,
     icon: 'receipt',
     monthlyPriceUsd: 39,
     subscribed: true,
@@ -481,7 +482,7 @@ describe('Set up (24.4.1)', () => {
     await renderActions();
     await fireEvent.press(screen.getByTestId('manage-setup'));
     await fireEvent.changeText(screen.getByLabelText('Watch inbox'), 'invoices@acme.co');
-    await pressLast('Save setup');
+    await pressLast('Save');
     await waitFor(() => expect(callbacks.onChanged).toHaveBeenCalled());
     expect(sent).toEqual([
       expect.objectContaining({
@@ -500,7 +501,7 @@ describe('Set up draws the version the flow runs, not the newest (backend §12.1
     expect(screen.getByLabelText('Watch inbox')).toBeTruthy();
     expect(screen.queryByText('Alerts')).toBeNull();
     expect(screen.queryByText('Daily digest to')).toBeNull();
-    await pressLast('Save setup');
+    await pressLast('Save');
     await waitFor(() => expect(callbacks.onChanged).toHaveBeenCalled());
     expect(sent).toEqual([expect.objectContaining({ body: { config: { inbox: 'ap@acme.co' } } })]);
   });

@@ -139,9 +139,9 @@ async function activateRefusedWith(error: PlatformError) {
       throw error;
     },
   });
-  setMockParams({ template: 'tpl.0', project: 'project-1' });
+  setMockParams({ template: 'tpl.0' });
   await renderWithProviders(<SetupScreen />, signedInSession);
-  await fireEvent.press(await screen.findByText('Activate solution'));
+  await fireEvent.press(await screen.findByText('Turn on'));
 }
 
 /** The flow page of a webhook-started flow with no address yet: Create address, refused with `error`. */
@@ -199,8 +199,8 @@ describe("Flows, in a team with no flow while the workspace has some (build 11, 
   });
 });
 
-describe('Setup — Activate (24.4: create, then patch its settings; 24.12: the button names Settings › Connections)', () => {
-  it('for a flow the workspace does not hold: adds it to the team chosen — POST, with its key — then sets it up and makes it live — PATCH — and opens it', async () => {
+describe('Setup — Turn on (24.4: create, then patch its settings; the Invoice Processing update: no team is sent, ADR-0036)', () => {
+  it('for a flow the workspace does not hold: adds it — POST, with its key, no team — then sets it up and makes it live — PATCH — and opens it', async () => {
     const catalog = bareCatalog(() => ({
       version: 3,
       setup: [
@@ -218,10 +218,10 @@ describe('Setup — Activate (24.4: create, then patch its settings; 24.12: the 
       [`POST ${WS}/subscriptions`]: () => ({ subscription: created }),
       [`PATCH ${WS}/subscriptions/new-0`]: () => ({ subscription: { ...created, status: 'live' } }),
     });
-    setMockParams({ template: 'tpl.0', project: 'project-1' });
+    setMockParams({ template: 'tpl.0' });
     await renderWithProviders(<SetupScreen />, signedInSession);
     await fireEvent.changeText(await screen.findByLabelText('Watch inbox'), 'ap@acme.co');
-    await fireEvent.press(screen.getByText('Activate solution'));
+    await fireEvent.press(screen.getByText('Turn on'));
     await waitFor(() =>
       expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'new-0' } }),
     );
@@ -230,7 +230,7 @@ describe('Setup — Activate (24.4: create, then patch its settings; 24.12: the 
         method: 'POST',
         path: `${WS}/subscriptions`,
         key: expect.stringMatching(/^subscribe-/u),
-        body: { templateId: 'tpl.0', templateVersion: 3, projectId: 'project-1' },
+        body: { templateId: 'tpl.0', templateVersion: 3 },
       },
       {
         method: 'PATCH',
@@ -241,7 +241,7 @@ describe('Setup — Activate (24.4: create, then patch its settings; 24.12: the 
     ]);
   });
 
-  it('while an account its flow needs is unconnected: the button says where to connect it, opens Settings › Connections, and sends nothing', async () => {
+  it('while an account its flow needs is unconnected: Turn on says to connect it first, and sends nothing', async () => {
     const held: Subscription = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'held-0', projectId: 'project-1', status: 'paused', unmetConnections: ['hubspot'] };
     routePlatform(platformOperation, {
       '/automations': bareCatalog(),
@@ -251,8 +251,9 @@ describe('Setup — Activate (24.4: create, then patch its settings; 24.12: the 
     const writes = keepWrites();
     setMockParams({ template: 'tpl.0' });
     await renderWithProviders(<SetupScreen />, signedInSession);
-    await fireEvent.press(await screen.findByText('Connect HubSpot in Settings › Connections'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/connections');
+    await fireEvent.press(await screen.findByText('Turn on'));
+    expect(await screen.findByText('Connect HubSpot first.')).toBeTruthy();
+    expect(mockRouter.push).not.toHaveBeenCalled();
     expect(writes).toEqual([]);
   });
 });
@@ -295,7 +296,7 @@ describe("Setup — each request's key (DESIGN-CONTRACT: a retry keeps it; a cha
       '/subscriptions': { subscriptions: [] },
     });
     const writes = keepWrites(answers);
-    setMockParams({ template: 'tpl.0', project: 'project-1' });
+    setMockParams({ template: 'tpl.0' });
     await renderWithProviders(<SetupScreen />, signedInSession);
     return writes;
   }
@@ -310,7 +311,7 @@ describe("Setup — each request's key (DESIGN-CONTRACT: a retry keeps it; a cha
       [`PATCH ${WS}/subscriptions/new-0`]: () =>
         ++activations === 1 ? refused() : { subscription: { ...draft('new-0'), status: 'live' } },
     });
-    await fireEvent.press(await screen.findByText('Activate solution'));
+    await fireEvent.press(await screen.findByText('Turn on'));
     await fireEvent.press(within(await screen.findByTestId('action-failure')).getByText('Try again'));
     await waitFor(() => expect(writes.map((write) => write.method)).toEqual(['POST', 'POST', 'PATCH']));
     // The create began the copy from nothing (Catalog stores `{}`), so the
@@ -334,8 +335,8 @@ describe("Setup — each request's key (DESIGN-CONTRACT: a retry keeps it; a cha
       },
       [`PATCH ${WS}/subscriptions/new-1`]: () => ({ subscription: { ...draft('new-1'), status: 'live' } }),
     });
-    await fireEvent.press(await screen.findByText('Activate solution'));
-    expect(await screen.findByText('The platform is unreachable')).toBeTruthy();
+    await fireEvent.press(await screen.findByText('Turn on'));
+    expect(await screen.findByText('Could not turn it on. Try again.')).toBeTruthy();
 
     // The person leaves and comes back; meanwhile the copy was archived. The
     // return drops the local draft and re-reads: nothing is held, so the team
@@ -344,10 +345,10 @@ describe("Setup — each request's key (DESIGN-CONTRACT: a retry keeps it; a cha
     await act(async () => {
       for (const effect of mockFocusEffects) effect();
     });
-    expect(await screen.findByLabelText('Add to: Team: Finance')).toBeTruthy();
-    expect(screen.queryByTestId('setup-held')).toBeNull();
+    // Nothing held: the team it goes to is its category's again, chosen by no one.
+    await waitFor(() => expect(screen.getByTestId('setup-team').props.children).toBe('Team: Finance'));
 
-    await fireEvent.press(screen.getByText('Activate solution'));
+    await fireEvent.press(screen.getByText('Turn on'));
     await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith(opened('new-1')));
     expect(writes.map((write) => [write.method, write.path])).toEqual([
       ['POST', `${WS}/subscriptions`],
@@ -374,7 +375,7 @@ describe("Setup — each request's key (DESIGN-CONTRACT: a retry keeps it; a cha
     });
     setMockParams({ template: 'tpl.0' });
     await renderWithProviders(<SetupScreen />, signedInSession);
-    await fireEvent.press(await screen.findByText('Activate solution'));
+    await fireEvent.press(await screen.findByText('Turn on'));
     const failure = await screen.findByTestId('action-failure');
 
     await fireEvent.changeText(screen.getByLabelText('Watch inbox'), 'billing@acme.co');
@@ -387,40 +388,17 @@ describe("Setup — each request's key (DESIGN-CONTRACT: a retry keeps it; a cha
     expect(writes[1]!.key).not.toBe(writes[0]!.key);
   });
 
-  it('another team chosen after a refused create is a new intent: the create for that team goes with a new key', async () => {
-    let creates = 0;
-    const forSales = { ...draft('new-0'), projectId: 'project-2' };
-    const writes = await openSetup(
-      {
-        [`POST ${WS}/subscriptions`]: () => (++creates === 1 ? refused() : { subscription: forSales }),
-        [`PATCH ${WS}/subscriptions/new-0`]: () => ({ subscription: { ...forSales, status: 'live' } }),
-      },
-      ['Finance', 'Sales'],
-    );
-    await fireEvent.press(await screen.findByText('Activate solution'));
-    expect(await screen.findByTestId('action-failure')).toBeTruthy();
-
-    await fireEvent.press(screen.getByTestId('setup-team'));
-    await fireEvent.press(screen.getByText('Team: Sales'));
-    await fireEvent.press(screen.getByText('Activate solution'));
-    await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith(opened('new-0')));
-    const [first, second] = writes;
-    expect(first).toMatchObject({ method: 'POST', body: { projectId: 'project-1' } });
-    expect(second).toMatchObject({ method: 'POST', body: { projectId: 'project-2' } });
-    expect(second!.key).not.toBe(first!.key);
-  });
-
-  it('made live, the activation is spent: Activate again on the same screen is a new intent with a new key — never a replay of the one that succeeded', async () => {
+  it('made live, the activation is spent: Turn on again on the same screen is a new intent with a new key — never a replay of the one that succeeded', async () => {
     const writes = await openSetup({
       [`POST ${WS}/subscriptions`]: () => ({ subscription: draft('new-0') }),
       [`PATCH ${WS}/subscriptions/new-0`]: () => ({ subscription: { ...draft('new-0'), status: 'live' } }),
     });
-    await fireEvent.press(await screen.findByText('Activate solution'));
+    await fireEvent.press(await screen.findByText('Turn on'));
     await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith(opened('new-0')));
 
     // On a phone the screen is dismissed by now; the unit router opens nothing,
     // so it stays, and the rule is held here.
-    await fireEvent.press(screen.getByText('Activate solution'));
+    await fireEvent.press(screen.getByText('Turn on'));
     await waitFor(() => expect(writes.map((write) => write.method)).toEqual(['POST', 'PATCH', 'PATCH']));
     expect(writes[2]!.body).toEqual(writes[1]!.body);
     expect(writes[2]!.key).not.toBe(writes[1]!.key);
@@ -465,7 +443,7 @@ describe('An automation that failed its probe (DESIGN-CONTRACT: its Add / Activa
       },
     },
     {
-      press: 'Activate, on Setup',
+      press: 'Turn on, on Setup',
       route: () =>
         routePlatform(platformOperation, {
           '/automations': bareCatalog((a) => ({ available: a.templateId !== 'tpl.0' })),
@@ -473,13 +451,13 @@ describe('An automation that failed its probe (DESIGN-CONTRACT: its Add / Activa
           '/subscriptions': { subscriptions: [] },
         }),
       open: async () => {
-        setMockParams({ template: 'tpl.0', project: 'project-1' });
+        setMockParams({ template: 'tpl.0' });
         await renderWithProviders(<SetupScreen />, signedInSession);
-        return screen.findByText('Activate solution');
+        return screen.findByText('Turn on');
       },
     },
     {
-      press: 'Resume, on the flow page',
+      press: 'Turn on, on the flow page (a paused flow)',
       route: () =>
         routePlatform(platformOperation, {
           '/automations': {
@@ -490,7 +468,7 @@ describe('An automation that failed its probe (DESIGN-CONTRACT: its Add / Activa
       open: async () => {
         setMockParams({ flow: 'kpi' });
         await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
-        return screen.findByText('Resume');
+        return screen.findByText('Turn on');
       },
     },
   ])('$press sends nothing and opens nothing, and the screen says it is not responding', async ({ route, open }) => {
@@ -527,13 +505,16 @@ describe('Try again, under a failed action (DESIGN-CONTRACT: a failed action sta
         await fireEvent.press(screen.getByText('Pause'));
         return writes;
       },
+      says: 'The platform is unreachable',
       done: async () => {
         expect(await screen.findByText('Paused')).toBeTruthy();
-        expect(screen.getByText('Resume')).toBeTruthy();
+        expect(screen.getByText('Turn on')).toBeTruthy();
       },
     },
     {
-      press: 'Activate, on Setup',
+      press: 'Turn on, on Setup',
+      // Plain words, never the platform's own sentence (spec §3.B): an add not answered (502).
+      says: 'Could not add this flow. Try again.',
       open: async () => {
         const created = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'new-0', status: 'draft', projectId: 'project-1' };
         let attempts = 0;
@@ -550,9 +531,9 @@ describe('Try again, under a failed action (DESIGN-CONTRACT: a failed action sta
           },
           [`PATCH ${WS}/subscriptions/new-0`]: () => ({ subscription: { ...created, status: 'live' } }),
         });
-        setMockParams({ template: 'tpl.0', project: 'project-1' });
+        setMockParams({ template: 'tpl.0' });
         await renderWithProviders(<SetupScreen />, signedInSession);
-        await fireEvent.press(await screen.findByText('Activate solution'));
+        await fireEvent.press(await screen.findByText('Turn on'));
         return writes;
       },
       done: async () => {
@@ -561,10 +542,10 @@ describe('Try again, under a failed action (DESIGN-CONTRACT: a failed action sta
         );
       },
     },
-  ])('$press, lost on the way: Try again sends the same request with the same key, and it lands', async ({ open, done }) => {
+  ])('$press, lost on the way: Try again sends the same request with the same key, and it lands', async ({ open, done, says }) => {
     const writes = await open();
     const failure = await screen.findByTestId('action-failure');
-    expect(within(failure).getByText('The platform is unreachable')).toBeTruthy();
+    expect(within(failure).getByText(says)).toBeTruthy();
     expect(writes).toHaveLength(1);
     await fireEvent.press(within(failure).getByText('Try again'));
     await done();
@@ -576,19 +557,19 @@ describe('Try again, under a failed action (DESIGN-CONTRACT: a failed action sta
 describe("A refusal a person can act on is said in the website's words (DESIGN-CONTRACT's refusal map: uploading its file, issuing a webhook address, Add's two plan reasons — on a 403 only)", () => {
   it.each([
     {
-      press: 'Activate, refused 403 over_plan_limit',
+      press: 'Turn on, refused 403 over_plan_limit',
       refuse: () => activateRefusedWith(new PlatformError('Forbidden', 403, 'FORBIDDEN', { reason: 'over_plan_limit' })),
       says: 'This workspace has reached its current plan limit.',
     },
     {
-      press: 'Activate, refused 403 entitlements_not_configured',
+      press: 'Turn on, refused 403 entitlements_not_configured',
       refuse: () => activateRefusedWith(new PlatformError('Forbidden', 403, 'FORBIDDEN', { reason: 'entitlements_not_configured' })),
       says: 'Subscriptions are unavailable while billing entitlements are not configured.',
     },
     {
-      press: 'Activate, refused 409 over_plan_limit (not a 403: the platform\'s own words)',
+      press: 'Turn on, refused 409 over_plan_limit (not a 403: plain words, spec §3.B)',
       refuse: () => activateRefusedWith(new PlatformError('Over the plan limit', 409, 'CONFLICT', { reason: 'over_plan_limit' })),
-      says: 'Over the plan limit',
+      says: 'Could not turn it on. Try again.',
     },
     {
       press: 'Create address, refused trigger_kind_mismatch',

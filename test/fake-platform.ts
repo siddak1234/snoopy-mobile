@@ -70,7 +70,7 @@ export function fakePlatform(platformOperation: jest.Mock) {
       if (reply === undefined) throw new Error(`unrouted ${route}`);
       return { data: typeof reply === 'function' ? (reply as (sent: Sent) => unknown)(entry) : reply };
     };
-  const verbs = { GET: call('GET'), POST: call('POST'), PATCH: call('PATCH'), DELETE: call('DELETE') };
+  const verbs = { GET: call('GET'), POST: call('POST'), PUT: call('PUT'), PATCH: call('PATCH'), DELETE: call('DELETE') };
   const clients = { platform: verbs, automations: verbs, connections: verbs };
   platformOperation.mockImplementation(async (_key: string, execute: Function) => (await execute(clients)).data);
 

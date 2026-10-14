@@ -51,7 +51,8 @@ export const signedInSession: SessionContextValue = {
   // The platform's own answer to `GET /v1/session`, typed with it.
   session: {
     authenticated: true,
-    user: { userId: 'u1', email: 'alex@acme.co', activeWorkspaceId: TEST_WORKSPACE },
+    // The account answered "AI reads your documents" (backend ADR-0038): no card over the screens under test.
+    user: { userId: 'u1', email: 'alex@acme.co', activeWorkspaceId: TEST_WORKSPACE, aiDocumentReading: 'allowed' },
     workspaces: [{ id: TEST_WORKSPACE, name: 'Acme Operations', type: 'organization', role: 'owner' }],
   } satisfies Answer<'GET /v1/session'>,
   // Past the Face ID lock: a session that is open.
@@ -101,6 +102,7 @@ export function catalogPayload(): Catalog {
     monthlyPriceUsd: sol.price,
     subscribed: [0, 1, 2].includes(i),
     available: true,
+    usesAi: false,
     requiredConnections: [],
     setup: [
       {
@@ -145,7 +147,7 @@ export function catalogPayload(): Catalog {
 
   return {
     automations,
-    categories: ['All', 'Finance', 'Ops', 'Sales', 'Reporting'],
+    categories: ['All', 'Finance', 'Operations', 'Sales', 'Data'],
   };
 }
 
@@ -173,7 +175,7 @@ export function flowCatalogPayload(): Catalog {
         description: step.desc,
       })),
     })),
-    categories: ['All', 'Finance', 'Ops', 'Sales', 'Reporting'],
+    categories: ['All', 'Finance', 'Operations', 'Sales', 'Data'],
   };
 }
 
@@ -389,6 +391,75 @@ export function providersPayload(): Answer<'GET /v1/connections/providers'> {
   };
 }
 
+/** QuickBooks as the platform lists it since 25.4.18: its icon names its own logo. */
+export const QUICKBOOKS_PROVIDER: Answer<'GET /v1/connections/providers'>['providers'][number] = {
+  providerId: 'quickbooks',
+  displayName: 'QuickBooks Online',
+  description: 'Records bills and receipts.',
+  scopes: ['com.intuit.quickbooks.accounting'],
+  authType: 'oauth2',
+  icon: 'QuickBooksLogo',
+};
+
+/** The providers with QuickBooks among them. */
+export function providersWithQuickBooks(): Answer<'GET /v1/connections/providers'> {
+  return { providers: [...providersPayload().providers, QUICKBOOKS_PROVIDER] };
+}
+
+/**
+ * Invoice Processing v2 as the catalog publishes it (backend ADR-0036–0038;
+ * the spec's §2.1): Accounting, QuickBooks optional, the vendor choice a
+ * `connection` setting defaulting to None, two settings, five step groups, and
+ * AI reading its file.
+ */
+export function invoiceProcessingEntry(): CatalogEntry {
+  const step = (id: string, kicker: CatalogEntry['pipeline'][number]['kicker'], group: string, title: string, description: string) => ({
+    id,
+    kicker,
+    group,
+    title,
+    description,
+  });
+  return {
+    templateId: 'invoice-processing',
+    version: 2,
+    name: 'Invoice Processing',
+    description: 'Reads bills and receipts, then saves the details or records them in QuickBooks.',
+    category: 'Accounting',
+    icon: 'Receipt',
+    monthlyPriceUsd: 0,
+    subscribed: false,
+    available: true,
+    usesAi: true,
+    requiredConnections: [
+      { providerId: 'quickbooks', displayName: 'QuickBooks Online', purpose: 'Records bills and receipts.', optional: true },
+    ],
+    setup: [
+      { section: 'connections', key: 'vendor', title: 'Vendor', description: 'Where the details go.', control: 'connection', defaultValue: 'none', required: false },
+      { section: 'rules', key: 'holdAboveAmount', title: 'Approval limit', description: 'Amounts over this wait for approval.', control: 'money', defaultValue: 500, required: false },
+      { section: 'notifications', key: 'notifyEmail', title: 'Also email', description: 'Gets a short summary of each one.', control: 'email', required: false },
+    ],
+    groups: [
+      { id: 'received', title: 'Received', description: 'You add a PDF or photo.' },
+      { id: 'read', title: 'Read', description: 'AI reads the details.' },
+      { id: 'checked', title: 'Checked', description: 'Totals and duplicates are checked.' },
+      { id: 'done', title: 'Done', description: 'Saved, or recorded in QuickBooks.' },
+      { id: 'emailed', title: 'Emailed', description: 'A summary goes to Also email.' },
+    ],
+    pipeline: [
+      step('receive', 'TRIGGER', 'received', 'Document received', 'A PDF or photo arrives.'),
+      step('read-company', 'ACTION', 'received', 'QuickBooks checked', 'Checks QuickBooks is connected.'),
+      step('extract', 'AI STEP', 'read', 'Document read', 'AI reads the details.'),
+      step('check-document', 'ACTION', 'checked', 'Details checked', 'Checks totals and dates.'),
+      step('verify-read', 'AI STEP', 'read', 'Read again', 'Only when something looks wrong.'),
+      step('find-vendor', 'ACTION', 'checked', 'Vendor looked up', 'Finds the vendor in QuickBooks.'),
+      step('decide', 'ACTION', 'checked', 'Record in QuickBooks?', 'Records it, or waits for approval.'),
+      step('save-details', 'ACTION', 'done', 'Details saved', 'Saves the details for your team.'),
+      step('notify', 'ACTION', 'emailed', 'Summary emailed', 'Sends a summary to Also email.'),
+    ],
+  };
+}
+
 type Billing = Answer<'GET /v1/workspaces/{workspaceId}/billing'>;
 
 /**
@@ -409,6 +480,7 @@ export type RouteOverrides = {
   '/runs'?: Answer<'GET /v1/workspaces/{workspaceId}/runs'>;
   '/run-stats'?: Answer<'GET /v1/workspaces/{workspaceId}/run-stats'>;
   '/notifications'?: Answer<'GET /v1/workspaces/{workspaceId}/notifications'>;
+  '/connections/providers'?: Answer<'GET /v1/connections/providers'>;
 } & { [billing: `/v1/workspaces/${string}/billing`]: Billing } & {
   [connections: `${string}/connections`]: Answer<'GET /v1/workspaces/{workspaceId}/connections'>;
 };

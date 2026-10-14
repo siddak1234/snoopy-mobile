@@ -6,7 +6,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Pressable } from '@/components/pressable';
-import { fonts, status, typeScale, withAlpha } from '@/constants/theme';
+import { fonts, iconSize, status, typeScale, withAlpha } from '@/constants/theme';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { WORKSPACE_CHANGED, uploadRefusalMessage } from '@/lib/content/refusals';
@@ -169,11 +169,9 @@ export function RunFileField({
   return (
     <View style={[styles.row, divider && { borderBottomWidth: 1, borderBottomColor: palette.divider }]}>
       <View style={styles.titleLine}>
-        <Paperclip size={20} color={palette.accentRamp[300]} />
-        <Text style={[styles.title, { color: palette.text }]}>
-          {field.title}
-          {field.required ? null : <Text style={{ color: palette.neutral[400] }}> (optional)</Text>}
-        </Text>
+        <Paperclip size={iconSize.row} color={palette.accentRamp[300]} />
+        {/* The manifest's title alone: a file field says no "(optional)" (spec §3.D). */}
+        <Text style={[styles.title, { color: palette.text }]}>{field.title}</Text>
       </View>
       <Text style={[styles.sub, { color: palette.neutral[400] }]}>{field.description}</Text>
       {progress ? <Text style={[styles.sub, { color: palette.neutral[400] }]}>{progress}</Text> : null}
@@ -231,7 +229,7 @@ function FileAction({
         { borderColor: busy ? palette.neutral[700] : palette.accent },
         pressed && !busy && { backgroundColor: withAlpha(palette.accent, 0.12) },
       ]}>
-      <IconCmp size={16} color={color} />
+      <IconCmp size={iconSize.button} color={color} />
       <Text style={[styles.actionLabel, { color }]}>{label}</Text>
     </Pressable>
   );
@@ -268,7 +266,7 @@ const styles = StyleSheet.create({
   },
   titleLine: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   title: { flex: 1, minWidth: 0, fontFamily: fonts.medium, fontSize: typeScale.label.fontSize },
-  sub: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize, paddingLeft: 30 },
+  sub: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize, paddingLeft: iconSize.row + 10 },
   actions: { flexDirection: 'row', gap: 10, marginTop: 4 },
   action: {
     flex: 1,

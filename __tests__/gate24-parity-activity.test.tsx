@@ -170,7 +170,7 @@ const fact = (label: 'Started' | 'Ended' | 'Trigger') =>
     .map((node) => node.props.children);
 
 describe("a run's page says what the website's says (G18)", () => {
-  it('names the version it ran, then when it started and ended and how it started: the website’s facts', async () => {
+  it('names its flow — no version beside it since the Invoice Processing update, as the website says it — then when it started and ended and how it started: the website’s facts', async () => {
     routeRun(
       detail(
         {
@@ -185,7 +185,10 @@ describe("a run's page says what the website's says (G18)", () => {
     );
     setMockParams({ runId: 'run-1' });
     await renderWithProviders(<RunDetailScreen />, signedInSession);
-    expect(await screen.findByText('Invoice check · v4 · Recorded INV-7')).toBeTruthy();
+    expect(await screen.findByText('Invoice check')).toBeTruthy();
+    expect(screen.queryByText('Invoice check · v4')).toBeNull();
+    // How it went, on a line of its own (spec §3.E).
+    expect(screen.getByTestId('run-result').props.children).toBe('Recorded INV-7');
     expect(fact('Started')).toEqual(['Started', 'Oct 7, 2026, 9:05 AM']);
     expect(fact('Ended')).toEqual(['Ended', 'Oct 7, 2026, 9:06 AM']);
     expect(fact('Trigger')).toEqual(['Trigger', 'Triggered']);
@@ -255,13 +258,14 @@ describe("a run's page says what the website's says (G18)", () => {
     expect(screen.queryByText('No steps reported yet.')).toBeNull();
   });
 
-  it('says No steps reported yet. while the run has reported none, and its flow’s steps still follow, waiting', async () => {
+  it('says No steps reported yet. while the run has reported none, then Working… — never the steps it has not reached (spec §3.E)', async () => {
     routeRun(detail({ status: 'running', origin: 'trigger', endedAt: undefined }));
     setMockParams({ runId: 'run-1' });
     await renderWithProviders(<RunDetailScreen />, signedInSession);
     expect(await screen.findByText('No steps reported yet.')).toBeTruthy();
-    expect(screen.getByText('Invoice received')).toBeTruthy();
-    expect(screen.getByText('Check the amount')).toBeTruthy();
+    expect(screen.getByText('Working…')).toBeTruthy();
+    expect(screen.queryByText('Invoice received')).toBeNull();
+    expect(screen.queryByText('Check the amount')).toBeNull();
   });
 });
 
