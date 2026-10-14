@@ -787,6 +787,11 @@ describe('a run\'s file field: Take photo beside Upload (25.8.3; the owner\'s de
         () => new PlatformError('Bad Request', 400, 'BAD_REQUEST', { reason: 'file_unreadable' }),
         'This file could not be read. Choose it again, or try another copy.',
       ],
+      [
+        'a 400 that names measurement_busy, the reason on another status',
+        () => new PlatformError('Bad Request', 400, 'BAD_REQUEST', { reason: 'measurement_busy' }),
+        WAITING,
+      ],
     ])('never completes again for any other answer — %s — said at once, as before', async (_what, refusal, says) => {
       answer(`POST ${UPLOADS_PATH}`, ticket('upload-1'));
       answer(
