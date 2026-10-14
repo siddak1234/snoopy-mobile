@@ -37,7 +37,7 @@ jest.mock('expo-constants', () => ({
   },
 }));
 
-import { fireEvent, screen, waitFor, within } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import { ImageManipulator } from 'expo-image-manipulator';
@@ -54,6 +54,7 @@ import { CAMERA_NOT_OPENED, CAMERA_OFF } from '@/lib/content/screen-states';
 import { aiConsentKey } from '@/lib/platform/ai-consent-store';
 import type { AutomationRunInputField } from '@/lib/platform/automations';
 import { PlatformError, PlatformRateLimitedError, PlatformUnreachableError } from '@/lib/platform/problem';
+import { busyMessage } from '@/lib/platform/retry-after';
 import { IMAGE_NOT_READ, boundedResize, isImage, jpegName, reencodeImage } from '@/lib/platform/run-image';
 import { TEST_WORKSPACE, flowCatalogPayload, routePlatform, sessionAs, signedInSession, subscriptionsPayload } from '@/test/platform';
 import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
@@ -656,6 +657,187 @@ describe('a run\'s file field: Take photo beside Upload (25.8.3; the owner\'s de
     expect(await screen.findByText(says)).toBeTruthy();
     expect(screen.queryByText(/^Ready:/)).toBeNull();
     expect(sent.filter((request) => request.path === COMPLETE_PATH)).toHaveLength(1);
+  });
+
+  describe("a file waiting to be measured, completed again by itself (backend BUILD-PLAN 25.2.39; the owner's rule of 2026-10-13)", () => {
+    const WAITING = 'Files are checked one at a time. Nothing was lost. Choose the file again in a moment.';
+    /** The contract's 429 on completeUpload, as the transport projects it: its busy words, the reason beside them, and the wait it stated, if any. */
+    const busy = (seconds?: number) => () => {
+      throw new PlatformRateLimitedError(busyMessage(seconds), seconds, { reason: 'measurement_busy' });
+    };
+    const ticket = (uploadSessionId: string) => () => ({
+      uploadSessionId,
+      uploadUrl: 'https://store.example.test/put',
+      expiresAt: '2026-10-10T12:00:00Z',
+      maximumSizeBytes: 10_000_000,
+    });
+    const measured = (artifactId: string) => () => ({
+      artifact: { artifactId, filename: 'invoice.pdf', contentType: 'application/pdf', sizeBytes: 4096 },
+    });
+    /** Every completion sent, by the upload it completed. */
+    const completions = () => sent.filter((request) => request.path === COMPLETE_PATH).map((request) => request.ids?.uploadSessionId);
+    /** Let `ms` of the field's time pass, and everything it set off settle. */
+    const pass = async (ms: number) => {
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(ms);
+      });
+    };
+    /** invoice.pdf given by Upload, settled at the first completion's answer. */
+    const uploadFile = async () => {
+      const view = await renderBox([RECEIPT]);
+      await fireEvent.press(screen.getByTestId('run-file-receipt-upload'));
+      await pass(0);
+      return view;
+    };
+    /** The field as it is while a file uploads, and nothing new: no words, no busy words, no file yet, Start run held. */
+    const stillUploading = () => {
+      expect(screen.getByText('Uploading invoice.pdf…')).toBeTruthy();
+      expect(screen.getByText('Uploading…')).toBeTruthy();
+      expect(screen.queryByText(WAITING)).toBeNull();
+      expect(screen.queryByText(/^The platform is busy/u)).toBeNull();
+      expect(screen.queryByText(/^Ready:/u)).toBeNull();
+    };
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      pickerGives('invoice.pdf', 'application/pdf');
+      filesOf(4096);
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('completes the same upload again 1.5 s later, saying nothing new while it waits, and the run starts with its file — the words never shown', async () => {
+      answer(`POST ${UPLOADS_PATH}`, ticket('upload-1'));
+      answer(`POST ${COMPLETE_PATH}`, busy(), measured('artifact-1'));
+      answer(`POST ${RUNS_PATH}`, () => ({ run: { id: 'run-1' } }));
+      await uploadFile();
+      expect(completions()).toEqual(['upload-1']);
+      stillUploading();
+
+      await pass(1_499);
+      expect(completions()).toEqual(['upload-1']);
+      stillUploading();
+      await pass(1);
+      expect(completions()).toEqual(['upload-1', 'upload-1']);
+      expect(screen.getByText('Ready: invoice.pdf (4 KB)')).toBeTruthy();
+
+      await fireEvent.press(screen.getByText('Start run'));
+      await pass(0);
+      expect(onStarted).toHaveBeenCalledWith('run-1');
+      expect(sent.filter((request) => request.path === RUNS_PATH).map((request) => request.body)).toEqual([
+        { subscriptionId: 'sub-1', input: { receipt: 'artifact-1' } },
+      ]);
+      // One upload, its bytes sent once and completed twice; the words never said.
+      expect(sent.filter((request) => request.path === UPLOADS_PATH)).toHaveLength(1);
+      expect(putFileToSignedUrl).toHaveBeenCalledTimes(1);
+      expect(completions()).toEqual(['upload-1', 'upload-1']);
+      expect(screen.queryByText(WAITING)).toBeNull();
+    });
+
+    it("says the website's words only when the file still waits at the fifth completion — 1 + 4, 1.5 s apart, the same upload — sends nothing more, and choosing the file again sends it afresh", async () => {
+      answer(`POST ${UPLOADS_PATH}`, ticket('upload-1'), ticket('upload-2'));
+      answer(`POST ${COMPLETE_PATH}`, busy(), busy(), busy(), busy(), busy(), measured('artifact-2'));
+      await uploadFile();
+      expect(completions()).toEqual(['upload-1']);
+      for (const count of [2, 3, 4]) {
+        await pass(1_500);
+        expect(completions()).toHaveLength(count);
+        stillUploading();
+      }
+      await pass(1_500);
+      expect(completions()).toEqual(['upload-1', 'upload-1', 'upload-1', 'upload-1', 'upload-1']);
+      expect(screen.getByText(WAITING)).toBeTruthy();
+      expect(screen.queryByText(/^The platform is busy/u)).toBeNull();
+      expect(screen.queryByText(/^Uploading /u)).toBeNull();
+      expect(screen.queryByText(/^Ready:/u)).toBeNull();
+
+      // Bounded: no sixth completion, however long the field is left.
+      await pass(60_000);
+      expect(completions()).toHaveLength(5);
+      expect(screen.getByText(WAITING)).toBeTruthy();
+
+      // Choosing the file again opens a new upload, whose completion is measured.
+      await fireEvent.press(screen.getByTestId('run-file-receipt-upload'));
+      await pass(0);
+      expect(screen.getByText('Ready: invoice.pdf (4 KB)')).toBeTruthy();
+      expect(screen.queryByText(WAITING)).toBeNull();
+      expect(completions()).toEqual(['upload-1', 'upload-1', 'upload-1', 'upload-1', 'upload-1', 'upload-2']);
+    });
+
+    it.each([
+      [
+        "the Edge's flood limit, a second stated",
+        () => new PlatformRateLimitedError(busyMessage(1), 1),
+        'The platform is busy right now. Try again in a second.',
+      ],
+      [
+        "the plan's request limit, 2 s stated",
+        () => new PlatformRateLimitedError(busyMessage(2), 2, { reason: 'over_workspace_quota' }),
+        'The platform is busy right now. Try again in 2 seconds.',
+      ],
+      [
+        'a 429 that names no reason and states no wait',
+        () => new PlatformRateLimitedError(busyMessage(undefined)),
+        'The platform is busy right now. Try again in a moment.',
+      ],
+      [
+        'a refusal when the upload is sealed',
+        () => new PlatformError('Bad Request', 400, 'BAD_REQUEST', { reason: 'file_unreadable' }),
+        'This file could not be read. Choose it again, or try another copy.',
+      ],
+    ])('never completes again for any other answer — %s — said at once, as before', async (_what, refusal, says) => {
+      answer(`POST ${UPLOADS_PATH}`, ticket('upload-1'));
+      answer(
+        `POST ${COMPLETE_PATH}`,
+        () => {
+          throw refusal();
+        },
+        measured('artifact-1'),
+      );
+      await uploadFile();
+      expect(screen.getByText(says)).toBeTruthy();
+      expect(screen.queryByText(/^Uploading /u)).toBeNull();
+      await pass(60_000);
+      expect(completions()).toEqual(['upload-1']);
+      expect(screen.getByText(says)).toBeTruthy();
+      expect(screen.queryByText(/^Ready:/u)).toBeNull();
+    });
+
+    it.each([3, 5])('waits the %i s the answer states before completing again, not the 1.5 s it waits when none is stated', async (seconds) => {
+      answer(`POST ${UPLOADS_PATH}`, ticket('upload-1'));
+      answer(`POST ${COMPLETE_PATH}`, busy(seconds), measured('artifact-1'));
+      await uploadFile();
+      await pass(seconds * 1_000 - 1);
+      expect(completions()).toEqual(['upload-1']);
+      stillUploading();
+      await pass(1);
+      expect(completions()).toEqual(['upload-1', 'upload-1']);
+      expect(screen.getByText('Ready: invoice.pdf (4 KB)')).toBeTruthy();
+      expect(screen.queryByText(WAITING)).toBeNull();
+    });
+
+    it('never waits out a stated wait over 5 s, nor completes sooner than it asks: the words at once, after one completion', async () => {
+      answer(`POST ${UPLOADS_PATH}`, ticket('upload-1'));
+      answer(`POST ${COMPLETE_PATH}`, busy(6), measured('artifact-1'));
+      await uploadFile();
+      expect(screen.getByText(WAITING)).toBeTruthy();
+      expect(screen.queryByText(/^Uploading /u)).toBeNull();
+      await pass(60_000);
+      expect(completions()).toEqual(['upload-1']);
+      expect(screen.queryByText(/^Ready:/u)).toBeNull();
+    });
+
+    it('sends nothing more once the field goes while its file waits', async () => {
+      answer(`POST ${UPLOADS_PATH}`, ticket('upload-1'));
+      answer(`POST ${COMPLETE_PATH}`, busy(), measured('artifact-1'));
+      const view = await uploadFile();
+      expect(completions()).toEqual(['upload-1']);
+      await view.unmount();
+      await pass(60_000);
+      expect(completions()).toEqual(['upload-1']);
+    });
   });
 
   it.each([

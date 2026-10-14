@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -18,6 +19,7 @@ import { OAuthButton } from '@/components/nocturne/oauth-button';
 import { Skeleton } from '@/components/nocturne/skeleton';
 import { OrDivider } from '@/components/nocturne/or-divider';
 import { PillButton } from '@/components/nocturne/pill-button';
+import { pressed } from '@/components/pressable';
 import { em, fonts, layout, radius, status, typeScale } from '@/constants/theme';
 import { useBiometricWording } from '@/hooks/use-biometric-wording';
 import { useSession } from '@/hooks/use-session';
@@ -25,7 +27,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { useResource } from '@/hooks/use-resource';
 import { readLoginProviders } from '@/lib/platform/auth';
 import { readFaceIdChoice, readSession } from '@/lib/platform/session-store';
-import type { LoginProvider } from '@/lib/platform/native-auth';
+import { websiteOrigin, type LoginProvider } from '@/lib/platform/native-auth';
 import { RETURN_OPTIONS, afterSignIn } from '@/lib/view/return-to';
 
 /**
@@ -53,6 +55,7 @@ export default function LoginScreen() {
   const signInInFlight = useRef(false);
   const { signIn } = useSession();
   const providerPolicy = useResource(readLoginProviders, []);
+  const site = websiteOrigin();
   // Biometrics unlock a session this device already holds; they never mint one.
   // So the unlock is offered only when there is something to unlock — after a
   // sign-out or a fresh install there is not (24.7.3 attempt 2, feedback #10, #12).
@@ -198,6 +201,39 @@ export default function LoginScreen() {
           ))}
         </View>
 
+        {/* One line under the buttons, the website's words (the owner's decision
+            of 2026-10-13): nothing to tick and no step added — continuing is
+            agreeing. This screen's secondary text, as Remember me's own line is
+            drawn; each page opens on the website, as Account deleted's Privacy
+            Policy does, and is plain words where the app does not know it. */}
+        <Text style={[styles.agreement, { color: palette.neutral[400] }]}>
+          By continuing, you agree to our{' '}
+          {site ? (
+            <Text
+              style={[styles.link, { color: palette.accentRamp[300] }]}
+              accessibilityRole="link"
+              testID="login-terms"
+              onPress={pressed(() => void Linking.openURL(`${site}/terms`))}>
+              Terms of Service
+            </Text>
+          ) : (
+            'Terms of Service'
+          )}{' '}
+          and{' '}
+          {site ? (
+            <Text
+              style={[styles.link, { color: palette.accentRamp[300] }]}
+              accessibilityRole="link"
+              testID="login-privacy"
+              onPress={pressed(() => void Linking.openURL(`${site}/privacy`))}>
+              Privacy Policy
+            </Text>
+          ) : (
+            'Privacy Policy'
+          )}
+          .
+        </Text>
+
         <View style={[styles.rememberRow, { borderColor: palette.neutral[800] }]}>
           <View style={styles.rememberText}>
             <Text style={[styles.rememberTitle, { color: palette.text }]}>Remember me</Text>
@@ -254,6 +290,13 @@ const styles = StyleSheet.create({
   oauthColumnAlone: {
     marginTop: 44,
   },
+  // Remember me's line's size, never smaller; its colour is given where it is drawn.
+  agreement: {
+    marginTop: 14,
+    fontFamily: fonts.regular,
+    ...typeScale.small,
+  },
+  link: { textDecorationLine: 'underline' },
   rememberRow: {
     marginTop: 18,
     flexDirection: 'row',

@@ -1785,7 +1785,7 @@ returns to its first. One table, `presses-patterns-dialog-close:501`, a row per 
 | `automation-actions.tsx:189` — Webhook address › Close | `:406` |
 | `automation-actions.tsx:200` — Archive flow › Cancel | `:418` |
 | `move-version.tsx:145` — Move to vN › Cancel | `:428` |
-| `start-run.tsx:231` — AI reads this file › Cancel (Round 17, Apple 5.1.2(i)): nothing started and nothing kept, the note and the file as they were, and the next Start run asks again | `start-run:972` |
+| `start-run.tsx:231` — AI reads this file › Cancel (Round 17, Apple 5.1.2(i)): nothing started and nothing kept, the note and the file as they were, and the next Start run asks again | `start-run:1154` |
 | `(home)/run.tsx:288` — Cancel this run? › Keep it running | `presses-home-activity:107` |
 | `connections-card.tsx:228` — Connect › Cancel | `:438` |
 | `connections-card.tsx:223` — Replace account? › Cancel | `:449` |
@@ -1864,11 +1864,11 @@ returns to its first. One table, `presses-patterns-dialog-close:501`, a row per 
 | `automation-actions.tsx:204` — Archive | PATCH `{status: 'archived'}`, then the Flows list | `automation-actions:186`, `tab-screens:405` |
 | `move-version.tsx:118` — Move to vN | its confirmation | `automation-actions:157` |
 | `move-version.tsx:156` — Move to vN (confirm) | PATCH `{templateVersion}`; refusals in words | `automation-actions:157`, `automation-actions:171` |
-| `start-run.tsx:229` — Start run, the flow page's start controls (25.8.3; ~~`run-dialog.tsx:117`, in the Run dialog~~) | POST runs `{subscriptionId, input}` with the declared values, its key kept for a resubmission and renewed by a change; the run's page; the box drawn anew — the defaults, the files emptied, a new key; held while a file uploads; refusals in words, `artifact_unavailable` emptying the files; refused, and nothing sent, once another workspace is active. A run that carries a file asks first, AI reads this file, once per person on this phone and version of its words (Round 17, Apple 5.1.2(i)) — held while it is open, asked when the Keychain cannot be read; a run without a file never asks | `start-run:337`, `start-run:384`, `start-run:411`, `start-run:429`, `start-run:442`, `start-run:466`, `start-run:479`, `start-run:516`, `start-run:540`, `start-run:908`, `start-run:929`, `start-run:991`, `start-run:1006`, `start-run:1015`, `presses-flows:431`, `dialog-boundary:203` |
-| `run-file-field.tsx:188` — Take photo (25.8.3) | the camera asked for at the press, images only; refused, a sentence in the field and nothing opened; the photo re-encoded once — upright, its long side at most 2,576 px, a JPEG at 0.9 — and uploaded as `image/jpeg`, `photo.jpg`; the run carries its id; a camera that cannot open says so; refused, and nothing asked, once another workspace is active | `start-run:704`, `start-run:742`, `start-run:759`, `start-run:540` |
-| `run-file-field.tsx:196` — Upload (25.8.3; ~~`run-file-field.tsx:142` — Choose file~~) | the document picker, held to a PDF, a JPEG or a PNG; a PDF uploaded as it is, an image re-encoded once and uploaded as `image/jpeg` under a `.jpg` name; the run carries its id; an image that cannot be re-encoded is not sent; a refusal in words | `start-run:568`, `start-run:583`, `start-run:661`, `start-run:687`, `start-run:777`, `start-run:479`, `presses-flows:599` |
-| `start-run.tsx:231` — AI reads this file › Agree and start (Round 17, Apple 5.1.2(i)) | keeps the consent — `agreed` under `autom8x.ai-consent.v{version}.{userId}`, this-device-only — before the run is sent, then POSTs the run, once; the next run with a file is not asked; a consent that cannot be kept still starts the run, and the next asks again | `start-run:943`, `start-run:991`, `start-run:1027` |
-| `ai-consent-dialog.tsx:48` — Privacy Policy, in AI reads this file (Round 17) | opens the website's `/privacy`; the dialog stays, nothing started or kept; plain words, no press, without the website's origin | `start-run:1041`, `start-run:1051` |
+| `start-run.tsx:229` — Start run, the flow page's start controls (25.8.3; ~~`run-dialog.tsx:117`, in the Run dialog~~) | POST runs `{subscriptionId, input}` with the declared values, its key kept for a resubmission and renewed by a change; the run's page; the box drawn anew — the defaults, the files emptied, a new key; held while a file uploads, a file waiting to be measured and completed again included (backend 25.2.39); refusals in words, `artifact_unavailable` emptying the files; refused, and nothing sent, once another workspace is active. A run that carries a file asks first, AI reads this file, once per person on this phone and version of its words (Round 17, Apple 5.1.2(i)) — held while it is open, asked when the Keychain cannot be read; a run without a file never asks | `start-run:338`, `start-run:385`, `start-run:412`, `start-run:430`, `start-run:443`, `start-run:467`, `start-run:480`, `start-run:517`, `start-run:541`, `start-run:711`, `start-run:1090`, `start-run:1111`, `start-run:1173`, `start-run:1188`, `start-run:1197`, `presses-flows:431`, `dialog-boundary:203` |
+| `run-file-field.tsx:188` — Take photo (25.8.3) | the camera asked for at the press, images only; refused, a sentence in the field and nothing opened; the photo re-encoded once — upright, its long side at most 2,576 px, a JPEG at 0.9 — and uploaded as `image/jpeg`, `photo.jpg`; the run carries its id; a camera that cannot open says so; refused, and nothing asked, once another workspace is active | `start-run:886`, `start-run:924`, `start-run:941`, `start-run:541` |
+| `run-file-field.tsx:196` — Upload (25.8.3; ~~`run-file-field.tsx:142` — Choose file~~) | the document picker, held to a PDF, a JPEG or a PNG; a PDF uploaded as it is, an image re-encoded once and uploaded as `image/jpeg` under a `.jpg` name; the run carries its id; an image that cannot be re-encoded is not sent; a refusal in words; a file waiting to be measured completed again by itself — the same upload, after the wait the answer states (5 s at most) or 1.5 s, at most four more times, nothing new on screen meanwhile — and the website's sentence only when it still waits, any other answer said at once (backend 25.2.39) | `start-run:569`, `start-run:584`, `start-run:843`, `start-run:869`, `start-run:959`, `start-run:480`, `start-run:711`, `start-run:739`, `start-run:769`, `start-run:808`, `start-run:821`, `start-run:832`, `presses-flows:599` |
+| `start-run.tsx:231` — AI reads this file › Agree and start (Round 17, Apple 5.1.2(i)) | keeps the consent — `agreed` under `autom8x.ai-consent.v{version}.{userId}`, this-device-only — before the run is sent, then POSTs the run, once; the next run with a file is not asked; a consent that cannot be kept still starts the run, and the next asks again | `start-run:1125`, `start-run:1173`, `start-run:1209` |
+| `ai-consent-dialog.tsx:48` — Privacy Policy, in AI reads this file (Round 17) | opens the website's `/privacy`; the dialog stays, nothing started or kept; plain words, no press, without the website's origin | `start-run:1223`, `start-run:1233` |
 | `setup-dialog.tsx:75` — Save setup | PATCH `{config}` only | `automation-actions:480` |
 | `dialog-boundary.tsx:65` — Cancel, on the failed dialog (Round 17, 25.8.1) | closes: the dialog's own `onClose`, the caller's; nothing sent | `dialog-boundary:90` |
 | `dialog-boundary.tsx:66` — Try again, on the failed dialog (Round 17, 25.8.1) | draws the dialog again: a child that no longer throws is shown, one that still throws fails to the same words; nothing sent | `dialog-boundary:109`, `dialog-boundary:123`, `dialog-boundary:292` |
@@ -1945,8 +1945,9 @@ returns to its first. One table, `presses-patterns-dialog-close:501`, a row per 
 | --- | --- | --- |
 | `app/index.tsx:138` — the cover | signed in, Home; signed out, nothing | `cover-haptics:26`, `splash-tap:18` |
 | `app/index.tsx:164` — Get started | opens Sign in, once | `splash-tap:18`, `real-router/sign-out:97` |
-| `(auth)/login.tsx:191` — Sign in with … | that provider's sign-in | `auth-screens:45` |
-| `(auth)/login.tsx:167` — Unlock with Face ID | opens the lock | `auth-screens:86` |
+| `(auth)/login.tsx:199` — Sign in with … | that provider's sign-in | `auth-screens:58` |
+| `(auth)/login.tsx:178` — Unlock with Face ID | opens the lock | `auth-screens:99` |
+| `(auth)/login.tsx:216, :228` — Terms of Service; Privacy Policy (Round 17, the owner's decision of 2026-10-13; through `pressed()`) | opens the website's `/terms`; its `/privacy` | `auth-screens:173` |
 | `(auth)/faceid-offer.tsx:98, :101` — Use Face ID; Not now | checks Face ID, records yes, opens Home; records no, opens Home | `faceid-offer:27`, `faceid-offer:36` |
 | `(auth)/faceid.tsx:181` — Use identity provider | signs this phone out, then the cover | `faceid-screen:70`, `real-router/sign-out:234` |
 | `(auth)/account-deleted.tsx:49` — Continue | the cover | `real-router/sign-out:181` |
@@ -3908,3 +3909,222 @@ the gate, which reads no record.
 
 **Not done, said so.** No other dialog's `onRequestClose` is run by a test either: the other 22 in
 `app/` and `components/`. That is outside this change.
+
+### The contract of backend #207, and a file with no place yet to be measured in words (Round 17; 2026-10-13)
+
+Backend BUILD-PLAN 25.8.8: `snoopy-backend` #207 moves `docs/openapi/automations.yaml` from
+`62201275…`, the contract production serves (`bf06166`'s), to `cceee630…` at its head `41917a3`, so
+both clients regenerate against it, the app's before 25.8.4's build. Run with `SNOOPY_BACKEND_ROOT`
+at a read-only extract of `41917a3`'s `docs/openapi.yaml` and `docs/openapi/`,
+`npm run generate:platform-contracts` changed `lib/generated/platform-contracts/automations.d.ts`
+only: sha256 `cceee630…`, was `62201275…`. `completeUpload` gains a 429 (`:1177-1185`): the file has
+no place yet to be measured (backend 25.2.39), `details.reason` `measurement_busy`, "nothing was
+refused and nothing was lost — the upload stays open, and completing it again shortly measures it".
+The rest is descriptions, backend 25.2.41's first in, first out: `createRun`'s 201 and 429,
+`RunStatus` and the `run-created` payload. `platform.d.ts` and `connections.d.ts` stay `93fd335c…`
+and `ab70cb0f…`. `npm run verify:platform-contracts` against the same extract: "Generated platform
+types are current." Production serves `62201275…` until the promotion that carries #207, and the
+Deployed contract check compares this file with production's, so this lands after that promotion's
+read-back, not before.
+
+**`measurement_busy` in words** (backend SYSTEM-MANIFEST §12.1 #272, with 25.8.8). Until now the app
+said the platform's busy words for it, as for every 429 (`lib/platform/client.ts:155-157`): "The
+platform is busy right now. Try again in a moment." — not the problem's title, as #272 has it for
+both clients. Nothing here completes an upload again: `sendRunFile` completes it once
+(`lib/platform/run-file.ts:53`), and the file field empties itself after any failure and says why
+(`components/automations/run-file-field.tsx:147-150`). So there was no retry to reuse, and none was
+added. `UPLOAD_REFUSALS` (`lib/content/refusals.ts:184-198`) names it after the five reasons of the
+refresh before (25.8.6), the same way, in the website's sentence: "Files are checked one at a time.
+Nothing was lost. Choose the file again in a moment." (`snoopy/app/account/flows/upload-refusals.ts`,
+its builder's change of the same day, read on its branch before it was committed; the two must land
+word for word alike). Choosing the file again opens a new upload, whose completion is
+measured; the first stays pending with its bytes until the platform lets it expire.
+`FLOW_QUEUE_FULL`, the website's sentence for a full queue, is unchanged: 25.2.41 changes when a run
+waits, not the advice the contract gives ("try again once a run has ended").
+
+**Since then, the same day:** the app completes the same upload again by itself while its file
+waits, at most four more times, and says these words only when it still waits after the last; a
+person no longer chooses the file again for this answer unless it does ("A file waiting to be
+measured, completed again by itself", below).
+
+Tests: `__tests__/upload-refusals.test.ts:55` and `:67` (the sentence for a 429 that names it, any
+other 429 keeping the busy words and its wait; the list), `__tests__/start-run.test.tsx:661` (the
+field says it and holds no file, and the same press a moment later sends a new upload that
+completes), `__tests__/platform-request.test.ts:202` (the transport keeps the completion's 429
+details, and the words follow from them). Each file run alone: 12, 17 and 64 tests, all passing.
+The full gate was not run in this step; it runs before the push.
+
+**Since then:** `start-run.test.tsx:661` is replaced by the block at `:662`, whose "says the
+website's words only when the file still waits at the fifth completion…" holds the words in the
+field; M1–M3 below, made again against it, still fail it ("Guards proved to bite, completed again
+by itself", below).
+
+### Guards proved to bite, the busy measurement
+
+Four runs by one script (`bites-b5b6/bites.py` in the session's scratchpad, with `spec-b5.json`,
+`run-b5.log` and the jest JSON reports in `out-b5/` beside it) on this branch's tree. The clean tree
+first — `upload-refusals`, `platform-request` and `start-run`, 93 tests, all passing — then each run
+made one exact edit, ran the suites named, each alone, restored the file from a copy saved before
+the edit and compared its SHA-256 equal; `git status --porcelain` matched the intended changes after
+every restore. Every break failed the tests named and nothing else.
+
+| Guard | Broken by | Tests that failed |
+| --- | --- | --- |
+| M1 · `measurement_busy` is named (`lib/content/refusals.ts:197`) | the entry removed | `upload-refusals` "says a file with no place yet to be measured…", "names the five reasons… and the busy measurement after them"; `platform-request` "keeps an upload completion's 429 details…"; `start-run` "says a file with no place yet to be measured…" |
+| M2 · Its words, word for word (`refusals.ts:197`) | "Nothing was lost." made "Nothing was refused." | `upload-refusals` "says a file with no place yet to be measured…"; `platform-request` "keeps an upload completion's 429 details…"; `start-run` "says a file with no place yet to be measured…" |
+| M3 · The file field says the upload's words (`components/automations/run-file-field.tsx:150`) | the error's own message shown | `start-run` "says a file with no place yet to be measured…" and the six "says … refused when its upload is sealed…" |
+| M4 · The transport keeps a 429's details (`lib/platform/client.ts:157`) | the details dropped | `platform-request` "keeps an upload completion's 429 details…", "keeps a 429's public details, so a run refused at a flow whose queue is full…" |
+
+### The line under the sign-in buttons (Round 17; 2026-10-13)
+
+The owner's decision of 2026-10-13, 18:07Z: "by continuing you agree is better … we want it to be
+easy for users to sign up and access flows not make it complicated for no absolute reason. we do
+want to stay compliant but that does not mean make it harder" — one line directly under the sign-in
+buttons, the same words in both clients, "By continuing, you agree to our Terms of Service and
+Privacy Policy.", "Terms of Service" opening the website's `/terms` and "Privacy Policy" its
+`/privacy`: no checkbox, no extra screen, no extra tap, nothing else on the screen changed. The
+owner approved the round's plan that carries it with "go" the same day.
+
+`app/(auth)/login.tsx:204-235` draws it between the providers' column and Remember me, in this
+screen's secondary text as Remember me's own line is drawn — `typeScale.small`,
+`palette.neutral[400]`, the regular face — and the two pages as links that look like links:
+underlined, in the accent the app's other links in a sentence take (`palette.accentRamp[300]`, as
+`app/(tabs)/flows/detail.tsx:306`), `accessibilityRole="link"`. Each opens the website through
+`websiteOrigin()` (`lib/platform/native-auth.ts:74-83`), as Account deleted's Privacy Policy does
+(`app/(auth)/account-deleted.tsx:35-45`), and presses through `pressed()`, so it ticks; where the
+app does not know the website's origin the words are plain, as there. The website's line is the
+same words, under its buttons in its muted text with its links in the accent, underlined
+(`snoopy/app/(auth)/login/LoginForm.tsx`, its builder's change of the same day, read on its branch
+before it was committed). Signing in is as it was: a provider's button signs in at one press, and
+Remember me is still the screen's one switch.
+
+Tests, in `__tests__/auth-screens.test.tsx`, which now mocks `expo-constants` for the website's
+origin as `account-deleted.test.tsx` does: `:137` (the words; the providers, the line and Remember
+me in that order; the line's size and colour Remember me's line's; the links underlined and named
+links; one switch; a provider still one press), `:173` (the two pages, in order), `:182` (plain
+words without the website's origin). Run alone: 9 tests, all passing. `audit:presses`, read
+against coverage from that file alone (`--collectCoverageFrom` the screen, in the scratchpad):
+the two presses resolve to their arrows (`login.tsx:216`, `:228`) and run; the register's rows
+above. No real-router test: the links open the system browser and move no route (CLAUDE.md rule
+11 is where a screen goes). Not run in this step, read instead: the other suites that draw this
+screen — `sign-out`, `cover-haptics`, `splash-tap`, and the real-router `sign-out` and
+`session-ended` — none of which asks for words the line could now answer. The full gate was not
+run in this step; it runs before the push.
+
+### Guards proved to bite, the line under the sign-in buttons
+
+Nine runs by the same script (`spec-b6.json`, `run-b6.log` and `out-b6/` beside it). The clean tree
+first — `auth-screens`, 9 tests, all passing, and `audit:haptics` passing — then each run made one
+exact edit to `app/(auth)/login.tsx`, ran `auth-screens` alone (S8 `audit:haptics` instead),
+restored the file from its saved copy, its SHA-256 equal, and `git status --porcelain` was as
+before. Every break failed the tests named and nothing else.
+
+| Guard | Broken by | Tests that failed |
+| --- | --- | --- |
+| S1 · The line is drawn (`app/(auth)/login.tsx:204-235`) | the line removed | `auth-screens` the three "the line under the sign-in buttons" tests |
+| S2 · Terms of Service opens `/terms` (`login.tsx:216`) | it opened `/privacy` | `auth-screens` "opens the website's Terms of Service and Privacy Policy" |
+| S3 · Privacy Policy opens `/privacy` (`login.tsx:228`) | it opened `/terms` | the same |
+| S4 · Plain words where the website's origin is not known (`login.tsx:211`) | the link drawn whatever the origin | `auth-screens` "says the same words, plain, where the app does not know the website" |
+| S5 · Never smaller (`login.tsx:294-298`, `agreement`) | `typeScale.caption` | `auth-screens` "says the website's words under the buttons…" (14 expected, 13 drawn) |
+| S6 · Never fainter (`login.tsx:209`) | `palette.neutral[500]` | the same (Remember me's line's colour expected) |
+| S7 · Under the buttons, above Remember me | the line moved below Remember me | the same (the order) |
+| S8 · The links tick (`login.tsx:216`) | Terms of Service's press not through `pressed()` | `audit:haptics` "app/(auth)/login.tsx:216: onPress on <Text> is not pressed(…)" |
+| S9 · Links that look like links (`login.tsx:299`, `link`) | the underline removed | `auth-screens` "says the website's words under the buttons…" |
+
+### A file waiting to be measured, completed again by itself (Round 17; 2026-10-13)
+
+The owner's rule of 2026-10-13 — about 17:50Z, "dont start adding blockers, see how we can work
+around them", and 18:07Z, "we want it to be easy for users to sign up and access flows not make it
+complicated for no absolute reason" — applied by this session, not a decision the owner took on it,
+to "The contract of backend #207, and a file with no place yet to be measured in words" above: that
+entry made a person choose the file again for an answer that refuses nothing. The contract's 429 on
+`completeUpload` says "nothing was refused and nothing was lost — the upload stays open, and
+completing it again shortly measures it" (`lib/generated/platform-contracts/automations.d.ts:1177`),
+and backend 25.2.39 seals the bytes before it measures them, its `finalize` idempotent, so
+completing the same upload again is safe. Its queue has two places a process and one a workspace, so
+two runs started at once in one workspace, as the owner's test at the round's close does, meet it.
+
+`lib/platform/run-file.ts` now completes the same upload again by itself (`completeWhenMeasured`,
+`:87-104`). When a completion answers 429 with `details.reason` `measurement_busy` — that reason on
+a `PlatformRateLimitedError`, and nothing else (`:108`) — it waits the seconds the answer's
+`retry-after` states, or 1.5 s when it states none (`:109`), and completes it again, at most four
+more times (`:28`, `:97`): five completions in all. Meanwhile the field keeps the state it had while
+uploading — "Uploading <the file's name>…", Start run held as "Uploading…" — and says nothing new.
+Only a file still waiting at the fifth completion reaches the words that entry added, unchanged
+(`lib/content/refusals.ts:197`); the field is then emptied as after any refusal, and choosing the
+file again sends it afresh. A refusal, any other 429 — the Edge's flood limit, a plan's request
+limit — and an outage are said at once, as before. A wait ends when the upload is stopped — the
+field going (`components/automations/run-file-field.tsx:70-79`) — and nothing more is sent
+(`run-file.ts:100-101`, `:114-128`). `refusals.ts`'s comment on the words says so in the same seven
+lines, so the words stay at `:197`.
+
+**The 5 s bound, this session's choice** (`run-file.ts:37`, `:110`): a stated wait over 5 s is not
+waited out and not cut short — that answer is said at once — so a person is never held longer and
+the platform never asked sooner than it said. The platform states no wait for this answer today
+(backend `41917a3`: `apps/artifacts/src/errors.ts:28-31` sets no `retry-after`, and
+`apps/runs/src/artifacts-answers.ts:57-63` relays the reason alone; only the Edge's two limits send
+one, `apps/api/src/app.ts:219` and `:1107`, and neither names `measurement_busy`), so the waits come
+to 6 s, and to 20 s at most.
+
+**The budgets checked against it.** The transport's 10 s for one request (`lib/platform/client.ts:29`,
+`:131`): each completion is a request of its own under it, and every wait falls between requests,
+never inside one. The PUT's 15 minutes (`client.ts:176`, `:199`): the waits come after it. The
+upload's own life, 15 minutes from its opening — the ticket's `expiresAt` (backend
+`apps/artifacts/src/routes-upload.ts:136`, with `DEFAULT_UPLOAD_TTL_SECONDS` and
+`DEFAULT_S3_UPLOAD_TTL_SECONDS`, 15 × 60, at `41917a3`): at most 20 s of waiting and five requests
+of at most 10 s each, 70 s in all, well inside it; an upload that ends anyway is refused
+`session_expired` and said as it always was ("The upload took too long. Choose the file again.").
+The session: `platformOperation` renews a credential on a 401 for each request it sends
+(`client.ts:99-121`), so a wait across an access token's expiry costs nothing. Nothing else times
+this path: Start run has no clock, and is held while the field uploads.
+
+**The website.** Its builder makes the same change on its branch the same day, with the same five
+completions, the same 1.5 s and the same 5 s bound (`snoopy/app/account/flows/upload-completion.ts`,
+read on its branch before it was committed); the two must land alike.
+
+Tests, with fake timers: `__tests__/start-run.test.tsx:662`, a block of ten in place of the test
+that held the opposite (that the app never completes an upload again by itself) — the same upload
+completed again at 1.5 s and not at 1,499 ms, the field uploading and saying nothing new meanwhile,
+and the run started with the file, the words never shown (`:711`); the words only at the fifth
+completion, 1.5 s apart, the same upload, no sixth a minute later, and choosing the file again
+sending a new upload that completes (`:739`); no completion again for the Edge's flood limit, a
+plan's request limit, a 429 that names nothing, or a refusal — each said at once, one completion a
+minute later (`:769`); a stated 3 s and 5 s waited to the millisecond (`:808`); a stated 6 s said at
+once (`:821`); nothing more once the field goes (`:832`). `__tests__/platform-request.test.ts:233`,
+through the real transport: a 429 stating `retry-after: 3`, the same upload completed again at 3 s
+and not at 2,999 ms; the test above it (`:203`) still holds the transport to asking once, its
+comment corrected. Each file run alone: `start-run` 73, `platform-request` 18, `upload-refusals` 12
+and `run-file` 5 tests, all passing. `audit:presses`, read against coverage from `start-run` alone
+(`--collectCoverageFrom` `app/` and `components/`, in the scratchpad): Upload
+(`run-file-field.tsx:196`), Take photo (`:188`), Start run (`start-run.tsx:229`) and the consent's
+presses (`start-run.tsx:231`, `ai-consent-dialog.tsx:48`) resolve and run; no file in `app/` or
+`components/` changed, and no press was added. The press register's rows that cite `start-run` were
+re-pointed by each test's title: that entry moved them 38 lines without saying so, and
+this one moves them again; Upload's and Start run's rows gain the tests above. Light checks only:
+audit:vocabulary, :type, :tokens, :haptics, :credentials, :fixtures, :platform exit 0; eslint on
+the changed files 0 errors (one more `import/first` warning, the test file's own pattern after its
+`jest.mock` calls); tsc --noEmit exit 0. The full gate was not run in this step; it runs before the
+push.
+
+### Guards proved to bite, completed again by itself
+
+Ten runs by the same script (`bites-b5b6/bites.py`, with `spec-b5r.json` and `spec-b5r-m.json`,
+`run-b5r.log` and `run-b5r-m.log`, and the jest JSON reports in `out-b5r/` and `out-b5r-m/`, in
+`bites-b5-retry/` in the session's scratchpad). The clean tree first — `start-run`, 73 tests, and
+`platform-request`, 18, all passing — then each run made one exact edit, R1–R7 to
+`lib/platform/run-file.ts` and M1r–M3r the edits of M1–M3 above, ran the suites named, each alone,
+restored the file from its saved copy, its SHA-256 equal, and `git status --porcelain` was as
+before. Every break failed the tests named and nothing else.
+
+| Guard | Broken by | Tests that failed |
+| --- | --- | --- |
+| R1 · The same upload completed again (`lib/platform/run-file.ts:76`) | completed once, as before | `start-run` "completes the same upload again 1.5 s later…", "says the website's words only when the file still waits at the fifth completion…", the two "waits the %i s the answer states…"; `platform-request` "completes the same upload again after the wait its 429 states…" |
+| R2 · At most four more times (`run-file.ts:97`) | no limit | `start-run` "says the website's words only when the file still waits at the fifth completion…" |
+| R3 · For `measurement_busy` alone (`run-file.ts:108`) | any 429 | `start-run` "never completes again for any other answer —" the Edge's flood limit, the plan's request limit, a 429 that names no reason |
+| R4 · The wait the answer states (`run-file.ts:109`) | always 1.5 s | `start-run` the two "waits the %i s the answer states…", "never waits out a stated wait over 5 s…"; `platform-request` "completes the same upload again after the wait its 429 states…" |
+| R5 · Never more than 5 s (`run-file.ts:110`) | any stated wait waited out | `start-run` "never waits out a stated wait over 5 s…" |
+| R6 · The wait ends when the field goes (`run-file.ts:100-101`) | the wait not stopped, nothing checked after it | `start-run` "sends nothing more once the field goes while its file waits" |
+| R7 · 1.5 s when none is stated (`run-file.ts:29`) | no wait | `start-run` "completes the same upload again 1.5 s later…", "says the website's words only when the file still waits at the fifth completion…", "sends nothing more once the field goes…" |
+| M1r · `measurement_busy` is named (`lib/content/refusals.ts:197`), against the new block | the entry removed | `start-run` "says the website's words only when the file still waits at the fifth completion…", "never waits out a stated wait over 5 s…" |
+| M2r · Its words, word for word (`refusals.ts:197`) | "Nothing was lost." made "Nothing was refused." | the same two |
+| M3r · The file field says the upload's words (`components/automations/run-file-field.tsx:150`) | the error's own message shown | `start-run` the same two, the six "says … refused when its upload is sealed…", and "never completes again for any other answer — a refusal when the upload is sealed…" |
