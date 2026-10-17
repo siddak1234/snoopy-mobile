@@ -17,7 +17,6 @@ import { Pressable } from '@/components/pressable';
 import { DocumentCard } from '@/components/runs/document-card';
 import { em, fonts, iconSize, layout, status, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import type { TrackerRow } from '@/lib/view/runs';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { useResource, busyBody } from '@/hooks/use-resource';
 import { activeWorkspaceId, useSession, workspaceIfShown } from '@/hooks/use-session';
@@ -32,7 +31,14 @@ import {
 } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
 import { cancelRun } from '@/lib/platform/automations';
-import { readAllApprovals, readRun, readRunDocuments } from '@/lib/platform/runs';
+import {
+  readAllApprovals,
+  readRemovedSubscriptionsOrNone,
+  readRun,
+  readRunDocuments,
+  readSubscriptions,
+  type Subscription,
+} from '@/lib/platform/runs';
 import { PlatformError, PlatformNotConfiguredError } from '@/lib/platform/problem';
 import { duration, timeOfDay } from '@/lib/view/format';
 import { documentsFileName, toDocumentCards } from '@/lib/view/documents';
@@ -45,6 +51,8 @@ import {
   toRunFacts,
   toRunStats,
   toTracker,
+  type TrackerFlow,
+  type TrackerRow,
 } from '@/lib/view/runs';
 
 
@@ -68,7 +76,7 @@ function TrackerStep({ row, divider }: { row: TrackerRow; divider: boolean }) {
             ? palette.accentRamp[300]
             : palette.neutral[500];
   const IconCmp = row.icon;
-  const quiet = row.state === 'waiting' || row.state === 'skipped' || row.state === 'stopped';
+  const quiet = row.state === 'waiting' || row.state === 'skipped' || row.state === 'stopped' || row.state === 'unknown';
   return (
     <View
       testID={`run-step-${row.id}`}
@@ -76,7 +84,10 @@ function TrackerStep({ row, divider }: { row: TrackerRow; divider: boolean }) {
       <IconCmp size={iconSize.row} color={tone} style={styles.trackerIcon} />
       <View style={styles.trackerBody}>
         <Text style={[styles.trackerTitle, { color: quiet ? palette.neutral[400] : palette.text }]}>{row.title}</Text>
-        <Text style={[styles.trackerSub, { color: row.tone === 'muted' ? palette.neutral[500] : tone }]}>{row.sub}</Text>
+        {/* A platform step this build does not know has no state, so no line (backend ADR-0041). */}
+        {row.sub ? (
+          <Text style={[styles.trackerSub, { color: row.tone === 'muted' ? palette.neutral[500] : tone }]}>{row.sub}</Text>
+        ) : null}
       </View>
     </View>
   );
@@ -131,19 +142,33 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
    * amended 2026-10-14): the label and value lines its automation wrote for
    * people, on this one-run read only — never the raw output. ~~Confidence~~,
    * which no published shape carries (§12.1 #73a), is no longer drawn.
+   *
+   * And its flow, as it is now (Build 22, the session's S23): a setting step's
+   * line — the integration the flow has chosen — and a title by connection
+   * ("QuickBooks updated") follow the flow's settings, since a run does not
+   * record its own choice (backend §12.1 #290). The live list first, an
+   * archived flow's only when the run's flow is not in it; a flow that cannot be
+   * read costs those two their words, never the page.
    */
   // Reads that have settled, either way: what schedules the next one while the run goes on.
   const [reads, setReads] = useState(0);
   const detail = useResource(async () => {
     try {
       if (!runId || !openedIn) throw new PlatformNotConfiguredError();
-      const [run, catalog, approvals] = await Promise.all([
+      const [run, catalog, approvals, live] = await Promise.all([
         readRun(openedIn, runId),
         readCatalog(openedIn),
         readAllApprovals(openedIn),
+        readSubscriptions(openedIn).then(
+          (answer) => answer.subscriptions,
+          () => null,
+        ),
       ]);
       const entry = catalog.automations.find((a) => a.templateId === run.run.templateId);
-      return { detail: run, entry, approvals: approvals.approvals };
+      const own = (rows: Subscription[] | null) => rows?.find((row) => row.id === run.run.subscriptionId);
+      const flow =
+        own(live) ?? (live === null ? undefined : own((await readRemovedSubscriptionsOrNone(openedIn)).subscriptions));
+      return { detail: run, entry, approvals: approvals.approvals, flow };
     } finally {
       setReads((n) => n + 1);
     }
@@ -176,18 +201,30 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
 
   const liveRun = detail.status === 'ready' ? detail.data : null;
   // Every step from the start, each where the run is (spec A7; the session's
-  // S14) — by the flow's groups where its manifest declares them, the catalog's
-  // only for a run of the version they were declared for; a run of another
-  // version is drawn by the steps it reported.
-  const declaredFor = liveRun !== null && liveRun.entry?.version === liveRun.detail.run.templateVersion;
+  // S14) — by the catalog's groups, the newest version's, for any run whose
+  // every reported step they still declare (Build 22, the session's S25: a v3
+  // run is drawn by v4's five steps); a run that reported a step they no longer
+  // declare is drawn by the steps it reported. ~~Only a run of the catalog's
+  // own version drawn by its groups~~ until Build 22. Step 2 says the flow's
+  // integration, step 4's title follows it, step 5 is the run's email.
+  const trackerFlow: TrackerFlow | undefined =
+    liveRun?.flow !== undefined
+      ? {
+          setup: liveRun.flow.setup ?? liveRun.entry?.setup ?? [],
+          config: liveRun.flow.config,
+          providerName: (providerId) =>
+            liveRun.entry?.requiredConnections.find((c) => c.providerId === providerId)?.displayName ?? providerId,
+        }
+      : undefined;
   const tracker = liveRun
     ? toTracker(
         liveRun.detail.steps,
-        declaredFor ? liveRun.entry?.pipeline : undefined,
-        declaredFor ? liveRun.entry?.groups : undefined,
+        liveRun.entry?.pipeline,
+        liveRun.entry?.groups,
         liveRun.detail.run,
         timeOfDay,
         liveRun.entry?.pipeline,
+        { flow: trackerFlow, email: liveRun.detail.email },
       )
     : [];
   // A waiting document whose approval was refused or ran out says "Not approved" (S21).

@@ -324,13 +324,10 @@ export default function SetupScreen() {
           }
         }
         // No team is sent: the platform puts the flow in its category's team
-        // (backend ADR-0036) and puts this person on it.
+        // (backend ADR-0036) and puts this person on it. No version either: a
+        // new flow runs the newest (Build 22, backend ADR-0041).
         adding = true;
-        const created = await createSubscription(
-          workspaceId,
-          { templateId: entry.templateId, templateVersion: entry.version },
-          createKey.current,
-        );
+        const created = await createSubscription(workspaceId, { templateId: entry.templateId }, createKey.current);
         adding = false;
         addUnanswered.current = false;
         current = created.subscription;

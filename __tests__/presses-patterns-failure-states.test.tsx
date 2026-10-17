@@ -11,6 +11,7 @@ import ArchivedFlowsScreen from '@/app/(tabs)/flows/archived';
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import FlowsScreen from '@/app/(tabs)/flows/index';
 import SetupScreen from '@/app/(tabs)/flows/setup';
+import FlowEmailScreen from '@/app/(tabs)/flows/email';
 import ConnectVendorScreen from '@/app/(tabs)/flows/vendor';
 import AccountScreen from '@/app/(tabs)/settings/account';
 import BillingScreen from '@/app/(tabs)/settings/billing';
@@ -67,7 +68,8 @@ const SCREENS = {
   Home: {
     Screen: HomeScreen,
     read: /\/run-stats\?since=/u,
-    refused: /^\/v1\/workspaces\/[^/]+\/(run-stats|runs|automations|approvals|subscriptions|connections)(\?|$)/u,
+    // Home's six reads (Build 22: ~~the connections~~ no longer one of them, the session's S31).
+    refused: /^\/v1\/workspaces\/[^/]+\/(run-stats|runs|automations|approvals|subscriptions)(\?|$)/u,
   },
   Run: { Screen: RunDetailScreen, params: { runId: 'run-0' }, read: /\/runs\/run-0$/u },
   Approvals: { Screen: ApprovalsScreen, read: /\/approvals\?status=pending$/u },
@@ -76,7 +78,8 @@ const SCREENS = {
   'Flow detail': { Screen: WorkflowDetailScreen, params: { flow: 'invoice' }, read: /\/subscriptions$/u },
   Flows: { Screen: FlowsScreen, read: /\/subscriptions$/u },
   Setup: { Screen: SetupScreen, params: { template: 'tpl.0' }, read: /\/automations$/u },
-  'Connect vendor': { Screen: ConnectVendorScreen, params: { flow: 'invoice', field: 'vendor' }, read: /\/automations$/u },
+  'Connect integration': { Screen: ConnectVendorScreen, params: { flow: 'invoice', field: 'vendor' }, read: /\/automations$/u },
+  'Who gets the email': { Screen: FlowEmailScreen, params: { flow: 'invoice' }, read: /\/email-recipients$/u },
   Account: { Screen: AccountScreen, read: /^\/v1\/auth\/identities$/u },
   Billing: { Screen: BillingScreen, read: /^\/v1\/workspaces$/u },
   Connections: { Screen: ConnectionsScreen, read: /\/connections$/u },
@@ -125,9 +128,13 @@ const CASES: Case[] = [
   // fetching screen: Back, and no Retry that cannot succeed.
   ['Setup', 'unavailable', 'app/(tabs)/flows/setup.tsx:142-151', true],
   // The flow's vendor page (the Invoice Processing update), as every fetching screen.
-  ['Connect vendor', 'offline', 'app/(tabs)/flows/vendor.tsx:100', true],
-  ['Connect vendor', 'unavailable', 'app/(tabs)/flows/vendor.tsx:103', true],
-  ['Connect vendor', 'error', 'app/(tabs)/flows/vendor.tsx:111-113', true],
+  ['Connect integration', 'offline', 'app/(tabs)/flows/vendor.tsx:100', true],
+  ['Connect integration', 'unavailable', 'app/(tabs)/flows/vendor.tsx:103', true],
+  ['Connect integration', 'error', 'app/(tabs)/flows/vendor.tsx:111-113', true],
+  // A flow's email screen (Build 22, P5), as every fetching screen.
+  ['Who gets the email', 'offline', 'app/(tabs)/flows/email.tsx', true],
+  ['Who gets the email', 'unavailable', 'app/(tabs)/flows/email.tsx', true],
+  ['Who gets the email', 'error', 'app/(tabs)/flows/email.tsx', true],
   ['Account', 'offline', 'app/(tabs)/settings/account.tsx:92', true],
   ['Account', 'unavailable', 'app/(tabs)/settings/account.tsx:95', true],
   ['Account', 'error', 'app/(tabs)/settings/account.tsx:101-103', true],

@@ -1,12 +1,12 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { CaretRight, Pause, Play, RocketLaunch } from 'phosphor-react-native';
+import { CaretRight, EnvelopeSimple, Pause, Play, RocketLaunch } from 'phosphor-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AutomationActions } from '@/components/automations/automation-actions';
 import { StartRun, canStartRun } from '@/components/automations/start-run';
-import { ConnectionMark, ConnectionRow, NoneMark } from '@/components/connection-row';
+import { ConnectionMark, ConnectionRow, GlyphMark, NoneMark } from '@/components/connection-row';
 import type { ArchivedFlowPath } from '@/components/flows/archived-flows';
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
@@ -14,7 +14,6 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { pressed } from '@/components/pressable';
-import { ConnectionsCard } from '@/components/settings/connections-card';
 import { chosenVendor, connectionFields } from '@/components/setup-field';
 import { StatTileButton } from '@/components/stat-tile-button';
 import { em, fonts, iconSize, layout, status, typeScale } from '@/constants/theme';
@@ -26,8 +25,8 @@ import { roleIn, useSession, workspaceIfShown } from '@/hooks/use-session';
 import { statusAction, useWorkflows, type FlowStatus } from '@/hooks/use-workflows';
 import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
 import {
-  CONNECTIONS_LABEL,
   DASHBOARD_LABEL,
+  FIGURE_UNAVAILABLE,
   OPEN_LIVE_FLOW_LABEL,
   SETUP_TURNING_ON,
   SETUP_TURN_ON,
@@ -44,7 +43,7 @@ import {
   errorTitleFor,
 } from '@/lib/content/screen-states';
 import { readCatalog, readConnectionProviders, readConnections } from '@/lib/platform/catalog';
-import { updateSubscription } from '@/lib/platform/automations';
+import { readFlowEmailRecipients, updateSubscription } from '@/lib/platform/automations';
 import { readProjects } from '@/lib/platform/projects';
 import {
   readRemovedSubscriptionsOrNone,
@@ -57,12 +56,12 @@ import {
   addedAgainAs,
   connectionState,
   scopeLabels,
-  toConnectionRow,
   toFlows,
   toRemovedFlows,
   type FlowView,
 } from '@/lib/view/catalog';
 import { EMPTY, count } from '@/lib/view/format';
+import { recipientsLine } from '@/lib/view/flow-email';
 import { flowStepPlan } from '@/lib/view/pipeline';
 import { administers } from '@/lib/view/roles';
 import { FLOW_STATS_REREAD_MS } from '@/lib/view/runs';
@@ -72,26 +71,29 @@ const ACTION_ICON = { pause: Pause, play: Play, rocket: RocketLaunch } as const;
 
 /**
  * The flow page — the run page for a flow (Build 21, spec A6; the owner's AM4 of
- * 2026-10-15: "set up page is initial, after that flow page is the run page …
- * when a user clicks a flow it shows basically steps to run now in the way i
- * described in feedback"). The TEST VERSION of his order (D3: "lets test this
- * flow page order first then we can agree if it should be the standard. it
- * should be easy for a user to run something"), top to bottom:
+ * 2026-10-15: "set up page is initial, after that flow page is the run page"),
+ * with Build 22's steps (P1–P4; the owner's build 21 items 5–7). Top to bottom:
  *
  * 1. its name, its status and its team — no description (the session's S24);
  * 2. **DASHBOARD** — Runs, Successes, Failures, live: read again each time the
  *    page is shown and every 5 s while a run of this flow is pending or running
  *    (the owner's build 20 item 10: "Dashboard items should be updated too";
  *    the session's S30); a tile opens Activity for it;
- * 3. **STEPS** — numbered, one per group (or step); Step 1 holds the document
- *    and Start run (Turn on while it is off), and the step that writes to a
- *    vendor shows the vendor chosen: its mark, its name, "Connected" or "Not
- *    connected" — the whole row opens Connect vendor (~~a Connect vendor button,
- *    drawn whatever the connection's state~~, the owner's build 20 items 4–5);
- * 4. **CONNECTIONS** — every account the flow uses, the one connection row;
- * 5. at the bottom its actions: Pause while it is on (Turn on is Step 1's while
- *    it is off), the move to a newer version, **Edit setup** (Set up again),
- *    the webhook address, Archive.
+ * 3. **STEPS** — numbered, titles only (the session's S20): "1 · Upload invoice"
+ *    holds the document and Start run (Turn on while it is off); "2 · Connect
+ *    integration" holds the integration row — its mark, its name, "Connected" or
+ *    "Not connected", or None — which opens the choices; "3 · AI processing";
+ *    "4 · QuickBooks updated" or "Details saved", by the flow's choice, nothing
+ *    under it; "5 · Email sent", the first address and how many more, which
+ *    opens who gets the email (`flowStepPlan`'s kinds, backend ADR-0041);
+ * 4. at the bottom its actions: Pause while it is on (Turn on is Step 1's while
+ *    it is off), **Edit setup** (Set up again), the webhook address, Archive.
+ *
+ * ~~CONNECTIONS~~ ("Remove the connections in the bottom as well") and ~~the
+ * move to a newer version~~ ("I also dont want a move to vx number in the
+ * flows. The user always gets the latest version") until Build 22 (the owner's
+ * build 21 item 7): the platform moves every flow to the newest version
+ * (backend ADR-0041), and Disconnect stays in Settings › Connections.
  *
  * Drawn in the Flows stack and, for an archived flow opened from Settings, in
  * the Settings stack (24.12); `detailPath` is where its live twin opens (build
@@ -106,7 +108,6 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
   const { flow } = useLocalSearchParams<{ flow?: string }>();
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
   // One key per target status: a retry of Pause keeps its key, and a Resume
   // after a re-read is a different intent with its own.
   const statusKeys = useIntentKeys('status');
@@ -114,9 +115,9 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
   /**
    * This flow, by subscription id: the subscription for its status, the catalog
    * for its name, steps and accounts, `run-stats` for its tiles, and the
-   * workspace's connections for the vendor row's state and CONNECTIONS. The
-   * subscription and its catalog entry are kept as read, for Step 1 (`StartRun`)
-   * and the actions (`AutomationActions`).
+   * workspace's connections for the integration row's state. The subscription
+   * and its catalog entry are kept as read, for Step 1 (`StartRun`) and the
+   * actions (`AutomationActions`).
    */
   const flows = useWorkspaceResource(async (workspaceId) => {
     const [subs, catalog, stats, providers, projects, removed, held] = await Promise.all([
@@ -185,6 +186,18 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
 
   const def: FlowView | undefined =
     flows.status === 'ready' ? flows.data.flows.find((f) => f.key === flow) : undefined;
+  /**
+   * Step 5's addresses (Build 22, the session's S22): who gets this flow's run
+   * emails, read for a flow that is not archived — an archived flow's page reads
+   * none — and read again each time the page is shown, so a change made on the
+   * email screen shows on return. A read that fails costs the row its address
+   * ("Unavailable"), never the page.
+   */
+  const emailFor = def !== undefined && !def.removed ? def.key : null;
+  const recipients = useWorkspaceResource(
+    async (workspaceId) => (emailFor ? readFlowEmailRecipients(workspaceId, emailFor) : null),
+    [emailFor],
+  );
   const subscription =
     flows.status === 'ready' && def ? flows.data.subscriptions.find((s) => s.id === def.key) : undefined;
   const entry =
@@ -284,7 +297,8 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
   // version has the choice: a flow on an older version without it (Invoice
   // Processing v1) still needs QuickBooks, and says so (the review of the
   // Invoice Processing screens).
-  const vendorFields = connectionFields(subscription.setup ?? entry?.setup ?? []);
+  const setupFields = subscription.setup ?? entry?.setup ?? [];
+  const vendorFields = connectionFields(setupFields);
   const declared = entry?.requiredConnections ?? [];
   const optional = new Set(vendorFields.length > 0 ? declared.filter((c) => c.optional).map((c) => c.providerId) : []);
   const nameOf = (providerId: string) =>
@@ -299,16 +313,21 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
 
   // STEPS by the catalog's groups only for the version they were declared for;
   // a flow on another version gets its steps by title, as an ungrouped
-  // manifest draws them (spec §3.D) — never another version's groups.
+  // manifest draws them (spec §3.D) — never another version's groups. Since
+  // Build 22 every flow is moved to the newest version (backend ADR-0041), so
+  // the two differ only for a flow the platform could not move.
   const plan = flowStepPlan(
     entry?.pipeline,
     entry?.version === subscription.templateVersion ? entry.groups : undefined,
-    vendorFields,
+    setupFields,
+    subscription.config,
   );
 
-  /** The vendor a step writes to: its mark, its name, its state — the whole row opens Connect vendor. */
+  /** A setting step's integration: its mark, its name, its state — the whole row opens the choices. */
   const vendorRow = (key: string) => {
-    const field = vendorFields.find((candidate) => candidate.key === key)!;
+    const field = vendorFields.find((candidate) => candidate.key === key);
+    // A setting step's other fields (an amount, a text) are edited on Set up, not drawn here.
+    if (!field) return null;
     const chosen = chosenVendor(field, subscription.config);
     const none = chosen === 'none';
     const connected = !none && connectionState(connectionOf(chosen)) === 'connected';
@@ -398,14 +417,25 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
     </View>
   );
 
-  // CONNECTIONS: every account the flow uses, in the manifest's order, the one row (spec A4) —
-  // then any the platform says it is owed that the catalog does not name (a platform from
-  // before `requiredConnections`). One this deployment does not list is named in Step 1 only.
-  const used = [...new Set([...declared.map((c) => c.providerId), ...subscription.unmetConnections])];
-  const connectionRows = used.flatMap((providerId) => {
-    const provider = providers.get(providerId);
-    return provider ? [toConnectionRow(provider, connectionOf(providerId))] : [];
-  });
+  // Step 5: who gets the run's email — the first address listed and how many
+  // more (the session's S22), a tap from the screen that changes it. Unread,
+  // the design's em dash; unreadable, "Unavailable", and it still opens.
+  const emailLine =
+    recipients.status === 'ready' && recipients.data
+      ? recipientsLine(recipients.data)
+      : { first: recipients.status === 'loading' ? EMPTY : FIGURE_UNAVAILABLE, more: null };
+  const emailRow = def.removed ? null : (
+    <View style={{ borderTopWidth: 1, borderTopColor: palette.divider }}>
+      <ConnectionRow
+        testID="flow-email"
+        mark={<GlyphMark icon={EnvelopeSimple} />}
+        name={emailLine.first}
+        line={emailLine.more}
+        right={<CaretRight size={15} color={palette.neutral[500]} />}
+        onPress={() => router.push({ pathname: '/(tabs)/flows/email', params: { flow: def.key } })}
+      />
+    </View>
+  );
 
   return (
     <ScrollView
@@ -460,43 +490,23 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
         <SectionLabel>{STEPS_LABEL}</SectionLabel>
         <SurfaceCard style={styles.underLabel}>
           {/* A flow whose template the catalog no longer lists has no steps to hold Step 1's controls: they stand alone. */}
-          {plan.rows.length === 0 ? stepOne : null}
-          {plan.rows.map((row, i) => (
+          {plan.length === 0 ? stepOne : null}
+          {plan.map((row, i) => (
             <View
               key={row.id}
               testID={`flow-step-${row.id}`}
-              style={i < plan.rows.length - 1 && { borderBottomWidth: 1, borderBottomColor: palette.divider }}>
+              style={i < plan.length - 1 && { borderBottomWidth: 1, borderBottomColor: palette.divider }}>
+              {/* The step's title only — no line under it (the session's S20; P2: "After step 4 i dont want to see quickbooks"). */}
               <View style={styles.stepRow}>
                 <Text style={[styles.stepLabel, { color: palette.text }]}>{row.label}</Text>
-                <Text style={[styles.stepSub, { color: palette.neutral[400] }]}>{row.sub}</Text>
               </View>
               {row.input ? stepOne : null}
-              {row.vendorFields.map(vendorRow)}
+              {row.kind === 'setting' ? row.fields.map(vendorRow) : null}
+              {row.kind === 'email' ? emailRow : null}
             </View>
           ))}
         </SurfaceCard>
-        {/* A vendor choice its version places in no step (v2, from before `group`): under the steps. */}
-        {plan.unplaced.length > 0 ? (
-          <SurfaceCard style={styles.gapAbove}>{plan.unplaced.map(vendorRow)}</SurfaceCard>
-        ) : null}
       </View>
-
-      {!def.removed && connectionRows.length > 0 ? (
-        <View testID="flow-connections">
-          <SectionLabel>{CONNECTIONS_LABEL}</SectionLabel>
-          <View style={styles.underLabel}>
-            <ConnectionsCard
-              testID="flow-connections-card"
-              rows={connectionRows}
-              loadedFor={flows.loadedFor}
-              canManage={canManage}
-              notice={notice}
-              onNotice={setNotice}
-              onChanged={flows.refresh}
-            />
-          </View>
-        </View>
-      ) : null}
 
       {def.removed ? (
         // Read-only (24.11.8): no status, no actions. The one thing to do with an
@@ -544,7 +554,6 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
           entry={entry}
           shownWorkspaceId={flows.loadedFor}
           canAdminister={canManage}
-          onChanged={flows.reload}
           // To the list, whichever way detail was reached — a cross-tab replace
           // from Setup leaves nothing to go back to.
           onArchived={() => router.dismissTo('/(tabs)/flows')}
@@ -592,10 +601,8 @@ const styles = StyleSheet.create({
   team: { marginTop: 1, fontFamily: fonts.regular, fontSize: typeScale.body.fontSize },
   statsRow: { flexDirection: 'row', gap: 10 },
   underLabel: { marginTop: 9 },
-  gapAbove: { marginTop: 10 },
-  stepRow: { gap: 2, paddingVertical: 12, paddingHorizontal: 14 },
+  stepRow: { paddingVertical: 12, paddingHorizontal: 14 },
   stepLabel: { fontFamily: fonts.medium, fontSize: typeScale.label.fontSize },
-  stepSub: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
   stepAction: { paddingHorizontal: 14, paddingBottom: 14 },
   owed: { paddingHorizontal: 14, paddingBottom: 12, fontFamily: fonts.medium, ...typeScale.small },
   actions: { flexDirection: 'row', gap: 10 },

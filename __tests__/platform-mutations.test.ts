@@ -86,7 +86,7 @@ describe('automation mutations', () => {
     const created = { subscription: { id: 'sub-1' } };
     automationsPost.mockResolvedValue({ data: created, response: { ok: true } });
     await expect(
-      createSubscription('workspace-1', { templateId: 'invoice', templateVersion: 3 }, 'intent-1'),
+      createSubscription('workspace-1', { templateId: 'invoice' }, 'intent-1'),
     ).resolves.toBe(created);
     expect(automationsPost).toHaveBeenCalledWith(
       '/v1/workspaces/{workspaceId}/subscriptions',
@@ -95,7 +95,7 @@ describe('automation mutations', () => {
           path: { workspaceId: 'workspace-1' },
           header: { 'Idempotency-Key': 'intent-1' },
         },
-        body: { templateId: 'invoice', templateVersion: 3 },
+        body: { templateId: 'invoice' },
         signal,
       }),
     );

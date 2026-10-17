@@ -301,12 +301,16 @@ export const SETUP_SAVING = 'Saving…';
 export const SETUP_SAVE_FAILED = 'Could not save. Try again.';
 
 /**
- * Connect vendor (§3.C; Build 21's A2: a tap saves and goes back). ~~"Connect
+ * The choices page (§3.C; Build 21's A2: a tap saves and goes back). ~~"Connect
  * vendor ›", "Done", "Save", "Saving…" as buttons, and "Disconnect from
  * QuickBooks"~~ are gone (the owner's build 20 items 2, 4, 5 and his ~04:15Z
  * "we will list on apples app store not intuits. so we do not need that").
+ * Titled as the flow page's step 2 since Build 22 (the session's S21: one word
+ * for one thing; the owner's build 21 item 5: "2. Connect integration … if i
+ * click that button it should take me to the choices I have like none or
+ * quickbooks"); ~~"Connect vendor"~~ until Build 22.
  */
-export const VENDOR_TITLE = 'Connect vendor';
+export const VENDOR_TITLE = 'Connect integration';
 export function vendorFor(flowName: string): string {
   return `For ${flowName}`;
 }
@@ -344,13 +348,45 @@ export function disconnectBody(liveFlows: number): string {
 export const ACCOUNT_LEAD = 'Sign in with any of these.';
 
 /**
- * The flow page (Build 21, spec A6 — the TEST VERSION of the owner's order, D3:
- * "lets test this flow page order first then we can agree if it should be the
- * standard"): DASHBOARD, STEPS, CONNECTIONS; steps numbered, labels not.
+ * The flow page (Build 21, spec A6; Build 22, P1–P4): DASHBOARD, STEPS; steps
+ * numbered, labels not. ~~CONNECTIONS~~ until Build 22 (the owner's build 21
+ * item 7: "Remove the connections in the bottom as well").
  */
 export const DASHBOARD_LABEL = 'DASHBOARD';
 export const STEPS_LABEL = 'STEPS';
-export const CONNECTIONS_LABEL = 'CONNECTIONS';
+
+/**
+ * The flow page's step 5 and the screen it opens (Build 22, P1 and P5; spec §4;
+ * the owner's build 21 item 5: "5. Email sent- this should show the email the
+ * automation sends to … When i select this step it should take me to the page
+ * where i can edit in a screen the email it should send to"). Who always gets
+ * it is the session's D1, approved by the owner (21:12Z): the workspace's owners
+ * and admins and the person who starts the run; the screen adds more.
+ */
+export function andMore(count: number): string {
+  return `and ${count} more`;
+}
+export const EMAIL_TITLE = 'Who gets the email';
+export const EMAIL_ALWAYS_LABEL = 'ALWAYS';
+export const EMAIL_ALSO_LABEL = 'ALSO SEND TO';
+export const EMAIL_STARTER = 'The person who starts the run';
+export const EMAIL_ROLE: Readonly<Record<'owner' | 'admin', string>> = { owner: 'Owner', admin: 'Admin' };
+/** No extra address; and a run's step 2 when the flow chose no integration (the session's S23). */
+export const NONE_LABEL = 'None';
+export const EMAIL_PLACEHOLDER = 'Email address';
+export const EMAIL_ADD = 'Add';
+export const EMAIL_ADDING = 'Adding…';
+export const EMAIL_REMOVING = 'Removing…';
+export function removeAddress(address: string): string {
+  return `Remove ${address}`;
+}
+/** How many extra addresses a flow holds at most (backend ADR-0041; the session's S13). */
+export const EMAIL_EXTRA_LIMIT = 10;
+export const EMAIL_LIMIT_REACHED = 'You can add up to 10.';
+export const EMAIL_ASK_ADMIN = 'Ask an owner or admin to change this.';
+export const EMAIL_INVALID = 'Enter an email address.';
+export const EMAIL_DUPLICATE = 'Already on the list.';
+export const EMAIL_SAVE_FAILED = 'Could not save. Try again.';
 /**
  * The row at the bottom of the flow page that opens Set up again (the owner's
  * AM4, ~22:15Z: "they can have a edit settings/flow/setup thing in the bottom
@@ -358,9 +394,6 @@ export const CONNECTIONS_LABEL = 'CONNECTIONS';
  * up", a dialog~~ until Build 21.
  */
 export const EDIT_SETUP_LABEL = 'Edit setup';
-
-/** Home's quick run (Build 21, spec A9; the owner: "they shouldnt have to do a bunch of work in the app"). */
-export const RUN_A_FLOW_LABEL = 'RUN A FLOW';
 
 /**
  * A run's page (§3.E; Build 21's A7: every step from the start, a live tracker).
@@ -379,6 +412,12 @@ export const STEP_FAILED = 'Failed';
 export function stepHeld(reason: string | undefined): string {
   return reason ? `Waiting for approval: ${reason}` : 'Waiting for approval';
 }
+/** A run's step 5, the platform's email (Build 22; the session's S24): its line per state. */
+export const EMAIL_SENDING = 'Sending…';
+export function emailSent(time: string): string {
+  return `Sent · ${time}`;
+}
+export const EMAIL_NOT_SENT = 'Not sent';
 /** "Document 1 of 3" (the owner's ~04:05Z: "a json out that clearly seperates accordingly"). */
 export function documentOf(index: number, count: number): string {
   return `Document ${index} of ${count}`;

@@ -4532,3 +4532,158 @@ contract check (it reads production).
 
 (Each run by `b21-app-review/bite.sh` in the session's scratchpad, Node 22.23.2: red, the file
 restored sha256-equal, green.)
+
+### Build 22 (Round 17; 2026-10-17)
+
+A re-entry on the owner's words after build 21: his seven TestFlight items of 2026-10-17
+14:30–14:39Z (read through the ASC API, each with its screenshot, `fb01`–`fb07`, looked at), and
+his **"continue and complete. parallel if you can"** (21:12Z), which approved the plan given with
+it — H1–H4 · F1–F3 · P1–P5 · W1–W3 — and **the session's suggestions D1–D6** shown beside it. D1–D6
+are the session's, approved by the owner, never his own words: D1 the workspace's owners and admins
+and the person who started a run always get its email, and the step 5 screen adds more addresses;
+D2 step 3 is "AI processing"; D3 step 4 is "Details saved" with None, "QuickBooks updated"
+otherwise; D4 "overflow" is OVERVIEW; D5 the website gets W1 and W2, matching the app; D6 Home's
+approvals banner stays, right after TODAY. The spec is the session's `b22/spec.md`; the contract the
+session's `b22-contract` (backend `docs/` + `schemas/` with this round's changes: no client version
+move, `…/subscriptions/{id}/email-recipients`, `AutomationStepGroup.titleByConnection` and
+`.platform`, `RunDetail.email`). The generated types name the bytes they came from:
+`automations.yaml` sha256 `8f780521…`, `openapi.yaml` `52a5ca8d…`, `connections.yaml` `bf50b980…`
+(unchanged). They are regenerated from backend `main` once the release is read back (spec §6, #10);
+until then the Deployed contract check fails by design (it reads production, and was not run).
+
+The owner's words this answers (verbatim):
+
+- Item 1, Home: "Remove run a flow section. We did not add thus. / Remove overflow, it should be the
+  3 icons for today with the run types / Then add a flow and flow buttons / Then recent runs. / I
+  dont want want flows integrations, connect integrations, view teams, or run a flow. / Recent runs
+  is fine" → **H1–H4**: Home is the header, the greeting, TODAY, the review banner while something
+  waits (D6), Add a flow + Flows, RECENT RUNS. RUN A FLOW, OVERVIEW (D4), and the Connect
+  integration and View teams rows are gone, with `quickRunRows`, `flowsFigure`,
+  `integrationsFigure`, `RUN_A_FLOW_LABEL`, and the reads only they used — the connections and the
+  teams (the session's S31). The first run keeps its own Add a flow.
+- Items 2–4, Flows and Activity: "Flows and activity ahould have the headed buttons on top circle
+  icons like home instead. / This looks odd. It should be the logos same as home for organization
+  and team then to its right the box for archived and then +new can stay as is." / "Same as the
+  change for flows make the organization and teams circle icons then calendar all time can stay as
+  is." / "Ensure icons for activity and flows after change are in the same height on the page next
+  to the section name. / In this case its Activity then to its right the icons as deacribed.
+  Symmetry and standard" → **F1–F3**: `components/title-row.tsx` on both — the title, Home's two
+  circles (`ScopeIcons`, unchanged look) 8 pt right of it and 8 apart, flexible space, the page's
+  controls — 38 tall, every item centred, first under the same top padding; `ScopeControl`'s pills
+  deleted (`ScopePill` stays for the time range).
+- Items 5–7, the flow page: "Step 1 is upload invoice. / Why do we have so many steps the user
+  doesnt care about. It should be / 1. Upooad Invoice / 2. Connect integration - shows either none
+  or quickbooks or any other integration like quickbooks. It should show the integration type, then
+  if i click that button it should take me to the choices I have like none or quickbooks. / 3. Then
+  something about AI Processing / 4. Quickbooks updated / 5. Email sent- this should show the email
+  the automation sends to. … When i select this step it should take me to the page where i can edit
+  in a screen the email it should send to. / We need ti discuss where the email goes. It should go
+  to the owner/admin and the person that uploaded the document." / "Im on v3 now. But make sure it
+  still has the steps the way i described in my comments" / "After step 4 i dont want to see
+  quickbooks, remember i integrated it into the step. Remove the connections in the bottom as well .
+  I also dont want a move to vx number in the flows. The user always gets the latest version. They
+  dont get to oick when to update" → **P1–P4**: the five steps from Invoice Processing v4's groups,
+  titles only (`flowStepPlan`'s kinds), the integration row in step 2, step 4 by
+  `titleByConnection` (D2, D3), step 5's row of who gets the email; no CONNECTIONS; no move —
+  `components/automations/move-version.tsx` and `setup-dialog.tsx` deleted, `MOVE_REFUSALS` gone,
+  `templateVersion` sent by no write (`setup.tsx`'s Add, `lib/platform/automations.ts`); the
+  choices page titled "Connect integration" (S21); **P5**'s screen, Who gets the email
+  (`app/(tabs)/flows/email.tsx`, D1); and the run page's setting step, step 4's title and step 5
+  (S23–S25), the version gate at `run.tsx:182` gone. `audit:vocabulary` now fails "Move to v" and
+  "Connect vendor" in copy.
+
+**The session's choices** (none is the owner's; listed for him with the checklist). From the spec, as
+built: S12, S13, S20, S21, S22, S23, S24, S25, S26, S30, S31. This lane's own:
+
+| # | Choice |
+| --- | --- |
+| M1 | A setting step draws its connection fields, as the integration row; any other kind of field a setting step names is edited on Set up, not drawn on the flow page (the app has no in-step editor; Build 21's M3). |
+| M2 | Step 5 says the design's em dash while its read is in flight, and "The person who starts the run" when nobody is listed (a member who may not read the workspace's people, and no extra address). It is read again on every return to the page, so a change on the email screen shows at once. |
+| M3 | The title row's rule is measured, not guessed: the title's and the controls' widths by `onLayout`, the least space before the controls 8 pt; the controls' full width is kept while Archived is a circle, so the word comes back when the row widens. The Archived circle is the scope circles' own (`CircleButton`, glyph 19), so every circle in the row is one. |
+| M4 | On Flows and Activity the workspace circle opens the switcher with any number of workspaces, as Home's always did; the pill's rule (two or more, or a cut list) went with the pills. |
+| M5 | The flow page keeps drawing the catalog's groups only for the version they were declared for (the run page's gate is the one the spec drops); every flow is moved to the newest, so the two differ only for a flow the platform could not move. A v3 vendor, which names a step with work, is not drawn on the page (Set up has it). |
+| M6 | The run page reads the flow's live row, and the archived list only when the run's flow is not live; a flow that cannot be read makes a setting step say "Done" and step 4 its own title. |
+| M7 | A `platform` this build does not know is, on the run page, its title with no line, CircleDashed in the muted colour, and not counted in Steps done ("a step with no state"). |
+| M8 | The email screen: Add also from the keyboard's Done; the field clears after a saved add; typing clears the line under the section; one write at a time (X and Add wait while one is sent); the X is a 38-pt circle with an 8-pt reach. Its rows are the one connection row (mark 24 · address · line), its None the Prohibit mark. A failed load says "Couldn't load this flow" — the flow page's words, no new title. |
+| M9 | `setup-dialog.tsx` is deleted whole: its only user was the move dialog. |
+| M10 | The Build 21 review's Disconnect guard (connections read again past the snapshot) is held where Disconnect now is, Settings › Connections. |
+
+**Found, for the backend lane (not changed here):** `FlowEmailAddress`'s pattern is not in the
+generated types (openapi-typescript drops `pattern`), so `lib/view/flow-email.ts` restates it, cited;
+a change to the contract's pattern needs the same change there.
+
+**NOT OBSERVED** in this lane: the app on a simulator or a device (nothing here was launched); a real
+v4 flow, run or email; the release's automatic move; the Deployed contract check (production); the
+website's lane (its own).
+
+**Presses** (the register "Every press, its test (build 13)" and its later rows stay as written;
+these are this change's):
+
+| Press | Configured to | Held by |
+| --- | --- | --- |
+| `flows/index.tsx` — Archived as its icon (`CircleButton`) | opens Archived flows | `build22-screens` "Archived keeps its word where it fits … the same press" |
+| `scope-control.tsx` — the scope circles on Flows and Activity (`CircleButton`, through `ScopeIcons`) | the switcher, with any number of workspaces; Show | `presses-home-activity` (the scope tables), `scope-control` |
+| `flows/detail.tsx` — step 5's row | Who gets the email, `{ flow }`; unread too | `build22-screens` "step 5: the first address …", "step 5 unread says Unavailable …"; real-router `connect-vendor` "step 5 opens Who gets the email …" |
+| `flows/email.tsx` — Back | goes back | `build22-screens` "Back goes back"; `presses-patterns-back-circle` "Who gets the email" |
+| `flows/email.tsx` — X | PUT the list without it, "Removing…" meanwhile; refused, the words and the list kept | `build22-screens` "X removes the address at once …", "a refusal or a failure …" |
+| `flows/email.tsx` — Add | checks, then PUT the whole list; shows the answer | `build22-screens` "Add sends the whole list once …", the Add table, "a refusal or a failure …" |
+| `flows/email.tsx` — its failed load's Retry and Back | as every fetching screen | `presses-patterns-failure-states` "Who gets the email" (3 rows) |
+| ~~Home — RUN A FLOW's rows, Connect integration, View teams~~ | gone (item 1) | `parity-home` "draws no RUN A FLOW …" |
+| ~~`scope-control.tsx` — the workspace pill, the team pill~~ | gone (items 2–3) | `build22-screens` "Flows: …", "Activity: …" |
+| ~~`move-version.tsx` — Move to vN, its confirm, its Cancel; `setup-dialog.tsx` — Save and move~~ | gone (item 7) | `automation-actions` "offers no Move …" |
+| ~~`flows/detail.tsx` — CONNECTIONS' Connect / Reconnect / Disconnect~~ | gone from the flow page (item 7); Settings › Connections keeps them | `build22-screens` "no CONNECTIONS …"; `invoice-processing-screens` "P3: no CONNECTIONS …", "Disconnect on Settings › Connections …" |
+
+Tests: `__tests__/build22-screens.test.tsx` (27) and `__tests__/build22-views.test.ts`; Home's,
+the title rows', the flow page's, the run page's and the move's existing tests moved to the new
+rules (`parity-home` — Gate 24's G5 and G6 notes struck there — `build14-home-scope-icons-and-first-run`,
+`build14-activity-range`, `scope-control`, `presses-home-activity`, `invoice-processing-screens`,
+`automation-actions`, `parity-flows`, `tab-screens`, `vendor-page`, real-router `home-links` and
+`connect-vendor`); `test/platform.tsx` gains `invoiceProcessingV4Entry()` and `recipientsPayload()`
+(example.com addresses only), and routes the recipients read.
+
+### Guards proved to bite, Build 22
+
+Thirty-one runs of one script (`b22-app-bites/bite.py`, its jest logs beside it in the session's
+scratchpad), Node 22.23.2, each on the final tree: one exact edit, the test named run (red: a test
+failed), the file restored from its saved copy — its SHA-256 equal every time — and the test run again
+(green: it passed).
+
+| Guard | Broken by | What failed |
+| --- | --- | --- |
+| H4 · Home top to bottom: the banner right after TODAY | the banner never drawn (`approvalCount < 0`) (`app/(tabs)/(home)/index.tsx`) | `parity-home` "the header, the greeting, TODAY, the banner…" |
+| H2 · no OVERVIEW on Home | OVERVIEW drawn again over TODAY (`app/(tabs)/(home)/index.tsx`) | `parity-home` "draws no RUN A FLOW…" |
+| S31 · Home reads no connections | the connections read again beside the six (`app/(tabs)/(home)/index.tsx`) | `parity-home` "reads only what it draws…" |
+| F1 · the circles beside the title | `ScopeIcons` taken out of the row (`components/title-row.tsx`) | `build22-screens` "Flows: the title, the two circles…" |
+| S26 · Archived its icon alone when the row is too narrow | the rule 100 pt looser (`components/title-row.tsx`) | `build22-screens` "Archived keeps its word where it fits…" |
+| F3 · the row 38 tall, centred | `height` 38 made `minHeight` (`components/title-row.tsx`) | `build22-screens` "the circles sit at the same height…" |
+| F3 · the same top padding on both pages | Activity's top padding 4 pt more (`app/(tabs)/activity/index.tsx`) | `build22-screens` "the circles sit at the same height…" |
+| P1 · step 4 titled by the connection chosen | the step's own title, never by connection (`lib/view/pipeline.ts`) | `build22-screens` "QuickBooks: 1 · Upload invoice…" |
+| P2 · nothing between step 4 and step 5 | the email row under every step with work (`app/(tabs)/flows/detail.tsx`) | `build22-screens` "nothing between step 4…" |
+| P3 · no CONNECTIONS | CONNECTIONS drawn under STEPS (`app/(tabs)/flows/detail.tsx`) | `build22-screens` "no CONNECTIONS and no move…" |
+| P4 · no Move | "Move to v2" drawn in the actions (`components/automations/automation-actions.tsx`) | `automation-actions` "offers no Move…" |
+| P4 · no version sent at create | `templateVersion` sent with Add (`app/(tabs)/flows/setup.tsx`) | `parity-flows` "with nothing added since…" |
+| S22 · step 5: the first address and "and {n} more" | "and {all} more" (`lib/view/flow-email.ts`) | `build22-screens` "step 5: the first address…" |
+| S22 · step 5 unread says Unavailable | the em dash for a failed read (`app/(tabs)/flows/detail.tsx`) | `build22-screens` "step 5 unread says Unavailable…" |
+| archived · no addresses read | an archived flow's addresses read (`app/(tabs)/flows/detail.tsx`) | `build22-screens` "an archived flow…" |
+| S21 · the choices page is Connect integration | the title "Choose integration" (`lib/content/screen-states.ts`) | `vendor-page` "says what it is and for which flow…" |
+| S12 · a member: no X, no field | the field drawn for anyone (`app/(tabs)/flows/email.tsx`) | `build22-screens` "a member sees the list…" |
+| S30 · Already on the list, without case | compared with case (`lib/view/flow-email.ts`) | `build22-screens` "Add "Owner@Example.com"…" |
+| S30 · Enter an email address | any text taken as an address (`lib/view/flow-email.ts`) | `build22-screens` "Add "bookkeeper"…" |
+| S13 · You can add up to 10. | the limit 11 (`lib/content/screen-states.ts`) | `build22-screens` "at ten the field gives way…" |
+| S30 · X: one PUT without it | the PUT keeps the address (`app/(tabs)/flows/email.tsx`) | `build22-screens` "X removes the address at once…" |
+| S30 · X says Removing… meanwhile | no "Removing…" (`app/(tabs)/flows/email.tsx`) | `build22-screens` "X removes the address at once…" |
+| S30 · Could not save. Try again. | a failed save says nothing (`app/(tabs)/flows/email.tsx`) | `build22-screens` "a refusal or a failure says…" |
+| S23 · a setting step says the integration | a setting step always "Done" (`lib/view/runs.ts`) | `build22-screens` "succeeded and emailed…" |
+| S23 · the run page's step 4 by the flow's choice | the flow's settings read as none (`app/(tabs)/(home)/run.tsx`) | `build22-screens` "succeeded and emailed…" |
+| S24 · Sending… while owed | "Waiting" for an owed email (`lib/view/runs.ts`) | `build22-screens` "its email owed…" |
+| S24 · a cancelled run: Stopped | a cancelled run's email by its email state (`lib/view/runs.ts`) | `build22-screens` "running: 5 Waiting; cancelled: 5 Stopped…" |
+| S25 · no version gate on the run page | the version gate back on the groups (`app/(tabs)/(home)/run.tsx`) | `build22-screens` "is drawn by the five steps…" |
+| a step with no state is not counted | a step with no state counted (`lib/view/runs.ts`) | `build22-views` "a platform step this build does not know: its title…" |
+| vocabulary · "Move to v" banned | "Move to v" taken off the ban (`scripts/audit-vocabulary.mjs`) | `audit-gates` "Build 22…" |
+| vocabulary · "Connect vendor" in any form | the ban back to "Connect vendor ›" (`scripts/audit-vocabulary.mjs`) | `audit-gates` "Build 22…" |
+
+(Thirty-one guards. Three first runs proved nothing — two failures whose message held a screen
+element jest could not send between its workers (`expect([word, queryByText(word)])`), now asserted
+as a boolean, and one whose test name was read as a pattern ("(…)") so no test ran — so the script
+now counts a red only when a test failed and a green only when one passed, and those three were run
+again: red, then green.)

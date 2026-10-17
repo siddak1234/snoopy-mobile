@@ -8,8 +8,9 @@ import { IconTile } from '@/components/nocturne/icon-tile';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
-import { ScopeControl } from '@/components/scope-control';
-import { em, fonts, iconSize, layout, radius, status, typeScale, withAlpha } from '@/constants/theme';
+import { CircleButton } from '@/components/scope-control';
+import { TitleRow } from '@/components/title-row';
+import { fonts, iconSize, layout, radius, status, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
@@ -32,12 +33,18 @@ import { flowsOverPlan } from '@/lib/view/billing';
 import { scopeLabels, toFlows, toRemovedFlows, type FlowView } from '@/lib/view/catalog';
 import { inScope } from '@/lib/view/scope';
 
+/** The header's Archived, its word or — the row too narrow — its icon's name. */
+const ARCHIVED_LABEL = 'Archived';
+
 /**
  * Flows — the one tab for what the workspace runs (design `sFlows`; one tab
- * since BUILD-PLAN 24.9.3). The scope control narrows it to a team; "New"
- * opens the catalog inside this tab, and "Archived", left of it (build 11, D5
- * — the owner's build 10 item 8: "a button to the left of new… We dont need a
- * component on the page"), opens the archived flows, always, count or none.
+ * since BUILD-PLAN 24.9.3). Its first row is the title, Home's two scope
+ * circles beside it — they narrow it to a team — then "Archived" and "New"
+ * (Build 22, F1; `TitleRow`); "New" opens the catalog inside this tab, and
+ * "Archived", left of it (build 11, D5 — the owner's build 10 item 8: "a
+ * button to the left of new… We dont need a component on the page"), opens the
+ * archived flows, always, count or none — as its icon alone when the row has no
+ * room for its word (the session's S26).
  * With no live flow in the workspace the screen is the empty standard,
  * whatever is archived (D6, item 9: "like this when no flows even if archive"),
  * with the way to the archived ones under it when there are any.
@@ -140,36 +147,46 @@ export default function FlowsScreen() {
         styles.content,
         { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) },
       ]}>
-      <ScopeControl />
-      <View style={styles.titleRow}>
-        <Text style={[styles.title, { color: palette.text }]}>Flows</Text>
-        {/* [Archived][New]: Archived secondary, so New stays the one accent control. */}
-        <View style={styles.headerActions}>
-          <PillButton
-            label="Archived"
-            variant="secondary"
-            height={36}
-            fontSize={typeScale.body.fontSize}
-            icon={Archive}
-            iconSize={14}
-            gap={5}
-            style={styles.headerPill}
-            testID="flows-archived"
-            onPress={() => router.push('/(tabs)/flows/archived')}
-          />
-          <PillButton
-            label="New"
-            variant="primary"
-            height={36}
-            fontSize={typeScale.body.fontSize}
-            icon={Plus}
-            iconSize={14}
-            gap={5}
-            style={styles.headerPill}
-            onPress={() => router.push('/(tabs)/flows/add')}
-          />
-        </View>
-      </View>
+      {/* [Archived][New]: Archived secondary, so New stays the one accent control. */}
+      <TitleRow
+        title="Flows"
+        right={(compact) => (
+          <>
+            {compact ? (
+              <CircleButton
+                testID="flows-archived"
+                icon={Archive}
+                accessibilityLabel={ARCHIVED_LABEL}
+                onPress={() => router.push('/(tabs)/flows/archived')}
+              />
+            ) : (
+              <PillButton
+                label={ARCHIVED_LABEL}
+                variant="secondary"
+                height={36}
+                fontSize={typeScale.body.fontSize}
+                icon={Archive}
+                iconSize={14}
+                gap={5}
+                style={styles.headerPill}
+                testID="flows-archived"
+                onPress={() => router.push('/(tabs)/flows/archived')}
+              />
+            )}
+            <PillButton
+              label="New"
+              variant="primary"
+              height={36}
+              fontSize={typeScale.body.fontSize}
+              icon={Plus}
+              iconSize={14}
+              gap={5}
+              style={styles.headerPill}
+              onPress={() => router.push('/(tabs)/flows/add')}
+            />
+          </>
+        )}
+      />
 
       {/* Over the plan (decision 7a3): every flow is held from starting a run, in
           any scope, so this says so above the list, whatever the team. */}
@@ -260,23 +277,9 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     gap: 16,
   },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  title: {
-    fontFamily: fonts.medium,
-    fontSize: typeScale.display.fontSize,
-    letterSpacing: em(-0.015, typeScale.display.fontSize),
-  },
+  // Both header pills 12 a side (the session's S26), so the words fit beside the circles.
   headerPill: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
   },
   overPlan: {
     flexDirection: 'row',

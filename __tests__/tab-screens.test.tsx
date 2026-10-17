@@ -447,7 +447,8 @@ describe('Workflow detail', () => {
     expect(getByText('Lead enrichment')).toBeTruthy();
     expect(getByText('Draft')).toBeTruthy();
     expect(getAllByText('—').length).toBeGreaterThanOrEqual(3);
-    expect(getByText('HubSpot')).toBeTruthy();
+    // What it is owed is said in Step 1 (~~CONNECTIONS' HubSpot row~~ until Build 22).
+    expect(getByText('Connect HubSpot first.')).toBeTruthy();
     expect(getByText('Turn on')).toBeTruthy();
     expect(queryByText('Publish')).toBeNull();
   });
@@ -1466,7 +1467,8 @@ describe('Setup (design sSetup; the Invoice Processing update, spec §3.B)', () 
     );
     expect(mockRouter.dismissTo).toHaveBeenCalledWith('/(tabs)/flows');
     expect(writes.map(({ method, body }) => [method, body])).toEqual([
-      ['POST', { templateId: 'invoice-processing', templateVersion: 2 }],
+      // No version is sent: a new flow runs the newest (Build 22, P4).
+      ['POST', { templateId: 'invoice-processing' }],
       ['PATCH', { config: { vendor: 'none', holdAboveAmount: 500, notifyEmail: undefined }, status: 'live' }],
     ]);
   });
@@ -1639,7 +1641,7 @@ describe('Setup (design sSetup; the Invoice Processing update, spec §3.B)', () 
       expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'fresh-0' } }),
     );
     expect(writes.map(({ path }) => path).some((path) => path.endsWith('/subscriptions/archived-0'))).toBe(false);
-    expect(writes[0]!.body).toEqual({ templateId: 'invoice-processing', templateVersion: 2 });
+    expect(writes[0]!.body).toEqual({ templateId: 'invoice-processing' });
     // No team directory is read: there is no team to ask onto, or to pick.
     expect(platformOperation.mock.calls.some(([path]: [string]) => path.endsWith('/project-directory'))).toBe(false);
   });
@@ -2127,6 +2129,8 @@ describe('Flows with no live flow (build 11, D6)', () => {
     await fireEvent.press(await screen.findByTestId('scope-option-project-1'));
     expect(await screen.findByText('No flows in this team yet')).toBeTruthy();
     expect(screen.queryByTestId('screen-empty')).toBeNull();
-    expect(screen.getByTestId('scope-control')).toBeTruthy();
+    // The scope stays: its circles beside the title (Build 22, F1; ~~the pills above it~~).
+    expect(screen.getByTestId('title-scope-team')).toBeTruthy();
+    expect(screen.queryByTestId('scope-control')).toBeNull();
   });
 });

@@ -56,21 +56,11 @@ export function connectionIncomplete(stillConnected: boolean): string {
     : 'The connection could not be completed. Try again or contact an owner.';
 }
 
-/** Moving a subscription to another version (backend §12.1 #126). */
-export const MOVE_REFUSALS: Readonly<Record<string, string>> = {
-  approvals_pending:
-    'An approval for this flow is still waiting. Decide it first, then move.',
-  runs_in_flight: 'A run of this flow is still going. Wait for it to finish, then move.',
-  version_unavailable: 'That version is no longer available.',
-  subscription_archived: 'An archived flow cannot move.',
-  // Answered with that version's fields in the move dialog (backend §12.1 #185):
-  // Set up draws the version the flow runs, so it could not fix a mismatch.
-  invalid_config: 'Its settings do not fit that version. Set them for it to move.',
-  unmet_connections:
-    'That version needs an account this workspace has not connected. Connect it first, or pause the flow and move.',
-  setup_incomplete:
-    'That version needs a setting this flow does not have yet. Pause it, move, then finish Set up.',
-};
+/**
+ * ~~`MOVE_REFUSALS`, moving a subscription to another version (backend §12.1
+ * #126)~~ until Build 22: no client moves a flow — the platform moves every
+ * flow to the newest version (backend ADR-0041; the owner's build 21 item 7).
+ */
 
 /** Issuing or rotating a webhook address (backend §12.1 #91, #109). */
 export const WEBHOOK_ISSUE_REFUSALS: Readonly<Record<string, string>> = {

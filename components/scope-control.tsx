@@ -15,8 +15,8 @@ import { ALL_TEAMS_ICON, teamTypeIcon } from '@/lib/content/team-types';
 import { readProjects } from '@/lib/platform/projects';
 
 /**
- * What the scope control reads and which of its cards is open, shared by its two
- * forms: the labelled pills (Flows, Activity) and Home's icons.
+ * What the scope control reads and which of its cards is open: its two icons,
+ * on Home beside the bell and on Flows and Activity beside the title (Build 22).
  *
  * Teams come from the shared snapshot, so every screen drawing a form reads the
  * list once.
@@ -30,9 +30,6 @@ function useScopeChoices() {
   const activeWorkspace =
     currentSession?.workspaces.find((workspace) => workspace.id === currentSession.user.activeWorkspaceId) ??
     currentSession?.workspaces[0];
-  const canSwitchWorkspace =
-    currentSession !== null &&
-    (currentSession.workspaces.length >= 2 || currentSession.workspacesTruncated === true);
 
   const teams = useWorkspaceResource(async (workspaceId) =>
     (await readProjects(workspaceId)).filter((project) => project.status !== 'archived'),
@@ -51,7 +48,6 @@ function useScopeChoices() {
     setOpen,
     activeWorkspace,
     workspaceLabel,
-    canSwitchWorkspace,
     teams,
     openTeams,
     chosen,
@@ -62,10 +58,9 @@ function useScopeChoices() {
 type ScopeChoices = ReturnType<typeof useScopeChoices>;
 
 /**
- * The cards both forms open: the workspace switcher and Show (the team list).
- * One set, so a choice made from Home's icons is made exactly as from the
- * pills. No Create a team since the Invoice Processing update (backend
- * ADR-0036): the platform makes a flow's team when it is first needed.
+ * The cards the icons open: the workspace switcher and Show (the team list).
+ * No Create a team since the Invoice Processing update (backend ADR-0036): the
+ * platform makes a flow's team when it is first needed.
  */
 function ScopeCards({ scope }: { scope: ScopeChoices }) {
   const { palette } = useTheme();
@@ -114,10 +109,10 @@ function ScopeCards({ scope }: { scope: ScopeChoices }) {
 }
 
 /**
- * A pill that says what is chosen and, with a caret, opens the choice: the
- * scope control's two, and Activity's time range beside its title (the owner's
- * build 13 decision 4), which chooses what that screen shows as these do. With
- * no `onPress` it is not a button and draws no caret.
+ * A pill that says what is chosen and, with a caret, opens the choice:
+ * Activity's time range beside its title (the owner's build 13 decision 4).
+ * With no `onPress` it is not a button and draws no caret. ~~The scope
+ * control's two pills on Flows and Activity~~ until Build 22.
  */
 export function ScopePill({
   icon: IconCmp,
@@ -154,91 +149,83 @@ export function ScopePill({
 }
 
 /**
- * The scope control at the top of Flows and Activity (BUILD-PLAN 24.9.2;
- * teams since 24.11.7): the workspace, then "All teams" or one team. The
- * workspace pill opens the switcher. The team pill is always there, with All
- * teams and every team this person can see. A team is named by its kind
- * (24.12), and the platform makes it when the first flow of its kind is added
- * (backend ADR-0036). Home draws the same control as two icons
- * (`ScopeIcons`, the owner's build 13 decision 2).
+ * One circle of the header row: Home's bell, exactly — 38 across, a hairline
+ * ring, the glyph at 19 — every press ticking. The scope's two icons are drawn
+ * with it, and since Build 22 Flows' Archived when its row has no room for the
+ * word (the session's S26), so every circle in a header row is the same.
  */
-export function ScopeControl() {
-  const scope = useScopeChoices();
-  const { setOpen, workspaceLabel, canSwitchWorkspace, chosen, teamLabel } = scope;
-
+export function CircleButton({
+  icon: Glyph,
+  accessibilityLabel,
+  onPress,
+  testID,
+}: {
+  icon: Icon;
+  accessibilityLabel: string;
+  onPress: () => void;
+  testID?: string;
+}) {
+  const { palette } = useTheme();
   return (
-    <View style={styles.row} testID="scope-control">
-      <ScopePill
-        icon={Buildings}
-        label={workspaceLabel}
-        accessibilityLabel={`Workspace: ${workspaceLabel}`}
-        onPress={canSwitchWorkspace ? () => setOpen('workspace') : undefined}
-      />
-      <ScopePill
-        icon={chosen ? UsersThree : Stack}
-        label={teamLabel}
-        accessibilityLabel={`Team: ${teamLabel}`}
-        onPress={() => setOpen('team')}
-      />
-      <ScopeCards scope={scope} />
-    </View>
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.iconButton,
+        { borderColor: palette.neutral[800] },
+        pressed && { backgroundColor: withAlpha(palette.text, 0.07) },
+      ]}>
+      <Glyph size={19} color={palette.neutral[300]} weight="regular" />
+    </Pressable>
   );
 }
 
 /**
- * Home's scope control: two icons beside the bell, the words gone (the owner's
- * build 13 decision 2, 2026-10-06). The workspace is a person (Personal) or a
- * building (an organization); the team is its kind's icon (`teamTypeIcon`), or
- * four squares for All teams. An icon cannot say which workspace or team is
- * chosen, so each is read aloud as what it is and what is chosen ("Workspace:
- * Acme", "Team: Legal"), and each opens the card the pills open, where the words
- * are — the workspace's with any number of workspaces, since only the card can
- * name the one there is. Drawn as the bell beside them, and like it, every press
- * ticks.
+ * The scope control (BUILD-PLAN 24.9.2; teams since 24.11.7): two icons, the
+ * words gone (the owner's build 13 decision 2, 2026-10-06) — on Home beside
+ * the bell, and since Build 22 on Flows and Activity beside the title
+ * (`TitleRow`; the owner's build 21 items 2–4: "the logos same as home for
+ * organization and team"). The workspace is a person (Personal) or a building
+ * (an organization); the team is its kind's icon (`teamTypeIcon`), or four
+ * squares for All teams. An icon cannot say which workspace or team is chosen,
+ * so each is read aloud as what it is and what is chosen ("Workspace: Acme",
+ * "Team: Legal"), and each opens its card, where the words are — the
+ * workspace's with any number of workspaces, since only the card can name the
+ * one there is. Drawn as the bell beside them, and like it, every press ticks.
+ * ~~`ScopeControl`, the labelled pills above Flows' and Activity's titles~~
+ * until Build 22 ("This looks odd").
+ *
+ * `testIDPrefix` names where it is drawn: `home-scope` (Home) or `title-scope`
+ * (a title row).
  */
-export function ScopeIcons() {
-  const { palette } = useTheme();
+export function ScopeIcons({ testIDPrefix = 'home-scope' }: { testIDPrefix?: string }) {
   const scope = useScopeChoices();
   const { setOpen, activeWorkspace, workspaceLabel, chosen, teamLabel } = scope;
   const WorkspaceIcon = activeWorkspace?.type === 'personal' ? User : Buildings;
   const TeamIcon = chosen ? teamTypeIcon(chosen.type) : ALL_TEAMS_ICON;
-  const button = ({ pressed }: { pressed: boolean }) => [
-    styles.iconButton,
-    { borderColor: palette.neutral[800] },
-    pressed && { backgroundColor: withAlpha(palette.text, 0.07) },
-  ];
 
   return (
     <>
-      <Pressable
-        testID="home-scope-workspace"
-        accessibilityRole="button"
+      <CircleButton
+        testID={`${testIDPrefix}-workspace`}
+        icon={WorkspaceIcon}
         accessibilityLabel={`Workspace: ${workspaceLabel}`}
         onPress={() => setOpen('workspace')}
-        style={button}>
-        <WorkspaceIcon size={19} color={palette.neutral[300]} weight="regular" />
-      </Pressable>
-      <Pressable
-        testID="home-scope-team"
-        accessibilityRole="button"
+      />
+      <CircleButton
+        testID={`${testIDPrefix}-team`}
+        icon={TeamIcon}
         accessibilityLabel={`Team: ${teamLabel}`}
         onPress={() => setOpen('team')}
-        style={button}>
-        <TeamIcon size={19} color={palette.neutral[300]} weight="regular" />
-      </Pressable>
+      />
       <ScopeCards scope={scope} />
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  // At the bigger type (24.12) two long names no longer share one line: the
-  // team pill goes under the workspace's rather than off the screen's edge.
-  row: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',

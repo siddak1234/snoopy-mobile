@@ -10,10 +10,11 @@ import { FilterChip } from '@/components/nocturne/filter-chip';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
-import { ScopeControl, ScopePill } from '@/components/scope-control';
+import { ScopePill } from '@/components/scope-control';
+import { TitleRow } from '@/components/title-row';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { SettingsRow } from '@/components/settings/settings-row';
-import { em, fonts, layout, status, typeScale } from '@/constants/theme';
+import { fonts, layout, status, typeScale } from '@/constants/theme';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { useScope } from '@/hooks/use-scope';
 import { useTheme } from '@/hooks/use-theme';
@@ -336,20 +337,23 @@ export default function ActivityScreen() {
         { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) },
       ]}
       showsVerticalScrollIndicator={false}>
-      <ScopeControl />
-      {/* The title, and the time range beside it as Flows' buttons sit beside
-          its own (the owner's build 13 decision 4): it says the range chosen and
-          opens the four, in a card as the team pill opens Show. */}
-      <View style={styles.titleRow}>
-        <Text style={[styles.h1, { color: palette.text }]}>Activity</Text>
-        <ScopePill
-          testID="activity-range"
-          icon={CalendarBlank}
-          label={RANGE_LABEL[range]}
-          accessibilityLabel={`Time range: ${RANGE_LABEL[range]}`}
-          onPress={() => setRangeOpen(true)}
-        />
-      </View>
+      {/* The title, Home's two scope circles beside it, then the time range, as
+          Flows' row (Build 22, F2–F3; the owner's build 21 item 3: "make the
+          organization and teams circle icons then calendar all time can stay as
+          is"). The range says what is chosen and opens the four, in a card (the
+          owner's build 13 decision 4). ~~The scope control's pills above~~. */}
+      <TitleRow
+        title="Activity"
+        right={() => (
+          <ScopePill
+            testID="activity-range"
+            icon={CalendarBlank}
+            label={RANGE_LABEL[range]}
+            accessibilityLabel={`Time range: ${RANGE_LABEL[range]}`}
+            onPress={() => setRangeOpen(true)}
+          />
+        )}
+      />
       <Dialog
         visible={rangeOpen}
         onRequestClose={() => setRangeOpen(false)}
@@ -429,17 +433,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.screenX,
     paddingBottom: 20,
     gap: 14,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  h1: {
-    fontFamily: fonts.medium,
-    fontSize: typeScale.display.fontSize,
-    letterSpacing: em(-0.015, typeScale.display.fontSize),
   },
   rangeList: {
     marginHorizontal: -layout.rowPadH,

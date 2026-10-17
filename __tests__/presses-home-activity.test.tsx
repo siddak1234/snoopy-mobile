@@ -6,7 +6,7 @@ import NotificationsScreen from '@/app/(tabs)/(home)/notifications';
 import RunDetailScreen from '@/app/(tabs)/(home)/run';
 import ApprovalsScreen from '@/app/(tabs)/activity/approvals';
 import ActivityScreen from '@/app/(tabs)/activity/index';
-import { ScopeControl } from '@/components/scope-control';
+import { ScopeIcons } from '@/components/scope-control';
 import { nocturneDark } from '@/constants/theme';
 import { resetPushForTests } from '@/hooks/use-push-registration';
 import type { SessionContextValue } from '@/hooks/use-session';
@@ -50,8 +50,6 @@ jest.mock('@/lib/platform/scope-store', () => ({
   }),
 }));
 const { writeScope } = jest.requireMock('@/lib/platform/scope-store');
-
-const Haptics = jest.requireMock('expo-haptics');
 
 let keys = 0;
 beforeEach(() => {
@@ -397,25 +395,23 @@ describe('the scope control (24.9.2; teams since 24.11.7)', () => {
     return fake;
   }
 
+  // Since Build 22 the scope is the two circles on every page (F1–F3): the
+  // workspace circle opens the switcher with any number of workspaces, as
+  // Home's always did — only the card can name the one there is. ~~The pill's
+  // rule (two or more, or a cut list)~~ went with the pills.
   it.each([
-    ['two workspaces opens Switch workspace, which lists them', holding([ACME, { id: PERSONAL, name: 'Personal', role: 'owner' }]), true],
-    ['a list cut short (workspacesTruncated) opens Switch workspace too', holding([ACME], true), true],
-    ['one workspace is not a button: nothing opens', holding([ACME]), false],
-  ] as const)('the workspace pill with %s (DESIGN-CONTRACT: the switcher shows with two or more, or a truncated list)', async (_case, session, opens) => {
+    ['two workspaces', holding([ACME, { id: PERSONAL, name: 'Personal', role: 'owner' }])],
+    ['a list cut short (workspacesTruncated)', holding([ACME], true)],
+    ['one workspace', holding([ACME])],
+  ] as const)('the workspace circle with %s opens Switch workspace, which lists them', async (_case, session) => {
     routeTeams();
-    await renderWithProviders(<ScopeControl />, session);
+    await renderWithProviders(<ScopeIcons testIDPrefix="title-scope" />, session);
 
     await fireEvent.press(await screen.findByLabelText('Workspace: Acme Operations'));
 
-    if (opens) {
-      const dialog = await screen.findByTestId('workspace-switcher-dialog');
-      expect(within(dialog).getByText('Switch workspace')).toBeTruthy();
-      expect(await within(dialog).findByTestId(`workspace-option-${PERSONAL}`)).toBeTruthy();
-    } else {
-      expect(screen.queryByTestId('workspace-switcher-dialog')).toBeNull();
-      // A press with no handler gives no tick (D7).
-      expect(Haptics.selectionAsync).not.toHaveBeenCalled();
-    }
+    const dialog = await screen.findByTestId('workspace-switcher-dialog');
+    expect(within(dialog).getByText('Switch workspace')).toBeTruthy();
+    expect(await within(dialog).findByTestId(`workspace-option-${PERSONAL}`)).toBeTruthy();
   });
 
   it.each([
@@ -423,11 +419,11 @@ describe('the scope control (24.9.2; teams since 24.11.7)', () => {
     ['a team', null, 'scope-option-project-2', 'Team: Sales', [[TEST_WORKSPACE, 'project-2']]],
     ['Done', 'project-1', 'Done', 'Team: Finance', []],
   ] as const)(
-    'the Show dialog: %s closes it, and the pill says the scope it leaves — kept for this workspace when it changed',
+    'the Show dialog: %s closes it, and the team circle says the scope it leaves — kept for this workspace when it changed',
     async (_row, before, press, pill, kept) => {
       if (before) mockStored.set(TEST_WORKSPACE, before);
       routeTeams();
-      await renderWithProviders(<ScopeControl />, signedInSession);
+      await renderWithProviders(<ScopeIcons testIDPrefix="title-scope" />, signedInSession);
       await fireEvent.press(await screen.findByLabelText(before ? 'Team: Finance' : 'Team: All teams'));
       const dialog = screen.getByTestId('scope-team-dialog');
 

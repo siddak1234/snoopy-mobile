@@ -7,15 +7,15 @@ import {
   toDocumentCard,
   toDocumentCards,
 } from '@/lib/view/documents';
-import { quickRunRows } from '@/lib/view/home';
 import { groupState, runLabel, stepStates, toRunStats, toTracker, type TrackerState } from '@/lib/view/runs';
-import { invoiceProcessingEntry, invoiceProcessingV3Entry, subscriptionsPayload, flowCatalogPayload } from '@/test/platform';
+import { invoiceProcessingEntry, invoiceProcessingV3Entry } from '@/test/platform';
 
 /**
  * Build 21's view rules, each a table (spec A7, A8, A9; the session's S14):
  * the tracker's state for every step and group, from shared fixtures — run
  * 793eef82 as it ran, a v3 run of three receipts, a held run, a
- * continuation, a failed run — the document card, and Home's quick runs.
+ * continuation, a failed run — and the document card. ~~Home's quick runs~~
+ * until Build 22 (the owner's build 21 item 1: "Remove run a flow section").
  */
 
 type Step = { stepId: string; outcome: 'ok' | 'held' | 'failed'; summary: string; occurredAt: string; heldReason?: string };
@@ -309,19 +309,5 @@ describe("a document's card (spec A7; the owner's ~04:05Z and AM7)", () => {
     const cards = toDocumentCards([doc({ index: 3 }), doc({ index: 1 }), doc({ index: 2 })]);
     expect(cards.map((card) => card.heading)).toEqual(['Document 1 of 3', 'Document 2 of 3', 'Document 3 of 3']);
     expect(toDocumentCards(undefined)).toEqual([]);
-  });
-});
-
-describe("Home's quick runs (spec A9)", () => {
-  it('every live flow, in the team chosen, by its name and team; none when nothing could be read', () => {
-    const subscriptions = subscriptionsPayload().subscriptions.map((row) => ({ ...row, projectId: row.id === 'email' ? 'p-legal' : null }));
-    const catalog = flowCatalogPayload().automations;
-    const labels = new Map([['p-legal', 'Legal']]);
-    expect(quickRunRows(subscriptions, catalog, labels, null).map((row) => [row.id, row.name, row.team])).toEqual([
-      ['invoice', 'Invoice triage', 'Whole workspace'],
-      ['email', 'Email triage', 'Team: Legal'],
-    ]);
-    expect(quickRunRows(subscriptions, catalog, labels, 'p-legal').map((row) => row.id)).toEqual(['email']);
-    expect(quickRunRows(null, catalog, labels, null)).toEqual([]);
   });
 });
