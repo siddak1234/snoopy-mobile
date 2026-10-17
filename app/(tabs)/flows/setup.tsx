@@ -467,8 +467,11 @@ export default function SetupScreen() {
 
           {actionError ? <ActionFailure message={actionError} retryLabel="Try again" onRetry={submit} /> : null}
 
+          {/* A button to a screen reader, as it is to the eye (the Build 21 review). */}
           <Pressable
             testID="setup-turn-on"
+            accessibilityRole="button"
+            accessibilityState={{ disabled: busy, busy }}
             disabled={busy}
             onPress={submit}
             style={({ pressed }) => [

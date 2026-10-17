@@ -345,6 +345,8 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
       onPress={changeStatus}
     />
   );
+  // One key whether the flow is on or off: Turn on keeps the form, and a file
+  // given first stays given — as the website's form does (the Build 21 review).
   const stepOne = def.removed ? null : (
     <View>
       {startable ? (
@@ -358,7 +360,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
       ) : current !== 'Live' ? (
         (subscription.runInput ?? []).length > 0 ? (
           <StartRun
-            key={`${subscription.id}:${subscription.templateVersion}:off`}
+            key={`${subscription.id}:${subscription.templateVersion}`}
             subscriptionId={subscription.id}
             shownWorkspaceId={flows.loadedFor}
             runInput={subscription.runInput ?? []}

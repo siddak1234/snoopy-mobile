@@ -294,6 +294,40 @@ describe('the flow page — the TEST VERSION of the owner\'s order (spec A6; D3,
     expect(within(screen.getByTestId('connection-action-quickbooks')).getByText('Connect')).toBeTruthy();
   });
 
+  it('Disconnect on CONNECTIONS: the row and its step say Not connected at once — read again, never answered from the snapshot', async () => {
+    const fake = fakePlatform(platformOperation);
+    let disconnected = false;
+    const flow = added({ vendor: 'quickbooks' });
+    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', () => ({
+      subscriptions: [disconnected ? { ...flow, unmetConnections: ['quickbooks'] } : flow],
+    }));
+    fake.always('GET /v1/workspaces/{workspaceId}/automations', { automations: [invoiceProcessingV3Entry()], categories: ['All'] });
+    fake.always('GET /v1/workspaces/{workspaceId}/run-stats', stats());
+    fake.always('GET /v1/connections/providers', providersWithQuickBooks());
+    fake.always('GET /v1/workspaces/{workspaceId}/projects', { projects: [ACCOUNTING_TEAM] });
+    fake.always('GET /v1/workspaces/{workspaceId}/connections', () => ({
+      connections: [disconnected ? quickbooks({ status: 'disconnected' }) : quickbooks()],
+    }));
+    fake.always('DELETE /v1/workspaces/{workspaceId}/connections/{connectionId}', () => {
+      disconnected = true;
+      return { connection: { ...quickbooks({ status: 'disconnected' }) } };
+    });
+    setMockParams({ flow: 'ip-1' });
+    await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
+    expect(within(await screen.findByTestId('flow-vendor-vendor')).getByText('Connected')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('connection-action-quickbooks'));
+    const dialog = within(await screen.findByTestId('disconnect-dialog'));
+    expect(dialog.getByText('1 live flow uses it. It stops until you connect it again.')).toBeTruthy();
+    await fireEvent.press(dialog.getByText('Disconnect'));
+    // Within the snapshot's 15 s window: the page says what the platform holds now.
+    await waitFor(() =>
+      expect(within(screen.getByTestId('connection-action-quickbooks')).getByText('Connect')).toBeTruthy(),
+    );
+    expect(within(screen.getByTestId('connection-row-quickbooks')).getByText('Not connected')).toBeTruthy();
+    expect(within(screen.getByTestId('flow-vendor-vendor')).getByText('Not connected')).toBeTruthy();
+    expect(fake.to('DELETE /v1/workspaces/{workspaceId}/connections/{connectionId}')).toHaveLength(1);
+  });
+
   it('Edit setup, at the bottom, opens Set up for this flow', async () => {
     await openFlow(added({ vendor: 'none' }));
     const edit = await screen.findByTestId('manage-setup');
@@ -454,7 +488,8 @@ describe('Set up — one simple page, once, everything on it (the owner\'s AM4)'
     for (const gone of ['Amounts over this wait for approval.', 'Where the details go.', 'Connect vendor ›']) {
       expect([gone, screen.queryByText(gone)]).toEqual([gone, null]);
     }
-    await fireEvent.press(screen.getByText('Turn on'));
+    // Its one button is a button to a screen reader too (the Build 21 review).
+    await fireEvent.press(screen.getByRole('button', { name: 'Turn on' }));
     await waitFor(() =>
       expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'ip-1' } }),
     );

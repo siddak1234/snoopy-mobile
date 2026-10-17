@@ -22,6 +22,7 @@ import {
 import { DISCONNECTING_LABEL, DISCONNECT_LABEL, disconnectBody, disconnectTitle } from '@/lib/content/screen-states';
 import { connectOAuthProvider, connectProviderWithKey, disconnectConnection } from '@/lib/platform/connections';
 import { PlatformError } from '@/lib/platform/problem';
+import { invalidateShared } from '@/lib/platform/snapshot';
 import { connectionAction, type ConnectionView } from '@/lib/view/catalog';
 
 /**
@@ -86,6 +87,18 @@ export function ConnectionsCard({
   // A pasted key's key follows its values: the same values resubmitted reuse it.
   const keys = useIntentKeys('connection');
 
+  /**
+   * Something changed, or might have: the workspace's connections and flows are
+   * dropped from the shared snapshot first, then the screen reads them again.
+   * A screen that re-reads keeping its rows (`refresh` — the flow page, Set up)
+   * would otherwise be answered from the snapshot for its 15 s window, and a
+   * Disconnect would still say "Disconnect" (the Build 21 review).
+   */
+  const reread = () => {
+    if (loadedFor) invalidateShared(loadedFor, ['connections', 'subscriptions']);
+    onChanged();
+  };
+
   const closeKey = () => {
     setKeying(null);
     setKeyPending(false);
@@ -128,7 +141,7 @@ export function ConnectionsCard({
       // `cancelled` is not proof that nothing happened. A system browser sharing a
       // logged-in website session completes the connect AT the website and skips
       // the app handoff (manifest §12.1 #79); re-reading is the only honest answer.
-      onChanged();
+      reread();
     } catch (caught) {
       setRowError({ providerId: row.providerId, message: refusalMessage(caught, {}, 'The connection was not changed.') });
     } finally {
@@ -174,7 +187,7 @@ export function ConnectionsCard({
     try {
       await connectProviderWithKey(workspaceId, row.providerId, values, keys.keyFor());
       closeKey();
-      onChanged();
+      reread();
     } catch (caught) {
       // The key was reused with other values, or its first request is still
       // verifying: the contract's way on is the same key again, never a new one
@@ -189,7 +202,7 @@ export function ConnectionsCard({
   /** After a 409 on a pasted key: the rows as the platform holds them now, so a connect that did finish shows. */
   const refreshAfterConflict = () => {
     closeKey();
-    onChanged();
+    reread();
   };
 
   return (
@@ -292,7 +305,7 @@ export function ConnectionsCard({
           onDone={() => {
             setDisconnecting(null);
             onNotice(null);
-            onChanged();
+            reread();
           }}
         />
       ) : null}

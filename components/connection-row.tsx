@@ -13,6 +13,9 @@ import { iconFor } from '@/lib/view/icon-registry';
 /** The row's least height (spec A4): the same for every provider, whatever its line says. */
 export const CONNECTION_ROW_MIN_HEIGHT = 64;
 
+/** How far past its edge the row's button answers a finger: Back's reach (`back-circle.tsx`). */
+export const CONNECTION_BUTTON_REACH = 8;
+
 /**
  * A vendor's mark at the row's 24 × 24 (Build 21, spec A4; the session's S12):
  * QuickBooks' round symbol, the design's Google glyph, or the icon set's glyph
@@ -177,6 +180,8 @@ export function ConnectionButton({
       accessibilityState={disabled ? { disabled: true } : undefined}
       disabled={disabled}
       onPress={onPress}
+      // Drawn about 35 tall in its 64 row; its reach is 44+ to a finger, as Back's is (the Build 21 review).
+      hitSlop={CONNECTION_BUTTON_REACH}
       style={({ pressed }) => [
         styles.button,
         { borderColor: disabled ? palette.neutral[700] : tone },

@@ -157,6 +157,7 @@ exports[`the connection row — dark palette (snapshot-pinned) Google and QuickB
       accessible={true}
       collapsable={false}
       focusable={true}
+      hitSlop={8}
       onBlur={[Function]}
       onClick={[Function]}
       onFocus={[Function]}
@@ -296,6 +297,7 @@ exports[`the connection row — dark palette (snapshot-pinned) Google and QuickB
       accessible={true}
       collapsable={false}
       focusable={true}
+      hitSlop={8}
       onBlur={[Function]}
       onClick={[Function]}
       onFocus={[Function]}
@@ -497,6 +499,7 @@ exports[`the connection row — light palette (snapshot-pinned) Google and Quick
       accessible={true}
       collapsable={false}
       focusable={true}
+      hitSlop={8}
       onBlur={[Function]}
       onClick={[Function]}
       onFocus={[Function]}
@@ -636,6 +639,7 @@ exports[`the connection row — light palette (snapshot-pinned) Google and Quick
       accessible={true}
       collapsable={false}
       focusable={true}
+      hitSlop={8}
       onBlur={[Function]}
       onClick={[Function]}
       onFocus={[Function]}

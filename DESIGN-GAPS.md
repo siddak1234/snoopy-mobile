@@ -4485,3 +4485,50 @@ file restored from its saved copy — its SHA-256 equal every time — and the t
 A8's approval card: no test asserted them yet — so their tests were strengthened (`build21-views`'
 precedence and per-step cases; the approval card's `approval-run-*` line) and each was run again,
 red, then green.)
+
+### The review of Build 21's screens (Round 17; 2026-10-17)
+
+One independent pass over `round-17/b21-screens` at `651ab72` (base `main` `bd15802`), by a session
+that wrote none of it, against the spec's AM1–AM8 and A1–A9 (the app's side of C1/C2), the owner's
+build 20 words and screenshots (fb01–fb13, each looked at), the website's branch for the same
+screens (`round-17/b21-screens` at `aa4e482`: the same tracker rules, words, money and file name)
+and the contract `b21-contract` (`automations.yaml` `8b6b6f78…`). Fixed on the same branch, each
+with a test proved to bite (below).
+
+| Severity | Finding | Fixed |
+| --- | --- | --- |
+| should-fix | A flow page's CONNECTIONS and Set up's account rows re-read with `refresh`, which keeps the shared snapshot (15 s for connections), and `ConnectionsCard` dropped nothing after a Disconnect, a pasted key or a sign-in that came back without a handoff: a Disconnect on the flow page still drew "Disconnect", the email and the step's "Connected" until the window ran out (`main` re-read with `reload`). | `components/settings/connections-card.tsx` `reread()`: the workspace's connections and flows leave the snapshot before every re-read it asks for. |
+| nit | Step 1's form was drawn anew at Turn on (a second key), so a file given while the flow was off was gone — the comment said it was kept, and the website's form keeps it. | `app/(tabs)/flows/detail.tsx`: one key on or off. |
+| nit | Set up's one button (Turn on / Save) was no button to a screen reader (from before Build 21). | `app/(tabs)/flows/setup.tsx`: `accessibilityRole="button"`, busy while it sends. |
+| nit | The connection row's own button is about 35 pt tall — under Apple's 44. | `components/connection-row.tsx`: `hitSlop` 8 (`CONNECTION_BUTTON_REACH`, Back's reach); the row's snapshot re-pinned for that prop alone (4 lines, both palettes). |
+
+**The review's choices** (the session's, not the owner's): the reach is Back's 8 pt rather than a
+taller button, so nothing on screen moves; Step 1 keeps a file across Turn on, as the website does.
+
+**Seen and left, for the owner or another lane** (not changed here):
+
+- A held run whose approval was decided still says "Waiting for approval: {reason}" on its
+  approval step, under the result line's "Approved — continued in a new run" or "Rejected": the
+  spec's S14 has no state for a decided hold, and the website draws the same — a change belongs to
+  both clients together.
+- After Release 2, a flow still on v2 draws the catalog's v3 steps by title (22 rows) on its page:
+  the platform publishes one pipeline per automation, its newest (as before Build 21); the owner's
+  test moves the flow to v3 first (spec §5, #9).
+- On Set up, a vendor's row says "Saving…" while its sign-in sheet is open, though Set up saves
+  nothing until Turn on (the sheet covers the page meanwhile).
+- For the backend lane: `RunDetail.documents` still says `maxItems: 10` in the contract, and
+  `RunDocumentAmount`'s pattern allows at most 12 digits before the point — both limits other than
+  size, which AM1 and AM7 remove. The generated types carry neither, so the app is unaffected.
+
+**NOT OBSERVED**: the app on a simulator or a phone (nothing launched); a real v3 run; the Deployed
+contract check (it reads production).
+
+| Guard | Broken by | What failed |
+| --- | --- | --- |
+| Connections read again past the snapshot | `invalidateShared` removed from `reread()` | `invoice-processing-screens` "Disconnect on CONNECTIONS: the row and its step say Not connected at once…" |
+| Step 1 keeps a file across Turn on | the off form's key back to `…:off` | `build21-screens` "a paused flow: the file given first is still there after Turn on…" |
+| Set up's button is a button | `accessibilityRole` removed | `invoice-processing-screens` "Add: the vendor and None right on the page…" |
+| The row's button reaches 44 | `hitSlop` removed | `connection-row` "its padding, its border, its words and its reach add to 44 or more…" |
+
+(Each run by `b21-app-review/bite.sh` in the session's scratchpad, Node 22.23.2: red, the file
+restored sha256-equal, green.)

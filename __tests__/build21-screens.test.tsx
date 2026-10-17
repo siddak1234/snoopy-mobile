@@ -26,6 +26,9 @@ import {
   approvalsPayload,
   flowCatalogPayload,
   inboxPayload,
+  invoiceProcessingV3Entry,
+  planSubscriptionsPayload,
+  providersWithQuickBooks,
   runStatsPayload,
   routePlatform,
   runsPayload,
@@ -103,6 +106,64 @@ describe('a quick run from Home: three presses to a started run (spec A9)', () =
       { subscriptionId: 'invoice', input: { invoiceFile: 'artifact-1' } },
     ]);
     expect(presses).toHaveLength(3);
+  });
+});
+
+/**
+ * The Build 21 review: Step 1's form is one form whether the flow is on or off,
+ * so a file given while it is off stays given once Turn on is pressed — as the
+ * website's form keeps it. ~~A second form, drawn anew at Turn on, the file
+ * gone~~ until the review.
+ */
+describe('Step 1 keeps the file across Turn on (spec A6; the Build 21 review)', () => {
+  it('a paused flow: the file given first is still there after Turn on, and Start run sends it', async () => {
+    const entry = invoiceProcessingV3Entry();
+    const flow = {
+      ...planSubscriptionsPayload().subscriptions[0]!,
+      id: 'ip-1',
+      templateId: 'invoice-processing',
+      templateVersion: entry.version,
+      config: { vendor: 'none' },
+      unmetConnections: [],
+      setup: entry.setup,
+      runInput: [{ key: 'invoiceFile', title: 'Document', description: 'A PDF or photo of bills or receipts.', control: 'artifact' as const, required: false }],
+      projectId: null,
+    };
+    let live = false;
+    const fake = fakePlatform(platformOperation);
+    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', () => ({
+      subscriptions: [{ ...flow, status: live ? ('live' as const) : ('paused' as const) }],
+    }));
+    fake.always('GET /v1/workspaces/{workspaceId}/automations', { automations: [entry], categories: ['All'] });
+    fake.always('GET /v1/workspaces/{workspaceId}/run-stats', runStatsPayload());
+    fake.always('GET /v1/connections/providers', providersWithQuickBooks());
+    fake.always('GET /v1/workspaces/{workspaceId}/projects', { projects: [] });
+    fake.always('GET /v1/workspaces/{workspaceId}/connections', { connections: [] });
+    fake.always('PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}', () => {
+      live = true;
+      return { subscription: { ...flow, status: 'live' as const } };
+    });
+    fake.always('POST /v1/workspaces/{workspaceId}/runs', { run: { ...runsPayload().runs[0]!, id: 'run-new', status: 'pending' } });
+    mockPick.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///cache/receipts.pdf', name: 'receipts.pdf', mimeType: 'application/pdf', size: 5 }] });
+    mockSend.mockResolvedValue({ artifactId: 'artifact-1', filename: 'receipts.pdf', contentType: 'application/pdf', sizeBytes: 5 });
+
+    setMockParams({ flow: 'ip-1' });
+    await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
+    await fireEvent.press(await screen.findByTestId('run-file-invoiceFile-upload'));
+    expect(await screen.findByText('Ready: receipts.pdf (5 bytes)')).toBeTruthy();
+    expect(screen.queryByText('Start run')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('flow-step-turn-on'));
+    expect(await screen.findByText('Start run')).toBeTruthy();
+    // The file is still given: no second pick.
+    expect(screen.getByText('Ready: receipts.pdf (5 bytes)')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Start run'));
+    await waitFor(() => expect(fake.to('POST /v1/workspaces/{workspaceId}/runs')).toHaveLength(1));
+    expect(fake.to('POST /v1/workspaces/{workspaceId}/runs')[0]!.body).toEqual({
+      subscriptionId: 'ip-1',
+      input: { invoiceFile: 'artifact-1' },
+    });
+    expect(mockPick).toHaveBeenCalledTimes(1);
   });
 });
 

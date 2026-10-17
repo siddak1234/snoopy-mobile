@@ -59,7 +59,8 @@ simple page, once (A6, AM4); a run's page with every step from the start, its do
 Download JSON (A7, the app's side of C1/C2); every run by its full id (A8, AM2); Home's RUN A FLOW
 and no Teams list (A9, AM5). The record is DESIGN-GAPS "Build 21 (Round 17; 2026-10-15)", the
 session's choices listed there as the session's; the contract is the round's (`b21-contract`) until
-the platform's release, then backend `main`.
+the platform's release, then backend `main`. Its independent review (2026-10-17), fixed on the same
+branch: DESIGN-GAPS "The review of Build 21's screens (Round 17; 2026-10-17)".
 
 **Round 16 CLOSED 2026-10-07** — Gate 24 re-run by command by a fresh `snoopy-backend` session that wrote none of it; its record here is DESIGN-GAPS "Build 16: the owner's device pass, and Round 16's close". Open from 2026-09-29 (BUILD-PLAN Phase 24, ADR-0032): the mobile app offers
 every signed-in feature the website offers, on the same published operations,

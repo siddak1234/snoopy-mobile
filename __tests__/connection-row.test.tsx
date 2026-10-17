@@ -11,7 +11,14 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react-nativ
 import React from 'react';
 import { StyleSheet } from 'react-native';
 
-import { CONNECTION_ROW_MIN_HEIGHT, ConnectionButton, ConnectionMark, ConnectionRow } from '@/components/connection-row';
+import {
+  CONNECTION_BUTTON_REACH,
+  CONNECTION_ROW_MIN_HEIGHT,
+  ConnectionButton,
+  ConnectionMark,
+  ConnectionRow,
+} from '@/components/connection-row';
+import { typeScale } from '@/constants/theme';
 import { ConnectionsCard } from '@/components/settings/connections-card';
 import type { ThemeMode } from '@/hooks/use-theme';
 import { platformOperation } from '@/lib/platform/client';
@@ -127,6 +134,25 @@ describe('the row says the account, else its state (spec A4)', () => {
     expect(screen.queryByText('Reads and sends email.')).toBeNull();
     expect(screen.queryByText(/used by/u)).toBeNull();
     expect(screen.queryByTestId('connection-action-google')).toBeNull();
+  });
+});
+
+describe("our button reaches 44 to a finger (the Build 21 review; Apple's least target)", () => {
+  it('its padding, its border, its words and its reach add to 44 or more, every label', async () => {
+    for (const label of ['Connect', 'Reconnect', 'Disconnect']) {
+      const shown = await renderWithProviders(
+        <ConnectionButton testID="our-button" label={label} onPress={() => {}} />,
+        sessionAs('owner'),
+      );
+      const button = screen.getByTestId('our-button');
+      const style = StyleSheet.flatten(button.props.style) as { paddingVertical: number; borderWidth: number };
+      const reach = button.props.hitSlop as number;
+      expect(reach).toBe(CONNECTION_BUTTON_REACH);
+      // The words' own height is at least their size; the reach is added above and below.
+      const least = style.paddingVertical * 2 + style.borderWidth * 2 + typeScale.body.fontSize + reach * 2;
+      expect([label, least >= 44]).toEqual([label, true]);
+      await shown.unmount();
+    }
   });
 });
 
