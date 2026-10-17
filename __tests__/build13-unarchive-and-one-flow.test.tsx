@@ -167,8 +167,9 @@ describe("One flow per workspace (the owner's build 12 item 9)", () => {
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'copy-team' } });
   });
 
-  it('Setup, for a flow the workspace holds, says its team, offers no team, and Turn on configures that subscription — nothing is added', async () => {
-    const held: Subscription = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'held-0', projectId: 'project-1', status: 'paused' };
+  it('Setup, for a flow the workspace holds, says its team, offers no team, and Save configures that subscription — nothing is added, its status kept (Build 21: Save for a flow on or paused)', async () => {
+    // Its version declares nothing to fill in, as the catalog's here (Set up draws the version it runs, §12.1 #185).
+    const held: Subscription = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'held-0', projectId: 'project-1', status: 'paused', setup: [] };
     const writes = routeSetup(held, projectsPayload('Finance', 'Sales'));
     // Reached with another team chosen: it is still the one copy, where it is.
     setMockParams({ template: 'tpl.0', project: 'project-2' });
@@ -176,32 +177,31 @@ describe("One flow per workspace (the owner's build 12 item 9)", () => {
     await waitFor(() => expect(screen.getByTestId('setup-team').props.children).toBe('Team: Finance'));
     expect(screen.queryByText('Add to')).toBeNull();
     expect(screen.queryByText('Team: Sales')).toBeNull();
-    await fireEvent.press(screen.getByText('Turn on'));
-    await waitFor(() =>
-      expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'held-0' } }),
-    );
+    expect(screen.queryByText('Turn on')).toBeNull();
+    await fireEvent.press(screen.getByText('Save'));
+    await waitFor(() => expect(mockRouter.back).toHaveBeenCalled());
     expect(writes).toEqual([
       {
         method: 'PATCH',
         path: `/v1/workspaces/${TEST_WORKSPACE}/subscriptions/held-0`,
-        body: { config: {}, status: 'live' },
+        body: { config: {} },
       },
     ]);
   });
 
-  it('Setup, for a flow held for the whole workspace, needs no team: a plain member still has Turn on, and it configures that subscription', async () => {
-    const held: Subscription = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'held-whole', projectId: null, status: 'paused' };
+  it('Setup, for a flow held for the whole workspace, needs no team: a plain member still has Save, and it configures that subscription', async () => {
+    const held: Subscription = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'held-whole', projectId: null, status: 'paused', setup: [] };
     const writes = routeSetup(held, { projects: [] });
     setMockParams({ template: 'tpl.0' });
     await renderWithProviders(<SetupScreen />, sessionAs('member'));
     await waitFor(() => expect(screen.getByTestId('setup-team').props.children).toBe('Whole workspace'));
     expect(screen.queryByText('An owner or admin creates the first team.')).toBeNull();
-    await fireEvent.press(screen.getByText('Turn on'));
+    await fireEvent.press(screen.getByText('Save'));
     await waitFor(() => expect(writes).toHaveLength(1));
     expect(writes[0]).toEqual({
       method: 'PATCH',
       path: `/v1/workspaces/${TEST_WORKSPACE}/subscriptions/held-whole`,
-      body: { config: {}, status: 'live' },
+      body: { config: {} },
     });
     expect(screen.queryByText('Pick a team.')).toBeNull();
   });
@@ -276,7 +276,7 @@ describe("One flow per workspace: what Setup adds is held at once (the build 13 
   });
 
   it('a create whose activation failed stays in its team, and Turn on again turns on that copy — never a second', async () => {
-    const created = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'added-0', status: 'draft', unmetConnections: [] };
+    const created = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'added-0', status: 'draft', unmetConnections: [], setup: [] };
     let activations = 0;
     const writes = routeCreate(created, () => {
       activations += 1;

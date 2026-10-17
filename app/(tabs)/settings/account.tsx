@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Key, Trash } from 'phosphor-react-native';
+import { Trash, UserCircle } from 'phosphor-react-native';
 import React, { useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,13 +7,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { BackCircle } from '@/components/nocturne/back-circle';
+import { ProviderGlyph, type OAuthProvider } from '@/components/nocturne/oauth-button';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { SettingsRow } from '@/components/settings/settings-row';
-import { em, fonts, layout, status, typeScale } from '@/constants/theme';
+import { em, fonts, iconSize, layout, status, typeScale } from '@/constants/theme';
 import { busyBody, useResource } from '@/hooks/use-resource';
 import { useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
@@ -24,7 +25,7 @@ import {
   deletionOutcome,
   type DeletionOutcome,
 } from '@/lib/content/deletion';
-import { SIGN_OUT_FAILED, errorTitleFor } from '@/lib/content/screen-states';
+import { ACCOUNT_LEAD, SIGN_OUT_FAILED, errorTitleFor } from '@/lib/content/screen-states';
 import { deleteAccount, readIdentities, unlinkIdentity, type LoginIdentity } from '@/lib/platform/account';
 import { readCurrentSession, readLoginProviders } from '@/lib/platform/auth';
 import { linkIdentity } from '@/lib/platform/identity-link';
@@ -121,15 +122,11 @@ export default function AccountScreen() {
 
       <View>
         <SectionLabel>LINKED ACCOUNTS</SectionLabel>
-        {/* What linking does, and the one trap — a first sign-in with a provider not
-            yet linked can start a separate account (the owner's build 12 item 8). And
-            the rule Supabase applies on its own: a sign-in whose verified email is this
-            account's joins this account (the owner's build 13 decision 9, feedback #16). */}
-        <Text style={[styles.text, styles.lead, muted]}>
-          Any account linked here signs you in to this same account, in the app and on the website. Signing in with
-          Google, Microsoft or Apple at the same email address as this account joins this account too. To use one with
-          a different email address, link it before you first sign in with it. Provider credentials are handled by the
-          Autom8x backend and never reach this app.
+        {/* One line (Build 21, spec A5; the owner's build 20 item 9: "Why is there a paragraph. It should be
+            short not an essay"). ~~What linking does, the same-email join and the credentials sentence~~ (the
+            owner's build 13 decision 9A) — linking still works as it did; the line no longer explains it. */}
+        <Text testID="account-lead" style={[styles.text, styles.lead, muted]}>
+          {ACCOUNT_LEAD}
         </Text>
         <SurfaceCard style={styles.card}>
           {account.data.providers.map((provider, index) => {
@@ -139,7 +136,15 @@ export default function AccountScreen() {
               <SettingsRow
                 key={provider.id}
                 testID={`identity-${provider.id}`}
-                icon={Key}
+                icon={UserCircle}
+                // The provider's own mark at 24, from the design's sign-in glyphs (spec A5); ~~Key~~.
+                glyph={
+                  isGlyphProvider(provider.id) ? (
+                    <View testID={`identity-glyph-${provider.id}`} style={styles.glyph}>
+                      <ProviderGlyph provider={provider.id} color={palette.text} size={iconSize.row} />
+                    </View>
+                  ) : undefined
+                }
                 title={provider.label}
                 // The address the provider reports, so two linked accounts can be
                 // told apart (backend 24.12.2); none when it reports none, and an
@@ -208,6 +213,11 @@ export default function AccountScreen() {
       ) : null}
     </ScrollView>
   );
+}
+
+/** A sign-in provider the design draws a glyph for: Google, Microsoft and Apple. */
+function isGlyphProvider(id: string): id is OAuthProvider {
+  return id === 'google' || id === 'microsoft' || id === 'apple';
 }
 
 /** ADR-0028's confirmation, and every answer the contract gives a bearer caller. */
@@ -332,4 +342,5 @@ const styles = StyleSheet.create({
   text: { fontFamily: fonts.regular, ...typeScale.body },
   small: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
   linkLabel: { fontFamily: fonts.medium, fontSize: typeScale.body.fontSize },
+  glyph: { width: iconSize.row, height: iconSize.row, alignItems: 'center', justifyContent: 'center' },
 });

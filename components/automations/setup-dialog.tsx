@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { Dialog, DialogButton, DialogText } from '@/components/dialog';
-import { DialogBoundary } from '@/components/dialog-boundary';
 import {
   NumberedSectionLabel,
   SetupFieldRow,
@@ -15,85 +13,22 @@ import {
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { MOVE_REFUSALS, WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
-import { SETUP_SAVE, SETUP_SAVE_FAILED, SETUP_SAVING, errorTitleFor } from '@/lib/content/screen-states';
+import { SETUP_SAVE_FAILED } from '@/lib/content/screen-states';
 import { updateSubscription } from '@/lib/platform/automations';
 
-type SetupDialogProps = {
-  /** The flow's name: "Set up Invoice Processing". */
-  name: string;
-  /** Its team, as the flow page says it: "Team: Accounting". */
-  team?: string;
-  subscriptionId: string;
-  /** The workspace the screen loaded; the save is refused once it is not active. */
-  shownWorkspaceId: string | null;
-  setup: SetupField[];
-  config: Record<string, unknown>;
-  /** The version the save moves the flow to, whose fields `setup` are. */
-  moveTo?: number;
-  onClose: () => void;
-  onSaved: () => void;
-};
-
 /**
- * Change an existing subscription's settings (BUILD-PLAN 24.4.1) — the
- * website's "Set up" dialog. It saves the settings only; going live stays its
- * own action. Mounted only while open, so it always starts from what the
- * subscription holds now.
+ * The settings form a flow's move to a newer version draws (backend §12.1 #185):
+ * a move refused because the settings do not fit that version
+ * (`invalid_config`) is answered with that version's fields seeded from what
+ * the flow holds, sent with the move in one change. The Move dialog draws that
+ * form itself, in its own sheet (`useSetupForm`, `SetupFields`): iOS will not
+ * present a second modal while the first is still being dismissed, so a second
+ * dialog swapped in for the Move one was never shown (the connections card's
+ * rule; the review of #49).
  *
- * **With `moveTo`, the settings are the version it moves to, and saving moves
- * it** (backend §12.1 #185): a move refused because the settings do not fit
- * that version (`invalid_config`) is answered with that version's fields seeded
- * from what the flow holds, sent with the move in one change — Set up itself
- * draws the version the flow runs, so it could never fix a mismatch with
- * another one. The Move dialog draws that form itself, in its own sheet
- * (`useSetupForm`, `SetupFields`): iOS will not present a second modal while
- * the first is still being dismissed, so a second dialog swapped in for the
- * Move one was never shown (the connections card's rule; the review of #49).
- *
- * Inside `DialogBoundary` (BUILD-PLAN 25.8.1): the rows are drawn from a
- * manifest the platform may publish after this build shipped, and a row that
- * cannot be drawn ends in "Couldn't load this setup" with Try again, never a
- * white screen. The boundary is around the whole dialog, its hooks included.
+ * ~~`SetupDialog`, "Set up {name}" over the flow page~~ until Build 21: Set up is
+ * one page, opened from the flow page's "Edit setup" (the owner's AM4).
  */
-export function SetupDialog(props: SetupDialogProps) {
-  return (
-    <DialogBoundary title={errorTitleFor('setup')} onClose={props.onClose}>
-      <SetupDialogBody {...props} />
-    </DialogBoundary>
-  );
-}
-
-function SetupDialogBody({ name, team, subscriptionId, shownWorkspaceId, setup, config, moveTo, onClose, onSaved }: SetupDialogProps) {
-  const form = useSetupForm({ subscriptionId, shownWorkspaceId, setup, config, moveTo, onSaved });
-
-  return (
-    <Dialog
-      visible
-      testID="setup-dialog"
-      onRequestClose={form.busy ? () => undefined : onClose}
-      // The spec's §3.B (~~"Flow setup", "Complete the settings supplied by this flow."~~ until 2026-10-14).
-      title={moveTo === undefined ? `Set up ${name}` : `Settings for v${moveTo}`}
-      body={
-        moveTo === undefined
-          ? team
-          : `v${moveTo} checks its settings differently. Set them for it; saving moves the flow.`
-      }
-      actions={
-        <>
-          <DialogButton label="Cancel" disabled={form.busy} onPress={onClose} />
-          <DialogButton
-            tone="accent"
-            disabled={form.busy}
-            onPress={() => void form.save()}
-            label={moveTo === undefined ? (form.busy ? SETUP_SAVING : SETUP_SAVE) : form.busy ? 'Moving…' : `Save and move to v${moveTo}`}
-          />
-        </>
-      }>
-      <SetupFields setup={setup} values={form.values} onChange={form.change} />
-      {form.error ? <DialogText tone="error">{form.error}</DialogText> : null}
-    </Dialog>
-  );
-}
 
 /**
  * The form's state and its one write: the values, seeded from what the flow

@@ -3,7 +3,7 @@ import React from 'react';
 import { Text } from 'react-native';
 
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
-import { SetupDialog } from '@/components/automations/setup-dialog';
+import SetupScreen from '@/app/(tabs)/flows/setup';
 import { StartRun } from '@/components/automations/start-run';
 import { DialogBoundary, InlineBoundary } from '@/components/dialog-boundary';
 import type { SetupField } from '@/components/setup-field';
@@ -15,7 +15,15 @@ import {
   errorTitleFor,
 } from '@/lib/content/screen-states';
 import type { AutomationRunInputField } from '@/lib/platform/automations';
-import { TEST_WORKSPACE, flowCatalogPayload, routePlatform, signedInSession, subscriptionsPayload } from '@/test/platform';
+import {
+  TEST_WORKSPACE,
+  catalogPayload,
+  flowCatalogPayload,
+  routePlatform,
+  sessionAs,
+  signedInSession,
+  subscriptionsPayload,
+} from '@/test/platform';
 import { renderWithProviders, setMockParams } from '@/test/render';
 
 jest.mock('@/lib/platform/client', () => ({
@@ -189,7 +197,6 @@ beforeEach(() => {
 });
 
 const RUNS_PATH = '/v1/workspaces/{workspaceId}/runs';
-const SUB_PATH = '/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}';
 
 /** A control this build does not know, as a newer platform would publish it: the generated union is closed, so the test says so. */
 const NEWER = 'date-range' as never;
@@ -204,7 +211,7 @@ describe("the run's form — the flow page's start controls since 25.8.3 (25.8.1
     answers[`POST ${RUNS_PATH}`] = [{ run: { id: 'run-1' } }];
     const onStarted = jest.fn();
     await renderWithProviders(
-      <StartRun subscriptionId="sub-1" shownWorkspaceId={TEST_WORKSPACE} runInput={[WINDOW, NOTE]} usesAi={false} onStarted={onStarted} />,
+      <StartRun subscriptionId="sub-1" shownWorkspaceId={TEST_WORKSPACE} runInput={[WINDOW, NOTE]} onStarted={onStarted} />,
       signedInSession,
     );
     const box = screen.getByTestId('start-run');
@@ -224,7 +231,7 @@ describe("the run's form — the flow page's start controls since 25.8.3 (25.8.1
   it("is inside its boundary: a row it cannot draw becomes the failed card in the run form's words, and Try again draws the form again once it can", async () => {
     mockThrow.file = true;
     await renderWithProviders(
-      <StartRun subscriptionId="sub-1" shownWorkspaceId={TEST_WORKSPACE} runInput={[RECEIPT, NOTE]} usesAi={false} onStarted={jest.fn()} />,
+      <StartRun subscriptionId="sub-1" shownWorkspaceId={TEST_WORKSPACE} runInput={[RECEIPT, NOTE]} onStarted={jest.fn()} />,
       signedInSession,
     );
     const failed = await screen.findByTestId('form-failed');
@@ -260,59 +267,47 @@ describe("the run's form — the flow page's start controls since 25.8.3 (25.8.1
   });
 });
 
-describe('the Setup dialog (25.8.1)', () => {
-  it('draws a control newer than this build under its section as the website does, beside the resource-picker it knows, and saves the typed string as declared', async () => {
-    answers[`PATCH ${SUB_PATH}`] = [{ subscription: { id: 'sub-1' } }];
-    const onSaved = jest.fn();
-    await renderWithProviders(
-      <SetupDialog
-        name="Invoice triage"
-        subscriptionId="sub-1"
-        shownWorkspaceId={TEST_WORKSPACE}
-        setup={[WINDOW_SETTING, INBOX]}
-        config={{ inbox: 'AP-Invoices' }}
-        onClose={jest.fn()}
-        onSaved={onSaved}
-      />,
-      signedInSession,
+/**
+ * Set up — one page since Build 21 (the owner's AM4), the Set up dialog's
+ * boundary kept: its rows are drawn inside `InlineBoundary`, so a newer
+ * control is the website's text input with its note, and a row that cannot be
+ * drawn ends in "Couldn't load this setup" with Try again.
+ */
+describe('the Set up page (25.8.1, kept from the Set up dialog)', () => {
+  /** A flow not added yet whose version declares a control newer than this build, beside the picker it knows. */
+  function routeNewerSetup() {
+    const catalog = catalogPayload();
+    catalog.automations = catalog.automations.map((entry) =>
+      entry.templateId === 'tpl.3' ? { ...entry, setup: [WINDOW_SETTING, INBOX] } : entry,
     );
-    const dialog = screen.getByTestId('setup-dialog');
-    expect(within(dialog).getByText('1 · SOURCE')).toBeTruthy();
-    expect(within(dialog).getAllByText(NEWER_CONTROL_NOTE)).toHaveLength(1);
-    // The picker is a control this build knows: its text input holds the configured name, and carries no note.
-    expect(within(dialog).getByLabelText('Watch inbox').props.value).toBe('AP-Invoices');
-    await fireEvent.changeText(within(dialog).getByLabelText('Review window'), 'last week');
-    await fireEvent.press(within(dialog).getByText('Save'));
-    await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
-    expect(sent).toEqual([
-      { method: 'PATCH', path: SUB_PATH, key: 'intent-key', body: { config: { window: 'last week', inbox: 'AP-Invoices' } } },
-    ]);
+    routePlatform(platformOperation, { '/automations': catalog, '/subscriptions': { subscriptions: [] } });
+    setMockParams({ template: 'tpl.3' });
+  }
+
+  it('draws a control newer than this build under its section as the website does, beside the resource-picker it knows', async () => {
+    routeNewerSetup();
+    await renderWithProviders(<SetupScreen />, sessionAs('owner'));
+    expect(await screen.findByText('1 · SOURCE')).toBeTruthy();
+    expect(screen.getAllByText(NEWER_CONTROL_NOTE)).toHaveLength(1);
+    expect(screen.getByLabelText('Review window')).toBeTruthy();
+    expect(screen.getByLabelText('Watch inbox')).toBeTruthy();
     expect(consoleError).not.toHaveBeenCalled();
   });
 
-  it('is inside its boundary: a row it cannot draw becomes "Couldn\'t load this setup", and Try again draws the dialog again once it can', async () => {
+  it('is inside its boundary: a row it cannot draw becomes "Couldn\'t load this setup", and Try again draws the form again once it can', async () => {
+    routeNewerSetup();
     mockThrow.section = true;
-    await renderWithProviders(
-      <SetupDialog
-        name="Invoice triage"
-        subscriptionId="sub-1"
-        shownWorkspaceId={TEST_WORKSPACE}
-        setup={[INBOX]}
-        config={{}}
-        onClose={jest.fn()}
-        onSaved={jest.fn()}
-      />,
-      signedInSession,
-    );
-    const failed = await screen.findByTestId('dialog-failed');
+    await renderWithProviders(<SetupScreen />, sessionAs('owner'));
+    const failed = await screen.findByTestId('form-failed');
     expect(within(failed).getByText(errorTitleFor('setup'))).toBeTruthy();
     expect(within(failed).getByText("Couldn't load this setup")).toBeTruthy();
-    expect(screen.queryByTestId('setup-dialog')).toBeNull();
+    // The page itself stands: its title is drawn above the failed card.
+    expect(screen.getByText(/^Set up /u)).toBeTruthy();
+    expect(screen.queryByTestId('setup-turn-on')).toBeNull();
     mockThrow.section = false;
     await fireEvent.press(within(failed).getByText(TRY_AGAIN_LABEL));
-    expect(await screen.findByTestId('setup-dialog')).toBeTruthy();
-    expect(screen.getByText('1 · SOURCE')).toBeTruthy();
-    expect(screen.queryByTestId('dialog-failed')).toBeNull();
-    expect(sent).toEqual([]);
+    expect(await screen.findByText('1 · SOURCE')).toBeTruthy();
+    expect(screen.getByTestId('setup-turn-on')).toBeTruthy();
+    expect(screen.queryByTestId('form-failed')).toBeNull();
   });
 });

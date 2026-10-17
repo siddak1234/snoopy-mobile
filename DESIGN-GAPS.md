@@ -4345,3 +4345,143 @@ named; with the file restored, all pass.
 | nit · The run's header without the version (`run.tsx`) | "· v{N}" back | `invoice-processing-screens` "names its flow…" |
 | nit · Nothing said of a vendor not offered (`vendor.tsx`) | "Ask an owner or admin…" for it | `vendor-page` "a vendor this deployment does not offer…" |
 | nit · A pasted-key vendor to Settings › Connections (`vendor.tsx`) | the browser sign-in for it | `vendor-page` "a vendor that takes a pasted key…" |
+
+### Build 21 (Round 17; 2026-10-15)
+
+A re-entry on the owner's words after build 20 (his thirteen TestFlight items of 2026-10-15
+01:38–01:58Z, read through the ASC API; his decisions D1–D4; the quick-run ask; the Intuit
+decision; and his "go with all", ~04:15Z, which approved the A/B/C list given in the message it
+answered — A1–A9 here — **not** the session's choices), corrected by him the same evening (AM1–AM8,
+~22:15Z and ~22:35Z, which override the spec where they differ). The spec is the session's
+`b21/spec.md`; the contract the session's `b21-contract` (backend `docs/` + `schemas/` with this
+round's changes: `RunDocument`, `RunDetail.documents`, `GET …/runs/{runId}/documents`,
+`AutomationSetupField.providers` and `.group`). The generated types name the bytes they came from:
+`automations.yaml` sha256 `8b6b6f78…` (the backend lane's AM2 file-name words and its formatter,
+2026-10-16 23:05Z), `openapi.yaml` `0f20ff23…`, `connections.yaml` `bf50b980…`. They are
+regenerated from backend `main` once Release 1 is read back (spec §5, #7); until then the
+Deployed contract check fails by design (it reads production, and was not run).
+
+The owner's words this answers (verbatim):
+
+- Item 1 / D1: "we dont need to say this at all: including AI reading of documents you add. the
+  terms and privacy policy includes that information. that is jargon not needed and unnecessarily
+  added." → **A1**: the account's AI answer is gone from the app — the Home card, the Settings row,
+  the Start-run gate, `hooks/use-ai-reading.tsx`, `lib/platform/ai-reading.ts`,
+  `lib/content/ai-reading.ts` and their test. A run with a file starts at the press. The sign-in
+  line is unchanged, byte for byte.
+- Item 2: "When i click one of the choices like none i shouldnt need to press done or the back
+  arrow. It should just take me back to the set up page aabd be saved. If i need to connect then
+  after i click and connection happens then it shoukd take me back" → **A2**: Connect vendor saves
+  at the tap and goes back (`components/flows/vendor-choice.tsx`, `app/(tabs)/flows/vendor.tsx`).
+- Items 4, 5: "It says connected but not connected on the main flow page" / "Why does it say
+  connect when it was connected" → **A3**: the vendor row says its state; "Connect vendor ›" is
+  deleted, and `audit:vocabulary` now fails it.
+- Items 6, 7, 8: "Logo then to the right name then below the account email" / "Standard format and
+  size for each connection component on the list not random buttons and such" / "Rather than keys
+  ok the left as icons i want the logos of the company's" → **A4**, **A5**:
+  `components/connection-row.tsx`, the one row everywhere; Account's glyphs.
+- Item 9: "Why is there a paragraph. It should be short not an essay" → Account's one line;
+  descriptions off the connection rows; no help line under any setting.
+- Items 10, 11: "It shoukd show all the steps and a live tracker of which ones are done… We have
+  pre determined steps and it should ahow where we are. Dashboard items should be updated too" /
+  "What is the checked issue?" → **A7**'s tracker (`toTracker`), never a step's own summary — "34
+  accounts read" under Received is gone — and **A6**'s live DASHBOARD.
+- Item 12 and D3: "steps, then in there we have upload photo. Then show the rest of the steps.
+  Then in one of the steps where data is uploaded to quickbooks it shows connected to quickbooks.
+  In the bottom we can have a connections section" / "lets test this flow page order first then we
+  can agree if it should be the standard" → **A6**, the TEST VERSION of his order.
+- D4: "run number is the run ID. each id is unique … like a case number or uuid", and AM2: "s15 runs
+  should have the full ID." → **A8**: `runLabel` is "Run {full id}" — the run page's title,
+  Activity's and Home's rows, an approval's card; the facts' Run ID; the JSON file
+  `run-{full id}.json`. The request id is never shown; `audit:vocabulary` now fails a `.requestId`
+  read where a screen is made.
+- The quick-run ask: "when a user wants to run a random flow. they shouldnt have to do a bunch of
+  work in the app" → **A9**: Home's RUN A FLOW, three presses to a started run.
+- ~04:05Z: "it was 3 receipts in one picture. that should work … we should get a json out that
+  clearly seperates accordingly … cu price, location, and more should be there", and AM7: "ensure
+  invoice number, bill number, or another standard practice from vendors is part of the json
+  schema output" → the run page's DOCUMENTS (`lib/view/documents.ts`,
+  `components/runs/document-card.tsx`) and Download JSON (`readRunDocuments`, the app's side of
+  C1/C2).
+- ~04:15Z: "we will list on apples app store not intuits. so we do not need that" → no Intuit
+  button image, no "Disconnect from QuickBooks"; the two `connect-to-quickbooks*.png` files are
+  deleted.
+- AM4: "set up page is initial, after that flow page is the run page. set up should be made simple
+  … they can have a edit settings/flow/setup thing in the bottom of the flow page" → Set up stays,
+  one simple page (the vendor and None drawn right on it), and Edit setup at the flow page's bottom
+  (~~the spec's S10, Set up folded into the flow page~~).
+- AM5: "remove lsit teams on bottom of home page, it is useless." → Home's TEAMS is gone.
+
+**The session's choices** (none is the owner's; listed for him with the checklist). From the
+spec, as built: S11 (no help line), S12 (the row's marks: QuickBooks' symbol is the preferred
+logo's top-left **536 × 536**, the round symbol's own square, measured — its pixels span columns
+and rows 0–535 and the wordmark starts at column 610 — not the spec's 600 box, which sits it 32 px
+off-centre; checked pixel for pixel against `quickbooks-logo.png` with PIL when it was cut, the
+file's sha256 `616e1f16…` held by `vendor-logos.test.tsx`), S13, S14, S16, S21, S24, S25, S30.
+This lane's own:
+
+| # | Choice |
+| --- | --- |
+| M1 | The run page's title is "Run {full id}" at the title size, selectable, wrapping at its hyphens; its flow and status pill on the line under it — the full id beside a pill does not fit a phone's width. |
+| M2 | Set up's one button is Turn on for a flow not added or a draft, Save for one on or paused (its status kept, then Back). Save asks only about a vendor the page changed, and never for the accounts a flow needs: turning on stays the flow page's. |
+| M3 | The flow page's steps show the vendor only (AM4: "the vendor step shows its vendor"); the Approval limit and any other setting are edited on Set up through Edit setup — the spec's in-step setting rows and their dialog (A6, S10) are not built. |
+| M4 | The flow page's bottom status button is drawn only while the flow is on (Pause); while it is off, Turn on is Step 1's alone — never two Turn on buttons. |
+| M5 | A document's numbers are label and value rows: its own under its printed label ("Invoice #" · "INV-7"), "No." when none is printed, then each reference by its label; the date and time on their own line. |
+| M6 | A step done says "Done · 2:32 PM" (the time of day); a failed step whose run gave no reason says "Failed"; a run of another version still going ends in "Step {n}" Working…. |
+| M7 | A version whose vendor field names no step (Invoice Processing v2) draws its vendor row under the steps. |
+| M8 | CONNECTIONS also draws any account the platform says the flow is owed that the catalog does not name, when this deployment lists it; one it does not list is named in Step 1 only. |
+| M9 | Download JSON keeps its words while it works (the spec names no busy word). |
+| M10 | A connection that needs attention but holds an email says the email (A4's order); its button says Reconnect. |
+| M11 | What a connect came back with ("Connection completed successfully.", "… already connected …") goes when any row's button is pressed next. |
+| M12 | A vendor row that is no choice (a member, a vendor this deployment does not list) still announces itself as a radio, disabled, chosen or not. |
+| M13 | Edit setup is offered when the version the flow runs declares settings or accounts. |
+
+**Found, for the backend lane (not changed here):** `RunDetail.documents` in the contract still
+says `maxItems: 10` (`automations.yaml`, the `RunDetail` schema) while AM1 says no cap anywhere;
+the generated types carry no bound, so the app is unaffected.
+
+**NOT OBSERVED** in this lane: the app on a simulator or a device (nothing here was launched); a
+real v3 run with three receipts; the Deployed contract check (production); the website's parity
+for these screens (its own lane).
+
+### Guards proved to bite, Build 21
+
+Thirty-one runs of one script (`b21-bites/bite.sh`, its jest logs beside it in the session's
+scratchpad), Node 22.23.2, each on the final tree: one exact edit, the test named run (red), the
+file restored from its saved copy — its SHA-256 equal every time — and the test run again (green).
+
+| Guard | Broken by | What failed |
+| --- | --- | --- |
+| A1 · no AI consent in any runtime file | `// usesAi` added to `lib/content/screen-states.ts` | `build21-screens` "no runtime file says or wires the AI consent…" |
+| A1 · a run with a file starts at the press | Start run made to stop on a file and say "AI reads this file" | `start-run` "uploads the file, starts the run once…" |
+| A2 · a tap saves and goes back | `router.back()` after the save removed | `vendor-page` "tapping None on a QuickBooks flow saves None once…" |
+| A2 · a member's vendor not connected is no choice | the row tappable for anyone | `vendor-page` "not connected, a member is told who connects it…" |
+| A3 · the vendor row says its state | always "Not connected" | `invoice-processing-screens` "A3: QuickBooks chosen and connected says Connected…" |
+| A4 · one least height | 56 for 64 | `connection-row` "…the same least height…" (both palettes) |
+| A5 · Account's one line | the old lead back | `account-screen` "says one line — Sign in with any of these. …" |
+| A6 · Step 1 holds the document and Start run | Step 1's controls not drawn | `invoice-processing-screens` "reads top to bottom…" |
+| A6 · no description under the name | the description drawn | `tab-screens` "a flow's page says it under the name…" |
+| A6 · the DASHBOARD reads again while a run goes on | the timer's condition inverted | `invoice-processing-screens` "DASHBOARD is live…" |
+| A6 · Edit setup opens Set up for this flow | `flow` dropped from its params | `automation-actions` "opens Set up — the one page Add opened — for this flow…" |
+| AM4 · Save keeps the flow's status | `status: 'live'` sent with Save | `invoice-processing-screens` "Edit setup on a live flow: Save keeps its status…" |
+| AM4 · a connected vendor is chosen on Set up | only None chosen at a tap | `tab-screens` "turns on with QuickBooks once it is connected…" |
+| A7 · a group's precedence | failed before held | `build21-views` "a group is working over held over failed…" |
+| A7 · a step passed over is Skipped | Waiting for it | `build21-views` "each step on its own…" |
+| A7 · Steps done counts skipped groups | done only | `build21-views` "Steps done counts…" |
+| A7 · never a step's own summary | a done group says its last step's summary | `invoice-processing-screens` "run 793eef82 as it was…" |
+| A7 · "{quantity} × {unit price}" | never drawn | `build21-views` "every line…" |
+| A7 · a document's own number under its label | always "No." | `build21-views` "its numbers…" |
+| A7 · Download JSON is `run-{full id}.json` | the first eight | `invoice-processing-screens` "Download JSON hands the platform's file…" |
+| A7 · Not approved | never | `invoice-processing-screens` "a waiting document reads Not approved…" |
+| A8 · "Run {full id}" | the first eight | `flows-view` "is Run and the whole id…" |
+| A8 · Home's rows by the full id | "· v{N}" back | `parity-home` "names each recent run by its full id…" |
+| A8 · an approval's run by its full id | the first eight | `gate24-parity-activity` "draws each one's Pending pill…" |
+| A9 · RUN A FLOW lists live flows only | every flow not archived | `parity-home` "lists every live flow under the greeting…" |
+| AM5 · no Teams list on Home | TEAMS drawn | `parity-home` "draws no Teams list…" |
+| vocabulary · "Connect vendor ›" banned | the ban emptied | `audit-gates` "Build 21" |
+| vocabulary · `.requestId` read where a screen is made | another name matched | `audit-gates` "Build 21" |
+
+(Twenty-eight guards. Three first runs stayed green — A7's group precedence, A7's skipped step and
+A8's approval card: no test asserted them yet — so their tests were strengthened (`build21-views`'
+precedence and per-step cases; the approval card's `approval-run-*` line) and each was run again,
+red, then green.)

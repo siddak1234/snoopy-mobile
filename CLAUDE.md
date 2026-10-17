@@ -47,6 +47,20 @@ record is DESIGN-GAPS "The Invoice Processing update's shared screens (Round 17;
 its independent review's findings, fixed on the same branch, DESIGN-GAPS "The review of the Invoice
 Processing screens (Round 17; 2026-10-14)".
 
+**And Build 21 (2026-10-15/16), a re-entry on the owner's words after build 20** — his thirteen
+TestFlight items, D1–D4, the quick-run ask, the Intuit decision ("we will list on apples app store
+not intuits. so we do not need that") and "go with all" (~04:15Z, the A/B/C list it answered, not
+the session's choices), corrected the same evening by AM1–AM8 (~22:15Z, ~22:35Z): no AI consent
+anywhere (A1); Connect vendor saves at the tap and goes back (A2); the vendor row says its state
+(A3); one connection row everywhere, our own Connect / Reconnect / Disconnect, the vendors' marks
+at 24 (A4, A5); the flow page as the run page — DASHBOARD live, STEPS with the document and Start
+run in Step 1 and the vendor in its step, CONNECTIONS, Edit setup at the bottom — and Set up one
+simple page, once (A6, AM4); a run's page with every step from the start, its documents and
+Download JSON (A7, the app's side of C1/C2); every run by its full id (A8, AM2); Home's RUN A FLOW
+and no Teams list (A9, AM5). The record is DESIGN-GAPS "Build 21 (Round 17; 2026-10-15)", the
+session's choices listed there as the session's; the contract is the round's (`b21-contract`) until
+the platform's release, then backend `main`.
+
 **Round 16 CLOSED 2026-10-07** — Gate 24 re-run by command by a fresh `snoopy-backend` session that wrote none of it; its record here is DESIGN-GAPS "Build 16: the owner's device pass, and Round 16's close". Open from 2026-09-29 (BUILD-PLAN Phase 24, ADR-0032): the mobile app offers
 every signed-in feature the website offers, on the same published operations,
 and ships to Apple first. This repository owns 24.3–24.7 and, since the owner's build 6 feedback of 2026-10-02, 24.9 (the flows design pass: one Flows tab, a project scope, a shared workspace snapshot) and, since build 7's, 24.11.6–24.11.10 (the cover when signed out, Teams in place of Projects, Archived flows (Removed flows until 24.12), Unlink, flow history), and, since build 9's (the owner's decisions of 2026-10-02), the app's part of 24.12 (a team is its kind, the archive wording, Settings by category, the billing cards, the join link, the export to the share sheet, Unlink in words, the empty-screen standard, the bigger type), and, since build 10's (the owner's decisions of 2026-10-03, build 11), Settings as one grouped page, compact billing cards with a drawn Pro, an archived flow's live twin, a team on and for every flow, the Archived header button and the Flows empty standard, and a tick on every press, one phase per session:

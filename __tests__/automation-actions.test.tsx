@@ -25,7 +25,7 @@ import type { CatalogEntry } from '@/lib/platform/catalog';
 import type { SetupField } from '@/components/setup-field';
 import { PlatformError, PlatformUnreachableError } from '@/lib/platform/problem';
 import { TEST_WORKSPACE, sessionAs } from '@/test/platform';
-import { renderWithProviders } from '@/test/render';
+import { mockRouter, renderWithProviders } from '@/test/render';
 
 const { platformOperation, newIdempotencyKey, putFileToSignedUrl } = jest.requireMock('@/lib/platform/client');
 
@@ -477,33 +477,20 @@ describe('Webhook address (24.4.1, backend §12.1 #91, #109)', () => {
   });
 });
 
-describe('Set up (24.4.1)', () => {
-  it('saves the settings only — going live stays its own action', async () => {
-    await renderActions();
-    await fireEvent.press(screen.getByTestId('manage-setup'));
-    await fireEvent.changeText(screen.getByLabelText('Watch inbox'), 'invoices@acme.co');
-    await pressLast('Save');
-    await waitFor(() => expect(callbacks.onChanged).toHaveBeenCalled());
-    expect(sent).toEqual([
-      expect.objectContaining({
-        method: 'PATCH',
-        path: SUB_PATH,
-        body: { config: { inbox: 'invoices@acme.co', alerts: false } },
-      }),
-    ]);
-  });
-});
-
-describe('Set up draws the version the flow runs, not the newest (backend §12.1 #185)', () => {
-  it("shows the pinned version's settings when a newer version changes them", async () => {
-    await renderActions({ sub: subscription({ setup: [INBOX] }), entry: entry({ version: 2, setup: [INBOX, ALERTS, DIGEST] }) });
-    await fireEvent.press(screen.getByTestId('manage-setup'));
-    expect(screen.getByLabelText('Watch inbox')).toBeTruthy();
-    expect(screen.queryByText('Alerts')).toBeNull();
-    expect(screen.queryByText('Daily digest to')).toBeNull();
-    await pressLast('Save');
-    await waitFor(() => expect(callbacks.onChanged).toHaveBeenCalled());
-    expect(sent).toEqual([expect.objectContaining({ body: { config: { inbox: 'ap@acme.co' } } })]);
+describe('Edit setup (Build 21; the owner\'s AM4: "they can have a edit settings/flow/setup thing in the bottom of the flow page")', () => {
+  it('opens Set up — the one page Add opened — for this flow, and sends nothing itself', async () => {
+    const sub = subscription({ setup: [INBOX] });
+    await renderActions({ sub, entry: entry({ version: 2, setup: [INBOX, ALERTS, DIGEST] }) });
+    const row = screen.getByTestId('manage-setup');
+    expect(within(row).getByText('Edit setup')).toBeTruthy();
+    expect(screen.queryByText('The settings it runs with')).toBeNull();
+    await fireEvent.press(row);
+    expect(mockRouter.push).toHaveBeenCalledWith({
+      pathname: '/(tabs)/flows/setup',
+      params: { template: sub.templateId, flow: sub.id },
+    });
+    expect(screen.queryByTestId('setup-dialog')).toBeNull();
+    expect(sent).toEqual([]);
   });
 
   it('offers no Set up when the version it runs declares none, though the newest does', async () => {
