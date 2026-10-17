@@ -242,7 +242,8 @@ describe('Setup — Turn on (24.4: create, then patch its settings; the Invoice 
   });
 
   it('while an account its flow needs is unconnected: Turn on says to connect it first, and sends nothing', async () => {
-    const held: Subscription = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'held-0', projectId: 'project-1', status: 'paused', unmetConnections: ['hubspot'] };
+    // A draft (Turn on); a flow on or paused is saved, its status kept, and Save does not ask for accounts.
+    const held: Subscription = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'held-0', projectId: 'project-1', status: 'draft', unmetConnections: ['hubspot'], setup: [] };
     routePlatform(platformOperation, {
       '/automations': bareCatalog(),
       '/projects': projectsPayload('Finance'),
@@ -276,12 +277,13 @@ describe("Setup — each request's key (DESIGN-CONTRACT: a retry keeps it; a cha
       ],
     }));
 
-  /** What a create answers: a draft in the Finance team that owes no account. */
+  /** What a create answers: a draft in the Finance team that owes no account, its version's one field (§12.1 #185). */
   const draft = (id: string): Subscription => ({
     ...planSubscriptionsPayload().subscriptions[0]!,
     id,
     status: 'draft',
     projectId: 'project-1',
+    setup: inboxCatalog().automations[0]!.setup,
   });
 
   const refused = (): never => {
@@ -362,7 +364,7 @@ describe("Setup — each request's key (DESIGN-CONTRACT: a retry keeps it; a cha
   });
 
   it('a field edited after a refused activation is a new intent: the new settings go with a new key, never under the refused one', async () => {
-    const held: Subscription = { ...draft('held-0'), status: 'paused' };
+    const held: Subscription = draft('held-0');
     routePlatform(platformOperation, {
       '/automations': inboxCatalog(),
       '/projects': projectsPayload('Finance'),
@@ -388,7 +390,7 @@ describe("Setup — each request's key (DESIGN-CONTRACT: a retry keeps it; a cha
     expect(writes[1]!.key).not.toBe(writes[0]!.key);
   });
 
-  it('made live, the activation is spent: Turn on again on the same screen is a new intent with a new key — never a replay of the one that succeeded', async () => {
+  it('made live, the activation is spent: Save on the same screen is a new intent with a new key — never a replay of the one that succeeded', async () => {
     const writes = await openSetup({
       [`POST ${WS}/subscriptions`]: () => ({ subscription: draft('new-0') }),
       [`PATCH ${WS}/subscriptions/new-0`]: () => ({ subscription: { ...draft('new-0'), status: 'live' } }),
@@ -397,10 +399,10 @@ describe("Setup — each request's key (DESIGN-CONTRACT: a retry keeps it; a cha
     await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith(opened('new-0')));
 
     // On a phone the screen is dismissed by now; the unit router opens nothing,
-    // so it stays, and the rule is held here.
-    await fireEvent.press(screen.getByText('Turn on'));
+    // so it stays — the flow now on, its button Save — and the rule is held here.
+    await fireEvent.press(screen.getByText('Save'));
     await waitFor(() => expect(writes.map((write) => write.method)).toEqual(['POST', 'PATCH', 'PATCH']));
-    expect(writes[2]!.body).toEqual(writes[1]!.body);
+    expect(writes[2]!.body).toEqual({ config: (writes[1]!.body as { config: unknown }).config });
     expect(writes[2]!.key).not.toBe(writes[1]!.key);
   });
 });

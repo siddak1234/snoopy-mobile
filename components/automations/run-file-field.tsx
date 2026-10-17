@@ -164,16 +164,15 @@ export function RunFileField({
         ? `Ready: ${state.name} (${formatSize(state.sizeBytes)})`
         : null;
 
-  // Title line, then the description, then the two ways to give the file at
-  // full width — the Setup rows' order, so both read alike in one card.
+  // Title line, then the two ways to give the file at full width — the setting
+  // rows' order, so both read alike in one card.
   return (
     <View style={[styles.row, divider && { borderBottomWidth: 1, borderBottomColor: palette.divider }]}>
       <View style={styles.titleLine}>
         <Paperclip size={iconSize.row} color={palette.accentRamp[300]} />
-        {/* The manifest's title alone: a file field says no "(optional)" (spec §3.D). */}
+        {/* The manifest's title alone: no "(optional)" (spec §3.D) and no line under it (Build 21, A6: titles only). */}
         <Text style={[styles.title, { color: palette.text }]}>{field.title}</Text>
       </View>
-      <Text style={[styles.sub, { color: palette.neutral[400] }]}>{field.description}</Text>
       {progress ? <Text style={[styles.sub, { color: palette.neutral[400] }]}>{progress}</Text> : null}
       {error ? <Text style={[styles.sub, { color: status.err }]}>{error}</Text> : null}
       <View style={styles.actions}>

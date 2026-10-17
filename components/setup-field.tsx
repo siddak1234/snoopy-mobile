@@ -91,16 +91,32 @@ export function NumberedSectionLabel({ children, testID }: { children: string; t
 }
 
 /**
- * The flow's vendor choice (backend ADR-0037): the one setup field with
- * `control: connection`, or none. Its value is `none` or the `providerId` of
- * one of the flow's optional connections, and it is chosen on the flow's
- * Connect vendor page, never typed in a row.
+ * Every connection choice a version declares — one per step that uses a
+ * connection (backend ADR-0040, BUILD-PLAN 25.4.30; Build 21's C4). Invoice
+ * Processing declares one; v2's has no `providers` and covers every optional
+ * connection.
  */
-export function connectionField<T extends { control: string }>(setup: readonly T[]): T | undefined {
-  return setup.find((field) => field.control === 'connection');
+export function connectionFields<T extends { control: string }>(setup: readonly T[]): T[] {
+  return setup.filter((field) => field.control === 'connection');
 }
 
-/** The fields a form draws as rows: every field but the vendor choice, which has a page of its own. */
+/**
+ * The vendors one connection field chooses among, in the manifest's order: the
+ * optional connections it names (`providers`), or — a field without
+ * `providers`, the one of a version that declares only one (ADR-0040; the
+ * spec's S8) — every optional connection.
+ */
+export function fieldProviders<C extends { providerId: string; optional?: boolean }>(
+  field: { providers?: readonly string[] } | undefined,
+  connections: readonly C[],
+): C[] {
+  const optional = connections.filter((connection) => connection.optional);
+  if (!field?.providers) return optional;
+  const named = new Set(field.providers);
+  return optional.filter((connection) => named.has(connection.providerId));
+}
+
+/** The fields a form draws as rows: every field but the vendor choice, drawn as its vendors under CONNECT. */
 export function rowFields<T extends { control: string }>(setup: readonly T[]): T[] {
   return setup.filter((field) => field.control !== 'connection');
 }
@@ -113,6 +129,11 @@ export function chosenVendor(
   if (!field) return 'none';
   const value = config?.[field.key] ?? field.defaultValue;
   return typeof value === 'string' && value !== '' ? value : 'none';
+}
+
+/** The glyph a setting row is drawn with: its control's, or the text glyph for one this build does not know (25.8.1). */
+export function controlIcon(control: string): Icon {
+  return isKnownControl(control) ? CONTROL_ICON[control] : CONTROL_ICON.text;
 }
 
 /** Whole dollars with thousands separators, and two cents: what a money field shows. */
@@ -263,23 +284,22 @@ export function isEmailField(field: Pick<FieldRowSpec, 'key' | 'title' | 'contro
   return field.control === 'email' || /email/iu.test(`${field.key} ${field.title}`);
 }
 
-export function SetupFieldRow({
+/**
+ * The input itself: an amount typed from the right, an address with the email
+ * keyboard, any other text — or, for a switch, the switch. What a row draws
+ * under its title (a switch, on its title line).
+ */
+export function FieldInput({
   field,
   value,
   onChange,
-  divider,
 }: {
   field: FieldRowSpec;
   value: unknown;
   onChange: (next: unknown) => void;
-  divider: boolean;
 }) {
   const { palette } = useTheme();
-  // A control this build does not know draws under the text glyph, as its text input (25.8.1).
-  const Glyph = isKnownControl(field.control) ? CONTROL_ICON[field.control] : CONTROL_ICON.text;
   const isMoney = field.control === 'money';
-  const notifies = notifiesLine(field);
-  const newer = controlNote(field);
   const externalValue = isMoney
     ? (() => {
         const cents = moneyCents(value);
@@ -298,6 +318,10 @@ export function SetupFieldRow({
     lastEmitted.current = value;
     setDraft(externalValue);
   }, [externalValue, value]);
+
+  if (field.control === 'toggle') {
+    return <NocToggle value={value === true} onChange={(next) => onChange(next)} />;
+  }
 
   const changeText = (next: string) => {
     if (isMoney) {
@@ -324,61 +348,76 @@ export function SetupFieldRow({
     onChange(next);
   };
 
-  // Title line, then the description, then the control at full width: a field
-  // that holds an address or an amount needs the whole row, not a box beside
-  // the words (24.7.3 attempt 4, feedback #4). Optional fields say so by name.
-  const body = (
-    <>
+  return (
+    <View style={[styles.inputWrap, { borderColor: palette.neutral[700], backgroundColor: palette.bg }]}>
+      {isMoney ? <Text style={[styles.currency, { color: palette.neutral[400] }]}>$</Text> : null}
+      <TextInput
+        accessibilityLabel={field.title}
+        value={draft}
+        onChangeText={changeText}
+        placeholder={isMoney ? '0.00' : field.required ? 'Required' : 'Optional'}
+        placeholderTextColor={palette.neutral[500]}
+        keyboardType={isMoney ? 'number-pad' : isEmailField(field) ? 'email-address' : 'default'}
+        textContentType={isEmailField(field) ? 'emailAddress' : undefined}
+        autoComplete={isEmailField(field) ? 'email' : undefined}
+        autoCapitalize="none"
+        autoCorrect={false}
+        selectionColor={palette.accent}
+        style={[styles.input, { color: palette.text }]}
+      />
+    </View>
+  );
+}
+
+/**
+ * One row of Set up and of a run's form: the title line —
+ * glyph, title, "Optional", a switch inline — then the input at full width.
+ * **No help line under it** (Build 21, spec A6 and B5; the session's S11; the
+ * owner's build 20 item 3: "What is the gets a short summary even mean"): the
+ * manifest's `description` stays the manifest's record and is not drawn. A
+ * notification switch's line and the newer-control note stay: they say what
+ * the row does, not what the field means.
+ */
+export function SetupFieldRow({
+  field,
+  value,
+  onChange,
+  divider,
+}: {
+  field: FieldRowSpec;
+  value: unknown;
+  onChange: (next: unknown) => void;
+  divider: boolean;
+}) {
+  const { palette } = useTheme();
+  // A control this build does not know draws under the text glyph, as its text input (25.8.1).
+  const Glyph = controlIcon(field.control);
+  const notifies = notifiesLine(field);
+  const newer = controlNote(field);
+
+  // Title line, then the control at full width: a field that holds an address
+  // or an amount needs the whole row, not a box beside the words (24.7.3
+  // attempt 4, feedback #4). Optional fields say so by name.
+  return (
+    <View style={[styles.row, divider && { borderBottomWidth: 1, borderBottomColor: palette.divider }]}>
       <View style={styles.titleLine}>
         <Glyph size={iconSize.row} color={palette.accentRamp[300]} />
         <Text style={[styles.rowTitle, { color: palette.text }]}>{field.title}</Text>
         {!field.required ? (
           <Text style={[styles.optional, { color: palette.neutral[500] }]}>Optional</Text>
         ) : null}
-        {field.control === 'toggle' ? (
-          <NocToggle value={value === true} onChange={(next) => onChange(next)} />
-        ) : null}
+        {field.control === 'toggle' ? <FieldInput field={field} value={value} onChange={onChange} /> : null}
       </View>
-      <Text style={[styles.rowSub, { color: palette.neutral[400] }]}>{field.description}</Text>
       {notifies ? <Text style={[styles.rowSub, { color: palette.neutral[400] }]}>{notifies}</Text> : null}
       {newer ? <Text style={[styles.rowSub, { color: palette.neutral[400] }]}>{newer}</Text> : null}
-      {field.control === 'toggle' ? null : (
-        <View
-          style={[
-            styles.inputWrap,
-            { borderColor: palette.neutral[700], backgroundColor: palette.bg },
-          ]}>
-          {isMoney ? <Text style={[styles.currency, { color: palette.neutral[400] }]}>$</Text> : null}
-          <TextInput
-            accessibilityLabel={field.title}
-            value={draft}
-            onChangeText={changeText}
-            placeholder={isMoney ? '0.00' : field.required ? 'Required' : 'Optional'}
-            placeholderTextColor={palette.neutral[500]}
-            keyboardType={isMoney ? 'number-pad' : isEmailField(field) ? 'email-address' : 'default'}
-            textContentType={isEmailField(field) ? 'emailAddress' : undefined}
-            autoComplete={isEmailField(field) ? 'email' : undefined}
-            autoCapitalize="none"
-            autoCorrect={false}
-            selectionColor={palette.accent}
-            style={[styles.input, { color: palette.text }]}
-          />
-        </View>
-      )}
-    </>
+      {/* The public contract has no resource-list operation or resource kind. Match
+          the completed web client: accept its opaque string value in a text input
+          instead of inventing a provider-specific picker — `resource-picker` is a
+          known control drawn that way (25.8.1), and a control this build does not
+          know is drawn that way too, with `controlNote`'s line under it. */}
+      {field.control === 'toggle' ? null : <FieldInput field={field} value={value} onChange={onChange} />}
+    </View>
   );
-
-  const rowStyle = [
-    styles.row,
-    divider && { borderBottomWidth: 1, borderBottomColor: palette.divider },
-  ];
-
-  // The public contract has no resource-list operation or resource kind. Match
-  // the completed web client: accept its opaque string value in a text input
-  // instead of inventing a provider-specific picker — `resource-picker` is a
-  // known control drawn that way (25.8.1), and a control this build does not
-  // know is drawn that way too, with `controlNote`'s line under it.
-  return <View style={rowStyle}>{body}</View>;
 }
 
 const styles = StyleSheet.create({

@@ -17,6 +17,15 @@
  * scanned: they are the platform's words, not the app's. The brand line under
  * the mark, "AUTOMATION × AI", names what Autom8x is, not a thing in the app,
  * and is the one exact string allowed.
+ *
+ * Since Build 21 (Round 17, 2026-10-15) two more, from the owner's build 20
+ * items: no copy says "Connect vendor ›" (items 4 and 5: "It says connected but
+ * not connected on the main flow page", "Why does it say connect when it was
+ * connected" — the button drawn whatever the connection's state; the vendor row
+ * says its state now), and no screen reads a run's `requestId` (decision D4:
+ * "run number is the run ID" — build 20 titled run 793eef82 by its request id's
+ * first eight characters): a property `.requestId` read in app/, components/,
+ * lib/view/ or lib/content/ fails, as a run is named by its `id` alone.
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { extname, join, relative } from "node:path";
@@ -39,6 +48,12 @@ const RETIRED = /\b(projects?|automations?|solutions?|pipelines?)\b/iu;
 
 /** The brand line under the mark (design source, the cover and Home). */
 const BRAND_LINE = "AUTOMATION × AI";
+
+/** Copy no screen says again (Build 21; the owner's build 20 items 4 and 5). */
+const BANNED_PHRASES = ["Connect vendor ›"];
+
+/** Where a screen's words and what it shows are made: a run's request id is read in none of them (D4). */
+const DISPLAY_ROOTS = ["app/", "components/", "lib/view/", "lib/content/"];
 
 /** Reads as words to a person: a space, or a leading capital. */
 function readsAsCopy(text) {
@@ -85,18 +100,32 @@ function visit(node, source, path) {
     const { line } = source.getLineAndCharacterOfPosition(node.getStart(source));
     findings.push(`${path}:${line + 1}: ${JSON.stringify(text.trim())}`);
   }
+  if (text !== null && BANNED_PHRASES.some((phrase) => text.includes(phrase))) {
+    const { line } = source.getLineAndCharacterOfPosition(node.getStart(source));
+    findings.push(`${path}:${line + 1}: ${JSON.stringify(text.trim())} (a banned phrase)`);
+  }
+  if (
+    ts.isPropertyAccessExpression(node) &&
+    node.name.text === "requestId" &&
+    DISPLAY_ROOTS.some((prefix) => path.startsWith(prefix))
+  ) {
+    const { line } = source.getLineAndCharacterOfPosition(node.getStart(source));
+    findings.push(`${path}:${line + 1}: ${node.getText(source)} (a run is named by its id, never its request id)`);
+  }
   ts.forEachChild(node, (child) => visit(child, source, path));
 }
 
 if (findings.length > 0) {
   console.error(
-    'Vocabulary audit failed. The app says "team", "flow" and "steps" — a project, an automation, a solution and a pipeline are not copy:\n',
+    'Vocabulary audit failed. The app says "team", "flow" and "steps" — a project, an automation, a solution and a pipeline are not copy; "Connect vendor ›" is not said; a run is named by its id:\n',
   );
   for (const finding of findings) console.error(`  ${finding}`);
   process.exit(1);
 }
 
-console.log('Vocabulary audit passed. No copy says "project", "automation", "solution" or "pipeline".');
+console.log(
+  'Vocabulary audit passed. No copy says "project", "automation", "solution", "pipeline" or "Connect vendor ›", and no screen reads a run\'s request id.',
+);
 
 function walk(path) {
   let entries;

@@ -379,9 +379,9 @@ describe('Workflow scope (18.6.2; every flow says its team since build 11, D4)',
     setMockParams({ flow: 'invoice' });
     routePlatform(platformOperation, { '/automations': flowCatalogPayload() });
     await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
-    // Its team on a line of its own, then what it does (spec §3.D).
+    // Its team on a line of its own — and no description under it since Build 21 (the session's S24).
     expect(await screen.findByText('Whole workspace')).toBeTruthy();
-    expect(screen.getByText('AP inbox → QuickBooks')).toBeTruthy();
+    expect(screen.queryByText('AP inbox → QuickBooks')).toBeNull();
 
     resetSnapshot();
     withRemovedFlow();
@@ -430,7 +430,7 @@ describe('Workflow detail', () => {
     expect(getByText('Weekly KPI report')).toBeTruthy();
     // Its team under its name — the whole workspace's, here — since build 11 (D4).
     expect(getByText('Whole workspace')).toBeTruthy();
-    expect(getByText('Sheets → Slack digest')).toBeTruthy();
+    expect(queryByText('Sheets → Slack digest')).toBeNull();
     expect(getByText('Paused')).toBeTruthy();
     // FINDING 6: only `unmetConnections` is published, so a satisfied provider
     // cannot be listed. The paused workflow has none outstanding.
@@ -516,13 +516,13 @@ describe('Workflow detail', () => {
     await fireEvent.press(await screen.findByText('Pause'));
     expect(await screen.findByText('The platform is unreachable')).toBeTruthy();
 
-    // Saving the settings re-reads: the Pause had landed, so the button now resumes.
-    await fireEvent.press(screen.getByTestId('manage-setup'));
-    const save = await screen.findAllByText('Save');
-    await fireEvent.press(save[save.length - 1]!);
+    // Try again resends the Pause under its own key, and re-reads: the Pause had
+    // landed, so the page now offers Turn on — Step 1's, the flow being off.
+    await fireEvent.press(screen.getByText('Try again'));
     await fireEvent.press(await screen.findByText('Turn on'));
-    await waitFor(() => expect(statusKeys).toHaveLength(2));
-    expect(statusKeys[1]).not.toBe(statusKeys[0]);
+    await waitFor(() => expect(statusKeys).toHaveLength(3));
+    expect(statusKeys[1]).toBe(statusKeys[0]);
+    expect(statusKeys[2]).not.toBe(statusKeys[0]);
   });
 
   it('toggles Live → Paused and back (design dToggle), showing what the platform answers', async () => {
@@ -828,8 +828,7 @@ describe('Settings — one grouped page (build 11, D1)', () => {
   const ROWS = [
     ['settings-account', 'Account'],
     ['settings-face-id', 'Face ID unlock'],
-    // The account's answer to "AI reads your documents", below Face ID (spec §3.H).
-    ['settings-ai-reading', 'AI reads documents'],
+    // ~~The account's answer to "AI reads your documents"~~ — gone with the owner's D1 (Build 21, spec A1).
     ['settings-connections', 'Connections'],
     ['settings-billing', 'Billing'],
     ['workspace-switcher-row', 'Acme Operations'],
@@ -847,7 +846,6 @@ describe('Settings — one grouped page (build 11, D1)', () => {
     'Account',
     'SECURITY',
     'Face ID unlock',
-    'AI reads documents',
     'Connections',
     'Billing',
     'WORKSPACE',
@@ -1407,6 +1405,8 @@ describe('Setup (design sSetup; the Invoice Processing update, spec §3.B)', () 
     status: 'draft',
     projectId: 'project-1',
     config: {},
+    // The settings of the version it runs (backend §12.1 #185): Invoice Processing v2's.
+    setup: invoiceProcessingEntry().setup,
   });
 
   it('names the flow it sets up, and the team it goes to — its category\'s, chosen by no one (ADR-0036)', async () => {
@@ -1421,7 +1421,7 @@ describe('Setup (design sSetup; the Invoice Processing update, spec §3.B)', () 
     expect(screen.queryByLabelText(/^Add to/u)).toBeNull();
   });
 
-  it('numbers its steps — 1 · CONNECT, 2 · SETTINGS, 3 · EMAIL — at the label size, in the text colour, with the manifest\'s help lines and Optional', async () => {
+  it('numbers its steps — 1 · CONNECT, 2 · SETTINGS, 3 · EMAIL — at the label size, in the text colour, the settings by title and Optional, with no help line (Build 21, spec A6)', async () => {
     routeSetup(invoiceProcessing());
     setMockParams({ template: 'invoice-processing' });
     await renderWithProviders(<SetupScreen />, signedInSession);
@@ -1432,28 +1432,28 @@ describe('Setup (design sSetup; the Invoice Processing update, spec §3.B)', () 
       expect([label, style.fontSize, style.color]).toEqual([label, typeScale.label.fontSize, nocturneDark.text]);
     }
     expect(screen.getByText('Approval limit')).toBeTruthy();
-    expect(screen.getByText('Amounts over this wait for approval.')).toBeTruthy();
+    expect(screen.queryByText('Amounts over this wait for approval.')).toBeNull();
     expect(screen.getByLabelText('Approval limit').props.value).toBe('500.00');
     expect(screen.getByText('Also email')).toBeTruthy();
-    expect(screen.getByText('Gets a short summary of each one.')).toBeTruthy();
+    expect(screen.queryByText('Gets a short summary of each one.')).toBeNull();
     expect(screen.getAllByText('Optional')).toHaveLength(2);
-    // The vendor choice is not a row of its own: its page is Connect vendor.
+    // The vendor choice is not a settings row: its vendors are drawn under CONNECT.
     expect(screen.queryByText('Where the details go.')).toBeNull();
     for (const gone of ['CONNECTIONS', 'REVIEW RULES', 'NOTIFICATIONS']) expect(screen.queryByText(new RegExp(gone, 'u'))).toBeNull();
   });
 
-  it('draws the vendor choice as None until one is chosen, and Connect vendor › opens the flow\'s vendor page with it', async () => {
+  it('draws each vendor and None right on the page — None chosen until one is — with no Connect vendor button and no second page', async () => {
     routeSetup(invoiceProcessing());
     setMockParams({ template: 'invoice-processing' });
     await renderWithProviders(<SetupScreen />, signedInSession);
-    const vendor = await screen.findByTestId('setup-vendor');
+    const vendor = await screen.findByTestId('setup-vendor-vendor');
+    expect(within(vendor).getByText('QuickBooks Online')).toBeTruthy();
+    expect(within(vendor).getByText('Not connected')).toBeTruthy();
     expect(within(vendor).getByText('None')).toBeTruthy();
-    expect(within(vendor).queryByText('Not connected')).toBeNull();
-    await fireEvent.press(within(vendor).getByText('Connect vendor ›'));
-    expect(mockRouter.push).toHaveBeenCalledWith({
-      pathname: '/(tabs)/flows/vendor',
-      params: { template: 'invoice-processing', vendor: 'none' },
-    });
+    expect(within(vendor).getByTestId('vendor-chosen-none')).toBeTruthy();
+    expect(within(vendor).queryByTestId('vendor-chosen-quickbooks')).toBeNull();
+    expect(screen.queryByText(/Connect vendor/u)).toBeNull();
+    expect(mockRouter.push).not.toHaveBeenCalled();
   });
 
   it('turns on with None: adds the flow with no team sent, then saves the settings and the choice, and opens it', async () => {
@@ -1471,48 +1471,55 @@ describe('Setup (design sSetup; the Invoice Processing update, spec §3.B)', () 
     ]);
   });
 
-  it('brings QuickBooks back from Connect vendor: its logo, "Not connected" while it is not, and Turn on refused in words with nothing sent', async () => {
-    const writes = routeSetup(invoiceProcessing(), { created: draft() });
-    setMockParams({ template: 'invoice-processing', vendor: 'quickbooks' });
+  it('a draft holding QuickBooks not connected: "Not connected" under it, and Turn on refused in words with nothing sent', async () => {
+    const writes = routeSetup({
+      ...invoiceProcessing(),
+      '/subscriptions': { subscriptions: [{ ...draft(), config: { vendor: 'quickbooks' } }] },
+    });
+    setMockParams({ template: 'invoice-processing' });
     await renderWithProviders(<SetupScreen />, signedInSession);
-    const vendor = await screen.findByTestId('setup-vendor');
+    const vendor = await screen.findByTestId('setup-vendor-vendor');
+    expect(within(vendor).getByTestId('vendor-chosen-quickbooks')).toBeTruthy();
     expect(within(vendor).getByLabelText('QuickBooks')).toBeTruthy();
-    expect(within(vendor).queryByText('QuickBooks Online')).toBeNull();
     expect(within(vendor).getByText('Not connected')).toBeTruthy();
     await fireEvent.press(screen.getByText('Turn on'));
     expect(await screen.findByText('Connect QuickBooks Online first, or choose None.')).toBeTruthy();
     expect(writes).toEqual([]);
   });
 
-  it('turns on with QuickBooks once it is connected, the choice sent as the flow\'s setting', async () => {
+  it('turns on with QuickBooks once it is connected: a tap chooses it, and the choice is sent as the flow\'s setting', async () => {
     const writes = routeSetup(invoiceProcessing(true), { created: draft() });
-    setMockParams({ template: 'invoice-processing', vendor: 'quickbooks' });
+    setMockParams({ template: 'invoice-processing' });
     await renderWithProviders(<SetupScreen />, signedInSession);
-    expect(within(await screen.findByTestId('setup-vendor')).queryByText('Not connected')).toBeNull();
+    const vendor = await screen.findByTestId('setup-vendor-vendor');
+    expect(within(vendor).getByText('Connected')).toBeTruthy();
+    await fireEvent.press(within(vendor).getByTestId('vendor-quickbooks'));
+    expect(within(vendor).getByTestId('vendor-chosen-quickbooks')).toBeTruthy();
+    expect(writes).toEqual([]);
     await fireEvent.press(screen.getByText('Turn on'));
     await waitFor(() => expect(writes).toHaveLength(2));
     expect((writes[1]!.body as { config: Record<string, unknown> }).config.vendor).toBe('quickbooks');
   });
 
-  it('configures a flow the workspace holds where it is: its own team, and Connect vendor saves on the vendor page', async () => {
+  it('configures a flow the workspace holds where it is: its own team, its own values, and Save keeps it on', async () => {
     const held: Subscription = { ...draft(), status: 'live', config: { vendor: 'none', holdAboveAmount: 750 } };
-    routeSetup({
+    const writes = routeSetup({
       ...invoiceProcessing(),
       '/subscriptions': { subscriptions: [held] },
       '/projects': projectsPayload('Accounting'),
     });
-    setMockParams({ template: 'invoice-processing' });
+    setMockParams({ template: 'invoice-processing', flow: 'ip-1' });
     await renderWithProviders(<SetupScreen />, signedInSession);
     await waitFor(() => expect(screen.getByLabelText('Approval limit').props.value).toBe('750.00'));
     expect(screen.getByTestId('setup-team').props.children).toBe('Team: Accounting');
-    await fireEvent.press(screen.getByTestId('setup-connect-vendor'));
-    expect(mockRouter.push).toHaveBeenCalledWith({
-      pathname: '/(tabs)/flows/vendor',
-      params: { template: 'invoice-processing', flow: 'ip-1' },
-    });
+    expect(screen.queryByTestId('setup-connect-vendor')).toBeNull();
+    await fireEvent.press(screen.getByText('Save'));
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect(writes[0]).toMatchObject({ method: 'PATCH', body: { config: { vendor: 'none', holdAboveAmount: 750, notifyEmail: undefined } } });
+    expect(mockRouter.back).toHaveBeenCalled();
   });
 
-  it('says an account the flow cannot run without, Connected ✓ or Connect › to Settings › Connections — no purpose line — and refuses Turn on until it is connected', async () => {
+  it('draws an account the flow cannot run without as the one connection row — no purpose line — and refuses Turn on until it is connected', async () => {
     const catalog = catalogPayload();
     const sample = catalog.automations[0]!.setup[0]!;
     catalog.automations = catalog.automations.map((automation) => ({
@@ -1533,14 +1540,18 @@ describe('Setup (design sSetup; the Invoice Processing update, spec §3.B)', () 
     setMockParams({ template: 'tpl.0' });
     await renderWithProviders(<SetupScreen />, signedInSession);
     expect(await screen.findByText('1 · CONNECT')).toBeTruthy();
-    expect(screen.getByText('Connected ✓')).toBeTruthy();
-    expect(screen.queryByText('Post draft bills')).toBeNull();
+    // HubSpot, the provider this deployment lists: the one row, not connected, with our Connect.
+    const hubspot = within(screen.getByTestId('connection-row-hubspot'));
+    expect(hubspot.getByText('HubSpot')).toBeTruthy();
+    expect(hubspot.getByText('Not connected')).toBeTruthy();
+    expect(within(screen.getByTestId('connection-action-hubspot')).getByText('Connect')).toBeTruthy();
+    for (const gone of ['Read the invoices', 'Post draft bills', 'Connected ✓', 'Connect ›']) {
+      expect([gone, screen.queryByText(gone)]).toEqual([gone, null]);
+    }
     expect(screen.getByText('2 · SETTINGS')).toBeTruthy();
     await fireEvent.press(screen.getByText('Turn on'));
     expect(await screen.findByText('Connect HubSpot first.')).toBeTruthy();
     expect(writes).toEqual([]);
-    await fireEvent.press(screen.getByLabelText('Connect HubSpot'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/connections');
   });
 
   it('draws no CONNECT step when the platform predates `requiredConnections` (the image before the SEVENTEENTH promotion)', async () => {

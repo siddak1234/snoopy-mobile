@@ -1,7 +1,7 @@
 const { spawnSync } = require('node:child_process');
 const { mkdtempSync, mkdirSync, rmSync, writeFileSync } = require('node:fs');
 const { tmpdir } = require('node:os');
-const { join, resolve } = require('node:path');
+const { dirname, join, resolve } = require('node:path');
 
 const platformAudit = resolve(__dirname, '../scripts/audit-platform.mjs');
 const fixtureAudit = resolve(__dirname, '../scripts/audit-fixtures.mjs');
@@ -276,6 +276,41 @@ describe('the vocabulary audit (24.11.7)', () => {
         'export const id = `project-${scope.projectId}`;',
         'export const Mark = () => <Text testID="automation-row">AUTOMATION × AI</Text>;',
         '// a project in the contract is a team on screen',
+      ].join('\n'),
+    );
+    expect(run(vocabularyAudit).status).toBe(0);
+  });
+});
+
+/**
+ * Build 21's two (the owner's build 20 items 4 and 5, and D4): "Connect vendor
+ * ›" is never said again, and no screen reads a run's request id — a run is
+ * named by its `id`. The platform modules keep their path parameters.
+ */
+describe('the vocabulary audit: Build 21', () => {
+  it('fails "Connect vendor ›" in copy and a request id read where a screen is made, and passes the platform\'s own names', () => {
+    expect(run(vocabularyAudit).status).toBe(0);
+
+    for (const [file, source] of [
+      ['app/flow.tsx', 'export const A = () => <Text>Connect vendor ›</Text>;'],
+      ['lib/content/words.ts', "export const B = 'Connect vendor ›';"],
+      ['lib/view/label.ts', 'export const C = (run) => `Run ${run.requestId.slice(0, 8)}`;'],
+      ['components/run-row.tsx', 'export const D = ({ run }) => <Text>{run.requestId}</Text>;'],
+    ]) {
+      mkdirSync(dirname(join(root, file)), { recursive: true });
+      writeFileSync(join(root, file), source);
+      const result = run(vocabularyAudit);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(file);
+      rmSync(join(root, file));
+    }
+
+    writeFileSync(
+      join(root, 'lib/platform-code.ts'),
+      [
+        "export const path = '/v1/workspaces/{workspaceId}/projects/{projectId}/access-requests/{requestId}';",
+        'export const values = (requestId) => ({ requestId });',
+        "export const vendor = 'Connect vendor';",
       ].join('\n'),
     );
     expect(run(vocabularyAudit).status).toBe(0);

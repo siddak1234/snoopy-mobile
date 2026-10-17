@@ -1,7 +1,25 @@
 import type { Icon } from 'phosphor-react-native';
-import { CheckCircle, CircleDashed, HandPalm, WarningCircle, XCircle } from 'phosphor-react-native';
+import {
+  CheckCircle,
+  CircleDashed,
+  CircleNotch,
+  HandPalm,
+  MinusCircle,
+  WarningCircle,
+  XCircle,
+} from 'phosphor-react-native';
 
-import { RUN_WAITING_FOR_APPROVAL, RUN_WORKING } from '@/lib/content/screen-states';
+import {
+  RUN_ID_LABEL,
+  RUN_WAITING_FOR_APPROVAL,
+  RUN_WORKING,
+  STEP_DONE,
+  STEP_FAILED,
+  STEP_SKIPPED,
+  STEP_STOPPED,
+  STEP_WAITING,
+  stepHeld,
+} from '@/lib/content/screen-states';
 
 import type { CatalogEntry } from '@/lib/platform/catalog';
 import type { InboxNotification } from '@/lib/platform/notifications';
@@ -32,9 +50,10 @@ export type RunRowView = {
   meta: string;
   time: string;
   /**
-   * When the run was made, in full, and the version it ran: the website's line
-   * under a run's name (`formatWhen(createdAt) · v{templateVersion}`), which
-   * Activity draws under the row's own line (Gate 24's parity pass, G17).
+   * When the run was made, in full, and the run itself: `{when} · Run {id}`,
+   * the full id (Build 21, spec A8; the owner's D4: "run number is the run ID",
+   * and AM2: "runs should have the full ID"), which Activity draws under the row's own line (Gate 24's
+   * parity pass, G17). ~~`· v{templateVersion}`~~ until Build 21.
    */
   stamp: string;
   tone: StatusTone;
@@ -114,7 +133,7 @@ export function toRunRow(
     name: nameFor(run, catalog),
     meta: metaFor(run, approvals),
     time: relativeTime(run.createdAt, now),
-    stamp: `${dateTime(run.createdAt)} · v${run.templateVersion}`,
+    stamp: `${dateTime(run.createdAt)} · ${runLabel(run)}`,
     tone: statusTone(run.status),
     status: statusLabel(run.status) as StatusPillLabel,
   };
@@ -178,19 +197,18 @@ export function splitByDay(
 }
 
 /**
- * The run label the design quotes, e.g. "Run #4821".
- *
- * §12.1 #69 refuses a human run number and names `requestId` as the substitute.
- * It is a poor one and the caveat belongs in the code rather than only in a
- * register: `requestId` defaults to a `randomUUID()` — 36 characters, no shorter
- * than `Run.id` — and when a caller supplies `x-request-id` it is
- * client-controlled and not unique per run. So this renders a short prefix for
- * recognisability and never claims it identifies the run. Filed in
- * DESIGN-CONTRACT.md; a genuinely quotable label is a backend decision.
+ * A run's name: "Run" and its FULL id — the run page's title, Activity's and
+ * Home's rows, an approval's link (Build 21, spec A8). The owner's D4 of
+ * 2026-10-15: "run number is the run ID. each id is unique, no duplicates
+ * amongst flows … like a case number or uuid", and his AM2 (~22:15Z): "runs
+ * should have the full ID" — ~~the first eight characters~~ of the spec's S15.
+ * The platform's §12.1 #69 as amended names a run by `id`. ~~the request id's
+ * first eight~~ until Build 21 — which titled run 793eef82 "Run 1e3231c6" while
+ * its email linked /runs/793eef82. The request id traces a request and is
+ * never shown.
  */
-export function runLabel(run: Run): string {
-  const source = run.requestId || run.id;
-  return source ? `Run ${source.slice(0, 8)}` : EMPTY;
+export function runLabel(run: Pick<Run, 'id'>): string {
+  return run.id ? `Run ${run.id}` : EMPTY;
 }
 
 /**
@@ -262,6 +280,8 @@ export type ApprovalItem = {
   id: string;
   /** The held run, which "View the run" opens (the website's link beside the decision). */
   runId: string;
+  /** That run by its full id, "Run {id}", beside its link (Build 21, spec A8; the owner's AM2). */
+  run: string;
   workflow: string;
   title: string;
   why: string;
@@ -304,6 +324,7 @@ export function toApprovalItem(
   return {
     id: approval.id,
     runId: approval.runId,
+    run: runLabel({ id: approval.runId }),
     workflow: approvalWorkflowLabel(approval, subscriptions, catalog),
     title: approvalTitle(approval, subscriptions, catalog),
     why: approval.reason,
@@ -376,24 +397,27 @@ export function inboxRows(
   });
 }
 
-/** A run's PROGRESS row (the shape `RunTimelineItem` had). */
-export type TimelineRowView = {
-  id: string;
-  icon: Icon;
-  tone: 'ok' | 'warn' | 'err' | 'pending';
-  title: string;
-  /** The latest summary in it; empty for the last row of a run still going. */
-  sub: string;
-  /** Why a held step held, under its summary, as the website draws it beside it. */
-  reason?: string;
-  time?: string;
-};
+/** A step's, or a step group's, place in the run (Build 21, spec A7; the session's S14). */
+export type TrackerState = 'waiting' | 'working' | 'done' | 'held' | 'failed' | 'skipped' | 'stopped';
 
-/** What PROGRESS says while the run has reported no step, in the website's words. */
-export const NO_STEPS_REPORTED = 'No steps reported yet.';
+/** One row of a run's STEPS: "2 · Read", its state's icon (24) and its state in words. */
+export type TrackerRow = {
+  id: string;
+  title: string;
+  state: TrackerState;
+  icon: Icon;
+  tone: 'ok' | 'warn' | 'err' | 'accent' | 'muted';
+  sub: string;
+};
 
 /** How long a run's page waits, while the run has not ended, before it reads the run again. */
 export const RUN_REREAD_MS = 2_000;
+
+/**
+ * How long a flow page waits, while a run of the flow is pending or running,
+ * before it reads its DASHBOARD again (Build 21, spec A6; the session's S30).
+ */
+export const FLOW_STATS_REREAD_MS = 5_000;
 
 type ReportedStep = {
   stepId: string;
@@ -403,108 +427,188 @@ type ReportedStep = {
   occurredAt: string;
 };
 
+type RunState = Pick<Run, 'status'> & Partial<Pick<Run, 'origin' | 'failureReason'>>;
+
 /**
- * A run's PROGRESS (the Invoice Processing update, spec §3.E; the owner's build
- * 19 items 6 and 7: "Look at this no one would want to use this at all" — a
- * timeline of ten "Not run" lookups — and "This flow is so long"): what the run
- * did, never what it did not.
+ * Each declared step's state, from what the run reported (spec A7; the
+ * session's S14). Per step, in the pipeline's order:
  *
- * **A manifest that declares groups** (backend ADR-0037; Invoice Processing v2:
- * Received · Read · Checked · Done · Emailed) is drawn one row per group that
- * has a reported step, in the groups' order: the group's title, the latest
- * reported step's summary in it, its outcome's icon and its time — a held one
- * with its reason; a reported step no group holds follows them, by its title,
- * never dropped. The caller passes the catalog's groups only for a run of the
- * version they were declared for. **Without groups**, each reported step,
- * titled from the pipeline (`stepId` is "always a step the pinned manifest
- * declares"). Either
- * way: **no row for a step that did not run** — ~~"Not run"~~ and the pending
- * rows of every declared step are gone — **never a step id**, and while the run
- * is still going, a last row "Working…".
+ * - reported `ok`, or `failed` without failing the run → done; `held` → held;
+ *   `failed`, the run failed, and it is the step reported last → failed;
+ * - not reported, before the furthest step reported → skipped (it was not
+ *   needed: None's QuickBooks lookups, a second read nobody needed);
+ * - not reported, after it: the first is working while the run goes on, the
+ *   rest waiting; waiting while the run is held; skipped once it succeeded;
+ *   stopped once it failed or was cancelled.
+ *
+ * A continuation (`approval-continuation`) did its first steps in the run it
+ * continues: every step before its first reported one is done.
  */
-export function toProgress(
+export function stepStates(
+  pipeline: readonly { id: string }[],
   steps: readonly ReportedStep[],
-  declared: readonly { id: string; title: string; group?: string }[] | undefined,
-  groups: readonly { id: string; title: string }[] | undefined,
-  clock: (iso: string) => string,
-  runStatus?: 'pending' | 'running' | 'held' | 'succeeded' | 'failed' | 'cancelled',
-): TimelineRowView[] {
-  const going = runStatus === 'pending' || runStatus === 'running';
-  // In the order they happened; the platform's own order breaks a tie.
+  run: RunState,
+): { state: TrackerState; step?: ReportedStep }[] {
+  const order = new Map(pipeline.map((step, index) => [step.id, index]));
   const ordered = steps
     .map((step, index) => ({ step, index }))
     .sort((a, b) => Date.parse(a.step.occurredAt) - Date.parse(b.step.occurredAt) || a.index - b.index)
     .map(({ step }) => step);
-  const titles = new Map((declared ?? []).map((d) => [d.id, d]));
-  const row = (id: string, title: string, step: ReportedStep): TimelineRowView => ({
-    id,
-    icon: OUTCOME_ICON[step.outcome],
-    tone: OUTCOME_TONE[step.outcome],
-    title,
-    sub: step.summary,
-    ...(step.heldReason ? { reason: step.heldReason } : {}),
-    time: clock(step.occurredAt),
-  });
-
-  const stepRow = (step: ReportedStep): TimelineRowView => {
-    const title = titles.get(step.stepId)?.title;
-    // A step the manifest does not name is titled by what it said, never by its id.
-    return title ? row(`reported:${step.stepId}`, title, step) : { ...row(`reported:${step.stepId}`, step.summary, step), sub: '' };
-  };
-
-  let rows: TimelineRowView[];
-  if (groups && groups.length > 0) {
-    const latest = new Map<string, ReportedStep>();
-    const ungrouped: ReportedStep[] = [];
-    for (const step of ordered) {
-      const group = titles.get(step.stepId)?.group;
-      if (group && groups.some((candidate) => candidate.id === group)) latest.set(group, step);
-      else ungrouped.push(step);
+  const latest = new Map<string, ReportedStep>();
+  for (const step of ordered) latest.set(step.stepId, step);
+  const reported = [...latest.keys()].flatMap((id) => (order.has(id) ? [order.get(id)!] : []));
+  const furthest = reported.length > 0 ? Math.max(...reported) : -1;
+  const first = reported.length > 0 ? Math.min(...reported) : -1;
+  const lastId = ordered[ordered.length - 1]?.stepId;
+  const going = run.status === 'pending' || run.status === 'running';
+  const continued = run.origin === 'approval-continuation';
+  return pipeline.map((declared, index) => {
+    const step = latest.get(declared.id);
+    if (step) {
+      if (step.outcome === 'held') return { state: 'held', step };
+      if (step.outcome === 'failed' && run.status === 'failed' && declared.id === lastId) return { state: 'failed', step };
+      return { state: 'done', step };
     }
-    rows = groups.flatMap((group) => {
-      const step = latest.get(group.id);
-      return step ? [row(`group:${group.id}`, group.title, step)] : [];
-    });
-    // A reported step the groups do not hold is still drawn after them, never
-    // dropped — as the website draws it (the review of the Invoice Processing
-    // screens).
-    rows.push(...ungrouped.map(stepRow));
-  } else {
-    rows = ordered.map(stepRow);
-  }
-  if (going) rows.push({ id: 'working', icon: CircleDashed, tone: 'pending', title: RUN_WORKING, sub: '' });
-  return rows;
+    if (continued && index < first) return { state: 'done' };
+    if (index < furthest) return { state: 'skipped' };
+    if (going) return { state: index === furthest + 1 ? 'working' : 'waiting' };
+    if (run.status === 'held') return { state: 'waiting' };
+    if (run.status === 'succeeded') return { state: 'skipped' };
+    return { state: 'stopped' };
+  });
 }
 
-const OUTCOME_ICON: Record<'ok' | 'held' | 'failed', Icon> = {
-  ok: CheckCircle,
-  held: HandPalm,
-  failed: WarningCircle,
-};
+/** A group's state from its steps' (S14): working > held > failed > waiting (all) > done (any) > stopped > waiting > skipped. */
+export function groupState(states: readonly TrackerState[]): TrackerState {
+  if (states.includes('working')) return 'working';
+  if (states.includes('held')) return 'held';
+  if (states.includes('failed')) return 'failed';
+  if (states.length > 0 && states.every((state) => state === 'waiting')) return 'waiting';
+  if (states.includes('done')) return 'done';
+  if (states.includes('stopped')) return 'stopped';
+  if (states.includes('waiting')) return 'waiting';
+  return 'skipped';
+}
 
-const OUTCOME_TONE: Record<'ok' | 'held' | 'failed', TimelineRowView['tone']> = {
-  ok: 'ok',
-  held: 'warn',
-  failed: 'err',
+const TRACKER_LOOK: Record<TrackerState, { icon: Icon; tone: TrackerRow['tone'] }> = {
+  waiting: { icon: CircleDashed, tone: 'muted' },
+  working: { icon: CircleNotch, tone: 'accent' },
+  done: { icon: CheckCircle, tone: 'ok' },
+  held: { icon: HandPalm, tone: 'warn' },
+  failed: { icon: WarningCircle, tone: 'err' },
+  skipped: { icon: MinusCircle, tone: 'muted' },
+  stopped: { icon: MinusCircle, tone: 'muted' },
 };
 
 /**
- * The run-detail stat tiles: Duration, and Steps done — the rows PROGRESS
- * shows that finished, over the rows it shows (spec §3.E: "{groups done} /
- * {groups shown}"), so a run never reads "1 / 24" for the steps it did not
- * need. A failed or held row is shown, not done (the owner's build 14 feedback
- * #8). ~~Confidence~~, an em dash that no published shape could fill, is gone
- * (the spec's U11).
+ * What a row says of its state — never a step's own summary and never a step
+ * id (B6; the owner's build 20 item 10: "It shoukd show all the steps and a live
+ * tracker of which ones are done", and item 11's "What is the checked issue?"
+ * over "34 accounts read" under Received).
+ */
+function trackerSub(state: TrackerState, steps: readonly ReportedStep[], run: RunState, clock: (iso: string) => string): string {
+  if (state === 'working') return RUN_WORKING;
+  if (state === 'waiting') return STEP_WAITING;
+  if (state === 'skipped') return STEP_SKIPPED;
+  if (state === 'stopped') return STEP_STOPPED;
+  if (state === 'failed') return run.failureReason ?? STEP_FAILED;
+  if (state === 'held') return stepHeld(steps.find((step) => step.outcome === 'held')?.heldReason);
+  const last = steps.reduce<ReportedStep | undefined>(
+    (latest, step) => (!latest || Date.parse(step.occurredAt) >= Date.parse(latest.occurredAt) ? step : latest),
+    undefined,
+  );
+  return last ? `${STEP_DONE} · ${clock(last.occurredAt)}` : STEP_DONE;
+}
+
+/**
+ * A run's STEPS (Build 21, spec A7): every row from the start, each with where
+ * the run is — "1 · Received  Done · 2:32 PM", "2 · Read  Working…", "3 ·
+ * Checked  Waiting". One row per declared group, in the groups' order (backend
+ * ADR-0037), or one per declared step for a version without groups; the
+ * caller passes the catalog's pipeline and groups only for a run of the version
+ * they were declared for. A run of another version, whose steps the catalog no
+ * longer declares, is drawn as the steps it reported — each titled from the
+ * catalog where it still names it, else "Step {n}" — and "Working…" while it
+ * goes on (~~each reported step's own summary under its group~~ until Build 21).
+ */
+export function toTracker(
+  steps: readonly ReportedStep[],
+  declared: readonly { id: string; title: string; group?: string }[] | undefined,
+  groups: readonly { id: string; title: string }[] | undefined,
+  run: RunState,
+  clock: (iso: string) => string,
+  /** The catalog's steps, to title a run of another version by (`declared` absent). */
+  titles: readonly { id: string; title: string }[] | undefined = declared,
+): TrackerRow[] {
+  const known = new Set((declared ?? []).map((step) => step.id));
+  const covered = declared && declared.length > 0 && steps.every((step) => known.has(step.stepId));
+  if (!covered) return reportedRows(steps, titles, run, clock);
+  const pipeline = declared!;
+  const states = stepStates(pipeline, steps, run);
+  const row = (id: string, title: string, members: number[]): TrackerRow => {
+    const state = groupState(members.map((index) => states[index]!.state));
+    const reported = members.flatMap((index) => (states[index]!.step ? [states[index]!.step!] : []));
+    return { id, title, state, ...TRACKER_LOOK[state], sub: trackerSub(state, reported, run, clock) };
+  };
+  if (groups && groups.length > 0) {
+    return groups.map((group, position) =>
+      row(
+        `group:${group.id}`,
+        `${position + 1} · ${group.title}`,
+        pipeline.flatMap((step, index) => (step.group === group.id ? [index] : [])),
+      ),
+    );
+  }
+  return pipeline.map((step, index) => row(`step:${step.id}`, `${index + 1} · ${step.title}`, [index]));
+}
+
+/** The fallback: the steps a run of another version reported, in order, by state. */
+function reportedRows(
+  steps: readonly ReportedStep[],
+  declared: readonly { id: string; title: string }[] | undefined,
+  run: RunState,
+  clock: (iso: string) => string,
+): TrackerRow[] {
+  const titles = new Map((declared ?? []).map((step) => [step.id, step.title]));
+  const ordered = [...steps].sort((a, b) => Date.parse(a.occurredAt) - Date.parse(b.occurredAt));
+  const rows = ordered.map((step, index): TrackerRow => {
+    const failedRun = step.outcome === 'failed' && run.status === 'failed' && index === ordered.length - 1;
+    const state: TrackerState = step.outcome === 'held' ? 'held' : failedRun ? 'failed' : 'done';
+    return {
+      id: `reported:${index}:${step.stepId}`,
+      title: `${index + 1} · ${titles.get(step.stepId) ?? `Step ${index + 1}`}`,
+      state,
+      ...TRACKER_LOOK[state],
+      sub: trackerSub(state, [step], run, clock),
+    };
+  });
+  if (run.status === 'pending' || run.status === 'running') {
+    rows.push({
+      id: 'working',
+      title: `${rows.length + 1} · Step ${rows.length + 1}`,
+      state: 'working',
+      ...TRACKER_LOOK.working,
+      sub: RUN_WORKING,
+    });
+  }
+  return rows;
+}
+
+/**
+ * The run page's tiles: Duration, and Steps done — the rows done or skipped
+ * over every row (spec A7; the session's S14), so a run at its start reads "0 /
+ * 5" and never "1 / 1" (the owner's build 20 item 10). ~~Rows done over rows
+ * shown~~ until Build 21.
  */
 export function toRunStats(
-  progress: readonly TimelineRowView[],
+  rows: readonly TrackerRow[],
   durationText: string,
 ): { value: string; label: string }[] {
-  const shown = progress.filter((item) => item.id !== 'working');
-  const done = shown.filter((item) => item.tone === 'ok').length;
+  const counted = rows.filter((row) => row.id !== 'working');
+  const done = counted.filter((row) => row.state === 'done' || row.state === 'skipped').length;
   return [
     { value: durationText, label: 'Duration' },
-    { value: shown.length > 0 ? `${done} / ${shown.length}` : EMPTY, label: 'Steps done' },
+    { value: counted.length > 0 ? `${done} / ${counted.length}` : EMPTY, label: 'Steps done' },
   ];
 }
 
@@ -526,15 +630,17 @@ export function runResultLine(run: Run, approvals: readonly Approval[]): string 
 /**
  * The run's facts, as the website's run page lists them under its title
  * (Gate 24's parity pass, G18): when it started and ended — the design's em
- * dash for either it has not reached — and how it started, its Trigger, in the
- * website's words (`runOriginLabel`).
+ * dash for either it has not reached — how it started, its Trigger, in the
+ * website's words (`runOriginLabel`), and since Build 21 its Run ID, the full
+ * id (spec A7; the owner's D4 and AM2).
  */
 export function toRunFacts(
-  run: Pick<Run, 'startedAt' | 'endedAt' | 'origin'>,
-): { label: 'Started' | 'Ended' | 'Trigger'; value: string }[] {
+  run: Pick<Run, 'id' | 'startedAt' | 'endedAt' | 'origin'>,
+): { label: 'Started' | 'Ended' | 'Trigger' | 'Run ID'; value: string }[] {
   return [
     { label: 'Started', value: dateTime(run.startedAt) },
     { label: 'Ended', value: dateTime(run.endedAt) },
     { label: 'Trigger', value: runOriginLabel(run.origin) },
+    { label: RUN_ID_LABEL, value: run.id },
   ];
 }

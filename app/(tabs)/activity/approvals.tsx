@@ -110,6 +110,10 @@ function ApprovalCard({
         style={({ pressed }) => [styles.viewRun, pressed && { opacity: 0.7 }]}>
         <Text style={[styles.viewRunLabel, { color: palette.accentRamp[300] }]}>View the run</Text>
       </Pressable>
+      {/* The run it holds, by its full id (Build 21, spec A8; the owner's D4 and AM2). */}
+      <Text testID={`approval-run-${item.id}`} selectable style={[styles.note, { color: palette.neutral[500] }]}>
+        {item.run}
+      </Text>
     </SurfaceCard>
   );
 }

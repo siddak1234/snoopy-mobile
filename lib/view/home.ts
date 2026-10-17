@@ -1,11 +1,12 @@
+import type { Icon } from 'phosphor-react-native';
+
 import { FIGURE_UNAVAILABLE } from '@/lib/content/screen-states';
-import type { Connection } from '@/lib/platform/catalog';
+import type { CatalogEntry, Connection } from '@/lib/platform/catalog';
 import { PlatformNotConfiguredError, PlatformRateLimitedError, PlatformUnreachableError } from '@/lib/platform/problem';
-import type { Project } from '@/lib/platform/projects';
 import type { Subscription } from '@/lib/platform/runs';
-import type { WorkspaceSummary } from '@/lib/platform/workspaces';
-import { withoutArchived } from './catalog';
+import { scopeLabel, withoutArchived } from './catalog';
 import { count } from './format';
+import { iconFor } from './icon-registry';
 import { scopeSubscriptions } from './scope';
 
 /**
@@ -48,32 +49,37 @@ export function homeFailure(errors: readonly unknown[]): unknown {
   );
 }
 
-/** A team on Home: its kind, its status, and its workspace's name when the teams shown span several. */
-export type HomeTeam = { id: string; workspaceId: string; kind: string; status: string; workspace: string | null };
-
-/** A team's status in the website's words (its dashboard's Teams). */
-const TEAM_STATUS: Record<Project['status'], string> = {
-  active: 'Active',
-  paused: 'Paused',
-  draft: 'Draft',
-  archived: 'Archived',
-};
+/** One row of Home's RUN A FLOW: a live flow, its icon, its name and its team. */
+export type QuickRunRow = { id: string; name: string; icon: Icon; team: string };
 
 /**
- * Home's teams (Gate 24 parity, G7): the first three this person can see that
- * are not deleted, in the order their workspaces and teams come — the website's
- * `listAccessibleProjects()`, archived teams left out, then `.slice(0, 3)`. A
- * team is its kind (24.12), and names its workspace only when the three span
- * more than one, as the website's do.
+ * Home's RUN A FLOW (Build 21, spec A9; the owner's "when a user wants to run a
+ * random flow. they shouldnt have to do a bunch of work in the app"; the
+ * session's S16): every live flow, in the team scope Home is narrowed to as
+ * its tiles are, each opening its flow page, whose Step 1 holds the document
+ * and Start run — three taps from Home to a started run. Empty, the section is
+ * not drawn. ~~TEAMS, the first three teams~~ until Build 21 (the owner's AM5:
+ * "remove lsit teams on bottom of home page, it is useless"); teams stay in
+ * Settings.
  */
-export function homeTeams(items: readonly { workspace: WorkspaceSummary; project: Project }[]): HomeTeam[] {
-  const top = items.filter(({ project }) => project.status !== 'archived').slice(0, 3);
-  const several = new Set(top.map(({ project }) => project.workspaceId)).size > 1;
-  return top.map(({ workspace, project }) => ({
-    id: project.id,
-    workspaceId: project.workspaceId,
-    kind: project.type,
-    status: TEAM_STATUS[project.status],
-    workspace: several ? workspace.name : null,
-  }));
+export function quickRunRows(
+  subscriptions: readonly Subscription[] | null,
+  catalog: readonly CatalogEntry[] | null,
+  labels: ReadonlyMap<string, string>,
+  projectId: string | null,
+): QuickRunRow[] {
+  if (subscriptions === null) return [];
+  const entries = new Map((catalog ?? []).map((entry) => [entry.templateId, entry]));
+  return scopeSubscriptions(
+    subscriptions.filter((subscription) => subscription.status === 'live'),
+    projectId,
+  ).map((subscription) => {
+    const entry = entries.get(subscription.templateId);
+    return {
+      id: subscription.id,
+      name: subscription.name ?? entry?.name ?? subscription.templateId,
+      icon: iconFor(entry?.icon),
+      team: scopeLabel(subscription.projectId, labels),
+    };
+  });
 }

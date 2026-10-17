@@ -97,3 +97,43 @@ export function flowStepRows(
   }
   return (steps ?? []).map((step, index) => ({ id: step.id, label: `${index + 1} · ${step.title}`, sub: step.description }));
 }
+
+/**
+ * A flow page's STEPS with what each holds (Build 21, spec A6 — the TEST VERSION
+ * of the owner's order, D3; his build 20 item 12: "steps, then in there we have
+ * upload photo. Then show the rest of the steps. Then in one of the steps where
+ * data is uploaded to quickbooks it shows connected to quickbooks"):
+ *
+ * - `input` — the row that receives the run's input: the trigger's group (the
+ *   pipeline's TRIGGER step, else its first), or, without groups, the first
+ *   step. Step 1 holds the document and Start run.
+ * - `vendorFields` — each step's vendor choice, by the `group` its connection
+ *   field names (backend ADR-0040; Invoice Processing v3's `vendor` names
+ *   "done"). A field that names no row here — a version from before `group`
+ *   (v2) — is `unplaced`: the page draws it under the steps.
+ */
+export type FlowStepPlan = FlowStepRow & { input: boolean; vendorFields: string[] };
+
+export function flowStepPlan(
+  steps: readonly DeclaredStep[] | undefined,
+  groups: readonly StepGroup[] | undefined,
+  vendorFields: readonly { key: string; group?: string }[],
+): { rows: FlowStepPlan[]; unplaced: string[] } {
+  const rows = flowStepRows(steps, groups);
+  const grouped = Boolean(groups && groups.length > 0);
+  const trigger = (steps ?? []).find((step) => step.kicker === 'TRIGGER') ?? steps?.[0];
+  const inputId = grouped
+    ? (groups!.find((group) => group.id === trigger?.group)?.id ?? groups![0]?.id)
+    : rows[0]?.id;
+  const ids = new Set(grouped ? rows.map((row) => row.id) : []);
+  const placed = new Map<string, string[]>();
+  const unplaced: string[] = [];
+  for (const field of vendorFields) {
+    if (field.group && ids.has(field.group)) placed.set(field.group, [...(placed.get(field.group) ?? []), field.key]);
+    else unplaced.push(field.key);
+  }
+  return {
+    rows: rows.map((row) => ({ ...row, input: row.id === inputId, vendorFields: placed.get(row.id) ?? [] })),
+    unplaced,
+  };
+}

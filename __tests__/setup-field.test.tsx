@@ -187,14 +187,15 @@ describe('SetupFieldRow — every control the union permits', () => {
     expect(screen.getByLabelText('Hold on mismatch').props.value).toBe('');
   });
 
-  it('always shows the manifest’s own description as the second line', async () => {
+  it('draws no help line: the manifest’s description stays the manifest’s (Build 21, spec A6; the session’s S11; the owner’s build 20 item 3)', async () => {
     await renderWithProviders(
       <SetupFieldRow field={field({ description: 'Pause when the amount differs' })} value={true} onChange={() => {}} divider={false} />,
     );
-    expect(screen.getByText('Pause when the amount differs')).toBeTruthy();
+    expect(screen.getByText('Hold on mismatch')).toBeTruthy();
+    expect(screen.queryByText('Pause when the amount differs')).toBeNull();
   });
 
-  it('says which notification a toggle controls, in the website’s words, under its description (Gate 24 parity)', async () => {
+  it('says which notification a toggle controls, in the website’s words (Gate 24 parity) — its description not drawn', async () => {
     await renderWithProviders(
       <SetupFieldRow
         field={field({ section: 'notifications', title: 'Failure alerts', description: 'Email me', notifies: 'run-failed' })}
@@ -203,7 +204,7 @@ describe('SetupFieldRow — every control the union permits', () => {
         divider={false}
       />,
     );
-    expect(screen.getByText('Email me')).toBeTruthy();
+    expect(screen.queryByText('Email me')).toBeNull();
     expect(screen.getByText('Controls the notification sent when a run fails.')).toBeTruthy();
   });
 
@@ -282,7 +283,7 @@ describe('a control this build does not know (BUILD-PLAN 25.8.1, the owner\'s re
     const onChange = jest.fn();
     await renderWithProviders(<SetupFieldRow field={newer} value="2026-10-01..2026-10-07" onChange={onChange} divider={false} />);
     expect(screen.getByText('Review window')).toBeTruthy();
-    expect(screen.getByText('Which days to read')).toBeTruthy();
+    expect(screen.queryByText('Which days to read')).toBeNull();
     expect(screen.getByText(NEWER_CONTROL_NOTE)).toBeTruthy();
     const input = screen.getByLabelText('Review window');
     expect(input.props.value).toBe('2026-10-01..2026-10-07');

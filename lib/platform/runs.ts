@@ -43,6 +43,19 @@ export function readRunStats(workspaceId: string, since?: Date): Promise<RunStat
   );
 }
 
+/**
+ * The run counts as the platform holds them now, never an answer the snapshot
+ * kept: a flow page's DASHBOARD is live (Build 21, spec A6; the owner's build
+ * 20 item 10: "Dashboard items should be updated too"; the session's S30) —
+ * read on every return to the page and every 5 s while a run of the flow is
+ * pending or running. The answer becomes the snapshot's, so Flows and Home
+ * then read what this one saw.
+ */
+export function readRunStatsNow(workspaceId: string): Promise<RunStats> {
+  invalidateShared(workspaceId, ['run-stats']);
+  return readRunStats(workspaceId);
+}
+
 /** Runs for a workspace, newest first, optionally one subscription's. */
 export function readRuns(workspaceId: string, subscriptionId?: string): Promise<{ runs: Run[] }> {
   const query = subscriptionId ? `?subscriptionId=${encodeURIComponent(subscriptionId)}` : '';
@@ -219,6 +232,25 @@ export type RunDetail = components['schemas']['RunDetail'];
 export function readRun(workspaceId: string, runId: string): Promise<RunDetail> {
   return platformOperation(`/v1/workspaces/${workspaceId}/runs/${runId}`, ({ automations }, signal) =>
     automations.GET('/v1/workspaces/{workspaceId}/runs/{runId}', {
+      params: { path: { workspaceId, runId } },
+      signal,
+    }),
+  );
+}
+
+export type RunDocument = components['schemas']['RunDocument'];
+export type RunDocumentsFile = components['schemas']['RunDocumentsFile'];
+
+/**
+ * One run's documents, as the JSON file the platform serves for keeping
+ * (`readRunDocuments`, backend ADR-0039, BUILD-PLAN 25.4.28; Build 21's C2):
+ * `{ runId, templateId, templateVersion, status, startedAt, endedAt,
+ * documents }` — what "Download JSON" hands to the share sheet (A7). Read at the
+ * press, never kept.
+ */
+export function readRunDocuments(workspaceId: string, runId: string): Promise<RunDocumentsFile> {
+  return platformOperation(`/v1/workspaces/${workspaceId}/runs/${runId}/documents`, ({ automations }, signal) =>
+    automations.GET('/v1/workspaces/{workspaceId}/runs/{runId}/documents', {
       params: { path: { workspaceId, runId } },
       signal,
     }),

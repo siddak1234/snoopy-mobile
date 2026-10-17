@@ -212,15 +212,17 @@ describe('approvalTitle — the three-hop join, and every hop that can miss', ()
   });
 });
 
-describe('runLabel — §12.1 #69’s substitute, with its caveat', () => {
-  it('shortens requestId rather than claiming it is a run number', () => {
-    const label = runLabel({ requestId: 'b3f1c2d4-0000-4000-8000-000000000000' } as never);
-    expect(label).toBe('Run b3f1c2d4');
+describe('runLabel — a run is named by its FULL id (Build 21, spec A8; the owner\'s D4 and AM2)', () => {
+  it('is "Run" and the whole id, never the request id', () => {
+    const run = { id: '793eef82-102d-81be-a2d3-9e8d4e2b2c36', requestId: '1e3231c6-0000-4000-8000-000000000000' };
+    const label = runLabel(run as never);
+    expect(label).toBe('Run 793eef82-102d-81be-a2d3-9e8d4e2b2c36');
+    expect(label).not.toContain('1e3231c6');
     expect(label).not.toContain('#');
   });
 
-  it('falls back to the run id when no requestId was recorded', () => {
-    expect(runLabel({ id: 'aaaabbbb-cccc-4ddd-8eee-ffff00001111' } as never)).toBe('Run aaaabbbb');
+  it('is the em dash for a run with no id, never a request id in its place', () => {
+    expect(runLabel({ requestId: 'b3f1c2d4-0000-4000-8000-000000000000' } as never)).toBe('—');
   });
 });
 

@@ -1,10 +1,9 @@
-import { Archive, CaretRight, SlidersHorizontal, WebhooksLogo, type Icon } from 'phosphor-react-native';
+import { useRouter } from 'expo-router';
+import { Archive, CaretRight, SlidersHorizontal, WebhooksLogo } from 'phosphor-react-native';
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { MoveVersion } from '@/components/automations/move-version';
-import { SetupDialog } from '@/components/automations/setup-dialog';
-import { rowFields } from '@/components/setup-field';
 import { WebhookAddressDialog } from '@/components/automations/webhook-address-dialog';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { SectionLabel } from '@/components/nocturne/section-label';
@@ -17,16 +16,21 @@ import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
 import { useTheme } from '@/hooks/use-theme';
 import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
+import { EDIT_SETUP_LABEL } from '@/lib/content/screen-states';
 import { updateSubscription, type Subscription } from '@/lib/platform/automations';
 import type { CatalogEntry } from '@/lib/platform/catalog';
 
-type Open = 'setup' | 'webhook' | 'archive' | null;
+type Open = 'webhook' | 'archive' | null;
 
 /**
  * What a person can do with one flow, on the website's operations and by
  * its rules (BUILD-PLAN 24.4.1, `snoopy/app/account/automations`):
  *
- * - **Set up** when the automation declares settings.
+ * - **Edit setup** when the version it runs declares settings or accounts:
+ *   Set up again, the same page Add opened (Build 21; the owner's AM4: "they
+ *   can have a edit settings/flow/setup thing in the bottom of the flow page
+ *   in case they want to change how it was set up"; ~~Set up, a dialog over
+ *   the page~~ until Build 21).
  * - **Move to vN** when the catalog has a newer version than the one pinned.
  * - **Webhook address** for a webhook-started version, owner or admin only.
  * - **Archive flow**, at the bottom and in red (BUILD-PLAN 24.9.4, the owner's
@@ -44,7 +48,6 @@ type Open = 'setup' | 'webhook' | 'archive' | null;
  */
 export function AutomationActions({
   name,
-  team,
   subscription,
   entry,
   shownWorkspaceId,
@@ -54,8 +57,6 @@ export function AutomationActions({
   onArchived,
 }: {
   name: string;
-  /** Its team, as the flow page says it — Set up says it under its title. */
-  team?: string;
   subscription: Subscription;
   /** The catalog's entry for its template; absent once the template is withdrawn. */
   entry: CatalogEntry | undefined;
@@ -66,6 +67,7 @@ export function AutomationActions({
   onArchived: () => void;
 }) {
   const { palette } = useTheme();
+  const router = useRouter();
   const session = useSession();
   const { forget } = useSolutions();
   const archiveKeys = useIntentKeys('archive');
@@ -81,6 +83,7 @@ export function AutomationActions({
   // against — not the catalog's newest, which differs once a version changes a
   // field (backend §12.1 #185). Absent when that version declares none.
   const setup = subscription.setup ?? [];
+  const setsUp = setup.length > 0 || (entry?.requiredConnections ?? []).length > 0;
   const newer = entry && subscription.templateVersion < entry.version ? entry.version : null;
   const webhook = subscription.triggerKind === 'webhook' && canAdminister;
   const close = () => setOpen(null);
@@ -108,16 +111,6 @@ export function AutomationActions({
     }
   };
 
-  const rows: { key: string; icon: Icon; title: string; sub: string; open: Exclude<Open, null> }[] = [
-    // The vendor choice has its own page (CONNECT on the flow page), so Set up is offered for the rest.
-    ...(rowFields(setup).length > 0
-      ? [{ key: 'setup', icon: SlidersHorizontal, title: 'Set up', sub: 'The settings it runs with', open: 'setup' as const }]
-      : []),
-    ...(webhook
-      ? [{ key: 'webhook', icon: WebhooksLogo, title: 'Webhook address', sub: 'Where a service sends the events that start it', open: 'webhook' as const }]
-      : []),
-  ];
-
   return (
     <View style={styles.stack}>
       {statusRow}
@@ -134,22 +127,35 @@ export function AutomationActions({
           onMoved={onChanged}
         />
       ) : null}
-      {rows.length > 0 ? (
+      {setsUp || webhook ? (
         <View>
           <SectionLabel>MANAGE</SectionLabel>
           <SurfaceCard style={styles.card}>
-            {rows.map((row, index) => (
+            {setsUp ? (
               <SettingsRow
-                key={row.key}
-                testID={`manage-${row.key}`}
-                icon={row.icon}
-                title={row.title}
-                sub={row.sub}
-                divider={index < rows.length - 1}
-                onPress={() => setOpen(row.open)}
+                testID="manage-setup"
+                icon={SlidersHorizontal}
+                title={EDIT_SETUP_LABEL}
+                divider={webhook}
+                onPress={() =>
+                  router.push({
+                    pathname: '/(tabs)/flows/setup',
+                    params: { template: subscription.templateId, flow: subscription.id },
+                  })
+                }
                 right={<CaretRight size={15} color={palette.neutral[500]} />}
               />
-            ))}
+            ) : null}
+            {webhook ? (
+              <SettingsRow
+                testID="manage-webhook"
+                icon={WebhooksLogo}
+                title="Webhook address"
+                sub="Where a service sends the events that start it"
+                onPress={() => setOpen('webhook')}
+                right={<CaretRight size={15} color={palette.neutral[500]} />}
+              />
+            ) : null}
           </SurfaceCard>
         </View>
       ) : null}
@@ -173,21 +179,6 @@ export function AutomationActions({
         <Text style={[styles.archiveLabel, { color: palette.danger }]}>Archive flow</Text>
       </Pressable>
 
-      {open === 'setup' ? (
-        <SetupDialog
-          name={name}
-          team={team}
-          subscriptionId={subscription.id}
-          shownWorkspaceId={shownWorkspaceId}
-          setup={setup}
-          config={subscription.config}
-          onClose={close}
-          onSaved={() => {
-            close();
-            onChanged();
-          }}
-        />
-      ) : null}
       {open === 'webhook' ? (
         <WebhookAddressDialog
           subscriptionId={subscription.id}

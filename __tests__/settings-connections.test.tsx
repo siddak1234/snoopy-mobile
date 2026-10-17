@@ -54,16 +54,13 @@ beforeEach(() => {
   connectOAuthProvider.mockReset();
 });
 
+/** The row's own Connect — through the provider at once, no dialog since Build 21 (spec A4). */
 async function openGmailAndConnect() {
-  await fireEvent.press(await screen.findByText('Gmail'));
-  expect(await screen.findByText('Connect Gmail')).toBeTruthy();
-  // The row's own "Connect" link is also on screen; the dialog's button is last.
-  const buttons = screen.getAllByText('Connect');
-  await fireEvent.press(buttons[buttons.length - 1]);
+  await fireEvent.press(await screen.findByTestId('connection-action-gmail'));
 }
 
 describe('an OAuth connect that comes back cancelled', () => {
-  it('closes the dialog and re-reads the workspace connections', async () => {
+  it('re-reads the workspace connections, and the row says what the re-read found', async () => {
     const connected = {
       id: 'c1',
       providerId: 'gmail',
@@ -86,13 +83,14 @@ describe('an OAuth connect that comes back cancelled', () => {
     await openGmailAndConnect();
 
     await waitFor(() => expect(connectOAuthProvider).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(screen.queryByText('Connect Gmail')).toBeNull());
+    expect(screen.queryByTestId('connection-dialog')).toBeNull();
     await waitFor(() =>
       expect(reads.filter((path) => path.endsWith('/connections')).length).toBe(readsBefore + 1),
     );
-    // The truth the re-read established, rendered from the published fields.
-    expect(await screen.findByText('alex@acme.co · Connected · used by 1 live flow')).toBeTruthy();
+    // The truth the re-read established, from the published fields: the account's email (spec A4).
+    expect(await screen.findByText('alex@acme.co')).toBeTruthy();
     expect(screen.queryByText('Not connected')).toBeNull();
+    expect(screen.queryByText(/used by/u)).toBeNull();
   });
 
   it('keeps a real failure inline, on the loaded screen', async () => {
@@ -110,7 +108,7 @@ describe('an OAuth connect that comes back cancelled', () => {
     expect(
       await screen.findByText('No web browser is available on this device to continue.'),
     ).toBeTruthy();
-    expect(screen.getByText('Connect Gmail')).toBeTruthy();
+    expect(screen.getByText('Not connected')).toBeTruthy();
     expect(reads.filter((path) => path.endsWith('/connections')).length).toBe(readsBefore);
   });
 });
@@ -133,80 +131,29 @@ describe('who may change a connection (the Edge refuses a member 403)', () => {
   it('offers a member nothing to press, and says who can change it', async () => {
     routeReads([[CONNECTED_GMAIL]]);
     await renderWithProviders(<ConnectionsScreen />, sessionAs('member'));
-    await fireEvent.press(await screen.findByText('Gmail'));
-    expect(screen.queryByTestId('connection-dialog')).toBeNull();
-    expect(screen.queryByText('Connect')).toBeNull();
+    expect(await screen.findByText('Gmail')).toBeTruthy();
+    expect(screen.queryByTestId('connection-action-gmail')).toBeNull();
+    expect(screen.queryByText('Disconnect')).toBeNull();
     expect(
       screen.getByText('Only an owner or admin of this workspace can connect or disconnect an account.'),
     ).toBeTruthy();
   });
 });
 
-describe('the connection dialog’s actions (feedback #2)', () => {
-  it('stacks the actions of a connected, replaceable connection — Reconnect, Replace account, Disconnect — and keeps two in a row', async () => {
-    // The first TestFlight build drew Cancel and Replace account on one line
-    // and Disconnect alone on a second, right-aligned — a wrapped row read as
-    // broken. Three actions or more stack at full width; two still share a row.
-    const { StyleSheet } = jest.requireActual('react-native');
-    routeReads([[CONNECTED_GMAIL], [CONNECTED_GMAIL]]);
-    await renderWithProviders(<ConnectionsScreen />, sessionAs('owner'));
-    await fireEvent.press(await screen.findByText('Gmail'));
-    expect(within(await screen.findByTestId('connection-dialog')).getByText('Reconnect')).toBeTruthy();
-    expect(StyleSheet.flatten(screen.getByTestId('connection-dialog-actions').props.style).flexDirection).toBe('column');
-
-    await fireEvent.press(screen.getByText('Replace account'));
-    expect(await screen.findByText('Replace alex@acme.co?')).toBeTruthy();
-    expect(StyleSheet.flatten(screen.getByTestId('replace-account-dialog-actions').props.style).flexDirection).toBe('row');
-  });
-});
-
-describe('replacing a connection’s account', () => {
-  async function openReplace() {
-    await fireEvent.press(await screen.findByText('Gmail'));
-    expect(within(await screen.findByTestId('connection-dialog')).getByText('Disconnect')).toBeTruthy();
-    await fireEvent.press(screen.getByText('Replace account'));
-    expect(await screen.findByText('Replace alex@acme.co?')).toBeTruthy();
-    const buttons = screen.getAllByText('Replace account');
-    await fireEvent.press(buttons[buttons.length - 1]);
-  }
-
-  it('names the exact connection it replaces', async () => {
-    routeReads([[CONNECTED_GMAIL], [CONNECTED_GMAIL]]);
-    connectOAuthProvider.mockResolvedValue({ status: 'connected', connection: CONNECTED_GMAIL });
-    await renderWithProviders(<ConnectionsScreen />, sessionAs('owner'));
-    await openReplace();
-    await waitFor(() => expect(connectOAuthProvider).toHaveBeenCalledTimes(1));
-    const [workspaceId, provider, options] = connectOAuthProvider.mock.calls[0];
-    expect(workspaceId).toBe(CONNECTED_GMAIL.workspaceId);
-    expect(provider.providerId).toBe('gmail');
-    expect(options).toEqual({ replaceConnectionId: 'c1' });
-  });
-
-  it('says a stale replacement (409) in words, changes nothing, and re-reads when closed', async () => {
-    const { PlatformError } = jest.requireActual('@/lib/platform/problem');
-    const reads = routeReads([[CONNECTED_GMAIL], [CONNECTED_GMAIL]]);
-    connectOAuthProvider.mockRejectedValue(new PlatformError('Conflict', 409));
-    await renderWithProviders(<ConnectionsScreen />, sessionAs('admin'));
-    await openReplace();
-    expect(
-      await screen.findByText(
-        'This connection changed since this screen loaded, so nothing was replaced. Reload it to see it, then choose again.',
-      ),
-    ).toBeTruthy();
-    const readsBefore = reads.filter((path) => path.endsWith('/connections')).length;
-    await fireEvent.press(screen.getByText('Cancel'));
-    // The rows were stale: the next choice is made on what is connected now.
-    await waitFor(() =>
-      expect(reads.filter((path) => path.endsWith('/connections')).length).toBe(readsBefore + 1),
-    );
-  });
-
-  it('says so when the platform reused the connection instead', async () => {
+/**
+ * ~~The connection dialog's actions, and Replace account~~ until Build 21: the
+ * row's one button is Connect, Reconnect or Disconnect (spec A4; the session's
+ * S12) — the platform's replace route stays, unused by the row.
+ */
+describe('the row offers one thing: Disconnect for a connected account, nothing to replace it (spec A4)', () => {
+  it('draws no Replace account and no actions dialog for a connected account — Disconnect asks first', async () => {
     routeReads([[CONNECTED_GMAIL]]);
-    connectOAuthProvider.mockResolvedValue({ status: 'connected', connection: CONNECTED_GMAIL, reused: true });
     await renderWithProviders(<ConnectionsScreen />, sessionAs('owner'));
-    await openReplace();
-    expect(await screen.findByText('alex@acme.co is still connected — there was nothing to replace.')).toBeTruthy();
+    await fireEvent.press(await screen.findByTestId('connection-action-gmail'));
+    expect(await screen.findByText('Disconnect Gmail?')).toBeTruthy();
+    expect(screen.queryByText('Replace account')).toBeNull();
+    expect(screen.queryByTestId('connection-dialog')).toBeNull();
+    expect(connectOAuthProvider).not.toHaveBeenCalled();
   });
 });
 

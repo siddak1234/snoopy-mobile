@@ -76,7 +76,7 @@ const SCREENS = {
   'Flow detail': { Screen: WorkflowDetailScreen, params: { flow: 'invoice' }, read: /\/subscriptions$/u },
   Flows: { Screen: FlowsScreen, read: /\/subscriptions$/u },
   Setup: { Screen: SetupScreen, params: { template: 'tpl.0' }, read: /\/automations$/u },
-  'Connect vendor': { Screen: ConnectVendorScreen, params: { template: 'invoice-processing' }, read: /\/automations$/u },
+  'Connect vendor': { Screen: ConnectVendorScreen, params: { flow: 'invoice', field: 'vendor' }, read: /\/automations$/u },
   Account: { Screen: AccountScreen, read: /^\/v1\/auth\/identities$/u },
   Billing: { Screen: BillingScreen, read: /^\/v1\/workspaces$/u },
   Connections: { Screen: ConnectionsScreen, read: /\/connections$/u },

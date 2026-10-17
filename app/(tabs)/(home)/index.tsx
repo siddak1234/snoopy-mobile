@@ -24,7 +24,6 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { Skeleton } from '@/components/nocturne/skeleton';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable, pressed } from '@/components/pressable';
-import { AiReadingCardOnce } from '@/components/ai-reading-card';
 import { ScopeIcons } from '@/components/scope-control';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { StatTileButton } from '@/components/stat-tile-button';
@@ -36,20 +35,18 @@ import { useTheme } from '@/hooks/use-theme';
 import {
   ADD_FLOW_LABEL,
   FIGURE_UNAVAILABLE,
-  HOME_NO_TEAMS,
   HOME_OFFLINE_BODY,
   HOME_OFFLINE_TITLE,
   PLATFORM_BUSY_TITLE,
   PLATFORM_FAILED_TITLE,
   RECENT_RUNS_UNAVAILABLE,
-  TEAMS_UNAVAILABLE,
+  RUN_A_FLOW_LABEL,
   UNAVAILABLE_BODY,
   sessionKeptBody,
 } from '@/lib/content/screen-states';
-import { teamTypeIcon } from '@/lib/content/team-types';
 import { readCatalog, readConnections } from '@/lib/platform/catalog';
 import { readInbox } from '@/lib/platform/notifications';
-import { readAccessibleProjects } from '@/lib/platform/projects';
+import { readProjects } from '@/lib/platform/projects';
 import {
   localMidnight,
   readAllApprovals,
@@ -58,8 +55,8 @@ import {
   readRuns,
   readSubscriptions,
 } from '@/lib/platform/runs';
-import { toStatTiles, type StatTileView } from '@/lib/view/catalog';
-import { flowsFigure, homeFailure, homeTeams, integrationsFigure } from '@/lib/view/home';
+import { scopeLabels, toStatTiles, type StatTileView } from '@/lib/view/catalog';
+import { flowsFigure, homeFailure, integrationsFigure, quickRunRows } from '@/lib/view/home';
 import { catalogIndex, toRunRows } from '@/lib/view/runs';
 import { scopeRuns, scopeStats } from '@/lib/view/scope';
 
@@ -307,11 +304,13 @@ export default function HomeScreen() {
    * figure whose re-read fails says so. The scope then narrows what
    * is shown, never what was read (24.9.2). Beside them, the inbox's unread
    * count is the bell's alone (decision 3A): a refused read of it costs the dot,
-   * never the dashboard; and the teams, every workspace's (G7), are the teams
-   * block's alone.
+   * never the dashboard; and the workspace's teams name each flow of RUN A
+   * FLOW (Build 21, A9) — a refused read of them costs the label, never the
+   * list. ~~Every workspace's teams for a TEAMS block (G7)~~ until Build 21
+   * (the owner's AM5).
    */
   const dashboard = useWorkspaceResource(async (workspaceId) => {
-    const [reads, teams, unread] = await Promise.all([
+    const [reads, projects, unread] = await Promise.all([
       Promise.allSettled([
         readRunStats(workspaceId, localMidnight()),
         readRuns(workspaceId),
@@ -321,9 +320,9 @@ export default function HomeScreen() {
         readSubscriptions(workspaceId),
         readConnections(workspaceId),
       ]),
-      readAccessibleProjects().then(
-        ({ items }) => items,
-        () => null,
+      readProjects(workspaceId).then(
+        (items) => items,
+        () => [],
       ),
       readInbox(workspaceId).then(
         (inbox) => inbox.unreadCount,
@@ -350,7 +349,7 @@ export default function HomeScreen() {
       pending: answer(pending)?.approvals ?? null,
       subscriptions: answer(subscriptions)?.subscriptions ?? null,
       connections: answer(connections)?.connections ?? null,
-      teams,
+      labels: scopeLabels(projects),
       unread,
     };
   });
@@ -362,7 +361,7 @@ export default function HomeScreen() {
     );
   }
 
-  const { stats, runs, catalog, approvals, pending, subscriptions, connections, teams, unread } = dashboard.data;
+  const { stats, runs, catalog, approvals, pending, subscriptions, connections, labels, unread } = dashboard.data;
   // A team narrows through the subscriptions (24.9.2): without them, what a
   // chosen team's figures are cannot be told, and they read as unavailable.
   const scopable = projectId === null || subscriptions !== null;
@@ -387,7 +386,8 @@ export default function HomeScreen() {
   // With no flow set up, ever — the catalog's flag, so a catalog that could not
   // be read claims nothing — the first run takes the place of the runs below.
   const firstRun = catalog !== null && !catalog.some((automation) => automation.subscribed);
-  const teamRows = teams === null ? null : homeTeams(teams);
+  // RUN A FLOW: every live flow in the team chosen, a tap from its Step 1 (A9).
+  const quickRuns = quickRunRows(subscriptions, catalog, labels, projectId);
   // The bell says the inbox holds something unread — the platform's read state,
   // the same on every device (decision 3A), and the whole workspace's, as the
   // inbox is — not merely that something is held or failed.
@@ -439,6 +439,28 @@ export default function HomeScreen() {
           </Text>
         ) : null}
       </View>
+
+      {/* RUN A FLOW (Build 21, spec A9): each live flow opens its page, whose Step 1
+          holds the document and Start run — three taps to a started run. */}
+      {quickRuns.length > 0 ? (
+        <View testID="home-quick-runs">
+          <SectionLabel>{RUN_A_FLOW_LABEL}</SectionLabel>
+          <SurfaceCard level="sm" style={styles.runsCard}>
+            {quickRuns.map((row, i) => (
+              <SettingsRow
+                key={row.id}
+                icon={row.icon}
+                title={row.name}
+                sub={row.team}
+                testID={`home-quick-run-${row.id}`}
+                divider={i < quickRuns.length - 1}
+                onPress={() => router.push({ pathname: '/(tabs)/flows/detail', params: { flow: row.id } })}
+                right={caret}
+              />
+            ))}
+          </SurfaceCard>
+        </View>
+      ) : null}
 
       {/* Stats: today's, and said so over the row (the owner's build 12 item 1). */}
       <View>
@@ -632,6 +654,17 @@ export default function HomeScreen() {
                     }}>
                     {r.meta}
                   </Text>
+                  {/* When, and the run by its full id (Build 21, spec A8; the owner's AM2). */}
+                  <Text
+                    testID={`home-stamp-${r.runId}`}
+                    style={{
+                      marginTop: 1,
+                      fontFamily: fonts.regular,
+                      fontSize: typeScale.caption.fontSize,
+                      color: palette.neutral[500],
+                    }}>
+                    {r.stamp}
+                  </Text>
                 </View>
                 <Text
                   style={{
@@ -650,51 +683,6 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* The website's Teams (Gate 24 parity, G7): the first three teams this
-          person can see, across their workspaces, each its kind and status — and
-          its workspace when they span several — opening its page; View all teams
-          beside the label, as See all is beside RECENT RUNS. */}
-      <View>
-        <View style={styles.sectionHeader}>
-          <SectionLabel>TEAMS</SectionLabel>
-          {teamRows !== null && teamRows.length > 0 ? (
-            <Text
-              onPress={pressed(() => router.push('/(tabs)/settings/teams'))}
-              suppressHighlighting
-              style={linkStyle}>
-              View all teams
-            </Text>
-          ) : null}
-        </View>
-        <SurfaceCard level="sm" style={styles.runsCard}>
-          {teamRows === null ? <Text style={lineStyle}>{TEAMS_UNAVAILABLE}</Text> : null}
-          {teamRows !== null && teamRows.length === 0 ? (
-            <View style={styles.noTeams}>
-              <Text style={[styles.noTeamsText, { color: palette.neutral[500] }]}>{HOME_NO_TEAMS}</Text>
-            </View>
-          ) : null}
-          {(teamRows ?? []).map((team, i, rows) => (
-            <SettingsRow
-              key={team.id}
-              icon={teamTypeIcon(team.kind)}
-              title={team.kind}
-              value={team.status}
-              sub={team.workspace ?? undefined}
-              testID={`home-team-${team.id}`}
-              divider={i < rows.length - 1}
-              onPress={() =>
-                router.push({
-                  pathname: '/(tabs)/settings/team',
-                  params: { projectId: team.id, workspaceId: team.workspaceId },
-                })
-              }
-              right={caret}
-            />
-          ))}
-        </SurfaceCard>
-      </View>
-      {/* "AI reads your documents", once, until the account answers (backend ADR-0038). */}
-      <AiReadingCardOnce />
     </ScrollView>
   );
 }
@@ -781,18 +769,6 @@ const styles = StyleSheet.create({
     fontSize: typeScale.body.fontSize,
     textAlign: 'center',
     paddingVertical: 16,
-  },
-  // No team yet: the line. A team is made by the platform when a flow of its
-  // kind is first added (backend ADR-0036), so there is nothing to create here.
-  noTeams: {
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 16,
-  },
-  noTeamsText: {
-    fontFamily: fonts.regular,
-    fontSize: typeScale.body.fontSize,
-    textAlign: 'center',
   },
   stateRoot: {
     flex: 1,

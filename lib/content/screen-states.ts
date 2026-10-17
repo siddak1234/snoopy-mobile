@@ -117,14 +117,11 @@ export const HOME_OFFLINE_BODY =
  * A figure on Home the platform refused or could not answer (Gate 24 parity,
  * G6): it says so on its own and the rest still show, as the website's
  * dashboard does (`readOverview`: "Unavailable"; "Recent activity could not be
- * read just now."). The teams line is the app's, in that sentence's pattern:
- * the website's teams read has no figure of its own.
+ * read just now."). ~~The teams line~~ went with Home's TEAMS (Build 21; the
+ * owner's AM5).
  */
 export const FIGURE_UNAVAILABLE = 'Unavailable';
 export const RECENT_RUNS_UNAVAILABLE = 'Recent activity could not be read just now.';
-export const TEAMS_UNAVAILABLE = 'Your teams could not be read just now.';
-/** Home's teams with none to list, in the website's words (its dashboard's Teams). */
-export const HOME_NO_TEAMS = 'No teams yet.';
 
 /**
  * The cover after a session ended while it was in use (Gate 24 parity, G4), in
@@ -278,13 +275,12 @@ export const CATALOG_SUBTITLE = 'Ready-made flows for your teams.';
 export function teamLine(kind: string): string {
   return `Team: ${kind}`;
 }
-/** Setup's button (§3.B). */
+/** Turn on, where a flow is not live (§3.B; since Build 21 in its Step 1 and at the bottom of its page). */
 export const SETUP_TURN_ON = 'Turn on';
 export const SETUP_TURNING_ON = 'Turning on…';
-/** The flow's vendor choice on Set up and its page (§3.B, §3.D). */
-export const CONNECT_VENDOR = 'Connect vendor ›';
+/** A chosen vendor not connected (§3.B, §3.D; Build 21's A3 vendor row, in the warning colour). */
 export const VENDOR_NOT_CONNECTED = 'Not connected';
-/** Setup's refusals, nothing sent (§3.B). */
+/** Refusals, nothing sent (§3.B; since Build 21 Step 1's owed line and Add's). */
 export function connectFirstOrNone(displayName: string): string {
   return `Connect ${displayName} first, or choose None.`;
 }
@@ -299,12 +295,17 @@ export function enterAnAmount(titles: string): string {
 }
 export const SETUP_ADD_FAILED = 'Could not add this flow. Try again.';
 export const SETUP_TURN_ON_FAILED = 'Could not turn it on. Try again.';
-/** The flow page's Set up dialog (§3.B: the website's modal words). */
+/** Set up's button for a flow already on or paused, which keeps its status (Build 21; the owner's AM4). */
 export const SETUP_SAVE = 'Save';
 export const SETUP_SAVING = 'Saving…';
 export const SETUP_SAVE_FAILED = 'Could not save. Try again.';
 
-/** Connect vendor (§3.C). */
+/**
+ * Connect vendor (§3.C; Build 21's A2: a tap saves and goes back). ~~"Connect
+ * vendor ›", "Done", "Save", "Saving…" as buttons, and "Disconnect from
+ * QuickBooks"~~ are gone (the owner's build 20 items 2, 4, 5 and his ~04:15Z
+ * "we will list on apples app store not intuits. so we do not need that").
+ */
 export const VENDOR_TITLE = 'Connect vendor';
 export function vendorFor(flowName: string): string {
   return `For ${flowName}`;
@@ -312,21 +313,80 @@ export function vendorFor(flowName: string): string {
 export const VENDOR_CONNECTED = 'Connected';
 export const VENDOR_ASK_ADMIN = 'Ask an owner or admin to connect it.';
 export const VENDOR_NONE_SUB = 'Save the details only.';
-export const VENDOR_DONE = 'Done';
-export const VENDOR_SAVE = 'Save';
+/** The tapped row's line while its choice is saved. */
 export const VENDOR_SAVING = 'Saving…';
 export const VENDOR_SAVE_FAILED = 'Could not save. Try again.';
-/** Under "Disconnect from QuickBooks?" — the spec names the link, not its confirm; the plainest true line. */
-export const VENDOR_DISCONNECT_BODY = 'You can connect it again any time.';
 
-/** The flow page's start controls (§3.D): one line in place of the 28-word lead. */
-export const START_RUN_LEAD = 'Fill this in, then start the run.';
+/**
+ * The one connection row (Build 21, spec A4; the owner's build 20 items 6 and 7:
+ * "Logo then to the right name then below the account email", "Standard format
+ * and size for each connection component on the list not random buttons"):
+ * line 2 says the account's email, else its state; one button, ours.
+ */
+export const CONNECTION_CONNECTED = 'Connected';
+export const CONNECTION_NOT_CONNECTED = 'Not connected';
+export const CONNECTION_ATTENTION = 'Needs attention';
+export const CONNECT_LABEL = 'Connect';
+export const RECONNECT_LABEL = 'Reconnect';
+export const DISCONNECT_LABEL = 'Disconnect';
+export const DISCONNECTING_LABEL = 'Disconnecting…';
+export function disconnectTitle(name: string): string {
+  return `Disconnect ${name}?`;
+}
+/** What Disconnect stops, by the live flows the platform counts (`usedByCount`). */
+export function disconnectBody(liveFlows: number): string {
+  if (liveFlows === 1) return '1 live flow uses it. It stops until you connect it again.';
+  if (liveFlows > 1) return `${liveFlows} live flows use it. They stop until you connect it again.`;
+  return 'You can connect it again any time.';
+}
 
-/** A run's page (§3.E). */
-export const PROGRESS_LABEL = 'PROGRESS';
+/** Account's lead (Build 21, spec A5; the owner's build 20 item 9: "Why is there a paragraph"). */
+export const ACCOUNT_LEAD = 'Sign in with any of these.';
+
+/**
+ * The flow page (Build 21, spec A6 — the TEST VERSION of the owner's order, D3:
+ * "lets test this flow page order first then we can agree if it should be the
+ * standard"): DASHBOARD, STEPS, CONNECTIONS; steps numbered, labels not.
+ */
+export const DASHBOARD_LABEL = 'DASHBOARD';
+export const STEPS_LABEL = 'STEPS';
+export const CONNECTIONS_LABEL = 'CONNECTIONS';
+/**
+ * The row at the bottom of the flow page that opens Set up again (the owner's
+ * AM4, ~22:15Z: "they can have a edit settings/flow/setup thing in the bottom
+ * of the flow page in case they want to change how it was set up"); ~~"Set
+ * up", a dialog~~ until Build 21.
+ */
+export const EDIT_SETUP_LABEL = 'Edit setup';
+
+/** Home's quick run (Build 21, spec A9; the owner: "they shouldnt have to do a bunch of work in the app"). */
+export const RUN_A_FLOW_LABEL = 'RUN A FLOW';
+
+/**
+ * A run's page (§3.E; Build 21's A7: every step from the start, a live tracker).
+ * ~~PROGRESS~~ is STEPS; each group's line says its state, never a step's own
+ * summary (B6; the owner's build 20 items 10 and 11).
+ */
 export const DETAILS_LABEL = 'DETAILS';
+export const DOCUMENTS_LABEL = 'DOCUMENTS';
 export const RUN_WORKING = 'Working…';
 export const RUN_WAITING_FOR_APPROVAL = 'Waiting for approval.';
+export const STEP_WAITING = 'Waiting';
+export const STEP_DONE = 'Done';
+export const STEP_SKIPPED = 'Skipped';
+export const STEP_STOPPED = 'Stopped';
+export const STEP_FAILED = 'Failed';
+export function stepHeld(reason: string | undefined): string {
+  return reason ? `Waiting for approval: ${reason}` : 'Waiting for approval';
+}
+/** "Document 1 of 3" (the owner's ~04:05Z: "a json out that clearly seperates accordingly"). */
+export function documentOf(index: number, count: number): string {
+  return `Document ${index} of ${count}`;
+}
+export const DOCUMENT_MORE_LINES = 'More lines on the document.';
+export const DOWNLOAD_JSON_LABEL = 'Download JSON';
+export const DOWNLOAD_FAILED = 'Could not download. Try again.';
+export const RUN_ID_LABEL = 'Run ID';
 
 /**
  * `notifsEmpty` — and note it is not an apology.

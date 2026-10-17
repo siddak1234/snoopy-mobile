@@ -11,16 +11,6 @@ jest.mock('expo-image-manipulator', () => ({
   ImageManipulator: { manipulate: jest.fn() },
   SaveFormat: { JPEG: 'jpeg', PNG: 'png', WEBP: 'webp' },
 }));
-// The website's origin, for the card's Privacy Policy: the browser leg's base, as Support uses it.
-const mockExtra: { nativeAuthBaseUrl?: string } = {};
-jest.mock('expo-constants', () => ({
-  __esModule: true,
-  default: {
-    get expoConfig() {
-      return { extra: mockExtra };
-    },
-  },
-}));
 
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import * as DocumentPicker from 'expo-document-picker';
@@ -28,11 +18,9 @@ import { File } from 'expo-file-system';
 import { ImageManipulator } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import React from 'react';
-import { Linking } from 'react-native';
 
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import { StartRun } from '@/components/automations/start-run';
-import { forgetSavedAiReading } from '@/hooks/use-ai-reading';
 import type { SessionContextValue } from '@/hooks/use-session';
 import { FLOW_QUEUE_FULL, WORKSPACE_CHANGED } from '@/lib/content/refusals';
 import { CAMERA_NOT_OPENED, CAMERA_OFF } from '@/lib/content/screen-states';
@@ -75,13 +63,9 @@ beforeEach(() => {
   };
   const clients = {
     automations: { GET: call('GET'), POST: call('POST'), PATCH: call('PATCH') },
-    // The account's answer to "AI reads your documents" (backend ADR-0038).
     platform: { PUT: call('PUT') },
   };
   platformOperation.mockImplementation(async (_key: string, execute: Function) => (await execute(clients)).data);
-  // Nothing an earlier test saved on the account answers this one.
-  forgetSavedAiReading();
-  mockExtra.nativeAuthBaseUrl = 'https://www.example.test/api/platform';
 });
 
 function answer(route: string, ...replies: (() => unknown)[]) {
@@ -103,7 +87,7 @@ const HOLD: AutomationRunInputField = {
   defaultValue: 500,
 };
 
-/** One line (spec §3.D), in place of the 28-word lead. */
+/** The line above the fields until Build 21 (spec A6: titles only, no line). */
 const LEAD = 'Fill this in, then start the run.';
 
 const onStarted = jest.fn();
@@ -118,7 +102,7 @@ async function renderBox(
   session: SessionContextValue = sessionAs('owner'),
 ) {
   return renderWithProviders(
-    <StartRun subscriptionId="sub-1" shownWorkspaceId={shown} runInput={runInput} usesAi={false} onStarted={onStarted} />,
+    <StartRun subscriptionId="sub-1" shownWorkspaceId={shown} runInput={runInput} onStarted={onStarted} />,
     session,
   );
 }
@@ -264,8 +248,8 @@ function readingOrder(tree: unknown): string[] {
   return order;
 }
 
-describe("the flow page's start controls (25.8.3)", () => {
-  it('are drawn first under the flow\'s name — above the tiles, the rest of the page in its order — and the Run button and its dialog are gone', async () => {
+describe("the flow page's start controls (25.8.3; in Step 1 since Build 21)", () => {
+  it("sit in Step 1 — after the name and DASHBOARD, before the rest of the steps — and the Run button and its dialog are gone", async () => {
     const { view } = await openFlowPage({ runInput: [NOTE] });
     const order = readingOrder(view.toJSON());
     const at = (entry: string) => {
@@ -273,13 +257,13 @@ describe("the flow page's start controls (25.8.3)", () => {
       expect(index).toBeGreaterThanOrEqual(0);
       return index;
     };
-    // The header, then the box, then the tiles, then the page as it was.
-    expect(at('text:Invoice triage')).toBeLessThan(at('start-run'));
-    expect(at('start-run')).toBeLessThan(at('flow-stat-All'));
+    // The header, the tiles, then STEPS with the box inside its first step, then the actions.
+    expect(at('text:Invoice triage')).toBeLessThan(at('text:DASHBOARD'));
+    expect(at('text:DASHBOARD')).toBeLessThan(at('flow-stat-All'));
     expect(at('flow-stat-All')).toBeLessThan(at('text:STEPS'));
-    expect(at('text:STEPS')).toBeLessThan(at('text:Pause'));
+    expect(at('text:STEPS')).toBeLessThan(at('start-run'));
+    expect(at('start-run')).toBeLessThan(at('text:Pause'));
     expect(at('text:Pause')).toBeLessThan(at('archive-flow'));
-    // The box holds the run's fields and Start run; nothing at the bottom opens a dialog any more.
     const box = screen.getByTestId('start-run');
     expect(within(box).getByLabelText('Note')).toBeTruthy();
     expect(within(box).getByText('Start run')).toBeTruthy();
@@ -294,7 +278,7 @@ describe("the flow page's start controls (25.8.3)", () => {
     ['its version declaring nothing', false, { runInput: undefined }, undefined],
     ['its automation not answering its probe', false, { runInput: [NOTE] }, 'unavailable'],
     ['its template withdrawn from the catalog', false, { runInput: [NOTE] }, 'withdrawn'],
-  ] as const)('are offered only where the Run button was — %s: %s', async (_case, offered, invoice, catalogChange) => {
+  ] as const)('Start run is offered only where the Run button was — %s: %s', async (_case, offered, invoice, catalogChange) => {
     const catalog = flowCatalogPayload();
     if (catalogChange === 'unavailable') {
       catalog.automations = catalog.automations.map((entry) => (entry.templateId === 'tplflow.invoice' ? { ...entry, available: false } : entry));
@@ -303,7 +287,6 @@ describe("the flow page's start controls (25.8.3)", () => {
       catalog.automations = catalog.automations.filter((entry) => entry.templateId !== 'tplflow.invoice');
     }
     await openFlowPage(invoice, { catalog });
-    expect(screen.queryByTestId('start-run') !== null).toBe(offered);
     expect(screen.queryByText('Start run') !== null).toBe(offered);
   });
 
@@ -355,9 +338,14 @@ describe("the flow page's start controls (25.8.3)", () => {
 /* ───────────────────────────── the form ───────────────────────────── */
 
 describe('the start controls, as the Run dialog was (24.4.1, ADR-0030)', () => {
-  it('say, before a run starts, what to do in one line: "Fill this in, then start the run." (spec §3.D, the 28-word lead gone)', async () => {
-    await renderBox();
-    expect(within(screen.getByTestId('start-run')).getByText(LEAD)).toBeTruthy();
+  it('draw each field by its title alone — no lead line and no help line under it (Build 21, spec A6; the owner\'s build 20 item 9)', async () => {
+    await renderBox([NOTE, RECEIPT]);
+    const box = within(screen.getByTestId('start-run'));
+    expect(box.getByText('Note')).toBeTruthy();
+    expect(box.getByText('Receipt')).toBeTruthy();
+    expect(box.queryByText(LEAD)).toBeNull();
+    expect(box.queryByText(NOTE.description)).toBeNull();
+    expect(box.queryByText(RECEIPT.description)).toBeNull();
   });
 
   it('start a run with the declared values; the same values resubmitted reuse the key, a change is a new run', async () => {
@@ -1013,244 +1001,30 @@ describe('the re-encode itself (lib/platform/run-image.ts)', () => {
   });
 });
 
-/* ───────────────────────── the consent before AI reads a run's file ───────────────────────── */
+/* ───────────────────────── no consent before a run's file (Build 21, A1) ───────────────────────── */
 
 /**
- * The account's answer to "AI reads your documents" (backend ADR-0038; spec
- * §3.G, §3.H; the owner's build 19 item 4): a run with a file, on a flow that
- * uses AI (`usesAi`), starts when the account allowed it; never asked, the
- * card asks first, and Allow starts the run; declined, "AI reading is off."
- * with Turn on under Start run. The per-run "AI reads this file" dialog of
- * 2026-10-13 is gone.
+ * The owner's D1 of 2026-10-15: "we dont need to say this at all … the terms
+ * and privacy policy includes that information. that is jargon not needed and
+ * unnecessarily added." A run with a file starts at the press — no card, no
+ * dialog, nothing saved on the account — on every flow.
  */
-
-/** The card's words, as a person reads them — the website says them byte for byte. */
-const CARD = {
-  title: 'AI reads your documents',
-  body: "Some flows send a document you add to AI models, through OpenRouter, to read it. They don't keep it.",
-  policy: 'See our Privacy Policy.',
-  allow: 'Allow',
-  notNow: 'Not now',
-  failed: 'Could not save your choice. Try again.',
-};
-const RECEIPT_OPTIONAL: AutomationRunInputField = { ...RECEIPT, required: false };
-const CONSENT_PATH = '/v1/session/ai-document-reading';
-
-/** The runs the box asked the platform to start. */
-const runsSent = () => sent.filter((request) => request.path === RUNS_PATH);
-/** The answers the box saved on the account. */
-const choicesSent = () => sent.filter((request) => request.path === CONSENT_PATH);
-
-/** The signed-in owner, whose account answered `choice` (null: never asked). */
-function answeredAs(choice: 'allowed' | 'declined' | null): SessionContextValue {
-  const owner = sessionAs('owner');
-  if (owner.status !== 'signed-in') throw new Error('fixture');
-  return { ...owner, session: { ...owner.session, user: { ...owner.session.user, aiDocumentReading: choice } } };
-}
-
-/** A PDF given to the receipt field: uploaded, and ready to start. */
-async function giveFile() {
-  pickerGives('invoice.pdf', 'application/pdf');
-  filesOf(5);
-  answerUpload('invoice.pdf', 'application/pdf', 5);
-  await fireEvent.press(screen.getByTestId('run-file-receipt-upload'));
-  expect(await screen.findByText('Ready: invoice.pdf (5 bytes)')).toBeTruthy();
-}
-
-/** The start controls of a flow that uses AI, for an account that answered `choice`. */
-async function renderAiBox(runInput: AutomationRunInputField[], choice: 'allowed' | 'declined' | null) {
-  return renderWithProviders(
-    <StartRun subscriptionId="sub-1" shownWorkspaceId={TEST_WORKSPACE} runInput={runInput} usesAi onStarted={onStarted} />,
-    answeredAs(choice),
-  );
-}
-
-describe('the account\'s answer to "AI reads your documents" gates a run with a file on a flow that uses AI (backend ADR-0038)', () => {
-  let openURL: jest.SpyInstance;
-  beforeEach(() => {
-    openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
-  });
-  afterEach(() => openURL.mockRestore());
-
-  it('starts the run at once when the account allowed it: no card, nothing saved', async () => {
+describe('a run with a file starts at the press: nothing asked first (Build 21, spec A1)', () => {
+  it('uploads the file, starts the run once, and draws no question and no AI words', async () => {
     answer(`POST ${RUNS_PATH}`, () => ({ run: { id: 'run-1' } }));
-    await renderAiBox([RECEIPT], 'allowed');
-    await giveFile();
+    await renderBox([RECEIPT]);
+    pickerGives('invoice.pdf', 'application/pdf');
+    filesOf(5);
+    answerUpload('invoice.pdf', 'application/pdf', 5);
+    await fireEvent.press(screen.getByTestId('run-file-receipt-upload'));
+    expect(await screen.findByText('Ready: invoice.pdf (5 bytes)')).toBeTruthy();
     await fireEvent.press(screen.getByText('Start run'));
     await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-1'));
+    expect(sent.filter((request) => request.path === RUNS_PATH).map((request) => request.body)).toEqual([
+      { subscriptionId: 'sub-1', input: { receipt: 'artifact-1' } },
+    ]);
+    expect(sent.filter((request) => request.method === 'PUT')).toEqual([]);
+    expect(screen.queryByText(/\bAI\b/u)).toBeNull();
     expect(screen.queryByTestId('ai-reading-card')).toBeNull();
-    expect(choicesSent()).toEqual([]);
-    expect(runsSent().map((request) => request.body)).toEqual([{ subscriptionId: 'sub-1', input: { receipt: 'artifact-1' } }]);
-  });
-
-  it('never asked: Start run with a file opens the card in its words, nothing starts while it is open, and the per-run dialog is gone', async () => {
-    await renderAiBox([RECEIPT], null);
-    await giveFile();
-    await fireEvent.press(screen.getByText('Start run'));
-    const card = await screen.findByTestId('ai-reading-card');
-    expect(within(card).getByText(CARD.title)).toBeTruthy();
-    expect(within(card).getByText(CARD.body)).toBeTruthy();
-    expect(within(card).getByText(CARD.allow)).toBeTruthy();
-    expect(within(card).getByText(CARD.notNow)).toBeTruthy();
-    expect(screen.queryByText('AI reads this file')).toBeNull();
-    expect(screen.queryByText('Agree and start')).toBeNull();
-    expect(screen.getByTestId('start-run-button').props.accessibilityState?.disabled).toBe(true);
-    expect(runsSent()).toEqual([]);
-    expect(choicesSent()).toEqual([]);
-  });
-
-  it('Allow saves "allowed" on the account, then starts the run once; the next run with a file is not asked', async () => {
-    answer(`PUT ${CONSENT_PATH}`, () => ({ aiDocumentReading: 'allowed', decidedAt: '2026-10-14T20:00:00Z' }));
-    answer(`POST ${RUNS_PATH}`, () => ({ run: { id: 'run-1' } }), () => ({ run: { id: 'run-2' } }));
-    await renderAiBox([RECEIPT], null);
-    await giveFile();
-    await fireEvent.press(screen.getByText('Start run'));
-    await fireEvent.press(within(await screen.findByTestId('ai-reading-card')).getByText(CARD.allow));
-    await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-1'));
-    expect(choicesSent().map((request) => [request.method, request.body])).toEqual([['PUT', { choice: 'allowed' }]]);
-    expect(screen.queryByTestId('ai-reading-card')).toBeNull();
-    expect(runsSent()).toHaveLength(1);
-
-    // The box is fresh; the next run with a file starts with no card.
-    await giveFile();
-    await fireEvent.press(screen.getByText('Start run'));
-    await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-2'));
-    expect(screen.queryByTestId('ai-reading-card')).toBeNull();
-    expect(choicesSent()).toHaveLength(1);
-  });
-
-  it('Not now saves "declined" and starts nothing; "AI reading is off." with Turn on follows, and Turn on allows it and starts the run', async () => {
-    answer(`PUT ${CONSENT_PATH}`, () => ({ aiDocumentReading: 'declined', decidedAt: '2026-10-14T20:00:00Z' }));
-    answer(`PUT ${CONSENT_PATH}`, () => ({ aiDocumentReading: 'allowed', decidedAt: '2026-10-14T20:01:00Z' }));
-    answer(`POST ${RUNS_PATH}`, () => ({ run: { id: 'run-1' } }));
-    await renderAiBox([RECEIPT], null);
-    await giveFile();
-    await fireEvent.press(screen.getByText('Start run'));
-    await fireEvent.press(within(await screen.findByTestId('ai-reading-card')).getByText(CARD.notNow));
-    await waitFor(() => expect(screen.queryByTestId('ai-reading-card')).toBeNull());
-    expect(choicesSent().map((request) => request.body)).toEqual([{ choice: 'declined' }]);
-    expect(runsSent()).toEqual([]);
-    const off = await screen.findByTestId('ai-reading-off');
-    expect(within(off).getByText('AI reading is off.')).toBeTruthy();
-
-    // Declined, Start run with the file starts nothing and asks nothing.
-    await fireEvent.press(screen.getByText('Start run'));
-    expect(screen.queryByTestId('ai-reading-card')).toBeNull();
-    expect(runsSent()).toEqual([]);
-
-    await fireEvent.press(within(off).getByText('Turn on'));
-    await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-1'));
-    expect(choicesSent().map((request) => request.body)).toEqual([{ choice: 'declined' }, { choice: 'allowed' }]);
-    expect(screen.queryByTestId('ai-reading-off')).toBeNull();
-  });
-
-  it('declined from the start: the line is drawn under Start run, and Turn on with no file only allows it', async () => {
-    answer(`PUT ${CONSENT_PATH}`, () => ({ aiDocumentReading: 'allowed', decidedAt: '2026-10-14T20:00:00Z' }));
-    await renderAiBox([RECEIPT_OPTIONAL], 'declined');
-    const off = screen.getByTestId('ai-reading-off');
-    await fireEvent.press(within(off).getByTestId('ai-reading-turn-on'));
-    await waitFor(() => expect(screen.queryByTestId('ai-reading-off')).toBeNull());
-    expect(choicesSent().map((request) => request.body)).toEqual([{ choice: 'allowed' }]);
-    expect(runsSent()).toEqual([]);
-  });
-
-  it('says so when Turn on could not be saved, and starts nothing', async () => {
-    answer(`PUT ${CONSENT_PATH}`, () => {
-      throw new PlatformError('The account service did not answer.', 502);
-    });
-    await renderAiBox([RECEIPT], 'declined');
-    await giveFile();
-    await fireEvent.press(screen.getByTestId('ai-reading-turn-on'));
-    expect(await screen.findByText('Could not save. Try again.')).toBeTruthy();
-    expect(runsSent()).toEqual([]);
-    expect(screen.getByTestId('ai-reading-off')).toBeTruthy();
-  });
-
-  it('says so in the card when the answer could not be saved: the card stays and nothing starts', async () => {
-    answer(`PUT ${CONSENT_PATH}`, () => {
-      throw new PlatformError('The account service did not answer.', 502);
-    });
-    await renderAiBox([RECEIPT], null);
-    await giveFile();
-    await fireEvent.press(screen.getByText('Start run'));
-    const card = await screen.findByTestId('ai-reading-card');
-    await fireEvent.press(within(card).getByText(CARD.allow));
-    expect(await within(card).findByText(CARD.failed)).toBeTruthy();
-    expect(runsSent()).toEqual([]);
-    expect(onStarted).not.toHaveBeenCalled();
-  });
-
-  it('after a failed save, Not now closes the card — nothing saved, nothing started — and the next Start run with the file asks again', async () => {
-    answer(`PUT ${CONSENT_PATH}`, () => {
-      throw new PlatformError('The account service did not answer.', 502);
-    });
-    await renderAiBox([RECEIPT], null);
-    await giveFile();
-    await fireEvent.press(screen.getByText('Start run'));
-    const card = await screen.findByTestId('ai-reading-card');
-    await fireEvent.press(within(card).getByText(CARD.allow));
-    expect(await within(card).findByText(CARD.failed)).toBeTruthy();
-    await fireEvent.press(within(card).getByText(CARD.notNow));
-    await waitFor(() => expect(screen.queryByTestId('ai-reading-card')).toBeNull());
-    expect(choicesSent().map((request) => request.body)).toEqual([{ choice: 'allowed' }]);
-    expect(runsSent()).toEqual([]);
-    expect(screen.queryByTestId('ai-reading-off')).toBeNull();
-    // Still never answered: a run with the file asks first again.
-    await fireEvent.press(screen.getByText('Start run'));
-    expect(await screen.findByTestId('ai-reading-card')).toBeTruthy();
-    expect(runsSent()).toEqual([]);
-  });
-
-  it.each([
-    ['a flow that does not use AI, with a file', [RECEIPT], false, true],
-    ['no file field', [NOTE], true, false],
-    ['its file field left empty', [NOTE, RECEIPT_OPTIONAL], true, false],
-  ] as const)('is never asked for %s — the run starts as it always did', async (_case, runInput, usesAi, withFile) => {
-    answer(`POST ${RUNS_PATH}`, () => ({ run: { id: 'run-1' } }));
-    await renderWithProviders(
-      <StartRun subscriptionId="sub-1" shownWorkspaceId={TEST_WORKSPACE} runInput={[...runInput]} usesAi={usesAi} onStarted={onStarted} />,
-      answeredAs(null),
-    );
-    if (withFile) await giveFile();
-    else await fireEvent.changeText(screen.getByLabelText('Note'), 'Pay it');
-    await fireEvent.press(screen.getByText('Start run'));
-    await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-1'));
-    expect(screen.queryByTestId('ai-reading-card')).toBeNull();
-    expect(choicesSent()).toEqual([]);
-  });
-
-  it("opens the website's Privacy Policy from the card — the card stays open, nothing started or saved", async () => {
-    await renderAiBox([RECEIPT], null);
-    await giveFile();
-    await fireEvent.press(screen.getByText('Start run'));
-    const card = await screen.findByTestId('ai-reading-card');
-    expect(within(card).getByText(CARD.policy)).toBeTruthy();
-    await fireEvent.press(within(card).getByTestId('ai-reading-privacy'));
-    expect(openURL).toHaveBeenCalledWith('https://www.example.test/privacy');
-    expect(screen.getByTestId('ai-reading-card')).toBeTruthy();
-    expect(runsSent()).toEqual([]);
-    expect(choicesSent()).toEqual([]);
-  });
-
-  it('says "Privacy Policy" in plain words where the app does not know the website', async () => {
-    delete mockExtra.nativeAuthBaseUrl;
-    await renderAiBox([RECEIPT], null);
-    await giveFile();
-    await fireEvent.press(screen.getByText('Start run'));
-    const card = await screen.findByTestId('ai-reading-card');
-    expect(within(card).getByText(CARD.policy)).toBeTruthy();
-    expect(within(card).queryByTestId('ai-reading-privacy')).toBeNull();
-  });
-
-  it("is closed by Android's back: nothing started, nothing saved, the file as it was", async () => {
-    await renderAiBox([RECEIPT], null);
-    await giveFile();
-    await fireEvent.press(screen.getByText('Start run'));
-    const card = await screen.findByTestId('ai-reading-card');
-    await fireEvent(card, 'requestClose');
-    await waitFor(() => expect(screen.queryByTestId('ai-reading-card')).toBeNull());
-    expect(runsSent()).toEqual([]);
-    expect(choicesSent()).toEqual([]);
-    expect(screen.getByText('Ready: invoice.pdf (5 bytes)')).toBeTruthy();
   });
 });

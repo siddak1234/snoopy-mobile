@@ -1,137 +1,77 @@
-import { fireEvent, screen } from '@testing-library/react-native';
 import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import React from 'react';
-import { StyleSheet } from 'react-native';
 
-import { NoVendorMark, VendorConnectButton, VendorLogo, VendorMark } from '@/components/vendor-logo';
-import { iconSize } from '@/constants/theme';
-import type { ThemeMode } from '@/hooks/use-theme';
-import { BRAND_LOGO_NAMES, brandLogoFor, disconnectLabelFor } from '@/lib/view/brand-logos';
+import { BRAND_MARK_NAMES, QUICKBOOKS_SYMBOL, brandMarkFor } from '@/lib/view/brand-logos';
 import { iconFor } from '@/lib/view/icon-registry';
-import { renderWithProviders } from '@/test/render';
 
 /**
- * The vendors' own marks (the Invoice Processing update, spec §4; the owner's
- * build 19 item 9: "Add the quickbooks logo"), held to Intuit's rules: its
- * files, unaltered — each one's sha256 the value recorded when it was
- * downloaded from Intuit (spec §4.1, 2026-10-14) — the full logo at 24 pt, the
- * dark wordmark on light and the reversed one on dark, and its own Connect
- * button at its size.
+ * The vendors' own marks (Build 21, spec A4; the session's S12): every
+ * connection row is the same — a 24 × 24 mark — so QuickBooks is drawn by its
+ * round symbol, cropped square from Intuit's preferred logo file the app
+ * already bundled, its pixels unchanged, and Google by the design's own glyph.
+ * ~~Intuit's "Connect to QuickBooks" button images~~ are gone (the owner,
+ * ~04:15Z: "we will list on apples app store not intuits. so we do not need
+ * that"): every connection has our own Connect and Disconnect.
  */
 
 const VENDORS = join(__dirname, '..', 'assets', 'vendors');
 
 /**
  * Every bundled vendor file and its sha256. The logos are Intuit's "QuickBooks
- * Logo" page downloads (spec §4.1: preferred `…-black-external.png`, reversed
- * `…-white-external.png`); the buttons are the English tall green
- * `C2QB_green_btn_tall_default` 1x and 2x from Intuit's
- * `Connect_to_QuickBooks_buttons.zip` (that archive's sha256
- * 8f21125be0720874d0c6c90558bbd62565b8a993d1d8f7fb23ce677bb4651a78), renamed only.
+ * Logo" page downloads (the Invoice Processing update, spec §4.1: preferred
+ * `…-black-external.png`, reversed `…-white-external.png`), kept as the
+ * symbol's source; the symbol is the preferred logo's top-left 536 × 536 —
+ * the round symbol's own square, measured: its pixels span columns and rows
+ * 0–535 and the wordmark begins at column 610 — cut with nothing recoloured or
+ * rescaled (checked pixel for pixel against the source when it was cut,
+ * 2026-10-15/16; DESIGN-GAPS "Build 21").
  */
-const INTUIT_FILES: Record<string, string> = {
+const VENDOR_FILES: Record<string, string> = {
   'quickbooks-logo.png': '67fcdc67a032a068feeecddecb0cd9f4d12020dddb199a3c155837abef3cc2eb',
   'quickbooks-logo-reversed.png': '3837c7d32394cc53f9785d02a307cfa71fa5b602b2be159964e02cdcd735b21e',
-  'connect-to-quickbooks.png': 'b92aa96c4b6dff65540241b8dbea84fb75d11b8e6068ce708e168ac60ab66479',
-  'connect-to-quickbooks@2x.png': 'c9b9802b3b6e8177e4584d5cb5b34b3facb7ec46cc59f273d9417a7bbd9add5b',
+  'quickbooks-symbol.png': '616e1f163e195b6267d2ff92735a40db13f83ca04c42af97060b702694ecaf9b',
 };
 
 const sha256 = (file: string) => createHash('sha256').update(readFileSync(join(VENDORS, file))).digest('hex');
+const size = (file: string) => {
+  const png = readFileSync(join(VENDORS, file));
+  return [png.readUInt32BE(16), png.readUInt32BE(20)];
+};
 
-describe("the vendors' files are their own, unaltered (spec §4.3 guard M2)", () => {
-  it.each(Object.entries(INTUIT_FILES))('%s is the file Intuit provides, byte for byte', (file, expected) => {
+describe("the vendors' files (spec A4; guard M2 of the Invoice Processing update)", () => {
+  it.each(Object.entries(VENDOR_FILES))('%s is the file recorded, byte for byte', (file, expected) => {
     expect(sha256(file)).toBe(expected);
   });
 
-  it('bundles no vendor file the guard does not hold', () => {
-    expect(readdirSync(VENDORS).sort()).toEqual(Object.keys(INTUIT_FILES).sort());
+  it('bundles no vendor file the guard does not hold — no Connect button image', () => {
+    expect(readdirSync(VENDORS).sort()).toEqual(Object.keys(VENDOR_FILES).sort());
   });
 
-  it("the logos are 2345 × 600, as the registry's aspect says, and the button's 1x is 274 × 48", () => {
-    const size = (file: string) => {
-      const png = readFileSync(join(VENDORS, file));
-      return [png.readUInt32BE(16), png.readUInt32BE(20)];
-    };
+  it('the symbol is the square the registry records, cut from the file it names', () => {
+    expect(QUICKBOOKS_SYMBOL.source).toBe('assets/vendors/quickbooks-logo.png');
+    expect(QUICKBOOKS_SYMBOL.sourceSha256).toBe(sha256('quickbooks-logo.png'));
+    expect(QUICKBOOKS_SYMBOL.file).toBe('assets/vendors/quickbooks-symbol.png');
+    expect(QUICKBOOKS_SYMBOL.crop).toEqual({ left: 0, top: 0, width: 536, height: 536 });
+    expect(size('quickbooks-symbol.png')).toEqual([536, 536]);
     expect(size('quickbooks-logo.png')).toEqual([2345, 600]);
-    expect(size('quickbooks-logo-reversed.png')).toEqual([2345, 600]);
-    expect(size('connect-to-quickbooks.png')).toEqual([274, 48]);
-    expect(size('connect-to-quickbooks@2x.png')).toEqual([548, 96]);
-    expect(brandLogoFor('QuickBooksLogo')!.aspect).toBe(2345 / 600);
   });
 });
 
 describe('the registry (lib/view/brand-logos.ts)', () => {
-  it('resolves the name the platform sends — a brand before the icon set — and nothing else', () => {
-    expect(BRAND_LOGO_NAMES).toEqual(['QuickBooksLogo']);
-    const quickbooks = brandLogoFor(' QuickBooksLogo ');
-    expect(quickbooks).toMatchObject({
-      alt: 'QuickBooks',
-      connectLabel: 'Connect to QuickBooks',
-      disconnectLabel: 'Disconnect from QuickBooks',
-      connectSize: { width: 274, height: 48 },
-    });
+  it('resolves the names the platform sends — a brand before the icon set — and nothing else', () => {
+    expect([...BRAND_MARK_NAMES].sort()).toEqual(['GoogleLogo', 'QuickBooksLogo']);
+    expect(brandMarkFor(' QuickBooksLogo ')).toMatchObject({ kind: 'image', alt: 'QuickBooks' });
+    expect(brandMarkFor('GoogleLogo')).toEqual({ kind: 'glyph', provider: 'google', alt: 'Google' });
     for (const name of [undefined, null, '', 'PlugsConnected', 'quickbookslogo', 'constructor', 'toString']) {
-      expect([name, brandLogoFor(name)]).toEqual([name, null]);
+      expect([name, brandMarkFor(name)]).toEqual([name, null]);
     }
     // Any other name still falls back in the icon set, as before.
     expect(iconFor('QuickBooksLogo')).toBe(iconFor('no-such-icon'));
   });
 
-  it('says Disconnect in the vendor\'s own words where it has them', () => {
-    expect(disconnectLabelFor('QuickBooksLogo')).toBe('Disconnect from QuickBooks');
-    expect(disconnectLabelFor('envelope')).toBe('Disconnect');
-  });
-});
-
-describe.each<ThemeMode>(['dark', 'light'])('the marks — %s palette (snapshot-pinned, spec §4.3)', (mode) => {
-  const quickbooks = brandLogoFor('QuickBooksLogo')!;
-
-  it('the logo: 24 pt tall, in proportion, on no tile — the reversed one on dark, the preferred one on light', async () => {
-    const { toJSON } = await renderWithProviders(<VendorLogo brand={quickbooks} testID="logo" />, undefined, mode);
-    const logo = screen.getByTestId('logo');
-    expect(StyleSheet.flatten(logo.props.style)).toEqual({ height: iconSize.row, width: iconSize.row * (2345 / 600) });
-    expect(logo.props.source).toBe(mode === 'dark' ? quickbooks.dark : quickbooks.light);
-    expect(logo.props.accessibilityLabel).toBe('QuickBooks');
-    expect(toJSON()).toMatchSnapshot();
-  });
-
-  it('a vendor with no logo bundled: its icon at 24 and its name; None: the prohibit sign and None', async () => {
-    const { toJSON } = await renderWithProviders(
-      <>
-        <VendorMark icon="envelope" name="Gmail" />
-        <VendorMark icon="QuickBooksLogo" name="QuickBooks Online" />
-        <NoVendorMark />
-      </>,
-      undefined,
-      mode,
-    );
-    expect(screen.getByText('Gmail')).toBeTruthy();
-    expect(screen.getByText('None')).toBeTruthy();
-    expect(screen.queryByText('QuickBooks Online')).toBeNull();
-    expect(screen.getByTestId(/^phosphor-react-native-prohibit-/u).props.width).toBe(24);
-    expect(toJSON()).toMatchSnapshot();
-  });
-
-  it("Intuit's Connect button: its own image, at its size, read aloud as its words; a press runs it", async () => {
-    const onPress = jest.fn();
-    const { toJSON } = await renderWithProviders(
-      <VendorConnectButton brand={quickbooks} onPress={onPress} testID="connect" />,
-      undefined,
-      mode,
-    );
-    expect(StyleSheet.flatten(screen.getByTestId('connect-image').props.style)).toEqual({ width: 274, height: 48 });
-    expect(screen.getByTestId('connect-image').props.source).toBe(quickbooks.connectButton);
-    await fireEvent.press(screen.getByLabelText('Connect to QuickBooks'));
-    expect(onPress).toHaveBeenCalledTimes(1);
-    expect(toJSON()).toMatchSnapshot();
-  });
-
-  it("Intuit's Connect button is never dimmed — busy or pressed, its graphic as Intuit made it", async () => {
-    await renderWithProviders(<VendorConnectButton brand={quickbooks} onPress={() => {}} disabled testID="connect" />, undefined, mode);
-    const button = screen.getByTestId('connect');
-    expect(button.props.accessibilityState).toMatchObject({ disabled: true });
-    expect(StyleSheet.flatten(button.props.style)).not.toHaveProperty('opacity');
+  it("names no vendor button, label or size — Connect and Disconnect are the app's own", () => {
+    const quickbooks = brandMarkFor('QuickBooksLogo')!;
+    expect(Object.keys(quickbooks).sort()).toEqual(['alt', 'kind', 'source']);
   });
 });

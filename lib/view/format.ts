@@ -110,10 +110,20 @@ export function calendarDate(iso: string | null | undefined): string {
 export function dateTime(iso: string | null | undefined): string {
   const at = parseInstant(iso);
   if (at === null) return EMPTY;
+  return `${calendarDate(iso)}, ${timeOfDay(iso)}`;
+}
+
+/**
+ * The time of day in the device's zone, as `dateTime` says it: `'9:05 PM'` —
+ * when a run's step was done (Build 21, spec A7).
+ */
+export function timeOfDay(iso: string | null | undefined): string {
+  const at = parseInstant(iso);
+  if (at === null) return EMPTY;
   const date = new Date(at);
   const hours = date.getHours();
   const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${calendarDate(iso)}, ${hours % 12 || 12}:${minutes} ${hours < 12 ? 'AM' : 'PM'}`;
+  return `${hours % 12 || 12}:${minutes} ${hours < 12 ? 'AM' : 'PM'}`;
 }
 
 /**

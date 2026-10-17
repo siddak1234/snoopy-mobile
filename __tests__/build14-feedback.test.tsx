@@ -119,8 +119,8 @@ describe('a run that has not ended is read again until it has (feedback #3)', ()
     setMockParams({ runId: 'run-1' });
     await renderWithProviders(<RunDetailScreen />, signedInSession);
     expect(await screen.findByText('Running')).toBeTruthy();
-    // Nothing reported yet: no count to give, and the run's last row says it is working (spec §3.E).
-    expect(within(steps()).getByText('—')).toBeTruthy();
+    // Nothing reported yet: every step drawn, the first working, none done (Build 21, spec A7).
+    expect(within(steps()).getByText('0 / 4')).toBeTruthy();
     expect(screen.getByText('Working…')).toBeTruthy();
 
     // Read again; while that read is unanswered, no other is made.
@@ -129,13 +129,14 @@ describe('a run that has not ended is read again until it has (feedback #3)', ()
     expect(fake.to(RUN)).toHaveLength(2);
 
     await act(async () => second.release());
-    expect(await screen.findByText('1 / 1')).toBeTruthy();
+    // Never "1 / 1" while it runs (the owner's build 20 item 10): one done of the four.
+    expect(await screen.findByText('1 / 4')).toBeTruthy();
     expect(screen.getByText('Running')).toBeTruthy();
 
     await waitFor(() => expect(fake.to(RUN)).toHaveLength(3));
     await act(async () => third.release());
     expect(await screen.findByText('Success')).toBeTruthy();
-    expect(within(steps()).getByText('3 / 3')).toBeTruthy();
+    expect(within(steps()).getByText('4 / 4')).toBeTruthy();
     expect(screen.queryByText('Working…')).toBeNull();
     expect(screen.queryByText('Cancel run')).toBeNull();
 
@@ -166,48 +167,54 @@ describe('a run that has not ended is read again until it has (feedback #3)', ()
     const fake = routeRun(detail('failed', [['receive', 'failed']]));
     setMockParams({ runId: 'run-1' });
     await renderWithProviders(<RunDetailScreen />, signedInSession);
-    expect(await screen.findByText('Failed')).toBeTruthy();
+    // The pill, and the step that failed with no reason given.
+    expect(await screen.findAllByText('Failed')).toHaveLength(2);
     await aWhile();
     expect(fake.to(RUN)).toHaveLength(1);
   });
 });
 
-describe('a finished run shows what it did, never what it did not (spec §3.E; the owner\'s build 19 item 6, after build 14\'s #4, #5, #8)', () => {
-  it('a success with no address set: its three steps, done — no "Not run" row for the email it did not send', async () => {
+describe('a finished run shows every step and where it ended (Build 21, spec A7; the owner\'s build 20 item 10, over build 19\'s item 6)', () => {
+  it('a success with no address set: three steps done, and the email it did not send Skipped — every step counted', async () => {
     routeRun(detail('succeeded', [['receive', 'ok'], ['validate', 'ok'], ['post', 'ok']]));
     setMockParams({ runId: 'run-1' });
     await renderWithProviders(<RunDetailScreen />, signedInSession);
     expect(await screen.findByText('Success')).toBeTruthy();
     expect(screen.queryByText(/Not run/u)).toBeNull();
-    expect(screen.queryByText('Email the outcome')).toBeNull();
-    expect(screen.queryByTestId(/^phosphor-react-native-minus-circle-/u)).toBeNull();
+    const email = within(screen.getByTestId('run-step-step:notify'));
+    expect(email.getByText('4 · Email the outcome')).toBeTruthy();
+    expect(email.getByText('Skipped')).toBeTruthy();
+    expect(email.getByTestId(/^phosphor-react-native-minus-circle-/u).props.width).toBe(24);
     expect(screen.queryByTestId(/^phosphor-react-native-circle-dashed-/u)).toBeNull();
     expect(screen.getAllByTestId(/^phosphor-react-native-check-circle-/u)).toHaveLength(3);
-    expect(within(steps()).getByText('3 / 3')).toBeTruthy();
+    expect(within(steps()).getByText('4 / 4')).toBeTruthy();
   });
 
-  it('a failure at its first step: that step, failed, and nothing after it', async () => {
+  it('a failure at its first step: that step, failed, and the rest Stopped', async () => {
     routeRun(detail('failed', [['receive', 'failed']]));
     setMockParams({ runId: 'run-1' });
     await renderWithProviders(<RunDetailScreen />, signedInSession);
-    expect(await screen.findByText('Failed')).toBeTruthy();
-    expect(screen.getByText('Invoice received')).toBeTruthy();
+    expect(await screen.findByText('1 · Invoice received')).toBeTruthy();
+    // No reason given: the step says Failed, as the pill does.
+    expect(within(screen.getByTestId('run-step-step:receive')).getByText('Failed')).toBeTruthy();
+    expect(within(screen.getByTestId('run-step-step:receive')).getByTestId(/^phosphor-react-native-warning-circle-/u)).toBeTruthy();
+    for (const id of ['validate', 'post', 'notify']) {
+      expect(within(screen.getByTestId(`run-step-step:${id}`)).getByText('Stopped')).toBeTruthy();
+    }
     expect(screen.queryByText(/Not run/u)).toBeNull();
-    expect(screen.queryByText('Check the amount')).toBeNull();
-    expect(screen.getByTestId(/^phosphor-react-native-warning-circle-/u)).toBeTruthy();
-    expect(within(steps()).getByText('0 / 1')).toBeTruthy();
+    expect(within(steps()).getByText('0 / 4')).toBeTruthy();
   });
 
-  it('a held run: what it did, the held step with its hand — and no rows for what is left', async () => {
+  it('a held run: what it did, the held step with its hand, and what is left Waiting', async () => {
     routeRun(detail('held', [['receive', 'ok'], ['validate', 'held']]));
     setMockParams({ runId: 'run-1' });
     await renderWithProviders(<RunDetailScreen />, signedInSession);
-    expect(await screen.findByText('Check the amount')).toBeTruthy();
+    expect(await screen.findByText('2 · Check the amount')).toBeTruthy();
     expect(screen.queryByText('Records the invoice once it is within threshold or has been approved.')).toBeNull();
     expect(screen.queryByText(/Not run/u)).toBeNull();
-    expect(screen.queryByTestId(/^phosphor-react-native-circle-dashed-/u)).toBeNull();
-    expect(screen.getByTestId(/^phosphor-react-native-hand-palm-/u)).toBeTruthy();
-    expect(within(steps()).getByText('1 / 2')).toBeTruthy();
+    expect(screen.getAllByTestId(/^phosphor-react-native-circle-dashed-/u)).toHaveLength(2);
+    expect(within(screen.getByTestId('run-step-step:validate')).getByTestId(/^phosphor-react-native-hand-palm-/u)).toBeTruthy();
+    expect(within(steps()).getByText('1 / 4')).toBeTruthy();
   });
 });
 

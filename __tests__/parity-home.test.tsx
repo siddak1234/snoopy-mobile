@@ -19,6 +19,7 @@ import {
   TEST_WORKSPACE,
   approvalsPayload,
   catalogPayload,
+  flowCatalogPayload,
   inboxPayload,
   runStatsPayload,
   runsPayload,
@@ -424,70 +425,94 @@ describe('G6 — the overview, and every figure on its own', () => {
   });
 });
 
-describe("G7 — the website's Teams on Home", () => {
-  it('lists the first three teams across the workspaces, the deleted left out — each its kind and status, and its workspace when they span several — each opening its page in its workspace, with View all teams', async () => {
+/** The order of what is on screen: each test id, and each line of text as `text:<words>`. */
+function readingOrder(tree: unknown): string[] {
+  const order: string[] = [];
+  const walk = (node: unknown) => {
+    if (typeof node === 'string') return void order.push(`text:${node}`);
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) return void node.forEach(walk);
+    const { props, children } = node as { props?: { testID?: unknown }; children?: unknown[] | null };
+    if (typeof props?.testID === 'string') order.push(props.testID);
+    children?.forEach(walk);
+  };
+  walk(tree);
+  return order;
+}
+
+/**
+ * Build 21 (spec A9; the owner's "when a user wants to run a random flow. they
+ * shouldnt have to do a bunch of work in the app", and his AM5: "remove lsit
+ * teams on bottom of home page, it is useless"): RUN A FLOW, right under the
+ * greeting — every live flow, its team under its name, opening its flow page —
+ * and ~~TEAMS~~ gone from Home; teams stay in Settings.
+ */
+describe('Home: RUN A FLOW, and no Teams list (Build 21, spec A9; the owner\'s AM5)', () => {
+  it('lists every live flow under the greeting, before TODAY — its name and team — and each opens its flow page; a paused or draft flow is not listed', async () => {
     routeHome({
-      workspaces: [ACME, OWN],
-      teams: {
-        [TEST_WORKSPACE]: [
-          team('finance', TEST_WORKSPACE, 'Finance', 'active'),
-          team('legal', TEST_WORKSPACE, 'Legal', 'archived'),
-          team('sales', TEST_WORKSPACE, 'Sales', 'paused'),
-        ],
-        [PERSONAL]: [team('hr', PERSONAL, 'HR', 'draft'), team('it', PERSONAL, 'IT', 'active')],
-      },
+      catalog: flowCatalogPayload(),
+      subscriptions: placedSubscriptions(),
+      teams: { [TEST_WORKSPACE]: [team('project-1', TEST_WORKSPACE, 'Finance', 'active'), team('project-2', TEST_WORKSPACE, 'Legal', 'active')] },
     });
-    await renderWithProviders(<HomeScreen />, signedInSession);
-    const finance = await screen.findByTestId('home-team-finance');
-
-    const rows = screen.getAllByTestId(/^home-team-/u).map((row) => row.props.testID as string);
-    expect(rows).toEqual(['home-team-finance', 'home-team-sales', 'home-team-hr']);
-    expect(within(finance).getByText('Finance')).toBeTruthy();
-    expect(figure('home-team-finance')).toBe('Active');
-    expect(figure('home-team-sales')).toBe('Paused');
-    expect(figure('home-team-hr')).toBe('Draft');
-    expect(within(finance).getByText('Acme Operations')).toBeTruthy();
-    expect(within(screen.getByTestId('home-team-hr')).getByText("Alex's space")).toBeTruthy();
-
-    await fireEvent.press(finance);
-    await fireEvent.press(screen.getByTestId('home-team-hr'));
-    await fireEvent.press(screen.getByText('View all teams'));
-    expect(mockRouter.push.mock.calls).toEqual([
-      [{ pathname: '/(tabs)/settings/team', params: { projectId: 'finance', workspaceId: TEST_WORKSPACE } }],
-      [{ pathname: '/(tabs)/settings/team', params: { projectId: 'hr', workspaceId: PERSONAL } }],
-      ['/(tabs)/settings/teams'],
+    const view = await renderWithProviders(<HomeScreen />, signedInSession);
+    const list = await screen.findByTestId('home-quick-runs');
+    expect(within(list).getByText('RUN A FLOW')).toBeTruthy();
+    expect(within(list).getAllByTestId(/^home-quick-run-/u).map((row) => row.props.testID)).toEqual([
+      'home-quick-run-invoice',
+      'home-quick-run-email',
     ]);
+    const invoice = within(screen.getByTestId('home-quick-run-invoice'));
+    expect(invoice.getByText('Invoice triage')).toBeTruthy();
+    expect(invoice.getByText('Team: Finance')).toBeTruthy();
+    expect(invoice.getAllByTestId(/^phosphor-react-native-/u)[0]!.props.width).toBe(24);
+    const order = readingOrder(view.toJSON());
+    expect(order.indexOf('text:AUTOMATION × AI')).toBeLessThan(order.indexOf('home-quick-runs'));
+    expect(order.indexOf('home-quick-runs')).toBeLessThan(order.indexOf('text:TODAY'));
+
+    await fireEvent.press(screen.getByTestId('home-quick-run-email'));
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'email' } });
   });
 
-  it('teams of one workspace do not name it', async () => {
+  it('draws no RUN A FLOW when no flow is live', async () => {
+    const subscriptions = subscriptionsPayload();
+    subscriptions.subscriptions = subscriptions.subscriptions.map((row) => ({ ...row, status: 'paused' as const }));
+    routeHome({ catalog: flowCatalogPayload(), subscriptions });
+    await renderWithProviders(<HomeScreen />, signedInSession);
+    expect(await screen.findByTestId('home-stats')).toBeTruthy();
+    expect(screen.queryByTestId('home-quick-runs')).toBeNull();
+    expect(screen.queryByText('RUN A FLOW')).toBeNull();
+  });
+
+  it('draws no Teams list — no TEAMS, no team rows, no View all teams — and View teams still opens Settings › Teams', async () => {
     routeHome({
       workspaces: [ACME, OWN],
-      teams: { [TEST_WORKSPACE]: [team('finance', TEST_WORKSPACE, 'Finance', 'active'), team('sales', TEST_WORKSPACE, 'Sales', 'active')] },
+      teams: { [TEST_WORKSPACE]: [team('finance', TEST_WORKSPACE, 'Finance', 'active')], [PERSONAL]: [team('hr', PERSONAL, 'HR', 'draft')] },
     });
     await renderWithProviders(<HomeScreen />, signedInSession);
-    const finance = await screen.findByTestId('home-team-finance');
-    expect(within(finance).queryByText('Acme Operations')).toBeNull();
-    expect(within(screen.getByTestId('home-team-sales')).queryByText('Acme Operations')).toBeNull();
+    expect(await screen.findByTestId('home-stats')).toBeTruthy();
+    for (const gone of ['TEAMS', 'View all teams', 'No teams yet.', 'Your teams could not be read just now.']) {
+      expect([gone, screen.queryByText(gone)]).toEqual([gone, null]);
+    }
+    expect(screen.queryAllByTestId(/^home-team-/u)).toEqual([]);
+    await fireEvent.press(screen.getByTestId('home-view-teams'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/teams');
   });
 
-  it.each(['member', 'admin', 'owner'] as const)(
-    'with none: No teams yet., and no Create a team for an organization %s — the platform makes a flow\'s team when first needed (ADR-0036)',
-    async (role) => {
-      routeHome();
-      await renderWithProviders(<HomeScreen />, sessionAs(role));
-      expect(await screen.findByText('No teams yet.')).toBeTruthy();
-      expect(screen.queryByTestId('home-create-team')).toBeNull();
-      expect(screen.queryByText('Create a team')).toBeNull();
-      expect(screen.queryByText('View all teams')).toBeNull();
-    },
-  );
-
-  it('a teams read that is refused says so, and the rest of Home still shows', async () => {
-    const fake = routeHome();
-    refuse(fake, 'GET /v1/workspaces', () => new PlatformError('Service Unavailable', 503));
+  it('a refused teams read costs the team names only: the live flows are still listed', async () => {
+    const fake = routeHome({ catalog: flowCatalogPayload(), subscriptions: placedSubscriptions() });
+    refuse(fake, 'GET /v1/workspaces/{workspaceId}/projects', () => new PlatformError('Service Unavailable', 503));
     await renderWithProviders(<HomeScreen />, signedInSession);
-    expect(await screen.findByText('Your teams could not be read just now.')).toBeTruthy();
-    expect(screen.queryByText('View all teams')).toBeNull();
+    expect(within(await screen.findByTestId('home-quick-run-invoice')).getByText('Invoice triage')).toBeTruthy();
     expect(screen.getByTestId('home-stats')).toBeTruthy();
+  });
+
+  it('names each recent run by its full id, under its line (spec A8; the owner\'s AM2)', async () => {
+    const runs = runsPayload();
+    runs.runs = [{ ...runs.runs[0]!, id: '793eef82-102d-81be-a2d3-9e8d4e2b2c36', requestId: '1e3231c6-0000-4000-8000-000000000000' }];
+    routeHome({ runs });
+    await renderWithProviders(<HomeScreen />, signedInSession);
+    const stamp = await screen.findByTestId('home-stamp-793eef82-102d-81be-a2d3-9e8d4e2b2c36');
+    expect(stamp.props.children).toMatch(/ · Run 793eef82-102d-81be-a2d3-9e8d4e2b2c36$/u);
+    expect(screen.queryByText(/1e3231c6/u)).toBeNull();
   });
 });

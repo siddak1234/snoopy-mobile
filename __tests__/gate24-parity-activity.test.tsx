@@ -53,8 +53,8 @@ const colorOf = (node: { props: { style?: unknown } }) => (StyleSheet.flatten(no
 
 /* ------------------------------------------------------------ Activity, G17 */
 
-describe('Activity says a run as the website does: when, the version it ran, and after approval (G17)', () => {
-  it('draws the date and time each run was made and the version it ran, under its line', async () => {
+describe('Activity says a run as the website does: when, the run by its full id, and after approval (G17; Build 21, A8)', () => {
+  it('draws the date and time each run was made and the run by its full id — no longer the version it ran — under its line', async () => {
     const at = new Date(2026, 8, 30, 21, 5).toISOString();
     const run: Run = { ...runsPayload().runs[0]!, id: 'run-v3', templateVersion: 3, createdAt: at, updatedAt: at };
     routePlatform(platformOperation, {
@@ -64,7 +64,8 @@ describe('Activity says a run as the website does: when, the version it ran, and
     });
     await renderWithProviders(<ActivityScreen />, signedInSession);
     const row = await screen.findByTestId('activity-row-run-v3');
-    expect(within(row).getByText('Sep 30, 2026, 9:05 PM · v3')).toBeTruthy();
+    expect(within(row).getByText('Sep 30, 2026, 9:05 PM · Run run-v3')).toBeTruthy();
+    expect(within(row).queryByText(/ · v3/u)).toBeNull();
     // The design's own time beside it stays.
     expect(within(row).getByText(/^\d+d$/u)).toBeTruthy();
   });
@@ -156,7 +157,7 @@ function routeRun(read: Detail) {
   const catalog = catalogPayload();
   fake.always('GET /v1/workspaces/{workspaceId}/automations', {
     ...catalog,
-    automations: [{ ...catalog.automations[0]!, templateId: 'invoice-check', name: 'Invoice check', pipeline: [...PIPELINE] }],
+    automations: [{ ...catalog.automations[0]!, templateId: 'invoice-check', version: 4, name: 'Invoice check', pipeline: [...PIPELINE] }],
   });
   fake.always('GET /v1/workspaces/{workspaceId}/approvals', { approvals: [] });
   fake.always('GET /v1/workspaces/{workspaceId}/runs/{runId}', read);
@@ -228,7 +229,7 @@ describe("a run's page says what the website's says (G18)", () => {
     expect(mockRouter.push).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps a held step’s summary, its reason beside it, and says when each step happened — its date and its time', async () => {
+  it('says a held step waits for approval and why, in the warning colour — never its own summary — and when each step was done (Build 21, spec A7)', async () => {
     routeRun(
       detail(
         {
@@ -251,21 +252,23 @@ describe("a run's page says what the website's says (G18)", () => {
     );
     setMockParams({ runId: 'run-1' });
     await renderWithProviders(<RunDetailScreen />, signedInSession);
-    expect(await screen.findByText('Checked $730 against $500')).toBeTruthy();
-    expect(colorOf(screen.getByText('Above the $500 auto-approve threshold.'))).toBe(status.warnText);
-    expect(screen.getByText('Oct 7, 2026, 9:05 AM')).toBeTruthy();
-    expect(screen.getByText('Oct 7, 2026, 9:06 PM')).toBeTruthy();
+    const held = await screen.findByText('Waiting for approval: Above the $500 auto-approve threshold.');
+    expect(colorOf(held)).toBe(status.warnText);
+    expect(screen.queryByText('Checked $730 against $500')).toBeNull();
+    expect(screen.queryByText('Invoice INV-7 received')).toBeNull();
+    expect(screen.getByText('Done · 9:05 AM')).toBeTruthy();
     expect(screen.queryByText('No steps reported yet.')).toBeNull();
   });
 
-  it('says No steps reported yet. while the run has reported none, then Working… — never the steps it has not reached (spec §3.E)', async () => {
+  it('draws every declared step from the start — the first Working…, the rest Waiting — never "No steps reported yet." (Build 21, spec A7)', async () => {
     routeRun(detail({ status: 'running', origin: 'trigger', endedAt: undefined }));
     setMockParams({ runId: 'run-1' });
     await renderWithProviders(<RunDetailScreen />, signedInSession);
-    expect(await screen.findByText('No steps reported yet.')).toBeTruthy();
-    expect(screen.getByText('Working…')).toBeTruthy();
-    expect(screen.queryByText('Invoice received')).toBeNull();
-    expect(screen.queryByText('Check the amount')).toBeNull();
+    expect(await screen.findByText('1 · Invoice received')).toBeTruthy();
+    expect(within(screen.getByTestId('run-step-step:receive')).getByText('Working…')).toBeTruthy();
+    expect(within(screen.getByTestId('run-step-step:validate')).getByText('2 · Check the amount')).toBeTruthy();
+    expect(within(screen.getByTestId('run-step-step:validate')).getByText('Waiting')).toBeTruthy();
+    expect(screen.queryByText('No steps reported yet.')).toBeNull();
   });
 });
 
@@ -315,6 +318,9 @@ describe("Approvals says each approval as the website's does: its status, its ex
     expect(pills).toHaveLength(3);
     // The website's info tone, which is the accent here, as a running run's pill is.
     expect(colorOf(pills[0]!)).toBe(nocturneDark.accentRamp[300]);
+
+    // The run it holds, by its full id beside its link (Build 21, spec A8; the owner's AM2).
+    expect(screen.getByTestId('approval-run-a2').props.children).toBe('Run run-of-a2');
 
     await fireEvent.press(screen.getByTestId('view-run-a2'));
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/(home)/run', params: { runId: 'run-of-a2' } });
