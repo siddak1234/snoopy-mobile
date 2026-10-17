@@ -41,16 +41,16 @@ async function openTheRun(view: Awaited<ReturnType<typeof launch>>) {
 }
 
 /**
- * The page of that run, `runId` and all: its request named in the title, its
- * summary under it. Read from the page, as a replace into the tabs gives the
+ * The page of that run, `runId` and all: the run by its full id in the title
+ * (Build 21, spec A8; ~~its request~~), its summary under it. Read from the page, as a replace into the tabs gives the
  * screen its params while the address keeps none.
  */
 function expectTheRun(view: Awaited<ReturnType<typeof launch>>) {
   expect(view.getSegments()).toEqual(['(tabs)', '(home)', 'run']);
-  expect(screen.getByText('Run req-0')).toBeTruthy();
+  expect(screen.getByText('Run run-0')).toBeTruthy();
   // The run's subheader: its flow (Gate 24 parity, G18; the version gone with the
   // Invoice Processing update, as on the website); how it ended on its own line (spec §3.E).
-  expect(within(screen.getByText('Run req-0').parent!).getByText('Invoice triage')).toBeTruthy();
+  expect(within(screen.getByText('Run run-0').parent!).getByText('Invoice triage')).toBeTruthy();
   expect(screen.getByTestId('run-result').props.children).toBe('Run #4821 · posted to QuickBooks');
 }
 

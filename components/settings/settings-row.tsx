@@ -33,6 +33,10 @@ export type SettingsRowSize = 'regular' | 'roomy';
  * logo carries the vendor's name (the Invoice Processing update, 2026-10-14),
  * with its clear space — 12 pt — to the lines under it.
  * The icon is 24, as every row's label is since then (`iconSize.row`).
+ *
+ * `glyph` is drawn in place of the icon, at the same 24: a sign-in provider's
+ * own mark on Account (Build 21, spec A5; the owner's build 20 item 8: "Rather
+ * than keys ok the left as icons i want the logos of the company's").
  */
 export function SettingsRow({
   icon: IconCmp,
@@ -46,6 +50,7 @@ export function SettingsRow({
   testID,
   size = 'regular',
   brand,
+  glyph,
 }: {
   icon: Icon;
   title: string;
@@ -59,8 +64,10 @@ export function SettingsRow({
   onPress?: () => void;
   testID?: string;
   size?: SettingsRowSize;
-  /** A vendor's logo, in place of the icon and the title (`components/vendor-logo.tsx`). */
+  /** A vendor's logo, in place of the icon and the title. */
   brand?: React.ReactNode;
+  /** A mark drawn in place of the icon, at its size. */
+  glyph?: React.ReactNode;
 }) {
   const { palette } = useTheme();
   const roomy = size === 'roomy';
@@ -69,7 +76,7 @@ export function SettingsRow({
   );
   const body = (
     <>
-      {brand ? null : <IconCmp size={iconSize.row} color={palette.accentRamp[300]} />}
+      {brand ? null : (glyph ?? <IconCmp size={iconSize.row} color={palette.accentRamp[300]} />)}
       <View style={styles.rowBody}>
         {brand ? (
           // The logo's clear space (Intuit: half its symbol's height; 12 here) to what is under it.

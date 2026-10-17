@@ -505,7 +505,7 @@ describe("SECURITY › the Face ID row's Try again (face-id-row.tsx; DESIGN-CONT
 
 /* ───────────────────────────── Connections (24.4.3) ───────────────────────────── */
 
-describe('Settings › Connections › the dialog\'s main button: Disconnect, and Connect with a key (connections-card.tsx; DESIGN-CONTRACT Mutations: "Disconnect: delete the stable connection ID", "API-key connection: generated credential fields → connection mutation with an idempotency key")', () => {
+describe('Settings › Connections › the row\'s button, then its dialog\'s: Disconnect, and Connect with a key (connections-card.tsx; Build 21, spec A4; DESIGN-CONTRACT Mutations: "Disconnect: delete the stable connection ID", "API-key connection: generated credential fields → connection mutation with an idempotency key")', () => {
   const GMAIL: ConnectionProvider = { providerId: 'gmail', displayName: 'Gmail', description: 'Send mail as you.', scopes: [], authType: 'oauth2', icon: 'envelope' };
   const TWILIO: ConnectionProvider = {
     providerId: 'twilio',
@@ -536,8 +536,9 @@ describe('Settings › Connections › the dialog\'s main button: Disconnect, an
       button: 'Disconnect',
       provider: GMAIL,
       connections: [CONNECTED_GMAIL],
-      // A held connection's actions, under its provider's name (Gate 24 parity: Reconnect beside them).
-      title: 'Gmail',
+      // Disconnect asks first, saying what it stops (spec A4).
+      dialogId: 'disconnect-dialog',
+      title: 'Disconnect Gmail?',
       fill: async (_dialog: ReturnType<typeof within>, _fake: ReturnType<typeof fakePlatform>) => undefined,
       route: 'DELETE /v1/workspaces/{workspaceId}/connections/{connectionId}' as const,
       answer: { connection: { ...CONNECTED_GMAIL, status: 'disconnected' } } satisfies Answer<'DELETE /v1/workspaces/{workspaceId}/connections/{connectionId}'>,
@@ -550,6 +551,7 @@ describe('Settings › Connections › the dialog\'s main button: Disconnect, an
       button: 'Verify and connect',
       provider: TWILIO,
       connections: [],
+      dialogId: 'connection-dialog',
       title: 'Connect Twilio',
       // Every field the provider declares, or nothing is sent and it says so.
       fill: async (dialog: ReturnType<typeof within>, fake: ReturnType<typeof fakePlatform>) => {
@@ -569,21 +571,21 @@ describe('Settings › Connections › the dialog\'s main button: Disconnect, an
     },
   ])(
     '$button sends its request for that connection, then closes the dialog and reads the connections again',
-    async ({ button, provider, connections, title, fill, route, answer, values, body, key }) => {
+    async ({ button, provider, connections, dialogId, title, fill, route, answer, values, body, key }) => {
       const fake = fakePlatform(platformOperation);
       fake.always('GET /v1/connections/providers', { providers: [provider] });
       fake.always(CONNECTIONS_READ, { connections });
       fake.always(route, answer);
       await renderWithProviders(<ConnectionsScreen />, sessionAs('owner'));
-      await fireEvent.press(await screen.findByTestId(`connection-row-${provider.providerId}`));
-      const dialog = within(await screen.findByTestId('connection-dialog'));
+      await fireEvent.press(await screen.findByTestId(`connection-action-${provider.providerId}`));
+      const dialog = within(await screen.findByTestId(dialogId));
       expect(dialog.getByText(title)).toBeTruthy();
       await fill(dialog, fake);
       const reads = fake.to(CONNECTIONS_READ).length;
 
       await fireEvent.press(dialog.getByText(button));
 
-      await waitFor(() => expect(screen.queryByTestId('connection-dialog')).toBeNull());
+      await waitFor(() => expect(screen.queryByTestId(dialogId)).toBeNull());
       await waitFor(() => expect(fake.to(CONNECTIONS_READ)).toHaveLength(reads + 1));
       expect(fake.to(route)).toHaveLength(1);
       expect(fake.to(route)[0]!.values).toEqual(values);

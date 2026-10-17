@@ -21,12 +21,13 @@ const { platformOperation } = jest.requireMock('@/lib/platform/client');
 const { connectOAuthProvider, disconnectConnection } = jest.requireMock('@/lib/platform/connections');
 
 /**
- * Settings › Connections, QuickBooks's row (spec §3.I, §4; Intuit's technical
- * requirements 1.1 and 1.3): its logo in place of the plug and its name; not
- * connected, Intuit's own Connect to QuickBooks button, which connects at once;
- * connected, "Disconnect from QuickBooks" where the button was, opening the
- * connection's actions, where Disconnect says the same words — and no text
- * "Connect" or "Reconnect" stands in for Intuit's button.
+ * Settings › Connections, QuickBooks's row — the one connection row since
+ * Build 21 (spec A4; the owner's build 20 items 6 and 7, and his ~04:15Z: "we
+ * will list on apples app store not intuits. so we do not need that"): its
+ * round symbol at 24 × 24, its name beside it, the account's email or its
+ * state under it, and our own Connect / Disconnect — ~~Intuit's Connect to
+ * QuickBooks button image, "Disconnect from QuickBooks" and the logo carrying
+ * its name~~.
  */
 
 const GMAIL = { providerId: 'gmail', displayName: 'Gmail', description: 'Send mail as you.', scopes: [], authType: 'oauth2', icon: 'envelope' };
@@ -34,7 +35,7 @@ const qbConnection = {
   id: 'c-qb',
   providerId: 'quickbooks',
   workspaceId: TEST_WORKSPACE,
-  externalAccount: { id: 'realm-1', displayName: 'Acme Books' },
+  externalAccount: { id: 'realm-1', displayName: 'books@example.com' },
   status: 'connected',
   requiredScopes: [],
   grantedScopes: [],
@@ -59,41 +60,36 @@ beforeEach(() => {
   resetSnapshot();
 });
 
-describe("QuickBooks's row in Settings › Connections (spec §3.I)", () => {
-  it("is the logo — no plug, no name beside it — with Intuit's Connect to QuickBooks button while not connected, and no text Connect", async () => {
+describe("QuickBooks's row in Settings › Connections (spec A4)", () => {
+  it('is the round symbol at 24 × 24 · QuickBooks Online · Not connected · our Connect — no description, no Intuit button', async () => {
     routeReads([]);
     await renderWithProviders(<ConnectionsScreen />, signedInSession);
-    const row = await screen.findByTestId('connection-row-quickbooks');
-    expect(within(row).getByTestId('connection-logo-quickbooks').props.accessibilityLabel).toBe('QuickBooks');
-    expect(within(row).queryByText('QuickBooks Online')).toBeNull();
-    expect(within(row).getByText('Records bills and receipts.')).toBeTruthy();
-    expect(within(row).getByLabelText('Connect to QuickBooks')).toBeTruthy();
-    expect(within(row).queryByText('Connect')).toBeNull();
-    expect(within(row).queryByText('Reconnect')).toBeNull();
-    // Another provider keeps its words.
-    expect(within(screen.getByTestId('connection-row-gmail')).getByText('Connect')).toBeTruthy();
-    expect(screen.queryByText('Only providers configured for this deployment are shown.')).toBeNull();
+    const row = within(await screen.findByTestId('connection-row-quickbooks'));
+    const mark = row.getByTestId('connection-mark-quickbooks');
+    expect(mark.props.accessibilityLabel).toBe('QuickBooks');
+    expect(StyleSheet.flatten(mark.props.style)).toEqual({ width: 24, height: 24 });
+    expect(row.getByText('QuickBooks Online')).toBeTruthy();
+    expect(row.getByText('Not connected')).toBeTruthy();
+    expect(within(screen.getByTestId('connection-action-quickbooks')).getByText('Connect')).toBeTruthy();
+    for (const gone of ['Records bills and receipts.', 'Connect to QuickBooks', 'Disconnect from QuickBooks']) {
+      expect([gone, screen.queryByText(gone), screen.queryByLabelText(gone)]).toEqual([gone, null, null]);
+    }
+    // Every provider the same row: Gmail's says the same things in the same places.
+    expect(within(screen.getByTestId('connection-action-gmail')).getByText('Connect')).toBeTruthy();
+    expect(screen.queryByText('CONNECTIONS')).toBeNull();
   });
 
-  it("keeps the logo's clear space — 12 pt, Intuit's half the symbol's height — to its description under it", async () => {
-    routeReads([]);
-    await renderWithProviders(<ConnectionsScreen />, signedInSession);
-    const row = await screen.findByTestId('connection-row-quickbooks');
-    const brand = within(row).getByTestId('brand-of-connection-row-quickbooks');
-    expect(within(brand).getByTestId('connection-logo-quickbooks')).toBeTruthy();
-    expect(StyleSheet.flatten(brand.props.style)).toMatchObject({ marginBottom: 12 });
-  });
-
-  it('the button connects at once — no dialog — says it completed, and the row reads it again as connected', async () => {
+  it('Connect connects at once — no dialog — says it completed, and the row reads it again: the email and Disconnect', async () => {
     routeReads([], [qbConnection]);
     connectOAuthProvider.mockResolvedValue({ status: 'connected', connection: qbConnection });
     await renderWithProviders(<ConnectionsScreen />, signedInSession);
-    await fireEvent.press(await screen.findByTestId('connect-brand-quickbooks'));
+    await fireEvent.press(await screen.findByTestId('connection-action-quickbooks'));
     await waitFor(() => expect(connectOAuthProvider).toHaveBeenCalledWith(TEST_WORKSPACE, QUICKBOOKS_PROVIDER));
     expect(screen.queryByTestId('connection-dialog')).toBeNull();
     expect(await screen.findByText('Connection completed successfully.')).toBeTruthy();
-    expect(await within(screen.getByTestId('connection-row-quickbooks')).findByText('Disconnect from QuickBooks')).toBeTruthy();
-    expect(within(screen.getByTestId('connection-row-quickbooks')).queryByLabelText('Connect to QuickBooks')).toBeNull();
+    const row = within(await screen.findByTestId('connection-row-quickbooks'));
+    expect(await row.findByText('books@example.com')).toBeTruthy();
+    expect(within(screen.getByTestId('connection-action-quickbooks')).getByText('Disconnect')).toBeTruthy();
   });
 
   it.each([
@@ -104,30 +100,31 @@ describe("QuickBooks's row in Settings › Connections (spec §3.I)", () => {
     routeReads([]);
     answer();
     await renderWithProviders(<ConnectionsScreen />, signedInSession);
-    await fireEvent.press(await screen.findByTestId('connect-brand-quickbooks'));
-    expect(await within(screen.getByTestId('connection-row-quickbooks')).findByText(words)).toBeTruthy();
+    await fireEvent.press(await screen.findByTestId('connection-action-quickbooks'));
+    expect(await screen.findByText(words)).toBeTruthy();
   });
 
-  it("connected: Disconnect from QuickBooks opens its actions — Disconnect in Intuit's words, no text Reconnect — and disconnects it", async () => {
+  it('connected: Disconnect asks first — "Disconnect QuickBooks Online?" and what it stops — then disconnects it', async () => {
     routeReads([qbConnection], []);
     disconnectConnection.mockResolvedValue({ connection: { ...qbConnection, status: 'disconnected' } });
     await renderWithProviders(<ConnectionsScreen />, signedInSession);
-    await fireEvent.press(await screen.findByTestId('disconnect-brand-quickbooks'));
-    const dialog = await screen.findByTestId('connection-dialog');
-    expect(within(dialog).queryByText('Reconnect')).toBeNull();
-    expect(within(dialog).getByText('Replace account')).toBeTruthy();
-    await fireEvent.press(within(dialog).getByText('Disconnect from QuickBooks'));
+    await fireEvent.press(await screen.findByTestId('connection-action-quickbooks'));
+    const dialog = within(await screen.findByTestId('disconnect-dialog'));
+    expect(dialog.getByText('Disconnect QuickBooks Online?')).toBeTruthy();
+    expect(dialog.getByText('1 live flow uses it. It stops until you connect it again.')).toBeTruthy();
+    expect(disconnectConnection).not.toHaveBeenCalled();
+    await fireEvent.press(dialog.getByText('Disconnect'));
     await waitFor(() => expect(disconnectConnection).toHaveBeenCalledWith(TEST_WORKSPACE, 'c-qb'));
-    expect(await within(screen.getByTestId('connection-row-quickbooks')).findByLabelText('Connect to QuickBooks')).toBeTruthy();
+    expect(await within(screen.getByTestId('connection-row-quickbooks')).findByText('Not connected')).toBeTruthy();
   });
 
-  it('a member sees the logo and its state, and no button or link', async () => {
-    routeReads([]);
+  it('a member sees the symbol, the name and its state, and no button', async () => {
+    routeReads([qbConnection]);
     await renderWithProviders(<ConnectionsScreen />, sessionAs('member'));
-    const row = await screen.findByTestId('connection-row-quickbooks');
-    expect(within(row).getByTestId('connection-logo-quickbooks')).toBeTruthy();
-    expect(within(row).queryByLabelText('Connect to QuickBooks')).toBeNull();
-    expect(within(row).queryByText('Disconnect from QuickBooks')).toBeNull();
-    expect(screen.getByText('Only an owner or admin of this workspace can connect or disconnect an account.')).toBeTruthy();
+    const row = within(await screen.findByTestId('connection-row-quickbooks'));
+    expect(row.getByTestId('connection-mark-quickbooks')).toBeTruthy();
+    expect(row.getByText('books@example.com')).toBeTruthy();
+    expect(screen.queryByTestId('connection-action-quickbooks')).toBeNull();
+    expect(screen.queryByText('Disconnect')).toBeNull();
   });
 });

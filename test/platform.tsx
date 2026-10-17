@@ -460,6 +460,62 @@ export function invoiceProcessingEntry(): CatalogEntry {
   };
 }
 
+/**
+ * Invoice Processing v3 as the spec draws it (Build 21, spec §3.1–§3.2, with
+ * the owner's AM3: no "Send results to" setting, so no Emailed group and no
+ * notify step): the vendor choice names QuickBooks and the Done step
+ * (`providers`, `group`, backend ADR-0040), the Approval limit the Checked
+ * step, four groups, and the 22 steps in their groups' order.
+ */
+export function invoiceProcessingV3Entry(): CatalogEntry {
+  const v2 = invoiceProcessingEntry();
+  const step = (id: string, kicker: CatalogEntry['pipeline'][number]['kicker'], group: string, title: string) => ({
+    id,
+    kicker,
+    group,
+    title,
+    description: title,
+  });
+  return {
+    ...v2,
+    version: 3,
+    setup: [
+      { section: 'connections', key: 'vendor', title: 'Vendor', description: 'Where the details go.', control: 'connection', defaultValue: 'none', required: false, providers: ['quickbooks'], group: 'done' },
+      { section: 'rules', key: 'holdAboveAmount', title: 'Approval limit', description: 'Amounts over this wait for approval.', control: 'money', defaultValue: 500, required: false, group: 'checked' },
+    ],
+    groups: [
+      { id: 'received', title: 'Received', description: 'Add a PDF or photo.' },
+      { id: 'read', title: 'Read', description: 'AI reads each bill or receipt.' },
+      { id: 'checked', title: 'Checked', description: 'Totals and duplicates are checked.' },
+      { id: 'done', title: 'Done', description: 'Saved, or recorded in QuickBooks.' },
+    ],
+    pipeline: [
+      step('receive', 'TRIGGER', 'received', 'Document received'),
+      step('extract', 'AI STEP', 'read', 'Documents read'),
+      step('check-documents', 'ACTION', 'read', 'Documents checked'),
+      step('verify-read', 'AI STEP', 'read', 'Read again'),
+      step('read-company', 'ACTION', 'checked', 'QuickBooks checked'),
+      step('read-preferences', 'ACTION', 'checked', 'QuickBooks settings read'),
+      step('find-accounts', 'ACTION', 'checked', 'Accounts read'),
+      step('find-vendors', 'ACTION', 'checked', 'Vendors looked up'),
+      step('find-names', 'ACTION', 'checked', 'Names checked'),
+      step('find-duplicates', 'ACTION', 'checked', 'Duplicates checked'),
+      step('find-related', 'ACTION', 'checked', 'Related records looked up'),
+      step('decide', 'ACTION', 'checked', 'Ready to record?'),
+      step('create-vendors', 'ACTION', 'done', 'Vendors added'),
+      step('create-records', 'ACTION', 'done', 'Recorded in QuickBooks'),
+      step('save-documents', 'ACTION', 'done', 'Details saved'),
+      step('ask-approval', 'ACTION', 'done', 'Needs your approval'),
+      step('confirm-company', 'ACTION', 'done', 'Company checked again'),
+      step('confirm-vendors', 'ACTION', 'done', 'Vendors checked again'),
+      step('create-approved-vendors', 'ACTION', 'done', 'Approved vendors added'),
+      step('confirm-no-duplicates', 'ACTION', 'done', 'Duplicates checked again'),
+      step('create-approved-records', 'ACTION', 'done', 'Approved documents recorded'),
+      step('save-approved', 'ACTION', 'done', 'Approved details saved'),
+    ],
+  };
+}
+
 type Billing = Answer<'GET /v1/workspaces/{workspaceId}/billing'>;
 
 /**

@@ -7,6 +7,14 @@ import type {
   ConnectionProvider,
 } from '@/lib/platform/catalog';
 import type { RunStatusCounts, RunSubscriptionCounts, Subscription } from '@/lib/platform/runs';
+import {
+  CONNECTION_ATTENTION,
+  CONNECTION_CONNECTED,
+  CONNECTION_NOT_CONNECTED,
+  CONNECT_LABEL,
+  DISCONNECT_LABEL,
+  RECONNECT_LABEL,
+} from '@/lib/content/screen-states';
 import { EMPTY, calendarDate, count } from './format';
 import { toPipelineSteps, type PipelineStep } from './pipeline';
 import { iconFor } from './icon-registry';
@@ -63,33 +71,65 @@ export type TemplateView = {
   available: boolean;
 };
 
-/** A Settings connection row, in the shape `settingsConnections` had. */
+/**
+ * A connection's state, as the one connection row says it (Build 21, spec A4):
+ * connected; needing attention — the platform asks for a new sign-in
+ * (`reauthorization-required`, backend §12.1 #175) or holds an `errorCode`; or
+ * not connected — no connection, one disconnected, or one still authorizing.
+ */
+export type ConnectionRowState = 'connected' | 'attention' | 'not-connected';
+
+export function connectionState(connection: Connection | undefined): ConnectionRowState {
+  if (!connection) return 'not-connected';
+  if (connection.status === 'reauthorization-required') return 'attention';
+  if (connection.status === 'connected') return connection.errorCode ? 'attention' : 'connected';
+  return 'not-connected';
+}
+
+/**
+ * Line 2 of the row (Build 21, spec A4; the owner's build 20 item 6: "Logo then
+ * to the right name then below the account email"): the account's email when
+ * the platform holds one — `externalAccount.displayName` carrying an `@` — else
+ * the state in a word; "Needs attention" in the warning colour.
+ */
+export function connectionLine(
+  connection: Connection | undefined,
+): { text: string; tone: 'muted' | 'warn' } {
+  const state = connectionState(connection);
+  const name = connection?.externalAccount.displayName ?? '';
+  if (state !== 'not-connected' && name.includes('@')) return { text: name, tone: 'muted' };
+  if (state === 'connected') return { text: CONNECTION_CONNECTED, tone: 'muted' };
+  if (state === 'attention') return { text: CONNECTION_ATTENTION, tone: 'warn' };
+  return { text: CONNECTION_NOT_CONNECTED, tone: 'muted' };
+}
+
+/** The row's one button, for an owner or admin: Connect, Reconnect, or Disconnect (spec A4). */
+export function connectionAction(state: ConnectionRowState): 'Connect' | 'Reconnect' | 'Disconnect' {
+  if (state === 'connected') return DISCONNECT_LABEL;
+  if (state === 'attention') return RECONNECT_LABEL;
+  return CONNECT_LABEL;
+}
+
+/** One connection row (Build 21, spec A4): a provider, annotated with the workspace's connection to it. */
 export type ConnectionView = {
   provider: ConnectionProvider;
   providerId: string;
   connectionId?: string;
   authType: ConnectionProvider['authType'];
   credentialFields: NonNullable<ConnectionProvider['credentialFields']>;
-  icon: Icon;
+  /** The provider's icon name: its own mark, or the icon set's. */
+  iconName: string;
   name: string;
-  sub: string;
+  state: ConnectionRowState;
+  /** Line 2: the account's email, else the state in a word. */
+  line: string;
+  lineTone: 'muted' | 'warn';
+  /** The live flows that use it (`usedByCount`): what Disconnect stops. */
+  liveFlows: number;
+  /** Whether the workspace holds a connection Reconnect renews: connected, or needing attention. */
   connected: boolean;
-  /** The account the connection acts as — what Replace names (BUILD-PLAN 24.4.3). */
-  accountName?: string;
-  /**
-   * Whether its account can be replaced through consent: an OAuth connection
-   * that is not disconnected. A pasted key is replaced by pasting another.
-   * Ported from the website's `ConnectionsPanel` rule.
-   */
-  replaceable: boolean;
-  /**
-   * A connection the workspace holds that Reconnect renews or repairs:
-   * connected, or needing reauthorization (backend §12.1 #175) — the website's
-   * `reconnectableProviderIds`, where its button reads "Reconnect".
-   */
-  reconnectable: boolean;
-  /** It has an `errorCode`: the website says it needs attention before it can be used. */
-  attention: boolean;
+  /** Whether that connection is active now (`connected`), so a Reconnect that does not complete leaves it working. */
+  active: boolean;
 };
 
 /**
@@ -208,54 +248,42 @@ export function toCategories(response: CatalogResponse): string[] {
 }
 
 /**
- * Settings' CONNECTIONS card: every provider, annotated with its connection.
+ * Every provider, annotated with the workspace's connection to it — Settings ›
+ * Connections and a flow page's CONNECTIONS (Build 21, spec A4).
  *
  * Driven by the provider list rather than the connection list, because the
- * connections read omits a provider with no connection — and the design draws
- * exactly that row ("Slack · Not connected"). `usedByCount` is the one field no
- * single service can answer, and it is precisely the design's "used by 2
- * solutions", so the sub-line needs no invention.
+ * connections read omits a provider with no connection — and that row ("Not
+ * connected") is drawn too. ~~What connecting it lets flows do and "used by 2
+ * live flows"~~ are no longer drawn (the owner's build 20 item 9: "It should be
+ * short not an essay"); the count is kept, for Disconnect's question.
  */
 export function toConnectionRows(
-  providers: ConnectionProvider[],
-  connections: Connection[],
+  providers: readonly ConnectionProvider[],
+  connections: readonly Connection[],
 ): ConnectionView[] {
   const byProvider = new Map(connections.map((c) => [c.providerId, c]));
-
-  return providers.map((provider) => {
-    const connection = byProvider.get(provider.providerId);
-    return {
-      provider,
-      providerId: provider.providerId,
-      ...(connection ? { connectionId: connection.id } : {}),
-      authType: provider.authType,
-      credentialFields: provider.credentialFields ?? [],
-      icon: iconFor(provider.icon),
-      name: provider.displayName,
-      sub: connectionSubtitle(connection),
-      connected: connection?.status === 'connected',
-      ...(connection ? { accountName: connection.externalAccount.displayName } : {}),
-      replaceable: Boolean(
-        connection && connection.status !== 'disconnected' && provider.authType === 'oauth2',
-      ),
-      reconnectable: connection?.status === 'connected' || connection?.status === 'reauthorization-required',
-      attention: Boolean(connection?.errorCode),
-    };
-  });
+  return providers.map((provider) => toConnectionRow(provider, byProvider.get(provider.providerId)));
 }
 
-/**
- * `alex@acme.co · Connected · used by 2 live flows`, `alex@acme.co ·
- * Reauthorization required`, `Not connected`: the account it acts as, as the
- * website names each connection, and "live" because `usedByCount` counts only
- * live flows — a draft is being set up, not running.
- */
-function connectionSubtitle(connection: Connection | undefined): string {
-  if (!connection) return 'Not connected';
-  const state = `${connection.externalAccount.displayName} · ${statusLabel(connection.status)}`;
-  const used = connection.usedByCount;
-  if (typeof used !== 'number' || used < 1) return state;
-  return `${state} · used by ${used} live ${used === 1 ? 'flow' : 'flows'}`;
+/** One provider's row, with the connection the workspace holds to it, or none. */
+export function toConnectionRow(provider: ConnectionProvider, connection: Connection | undefined): ConnectionView {
+  const state = connectionState(connection);
+  const line = connectionLine(connection);
+  return {
+    provider,
+    providerId: provider.providerId,
+    ...(connection ? { connectionId: connection.id } : {}),
+    authType: provider.authType,
+    credentialFields: provider.credentialFields ?? [],
+    iconName: provider.icon,
+    name: provider.displayName,
+    state,
+    line: line.text,
+    lineTone: line.tone,
+    liveFlows: typeof connection?.usedByCount === 'number' ? connection.usedByCount : 0,
+    connected: state !== 'not-connected',
+    active: connection?.status === 'connected',
+  };
 }
 
 /** A Home stat tile, in the shape `homeStats` had. */

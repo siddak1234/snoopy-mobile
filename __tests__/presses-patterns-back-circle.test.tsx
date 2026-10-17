@@ -123,10 +123,26 @@ const PAGES: {
     page: 'Connect vendor',
     site: 'app/(tabs)/flows/vendor.tsx',
     Screen: ConnectVendorScreen,
-    params: { template: 'invoice-processing' },
+    // An added flow's step vendor (Build 21, A2): `flow` and `field`.
+    params: { flow: 'ip-1', field: 'vendor' },
     routes: [
       [/\/automations$/u, { automations: [invoiceProcessingEntry()], categories: ['All', 'Accounting'] }],
       [/\/connections\/providers$/u, providersWithQuickBooks()],
+      [
+        /\/subscriptions$/u,
+        {
+          subscriptions: [
+            {
+              ...planSubscriptionsPayload().subscriptions[0]!,
+              id: 'ip-1',
+              templateId: 'invoice-processing',
+              templateVersion: 2,
+              config: { vendor: 'none' },
+              setup: invoiceProcessingEntry().setup,
+            },
+          ],
+        },
+      ],
     ],
     loaded: () => screen.findByText('For Invoice Processing'),
   },

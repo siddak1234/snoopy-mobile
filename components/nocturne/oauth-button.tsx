@@ -8,11 +8,20 @@ import { useTheme } from '@/hooks/use-theme';
 
 export type OAuthProvider = 'apple' | 'google' | 'microsoft';
 
-/** Brand glyphs exactly as inlined in the design (fill: currentColor). */
-function ProviderGlyph({ provider, color }: { provider: OAuthProvider; color: string }) {
+/**
+ * Brand glyphs exactly as inlined in the design (fill: currentColor). Exported
+ * since Build 21 (spec A4, A5; the owner's build 20 items 7 and 8: "Google
+ * should also have its logo on the left", "Rather than keys … i want the logos
+ * of the company's") for the connection row and Account's sign-in rows, which
+ * draw them at the row's 24 (`size`). Without `size` each is drawn as the
+ * design drew it in this button — 17, 17 and 16 — so the button and its
+ * snapshots do not move.
+ */
+export function ProviderGlyph({ provider, color, size }: { provider: OAuthProvider; color: string; size?: number }) {
   if (provider === 'apple') {
+    const side = size ?? 17;
     return (
-      <Svg width={17} height={17} viewBox="0 0 384 512" style={{ marginTop: -2 }}>
+      <Svg width={side} height={side} viewBox="0 0 384 512" style={{ marginTop: size === undefined ? -2 : 0 }}>
         <Path
           fill={color}
           d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.7-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"
@@ -21,8 +30,9 @@ function ProviderGlyph({ provider, color }: { provider: OAuthProvider; color: st
     );
   }
   if (provider === 'google') {
+    const side = size ?? 17;
     return (
-      <Svg width={17} height={17} viewBox="0 0 24 24">
+      <Svg width={side} height={side} viewBox="0 0 24 24">
         <Path
           fill={color}
           d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27 3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10 5.35 0 9.25-3.67 9.25-9.09 0-1.15-.15-1.81-.15-1.81z"
@@ -30,8 +40,9 @@ function ProviderGlyph({ provider, color }: { provider: OAuthProvider; color: st
       </Svg>
     );
   }
+  const side = size ?? 16;
   return (
-    <Svg width={16} height={16} viewBox="0 0 21 21">
+    <Svg width={side} height={side} viewBox="0 0 21 21">
       <Rect x={0} y={0} width={10} height={10} fill={color} />
       <Rect x={11} y={0} width={10} height={10} fill={color} />
       <Rect x={0} y={11} width={10} height={10} fill={color} />

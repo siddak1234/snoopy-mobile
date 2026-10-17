@@ -2,7 +2,6 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-
 import React from 'react';
 
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
-import ConnectVendorScreen from '@/app/(tabs)/flows/vendor';
 import SettingsScreen from '@/app/(tabs)/settings';
 import AccountScreen from '@/app/(tabs)/settings/account';
 import ConnectionsScreen from '@/app/(tabs)/settings/connections';
@@ -14,8 +13,6 @@ import { PlatformError } from '@/lib/platform/problem';
 import {
   TEST_WORKSPACE,
   flowCatalogPayload,
-  invoiceProcessingEntry,
-  providersWithQuickBooks,
   routePlatform,
   signedInSession,
   subscriptionsPayload,
@@ -181,6 +178,19 @@ async function flow() {
 const GMAIL = {
   providers: [{ providerId: 'gmail', displayName: 'Gmail', description: 'Send mail as you.', scopes: [], authType: 'oauth2', icon: 'envelope' }],
 };
+const TWILIO = {
+  providers: [
+    {
+      providerId: 'twilio',
+      displayName: 'Twilio',
+      description: 'Send texts as you.',
+      scopes: [],
+      authType: 'api-key',
+      icon: 'chat',
+      credentialFields: [{ name: 'authToken', label: 'Auth token', secret: true, help: 'In the Twilio console' }],
+    },
+  ],
+};
 const GMAIL_CONNECTED = {
   connections: [
     {
@@ -226,39 +236,6 @@ type DialogCase = {
 };
 
 const CASES: DialogCase[] = [
-  {
-    // The flow's vendor page (the Invoice Processing update, spec §3.C): Disconnect, confirmed first.
-    name: 'Connect vendor › Disconnect from QuickBooks?: Cancel',
-    site: 'app/(tabs)/flows/vendor.tsx',
-    open: async () => {
-      route(
-        [/\/automations$/u, { automations: [invoiceProcessingEntry()], categories: ['All', 'Accounting'] }],
-        [/\/connections\/providers$/u, providersWithQuickBooks()],
-        [
-          /\/workspaces\/[^/]+\/connections$/u,
-          {
-            connections: [
-              {
-                id: 'c-qb',
-                providerId: 'quickbooks',
-                workspaceId: TEST_WORKSPACE,
-                externalAccount: { id: 'realm-1', displayName: 'Acme Books' },
-                status: 'connected',
-                requiredScopes: [],
-                grantedScopes: [],
-                usedByCount: 0,
-              },
-            ],
-          },
-        ],
-      );
-      setMockParams({ template: 'invoice-processing' });
-      await renderWithProviders(<ConnectVendorScreen />, signedInSession);
-      await pressId('vendor-disconnect-quickbooks');
-    },
-    dialog: 'vendor-disconnect-dialog',
-    close: 'Cancel',
-  },
   {
     name: 'Account › Unlink Apple?: Cancel',
     site: 'app/(tabs)/settings/account.tsx:176',
@@ -403,16 +380,6 @@ const CASES: DialogCase[] = [
     close: 'Cancel',
   },
   {
-    name: 'Flow › Set up: Cancel',
-    site: 'components/automations/automation-actions.tsx:177',
-    open: async () => {
-      await flow();
-      await pressId('manage-setup');
-    },
-    dialog: 'setup-dialog',
-    close: 'Cancel',
-  },
-  {
     name: 'Flow › Webhook address: Close',
     site: 'components/automations/automation-actions.tsx:189',
     open: async () => {
@@ -445,27 +412,28 @@ const CASES: DialogCase[] = [
     close: 'Cancel',
   },
   {
-    name: 'Connections › Connect HubSpot: Cancel',
-    site: 'components/settings/connections-card.tsx:228',
+    // A pasted key's provider: its row's Connect opens the key form (spec A4).
+    name: 'Connections › Connect Twilio: Cancel',
+    site: 'components/settings/connections-card.tsx',
     open: async () => {
-      route();
+      route([/^\/v1\/connections\/providers$/u, TWILIO], [/\/connections$/u, { connections: [] }]);
       await renderWithProviders(<ConnectionsScreen />, signedInSession);
-      await press('HubSpot');
+      await pressId('connection-action-twilio');
     },
     dialog: 'connection-dialog',
     close: 'Cancel',
   },
   {
-    name: 'Connections › Replace alex@acme.co?: Cancel',
-    site: 'components/settings/connections-card.tsx:223',
+    // Disconnect asks first, saying what it stops (spec A4).
+    name: 'Connections › Disconnect Gmail?: Cancel',
+    site: 'components/settings/connections-card.tsx',
     open: async () => {
       route([/^\/v1\/connections\/providers$/u, GMAIL], [/\/connections$/u, GMAIL_CONNECTED]);
       await renderWithProviders(<ConnectionsScreen />, signedInSession);
-      await press('Gmail');
-      await pressIn('connection-dialog', 'Replace account');
-      await screen.findByText('Replace alex@acme.co?');
+      await pressId('connection-action-gmail');
+      await screen.findByText('Disconnect Gmail?');
     },
-    dialog: 'replace-account-dialog',
+    dialog: 'disconnect-dialog',
     close: 'Cancel',
   },
   {

@@ -5,6 +5,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react-nativ
 import ConnectionsScreen from '@/app/(tabs)/settings/connections';
 import type { Connection, ConnectionProvider } from '@/lib/platform/connections';
 import { PlatformError } from '@/lib/platform/problem';
+import { resetSnapshot } from '@/lib/platform/snapshot';
 import { TEST_WORKSPACE, sessionAs } from '@/test/platform';
 import { renderWithProviders } from '@/test/render';
 
@@ -23,7 +24,9 @@ const { connectOAuthProvider, connectProviderWithKey, disconnectConnection } = j
 /**
  * Gate 24's parity line for Settings › Connections — G12 to G16 of its audit:
  * the website's Connections page (`snoopy` `app/account/connections`), its two
- * lists in the app's one, each row and each answer in its words. The
+ * lists in the app's one, each answer in its words — each row, since Build 21,
+ * the one connection row (spec A4; the owner's build 20 items 6, 7 and 9): its
+ * mark, its name, the account's email or its state, and one button. The
  * operations themselves are mocked here; what they send is held in
  * `platform-mutations` and `presses-settings`.
  */
@@ -52,6 +55,8 @@ const CONNECTED_GMAIL: Connection = {
   usedByCount: 2,
 };
 const BROKEN_GMAIL: Connection = { ...CONNECTED_GMAIL, status: 'reauthorization-required', errorCode: 'refresh_failed', usedByCount: 0 };
+/** Still connected, but holding an error the platform found: it needs attention, and stays active meanwhile. */
+const FLAGGED_GMAIL: Connection = { ...CONNECTED_GMAIL, errorCode: 'scope_missing' };
 const CONNECTED_TWILIO: Connection = {
   ...CONNECTED_GMAIL,
   id: 'c2',
@@ -78,6 +83,11 @@ async function pressInDialog(label: string) {
   await fireEvent.press(buttons[buttons.length - 1]!);
 }
 
+/** A row's one button (Build 21, spec A4): Connect, Reconnect or Disconnect. */
+async function pressRow(providerId: string) {
+  await fireEvent.press(await screen.findByTestId(`connection-action-${providerId}`));
+}
+
 beforeEach(() => {
   platformOperation.mockReset();
   connectOAuthProvider.mockReset();
@@ -87,35 +97,47 @@ beforeEach(() => {
   newIdempotencyKey.mockImplementation((prefix: string) => `${prefix}-${++n}`);
 });
 
-describe('G12 — a row says the account, its state, the live flows that use it, and when it needs attention', () => {
-  it('names the account the connection acts as, and says its flows are live ones', async () => {
+describe('G12 — a row says the account, else its state; one that needs attention says so (spec A4)', () => {
+  it('names the account the connection acts as by its email — no state words, no "used by" line — and an unconnected one "Not connected"', async () => {
     route([[CONNECTED_GMAIL]]);
     await renderWithProviders(<ConnectionsScreen />, sessionAs('owner'));
-    expect(await screen.findByText('alex@acme.co · Connected · used by 2 live flows')).toBeTruthy();
+    const gmail = within(await screen.findByTestId('connection-row-gmail'));
+    expect(gmail.getByText('alex@acme.co')).toBeTruthy();
+    expect(screen.queryByText(/used by/u)).toBeNull();
+    expect(screen.queryByText(/ · Connected/u)).toBeNull();
     expect(within(screen.getByTestId('connection-row-twilio')).getByText('Not connected')).toBeTruthy();
   });
 
-  it('a connection with an error code needs attention before it can be used, in the website’s words; one without says nothing of it', async () => {
-    route([[BROKEN_GMAIL, CONNECTED_TWILIO]]);
+  it('a connection that needs attention offers Reconnect; with no email to name it says "Needs attention" in the warning colour; a healthy one with no email says "Connected"', async () => {
+    route([[BROKEN_GMAIL, { ...CONNECTED_TWILIO, errorCode: 'expired' }]]);
+    const { nocturneDark, status } = jest.requireActual('@/constants/theme');
+    const view = await renderWithProviders(<ConnectionsScreen />, sessionAs('owner'));
+    await screen.findByTestId('connection-row-gmail');
+    expect(within(screen.getByTestId('connection-action-gmail')).getByText('Reconnect')).toBeTruthy();
+    const attention = within(screen.getByTestId('connection-row-twilio')).getByText('Needs attention');
+    expect(StyleSheet.flatten(attention.props.style).color).toBe(status.warnText);
+    expect(within(screen.getByTestId('connection-action-twilio')).getByText('Reconnect')).toBeTruthy();
+    await view.unmount();
+    resetSnapshot();
+
+    route([[CONNECTED_TWILIO]]);
     await renderWithProviders(<ConnectionsScreen />, sessionAs('owner'));
-    const broken = within(await screen.findByTestId('connection-row-gmail'));
-    expect(broken.getByText('alex@acme.co · Reauthorization required')).toBeTruthy();
-    expect(broken.getByText('This connection needs attention before it can be used.')).toBeTruthy();
-    const fine = within(screen.getByTestId('connection-row-twilio'));
-    expect(fine.getByText('AC123 · Connected · used by 1 live flow')).toBeTruthy();
-    expect(fine.queryByText('This connection needs attention before it can be used.')).toBeNull();
+    const fine = within(await screen.findByTestId('connection-row-twilio'));
+    expect(StyleSheet.flatten(fine.getByText('Connected').props.style).color).toBe(nocturneDark.neutral[400]);
+    expect(within(screen.getByTestId('connection-action-twilio')).getByText('Disconnect')).toBeTruthy();
   });
 });
 
-describe('G13 — every provider says what it is for, to everyone (the configured-providers line gone, spec §3.I)', () => {
+describe('G13 — no description under any row (the owner\'s build 20 item 9: "It should be short not an essay"), and a member is told who changes them', () => {
   it.each([
     { role: 'owner' as const, who: 'an owner' },
     { role: 'member' as const, who: 'a member' },
-  ])('to $who: a connected provider’s description and an unconnected one’s, and no configured-providers line', async ({ role }) => {
+  ])('to $who: no provider\'s description, no configured-providers line', async ({ role }) => {
     route([[CONNECTED_GMAIL]]);
     await renderWithProviders(<ConnectionsScreen />, sessionAs(role));
-    expect(within(await screen.findByTestId('connection-row-gmail')).getByText('Send mail as you.')).toBeTruthy();
-    expect(within(screen.getByTestId('connection-row-twilio')).getByText('Send texts as you.')).toBeTruthy();
+    await screen.findByTestId('connection-row-gmail');
+    expect(screen.queryByText('Send mail as you.')).toBeNull();
+    expect(screen.queryByText('Send texts as you.')).toBeNull();
     expect(screen.queryByText('Only providers configured for this deployment are shown.')).toBeNull();
     expect(screen.queryByText('Only an owner or admin of this workspace can connect or disconnect an account.') !== null).toBe(
       role === 'member',
@@ -123,109 +145,84 @@ describe('G13 — every provider says what it is for, to everyone (the configure
   });
 });
 
-describe('G14 — Connect, or Reconnect: a held connection is reconnected, and a reused answer is said', () => {
-  it('a connected OAuth provider offers Reconnect beside Replace account and Disconnect, under its name, and Reconnect asks the provider again for the same account', async () => {
-    const { connectionReads } = route([[CONNECTED_GMAIL]]);
+describe('G14 — Connect, or Reconnect: a connection that needs attention is reconnected, and a reused answer is said', () => {
+  it('Reconnect asks the provider again for the same account — no dialog — and says it completed', async () => {
+    const { connectionReads } = route([[BROKEN_GMAIL]]);
     connectOAuthProvider.mockResolvedValue({ status: 'connected', connection: CONNECTED_GMAIL });
     await renderWithProviders(<ConnectionsScreen />, sessionAs('owner'));
-    await fireEvent.press(await screen.findByTestId('connection-row-gmail'));
-    const dialog = within(await screen.findByTestId('connection-dialog'));
-    expect(dialog.getByText('Gmail')).toBeTruthy();
-    expect(dialog.getByText('alex@acme.co · Connected · used by 2 live flows')).toBeTruthy();
-    expect(dialog.getByText('Replace account')).toBeTruthy();
-    expect(dialog.getByText('Disconnect')).toBeTruthy();
-    expect(StyleSheet.flatten(screen.getByTestId('connection-dialog-actions').props.style).flexDirection).toBe('column');
+    await screen.findByTestId('connection-row-gmail');
     const before = connectionReads();
 
-    await pressInDialog('Reconnect');
+    await pressRow('gmail');
 
     await waitFor(() => expect(connectOAuthProvider).toHaveBeenCalledTimes(1));
     // Reconnect keeps the account: no connection named for replacement.
     expect(connectOAuthProvider.mock.calls[0]).toEqual([TEST_WORKSPACE, GMAIL]);
-    await waitFor(() => expect(screen.queryByTestId('connection-dialog')).toBeNull());
+    expect(screen.queryByTestId('connection-dialog')).toBeNull();
     await waitFor(() => expect(connectionReads()).toBe(before + 1));
     expect(await screen.findByText('Connection completed successfully.')).toBeTruthy();
     expect(disconnectConnection).not.toHaveBeenCalled();
   });
 
   it.each([
-    { press: 'Reconnect', held: [CONNECTED_GMAIL] },
+    { press: 'Reconnect', held: [BROKEN_GMAIL] },
     { press: 'Connect', held: [] as Connection[] },
   ])('$press answered reused says the account is already connected with everything it needs — nothing asked, the rows read again', async ({ press, held }) => {
     const { connectionReads } = route([held]);
     connectOAuthProvider.mockResolvedValue({ status: 'connected', connection: CONNECTED_GMAIL, reused: true });
     await renderWithProviders(<ConnectionsScreen />, sessionAs('admin'));
-    await fireEvent.press(await screen.findByTestId('connection-row-gmail'));
+    expect(within(await screen.findByTestId('connection-action-gmail')).getByText(press)).toBeTruthy();
     const before = connectionReads();
 
-    await pressInDialog(press);
+    await pressRow('gmail');
 
     expect(
       await screen.findByText('Gmail is already connected as alex@acme.co, with everything it needs — there is nothing to authorize.'),
     ).toBeTruthy();
-    expect(screen.queryByTestId('connection-dialog')).toBeNull();
     expect(screen.queryByText('Connection completed successfully.')).toBeNull();
     await waitFor(() => expect(connectionReads()).toBe(before + 1));
   });
 
-  it('the notice goes when the next row is opened', async () => {
-    route([[CONNECTED_GMAIL]]);
+  it('the notice goes when the next button is pressed', async () => {
+    route([[BROKEN_GMAIL]]);
     connectOAuthProvider.mockResolvedValue({ status: 'connected', connection: CONNECTED_GMAIL, reused: true });
     await renderWithProviders(<ConnectionsScreen />, sessionAs('owner'));
-    await fireEvent.press(await screen.findByTestId('connection-row-gmail'));
-    await pressInDialog('Reconnect');
+    await pressRow('gmail');
     expect(await screen.findByTestId('connections-notice')).toBeTruthy();
-    await fireEvent.press(await screen.findByTestId('connection-row-twilio'));
+    await pressRow('twilio');
     expect(screen.queryByTestId('connections-notice')).toBeNull();
   });
 
-  it('a connection that needs reauthorization says Reconnect on its row, and its dialog offers Reconnect and Disconnect — which disconnects it', async () => {
-    const { connectionReads } = route([[BROKEN_GMAIL]]);
-    disconnectConnection.mockResolvedValue({ connection: { ...BROKEN_GMAIL, status: 'disconnected' } });
+  it('Disconnect asks first, then disconnects it and reads the rows again', async () => {
+    const { connectionReads } = route([[CONNECTED_GMAIL]]);
+    disconnectConnection.mockResolvedValue({ connection: { ...CONNECTED_GMAIL, status: 'disconnected' } });
     await renderWithProviders(<ConnectionsScreen />, sessionAs('owner'));
-    const row = within(await screen.findByTestId('connection-row-gmail'));
-    expect(row.getByText('Reconnect')).toBeTruthy();
-    expect(row.queryByText('Connect')).toBeNull();
-    await fireEvent.press(screen.getByTestId('connection-row-gmail'));
-    const dialog = within(await screen.findByTestId('connection-dialog'));
-    expect(dialog.getByText('Gmail')).toBeTruthy();
-    expect(dialog.getByText('Reconnect')).toBeTruthy();
+    await pressRow('gmail');
+    const dialog = within(await screen.findByTestId('disconnect-dialog'));
+    expect(dialog.getByText('2 live flows use it. They stop until you connect it again.')).toBeTruthy();
     const before = connectionReads();
-
-    await pressInDialog('Disconnect');
-
+    await fireEvent.press(dialog.getByText('Disconnect'));
     await waitFor(() => expect(disconnectConnection).toHaveBeenCalledWith(TEST_WORKSPACE, 'c1'));
-    await waitFor(() => expect(screen.queryByTestId('connection-dialog')).toBeNull());
+    await waitFor(() => expect(screen.queryByTestId('disconnect-dialog')).toBeNull());
     await waitFor(() => expect(connectionReads()).toBe(before + 1));
     expect(connectOAuthProvider).not.toHaveBeenCalled();
   });
 
-  it('a connection still authorizing is not one to reconnect: Connect, with Replace account beside it as before', async () => {
+  it('a connection still authorizing is not one to reconnect: Connect', async () => {
     route([[{ ...CONNECTED_GMAIL, status: 'authorizing' }]]);
     await renderWithProviders(<ConnectionsScreen />, sessionAs('owner'));
-    expect(within(await screen.findByTestId('connection-row-gmail')).getByText('Connect')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('connection-row-gmail'));
-    const dialog = within(await screen.findByTestId('connection-dialog'));
-    expect(dialog.getByText('Connect Gmail')).toBeTruthy();
-    expect(dialog.getByText('Replace account')).toBeTruthy();
-    expect(dialog.queryByText('Reconnect')).toBeNull();
-    expect(dialog.queryByText('Disconnect')).toBeNull();
-    expect(StyleSheet.flatten(screen.getByTestId('connection-dialog-actions').props.style).flexDirection).toBe('column');
+    expect(within(await screen.findByTestId('connection-action-gmail')).getByText('Connect')).toBeTruthy();
+    expect(within(screen.getByTestId('connection-row-gmail')).getByText('Not connected')).toBeTruthy();
   });
 
-  it('a key provider’s Reconnect asks for its key again in the same dialog — no Replace account — and sends it keyed', async () => {
-    const { connectionReads } = route([[CONNECTED_TWILIO]]);
+  it('a key provider\'s Reconnect asks for its key again — no Replace account — and sends it keyed', async () => {
+    const { connectionReads } = route([[{ ...CONNECTED_TWILIO, status: 'reauthorization-required' }]]);
     connectProviderWithKey.mockResolvedValue({ connection: CONNECTED_TWILIO });
     await renderWithProviders(<ConnectionsScreen />, sessionAs('owner'));
-    await fireEvent.press(await screen.findByTestId('connection-row-twilio'));
-    const actions = within(await screen.findByTestId('connection-dialog'));
-    expect(actions.getByText('Twilio')).toBeTruthy();
-    expect(actions.queryByText('Replace account')).toBeNull();
-
-    await pressInDialog('Reconnect');
-
+    await pressRow('twilio');
     const form = within(await screen.findByTestId('connection-dialog'));
     expect(form.getByText('Connect Twilio')).toBeTruthy();
+    expect(form.queryByText('Replace account')).toBeNull();
     expect(form.queryByText('Disconnect')).toBeNull();
     await fireEvent.changeText(form.getByPlaceholderText('Starts with AC'), 'AC999');
     await fireEvent.changeText(form.getByPlaceholderText('In the Twilio console'), 'new-token');
@@ -250,7 +247,7 @@ describe('G14 — Connect, or Reconnect: a held connection is reconnected, and a
 describe('G15 — a pasted key answered 409 may still be verifying', () => {
   async function submitTwilio() {
     await renderWithProviders(<ConnectionsScreen />, sessionAs('owner'));
-    await fireEvent.press(await screen.findByTestId('connection-row-twilio'));
+    await pressRow('twilio');
     const form = within(await screen.findByTestId('connection-dialog'));
     expect(form.getByText('Verify and connect')).toBeTruthy();
     await fireEvent.changeText(form.getByPlaceholderText('Starts with AC'), 'AC123');
@@ -299,7 +296,7 @@ describe('G15 — a pasted key answered 409 may still be verifying', () => {
     await waitFor(() => expect(screen.queryByTestId('connection-dialog')).toBeNull());
     await waitFor(() => expect(connectionReads()).toBe(before + 1));
     // The first request did finish: the row says so now.
-    expect(await screen.findByText('AC123 · Connected · used by 1 live flow')).toBeTruthy();
+    expect(await within(screen.getByTestId('connection-row-twilio')).findByText('Connected')).toBeTruthy();
     expect(connectProviderWithKey).toHaveBeenCalledTimes(1);
   });
 
@@ -316,73 +313,37 @@ describe('G15 — a pasted key answered 409 may still be verifying', () => {
 });
 
 describe('G16 — what a connect came back with is said, as the website’s page says it', () => {
-  it('a Connect that completes says so above the rows', async () => {
+  it('a Connect that completes says so above the rows, and the row names the account', async () => {
     route([[], [CONNECTED_GMAIL]]);
     connectOAuthProvider.mockResolvedValue({ status: 'connected', connection: CONNECTED_GMAIL });
     await renderWithProviders(<ConnectionsScreen />, sessionAs('owner'));
-    await fireEvent.press(await screen.findByTestId('connection-row-gmail'));
-    expect(within(await screen.findByTestId('connection-dialog')).getByText('Connect Gmail')).toBeTruthy();
-    await pressInDialog('Connect');
+    await pressRow('gmail');
     expect(await screen.findByText('Connection completed successfully.')).toBeTruthy();
-    expect(await screen.findByText('alex@acme.co · Connected · used by 2 live flows')).toBeTruthy();
-  });
-
-  it('a Replace that completes says so too', async () => {
-    route([[CONNECTED_GMAIL]]);
-    connectOAuthProvider.mockResolvedValue({ status: 'connected', connection: { ...CONNECTED_GMAIL, externalAccount: { id: 'a2', displayName: 'sam@acme.co' } } });
-    await renderWithProviders(<ConnectionsScreen />, sessionAs('owner'));
-    await fireEvent.press(await screen.findByTestId('connection-row-gmail'));
-    await pressInDialog('Replace account');
-    const confirm = within(await screen.findByTestId('replace-account-dialog'));
-    const buttons = confirm.getAllByText('Replace account');
-    await fireEvent.press(buttons[buttons.length - 1]!);
-    expect(await screen.findByText('Connection completed successfully.')).toBeTruthy();
-    expect(connectOAuthProvider.mock.calls[0][2]).toEqual({ replaceConnectionId: 'c1' });
+    expect(await within(screen.getByTestId('connection-row-gmail')).findByText('alex@acme.co')).toBeTruthy();
   });
 
   it.each([
-    {
-      name: 'Connect, with nothing connected',
-      held: [] as Connection[],
-      open: async () => pressInDialog('Connect'),
-      words: 'The connection could not be completed. Try again or contact an owner.',
-      dialog: 'connection-dialog',
-    },
-    {
-      name: 'Reconnect, with the account connected',
-      held: [CONNECTED_GMAIL],
-      open: async () => pressInDialog('Reconnect'),
-      words: "The new authorization didn't complete, so nothing changed — your existing connection is still active. Try again or contact an owner.",
-      dialog: 'connection-dialog',
-    },
+    { name: 'Connect, with nothing connected', held: [] as Connection[], words: 'The connection could not be completed. Try again or contact an owner.' },
     {
       name: 'Reconnect, with the connection needing reauthorization — which is not active',
       held: [BROKEN_GMAIL],
-      open: async () => pressInDialog('Reconnect'),
       words: 'The connection could not be completed. Try again or contact an owner.',
-      dialog: 'connection-dialog',
     },
     {
-      name: 'Replace account, with the account connected',
-      held: [CONNECTED_GMAIL],
-      open: async () => {
-        await pressInDialog('Replace account');
-        const buttons = within(await screen.findByTestId('replace-account-dialog')).getAllByText('Replace account');
-        await fireEvent.press(buttons[buttons.length - 1]!);
-      },
+      name: 'Reconnect, with the connection still active but flagged',
+      held: [FLAGGED_GMAIL],
       words: "The new authorization didn't complete, so nothing changed — your existing connection is still active. Try again or contact an owner.",
-      dialog: 'replace-account-dialog',
     },
-  ])('$name: back without the connection, it says whether what was connected still is — and changes nothing', async ({ held, open, words, dialog }) => {
+  ])('$name: back without the connection, it says whether what was connected still is — under its row — and changes nothing', async ({ held, words }) => {
     const { connectionReads } = route([held]);
     connectOAuthProvider.mockResolvedValue({ status: 'incomplete' });
     await renderWithProviders(<ConnectionsScreen />, sessionAs('owner'));
-    await fireEvent.press(await screen.findByTestId('connection-row-gmail'));
+    await screen.findByTestId('connection-row-gmail');
     const before = connectionReads();
 
-    await open();
+    await pressRow('gmail');
 
-    expect(await within(screen.getByTestId(dialog)).findByText(words)).toBeTruthy();
+    expect(await screen.findByText(words)).toBeTruthy();
     expect(connectionReads()).toBe(before);
     expect(screen.queryByTestId('connections-notice')).toBeNull();
   });

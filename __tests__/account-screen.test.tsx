@@ -95,15 +95,19 @@ describe('Linked accounts (24.6.2, on 24.2.1)', () => {
     expect(within(screen.getByTestId('identity-apple')).queryByText(/@/u)).toBeNull();
   });
 
-  it("says what a linked account does, that the same email joins this account, and to link a different one first; the credentials sentence stays (build 12 item 8; build 13 decision 9)", async () => {
+  it('says one line — "Sign in with any of these." — and draws each provider by its own mark at 24, never a key (Build 21, spec A5; the owner\'s build 20 items 8 and 9)', async () => {
     route();
     await renderWithProviders(<AccountScreen />, session());
-    expect(
-      await screen.findByText(
-        "Any account linked here signs you in to this same account, in the app and on the website. Signing in with Google, Microsoft or Apple at the same email address as this account joins this account too. To use one with a different email address, link it before you first sign in with it. Provider credentials are handled by the Autom8x backend and never reach this app.",
-      ),
-    ).toBeTruthy();
-    expect(screen.queryByText(/Link additional sign-in options to this account\./u)).toBeNull();
+    expect((await screen.findByTestId('account-lead')).props.children).toBe('Sign in with any of these.');
+    expect(screen.queryByText(/Any account linked here/u)).toBeNull();
+    expect(screen.queryByText(/Provider credentials are handled/u)).toBeNull();
+    // The providers `route()` lists: Google and Apple.
+    for (const provider of ['google', 'apple']) {
+      const row = within(screen.getByTestId(`identity-${provider}`));
+      expect(row.getByTestId(`identity-glyph-${provider}`)).toBeTruthy();
+      expect(row.queryByTestId(/^phosphor-react-native-key-/u)).toBeNull();
+      expect(StyleSheet.flatten(row.getByTestId(`identity-glyph-${provider}`).props.style)).toMatchObject({ width: 24, height: 24 });
+    }
   });
 });
 

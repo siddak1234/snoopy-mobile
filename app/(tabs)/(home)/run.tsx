@@ -1,7 +1,8 @@
+import { File, Paths } from 'expo-file-system';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { FlowArrow, StopCircle } from 'phosphor-react-native';
+import { DownloadSimple, FlowArrow, StopCircle } from 'phosphor-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
@@ -13,75 +14,69 @@ import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import type { InboxRunPath } from '@/components/notifications/inbox';
 import { Pressable } from '@/components/pressable';
+import { DocumentCard } from '@/components/runs/document-card';
 import { em, fonts, iconSize, layout, status, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import type { TimelineRowView as RunTimelineItem } from '@/lib/view/runs';
+import type { TrackerRow } from '@/lib/view/runs';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { useResource, busyBody } from '@/hooks/use-resource';
 import { activeWorkspaceId, useSession, workspaceIfShown } from '@/hooks/use-session';
 import { refusalMessage, WORKSPACE_CHANGED } from '@/lib/content/refusals';
-import { DETAILS_LABEL, PROGRESS_LABEL, errorTitleFor } from '@/lib/content/screen-states';
+import {
+  DETAILS_LABEL,
+  DOCUMENTS_LABEL,
+  DOWNLOAD_FAILED,
+  DOWNLOAD_JSON_LABEL,
+  STEPS_LABEL,
+  errorTitleFor,
+} from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
 import { cancelRun } from '@/lib/platform/automations';
-import { readAllApprovals, readRun } from '@/lib/platform/runs';
+import { readAllApprovals, readRun, readRunDocuments } from '@/lib/platform/runs';
 import { PlatformError, PlatformNotConfiguredError } from '@/lib/platform/problem';
-import { dateTime, duration } from '@/lib/view/format';
+import { duration, timeOfDay } from '@/lib/view/format';
+import { documentsFileName, toDocumentCards } from '@/lib/view/documents';
 import { statusLabel, type StatusPillLabel } from '@/lib/view/status';
 import {
-  NO_STEPS_REPORTED,
   RUN_REREAD_MS,
+  heldDecision,
   runLabel,
   runResultLine,
-  toProgress,
   toRunFacts,
   toRunStats,
+  toTracker,
 } from '@/lib/view/runs';
-
-const TIMELINE_ICON_COLOR: Record<string, string | undefined> = {
-  ok: status.ok,
-  warn: status.warnText,
-  err: status.err,
-  pending: undefined,
-} as const;
 
 
 /**
- * One row of PROGRESS — a group of the flow's steps, or a step — its title, the
- * latest summary in it, a held step's reason beside it, and when it happened —
- * the date and the time, on a line of its own, as the website's steps say it
- * (Gate 24's parity pass, G18). Its icon is 24 (spec §3.0 rule 2).
+ * One row of STEPS (Build 21, spec A7; the owner's build 20 item 10: "It
+ * shoukd show all the steps and a live tracker of which ones are done"): "2 ·
+ * Read", its state's icon at 24 and its state in words — Waiting, Working…,
+ * Done and when, Waiting for approval and why, the run's failure, Skipped or
+ * Stopped — never a step's own summary and never a step id (B6).
  */
-function TimelineRow({ item, divider }: { item: RunTimelineItem; divider: boolean }) {
+function TrackerStep({ row, divider }: { row: TrackerRow; divider: boolean }) {
   const { palette } = useTheme();
-  const iconColor = TIMELINE_ICON_COLOR[item.tone] ?? palette.neutral[500];
-  const IconCmp = item.icon;
-  // The run still going is drawn quieter than what it did.
-  const quiet = item.tone === 'pending';
+  const tone =
+    row.tone === 'ok'
+      ? status.ok
+      : row.tone === 'warn'
+        ? status.warnText
+        : row.tone === 'err'
+          ? status.err
+          : row.tone === 'accent'
+            ? palette.accentRamp[300]
+            : palette.neutral[500];
+  const IconCmp = row.icon;
+  const quiet = row.state === 'waiting' || row.state === 'skipped' || row.state === 'stopped';
   return (
     <View
-      style={[styles.timelineRow, divider && { borderBottomWidth: 1, borderBottomColor: palette.divider }]}>
-      <IconCmp size={iconSize.row} color={iconColor} style={styles.timelineIcon} />
-      <View style={styles.timelineBody}>
-        <Text
-          style={[
-            styles.timelineTitle,
-            { color: quiet ? palette.neutral[400] : palette.text },
-          ]}>
-          {item.title}
-        </Text>
-        {item.sub ? (
-          <Text
-            style={[
-              styles.timelineSub,
-              { color: quiet ? palette.neutral[500] : palette.neutral[400] },
-            ]}>
-            {item.sub}
-          </Text>
-        ) : null}
-        {item.reason ? <Text style={[styles.timelineSub, { color: status.warnText }]}>{item.reason}</Text> : null}
-        {item.time ? (
-          <Text style={[styles.timelineTime, { color: palette.neutral[500] }]}>{item.time}</Text>
-        ) : null}
+      testID={`run-step-${row.id}`}
+      style={[styles.trackerRow, divider && { borderBottomWidth: 1, borderBottomColor: palette.divider }]}>
+      <IconCmp size={iconSize.row} color={tone} style={styles.trackerIcon} />
+      <View style={styles.trackerBody}>
+        <Text style={[styles.trackerTitle, { color: quiet ? palette.neutral[400] : palette.text }]}>{row.title}</Text>
+        <Text style={[styles.trackerSub, { color: row.tone === 'muted' ? palette.neutral[500] : tone }]}>{row.sub}</Text>
       </View>
     </View>
   );
@@ -114,6 +109,8 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   /**
    * The prototype's retry was theatre: idle → 1600ms → swap to a 'retried'
@@ -178,41 +175,47 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
   }, [going, focused, reads, refresh]);
 
   const liveRun = detail.status === 'ready' ? detail.data : null;
-  // What it did, by the flow's visible groups where its manifest declares them
-  // (spec §3.E) — the catalog's groups only for a run of the version they were
-  // declared for; a run of another version is drawn step by step, as the
-  // website draws it (the review of the Invoice Processing screens).
-  const progress = liveRun
-    ? toProgress(
+  // Every step from the start, each where the run is (spec A7; the session's
+  // S14) — by the flow's groups where its manifest declares them, the catalog's
+  // only for a run of the version they were declared for; a run of another
+  // version is drawn by the steps it reported.
+  const declaredFor = liveRun !== null && liveRun.entry?.version === liveRun.detail.run.templateVersion;
+  const tracker = liveRun
+    ? toTracker(
         liveRun.detail.steps,
+        declaredFor ? liveRun.entry?.pipeline : undefined,
+        declaredFor ? liveRun.entry?.groups : undefined,
+        liveRun.detail.run,
+        timeOfDay,
         liveRun.entry?.pipeline,
-        liveRun.entry?.version === liveRun.detail.run.templateVersion ? liveRun.entry.groups : undefined,
-        dateTime,
-        liveRun.detail.run.status,
       )
     : [];
+  // A waiting document whose approval was refused or ran out says "Not approved" (S21).
+  const decided = liveRun ? heldDecision(liveRun.detail.run, liveRun.approvals) : null;
   const run = liveRun
     ? {
+        // The run by its FULL id (the owner's D4 and AM2); never the request id.
         title: runLabel(liveRun.detail.run),
-        // Its flow — the website's subheader, which no longer says the version
-        // it ran (the Invoice Processing update; the spec's S9, the version gone
-        // from the catalog card too).
+        // Its flow — the website's subheader.
         sub: liveRun.entry?.name ?? liveRun.detail.run.templateId,
         // How it went, on a line of its own (spec §3.E).
         result: runResultLine(liveRun.detail.run, liveRun.approvals),
         status: statusLabel(liveRun.detail.run.status) as StatusPillLabel,
-        stats: toRunStats(progress, duration(liveRun.detail.run.startedAt, liveRun.detail.run.endedAt)),
-        // Started, Ended, Trigger: the website's facts under its title.
+        stats: toRunStats(tracker, duration(liveRun.detail.run.startedAt, liveRun.detail.run.endedAt)),
+        // Started, Ended, Trigger, Run ID: the website's facts.
         facts: toRunFacts(liveRun.detail.run),
         // The run a continuation continues, a tap away, as the website links "the
         // run that was held" (until Gate 24's parity pass, its id's first eight
         // characters, which nothing opened).
         continues: liveRun.detail.run.continuesRunId,
-        // "No steps reported yet." while nothing is drawn, whatever was reported.
-        reported: progress.some((row) => row.id !== 'working'),
-        timeline: progress as RunTimelineItem[],
-        // What a succeeded run saved, as its automation wrote it for people
-        // (backend ADR-0037; the one-run read only). Absent, no section.
+        tracker,
+        // Each document it read, on a card of its own (backend ADR-0039).
+        documents: toDocumentCards(
+          liveRun.detail.documents,
+          decided === 'rejected' ? 'rejected' : decided === 'closed' ? 'expired' : null,
+        ),
+        // What a v1/v2 run saved, as its automation wrote it for people (backend
+        // ADR-0037; the one-run read only) — drawn only where no documents are.
         details: liveRun.detail.details ?? [],
         subscriptionId: liveRun.detail.run.subscriptionId,
         id: liveRun.detail.run.id,
@@ -220,6 +223,44 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
         cancellable: liveRun.detail.run.status === 'pending' || liveRun.detail.run.status === 'running',
       }
     : null;
+
+  /**
+   * Download JSON (spec A7, C2; the session's S25): the run's documents as the
+   * platform serves them for keeping (`readRunDocuments`), read at the press,
+   * handed to the share sheet as `run-{full id}.json` — on iOS the file itself,
+   * on Android the text, which is what its share intent carries — the pattern
+   * of Settings › Data's export. The file is removed once shared.
+   */
+  const downloadJson = async () => {
+    if (!run || downloading) return;
+    const workspaceId = workspaceIfShown(session, openedIn);
+    if (!workspaceId) {
+      setDownloadError(WORKSPACE_CHANGED);
+      return;
+    }
+    setDownloading(true);
+    setDownloadError(null);
+    try {
+      const file = await readRunDocuments(workspaceId, run.id);
+      const json = JSON.stringify(file, null, 2);
+      if (Platform.OS !== 'ios') {
+        await Share.share({ message: json });
+        return;
+      }
+      const saved = new File(Paths.cache, documentsFileName(run.id));
+      saved.create({ overwrite: true });
+      saved.write(json);
+      try {
+        await Share.share({ url: saved.uri });
+      } finally {
+        if (saved.exists) saved.delete();
+      }
+    } catch {
+      setDownloadError(DOWNLOAD_FAILED);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   /**
    * Cancel a run that has not ended, confirmed first because a cancelled run is
@@ -288,13 +329,18 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
         { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) },
       ]}
       showsVerticalScrollIndicator={false}>
+      {/* The run by its full id, which wraps at its hyphens; its flow and status under it. */}
       <View style={styles.header}>
         <BackCircle onPress={() => router.back()} />
         <View style={styles.headerText}>
-          <Text style={[styles.title, { color: palette.text }]}>{run.title}</Text>
-          <Text style={[styles.subtitle, { color: palette.neutral[400] }]}>{run.sub}</Text>
+          <Text testID="run-title" selectable style={[styles.title, { color: palette.text }]}>
+            {run.title}
+          </Text>
+          <View style={styles.subRow}>
+            <Text style={[styles.subtitle, { color: palette.neutral[400] }]}>{run.sub}</Text>
+            <StatusPill label={run.status} />
+          </View>
         </View>
-        <StatusPill label={run.status} />
       </View>
 
       {run.result ? (
@@ -309,18 +355,6 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
         ))}
       </View>
 
-      <SurfaceCard>
-        {run.facts.map((fact, i) => (
-          <View
-            key={fact.label}
-            testID={`run-fact-${fact.label}`}
-            style={[styles.fieldRow, i < run.facts.length - 1 && { borderBottomWidth: 1, borderBottomColor: palette.divider }]}>
-            <Text style={[styles.fieldKey, { color: palette.neutral[400] }]}>{fact.label}</Text>
-            <Text style={[styles.fieldValue, { color: palette.text }]}>{fact.value}</Text>
-          </View>
-        ))}
-      </SurfaceCard>
-
       {continued ? (
         <Pressable
           testID="run-continues"
@@ -334,27 +368,22 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
       ) : null}
 
       <View testID="run-progress">
-        <SectionLabel>{PROGRESS_LABEL}</SectionLabel>
+        <SectionLabel>{STEPS_LABEL}</SectionLabel>
         <SurfaceCard style={styles.sectionCard}>
-          {/* The website's line while the run has reported nothing; "Working…"
-              follows it while the run goes on. */}
-          {run.reported ? null : (
-            <Text
-              style={[
-                styles.noSteps,
-                { color: palette.neutral[400] },
-                run.timeline.length > 0 && { borderBottomWidth: 1, borderBottomColor: palette.divider },
-              ]}>
-              {NO_STEPS_REPORTED}
-            </Text>
-          )}
-          {run.timeline.map((item, i) => (
-            <TimelineRow key={item.id} item={item} divider={i < run.timeline.length - 1} />
+          {run.tracker.map((row, i) => (
+            <TrackerStep key={row.id} row={row} divider={i < run.tracker.length - 1} />
           ))}
         </SurfaceCard>
       </View>
 
-      {run.details.length > 0 ? (
+      {run.documents.length > 0 ? (
+        <View testID="run-documents" style={styles.documents}>
+          <SectionLabel>{DOCUMENTS_LABEL}</SectionLabel>
+          {run.documents.map((card) => (
+            <DocumentCard key={card.index} card={card} />
+          ))}
+        </View>
+      ) : run.details.length > 0 ? (
         <View testID="run-details">
           <SectionLabel>{DETAILS_LABEL}</SectionLabel>
           <SurfaceCard style={styles.sectionCard}>
@@ -370,6 +399,41 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
               </View>
             ))}
           </SurfaceCard>
+        </View>
+      ) : null}
+
+      <SurfaceCard>
+        {run.facts.map((fact, i) => (
+          <View
+            key={fact.label}
+            testID={`run-fact-${fact.label}`}
+            style={[styles.fieldRow, i < run.facts.length - 1 && { borderBottomWidth: 1, borderBottomColor: palette.divider }]}>
+            <Text style={[styles.fieldKey, { color: palette.neutral[400] }]}>{fact.label}</Text>
+            <Text selectable style={[styles.fieldValue, { color: palette.text }]}>
+              {fact.value}
+            </Text>
+          </View>
+        ))}
+      </SurfaceCard>
+
+      {run.documents.length > 0 ? (
+        <View style={styles.download}>
+          <PillButton
+            testID="run-download-json"
+            label={DOWNLOAD_JSON_LABEL}
+            variant="secondary"
+            height={46}
+            fontSize={typeScale.label.fontSize}
+            icon={DownloadSimple}
+            iconSize={iconSize.button}
+            disabled={downloading}
+            onPress={downloadJson}
+          />
+          {downloadError ? (
+            <Text accessibilityRole="alert" style={[styles.downloadError, { color: status.err }]}>
+              {downloadError}
+            </Text>
+          ) : null}
         </View>
       ) : null}
 
@@ -438,19 +502,26 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 12,
   },
   headerText: {
     flex: 1,
+    minWidth: 0,
+    gap: 4,
   },
   title: {
     fontFamily: fonts.medium,
-    fontSize: typeScale.heading.fontSize,
-    letterSpacing: em(-0.01, typeScale.heading.fontSize),
+    ...typeScale.title,
+    letterSpacing: em(-0.01, typeScale.title.fontSize),
+  },
+  subRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 10,
   },
   subtitle: {
-    marginTop: 1,
     fontFamily: fonts.regular,
     fontSize: typeScale.small.fontSize,
   },
@@ -461,46 +532,39 @@ const styles = StyleSheet.create({
   sectionCard: {
     marginTop: 9,
   },
-  timelineRow: {
+  documents: {
+    gap: 9,
+  },
+  trackerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
     paddingVertical: 12,
     paddingHorizontal: 14,
   },
-  timelineIcon: {
+  trackerIcon: {
     marginTop: 1,
   },
-  timelineBody: {
+  trackerBody: {
     flex: 1,
   },
-  timelineTitle: {
+  trackerTitle: {
     fontFamily: fonts.medium,
     fontSize: typeScale.label.fontSize,
   },
-  timelineSub: {
+  trackerSub: {
     marginTop: 1,
     fontFamily: fonts.regular,
     fontSize: typeScale.small.fontSize,
-  },
-  timelineTime: {
-    marginTop: 2,
-    fontFamily: fonts.regular,
-    fontSize: typeScale.caption.fontSize,
   },
   continues: {
     fontFamily: fonts.regular,
     fontSize: typeScale.body.fontSize,
   },
-  noSteps: {
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    fontFamily: fonts.regular,
-    fontSize: typeScale.body.fontSize,
-  },
+  // A label and its value on one line; a long value — the run's id — wraps under its own column.
   fieldRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 16,
     paddingVertical: 11,
     paddingHorizontal: 14,
   },
@@ -509,6 +573,8 @@ const styles = StyleSheet.create({
     fontSize: typeScale.body.fontSize,
   },
   fieldValue: {
+    flex: 1,
+    textAlign: 'right',
     fontFamily: fonts.medium,
     fontSize: typeScale.body.fontSize,
   },
@@ -516,7 +582,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     ...typeScale.body,
   },
-  // A label and its value on one line; a long value wraps under its own column.
   detailRow: {
     flexDirection: 'row',
     gap: 16,
@@ -528,6 +593,13 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     fontFamily: fonts.medium,
     ...typeScale.body,
+  },
+  download: {
+    gap: 6,
+  },
+  downloadError: {
+    fontFamily: fonts.regular,
+    ...typeScale.small,
   },
   actions: {
     flexDirection: 'row',

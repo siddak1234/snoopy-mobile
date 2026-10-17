@@ -248,20 +248,15 @@ describe('G11 — setup draws the manifest’s sections in its order, and says w
     expect(screen.getByText('Controls the notification sent when a run fails.')).toBeTruthy();
   });
 
-  it('the flow page’s Set up: the same order and the same line, from the version the flow runs', async () => {
+  it('Set up from the flow page’s Edit setup: the same order and the same line, from the version the flow runs', async () => {
     const rows = subscriptionsPayload().subscriptions.map((row) =>
       row.id === 'invoice' ? { ...row, setup: [ALERTS, SOURCE, RULES] } : row,
     );
-    routePlatform(platformOperation, { '/subscriptions': { subscriptions: rows } });
-    setMockParams({ flow: 'invoice' });
-    await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
-    await fireEvent.press(await screen.findByTestId('manage-setup'));
-    const dialog = within(await screen.findByTestId('setup-dialog'));
-    expect(dialog.getAllByText(/^\d+ · /u).map((label) => label.props.children as string)).toEqual([
-      '1 · EMAIL',
-      '2 · SOURCE',
-      '3 · SETTINGS',
-    ]);
-    expect(dialog.getByText('Controls the notification sent when a run fails.')).toBeTruthy();
+    routePlatform(platformOperation, { '/automations': flowCatalogPayload(), '/subscriptions': { subscriptions: rows } });
+    setMockParams({ template: 'tplflow.invoice', flow: 'invoice' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    expect(await screen.findByText('Failure alerts')).toBeTruthy();
+    expect(headings()).toEqual(['1 · EMAIL', '2 · SOURCE', '3 · SETTINGS']);
+    expect(screen.getByText('Controls the notification sent when a run fails.')).toBeTruthy();
   });
 });
