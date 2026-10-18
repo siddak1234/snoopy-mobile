@@ -6,7 +6,6 @@ import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { SessionContext, workspaceIfShown, type SessionContextValue } from '@/hooks/use-session';
 import {
-  MOVE_REFUSALS,
   WEBHOOK_ISSUE_REFUSALS,
   WORKSPACE_CHANGED,
   refusalMessage,
@@ -60,16 +59,17 @@ describe('workspaceIfShown', () => {
 });
 
 describe('refusalMessage', () => {
+  // ~~MOVE_REFUSALS~~ until Build 22 (no client moves a flow, backend ADR-0041): the webhook's map holds the rule.
   it('says a listed reason in words, and otherwise the platform’s own message', () => {
-    const pending = new PlatformError('Conflict', 409, 'CONFLICT', { reason: 'approvals_pending' });
-    expect(refusalMessage(pending, MOVE_REFUSALS)).toBe(MOVE_REFUSALS.approvals_pending);
+    const mismatch = new PlatformError('Conflict', 409, 'CONFLICT', { reason: 'trigger_kind_mismatch' });
+    expect(refusalMessage(mismatch, WEBHOOK_ISSUE_REFUSALS)).toBe(WEBHOOK_ISSUE_REFUSALS.trigger_kind_mismatch);
 
     const unlisted = new PlatformError('Over the plan limit', 403, 'FORBIDDEN', { reason: 'other' });
-    expect(refusalMessage(unlisted, MOVE_REFUSALS)).toBe('Over the plan limit');
+    expect(refusalMessage(unlisted, WEBHOOK_ISSUE_REFUSALS)).toBe('Over the plan limit');
 
     // An inherited name is not a listed reason.
     const inherited = new PlatformError('Refused', 409, 'CONFLICT', { reason: 'toString' });
-    expect(refusalMessage(inherited, MOVE_REFUSALS)).toBe('Refused');
+    expect(refusalMessage(inherited, WEBHOOK_ISSUE_REFUSALS)).toBe('Refused');
 
     expect(refusalMessage('not an error')).toBe('That did not work. Try again.');
     expect(WORKSPACE_CHANGED).toMatch(/Reload this screen/);
@@ -77,7 +77,6 @@ describe('refusalMessage', () => {
 
   it('says an archived flow is archived, not removed (24.12)', () => {
     const archived = new PlatformError('Conflict', 409, 'CONFLICT', { reason: 'subscription_archived' });
-    expect(refusalMessage(archived, MOVE_REFUSALS)).toBe('An archived flow cannot move.');
     expect(refusalMessage(archived, WEBHOOK_ISSUE_REFUSALS)).toBe('An archived flow has no address.');
   });
 });

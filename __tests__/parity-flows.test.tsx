@@ -68,8 +68,10 @@ describe('G9 — the accounts a flow is owed link to Settings › Connections', 
     setMockParams({ flow: 'lead' });
     await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
     expect(await screen.findByText('Connect HubSpot first.')).toBeTruthy();
-    // One line, "Not connected" (spec §3.D): ~~"Required before publishing"~~.
-    expect(screen.getByText('Not connected')).toBeTruthy();
+    // Said in Step 1 alone: ~~"Required before publishing"~~, and ~~CONNECTIONS' "Not
+    // connected" row~~ until Build 22 (the owner's build 21 item 7: "Remove the connections").
+    expect(screen.queryByText('Not connected')).toBeNull();
+    expect(screen.queryByText('CONNECTIONS')).toBeNull();
     expect(screen.queryByText('Required before publishing')).toBeNull();
     await fireEvent.press(screen.getByText('Connect HubSpot first.'));
     expect(mockRouter.push).toHaveBeenCalledTimes(1);
@@ -168,7 +170,8 @@ describe('G10 — Turn on reads the workspace’s flows again before it adds one
       expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'made-here' } }),
     );
     expect(fake.to(SUBSCRIPTIONS)).toHaveLength(2);
-    expect(fake.to(CREATE).map((sent) => sent.body)).toEqual([{ templateId: 'tpl.0', templateVersion: 1 }]);
+    // No version is sent: a new flow runs the newest (Build 22, P4; backend ADR-0041).
+    expect(fake.to(CREATE).map((sent) => sent.body)).toEqual([{ templateId: 'tpl.0' }]);
     expect(fake.to(SAVE)).toHaveLength(1);
     expect(screen.queryByText('This flow is already in this workspace.')).toBeNull();
   });

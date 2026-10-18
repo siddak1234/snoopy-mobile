@@ -3,7 +3,6 @@ import { Archive, CaretRight, SlidersHorizontal, WebhooksLogo } from 'phosphor-r
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { MoveVersion } from '@/components/automations/move-version';
 import { WebhookAddressDialog } from '@/components/automations/webhook-address-dialog';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { SectionLabel } from '@/components/nocturne/section-label';
@@ -31,7 +30,11 @@ type Open = 'webhook' | 'archive' | null;
  *   can have a edit settings/flow/setup thing in the bottom of the flow page
  *   in case they want to change how it was set up"; ~~Set up, a dialog over
  *   the page~~ until Build 21).
- * - **Move to vN** when the catalog has a newer version than the one pinned.
+ * - ~~**the move to a newer version** when the catalog has one newer than
+ *   the version pinned~~ until Build 22 (the owner's build 21 item 7: "I also dont want a
+ *   move to vx number in the flows. The user always gets the latest version.
+ *   They dont get to oick when to update"): the platform moves every flow to
+ *   the newest version itself (backend ADR-0041).
  * - **Webhook address** for a webhook-started version, owner or admin only.
  * - **Archive flow**, at the bottom and in red (BUILD-PLAN 24.9.4, the owner's
  *   feedback 5 of 2026-10-02; "Archive", not "Remove", since decision 4 of the
@@ -53,7 +56,6 @@ export function AutomationActions({
   shownWorkspaceId,
   canAdminister,
   statusRow,
-  onChanged,
   onArchived,
 }: {
   name: string;
@@ -63,7 +65,6 @@ export function AutomationActions({
   shownWorkspaceId: string | null;
   canAdminister: boolean;
   statusRow: React.ReactNode;
-  onChanged: () => void;
   onArchived: () => void;
 }) {
   const { palette } = useTheme();
@@ -84,7 +85,6 @@ export function AutomationActions({
   // field (backend §12.1 #185). Absent when that version declares none.
   const setup = subscription.setup ?? [];
   const setsUp = setup.length > 0 || (entry?.requiredConnections ?? []).length > 0;
-  const newer = entry && subscription.templateVersion < entry.version ? entry.version : null;
   const webhook = subscription.triggerKind === 'webhook' && canAdminister;
   const close = () => setOpen(null);
 
@@ -114,19 +114,6 @@ export function AutomationActions({
   return (
     <View style={styles.stack}>
       {statusRow}
-      {newer !== null ? (
-        <MoveVersion
-          name={name}
-          subscriptionId={subscription.id}
-          shownWorkspaceId={shownWorkspaceId}
-          from={subscription.templateVersion}
-          to={newer}
-          config={subscription.config}
-          // Move is offered only to the catalog's newest, so its fields are the target's.
-          targetSetup={entry?.setup ?? []}
-          onMoved={onChanged}
-        />
-      ) : null}
       {setsUp || webhook ? (
         <View>
           <SectionLabel>MANAGE</SectionLabel>

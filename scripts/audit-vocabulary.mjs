@@ -26,6 +26,14 @@
  * "run number is the run ID" — build 20 titled run 793eef82 by its request id's
  * first eight characters): a property `.requestId` read in app/, components/,
  * lib/view/ or lib/content/ fails, as a run is named by its `id` alone.
+ *
+ * Since Build 22 (Round 17, 2026-10-17) two more, from the owner's build 21
+ * items: no copy says "Move to v" (item 7: "I also dont want a move to vx number
+ * in the flows. The user always gets the latest version. They dont get to oick
+ * when to update" — the platform moves every flow, backend ADR-0041), and none
+ * says "Connect vendor" at all, the "›" or not (item 5: "2. Connect integration
+ * … if i click that button it should take me to the choices"; the session's
+ * S21: the choices page is "Connect integration", one word for one thing).
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { extname, join, relative } from "node:path";
@@ -49,8 +57,12 @@ const RETIRED = /\b(projects?|automations?|solutions?|pipelines?)\b/iu;
 /** The brand line under the mark (design source, the cover and Home). */
 const BRAND_LINE = "AUTOMATION × AI";
 
-/** Copy no screen says again (Build 21; the owner's build 20 items 4 and 5). */
-const BANNED_PHRASES = ["Connect vendor ›"];
+/**
+ * Copy no screen says again: "Connect vendor" (Build 21's "Connect vendor ›",
+ * the owner's build 20 items 4 and 5; any form since Build 22) and "Move to v"
+ * (Build 22; the owner's build 21 item 7).
+ */
+const BANNED_PHRASES = ["Connect vendor", "Move to v"];
 
 /** Where a screen's words and what it shows are made: a run's request id is read in none of them (D4). */
 const DISPLAY_ROOTS = ["app/", "components/", "lib/view/", "lib/content/"];
@@ -117,14 +129,14 @@ function visit(node, source, path) {
 
 if (findings.length > 0) {
   console.error(
-    'Vocabulary audit failed. The app says "team", "flow" and "steps" — a project, an automation, a solution and a pipeline are not copy; "Connect vendor ›" is not said; a run is named by its id:\n',
+    'Vocabulary audit failed. The app says "team", "flow" and "steps" — a project, an automation, a solution and a pipeline are not copy; "Connect vendor" and "Move to v" are not said; a run is named by its id:\n',
   );
   for (const finding of findings) console.error(`  ${finding}`);
   process.exit(1);
 }
 
 console.log(
-  'Vocabulary audit passed. No copy says "project", "automation", "solution", "pipeline" or "Connect vendor ›", and no screen reads a run\'s request id.',
+  'Vocabulary audit passed. No copy says "project", "automation", "solution", "pipeline", "Connect vendor" or "Move to v", and no screen reads a run\'s request id.',
 );
 
 function walk(path) {

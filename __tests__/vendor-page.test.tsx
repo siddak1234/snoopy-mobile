@@ -31,7 +31,8 @@ const { platformOperation, newIdempotencyKey } = jest.requireMock('@/lib/platfor
 const { connectOAuthProvider, disconnectConnection } = jest.requireMock('@/lib/platform/connections');
 
 /**
- * Connect vendor — one step's vendor for one flow (Build 21, spec A2; the
+ * Connect integration (~~Connect vendor~~ until Build 22, the session's S21) —
+ * one step's vendor for one flow (Build 21, spec A2; the
  * owner's build 20 item 2: "When i click one of the choices like none i
  * shouldnt need to press done or the back arrow. It should just take me back
  * … and be saved. If i need to connect then after i click and connection
@@ -92,7 +93,9 @@ function route(
 async function open(session = signedInSession, field = 'vendor') {
   setMockParams({ flow: 'ip-1', field });
   await renderWithProviders(<ConnectVendorScreen />, session);
-  expect(await screen.findByText('Connect vendor')).toBeTruthy();
+  // Titled as the flow page's step 2 since Build 22 (the session's S21); ~~Connect vendor~~.
+  expect(await screen.findByText('Connect integration')).toBeTruthy();
+  expect(screen.queryByText('Connect vendor')).toBeNull();
 }
 
 beforeEach(() => {
@@ -104,7 +107,7 @@ beforeEach(() => {
   newIdempotencyKey.mockImplementation((prefix: string) => `${prefix}-${++n}`);
 });
 
-describe('Connect vendor — a tap saves and goes back (spec A2)', () => {
+describe('Connect integration — a tap saves and goes back (spec A2)', () => {
   it('says what it is and for which flow; each vendor the one row — symbol, name, state — then None; the chosen one checked; no Done, no Save', async () => {
     route({ connected: true });
     await open();

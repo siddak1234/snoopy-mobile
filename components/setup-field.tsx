@@ -173,7 +173,7 @@ const CONTROL_ICON: Record<KnownControl, Icon> = {
   // The address control (backend, 2026-10-02): the email keyboard, an envelope.
   email: EnvelopeSimple,
   // The vendor choice (backend ADR-0037): never a row of its own — its page is
-  // Connect vendor — but known, so no screen says it is newer than this build.
+  // Connect integration — but known, so no screen says it is newer than this build.
   connection: PlugsConnected,
 };
 

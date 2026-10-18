@@ -1,4 +1,4 @@
-import { Prohibit } from 'phosphor-react-native';
+import { Prohibit, type Icon } from 'phosphor-react-native';
 import React from 'react';
 import { Image, StyleSheet, Text, View, type AccessibilityRole, type AccessibilityState } from 'react-native';
 
@@ -51,14 +51,23 @@ export function ConnectionMark({ icon, testID }: { icon: string | null | undefin
   );
 }
 
-/** "None" (no vendor): its mark, the Prohibit glyph at 24. */
-export function NoneMark({ testID }: { testID?: string }) {
+/**
+ * A glyph in the mark's 24 × 24 place, in the accent: None's Prohibit, and since
+ * Build 22 the flow page's email row (EnvelopeSimple) and the email screen's
+ * people (UserCircle) — so those rows line up with every connection row.
+ */
+export function GlyphMark({ icon: Glyph, testID }: { icon: Icon; testID?: string }) {
   const { palette } = useTheme();
   return (
     <View testID={testID} style={styles.markBox}>
-      <Prohibit size={iconSize.row} color={palette.accentRamp[300]} />
+      <Glyph size={iconSize.row} color={palette.accentRamp[300]} />
     </View>
   );
+}
+
+/** "None" (no vendor): its mark, the Prohibit glyph at 24. */
+export function NoneMark({ testID }: { testID?: string }) {
+  return <GlyphMark icon={Prohibit} testID={testID} />;
 }
 
 export type ConnectionLineTone = 'muted' | 'ok' | 'warn' | 'err';
@@ -74,8 +83,10 @@ export type ConnectionLineTone = 'muted' | 'ok' | 'warn' | 'err';
  * Nocturne primitive, snapshot-pinned in both palettes
  * (`__tests__/connection-row.test.tsx`).
  *
- * Used on Settings › Connections, on a flow page's CONNECTIONS and its vendor
- * row, and on Connect vendor, where the whole row is the control (`onPress`).
+ * Used on Settings › Connections, on a flow page's integration and email rows,
+ * on the choices page (Connect integration), where the whole row is the
+ * control (`onPress`), and on a flow's email screen (Build 22). ~~A flow page's
+ * CONNECTIONS~~ until Build 22.
  */
 export function ConnectionRow({
   mark,

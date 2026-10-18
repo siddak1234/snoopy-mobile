@@ -1,14 +1,16 @@
-import { fireEvent, screen } from 'expo-router/testing-library';
+import { fireEvent, screen, within } from 'expo-router/testing-library';
 
-import { WORKSPACE, answerPlatform, asInProduction, flush, launch, press, signedInOnThisPhone } from '@/test/real-router';
+import { WORKSPACE, answerPlatform, asInProduction, flush, launch, signedInOnThisPhone } from '@/test/real-router';
 
 /**
- * Home's ways out (Gate 24 parity, G5; Build 21's RUN A FLOW, spec A9), under
- * the REAL router: each crosses from the Home tab into another tab's stack, so
- * each is proved where its address resolves — a live flow's page with the flow
- * it takes on arrival, Connections and Teams — and Back comes home. ~~A team's
- * page from Home's TEAMS list~~: gone with the owner's AM5 ("remove lsit teams
- * on bottom of home page, it is useless").
+ * Home's ways out, under the REAL router: each crosses from the Home tab into
+ * the Flows tab's stack, so each is proved where its address resolves — Add a
+ * flow and Flows, Home's two pills (Build 22: "Then add a flow and flow
+ * buttons", the owner's build 21 item 1). ~~RUN A FLOW's live flow page (Build
+ * 21, spec A9), Connect integration and View teams (Gate 24 parity, G5)~~ until
+ * Build 22 ("I dont want want flows integrations, connect integrations, view
+ * teams, or run a flow"); ~~a team's page from Home's TEAMS list~~ until the
+ * owner's AM5.
  */
 
 jest.setTimeout(60_000);
@@ -44,39 +46,21 @@ function oneTeam() {
   );
 }
 
-describe("Home's ways out (Gate 24 parity, G5; Build 21, A9)", () => {
-  it("RUN A FLOW opens a live flow's page in the Flows tab, with the flow it takes on arrival (Build 21, spec A9)", async () => {
+describe("Home's ways out (Build 22, H1–H4)", () => {
+  it.each([
+    ['Add a flow', ['(tabs)', 'flows', 'add']],
+    ['Flows', ['(tabs)', 'flows']],
+  ])('%s opens the Flows tab where it goes', async (label, segments) => {
     signedInOnThisPhone();
     oneTeam();
     const view = await launch();
 
     await asInProduction(async () => {
-      await fireEvent.press(await screen.findByTestId('home-quick-run-invoice'));
+      // The pill, not the tab bar's own "Flows".
+      await fireEvent.press(within(await screen.findByTestId('home-quick-actions')).getByText(label));
       await flush(100);
       await flush(1000);
-    });
-    expect([view.getSegments(), view.getSearchParams()]).toEqual([['(tabs)', 'flows', 'detail'], { flow: 'invoice' }]);
-    expect(await screen.findByTestId('flow-steps')).toBeTruthy();
-  });
-
-  it.each([
-    ['Connect integration', ['(tabs)', 'settings', 'connections']],
-    ['View teams', ['(tabs)', 'settings', 'teams']],
-  ])('%s opens its Settings page, and Back comes home', async (label, segments) => {
-    signedInOnThisPhone();
-    oneTeam();
-    const view = await launch();
-
-    await asInProduction(async () => {
-      await press(label);
     });
     expect(view.getSegments()).toEqual(segments);
-
-    await asInProduction(async () => {
-      await fireEvent.press(screen.getAllByLabelText('Back')[0]!);
-      await flush(100);
-      await flush(1000);
-    });
-    expect([view.getPathname(), view.getSegments()]).toEqual(['/', ['(tabs)', '(home)']]);
   });
 });

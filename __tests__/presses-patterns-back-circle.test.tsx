@@ -7,6 +7,7 @@ import AddFlowScreen from '@/app/(tabs)/flows/add';
 import ArchivedFlowsScreen from '@/app/(tabs)/flows/archived';
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import SetupScreen from '@/app/(tabs)/flows/setup';
+import FlowEmailScreen from '@/app/(tabs)/flows/email';
 import ConnectVendorScreen from '@/app/(tabs)/flows/vendor';
 import AccountScreen from '@/app/(tabs)/settings/account';
 import BillingScreen from '@/app/(tabs)/settings/billing';
@@ -120,7 +121,15 @@ const PAGES: {
     loaded: () => screen.findByText('Set up Weekly KPI digest'),
   },
   {
-    page: 'Connect vendor',
+    // Who gets a flow's run email (Build 22, P5): `flow`.
+    page: 'Who gets the email',
+    site: 'app/(tabs)/flows/email.tsx',
+    Screen: FlowEmailScreen,
+    params: { flow: 'invoice' },
+    loaded: () => screen.findByText('ALSO SEND TO'),
+  },
+  {
+    page: 'Connect integration',
     site: 'app/(tabs)/flows/vendor.tsx',
     Screen: ConnectVendorScreen,
     // An added flow's step vendor (Build 21, A2): `flow` and `field`.

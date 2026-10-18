@@ -8,10 +8,8 @@ import {
   CaretRight,
   FlowArrow,
   HandPalm,
-  Plugs,
   Plus,
   Sparkle,
-  UsersThree,
   WarningCircle,
   WifiSlash,
 } from 'phosphor-react-native';
@@ -25,7 +23,6 @@ import { Skeleton } from '@/components/nocturne/skeleton';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable, pressed } from '@/components/pressable';
 import { ScopeIcons } from '@/components/scope-control';
-import { SettingsRow } from '@/components/settings/settings-row';
 import { StatTileButton } from '@/components/stat-tile-button';
 import { em, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource, type ResourceState } from '@/hooks/use-resource';
@@ -40,13 +37,11 @@ import {
   PLATFORM_BUSY_TITLE,
   PLATFORM_FAILED_TITLE,
   RECENT_RUNS_UNAVAILABLE,
-  RUN_A_FLOW_LABEL,
   UNAVAILABLE_BODY,
   sessionKeptBody,
 } from '@/lib/content/screen-states';
-import { readCatalog, readConnections } from '@/lib/platform/catalog';
+import { readCatalog } from '@/lib/platform/catalog';
 import { readInbox } from '@/lib/platform/notifications';
-import { readProjects } from '@/lib/platform/projects';
 import {
   localMidnight,
   readAllApprovals,
@@ -55,8 +50,8 @@ import {
   readRuns,
   readSubscriptions,
 } from '@/lib/platform/runs';
-import { scopeLabels, toStatTiles, type StatTileView } from '@/lib/view/catalog';
-import { flowsFigure, homeFailure, integrationsFigure, quickRunRows } from '@/lib/view/home';
+import { toStatTiles, type StatTileView } from '@/lib/view/catalog';
+import { homeFailure } from '@/lib/view/home';
 import { catalogIndex, toRunRows } from '@/lib/view/runs';
 import { scopeRuns, scopeStats } from '@/lib/view/scope';
 
@@ -140,9 +135,11 @@ function HomeHeader({ initials, hasAttention }: { initials: string; hasAttention
  * build 13 decision 5 the dashboard is drawn as it is with flows — the header's
  * buttons, the greeting, TODAY at 0 — and this says there is nothing yet, with
  * its one way in. Until then it was a screen of its own, whose bell and avatar
- * were drawn but were not buttons. The quick actions' pills are not drawn with
- * it: their Add a flow would sit just over this one. The website's other two,
- * Connect integration and View teams, are (Gate 24 parity, G5).
+ * were drawn but were not buttons. The Add a flow and Flows pills are not drawn
+ * with it: their Add a flow would sit just over this one. ~~The website's other
+ * two quick actions, as rows (Gate 24 parity, G5)~~ until Build 22 (the owner's
+ * build 21 item 1: "I dont want want flows integrations, connect integrations,
+ * view teams, or run a flow").
  */
 function HomeFirstRun() {
   const { palette } = useTheme();
@@ -304,13 +301,14 @@ export default function HomeScreen() {
    * figure whose re-read fails says so. The scope then narrows what
    * is shown, never what was read (24.9.2). Beside them, the inbox's unread
    * count is the bell's alone (decision 3A): a refused read of it costs the dot,
-   * never the dashboard; and the workspace's teams name each flow of RUN A
-   * FLOW (Build 21, A9) — a refused read of them costs the label, never the
-   * list. ~~Every workspace's teams for a TEAMS block (G7)~~ until Build 21
-   * (the owner's AM5).
+   * never the dashboard. Home reads only what it draws (the session's S31):
+   * ~~the workspace's connections, for the overview's integrations figure (G6),
+   * and its teams, to name each quick-run row (Build 21, A9)~~ until Build 22 (the
+   * owner's build 21 item 1). ~~Every workspace's teams for a TEAMS block
+   * (G7)~~ until Build 21 (the owner's AM5).
    */
   const dashboard = useWorkspaceResource(async (workspaceId) => {
-    const [reads, projects, unread] = await Promise.all([
+    const [reads, unread] = await Promise.all([
       Promise.allSettled([
         readRunStats(workspaceId, localMidnight()),
         readRuns(workspaceId),
@@ -318,12 +316,7 @@ export default function HomeScreen() {
         readAllApprovals(workspaceId),
         readApprovals(workspaceId, 'pending'),
         readSubscriptions(workspaceId),
-        readConnections(workspaceId),
       ]),
-      readProjects(workspaceId).then(
-        (items) => items,
-        () => [],
-      ),
       readInbox(workspaceId).then(
         (inbox) => inbox.unreadCount,
         () => 0,
@@ -331,7 +324,7 @@ export default function HomeScreen() {
     ]);
     const refusals = reads.flatMap((read) => (read.status === 'rejected' ? [read.reason] : []));
     if (refusals.length === reads.length) throw homeFailure(refusals);
-    const [stats, runs, catalog, approvals, pending, subscriptions, connections] = reads;
+    const [stats, runs, catalog, approvals, pending, subscriptions] = reads;
     const answer = <T,>(read: PromiseSettledResult<T>): T | null => (read.status === 'fulfilled' ? read.value : null);
     return {
       stats: answer(stats),
@@ -348,8 +341,6 @@ export default function HomeScreen() {
       // The banner's count: what Approvals lists (G1).
       pending: answer(pending)?.approvals ?? null,
       subscriptions: answer(subscriptions)?.subscriptions ?? null,
-      connections: answer(connections)?.connections ?? null,
-      labels: scopeLabels(projects),
       unread,
     };
   });
@@ -361,7 +352,7 @@ export default function HomeScreen() {
     );
   }
 
-  const { stats, runs, catalog, approvals, pending, subscriptions, connections, labels, unread } = dashboard.data;
+  const { stats, runs, catalog, approvals, pending, subscriptions, unread } = dashboard.data;
   // A team narrows through the subscriptions (24.9.2): without them, what a
   // chosen team's figures are cannot be told, and they read as unavailable.
   const scopable = projectId === null || subscriptions !== null;
@@ -386,13 +377,10 @@ export default function HomeScreen() {
   // With no flow set up, ever — the catalog's flag, so a catalog that could not
   // be read claims nothing — the first run takes the place of the runs below.
   const firstRun = catalog !== null && !catalog.some((automation) => automation.subscribed);
-  // RUN A FLOW: every live flow in the team chosen, a tap from its Step 1 (A9).
-  const quickRuns = quickRunRows(subscriptions, catalog, labels, projectId);
   // The bell says the inbox holds something unread — the platform's read state,
   // the same on every device (decision 3A), and the whole workspace's, as the
   // inbox is — not merely that something is held or failed.
   const hasAttention = unread > 0;
-  const caret = <CaretRight size={15} color={palette.neutral[500]} />;
   const linkStyle = {
     fontFamily: fonts.regular,
     fontSize: typeScale.small.fontSize,
@@ -440,29 +428,15 @@ export default function HomeScreen() {
         ) : null}
       </View>
 
-      {/* RUN A FLOW (Build 21, spec A9): each live flow opens its page, whose Step 1
-          holds the document and Start run — three taps to a started run. */}
-      {quickRuns.length > 0 ? (
-        <View testID="home-quick-runs">
-          <SectionLabel>{RUN_A_FLOW_LABEL}</SectionLabel>
-          <SurfaceCard level="sm" style={styles.runsCard}>
-            {quickRuns.map((row, i) => (
-              <SettingsRow
-                key={row.id}
-                icon={row.icon}
-                title={row.name}
-                sub={row.team}
-                testID={`home-quick-run-${row.id}`}
-                divider={i < quickRuns.length - 1}
-                onPress={() => router.push({ pathname: '/(tabs)/flows/detail', params: { flow: row.id } })}
-                right={caret}
-              />
-            ))}
-          </SurfaceCard>
-        </View>
-      ) : null}
+      {/* Top to bottom since Build 22 (the owner's build 21 item 1): the greeting,
+          TODAY, the approvals banner while something waits, Add a flow and Flows,
+          RECENT RUNS. ~~The quick-run list~~ ("Remove run a flow section. We did
+          not add thus."), ~~the overview's figures~~ ("Remove overflow" — the
+          overview, the session's D4, approved by the owner) and ~~the
+          Connections and Teams rows~~ until Build 22. */}
 
-      {/* Stats: today's, and said so over the row (the owner's build 12 item 1). */}
+      {/* Stats: today's, and said so over the row (the owner's build 12 item 1);
+          "the 3 icons for today with the run types" (build 21 item 1). */}
       <View>
         <SectionLabel>TODAY</SectionLabel>
         {tiles ? (
@@ -495,35 +469,12 @@ export default function HomeScreen() {
         )}
       </View>
 
-      {/* The website's overview beside TODAY (Gate 24 parity, G6): the flows —
-          in the team chosen, as the tiles are — and the integrations, each its
-          own read and "Unavailable" on its own. Figures, as the website's are,
-          not buttons: the quick actions below are the ways to both. */}
-      <View>
-        <SectionLabel>OVERVIEW</SectionLabel>
-        <SurfaceCard level="sm" style={styles.runsCard}>
-          <SettingsRow
-            icon={FlowArrow}
-            title="Flows"
-            value={flowsFigure(subscriptions, projectId)}
-            testID="home-flows"
-            divider
-            right={null}
-          />
-          <SettingsRow
-            icon={Plugs}
-            title="Integrations"
-            value={integrationsFigure(connections)}
-            testID="home-integrations"
-            right={null}
-          />
-        </SurfaceCard>
-      </View>
-
-      {/* Approvals banner — only when something waits (the owner, build 13 #3). At 0
+      {/* Approvals banner — only when something waits (the owner, build 13 #3), right
+          after TODAY (the session's D6, approved by the owner 2026-10-17). At 0
           Approvals would show its own empty state, so nothing is lost. */}
       {approvalCount > 0 ? (
         <Pressable
+          testID="home-approvals"
           onPress={() => router.push('/(tabs)/activity/approvals')}
           style={({ pressed }) => [
             styles.approvalsBanner,
@@ -551,53 +502,33 @@ export default function HomeScreen() {
         </Pressable>
       ) : null}
 
-      {/* Quick actions. With no flow, the first run below has its own Add a
-          flow, so the pills are not drawn over it; the website's other two
-          (Gate 24 parity, G5) are drawn either way, as rows — "Connect
-          integration" does not fit half a phone's width as a pill. */}
-      <View style={styles.quickActions} testID="home-quick-actions">
-        {firstRun ? null : (
-          <View style={styles.actionsRow}>
-            <PillButton
-              label={ADD_FLOW_LABEL}
-              variant="primary"
-              height={46}
-              fontSize={typeScale.label.fontSize}
-              icon={Plus}
-              iconSize={16}
-              onPress={() => router.push('/(tabs)/flows/add')}
-              style={{ flex: 1 }}
-            />
-            <PillButton
-              label="Flows"
-              variant="secondary"
-              height={46}
-              fontSize={typeScale.label.fontSize}
-              icon={FlowArrow}
-              iconSize={16}
-              onPress={() => router.push('/(tabs)/flows')}
-              style={{ flex: 1 }}
-            />
-          </View>
-        )}
-        <SurfaceCard level="sm">
-          <SettingsRow
-            icon={Plugs}
-            title="Connect integration"
-            testID="home-connect-integration"
-            divider
-            onPress={() => router.push('/(tabs)/settings/connections')}
-            right={caret}
+      {/* Add a flow and Flows ("Then add a flow and flow buttons", build 21 item 1).
+          With no flow, the first run below has its own Add a flow, so the pills
+          are not drawn over it. */}
+      {firstRun ? null : (
+        <View style={styles.actionsRow} testID="home-quick-actions">
+          <PillButton
+            label={ADD_FLOW_LABEL}
+            variant="primary"
+            height={46}
+            fontSize={typeScale.label.fontSize}
+            icon={Plus}
+            iconSize={16}
+            onPress={() => router.push('/(tabs)/flows/add')}
+            style={{ flex: 1 }}
           />
-          <SettingsRow
-            icon={UsersThree}
-            title="View teams"
-            testID="home-view-teams"
-            onPress={() => router.push('/(tabs)/settings/teams')}
-            right={caret}
+          <PillButton
+            label="Flows"
+            variant="secondary"
+            height={46}
+            fontSize={typeScale.label.fontSize}
+            icon={FlowArrow}
+            iconSize={16}
+            onPress={() => router.push('/(tabs)/flows')}
+            style={{ flex: 1 }}
           />
-        </SurfaceCard>
-      </View>
+        </View>
+      )}
 
       {firstRun ? (
         // No flow yet (the owner's build 13 decision 5): the first run, where the runs go.
@@ -738,10 +669,6 @@ const styles = StyleSheet.create({
   },
   actionsRow: {
     flexDirection: 'row',
-    gap: 10,
-  },
-  // The pills and the rows under them read as one group, closer than the sections.
-  quickActions: {
     gap: 10,
   },
   sectionHeader: {

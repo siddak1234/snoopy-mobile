@@ -22,9 +22,9 @@ import { readSubscriptions } from '@/lib/platform/runs';
 import { administers } from '@/lib/view/roles';
 
 /**
- * Connect vendor — one step's vendor for one flow (the owner's build 19 item 1;
- * backend ADR-0037, ADR-0040; Build 21's A2). Opened from the flow page's
- * vendor row with `flow` (the subscription) and `field` (the connection
+ * Connect integration (Build 22; ~~Connect vendor~~) — one step's vendor for one
+ * flow (the owner's build 19 item 1; backend ADR-0037, ADR-0040; Build 21's A2).
+ * Opened from the flow page's integration row with `flow` and `field` (the connection
  * setting's key — a flow may choose one vendor per step, ADR-0040).
  *
  * **A tap is the choice, saved, and back** (the owner's build 20 item 2: "When

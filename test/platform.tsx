@@ -516,6 +516,62 @@ export function invoiceProcessingV3Entry(): CatalogEntry {
   };
 }
 
+/**
+ * Invoice Processing v4 as the round's manifest declares it (Build 22, spec §3;
+ * `b22/invoice-processing.v4.json`): v3's 22 steps and settings' keys, in five
+ * steps — Upload invoice (receive); Connect integration, a setting step the
+ * `vendor` field names ("Integration"); AI processing (extract, check-documents,
+ * verify-read); Details saved, "QuickBooks updated" while QuickBooks is chosen
+ * (`titleByConnection`), holding the other 18; and Email sent, the platform's
+ * (`platform: email`). The Approval limit names no step.
+ */
+export function invoiceProcessingV4Entry(): CatalogEntry {
+  const v3 = invoiceProcessingV3Entry();
+  const groupOf = (id: string) =>
+    id === 'receive' ? 'upload' : ['extract', 'check-documents', 'verify-read'].includes(id) ? 'process' : 'record';
+  return {
+    ...v3,
+    version: 4,
+    setup: [
+      { section: 'connections', key: 'vendor', title: 'Integration', description: 'Where the details go.', control: 'connection', defaultValue: 'none', required: false, providers: ['quickbooks'], group: 'connect' },
+      { section: 'rules', key: 'holdAboveAmount', title: 'Approval limit', description: 'Amounts over this wait for approval.', control: 'money', defaultValue: 500, required: false },
+    ],
+    groups: [
+      { id: 'upload', title: 'Upload invoice', description: 'Add a PDF or photo.' },
+      { id: 'connect', title: 'Connect integration', description: 'QuickBooks, or None.' },
+      { id: 'process', title: 'AI processing', description: 'AI reads and checks each document.' },
+      {
+        id: 'record',
+        title: 'Details saved',
+        description: 'Saved, or recorded in QuickBooks.',
+        titleByConnection: { field: 'vendor', titles: [{ providerId: 'quickbooks', title: 'QuickBooks updated' }] },
+      },
+      { id: 'email', title: 'Email sent', description: 'The results are emailed.', platform: 'email' },
+    ],
+    pipeline: v3.pipeline.map((step) => ({ ...step, group: groupOf(step.id) })),
+  };
+}
+
+/**
+ * Who a flow's run emails go to (Build 22, P5): the workspace's owners and
+ * admins, owners first, and its extra addresses — every one an example.com
+ * address, never a real person's in a public repository.
+ */
+export function recipientsPayload(
+  overrides: Partial<Answer<'GET /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/email-recipients'>> = {},
+): Answer<'GET /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/email-recipients'> {
+  return {
+    subscriptionId: 'ip-1',
+    people: [
+      { email: 'owner@example.com', displayName: 'Olive Owner', role: 'owner' },
+      { email: 'admin@example.com', role: 'admin' },
+    ],
+    extra: ['ap@example.com'],
+    canEdit: true,
+    ...overrides,
+  };
+}
+
 type Billing = Answer<'GET /v1/workspaces/{workspaceId}/billing'>;
 
 /**
@@ -606,6 +662,8 @@ export function routePlatform(platformOperation: jest.Mock, overrides: RouteOver
         magicLinkLoginEnabled: false,
       } satisfies Answer<'GET /v1/auth/providers'>);
     }
+    // A flow's email recipients (Build 22, P5): before a flow's own path, which it extends.
+    if (/\/subscriptions\/[^/?]+\/email-recipients$/.test(path)) return Promise.resolve(recipientsPayload());
     if (/\/subscriptions\/[^/?]+$/.test(path)) {
       return Promise.resolve({ subscription: subscriptionsPayload().subscriptions[0] } satisfies OneSubscription);
     }

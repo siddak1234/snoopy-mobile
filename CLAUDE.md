@@ -62,6 +62,28 @@ session's choices listed there as the session's; the contract is the round's (`b
 the platform's release, then backend `main`. Its independent review (2026-10-17), fixed on the same
 branch: DESIGN-GAPS "The review of Build 21's screens (Round 17; 2026-10-17)".
 
+**And Build 22 (2026-10-17), a re-entry on the owner's words after build 21** — his seven TestFlight
+items (14:30–14:39Z: Home, Flows, Activity and the flow page, quoted in DESIGN-GAPS "Build 22") and
+"continue and complete. parallel if you can" (21:12Z), which approved the plan H1–H4 · F1–F3 · P1–P5 ·
+W1–W3 and **the session's suggestions D1–D6** shown with it (D1 the owners, admins and the person who
+started a run always get its email, the step 5 screen adds more; D2 "AI processing"; D3 "Details
+saved" with None, "QuickBooks updated" otherwise; D4 "overflow" = OVERVIEW; D5 the website matches;
+D6 the approvals banner right after TODAY — the session's, approved, never the owner's own words):
+Home is the greeting, TODAY, the banner, Add a flow + Flows and RECENT RUNS — no RUN A FLOW, OVERVIEW,
+Connect integration or View teams (H1–H4); Flows and Activity open on one title row, Home's two scope
+circles beside the title (`components/title-row.tsx`; `ScopeControl`'s pills deleted; F1–F3); the flow
+page's five steps, titles only — Upload invoice, Connect integration with the integration, AI
+processing, QuickBooks updated / Details saved, Email sent with who gets it — no CONNECTIONS, no move
+to another version (the platform moves every flow, backend ADR-0041; `move-version.tsx` and
+`setup-dialog.tsx` deleted; P1–P4); a flow's email screen, Who gets the email (`app/(tabs)/flows/email.tsx`,
+P5); and the run page's setting step, step 4 by the flow's choice and step 5 by the run's email. The
+spec is the session's `b22/spec.md`, the contract `b22-contract` (`automations.yaml` `8f780521…`,
+`openapi.yaml` `52a5ca8d…`) until the platform's release, then backend `main`. The record is
+DESIGN-GAPS "Build 22 (Round 17; 2026-10-17)", the session's choices listed there as the session's.
+Its independent review (2026-10-17), fixed on the same branch: DESIGN-GAPS "The review of Build 22's
+screens (Round 17; 2026-10-17)" — the title rows keep every item on one line at 320 pt, and the email
+screen's field shows over the keyboard.
+
 **Round 16 CLOSED 2026-10-07** — Gate 24 re-run by command by a fresh `snoopy-backend` session that wrote none of it; its record here is DESIGN-GAPS "Build 16: the owner's device pass, and Round 16's close". Open from 2026-09-29 (BUILD-PLAN Phase 24, ADR-0032): the mobile app offers
 every signed-in feature the website offers, on the same published operations,
 and ships to Apple first. This repository owns 24.3–24.7 and, since the owner's build 6 feedback of 2026-10-02, 24.9 (the flows design pass: one Flows tab, a project scope, a shared workspace snapshot) and, since build 7's, 24.11.6–24.11.10 (the cover when signed out, Teams in place of Projects, Archived flows (Removed flows until 24.12), Unlink, flow history), and, since build 9's (the owner's decisions of 2026-10-02), the app's part of 24.12 (a team is its kind, the archive wording, Settings by category, the billing cards, the join link, the export to the share sheet, Unlink in words, the empty-screen standard, the bigger type), and, since build 10's (the owner's decisions of 2026-10-03, build 11), Settings as one grouped page, compact billing cards with a drawn Pro, an archived flow's live twin, a team on and for every flow, the Archived header button and the Flows empty standard, and a tick on every press, one phase per session:

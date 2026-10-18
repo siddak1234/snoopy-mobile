@@ -1,10 +1,9 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import React from 'react';
-import { StyleSheet } from 'react-native';
 
 import ArchivedFlowsScreen from '@/app/(tabs)/flows/archived';
 import FlowsScreen from '@/app/(tabs)/flows/index';
-import { ScopeControl } from '@/components/scope-control';
+import { ScopeIcons } from '@/components/scope-control';
 import type { Subscription } from '@/lib/platform/automations';
 import { fakePlatform } from '@/test/fake-platform';
 import { renderWithProviders } from '@/test/render';
@@ -38,7 +37,9 @@ const { readScope, writeScope } = jest.requireMock('@/lib/platform/scope-store')
 /**
  * The scope control (BUILD-PLAN 24.9.2; teams since 24.11.7): the workspace,
  * then All teams or one team; Flows follows it, and the choice is kept per
- * workspace.
+ * workspace. Since Build 22 it is Home's two circles beside the title on Flows
+ * and Activity too (F1–F3), read aloud as "Workspace: …" and "Team: …";
+ * ~~the labelled pills above the title~~.
  */
 describe('the scope control on Flows', () => {
   beforeEach(() => {
@@ -125,7 +126,7 @@ describe('the scope control on Flows', () => {
   });
 });
 
-describe('the team pill (24.11.7)', () => {
+describe('the team circle (24.11.7; a circle since Build 22)', () => {
   beforeEach(() => {
     mockStored.clear();
     platformOperation.mockReset();
@@ -141,7 +142,7 @@ describe('the team pill (24.11.7)', () => {
         workspaces: [{ id: TEST_WORKSPACE, name: 'Acme', type: 'organization', role }],
         activeWorkspaceId: TEST_WORKSPACE,
       });
-      await renderWithProviders(<ScopeControl />, sessionAs(role));
+      await renderWithProviders(<ScopeIcons testIDPrefix="title-scope" />, sessionAs(role));
       await fireEvent.press(await screen.findByLabelText('Team: All teams'));
       expect(await screen.findByTestId('scope-option-all')).toBeTruthy();
       expect(screen.queryByTestId('scope-create-team')).toBeNull();
@@ -166,7 +167,7 @@ describe('the team pill (24.11.7)', () => {
         },
       ],
     });
-    await renderWithProviders(<ScopeControl />, sessionAs('member'));
+    await renderWithProviders(<ScopeIcons testIDPrefix="title-scope" />, sessionAs('member'));
     await fireEvent.press(await screen.findByLabelText('Team: All teams'));
     expect(await screen.findByTestId('scope-option-p-1')).toBeTruthy();
     expect(screen.getAllByText('Finance')).toHaveLength(1);
@@ -175,27 +176,30 @@ describe('the team pill (24.11.7)', () => {
   });
 });
 
-describe('the scope pills at the bigger type (24.12)', () => {
+describe('the scope circles with a long name (24.12; circles since Build 22)', () => {
   beforeEach(() => {
     mockStored.clear();
     platformOperation.mockReset();
   });
 
-  it('keeps a long name whole: the row wraps and a pill may take all of it, so neither is cut short nor runs off the screen', async () => {
+  it('read the whole name aloud, and the card it opens names it — no word in the row to cut short', async () => {
     const fake = fakePlatform(platformOperation);
     fake.always('GET /v1/workspaces/{workspaceId}/projects', { projects: [] });
+    fake.always('GET /v1/workspaces', {
+      workspaces: [{ id: TEST_WORKSPACE, name: 'Northwind Traders Operations', type: 'organization', role: 'owner' }],
+      activeWorkspaceId: TEST_WORKSPACE,
+    });
     if (signedInSession.status !== 'signed-in') throw new Error('fixture');
     const name = 'Northwind Traders Operations';
     const named = {
       ...signedInSession,
       session: { ...signedInSession.session, workspaces: [{ ...signedInSession.session.workspaces[0]!, name }] },
     };
-    await renderWithProviders(<ScopeControl />, named);
-    const workspacePill = await screen.findByLabelText(`Workspace: ${name}`);
-    expect(screen.getByText(name)).toBeTruthy();
-    expect(StyleSheet.flatten(screen.getByTestId('scope-control').props.style).flexWrap).toBe('wrap');
-    for (const pill of [workspacePill, screen.getByLabelText('Team: All teams')]) {
-      expect(StyleSheet.flatten(pill.props.style).maxWidth).toBe('100%');
-    }
+    await renderWithProviders(<ScopeIcons testIDPrefix="title-scope" />, named);
+    const workspace = await screen.findByLabelText(`Workspace: ${name}`);
+    expect(workspace.props.testID).toBe('title-scope-workspace');
+    expect(screen.queryByText(name)).toBeNull();
+    await fireEvent.press(workspace);
+    expect(await screen.findByText(name)).toBeTruthy();
   });
 });

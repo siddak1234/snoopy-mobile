@@ -121,10 +121,11 @@ describe("Activity's time range (the owner's build 13 decision 4)", () => {
     const button = await screen.findByLabelText('Time range: All time');
     expect(within(button).getByText('All time')).toBeTruthy();
     expect(button.props.accessibilityRole).toBe('button');
-    // On the title's row, after the title.
+    // On the title's row, after the title (and since Build 22 the scope's two circles, which say no words).
     expect(
-      within(button.parent!).getAllByText(/./u).map((node) => node.props.children),
+      within(screen.getByTestId('title-row')).getAllByText(/./u).map((node) => node.props.children),
     ).toEqual(['Activity', 'All time']);
+    expect(within(screen.getByTestId('title-row-right')).getByLabelText('Time range: All time')).toBe(button);
     expect(rows()).toEqual(['today-ok', 'today-failed', 'yesterday-failed', 'week-ok', 'month-failed', 'month-ok', 'older-failed']);
     for (const day of ['TODAY', 'YESTERDAY', 'EARLIER']) expect(screen.getByText(day)).toBeTruthy();
   });
