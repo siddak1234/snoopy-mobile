@@ -372,15 +372,18 @@ describe('the flow page (spec A6; Build 22, P1–P4)', () => {
 
   it('DASHBOARD is live: read again while a run of the flow goes on, and the tiles change without leaving the page (S30)', async () => {
     let reads = 0;
+    // Running until the test has seen it so; then the run ends, a success. A flag rather than a
+    // read count: with the re-read at 20 ms, a slow runner read twice before the first look.
+    let ended = false;
     await openFlow(added({ vendor: 'none' }), {
       runStats: () => {
         reads += 1;
-        // Running at first; then the run ends, a success.
-        return reads === 1 ? stats({ total: 1, running: 1 }) : stats({ total: 1, succeeded: 1 });
+        return ended ? stats({ total: 1, succeeded: 1 }) : stats({ total: 1, running: 1 });
       },
     });
     const successes = await screen.findByTestId('flow-stat-Success');
     expect(within(successes).getByText('0')).toBeTruthy();
+    ended = true;
     await waitFor(() => expect(within(screen.getByTestId('flow-stat-Success')).getByText('1')).toBeTruthy());
     const settled = reads;
     // Nothing running now: no more reads.
