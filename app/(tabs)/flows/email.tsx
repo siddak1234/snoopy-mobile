@@ -173,9 +173,14 @@ export default function FlowEmailScreen() {
 
   return (
     <ScrollView
+      testID="email-screen"
       style={{ backgroundColor: palette.bg }}
       contentContainerStyle={[styles.content, { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) }]}
       keyboardShouldPersistTaps="handled"
+      // The field sits under the lists, below where the keyboard opens on a phone
+      // once a few addresses are listed: the page makes room for the keyboard and
+      // brings the field into view, so what is typed is seen (the Build 22 review).
+      automaticallyAdjustKeyboardInsets
       showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <BackCircle onPress={() => router.back()} />
@@ -246,6 +251,8 @@ export default function FlowEmailScreen() {
             <View style={styles.addRow}>
               <TextInput
                 testID="email-input"
+                // Said aloud once it holds an address too, when its placeholder is gone (the website's label).
+                accessibilityLabel={EMAIL_PLACEHOLDER}
                 value={draft}
                 onChangeText={(text) => {
                   setDraft(text);

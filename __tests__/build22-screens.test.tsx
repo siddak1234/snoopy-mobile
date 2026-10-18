@@ -179,6 +179,56 @@ describe('Flows and Activity: one title row, the circles beside the title (F1–
     expect(within(screen.getByTestId('title-row-right')).getByText('Archived')).toBeTruthy();
   });
 
+  it('a 320-pt phone (280 inside the margins): the title, the two circles, Archived and New still on the one line — New its accent icon, the same press (the Build 22 review)', async () => {
+    await renderWithProviders(<FlowsScreen />, signedInSession);
+    await screen.findByTestId('title-row');
+    const accent = StyleSheet.flatten(screen.getByTestId('flows-new').props.style).borderColor;
+    // Inter's widths: "Flows" 79; Archived + New 196 as pills, 124 with Archived a circle (38 + 8 + 78).
+    await layout('title-row-title', 79);
+    await layout('title-row-right', 196);
+    await layout('title-row', 280);
+    await layout('title-row-right', 124);
+    expect(screen.queryByText('Archived')).toBeNull();
+    expect(screen.queryByText('New')).toBeNull();
+    const right = within(screen.getByTestId('title-row-right'));
+    expect(right.getByLabelText('Archived').props.testID).toBe('flows-archived');
+    const add = right.getByLabelText('New');
+    expect(add.props.testID).toBe('flows-new');
+    expect(add.props.accessibilityRole).toBe('button');
+    // New's accent, as its pill: the ring, and the glyph in it.
+    const ring = StyleSheet.flatten(add.props.style);
+    expect(ring).toMatchObject({ width: 38, height: 38, borderRadius: 999, borderWidth: 1 });
+    expect(ring.borderColor).toBe(accent);
+    expect(ring.borderColor).not.toBe(StyleSheet.flatten(screen.getByTestId('title-scope-team').props.style).borderColor);
+    // Everything fits: the title, 8, the circles (84), 8, Archived's circle, 8, New's circle.
+    expect(79 + 8 + 84 + 8 + 38 + 8 + 38).toBeLessThanOrEqual(280);
+    await fireEvent.press(add);
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/add');
+
+    // A 375-pt phone again: New its word, Archived its icon.
+    await layout('title-row-right', 84);
+    await layout('title-row', 335);
+    expect(within(screen.getByTestId('title-row-right')).getByText('New')).toBeTruthy();
+    expect(screen.queryByText('Archived')).toBeNull();
+  });
+
+  it('Activity on a 320-pt phone: the time range is its calendar alone in a circle, read aloud and opening the same card (the Build 22 review)', async () => {
+    await renderWithProviders(<ActivityScreen />, signedInSession);
+    await screen.findByTestId('title-row');
+    // "Activity" 102; All time 118 — 102 + 8 + 84 + 8 + 118 = 320, over the 280 a 320-pt phone leaves.
+    await layout('title-row-title', 102);
+    await layout('title-row-right', 118);
+    await layout('title-row', 335);
+    expect(within(screen.getByTestId('title-row-right')).getByText('All time')).toBeTruthy();
+    await layout('title-row', 280);
+    expect(screen.queryByText('All time')).toBeNull();
+    const range = within(screen.getByTestId('title-row-right')).getByLabelText('Time range: All time');
+    expect(range.props.testID).toBe('activity-range');
+    expect(StyleSheet.flatten(range.props.style)).toMatchObject({ width: 38, height: 38, borderRadius: 999 });
+    await fireEvent.press(range);
+    expect(screen.getByTestId('activity-range-dialog')).toBeTruthy();
+  });
+
   it('the circles sit at the same height on both: the same row, 38 tall and centred, first under the same top padding', async () => {
     /** The first test id in reading order, and the top padding of what holds the row. */
     const firstTestID = (node: unknown): string | null => {
@@ -359,6 +409,15 @@ describe('Who gets the email (P5; D1, S30)', () => {
     expect(screen.queryByLabelText('Remove ap@example.com')).toBeNull();
     expect(screen.queryByPlaceholderText('Email address')).toBeNull();
     expect(screen.queryByText('Add')).toBeNull();
+  });
+
+  it('the field is seen when the keyboard opens, and said aloud once it holds an address (the Build 22 review)', async () => {
+    await openEmail();
+    const field = await screen.findByPlaceholderText('Email address');
+    // The page makes room for the keyboard and brings the focused field into view (iOS).
+    expect(screen.getByTestId('email-screen').props.automaticallyAdjustKeyboardInsets).toBe(true);
+    await fireEvent.changeText(field, 'bookkeeper@example.com');
+    expect(screen.getByLabelText('Email address').props.value).toBe('bookkeeper@example.com');
   });
 
   it('no extra address: a None row', async () => {

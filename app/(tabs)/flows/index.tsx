@@ -35,6 +35,8 @@ import { inScope } from '@/lib/view/scope';
 
 /** The header's Archived, its word or — the row too narrow — its icon's name. */
 const ARCHIVED_LABEL = 'Archived';
+/** The header's New, its word or — a 320-pt row — its icon's name. */
+const NEW_LABEL = 'New';
 
 /**
  * Flows — the one tab for what the workspace runs (design `sFlows`; one tab
@@ -147,12 +149,15 @@ export default function FlowsScreen() {
         styles.content,
         { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) },
       ]}>
-      {/* [Archived][New]: Archived secondary, so New stays the one accent control. */}
+      {/* [Archived][New]: Archived secondary, so New stays the one accent control.
+          Narrower, Archived is its icon (S26); narrower still — a 320-pt phone —
+          New is its icon too, in its accent (the Build 22 review's M11). */}
       <TitleRow
         title="Flows"
-        right={(compact) => (
+        levels={2}
+        right={(level) => (
           <>
-            {compact ? (
+            {level >= 1 ? (
               <CircleButton
                 testID="flows-archived"
                 icon={Archive}
@@ -173,17 +178,28 @@ export default function FlowsScreen() {
                 onPress={() => router.push('/(tabs)/flows/archived')}
               />
             )}
-            <PillButton
-              label="New"
-              variant="primary"
-              height={36}
-              fontSize={typeScale.body.fontSize}
-              icon={Plus}
-              iconSize={14}
-              gap={5}
-              style={styles.headerPill}
-              onPress={() => router.push('/(tabs)/flows/add')}
-            />
+            {level >= 2 ? (
+              <CircleButton
+                testID="flows-new"
+                icon={Plus}
+                tone="accent"
+                accessibilityLabel={NEW_LABEL}
+                onPress={() => router.push('/(tabs)/flows/add')}
+              />
+            ) : (
+              <PillButton
+                label={NEW_LABEL}
+                variant="primary"
+                height={36}
+                fontSize={typeScale.body.fontSize}
+                icon={Plus}
+                iconSize={14}
+                gap={5}
+                style={styles.headerPill}
+                testID="flows-new"
+                onPress={() => router.push('/(tabs)/flows/add')}
+              />
+            )}
           </>
         )}
       />

@@ -1,4 +1,4 @@
-import { titleRowCompact } from '@/components/title-row';
+import { titleRowLevel } from '@/components/title-row';
 import { addProblem, isFlowEmail, recipientsLine } from '@/lib/view/flow-email';
 import { flowStepPlan, stepTitle } from '@/lib/view/pipeline';
 import { toRunStats, toTracker } from '@/lib/view/runs';
@@ -191,19 +191,34 @@ describe("the run page's steps (S23, S24, S25)", () => {
   });
 });
 
-describe('the title row is too narrow when its parts do not fit (S26)', () => {
+describe('the title row draws its controls as wide as it has room for (S26; the Build 22 review\'s M11)', () => {
+  // Measured with Inter's own widths at the app's sizes: "Flows" 79, "Activity" 102 (display, 29);
+  // Archived + New 196 as pills, 124 with Archived a circle, 84 with both circles; All time 118, its circle 38.
   it.each([
-    // Flows on the owner's 420-pt phone (380 inside the margins): the word fits.
-    [380, 78, 195, false],
-    // A 375-pt phone (335): Archived goes to its icon.
-    [335, 78, 195, true],
-    [373, 78, 195, false],
-    [372, 78, 195, true],
-    // Not measured yet: the full form.
-    [null, 78, 195, false],
-    [335, null, 195, false],
-    [335, 78, null, false],
-  ])('row %s, title %s, controls %s → compact %s', (row, title, right, compact) => {
-    expect(titleRowCompact(row, title, right)).toBe(compact);
+    // Flows on the owner's 420-pt phone (380 inside the margins): every word.
+    [380, 79, [196], 2, 0],
+    // A 375-pt phone (335): Archived goes to its icon; New keeps its word.
+    [335, 79, [196], 2, 1],
+    [335, 79, [196, 124], 2, 1],
+    // A 320-pt phone (280): New goes to its icon too — 79 + 8 + 84 + 8 + 84 = 263.
+    [280, 79, [196, 124], 2, 2],
+    [280, 79, [196, 124, 84], 2, 2],
+    // The boundaries: room is the row less the title, 8, the circles (84) and 8.
+    [375, 79, [196], 2, 0],
+    [374, 79, [196], 2, 1],
+    [303, 79, [196, 124], 2, 1],
+    [302, 79, [196, 124], 2, 2],
+    // Wider again: the words again, from the widths kept.
+    [380, 79, [196, 124, 84], 2, 0],
+    // Activity: All time at 335; its calendar alone at 280 (102 + 8 + 84 + 8 + 38 = 240).
+    [335, 102, [118], 1, 0],
+    [280, 102, [118], 1, 1],
+    [280, 102, [118, 38], 1, 1],
+    // Not laid out yet: the full form.
+    [null, 79, [196], 2, 0],
+    [335, null, [196], 2, 0],
+    [335, 79, [], 2, 0],
+  ] as const)('row %s, title %s, controls %j, levels %s → level %s', (row, title, widths, levels, level) => {
+    expect(titleRowLevel(row, title, widths, levels)).toBe(level);
   });
 });

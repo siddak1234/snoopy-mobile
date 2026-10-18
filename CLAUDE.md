@@ -80,6 +80,9 @@ P5); and the run page's setting step, step 4 by the flow's choice and step 5 by 
 spec is the session's `b22/spec.md`, the contract `b22-contract` (`automations.yaml` `8f780521…`,
 `openapi.yaml` `52a5ca8d…`) until the platform's release, then backend `main`. The record is
 DESIGN-GAPS "Build 22 (Round 17; 2026-10-17)", the session's choices listed there as the session's.
+Its independent review (2026-10-17), fixed on the same branch: DESIGN-GAPS "The review of Build 22's
+screens (Round 17; 2026-10-17)" — the title rows keep every item on one line at 320 pt, and the email
+screen's field shows over the keyboard.
 
 **Round 16 CLOSED 2026-10-07** — Gate 24 re-run by command by a fresh `snoopy-backend` session that wrote none of it; its record here is DESIGN-GAPS "Build 16: the owner's device pass, and Round 16's close". Open from 2026-09-29 (BUILD-PLAN Phase 24, ADR-0032): the mobile app offers
 every signed-in feature the website offers, on the same published operations,

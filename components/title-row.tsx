@@ -13,17 +13,29 @@ export const TITLE_ROW_GAP = 8;
 const CIRCLES_WIDTH = 38 + TITLE_ROW_GAP + 38;
 
 /**
- * Whether a row of `rowWidth` has too little room for the title, the circles
- * and the page's controls at their full width (the session's S26): measured,
- * never guessed — `null` until all three are known, which draws the full form.
+ * How far a row of `rowWidth` draws the page's controls from their full width
+ * (the session's S26; the Build 22 review's M11): 0, every word; 1, 2, … each a
+ * step narrower, as the page draws them (`right(level)`), up to `levels`.
+ * Measured, never guessed: the room is what the title and the two circles
+ * leave, with 8 pt before the controls, and the first step whose measured width
+ * fits it is drawn — a step not yet measured is drawn to be measured, and the
+ * last is drawn whatever it measures. `null` (not laid out yet) draws the full
+ * form. On Flows a 375-pt phone draws Archived as its icon (level 1) and a
+ * 320-pt one New too (level 2); Activity's time range is its icon at 320 pt.
  */
-export function titleRowCompact(
+export function titleRowLevel(
   rowWidth: number | null,
   titleWidth: number | null,
-  rightWidth: number | null,
-): boolean {
-  if (rowWidth === null || titleWidth === null || rightWidth === null) return false;
-  return rowWidth < titleWidth + TITLE_ROW_GAP + CIRCLES_WIDTH + TITLE_ROW_GAP + rightWidth;
+  rightWidths: readonly (number | undefined)[],
+  levels: number,
+): number {
+  if (rowWidth === null || titleWidth === null) return 0;
+  const room = rowWidth - (titleWidth + TITLE_ROW_GAP + CIRCLES_WIDTH + TITLE_ROW_GAP);
+  for (let level = 0; level < levels; level += 1) {
+    const width = rightWidths[level];
+    if (width === undefined || width <= room) return level;
+  }
+  return levels;
 }
 
 /**
@@ -38,27 +50,40 @@ export function titleRowCompact(
  * tall with every item centred, first under the safe area on both, so the
  * circles sit at the same height on each.
  *
- * `right` is drawn `compact` when the row is too narrow for it at its full
- * width (`titleRowCompact`, by `onLayout`): Flows then draws Archived as its
- * icon alone. ~~The scope control's labelled pills above the title~~ until
- * Build 22.
+ * `right` is drawn at the `level` the row has room for (`titleRowLevel`, by
+ * `onLayout`; `levels` the page's narrower forms): Flows draws Archived as its
+ * icon alone, then New too; Activity its time range as its icon. Every item
+ * stays on the one line at 320 pt (the Build 22 review's M11; ~~Archived the
+ * one narrower form, so the row ran past a 320-pt screen's edge~~). ~~The scope
+ * control's labelled pills above the title~~ until Build 22.
  */
 export function TitleRow({
   title,
   right,
+  levels = 1,
   testID = 'title-row',
 }: {
   title: string;
-  right: (compact: boolean) => React.ReactNode;
+  right: (level: number) => React.ReactNode;
+  levels?: number;
   testID?: string;
 }) {
   const { palette } = useTheme();
   const [rowWidth, setRowWidth] = useState<number | null>(null);
   const [titleWidth, setTitleWidth] = useState<number | null>(null);
-  // The controls' width at full size, kept while they are drawn compact.
-  const [rightWidth, setRightWidth] = useState<number | null>(null);
-  const compact = titleRowCompact(rowWidth, titleWidth, rightWidth);
+  // Each form's width as it was last drawn, kept while another is drawn, so a wider row draws the words again.
+  const [rightWidths, setRightWidths] = useState<readonly (number | undefined)[]>([]);
+  const level = titleRowLevel(rowWidth, titleWidth, rightWidths, levels);
   const width = (set: (value: number) => void) => (event: LayoutChangeEvent) => set(event.nativeEvent.layout.width);
+  const measureRight = (event: LayoutChangeEvent) => {
+    const measured = event.nativeEvent.layout.width;
+    setRightWidths((known) => {
+      if (known[level] === measured) return known;
+      const next = [...known];
+      next[level] = measured;
+      return next;
+    });
+  };
 
   return (
     <View testID={testID} style={styles.row} onLayout={width(setRowWidth)}>
@@ -73,11 +98,8 @@ export function TitleRow({
         <ScopeIcons testIDPrefix="title-scope" />
       </View>
       <View style={styles.space} />
-      <View
-        testID={`${testID}-right`}
-        style={styles.right}
-        onLayout={compact ? undefined : width(setRightWidth)}>
-        {right(compact)}
+      <View testID={`${testID}-right`} style={styles.right} onLayout={measureRight}>
+        {right(level)}
       </View>
     </View>
   );

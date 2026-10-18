@@ -10,7 +10,7 @@ import { FilterChip } from '@/components/nocturne/filter-chip';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
-import { ScopePill } from '@/components/scope-control';
+import { CircleButton, ScopePill } from '@/components/scope-control';
 import { TitleRow } from '@/components/title-row';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { SettingsRow } from '@/components/settings/settings-row';
@@ -341,18 +341,29 @@ export default function ActivityScreen() {
           Flows' row (Build 22, F2–F3; the owner's build 21 item 3: "make the
           organization and teams circle icons then calendar all time can stay as
           is"). The range says what is chosen and opens the four, in a card (the
-          owner's build 13 decision 4). ~~The scope control's pills above~~. */}
+          owner's build 13 decision 4) — on a row too narrow for its words (a
+          320-pt phone), its calendar alone in a circle, read aloud the same
+          (the Build 22 review's M11). ~~The scope control's pills above~~. */}
       <TitleRow
         title="Activity"
-        right={() => (
-          <ScopePill
-            testID="activity-range"
-            icon={CalendarBlank}
-            label={RANGE_LABEL[range]}
-            accessibilityLabel={`Time range: ${RANGE_LABEL[range]}`}
-            onPress={() => setRangeOpen(true)}
-          />
-        )}
+        right={(level) =>
+          level >= 1 ? (
+            <CircleButton
+              testID="activity-range"
+              icon={CalendarBlank}
+              accessibilityLabel={`Time range: ${RANGE_LABEL[range]}`}
+              onPress={() => setRangeOpen(true)}
+            />
+          ) : (
+            <ScopePill
+              testID="activity-range"
+              icon={CalendarBlank}
+              label={RANGE_LABEL[range]}
+              accessibilityLabel={`Time range: ${RANGE_LABEL[range]}`}
+              onPress={() => setRangeOpen(true)}
+            />
+          )
+        }
       />
       <Dialog
         visible={rangeOpen}

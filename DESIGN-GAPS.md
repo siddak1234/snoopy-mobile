@@ -4687,3 +4687,69 @@ element jest could not send between its workers (`expect([word, queryByText(word
 as a boolean, and one whose test name was read as a pattern ("(…)") so no test ran — so the script
 now counts a red only when a test failed and a green only when one passed, and those three were run
 again: red, then green.)
+
+### The review of Build 22's screens (Round 17; 2026-10-17)
+
+One independent pass over `round-17/b22-screens` at `32de6cf` (base `main` `903f461`), by a session
+that wrote none of it, against the spec's "Done means" for H1–H4, F1–F3, P1–P4, the email screen and
+the run page, the owner's seven build 21 items and their screenshots (fb01–fb07, each looked at), the
+website's branch for the same screens (`round-17/b22-screens` at `0e15368`: the same words, the same
+step plan and tracker rules, the same flow-page gate) and the contract `b22-contract`
+(`automations.yaml` `8f780521…`). Widths below are Inter's own advance widths at the app's sizes
+(the 500 weight's font file in `node_modules`), which match the owner's fb02 screenshot (Archived
+113 pt and New 82 pt at 14 a side). Fixed on the same branch, each with a test proved to bite (below).
+
+| Severity | Finding | Fixed |
+| --- | --- | --- |
+| should-fix | The title rows ran off a 320-pt screen (iPhone SE 1st generation; Display Zoom on an SE or a mini), which leaves 280 inside the margins: Flows, with Archived already a circle, needs 303 (79 + 8 + 84 + 8 + 38 + 8 + 78), so New ran 23 pt past the margin; Activity needs 320 (102 + 8 + 84 + 8 + 118), so All time ran 40 pt past it, 20 past the screen's edge. Both the title and the controls are `flexShrink: 0`, and Archived was the only narrower form. | `components/title-row.tsx`: `titleRowLevel`, a measured ladder — each narrower form of the page's controls drawn only when the one before it does not fit, each form's width kept, the words back when the row widens; Flows' second form draws New as its Plus in a 38-pt accent circle ("New"), Activity's first its calendar in a 38-pt circle ("Time range: {range}", the same card). 375 pt and wider are unchanged: the owner's 420-pt phone draws every word. |
+| should-fix | The email screen's Email address field sits under its lists, and the screen did not make room for the keyboard: with two people, the starter and one extra address the field ends about 485 pt down, under a keyboard that opens at about 407 on a 667-pt-tall phone, so what is typed is hidden. | `app/(tabs)/flows/email.tsx`: the scroll view's `automaticallyAdjustKeyboardInsets` (iOS: room for the keyboard, the focused field brought into view). |
+| nit | The field was said aloud by its placeholder only, so once it held an address VoiceOver read the address with no name; the website's field has its label. | `accessibilityLabel` "Email address" (the spec's word). |
+
+**The review's choices** (the session's, not the owner's; also in the spec, §8.M): M11 — on a row too
+narrow for every word, Flows' New becomes its accent circle after Archived, and Activity's time range
+its calendar circle, rather than letting the row run off the screen or wrap; the owner's "+new can stay
+as is" and "calendar all time can stay as is" hold on every phone 343 pt wide or more (Flows) and 360
+or more (Activity). M12 — the email screen makes room for the keyboard with the scroll view's own
+inset rather than a keyboard-avoiding wrapper, so nothing on the page moves until the field is focused.
+
+**Seen and left, for the session or another lane** (not changed here):
+
+- An archived flow from before v4 — never moved (spec §5) — still draws the catalog's 22 steps by
+  title on its read-only page, the list the owner's item 5 objected to, because the flow page draws
+  the catalog's groups only for the version they were declared for (M5; the website the same,
+  `app/account/flows/[subscriptionId]/page.tsx:196`). The spec's "an archived flow's page draws step
+  2's row and step 5's title" holds for a flow archived on v4. Drawing v4's five steps for an older
+  flow needs a rule for its settings (v3's `vendor` names a step v4 does not have; v1 has none) in
+  both clients at once.
+- The integration row is still read aloud "{name}: change the vendor" (`app/(tabs)/flows/detail.tsx:338`),
+  and the choices page's failed load says "Couldn't load this flow's vendors"
+  (`lib/content/screen-states.ts:61`), beside the title "Connect integration" (S21: one word for one
+  thing). The website's row says the same (`page.tsx:216`); the spec fixes every word, so a change
+  belongs to both clients together.
+
+Checked and found as the spec says: Home's order and its reads (H1–H4, S31); both title rows' circles,
+height and top padding (F1–F3); the flow page's five titles for QuickBooks and None, nothing under
+steps 3 and 4, no CONNECTIONS, no Move, no version sent (P1–P4); step 5's line, Unavailable and the
+archived flow; the email screen's words, member view, duplicate and invalid checks, the limit, X and
+Add each one PUT of the whole list, the failure line; the run page's setting step, step 4 by the
+flow's choice, step 5 by `RunDetail.email` and the version gate gone; colours from the palette in
+both themes; the X's 38-pt circle with an 8-pt reach.
+
+**NOT OBSERVED**: the app on a simulator or a phone (nothing launched); a real v4 flow, run or email;
+the Deployed contract check (it reads production).
+
+### Guards proved to bite, the review of Build 22
+
+| Guard | Broken by | What failed |
+| --- | --- | --- |
+| M11 · Flows at 320 pt: New its accent icon | Flows' `levels` 2 made 1 (`app/(tabs)/flows/index.tsx`) | `build22-screens` "a 320-pt phone (280 inside the margins)…" |
+| M11 · Activity at 320 pt: the range its icon | the circle drawn only from level 9 (`app/(tabs)/activity/index.tsx`) | `build22-screens` "Activity on a 320-pt phone…" |
+| M11 · the ladder's last form drawn whatever it measures | the last level capped at 1 (`components/title-row.tsx`) | `build22-views` "row 280, title 79, …" |
+| S26 · Archived its icon alone when the row is too narrow (held again, by the ladder) | the room 100 pt looser (`components/title-row.tsx`) | `build22-screens` "Archived keeps its word where it fits…" |
+| M11 · New's circle in its accent | the circle's ring always neutral (`components/scope-control.tsx`) | `build22-screens` "a 320-pt phone (280 inside the margins)…" |
+| the email field seen over the keyboard | `automaticallyAdjustKeyboardInsets` removed (`app/(tabs)/flows/email.tsx`) | `build22-screens` "the field is seen when the keyboard opens…" |
+| the email field said aloud | its `accessibilityLabel` removed (`app/(tabs)/flows/email.tsx`) | `build22-screens` "the field is seen when the keyboard opens…" |
+
+(Each run by `b22-app-review-bites/bite.py` in the session's scratchpad, Node 22.23.2: red — a test
+failed — the file restored sha256-equal, green — a test passed. The Build 22 table's S26 row named
+`titleRowCompact`, which the ladder replaced; its guard is the fourth row here.)

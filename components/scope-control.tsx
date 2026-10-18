@@ -151,21 +151,27 @@ export function ScopePill({
 /**
  * One circle of the header row: Home's bell, exactly — 38 across, a hairline
  * ring, the glyph at 19 — every press ticking. The scope's two icons are drawn
- * with it, and since Build 22 Flows' Archived when its row has no room for the
- * word (the session's S26), so every circle in a header row is the same.
+ * with it, and since Build 22 a title row's own controls when the row has no
+ * room for their words (the session's S26; the Build 22 review's M11): Flows'
+ * Archived, then its New — `accent`, New's accent ring and glyph, as its pill
+ * is drawn — and Activity's time range, so every circle in a header row is the
+ * same.
  */
 export function CircleButton({
   icon: Glyph,
   accessibilityLabel,
   onPress,
   testID,
+  tone = 'neutral',
 }: {
   icon: Icon;
   accessibilityLabel: string;
   onPress: () => void;
   testID?: string;
+  tone?: 'neutral' | 'accent';
 }) {
   const { palette } = useTheme();
+  const accent = tone === 'accent';
   return (
     <Pressable
       testID={testID}
@@ -174,10 +180,10 @@ export function CircleButton({
       onPress={onPress}
       style={({ pressed }) => [
         styles.iconButton,
-        { borderColor: palette.neutral[800] },
-        pressed && { backgroundColor: withAlpha(palette.text, 0.07) },
+        { borderColor: accent ? palette.accent : palette.neutral[800] },
+        pressed && { backgroundColor: accent ? withAlpha(palette.accent, 0.12) : withAlpha(palette.text, 0.07) },
       ]}>
-      <Glyph size={19} color={palette.neutral[300]} weight="regular" />
+      <Glyph size={19} color={accent ? palette.accent : palette.neutral[300]} weight="regular" />
     </Pressable>
   );
 }
