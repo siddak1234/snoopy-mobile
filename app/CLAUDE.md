@@ -35,7 +35,7 @@ The app offers every signed-in page the website offers, on the same operations a
 
 ## A test for every screen
 
-- Each route file has a test under `__tests__/` that renders it and its states (loading, offline, error, empty, loaded).
+- Each route file has a test under `__tests__/` that renders it and its states (`components/screen-state.tsx`: loading, offline, error, unavailable, empty; then loaded).
 - Every press is pressed by a test that asserts its outcome (`audit:presses`).
 - Sign-in, sign-out, the guard, a redirect, or the params a screen takes on arrival: a test under `__tests__/real-router/`.
 - A new screen: `/new-screen` (`.claude/skills/new-screen/SKILL.md`).

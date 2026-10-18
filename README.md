@@ -376,7 +376,7 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   reads the workspace's billing quietly through the shared snapshot for an
   owner or admin (D1). The app is offered in the United States App Store
   storefront only; selling elsewhere needs a storefront check first.
-- `npm run verify` ends by emitting .autom8x/repo-facts/snoopy-mobile.json
+- `npm run verify` ends by emitting `.autom8x/repo-facts/snoopy-mobile.json`
   (gitignored). The backend's round close commits it, so the manifest quotes
   this repository's counts rather than reading its files.
 

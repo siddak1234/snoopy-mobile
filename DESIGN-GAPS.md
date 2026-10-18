@@ -533,7 +533,7 @@ owner approved (MASTER-PLAN §4); it rides 25.8.4's build.
   (`lib/generated/platform-contracts/automations.d.ts`). The platform checks a file's type against
   the flow's manifest only when its upload opens (backend `snoopy-backend/apps/artifacts/src/routes.ts:248-255`,
   `content_type_not_accepted`).
-- SDK 54's pins (node_modules/expo/bundledNativeModules.json:51-52): `expo-image-manipulator`
+- SDK 54's pins (`node_modules/expo/bundledNativeModules.json:51-52`): `expo-image-manipulator`
   `~14.0.8`, `expo-image-picker` `~17.0.11`; `npx expo install` added exactly those (14.0.8 and
   17.0.11, with `expo-image-loader` 6.0.0 under both), and `npx expo install --check` answers
   "Dependencies are up to date".
@@ -820,7 +820,7 @@ gate and the store below were set for this change; nothing here records them as 
   swallowed. The person is `session.user.userId`, a UUID
   (`lib/generated/platform-contracts/platform.d.ts:1539-1540`), as `app/_layout.tsx:139` and
   `app/(tabs)/settings/team.tsx:59` read it; a SecureStore key takes letters, digits, `.`, `-` and
-  `_` (node_modules/expo-secure-store/build/SecureStore.js:151-153), which a UUID is.
+  `_` (`node_modules/expo-secure-store/build/SecureStore.js:151-153`), which a UUID is.
 - `npm run audit:haptics` failed on this branch as committed — "app/(auth)/account-deleted.tsx:39:
   onPress on <Text> is not pressed(…)", `c6574ef`'s Privacy Policy link — so `npm run verify`
   failed at `c6574ef`.
@@ -965,7 +965,7 @@ test alone failed — the run POSTed with the file, `{ subscriptionId: 'sub-1', 
 and `git status --porcelain` was as before.
 
 Only Android reaches it today. React Native calls a `Modal`'s `onRequestClose` for Android's back
-and, on iOS, only when a sheet is swiped to dismiss (node_modules/react-native/Libraries/Modal/Modal.js:89;
+and, on iOS, only when a sheet is swiped to dismiss (`node_modules/react-native/Libraries/Modal/Modal.js:89`;
 the New Architecture's `React/Fabric/Mounting/ComponentViews/Modal/RCTModalHostViewComponentView.mm:306-322`,
 on by `app.json:10`). `Dialog`'s modal is `transparent` (`components/dialog.tsx:47`), so it is
 presented `overFullScreen` (`Modal.js:300-305`), which no swipe dismisses.

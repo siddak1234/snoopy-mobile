@@ -571,7 +571,7 @@ Written 2026-09-30, once the owner had completed 24.8.1, 24.8.2 and 24.8.6.
   <hash>.` as `snoopy` writes it, and `verify:platform-contracts` compares
   those hashes with the source documents; generator and verifier read
   `SNOOPY_BACKEND_ROOT` (default `../snoopy-backend`). A skipped contract
-  check is recorded beside the facts (.autom8x/repo-facts/platform-contracts.json),
+  check is recorded beside the facts (`.autom8x/repo-facts/platform-contracts.json`),
   `repo-facts` then emits NO facts and says why (exit code unchanged), and the
   facts-schema test skips visibly instead of passing. Rehearsed on the branch:
   `--dry-run` answered `REFUSED: the tree is not clean` with edits pending and
