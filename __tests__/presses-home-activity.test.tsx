@@ -229,7 +229,7 @@ describe('Notifications: read and dismissed on the platform (the owner\'s build 
     return fake;
   }
 
-  it('Mark all read saves the rows on screen read, by id (DESIGN-GAPS: "not rows a later re-read brings in"), and draws what the platform answers', async () => {
+  it('Mark all read saves the rows on screen read, by id (DESIGN-GAPS.archive.md: "not rows a later re-read brings in"), and draws what the platform answers', async () => {
     const inbox = inboxPayload();
     // By the time the save lands, one more run has failed: the platform lists it, unread.
     const later = { ...inbox.items[3]!, id: 'run:run-later', runId: 'run-later', failureReason: 'Reason run-later' };

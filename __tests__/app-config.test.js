@@ -229,7 +229,7 @@ describe('the real static config, through the factory', () => {
    * the web sign-in uses is grouped under it — after the first credentials run
    * tried to switch it off. The encryption declaration is the OS-only case and
    * stops the export-compliance question on every upload. Both are recorded in
-   * DESIGN-GAPS.md "Release configuration, 24.7".
+   * DESIGN-GAPS.archive.md "Release configuration, 24.7".
    */
   it('declares the release entitlements and the name the store record carries', () => {
     setEnv({ ...RELEASE, EAS_BUILD_PROFILE: 'production' });

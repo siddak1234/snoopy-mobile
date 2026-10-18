@@ -47,8 +47,9 @@ app-example
 .env.local
 .env*.local
 
-# Claude Code local settings
-.claude/
+# Claude Code: the personal settings stay local; the rest of .claude/ (skills, agents,
+# hooks, settings.json) is committed and routed from CLAUDE.md.
+.claude/settings.local.json
 
 # test coverage output
 coverage/

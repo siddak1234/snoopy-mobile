@@ -3,15 +3,19 @@
 #
 # Install once per clone: `npm run hooks:install` (git config core.hooksPath .githooks).
 #
-# What CI's jobs run (.github/workflows/ci.yml), in the same order: Lint, Typecheck,
-# every architecture gate, the contract check, the tests with coverage and the
-# press audit — all of them `npm run verify` — then the two checks the Architecture
-# gates job runs beyond verify: `audit:dependencies` and the salvaged-client-data
-# scan. The native bundle exports ("Native bundle export") stay CI-only. The first
+# What CI's jobs run (.github/workflows/ci.yml), in the same order: Lint, the docs
+# checks (`check:docs`, `map -- --check`, `audit:docs`; the Architecture gates job),
+# Typecheck, every architecture gate, the contract check, the tests with coverage
+# and the press audit — all of them `npm run verify` — then the two checks the
+# Architecture gates job runs beyond verify: `audit:dependencies` and the
+# salvaged-client-data scan. The native bundle exports ("Native bundle export") stay CI-only. The first
 # red gate refuses the push and is named below; nothing is pushed. A by-design red
 # push — the deliberate-failure commit a CI proof needs — bypasses this hook with
 #
 #   git push --no-verify
+#
+# by the owner's hand only: in a Claude Code session .claude/hooks/guard.mjs
+# refuses it.
 #
 # Push from a clone outside iCloud-synced folders: jest hangs on evicted files.
 set -u
@@ -81,7 +85,7 @@ if [ "$dirty" -ne 0 ]; then
   echo "pre-push: note — $dirty uncommitted path(s); the gate judges the working tree, the push sends the commits."
 fi
 
-gate "verify (lint, typecheck, architecture gates, contracts, tests with coverage, presses, facts)" npm run verify
+gate "verify (lint, docs checks, typecheck, architecture gates, contracts, tests with coverage, presses, facts)" npm run verify
 gate "audit:dependencies" npm run audit:dependencies
 gate "No salvaged client data" salvage_scan
 

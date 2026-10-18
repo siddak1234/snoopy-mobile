@@ -109,7 +109,7 @@ export function Inbox({ runPath }: { runPath: InboxRunPath }) {
     }
   };
   // The rows on screen, by id, not "everything listed now": an item that arrives
-  // after the inbox was drawn is still unread (DESIGN-GAPS).
+  // after the inbox was drawn is still unread (DESIGN-GAPS.archive.md).
   const markAllRead = () => {
     const unread = items.filter((item) => item.unread).map((item) => item.id);
     if (unread.length === 0) return;
