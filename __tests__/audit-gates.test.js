@@ -285,7 +285,9 @@ describe('the vocabulary audit (24.11.7)', () => {
 /**
  * Build 21's two (the owner's build 20 items 4 and 5, and D4): "Connect vendor
  * ›" is never said again, and no screen reads a run's request id — a run is
- * named by its `id`. The platform modules keep their path parameters.
+ * named by its `id`. The platform modules keep their path parameters. Since
+ * Build 22 "Connect vendor" in any form, and "Move to v" (the owner's build 21
+ * items 5 and 7).
  */
 describe('the vocabulary audit: Build 21', () => {
   it('fails "Connect vendor ›" in copy and a request id read where a screen is made, and passes the platform\'s own names', () => {
@@ -310,10 +312,42 @@ describe('the vocabulary audit: Build 21', () => {
       [
         "export const path = '/v1/workspaces/{workspaceId}/projects/{projectId}/access-requests/{requestId}';",
         'export const values = (requestId) => ({ requestId });',
-        "export const vendor = 'Connect vendor';",
+        "export const vendor = 'vendor';",
       ].join('\n'),
     );
     expect(run(vocabularyAudit).status).toBe(0);
+    rmSync(join(root, 'lib/platform-code.ts'));
+  });
+});
+
+describe('the vocabulary audit: Build 22', () => {
+  it('fails "Connect vendor" in any form and "Move to v" in copy — the owner\'s build 21 items 5 and 7 — and passes a comment and a key', () => {
+    expect(run(vocabularyAudit).status).toBe(0);
+
+    for (const [file, source] of [
+      ['app/vendor.tsx', 'export const A = () => <Text>Connect vendor</Text>;'],
+      ['lib/content/titles.ts', "export const B = 'Connect vendor';"],
+      ['components/move.tsx', 'export const C = ({ to }) => <Text>{`Move to v${to}`}</Text>;'],
+      ['lib/content/move.ts', "export const D = 'Move to v2';"],
+    ]) {
+      mkdirSync(dirname(join(root, file)), { recursive: true });
+      writeFileSync(join(root, file), source);
+      const result = run(vocabularyAudit);
+      expect([file, result.status]).toEqual([file, 1]);
+      expect(result.stderr).toContain(file);
+      rmSync(join(root, file));
+    }
+
+    writeFileSync(
+      join(root, 'lib/words-ok.ts'),
+      [
+        '// ~~Connect vendor~~ and ~~Move to v2~~ until Build 22: a comment is never copy.',
+        "export const route = '/(tabs)/flows/vendor';",
+        "export const VENDOR_TITLE = 'Connect integration';",
+      ].join('\n'),
+    );
+    expect(run(vocabularyAudit).status).toBe(0);
+    rmSync(join(root, 'lib/words-ok.ts'));
   });
 });
 

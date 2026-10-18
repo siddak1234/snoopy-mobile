@@ -23,7 +23,7 @@ export const NONE = 'none';
  * None. Each row is the one connection row (spec A4) — the vendor's mark, its
  * name, the account's email or its state under it — and the whole row is the
  * control; a check (24) marks the chosen one, in place of a button. Drawn on
- * Connect vendor, where a tap is saved at once, and on Set up, where a tap is
+ * Connect integration, where a tap is saved at once, and on Set up, where a tap is
  * the choice its Turn on or Save sends (the owner's AM4: "set up should be made
  * simple. vendor connections can be specific but everything is there").
  *

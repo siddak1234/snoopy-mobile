@@ -230,7 +230,8 @@ describe('Setup — Turn on (24.4: create, then patch its settings; the Invoice 
         method: 'POST',
         path: `${WS}/subscriptions`,
         key: expect.stringMatching(/^subscribe-/u),
-        body: { templateId: 'tpl.0', templateVersion: 3 },
+        // No version: a new flow runs the newest (Build 22, P4; backend ADR-0041).
+        body: { templateId: 'tpl.0' },
       },
       {
         method: 'PATCH',

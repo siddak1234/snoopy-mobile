@@ -19,7 +19,6 @@ import {
   TEST_WORKSPACE,
   approvalsPayload,
   catalogPayload,
-  flowCatalogPayload,
   inboxPayload,
   runStatsPayload,
   runsPayload,
@@ -41,10 +40,16 @@ import { mockRouter, renderWithProviders } from '@/test/render';
  * - G3: Home's own failure says what happened — busy with its wait, failed —
  *   and that the person was not signed out; "Check your connection" only
  *   offline. The shared failed load says it too, in the website's words.
- * - G5: Connect integration and View teams, with flows or none.
- * - G6: the overview's flows and integrations, and every figure failing on its
- *   own.
- * - G7: the first three teams across the workspaces, and View all teams.
+ * - ~~G5: Connect integration and View teams, with flows or none~~ and
+ *   ~~G6's overview (Flows, Integrations)~~ until Build 22 (the owner's build
+ *   21 item 1: "Remove overflow … I dont want want flows integrations, connect
+ *   integrations, view teams, or run a flow"); G6's rule stands: every figure
+ *   fails on its own.
+ * - ~~G7: the first three teams across the workspaces, and View all teams~~
+ *   until the owner's AM5.
+ *
+ * The website's dashboard matches the app since Build 22 (the session's D5,
+ * approved by the owner): TODAY, the banner, Add a flow and Flows, Recent runs.
  */
 
 jest.mock('@/lib/platform/client', () => ({
@@ -128,7 +133,6 @@ const WORKSPACE_READS: Route[] = [
   'GET /v1/workspaces/{workspaceId}/automations',
   'GET /v1/workspaces/{workspaceId}/approvals',
   'GET /v1/workspaces/{workspaceId}/subscriptions',
-  'GET /v1/workspaces/{workspaceId}/connections',
 ];
 
 /** The four fixture flows, placed: invoice in Finance, email and lead in Legal, kpi the whole workspace's. */
@@ -144,9 +148,6 @@ const pendingOn = (subscriptionId: string, index: number): Approvals['approvals'
   id: `apr-${subscriptionId}`,
   subscriptionId,
 });
-
-/** What a row of the overview says: its figure. */
-const figure = (testID: string) => screen.getByTestId(`value-of-${testID}`).props.children;
 
 beforeEach(() => {
   platformOperation.mockReset();
@@ -282,65 +283,31 @@ describe("G3 — Home's own failure says what happened, and that nobody was sign
   });
 });
 
-describe("G5 — the website's other quick actions", () => {
-  it.each([
-    ['with flows', () => routeHome()],
-    [
-      'with none set up yet',
-      () => {
-        const catalog = catalogPayload();
-        catalog.automations = catalog.automations.map((automation) => ({ ...automation, subscribed: false }));
-        return routeHome({ catalog });
-      },
-    ],
-  ])('%s: Connect integration opens Settings › Connections, and View teams opens Settings › Teams', async (_case, route) => {
-    route();
+describe("Home's ways out since Build 22 (H3, H4)", () => {
+  it('with flows: Add a flow opens the catalog and Flows the Flows tab — no Connect integration, no View teams', async () => {
+    routeHome();
     await renderWithProviders(<HomeScreen />, signedInSession);
-    const quickActions = await screen.findByTestId('home-quick-actions');
+    const pills = await screen.findByTestId('home-quick-actions');
+    await fireEvent.press(within(pills).getByText('Add a flow'));
+    await fireEvent.press(within(pills).getByText('Flows'));
+    expect(mockRouter.push.mock.calls).toEqual([['/(tabs)/flows/add'], ['/(tabs)/flows']]);
+    for (const gone of ['Connect integration', 'View teams']) expect([gone, screen.queryByText(gone) !== null]).toEqual([gone, false]);
+  });
 
-    await fireEvent.press(within(quickActions).getByText('Connect integration'));
-    expect(mockRouter.push.mock.calls).toEqual([['/(tabs)/settings/connections']]);
-    await fireEvent.press(within(quickActions).getByText('View teams'));
-    expect(mockRouter.push.mock.calls).toEqual([['/(tabs)/settings/connections'], ['/(tabs)/settings/teams']]);
+  it('with none set up yet: the first run\'s own Add a flow, no pills, and no Connect integration or View teams', async () => {
+    const catalog = catalogPayload();
+    catalog.automations = catalog.automations.map((automation) => ({ ...automation, subscribed: false }));
+    routeHome({ catalog });
+    await renderWithProviders(<HomeScreen />, signedInSession);
+    const first = await screen.findByTestId('home-first-run');
+    expect(screen.queryByTestId('home-quick-actions')).toBeNull();
+    await fireEvent.press(within(first).getByText('Add a flow'));
+    expect(mockRouter.push.mock.calls).toEqual([['/(tabs)/flows/add']]);
+    for (const gone of ['Connect integration', 'View teams']) expect([gone, screen.queryByText(gone) !== null]).toEqual([gone, false]);
   });
 });
 
-describe('G6 — the overview, and every figure on its own', () => {
-  it("says the workspace's flows that are not archived — in the team chosen, as the tiles are — and its connected integrations", async () => {
-    const subscriptions = placedSubscriptions();
-    subscriptions.subscriptions.push({ ...subscriptions.subscriptions[0]!, id: 'gone', status: 'archived', projectId: 'project-1' });
-    const connection = {
-      workspaceId: TEST_WORKSPACE,
-      externalAccount: { id: 'acct-1', displayName: 'ap@acme.co' },
-      requiredScopes: [],
-      grantedScopes: [],
-      usedByCount: 1,
-    };
-    routeHome({
-      subscriptions,
-      teams: { [TEST_WORKSPACE]: [team('project-1', TEST_WORKSPACE, 'Finance', 'active'), team('project-2', TEST_WORKSPACE, 'Legal', 'active')] },
-      connections: {
-        connections: [
-          { ...connection, id: 'c1', providerId: 'gmail', status: 'connected' },
-          { ...connection, id: 'c2', providerId: 'quickbooks', status: 'connected' },
-          { ...connection, id: 'c3', providerId: 'hubspot', status: 'reauthorization-required' },
-        ],
-      },
-    });
-    const view = await renderWithProviders(<HomeScreen />, signedInSession);
-    expect(await screen.findByText('OVERVIEW')).toBeTruthy();
-    expect(figure('home-flows')).toBe('4');
-    expect(figure('home-integrations')).toBe('2');
-
-    // Finance chosen: its one live flow; the integrations are the workspace's.
-    mockStored.set(TEST_WORKSPACE, 'project-1');
-    await view.unmount();
-    await renderWithProviders(<HomeScreen />, signedInSession);
-    expect(await screen.findByLabelText('Team: Finance')).toBeTruthy();
-    expect(figure('home-flows')).toBe('1');
-    expect(figure('home-integrations')).toBe('2');
-  });
-
+describe('G6 — every figure on its own', () => {
   it.each<[string, Route, () => void]>([
     [
       "today's counts",
@@ -350,7 +317,6 @@ describe('G6 — the overview, and every figure on its own', () => {
         expect(screen.queryByTestId('home-stats')).toBeNull();
         expect(screen.queryByText(/Your agents ran/u)).toBeNull();
         expect(screen.getByText('Run #4821 · posted to QuickBooks')).toBeTruthy();
-        expect(figure('home-flows')).toBe('4');
       },
     ],
     [
@@ -367,18 +333,9 @@ describe('G6 — the overview, and every figure on its own', () => {
       'the flows',
       'GET /v1/workspaces/{workspaceId}/subscriptions',
       () => {
-        expect(figure('home-flows')).toBe('Unavailable');
         // All teams: nothing else narrows through them.
         expect(screen.getByTestId('home-stats')).toBeTruthy();
         expect(screen.getByText('Run #4821 · posted to QuickBooks')).toBeTruthy();
-      },
-    ],
-    [
-      'the integrations',
-      'GET /v1/workspaces/{workspaceId}/connections',
-      () => {
-        expect(figure('home-integrations')).toBe('Unavailable');
-        expect(figure('home-flows')).toBe('4');
       },
     ],
     [
@@ -418,10 +375,8 @@ describe('G6 — the overview, and every figure on its own', () => {
     await renderWithProviders(<HomeScreen />, signedInSession);
     expect(await screen.findByLabelText('Team: Finance')).toBeTruthy();
 
-    expect(figure('home-flows')).toBe('Unavailable');
     expect(screen.getByTestId('home-stats-unavailable')).toBeTruthy();
     expect(screen.getByText('Recent activity could not be read just now.')).toBeTruthy();
-    expect(figure('home-integrations')).toBe('0');
   });
 });
 
@@ -441,69 +396,61 @@ function readingOrder(tree: unknown): string[] {
 }
 
 /**
- * Build 21 (spec A9; the owner's "when a user wants to run a random flow. they
- * shouldnt have to do a bunch of work in the app", and his AM5: "remove lsit
- * teams on bottom of home page, it is useless"): RUN A FLOW, right under the
- * greeting — every live flow, its team under its name, opening its flow page —
- * and ~~TEAMS~~ gone from Home; teams stay in Settings.
+ * Build 22, H1–H4 (the owner's build 21 item 1, verbatim: "Remove run a flow
+ * section. We did not add thus. / Remove overflow, it should be the 3 icons for
+ * today with the run types / Then add a flow and flow buttons / Then recent
+ * runs. / I dont want want flows integrations, connect integrations, view teams,
+ * or run a flow. / Recent runs is fine"; "overflow" is OVERVIEW and the banner
+ * stays right after TODAY — the session's D4 and D6, approved by the owner):
+ * the header, the greeting, TODAY, the banner while something waits, Add a flow
+ * and Flows, RECENT RUNS. ~~RUN A FLOW (Build 21, spec A9)~~, ~~OVERVIEW (G6)~~,
+ * ~~Connect integration and View teams (G5)~~ and ~~TEAMS (the owner's AM5)~~.
  */
-describe('Home: RUN A FLOW, and no Teams list (Build 21, spec A9; the owner\'s AM5)', () => {
-  it('lists every live flow under the greeting, before TODAY — its name and team — and each opens its flow page; a paused or draft flow is not listed', async () => {
-    routeHome({
-      catalog: flowCatalogPayload(),
-      subscriptions: placedSubscriptions(),
-      teams: { [TEST_WORKSPACE]: [team('project-1', TEST_WORKSPACE, 'Finance', 'active'), team('project-2', TEST_WORKSPACE, 'Legal', 'active')] },
-    });
+describe('Home, top to bottom (Build 22, H1–H4)', () => {
+  it('the header, the greeting, TODAY, the banner, Add a flow and Flows, then RECENT RUNS — and nothing else', async () => {
+    const pending = [pendingOn('invoice', 0)];
+    routeHome({ subscriptions: placedSubscriptions(), pending: { approvals: pending } });
     const view = await renderWithProviders(<HomeScreen />, signedInSession);
-    const list = await screen.findByTestId('home-quick-runs');
-    expect(within(list).getByText('RUN A FLOW')).toBeTruthy();
-    expect(within(list).getAllByTestId(/^home-quick-run-/u).map((row) => row.props.testID)).toEqual([
-      'home-quick-run-invoice',
-      'home-quick-run-email',
-    ]);
-    const invoice = within(screen.getByTestId('home-quick-run-invoice'));
-    expect(invoice.getByText('Invoice triage')).toBeTruthy();
-    expect(invoice.getByText('Team: Finance')).toBeTruthy();
-    expect(invoice.getAllByTestId(/^phosphor-react-native-/u)[0]!.props.width).toBe(24);
+    expect(await screen.findByTestId('home-approvals')).toBeTruthy();
     const order = readingOrder(view.toJSON());
-    expect(order.indexOf('text:AUTOMATION × AI')).toBeLessThan(order.indexOf('home-quick-runs'));
-    expect(order.indexOf('home-quick-runs')).toBeLessThan(order.indexOf('text:TODAY'));
-
-    await fireEvent.press(screen.getByTestId('home-quick-run-email'));
-    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'email' } });
+    const sequence = ['home-header', 'text:AUTOMATION × AI', 'text:TODAY', 'home-stats', 'home-approvals', 'home-quick-actions', 'text:RECENT RUNS'];
+    const at = sequence.map((entry) => [entry, order.indexOf(entry)] as const);
+    expect(at.filter(([, index]) => index < 0)).toEqual([]);
+    expect([...at].sort((a, b) => a[1] - b[1]).map(([entry]) => entry)).toEqual(sequence);
+    // RECENT RUNS is the last section: nothing after its card but its rows.
+    expect(order.slice(order.indexOf('text:RECENT RUNS')).filter((entry) => /^text:[A-Z ]{4,}$/u.test(entry))).toEqual(['text:RECENT RUNS']);
   });
 
-  it('draws no RUN A FLOW when no flow is live', async () => {
-    const subscriptions = subscriptionsPayload();
-    subscriptions.subscriptions = subscriptions.subscriptions.map((row) => ({ ...row, status: 'paused' as const }));
-    routeHome({ catalog: flowCatalogPayload(), subscriptions });
-    await renderWithProviders(<HomeScreen />, signedInSession);
-    expect(await screen.findByTestId('home-stats')).toBeTruthy();
-    expect(screen.queryByTestId('home-quick-runs')).toBeNull();
-    expect(screen.queryByText('RUN A FLOW')).toBeNull();
-  });
-
-  it('draws no Teams list — no TEAMS, no team rows, no View all teams — and View teams still opens Settings › Teams', async () => {
+  it('draws no RUN A FLOW — though flows are live — no OVERVIEW, no Integrations, no Connect integration, no View teams, no Teams list', async () => {
     routeHome({
+      subscriptions: placedSubscriptions(),
       workspaces: [ACME, OWN],
       teams: { [TEST_WORKSPACE]: [team('finance', TEST_WORKSPACE, 'Finance', 'active')], [PERSONAL]: [team('hr', PERSONAL, 'HR', 'draft')] },
     });
     await renderWithProviders(<HomeScreen />, signedInSession);
     expect(await screen.findByTestId('home-stats')).toBeTruthy();
-    for (const gone of ['TEAMS', 'View all teams', 'No teams yet.', 'Your teams could not be read just now.']) {
-      expect([gone, screen.queryByText(gone)]).toEqual([gone, null]);
+    for (const gone of ['RUN A FLOW', 'OVERVIEW', 'Integrations', 'Connect integration', 'View teams', 'TEAMS', 'View all teams']) {
+      expect([gone, screen.queryByText(gone) !== null]).toEqual([gone, false]);
     }
-    expect(screen.queryAllByTestId(/^home-team-/u)).toEqual([]);
-    await fireEvent.press(screen.getByTestId('home-view-teams'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/teams');
+    for (const id of [/^home-quick-run/u, /^home-flows$/u, /^home-integrations$/u, /^home-connect-integration$/u, /^home-view-teams$/u, /^home-team-/u]) {
+      expect(screen.queryAllByTestId(id)).toEqual([]);
+    }
   });
 
-  it('a refused teams read costs the team names only: the live flows are still listed', async () => {
-    const fake = routeHome({ catalog: flowCatalogPayload(), subscriptions: placedSubscriptions() });
-    refuse(fake, 'GET /v1/workspaces/{workspaceId}/projects', () => new PlatformError('Service Unavailable', 503));
+  it('reads only what it draws: no connections (the session\'s S31)', async () => {
+    const fake = routeHome();
     await renderWithProviders(<HomeScreen />, signedInSession);
-    expect(within(await screen.findByTestId('home-quick-run-invoice')).getByText('Invoice triage')).toBeTruthy();
-    expect(screen.getByTestId('home-stats')).toBeTruthy();
+    expect(await screen.findByTestId('home-stats')).toBeTruthy();
+    expect(fake.to('GET /v1/workspaces/{workspaceId}/connections')).toEqual([]);
+  });
+
+  it('no banner while nothing waits: TODAY is followed by Add a flow and Flows', async () => {
+    routeHome({ pending: { approvals: [] } });
+    const view = await renderWithProviders(<HomeScreen />, signedInSession);
+    expect(await screen.findByTestId('home-stats')).toBeTruthy();
+    expect(screen.queryByTestId('home-approvals')).toBeNull();
+    const order = readingOrder(view.toJSON());
+    expect(order.indexOf('home-stats')).toBeLessThan(order.indexOf('home-quick-actions'));
   });
 
   it('names each recent run by its full id, under its line (spec A8; the owner\'s AM2)', async () => {

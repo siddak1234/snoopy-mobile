@@ -103,7 +103,7 @@ function entry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
 }
 
 
-const callbacks = { onChanged: jest.fn(), onArchived: jest.fn() };
+const callbacks = { onArchived: jest.fn() };
 
 async function renderActions(
   props: {
@@ -154,32 +154,22 @@ describe('Run (24.4.1, ADR-0030; the flow page\'s start controls since 25.8.3)',
   });
 });
 
-describe('Move to a newer version (24.4.1, backend §12.1 #126)', () => {
-  it('is offered only when the catalog has a newer version, and moves on confirm', async () => {
-    const view = await renderActions();
-    expect(screen.queryByText(/is available/)).toBeNull();
-    await view.unmount();
-
+/**
+ * No move (Build 22, P4; the owner's build 21 item 7: "I also dont want a move
+ * to vx number in the flows. The user always gets the latest version. They dont
+ * get to oick when to update"): the platform moves every flow to the newest
+ * version (backend ADR-0041), so a flow behind the catalog — which the release
+ * leaves none of — offers no move and sends no version. ~~Move to vN~~ (24.4.1,
+ * backend §12.1 #126) until Build 22.
+ */
+describe('no move to another version (Build 22, P4)', () => {
+  it('offers no Move and says no version, even for a flow the catalog has a newer version of', async () => {
     await renderActions({ entry: entry({ version: 2 }) });
-    expect(screen.getByText('This runs v1; v2 is available.')).toBeTruthy();
-    await fireEvent.press(screen.getByText('Move to v2'));
-    expect(await screen.findByText('Move Invoice triage to v2?')).toBeTruthy();
-    await pressLast('Move to v2');
-    await waitFor(() => expect(callbacks.onChanged).toHaveBeenCalled());
-    expect(sent).toEqual([expect.objectContaining({ method: 'PATCH', path: SUB_PATH, body: { templateVersion: 2 } })]);
-  });
-
-  it('says a refusal a person can act on in words', async () => {
-    answer(`PATCH ${SUB_PATH}`, () => {
-      throw new PlatformError('Conflict', 409, 'CONFLICT', { reason: 'runs_in_flight' });
-    });
-    await renderActions({ entry: entry({ version: 2 }) });
-    await fireEvent.press(screen.getByText('Move to v2'));
-    await pressLast('Move to v2');
-    expect(
-      await screen.findByText('A run of this flow is still going. Wait for it to finish, then move.'),
-    ).toBeTruthy();
-    expect(callbacks.onChanged).not.toHaveBeenCalled();
+    expect(screen.getByTestId('archive-flow')).toBeTruthy();
+    expect(screen.queryByText(/Move/u)).toBeNull();
+    expect(screen.queryByText(/is available/u)).toBeNull();
+    expect(screen.queryByText(/v2/u)).toBeNull();
+    expect(sent).toHaveLength(0);
   });
 });
 
@@ -499,86 +489,13 @@ describe('Edit setup (Build 21; the owner\'s AM4: "they can have a edit settings
   });
 });
 
-describe('a move whose settings do not fit is answered with the new version\'s settings (backend §12.1 #185)', () => {
-  it('offers that version\'s fields, seeded from what the flow holds, and saving moves it in one change', async () => {
-    answer(`PATCH ${SUB_PATH}`, () => {
-      throw new PlatformError('Unprocessable', 422, 'VALIDATION_FAILED', { reason: 'invalid_config' });
-    });
-    await renderActions({ sub: subscription({ setup: [INBOX] }), entry: entry({ version: 2, setup: [INBOX, ALERTS, DIGEST] }) });
-    await fireEvent.press(screen.getByText('Move to v2'));
-    await pressLast('Move to v2');
-    expect(await screen.findByText('Its settings do not fit that version. Set them for it to move.')).toBeTruthy();
-    await fireEvent.press(screen.getByText('Set them for v2'));
-
-    expect(await screen.findByText('Settings for v2')).toBeTruthy();
-    // The new version's fields, the flow's own value carried over.
-    expect(screen.getByLabelText('Watch inbox').props.value).toBe('ap@acme.co');
-    await fireEvent.changeText(screen.getByLabelText('Daily digest to'), 'ops@acme.co');
-    await pressLast('Save and move to v2');
-    await waitFor(() => expect(callbacks.onChanged).toHaveBeenCalled());
-    expect(sent.map((call) => call.body)).toEqual([
-      { templateVersion: 2 },
-      { config: { inbox: 'ap@acme.co', alerts: false, digest: 'ops@acme.co' }, templateVersion: 2 },
-    ]);
-  });
-
-  it('cancelling the new version\'s settings sends nothing and leaves the flow where it is', async () => {
-    answer(`PATCH ${SUB_PATH}`, () => {
-      throw new PlatformError('Unprocessable', 422, 'VALIDATION_FAILED', { reason: 'invalid_config' });
-    });
-    await renderActions({ sub: subscription({ setup: [INBOX] }), entry: entry({ version: 2, setup: [INBOX, DIGEST] }) });
-    await fireEvent.press(screen.getByText('Move to v2'));
-    await pressLast('Move to v2');
-    await fireEvent.press(await screen.findByText('Set them for v2'));
-    expect(await screen.findByText('Settings for v2')).toBeTruthy();
-    await pressLast('Cancel');
-    await waitFor(() => expect(screen.queryByText('Settings for v2')).toBeNull());
-    expect(sent.map((call) => call.body)).toEqual([{ templateVersion: 2 }]);
-    expect(callbacks.onChanged).not.toHaveBeenCalled();
-  });
-
-  it("draws the new version's settings in the sheet that asked — no second modal, which iOS would not present while the first dismisses (the review of #49)", async () => {
-    answer(`PATCH ${SUB_PATH}`, () => {
-      throw new PlatformError('Unprocessable', 422, 'VALIDATION_FAILED', { reason: 'invalid_config' });
-    });
-    await renderActions({ sub: subscription({ setup: [INBOX] }), entry: entry({ version: 2, setup: [INBOX, DIGEST] }) });
-    await fireEvent.press(screen.getByText('Move to v2'));
-    await pressLast('Move to v2');
-    await screen.findByText('Set them for v2');
-    const sheet = screen.getByTestId('move-version-dialog');
-
-    await fireEvent.press(screen.getByText('Set them for v2'));
-    expect(await screen.findByText('Settings for v2')).toBeTruthy();
-    // The very element that asked now holds the fields — its id moved with its words — not
-    // a second sheet mounted as the first one left.
-    expect(screen.getByTestId('setup-dialog')).toBe(sheet);
-    expect(screen.queryByTestId('move-version-dialog')).toBeNull();
-    expect(screen.getByLabelText('Watch inbox').props.value).toBe('ap@acme.co');
-  });
-
-  it('offers nothing to set for any other refusal', async () => {
-    answer(`PATCH ${SUB_PATH}`, () => {
-      throw new PlatformError('Conflict', 409, 'CONFLICT', { reason: 'runs_in_flight' });
-    });
-    await renderActions({ entry: entry({ version: 2 }) });
-    await fireEvent.press(screen.getByText('Move to v2'));
-    await pressLast('Move to v2');
-    expect(await screen.findByText('A run of this flow is still going. Wait for it to finish, then move.')).toBeTruthy();
-    expect(screen.queryByText('Set them for v2')).toBeNull();
-  });
-});
-
 describe('every action acts on the workspace the screen loaded (24.3.6)', () => {
   it('is refused in words, and sends nothing, once another workspace is active', async () => {
-    await renderActions({ shown: 'another-workspace', entry: entry({ version: 2 }) });
+    await renderActions({ shown: 'another-workspace' });
     await fireEvent.press(screen.getByTestId('archive-flow'));
     await pressLast('Archive');
     expect(await screen.findByText(WORKSPACE_CHANGED)).toBeTruthy();
     await fireEvent.press(screen.getByText('Cancel'));
-
-    await fireEvent.press(screen.getByText('Move to v2'));
-    await pressLast('Move to v2');
-    expect(await screen.findByText(WORKSPACE_CHANGED)).toBeTruthy();
     expect(sent).toHaveLength(0);
   });
 });

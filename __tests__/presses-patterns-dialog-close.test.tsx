@@ -401,16 +401,7 @@ const CASES: DialogCase[] = [
     dialog: 'archive-dialog',
     close: 'Cancel',
   },
-  {
-    name: 'Flow › Move Invoice triage to v2?: Cancel',
-    site: 'components/automations/move-version.tsx:145',
-    open: async () => {
-      await flow();
-      await press('Move to v2');
-    },
-    dialog: 'move-version-dialog',
-    close: 'Cancel',
-  },
+  // ~~Flow › Move Invoice triage to v2?: Cancel~~ until Build 22: no move (P4).
   {
     // A pasted key's provider: its row's Connect opens the key form (spec A4).
     name: 'Connections › Connect Twilio: Cancel',

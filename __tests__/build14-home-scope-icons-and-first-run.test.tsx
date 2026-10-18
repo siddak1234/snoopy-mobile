@@ -379,12 +379,12 @@ describe("Home with no flow is the dashboard (the owner's build 13 decision 5)",
     ).toBeTruthy();
     expect(screen.queryByText('RECENT RUNS')).toBeNull();
     expect(screen.queryByText('See all')).toBeNull();
-    // The quick actions' pills are not drawn over it; the website's other two
-    // quick actions are, as rows (Gate 24 parity, G5).
-    const quickActions = screen.getByTestId('home-quick-actions');
-    expect(within(quickActions).queryByText('Flows')).toBeNull();
-    expect(within(quickActions).getByText('Connect integration')).toBeTruthy();
-    expect(within(quickActions).getByText('View teams')).toBeTruthy();
+    // The Add a flow and Flows pills are not drawn over it; ~~the website's other
+    // two quick actions, as rows (Gate 24 parity, G5)~~ until Build 22 (the
+    // owner's build 21 item 1: "I dont want … connect integrations, view teams").
+    expect(screen.queryByTestId('home-quick-actions')).toBeNull();
+    expect(screen.queryByText('Connect integration')).toBeNull();
+    expect(screen.queryByText('View teams')).toBeNull();
     expect(screen.getAllByText('Add a flow')).toHaveLength(1);
     expect(screen.queryByText(/need(s)? your review/u)).toBeNull();
 

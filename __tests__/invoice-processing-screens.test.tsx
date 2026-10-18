@@ -5,12 +5,13 @@ import { Platform, Share, StyleSheet } from 'react-native';
 import RunDetailScreen from '@/app/(tabs)/(home)/run';
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import SetupScreen from '@/app/(tabs)/flows/setup';
+import ConnectionsScreen from '@/app/(tabs)/settings/connections';
 import type { Subscription } from '@/lib/platform/automations';
 import type { Connection } from '@/lib/platform/catalog';
 import { connectOAuthProvider } from '@/lib/platform/connections';
 import { readProjects, type Project } from '@/lib/platform/projects';
 import { resetSnapshot } from '@/lib/platform/snapshot';
-import { flowStepPlan, flowStepRows } from '@/lib/view/pipeline';
+import { flowStepPlan } from '@/lib/view/pipeline';
 import { toFlows } from '@/lib/view/catalog';
 import { resetPushForTests } from '@/hooks/use-push-registration';
 import { fakePlatform, type Answer } from '@/test/fake-platform';
@@ -19,8 +20,10 @@ import {
   TEST_WORKSPACE,
   invoiceProcessingEntry,
   invoiceProcessingV3Entry,
+  invoiceProcessingV4Entry,
   planSubscriptionsPayload,
   providersWithQuickBooks,
+  recipientsPayload,
   routePlatform,
   runDetailPayload,
   sessionAs,
@@ -94,9 +97,9 @@ const ACCOUNTING_TEAM = {
   createdAt: '2026-10-14T00:00:00Z',
 };
 
-/** Invoice Processing v3, added to Accounting, its vendor choice as `config` holds it. */
-function added(config: Record<string, unknown>, unmet: string[] = [], version: 2 | 3 = 3): Subscription {
-  const entry = version === 3 ? invoiceProcessingV3Entry() : invoiceProcessingEntry();
+/** Invoice Processing (v4 since Build 22), added to Accounting, its vendor choice as `config` holds it. */
+function added(config: Record<string, unknown>, unmet: string[] = [], version: 2 | 3 | 4 = 4): Subscription {
+  const entry = version === 4 ? invoiceProcessingV4Entry() : version === 3 ? invoiceProcessingV3Entry() : invoiceProcessingEntry();
   return {
     ...planSubscriptionsPayload().subscriptions[0]!,
     id: 'ip-1',
@@ -146,10 +149,10 @@ function stats(counts: Partial<Stats['workspace']> = {}): Stats {
 
 function openFlow(
   subscription: Subscription,
-  options: { connections?: Connection[]; entry?: ReturnType<typeof invoiceProcessingV3Entry>; runStats?: () => Stats } = {},
+  options: { connections?: Connection[]; entry?: ReturnType<typeof invoiceProcessingV4Entry>; runStats?: () => Stats } = {},
 ) {
   routePlatform(platformOperation, {
-    '/automations': { automations: [options.entry ?? invoiceProcessingV3Entry()], categories: ['All', 'Accounting'] },
+    '/automations': { automations: [options.entry ?? invoiceProcessingV4Entry()], categories: ['All', 'Accounting'] },
     '/subscriptions': { subscriptions: [subscription] },
     '/projects': { projects: [ACCOUNTING_TEAM] },
     '/connections/providers': providersWithQuickBooks(),
@@ -189,8 +192,8 @@ function readingOrder(tree: unknown): string[] {
 
 /* ───────────────────────────── the flow page (A6, A3) ───────────────────────────── */
 
-describe('the flow page — the TEST VERSION of the owner\'s order (spec A6; D3, AM4)', () => {
-  it('reads top to bottom: name, team and status; DASHBOARD; STEPS with the document and Start run in Step 1 and the vendor in Done; CONNECTIONS; then Edit setup and Archive', async () => {
+describe('the flow page (spec A6; Build 22, P1–P4)', () => {
+  it('reads top to bottom: name, team and status; DASHBOARD; the five STEPS — the document and Start run in 1, the integration in 2, nothing in 3 and 4, who gets the email in 5; then Pause, Edit setup and Archive', async () => {
     const view = await openFlow(added({ vendor: 'quickbooks' }), { connections: [quickbooks()] });
     expect(await screen.findByText('Invoice Processing')).toBeTruthy();
     expect(screen.getByTestId('flow-team').props.children).toBe('Team: Accounting');
@@ -206,23 +209,23 @@ describe('the flow page — the TEST VERSION of the owner\'s order (spec A6; D3,
       'text:DASHBOARD',
       'flow-stat-All',
       'text:STEPS',
-      'text:1 · Received',
+      'text:1 · Upload invoice',
       'start-run',
       'text:Document',
       'text:Start run',
-      'text:2 · Read',
-      'text:3 · Checked',
-      'text:4 · Done',
+      'text:2 · Connect integration',
       'flow-vendor-vendor',
-      'text:CONNECTIONS',
-      'connection-row-quickbooks',
+      'text:3 · AI processing',
+      'text:4 · QuickBooks updated',
+      'text:5 · Email sent',
+      'flow-email',
       'text:Pause',
       'manage-setup',
       'archive-flow',
     ];
     for (let i = 1; i < sequence.length; i += 1) expect([sequence[i - 1], at(sequence[i - 1]!) < at(sequence[i]!)]).toEqual([sequence[i - 1], true]);
     // Step 1 offers Take photo beside Upload, the file field by its title alone.
-    const step1 = within(screen.getByTestId('flow-step-received'));
+    const step1 = within(screen.getByTestId('flow-step-upload'));
     expect(step1.getByTestId('run-file-invoiceFile-photo')).toBeTruthy();
     expect(step1.getByTestId('run-file-invoiceFile-upload')).toBeTruthy();
   });
@@ -240,14 +243,21 @@ describe('the flow page — the TEST VERSION of the owner\'s order (spec A6; D3,
       'Send results to',
       'CONNECT',
       'NEW RUN',
+      // No step's description since Build 22 (the session's S20).
+      'Add a PDF or photo.',
+      'QuickBooks, or None.',
+      'AI reads and checks each document.',
+      'Saved, or recorded in QuickBooks.',
+      'The results are emailed.',
     ]) {
       expect([gone, screen.queryByText(gone)]).toEqual([gone, null]);
     }
   });
 
-  it('A3: QuickBooks chosen and connected says "Connected" in its step — never "Connect vendor"', async () => {
+  it('A3: QuickBooks chosen and connected says "Connected" in step 2 — never "Connect vendor"', async () => {
     await openFlow(added({ vendor: 'quickbooks' }), { connections: [quickbooks()] });
     const vendor = await screen.findByTestId('flow-vendor-vendor');
+    expect(within(screen.getByTestId('flow-step-connect')).getByTestId('flow-vendor-vendor')).toBe(vendor);
     expect(within(vendor).getByText('QuickBooks Online')).toBeTruthy();
     expect(within(vendor).getByText('Connected')).toBeTruthy();
     expect(within(vendor).queryByText('Not connected')).toBeNull();
@@ -263,7 +273,7 @@ describe('the flow page — the TEST VERSION of the owner\'s order (spec A6; D3,
     });
     const vendor = await screen.findByTestId('flow-vendor-vendor');
     expect(within(vendor).getByText('Not connected')).toBeTruthy();
-    await fireEvent.press(within(screen.getByTestId('flow-step-received')).getByText('Connect QuickBooks Online first, or choose None.'));
+    await fireEvent.press(within(screen.getByTestId('flow-step-upload')).getByText('Connect QuickBooks Online first, or choose None.'));
     expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/(tabs)/flows/vendor', params: { flow: 'ip-1', field: 'vendor' } });
     await fireEvent.press(vendor);
     expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/(tabs)/flows/vendor', params: { flow: 'ip-1', field: 'vendor' } });
@@ -281,41 +291,42 @@ describe('the flow page — the TEST VERSION of the owner\'s order (spec A6; D3,
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/vendor', params: { flow: 'ip-1', field: 'vendor' } });
   });
 
-  it('CONNECTIONS: every account the flow uses as the one row — the email and Disconnect when connected, Not connected and Connect when not', async () => {
+  it('P3: no CONNECTIONS — connected or not, the integration is step 2\'s row alone; Disconnect stays in Settings › Connections', async () => {
     const first = await openFlow(added({ vendor: 'quickbooks' }), { connections: [quickbooks()] });
-    let row = within(await screen.findByTestId('connection-row-quickbooks'));
-    expect(row.getByText('books@example.com')).toBeTruthy();
-    expect(within(screen.getByTestId('connection-action-quickbooks')).getByText('Disconnect')).toBeTruthy();
+    await screen.findByTestId('flow-vendor-vendor');
+    expect(screen.queryByText('CONNECTIONS')).toBeNull();
+    expect(screen.queryByText('Connections')).toBeNull();
+    expect(screen.queryByTestId('flow-connections')).toBeNull();
+    expect(screen.queryAllByTestId(/^connection-row-/u)).toEqual([]);
+    expect(screen.queryByText('Disconnect')).toBeNull();
+    expect(screen.queryByText('books@example.com')).toBeNull();
     await first.unmount();
     resetSnapshot();
     await openFlow(added({ vendor: 'none' }));
-    row = within(await screen.findByTestId('connection-row-quickbooks'));
-    expect(row.getByText('Not connected')).toBeTruthy();
-    expect(within(screen.getByTestId('connection-action-quickbooks')).getByText('Connect')).toBeTruthy();
+    await screen.findByTestId('flow-vendor-vendor');
+    expect(screen.queryByText('CONNECTIONS')).toBeNull();
+    expect(screen.queryAllByTestId(/^connection-row-/u)).toEqual([]);
   });
 
-  it('Disconnect on CONNECTIONS: the row and its step say Not connected at once — read again, never answered from the snapshot', async () => {
+  /**
+   * The Build 21 review's guard, where Disconnect is now (Build 22, P3): Settings ›
+   * Connections reads the connections again past the snapshot after a Disconnect,
+   * so the row says Not connected at once — never answered from the snapshot.
+   */
+  it('Disconnect on Settings › Connections: the row says Not connected at once — read again, never answered from the snapshot', async () => {
     const fake = fakePlatform(platformOperation);
     let disconnected = false;
-    const flow = added({ vendor: 'quickbooks' });
-    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', () => ({
-      subscriptions: [disconnected ? { ...flow, unmetConnections: ['quickbooks'] } : flow],
-    }));
-    fake.always('GET /v1/workspaces/{workspaceId}/automations', { automations: [invoiceProcessingV3Entry()], categories: ['All'] });
-    fake.always('GET /v1/workspaces/{workspaceId}/run-stats', stats());
     fake.always('GET /v1/connections/providers', providersWithQuickBooks());
-    fake.always('GET /v1/workspaces/{workspaceId}/projects', { projects: [ACCOUNTING_TEAM] });
     fake.always('GET /v1/workspaces/{workspaceId}/connections', () => ({
       connections: [disconnected ? quickbooks({ status: 'disconnected' }) : quickbooks()],
     }));
+    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', { subscriptions: [added({ vendor: 'quickbooks' })] });
     fake.always('DELETE /v1/workspaces/{workspaceId}/connections/{connectionId}', () => {
       disconnected = true;
       return { connection: { ...quickbooks({ status: 'disconnected' }) } };
     });
-    setMockParams({ flow: 'ip-1' });
-    await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
-    expect(within(await screen.findByTestId('flow-vendor-vendor')).getByText('Connected')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('connection-action-quickbooks'));
+    await renderWithProviders(<ConnectionsScreen />, signedInSession);
+    await fireEvent.press(await screen.findByTestId('connection-action-quickbooks'));
     const dialog = within(await screen.findByTestId('disconnect-dialog'));
     expect(dialog.getByText('1 live flow uses it. It stops until you connect it again.')).toBeTruthy();
     await fireEvent.press(dialog.getByText('Disconnect'));
@@ -324,7 +335,6 @@ describe('the flow page — the TEST VERSION of the owner\'s order (spec A6; D3,
       expect(within(screen.getByTestId('connection-action-quickbooks')).getByText('Connect')).toBeTruthy(),
     );
     expect(within(screen.getByTestId('connection-row-quickbooks')).getByText('Not connected')).toBeTruthy();
-    expect(within(screen.getByTestId('flow-vendor-vendor')).getByText('Not connected')).toBeTruthy();
     expect(fake.to('DELETE /v1/workspaces/{workspaceId}/connections/{connectionId}')).toHaveLength(1);
   });
 
@@ -343,15 +353,16 @@ describe('the flow page — the TEST VERSION of the owner\'s order (spec A6; D3,
     const fake = fakePlatform(platformOperation);
     const paused = { ...added({ vendor: 'none' }), status: 'paused' as const };
     fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', { subscriptions: [paused] });
-    fake.always('GET /v1/workspaces/{workspaceId}/automations', { automations: [invoiceProcessingV3Entry()], categories: ['All'] });
+    fake.always('GET /v1/workspaces/{workspaceId}/automations', { automations: [invoiceProcessingV4Entry()], categories: ['All'] });
     fake.always('GET /v1/workspaces/{workspaceId}/run-stats', stats());
     fake.always('GET /v1/connections/providers', providersWithQuickBooks());
     fake.always('GET /v1/workspaces/{workspaceId}/projects', { projects: [ACCOUNTING_TEAM] });
     fake.always('GET /v1/workspaces/{workspaceId}/connections', { connections: [] });
+    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/email-recipients', recipientsPayload());
     fake.always('PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}', { subscription: { ...paused, status: 'live' } });
     setMockParams({ flow: 'ip-1' });
     await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
-    const step1 = within(await screen.findByTestId('flow-step-received'));
+    const step1 = within(await screen.findByTestId('flow-step-upload'));
     expect(step1.getByText('Document')).toBeTruthy();
     expect(step1.queryByText('Start run')).toBeNull();
     await fireEvent.press(step1.getByTestId('flow-step-turn-on'));
@@ -361,15 +372,18 @@ describe('the flow page — the TEST VERSION of the owner\'s order (spec A6; D3,
 
   it('DASHBOARD is live: read again while a run of the flow goes on, and the tiles change without leaving the page (S30)', async () => {
     let reads = 0;
+    // Running until the test has seen it so; then the run ends, a success. A flag rather than a
+    // read count: with the re-read at 20 ms, a slow runner read twice before the first look.
+    let ended = false;
     await openFlow(added({ vendor: 'none' }), {
       runStats: () => {
         reads += 1;
-        // Running at first; then the run ends, a success.
-        return reads === 1 ? stats({ total: 1, running: 1 }) : stats({ total: 1, succeeded: 1 });
+        return ended ? stats({ total: 1, succeeded: 1 }) : stats({ total: 1, running: 1 });
       },
     });
     const successes = await screen.findByTestId('flow-stat-Success');
     expect(within(successes).getByText('0')).toBeTruthy();
+    ended = true;
     await waitFor(() => expect(within(screen.getByTestId('flow-stat-Success')).getByText('1')).toBeTruthy());
     const settled = reads;
     // Nothing running now: no more reads.
@@ -377,14 +391,18 @@ describe('the flow page — the TEST VERSION of the owner\'s order (spec A6; D3,
     expect(reads).toBe(settled);
   });
 
-  it('a v2 flow, whose vendor choice names no step, draws the vendor row under the steps', async () => {
-    await openFlow(added({ vendor: 'none' }, [], 2), { entry: invoiceProcessingEntry() as never });
-    const vendor = await screen.findByTestId('flow-vendor-vendor');
-    const steps = screen.getByTestId('flow-steps');
-    expect(within(steps).getByTestId('flow-vendor-vendor')).toBe(vendor);
-    for (const id of ['received', 'read', 'checked', 'done', 'emailed']) {
-      expect(within(screen.getByTestId(`flow-step-${id}`)).queryByTestId('flow-vendor-vendor')).toBeNull();
-    }
+  it('a setup field draws only in the setting step it names: a v2 vendor naming no step and a v3 vendor naming a step with work draw nowhere (spec §4)', async () => {
+    const v2 = await openFlow(added({ vendor: 'none' }, [], 2), { entry: invoiceProcessingEntry() as never });
+    expect(await screen.findByTestId('flow-step-received')).toBeTruthy();
+    expect(screen.queryByTestId('flow-vendor-vendor')).toBeNull();
+    await v2.unmount();
+    resetSnapshot();
+    await openFlow(added({ vendor: 'quickbooks' }, [], 3), { entry: invoiceProcessingV3Entry() as never, connections: [quickbooks()] });
+    expect(await screen.findByTestId('flow-step-done')).toBeTruthy();
+    // "After step 4 i dont want to see quickbooks" (the owner's build 21 item 7).
+    expect(screen.queryByTestId('flow-vendor-vendor')).toBeNull();
+    // Nor the Approval limit, on Set up alone.
+    expect(screen.queryByText('Approval limit')).toBeNull();
   });
 });
 
@@ -394,7 +412,6 @@ describe('a flow on an older version (Invoice Processing v1, held until the owne
     expect(await screen.findByTestId('flow-owed')).toBeTruthy();
     expect(screen.getByTestId('flow-owed').props.children).toBe('Connect QuickBooks Online first.');
     expect(screen.queryByTestId('flow-vendor-vendor')).toBeNull();
-    expect(within(screen.getByTestId('connection-row-quickbooks')).getByText('Not connected')).toBeTruthy();
   });
 
   it("STEPS: its steps by title, as an ungrouped manifest draws them — never another version's groups", async () => {
@@ -406,37 +423,30 @@ describe('a flow on an older version (Invoice Processing v1, held until the owne
 });
 
 describe('the flow-page rows view (lib/view/pipeline.ts)', () => {
-  it('numbers groups when declared, and steps when not', () => {
+  it('numbers groups when declared, and steps when not — titles only (the session\'s S20)', () => {
     const entry = invoiceProcessingEntry();
-    expect(flowStepRows(entry.pipeline, entry.groups).map((row) => row.label)).toEqual([
+    expect(flowStepPlan(entry.pipeline, entry.groups, [], {}).map((row) => row.label)).toEqual([
       '1 · Received',
       '2 · Read',
       '3 · Checked',
       '4 · Done',
       '5 · Emailed',
     ]);
-    expect(flowStepRows(entry.pipeline.slice(0, 2), undefined)).toEqual([
-      { id: 'receive', label: '1 · Document received', sub: 'A PDF or photo arrives.' },
-      { id: 'read-company', label: '2 · QuickBooks checked', sub: 'Checks QuickBooks is connected.' },
+    expect(flowStepPlan(entry.pipeline.slice(0, 2), undefined, [], {}).map((row) => [row.id, row.label])).toEqual([
+      ['receive', '1 · Document received'],
+      ['read-company', '2 · QuickBooks checked'],
     ]);
-    expect(flowStepRows(undefined, [])).toEqual([]);
   });
 
-  it('places the input in the trigger\'s group and each vendor in the group it names; one naming none is unplaced', () => {
-    const v3 = invoiceProcessingV3Entry();
-    const plan = flowStepPlan(v3.pipeline, v3.groups, v3.setup.filter((field) => field.control === 'connection'));
-    expect(plan.rows.map((row) => [row.id, row.input, row.vendorFields])).toEqual([
-      ['received', true, []],
-      ['read', false, []],
-      ['checked', false, []],
-      ['done', false, ['vendor']],
+  it("places the input in the trigger's group, and a field in the setting step it names", () => {
+    const v4 = invoiceProcessingV4Entry();
+    expect(flowStepPlan(v4.pipeline, v4.groups, v4.setup!, {}).map((row) => [row.id, row.input, row.fields])).toEqual([
+      ['upload', true, []],
+      ['connect', false, ['vendor']],
+      ['process', false, []],
+      ['record', false, []],
+      ['email', false, []],
     ]);
-    expect(plan.unplaced).toEqual([]);
-    const v2 = invoiceProcessingEntry();
-    const old = flowStepPlan(v2.pipeline, v2.groups, v2.setup.filter((field) => field.control === 'connection'));
-    expect(old.unplaced).toEqual(['vendor']);
-    // Without groups: the first step holds the input.
-    expect(flowStepPlan(v2.pipeline, undefined, []).rows[0]).toMatchObject({ id: 'receive', input: true });
   });
 
   it("draws an owed account by its provider's own icon name, never looked up by its id (the blank of build 19)", () => {
@@ -455,7 +465,7 @@ describe('the flow-page rows view (lib/view/pipeline.ts)', () => {
 /* ───────────────────────────── Set up (AM4) ───────────────────────────── */
 
 function routeSetup(fake: ReturnType<typeof fakePlatform>, held: () => Subscription[], connections: () => Connection[] = () => []) {
-  fake.always('GET /v1/workspaces/{workspaceId}/automations', { automations: [invoiceProcessingV3Entry()], categories: ['All', 'Accounting'] });
+  fake.always('GET /v1/workspaces/{workspaceId}/automations', { automations: [invoiceProcessingV4Entry()], categories: ['All', 'Accounting'] });
   fake.always('GET /v1/connections/providers', providersWithQuickBooks());
   fake.always('GET /v1/workspaces/{workspaceId}/connections', () => ({ connections: connections() }));
   fake.always('GET /v1/workspaces/{workspaceId}/projects', { projects: [ACCOUNTING_TEAM] });
@@ -493,9 +503,9 @@ describe('Set up — one simple page, once, everything on it (the owner\'s AM4)'
     await waitFor(() =>
       expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'ip-1' } }),
     );
+    // No version is sent: a new flow runs the newest (Build 22, P4; backend ADR-0041).
     expect(fake.to('POST /v1/workspaces/{workspaceId}/subscriptions')[0]!.body).toEqual({
       templateId: 'invoice-processing',
-      templateVersion: 3,
     });
     expect(fake.to('PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}')[0]!.body).toEqual({
       config: { vendor: 'none', holdAboveAmount: 500 },

@@ -9,11 +9,12 @@ import { act, fireEvent, screen, within } from 'expo-router/testing-library';
 import type { Subscription } from '@/lib/platform/automations';
 import type { Connection } from '@/lib/platform/catalog';
 import { connectOAuthProvider } from '@/lib/platform/connections';
-import { invoiceProcessingV3Entry, planSubscriptionsPayload, providersWithQuickBooks } from '@/test/platform';
+import { invoiceProcessingV4Entry, planSubscriptionsPayload, providersWithQuickBooks } from '@/test/platform';
 import { WORKSPACE, answerPlatform, flush, launch, signedInOnThisPhone } from '@/test/real-router';
 
 /**
- * The flow page's vendor row → Connect vendor → a tap → back, under the real
+ * The flow page's integration row (step 2 since Build 22) → Connect integration
+ * (~~Connect vendor~~) → a tap → back, under the real
  * router (CLAUDE.md rule 11: the params a screen takes on arrival): the vendor
  * page opens with the flow and the step's field, a tap saves the choice and
  * goes back to the same flow page — no Done, no second page — which reads the
@@ -38,17 +39,17 @@ const quickbooks: Connection = {
   usedByCount: 0,
 };
 
-/** Invoice Processing v3, live, holding `vendor`; the platform keeps what a save sends (`saved`), and the connections it is told. */
+/** Invoice Processing v4, live, holding `vendor`; the platform keeps what a save sends (`saved`), and the connections it is told. */
 function platformHolding(vendor: string, connections: Connection[], saved: string) {
   const flow: Subscription = {
     ...planSubscriptionsPayload().subscriptions[0]!,
     id: 'ip-1',
     workspaceId: WORKSPACE,
     templateId: 'invoice-processing',
-    templateVersion: 3,
+    templateVersion: 4,
     status: 'live',
     config: { vendor, holdAboveAmount: 500 },
-    setup: invoiceProcessingV3Entry().setup,
+    setup: invoiceProcessingV4Entry().setup,
   };
   const state = { flow, connections, saves: 0 };
   answerPlatform(
@@ -62,7 +63,7 @@ function platformHolding(vendor: string, connections: Connection[], saved: strin
       [`/v1/workspaces/${WORKSPACE}/connections`]: () => ({ connections: state.connections }),
     },
     {
-      '/automations': { automations: [invoiceProcessingV3Entry()], categories: ['All', 'Accounting'] },
+      '/automations': { automations: [invoiceProcessingV4Entry()], categories: ['All', 'Accounting'] },
       '/connections/providers': providersWithQuickBooks(),
     },
   );
@@ -126,4 +127,33 @@ it('a vendor not connected: the tap signs in, then saves it and comes back — t
   const after = await screen.findByTestId('flow-vendor-vendor');
   expect(await within(after).findByText('QuickBooks Online')).toBeTruthy();
   expect(within(after).getByText('Connected')).toBeTruthy();
+});
+
+/**
+ * Build 22 (P1, P5; the owner's build 21 item 5: "When i select this step it
+ * should take me to the page where i can edit in a screen the email it should
+ * send to"): step 5's row opens Who gets the email in the Flows tab with the
+ * flow it takes on arrival, and Back comes home to the same flow page.
+ */
+it('step 5 opens Who gets the email for this flow, and Back comes back to the flow page', async () => {
+  signedInOnThisPhone();
+  platformHolding('none', [], 'none');
+  const view = await openFlowPage();
+  const email = await screen.findByTestId('flow-email');
+  expect(await within(email).findByText('owner@example.com')).toBeTruthy();
+  expect(within(email).getByText('and 2 more')).toBeTruthy();
+
+  await fireEvent.press(email);
+  await flush(100);
+  await flush(1000);
+  expect(view.getPathname()).toBe('/flows/email');
+  expect(view.getSearchParams()).toMatchObject({ flow: 'ip-1' });
+  expect(await screen.findByText('Who gets the email')).toBeTruthy();
+  expect(screen.getByText('For Invoice Processing')).toBeTruthy();
+
+  await act(async () => router.back());
+  await flush(100);
+  await flush(1000);
+  expect(view.getPathname()).toBe('/flows/detail');
+  expect(await screen.findByTestId('flow-email')).toBeTruthy();
 });

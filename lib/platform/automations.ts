@@ -12,6 +12,7 @@ export type WebhookEndpoint = components['schemas']['WebhookEndpoint'];
 export type IssuedWebhookEndpoint = components['schemas']['IssuedWebhookEndpoint'];
 export type UploadTicket = components['schemas']['UploadTicket'];
 export type UploadedFile = components['schemas']['UploadedFile'];
+export type FlowEmailRecipients = components['schemas']['FlowEmailRecipients'];
 
 /**
  * What an action changed is read again next time, and only that (24.9.1): a
@@ -32,10 +33,15 @@ function changed<T>(workspaceId: string, keys: readonly string[]): (answer: T) =
  * the teams this person sees too — the teams are read again next time, and the
  * flow's page says "Team: Accounting" at once, never "a team" from a list read
  * before the team existed (the review of the Invoice Processing screens).
+ *
+ * No version is sent (Build 22, P4; backend ADR-0041): a new flow runs its
+ * automation's newest version, and the platform moves every flow to each new
+ * one — "The user always gets the latest version. They dont get to oick when to
+ * update" (the owner, build 21 item 7). ~~`templateVersion`~~ until Build 22.
  */
 export function createSubscription(
   workspaceId: string,
-  input: { templateId: string; templateVersion?: number; name?: string },
+  input: { templateId: string; name?: string },
   idempotencyKey: string,
 ): Promise<{ subscription: Subscription }> {
   return platformOperation(`/v1/workspaces/${workspaceId}/subscriptions`, ({ automations }, signal) =>
@@ -57,8 +63,6 @@ export function updateSubscription(
     name?: string;
     config?: Record<string, unknown>;
     status?: SubscriptionStatus;
-    /** Move to another version of its automation (backend §12.1 #126, BUILD-PLAN 24.4.1). */
-    templateVersion?: number;
   },
   idempotencyKey: string,
 ): Promise<{ subscription: Subscription }> {
@@ -164,6 +168,44 @@ export function issueWebhookAddress(
           path: { workspaceId, subscriptionId },
           header: { 'Idempotency-Key': idempotencyKey },
         },
+        signal,
+      }),
+  );
+}
+
+/**
+ * Who a flow's run emails go to (Build 22, P5; backend ADR-0041): the
+ * workspace's owners and admins (`people`, owners first), the person who starts
+ * each run, and the flow's extra addresses (`extra`). Any member who can see the
+ * flow may read it; `canEdit` says whether this person may change `extra`.
+ */
+export function readFlowEmailRecipients(workspaceId: string, subscriptionId: string): Promise<FlowEmailRecipients> {
+  return platformOperation(
+    `/v1/workspaces/${workspaceId}/subscriptions/${subscriptionId}/email-recipients`,
+    ({ automations }, signal) =>
+      automations.GET('/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/email-recipients', {
+        params: { path: { workspaceId, subscriptionId } },
+        signal,
+      }),
+  );
+}
+
+/**
+ * Replaces a flow's extra addresses with `extra`, the whole list — so a repeat
+ * changes nothing, and the platform takes no `Idempotency-Key` here. Owner or
+ * admin only (a member is refused 403).
+ */
+export function updateFlowEmailRecipients(
+  workspaceId: string,
+  subscriptionId: string,
+  extra: readonly string[],
+): Promise<FlowEmailRecipients> {
+  return platformOperation(
+    `/v1/workspaces/${workspaceId}/subscriptions/${subscriptionId}/email-recipients`,
+    ({ automations }, signal) =>
+      automations.PUT('/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/email-recipients', {
+        params: { path: { workspaceId, subscriptionId } },
+        body: { extra: [...extra] },
         signal,
       }),
   );
