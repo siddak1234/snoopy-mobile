@@ -4712,7 +4712,7 @@ as is" and "calendar all time can stay as is" hold on every phone 343 pt wide or
 or more (Activity). M12 — the email screen makes room for the keyboard with the scroll view's own
 inset rather than a keyboard-avoiding wrapper, so nothing on the page moves until the field is focused.
 
-**Seen and left, for the session or another lane** (not changed here):
+**Seen and left, for the session or another lane** (not changed here) — both FIXED by the session on 2026-10-18 before the push: an archived flow from before v4 shows no steps (the session's S34, `olderArchived` in `app/(tabs)/flows/detail.tsx`; the website's flow page already refuses archived flows, `page.tsx:147-151`), and the row is read aloud "{name}: change the integration" and the choices page's failed load says "Couldn't load this flow's integrations" (the website's `aria-label` the same); tests in `build22-screens`:
 
 - An archived flow from before v4 — never moved (spec §5) — still draws the catalog's 22 steps by
   title on its read-only page, the list the owner's item 5 objected to, because the flow page draws

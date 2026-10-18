@@ -58,7 +58,7 @@ const ERROR_TITLES: Record<ScreenKey, string> = {
   billing: "Couldn't load billing",
   account: "Couldn't load your account",
   data: "Couldn't load data export",
-  vendor: "Couldn't load this flow's vendors",
+  vendor: "Couldn't load this flow's integrations",
 };
 
 /** The design's own fallback for a screen not in the map. */

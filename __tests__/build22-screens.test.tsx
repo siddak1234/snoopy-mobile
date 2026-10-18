@@ -356,6 +356,18 @@ describe('the flow page: five steps, titles only (P1–P4)', () => {
     expect(within(integration).queryByTestId(/^phosphor-react-native-caret-right-/u)).toBeNull();
     expect(fake.to(`GET ${RECIPIENTS}`)).toEqual([]);
   });
+
+  it('an archived flow from before v4: no steps — never the catalog\'s internal steps by title (S34)', async () => {
+    await openFlow(added('quickbooks', { status: 'archived', templateVersion: 3, updatedAt: '2026-10-16T12:00:00Z' }), { archived: true });
+    expect(await screen.findByText('Archived')).toBeTruthy();
+    expect(screen.queryByTestId('flow-steps')).toBeNull();
+    expect(screen.queryByText('Documents read')).toBeNull();
+  });
+
+  it('the integration row is read aloud as the integration, the word step 2 uses (S21)', async () => {
+    await openFlow(added('quickbooks'));
+    expect(await screen.findByLabelText('QuickBooks Online: change the integration')).toBeTruthy();
+  });
 });
 
 /* ───────────────────────────── P5: who gets the email ───────────────────────────── */

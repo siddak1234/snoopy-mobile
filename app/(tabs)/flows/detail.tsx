@@ -322,6 +322,10 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
     setupFields,
     subscription.config,
   );
+  // An archived flow from before the newest version is never moved (spec §5): the catalog's
+  // groups are not its version's, so its steps would be every internal step by title — the
+  // list the owner's item 5 objected to. Its read-only page shows no steps (the session's S34).
+  const olderArchived = def.removed && entry?.version !== subscription.templateVersion;
 
   /** A setting step's integration: its mark, its name, its state — the whole row opens the choices. */
   const vendorRow = (key: string) => {
@@ -335,7 +339,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
       <View key={key} style={{ borderTopWidth: 1, borderTopColor: palette.divider }}>
         <ConnectionRow
           testID={`flow-vendor-${key}`}
-          accessibilityLabel={`${none ? 'None' : nameOf(chosen)}: change the vendor`}
+          accessibilityLabel={`${none ? 'None' : nameOf(chosen)}: change the integration`}
           mark={none ? <NoneMark /> : <ConnectionMark icon={providers.get(chosen)?.icon} />}
           name={none ? 'None' : nameOf(chosen)}
           line={none ? VENDOR_NONE_SUB : connected ? VENDOR_CONNECTED : VENDOR_NOT_CONNECTED}
@@ -486,27 +490,29 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
         </View>
       </View>
 
-      <View testID="flow-steps">
-        <SectionLabel>{STEPS_LABEL}</SectionLabel>
-        <SurfaceCard style={styles.underLabel}>
-          {/* A flow whose template the catalog no longer lists has no steps to hold Step 1's controls: they stand alone. */}
-          {plan.length === 0 ? stepOne : null}
-          {plan.map((row, i) => (
-            <View
-              key={row.id}
-              testID={`flow-step-${row.id}`}
-              style={i < plan.length - 1 && { borderBottomWidth: 1, borderBottomColor: palette.divider }}>
-              {/* The step's title only — no line under it (the session's S20; P2: "After step 4 i dont want to see quickbooks"). */}
-              <View style={styles.stepRow}>
-                <Text style={[styles.stepLabel, { color: palette.text }]}>{row.label}</Text>
+      {olderArchived ? null : (
+        <View testID="flow-steps">
+          <SectionLabel>{STEPS_LABEL}</SectionLabel>
+          <SurfaceCard style={styles.underLabel}>
+            {/* A flow whose template the catalog no longer lists has no steps to hold Step 1's controls: they stand alone. */}
+            {plan.length === 0 ? stepOne : null}
+            {plan.map((row, i) => (
+              <View
+                key={row.id}
+                testID={`flow-step-${row.id}`}
+                style={i < plan.length - 1 && { borderBottomWidth: 1, borderBottomColor: palette.divider }}>
+                {/* The step's title only — no line under it (the session's S20; P2: "After step 4 i dont want to see quickbooks"). */}
+                <View style={styles.stepRow}>
+                  <Text style={[styles.stepLabel, { color: palette.text }]}>{row.label}</Text>
+                </View>
+                {row.input ? stepOne : null}
+                {row.kind === 'setting' ? row.fields.map(vendorRow) : null}
+                {row.kind === 'email' ? emailRow : null}
               </View>
-              {row.input ? stepOne : null}
-              {row.kind === 'setting' ? row.fields.map(vendorRow) : null}
-              {row.kind === 'email' ? emailRow : null}
-            </View>
-          ))}
-        </SurfaceCard>
-      </View>
+            ))}
+          </SurfaceCard>
+        </View>
+      )}
 
       {def.removed ? (
         // Read-only (24.11.8): no status, no actions. The one thing to do with an
