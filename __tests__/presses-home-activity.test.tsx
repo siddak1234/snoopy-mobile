@@ -409,27 +409,27 @@ describe('the scope control (24.9.2; teams since 24.11.7)', () => {
 
     await fireEvent.press(await screen.findByLabelText('Workspace: Acme Operations'));
 
-    const dialog = await screen.findByTestId('workspace-switcher-dialog');
-    expect(within(dialog).getByText('Switch workspace')).toBeTruthy();
+    const dialog = await screen.findByTestId('workspace-switcher-menu');
+    expect(within(dialog).getByText('WORKSPACE')).toBeTruthy();
     expect(await within(dialog).findByTestId(`workspace-option-${PERSONAL}`)).toBeTruthy();
   });
 
   it.each([
-    ['All teams', 'project-1', 'scope-option-all', 'Team: All teams', [[TEST_WORKSPACE, null]]],
-    ['a team', null, 'scope-option-project-2', 'Team: Sales', [[TEST_WORKSPACE, 'project-2']]],
-    ['Done', 'project-1', 'Done', 'Team: Finance', []],
+    ['All departments', 'project-1', 'scope-option-all', 'Department: All departments', [[TEST_WORKSPACE, null]]],
+    ['a team', null, 'scope-option-project-2', 'Department: Sales', [[TEST_WORKSPACE, 'project-2']]],
+    ['a tap outside', 'project-1', 'scope-team-backdrop', 'Department: Finance', []],
   ] as const)(
-    'the Show dialog: %s closes it, and the team circle says the scope it leaves — kept for this workspace when it changed',
+    'the Department drop-down: %s closes it, and the department circle says the scope it leaves — kept for this workspace when it changed',
     async (_row, before, press, pill, kept) => {
       if (before) mockStored.set(TEST_WORKSPACE, before);
       routeTeams();
       await renderWithProviders(<ScopeIcons testIDPrefix="title-scope" />, signedInSession);
-      await fireEvent.press(await screen.findByLabelText(before ? 'Team: Finance' : 'Team: All teams'));
-      const dialog = screen.getByTestId('scope-team-dialog');
+      await fireEvent.press(await screen.findByLabelText(before ? 'Department: Finance' : 'Department: All departments'));
+      const dialog = screen.getByTestId('scope-team-menu');
 
-      await fireEvent.press(press === 'Done' ? within(dialog).getByText('Done') : within(dialog).getByTestId(press));
+      await fireEvent.press(press === 'scope-team-backdrop' ? screen.getByTestId(press) : within(dialog).getByTestId(press));
 
-      expect(screen.queryByTestId('scope-team-dialog')).toBeNull();
+      expect(screen.queryByTestId('scope-team-menu')).toBeNull();
       expect(screen.getByLabelText(pill)).toBeTruthy();
       expect(writeScope.mock.calls).toEqual(kept);
     },

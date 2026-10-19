@@ -188,24 +188,37 @@ export default function SettingsScreen() {
       <View>
         <SectionLabel>WORKSPACE</SectionLabel>
         <SurfaceCard style={styles.sectionCard}>
-          <SettingsRow
-            icon={Buildings}
-            title={activeWorkspace?.name ?? 'Workspace'}
-            divider
-            size="roomy"
-            testID="workspace-switcher-row"
-            onPress={canSwitchWorkspace ? () => setSwitcherOpen(true) : undefined}
-            right={
-              canSwitchWorkspace ? (
-                <View style={styles.right}>
-                  <Text style={[styles.value, muted]}>{activeWorkspace?.type ?? ''}</Text>
-                  <CaretRight size={15} color={palette.neutral[500]} testID="workspace-switcher-caret" />
-                </View>
-              ) : (
-                <Text style={[styles.value, muted]}>{activeWorkspace?.type ?? ''}</Text>
-              )
-            }
-          />
+          {canSwitchWorkspace ? (
+            <WorkspaceSwitcher
+              open={switcherOpen}
+              onOpenChange={setSwitcherOpen}
+              trigger={
+                <SettingsRow
+                  icon={Buildings}
+                  title={activeWorkspace?.name ?? 'Workspace'}
+                  divider
+                  size="roomy"
+                  testID="workspace-switcher-row"
+                  onPress={() => setSwitcherOpen(true)}
+                  right={
+                    <View style={styles.right}>
+                      <Text style={[styles.value, muted]}>{activeWorkspace?.type ?? ''}</Text>
+                      <CaretRight size={15} color={palette.neutral[500]} testID="workspace-switcher-caret" />
+                    </View>
+                  }
+                />
+              }
+            />
+          ) : (
+            <SettingsRow
+              icon={Buildings}
+              title={activeWorkspace?.name ?? 'Workspace'}
+              divider
+              size="roomy"
+              testID="workspace-switcher-row"
+              right={<Text style={[styles.value, muted]}>{activeWorkspace?.type ?? ''}</Text>}
+            />
+          )}
           <SettingsRow
             icon={Users}
             title="Your role"
@@ -228,8 +241,8 @@ export default function SettingsScreen() {
           />
           <SettingsRow
             icon={UsersThree}
-            title="Teams"
-            sub="Your teams, who is on them, and asking to join one"
+            title="Departments"
+            sub="Your departments, who is in them, and asking to join one"
             divider
             size="roomy"
             testID="settings-teams"
@@ -334,7 +347,6 @@ export default function SettingsScreen() {
         />
       ) : null}
 
-      <WorkspaceSwitcher open={switcherOpen} onClose={() => setSwitcherOpen(false)} />
     </ScrollView>
   );
 }

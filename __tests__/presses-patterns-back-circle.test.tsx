@@ -103,7 +103,7 @@ const PAGES: {
     site: 'app/(tabs)/flows/add.tsx:110',
     Screen: AddFlowScreen,
     routes: [[/\/subscriptions$/u, planSubscriptionsPayload()]],
-    loaded: () => screen.findByText('Ready-made flows for your teams.'),
+    loaded: () => screen.findByText('Ready-made flows for your departments.'),
   },
   {
     page: 'Flow detail',
@@ -207,7 +207,7 @@ const PAGES: {
       [/^\/v1\/workspaces$/u, workspaces('personal', 'owner')],
       [/\/projects\/p1$/u, { project: FINANCE }],
     ],
-    loaded: () => screen.findByText('Delete team'),
+    loaded: () => screen.findByText('Delete department'),
   },
   {
     page: 'Teams',

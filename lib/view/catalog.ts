@@ -162,9 +162,9 @@ export function scopeLabels(
   return new Map(projects.map((project) => [project.id, project.type]));
 }
 
-/** One flow's label from `scopeLabels`: "Team: {kind}", or "Whole workspace" (D4). */
+/** One flow's label from `scopeLabels`: "Department: {kind}", or "Whole workspace" (D4; "Department" since round 23). */
 export function scopeLabel(projectId: string | null | undefined, labels: ReadonlyMap<string, string>): string {
-  return projectId ? `Team: ${labels.get(projectId) ?? 'a team'}` : 'Whole workspace';
+  return projectId ? `Department: ${labels.get(projectId) ?? 'a department'}` : 'Whole workspace';
 }
 
 /**

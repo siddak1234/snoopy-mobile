@@ -119,7 +119,7 @@
 - [scripts/audit-presses.mjs](../scripts/audit-presses.mjs): Fails when a press runs nothing a test has run (build 13: the owner's
 - [scripts/audit-tokens.mjs](../scripts/audit-tokens.mjs): Fails when a colour is written outside the token sheet.
 - [scripts/audit-type.mjs](../scripts/audit-type.mjs): Fails when a font size is written outside the type scale (24.12).
-- [scripts/audit-vocabulary.mjs](../scripts/audit-vocabulary.mjs): Fails when the app's copy says "project", "automation", "solution" or
+- [scripts/audit-vocabulary.mjs](../scripts/audit-vocabulary.mjs): Fails when the app's copy says "project", "automation", "solution",
 - [scripts/generate-platform-contracts.mjs](../scripts/generate-platform-contracts.mjs): Generates TypeScript types from the backend's published OpenAPI contracts.
 - [scripts/release-ios.sh](../scripts/release-ios.sh): Builds and submits the iOS app from main — and refuses everything else.
 - [scripts/repo-facts.mjs](../scripts/repo-facts.mjs): What this repository reports about itself, in the shape snoopy-backend's
@@ -128,9 +128,9 @@
 
 ### Tests
 
-- `__tests__/`: account, android, app, audit, auth, automation, billing, build13, build14, build21, build22, components, connection, connections, cover, data, deep, deletion, dialog, doc, faceid, flows, gate24, identity, invoice, kit, native, nocturne, organization, override, paging, parity, pipeline, platform, pressable, presses, published, push, removed, repo, return, run, scope, screen, select, session, settings, setup, shared, sign, snapshot, splash, start, tab, teams, theme, timed, upload, use, vendor, verify, view, workspace
+- `__tests__/`: account, android, app, audit, auth, automation, billing, build13, build14, build21, build22, components, connection, connections, cover, data, deep, deletion, dialog, doc, faceid, flows, gate24, identity, invoice, kit, native, nocturne, organization, override, paging, parity, pipeline, platform, pressable, presses, published, push, removed, repo, return, round23, run, scope, screen, select, session, settings, setup, shared, sign, snapshot, splash, start, tab, teams, theme, timed, upload, use, vendor, verify, view, workspace
 - `__tests__/__snapshots__/`: connection, nocturne, screen
-- `__tests__/real-router/`: activity, appearance, connect, face, held, home, session, sign
+- `__tests__/real-router/`: activity, app, appearance, connect, face, held, home, session, sign
 
 ## Skills, agents and hooks
 

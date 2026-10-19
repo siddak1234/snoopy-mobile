@@ -112,7 +112,7 @@ export default function TeamScreen() {
           <Text style={[styles.subtitle, muted]}>
             {[
               workspace.type === 'personal' ? 'Personal' : workspace.name,
-              onTeam ? `You are its ${project.viewerRole}` : 'You see every team as an organization admin',
+              onTeam ? `You are its ${project.viewerRole}` : 'You see every department as an organization admin',
             ].join(' · ')}
           </Text>
         </View>
@@ -145,7 +145,7 @@ export default function TeamScreen() {
       {/* Both end something, so both are red (the owner's build 12 item 5). */}
       {owner || onTeam ? (
         <PillButton
-          label={owner ? 'Delete team' : 'Leave team'}
+          label={owner ? 'Delete department' : 'Leave department'}
           variant="danger"
           height={44}
           icon={owner ? Trash : SignOut}
@@ -159,10 +159,10 @@ export default function TeamScreen() {
           <ConfirmDialog
             testID="delete-team-dialog"
             title={`Delete "${project.type}"?`}
-            body="It leaves every team list. Its flows keep running until you archive them in Flows."
-            confirmLabel="Delete team"
+            body="It leaves every department list. Its flows keep running until you archive them in Flows."
+            confirmLabel="Delete department"
             busyLabel="Deleting…"
-            fallback="The team could not be deleted."
+            fallback="The department could not be deleted."
             run={async () => {
               await archiveProject(workspace.id, project.id, keys.keyFor('delete'));
               keys.settle('delete');
@@ -177,10 +177,10 @@ export default function TeamScreen() {
           <ConfirmDialog
             testID="leave-team-dialog"
             title={`Leave “${project.type}”?`}
-            body="You will be removed from this team and stop seeing its flows. To confirm, type DELETE."
-            confirmLabel="Leave team"
+            body="You will be removed from this department and stop seeing its flows. To confirm, type DELETE."
+            confirmLabel="Leave department"
             busyLabel="Leaving…"
-            fallback="You could not leave this team."
+            fallback="You could not leave this department."
             typed="DELETE"
             run={async () => {
               await removeProjectMember(workspace.id, project.id, viewerUserId ?? '', keys.keyFor('leave'));

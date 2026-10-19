@@ -139,14 +139,18 @@ describe("the run page's steps (S23, S24, S25)", () => {
     expect(rows(unread)[1]).toEqual(['2 · Connect integration', 'done', 'Done']);
   });
 
+  // Round 23, A7: step 5 is "Run completed" — done only once the run succeeded,
+  // its line the email's; Waiting while the run goes on or is held; Failed with it.
   it.each([
-    ['succeeded', { status: 'waiting', sentAt: null }, ['working', 'Sending…'], '4 / 5'],
-    ['succeeded', undefined, ['working', 'Sending…'], '4 / 5'],
-    ['succeeded', { status: 'sent', sentAt: at(34) }, ['done', 'Sent · 14:34'], '5 / 5'],
-    ['succeeded', { status: 'not_sent', sentAt: null }, ['skipped', 'Not sent'], '5 / 5'],
-    ['failed', { status: 'sent', sentAt: at(34) }, ['done', 'Sent · 14:34'], null],
+    ['succeeded', { status: 'waiting', sentAt: null }, ['done', 'Sending email…'], '5 / 5'],
+    ['succeeded', undefined, ['done', 'Sending email…'], '5 / 5'],
+    ['succeeded', { status: 'sent', sentAt: at(34) }, ['done', 'Email sent · 14:34'], '5 / 5'],
+    ['succeeded', { status: 'sent', sentAt: null }, ['done', 'Done'], '5 / 5'],
+    ['succeeded', { status: 'not_sent', sentAt: null }, ['done', 'Done'], '5 / 5'],
+    ['failed', { status: 'sent', sentAt: at(34) }, ['failed', 'Failed'], '2 / 5'],
     ['cancelled', { status: 'not_sent', sentAt: null }, ['stopped', 'Stopped'], null],
     ['pending', { status: 'waiting', sentAt: null }, ['waiting', 'Waiting'], null],
+    ['running', { status: 'sent', sentAt: at(34) }, ['waiting', 'Waiting'], null],
   ] as const)('a run %s, its email %j: step 5 %j', (status, email, [state, sub], done) => {
     const all = V4.pipeline.map((step) => [step.id] as [string]);
     const steps = status === 'succeeded' ? reported(...all) : reported(['receive']);
@@ -155,7 +159,7 @@ describe("the run page's steps (S23, S24, S25)", () => {
     if (done) expect(toRunStats(tracker, '1m')[1]!.value).toBe(done);
   });
 
-  it('held: step 4 waits for approval and why; step 5 by its email', () => {
+  it('held: step 4 waits for approval and why; step 5 waits too, whatever its email says (an approval email never checks it off)', () => {
     const steps = reported(['receive'], ['extract'], ['decide'], ['ask-approval', 'held']);
     steps[3]!.heldReason = 'Over $500';
     const tracker = toTracker(steps, V4.pipeline, V4.groups, { status: 'held' }, clock, V4.pipeline, {
@@ -164,8 +168,19 @@ describe("the run page's steps (S23, S24, S25)", () => {
     });
     expect(rows(tracker).slice(3)).toEqual([
       ['4 · QuickBooks updated', 'held', 'Waiting for approval: Over $500'],
-      ['5 · Email sent', 'done', 'Sent · 14:09'],
+      ['5 · Email sent', 'waiting', 'Waiting'],
     ]);
+    expect(toRunStats(tracker, '1m')[1]!.value).not.toBe('5 / 5');
+  });
+
+  it('step 5 follows the run whatever its group is titled ("Run completed" in v5)', () => {
+    const groups = V4.groups!.map((group) => (group.platform === 'email' ? { ...group, title: 'Run completed' } : group));
+    const all = V4.pipeline.map((step) => [step.id] as [string]);
+    const tracker = toTracker(reported(...all), V4.pipeline, groups, { status: 'succeeded' }, clock, V4.pipeline, {
+      flow: flow('quickbooks'),
+      email: { status: 'sent', sentAt: at(34) },
+    });
+    expect(rows(tracker)[4]).toEqual(['5 · Run completed', 'done', 'Email sent · 14:34']);
   });
 
   it("a v3 run (v3's step ids, all still declared) is drawn by v4's five steps; a v2 run by what it reported", () => {

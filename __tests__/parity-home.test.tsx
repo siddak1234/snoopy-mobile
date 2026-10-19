@@ -32,7 +32,7 @@ import { mockRouter, renderWithProviders } from '@/test/render';
  * Gate 24's parity line, Home's half (BUILD-PLAN 24 Gate 24: "Every signed-in
  * web feature present on mobile, checked against snoopy's page list screen by
  * screen"), against the website's dashboard (`snoopy/app/account/page.tsx`) and
- * its Approvals (`app/account/approvals/page.tsx`):
+ * its Approvals (`snoopy/app/account/approvals/page.tsx`):
  *
  * - G1: the review banner counts what the website's Approvals counts — every
  *   pending approval in the workspace, `?status=pending` — whatever team is
@@ -169,7 +169,7 @@ describe('G1 — the review banner counts what Approvals lists', () => {
 
     expect(await screen.findByText('3 items need your review')).toBeTruthy();
     // Home narrows to Finance — the scope is chosen — while the banner does not.
-    expect(await screen.findByLabelText('Team: Finance')).toBeTruthy();
+    expect(await screen.findByLabelText('Department: Finance')).toBeTruthy();
     expect(fake.to('GET /v1/workspaces/{workspaceId}/approvals').map((sent) => sent.query ?? null)).toEqual(
       expect.arrayContaining([{ status: 'pending' }, null]),
     );
@@ -324,7 +324,7 @@ describe('G6 — every figure on its own', () => {
       'GET /v1/workspaces/{workspaceId}/runs',
       () => {
         expect(screen.getByText('Recent activity could not be read just now.')).toBeTruthy();
-        expect(screen.queryByText('No runs in this team yet.')).toBeNull();
+        expect(screen.queryByText('No runs in this department yet.')).toBeNull();
         expect(screen.getByTestId('home-stats')).toBeTruthy();
         expect(screen.getByText('Your agents ran 128 tasks today.')).toBeTruthy();
       },
@@ -373,7 +373,7 @@ describe('G6 — every figure on its own', () => {
     const fake = routeHome({ teams: { [TEST_WORKSPACE]: [team('project-1', TEST_WORKSPACE, 'Finance', 'active')] } });
     refuse(fake, 'GET /v1/workspaces/{workspaceId}/subscriptions', () => new PlatformError('Service Unavailable', 503));
     await renderWithProviders(<HomeScreen />, signedInSession);
-    expect(await screen.findByLabelText('Team: Finance')).toBeTruthy();
+    expect(await screen.findByLabelText('Department: Finance')).toBeTruthy();
 
     expect(screen.getByTestId('home-stats-unavailable')).toBeTruthy();
     expect(screen.getByText('Recent activity could not be read just now.')).toBeTruthy();

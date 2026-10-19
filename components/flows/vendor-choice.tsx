@@ -8,7 +8,7 @@ import { fonts, iconSize, status, typeScale } from '@/constants/theme';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { WORKSPACE_CHANGED, connectionIncomplete, refusalMessage } from '@/lib/content/refusals';
-import { VENDOR_ASK_ADMIN, VENDOR_NONE_SUB, VENDOR_SAVING } from '@/lib/content/screen-states';
+import { VENDOR_ADMIN_ONLY, VENDOR_ASK_ADMIN, VENDOR_NONE_SUB, VENDOR_SAVING } from '@/lib/content/screen-states';
 import type { Connection, ConnectionProvider } from '@/lib/platform/catalog';
 import { connectOAuthProvider } from '@/lib/platform/connections';
 import { invalidateShared } from '@/lib/platform/snapshot';
@@ -35,6 +35,12 @@ export const NONE = 'none';
  * take me back"). A vendor that takes a pasted key is connected where its key
  * is pasted, Settings › Connections. For a member a vendor not connected is no
  * choice: "Ask an owner or admin to connect it."
+ *
+ * `readOnly` (round 23, B3 — only an organization's owners and admins change a
+ * flow's integration; backend ADR-0043): no row is a choice, None and connected
+ * vendors too, and the list ends "Only an owner or admin can change the
+ * integration." Connect integration passes it for a member; Set up for a member
+ * changing a flow already on (adding a flow stays any member's, ADR-0036).
  */
 export function VendorChoice({
   vendors,
@@ -46,6 +52,7 @@ export function VendorChoice({
   saving,
   onChoose,
   onConnectionsChanged,
+  readOnly = false,
 }: {
   /** The vendors this field chooses among, in the manifest's order. */
   vendors: readonly { providerId: string; displayName: string }[];
@@ -61,6 +68,8 @@ export function VendorChoice({
   onChoose: (choice: string) => void;
   /** A connect finished, either way: the screen reads its connections again. */
   onConnectionsChanged?: () => void;
+  /** A member who may not change the integration: every row inert, and the line that says so. */
+  readOnly?: boolean;
 }) {
   const { palette } = useTheme();
   const router = useRouter();
@@ -119,8 +128,8 @@ export function VendorChoice({
         const connection = connectionOf(vendor.providerId);
         const connected = connectionState(connection) === 'connected';
         const isChosen = chosen === vendor.providerId;
-        // Connected, or connectable by this person: the row is the choice.
-        const tappable = connected || (Boolean(provider) && canManage);
+        // Connected, or connectable by this person: the row is the choice — never when read-only.
+        const tappable = !readOnly && (connected || (Boolean(provider) && canManage));
         const line =
           busy === vendor.providerId
             ? { text: VENDOR_SAVING, tone: 'muted' as const }
@@ -154,18 +163,24 @@ export function VendorChoice({
         testID="vendor-none"
         accessibilityRole="radio"
         accessibilityLabel="None"
-        accessibilityState={{ selected: chosen === NONE, disabled: busy !== null && busy !== NONE }}
+        accessibilityState={{ selected: chosen === NONE, disabled: readOnly || (busy !== null && busy !== NONE) }}
         mark={<NoneMark />}
         name="None"
         line={busy === NONE ? VENDOR_SAVING : VENDOR_NONE_SUB}
-        disabled={busy !== null}
-        onPress={() => void tap(NONE)}
+        disabled={readOnly || busy !== null}
+        onPress={readOnly ? undefined : () => void tap(NONE)}
         right={check(chosen === NONE, 'vendor-chosen-none')}
       />
+      {readOnly ? (
+        <Text testID="vendor-read-only" style={[styles.readOnly, { color: palette.neutral[400] }]}>
+          {VENDOR_ADMIN_ONLY}
+        </Text>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   rowError: { paddingHorizontal: 14, paddingBottom: 12, fontFamily: fonts.regular, ...typeScale.small },
+  readOnly: { paddingHorizontal: 14, paddingVertical: 12, fontFamily: fonts.regular, ...typeScale.small },
 });

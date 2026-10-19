@@ -198,7 +198,7 @@ describe('Add a flow — the catalog inside Flows (24.9.3)', () => {
   it('lists the catalog with categories and prices — no version (the spec\'s S9) — Added ✓ for what the workspace holds and Add for the rest, no plan banner', async () => {
     const { getByText, getAllByText, queryByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
     expect(await screen.findByText('Add a flow')).toBeTruthy();
-    expect(getByText('Ready-made flows for your teams.')).toBeTruthy();
+    expect(getByText('Ready-made flows for your departments.')).toBeTruthy();
     expect(queryByText(/Prebuilt flows|Adding to/u)).toBeNull();
     expect(getAllByText('Weekly KPI digest').length).toBeGreaterThan(0);
     expect(getAllByText('Finance · $39/mo').length).toBeGreaterThan(0);
@@ -230,19 +230,24 @@ describe('Add a flow — the catalog inside Flows (24.9.3)', () => {
 
   it('filters the catalog by category', async () => {
     const { getByText, queryByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
-    await fireEvent.press(getByText('Finance'));
+    await fireEvent.press(screen.getByTestId('add-category'));
+    await fireEvent.press(screen.getByTestId('add-category-option-Finance'));
+    expect(screen.queryByTestId('add-category-menu')).toBeNull();
+    expect(screen.getByLabelText('Category: Finance')).toBeTruthy();
     expect(getByText('Invoice triage')).toBeTruthy();
     expect(getByText('Receipt OCR')).toBeTruthy();
     expect(queryByText('Email triage')).toBeNull();
     expect(queryByText('Slack alerts')).toBeNull();
-    await fireEvent.press(getByText('Operations'));
+    await fireEvent.press(screen.getByTestId('add-category'));
+    await fireEvent.press(screen.getByTestId('add-category-option-Operations'));
     expect(getByText('Email triage')).toBeTruthy();
     expect(queryByText('Invoice triage')).toBeNull();
   });
 
   it('opens the correct flow from a filtered list', async () => {
-    const { getByText, getAllByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
-    await fireEvent.press(getByText('Finance'));
+    const { getAllByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
+    await fireEvent.press(screen.getByTestId('add-category'));
+    await fireEvent.press(screen.getByTestId('add-category-option-Finance'));
     // Finance shows Invoice triage first; its flow is subscription solution-0.
     await fireEvent.press(getAllByText('Added ✓')[0]);
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'solution-0' } });
@@ -270,7 +275,7 @@ describe('Add a flow — the catalog inside Flows (24.9.3)', () => {
       '/projects': projectsPayload('Finance'),
     });
     await renderWithProviders(<SolutionsScreen />, signedInSession);
-    expect((await screen.findByTestId('added-where-tpl.0')).props.children).toBe('Team: Finance');
+    expect((await screen.findByTestId('added-where-tpl.0')).props.children).toBe('Department: Finance');
     expect(screen.getByTestId('added-tpl.0')).toBeTruthy();
     expect(screen.queryByTestId('add-tpl.0')).toBeNull();
     expect(screen.queryByText(/^Added in /u)).toBeNull();
@@ -335,8 +340,13 @@ describe('Workflows', () => {
     await fireEvent.press(getByText('New'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/add');
     expect(mockRouter.push).not.toHaveBeenCalledWith(expect.stringContaining('templates'));
-    // Archived sits left of New, drawn with nothing archived too (build 11, D5).
-    expect(screen.getAllByText(/^(Archived|New)$/u).map((label) => label.props.children)).toEqual(['Archived', 'New']);
+    // Archived sits left of New, drawn with nothing archived too (build 11, D5) — its circle since round 23.
+    expect(
+      within(screen.getByTestId('title-row-controls'))
+        .getAllByTestId(/^flows-(archived|new)$/u)
+        .map((button) => button.props.testID),
+    ).toEqual(['flows-archived', 'flows-new']);
+    expect(screen.getByTestId('flows-archived').props.accessibilityLabel).toBe('Archived');
   });
 });
 
@@ -623,7 +633,8 @@ describe('Activity', () => {
 
   it('filters to held runs via Needs review (design v3: chip filters, not navigates)', async () => {
     const { getByText, queryByText, getAllByText } = await renderWithProviders(<ActivityScreen />, signedInSession);
-    await fireEvent.press(getByText('Needs review'));
+    await fireEvent.press(screen.getByTestId('activity-outcome'));
+    await fireEvent.press(screen.getByTestId('activity-outcome-option-Needs review'));
     // A held run's row says where its approval stands — pending here, from the
     // approvals read beside the runs — never just its status word (24.7.3 #5, #7).
     expect(getAllByText(/Waiting for approval|Held for review/).length).toBeGreaterThan(0);
@@ -652,14 +663,16 @@ describe('Activity', () => {
     const { getByText, queryByText } = await renderWithProviders(<ActivityScreen />, signedInSession);
     expect(getByText('Approved — continued in a new run')).toBeTruthy();
     expect(getByText('After approval · Recorded INV-7')).toBeTruthy();
-    await fireEvent.press(getByText('Needs review'));
+    await fireEvent.press(screen.getByTestId('activity-outcome'));
+    await fireEvent.press(screen.getByTestId('activity-outcome-option-Needs review'));
     expect(getByText('No held runs.')).toBeTruthy();
     expect(queryByText('Approved — continued in a new run')).toBeNull();
   });
 
   it('filters to successes only', async () => {
     const { getByText, queryByText, getAllByText } = await renderWithProviders(<ActivityScreen />, signedInSession);
-    await fireEvent.press(getByText('Success'));
+    await fireEvent.press(screen.getByTestId('activity-outcome'));
+    await fireEvent.press(screen.getByTestId('activity-outcome-option-Success'));
     expect(getByText('32 emails routed · 3 escalated')).toBeTruthy();
     expect(queryByText('Run #52 · failed — Sheets auth expired')).toBeNull();
     expect(queryByText('Run #4820 · held for review — amount mismatch')).toBeNull();
@@ -686,7 +699,8 @@ describe('Activity', () => {
     expect(queryByText('YESTERDAY')).toBeNull();
     // A filter with nothing under it says so without inventing a window.
     // A filter with nothing to show says so — it is not the first-run empty.
-    await fireEvent.press(getByText('Needs review'));
+    await fireEvent.press(screen.getByTestId('activity-outcome'));
+    await fireEvent.press(screen.getByTestId('activity-outcome-option-Needs review'));
     expect(getByText('No held runs.')).toBeTruthy();
     expect(queryByText('No activity yet')).toBeNull();
   });
@@ -700,11 +714,13 @@ describe('Activity', () => {
 
   it('filters to failures and hides the empty TODAY section', async () => {
     const { getByText, queryByText, getAllByText } = await renderWithProviders(<ActivityScreen />, signedInSession);
-    await fireEvent.press(getByText('Failed'));
+    await fireEvent.press(screen.getByTestId('activity-outcome'));
+    await fireEvent.press(screen.getByTestId('activity-outcome-option-Failed'));
     expect(getByText('Run #52 · failed — Sheets auth expired')).toBeTruthy();
     expect(queryByText('TODAY')).toBeNull();
     expect(getByText('YESTERDAY')).toBeTruthy();
-    await fireEvent.press(getByText('All'));
+    await fireEvent.press(screen.getByTestId('activity-outcome'));
+    await fireEvent.press(screen.getByTestId('activity-outcome-option-All'));
     expect(getByText('TODAY')).toBeTruthy();
     expect(getByText('Run #911 · 4 receipts captured')).toBeTruthy();
   });
@@ -835,7 +851,7 @@ describe('Settings — one grouped page (build 11, D1)', () => {
     ['workspace-switcher-row', 'Acme Operations'],
     ['settings-role', 'Your role'],
     ['settings-organization', 'Organization'],
-    ['settings-teams', 'Teams'],
+    ['settings-teams', 'Departments'],
     ['settings-archived-flows', 'Archived flows'],
     ['settings-data', 'Export my data'],
     ['settings-notifications', 'Notifications'],
@@ -853,7 +869,7 @@ describe('Settings — one grouped page (build 11, D1)', () => {
     'Acme Operations',
     'Your role',
     'Organization',
-    'Teams',
+    'Departments',
     'Archived flows',
     'Export my data',
     'Notifications',
@@ -1077,7 +1093,7 @@ describe('Settings — one grouped page (build 11, D1)', () => {
     expect(getByText('owner')).toBeTruthy();
     await fireEvent.press(getByText('Export my data'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/data');
-    await fireEvent.press(getByText('Teams'));
+    await fireEvent.press(getByText('Departments'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/settings/teams');
   });
 
@@ -1294,8 +1310,8 @@ describe('Home header — the mark fills its row and draws nothing else (D9, 202
     expect(row).toMatchObject({ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' });
     expect(row.height).toBeUndefined();
     // The buttons keep their size, so the row stays 38 and nothing below moves.
-    for (const label of ['Workspace: Acme Operations', 'Team: All teams', 'Notifications']) {
-      expect(StyleSheet.flatten(getByLabelText(label).props.style)).toMatchObject({ width: 38, height: 38 });
+    for (const label of ['Workspace: Acme Operations', 'Department: All departments', 'Notifications']) {
+      expect(StyleSheet.flatten(getByLabelText(label).parent!.props.style)).toMatchObject({ width: 38, height: 38 });
     }
     const [avatar] = getByLabelText('Account and settings').children;
     expect(typeof avatar).not.toBe('string');
@@ -1415,7 +1431,7 @@ describe('Setup (design sSetup; the Invoice Processing update, spec §3.B)', () 
     setMockParams({ template: 'invoice-processing' });
     await renderWithProviders(<SetupScreen />, signedInSession);
     expect(await screen.findByText('Set up Invoice Processing')).toBeTruthy();
-    expect(screen.getByTestId('setup-team').props.children).toBe('Team: Accounting');
+    expect(screen.getByTestId('setup-team').props.children).toBe('Department: Accounting');
     for (const gone of ['One-time setup', 'Add to', 'Choose a team', 'Create a team', 'Create a team first.', 'See teams']) {
       expect(screen.queryByText(gone)).toBeNull();
     }
@@ -1513,7 +1529,7 @@ describe('Setup (design sSetup; the Invoice Processing update, spec §3.B)', () 
     setMockParams({ template: 'invoice-processing', flow: 'ip-1' });
     await renderWithProviders(<SetupScreen />, signedInSession);
     await waitFor(() => expect(screen.getByLabelText('Approval limit').props.value).toBe('750.00'));
-    expect(screen.getByTestId('setup-team').props.children).toBe('Team: Accounting');
+    expect(screen.getByTestId('setup-team').props.children).toBe('Department: Accounting');
     expect(screen.queryByTestId('setup-connect-vendor')).toBeNull();
     await fireEvent.press(screen.getByText('Save'));
     await waitFor(() => expect(writes).toHaveLength(1));
@@ -1869,15 +1885,12 @@ describe("Home's tiles count today, say so, and open today's runs (the owner's b
     expect(screen.queryByText('Today ✕')).toBeNull();
     expect(screen.queryByTestId('activity-selection')).toBeNull();
     expect(within(screen.getByTestId('activity-outcomes')).getAllByText(/./u).map((node) => node.props.children)).toEqual([
-      'All',
-      'Success',
-      'Needs review',
       'Failed',
     ]);
 
     await fireEvent.press(screen.getByLabelText('Time range: Today'));
-    await fireEvent.press(within(screen.getByTestId('activity-range-dialog')).getByTestId('activity-range-all'));
-    expect(screen.queryByTestId('activity-range-dialog')).toBeNull();
+    await fireEvent.press(within(screen.getByTestId('activity-range-menu')).getByTestId('activity-range-all'));
+    expect(screen.queryByTestId('activity-range-menu')).toBeNull();
     expect(screen.getByLabelText('Time range: All time')).toBeTruthy();
     // Every failed run again, under its day; the outcome stays as chosen.
     expect(screen.getByText('YESTERDAY')).toBeTruthy();
@@ -1890,7 +1903,7 @@ describe("Home's tiles count today, say so, and open today's runs (the owner's b
 
     // What the chip could never do: Today, chosen again.
     await fireEvent.press(screen.getByLabelText('Time range: All time'));
-    await fireEvent.press(within(screen.getByTestId('activity-range-dialog')).getByTestId('activity-range-today'));
+    await fireEvent.press(within(screen.getByTestId('activity-range-menu')).getByTestId('activity-range-today'));
     expect(screen.getByLabelText('Time range: Today')).toBeTruthy();
     expect(screen.queryAllByTestId(/^activity-row-/u).map((row) => row.props.testID)).toEqual(['activity-row-today-failed']);
   });
@@ -1935,7 +1948,8 @@ describe("Home's tiles count today, say so, and open today's runs (the owner's b
     // The tab bar arrives with nothing, and changes nothing: the screen draws again
     // with no params (an outcome chosen here), and today is still the day chosen.
     setMockParams({});
-    await fireEvent.press(view.getByText('All'));
+    await fireEvent.press(view.getByTestId('activity-outcome'));
+    await fireEvent.press(view.getByTestId('activity-outcome-option-All'));
     expect(view.getByLabelText('Time range: Today')).toBeTruthy();
     expect(view.queryAllByTestId(/^activity-row-/u)).toHaveLength(4);
     expect(view.queryByText('YESTERDAY')).toBeNull();
@@ -1959,8 +1973,13 @@ describe('Archived flows (24.11.8; "Archived" since 24.12)', () => {
     withRemovedFlow();
     const { findByText, queryByText } = await renderWithProviders(<FlowsScreen />, signedInSession);
     expect(await findByText('Invoice triage')).toBeTruthy();
-    // As drawn: Archived, then New.
-    expect(screen.getAllByText(/^(Archived|New)$/u).map((label) => label.props.children)).toEqual(['Archived', 'New']);
+    // As drawn: Archived (its circle since round 23), then New.
+    expect(
+      within(screen.getByTestId('title-row-controls'))
+        .getAllByTestId(/^flows-(archived|new)$/u)
+        .map((button) => button.props.testID),
+    ).toEqual(['flows-archived', 'flows-new']);
+    expect(screen.getByTestId('flows-archived').props.accessibilityLabel).toBe('Archived');
     expect(queryByText(/^Archived flows/u)).toBeNull();
     expect(queryByText('Old intake')).toBeNull();
     await fireEvent.press(screen.getByTestId('flows-archived'));
@@ -2098,7 +2117,7 @@ describe('Flows with no live flow (build 11, D6)', () => {
     expect(screen.getByText('No flows yet')).toBeTruthy();
     expect(screen.getByText('Add a prebuilt flow — your first one can be live in minutes.')).toBeTruthy();
     // Not the team's inline line, and not the old counted row.
-    expect(screen.queryByText('No flows in this team yet')).toBeNull();
+    expect(screen.queryByText('No flows in this department yet')).toBeNull();
     expect(screen.queryByText(/^Archived flows \(/u)).toBeNull();
     expect(screen.queryByText('Old intake')).toBeNull();
     await fireEvent.press(screen.getByText('Add a flow'));
@@ -2125,9 +2144,9 @@ describe('Flows with no live flow (build 11, D6)', () => {
     });
     await renderWithProviders(<FlowsScreen />, signedInSession);
     await screen.findByText('Invoice triage');
-    await fireEvent.press(screen.getByLabelText('Team: All teams'));
+    await fireEvent.press(screen.getByLabelText('Department: All departments'));
     await fireEvent.press(await screen.findByTestId('scope-option-project-1'));
-    expect(await screen.findByText('No flows in this team yet')).toBeTruthy();
+    expect(await screen.findByText('No flows in this department yet')).toBeTruthy();
     expect(screen.queryByTestId('screen-empty')).toBeNull();
     // The scope stays: its circles beside the title (Build 22, F1; ~~the pills above it~~).
     expect(screen.getByTestId('title-scope-team')).toBeTruthy();

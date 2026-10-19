@@ -322,7 +322,7 @@ describe('One team › its members (team-members.tsx; DESIGN-CONTRACT 24.5: "lea
 
     await fireEvent.press(await screen.findByTestId('team-member-u1'));
     const dialog = within(await screen.findByTestId('leave-team-row-dialog'));
-    expect(dialog.getByText('Leave this team?')).toBeTruthy();
+    expect(dialog.getByText('Leave this department?')).toBeTruthy();
     expect(dialog.getByText('You will lose access to its flows immediately.')).toBeTruthy();
     expect(fake.to(MEMBERSHIP_DELETE)).toHaveLength(0);
 
@@ -353,7 +353,7 @@ describe('One team › its members (team-members.tsx; DESIGN-CONTRACT 24.5: "lea
 
     // The first Remove asks.
     await fireEvent.press(dialog.getByText('Remove'));
-    expect(dialog.getByText('Remove Carol from this team?')).toBeTruthy();
+    expect(dialog.getByText('Remove Carol from this department?')).toBeTruthy();
     expect(actionsOf('team-member-dialog')).toEqual(['Cancel', 'Remove']);
     expect(fake.to(MEMBERSHIP_DELETE)).toHaveLength(0);
 
@@ -361,7 +361,7 @@ describe('One team › its members (team-members.tsx; DESIGN-CONTRACT 24.5: "lea
     const reads = fake.to(MEMBERSHIPS_READ).length;
     await fireEvent.press(dialog.getByText('Remove'));
     expect(await dialog.findByText(REFUSED)).toBeTruthy();
-    expect(dialog.getByText('Remove Carol from this team?')).toBeTruthy();
+    expect(dialog.getByText('Remove Carol from this department?')).toBeTruthy();
     expect(fake.to(MEMBERSHIPS_READ)).toHaveLength(reads);
 
     await fireEvent.press(dialog.getByText('Remove'));
@@ -386,7 +386,7 @@ describe('One team › its members (team-members.tsx; DESIGN-CONTRACT 24.5: "lea
     const dialog = within(await screen.findByTestId('add-team-members-dialog'));
     if (add) {
       await fireEvent.press(dialog.getByTestId('add-u4'));
-      expect(await dialog.findByText('Everyone in this organization is already on the team.')).toBeTruthy();
+      expect(await dialog.findByText('Everyone in this organization is already in the department.')).toBeTruthy();
     }
     const reads = fake.to(MEMBERSHIPS_READ).length;
 

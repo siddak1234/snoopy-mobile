@@ -90,7 +90,14 @@ function nativeLinkConfig(redirectUri) {
           // Without autoVerify the OS shows a disambiguation sheet instead of
           // opening the app, which reads to a person as a broken sign-in.
           autoVerify: true,
-          data: [{ scheme: 'https', host: url.host, pathPrefix: url.pathname }],
+          // The callback, and since round 23 (A5) the run and approval links an
+          // email or a push carries (`hooks/use-push-registration.tsx`, `linkTargetOf`); iOS's
+          // `applinks` claim already covers every path the host's AASA lists.
+          data: [
+            { scheme: 'https', host: url.host, pathPrefix: url.pathname },
+            { scheme: 'https', host: url.host, pathPrefix: '/runs/' },
+            { scheme: 'https', host: url.host, pathPrefix: '/approvals/' },
+          ],
           category: ['BROWSABLE', 'DEFAULT'],
         },
       ],

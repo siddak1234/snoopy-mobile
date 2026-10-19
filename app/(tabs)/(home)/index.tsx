@@ -15,6 +15,7 @@ import {
 } from 'phosphor-react-native';
 
 import { AvatarBadge } from '@/components/nocturne/avatar-badge';
+import { GlassSurface } from '@/components/glass-surface';
 import { BrandMark } from '@/components/nocturne/brand-mark';
 import { IconTile } from '@/components/nocturne/icon-tile';
 import { PillButton } from '@/components/nocturne/pill-button';
@@ -104,20 +105,21 @@ function HomeHeader({ initials, hasAttention }: { initials: string; hasAttention
       <BrandMark height={HOME_MARK_HEIGHT} testID="home-mark" />
       <View style={styles.headerActions} testID="home-header-actions">
         <ScopeIcons />
-        <Pressable
-          onPress={() => router.push('/(tabs)/(home)/notifications')}
-          accessibilityRole="button"
-          accessibilityLabel="Notifications"
-          style={({ pressed }) => [
-            styles.bellButton,
-            { borderColor: palette.neutral[800] },
-            pressed && { backgroundColor: withAlpha(palette.text, 0.07) },
-          ]}>
-          <Bell size={19} color={palette.neutral[300]} weight="regular" />
-          {hasAttention ? (
-            <View testID="home-bell-dot" style={[styles.bellDot, { backgroundColor: palette.accent }]} />
-          ) : null}
-        </Pressable>
+        <GlassSurface radius={999} interactive style={styles.bellButton}>
+          <Pressable
+            onPress={() => router.push('/(tabs)/(home)/notifications')}
+            accessibilityRole="button"
+            accessibilityLabel="Notifications"
+            style={({ pressed }) => [
+              styles.bellPress,
+              pressed && { backgroundColor: withAlpha(palette.text, 0.07) },
+            ]}>
+            <Bell size={19} color={palette.neutral[300]} weight="regular" />
+            {hasAttention ? (
+              <View testID="home-bell-dot" style={[styles.bellDot, { backgroundColor: palette.accent }]} />
+            ) : null}
+          </Pressable>
+        </GlassSurface>
         <Pressable
           onPress={() => router.push('/(tabs)/settings')}
           accessibilityRole="button"
@@ -608,7 +610,7 @@ export default function HomeScreen() {
               </Pressable>
             ))}
             {runRows !== null && runRows.length === 0 ? (
-              <Text style={lineStyle}>No runs in this team yet.</Text>
+              <Text style={lineStyle}>No runs in this department yet.</Text>
             ) : null}
           </SurfaceCard>
         </View>
@@ -634,11 +636,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  // The bell's circle: on Liquid Glass since round 23 (`GlassSurface`; the owner's build 22 items 5–6).
   bellButton: {
     width: 38,
     height: 38,
+  },
+  bellPress: {
+    flex: 1,
     borderRadius: 999,
-    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },

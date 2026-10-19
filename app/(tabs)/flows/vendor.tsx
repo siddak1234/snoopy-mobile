@@ -13,11 +13,11 @@ import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { busyBody, useWorkspaceResource } from '@/hooks/use-resource';
 import { roleIn, useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
-import { WORKSPACE_CHANGED } from '@/lib/content/refusals';
+import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
 import { VENDOR_SAVE_FAILED, VENDOR_TITLE, errorTitleFor, vendorFor } from '@/lib/content/screen-states';
 import { updateSubscription } from '@/lib/platform/automations';
 import { readCatalog, readConnectionProviders, readConnections } from '@/lib/platform/catalog';
-import { PlatformNotConfiguredError } from '@/lib/platform/problem';
+import { PlatformError, PlatformNotConfiguredError } from '@/lib/platform/problem';
 import { readSubscriptions } from '@/lib/platform/runs';
 import { administers } from '@/lib/view/roles';
 
@@ -109,7 +109,8 @@ export default function ConnectVendorScreen() {
 
   /** Save the choice, then back where the person came from; unchanged, straight back. */
   const save = async (choice: string) => {
-    if (saving) return;
+    // A member never saves here (round 23, B3): the rows are inert for them.
+    if (saving || !canManage) return;
     if (choice === saved) {
       router.back();
       return;
@@ -130,8 +131,9 @@ export default function ConnectVendorScreen() {
       );
       keys.settle(`${field.key}:${choice}`);
       router.back();
-    } catch {
-      setError(VENDOR_SAVE_FAILED);
+    } catch (caught) {
+      // A member's refusal in its own words (403, backend ADR-0043); anything else, the save's.
+      setError(caught instanceof PlatformError && caught.status === 403 ? refusalMessage(caught) : VENDOR_SAVE_FAILED);
     } finally {
       setSaving(null);
     }
@@ -163,6 +165,7 @@ export default function ConnectVendorScreen() {
           saving={saving}
           onChoose={(choice) => void save(choice)}
           onConnectionsChanged={() => resource.refresh()}
+          readOnly={!canManage}
         />
       </SurfaceCard>
 

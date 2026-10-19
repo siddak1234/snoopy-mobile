@@ -47,6 +47,13 @@ jest.mock('expo-blur', () => {
   return { BlurView: View };
 });
 
+// Liquid Glass (`components/glass-surface.tsx`): a View, and not available by
+// default, so a surface draws its iOS < 26 or Android form until a test says so.
+jest.mock('expo-glass-effect', () => {
+  const { View } = require('react-native');
+  return { GlassView: View, GlassContainer: View, isLiquidGlassAvailable: jest.fn(() => false) };
+});
+
 // `expo-crypto` is a native module with no implementation under jest, so it
 // answers empty. Backing it with Node's crypto rather than a canned string
 // means the PKCE tests exercise the real SHA-256 and real randomness — the

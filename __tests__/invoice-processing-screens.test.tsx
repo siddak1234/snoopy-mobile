@@ -1,6 +1,6 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import React from 'react';
-import { Platform, Share, StyleSheet } from 'react-native';
+import { AccessibilityInfo, Platform, Share, StyleSheet } from 'react-native';
 
 import RunDetailScreen from '@/app/(tabs)/(home)/run';
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
@@ -196,7 +196,7 @@ describe('the flow page (spec A6; Build 22, P1–P4)', () => {
   it('reads top to bottom: name, team and status; DASHBOARD; the five STEPS — the document and Start run in 1, the integration in 2, nothing in 3 and 4, who gets the email in 5; then Pause, Edit setup and Archive', async () => {
     const view = await openFlow(added({ vendor: 'quickbooks' }), { connections: [quickbooks()] });
     expect(await screen.findByText('Invoice Processing')).toBeTruthy();
-    expect(screen.getByTestId('flow-team').props.children).toBe('Team: Accounting');
+    expect(screen.getByTestId('flow-team').props.children).toBe('Department: Accounting');
     const order = readingOrder(view.toJSON());
     const at = (entry: string) => {
       const index = order.indexOf(entry);
@@ -486,7 +486,7 @@ describe('Set up — one simple page, once, everything on it (the owner\'s AM4)'
     setMockParams({ template: 'invoice-processing' });
     await renderWithProviders(<SetupScreen />, sessionAs('owner'));
     expect(await screen.findByText('Set up Invoice Processing')).toBeTruthy();
-    expect(screen.getByTestId('setup-team').props.children).toBe('Team: Accounting');
+    expect(screen.getByTestId('setup-team').props.children).toBe('Department: Accounting');
     expect(screen.getByText('1 · CONNECT')).toBeTruthy();
     expect(screen.getByText('2 · SETTINGS')).toBeTruthy();
     const vendor = within(screen.getByTestId('setup-vendor-vendor'));
@@ -573,12 +573,44 @@ describe('Set up — one simple page, once, everything on it (the owner\'s AM4)'
     await fireEvent.press(row);
     expect(mockConnect).not.toHaveBeenCalled();
   });
+
+  it('a member on a live flow (round 23, B3): the integration is read-only — no row is a choice, and the list says who can change it', async () => {
+    const fake = fakePlatform(platformOperation);
+    const live = added({ vendor: 'quickbooks', holdAboveAmount: 500 });
+    routeSetup(fake, () => [live], () => [quickbooks()]);
+    setMockParams({ template: 'invoice-processing', flow: 'ip-1' });
+    await renderWithProviders(<SetupScreen />, sessionAs('member'));
+    expect(await screen.findByTestId('vendor-chosen-quickbooks')).toBeTruthy();
+    expect(screen.getByTestId('vendor-read-only')).toHaveTextContent('Only an owner or admin can change the integration.');
+    for (const id of ['vendor-quickbooks', 'vendor-none']) {
+      const row = screen.getByTestId(id);
+      expect([id, row.props.accessibilityState]).toEqual([id, expect.objectContaining({ disabled: true })]);
+      await fireEvent.press(row);
+    }
+    // The choice did not move.
+    expect(screen.getByTestId('vendor-chosen-quickbooks')).toBeTruthy();
+    expect(screen.queryByTestId('vendor-chosen-none')).toBeNull();
+    expect(mockConnect).not.toHaveBeenCalled();
+  });
+
+  it('a member adding a flow still chooses its integration (ADR-0036): no read-only line, None is a choice', async () => {
+    const fake = fakePlatform(platformOperation);
+    routeSetup(fake, () => [], () => [quickbooks()]);
+    setMockParams({ template: 'invoice-processing' });
+    await renderWithProviders(<SetupScreen />, sessionAs('member'));
+    expect(await screen.findByTestId('vendor-quickbooks')).toBeTruthy();
+    expect(screen.queryByTestId('vendor-read-only')).toBeNull();
+    await fireEvent.press(screen.getByTestId('vendor-quickbooks'));
+    await waitFor(() => expect(screen.getByTestId('vendor-chosen-quickbooks')).toBeTruthy());
+    await fireEvent.press(screen.getByTestId('vendor-none'));
+    await waitFor(() => expect(screen.getByTestId('vendor-chosen-none')).toBeTruthy());
+  });
 });
 
 describe("Turn on, the first add of a category's flow (U2; the review of the Invoice Processing screens)", () => {
   const ACCOUNTING: Project = { ...ACCOUNTING_TEAM, viewerRole: 'member', createdAt: '2026-10-14T20:00:00Z' };
 
-  it('reads the teams again once the add made the team: the flow page says "Team: Accounting", never "a team"', async () => {
+  it('reads the teams again once the add made the team: the flow page says "Department: Accounting", never "a team"', async () => {
     const fake = fakePlatform(platformOperation);
     let teams: Project[] = [];
     let held: Subscription[] = [];
@@ -609,7 +641,7 @@ describe("Turn on, the first add of a category's flow (U2; the review of the Inv
 
     setMockParams({ flow: 'ip-1' });
     await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
-    expect((await screen.findByTestId('flow-team')).props.children).toBe('Team: Accounting');
+    expect((await screen.findByTestId('flow-team')).props.children).toBe('Department: Accounting');
     await expect(readProjects(TEST_WORKSPACE)).resolves.toEqual([ACCOUNTING]);
     expect(fake.to('GET /v1/workspaces/{workspaceId}/projects')).toHaveLength(2);
   });
@@ -746,7 +778,7 @@ describe("a run's page — every step from the start, a live tracker (spec A7; t
     const steps = await screen.findByTestId('run-progress');
     expect(within(steps).getByText('STEPS')).toBeTruthy();
     expect(screen.queryByText('PROGRESS')).toBeNull();
-    const rows = within(steps).getAllByTestId(/^run-step-/u);
+    const rows = within(steps).getAllByTestId(/^run-step-(?!spinner)/u);
     expect(rows.map((row) => row.props.testID)).toEqual([
       'run-step-group:received',
       'run-step-group:read',
@@ -756,8 +788,33 @@ describe("a run's page — every step from the start, a live tracker (spec A7; t
     expect(within(rows[0]!).getByText('1 · Received')).toBeTruthy();
     expect(within(rows[0]!).getByText('Working…')).toBeTruthy();
     for (const row of rows.slice(1)) expect(within(row).getByText('Waiting')).toBeTruthy();
+    // The working step's icon turns (round 23, A4); no other row's does.
+    expect(within(rows[0]!).getByTestId('run-step-spinner')).toBeTruthy();
+    expect(within(steps).getAllByTestId('run-step-spinner')).toHaveLength(1);
     expect(within(screen.getByText('Steps done').parent!).getByText('0 / 4')).toBeTruthy();
     expect(screen.queryByText('No steps reported yet.')).toBeNull();
+  });
+
+  it.each([
+    [false, 'turns'],
+    [true, 'stands still under Reduce Motion'],
+  ])('the working step\'s icon (round 23, A4), Reduce Motion %s: it %s', async (reduced) => {
+    // The system's answer, then react-native's own mock's again (a spy's restore would leave it answering nothing).
+    const motion = AccessibilityInfo.isReduceMotionEnabled as jest.Mock;
+    const asItWas = motion.getMockImplementation();
+    motion.mockResolvedValue(reduced);
+    try {
+      await openRun(ipRun('pending', []));
+      const spinner = await screen.findByTestId('run-step-spinner');
+      await act(async () => {
+        await new Promise((settle) => setTimeout(settle, 300));
+      });
+      const turned = (spinner.props.jestAnimatedStyle.value as { transform: [{ rotate: string }] }).transform[0].rotate;
+      if (reduced) expect(turned).toBe('0deg');
+      else expect(turned).not.toBe('0deg');
+    } finally {
+      motion.mockImplementation(asItWas);
+    }
   });
 
   it('while running: done groups say Done and when, the next Working…, and Steps done never runs ahead (fb10\'s "1 / 1" impossible)', async () => {
@@ -766,6 +823,10 @@ describe("a run's page — every step from the start, a live tracker (spec A7; t
     expect(within(received).getByText(/^Done · \d{1,2}:\d{2} (AM|PM)$/u)).toBeTruthy();
     expect(within(screen.getByTestId('run-step-group:read')).getByText('Working…')).toBeTruthy();
     expect(within(screen.getByTestId('run-step-group:checked')).getByText('Waiting')).toBeTruthy();
+    // Only the working step turns: not a done one, not a waiting one.
+    expect(within(screen.getByTestId('run-step-group:read')).getByTestId('run-step-spinner')).toBeTruthy();
+    expect(within(received).queryByTestId('run-step-spinner')).toBeNull();
+    expect(within(screen.getByTestId('run-step-group:checked')).queryByTestId('run-step-spinner')).toBeNull();
     expect(within(screen.getByText('Steps done').parent!).getByText('1 / 4')).toBeTruthy();
     // Never a step's own summary.
     expect(screen.queryByText('PDF, 2 pages')).toBeNull();

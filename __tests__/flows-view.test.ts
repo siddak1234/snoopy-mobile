@@ -121,7 +121,7 @@ describe('toFlows', () => {
       undefined,
       labels,
     );
-    expect(scoped.scope).toBe('Team: Finance');
+    expect(scoped.scope).toBe('Department: Finance');
     expect(whole.scope).toBe('Whole workspace');
   });
 

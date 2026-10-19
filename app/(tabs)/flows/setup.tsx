@@ -424,6 +424,7 @@ export default function SetupScreen() {
                       saving={null}
                       onChoose={(choice) => choose(field.key, choice)}
                       onConnectionsChanged={refreshResource}
+                      readOnly={!canManage && editing}
                     />
                   </SurfaceCard>
                 </View>

@@ -192,7 +192,7 @@ describe("Flows, in a team with no flow while the workspace has some (build 11, 
       '/projects': projectsPayload('Finance'),
     });
     await renderWithProviders(<FlowsScreen />, signedInSession);
-    expect(await screen.findByText('No flows in this team yet')).toBeTruthy();
+    expect(await screen.findByText('No flows in this department yet')).toBeTruthy();
     expect(screen.queryByTestId('screen-empty')).toBeNull();
     await fireEvent.press(screen.getByText('Add a flow'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/add');
@@ -349,7 +349,7 @@ describe("Setup — each request's key (DESIGN-CONTRACT: a retry keeps it; a cha
       for (const effect of mockFocusEffects) effect();
     });
     // Nothing held: the team it goes to is its category's again, chosen by no one.
-    await waitFor(() => expect(screen.getByTestId('setup-team').props.children).toBe('Team: Finance'));
+    await waitFor(() => expect(screen.getByTestId('setup-team').props.children).toBe('Department: Finance'));
 
     await fireEvent.press(screen.getByText('Turn on'));
     await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith(opened('new-1')));

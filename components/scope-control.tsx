@@ -1,12 +1,12 @@
-import { Buildings, CaretDown, Check, Stack, User, UsersThree, type Icon } from 'phosphor-react-native';
+import { Buildings, CaretDown, Stack, User, type Icon } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
-import { Dialog, DialogButton, DialogText } from '@/components/dialog';
+import { Dropdown } from '@/components/dropdown';
+import { GlassSurface } from '@/components/glass-surface';
 import { Pressable } from '@/components/pressable';
-import { SettingsRow } from '@/components/settings/settings-row';
 import { WorkspaceSwitcher } from '@/components/settings/workspace-switcher';
-import { fonts, layout, typeScale, withAlpha } from '@/constants/theme';
+import { fonts, typeScale, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useScope } from '@/hooks/use-scope';
 import { useSession } from '@/hooks/use-session';
@@ -15,16 +15,15 @@ import { ALL_TEAMS_ICON, teamTypeIcon } from '@/lib/content/team-types';
 import { readProjects } from '@/lib/platform/projects';
 
 /**
- * What the scope control reads and which of its cards is open: its two icons,
- * on Home beside the bell and on Flows and Activity beside the title (Build 22).
+ * What the scope control reads: its two icons, on Home beside the bell and on
+ * Flows and Activity in the title row (Build 22).
  *
- * Teams come from the shared snapshot, so every screen drawing a form reads the
- * list once.
+ * Departments come from the shared snapshot, so every screen drawing a form
+ * reads the list once.
  */
 function useScopeChoices() {
   const session = useSession();
   const { projectId, setProjectId } = useScope();
-  const [open, setOpen] = useState<'workspace' | 'team' | null>(null);
 
   const currentSession = session.status === 'signed-in' ? session.session : null;
   const activeWorkspace =
@@ -36,76 +35,11 @@ function useScopeChoices() {
   );
   const openTeams = teams.status === 'ready' ? teams.data : [];
   const chosen = openTeams.find((project) => project.id === projectId);
-  // A stored team that is gone (deleted, left, or another workspace's) reads as all.
-  const teamLabel = chosen ? chosen.type : 'All teams';
+  // A stored department that is gone (deleted, left, or another workspace's) reads as all.
+  const teamLabel = chosen ? chosen.type : 'All departments';
   const workspaceLabel = activeWorkspace?.name ?? 'Workspace';
 
-  return {
-    session,
-    projectId,
-    setProjectId,
-    open,
-    setOpen,
-    activeWorkspace,
-    workspaceLabel,
-    teams,
-    openTeams,
-    chosen,
-    teamLabel,
-  };
-}
-
-type ScopeChoices = ReturnType<typeof useScopeChoices>;
-
-/**
- * The cards the icons open: the workspace switcher and Show (the team list).
- * No Create a team since the Invoice Processing update (backend ADR-0036): the
- * platform makes a flow's team when it is first needed.
- */
-function ScopeCards({ scope }: { scope: ScopeChoices }) {
-  const { palette } = useTheme();
-  const { projectId, setProjectId, open, setOpen, teams, openTeams, chosen } = scope;
-  return (
-    <>
-      <WorkspaceSwitcher open={open === 'workspace'} onClose={() => setOpen(null)} />
-      <Dialog
-        visible={open === 'team'}
-        onRequestClose={() => setOpen(null)}
-        testID="scope-team-dialog"
-        title="Show"
-        body="Flows, runs and approvals follow the team you pick. Connections and billing are the workspace's."
-        actions={<DialogButton label="Done" onPress={() => setOpen(null)} />}>
-        <View style={styles.list}>
-          <SettingsRow
-            icon={Stack}
-            title="All teams"
-            divider={openTeams.length > 0}
-            testID="scope-option-all"
-            onPress={() => {
-              setProjectId(null);
-              setOpen(null);
-            }}
-            right={projectId === null || !chosen ? <Check size={16} color={palette.accent} /> : null}
-          />
-          {openTeams.map((project, index) => (
-            <SettingsRow
-              key={project.id}
-              icon={UsersThree}
-              title={project.type}
-              divider={index < openTeams.length - 1}
-              testID={`scope-option-${project.id}`}
-              onPress={() => {
-                setProjectId(project.id);
-                setOpen(null);
-              }}
-              right={project.id === projectId ? <Check size={16} color={palette.accent} /> : null}
-            />
-          ))}
-        </View>
-        {teams.status === 'error' ? <DialogText tone="error">{teams.message}</DialogText> : null}
-      </Dialog>
-    </>
-  );
+  return { projectId, setProjectId, activeWorkspace, workspaceLabel, teams, openTeams, chosen, teamLabel };
 }
 
 /**
@@ -123,7 +57,7 @@ export function ScopePill({
 }: {
   icon: Icon;
   label: string;
-  /** What it is and what is chosen: a pill is read aloud as "Team: Legal". */
+  /** What it is and what is chosen: a pill is read aloud as "Time range: Today". */
   accessibilityLabel: string;
   onPress?: () => void;
   testID?: string;
@@ -149,13 +83,14 @@ export function ScopePill({
 }
 
 /**
- * One circle of the header row: Home's bell, exactly — 38 across, a hairline
- * ring, the glyph at 19 — every press ticking. The scope's two icons are drawn
- * with it, and since Build 22 a title row's own controls when the row has no
- * room for their words (the session's S26; the Build 22 review's M11): Flows'
- * Archived, then its New — `accent`, New's accent ring and glyph, as its pill
- * is drawn — and Activity's time range, so every circle in a header row is the
- * same.
+ * One circle of the header row: 38 across, the glyph at 19, every press
+ * ticking. The scope's two icons are drawn with it, and since Build 22 a title
+ * row's own controls when the row has no room for their words (the session's
+ * S26; the Build 22 review's M11) — Flows' Archived always, its New — `accent`,
+ * New's accent glyph and tint — and Activity's time range, so every circle in a
+ * header row is the same. On Liquid Glass since round 23 (`GlassSurface`,
+ * interactive; the owner's build 22 items 5–6; ~~a hairline ring~~), as Home's
+ * bell and the back circle are.
  */
 export function CircleButton({
   icon: Glyph,
@@ -173,60 +108,92 @@ export function CircleButton({
   const { palette } = useTheme();
   const accent = tone === 'accent';
   return (
-    <Pressable
-      testID={testID}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.iconButton,
-        { borderColor: accent ? palette.accent : palette.neutral[800] },
-        pressed && { backgroundColor: accent ? withAlpha(palette.accent, 0.12) : withAlpha(palette.text, 0.07) },
-      ]}>
-      <Glyph size={19} color={accent ? palette.accent : palette.neutral[300]} weight="regular" />
-    </Pressable>
+    <GlassSurface radius={999} interactive tone={tone} style={styles.iconButton}>
+      <Pressable
+        testID={testID}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.iconPress,
+          pressed && { backgroundColor: accent ? withAlpha(palette.accent, 0.12) : withAlpha(palette.text, 0.07) },
+        ]}>
+        <Glyph size={19} color={accent ? palette.accent : palette.neutral[300]} weight="regular" />
+      </Pressable>
+    </GlassSurface>
   );
 }
 
 /**
- * The scope control (BUILD-PLAN 24.9.2; teams since 24.11.7): two icons, the
- * words gone (the owner's build 13 decision 2, 2026-10-06) — on Home beside
- * the bell, and since Build 22 on Flows and Activity beside the title
- * (`TitleRow`; the owner's build 21 items 2–4: "the logos same as home for
- * organization and team"). The workspace is a person (Personal) or a building
- * (an organization); the team is its kind's icon (`teamTypeIcon`), or four
- * squares for All teams. An icon cannot say which workspace or team is chosen,
- * so each is read aloud as what it is and what is chosen ("Workspace: Acme",
- * "Team: Legal"), and each opens its card, where the words are — the
- * workspace's with any number of workspaces, since only the card can name the
- * one there is. Drawn as the bell beside them, and like it, every press ticks.
- * ~~`ScopeControl`, the labelled pills above Flows' and Activity's titles~~
- * until Build 22 ("This looks odd").
+ * The scope control (BUILD-PLAN 24.9.2; departments since 24.11.7): two
+ * icons, the words gone (the owner's build 13 decision 2, 2026-10-06) — on
+ * Home beside the bell, and since Build 22 in Flows' and Activity's title rows
+ * (`TitleRow`; the owner's build 21 items 2–4). The workspace is a person
+ * (Personal) or a building (an organization); the department is its kind's
+ * icon (`teamTypeIcon`), or four squares for All departments. An icon cannot
+ * say which workspace or department is chosen, so each is read aloud as what
+ * it is and what is chosen ("Workspace: Acme", "Department: Legal"), and each
+ * opens its drop-down, where the words are (round 23, the owner's build 22
+ * items 3–4; ~~its card~~): the workspace's (`WorkspaceSwitcher`), and
+ * Department — All departments, then each — with a load error in it. The
+ * card's explanatory sentence went with the card (S3: the title says what the
+ * menu is). Every press ticks. ~~`ScopeControl`, the labelled pills above
+ * Flows' and Activity's titles~~ until Build 22 ("This looks odd").
  *
  * `testIDPrefix` names where it is drawn: `home-scope` (Home) or `title-scope`
  * (a title row).
  */
 export function ScopeIcons({ testIDPrefix = 'home-scope' }: { testIDPrefix?: string }) {
-  const scope = useScopeChoices();
-  const { setOpen, activeWorkspace, workspaceLabel, chosen, teamLabel } = scope;
+  const { projectId, setProjectId, activeWorkspace, workspaceLabel, teams, openTeams, chosen, teamLabel } =
+    useScopeChoices();
   const WorkspaceIcon = activeWorkspace?.type === 'personal' ? User : Buildings;
   const TeamIcon = chosen ? teamTypeIcon(chosen.type) : ALL_TEAMS_ICON;
+  const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const [teamOpen, setTeamOpen] = useState(false);
 
   return (
     <>
-      <CircleButton
-        testID={`${testIDPrefix}-workspace`}
-        icon={WorkspaceIcon}
-        accessibilityLabel={`Workspace: ${workspaceLabel}`}
-        onPress={() => setOpen('workspace')}
+      <WorkspaceSwitcher
+        open={workspaceOpen}
+        onOpenChange={setWorkspaceOpen}
+        trigger={
+          <CircleButton
+            testID={`${testIDPrefix}-workspace`}
+            icon={WorkspaceIcon}
+            accessibilityLabel={`Workspace: ${workspaceLabel}`}
+            onPress={() => setWorkspaceOpen(true)}
+          />
+        }
       />
-      <CircleButton
-        testID={`${testIDPrefix}-team`}
-        icon={TeamIcon}
-        accessibilityLabel={`Team: ${teamLabel}`}
-        onPress={() => setOpen('team')}
+      <Dropdown
+        testID="scope-team"
+        title="Department"
+        options={[
+          { value: 'all', label: 'All departments', icon: Stack, testID: 'scope-option-all' },
+          ...openTeams.map((project) => ({
+            value: project.id,
+            label: project.type,
+            icon: teamTypeIcon(project.type),
+            testID: `scope-option-${project.id}`,
+          })),
+        ]}
+        value={projectId === null || !chosen ? 'all' : projectId}
+        open={teamOpen}
+        onOpenChange={setTeamOpen}
+        onChange={(value) => {
+          setProjectId(value === 'all' ? null : value);
+          setTeamOpen(false);
+        }}
+        status={teams.status === 'error' ? { text: teams.message, tone: 'error', testID: 'scope-team-error' } : null}
+        trigger={
+          <CircleButton
+            testID={`${testIDPrefix}-team`}
+            icon={TeamIcon}
+            accessibilityLabel={`Department: ${teamLabel}`}
+            onPress={() => setTeamOpen(true)}
+          />
+        }
       />
-      <ScopeCards scope={scope} />
     </>
   );
 }
@@ -253,12 +220,11 @@ const styles = StyleSheet.create({
   iconButton: {
     width: 38,
     height: 38,
+  },
+  iconPress: {
+    flex: 1,
     borderRadius: 999,
-    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  list: {
-    marginHorizontal: -layout.rowPadH,
   },
 });

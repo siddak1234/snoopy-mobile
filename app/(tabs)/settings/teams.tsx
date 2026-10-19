@@ -146,9 +146,9 @@ export default function TeamsScreen() {
       <View style={styles.header}>
         <BackCircle onPress={() => router.back()} />
         <View style={styles.headerText}>
-          <Text style={[styles.title, { color: palette.text }]}>Teams</Text>
+          <Text style={[styles.title, { color: palette.text }]}>Departments</Text>
           <Text style={[styles.subtitle, muted]}>
-            {organizations > 1 ? 'Your teams across all organizations' : 'Your teams, and the ones you can ask to join'}
+            {organizations > 1 ? 'Your departments across all organizations' : 'Your departments, and the ones you can ask to join'}
           </Text>
         </View>
       </View>
@@ -160,7 +160,7 @@ export default function TeamsScreen() {
           <SectionLabel>{(workspace.type === 'personal' ? 'Personal' : workspace.name).toUpperCase()}</SectionLabel>
           <SurfaceCard style={styles.card}>
             {mine.length === 0 ? (
-              <Text style={[styles.text, styles.pad, muted]}>You are not on a team here yet.</Text>
+              <Text style={[styles.text, styles.pad, muted]}>You are not in a department here yet.</Text>
             ) : null}
             {mine.map((project, index) => (
               <SettingsRow

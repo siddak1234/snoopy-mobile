@@ -4,6 +4,14 @@ import type { Run } from '@/lib/platform/automations';
 import { flowCatalogPayload, runsPayload } from '@/test/platform';
 import { answerPlatform, flush, launch, press, pressTab, signedInOnThisPhone } from '@/test/real-router';
 
+/** Choose an outcome from Activity's drop-down (round 23; ~~a chip~~). */
+async function chooseOutcome(value: 'All' | 'Success') {
+  await fireEvent.press(await screen.findByTestId('activity-outcome'));
+  await fireEvent.press(await screen.findByTestId(`activity-outcome-option-${value}`));
+  await flush(100);
+  await flush(1000);
+}
+
 /**
  * A tile opens Activity with its selection — every time it is pressed (build 13).
  *
@@ -74,7 +82,7 @@ it('the same Home tile pressed again, after its selection was cleared on Activit
 
   // Widened on Activity: every day, every outcome.
   await chooseRange('all');
-  await press('All');
+  await chooseOutcome('All');
   expect(screen.getByLabelText('Time range: All time')).toBeTruthy();
   expect(rows()).toHaveLength(5);
 
@@ -104,7 +112,7 @@ it("the same flow page tile pressed again, after its flow was cleared on Activit
   expect(rows()).toEqual(['activity-row-today-failed', 'activity-row-yesterday-failed', 'activity-row-older-failed']);
 
   await press('Invoice triage ✕');
-  await press('All');
+  await chooseOutcome('All');
   expect(screen.queryByText('Invoice triage ✕')).toBeNull();
   expect(rows()).toHaveLength(5);
 
@@ -123,7 +131,7 @@ it('the tab bar changes nothing: after a tile visit and a clear, Activity opens 
   await pressTile('stat-Failed');
   expect(screen.getByLabelText('Time range: Today')).toBeTruthy();
   await chooseRange('all');
-  await press('Success');
+  await chooseOutcome('Success');
   expect(rows()).toEqual(['activity-row-today-ok', 'activity-row-yesterday-ok']);
   // And a range chosen here, not the one Activity opens on: the last 7 days.
   await chooseRange('week');

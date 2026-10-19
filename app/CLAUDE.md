@@ -18,7 +18,7 @@ Loads when a file here is read or edited. The root `CLAUDE.md` rules apply too.
 2. Show few steps, numbered, titles only.
 3. No jargon and no explanations: say what happens, in the person's words.
 4. Larger icons: 24 pt, 20 inside buttons.
-5. Say what the website says for the same thing (team and flow, never project or automation: `audit:vocabulary`).
+5. Say what the website says for the same thing (department and flow, never team, project or automation: `audit:vocabulary`).
 
 ## Audits to run after a screen change
 

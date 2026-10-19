@@ -1,11 +1,11 @@
 import type { NavigationProp } from '@react-navigation/native';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
-import { CalendarBlank, CaretRight, Check, CheckCircle, HandPalm } from 'phosphor-react-native';
+import { CalendarBlank, CaretRight, CheckCircle, Funnel, HandPalm } from 'phosphor-react-native';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Dialog, DialogButton } from '@/components/dialog';
+import { Dropdown } from '@/components/dropdown';
 import { FilterChip } from '@/components/nocturne/filter-chip';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
@@ -26,7 +26,7 @@ import {
   RUN_FLOW_ARCHIVED,
   errorTitleFor,
 } from '@/lib/content/screen-states';
-import { ACTIVITY_FILTERS, type ActivityItem } from '@/lib/content/screen-states';
+import { ACTIVITY_FILTERS, ACTIVITY_FILTER_LABEL, type ActivityItem } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
 import {
   rangeStart,
@@ -96,8 +96,9 @@ function ActivitySection({ label, items }: { label: string; items: ActivityItem[
   );
 }
 
-/** All four chips are filters (design actF — v3 ratified filtering and made
- *  "Needs review" filter held runs instead of navigating). */
+/** All four outcomes are filters (design actF — v3 ratified filtering and made
+ *  "Needs review" filter held runs instead of navigating); one drop-down since
+ *  round 23 (~~four chips~~). */
 type ActivityFilter = 'All' | 'Success' | 'Needs review' | 'Failed';
 
 /**
@@ -129,10 +130,10 @@ const isActivityFilter = (value: unknown): value is ActivityFilter =>
 type ArrivalParams = { flow?: string; flowName?: string; filter?: string; period?: string };
 
 /**
- * The time range's choices, as its card lists them (the owner's build 13
- * decision 4: "Today / Week / Month"), after All time — every run, which
- * Activity opens on. A choice's name is the button's label; the line under it
- * in the card says what it spans (`rangeStart`).
+ * The time range's choices, as its drop-down lists them (the owner's build 13
+ * decision 4: "Today / Week / Month"; a drop-down since round 23, ~~a card~~),
+ * after All time — every run, which Activity opens on. A choice's name is the
+ * button's label; the line under it says what it spans (`rangeStart`).
  */
 const RANGES: readonly RunRange[] = ['all', 'today', 'week', 'month'];
 const RANGE_LABEL: Record<RunRange, string> = { all: 'All time', today: 'Today', week: 'Week', month: 'Month' };
@@ -196,6 +197,7 @@ export default function ActivityScreen() {
   // where Today ✕ could only clear (build 13).
   const [range, setRange] = useState<RunRange>(() => arrivedWith(params).range);
   const [rangeOpen, setRangeOpen] = useState(false);
+  const [outcomeOpen, setOutcomeOpen] = useState(false);
   useEffect(() => {
     if (!params.flow && !params.filter && !params.period) return;
     const arrived = arrivedWith(params);
@@ -337,58 +339,53 @@ export default function ActivityScreen() {
         { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) },
       ]}
       showsVerticalScrollIndicator={false}>
-      {/* The title, Home's two scope circles beside it, then the time range, as
-          Flows' row (Build 22, F2–F3; the owner's build 21 item 3: "make the
-          organization and teams circle icons then calendar all time can stay as
-          is"). The range says what is chosen and opens the four, in a card (the
-          owner's build 13 decision 4) — on a row too narrow for its words (a
-          320-pt phone), its calendar alone in a circle, read aloud the same
-          (the Build 22 review's M11). ~~The scope control's pills above~~. */}
+      {/* The title, then Home's two scope circles and the time range on the
+          right (round 23, A1; Build 22, F2–F3). The range says what is chosen
+          and opens the four in a drop-down on it (the owner's build 22 items
+          3–4; ~~a card~~, the owner's build 13 decision 4) — on a row too
+          narrow for its words (a 320-pt phone), its calendar alone in a
+          circle, read aloud the same (the Build 22 review's M11). */}
       <TitleRow
         title="Activity"
-        right={(level) =>
-          level >= 1 ? (
-            <CircleButton
-              testID="activity-range"
-              icon={CalendarBlank}
-              accessibilityLabel={`Time range: ${RANGE_LABEL[range]}`}
-              onPress={() => setRangeOpen(true)}
-            />
-          ) : (
-            <ScopePill
-              testID="activity-range"
-              icon={CalendarBlank}
-              label={RANGE_LABEL[range]}
-              accessibilityLabel={`Time range: ${RANGE_LABEL[range]}`}
-              onPress={() => setRangeOpen(true)}
-            />
-          )
-        }
+        right={(level) => (
+          <Dropdown
+            testID="activity-range"
+            title="Time range"
+            options={RANGES.map((option) => ({
+              value: option,
+              label: RANGE_LABEL[option],
+              sub: RANGE_SPAN[option],
+              icon: CalendarBlank,
+              testID: `activity-range-${option}`,
+            }))}
+            value={range}
+            open={rangeOpen}
+            onOpenChange={setRangeOpen}
+            onChange={(next) => {
+              setRange(next);
+              setRangeOpen(false);
+            }}
+            trigger={
+              level >= 1 ? (
+                <CircleButton
+                  testID="activity-range"
+                  icon={CalendarBlank}
+                  accessibilityLabel={`Time range: ${RANGE_LABEL[range]}`}
+                  onPress={() => setRangeOpen(true)}
+                />
+              ) : (
+                <ScopePill
+                  testID="activity-range"
+                  icon={CalendarBlank}
+                  label={RANGE_LABEL[range]}
+                  accessibilityLabel={`Time range: ${RANGE_LABEL[range]}`}
+                  onPress={() => setRangeOpen(true)}
+                />
+              )
+            }
+          />
+        )}
       />
-      <Dialog
-        visible={rangeOpen}
-        onRequestClose={() => setRangeOpen(false)}
-        testID="activity-range-dialog"
-        title="Time range"
-        actions={<DialogButton label="Done" onPress={() => setRangeOpen(false)} />}>
-        <View style={styles.rangeList}>
-          {RANGES.map((option, index) => (
-            <SettingsRow
-              key={option}
-              icon={CalendarBlank}
-              title={RANGE_LABEL[option]}
-              sub={RANGE_SPAN[option]}
-              divider={index < RANGES.length - 1}
-              testID={`activity-range-${option}`}
-              onPress={() => {
-                setRange(option);
-                setRangeOpen(false);
-              }}
-              right={option === range ? <Check size={16} color={palette.accent} testID="activity-range-chosen" /> : null}
-            />
-          ))}
-        </View>
-      </Dialog>
       {/* The permanent way into Approvals (the owner's decision at Gate 24's
           close, G1): the website's sidebar link with its count, here a row
           above the runs, drawn at 0 too — Home's banner shows only while
@@ -404,22 +401,36 @@ export default function ActivityScreen() {
         />
       </SurfaceCard>
       {/* The flow a flow page's tile chose, on a row of its own above the
-          outcomes: a fifth chip beside the four runs off a phone's width (the
-          owner's build 12 item 1). It clears itself. */}
+          outcome (the owner's build 12 item 1). It clears itself. */}
       {flow ? (
         <View style={styles.filters} testID="activity-selection">
           <FilterChip key="flow" label={`${flow.name} ✕`} active onPress={() => setFlow(null)} />
         </View>
       ) : null}
+      {/* The outcome, one drop-down where the four chips were (round 23, the
+          owner's build 22 items 3–4): All runs, Success, Needs review, Failed. */}
       <View style={styles.filters} testID="activity-outcomes">
-        {ACTIVITY_FILTERS.map((f) => (
-          <FilterChip
-            key={f}
-            label={f}
-            active={f === filter}
-            onPress={() => setFilter(f as ActivityFilter)}
-          />
-        ))}
+        <Dropdown
+          testID="activity-outcome"
+          title="Outcome"
+          options={ACTIVITY_FILTERS.map((option) => ({ value: option, label: ACTIVITY_FILTER_LABEL[option] }))}
+          value={filter}
+          open={outcomeOpen}
+          onOpenChange={setOutcomeOpen}
+          onChange={(next) => {
+            setFilter(next as ActivityFilter);
+            setOutcomeOpen(false);
+          }}
+          trigger={
+            <ScopePill
+              testID="activity-outcome"
+              icon={Funnel}
+              label={ACTIVITY_FILTER_LABEL[filter]}
+              accessibilityLabel={`Outcome: ${ACTIVITY_FILTER_LABEL[filter]}`}
+              onPress={() => setOutcomeOpen(true)}
+            />
+          }
+        />
       </View>
       {today.length > 0 ? <ActivitySection label="TODAY" items={today} /> : null}
       {yesterday.length > 0 ? <ActivitySection label="YESTERDAY" items={yesterday} /> : null}
@@ -444,9 +455,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.screenX,
     paddingBottom: 20,
     gap: 14,
-  },
-  rangeList: {
-    marginHorizontal: -layout.rowPadH,
   },
   approvalsCard: {
     marginBottom: 12,
