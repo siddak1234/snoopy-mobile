@@ -42,7 +42,14 @@ const PROJECT_ID = 'cb806193-8885-4b5c-b1d6-850da3f162a2';
 jest.mock('expo-constants', () => ({
   __esModule: true,
   default: {
-    expoConfig: { version: '1.0.0', extra: { eas: { projectId: 'cb806193-8885-4b5c-b1d6-850da3f162a2' } } },
+    expoConfig: {
+      version: '1.0.0',
+      extra: {
+        eas: { projectId: 'cb806193-8885-4b5c-b1d6-850da3f162a2' },
+        // The app's link host (round 23, A5): the login callback's, as the release pins it.
+        nativeRedirectUri: 'https://app.autom8x.ai/auth/native/callback',
+      },
+    },
     platform: { ios: { buildNumber: '11' } },
   },
 }));
@@ -449,6 +456,17 @@ describe('Device push: the signed-in tree (build 11, D8)', () => {
     expect(mockRouter.push).toHaveBeenCalledTimes(2);
   });
 
+  it('a "Run completed" push (round 23, A8) opens the run’s page, as a failed run’s does', async () => {
+    await renderWithProviders(<TabLayout />, signedInSession);
+    await waitFor(() => expect(Notifications.addNotificationResponseReceivedListener).toHaveBeenCalled());
+    const opened = Notifications.addNotificationResponseReceivedListener.mock.calls[0][0];
+
+    await act(async () => opened(tap('n-ok-1', { event: 'run-succeeded', runId: 'run-12' })));
+    expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/(tabs)/(home)/run', params: { runId: 'run-12' } });
+    await act(async () => opened(tap('n-ok-2', { event: 'run-succeeded', runId: '../settings' })));
+    expect(mockRouter.push).toHaveBeenCalledTimes(1);
+  });
+
   it('the tap that opened the app opens its screen once signed in, and not before', async () => {
     const cold = [
       [tap('n-cold-1', { event: 'run-failed', runId: 'run-9' }), { pathname: '/(tabs)/(home)/run', params: { runId: 'run-9' } }],
@@ -734,5 +752,51 @@ describe('Device push: a tap opens in its own workspace (build 11)', () => {
     await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith(RUN));
     expect(events).toEqual(['switch', 'reload', 'open']);
     expect(openedIn).toEqual([OTHER]);
+  });
+
+  /** The link listener the signed-in tree set up (round 23, A5). */
+  const linkHeard = () => {
+    const calls = (Linking.addEventListener as jest.Mock).mock.calls.filter(([type]) => type === 'url');
+    return calls.at(-1)![1] as (event: { url: string }) => void;
+  };
+
+  it('an email’s run link in another of the person’s workspaces switches to it, then opens the run there (A5)', async () => {
+    await signedInTree();
+    await act(async () => linkHeard()({ url: `https://app.autom8x.ai/runs/run-7?workspace=${OTHER}` }));
+    await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith(RUN));
+    expect(switches).toEqual([{ workspaceId: OTHER, key: 'test-intent' }]);
+    expect(events).toEqual(['switch', 'reload', 'open']);
+    expect(openedIn).toEqual([OTHER]);
+  });
+
+  it('an approval link opens Approvals — in the active workspace at once; another host or path opens nothing', async () => {
+    await signedInTree();
+    await act(async () => linkHeard()({ url: `https://app.autom8x.ai/approvals/apr-8?workspace=${TEST_WORKSPACE}` }));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity/approvals');
+    expect(switches).toEqual([]);
+    await act(async () => linkHeard()({ url: `https://evil.example/runs/run-7?workspace=${OTHER}` }));
+    await act(async () => linkHeard()({ url: 'https://app.autom8x.ai/settings' }));
+    await settle();
+    expect(mockRouter.push).toHaveBeenCalledTimes(1);
+    expect(switches).toEqual([]);
+  });
+
+  it('the link that opened the app opens once signed in, and only once', async () => {
+    (Linking.getInitialURL as jest.Mock).mockResolvedValue(`https://app.autom8x.ai/runs/run-7?workspace=${TEST_WORKSPACE}`);
+    try {
+      const restoring = await renderWithProviders(<TabLayout />, sessionIn('restoring'));
+      await settle();
+      expect(mockRouter.push).not.toHaveBeenCalled();
+      await restoring.unmount();
+
+      const first = await renderWithProviders(<Switchable />, signedInSession);
+      await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith(RUN));
+      await first.unmount();
+      await renderWithProviders(<Switchable />, signedInSession);
+      await settle();
+      expect(mockRouter.push).toHaveBeenCalledTimes(1);
+    } finally {
+      (Linking.getInitialURL as jest.Mock).mockResolvedValue(null);
+    }
   });
 });

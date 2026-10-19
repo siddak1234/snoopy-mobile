@@ -183,9 +183,9 @@ function holdingTwo(): SessionContextValue & { reload: jest.Mock } {
 
 /** The header's buttons, in the order drawn, by what each is read aloud as. */
 const headerButtons = () =>
-  screen
-    .getByTestId('home-header-actions')
-    .children.map((child) => (typeof child === 'string' ? child : child.props.accessibilityLabel));
+  within(screen.getByTestId('home-header-actions'))
+    .getAllByRole('button')
+    .map((button) => button.props.accessibilityLabel);
 
 describe("the kinds' icons, beside the list (the owner's build 13 decision 2)", () => {
   it("gives every kind on the list an icon — the owner's, each its own — and Other, a kind in a person's own words and none chosen theirs", () => {
@@ -232,20 +232,19 @@ describe("Home's scope: two icons beside the bell (the owner's build 13 decision
     routeHome();
     await renderWithProviders(<HomeScreen />, signedInSession);
     expect(await screen.findByText('Welcome back, Alex')).toBeTruthy();
-
-    expect(headerButtons()).toEqual(['Workspace: Acme Operations', 'Team: All teams', 'Notifications', 'Account and settings']);
+    expect(headerButtons()).toEqual(['Workspace: Acme Operations', 'Department: All departments', 'Notifications', 'Account and settings']);
     expect(within(screen.getByLabelText('Workspace: Acme Operations')).getByTestId('icon-Buildings')).toBeTruthy();
-    expect(within(screen.getByLabelText('Team: All teams')).getByTestId('icon-SquaresFour')).toBeTruthy();
-    for (const label of ['Workspace: Acme Operations', 'Team: All teams']) {
+    expect(within(screen.getByLabelText('Department: All departments')).getByTestId('icon-SquaresFour')).toBeTruthy();
+    for (const label of ['Workspace: Acme Operations', 'Department: All departments']) {
       const button = screen.getByLabelText(label);
       expect(button.props.accessibilityRole).toBe('button');
-      // Drawn as the bell beside them.
-      expect(StyleSheet.flatten(button.props.style)).toMatchObject({ width: 38, height: 38, borderRadius: 999, borderWidth: 1 });
+      // Drawn as the bell beside them: a 38-pt circle of glass (round 23; a hairline ring below iOS 26).
+      expect(StyleSheet.flatten(button.parent!.props.style)).toMatchObject({ width: 38, height: 38, borderRadius: 999, borderWidth: 1 });
     }
     // No words: the pill row is not on Home.
     expect(screen.queryByTestId('scope-control')).toBeNull();
     expect(screen.queryByText('Acme Operations')).toBeNull();
-    expect(screen.queryByText('All teams')).toBeNull();
+    expect(screen.queryByText('All departments')).toBeNull();
   });
 
   it('draws a personal workspace as a person', async () => {
@@ -260,12 +259,12 @@ describe("Home's scope: two icons beside the bell (the owner's build 13 decision
     mockStored.set(TEST_WORKSPACE, 'project-1');
     routeHome({ projects: projectsPayload('Legal', 'Facilities') });
     await renderWithProviders(<HomeScreen />, signedInSession);
-    const legal = await screen.findByLabelText('Team: Legal');
+    const legal = await screen.findByLabelText('Department: Legal');
     expect(within(legal).getByTestId('icon-Gavel')).toBeTruthy();
 
     await fireEvent.press(legal);
-    await fireEvent.press(within(screen.getByTestId('scope-team-dialog')).getByTestId('scope-option-project-2'));
-    const facilities = await screen.findByLabelText('Team: Facilities');
+    await fireEvent.press(within(screen.getByTestId('scope-team-menu')).getByTestId('scope-option-project-2'));
+    const facilities = await screen.findByLabelText('Department: Facilities');
     expect(within(facilities).getByTestId('icon-UsersThree')).toBeTruthy();
   });
 
@@ -279,26 +278,26 @@ describe("Home's scope: two icons beside the bell (the owner's build 13 decision
     await renderWithProviders(<HomeScreen />, signedInSession);
     expect(await screen.findByText('Run #4821 · posted to QuickBooks')).toBeTruthy();
 
-    await fireEvent.press(screen.getByLabelText('Team: All teams'));
+    await fireEvent.press(screen.getByLabelText('Department: All departments'));
     expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
-    const dialog = screen.getByTestId('scope-team-dialog');
-    expect(within(dialog).getByText('Show')).toBeTruthy();
-    expect(within(dialog).getByText('All teams')).toBeTruthy();
+    const dialog = screen.getByTestId('scope-team-menu');
+    expect(within(dialog).getByText('DEPARTMENT')).toBeTruthy();
+    expect(within(dialog).getByText('All departments')).toBeTruthy();
     expect(within(dialog).getByText('Finance')).toBeTruthy();
     expect(within(dialog).getByText('Legal')).toBeTruthy();
 
     await fireEvent.press(within(dialog).getByTestId('scope-option-project-2'));
-    expect(screen.queryByTestId('scope-team-dialog')).toBeNull();
+    expect(screen.queryByTestId('scope-team-menu')).toBeNull();
     expect(writeScope.mock.calls).toEqual([[TEST_WORKSPACE, 'project-2']]);
-    const legal = await screen.findByLabelText('Team: Legal');
+    const legal = await screen.findByLabelText('Department: Legal');
     expect(within(legal).getByTestId('icon-Gavel')).toBeTruthy();
-    expect(screen.getByText('No runs in this team yet.')).toBeTruthy();
+    expect(screen.getByText('No runs in this department yet.')).toBeTruthy();
     expect(screen.queryByText('Run #4821 · posted to QuickBooks')).toBeNull();
 
     // And back to every team, from the same card.
     await fireEvent.press(legal);
-    await fireEvent.press(within(screen.getByTestId('scope-team-dialog')).getByTestId('scope-option-all'));
-    expect(within(await screen.findByLabelText('Team: All teams')).getByTestId('icon-SquaresFour')).toBeTruthy();
+    await fireEvent.press(within(screen.getByTestId('scope-team-menu')).getByTestId('scope-option-all'));
+    expect(within(await screen.findByLabelText('Department: All departments')).getByTestId('icon-SquaresFour')).toBeTruthy();
     expect(screen.getByText('Run #4821 · posted to QuickBooks')).toBeTruthy();
   });
 
@@ -310,11 +309,11 @@ describe("Home's scope: two icons beside the bell (the owner's build 13 decision
 
     await fireEvent.press(await screen.findByLabelText('Workspace: Acme Operations'));
     expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
-    const dialog = screen.getByTestId('workspace-switcher-dialog');
-    expect(within(dialog).getByText('Switch workspace')).toBeTruthy();
+    const dialog = screen.getByTestId('workspace-switcher-menu');
+    expect(within(dialog).getByText('WORKSPACE')).toBeTruthy();
     expect(await within(dialog).findByText("Alex's space")).toBeTruthy();
     expect(within(dialog).getByText('Acme Operations')).toBeTruthy();
-    expect(within(dialog).getByTestId(`workspace-active-${TEST_WORKSPACE}`)).toBeTruthy();
+    expect(within(within(dialog).getByTestId(`workspace-option-${TEST_WORKSPACE}`)).getByTestId('workspace-switcher-chosen')).toBeTruthy();
 
     await fireEvent.press(within(dialog).getByTestId(`workspace-option-${PERSONAL}`));
     await waitFor(() => expect(session.reload).toHaveBeenCalledTimes(1));
@@ -327,7 +326,7 @@ describe("Home's scope: two icons beside the bell (the owner's build 13 decision
         body: { workspaceId: PERSONAL },
       },
     ]);
-    await waitFor(() => expect(screen.queryByTestId('workspace-switcher-dialog')).toBeNull());
+    await waitFor(() => expect(screen.queryByTestId('workspace-switcher-menu')).toBeNull());
   });
 
   it('the workspace icon is a button with one workspace too — the card is where its name is read — and choosing it sends nothing', async () => {
@@ -340,12 +339,12 @@ describe("Home's scope: two icons beside the bell (the owner's build 13 decision
 
     await fireEvent.press(await screen.findByLabelText('Workspace: Acme Operations'));
     expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
-    const dialog = screen.getByTestId('workspace-switcher-dialog');
+    const dialog = screen.getByTestId('workspace-switcher-menu');
     expect(await within(dialog).findByText('Acme Operations')).toBeTruthy();
     expect(within(dialog).getAllByTestId(/^workspace-option-/u)).toHaveLength(1);
 
     await fireEvent.press(within(dialog).getByTestId(`workspace-option-${TEST_WORKSPACE}`));
-    await waitFor(() => expect(screen.queryByTestId('workspace-switcher-dialog')).toBeNull());
+    await waitFor(() => expect(screen.queryByTestId('workspace-switcher-menu')).toBeNull());
     expect(fake.to('PATCH /v1/session/active-workspace')).toEqual([]);
   });
 });
@@ -358,7 +357,7 @@ describe("Home with no flow is the dashboard (the owner's build 13 decision 5)",
     expect(await screen.findByText('Welcome back, Alex')).toBeTruthy();
     expect(screen.getByText('AUTOMATION × AI')).toBeTruthy();
     expect(screen.getByText('Your agents ran 0 tasks today.')).toBeTruthy();
-    expect(headerButtons()).toEqual(['Workspace: Acme Operations', 'Team: All teams', 'Notifications', 'Account and settings']);
+    expect(headerButtons()).toEqual(['Workspace: Acme Operations', 'Department: All departments', 'Notifications', 'Account and settings']);
     // TODAY, its three tiles at 0, each the button it is with flows.
     const stats = screen.getByTestId('home-stats');
     expect(within(stats.parent!).getAllByText(/./u).map((node) => node.props.children)).toEqual([
@@ -403,11 +402,11 @@ describe("Home with no flow is the dashboard (the owner's build 13 decision 5)",
     expect(mockRouter.push).toHaveBeenLastCalledWith('/(tabs)/settings');
     expect(Haptics.selectionAsync).toHaveBeenCalledTimes(2);
 
-    await fireEvent.press(screen.getByLabelText('Team: All teams'));
-    expect(screen.getByTestId('scope-team-dialog')).toBeTruthy();
-    await fireEvent.press(within(screen.getByTestId('scope-team-dialog')).getByText('Done'));
+    await fireEvent.press(screen.getByLabelText('Department: All departments'));
+    expect(screen.getByTestId('scope-team-menu')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('scope-team-backdrop'));
     await fireEvent.press(screen.getByLabelText('Workspace: Acme Operations'));
-    expect(screen.getByTestId('workspace-switcher-dialog')).toBeTruthy();
+    expect(screen.getByTestId('workspace-switcher-menu')).toBeTruthy();
     expect(Haptics.selectionAsync).toHaveBeenCalledTimes(5);
 
     // A tile too: Activity, today, its outcome.

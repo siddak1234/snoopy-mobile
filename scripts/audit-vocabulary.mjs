@@ -1,6 +1,7 @@
 /**
- * Fails when the app's copy says "project", "automation", "solution" or
- * "pipeline" (BUILD-PLAN 24.11.7; the Invoice Processing update, 2026-10-14).
+ * Fails when the app's copy says "project", "automation", "solution",
+ * "pipeline" or "team" (BUILD-PLAN 24.11.7; the Invoice Processing update,
+ * 2026-10-14; "team" since round 23).
  *
  * The owner's words: a team is the sub-organization with its own flows — what
  * the platform's contract calls a project — and "Flows will be the name we use
@@ -34,6 +35,10 @@
  * says "Connect vendor" at all, the "›" or not (item 5: "2. Connect integration
  * … if i click that button it should take me to the choices"; the session's
  * S21: the choices page is "Connect integration", one word for one thing).
+ *
+ * Since round 23 (2026-10-19) "team" too, from the owner's build 22 feedback:
+ * a person reads Department — "All departments", "in a department". The code
+ * keeps its names (`teams`, `/settings/team`, `scope-team`); only copy is read.
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { extname, join, relative } from "node:path";
@@ -50,9 +55,9 @@ const GENERATED = "lib/generated/";
  * The retired names, as words. "Solution" and "pipeline" joined them with the
  * Invoice Processing update (2026-10-14; the owner's build 19 item 8: "So much
  * ai slop wording … you just randomly out wird jargon in each place"): a person
- * reads flows and steps.
+ * reads flows and steps. "Team" since round 23: a person reads departments.
  */
-const RETIRED = /\b(projects?|automations?|solutions?|pipelines?)\b/iu;
+const RETIRED = /\b(projects?|automations?|solutions?|pipelines?|teams?)\b/iu;
 
 /** The brand line under the mark (design source, the cover and Home). */
 const BRAND_LINE = "AUTOMATION × AI";
@@ -129,14 +134,14 @@ function visit(node, source, path) {
 
 if (findings.length > 0) {
   console.error(
-    'Vocabulary audit failed. The app says "team", "flow" and "steps" — a project, an automation, a solution and a pipeline are not copy; "Connect vendor" and "Move to v" are not said; a run is named by its id:\n',
+    'Vocabulary audit failed. The app says "department", "flow" and "steps" — a project, an automation, a solution, a pipeline and a team are not copy; "Connect vendor" and "Move to v" are not said; a run is named by its id:\n',
   );
   for (const finding of findings) console.error(`  ${finding}`);
   process.exit(1);
 }
 
 console.log(
-  'Vocabulary audit passed. No copy says "project", "automation", "solution", "pipeline", "Connect vendor" or "Move to v", and no screen reads a run\'s request id.',
+  'Vocabulary audit passed. No copy says "project", "automation", "solution", "pipeline", "team", "Connect vendor" or "Move to v", and no screen reads a run\'s request id.',
 );
 
 function walk(path) {

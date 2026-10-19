@@ -38,7 +38,7 @@ const { readScope, writeScope } = jest.requireMock('@/lib/platform/scope-store')
  * The scope control (BUILD-PLAN 24.9.2; teams since 24.11.7): the workspace,
  * then All teams or one team; Flows follows it, and the choice is kept per
  * workspace. Since Build 22 it is Home's two circles beside the title on Flows
- * and Activity too (F1–F3), read aloud as "Workspace: …" and "Team: …";
+ * and Activity too (F1–F3), read aloud as "Workspace: …" and "Department: …";
  * ~~the labelled pills above the title~~.
  */
 describe('the scope control on Flows', () => {
@@ -62,22 +62,22 @@ describe('the scope control on Flows', () => {
   it('shows every flow for All teams, labelled by scope', async () => {
     await renderWithProviders(<FlowsScreen />, signedInSession);
     expect(await screen.findByText('Invoice triage')).toBeTruthy();
-    expect(screen.getByLabelText('Team: All teams')).toBeTruthy();
-    expect(screen.getByText(/^Team: Finance · /u)).toBeTruthy();
+    expect(screen.getByLabelText('Department: All departments')).toBeTruthy();
+    expect(screen.getByText(/^Department: Finance · /u)).toBeTruthy();
     expect(screen.getAllByText(/^Whole workspace · /u).length).toBeGreaterThan(0);
   });
 
   it('narrows Flows to the chosen team, and keeps the choice', async () => {
     await renderWithProviders(<FlowsScreen />, signedInSession);
     await screen.findByText('Invoice triage');
-    await fireEvent.press(screen.getByLabelText('Team: All teams'));
+    await fireEvent.press(screen.getByLabelText('Department: All departments'));
     await fireEvent.press(await screen.findByTestId('scope-option-project-1'));
-    expect(await screen.findByLabelText('Team: Finance')).toBeTruthy();
+    expect(await screen.findByLabelText('Department: Finance')).toBeTruthy();
     expect(screen.getByText('Invoice triage')).toBeTruthy();
     expect(screen.queryByText('Email triage')).toBeNull();
     // Inside a team each card still says its team: D4 is every card, in every
     // scope (the build 11 review; until then the label was not repeated here).
-    expect(screen.getByText(/^Team: Finance · /u)).toBeTruthy();
+    expect(screen.getByText(/^Department: Finance · /u)).toBeTruthy();
     expect(writeScope).toHaveBeenCalledWith(expect.any(String), 'project-1');
   });
 
@@ -104,8 +104,8 @@ describe('the scope control on Flows', () => {
 
     // Flows, in the team picked: its card says the team.
     const flows = await renderWithProviders(<FlowsScreen />, signedInSession);
-    expect(await flows.findByLabelText('Team: Finance')).toBeTruthy();
-    expect(await flows.findByText('Team: Finance · 1,284 runs · 1,272 ok · 12 failed')).toBeTruthy();
+    expect(await flows.findByLabelText('Department: Finance')).toBeTruthy();
+    expect(await flows.findByText('Department: Finance · 1,284 runs · 1,272 ok · 12 failed')).toBeTruthy();
     expect(flows.queryByText('Email triage')).toBeNull();
     await flows.unmount();
 
@@ -114,13 +114,13 @@ describe('the scope control on Flows', () => {
     expect(await page.findByText('Old intake')).toBeTruthy();
     // The team is the scope: the whole workspace's archived row is not listed.
     await waitFor(() => expect(page.queryByText('Older intake')).toBeNull());
-    expect(page.getByText(/^Team: Finance · /u)).toBeTruthy();
+    expect(page.getByText(/^Department: Finance · /u)).toBeTruthy();
   });
 
   it('restores the kept choice for the workspace on the next visit', async () => {
     mockStored.set(TEST_WORKSPACE, 'project-1');
     await renderWithProviders(<FlowsScreen />, signedInSession);
-    expect(await screen.findByLabelText('Team: Finance')).toBeTruthy();
+    expect(await screen.findByLabelText('Department: Finance')).toBeTruthy();
     expect(await screen.findByText('Invoice triage')).toBeTruthy();
     expect(screen.queryByText('Email triage')).toBeNull();
   });
@@ -143,7 +143,7 @@ describe('the team circle (24.11.7; a circle since Build 22)', () => {
         activeWorkspaceId: TEST_WORKSPACE,
       });
       await renderWithProviders(<ScopeIcons testIDPrefix="title-scope" />, sessionAs(role));
-      await fireEvent.press(await screen.findByLabelText('Team: All teams'));
+      await fireEvent.press(await screen.findByLabelText('Department: All departments'));
       expect(await screen.findByTestId('scope-option-all')).toBeTruthy();
       expect(screen.queryByTestId('scope-create-team')).toBeNull();
       expect(screen.queryByText('Create a team')).toBeNull();
@@ -168,7 +168,7 @@ describe('the team circle (24.11.7; a circle since Build 22)', () => {
       ],
     });
     await renderWithProviders(<ScopeIcons testIDPrefix="title-scope" />, sessionAs('member'));
-    await fireEvent.press(await screen.findByLabelText('Team: All teams'));
+    await fireEvent.press(await screen.findByLabelText('Department: All departments'));
     expect(await screen.findByTestId('scope-option-p-1')).toBeTruthy();
     expect(screen.getAllByText('Finance')).toHaveLength(1);
     expect(screen.queryByText('AP inbox')).toBeNull();

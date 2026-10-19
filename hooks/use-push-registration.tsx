@@ -8,6 +8,7 @@ import { AppState, Linking, Platform } from 'react-native';
 import { activeWorkspaceId, useSession, type SessionState } from '@/hooks/use-session';
 import type { components } from '@/lib/generated/platform-contracts/platform';
 import { newIdempotencyKey } from '@/lib/platform/client';
+import { nativeRedirectUri } from '@/lib/platform/native-auth';
 import { registerDevice } from '@/lib/platform/devices';
 import { PlatformError } from '@/lib/platform/problem';
 import { readPushNotNow, writePushNotNow } from '@/lib/platform/session-store';
@@ -49,6 +50,8 @@ let generation = 0;
 let heardToken: string | null = null;
 /** The notification a tap opened last, so one tap never opens two screens. */
 let openedResponse: string | null = null;
+/** The link the app was opened with, once opened, so it never opens again (round 23, A5). */
+let openedInitialLink: string | null = null;
 
 function update(next: Partial<Shared>): void {
   shared = { ...shared, ...next };
@@ -207,16 +210,61 @@ const WORKSPACE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 type PushData = Partial<components['schemas']['PushNotificationData']>;
 
 /**
- * What a tap opens: a failed run's page, or Approvals for a held one — where it
- * is decided, the website's page for it, as the inbox's row opens (Gate 24's
- * parity pass; Activity until then) — nothing for anything else.
+ * What a tap opens: a run's page for a failed or — since round 23 (A8) — a
+ * completed run, or Approvals for a held one — where it is decided, the
+ * website's page for it, as the inbox's row opens (Gate 24's parity pass;
+ * Activity until then) — nothing for anything else.
  */
 function targetOf(data: PushData): Href | null {
-  if (data.event === 'run-failed' && typeof data.runId === 'string' && RUN_ID.test(data.runId)) {
+  if (
+    (data.event === 'run-failed' || data.event === 'run-succeeded') &&
+    typeof data.runId === 'string' &&
+    RUN_ID.test(data.runId)
+  ) {
     return { pathname: '/(tabs)/(home)/run', params: { runId: data.runId } };
   }
   if (data.event === 'approval-requested') return '/(tabs)/activity/approvals';
   return null;
+}
+
+/**
+ * What an email's or a push's link opens (round 23, A5 — the owner's build 22
+ * item 8: "email → app link"): `https://<the app's link host>/runs/<id>?workspace=<id>`
+ * the run's page, `/approvals/<id>?workspace=<id>` Approvals, each in the
+ * workspace it names (`switchFor`), as a push's tap. Anything else — another
+ * host, another path, an id that is not one — opens nothing here; the router
+ * keeps its own handling (`app/+native-intent.tsx` sends these two to Home
+ * first, so it never shows "unmatched").
+ */
+export function linkTargetOf(
+  link: string,
+  host: string | null,
+): { target: Href; workspaceId: string | undefined } | null {
+  if (!host) return null;
+  let url: URL;
+  try {
+    url = new URL(link);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'https:' || url.host !== host) return null;
+  const match = /^\/(runs|approvals)\/([^/]+)\/?$/u.exec(url.pathname);
+  if (!match || !RUN_ID.test(match[2]!)) return null;
+  const workspaceId = url.searchParams.get('workspace') ?? undefined;
+  const target: Href =
+    match[1] === 'runs' ? { pathname: '/(tabs)/(home)/run', params: { runId: match[2]! } } : '/(tabs)/activity/approvals';
+  return { target, workspaceId };
+}
+
+/** The app's link host: the login callback's (`app.config.js` claims the one host for both). */
+function linkHost(): string | null {
+  const redirect = nativeRedirectUri();
+  if (!redirect) return null;
+  try {
+    return new URL(redirect).host;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -279,9 +327,37 @@ export function usePushRegistration(signedIn: boolean): void {
     };
   }, [signedIn]);
 
-  // A tap opens the inbox's own target: a failed run's page, or Approvals for a
-  // held one — in the workspace the push names. While the app runs, and the tap
-  // that opened it, once signed in.
+  // Open a tap's or a link's target in the workspace it names: at once in the
+  // active one; in another of this person's, switched to as the switcher does —
+  // the platform's active workspace, then the session read again — and opened
+  // once that session is drawn (below). A switch or a read that fails opens
+  // nothing, and the person stays where they are, rather than on a page reading
+  // a workspace the push or link did not name.
+  const openIn = useCallback(
+    (target: Href, named: PushData['workspaceId'], isLive: () => boolean) => {
+      const workspaceId = switchFor(named, drawn.current);
+      if (workspaceId === null) {
+        router.push(target);
+        return;
+      }
+      const { reload } = drawn.current;
+      void (async () => {
+        try {
+          await selectActiveWorkspace(workspaceId, newIdempotencyKey('workspace-activate'));
+          if (!isLive()) return;
+          await reload();
+          if (isLive()) setOwed({ workspaceId, target });
+        } catch {
+          // Not switched: nothing opens.
+        }
+      })();
+    },
+    [router],
+  );
+
+  // A tap opens the inbox's own target: a run's page, or Approvals for a held
+  // one — in the workspace the push names. While the app runs, and the tap that
+  // opened it, once signed in.
   useEffect(() => {
     if (!signedIn) return;
     let live = true;
@@ -294,27 +370,7 @@ export function usePushRegistration(signedIn: boolean): void {
       const data = (response.notification.request.content.data ?? {}) as PushData;
       const target = targetOf(data);
       if (!target) return;
-      const workspaceId = switchFor(data.workspaceId, drawn.current);
-      if (workspaceId === null) {
-        router.push(target);
-        return;
-      }
-      // Another of this person's workspaces: switched to as the switcher does —
-      // the platform's active workspace, then the session read again — and
-      // opened once that session is drawn (below). A switch or a read that
-      // fails opens nothing, and the person stays where they are, rather than
-      // on a page reading a workspace the push did not name.
-      const { reload } = drawn.current;
-      void (async () => {
-        try {
-          await selectActiveWorkspace(workspaceId, newIdempotencyKey('workspace-activate'));
-          if (!live) return;
-          await reload();
-          if (live) setOwed({ workspaceId, target });
-        } catch {
-          // Not switched: nothing opens.
-        }
-      })();
+      openIn(target, data.workspaceId, () => live);
     };
     const tapped = Notifications.addNotificationResponseReceivedListener(open);
     void Notifications.getLastNotificationResponseAsync().then(open, () => undefined);
@@ -322,7 +378,33 @@ export function usePushRegistration(signedIn: boolean): void {
       live = false;
       tapped.remove();
     };
-  }, [signedIn, router]);
+  }, [signedIn, openIn]);
+
+  // A link opens the same way (round 23, A5): the one the app was opened with,
+  // once, and each one while it runs — once signed in and past the lock.
+  useEffect(() => {
+    if (!signedIn) return;
+    let live = true;
+    const host = linkHost();
+    const open = (link: string | null, initial: boolean) => {
+      if (!live || !link) return;
+      if (initial) {
+        if (link === openedInitialLink) return;
+        openedInitialLink = link;
+      }
+      const found = linkTargetOf(link, host);
+      if (found) openIn(found.target, found.workspaceId, () => live);
+    };
+    const heard = Linking.addEventListener('url', (event) => open(event.url, false));
+    void Linking.getInitialURL().then(
+      (link) => open(link, true),
+      () => undefined,
+    );
+    return () => {
+      live = false;
+      heard.remove();
+    };
+  }, [signedIn, openIn]);
 
   // A switched tap opens only once the switched session is drawn: a run's page
   // binds to the workspace it opens in (24.11.9), so opened a render early it
@@ -450,4 +532,5 @@ export function resetPushForTests(): void {
   forgetSession();
   listeners = [];
   openedResponse = null;
+  openedInitialLink = null;
 }

@@ -1,17 +1,13 @@
-import { Buildings, Check } from 'phosphor-react-native';
+import { Buildings, User } from 'phosphor-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
 
-import { Dialog, DialogButton, DialogText } from '@/components/dialog';
-import { SettingsRow } from '@/components/settings/settings-row';
-import { fonts, layout, typeScale } from '@/constants/theme';
+import { Dropdown } from '@/components/dropdown';
 import { useSession } from '@/hooks/use-session';
-import { useTheme } from '@/hooks/use-theme';
 import { newIdempotencyKey } from '@/lib/platform/client';
 import { readWorkspaces, selectActiveWorkspace, type WorkspaceSummary } from '@/lib/platform/workspaces';
 
 /**
- * The switcher's own read of the workspace collection, in the dialog's states.
+ * The switcher's own read of the workspace collection, in the menu's states.
  *
  * Read on open rather than taken from the session: the session's `workspaces`
  * is a bounded first page (`workspacesTruncated`), and the contract says to page
@@ -32,10 +28,26 @@ const WORKSPACE_TYPE_LABEL: Record<WorkspaceSummary['type'], string> = {
  * screen whole when Settings became a stack (BUILD-PLAN 24.3.8). The active
  * workspace lives in the backend session, so switching is a mutation plus a
  * re-read of `/v1/session`; this keeps no workspace state of its own.
+ *
+ * Since round 23 a drop-down on its trigger (the owner's build 22 items 3–4;
+ * ~~a card~~): the header's workspace circle or Settings' workspace row, which
+ * `trigger` draws. Titled Workspace, each row the workspace's name and Personal
+ * or Organization; the switching row says Switching… and nothing closes it
+ * until the switch is done; Reload session at its foot when the switch landed
+ * but the session could not be read again.
  */
-export function WorkspaceSwitcher({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { palette } = useTheme();
+export function WorkspaceSwitcher({
+  open,
+  onOpenChange,
+  trigger,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** The page's own control, whose press opens it (`onOpenChange(true)`). */
+  trigger: React.ReactNode;
+}) {
   const session = useSession();
+  const onClose = () => onOpenChange(false);
   const currentSession = session.status === 'signed-in' ? session.session : null;
   const [choices, setChoices] = useState<WorkspaceChoices>({ status: 'loading' });
   const [switching, setSwitching] = useState<string | null>(null);
@@ -128,68 +140,43 @@ export function WorkspaceSwitcher({ open, onClose }: { open: boolean; onClose: (
     }
   };
 
+  const status =
+    choices.status === 'loading'
+      ? { text: 'Loading…', testID: 'workspace-switcher-loading' }
+      : choices.status === 'error'
+        ? { text: choices.message, tone: 'error' as const, testID: 'workspace-switcher-error' }
+        : switchError
+          ? { text: switchError, tone: 'error' as const, testID: 'workspace-switch-error' }
+          : null;
+
   return (
-    <Dialog
-      visible={open}
-      onRequestClose={close}
-      testID="workspace-switcher-dialog"
-      title="Switch workspace"
-      body="Every screen reads from the active workspace. Connections and billing are the workspace's; flows and runs follow the team you pick."
-      actions={
-        <>
-          <DialogButton label={reloadOwed ? 'Close' : 'Cancel'} disabled={switching !== null} onPress={close} />
-          {reloadOwed ? (
-            <DialogButton
-              tone="accent"
-              label={switching === 'reload' ? 'Working…' : 'Reload session'}
-              disabled={switching !== null}
-              onPress={retrySessionReload}
-            />
-          ) : null}
-        </>
-      }>
-      {choices.status === 'loading' ? <DialogText>Loading workspaces…</DialogText> : null}
-      {choices.status === 'error' ? <DialogText tone="error">{choices.message}</DialogText> : null}
-      {choices.status === 'ready' ? (
-        <View style={styles.switcherList}>
-          {choices.workspaces.map((workspace, i) => {
-            const active = workspace.id === choices.activeWorkspaceId;
-            return (
-              <SettingsRow
-                key={workspace.id}
-                icon={Buildings}
-                title={workspace.name}
-                sub={WORKSPACE_TYPE_LABEL[workspace.type]}
-                divider={i < choices.workspaces.length - 1}
-                testID={`workspace-option-${workspace.id}`}
-                onPress={switching ? undefined : () => chooseWorkspace(workspace)}
-                right={
-                  switching === workspace.id ? (
-                    <Text style={[styles.note, { color: palette.neutral[500] }]}>Switching…</Text>
-                  ) : active ? (
-                    <Check size={16} color={palette.accent} testID={`workspace-active-${workspace.id}`} />
-                  ) : null
-                }
-              />
-            );
-          })}
-        </View>
-      ) : null}
-      {switchError ? (
-        <DialogText tone="error" testID="workspace-switch-error">
-          {switchError}
-        </DialogText>
-      ) : null}
-    </Dialog>
+    <Dropdown
+      testID="workspace-switcher"
+      title="Workspace"
+      open={open}
+      onOpenChange={(next) => (next ? onOpenChange(true) : close())}
+      trigger={trigger}
+      options={
+        choices.status === 'ready'
+          ? choices.workspaces.map((workspace) => ({
+              value: workspace.id,
+              label: workspace.name,
+              sub: WORKSPACE_TYPE_LABEL[workspace.type],
+              icon: workspace.type === 'personal' ? User : Buildings,
+              testID: `workspace-option-${workspace.id}`,
+            }))
+          : []
+      }
+      value={choices.status === 'ready' ? (choices.activeWorkspaceId ?? null) : null}
+      onChange={(id) => {
+        const workspace = choices.status === 'ready' ? choices.workspaces.find((w) => w.id === id) : undefined;
+        if (workspace) void chooseWorkspace(workspace);
+      }}
+      busyValue={switching}
+      busyLabel="Switching…"
+      locked={switching !== null}
+      status={status}
+      footer={{ label: 'Reload session', onPress: retrySessionReload, testID: 'workspace-reload', hidden: !reloadOwed }}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  switcherList: {
-    marginHorizontal: -layout.rowPadH,
-  },
-  note: {
-    fontFamily: fonts.regular,
-    fontSize: typeScale.small.fontSize,
-  },
-});

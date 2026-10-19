@@ -3,6 +3,14 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { DownloadSimple, FlowArrow, StopCircle } from 'phosphor-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Platform, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  Easing,
+  cancelAnimation,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
@@ -16,6 +24,7 @@ import type { InboxRunPath } from '@/components/notifications/inbox';
 import { Pressable } from '@/components/pressable';
 import { DocumentCard } from '@/components/runs/document-card';
 import { em, fonts, iconSize, layout, status, typeScale } from '@/constants/theme';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useTheme } from '@/hooks/use-theme';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { useResource, busyBody } from '@/hooks/use-resource';
@@ -63,6 +72,27 @@ import {
  * Done and when, Waiting for approval and why, the run's failure, Skipped or
  * Stopped — never a step's own summary and never a step id (B6).
  */
+/**
+ * A working step's icon turns (round 23, A4 — the owner's build 22 item 7: the
+ * running step spins): a full turn every 900 ms, steadily, for as long as the
+ * step works; still under Reduce Motion.
+ */
+function StepSpinner({ children }: { children: React.ReactNode }) {
+  const reduceMotion = useReducedMotion();
+  const turn = useSharedValue(0);
+  useEffect(() => {
+    if (reduceMotion) return;
+    turn.value = withRepeat(withTiming(360, { duration: 900, easing: Easing.linear }), -1, false);
+    return () => cancelAnimation(turn);
+  }, [reduceMotion, turn]);
+  const spin = useAnimatedStyle(() => ({ transform: [{ rotate: `${turn.value}deg` }] }));
+  return (
+    <Animated.View testID="run-step-spinner" style={[styles.trackerIcon, spin]}>
+      {children}
+    </Animated.View>
+  );
+}
+
 function TrackerStep({ row, divider }: { row: TrackerRow; divider: boolean }) {
   const { palette } = useTheme();
   const tone =
@@ -81,7 +111,13 @@ function TrackerStep({ row, divider }: { row: TrackerRow; divider: boolean }) {
     <View
       testID={`run-step-${row.id}`}
       style={[styles.trackerRow, divider && { borderBottomWidth: 1, borderBottomColor: palette.divider }]}>
-      <IconCmp size={iconSize.row} color={tone} style={styles.trackerIcon} />
+      {row.state === 'working' ? (
+        <StepSpinner>
+          <IconCmp size={iconSize.row} color={tone} />
+        </StepSpinner>
+      ) : (
+        <IconCmp size={iconSize.row} color={tone} style={styles.trackerIcon} />
+      )}
       <View style={styles.trackerBody}>
         <Text style={[styles.trackerTitle, { color: quiet ? palette.neutral[400] : palette.text }]}>{row.title}</Text>
         {/* A platform step this build does not know has no state, so no line (backend ADR-0041). */}

@@ -301,7 +301,12 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   `DELETE /v1/session/devices/{deviceId}`. `hooks/use-push-registration.tsx`
   keeps an iOS phone that already allows notifications registered (every
   sign-in, every token change), shows the banner in the foreground and opens a
-  tap's run or Approvals; the inbox's card is the only ask. Android and a
+  tap's run or Approvals — and since round 23 an email's or a push's link,
+  `https://<the callback's host>/runs/<id>?workspace=<id>` or
+  `/approvals/<id>?workspace=<id>`, in the workspace it names
+  (`linkTargetOf`; `app/+native-intent.tsx` sends both paths to Home first;
+  `app.config.js` adds the two Android path prefixes, iOS's `applinks` claim
+  covers them); the inbox's card is the only ask. Android and a
   simulator register nothing. The library's own request to Expo's token service
   (`getExpoPushTokenAsync`, since build 11, D8) is the transport's third
   credential-less exception, in no file of this repository, which
@@ -309,6 +314,11 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   session credential goes with it, and the token it answers reaches the
   platform only through `lib/platform/devices.ts`, in the
   `PUT /v1/session/devices` body — never a log, a URL or the enclave.
+- Liquid Glass (round 23, A3): `expo-glass-effect` at the SDK 54 pin, drawn
+  only through `components/glass-surface.tsx` — the system's glass on iOS 26,
+  `expo-blur` under a tint below it, the opaque card on Android — on the tab
+  bar's capsule, the header circles and the drop-down panels. It makes no
+  request.
 - A run's file (BUILD-PLAN 25.8.3): `expo-image-picker` and
   `expo-image-manipulator` at the SDK 54 pins. Take photo is the camera, asked
   for at the press; Upload is `expo-document-picker`, held to a PDF, a JPEG or

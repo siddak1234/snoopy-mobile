@@ -122,11 +122,11 @@ export function TeamMembers({
       {leaving ? (
         <ConfirmDialog
           testID="leave-team-row-dialog"
-          title="Leave this team?"
+          title="Leave this department?"
           body="You will lose access to its flows immediately."
           confirmLabel="Leave"
           busyLabel="Leaving…"
-          fallback="You could not leave this team."
+          fallback="You could not leave this department."
           run={() => once('leave', (key) => removeProjectMember(workspaceId, projectId, viewerUserId ?? '', key))}
           onClose={() => setLeaving(false)}
           onDone={() => {
@@ -188,8 +188,8 @@ function MemberDialog({
       visible
       testID="team-member-dialog"
       onRequestClose={busy ? () => undefined : onClose}
-      title={confirming ? `Remove ${name} from this team?` : name}
-      body={confirming ? undefined : canChangeRole ? 'Role on this team' : `Role on this team: ${member.role}`}
+      title={confirming ? `Remove ${name} from this department?` : name}
+      body={confirming ? undefined : canChangeRole ? 'Role in this department' : `Role in this department: ${member.role}`}
       actions={
         confirming ? (
           <>
@@ -260,10 +260,10 @@ function AddMembersDialog({
       testID="add-team-members-dialog"
       onRequestClose={addingId ? () => undefined : () => onClose(added)}
       title="Add members"
-      body="Pick people in this organization to add to the team."
+      body="Pick people in this organization to add to the department."
       actions={<DialogButton label="Done" disabled={addingId !== null} onPress={() => onClose(added)} />}>
       <ChoiceChips label="Add as" options={ROLES} value={role} onChange={setRole} />
-      {left.length === 0 ? <DialogText>Everyone in this organization is already on the team.</DialogText> : null}
+      {left.length === 0 ? <DialogText>Everyone in this organization is already in the department.</DialogText> : null}
       <ScrollView style={styles.list}>
         {left.map((member) => (
           <View key={member.userId} style={[styles.addRow, { borderBottomColor: palette.divider }]}>

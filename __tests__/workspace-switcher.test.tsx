@@ -84,7 +84,7 @@ describe('the WORKSPACE row', () => {
     const row = await screen.findByTestId('workspace-switcher-row');
     expect(screen.queryByTestId('workspace-switcher-caret')).toBeNull();
     await fireEvent.press(row);
-    expect(screen.queryByTestId('workspace-switcher-dialog')).toBeNull();
+    expect(screen.queryByTestId('workspace-switcher-menu')).toBeNull();
     expect(platformOperation.mock.calls.some(([path]: [string]) => path === '/v1/workspaces')).toBe(false);
   });
 
@@ -95,16 +95,19 @@ describe('the WORKSPACE row', () => {
     expect(await screen.findByTestId('workspace-switcher-caret')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('workspace-switcher-row'));
 
-    expect(await screen.findByTestId('workspace-switcher-dialog')).toBeTruthy();
+    expect(await screen.findByTestId('workspace-switcher-menu')).toBeTruthy();
     expect(await screen.findByTestId(`workspace-option-${PERSONAL}`)).toBeTruthy();
-    // Within the dialog: Settings also has an Organization row of its own (24.5.1).
-    const dialog = within(screen.getByTestId('workspace-switcher-dialog'));
-    expect(dialog.getByText("Alex's space")).toBeTruthy();
-    expect(dialog.getByText('Personal')).toBeTruthy();
-    expect(dialog.getByText('Organization')).toBeTruthy();
+    // Within the menu: Settings also has an Organization row of its own (24.5.1).
+    const menu = within(screen.getByTestId('workspace-switcher-menu'));
+    expect(menu.getByText('WORKSPACE')).toBeTruthy();
+    expect(menu.getByText("Alex's space")).toBeTruthy();
+    expect(menu.getByText('Personal')).toBeTruthy();
+    expect(menu.getByText('Organization')).toBeTruthy();
+    // A drop-down, not a card: no dialog, and no explanatory sentence (S3).
+    expect(screen.queryByText(/Every screen reads from the active workspace/u)).toBeNull();
     // The server's active workspace is the one marked, not a client guess.
-    expect(screen.getByTestId(`workspace-active-${ORG}`)).toBeTruthy();
-    expect(screen.queryByTestId(`workspace-active-${PERSONAL}`)).toBeNull();
+    expect(within(screen.getByTestId(`workspace-option-${ORG}`)).getByTestId('workspace-switcher-chosen')).toBeTruthy();
+    expect(within(screen.getByTestId(`workspace-option-${PERSONAL}`)).queryByTestId('workspace-switcher-chosen')).toBeNull();
   });
 
   it('opens with one workspace when the session says its list is truncated', async () => {
@@ -164,7 +167,7 @@ describe('switching', () => {
     });
     expect(newIdempotencyKey).toHaveBeenCalledWith('workspace-activate');
     // Success is the server's session, adopted: the dialog closes on it.
-    await waitFor(() => expect(screen.queryByTestId('workspace-switcher-dialog')).toBeNull());
+    await waitFor(() => expect(screen.queryByTestId('workspace-switcher-menu')).toBeNull());
   });
 
   it('closes without a mutation when the active workspace is chosen again', async () => {
@@ -176,7 +179,7 @@ describe('switching', () => {
     await fireEvent.press(await screen.findByTestId('workspace-switcher-row'));
     await fireEvent.press(await screen.findByTestId(`workspace-option-${ORG}`));
 
-    await waitFor(() => expect(screen.queryByTestId('workspace-switcher-dialog')).toBeNull());
+    await waitFor(() => expect(screen.queryByTestId('workspace-switcher-menu')).toBeNull());
     expect(patch).not.toHaveBeenCalled();
     expect(session.reload).not.toHaveBeenCalled();
   });
@@ -194,10 +197,42 @@ describe('switching', () => {
     expect(await screen.findByTestId('workspace-switch-error')).toHaveTextContent(
       'The requested resource is unavailable.',
     );
-    expect(screen.getByTestId('workspace-switcher-dialog')).toBeTruthy();
+    expect(screen.getByTestId('workspace-switcher-menu')).toBeTruthy();
     expect(session.reload).not.toHaveBeenCalled();
     // Still the server's answer: the org stays marked active.
-    expect(screen.getByTestId(`workspace-active-${ORG}`)).toBeTruthy();
+    expect(within(screen.getByTestId(`workspace-option-${ORG}`)).getByTestId('workspace-switcher-chosen')).toBeTruthy();
+  });
+
+  it('while switching: the row says Switching…, and neither a tap outside nor another row closes or moves it (locked)', async () => {
+    let finish: (value: unknown) => void = () => undefined;
+    routeWorkspaces(
+      { workspaces: [org, personal, extra], activeWorkspaceId: ORG },
+      () => new Promise((resolve) => (finish = resolve)),
+    );
+    const session = sessionWith([org, personal, extra]);
+    await renderWithProviders(<SettingsScreen />, session);
+
+    await fireEvent.press(await screen.findByTestId('workspace-switcher-row'));
+    await fireEvent.press(await screen.findByTestId(`workspace-option-${PERSONAL}`));
+    expect(await within(screen.getByTestId(`workspace-option-${PERSONAL}`)).findByText('Switching…')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('workspace-switcher-backdrop'));
+    expect(screen.getByTestId('workspace-switcher-menu')).toBeTruthy();
+    expect(screen.getByTestId(`workspace-option-${EXTRA}`).props.accessibilityState).toMatchObject({ disabled: true });
+    await fireEvent.press(screen.getByTestId(`workspace-option-${EXTRA}`));
+    expect(platformOperation.mock.calls.filter(([path]: [string]) => path === '/v1/session/active-workspace')).toHaveLength(1);
+
+    finish({ activeWorkspaceId: PERSONAL });
+    await waitFor(() => expect(session.reload).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.queryByTestId('workspace-switcher-menu')).toBeNull());
+  });
+
+  it('a tap outside closes it when nothing is switching', async () => {
+    routeWorkspaces({ workspaces: [org, personal], activeWorkspaceId: ORG }, async () => ({}));
+    await renderWithProviders(<SettingsScreen />, sessionWith([org, personal]));
+    await fireEvent.press(await screen.findByTestId('workspace-switcher-row'));
+    expect(await screen.findByTestId('workspace-switcher-menu')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('workspace-switcher-backdrop'));
+    expect(screen.queryByTestId('workspace-switcher-menu')).toBeNull();
   });
 
   it('offers the session re-read again when the switch landed but the re-read did not', async () => {
@@ -222,6 +257,6 @@ describe('switching', () => {
 
     await fireEvent.press(screen.getByText('Reload session'));
     await waitFor(() => expect(reload).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(screen.queryByTestId('workspace-switcher-dialog')).toBeNull());
+    await waitFor(() => expect(screen.queryByTestId('workspace-switcher-menu')).toBeNull());
   });
 });

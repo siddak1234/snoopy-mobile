@@ -2,13 +2,11 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-
 import React from 'react';
 
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
-import SettingsScreen from '@/app/(tabs)/settings';
 import AccountScreen from '@/app/(tabs)/settings/account';
 import ConnectionsScreen from '@/app/(tabs)/settings/connections';
 import OrganizationScreen from '@/app/(tabs)/settings/organization';
 import TeamScreen from '@/app/(tabs)/settings/team';
 import TeamsScreen from '@/app/(tabs)/settings/teams';
-import type { SessionContextValue } from '@/hooks/use-session';
 import { PlatformError } from '@/lib/platform/problem';
 import {
   TEST_WORKSPACE,
@@ -36,8 +34,10 @@ const { platformOperation } = jest.requireMock('@/lib/platform/client');
  * is sent — no change, and no read of the page either, since nothing changed —
  * and the page stays where it was. A Cancel that steps back inside its dialog
  * (Remove's question) returns to the step before. A close a test already holds
- * is not repeated here: Cancel this run?'s Keep it running and the scope's Show
- * › Done (presses-home-activity), Add members › Done (presses-settings).
+ * is not repeated here: Cancel this run?'s Keep it running
+ * (presses-home-activity), Add members › Done (presses-settings). The scope's
+ * and the workspace's cards are drop-downs since round 23, closed by a tap
+ * outside (presses-home-activity, workspace-switcher).
  */
 
 type Route = readonly [RegExp, unknown];
@@ -63,7 +63,6 @@ const pressIn = async (dialog: string, text: string) =>
 
 /* ───────────────────────────── the pages, loaded ───────────────────────────── */
 
-const PERSONAL = 'ws-personal';
 const org = (role: 'owner' | 'admin' | 'member') => ({
   workspaces: [{ id: TEST_WORKSPACE, name: 'Acme Operations', type: 'organization', role }],
   activeWorkspaceId: TEST_WORKSPACE,
@@ -206,21 +205,6 @@ const GMAIL_CONNECTED = {
   ],
 };
 
-/** The signed-in person in the organization and their personal workspace: the switcher is offered. */
-const twoWorkspaces = (): SessionContextValue => {
-  if (signedInSession.status !== 'signed-in') throw new Error('fixture');
-  return {
-    ...signedInSession,
-    session: {
-      ...signedInSession.session,
-      workspaces: [
-        { id: TEST_WORKSPACE, name: 'Acme Operations', type: 'organization', role: 'owner' },
-        { id: PERSONAL, name: 'Personal', type: 'personal', role: 'owner' },
-      ],
-    },
-  } as SessionContextValue;
-};
-
 /* ───────────────────────────── the dialogs ───────────────────────────── */
 
 type DialogCase = {
@@ -311,7 +295,7 @@ const CASES: DialogCase[] = [
     site: 'app/(tabs)/settings/team.tsx:170',
     open: async () => {
       await team('owner');
-      await press('Delete team');
+      await press('Delete department');
     },
     dialog: 'delete-team-dialog',
     close: 'Cancel',
@@ -321,7 +305,7 @@ const CASES: DialogCase[] = [
     site: 'app/(tabs)/settings/team.tsx:189',
     open: async () => {
       await team('member');
-      await press('Leave team');
+      await press('Leave department');
     },
     dialog: 'leave-team-dialog',
     close: 'Cancel',
@@ -337,20 +321,20 @@ const CASES: DialogCase[] = [
     close: 'Close',
   },
   {
-    name: 'Team › a member › Remove Carol from this team?: Cancel',
+    name: 'Team › a member › Remove Carol from this department?: Cancel',
     site: 'components/teams/team-members.tsx:192',
     open: async () => {
       await team('owner');
       await pressId('team-member-u3');
       await pressIn('team-member-dialog', 'Remove');
-      await screen.findByText('Remove Carol from this team?');
+      await screen.findByText('Remove Carol from this department?');
     },
     dialog: 'team-member-dialog',
     close: 'Cancel',
-    returnsTo: { shows: 'Close', leaves: 'Remove Carol from this team?' },
+    returnsTo: { shows: 'Close', leaves: 'Remove Carol from this department?' },
   },
   {
-    name: 'Team › their own row, Leave this team?: Cancel',
+    name: 'Team › their own row, Leave this department?: Cancel',
     site: 'components/teams/team-members.tsx:127',
     open: async () => {
       await team('owner');
@@ -425,28 +409,6 @@ const CASES: DialogCase[] = [
       await screen.findByText('Disconnect Gmail?');
     },
     dialog: 'disconnect-dialog',
-    close: 'Cancel',
-  },
-  {
-    name: 'Settings › Switch workspace: Cancel',
-    site: 'components/settings/workspace-switcher.tsx:140',
-    open: async () => {
-      route([
-        /^\/v1\/workspaces$/u,
-        {
-          workspaces: [
-            { id: TEST_WORKSPACE, name: 'Acme Operations', type: 'organization', role: 'owner' },
-            { id: PERSONAL, name: 'Personal', type: 'personal', role: 'owner' },
-          ],
-          activeWorkspaceId: TEST_WORKSPACE,
-        },
-      ]);
-      await renderWithProviders(<SettingsScreen />, twoWorkspaces());
-      await pressId('workspace-switcher-row');
-      // The workspaces are read as it opens.
-      await screen.findByTestId(`workspace-option-${PERSONAL}`);
-    },
-    dialog: 'workspace-switcher-dialog',
     close: 'Cancel',
   },
 ];

@@ -10,8 +10,7 @@ import {
 } from 'phosphor-react-native';
 
 import {
-  EMAIL_NOT_SENT,
-  EMAIL_SENDING,
+  EMAIL_OWED,
   NONE_LABEL,
   RUN_ID_LABEL,
   RUN_WAITING_FOR_APPROVAL,
@@ -21,7 +20,7 @@ import {
   STEP_SKIPPED,
   STEP_STOPPED,
   STEP_WAITING,
-  emailSent,
+  emailSentLine,
   stepHeld,
 } from '@/lib/content/screen-states';
 
@@ -561,10 +560,14 @@ function settingRow(id: string, title: string, groupId: string, flow: TrackerFlo
 }
 
 /**
- * The platform's email step (Build 22, the session's S24; backend ADR-0041),
- * from the run's status and its `email`: Waiting while the run goes on;
- * "Sending…" once it ended or held and the email is owed — and with no `email`
- * from the platform; "Sent · {time}"; "Not sent"; Stopped for a cancelled run.
+ * The platform's email step, "Run completed" (round 23, A7; Build 22's S24;
+ * backend ADR-0041), from the run's status and its `email`, whatever the
+ * group's title: Waiting while the run goes on or is held (an approval's email
+ * never checks it off); Failed for a failed run; Stopped for a cancelled one;
+ * done once the run succeeded — "Email sent · {time}", "Sending email…" while
+ * the email is owed (and with no `email` from the platform), "Done" when it
+ * was not sent. The website's rule (`snoopy lib/run-progress.ts`), word for
+ * word. ~~Held → "Sending…"; not sent → Skipped, "Not sent"~~ until round 23.
  */
 function emailRow(
   id: string,
@@ -575,10 +578,11 @@ function emailRow(
 ): TrackerRow {
   const at = (state: TrackerState, sub: string): TrackerRow => ({ id, title, state, ...TRACKER_LOOK[state], sub });
   if (run.status === 'cancelled') return at('stopped', STEP_STOPPED);
-  if (run.status === 'pending' || run.status === 'running') return at('waiting', STEP_WAITING);
-  if (email?.status === 'sent') return at('done', email.sentAt ? emailSent(clock(email.sentAt)) : STEP_DONE);
-  if (email?.status === 'not_sent') return at('skipped', EMAIL_NOT_SENT);
-  return at('working', EMAIL_SENDING);
+  if (run.status === 'failed') return at('failed', STEP_FAILED);
+  if (run.status !== 'succeeded') return at('waiting', STEP_WAITING);
+  if (email?.status === 'sent') return at('done', email.sentAt ? emailSentLine(clock(email.sentAt)) : STEP_DONE);
+  if (email?.status === 'not_sent') return at('done', STEP_DONE);
+  return at('done', EMAIL_OWED);
 }
 
 /**

@@ -2,6 +2,7 @@ import React from 'react';
 import { Text } from 'react-native';
 import { Receipt, Trash } from 'phosphor-react-native';
 
+import { GlassSurface } from '@/components/glass-surface';
 import { AvatarBadge } from '@/components/nocturne/avatar-badge';
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { BrandMark } from '@/components/nocturne/brand-mark';
@@ -120,5 +121,30 @@ describe.each<ThemeMode>(['dark', 'light'])('Nocturne set — %s palette', (mode
     // `stabilizeAnimated` rounds sampled animation values and nothing else, so
     // Skeleton's pulse cannot make this gate fail at random. See test/stabilize.ts.
     expect(stabilizeAnimated(toJSON())).toMatchSnapshot();
+  });
+});
+
+/**
+ * The Liquid Glass primitive (round 23, A3; the owner's build 22 items 5–6),
+ * pinned in both palettes and both of its iOS forms — the system's glass on
+ * iOS 26, the blur below it — neutral and accent. Android's form is asserted in
+ * `round23.test.tsx`.
+ */
+const GLASS: { name: string; element: React.ReactElement }[] = [
+  { name: 'GlassSurface/neutral', element: <GlassSurface radius={999} style={{ width: 38, height: 38 }} /> },
+  { name: 'GlassSurface/accent', element: <GlassSurface radius={999} tone="accent" interactive style={{ width: 38, height: 38 }} /> },
+  { name: 'GlassSurface/panel', element: <GlassSurface radius={18}><Text>Menu</Text></GlassSurface> },
+];
+
+describe.each<[ThemeMode, boolean]>([
+  ['dark', false],
+  ['light', false],
+  ['dark', true],
+  ['light', true],
+])('GlassSurface — %s palette, Liquid Glass available: %s', (mode, glass) => {
+  it.each(GLASS.map((c) => [c.name, c.element] as const))('%s renders unchanged', async (_name, element) => {
+    jest.requireMock('expo-glass-effect').isLiquidGlassAvailable.mockReturnValue(glass);
+    const { toJSON } = await renderWithProviders(element, undefined, mode);
+    expect(toJSON()).toMatchSnapshot();
   });
 });
