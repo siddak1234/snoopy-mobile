@@ -25,7 +25,10 @@
     "verify:platform-contracts": "node scripts/verify-platform-contracts.mjs",
     "release:ios": "bash scripts/release-ios.sh",
     "hooks:install": "git config core.hooksPath .githooks",
-    "verify":"npm run lint && npm run typecheck && npm run audit:credentials && npm run audit:tokens && npm run audit:type && npm run audit:vocabulary && npm run audit:haptics && npm run audit:fixtures && npm run audit:platform && npm run verify:platform-contracts && npm run test:coverage && npm run audit:presses && node scripts/repo-facts.mjs --gate verify"
+    "check:docs": "node scripts/kit/check-docs.mjs",
+    "map": "node scripts/kit/map.mjs",
+    "audit:docs": "node scripts/audit-doc-references.mjs",
+    "verify":"npm run lint && npm run check:docs && npm run map -- --check && npm run audit:docs && npm run typecheck && npm run audit:credentials && npm run audit:tokens && npm run audit:type && npm run audit:vocabulary && npm run audit:haptics && npm run audit:fixtures && npm run audit:platform && npm run verify:platform-contracts && npm run test:coverage && npm run audit:presses && node scripts/repo-facts.mjs --gate verify"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
@@ -101,7 +104,8 @@
         ],
         "testPathIgnorePatterns": [
           "/node_modules/",
-          "<rootDir>/__tests__/real-router/"
+          "<rootDir>/__tests__/real-router/",
+          "/scripts/kit/"
         ]
       },
       {

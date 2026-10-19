@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "repo": "snoopy-mobile",
+  "generated": [
+    "docs/MAP.md",
+    "lib/generated/platform-contracts/automations.d.ts",
+    "lib/generated/platform-contracts/connections.d.ts",
+    "lib/generated/platform-contracts/platform.d.ts"
+  ],
+  "ignore": ["__tests__/**", "test/**", "docs/**"],
+  "unmapped": {
+    ".autom8x": "verify's repo-facts output (.autom8x/repo-facts/snoopy-mobile.json, generated, quoted by the backend) and release-ios's working files; gitignored",
+    "coverage": "jest's coverage output, read by audit:presses; gitignored",
+    "dist": "expo export's bundles; gitignored",
+    "design-gaps": "evidence images the DESIGN-GAPS records link; no prose",
+    "design-source": "the frozen Nocturne design export; read, never edited",
+    ".expo": "Expo's local state; gitignored",
+    ".vscode": "the editor's settings"
+  },
+  "rules": [
+    {
+      "id": "screens",
+      "code": ["app/**", "components/**", "constants/**", "assets/**", "hooks/**"],
+      "docs": ["DESIGN-CONTRACT.md", "DESIGN-GAPS.md"],
+      "need": "any"
+    },
+    { "id": "view", "code": ["lib/view/**"], "docs": ["DESIGN-GAPS.md"], "need": "any" },
+    { "id": "content", "code": ["lib/content/**"], "docs": ["DESIGN-CONTRACT.md", "DESIGN-GAPS.md"], "need": "any" },
+    { "id": "platform", "code": ["lib/platform/**"], "docs": ["README.md", "lib/platform/CLAUDE.md"], "need": "any" },
+    {
+      "id": "tooling",
+      "code": ["scripts/**", ".github/**", ".githooks/**", "app.config.js", "app.json", "eas.json"],
+      "docs": ["README.md"],
+      "need": "any"
+    },
+    { "id": "claude", "code": [".claude/**"], "docs": ["CLAUDE.md"], "need": "any" }
+  ],
+  "facts": [
+    { "key": "nocturne-components", "home": "README.md", "pattern": "\\b18 Nocturne\\b|\\b18 components\\b" },
+    { "key": "snapshot-repin", "home": "README.md", "pattern": "48 of the 64 Nocturne entries" },
+    { "key": "pre-push-timing", "home": "README.md", "pattern": "\\b111 s to green\\b" },
+    { "key": "pods-warnings", "home": "README.md", "pattern": "~2,700 warnings" }
+  ],
+  "records": {
+    "current": ["DESIGN-GAPS.md", "docs/records/round-record.md"],
+    "archive": ["DESIGN-GAPS.archive.md", "ROUND-7.5-OBSERVATIONS.md"]
+  },
+  "map": {
+    "kind": "expo-route",
+    "readFirst": [
+      "CLAUDE.md",
+      "snoopy-backend/docs/platform/ENGINEERING-STANDARD.md",
+      "DESIGN-CONTRACT.md",
+      "DESIGN-GAPS.md",
+      "docs/records/round-record.md"
+    ],
+    "lists": [
+      { "title": "Screens", "as": "expo-route", "glob": "app/**/*.tsx" },
+      { "title": "lib", "as": "package", "glob": "lib/*" },
+      { "title": "Scripts", "as": "header-line", "glob": "scripts/*" },
+      { "title": "Tests", "as": "test-prefixes", "glob": "__tests__/**/*.test.*" }
+    ]
+  }
+}

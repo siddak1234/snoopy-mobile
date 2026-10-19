@@ -38,7 +38,7 @@ path; no supported build can fall back to scheme-only matching.
 ## Verification
 
 ```bash
-npm run verify                    # lint, types, all architecture gates, contracts, tests
+npm run verify                    # lint, docs checks, types, all architecture gates, contracts, tests
 npm run audit:dependencies        # critical production dependency gate
 npm run export:ios                # production JS/native asset bundle
 npm run export:android
@@ -70,6 +70,38 @@ The individual architecture gates are:
   download (`downloadFileAsync`, 24.12) are each budgeted to a single call.
 - `verify:platform-contracts`: regenerate from the sibling backend checkout,
   when present, and reject a generated declaration diff.
+- `audit:presses` (`scripts/audit-presses.mjs`, coverage-based, in `verify`
+  and CI): **every press has a test that presses it and asserts its outcome**
+  (build 13, B9) — the screen and params it opens, the request it sends
+  (method, path, body), the dialog it opens or closes, what changes on screen,
+  or the refusal it says — never only that a mock was called. It resolves
+  every `onPress` and `onLongPress` in `app/` and `components/` to the
+  function it runs and fails when no test ran it, or when it cannot tell
+  which function that is (write a hook's function as `() => x.reload()`). A
+  press repeated across screens — Retry, Back, a dialog's Cancel — is one
+  table-driven test (`it.each`), not a copy per screen. The register is
+  `DESIGN-GAPS.archive.md`, "Every press, its test (build 13)", and each later
+  build's presses are in its own `DESIGN-GAPS.md` section.
+- `check:docs` (`scripts/kit/check-docs.mjs`), `map -- --check`
+  (`scripts/kit/map.mjs`) and `audit:docs`
+  (`scripts/audit-doc-references.mjs`), right after lint: a code change
+  without the doc `docs/docs-map.json` maps it to, a stale `docs/MAP.md`, or a
+  document naming a file that does not exist fails the gate. The rule they
+  enforce is the backend's engineering standard, section (e), linked from
+  `CLAUDE.md`.
+
+**Where a screen goes is proved under the real router** (build 13, the
+owner's build 12 item 6). Jest runs two projects (`package.json`
+`jest.projects`), and `npm test`, so `verify` and CI, runs both: `unit` maps
+expo-router to `test/mocks/expo-router.tsx`, which records an href and runs
+no navigator — how build 8–12's Sign out passed every test while it was
+dropped on the phone — and `real-router` (`__tests__/real-router/`, harness
+`test/real-router.tsx`) runs the app's own tree under the real expo-router.
+A change to sign-in, sign-out, the guard, a redirect, or the params a screen
+takes on arrival gets a test there. The auth boundary is the root layout's
+`Stack.Protected`, which admits the tabs only signed in and past the Face
+ID lock (`locked`, `hooks/use-session.tsx`; the build 13 review); nothing
+inside the tabs navigates to "/", which there names Home, not the cover.
 
 The gate suites include negative tests that inject forbidden source and prove
 the audits fail. `__tests__/nocturne-visual.test.tsx` snapshots all 18 Nocturne
@@ -79,8 +111,9 @@ visual change is explicitly authorized. One has been: the owner's bigger type
 were re-pinned once in build 10 (24.12) — 48 of the 64 Nocturne entries and 10
 of the 14 in `screen-state.test.tsx`; the other 20 set no font size.
 
-CI runs lint, typecheck, Jest, all architecture/dependency gates, contract
-verification, and both platform exports; `all-green` is the one check that
+CI runs lint, typecheck, Jest, all architecture/dependency gates (the docs
+checks among them, on the PR's whole range: `fetch-depth: 0` and
+`DOCS_BASE`), contract verification, and both platform exports; `all-green` is the one check that
 needs every one of them and is red on any failure, cancellation or skip.
 `contract-deployed` (`scripts/verify-deployed-contracts.mjs`) compares each
 generated file's sha256 header with the hash the live
@@ -94,7 +127,9 @@ refuses any mismatch, escape or not.
 `CI=1 npm run verify`, `audit:dependencies` and the salvaged-client-data scan
 — everything CI runs but the exports — and refuses the push at the first red
 gate, naming it (111 s to green, 3 s to refuse a lint error, measured
-2026-10-03); `git push --no-verify` is the bypass for a by-design red push.
+2026-10-03); `git push --no-verify` is the bypass for a by-design red push,
+the owner's by hand: in a Claude Code session `.claude/hooks/guard.mjs`
+refuses it.
 `npm run release:ios` (`scripts/release-ios.sh`; `--dry-run` rehearses the
 refusals) builds and submits only `origin/main`, clean, with `all-green`
 concluded success on HEAD and the live AASA naming the app, and only a build
@@ -122,7 +157,38 @@ Store Connect record's Apple ID and the Team ID, both public identifiers. The
 upload itself authenticates with the App Store Connect API key EAS holds for
 the project, created by the owner through `eas credentials` on 2026-09-30, so
 no Apple account name or password is written anywhere. The history is in
-`ROUND-7.5-OBSERVATIONS.md`.
+`ROUND-7.5-OBSERVATIONS.md`. The release's steps are the `testflight` skill
+(`.claude/skills/testflight/SKILL.md`).
+
+The fresh audit must also inspect the simulator or device, exercise reachable
+refusal and auth states, compare every screen with the website's page list,
+validate EAS configuration, and report any live journey that external
+configuration makes NOT OBSERVED. It must not convert NOT OBSERVED into PASS.
+
+## Release configuration, pinned
+
+Three values differ between a simulator, a preview build and production, and
+`app.config.js` refuses a preview or production build that lacks any of them
+or carries a wrong one:
+
+- `EXPO_PUBLIC_BACKEND_API_ORIGIN` — the Edge origin the bearer calls use,
+  HTTPS in release.
+- `EXPO_PUBLIC_NATIVE_REDIRECT_URI` — must equal
+  `https://app.autom8x.ai/auth/native/callback` byte-for-byte (ADR-0017; the
+  Edge's `NATIVE_APP_REDIRECT_URIS` compares by exact string). The iOS
+  associated domain and the Android verified app link are derived from it.
+- `EXPO_PUBLIC_NATIVE_AUTH_BASE_URL` — where the SYSTEM BROWSER opens the
+  ADR-0017 start leg; must equal `https://www.autom8x.ai/api/platform`. The
+  Edge keeps the OAuth transaction in a `__Host-` cookie, which is host-only,
+  and its deployed callback sits on the public web origin behind the website's
+  `/api/platform` rewrite (manifest §12.1 #79). A start leg opened on the API
+  origin sets a cookie the callback never receives and every native login ends
+  at the website with `exchange_failed`. Measured 2026-09-03; the evidence is
+  in `ROUND-7.5-OBSERVATIONS.md`.
+
+All three live in the EAS-hosted `preview` and `production` environments of
+the linked project `@autom8x.ai/snoopy-mobile` (`extra.eas.projectId` in
+`app.json`, pinned by `__tests__/app-config.test.js` through the real config).
 
 ## App Store listing (BUILD-PLAN 24.7.4)
 
@@ -196,14 +262,14 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
 | ------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Contact Info › Name                   | Collected     | Google, Microsoft or Apple return it at sign-in, to the platform account                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | Contact Info › Email Address          | Collected     | Sign-in, and the support form's email, the one field the platform requires (`app/(tabs)/settings/support.tsx`, `lib/platform/support.ts`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| Financial Info › Payment Info         | Collected     | Bills & Receipts (`automations/invoice-processing` in `snoopy-automations`) reads from a run's file how a receipt was paid — card, cash, check, bank transfer or other (`paymentMethod`) — and a card's last four digits when they are printed (`cardLast4`), both in `prompts/extract-document.v1.json`; its setup takes the company card's last four digits (`companyCardLast4`, `manifests/invoice-processing.v1.json`): "A receipt that shows another card waits for approval". This app uploads the file (`components/automations/run-file-field.tsx`) and sends the setup (`lib/platform/automations.ts`)                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Financial Info › Payment Info         | Collected     | Bills & Receipts (`automations/invoice-processing` in `snoopy-automations`) reads from a run's file how a receipt was paid — card, cash, check, bank transfer or other (`paymentMethod`) — and a card's last four digits when they are printed (`cardLast4`), both in `snoopy-automations/automations/invoice-processing/prompts/extract-documents.v1.json`; its setup takes the company card's last four digits (`companyCardLast4`, `snoopy-automations/manifests/invoice-processing.v1.json`): "A receipt that shows another card waits for approval". This app uploads the file (`components/automations/run-file-field.tsx`) and sends the setup (`lib/platform/automations.ts`)                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | Financial Info › Other Financial Info | Collected     | From the same file, Bills & Receipts reads a bill's or receipt's amounts — subtotal, tax, total, amount due — a bill's due date and payment terms, and a supplier statement's balance and the invoices, payments and credits it lists; its setup names the company's QuickBooks accounts, such as Paid from, "The bank or credit card account the company pays receipts from"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | User Content › Photos or Videos       | Collected     | Take photo (25.8.3): a camera photo, re-encoded as a JPEG, is uploaded as a run's file; declaring it is the conservative answer                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | User Content › Customer Support       | Collected     | The support form's text                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | User Content › Other User Content     | Collected     | Files given to a run (`components/automations/run-file-field.tsx`), a flow's setup, approval decisions                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | Identifiers › User ID                 | Collected     | The Autom8x account every request acts as                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | Identifiers › Device ID               | Collected     | The push token, sent to `PUT /v1/session/devices` (`lib/platform/devices.ts`); declaring it is the conservative answer                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| Purchases › Purchase History          | Collected     | Bills & Receipts records the business's purchases in its QuickBooks Online company, "a bill as a bill, a receipt as an expense, a credit note as a vendor credit" (`manifests/invoice-processing.v1.json`), each naming its seller, with its date, its amount and a category chosen by what the purchase was for, `spendType` (`src/decide/plan.ts`, `src/writes/bodies.ts`); each run keeps what it recorded with its results                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Purchases › Purchase History          | Collected     | Bills & Receipts records the business's purchases in its QuickBooks Online company, "a bill as a bill, a receipt as an expense, a credit note as a vendor credit" (`snoopy-automations/manifests/invoice-processing.v1.json`), each naming its seller, with its date, its amount and a category chosen by what the purchase was for, `spendType` (`snoopy-automations/automations/invoice-processing/src/decide/plan.ts`, `snoopy-automations/automations/invoice-processing/src/writes/bodies.ts`); each run keeps what it recorded with its results                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | Diagnostics › Other Diagnostic Data   | Collected     | No crash-reporting or analytics SDK is in `package.json`, but the platform's servers keep operational logs of the requests the app makes — in the Privacy Policy's words, "Standard operational logs (request metadata, IP addresses, timestamps, errors) used to run, secure, and debug the service" — so declaring it is the conservative answer. Its purposes are App Functionality and Analytics, since the policy also says "To improve it: aggregate, de-identified usage analysis."                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | Every other type                      | Not collected | Phone Number, Physical Address, Health & Fitness, Credit Info, Location, Sensitive Info, Contacts, Emails or Text Messages, Audio Data, Gameplay Content, Browsing History, Search History, Surroundings, Body, Other Data Types: nothing in the app asks for or reads them (no screen and no flow asks for a phone number or a postal address; nothing reads a credit score; Face ID stays on the device, `expo-local-authentication`; Search flows filters on the phone; the camera's microphone is off, `app.json`). Other User Contact Info: the app sends none besides the email address; the push token, which reaches the phone, is declared as Device ID. Usage Data (Product Interaction, Advertising Data, Other Usage Data): no analytics or advertising SDK in `package.json`, and the app shows no ads; the Privacy Policy's "Usage and log data", the platform's request logs, are declared once, under Diagnostics, for App Functionality and Analytics. Crash Data, Performance Data: no crash-reporting SDK in `package.json` |
 
@@ -237,7 +303,12 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   sign-in, every token change), shows the banner in the foreground and opens a
   tap's run or Approvals; the inbox's card is the only ask. Android and a
   simulator register nothing. The library's own request to Expo's token service
-  is the third credential-less exception of `CLAUDE.md` rule 5.
+  (`getExpoPushTokenAsync`, since build 11, D8) is the transport's third
+  credential-less exception, in no file of this repository, which
+  `audit:platform` does not see because it reads this repository's source. No
+  session credential goes with it, and the token it answers reaches the
+  platform only through `lib/platform/devices.ts`, in the
+  `PUT /v1/session/devices` body — never a log, a URL or the enclave.
 - A run's file (BUILD-PLAN 25.8.3): `expo-image-picker` and
   `expo-image-manipulator` at the SDK 54 pins. Take photo is the camera, asked
   for at the press; Upload is `expo-document-picker`, held to a PDF, a JPEG or
@@ -272,10 +343,39 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
 - The rules every screen shares (ADR-0032, BUILD-PLAN 24.3.6):
   - `administers()` in `lib/view/roles.ts` decides owner and admin controls.
   - `workspaceIfShown()` in `hooks/use-session.tsx`, with a resource's
-    `loadedFor`, binds an action to the workspace its screen loaded.
+    `loadedFor`, binds an action to the workspace its screen loaded, or it is
+    refused with `WORKSPACE_CHANGED`.
   - `useIntentKeys()` keeps a resubmission's idempotency key.
   - `refusalMessage()` in `lib/content/refusals.ts` says a refusal in the
     website's words.
+  - `withoutArchived()` (`lib/view/catalog.ts`): an archived subscription is
+    absent — never a workflow, never Added. The catalog's `subscribed` counts
+    one, so it never answers Added.
+  - `deletionOutcome()` (`lib/content/deletion.ts`): every answer
+    `DELETE /v1/account` gives a bearer caller, in ADR-0028's words. Never
+    say "deleted" for a lost answer: read the session first.
+  - `hostedAddress()` (`lib/platform/billing.ts`) and `websiteOrigin()`: the
+    only addresses the app opens outside itself, https only.
+  - `Pressable` and `pressed()` (`components/pressable.tsx`): every press
+    ticks, through the one helper; a press with no handler, a disabled
+    control and the signed-out cover give none (build 11, D7).
+  - `heldAs()` (`lib/view/catalog.ts`): a workspace holds a flow once (the
+    owner's build 12 item 9) — any subscription of its template that is not
+    archived, in any team or the whole workspace. Add reads a held flow
+    "Added ✓" and Setup configures it, never adding a second; a copy Setup
+    has just added is held from that moment (the build 13 review).
+  - `addedAgainAs()` (`lib/view/catalog.ts`): an archived flow's live twin —
+    the same template in any team or the whole workspace (`heldAs`, the
+    owner's build 12 item 9) — and with one, no "Unarchive" (D3).
+    `scopeLabels()` labels every flow (D4).
+- Billing (ADR-0032; the contract's rule, with Free's and Pro's drawn prices,
+  is `DESIGN-CONTRACT.md`, Round 16 (24.6), Billing): the app re-reads
+  billing when it returns to the foreground. The enrolled plan is one rule,
+  `lib/view/billing.ts`, shared with the plan's name on the Settings index —
+  Billing's value, before the arrow (the owner's build 12 item 2) — which
+  reads the workspace's billing quietly through the shared snapshot for an
+  owner or admin (D1). The app is offered in the United States App Store
+  storefront only; selling elsewhere needs a storefront check first.
 - `npm run verify` ends by emitting `.autom8x/repo-facts/snoopy-mobile.json`
   (gitignored). The backend's round close commits it, so the manifest quotes
   this repository's counts rather than reading its files.
@@ -311,9 +411,12 @@ rechecked it and Round 7.5 superseded it with the cloud build.
 ## Scope and handoff
 
 The current contract and screen-to-operation map are in
-[`DESIGN-CONTRACT.md`](DESIGN-CONTRACT.md). The Round 6 audit record and its
-deliberate gaps are in [`DESIGN-GAPS.md`](DESIGN-GAPS.md); the Round 7.5 and
-7.5M observations, findings and the state of 19c are in
+[`DESIGN-CONTRACT.md`](DESIGN-CONTRACT.md). The current findings, with the
+items carried open from earlier rounds, are in [`DESIGN-GAPS.md`](DESIGN-GAPS.md);
+the Round 6 audit record and its deliberate gaps, and Round 16's findings, are
+in [`DESIGN-GAPS.archive.md`](DESIGN-GAPS.archive.md); each round's preamble
+is in [`docs/records/round-record.md`](docs/records/round-record.md); the
+Round 7.5 and 7.5M observations, findings and the state of 19c are in
 [`ROUND-7.5-OBSERVATIONS.md`](ROUND-7.5-OBSERVATIONS.md).
 
 The governing master plan and round playbook live in the sibling private

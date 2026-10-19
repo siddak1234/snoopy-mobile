@@ -72,13 +72,27 @@ jobs:
   gates:
     name: Architecture gates
     runs-on: ubuntu-24.04
+    # The docs checks read the PR's whole range against its base, so the
+    # checkout keeps every commit and the base is named (the backend's
+    # engineering standard, section (e)).
+    env:
+      DOCS_BASE: origin/${{ github.base_ref || 'main' }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
       - run: npm ci
+      # A code change without the doc docs/docs-map.json maps it to, a commit
+      # trailer `Docs-Unchanged: <reason>` excepted (scripts/kit/check-docs.mjs).
+      - run: npm run check:docs
+      # docs/MAP.md is generated from the map and the tree; stale is red.
+      - run: npm run map -- --check
+      # No document names a file that does not exist (scripts/audit-doc-references.mjs).
+      - run: npm run audit:docs
       # The prototype shipped a hardcoded demo email and plaintext password in
       # the auth screens. They are gone and the allowlist is empty; the ratchet
       # now holds the count at zero, and a new occurrence fails the build.
