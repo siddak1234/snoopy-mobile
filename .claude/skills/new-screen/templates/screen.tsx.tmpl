@@ -1,0 +1,38 @@
+import { useRouter } from 'expo-router';
+import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { PillButton } from '@/components/nocturne/pill-button';
+import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { em, fonts, layout, typeScale } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+import { __camel__View } from '@/lib/view/__kebab__';
+
+/**
+ * __Title__ — the website's `__webPath__`, in its words. What it reads and
+ * sends, and how it says a refusal: DESIGN-CONTRACT.md. Its copy follows the
+ * plain-words rule in app/CLAUDE.md; its words come from its view model.
+ */
+export default function __Pascal__Screen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { palette } = useTheme();
+  const view = __camel__View();
+  return (
+    <View style={[styles.root, { backgroundColor: palette.bg, paddingTop: insets.top + 40 }]}>
+      <SurfaceCard style={styles.card}>
+        <Text style={[styles.title, { color: palette.text }]}>{view.title}</Text>
+        <Text style={[styles.text, { color: palette.neutral[400] }]}>{view.lead}</Text>
+        <PillButton label={view.action} variant="primary" height={46} onPress={() => router.back()} />
+      </SurfaceCard>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1, paddingHorizontal: layout.screenX },
+  card: { padding: 22, gap: 12 },
+  title: { fontFamily: fonts.medium, fontSize: typeScale.display.fontSize, letterSpacing: em(-0.01, typeScale.display.fontSize), textAlign: 'center' },
+  text: { fontFamily: fonts.regular, ...typeScale.label, textAlign: 'center' },
+});

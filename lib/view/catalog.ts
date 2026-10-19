@@ -140,7 +140,7 @@ export type ConnectionView = {
  * archived rows, so every screen treats one as absent — the website's rule
  * (`snoopy/app/account/automations/page.tsx`). The catalog's `subscribed` is not
  * used for this: it is true for a template with ANY subscription row, archived
- * included (DESIGN-GAPS.md, Round 16), so after an Archive it would still say
+ * included (DESIGN-GAPS.archive.md, Round 16), so after an Archive it would still say
  * Added and offer Pause on a subscription the platform no longer runs.
  */
 export function withoutArchived(subscriptions: Subscription[]): Subscription[] {

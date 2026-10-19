@@ -1,0 +1,21 @@
+import { fireEvent, screen } from '@testing-library/react-native';
+import React from 'react';
+
+import __Pascal__Screen from '@/app/__route__';
+import { __camel__View } from '@/lib/view/__kebab__';
+import { mockRouter, renderWithProviders } from '@/test/render';
+
+describe('__Title__ (the website\'s __webPath__)', () => {
+  it("says its title and lead in the website's words", async () => {
+    await renderWithProviders(<__Pascal__Screen />);
+    const view = __camel__View();
+    expect(screen.getByText(view.title)).toBeTruthy();
+    expect(screen.getByText(view.lead)).toBeTruthy();
+  });
+
+  it('goes back on its one action', async () => {
+    await renderWithProviders(<__Pascal__Screen />);
+    await fireEvent.press(screen.getByText(__camel__View().action));
+    expect(mockRouter.back).toHaveBeenCalledTimes(1);
+  });
+});

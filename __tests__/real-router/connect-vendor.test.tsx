@@ -15,7 +15,7 @@ import { WORKSPACE, answerPlatform, flush, launch, signedInOnThisPhone } from '@
 /**
  * The flow page's integration row (step 2 since Build 22) → Connect integration
  * (~~Connect vendor~~) → a tap → back, under the real
- * router (CLAUDE.md rule 11: the params a screen takes on arrival): the vendor
+ * router (CLAUDE.md rule 11, README "Verification": the params a screen takes on arrival): the vendor
  * page opens with the flow and the step's field, a tap saves the choice and
  * goes back to the same flow page — no Done, no second page — which reads the
  * flow again and draws what was saved (Build 21, spec A2; the owner's build 20

@@ -80,7 +80,7 @@ function nativeLinkConfig(redirectUri) {
   // domains" — and without it iOS refuses to create the session, which
   // expo-web-browser reports as a `cancel`. The first TestFlight build (Round
   // 16, 2026-10-01) shipped `applinks` alone and every tap on a provider ended
-  // silently (DESIGN-GAPS.md, "The sign-in sheet that would not open").
+  // silently (DESIGN-GAPS.archive.md, "The sign-in sheet that would not open").
   return {
     ios: { associatedDomains: [`applinks:${url.host}`, `webcredentials:${url.host}`] },
     android: {

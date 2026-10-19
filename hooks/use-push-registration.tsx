@@ -120,7 +120,8 @@ function tokenServiceFailed(error: unknown): boolean {
 /**
  * One registration: this phone's Expo push token, then the platform's `PUT`.
  * `getExpoPushTokenAsync` asks Expo's token service from inside the library —
- * CLAUDE.md rule 5's third credential-less exception — and the token it answers
+ * the transport's third credential-less exception (README "Runtime architecture";
+ * CLAUDE.md rule 5) — and the token it answers
  * goes to the platform in that body and nowhere else.
  */
 async function register(devicePushToken?: Notifications.DevicePushToken): Promise<Registration> {

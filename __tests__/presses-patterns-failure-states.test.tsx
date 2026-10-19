@@ -48,7 +48,7 @@ const { platformOperation } = jest.requireMock('@/lib/platform/client');
  * - Back — the circle, and Go back where a failed load draws it — goes back.
  * - Unavailable offers no Retry: no backend, no workspace or no subject cannot
  *   succeed on a second attempt (DESIGN-CONTRACT, "`unavailable` is separate
- *   from `error` because Retry distinguishes them"; DESIGN-GAPS, "`unconfigured`
+ *   from `error` because Retry distinguishes them"; DESIGN-GAPS.archive.md, "`unconfigured`
  *   is its own state").
  *
  * A tab's own screen (Activity, Flows) is given no way back, so only its Retry
