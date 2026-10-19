@@ -190,6 +190,9 @@ describe('release app configuration', () => {
           host: 'app.autom8x.ai',
           pathPrefix: '/auth/native/callback',
         },
+        // Round 23 (A5): an email's or a push's run and approval links open the app on Android too.
+        { scheme: 'https', host: 'app.autom8x.ai', pathPrefix: '/runs/' },
+        { scheme: 'https', host: 'app.autom8x.ai', pathPrefix: '/approvals/' },
       ],
     });
   });

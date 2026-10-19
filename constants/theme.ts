@@ -265,3 +265,12 @@ export function kicker(p: NocturnePalette, size: number = typeScale.caption.font
     color: p.neutral[400],
   };
 }
+
+/**
+ * The tint a Liquid Glass surface takes (`components/glass-surface.tsx`; the
+ * owner's build 22 items 5–6): the card colour lightly for a neutral surface,
+ * the accent a little for an accent one (New's circle).
+ */
+export function glassTint(p: NocturnePalette, tone: 'neutral' | 'accent' = 'neutral'): string {
+  return tone === 'accent' ? withAlpha(p.accent, 0.22) : withAlpha(p.surface, 0.35);
+}

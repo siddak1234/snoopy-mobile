@@ -184,7 +184,7 @@ function SetUpOrganization({ domain, onCreated }: { domain: string; onCreated: (
       <SectionLabel>SET UP AN ORGANIZATION</SectionLabel>
       <SurfaceCard style={[styles.card, styles.pad]}>
         <Text style={[styles.text, { color: palette.neutral[400] }]}>
-          Your email uses the domain {domain}. Create an organization workspace for your team.
+          Your email uses the domain {domain}. Create an organization workspace for your company.
         </Text>
         <TextField
           label="Organization name"

@@ -53,8 +53,8 @@ const ERROR_TITLES: Record<ScreenKey, string> = {
   configure: "Couldn't load this template",
   organization: "Couldn't load your organization",
   archived: "Couldn't load your archived flows",
-  teams: "Couldn't load your teams",
-  team: "Couldn't load this team",
+  teams: "Couldn't load your departments",
+  team: "Couldn't load this department",
   billing: "Couldn't load billing",
   account: "Couldn't load your account",
   data: "Couldn't load data export",
@@ -241,8 +241,8 @@ export const RUN_FLOW_ARCHIVED = 'Flow archived';
  * and an action where there is one — and a section with nothing in it keeps its
  * own line.
  */
-export const TEAMS_EMPTY_TITLE = 'No teams yet';
-export const TEAMS_EMPTY_BODY = 'A team has its own flows and its own people.';
+export const TEAMS_EMPTY_TITLE = 'No departments yet';
+export const TEAMS_EMPTY_BODY = 'A department has its own flows and its own people.';
 export const ORGANIZATION_EMPTY_TITLE = 'No organization yet';
 export const ORGANIZATION_EMPTY_BODY =
   'No organization is registered to your email domain. An owner can send you a join link.';
@@ -250,12 +250,12 @@ export const CATALOG_EMPTY_TITLE = 'No flows to add yet';
 export const CATALOG_EMPTY_BODY = 'More are on the way.';
 export const CONNECTIONS_EMPTY_TITLE = 'No integrations yet';
 
-/** The workspace has flows; the chosen team has none (24.9.2; teams since 24.11.7). */
-export const FLOWS_SCOPE_EMPTY_TITLE = 'No flows in this team yet';
-export const FLOWS_SCOPE_EMPTY_BODY = 'Add one here, or pick All teams above to see every flow.';
+/** The workspace has flows; the chosen department has none (24.9.2; departments since 24.11.7). */
+export const FLOWS_SCOPE_EMPTY_TITLE = 'No flows in this department yet';
+export const FLOWS_SCOPE_EMPTY_BODY = 'Add one here, or pick All departments above to see every flow.';
 export const ACTIVITY_EMPTY_TITLE = 'No activity yet';
 export const ACTIVITY_EMPTY_BODY = 'Every run lands here the moment your first agent goes live.';
-export const ACTIVITY_SCOPE_EMPTY = 'No runs in this team yet.';
+export const ACTIVITY_SCOPE_EMPTY = 'No runs in this department yet.';
 /** The one way in, named for what it does (24.9.3): "Flows will be the name". */
 export const ADD_FLOW_LABEL = 'Add a flow';
 /** Under the first-run empty when archived flows exist in the scope (build 11, D6): the way to them. */
@@ -270,10 +270,10 @@ export const ARCHIVED_FLOWS_LABEL = 'Archived flows';
  * owner or admin creates the first team."~~ are gone with the team picker.
  */
 /** The catalog's line under "Add a flow" (§3.A). */
-export const CATALOG_SUBTITLE = 'Ready-made flows for your teams.';
-/** Where a flow is, or will be: its team, by its kind (§3.A, §3.B, §3.D). */
+export const CATALOG_SUBTITLE = 'Ready-made flows for your departments.';
+/** Where a flow is, or will be: its department, by its kind (§3.A, §3.B, §3.D; "Department" since round 23). */
 export function teamLine(kind: string): string {
-  return `Team: ${kind}`;
+  return `Department: ${kind}`;
 }
 /** Turn on, where a flow is not live (§3.B; since Build 21 in its Step 1 and at the bottom of its page). */
 export const SETUP_TURN_ON = 'Turn on';
@@ -316,6 +316,8 @@ export function vendorFor(flowName: string): string {
 }
 export const VENDOR_CONNECTED = 'Connected';
 export const VENDOR_ASK_ADMIN = 'Ask an owner or admin to connect it.';
+/** Under a member's integration choices (round 23, B3; backend ADR-0043): none is theirs to change. */
+export const VENDOR_ADMIN_ONLY = 'Only an owner or admin can change the integration.';
 export const VENDOR_NONE_SUB = 'Save the details only.';
 /** The tapped row's line while its choice is saved. */
 export const VENDOR_SAVING = 'Saving…';
@@ -412,12 +414,16 @@ export const STEP_FAILED = 'Failed';
 export function stepHeld(reason: string | undefined): string {
   return reason ? `Waiting for approval: ${reason}` : 'Waiting for approval';
 }
-/** A run's step 5, the platform's email (Build 22; the session's S24): its line per state. */
-export const EMAIL_SENDING = 'Sending…';
-export function emailSent(time: string): string {
-  return `Sent · ${time}`;
+/**
+ * A run's step 5, "Run completed" (round 23, A7; Build 22's S24): its line once
+ * the run succeeded — the email sent and when, or still owed — the website's
+ * words, byte for byte. ~~"Sent · {time}", "Sending…", "Not sent"~~ until
+ * round 23 (S12: the run completed; "Not sent" read as a fault).
+ */
+export const EMAIL_OWED = 'Sending email…';
+export function emailSentLine(time: string): string {
+  return `Email sent · ${time}`;
 }
-export const EMAIL_NOT_SENT = 'Not sent';
 /** "Document 1 of 3" (the owner's ~04:05Z: "a json out that clearly seperates accordingly"). */
 export function documentOf(index: number, count: number): string {
   return `Document ${index} of ${count}`;
@@ -492,7 +498,7 @@ export const SIGN_OUT_FAILED =
   "Sign-out didn't complete — this session couldn't be revoked, so you're still signed in on this device. Nothing was cleared.";
 
 /**
- * Design-owned chrome that was living in `lib/fixtures.ts`.
+ * Design-owned chrome that was living in ~~`lib/fixtures.ts`~~.
  *
  * These are not stand-ins for server data and never were — they are the design's
  * own vocabulary and copy, which is why they survive the 2026-08-17 decision to
@@ -503,8 +509,19 @@ export const SIGN_OUT_FAILED =
  * while defeating its purpose.
  */
 
-/** Activity's four filter chips, over the closed run-status enum. */
+/** Activity's four outcomes, over the closed run-status enum: the choices of its outcome drop-down. */
 export const ACTIVITY_FILTERS = ['All', 'Success', 'Needs review', 'Failed'] as const;
+
+/**
+ * Each outcome as its drop-down says it (round 23, the owner's build 22 items
+ * 3–4; S4: "All" alone does not say what).
+ */
+export const ACTIVITY_FILTER_LABEL: Record<(typeof ACTIVITY_FILTERS)[number], string> = {
+  All: 'All runs',
+  Success: 'Success',
+  'Needs review': 'Needs review',
+  Failed: 'Failed',
+};
 
 /** A row in the activity list, after mapping. */
 export type ActivityItem = {

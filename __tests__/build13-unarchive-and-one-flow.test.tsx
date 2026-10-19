@@ -138,7 +138,7 @@ describe("One flow per workspace (the owner's build 12 item 9)", () => {
       '/projects': projectsPayload('Finance'),
     });
     await renderWithProviders(<SolutionsScreen />, signedInSession);
-    expect(await screen.findByText('Ready-made flows for your teams.')).toBeTruthy();
+    expect(await screen.findByText('Ready-made flows for your departments.')).toBeTruthy();
     expect(screen.getByTestId('added-where-tpl.0').props.children).toBe('Whole workspace');
     expect(screen.getByTestId('added-tpl.0')).toBeTruthy();
     expect(screen.queryByTestId('add-tpl.0')).toBeNull();
@@ -161,7 +161,7 @@ describe("One flow per workspace (the owner's build 12 item 9)", () => {
       '/projects': projectsPayload('Finance'),
     });
     await renderWithProviders(<SolutionsScreen />, signedInSession);
-    expect((await screen.findByTestId('added-where-tpl.0')).props.children).toBe('Team: Finance, Whole workspace');
+    expect((await screen.findByTestId('added-where-tpl.0')).props.children).toBe('Department: Finance, Whole workspace');
     expect(screen.queryByTestId('add-tpl.0')).toBeNull();
     await fireEvent.press(screen.getByTestId('added-tpl.0'));
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'copy-team' } });
@@ -174,9 +174,9 @@ describe("One flow per workspace (the owner's build 12 item 9)", () => {
     // Reached with another team chosen: it is still the one copy, where it is.
     setMockParams({ template: 'tpl.0', project: 'project-2' });
     await renderWithProviders(<SetupScreen />, signedInSession);
-    await waitFor(() => expect(screen.getByTestId('setup-team').props.children).toBe('Team: Finance'));
+    await waitFor(() => expect(screen.getByTestId('setup-team').props.children).toBe('Department: Finance'));
     expect(screen.queryByText('Add to')).toBeNull();
-    expect(screen.queryByText('Team: Sales')).toBeNull();
+    expect(screen.queryByText('Department: Sales')).toBeNull();
     expect(screen.queryByText('Turn on')).toBeNull();
     await fireEvent.press(screen.getByText('Save'));
     await waitFor(() => expect(mockRouter.back).toHaveBeenCalled());
@@ -265,7 +265,7 @@ describe("One flow per workspace: what Setup adds is held at once (the build 13 
     expect(writes[0]).toMatchObject({ method: 'POST', body: { templateId: 'tpl.0' } });
     expect(writes[0]!.body).not.toHaveProperty('projectId');
     expect(await screen.findByText('Connect HubSpot first.')).toBeTruthy();
-    expect(screen.getByTestId('setup-team').props.children).toBe('Team: Finance');
+    expect(screen.getByTestId('setup-team').props.children).toBe('Department: Finance');
     expect(screen.queryByText('Add to')).toBeNull();
 
     // Try again and Turn on say the same until it is connected. Nothing is added again.
@@ -289,7 +289,7 @@ describe("One flow per workspace: what Setup adds is held at once (the build 13 
     await fireEvent.press(await screen.findByText('Turn on'));
     await waitFor(() => expect(writes.map((write) => write.method)).toEqual(['POST', 'PATCH']));
     expect(await screen.findByTestId('action-failure')).toBeTruthy();
-    expect(screen.getByTestId('setup-team').props.children).toBe('Team: Finance');
+    expect(screen.getByTestId('setup-team').props.children).toBe('Department: Finance');
 
     await fireEvent.press(screen.getByText('Turn on'));
     await waitFor(() =>

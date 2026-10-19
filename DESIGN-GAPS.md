@@ -1812,3 +1812,102 @@ the Deployed contract check (it reads production).
 (Each run by `b22-app-review-bites/bite.py` in the session's scratchpad, Node 22.23.2: red — a test
 failed — the file restored sha256-equal, green — a test passed. The Build 22 table's S26 row named
 `titleRowCompact`, which the ladder replaced; its guard is the fourth row here.)
+
+### Round 23 — build 22's feedback (Round 17; 2026-10-19)
+
+The owner's build 22 items (memory `build-22-feedback-2026-10-18`; the round's plan, its "S" the
+session's): the title rows, one drop-down, Liquid Glass, the running step that spins, step 5 "Run
+completed", email and push links that open the app, "Department", and a member's integration
+read-only.
+
+- **A1 title rows** (`components/title-row.tsx`): the title left, flexible space, then on the right
+  the two scope circles and the page's controls. Flows: Archived its circle at every width (no pill
+  form), New its accent pill or its circle at 320 pt (`levels={1}`); Activity: the circles, then All
+  time or its circle. `titleRowLevel` keeps measuring the page's controls (`title-row-controls`).
+- **A2 one drop-down** (`components/dropdown.tsx`, `placeDropdown`): measured on the press
+  (`measureInWindow`), under its trigger 6 pt down or above when under 240 pt are left and more are
+  above, on the trigger's nearer edge, 16-pt gutters, at least 232 wide, at most 380 tall then
+  scrolling; a transparent Modal whose invisible backdrop ("Close") and Android's back close it unless
+  `locked`; rows are presses (44 tall, the chosen one's check, `menuitem`). It replaces the time range's
+  card, the four outcome chips (All runs · Success · Needs review · Failed, `ACTIVITY_FILTER_LABEL`; S4),
+  Add a flow's category chips (All categories, then each; S5), Show (title Department, All departments
+  then each, its load error in it) and the workspace switcher (controlled; title Workspace; Switching…
+  and `locked`; Reload session at its foot when owed, "Working…" and disabled while it re-reads, as
+  the dialog's button was). S3: the two cards' explanatory sentences are
+  gone. `picker-dialog`, `select-field`, `choice-chips` and the confirm dialogs are unchanged.
+- **A3 Liquid Glass** (`components/glass-surface.tsx`, `glassTint`; `expo-glass-effect` ~0.1.10, the
+  SDK 54 pin): the system's glass on iOS 26 (`regular`, tinted, the palette's scheme, interactive on a
+  button), a blur under the card at 55% in a hairline ring below it, the card at 92% on Android. On the
+  tab bar — a capsule 16 pt in on the page colour, ~62 tall, the focused tab in an accent lens that
+  springs to it (`LinearTransition`, the system's Reduce Motion) — the header circles (`CircleButton`,
+  Home's bell, `BackCircle`; New's circle keeps its accent) and the drop-down panels. S1: the custom
+  bar stays in the layout (native tabs are beta in SDK 54 and swap the icons for SF Symbols; an overlay
+  re-pads ~20 screens). S2: the avatar badge is unchanged. **The re-pin of the tab bar's and the back
+  circle's snapshots in both palettes (and the screen states, which draw the back circle) is
+  authorised by the owner's build 22 items 5–6**; `GlassSurface` is pinned in both palettes and both
+  iOS forms.
+- **A4**: a working step's icon turns 360° every 900 ms (`run-step-spinner`), still under Reduce
+  Motion (`hooks/use-reduced-motion.ts`: the router's test mock of Reanimated has no
+  `useReducedMotion`).
+- **A7 step 5** (`emailRow`): any title; waiting while pending, running or held; failed; stopped;
+  done once succeeded — "Email sent · {time}", "Sending email…", "Done" — the website's words
+  (`EMAIL_OWED`, `emailSentLine`). 5 / 5 only on success.
+- **A5 links**: `app/+native-intent.tsx` sends `/runs/<id>` and `/approvals/<id>` (any query) to
+  `/`, the splash, when the link starts the app, and nowhere (an empty path, which expo-router drops)
+  when the app is already open — `/` from an open screen is the cover, above Sign in or the tabs
+  (the review of round 23); `linkTargetOf` and the signed-in tree's link listener open the run's page or Approvals in the
+  workspace the link names (the push tap's `switchFor` and owed-open; the link the app opened with,
+  once). `app.config.js` adds Android's `/runs/` and `/approvals/` prefixes on the callback's host.
+- **A8**: a `run-succeeded` tap opens the run's page. The generated contract is regenerated from the
+  backend's openapi of this round; the Deployed-contract check is red by design until the release.
+- **B1**: `audit:vocabulary` retires "team"; every word a person reads says department ("All
+  departments", "Department: Legal", "in a department", "Your industry and department", "Create an
+  organization workspace for your company."). Identifiers, routes and test ids stay.
+- **B3**: `VendorChoice` `readOnly` — Connect integration for a member, and Set up for a member
+  changing a flow already on (S: adding a flow stays any member's, ADR-0036, so a member's first
+  choice on Set up is untouched); the line "Only an owner or admin can change the integration."; a
+  403 in the platform's words. Settings › Connections was already read-only for a member
+  (`app/(tabs)/settings/connections.tsx:87`, `canManage`).
+
+**NOT OBSERVED**: the app on a simulator or a phone (nothing launched) — Liquid Glass itself, the
+lens's spring and the drop-down's grow are seen only on a device; a real email or push link; the
+Deployed contract check (it reads production).
+
+### Guards proved to bite, round 23
+
+| Guard | Broken by | What failed |
+| --- | --- | --- |
+| A3 · the system glass on iOS 26 | the availability check made false (`components/glass-surface.tsx`) | `round23` "iOS with Liquid Glass…" |
+| A3 · Android keeps the opaque card | the blur branch taken on every platform | `round23` "Android: today's look…" |
+| A3 · the lens under the focused tab, moving with it | its `left` pinned to the first tab (`components/nocturne/tab-bar.tsx`) | `tab-bar` "sits the lens under the focused tab…" |
+| A2 · above a low trigger | the above branch removed (`components/dropdown.tsx`) | `round23` "…opens above it when it sits low…" |
+| A2 · a tap outside closes | the backdrop's press a no-op | `round23` "a tap outside closes it…" |
+| A2 · locked holds it open | `if (locked) return` removed | `round23` "…unless it is locked" |
+| A2 · choosing closes | the close after `onChange` removed | `round23` "…choosing applies and closes" |
+| A2 · category filters | its `onChange` a no-op (`app/(tabs)/flows/add.tsx`) | `tab-screens` "filters the catalog by category" |
+| A2 · Department sets the scope | its `onChange` a no-op (`components/scope-control.tsx`) | `presses-home-activity` "the Department drop-down…" |
+| A1 · the circles in the right group | the circles moved back beside the title (`components/title-row.tsx`) | `build22-screens` "Flows: the title first…" |
+| A1 · Archived its circle at every width | Archived drawn as its pill (`app/(tabs)/flows/index.tsx`) | `build22-screens` "Archived is its circle at every width…" |
+| A4 · only a working step turns | the spinner on every row but a skipped one (`app/(tabs)/(home)/run.tsx`) | `invoice-processing-screens` "at the start…", "while running…" |
+| A7 · held waits | Waiting only for pending/running (`lib/view/runs.ts`) | `build22-views` "held: … step 5 waits too…" |
+| A7 · failed is Failed | the failed line removed | `build22-views` "a run failed…" |
+| A5 · run/approval paths to the splash | `redirectSystemPath` returns the path (`app/+native-intent.tsx`) | `round23` the native-intent table |
+| A5 · a link while the app is open keeps the open screen | `/` returned when not `initial` | `round23` "while the app is open…", `real-router/app-links` "a link that arrives on Sign in…" |
+| A5 · a link opens, switched first | the link's open removed (`hooks/use-push-registration.tsx`) | `push-registration` the three link cases |
+| A5 · the opening link once | the once-check removed | `push-registration` "…opens once signed in, and only once" |
+| A5 · a link heard on Sign in opens once signed in | `useLinkHolder` not mounted (`app/_layout.tsx`) | `real-router/app-links` all four, "…and opens the run once signed in" among them |
+| A5 · Android's path prefixes | `/runs/` removed (`app.config.js`) | `app-config` "derives both native link claims…" |
+| A8 · a completed run's tap | `run-succeeded` dropped from `targetOf` | `push-registration` "a \"Run completed\" push…" |
+| B1 · "team" is not copy | `teams?` out of `RETIRED` (`scripts/audit-vocabulary.mjs`) | `audit-gates` "the vocabulary audit: round 23" |
+| B3 · a member's rows inert | `readOnly` ignored (`components/flows/vendor-choice.tsx`) | `vendor-page` "a member (round 23, B3)…" |
+| B3 · Set up read-only for a member on a live flow | `readOnly={false}` (`app/(tabs)/flows/setup.tsx`) | `invoice-processing-screens` "a member on a live flow…" |
+| B3 · a member adding a flow still chooses | `readOnly={!canManage}` | `invoice-processing-screens` "a member adding a flow…" |
+| A4 · still under Reduce Motion | `if (reduceMotion) return` removed (`app/(tabs)/(home)/run.tsx`) | `invoice-processing-screens` "…Reduce Motion true…" |
+| A2 · only a fade under Reduce Motion | the scale kept under Reduce Motion (`components/dropdown.tsx`) | `round23` "opening it, Reduce Motion true…" |
+| A2 · Reload session busy | its label kept, or `disabled` dropped (`components/settings/workspace-switcher.tsx`) | `workspace-switcher` "Reload session says \"Working…\"…" |
+| B3 · a 403 in its words | the 403 check never true (`app/(tabs)/flows/vendor.tsx`) | `vendor-page` "a 403 from the platform…" |
+
+(Each run by `app-bites/bite.py` in the round's scratchpad, Node 22.23.2: red — a test failed — the
+file restored sha256-equal, green — a test passed. The locked guard's row is `round23`'s: the
+switcher's own `close` also refuses while switching, so `workspace-switcher` stays green without it. The rows the review of round 23 added — the open-app link, Set up's two, Reduce Motion's two and Reload
+session's — were run the same way by hand: broken, red, restored sha256-equal, green.)

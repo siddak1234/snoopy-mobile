@@ -222,6 +222,52 @@ describe('Connect integration — a tap saves and goes back (spec A2)', () => {
     expect(fake.to(SAVE)).toEqual([]);
   });
 
+  it('a member (round 23, B3): no row is a choice — None and a connected vendor too — nothing saves, and the list says only an owner or admin changes it', async () => {
+    const fake = route({ connected: true, subscription: added({ vendor: 'quickbooks', holdAboveAmount: 500 }) });
+    await open(sessionAs('member'));
+    expect(screen.getByTestId('vendor-read-only')).toHaveTextContent('Only an owner or admin can change the integration.');
+    for (const id of ['vendor-quickbooks', 'vendor-none']) {
+      const row = screen.getByTestId(id);
+      expect([id, row.props.accessibilityState]).toEqual([id, expect.objectContaining({ disabled: true })]);
+      await fireEvent.press(row);
+    }
+    expect(fake.to(SAVE)).toEqual([]);
+    expect(connectOAuthProvider).not.toHaveBeenCalled();
+    expect(mockRouter.back).not.toHaveBeenCalled();
+    // The chosen one is still shown as chosen.
+    expect(screen.getByTestId('vendor-chosen-quickbooks')).toBeTruthy();
+  });
+
+  it('an owner or admin is unchanged: no read-only line, and a tap saves', async () => {
+    for (const role of ['owner', 'admin'] as const) {
+      const fake = route({ connected: true });
+      const view = await (async () => {
+        setMockParams({ flow: 'ip-1', field: 'vendor' });
+        return renderWithProviders(<ConnectVendorScreen />, sessionAs(role));
+      })();
+      expect(await view.findByText('Connect integration')).toBeTruthy();
+      expect(view.queryByTestId('vendor-read-only')).toBeNull();
+      await fireEvent.press(view.getByTestId('vendor-quickbooks'));
+      await waitFor(() => expect(fake.to(SAVE)).toHaveLength(1));
+      await view.unmount();
+      resetSnapshot();
+      mockRouter.back.mockClear();
+    }
+  });
+
+  it('a 403 from the platform says its own words — not "Could not save"', async () => {
+    route({
+      connected: true,
+      save: () => {
+        throw new PlatformError("Only an owner or admin can change a flow's integration.", 403, 'FORBIDDEN');
+      },
+    });
+    await open();
+    await fireEvent.press(screen.getByTestId('vendor-quickbooks'));
+    expect(await screen.findByText("Only an owner or admin can change a flow's integration.")).toBeTruthy();
+    expect(screen.queryByText('Could not save. Try again.')).toBeNull();
+  });
+
   it('says a save that failed in plain words, under the card, and stays', async () => {
     route({
       connected: true,

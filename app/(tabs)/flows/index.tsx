@@ -33,20 +33,21 @@ import { flowsOverPlan } from '@/lib/view/billing';
 import { scopeLabels, toFlows, toRemovedFlows, type FlowView } from '@/lib/view/catalog';
 import { inScope } from '@/lib/view/scope';
 
-/** The header's Archived, its word or — the row too narrow — its icon's name. */
+/** The header's Archived: its circle's name (always a circle since round 23). */
 const ARCHIVED_LABEL = 'Archived';
 /** The header's New, its word or — a 320-pt row — its icon's name. */
 const NEW_LABEL = 'New';
 
 /**
  * Flows — the one tab for what the workspace runs (design `sFlows`; one tab
- * since BUILD-PLAN 24.9.3). Its first row is the title, Home's two scope
- * circles beside it — they narrow it to a team — then "Archived" and "New"
- * (Build 22, F1; `TitleRow`); "New" opens the catalog inside this tab, and
- * "Archived", left of it (build 11, D5 — the owner's build 10 item 8: "a
- * button to the left of new… We dont need a component on the page"), opens the
- * archived flows, always, count or none — as its icon alone when the row has no
- * room for its word (the session's S26).
+ * since BUILD-PLAN 24.9.3). Its first row is the title, then on the right
+ * Home's two scope circles — they narrow it to a department — "Archived" and
+ * "New" (round 23, A1; Build 22, F1; `TitleRow`); "New" opens the catalog
+ * inside this tab, as its accent circle when the row has no room for its word
+ * (the session's S26), and "Archived", left of it (build 11, D5 — the owner's
+ * build 10 item 8: "a button to the left of new… We dont need a component on
+ * the page"), opens the archived flows, always, count or none — its circle
+ * alone at every width since round 23 (~~its word where it fit~~).
  * With no live flow in the workspace the screen is the empty standard,
  * whatever is archived (D6, item 9: "like this when no flows even if archive"),
  * with the way to the archived ones under it when there are any.
@@ -150,35 +151,19 @@ export default function FlowsScreen() {
         { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) },
       ]}>
       {/* [Archived][New]: Archived secondary, so New stays the one accent control.
-          Narrower, Archived is its icon (S26); narrower still — a 320-pt phone —
-          New is its icon too, in its accent (the Build 22 review's M11). */}
+          Archived always its circle; at 320 pt New is its accent circle too. */}
       <TitleRow
         title="Flows"
-        levels={2}
+        levels={1}
         right={(level) => (
           <>
+            <CircleButton
+              testID="flows-archived"
+              icon={Archive}
+              accessibilityLabel={ARCHIVED_LABEL}
+              onPress={() => router.push('/(tabs)/flows/archived')}
+            />
             {level >= 1 ? (
-              <CircleButton
-                testID="flows-archived"
-                icon={Archive}
-                accessibilityLabel={ARCHIVED_LABEL}
-                onPress={() => router.push('/(tabs)/flows/archived')}
-              />
-            ) : (
-              <PillButton
-                label={ARCHIVED_LABEL}
-                variant="secondary"
-                height={36}
-                fontSize={typeScale.body.fontSize}
-                icon={Archive}
-                iconSize={14}
-                gap={5}
-                style={styles.headerPill}
-                testID="flows-archived"
-                onPress={() => router.push('/(tabs)/flows/archived')}
-              />
-            )}
-            {level >= 2 ? (
               <CircleButton
                 testID="flows-new"
                 icon={Plus}

@@ -17,7 +17,7 @@ import { websiteOrigin } from '@/lib/platform/native-auth';
 import { sendContactRequest, type ContactRequest } from '@/lib/platform/support';
 
 const FIELDS: readonly { key: keyof ContactRequest; label: string; placeholder: string }[] = [
-  { key: 'industry', label: 'Your industry and team function', placeholder: 'Healthcare, patient intake' },
+  { key: 'industry', label: 'Your industry and department', placeholder: 'Healthcare, patient intake' },
   { key: 'workflow', label: 'The workflow you want to automate', placeholder: 'Invoices arrive by email, keyed into the ERP' },
   { key: 'tools', label: 'Current tools involved', placeholder: 'CRM, ticketing, internal tools' },
   { key: 'volume', label: 'Volume / frequency', placeholder: '400 invoices a month' },

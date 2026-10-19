@@ -86,11 +86,11 @@ describe('DialogButton', () => {
   it.each(['dark', 'light'] as const)("draws a danger button — what cannot be undone — in the theme's red (%s)", async (mode) => {
     const palette = mode === 'dark' ? nocturneDark : nocturneLight;
     const { getByText, getByTestId } = await renderWithProviders(
-      <DialogButton label="Delete team" tone="danger" testID="confirm" onPress={() => undefined} />,
+      <DialogButton label="Delete department" tone="danger" testID="confirm" onPress={() => undefined} />,
       undefined,
       mode,
     );
-    expect(textColor(getByText('Delete team'))).toBe(palette.danger);
+    expect(textColor(getByText('Delete department'))).toBe(palette.danger);
     expect(StyleSheet.flatten(getByTestId('confirm').props.style).borderColor).toBe(palette.danger);
   });
 });

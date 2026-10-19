@@ -193,7 +193,7 @@ describe('Teams (24.11.7)', () => {
     await renderWithProviders(<TeamsScreen />, signedInSession);
     expect(await screen.findByText('Finance')).toBeTruthy();
     expect(screen.queryByText('ASK TO JOIN')).toBeNull();
-    expect(screen.queryByText("Couldn't load your teams")).toBeNull();
+    expect(screen.queryByText("Couldn't load your departments")).toBeNull();
   });
 
   it("reads the directory through the one helper Setup shares: a 404 is nothing to list, any other failure is the screen's (F84)", async () => {
@@ -234,8 +234,8 @@ describe('Teams (24.11.7)', () => {
     routeNone('admin');
     await renderWithProviders(<TeamsScreen />, orgSession('admin'));
     expect(await screen.findByTestId('screen-empty')).toBeTruthy();
-    expect(screen.getByText('No teams yet')).toBeTruthy();
-    expect(screen.getByText('A team has its own flows and its own people.')).toBeTruthy();
+    expect(screen.getByText('No departments yet')).toBeTruthy();
+    expect(screen.getByText('A department has its own flows and its own people.')).toBeTruthy();
     expect(screen.queryByText('Create a team')).toBeNull();
     await fireEvent.press(screen.getByLabelText('Back'));
     expect(mockRouter.back).toHaveBeenCalled();
@@ -283,42 +283,42 @@ describe('One team (24.11.7)', () => {
     // Its title is its kind, said once (24.12).
     expect(await screen.findByText('Finance')).toBeTruthy();
     expect(screen.queryByText(/^Finance · /u)).toBeNull();
-    await fireEvent.press(await screen.findByText('Delete team'));
+    await fireEvent.press(await screen.findByText('Delete department'));
     expect(await screen.findByText('Delete "Finance"?')).toBeTruthy();
     // What actually happens — not a promise that data "reattaches" (it never did).
-    expect(screen.getByText('It leaves every team list. Its flows keep running until you archive them in Flows.')).toBeTruthy();
-    await pressLast('Delete team');
+    expect(screen.getByText('It leaves every department list. Its flows keep running until you archive them in Flows.')).toBeTruthy();
+    await pressLast('Delete department');
     await waitFor(() => expect(mockRouter.back).toHaveBeenCalled());
     const [archived] = fake.to('PATCH /v1/workspaces/{workspaceId}/projects/{projectId}');
     expect(archived!.values).toEqual({ workspaceId: PERSONAL, projectId: 'p1' });
     expect(archived!.body).toEqual({ status: 'archived' });
   });
 
-  it("draws Delete team for its owner and Leave team for a member in red, as their confirms are (the owner's build 12 item 5)", async () => {
+  it("draws Delete department for its owner and Leave department for a member in red, as their confirms are (the owner's build 12 item 5)", async () => {
     routeTeam('owner', { workspaceId: PERSONAL });
     const owner = await renderWithProviders(<TeamScreen />, signedInSession);
-    expect(colorOf(await owner.findByText('Delete team'))).toBe(nocturneDark.danger);
-    await fireEvent.press(owner.getByText('Delete team'));
-    expect(colorOf(within(await owner.findByTestId('delete-team-dialog')).getByText('Delete team'))).toBe(nocturneDark.danger);
+    expect(colorOf(await owner.findByText('Delete department'))).toBe(nocturneDark.danger);
+    await fireEvent.press(owner.getByText('Delete department'));
+    expect(colorOf(within(await owner.findByTestId('delete-team-dialog')).getByText('Delete department'))).toBe(nocturneDark.danger);
     await owner.unmount();
 
     routeTeam('member');
     const member = await renderWithProviders(<TeamScreen />, signedInSession);
-    expect(colorOf(await member.findByText('Leave team'))).toBe(nocturneDark.danger);
+    expect(colorOf(await member.findByText('Leave department'))).toBe(nocturneDark.danger);
   });
 
   it('lets a member leave only after typing DELETE, and shows them no requests', async () => {
     const fake = routeTeam('member');
     fake.always('DELETE /v1/workspaces/{workspaceId}/projects/{projectId}/memberships/{userId}', { removed: true });
     await renderWithProviders(<TeamScreen />, signedInSession);
-    await fireEvent.press(await screen.findByText('Leave team'));
+    await fireEvent.press(await screen.findByText('Leave department'));
     expect(screen.queryByText(/ASKING TO JOIN/u)).toBeNull();
     expect(fake.to('GET /v1/workspaces/{workspaceId}/projects/{projectId}/access-requests')).toHaveLength(0);
-    await pressLast('Leave team');
+    await pressLast('Leave department');
     expect(fake.to('DELETE /v1/workspaces/{workspaceId}/projects/{projectId}/memberships/{userId}')).toHaveLength(0);
 
     await fireEvent.changeText(screen.getByPlaceholderText('Type DELETE'), 'delete');
-    await pressLast('Leave team');
+    await pressLast('Leave department');
     await waitFor(() => expect(mockRouter.back).toHaveBeenCalled());
     expect(fake.to('DELETE /v1/workspaces/{workspaceId}/projects/{projectId}/memberships/{userId}')[0]!.values).toEqual({
       workspaceId: TEST_WORKSPACE,
@@ -381,10 +381,10 @@ describe('One team (24.11.7)', () => {
   it('lets an organization admin who is not on the team see it and decide, with nothing to leave (24.11.3)', async () => {
     routeTeam('admin', { onTeam: false, orgRole: 'admin' });
     await renderWithProviders(<TeamScreen />, signedInSession);
-    expect(await screen.findByText(/You see every team as an organization admin/u)).toBeTruthy();
+    expect(await screen.findByText(/You see every department as an organization admin/u)).toBeTruthy();
     expect(screen.getByText('ASKING TO JOIN · 1')).toBeTruthy();
-    expect(screen.queryByText('Leave team')).toBeNull();
-    expect(screen.queryByText('Delete team')).toBeNull();
+    expect(screen.queryByText('Leave department')).toBeNull();
+    expect(screen.queryByText('Delete department')).toBeNull();
   });
 });
 

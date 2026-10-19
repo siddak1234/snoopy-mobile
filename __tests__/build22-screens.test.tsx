@@ -129,104 +129,104 @@ const stepTitles = () =>
 const layout = async (testID: string, width: number) =>
   fireEvent(screen.getByTestId(testID), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width, height: 38 } } });
 
-describe('Flows and Activity: one title row, the circles beside the title (F1–F3)', () => {
+describe('Flows and Activity: one title row — the title left, the circles and the page\'s controls right (round 23, A1; Build 22, F1–F3)', () => {
   beforeEach(() => routePlatform(platformOperation));
 
-  it('Flows: the title, the two circles, Archived and New — no pills above it', async () => {
+  it('Flows: the title first, then on the right the two circles, Archived (a circle) and New — no pills above it', async () => {
     await renderWithProviders(<FlowsScreen />, signedInSession);
     const row = await screen.findByTestId('title-row');
     expect(within(row).getByText('Flows')).toBeTruthy();
-    const circles = within(screen.getByTestId('title-row-scope'));
-    expect(circles.getByLabelText('Workspace: Acme Operations').props.testID).toBe('title-scope-workspace');
-    expect(circles.getByLabelText('Team: All teams').props.testID).toBe('title-scope-team');
+    expect(row.children[0]).toBe(screen.getByTestId('title-row-title'));
     const right = within(screen.getByTestId('title-row-right'));
-    expect(right.getByText('Archived')).toBeTruthy();
+    // The circles are inside the right group, before the page's controls.
+    const circles = within(screen.getByTestId('title-row-scope'));
+    expect(right.getByTestId('title-row-scope')).toBeTruthy();
+    expect(circles.getByLabelText('Workspace: Acme Operations').props.testID).toBe('title-scope-workspace');
+    expect(circles.getByLabelText('Department: All departments').props.testID).toBe('title-scope-team');
+    const order = right.getAllByTestId(/^(title-scope-workspace|title-scope-team|flows-archived|flows-new)$/u);
+    expect(order.map((node) => node.props.testID)).toEqual(['title-scope-workspace', 'title-scope-team', 'flows-archived', 'flows-new']);
+    expect(right.getByLabelText('Archived').props.testID).toBe('flows-archived');
+    expect(right.queryByText('Archived')).toBeNull();
     expect(right.getByText('New')).toBeTruthy();
     expect(screen.queryByTestId('scope-control')).toBeNull();
-    expect(screen.queryByText('All teams')).toBeNull();
+    expect(screen.queryByText('All departments')).toBeNull();
   });
 
-  it('Activity: the title, the two circles, then All time — no pills above it', async () => {
+  it('Activity: the title first, then on the right the two circles and All time — no pills above it', async () => {
     await renderWithProviders(<ActivityScreen />, signedInSession);
     const row = await screen.findByTestId('title-row');
     expect(within(row).getByText('Activity')).toBeTruthy();
-    expect(within(screen.getByTestId('title-row-scope')).getByLabelText('Team: All teams')).toBeTruthy();
-    expect(within(screen.getByTestId('title-row-right')).getByLabelText('Time range: All time')).toBeTruthy();
+    expect(row.children[0]).toBe(screen.getByTestId('title-row-title'));
+    const right = within(screen.getByTestId('title-row-right'));
+    expect(within(screen.getByTestId('title-row-scope')).getByLabelText('Department: All departments')).toBeTruthy();
+    const order = right.getAllByTestId(/^(title-scope-workspace|title-scope-team|activity-range)$/u);
+    expect(order.map((node) => node.props.testID)).toEqual(['title-scope-workspace', 'title-scope-team', 'activity-range']);
+    expect(right.getByLabelText('Time range: All time')).toBeTruthy();
     expect(screen.queryByTestId('scope-control')).toBeNull();
   });
 
-  it('Archived keeps its word where it fits (380 pt inside the margins) and is its icon alone where it does not (335): the same press', async () => {
+  it('Archived is its circle at every width — no "Archived" word in the row at 420, 375 or 320 pt — and the circle opens the page', async () => {
     await renderWithProviders(<FlowsScreen />, signedInSession);
     await screen.findByTestId('title-row');
-    // "Flows" 78 wide; Archived and New, at full width, 195 — as measured on the owner's phone.
-    await layout('title-row-title', 78);
-    await layout('title-row-right', 195);
-    await layout('title-row', 380);
-    expect(within(screen.getByTestId('title-row-right')).getByText('Archived')).toBeTruthy();
-
-    await layout('title-row', 335);
-    expect(screen.queryByText('Archived')).toBeNull();
-    const circle = screen.getByLabelText('Archived');
-    expect(circle.props.accessibilityRole).toBe('button');
-    expect(StyleSheet.flatten(circle.props.style)).toMatchObject({ width: 38, height: 38, borderRadius: 999, borderWidth: 1 });
-    // New stays as it is.
-    expect(within(screen.getByTestId('title-row-right')).getByText('New')).toBeTruthy();
-    await fireEvent.press(circle);
+    await layout('title-row-title', 79);
+    await layout('title-row-controls', 98);
+    for (const width of [380, 335, 280]) {
+      await layout('title-row', width);
+      expect(within(screen.getByTestId('title-row')).queryByText('Archived')).toBeNull();
+      const circle = screen.getByLabelText('Archived');
+      expect(circle.props.accessibilityRole).toBe('button');
+      expect(StyleSheet.flatten(circle.parent!.props.style)).toMatchObject({ width: 38, height: 38, borderRadius: 999, borderWidth: 1 });
+    }
+    await fireEvent.press(screen.getByLabelText('Archived'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/archived');
-
-    // Room again: the word again — measured at full width, never the circle's.
-    await layout('title-row', 380);
-    expect(within(screen.getByTestId('title-row-right')).getByText('Archived')).toBeTruthy();
   });
 
-  it('a 320-pt phone (280 inside the margins): the title, the two circles, Archived and New still on the one line — New its accent icon, the same press (the Build 22 review)', async () => {
+  it('a 320-pt phone (280 inside the margins): the title, the two circles, Archived and New still on the one line — New its accent circle, the same press', async () => {
     await renderWithProviders(<FlowsScreen />, signedInSession);
     await screen.findByTestId('title-row');
     const accent = StyleSheet.flatten(screen.getByTestId('flows-new').props.style).borderColor;
-    // Inter's widths: "Flows" 79; Archived + New 196 as pills, 124 with Archived a circle (38 + 8 + 78).
+    // Inter's widths: "Flows" 79; Archived's circle and New's pill 124 (38 + 8 + 78); both circles 84.
     await layout('title-row-title', 79);
-    await layout('title-row-right', 196);
+    await layout('title-row-controls', 124);
+    await layout('title-row', 335);
+    expect(within(screen.getByTestId('title-row-right')).getByText('New')).toBeTruthy();
     await layout('title-row', 280);
-    await layout('title-row-right', 124);
-    expect(screen.queryByText('Archived')).toBeNull();
+    await layout('title-row-controls', 84);
     expect(screen.queryByText('New')).toBeNull();
     const right = within(screen.getByTestId('title-row-right'));
-    expect(right.getByLabelText('Archived').props.testID).toBe('flows-archived');
     const add = right.getByLabelText('New');
     expect(add.props.testID).toBe('flows-new');
     expect(add.props.accessibilityRole).toBe('button');
-    // New's accent, as its pill: the ring, and the glyph in it.
-    const ring = StyleSheet.flatten(add.props.style);
+    // New's accent, as its pill: the ring around the circle, and the glyph in it.
+    const ring = StyleSheet.flatten(add.parent!.props.style);
     expect(ring).toMatchObject({ width: 38, height: 38, borderRadius: 999, borderWidth: 1 });
     expect(ring.borderColor).toBe(accent);
-    expect(ring.borderColor).not.toBe(StyleSheet.flatten(screen.getByTestId('title-scope-team').props.style).borderColor);
+    expect(ring.borderColor).not.toBe(StyleSheet.flatten(screen.getByTestId('title-scope-team').parent!.props.style).borderColor);
     // Everything fits: the title, 8, the circles (84), 8, Archived's circle, 8, New's circle.
     expect(79 + 8 + 84 + 8 + 38 + 8 + 38).toBeLessThanOrEqual(280);
     await fireEvent.press(add);
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/add');
 
-    // A 375-pt phone again: New its word, Archived its icon.
-    await layout('title-row-right', 84);
+    // A 375-pt phone again: New its word.
     await layout('title-row', 335);
     expect(within(screen.getByTestId('title-row-right')).getByText('New')).toBeTruthy();
-    expect(screen.queryByText('Archived')).toBeNull();
   });
 
-  it('Activity on a 320-pt phone: the time range is its calendar alone in a circle, read aloud and opening the same card (the Build 22 review)', async () => {
+  it('Activity on a 320-pt phone: the time range is its calendar alone in a circle, read aloud and opening the same drop-down', async () => {
     await renderWithProviders(<ActivityScreen />, signedInSession);
     await screen.findByTestId('title-row');
     // "Activity" 102; All time 118 — 102 + 8 + 84 + 8 + 118 = 320, over the 280 a 320-pt phone leaves.
     await layout('title-row-title', 102);
-    await layout('title-row-right', 118);
+    await layout('title-row-controls', 118);
     await layout('title-row', 335);
     expect(within(screen.getByTestId('title-row-right')).getByText('All time')).toBeTruthy();
     await layout('title-row', 280);
     expect(screen.queryByText('All time')).toBeNull();
     const range = within(screen.getByTestId('title-row-right')).getByLabelText('Time range: All time');
     expect(range.props.testID).toBe('activity-range');
-    expect(StyleSheet.flatten(range.props.style)).toMatchObject({ width: 38, height: 38, borderRadius: 999 });
+    expect(StyleSheet.flatten(range.parent!.props.style)).toMatchObject({ width: 38, height: 38, borderRadius: 999 });
     await fireEvent.press(range);
-    expect(screen.getByTestId('activity-range-dialog')).toBeTruthy();
+    expect(screen.getByTestId('activity-range-menu')).toBeTruthy();
   });
 
   it('the circles sit at the same height on both: the same row, 38 tall and centred, first under the same top padding', async () => {
@@ -545,24 +545,24 @@ describe("a v4 run's page: steps 2, 4 and 5 (S23–S25)", () => {
       .map((node) => node.props.children);
   const stepsDone = () => within(screen.getByText('Steps done').parent!).getAllByText(/\//u)[0]!.props.children;
 
-  it('succeeded and emailed: step 2 the integration, 4 QuickBooks updated, 5 "Sent · {time}" — 5 / 5', async () => {
+  it('succeeded and emailed: step 2 the integration, 4 QuickBooks updated, 5 "Email sent · {time}" — 5 / 5', async () => {
     const all = invoiceProcessingV4Entry().pipeline.map((declared) => declared.id);
     await openRun('succeeded', all, { status: 'sent', sentAt: SENT });
     expect(await screen.findByTestId('run-step-group:email')).toBeTruthy();
     expect(step('connect')).toEqual(['2 · Connect integration', 'QuickBooks Online']);
     expect(step('record')[0]).toBe('4 · QuickBooks updated');
-    expect(step('email')).toEqual(['5 · Email sent', `Sent · ${timeOfDay(SENT)}`]);
+    expect(step('email')).toEqual(['5 · Email sent', `Email sent · ${timeOfDay(SENT)}`]);
     expect(stepsDone()).toBe('5 / 5');
   });
 
-  it('succeeded, its email owed: "Sending…" — 4 / 5; None says None and Details saved', async () => {
+  it('succeeded, its email owed: "Sending email…" — the run completed, 5 / 5 (round 23, A7); None says None and Details saved', async () => {
     const all = invoiceProcessingV4Entry().pipeline.map((declared) => declared.id);
     await openRun('succeeded', all, { status: 'waiting', sentAt: null }, 'none');
     expect(await screen.findByTestId('run-step-group:email')).toBeTruthy();
     expect(step('connect')).toEqual(['2 · Connect integration', 'None']);
     expect(step('record')[0]).toBe('4 · Details saved');
-    expect(step('email')).toEqual(['5 · Email sent', 'Sending…']);
-    expect(stepsDone()).toBe('4 / 5');
+    expect(step('email')).toEqual(['5 · Email sent', 'Sending email…']);
+    expect(stepsDone()).toBe('5 / 5');
   });
 
   it('running: 5 Waiting; cancelled: 5 Stopped', async () => {

@@ -1,14 +1,15 @@
 import { useRouter } from 'expo-router';
-import { FlowArrow, MagnifyingGlass } from 'phosphor-react-native';
+import { FlowArrow, MagnifyingGlass, SquaresFour } from 'phosphor-react-native';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Dropdown } from '@/components/dropdown';
 import { BackCircle } from '@/components/nocturne/back-circle';
-import { FilterChip } from '@/components/nocturne/filter-chip';
 import { IconTile } from '@/components/nocturne/icon-tile';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
+import { ScopePill } from '@/components/scope-control';
 import { ScreenEmpty, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { em, fonts, iconSize, layout, status, typeScale, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
@@ -24,6 +25,9 @@ import { readCatalog } from '@/lib/platform/catalog';
 import { readProjects } from '@/lib/platform/projects';
 import { readSubscriptions } from '@/lib/platform/runs';
 import { catalogPrice, heldAs, scopeLabel, scopeLabels, toSolutions, withoutArchived } from '@/lib/view/catalog';
+
+/** A category as the drop-down says it: the catalog's "All" is All categories (S5). */
+const categoryLabel = (category: string) => (category === 'All' ? 'All categories' : category);
 
 /**
  * "New" — the catalog, inside Flows (BUILD-PLAN 24.9.3; the owner's feedback 4
@@ -44,6 +48,7 @@ export default function AddFlowScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [category, setCategory] = useState('All');
+  const [categoryOpen, setCategoryOpen] = useState(false);
 
   const catalog = useWorkspaceResource(async (id) => {
     const [catalogResponse, subscriptions, projects] = await Promise.all([
@@ -114,11 +119,31 @@ export default function AddFlowScreen() {
         </View>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
-        {chips.map((f) => (
-          <FilterChip key={f} label={f} active={f === category} onPress={() => setCategory(f)} />
-        ))}
-      </ScrollView>
+      {/* The category, one drop-down where the chips were (round 23, the
+          owner's build 22 items 3–4): All categories, then each (S5). */}
+      <View style={styles.filters}>
+        <Dropdown
+          testID="add-category"
+          title="Category"
+          options={chips.map((f) => ({ value: f, label: categoryLabel(f) }))}
+          value={category}
+          open={categoryOpen}
+          onOpenChange={setCategoryOpen}
+          onChange={(next) => {
+            setCategory(next);
+            setCategoryOpen(false);
+          }}
+          trigger={
+            <ScopePill
+              testID="add-category"
+              icon={SquaresFour}
+              label={categoryLabel(category)}
+              accessibilityLabel={`Category: ${categoryLabel(category)}`}
+              onPress={() => setCategoryOpen(true)}
+            />
+          }
+        />
+      </View>
 
       <View style={styles.list}>
         {visible.map((sol) => {

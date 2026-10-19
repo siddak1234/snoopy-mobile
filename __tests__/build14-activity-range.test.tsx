@@ -94,7 +94,7 @@ const rows = () => screen.queryAllByTestId(/^activity-row-/u).map((row) => Strin
 /** Open the time range's card and choose one. */
 async function choose(range: 'all' | 'today' | 'week' | 'month') {
   await fireEvent.press(screen.getByTestId('activity-range'));
-  await fireEvent.press(within(screen.getByTestId('activity-range-dialog')).getByTestId(`activity-range-${range}`));
+  await fireEvent.press(within(screen.getByTestId('activity-range-menu')).getByTestId(`activity-range-${range}`));
 }
 
 describe('where each range begins (rangeStart)', () => {
@@ -130,15 +130,15 @@ describe("Activity's time range (the owner's build 13 decision 4)", () => {
     for (const day of ['TODAY', 'YESTERDAY', 'EARLIER']) expect(screen.getByText(day)).toBeTruthy();
   });
 
-  it("the button ticks and opens its card — All time, Today, Week and Month, each saying what it spans, the one chosen ticked — and Done closes it, changing nothing", async () => {
+  it("the button ticks and opens its card — All time, Today, Week and Month, each saying what it spans, the one chosen ticked — and a tap outside closes it, changing nothing", async () => {
     await renderWithProviders(<ActivityScreen />, signedInSession);
     await screen.findByLabelText('Time range: All time');
 
     await fireEvent.press(screen.getByTestId('activity-range'));
     expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
-    const card = screen.getByTestId('activity-range-dialog');
+    const card = screen.getByTestId('activity-range-menu');
     expect(within(card).getAllByText(/./u).map((node) => node.props.children)).toEqual([
-      'Time range',
+      'TIME RANGE',
       'All time',
       'Every run',
       'Today',
@@ -147,14 +147,13 @@ describe("Activity's time range (the owner's build 13 decision 4)", () => {
       'The last 7 days',
       'Month',
       'The last 30 days',
-      'Done',
     ]);
     expect(within(within(card).getByTestId('activity-range-all')).getByTestId('activity-range-chosen')).toBeTruthy();
     expect(within(card).getAllByTestId('activity-range-chosen')).toHaveLength(1);
     const reads = platformOperation.mock.calls.length;
 
-    await fireEvent.press(within(card).getByText('Done'));
-    expect(screen.queryByTestId('activity-range-dialog')).toBeNull();
+    await fireEvent.press(screen.getByTestId('activity-range-backdrop'));
+    expect(screen.queryByTestId('activity-range-menu')).toBeNull();
     expect(screen.getByLabelText('Time range: All time')).toBeTruthy();
     expect(rows()).toHaveLength(7);
     expect(platformOperation.mock.calls.length).toBe(reads);
@@ -166,7 +165,7 @@ describe("Activity's time range (the owner's build 13 decision 4)", () => {
     await screen.findByLabelText('Time range: All time');
 
     await choose('today');
-    expect(screen.queryByTestId('activity-range-dialog')).toBeNull();
+    expect(screen.queryByTestId('activity-range-menu')).toBeNull();
     expect(screen.getByLabelText('Time range: Today')).toBeTruthy();
     expect(rows()).toEqual(['today-ok', 'today-failed']);
     expect(screen.queryByText('YESTERDAY')).toBeNull();
@@ -183,7 +182,7 @@ describe("Activity's time range (the owner's build 13 decision 4)", () => {
     expect(
       within(screen.getByTestId('activity-range-month')).getByTestId('activity-range-chosen'),
     ).toBeTruthy();
-    await fireEvent.press(within(screen.getByTestId('activity-range-dialog')).getByTestId('activity-range-all'));
+    await fireEvent.press(within(screen.getByTestId('activity-range-menu')).getByTestId('activity-range-all'));
 
     expect(screen.getByLabelText('Time range: All time')).toBeTruthy();
     expect(rows()).toHaveLength(7);
@@ -194,13 +193,16 @@ describe("Activity's time range (the owner's build 13 decision 4)", () => {
     await screen.findByLabelText('Time range: All time');
 
     await choose('week');
-    await fireEvent.press(screen.getByText('Failed'));
+    await fireEvent.press(screen.getByTestId('activity-outcome'));
+    await fireEvent.press(screen.getByTestId('activity-outcome-option-Failed'));
     expect(rows()).toEqual(['today-failed', 'yesterday-failed']);
 
     await choose('month');
     expect(rows()).toEqual(['today-failed', 'yesterday-failed', 'month-failed']);
 
-    await fireEvent.press(screen.getByText('Success'));
+    await fireEvent.press(screen.getByTestId('activity-outcome'));
+
+    await fireEvent.press(screen.getByTestId('activity-outcome-option-Success'));
     expect(screen.getByLabelText('Time range: Month')).toBeTruthy();
     expect(rows()).toEqual(['today-ok', 'week-ok', 'month-ok']);
 
@@ -208,7 +210,8 @@ describe("Activity's time range (the owner's build 13 decision 4)", () => {
     expect(rows()).toEqual(['today-ok']);
 
     await choose('all');
-    await fireEvent.press(screen.getByText('Failed'));
+    await fireEvent.press(screen.getByTestId('activity-outcome'));
+    await fireEvent.press(screen.getByTestId('activity-outcome-option-Failed'));
     expect(rows()).toEqual(['today-failed', 'yesterday-failed', 'month-failed', 'older-failed']);
   });
 
@@ -226,7 +229,8 @@ describe("Activity's time range (the owner's build 13 decision 4)", () => {
       await choose(range);
       expect([range, screen.queryByText(line) !== null, rows()]).toEqual([range, true, []]);
     }
-    await fireEvent.press(screen.getByText('Failed'));
+    await fireEvent.press(screen.getByTestId('activity-outcome'));
+    await fireEvent.press(screen.getByTestId('activity-outcome-option-Failed'));
     expect(screen.getByText('No failed runs in the last 30 days.')).toBeTruthy();
     await choose('week');
     expect(screen.getByText('No failed runs in the last 7 days.')).toBeTruthy();
@@ -256,13 +260,16 @@ describe("Activity's time range (the owner's build 13 decision 4)", () => {
 
     // The tab bar arrives with nothing: the screen draws again, the range as it was.
     setMockParams({});
-    await fireEvent.press(view.getByText('Failed'));
+    await fireEvent.press(view.getByTestId('activity-outcome'));
+    await fireEvent.press(view.getByTestId('activity-outcome-option-Failed'));
     expect(view.getByLabelText('Time range: Month')).toBeTruthy();
     expect(rows()).toEqual(['today-failed', 'yesterday-failed', 'month-failed']);
 
     // A flow page's tile counts all time: it brings All time, as it brought no day before.
     setMockParams({ flow: 'invoice', flowName: 'Invoice triage', filter: 'All' });
-    await fireEvent.press(view.getByText('Success'));
+    // Any press draws the screen again: the outcome's menu opened and closed.
+    await fireEvent.press(view.getByTestId('activity-outcome'));
+    await fireEvent.press(view.getByTestId('activity-outcome-backdrop'));
     expect(await view.findByText('Invoice triage ✕')).toBeTruthy();
     expect(view.getByLabelText('Time range: All time')).toBeTruthy();
     expect(rows()).toHaveLength(7);

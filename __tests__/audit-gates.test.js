@@ -60,7 +60,7 @@ describe('architecture audit scripts', () => {
   });
 
   it('fails static, side-effect, dynamic, CommonJS, and relative fixture imports', () => {
-    // No `lib/fixtures.ts` is written here any more: the module existing inside
+    // No ~~`lib/fixtures.ts`~~ is written here any more: the module existing inside
     // a runtime root is itself a failure now, so creating one would assert the
     // opposite of the rule. The gate resolves the specifier rather than statting
     // the file, so an import is detected whether or not a target exists — which
@@ -317,6 +317,38 @@ describe('the vocabulary audit: Build 21', () => {
     );
     expect(run(vocabularyAudit).status).toBe(0);
     rmSync(join(root, 'lib/platform-code.ts'));
+  });
+});
+
+describe('the vocabulary audit: round 23', () => {
+  it('fails copy that says "team" — a person reads Department — and passes the code that keeps the name', () => {
+    expect(run(vocabularyAudit).status).toBe(0);
+
+    for (const [file, source] of [
+      ['app/teams.tsx', 'export const A = () => <Text>All teams</Text>;'],
+      ['lib/content/team.ts', "export const B = 'Team: Legal';"],
+      ['components/leave.tsx', 'export const C = () => <Row title="Leave team" />;'],
+      ['lib/content/empty.ts', "export const D = 'No runs in this team yet.';"],
+    ]) {
+      mkdirSync(dirname(join(root, file)), { recursive: true });
+      writeFileSync(join(root, file), source);
+      const result = run(vocabularyAudit);
+      expect([file, result.status]).toEqual([file, 1]);
+      expect(result.stderr).toContain(file);
+      rmSync(join(root, file));
+    }
+
+    writeFileSync(
+      join(root, 'lib/words-ok.ts'),
+      [
+        '// ~~All teams~~ until round 23: a comment is never copy.',
+        "export const route = '/(tabs)/settings/teams';",
+        "export const id = 'scope-team';",
+        "export const LABEL = 'All departments';",
+      ].join('\n'),
+    );
+    expect(run(vocabularyAudit).status).toBe(0);
+    rmSync(join(root, 'lib/words-ok.ts'));
   });
 });
 
