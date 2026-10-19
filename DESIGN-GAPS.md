@@ -1895,6 +1895,7 @@ Deployed contract check (it reads production).
 | A5 · a link while the app is open keeps the open screen | `/` returned when not `initial` | `round23` "while the app is open…", `real-router/app-links` "a link that arrives on Sign in…" |
 | A5 · a link opens, switched first | the link's open removed (`hooks/use-push-registration.tsx`) | `push-registration` the three link cases |
 | A5 · the opening link once | the once-check removed | `push-registration` "…opens once signed in, and only once" |
+| A5 · a link heard on Sign in opens once signed in | `useLinkHolder` not mounted (`app/_layout.tsx`) | `real-router/app-links` all four, "…and opens the run once signed in" among them |
 | A5 · Android's path prefixes | `/runs/` removed (`app.config.js`) | `app-config` "derives both native link claims…" |
 | A8 · a completed run's tap | `run-succeeded` dropped from `targetOf` | `push-registration` "a \"Run completed\" push…" |
 | B1 · "team" is not copy | `teams?` out of `RETIRED` (`scripts/audit-vocabulary.mjs`) | `audit-gates` "the vocabulary audit: round 23" |

@@ -66,13 +66,6 @@ import {
 
 
 /**
- * One row of STEPS (Build 21, spec A7; the owner's build 20 item 10: "It
- * shoukd show all the steps and a live tracker of which ones are done"): "2 ·
- * Read", its state's icon at 24 and its state in words — Waiting, Working…,
- * Done and when, Waiting for approval and why, the run's failure, Skipped or
- * Stopped — never a step's own summary and never a step id (B6).
- */
-/**
  * A working step's icon turns (round 23, A4 — the owner's build 22 item 7: the
  * running step spins): a full turn every 900 ms, steadily, for as long as the
  * step works; still under Reduce Motion.
@@ -93,6 +86,13 @@ function StepSpinner({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * One row of STEPS (Build 21, spec A7; the owner's build 20 item 10: "It
+ * shoukd show all the steps and a live tracker of which ones are done"): "2 ·
+ * Read", its state's icon at 24 and its state in words — Waiting, Working…,
+ * Done and when, Waiting for approval and why, the run's failure, Skipped or
+ * Stopped — never a step's own summary and never a step id (B6).
+ */
 function TrackerStep({ row, divider }: { row: TrackerRow; divider: boolean }) {
   const { palette } = useTheme();
   const tone =

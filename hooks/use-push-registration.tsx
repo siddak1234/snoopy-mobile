@@ -52,6 +52,14 @@ let heardToken: string | null = null;
 let openedResponse: string | null = null;
 /** The link the app was opened with, once opened, so it never opens again (round 23, A5). */
 let openedInitialLink: string | null = null;
+/**
+ * The newest run or approval link heard while the app runs and not yet opened
+ * (round 23's review): heard on Sign in or behind the Face ID lock, where the
+ * signed-in tree is not mounted, it waits here for the session to open.
+ */
+let heldLink: string | null = null;
+/** The signed-in tree's taker, told when a link is held; one at a time. */
+let takeHeldLink: (() => void) | null = null;
 
 function update(next: Partial<Shared>): void {
   shared = { ...shared, ...next };
@@ -232,9 +240,10 @@ function targetOf(data: PushData): Href | null {
  * item 8: "email → app link"): `https://<the app's link host>/runs/<id>?workspace=<id>`
  * the run's page, `/approvals/<id>?workspace=<id>` Approvals, each in the
  * workspace it names (`switchFor`), as a push's tap. Anything else — another
- * host, another path, an id that is not one — opens nothing here; the router
- * keeps its own handling (`app/+native-intent.tsx` sends these two to Home
- * first, so it never shows "unmatched").
+ * host, another path, an id that is not one — opens nothing here. The router
+ * never opens these two itself (`app/+native-intent.tsx`): a link that starts
+ * the app starts at `/`, the splash, and one that arrives while it runs is
+ * dropped, leaving the open screen where it is.
  */
 export function linkTargetOf(
   link: string,
@@ -254,6 +263,23 @@ export function linkTargetOf(
   const target: Href =
     match[1] === 'runs' ? { pathname: '/(tabs)/(home)/run', params: { runId: match[2]! } } : '/(tabs)/activity/approvals';
   return { target, workspaceId };
+}
+
+/**
+ * The root layout's half (`app/_layout.tsx`): hears every link while the app
+ * runs, signed in or not, and holds the newest run or approval link for the
+ * signed-in tree, which opens it at once when mounted, or once the session
+ * opens — a link that arrives on Sign in or behind the lock is not lost.
+ */
+export function useLinkHolder(): void {
+  useEffect(() => {
+    const heard = Linking.addEventListener('url', (event) => {
+      if (!linkTargetOf(event.url, linkHost())) return;
+      heldLink = event.url;
+      takeHeldLink?.();
+    });
+    return () => heard.remove();
+  }, []);
 }
 
 /** The app's link host: the login callback's (`app.config.js` claims the one host for both). */
@@ -381,7 +407,8 @@ export function usePushRegistration(signedIn: boolean): void {
   }, [signedIn, openIn]);
 
   // A link opens the same way (round 23, A5): the one the app was opened with,
-  // once, and each one while it runs — once signed in and past the lock.
+  // once, and each one `useLinkHolder` holds while it runs — heard before the
+  // session opened too — once signed in and past the lock.
   useEffect(() => {
     if (!signedIn) return;
     let live = true;
@@ -395,14 +422,25 @@ export function usePushRegistration(signedIn: boolean): void {
       const found = linkTargetOf(link, host);
       if (found) openIn(found.target, found.workspaceId, () => live);
     };
-    const heard = Linking.addEventListener('url', (event) => open(event.url, false));
+    const take = () => {
+      const link = heldLink;
+      heldLink = null;
+      open(link, false);
+    };
+    takeHeldLink = take;
+    // A link held before the session opened is taken with the one the app was
+    // opened with, after the sign-in's or the lock's own way to Home has run,
+    // as a push's tap waits for its answer — taken at once, Home replaced it.
     void Linking.getInitialURL().then(
-      (link) => open(link, true),
-      () => undefined,
+      (link) => {
+        open(link, true);
+        take();
+      },
+      () => take(),
     );
     return () => {
       live = false;
-      heard.remove();
+      if (takeHeldLink === take) takeHeldLink = null;
     };
   }, [signedIn, openIn]);
 
@@ -533,4 +571,6 @@ export function resetPushForTests(): void {
   listeners = [];
   openedResponse = null;
   openedInitialLink = null;
+  heldLink = null;
+  takeHeldLink = null;
 }

@@ -17,6 +17,7 @@ import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 
 import { fonts, nocturneDark, nocturneLight } from '@/constants/theme';
+import { useLinkHolder } from '@/hooks/use-push-registration';
 import { ScopeProvider } from '@/hooks/use-scope';
 import { SessionProvider, useSession, type SessionContextValue } from '@/hooks/use-session';
 import { SolutionsProvider } from '@/hooks/use-solutions';
@@ -84,6 +85,8 @@ function RootNavigator() {
   const { palette } = useTheme();
   const session = useSession();
   useOpenScreen(session);
+  // A run or approval link heard on Sign in or behind the lock waits for the session (round 23).
+  useLinkHolder();
   return (
     <ThemeProvider value={palette.scheme === 'dark' ? navDark : navLight}>
       <Stack

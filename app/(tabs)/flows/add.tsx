@@ -26,6 +26,9 @@ import { readProjects } from '@/lib/platform/projects';
 import { readSubscriptions } from '@/lib/platform/runs';
 import { catalogPrice, heldAs, scopeLabel, scopeLabels, toSolutions, withoutArchived } from '@/lib/view/catalog';
 
+/** A category as the drop-down says it: the catalog's "All" is All categories (S5). */
+const categoryLabel = (category: string) => (category === 'All' ? 'All categories' : category);
+
 /**
  * "New" — the catalog, inside Flows (BUILD-PLAN 24.9.3; the owner's feedback 4
  * and 5 of 2026-10-02: "name them flows… the new gives us a list of all flows
@@ -40,9 +43,6 @@ import { catalogPrice, heldAs, scopeLabel, scopeLabels, toSolutions, withoutArch
  * in any team or the whole workspace, reads "Added ✓" with its team and opens
  * itself.
  */
-/** A category as the drop-down says it: the catalog's "All" is All categories (S5). */
-const categoryLabel = (category: string) => (category === 'All' ? 'All categories' : category);
-
 export default function AddFlowScreen() {
   const { palette } = useTheme();
   const router = useRouter();

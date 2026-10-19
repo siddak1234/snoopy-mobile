@@ -6,7 +6,17 @@ import { Linking } from 'react-native';
 
 import { redirectSystemPath } from '@/app/+native-intent';
 import { flowCatalogPayload } from '@/test/platform';
-import { SESSION, WORKSPACE, answerPlatform, flush, kept, launch, signedInOnThisPhone } from '@/test/real-router';
+import {
+  SESSION,
+  WORKSPACE,
+  answerPlatform,
+  asInProduction,
+  flush,
+  kept,
+  launch,
+  press,
+  signedInOnThisPhone,
+} from '@/test/real-router';
 
 /**
  * An email's or a push's link opens the app (round 23, A5 — the owner's build
@@ -27,7 +37,7 @@ beforeEach(() => {
   nativeAuth.nativeRedirectUri = () => 'https://app.autom8x.ai/auth/native/callback';
 });
 
-/** The link listener the signed-in tree set up. */
+/** The link listener the root layout set up (`useLinkHolder`), which hands the link to the signed-in tree. */
 function heard(url: string) {
   const calls = (Linking.addEventListener as jest.Mock).mock.calls.filter(([type]) => type === 'url');
   return (calls.at(-1)![1] as (event: { url: string }) => void)({ url });
@@ -130,10 +140,12 @@ it('a run link that arrives while the app is open opens the run from the tabs, n
   expect(view.getSearchParams()).toMatchObject({ runId: 'run-0' });
 });
 
-it('a link that arrives on Sign in leaves Sign in where it is, never sending it to the cover', async () => {
+it('a link that arrives on Sign in leaves Sign in where it is, never sending it to the cover, and opens the run once signed in', async () => {
   kept.clear();
-  answerPlatform({}, {});
-  const view = await launch('/login');
+  answerPlatform({}, { '/automations': flowCatalogPayload() });
+  // Signed out, the cover; Get started replaces it with Sign in, as on a phone.
+  const view = await launch();
+  await press('Get started');
   const before = view.getSegments();
   expect(before).toEqual(['(auth)', 'login']);
 
@@ -145,4 +157,12 @@ it('a link that arrives on Sign in leaves Sign in where it is, never sending it 
   await flush(100);
   await flush(2500);
   expect(view.getSegments()).toEqual(before);
+
+  // Held, not lost (round 23's review): the sign-in opens the session, and the run with it.
+  await asInProduction(async () => {
+    await press('Sign in with Google');
+  });
+  await flush(1000);
+  expect(view.getPathname()).toBe('/run');
+  expect(view.getSearchParams()).toMatchObject({ runId: 'run-0' });
 });

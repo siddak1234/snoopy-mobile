@@ -6,7 +6,7 @@ import { CodedError } from 'expo-modules-core';
 import TabLayout from '@/app/(tabs)/_layout';
 import NotificationsScreen from '@/app/(tabs)/(home)/notifications';
 import NotificationSettingsScreen from '@/app/(tabs)/settings/notifications';
-import { resetPushForTests } from '@/hooks/use-push-registration';
+import { resetPushForTests, useLinkHolder } from '@/hooks/use-push-registration';
 import {
   SessionContext,
   activeWorkspaceId,
@@ -579,6 +579,12 @@ describe('Device push: a tap opens in its own workspace (build 11)', () => {
     return null;
   }
 
+  /** The root layout's link holder (`app/_layout.tsx`), which hears links for the signed-in tree. */
+  function LinkHolder() {
+    useLinkHolder();
+    return null;
+  }
+
   /** The signed-in tree, over a session that is read again as the provider's is. */
   function Switchable() {
     const [active, setActive] = useState(TEST_WORKSPACE);
@@ -592,6 +598,7 @@ describe('Device push: a tap opens in its own workspace (build 11)', () => {
     return (
       <SessionContext.Provider value={session}>
         <Drawn />
+        <LinkHolder />
         <TabLayout />
       </SessionContext.Provider>
     );
@@ -754,7 +761,7 @@ describe('Device push: a tap opens in its own workspace (build 11)', () => {
     expect(openedIn).toEqual([OTHER]);
   });
 
-  /** The link listener the signed-in tree set up (round 23, A5). */
+  /** The link listener the root layout's holder set up (round 23, A5), which hands the link to the signed-in tree. */
   const linkHeard = () => {
     const calls = (Linking.addEventListener as jest.Mock).mock.calls.filter(([type]) => type === 'url');
     return calls.at(-1)![1] as (event: { url: string }) => void;
