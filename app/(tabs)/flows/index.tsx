@@ -151,8 +151,7 @@ export default function FlowsScreen() {
         { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) },
       ]}>
       {/* [Archived][New]: Archived secondary, so New stays the one accent control.
-          Narrower, Archived is its icon (S26); narrower still — a 320-pt phone —
-          New is its icon too, in its accent (the Build 22 review's M11). */}
+          Archived always its circle; at 320 pt New is its accent circle too. */}
       <TitleRow
         title="Flows"
         levels={1}

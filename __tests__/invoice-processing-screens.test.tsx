@@ -1,6 +1,6 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import React from 'react';
-import { Platform, Share, StyleSheet } from 'react-native';
+import { AccessibilityInfo, Platform, Share, StyleSheet } from 'react-native';
 
 import RunDetailScreen from '@/app/(tabs)/(home)/run';
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
@@ -573,6 +573,38 @@ describe('Set up — one simple page, once, everything on it (the owner\'s AM4)'
     await fireEvent.press(row);
     expect(mockConnect).not.toHaveBeenCalled();
   });
+
+  it('a member on a live flow (round 23, B3): the integration is read-only — no row is a choice, and the list says who can change it', async () => {
+    const fake = fakePlatform(platformOperation);
+    const live = added({ vendor: 'quickbooks', holdAboveAmount: 500 });
+    routeSetup(fake, () => [live], () => [quickbooks()]);
+    setMockParams({ template: 'invoice-processing', flow: 'ip-1' });
+    await renderWithProviders(<SetupScreen />, sessionAs('member'));
+    expect(await screen.findByTestId('vendor-chosen-quickbooks')).toBeTruthy();
+    expect(screen.getByTestId('vendor-read-only')).toHaveTextContent('Only an owner or admin can change the integration.');
+    for (const id of ['vendor-quickbooks', 'vendor-none']) {
+      const row = screen.getByTestId(id);
+      expect([id, row.props.accessibilityState]).toEqual([id, expect.objectContaining({ disabled: true })]);
+      await fireEvent.press(row);
+    }
+    // The choice did not move.
+    expect(screen.getByTestId('vendor-chosen-quickbooks')).toBeTruthy();
+    expect(screen.queryByTestId('vendor-chosen-none')).toBeNull();
+    expect(mockConnect).not.toHaveBeenCalled();
+  });
+
+  it('a member adding a flow still chooses its integration (ADR-0036): no read-only line, None is a choice', async () => {
+    const fake = fakePlatform(platformOperation);
+    routeSetup(fake, () => [], () => [quickbooks()]);
+    setMockParams({ template: 'invoice-processing' });
+    await renderWithProviders(<SetupScreen />, sessionAs('member'));
+    expect(await screen.findByTestId('vendor-quickbooks')).toBeTruthy();
+    expect(screen.queryByTestId('vendor-read-only')).toBeNull();
+    await fireEvent.press(screen.getByTestId('vendor-quickbooks'));
+    await waitFor(() => expect(screen.getByTestId('vendor-chosen-quickbooks')).toBeTruthy());
+    await fireEvent.press(screen.getByTestId('vendor-none'));
+    await waitFor(() => expect(screen.getByTestId('vendor-chosen-none')).toBeTruthy());
+  });
 });
 
 describe("Turn on, the first add of a category's flow (U2; the review of the Invoice Processing screens)", () => {
@@ -761,6 +793,28 @@ describe("a run's page — every step from the start, a live tracker (spec A7; t
     expect(within(steps).getAllByTestId('run-step-spinner')).toHaveLength(1);
     expect(within(screen.getByText('Steps done').parent!).getByText('0 / 4')).toBeTruthy();
     expect(screen.queryByText('No steps reported yet.')).toBeNull();
+  });
+
+  it.each([
+    [false, 'turns'],
+    [true, 'stands still under Reduce Motion'],
+  ])('the working step\'s icon (round 23, A4), Reduce Motion %s: it %s', async (reduced) => {
+    // The system's answer, then react-native's own mock's again (a spy's restore would leave it answering nothing).
+    const motion = AccessibilityInfo.isReduceMotionEnabled as jest.Mock;
+    const asItWas = motion.getMockImplementation();
+    motion.mockResolvedValue(reduced);
+    try {
+      await openRun(ipRun('pending', []));
+      const spinner = await screen.findByTestId('run-step-spinner');
+      await act(async () => {
+        await new Promise((settle) => setTimeout(settle, 300));
+      });
+      const turned = (spinner.props.jestAnimatedStyle.value as { transform: [{ rotate: string }] }).transform[0].rotate;
+      if (reduced) expect(turned).toBe('0deg');
+      else expect(turned).not.toBe('0deg');
+    } finally {
+      motion.mockImplementation(asItWas);
+    }
   });
 
   it('while running: done groups say Done and when, the next Working…, and Steps done never runs ahead (fb10\'s "1 / 1" impossible)', async () => {

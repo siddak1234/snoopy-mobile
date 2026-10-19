@@ -304,7 +304,8 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   tap's run or Approvals — and since round 23 an email's or a push's link,
   `https://<the callback's host>/runs/<id>?workspace=<id>` or
   `/approvals/<id>?workspace=<id>`, in the workspace it names
-  (`linkTargetOf`; `app/+native-intent.tsx` sends both paths to Home first;
+  (`linkTargetOf`; `app/+native-intent.tsx` sends both paths to the splash when
+  they start the app, and leaves the open screen when it is already open;
   `app.config.js` adds the two Android path prefixes, iOS's `applinks` claim
   covers them); the inbox's card is the only ask. Android and a
   simulator register nothing. The library's own request to Expo's token service

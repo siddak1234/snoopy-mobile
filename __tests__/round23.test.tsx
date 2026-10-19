@@ -1,6 +1,6 @@
-import { fireEvent, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen } from '@testing-library/react-native';
 import React from 'react';
-import { Dimensions, Platform, StyleSheet, Text } from 'react-native';
+import { AccessibilityInfo, Dimensions, Platform, StyleSheet, Text } from 'react-native';
 
 import { redirectSystemPath } from '@/app/+native-intent';
 import { Dropdown, placeDropdown } from '@/components/dropdown';
@@ -147,6 +147,28 @@ describe('Dropdown (A2): a menu on its trigger', () => {
     expect(screen.queryByTestId('pick-menu')).toBeNull();
   });
 
+  it.each([
+    [false, [{ scale: 1 }]],
+    [true, []],
+  ])('opening it, Reduce Motion %s: it fades in, and grows only with motion (transform %j)', async (reduced, transform) => {
+    // The system's answer, then react-native's own mock's again (a spy's restore would leave it answering nothing).
+    const motion = AccessibilityInfo.isReduceMotionEnabled as jest.Mock;
+    const asItWas = motion.getMockImplementation();
+    motion.mockResolvedValue(reduced);
+    try {
+      await renderWithProviders(<Menu />);
+      await fireEvent.press(screen.getByTestId('pick-trigger'));
+      await act(async () => {
+        await new Promise((settle) => setTimeout(settle, 300));
+      });
+      // The panel: the animated view around the menu's glass.
+      const panel = screen.getByTestId('pick-menu').parent!;
+      expect(panel.props.jestAnimatedStyle.value).toEqual({ opacity: 1, transform });
+    } finally {
+      motion.mockImplementation(asItWas);
+    }
+  });
+
   it('a tap outside closes it, choosing nothing — unless it is locked', async () => {
     const onChange = jest.fn();
     const view = await renderWithProviders(<Menu onChange={onChange} />);
@@ -192,7 +214,7 @@ describe('Dropdown (A2): a menu on its trigger', () => {
   });
 });
 
-describe('links (A5): the router sends a run or approval link to Home; the app opens it', () => {
+describe('links (A5): the router starts at the splash on a run or approval link, or stays when open; the app opens it', () => {
   it.each([
     ['https://app.autom8x.ai/runs/run-7?workspace=5d0f3a8e-2c41-4b7a-9e15-0a6c3f2b7d94', '/'],
     ['https://app.autom8x.ai/approvals/apr-1?workspace=5d0f3a8e-2c41-4b7a-9e15-0a6c3f2b7d94', '/'],
@@ -205,6 +227,15 @@ describe('links (A5): the router sends a run or approval link to Home; the app o
     ['/settings', '/settings'],
   ])('%s → %s', (path, to) => {
     expect(redirectSystemPath({ path, initial: true })).toBe(to);
+  });
+
+  it.each([
+    ['https://app.autom8x.ai/runs/run-7?workspace=5d0f3a8e-2c41-4b7a-9e15-0a6c3f2b7d94', ''],
+    ['/approvals/apr-1/', ''],
+    ['/auth/native/callback?code=abc&state=xyz', '/auth/native/callback?code=abc&state=xyz'],
+    ['/settings', '/settings'],
+  ])('while the app is open: %s → %j (the open screen stays)', (path, to) => {
+    expect(redirectSystemPath({ path, initial: false })).toBe(to);
   });
 
   const HOST = 'app.autom8x.ai';

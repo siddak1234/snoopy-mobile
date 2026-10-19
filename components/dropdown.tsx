@@ -123,8 +123,8 @@ export function Dropdown<T extends string>({
   busyValue?: T | null;
   busyLabel?: string;
   locked?: boolean;
-  /** A last row in the accent (Reload session); `hidden` while it is not owed, so its press is always written where `audit:presses` reads it. */
-  footer?: { label: string; onPress: () => void; testID: string; hidden?: boolean };
+  /** A last row in the accent (Reload session); `hidden` while it is not owed, so its press is always written where `audit:presses` reads it; `disabled` while it works. */
+  footer?: { label: string; onPress: () => void; testID: string; hidden?: boolean; disabled?: boolean };
 }) {
   const { palette } = useTheme();
   const screen = useWindowDimensions();
@@ -264,6 +264,8 @@ export function Dropdown<T extends string>({
                   <Pressable
                     testID={footer.testID}
                     accessibilityRole="menuitem"
+                    accessibilityState={{ disabled: footer.disabled === true }}
+                    disabled={footer.disabled}
                     onPress={footer.onPress}
                     style={({ pressed }) => [
                       styles.row,

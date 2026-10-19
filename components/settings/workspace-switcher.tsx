@@ -176,7 +176,13 @@ export function WorkspaceSwitcher({
       busyLabel="Switching…"
       locked={switching !== null}
       status={status}
-      footer={{ label: 'Reload session', onPress: retrySessionReload, testID: 'workspace-reload', hidden: !reloadOwed }}
+      footer={{
+        label: switching === 'reload' ? 'Working…' : 'Reload session',
+        onPress: retrySessionReload,
+        testID: 'workspace-reload',
+        hidden: !reloadOwed,
+        disabled: switching !== null,
+      }}
     />
   );
 }

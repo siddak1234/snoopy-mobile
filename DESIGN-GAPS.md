@@ -1832,7 +1832,8 @@ read-only.
   card, the four outcome chips (All runs · Success · Needs review · Failed, `ACTIVITY_FILTER_LABEL`; S4),
   Add a flow's category chips (All categories, then each; S5), Show (title Department, All departments
   then each, its load error in it) and the workspace switcher (controlled; title Workspace; Switching…
-  and `locked`; Reload session at its foot when owed). S3: the two cards' explanatory sentences are
+  and `locked`; Reload session at its foot when owed, "Working…" and disabled while it re-reads, as
+  the dialog's button was). S3: the two cards' explanatory sentences are
   gone. `picker-dialog`, `select-field`, `choice-chips` and the confirm dialogs are unchanged.
 - **A3 Liquid Glass** (`components/glass-surface.tsx`, `glassTint`; `expo-glass-effect` ~0.1.10, the
   SDK 54 pin): the system's glass on iOS 26 (`regular`, tinted, the palette's scheme, interactive on a
@@ -1852,7 +1853,9 @@ read-only.
   done once succeeded — "Email sent · {time}", "Sending email…", "Done" — the website's words
   (`EMAIL_OWED`, `emailSentLine`). 5 / 5 only on success.
 - **A5 links**: `app/+native-intent.tsx` sends `/runs/<id>` and `/approvals/<id>` (any query) to
-  Home; `linkTargetOf` and the signed-in tree's link listener open the run's page or Approvals in the
+  `/`, the splash, when the link starts the app, and nowhere (an empty path, which expo-router drops)
+  when the app is already open — `/` from an open screen is the cover, above Sign in or the tabs
+  (the review of round 23); `linkTargetOf` and the signed-in tree's link listener open the run's page or Approvals in the
   workspace the link names (the push tap's `switchFor` and owed-open; the link the app opened with,
   once). `app.config.js` adds Android's `/runs/` and `/approvals/` prefixes on the callback's host.
 - **A8**: a `run-succeeded` tap opens the run's page. The generated contract is regenerated from the
@@ -1888,15 +1891,22 @@ Deployed contract check (it reads production).
 | A4 · only a working step turns | the spinner on every row but a skipped one (`app/(tabs)/(home)/run.tsx`) | `invoice-processing-screens` "at the start…", "while running…" |
 | A7 · held waits | Waiting only for pending/running (`lib/view/runs.ts`) | `build22-views` "held: … step 5 waits too…" |
 | A7 · failed is Failed | the failed line removed | `build22-views` "a run failed…" |
-| A5 · run/approval paths to Home | `redirectSystemPath` returns the path (`app/+native-intent.tsx`) | `round23` the native-intent table |
+| A5 · run/approval paths to the splash | `redirectSystemPath` returns the path (`app/+native-intent.tsx`) | `round23` the native-intent table |
+| A5 · a link while the app is open keeps the open screen | `/` returned when not `initial` | `round23` "while the app is open…", `real-router/app-links` "a link that arrives on Sign in…" |
 | A5 · a link opens, switched first | the link's open removed (`hooks/use-push-registration.tsx`) | `push-registration` the three link cases |
 | A5 · the opening link once | the once-check removed | `push-registration` "…opens once signed in, and only once" |
 | A5 · Android's path prefixes | `/runs/` removed (`app.config.js`) | `app-config` "derives both native link claims…" |
 | A8 · a completed run's tap | `run-succeeded` dropped from `targetOf` | `push-registration` "a \"Run completed\" push…" |
 | B1 · "team" is not copy | `teams?` out of `RETIRED` (`scripts/audit-vocabulary.mjs`) | `audit-gates` "the vocabulary audit: round 23" |
 | B3 · a member's rows inert | `readOnly` ignored (`components/flows/vendor-choice.tsx`) | `vendor-page` "a member (round 23, B3)…" |
+| B3 · Set up read-only for a member on a live flow | `readOnly={false}` (`app/(tabs)/flows/setup.tsx`) | `invoice-processing-screens` "a member on a live flow…" |
+| B3 · a member adding a flow still chooses | `readOnly={!canManage}` | `invoice-processing-screens` "a member adding a flow…" |
+| A4 · still under Reduce Motion | `if (reduceMotion) return` removed (`app/(tabs)/(home)/run.tsx`) | `invoice-processing-screens` "…Reduce Motion true…" |
+| A2 · only a fade under Reduce Motion | the scale kept under Reduce Motion (`components/dropdown.tsx`) | `round23` "opening it, Reduce Motion true…" |
+| A2 · Reload session busy | its label kept, or `disabled` dropped (`components/settings/workspace-switcher.tsx`) | `workspace-switcher` "Reload session says \"Working…\"…" |
 | B3 · a 403 in its words | the 403 check never true (`app/(tabs)/flows/vendor.tsx`) | `vendor-page` "a 403 from the platform…" |
 
 (Each run by `app-bites/bite.py` in the round's scratchpad, Node 22.23.2: red — a test failed — the
 file restored sha256-equal, green — a test passed. The locked guard's row is `round23`'s: the
-switcher's own `close` also refuses while switching, so `workspace-switcher` stays green without it.)
+switcher's own `close` also refuses while switching, so `workspace-switcher` stays green without it. The rows the review of round 23 added — the open-app link, Set up's two, Reduce Motion's two and Reload
+session's — were run the same way by hand: broken, red, restored sha256-equal, green.)

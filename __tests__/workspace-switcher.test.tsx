@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, screen, waitFor, within } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 
 import SettingsScreen from '@/app/(tabs)/settings';
 import type { SessionContextValue, SessionReloadOutcome } from '@/hooks/use-session';
@@ -257,6 +257,32 @@ describe('switching', () => {
 
     await fireEvent.press(screen.getByText('Reload session'));
     await waitFor(() => expect(reload).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByTestId('workspace-switcher-menu')).toBeNull());
+  });
+  it('Reload session says "Working…" and takes no second press while it re-reads', async () => {
+    let settle: (outcome: SessionReloadOutcome) => void = () => undefined;
+    const reload = jest
+      .fn<Promise<SessionReloadOutcome>, []>()
+      .mockResolvedValueOnce({ status: 'unavailable', message: 'The platform is unreachable' })
+      .mockImplementationOnce(() => new Promise((resolve) => (settle = resolve)));
+    routeWorkspaces({ workspaces: [org, personal], activeWorkspaceId: ORG }, async () => ({
+      activeWorkspaceId: PERSONAL,
+    }));
+    await renderWithProviders(<SettingsScreen />, sessionWith([org, personal], { reload }));
+    await fireEvent.press(await screen.findByTestId('workspace-switcher-row'));
+    await fireEvent.press(await screen.findByTestId(`workspace-option-${PERSONAL}`));
+    expect(await screen.findByTestId('workspace-switch-error')).toBeTruthy();
+    expect(screen.getByTestId('workspace-reload').props.accessibilityState).toMatchObject({ disabled: false });
+
+    await fireEvent.press(screen.getByTestId('workspace-reload'));
+    const row = await screen.findByTestId('workspace-reload');
+    expect(row).toHaveTextContent('Working…');
+    expect(row.props.accessibilityState).toMatchObject({ disabled: true });
+    expect(screen.queryByText('Reload session')).toBeNull();
+    await fireEvent.press(row);
+    expect(reload).toHaveBeenCalledTimes(2);
+
+    await act(async () => settle({ status: 'signed-in' }));
     await waitFor(() => expect(screen.queryByTestId('workspace-switcher-menu')).toBeNull());
   });
 });
