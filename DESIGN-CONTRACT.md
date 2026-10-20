@@ -179,7 +179,10 @@ F13, F14) the panel lays the card colour at 94% under its rows (`GlassSurface ba
 `GLASS_BACKING_ALPHA`), so every drop-down reads over a busy page as Add a flow's does over an empty one
 — fixed in the one component; and one strip behind the status bar (`components/status-bar-strip.tsx`,
 the page colour at 94% on the same glass, as tall as the top safe area, no touch), drawn once by the
-tabs' layout and once by the sign-in stack's, keeps content from scrolling under the clock (P11). **The words are department, never team**
+tabs' layout and once by the sign-in stack's, keeps content from scrolling under the clock (P11).
+The tab bar's lens latches under its tab on the first layout (nothing animates) and slides to a new
+tab in 240 ms, eased out — never a spring, so it cannot overshoot and shake — and moves at once under
+Reduce Motion (F2, F3, P2; `lensOffset`). **The words are department, never team**
 (B1): "All departments", "Department: Legal", "in a department". The app's copy says department
 and flow, never team, project or automation; `audit:vocabulary` fails the build on
 any of those words in copy, and the code keeps the contract's names (24.11.7; `teams`, routes and

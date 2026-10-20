@@ -1924,6 +1924,11 @@ drop-down, the status-bar strip, and the A8X run package.
   forms; `Dropdown` passes `backing="panel"` to its one surface — the workspace and department
   drop-downs, Activity's two and Add a flow's category, fixed in one place. The website's switcher panel
   is already opaque (`bg-[var(--surface)]`): verified, no change.
+- **P2 the tab lens** (F2, F3): `LinearTransition.springify()` (a spring that overshot and animated
+  its first layout too) is gone; the lens's `translateX` is a shared value, set on the first layout
+  and on a new row width, `withTiming` 240 ms `Easing.out(cubic)` on a focus change, set at once under
+  Reduce Motion; hidden until first set, so it never shows at the row's start. `lensOffset(slot,
+  rowWidth, count)` = the pad plus whole tab widths, the sum the tabs' `flex: 1` lays out.
 - **P11 the status-bar strip** (seen in fb09, fb10, fb15, fb16): `components/status-bar-strip.tsx`, a
   `GlassSurface radius={0} backing="page"` as tall as the top inset, absolute, `pointerEvents="none"`,
   rendered once after `<Tabs>` in `app/(tabs)/_layout.tsx` and once after the auth `Stack` (Sign in
@@ -1935,6 +1940,10 @@ drop-down, the status-bar strip, and the A8X run package.
 | --- | --- | --- |
 | P1 · every drop-down on a 94% backing | `backing="panel"` removed (`components/dropdown.tsx`) | `dropdown-backing` all three forms |
 | P11 · the strip over the tabs | `<StatusBarStrip />` removed (`app/(tabs)/_layout.tsx`) | `tab-layout` "draws the status-bar strip 59 tall…" |
+| P2 · a timing, never a spring | `withTiming` swapped for `withSpring` (`components/nocturne/tab-bar.tsx`) | `tab-bar` "a new focus slides it with a 240-ms timing…" and the slide test |
+| P2 · the first layout latches | the first set animated too | `tab-bar` "the first layout sets the lens…", "a new row width…" |
+| P2 · Reduce Motion moves it at once | `!reduceMotion` removed | `tab-bar` "under Reduce Motion…" |
+| P2 · centred under its tab | `lensOffset` without the pad | `tab-bar` the three `lensOffset` rows and the lens tests |
 
 (Each run by the lane's bite script in the round's scratchpad, Node 22.23.2: broken, red — a test failed —
 the file restored sha256-equal, green.)
