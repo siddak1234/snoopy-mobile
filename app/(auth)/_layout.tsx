@@ -1,5 +1,7 @@
 import { Stack } from 'expo-router';
+import { View } from 'react-native';
 
+import { StatusBarStrip } from '@/components/status-bar-strip';
 import { useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -10,22 +12,28 @@ import { useTheme } from '@/hooks/use-theme';
  * the lock showed let whoever held the phone answer "Not now" — Face ID off —
  * and the next cold start opened without Face ID (found fixing the build 13
  * review's first finding).
+ *
+ * Sign in scrolls, so the auth screens get the same strip behind the status
+ * bar as the tabs (round 24 P11, `components/status-bar-strip.tsx`).
  */
 export default function AuthLayout() {
   const { palette } = useTheme();
   const session = useSession();
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: palette.bg },
-      }}>
-      <Stack.Screen name="login" options={{ animation: 'fade' }} />
-      <Stack.Protected guard={session.status === 'signed-in' && !session.locked}>
-        <Stack.Screen name="faceid-offer" options={{ animation: 'fade' }} />
-      </Stack.Protected>
-      <Stack.Screen name="faceid" options={{ animation: 'fade' }} />
-      <Stack.Screen name="account-deleted" options={{ animation: 'fade' }} />
-    </Stack>
+    <View style={{ flex: 1, backgroundColor: palette.bg }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: palette.bg },
+        }}>
+        <Stack.Screen name="login" options={{ animation: 'fade' }} />
+        <Stack.Protected guard={session.status === 'signed-in' && !session.locked}>
+          <Stack.Screen name="faceid-offer" options={{ animation: 'fade' }} />
+        </Stack.Protected>
+        <Stack.Screen name="faceid" options={{ animation: 'fade' }} />
+        <Stack.Screen name="account-deleted" options={{ animation: 'fade' }} />
+      </Stack>
+      <StatusBarStrip />
+    </View>
   );
 }

@@ -1911,3 +1911,30 @@ Deployed contract check (it reads production).
 file restored sha256-equal, green — a test passed. The locked guard's row is `round23`'s: the
 switcher's own `close` also refuses while switching, so `workspace-switcher` stays green without it. The rows the review of round 23 added — the open-app link, Set up's two, Reduce Motion's two and Reload
 session's — were run the same way by hand: broken, red, restored sha256-equal, green.)
+
+### Round 24 — build 23's feedback (Round 17; 2026-10-20)
+
+The owner's build 23 items F1–F16 (memory `build-23-feedback-2026-10-20`; the round's plan, its "S" the
+session's): one drop-down standard, the tab lens, iOS text size, runs in Activity, Approve / Deny in
+step 4, Needs review, Clear all and the notifications offer, one run id per job, each invoice a
+drop-down, the status-bar strip, and the A8X run package.
+
+- **P1 one drop-down standard** (F1, F13, F14): `GlassSurface` gains `backing` (`panel` the card
+  colour, `page` the page colour) at `GLASS_BACKING_ALPHA` 0.94 (S3) under its children in all three
+  forms; `Dropdown` passes `backing="panel"` to its one surface — the workspace and department
+  drop-downs, Activity's two and Add a flow's category, fixed in one place. The website's switcher panel
+  is already opaque (`bg-[var(--surface)]`): verified, no change.
+- **P11 the status-bar strip** (seen in fb09, fb10, fb15, fb16): `components/status-bar-strip.tsx`, a
+  `GlassSurface radius={0} backing="page"` as tall as the top inset, absolute, `pointerEvents="none"`,
+  rendered once after `<Tabs>` in `app/(tabs)/_layout.tsx` and once after the auth `Stack` (Sign in
+  scrolls). Both new surfaces are pinned in both palettes and both iOS forms (`nocturne-visual`).
+
+### Guards proved to bite, round 24
+
+| Guard | Broken by | What failed |
+| --- | --- | --- |
+| P1 · every drop-down on a 94% backing | `backing="panel"` removed (`components/dropdown.tsx`) | `dropdown-backing` all three forms |
+| P11 · the strip over the tabs | `<StatusBarStrip />` removed (`app/(tabs)/_layout.tsx`) | `tab-layout` "draws the status-bar strip 59 tall…" |
+
+(Each run by the lane's bite script in the round's scratchpad, Node 22.23.2: broken, red — a test failed —
+the file restored sha256-equal, green.)

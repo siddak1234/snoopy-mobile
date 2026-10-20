@@ -3,6 +3,7 @@ import { Text } from 'react-native';
 import { Receipt, Trash } from 'phosphor-react-native';
 
 import { GlassSurface } from '@/components/glass-surface';
+import { StatusBarStrip } from '@/components/status-bar-strip';
 import { AvatarBadge } from '@/components/nocturne/avatar-badge';
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { BrandMark } from '@/components/nocturne/brand-mark';
@@ -134,6 +135,9 @@ const GLASS: { name: string; element: React.ReactElement }[] = [
   { name: 'GlassSurface/neutral', element: <GlassSurface radius={999} style={{ width: 38, height: 38 }} /> },
   { name: 'GlassSurface/accent', element: <GlassSurface radius={999} tone="accent" interactive style={{ width: 38, height: 38 }} /> },
   { name: 'GlassSurface/panel', element: <GlassSurface radius={18}><Text>Menu</Text></GlassSurface> },
+  // Round 24 P1 and P11: the drop-down's backing and the status-bar strip.
+  { name: 'GlassSurface/panel-backing', element: <GlassSurface radius={18} backing="panel"><Text>Menu</Text></GlassSurface> },
+  { name: 'StatusBarStrip', element: <StatusBarStrip /> },
 ];
 
 describe.each<[ThemeMode, boolean]>([

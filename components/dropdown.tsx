@@ -205,7 +205,7 @@ export function Dropdown<T extends string>({
             },
             enter,
           ]}>
-          <GlassSurface radius={RADIUS} testID={`${testID}-menu`} style={{ maxHeight: frame.maxHeight }}>
+          <GlassSurface radius={RADIUS} backing="panel" testID={`${testID}-menu`} style={{ maxHeight: frame.maxHeight }}>
             <View accessibilityViewIsModal>
               <ScrollView bounces={false} style={{ maxHeight: frame.maxHeight }}>
                 {title ? (

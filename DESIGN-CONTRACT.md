@@ -174,7 +174,12 @@ while it re-reads), Department (All departments,
 then each; its load error in it — the card's sentence gone, S3), Activity's time range and its
 outcome (All runs, Success, Needs review, Failed — one drop-down where four chips were), and Add a
 flow's category (All categories, then each). Its panel, the tab bar's capsule and the header circles
-are Liquid Glass (`components/glass-surface.tsx`, A3). **The words are department, never team**
+are Liquid Glass (`components/glass-surface.tsx`, A3). **Since round 24** (the owner's build 23 F1,
+F13, F14) the panel lays the card colour at 94% under its rows (`GlassSurface backing="panel"`,
+`GLASS_BACKING_ALPHA`), so every drop-down reads over a busy page as Add a flow's does over an empty one
+— fixed in the one component; and one strip behind the status bar (`components/status-bar-strip.tsx`,
+the page colour at 94% on the same glass, as tall as the top safe area, no touch), drawn once by the
+tabs' layout and once by the sign-in stack's, keeps content from scrolling under the clock (P11). **The words are department, never team**
 (B1): "All departments", "Department: Legal", "in a department". The app's copy says department
 and flow, never team, project or automation; `audit:vocabulary` fails the build on
 any of those words in copy, and the code keeps the contract's names (24.11.7; `teams`, routes and

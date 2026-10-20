@@ -128,7 +128,7 @@
 
 ### Tests
 
-- `__tests__/`: account, android, app, audit, auth, automation, billing, build13, build14, build21, build22, components, connection, connections, cover, data, deep, deletion, dialog, doc, faceid, flows, gate24, identity, invoice, kit, native, nocturne, organization, override, paging, parity, pipeline, platform, pressable, presses, published, push, removed, repo, return, round23, run, scope, screen, select, session, settings, setup, shared, sign, snapshot, splash, start, tab, teams, theme, timed, upload, use, vendor, verify, view, workspace
+- `__tests__/`: account, android, app, audit, auth, automation, billing, build13, build14, build21, build22, components, connection, connections, cover, data, deep, deletion, dialog, doc, dropdown, faceid, flows, gate24, identity, invoice, kit, native, nocturne, organization, override, paging, parity, pipeline, platform, pressable, presses, published, push, removed, repo, return, round23, run, scope, screen, select, session, settings, setup, shared, sign, snapshot, splash, start, tab, teams, theme, timed, upload, use, vendor, verify, view, workspace
 - `__tests__/__snapshots__/`: connection, nocturne, screen
 - `__tests__/real-router/`: activity, app, appearance, connect, face, held, home, session, sign
 

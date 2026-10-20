@@ -274,3 +274,12 @@ export function kicker(p: NocturnePalette, size: number = typeScale.caption.font
 export function glassTint(p: NocturnePalette, tone: 'neutral' | 'accent' = 'neutral'): string {
   return tone === 'accent' ? withAlpha(p.accent, 0.22) : withAlpha(p.surface, 0.35);
 }
+
+/**
+ * How solid a glass surface's backing is (`GlassSurface backing`; round 24 P1,
+ * the owner's build 23 F1/F13/F14): the card colour (a drop-down panel) or the
+ * page colour (the status-bar strip) at 94% under the surface's content, so a
+ * panel reads over a busy page as it does over an empty one while the glass
+ * edge stays. Session's choice S3.
+ */
+export const GLASS_BACKING_ALPHA = 0.94;
