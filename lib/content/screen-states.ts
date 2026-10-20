@@ -473,6 +473,11 @@ export const NOTIFICATIONS_EMPTY_BODY =
 export const PUSH_CARD_TITLE = 'Know the moment something needs you';
 export const PUSH_CARD_BODY = 'Get a notification on this phone when a run is held or fails.';
 export const PUSH_TURN_ON_LABEL = 'Turn on';
+/** The inbox's header action (round 24 P8; ~~Mark all read~~): empties it. */
+export const CLEAR_ALL_LABEL = 'Clear all';
+/** The notifications offer after a sign-in (round 24 P8; the owner's build 23 F6), as the Face ID offer asks. */
+export const NOTIFICATIONS_OFFER_TITLE = 'Turn on notifications';
+export const NOTIFICATIONS_OFFER_BODY = 'Know when a run needs your approval or something goes wrong.';
 export const PUSH_NOT_NOW_LABEL = 'Not now';
 /** iOS will not ask again: only its Settings can turn notifications on. */
 export const PUSH_DENIED_BODY = 'Notifications for Autom8x are off in iOS Settings.';

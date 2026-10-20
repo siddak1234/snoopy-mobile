@@ -28,7 +28,8 @@ import { useResource } from '@/hooks/use-resource';
 import { readLoginProviders } from '@/lib/platform/auth';
 import { readFaceIdChoice, readSession } from '@/lib/platform/session-store';
 import { websiteOrigin, type LoginProvider } from '@/lib/platform/native-auth';
-import { RETURN_OPTIONS, afterSignIn } from '@/lib/view/return-to';
+import { offersPushAsk } from '@/hooks/use-push-registration';
+import { nextAfterSignIn } from '@/lib/view/return-to';
 
 /**
  * Whether to ask the Face ID question after this sign-in: a remembered session,
@@ -106,7 +107,8 @@ export default function LoginScreen() {
    * person closed it on purpose. Only a real refusal is worth a message, and it
    * renders in the callout the design already draws. Signed in, the person goes
    * where they were when their session ended, or Home (`afterSignIn`; Gate 24
-   * parity, G4) — through the Face ID question first, where it is asked.
+   * parity, G4) — through the Face ID question first, where it is asked, then
+   * the notifications offer (round 24 P8; `nextAfterSignIn`).
    */
   const startSignIn = async (provider: LoginProvider) => {
     if (signInInFlight.current) return;
@@ -116,8 +118,10 @@ export default function LoginScreen() {
     try {
       const outcome = await signIn(provider, { remember });
       if (outcome.status === 'signed-in') {
-        if (await offersFaceId(remember)) router.replace('/(auth)/faceid-offer');
-        else router.replace(afterSignIn(), RETURN_OPTIONS);
+        const faceId = await offersFaceId(remember);
+        const next = nextAfterSignIn('login', { faceId, notifications: !faceId && (await offersPushAsk()) });
+        if (next.options) router.replace(next.href, next.options);
+        else router.replace(next.href);
         return;
       }
       if (outcome.status === 'cancelled') return;

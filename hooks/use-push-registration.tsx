@@ -457,6 +457,22 @@ export function usePushRegistration(signedIn: boolean): void {
   }, [owed, active, router]);
 }
 
+/**
+ * Whether a sign-in offers notifications on its own screen (round 24 P8): an
+ * iPhone iOS has not asked yet, where the person has not said Not now — this
+ * session's or the kept one. Anything unread is no offer: the inbox's card
+ * still asks.
+ */
+export async function offersPushAsk(): Promise<boolean> {
+  if (!pushSupported() || snapshot().notNow) return false;
+  try {
+    if (await readPushNotNow()) return false;
+  } catch {
+    return false;
+  }
+  return (await readPermission()) === 'ask';
+}
+
 /** What the inbox card shows: the ask, Settings, or why this phone cannot be asked. */
 export type PushAsk =
   | { kind: 'none' }

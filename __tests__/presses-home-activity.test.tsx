@@ -322,73 +322,63 @@ describe('Notifications: read and dismissed on the platform (the owner\'s build 
     return fake;
   }
 
-  it('Mark all read saves the rows on screen read, by id (DESIGN-GAPS.archive.md: "not rows a later re-read brings in"), and draws what the platform answers', async () => {
-    const inbox = inboxPayload();
-    // By the time the save lands, one more run has failed: the platform lists it, unread.
-    const later = { ...inbox.items[3]!, id: 'run:run-later', runId: 'run-later', failureReason: 'Reason run-later' };
-    // The re-read after the save is held, so what the screen shows meanwhile can be seen.
+  /**
+   * Clear all (round 24 P8; the owner's build 23 F6: "The mark all as read does
+   * not clear. Rename it to clear all and it should wipe the notifications").
+   */
+  const CLEAR = 'POST /v1/workspaces/{workspaceId}/notifications/clear';
+
+  it('Clear all: the rows leave at the tap, the platform is asked once with a key, and the empty inbox is drawn', async () => {
     let answer!: () => void;
     const held = new Promise<void>((resolve) => (answer = resolve));
-    const fake = fakePlatform(platformOperation);
-    fake.always('GET /v1/workspaces/{workspaceId}/automations', flowCatalogPayload());
-    fake.once(INBOX, inbox);
-    fake.always(INBOX, async () => {
+    const fake = routeInbox(inboxPayload(), { items: [], unreadCount: 0 });
+    fake.always(CLEAR, async () => {
       await held;
-      return { items: [later, ...inbox.items.map((item) => ({ ...item, read: true }))], unreadCount: 1 };
+      return { unreadCount: 0 };
     });
-    fake.always(READ, { unreadCount: 1 });
     await renderWithProviders(<NotificationsScreen />, signedInSession);
-    // Three held for review and one failed, every one unread, as the platform lists them.
     expect(await screen.findAllByText(TITLES)).toHaveLength(4);
-    expect(dots()).toEqual([UNREAD, UNREAD, UNREAD, UNREAD]);
+    expect(screen.queryByText('Mark all read')).toBeNull();
 
-    await fireEvent.press(screen.getByText('Mark all read'));
-
-    expect(fake.to(READ)).toEqual([
-      {
-        method: 'POST',
-        path: '/v1/workspaces/{workspaceId}/notifications/read',
-        values: { workspaceId: TEST_WORKSPACE },
-        key: 'notifications-read-1',
-        body: { ids: inbox.items.map((item) => item.id) },
-      },
+    await fireEvent.press(screen.getByTestId('inbox-clear-all'));
+    // Gone before the platform answers.
+    expect(screen.queryAllByText(TITLES)).toHaveLength(0);
+    expect(fake.to(CLEAR)).toEqual([
+      { method: 'POST', path: '/v1/workspaces/{workspaceId}/notifications/clear', values: { workspaceId: TEST_WORKSPACE }, key: 'notifications-clear-1' },
     ]);
-    // The rows stay while the inbox is re-read: no skeleton to confirm a dot.
-    await waitFor(() => expect(fake.to(INBOX)).toHaveLength(2));
-    expect(screen.queryByTestId('screen-loading')).toBeNull();
-    expect(screen.getAllByText(TITLES)).toHaveLength(4);
     await act(async () => answer());
-    expect(await screen.findByText(/Reason run-later/u)).toBeTruthy();
-    expect(dotOf(screen.getByText(/Reason run-later/u))).toBe(UNREAD);
-    expect(dots()).toEqual([UNREAD, 'transparent', 'transparent', 'transparent', 'transparent']);
-
-    // Nothing unread on screen but the newcomer: a second press names only it.
-    await fireEvent.press(screen.getByText('Mark all read'));
-    expect(fake.to(READ)[1]?.body).toEqual({ ids: ['run:run-later'] });
+    // The inbox read again: empty.
+    await waitFor(() => expect(fake.to(INBOX)).toHaveLength(2));
+    expect(screen.queryAllByText(TITLES)).toHaveLength(0);
+    expect(fake.to(CLEAR)).toHaveLength(1);
   });
 
-  it('Mark all read with every row read sends nothing', async () => {
-    const inbox = inboxPayload();
-    const fake = routeInbox({ items: inbox.items.map((item) => ({ ...item, read: true })), unreadCount: 0 });
-    await renderWithProviders(<NotificationsScreen />, signedInSession);
-    expect(await screen.findAllByText(TITLES)).toHaveLength(4);
-    await fireEvent.press(screen.getByText('Mark all read'));
-    expect(fake.to(READ)).toEqual([]);
-  });
-
-  it('a refused save says so and changes nothing on screen', async () => {
+  it('Clear all refused: the rows come back, with the reason', async () => {
     const fake = routeInbox(inboxPayload());
-    fake.once(READ, () => {
+    fake.once(CLEAR, () => {
       throw new PlatformError('Service Unavailable', 503);
     });
     await renderWithProviders(<NotificationsScreen />, signedInSession);
     expect(await screen.findAllByText(TITLES)).toHaveLength(4);
 
-    await fireEvent.press(screen.getByText('Mark all read'));
+    await fireEvent.press(screen.getByTestId('inbox-clear-all'));
 
     expect(await screen.findByText('Service Unavailable')).toBeTruthy();
+    expect(screen.getAllByText(TITLES)).toHaveLength(4);
     expect(dots()).toEqual([UNREAD, UNREAD, UNREAD, UNREAD]);
     expect(fake.to(INBOX)).toHaveLength(1);
+  });
+
+  it('Clear all clears the rows it was pressed on: one that arrives after is listed', async () => {
+    const inbox = inboxPayload();
+    const later = { ...inbox.items[3]!, id: 'run:run-later', runId: 'run-later', failureReason: 'Reason run-later' };
+    const fake = routeInbox(inbox, { items: [later], unreadCount: 1 });
+    fake.always(CLEAR, { unreadCount: 0 });
+    await renderWithProviders(<NotificationsScreen />, signedInSession);
+    expect(await screen.findAllByText(TITLES)).toHaveLength(4);
+    await fireEvent.press(screen.getByTestId('inbox-clear-all'));
+    expect(await screen.findByText(/Reason run-later/u)).toBeTruthy();
+    expect(screen.getAllByText(TITLES)).toHaveLength(1);
   });
 
   it('opening an unread row reads it on the platform and still opens it; a read row sends nothing', async () => {

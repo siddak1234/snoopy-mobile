@@ -75,6 +75,7 @@
 - `/faceid-offer`: [app/(auth)/faceid-offer.tsx](../app/(auth)/faceid-offer.tsx)
 - `/faceid`: [app/(auth)/faceid.tsx](../app/(auth)/faceid.tsx)
 - `/login`: [app/(auth)/login.tsx](../app/(auth)/login.tsx)
+- `/notifications-offer`: [app/(auth)/notifications-offer.tsx](../app/(auth)/notifications-offer.tsx)
 - `/`: [app/(tabs)/(home)/index.tsx](../app/(tabs)/(home)/index.tsx)
 - `/notifications`: [app/(tabs)/(home)/notifications.tsx](../app/(tabs)/(home)/notifications.tsx)
 - `/activity/approvals`: [app/(tabs)/activity/approvals.tsx](../app/(tabs)/activity/approvals.tsx)
@@ -127,9 +128,9 @@
 
 ### Tests
 
-- `__tests__/`: account, android, app, audit, auth, automation, billing, build13, build14, build21, build22, components, connection, connections, cover, data, deep, deletion, dialog, doc, dropdown, faceid, flows, gate24, identity, invoice, kit, native, nocturne, organization, override, paging, parity, pipeline, platform, pressable, presses, published, push, removed, repo, return, round23, run, scope, screen, select, session, settings, setup, shared, sign, snapshot, splash, start, tab, teams, text, theme, timed, upload, use, vendor, verify, view, workspace
+- `__tests__/`: account, android, app, audit, auth, automation, billing, build13, build14, build21, build22, components, connection, connections, cover, data, deep, deletion, dialog, doc, dropdown, faceid, flows, gate24, identity, invoice, kit, native, nocturne, notifications, organization, override, paging, parity, pipeline, platform, pressable, presses, published, push, removed, repo, return, round23, run, scope, screen, select, session, settings, setup, shared, sign, snapshot, splash, start, tab, teams, text, theme, timed, upload, use, vendor, verify, view, workspace
 - `__tests__/__snapshots__/`: connection, nocturne, screen
-- `__tests__/real-router/`: activity, app, appearance, connect, face, held, home, run, session, sign
+- `__tests__/real-router/`: activity, app, appearance, connect, face, held, home, notifications, run, session, sign
 
 ## Skills, agents and hooks
 

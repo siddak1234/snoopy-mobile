@@ -5,6 +5,8 @@ import { Receipt, Trash } from 'phosphor-react-native';
 import { GlassSurface } from '@/components/glass-surface';
 import { StatusBarStrip } from '@/components/status-bar-strip';
 import { DecisionButtons } from '@/components/runs/decision-buttons';
+import { OfferScreen } from '@/components/offer-screen';
+import { BellRinging } from 'phosphor-react-native';
 import { AvatarBadge } from '@/components/nocturne/avatar-badge';
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { BrandMark } from '@/components/nocturne/brand-mark';
@@ -155,13 +157,26 @@ describe.each<[ThemeMode, boolean]>([
 });
 
 /**
- * Round 24's new piece outside the Nocturne set (P6, P7): the one Approve / Deny
- * pair, idle and saving, pinned in both palettes.
+ * Round 24's new pieces outside the Nocturne set: the one Approve / Deny pair
+ * (P6, P7), idle and saving, and the sign-in offers' one layout (P8), pinned in
+ * both palettes.
  */
 describe.each<ThemeMode>(['dark', 'light'])('Round 24 — %s palette', (mode) => {
   it.each([
     ['DecisionButtons/idle', <DecisionButtons key="idle" testID="d" busy={null} onDecide={() => {}} />],
     ['DecisionButtons/denying', <DecisionButtons key="denying" testID="d" busy="rejected" onDecide={() => {}} />],
+    [
+      'OfferScreen',
+      <OfferScreen
+        key="offer"
+        icon={BellRinging}
+        title="Turn on notifications"
+        body="Know when a run needs your approval or something goes wrong."
+        accept={{ label: 'Turn on', onPress: () => {} }}
+        decline={{ label: 'Not now', onPress: () => {} }}
+        busy={false}
+      />,
+    ],
   ] as const)('%s renders unchanged', async (_name, element) => {
     const { toJSON } = await renderWithProviders(element, undefined, mode);
     expect(toJSON()).toMatchSnapshot();

@@ -29,6 +29,7 @@ export default function AuthLayout() {
         <Stack.Screen name="login" options={{ animation: 'fade' }} />
         <Stack.Protected guard={session.status === 'signed-in' && !session.locked}>
           <Stack.Screen name="faceid-offer" options={{ animation: 'fade' }} />
+          <Stack.Screen name="notifications-offer" options={{ animation: 'fade' }} />
         </Stack.Protected>
         <Stack.Screen name="faceid" options={{ animation: 'fade' }} />
         <Stack.Screen name="account-deleted" options={{ animation: 'fade' }} />

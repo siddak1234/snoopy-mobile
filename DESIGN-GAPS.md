@@ -1969,6 +1969,16 @@ drop-down, the status-bar strip, and the A8X run package.
   Reduce Motion — and the count counts down; the last one decided `dismissTo('/(tabs)/activity')`. The
   banner and the done notes went (`APPROVAL_DONE_TEXT` deleted). The callout icon's `marginTop` is
   `(lineHeight − 16) / 2`. Website: its lane.
+- **P8 Clear all and the notifications offer** (F6): `clearInbox()` (`lib/platform/notifications.ts`,
+  key prefix `notifications-clear`) behind the inbox header's **Clear all** (~~Mark all read~~): the
+  rows on screen leave at the tap (the dismissed set), back with the reason if refused; S7 the platform
+  clears past the 50 listed. `app/(auth)/notifications-offer.tsx`: guarded with the Face ID offer,
+  `usePushAsk().turnOn`/`notNow`, then `nextAfterSignIn` (`lib/view/return-to.ts`; login asks for
+  both offers, the Face ID offer for the second); `offersPushAsk()` (an iPhone, iOS not asked, no Not
+  now). The Face ID offer's layout is extracted to `components/offer-screen.tsx` (`OfferScreen`), so
+  both offers draw one layout — the reason for the new file; pinned in both palettes. The real-router
+  project's default iOS answer is "no" so a sign-in test meets no offer unless it asks for one. Parity:
+  the website has no inbox, nothing to match.
 - **P11 the status-bar strip** (seen in fb09, fb10, fb15, fb16): `components/status-bar-strip.tsx`, a
   `GlassSurface radius={0} backing="page"` as tall as the top inset, absolute, `pointerEvents="none"`,
   rendered once after `<Tabs>` in `app/(tabs)/_layout.tsx` and once after the auth `Stack` (Sign in
@@ -2000,6 +2010,12 @@ drop-down, the status-bar strip, and the A8X run package.
 | P7 · the last one decided → Activity | `dismissTo` dropped | `presses-home-activity` "deciding the only card…", `tab-screens` "counts down…" |
 | P7 · the pill follows the decision | the pill kept as listed | `presses-home-activity` "…never says Pending…", "a decided pill…" |
 | P7 · the callout icon centred | `marginTop: 1` | `presses-home-activity` "the warning callout's icon…" |
+| P8 · Clear all empties the inbox | `markInboxRead` sent in its place (`components/notifications/inbox.tsx`) | `presses-home-activity` the three Clear all cases |
+| P8 · refused, the rows come back | the restore dropped | `presses-home-activity` "Clear all refused…" |
+| P8 · the offer after the Face ID offer | `notifications: false` (`app/(auth)/faceid-offer.tsx`) | `faceid-offer` "then the notifications offer", `real-router/notifications-offer` "after the Face ID offer…" |
+| P8 · only where iOS can still ask | `!== 'denied'` for `=== 'ask'` (`hooks/use-push-registration.tsx`) | `notifications-offer` "iOS allows already", `real-router/notifications-offer` "iOS already allows…" |
+| P8 · Not now is kept | the offer's Not now a no-op (`app/(auth)/notifications-offer.tsx`) | `notifications-offer` "Not now is kept…", `real-router/notifications-offer` the first case |
+| P8 · a sign-in routes to the offer | the notifications step dropped (`lib/view/return-to.ts`) | `notifications-offer` the `nextAfterSignIn` table, `real-router/notifications-offer` |
 
 (Each run by the lane's bite script in the round's scratchpad, Node 22.23.2: broken, red — a test failed —
 the file restored sha256-equal, green.)

@@ -15,7 +15,7 @@ import { useTheme } from '@/hooks/use-theme';
 import type { NotificationItem, RunOrigin } from '@/lib/view/runs';
 import { readCatalog } from '@/lib/platform/catalog';
 import { newIdempotencyKey } from '@/lib/platform/client';
-import { dismissInboxItem, markInboxRead, readInbox } from '@/lib/platform/notifications';
+import { clearInbox, dismissInboxItem, markInboxRead, readInbox } from '@/lib/platform/notifications';
 import { catalogIndex, inboxRows } from '@/lib/view/runs';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
@@ -34,6 +34,7 @@ import {
   PUSH_NOT_YET_BODY,
   PUSH_OPEN_SETTINGS_LABEL,
   PUSH_TURN_ON_LABEL,
+  CLEAR_ALL_LABEL,
   errorTitleFor,
 } from '@/lib/content/screen-states';
 
@@ -107,12 +108,25 @@ export function Inbox({ returnTo }: { returnTo: Extract<RunOrigin, 'home' | 'set
       return false;
     }
   };
-  // The rows on screen, by id, not "everything listed now": an item that arrives
-  // after the inbox was drawn is still unread (DESIGN-GAPS.archive.md).
-  const markAllRead = () => {
-    const unread = items.filter((item) => item.unread).map((item) => item.id);
-    if (unread.length === 0) return;
-    void act((workspaceId) => markInboxRead(workspaceId, unread, newIdempotencyKey('notifications-read')));
+  /**
+   * Clear all (round 24 P8; the owner's build 23 F6: "The mark all as read does
+   * not clear. Rename it to clear all and it should wipe the notifications";
+   * ~~Mark all read~~): the rows leave at the tap, as a dismissal's does, and
+   * the platform empties the inbox (`clearInbox`); refused, they come back
+   * with the reason. An item that arrives after the tap is not one of them.
+   */
+  const clearAll = () => {
+    const ids = items.map((item) => item.id);
+    if (ids.length === 0) return;
+    setDismissed((current) => new Set([...current, ...ids]));
+    void act((workspaceId) => clearInbox(workspaceId, newIdempotencyKey('notifications-clear'))).then((saved) => {
+      if (saved) return;
+      setDismissed((current) => {
+        const next = new Set(current);
+        for (const id of ids) next.delete(id);
+        return next;
+      });
+    });
   };
   /**
    * Dismiss takes the row away at the tap — the owner's build 14 feedback #10,
@@ -220,10 +234,12 @@ export function Inbox({ returnTo }: { returnTo: Extract<RunOrigin, 'home' | 'set
         <BackCircle onPress={() => router.back()} />
         <Text style={[styles.title, { color: palette.text }]}>Notifications</Text>
         <Text
-          onPress={pressed(markAllRead)}
+          testID="inbox-clear-all"
+          accessibilityRole="button"
+          onPress={pressed(clearAll)}
           suppressHighlighting
           style={[styles.markAll, { color: palette.accentRamp[300] }]}>
-          Mark all read
+          {CLEAR_ALL_LABEL}
         </Text>
       </View>
 

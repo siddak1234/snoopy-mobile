@@ -48,3 +48,14 @@ jest.mock('@/lib/platform/native-auth', () => {
     }),
   };
 });
+
+/**
+ * Round 24 P8: a sign-in offers notifications where iOS can still ask. These
+ * tests are about where a screen goes, so by default iOS has already answered
+ * (no: nothing to offer, nothing registers), and a test about the offer says
+ * otherwise (`__tests__/real-router/notifications-offer.test.tsx`).
+ */
+beforeEach(() => {
+  const Notifications = jest.requireMock('expo-notifications') as { getPermissionsAsync: jest.Mock };
+  Notifications.getPermissionsAsync.mockResolvedValue({ status: 'denied', granted: false, canAskAgain: false, expires: 'never' });
+});

@@ -7768,6 +7768,317 @@ exports[`Round 24 — dark palette DecisionButtons/idle renders unchanged 1`] = 
 </RNCSafeAreaProvider>
 `;
 
+exports[`Round 24 — dark palette OfferScreen renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "flex": 1,
+          "paddingHorizontal": 24,
+        },
+        {
+          "backgroundColor": "#161826",
+          "paddingTop": 78,
+        },
+      ]
+    }
+  >
+    <View
+      style={
+        [
+          {
+            "backgroundColor": "#232532",
+            "borderRadius": 14,
+          },
+          {
+            "borderColor": "#3f424d",
+            "borderWidth": 1,
+          },
+          {
+            "alignItems": "center",
+            "gap": 10,
+            "padding": 22,
+          },
+        ]
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 16,
+              "borderWidth": 1,
+              "height": 56,
+              "justifyContent": "center",
+              "marginBottom": 4,
+              "width": 56,
+            },
+            {
+              "borderColor": "#5d5294",
+            },
+          ]
+        }
+      >
+        <RNSVGSvgView
+          align="xMidYMid"
+          bbHeight={28}
+          bbWidth={28}
+          className="bell-ringing-undefined__svg-icon-phosphor"
+          color="#d2cefd"
+          fill="currentColor"
+          focusable={false}
+          height={28}
+          meetOrSlice={0}
+          minX={0}
+          minY={0}
+          style={
+            [
+              {
+                "backgroundColor": "transparent",
+                "borderWidth": 0,
+              },
+              [
+                undefined,
+                undefined,
+                {},
+              ],
+              {
+                "flex": 0,
+                "height": 28,
+                "width": 28,
+              },
+            ]
+          }
+          testID="phosphor-react-native-bell-ringing-undefined"
+          vbHeight={256}
+          vbWidth={256}
+          width={28}
+        >
+          <RNSVGGroup
+            fill={
+              {
+                "type": 2,
+              }
+            }
+            propList={
+              [
+                "fill",
+              ]
+            }
+          >
+            <RNSVGGroup
+              fill={
+                {
+                  "payload": 4292005629,
+                  "type": 0,
+                }
+              }
+              propList={
+                [
+                  "fill",
+                ]
+              }
+            >
+              <RNSVGPath
+                d="M224 71.1a8 8 0 0 1-10.78-3.42 94.13 94.13 0 0 0-33.46-36.91 8 8 0 1 1 8.54-13.54 111.46 111.46 0 0 1 39.12 43.09A8 8 0 0 1 224 71.1M35.71 72a8 8 0 0 0 7.1-4.32 94.13 94.13 0 0 1 33.46-36.91 8 8 0 1 0-8.54-13.54 111.46 111.46 0 0 0-39.12 43.09A8 8 0 0 0 35.71 72m186.1 103.94A16 16 0 0 1 208 200h-40.8a40 40 0 0 1-78.4 0H48a16 16 0 0 1-13.79-24.06C43.22 160.39 48 138.28 48 112a80 80 0 0 1 160 0c0 26.27 4.78 48.38 13.81 63.94M150.62 200h-45.24a24 24 0 0 0 45.24 0M208 184c-10.64-18.27-16-42.49-16-72a64 64 0 0 0-128 0c0 29.52-5.38 53.74-16 72Z"
+                fill={
+                  {
+                    "payload": 4278190080,
+                    "type": 0,
+                  }
+                }
+              />
+            </RNSVGGroup>
+          </RNSVGGroup>
+        </RNSVGSvgView>
+      </View>
+      <Text
+        maxFontSizeMultiplier={2}
+        style={
+          [
+            {
+              "fontFamily": "Inter_500Medium",
+              "fontSize": 21,
+              "letterSpacing": -0.21,
+              "textAlign": "center",
+            },
+            {
+              "color": "#e9e9ed",
+            },
+          ]
+        }
+      >
+        Turn on notifications
+      </Text>
+      <Text
+        maxFontSizeMultiplier={2}
+        style={
+          [
+            {
+              "fontFamily": "Inter_400Regular",
+              "fontSize": 16,
+              "lineHeight": 23,
+              "textAlign": "center",
+            },
+            {
+              "color": "#b2b6ca",
+            },
+          ]
+        }
+      >
+        Know when a run needs your approval or something goes wrong.
+      </Text>
+      <View
+        style={
+          {
+            "alignSelf": "stretch",
+            "gap": 6,
+            "marginTop": 8,
+          }
+        }
+      >
+        <View
+          accessibilityState={
+            {
+              "busy": undefined,
+              "checked": undefined,
+              "disabled": undefined,
+              "expanded": undefined,
+              "selected": undefined,
+            }
+          }
+          accessibilityValue={
+            {
+              "max": undefined,
+              "min": undefined,
+              "now": undefined,
+              "text": undefined,
+            }
+          }
+          accessible={true}
+          collapsable={false}
+          focusable={true}
+          onBlur={[Function]}
+          onClick={[Function]}
+          onFocus={[Function]}
+          onResponderGrant={[Function]}
+          onResponderMove={[Function]}
+          onResponderRelease={[Function]}
+          onResponderTerminate={[Function]}
+          onResponderTerminationRequest={[Function]}
+          onStartShouldSetResponder={[Function]}
+          style={
+            [
+              {
+                "alignItems": "center",
+                "backgroundColor": "transparent",
+                "borderColor": "#9184d9",
+                "borderRadius": 999,
+                "borderWidth": 1,
+                "flexDirection": "row",
+                "gap": 7,
+                "justifyContent": "center",
+                "minHeight": 48,
+                "paddingHorizontal": 18,
+              },
+              {
+                "alignSelf": "stretch",
+              },
+            ]
+          }
+        >
+          <Text
+            maxFontSizeMultiplier={1.35}
+            style={
+              {
+                "color": "#9184d9",
+                "fontFamily": "Inter_500Medium",
+                "fontSize": 17,
+              }
+            }
+          >
+            Turn on
+          </Text>
+        </View>
+        <View
+          accessibilityState={
+            {
+              "busy": undefined,
+              "checked": undefined,
+              "disabled": undefined,
+              "expanded": undefined,
+              "selected": undefined,
+            }
+          }
+          accessibilityValue={
+            {
+              "max": undefined,
+              "min": undefined,
+              "now": undefined,
+              "text": undefined,
+            }
+          }
+          accessible={true}
+          collapsable={false}
+          focusable={true}
+          onBlur={[Function]}
+          onClick={[Function]}
+          onFocus={[Function]}
+          onResponderGrant={[Function]}
+          onResponderMove={[Function]}
+          onResponderRelease={[Function]}
+          onResponderTerminate={[Function]}
+          onResponderTerminationRequest={[Function]}
+          onStartShouldSetResponder={[Function]}
+          style={
+            [
+              {
+                "alignItems": "center",
+                "backgroundColor": "transparent",
+                "borderColor": "transparent",
+                "borderRadius": 999,
+                "borderWidth": 0,
+                "flexDirection": "row",
+                "gap": 7,
+                "justifyContent": "center",
+                "minHeight": 44,
+                "paddingHorizontal": 18,
+              },
+              undefined,
+            ]
+          }
+        >
+          <Text
+            maxFontSizeMultiplier={1.35}
+            style={
+              {
+                "color": "#e9e9ed",
+                "fontFamily": "Inter_500Medium",
+                "fontSize": 16,
+              }
+            }
+          >
+            Not now
+          </Text>
+        </View>
+      </View>
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
 exports[`Round 24 — light palette DecisionButtons/denying renders unchanged 1`] = `
 <RNCSafeAreaProvider
   onInsetsChange={[Function]}
@@ -8069,6 +8380,323 @@ exports[`Round 24 — light palette DecisionButtons/idle renders unchanged 1`] =
       >
         Deny
       </Text>
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Round 24 — light palette OfferScreen renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "flex": 1,
+          "paddingHorizontal": 24,
+        },
+        {
+          "backgroundColor": "#f5f5f8",
+          "paddingTop": 78,
+        },
+      ]
+    }
+  >
+    <View
+      style={
+        [
+          {
+            "backgroundColor": "#ffffff",
+            "borderRadius": 14,
+          },
+          {
+            "elevation": 1,
+            "shadowColor": "#1e1e3c",
+            "shadowOffset": {
+              "height": 1,
+              "width": 0,
+            },
+            "shadowOpacity": 0.12,
+            "shadowRadius": 1.5,
+          },
+          {
+            "alignItems": "center",
+            "gap": 10,
+            "padding": 22,
+          },
+        ]
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 16,
+              "borderWidth": 1,
+              "height": 56,
+              "justifyContent": "center",
+              "marginBottom": 4,
+              "width": 56,
+            },
+            {
+              "borderColor": "#c3bcec",
+            },
+          ]
+        }
+      >
+        <RNSVGSvgView
+          align="xMidYMid"
+          bbHeight={28}
+          bbWidth={28}
+          className="bell-ringing-undefined__svg-icon-phosphor"
+          color="#5548ab"
+          fill="currentColor"
+          focusable={false}
+          height={28}
+          meetOrSlice={0}
+          minX={0}
+          minY={0}
+          style={
+            [
+              {
+                "backgroundColor": "transparent",
+                "borderWidth": 0,
+              },
+              [
+                undefined,
+                undefined,
+                {},
+              ],
+              {
+                "flex": 0,
+                "height": 28,
+                "width": 28,
+              },
+            ]
+          }
+          testID="phosphor-react-native-bell-ringing-undefined"
+          vbHeight={256}
+          vbWidth={256}
+          width={28}
+        >
+          <RNSVGGroup
+            fill={
+              {
+                "type": 2,
+              }
+            }
+            propList={
+              [
+                "fill",
+              ]
+            }
+          >
+            <RNSVGGroup
+              fill={
+                {
+                  "payload": 4283779243,
+                  "type": 0,
+                }
+              }
+              propList={
+                [
+                  "fill",
+                ]
+              }
+            >
+              <RNSVGPath
+                d="M224 71.1a8 8 0 0 1-10.78-3.42 94.13 94.13 0 0 0-33.46-36.91 8 8 0 1 1 8.54-13.54 111.46 111.46 0 0 1 39.12 43.09A8 8 0 0 1 224 71.1M35.71 72a8 8 0 0 0 7.1-4.32 94.13 94.13 0 0 1 33.46-36.91 8 8 0 1 0-8.54-13.54 111.46 111.46 0 0 0-39.12 43.09A8 8 0 0 0 35.71 72m186.1 103.94A16 16 0 0 1 208 200h-40.8a40 40 0 0 1-78.4 0H48a16 16 0 0 1-13.79-24.06C43.22 160.39 48 138.28 48 112a80 80 0 0 1 160 0c0 26.27 4.78 48.38 13.81 63.94M150.62 200h-45.24a24 24 0 0 0 45.24 0M208 184c-10.64-18.27-16-42.49-16-72a64 64 0 0 0-128 0c0 29.52-5.38 53.74-16 72Z"
+                fill={
+                  {
+                    "payload": 4278190080,
+                    "type": 0,
+                  }
+                }
+              />
+            </RNSVGGroup>
+          </RNSVGGroup>
+        </RNSVGSvgView>
+      </View>
+      <Text
+        maxFontSizeMultiplier={2}
+        style={
+          [
+            {
+              "fontFamily": "Inter_500Medium",
+              "fontSize": 21,
+              "letterSpacing": -0.21,
+              "textAlign": "center",
+            },
+            {
+              "color": "#20222f",
+            },
+          ]
+        }
+      >
+        Turn on notifications
+      </Text>
+      <Text
+        maxFontSizeMultiplier={2}
+        style={
+          [
+            {
+              "fontFamily": "Inter_400Regular",
+              "fontSize": 16,
+              "lineHeight": 23,
+              "textAlign": "center",
+            },
+            {
+              "color": "#666a82",
+            },
+          ]
+        }
+      >
+        Know when a run needs your approval or something goes wrong.
+      </Text>
+      <View
+        style={
+          {
+            "alignSelf": "stretch",
+            "gap": 6,
+            "marginTop": 8,
+          }
+        }
+      >
+        <View
+          accessibilityState={
+            {
+              "busy": undefined,
+              "checked": undefined,
+              "disabled": undefined,
+              "expanded": undefined,
+              "selected": undefined,
+            }
+          }
+          accessibilityValue={
+            {
+              "max": undefined,
+              "min": undefined,
+              "now": undefined,
+              "text": undefined,
+            }
+          }
+          accessible={true}
+          collapsable={false}
+          focusable={true}
+          onBlur={[Function]}
+          onClick={[Function]}
+          onFocus={[Function]}
+          onResponderGrant={[Function]}
+          onResponderMove={[Function]}
+          onResponderRelease={[Function]}
+          onResponderTerminate={[Function]}
+          onResponderTerminationRequest={[Function]}
+          onStartShouldSetResponder={[Function]}
+          style={
+            [
+              {
+                "alignItems": "center",
+                "backgroundColor": "transparent",
+                "borderColor": "#6a5cc4",
+                "borderRadius": 999,
+                "borderWidth": 1,
+                "flexDirection": "row",
+                "gap": 7,
+                "justifyContent": "center",
+                "minHeight": 48,
+                "paddingHorizontal": 18,
+              },
+              {
+                "alignSelf": "stretch",
+              },
+            ]
+          }
+        >
+          <Text
+            maxFontSizeMultiplier={1.35}
+            style={
+              {
+                "color": "#6a5cc4",
+                "fontFamily": "Inter_500Medium",
+                "fontSize": 17,
+              }
+            }
+          >
+            Turn on
+          </Text>
+        </View>
+        <View
+          accessibilityState={
+            {
+              "busy": undefined,
+              "checked": undefined,
+              "disabled": undefined,
+              "expanded": undefined,
+              "selected": undefined,
+            }
+          }
+          accessibilityValue={
+            {
+              "max": undefined,
+              "min": undefined,
+              "now": undefined,
+              "text": undefined,
+            }
+          }
+          accessible={true}
+          collapsable={false}
+          focusable={true}
+          onBlur={[Function]}
+          onClick={[Function]}
+          onFocus={[Function]}
+          onResponderGrant={[Function]}
+          onResponderMove={[Function]}
+          onResponderRelease={[Function]}
+          onResponderTerminate={[Function]}
+          onResponderTerminationRequest={[Function]}
+          onStartShouldSetResponder={[Function]}
+          style={
+            [
+              {
+                "alignItems": "center",
+                "backgroundColor": "transparent",
+                "borderColor": "transparent",
+                "borderRadius": 999,
+                "borderWidth": 0,
+                "flexDirection": "row",
+                "gap": 7,
+                "justifyContent": "center",
+                "minHeight": 44,
+                "paddingHorizontal": 18,
+              },
+              undefined,
+            ]
+          }
+        >
+          <Text
+            maxFontSizeMultiplier={1.35}
+            style={
+              {
+                "color": "#20222f",
+                "fontFamily": "Inter_500Medium",
+                "fontSize": 16,
+              }
+            }
+          >
+            Not now
+          </Text>
+        </View>
+      </View>
     </View>
   </View>
 </RNCSafeAreaProvider>

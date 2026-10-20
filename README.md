@@ -314,8 +314,12 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   (`linkTargetOf`; `app/+native-intent.tsx` sends both paths to the splash when
   they start the app, and leaves the open screen when it is already open;
   `app.config.js` adds the two Android path prefixes, iOS's `applinks` claim
-  covers them); the inbox's card is the only ask. Android and a
-  simulator register nothing. The library's own request to Expo's token service
+  covers them); the inbox's card and, once after a sign-in, the notifications
+  offer (`app/(auth)/notifications-offer.tsx`, round 24 P8) are the only asks.
+  `lib/platform/notifications.ts` reads the inbox, marks rows read, dismisses
+  one and — since round 24 — empties it (`clearInbox`,
+  `POST …/notifications/clear`, Clear all). Android and a simulator register
+  nothing. The library's own request to Expo's token service
   (`getExpoPushTokenAsync`, since build 11, D8) is the transport's third
   credential-less exception, in no file of this repository, which
   `audit:platform` does not see because it reads this repository's source. No
