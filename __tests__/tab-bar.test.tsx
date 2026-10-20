@@ -68,7 +68,7 @@ describe('NocturneTabBar', () => {
     expect(band).toMatchObject({ backgroundColor: nocturneDark.bg, paddingHorizontal: 16 });
     expect(band.borderTopWidth).toBeUndefined();
     expect(StyleSheet.flatten(getByTestId('tab-bar-capsule').props.style)).toMatchObject({ borderRadius: 999 });
-    expect(StyleSheet.flatten(getByTestId('tab-bar-row').props.style)).toMatchObject({ height: 62 });
+    expect(StyleSheet.flatten(getByTestId('tab-bar-row').props.style)).toMatchObject({ minHeight: 62 });
   });
 
   /** Lets the lens's slide (240 ms) finish. */

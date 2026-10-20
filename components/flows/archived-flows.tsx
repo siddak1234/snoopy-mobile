@@ -1,13 +1,14 @@
 import { useRouter } from 'expo-router';
 import { Archive } from 'phosphor-react-native';
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { IconTile } from '@/components/nocturne/icon-tile';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { ScreenEmpty, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
+import { Text } from '@/components/text';
 import { em, fonts, iconSize, layout, typeScale } from '@/constants/theme';
 import { busyBody, useWorkspaceResource } from '@/hooks/use-resource';
 import { useScope } from '@/hooks/use-scope';

@@ -1,9 +1,10 @@
 import React from 'react';
-import { Text, type StyleProp, type ViewStyle } from 'react-native';
+import { type StyleProp, type ViewStyle } from 'react-native';
 import type { Icon } from 'phosphor-react-native';
 
 import { Pressable } from '@/components/pressable';
-import { fonts, typeScale, withAlpha } from '@/constants/theme';
+import { Text } from '@/components/text';
+import { fontScaleLimit, fonts, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type PillButtonVariant =
@@ -77,7 +78,8 @@ export function PillButton({
       accessibilityState={disabled ? { disabled: true } : undefined}
       style={({ pressed }) => [
         {
-          height,
+          // The least height: a label at a large text size grows it (round 24 P3).
+          minHeight: height,
           borderRadius: 999,
           borderWidth: variant === 'primary' || variant === 'secondary' || variant === 'danger' ? 1 : 0,
           borderColor,
@@ -92,7 +94,9 @@ export function PillButton({
         style,
       ]}>
       {IconCmp ? <IconCmp size={iconSize ?? size + 1} color={color} weight="regular" /> : null}
-      <Text style={{ fontFamily: fonts.medium, fontSize: size, color }}>{label}</Text>
+      <Text maxFontSizeMultiplier={fontScaleLimit.chrome} style={{ fontFamily: fonts.medium, fontSize: size, color }}>
+        {label}
+      </Text>
     </Pressable>
   );
 }

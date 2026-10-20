@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -25,6 +25,7 @@ import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable, pressed } from '@/components/pressable';
 import { ScopeIcons } from '@/components/scope-control';
 import { StatTileButton } from '@/components/stat-tile-button';
+import { Text } from '@/components/text';
 import { em, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource, type ResourceState } from '@/hooks/use-resource';
 import { useScope } from '@/hooks/use-scope';

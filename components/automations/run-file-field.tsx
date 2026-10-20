@@ -3,9 +3,10 @@ import { File } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera, Paperclip, UploadSimple, type Icon } from 'phosphor-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { Pressable } from '@/components/pressable';
+import { Text } from '@/components/text';
 import { fonts, iconSize, status, typeScale, withAlpha } from '@/constants/theme';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';

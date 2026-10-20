@@ -1,10 +1,11 @@
 import { Check, type Icon } from 'phosphor-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { Modal, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Modal, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { GlassSurface } from '@/components/glass-surface';
 import { Pressable } from '@/components/pressable';
+import { Text } from '@/components/text';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { elevation, em, fonts, status as statusColor, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';

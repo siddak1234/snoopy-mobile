@@ -712,6 +712,18 @@ height and tracked size comes from `typeScale` in `constants/theme.ts` — about
 2 pt over the design's text sizes and 3 over its titles, 12 at the smallest —
 no longer the design's values carried over 1:1. `audit:type` fails a size
 written anywhere else, and the Nocturne snapshots were re-pinned once for it.
+**Since round 24** (the owner's build 23 F14: "based on the users phone size and
+font size from their native ios system") text follows the phone's text size within
+limits: every `Text` and `TextInput` is `components/text.tsx`'s, which defaults
+`maxFontSizeMultiplier` to `fontScaleLimit.content` (2×, iOS AX2); text in a fixed
+bar — the tab labels, `StatusPill`, `PillButton`'s label, `ScopePill`'s, the
+Needs-review count and a title row's title — passes `fontScaleLimit.chrome` (1.35×)
+and a chip keeps one line; a fixed height that holds text is a least height
+(`minHeight`: the tab capsule's row, `PillButton`, the title row, the pills, the
+badge, the fields), so a large size grows a row rather than clipping it. `audit:type`
+fails `Text` or `TextInput` imported from react-native anywhere else. **The second
+authorised re-pin** (props only: `maxFontSizeMultiplier`, `numberOfLines`,
+`minHeight`) is README's re-pin fact.
 
 **The Home mark fills its row** (build 11, D9; the owner's build 10 item 12:
 "should fill up that empty space top left"). The design drew it at 17 in a row

@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { Buildings, CaretRight, ShareNetwork } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { Platform, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
@@ -15,6 +15,7 @@ import { OrgJoin } from '@/components/organization/org-join';
 import { OrgPeople } from '@/components/organization/org-people';
 import { ScreenEmpty, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { SettingsRow } from '@/components/settings/settings-row';
+import { Text } from '@/components/text';
 import { em, fonts, layout, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { busyBody, useWorkspaceResource } from '@/hooks/use-resource';

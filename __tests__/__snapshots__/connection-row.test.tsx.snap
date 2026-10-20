@@ -101,6 +101,7 @@ exports[`the connection row — dark palette (snapshot-pinned) Google and QuickB
       }
     >
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -117,6 +118,7 @@ exports[`the connection row — dark palette (snapshot-pinned) Google and QuickB
         Google
       </Text>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -183,6 +185,7 @@ exports[`the connection row — dark palette (snapshot-pinned) Google and QuickB
       }
     >
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -241,6 +244,7 @@ exports[`the connection row — dark palette (snapshot-pinned) Google and QuickB
       }
     >
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -257,6 +261,7 @@ exports[`the connection row — dark palette (snapshot-pinned) Google and QuickB
         QuickBooks Online
       </Text>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -323,6 +328,7 @@ exports[`the connection row — dark palette (snapshot-pinned) Google and QuickB
       }
     >
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -443,6 +449,7 @@ exports[`the connection row — light palette (snapshot-pinned) Google and Quick
       }
     >
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -459,6 +466,7 @@ exports[`the connection row — light palette (snapshot-pinned) Google and Quick
         Google
       </Text>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -525,6 +533,7 @@ exports[`the connection row — light palette (snapshot-pinned) Google and Quick
       }
     >
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -583,6 +592,7 @@ exports[`the connection row — light palette (snapshot-pinned) Google and Quick
       }
     >
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -599,6 +609,7 @@ exports[`the connection row — light palette (snapshot-pinned) Google and Quick
         QuickBooks Online
       </Text>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -665,6 +676,7 @@ exports[`the connection row — light palette (snapshot-pinned) Google and Quick
       }
     >
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {

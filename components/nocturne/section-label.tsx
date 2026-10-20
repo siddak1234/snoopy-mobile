@@ -1,6 +1,7 @@
 import React from 'react';
-import { Text, type StyleProp, type TextStyle } from 'react-native';
+import { type StyleProp, type TextStyle } from 'react-native';
 
+import { Text } from '@/components/text';
 import { em, fonts, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 

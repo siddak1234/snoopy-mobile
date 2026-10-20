@@ -1,7 +1,7 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { CaretRight, EnvelopeSimple, Pause, Play, RocketLaunch } from 'phosphor-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AutomationActions } from '@/components/automations/automation-actions';
@@ -16,6 +16,7 @@ import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { pressed } from '@/components/pressable';
 import { chosenVendor, connectionFields } from '@/components/setup-field';
 import { StatTileButton } from '@/components/stat-tile-button';
+import { Text } from '@/components/text';
 import { em, fonts, iconSize, layout, status, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ActionFailure, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';

@@ -1929,6 +1929,18 @@ drop-down, the status-bar strip, and the A8X run package.
   and on a new row width, `withTiming` 240 ms `Easing.out(cubic)` on a focus change, set at once under
   Reduce Motion; hidden until first set, so it never shows at the row's start. `lensOffset(slot,
   rowWidth, count)` = the pad plus whole tab widths, the sum the tabs' `flex: 1` lays out.
+- **P3 iOS text size** (F14): before, no `allowFontScaling`/`maxFontSizeMultiplier` anywhere, so text
+  followed iOS's size without a limit and fixed heights clipped. Now `components/text.tsx` (`Text`,
+  `TextInput`, React 19 has no `defaultProps` for a function component) defaults
+  `maxFontSizeMultiplier` to `fontScaleLimit.content` 2; chrome 1.35 (S4) on the tab labels,
+  `StatusPill` (one line), `PillButton`'s label, `ScopePill`'s label (one line), the Needs-review count
+  and the title row's title (one line, a fixed bar beside its circles). A codemod moved 61 files'
+  imports; `audit:type` fails `Text`/`TextInput` from react-native outside the wrapper. `minHeight` for
+  the tab row 62, `PillButton`, the title row 38, `ScopePill` 34, the badge 26, the text and select
+  fields 50, the OAuth button 48, Flows' search and the email input 44, Settings' segments and Add a
+  flow's button 34. **The second authorised re-pin** (F14; the counts are README's re-pin fact) — props
+  only. Phone size: the A4 captures on iPhone SE (3rd
+  generation) and 17 Pro Max at the default and the largest size.
 - **P11 the status-bar strip** (seen in fb09, fb10, fb15, fb16): `components/status-bar-strip.tsx`, a
   `GlassSurface radius={0} backing="page"` as tall as the top inset, absolute, `pointerEvents="none"`,
   rendered once after `<Tabs>` in `app/(tabs)/_layout.tsx` and once after the auth `Stack` (Sign in
@@ -1944,6 +1956,9 @@ drop-down, the status-bar strip, and the A8X run package.
 | P2 · the first layout latches | the first set animated too | `tab-bar` "the first layout sets the lens…", "a new row width…" |
 | P2 · Reduce Motion moves it at once | `!reduceMotion` removed | `tab-bar` "under Reduce Motion…" |
 | P2 · centred under its tab | `lensOffset` without the pad | `tab-bar` the three `lensOffset` rows and the lens tests |
+| P3 · the content limit by default | the default dropped (`components/text.tsx`) | `text` "Text follows the phone up to the content limit…" |
+| P3 · the caller's limit wins | the default spread after the props | `text` "the caller's limit wins" |
+| P3 · react-native's Text only in the wrapper | the import check not run (`scripts/audit-type.mjs`) | `audit-gates` "round 24 P3: Text or TextInput from react-native…" |
 
 (Each run by the lane's bite script in the round's scratchpad, Node 22.23.2: broken, red — a test failed —
 the file restored sha256-equal, green.)

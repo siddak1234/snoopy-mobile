@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { Archive, CaretRight, SlidersHorizontal, WebhooksLogo } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { WebhookAddressDialog } from '@/components/automations/webhook-address-dialog';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
@@ -9,6 +9,7 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
 import { SettingsRow } from '@/components/settings/settings-row';
+import { Text } from '@/components/text';
 import { fonts, iconSize, layout, typeScale, withAlpha } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';

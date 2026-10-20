@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,7 +13,8 @@ import {
 
 import { GlassSurface } from '@/components/glass-surface';
 import { Pressable } from '@/components/pressable';
-import { fonts, typeScale, withAlpha } from '@/constants/theme';
+import { Text } from '@/components/text';
+import { fontScaleLimit, fonts, typeScale, withAlpha } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -27,7 +28,7 @@ const TABS: Record<string, { label: string; icon: Icon }> = {
   settings: { label: 'Settings', icon: Gear },
 };
 
-/** The capsule's height (round 23, A3: ~62). */
+/** The capsule's least height (round 23, A3: ~62; taller only at a large text size, round 24 P3). */
 const CAPSULE_HEIGHT = 62;
 /** Inside the capsule, around the four tabs. */
 const CAPSULE_PAD = 4;
@@ -92,7 +93,7 @@ export function NocturneTabBar({ state, descriptors, navigation }: BottomTabBarP
         <View
           testID="tab-bar-row"
           onLayout={(event) => setRowWidth(event.nativeEvent.layout.width)}
-          style={{ height: CAPSULE_HEIGHT, flexDirection: 'row', alignItems: 'center', paddingHorizontal: CAPSULE_PAD }}>
+          style={{ minHeight: CAPSULE_HEIGHT, flexDirection: 'row', alignItems: 'center', paddingHorizontal: CAPSULE_PAD }}>
           {tabWidth > 0 && focusedSlot >= 0 ? (
             <Animated.View
               testID="tab-bar-lens"
@@ -136,7 +137,12 @@ export function NocturneTabBar({ state, descriptors, navigation }: BottomTabBarP
                 onPress={onPress}
                 style={{ flex: 1, alignItems: 'center', gap: 3, paddingVertical: 8 }}>
                 <IconCmp size={22} color={color} weight="regular" />
-                <Text style={{ fontFamily: fonts.medium, fontSize: typeScale.micro.fontSize, color }}>{tab.label}</Text>
+                <Text
+                  numberOfLines={1}
+                  maxFontSizeMultiplier={fontScaleLimit.chrome}
+                  style={{ fontFamily: fonts.medium, fontSize: typeScale.micro.fontSize, color }}>
+                  {tab.label}
+                </Text>
               </Pressable>
             );
           })}

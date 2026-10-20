@@ -263,7 +263,8 @@ describe('Flows and Activity: one title row — the title left, the circles and 
     };
     const flows = await place(FlowsScreen);
     const activity = await place(ActivityScreen);
-    expect(flows.row).toMatchObject({ height: 38, flexDirection: 'row', alignItems: 'center' });
+    // 38 at least: taller only at a large text size (round 24 P3).
+    expect(flows.row).toMatchObject({ minHeight: 38, flexDirection: 'row', alignItems: 'center' });
     expect(activity.row).toEqual(flows.row);
     expect(flows.top).toEqual(expect.any(Number));
     expect(activity.top).toBe(flows.top);

@@ -1217,6 +1217,7 @@ exports[`Nocturne set — dark palette AvatarBadge renders unchanged 1`] = `
     }
   >
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#e7e5fe",
@@ -1501,6 +1502,7 @@ exports[`Nocturne set — dark palette FilterChip/active renders unchanged 1`] =
     }
   >
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#9184d9",
@@ -1571,6 +1573,7 @@ exports[`Nocturne set — dark palette FilterChip/inactive renders unchanged 1`]
     }
   >
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#b2b6ca",
@@ -2137,8 +2140,8 @@ exports[`Nocturne set — dark palette OAuthButton renders unchanged 1`] = `
         "borderWidth": 1,
         "flexDirection": "row",
         "gap": 9,
-        "height": 48,
         "justifyContent": "center",
+        "minHeight": 48,
       }
     }
   >
@@ -2193,6 +2196,7 @@ exports[`Nocturne set — dark palette OAuthButton renders unchanged 1`] = `
       </RNSVGGroup>
     </RNSVGSvgView>
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#e9e9ed",
@@ -2243,6 +2247,7 @@ exports[`Nocturne set — dark palette OrDivider renders unchanged 1`] = `
       }
     />
     <Text
+      maxFontSizeMultiplier={2}
       style={
         [
           {
@@ -2326,8 +2331,8 @@ exports[`Nocturne set — dark palette PillButton/accent-ghost renders unchanged
           "borderWidth": 0,
           "flexDirection": "row",
           "gap": 7,
-          "height": 52,
           "justifyContent": "center",
+          "minHeight": 52,
           "paddingHorizontal": 18,
         },
         undefined,
@@ -2335,6 +2340,7 @@ exports[`Nocturne set — dark palette PillButton/accent-ghost renders unchanged
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
       style={
         {
           "color": "#d2cefd",
@@ -2401,8 +2407,8 @@ exports[`Nocturne set — dark palette PillButton/danger renders unchanged 1`] =
           "borderWidth": 1,
           "flexDirection": "row",
           "gap": 7,
-          "height": 52,
           "justifyContent": "center",
+          "minHeight": 52,
           "paddingHorizontal": 18,
         },
         undefined,
@@ -2482,6 +2488,7 @@ exports[`Nocturne set — dark palette PillButton/danger renders unchanged 1`] =
       </RNSVGGroup>
     </RNSVGSvgView>
     <Text
+      maxFontSizeMultiplier={1.35}
       style={
         {
           "color": "#f87171",
@@ -2548,8 +2555,8 @@ exports[`Nocturne set — dark palette PillButton/plain renders unchanged 1`] = 
           "borderWidth": 0,
           "flexDirection": "row",
           "gap": 7,
-          "height": 52,
           "justifyContent": "center",
+          "minHeight": 52,
           "paddingHorizontal": 18,
         },
         undefined,
@@ -2557,6 +2564,7 @@ exports[`Nocturne set — dark palette PillButton/plain renders unchanged 1`] = 
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
       style={
         {
           "color": "#e9e9ed",
@@ -2623,8 +2631,8 @@ exports[`Nocturne set — dark palette PillButton/primary renders unchanged 1`] 
           "borderWidth": 1,
           "flexDirection": "row",
           "gap": 7,
-          "height": 52,
           "justifyContent": "center",
+          "minHeight": 52,
           "paddingHorizontal": 18,
         },
         undefined,
@@ -2632,6 +2640,7 @@ exports[`Nocturne set — dark palette PillButton/primary renders unchanged 1`] 
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
       style={
         {
           "color": "#9184d9",
@@ -2698,8 +2707,8 @@ exports[`Nocturne set — dark palette PillButton/secondary renders unchanged 1`
           "borderWidth": 1,
           "flexDirection": "row",
           "gap": 7,
-          "height": 52,
           "justifyContent": "center",
+          "minHeight": 52,
           "paddingHorizontal": 18,
         },
         undefined,
@@ -2707,6 +2716,7 @@ exports[`Nocturne set — dark palette PillButton/secondary renders unchanged 1`
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
       style={
         {
           "color": "#e9e9ed",
@@ -2734,6 +2744,7 @@ exports[`Nocturne set — dark palette SectionLabel renders unchanged 1`] = `
   }
 >
   <Text
+    maxFontSizeMultiplier={2}
     style={
       [
         {
@@ -2839,6 +2850,7 @@ exports[`Nocturne set — dark palette StatCard renders unchanged 1`] = `
     }
   >
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#e9e9ed",
@@ -2851,6 +2863,7 @@ exports[`Nocturne set — dark palette StatCard renders unchanged 1`] = `
       1,284
     </Text>
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#b2b6ca",
@@ -2891,6 +2904,8 @@ exports[`Nocturne set — dark palette StatusPill/Cancelled renders unchanged 1`
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#b2b6ca",
@@ -2930,6 +2945,8 @@ exports[`Nocturne set — dark palette StatusPill/Draft renders unchanged 1`] = 
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#b2b6ca",
@@ -2969,6 +2986,8 @@ exports[`Nocturne set — dark palette StatusPill/Failed renders unchanged 1`] =
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#f87171",
@@ -3008,6 +3027,8 @@ exports[`Nocturne set — dark palette StatusPill/Held renders unchanged 1`] = `
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#fbbf24",
@@ -3047,6 +3068,8 @@ exports[`Nocturne set — dark palette StatusPill/Live renders unchanged 1`] = `
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#34d399",
@@ -3086,6 +3109,8 @@ exports[`Nocturne set — dark palette StatusPill/Paused renders unchanged 1`] =
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#fbbf24",
@@ -3125,6 +3150,8 @@ exports[`Nocturne set — dark palette StatusPill/Queued renders unchanged 1`] =
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#b2b6ca",
@@ -3164,6 +3191,8 @@ exports[`Nocturne set — dark palette StatusPill/Running renders unchanged 1`] 
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#d2cefd",
@@ -3203,6 +3232,8 @@ exports[`Nocturne set — dark palette StatusPill/Success renders unchanged 1`] 
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#34d399",
@@ -3351,6 +3382,7 @@ exports[`Nocturne set — dark palette StepCard renders unchanged 1`] = `
       }
     >
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -3366,6 +3398,7 @@ exports[`Nocturne set — dark palette StepCard renders unchanged 1`] = `
         TRIGGER
       </Text>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -3382,6 +3415,7 @@ exports[`Nocturne set — dark palette StepCard renders unchanged 1`] = `
         New email in AP inbox
       </Text>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -3512,7 +3546,7 @@ exports[`Nocturne set — dark palette TabBar renders unchanged 1`] = `
           {
             "alignItems": "center",
             "flexDirection": "row",
-            "height": 62,
+            "minHeight": 62,
             "paddingHorizontal": 4,
           }
         }
@@ -3632,6 +3666,8 @@ exports[`Nocturne set — dark palette TabBar renders unchanged 1`] = `
             </RNSVGGroup>
           </RNSVGSvgView>
           <Text
+            maxFontSizeMultiplier={1.35}
+            numberOfLines={1}
             style={
               {
                 "color": "#9184d9",
@@ -3757,6 +3793,8 @@ exports[`Nocturne set — dark palette TabBar renders unchanged 1`] = `
             </RNSVGGroup>
           </RNSVGSvgView>
           <Text
+            maxFontSizeMultiplier={1.35}
+            numberOfLines={1}
             style={
               {
                 "color": "#9397ab",
@@ -3882,6 +3920,8 @@ exports[`Nocturne set — dark palette TabBar renders unchanged 1`] = `
             </RNSVGGroup>
           </RNSVGSvgView>
           <Text
+            maxFontSizeMultiplier={1.35}
+            numberOfLines={1}
             style={
               {
                 "color": "#9397ab",
@@ -4007,6 +4047,8 @@ exports[`Nocturne set — dark palette TabBar renders unchanged 1`] = `
             </RNSVGGroup>
           </RNSVGSvgView>
           <Text
+            maxFontSizeMultiplier={1.35}
+            numberOfLines={1}
             style={
               {
                 "color": "#9397ab",
@@ -4047,6 +4089,7 @@ exports[`Nocturne set — dark palette TextField renders unchanged 1`] = `
     }
   >
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#b2b6ca",
@@ -4066,7 +4109,7 @@ exports[`Nocturne set — dark palette TextField renders unchanged 1`] = `
           "borderRadius": 12,
           "borderWidth": 1,
           "flexDirection": "row",
-          "height": 50,
+          "minHeight": 50,
           "paddingHorizontal": 14,
         }
       }
@@ -4074,6 +4117,7 @@ exports[`Nocturne set — dark palette TextField renders unchanged 1`] = `
       <TextInput
         accessibilityLabel="Email"
         autoCapitalize="none"
+        maxFontSizeMultiplier={2}
         onChangeText={[Function]}
         placeholderTextColor="#9397ab"
         secureTextEntry={false}
@@ -4117,6 +4161,7 @@ exports[`Nocturne set — dark palette TextField/secure renders unchanged 1`] = 
     }
   >
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#b2b6ca",
@@ -4136,7 +4181,7 @@ exports[`Nocturne set — dark palette TextField/secure renders unchanged 1`] = 
           "borderRadius": 12,
           "borderWidth": 1,
           "flexDirection": "row",
-          "height": 50,
+          "minHeight": 50,
           "paddingHorizontal": 14,
         }
       }
@@ -4144,6 +4189,7 @@ exports[`Nocturne set — dark palette TextField/secure renders unchanged 1`] = 
       <TextInput
         accessibilityLabel="Password"
         autoCapitalize="none"
+        maxFontSizeMultiplier={2}
         onChangeText={[Function]}
         placeholderTextColor="#9397ab"
         secureTextEntry={true}
@@ -4298,6 +4344,7 @@ exports[`Nocturne set — light palette AvatarBadge renders unchanged 1`] = `
     }
   >
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#453a91",
@@ -4582,6 +4629,7 @@ exports[`Nocturne set — light palette FilterChip/active renders unchanged 1`] 
     }
   >
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#6a5cc4",
@@ -4652,6 +4700,7 @@ exports[`Nocturne set — light palette FilterChip/inactive renders unchanged 1`
     }
   >
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#666a82",
@@ -5218,8 +5267,8 @@ exports[`Nocturne set — light palette OAuthButton renders unchanged 1`] = `
         "borderWidth": 1,
         "flexDirection": "row",
         "gap": 9,
-        "height": 48,
         "justifyContent": "center",
+        "minHeight": 48,
       }
     }
   >
@@ -5274,6 +5323,7 @@ exports[`Nocturne set — light palette OAuthButton renders unchanged 1`] = `
       </RNSVGGroup>
     </RNSVGSvgView>
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#20222f",
@@ -5324,6 +5374,7 @@ exports[`Nocturne set — light palette OrDivider renders unchanged 1`] = `
       }
     />
     <Text
+      maxFontSizeMultiplier={2}
       style={
         [
           {
@@ -5407,8 +5458,8 @@ exports[`Nocturne set — light palette PillButton/accent-ghost renders unchange
           "borderWidth": 0,
           "flexDirection": "row",
           "gap": 7,
-          "height": 52,
           "justifyContent": "center",
+          "minHeight": 52,
           "paddingHorizontal": 18,
         },
         undefined,
@@ -5416,6 +5467,7 @@ exports[`Nocturne set — light palette PillButton/accent-ghost renders unchange
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
       style={
         {
           "color": "#5548ab",
@@ -5482,8 +5534,8 @@ exports[`Nocturne set — light palette PillButton/danger renders unchanged 1`] 
           "borderWidth": 1,
           "flexDirection": "row",
           "gap": 7,
-          "height": 52,
           "justifyContent": "center",
+          "minHeight": 52,
           "paddingHorizontal": 18,
         },
         undefined,
@@ -5563,6 +5615,7 @@ exports[`Nocturne set — light palette PillButton/danger renders unchanged 1`] 
       </RNSVGGroup>
     </RNSVGSvgView>
     <Text
+      maxFontSizeMultiplier={1.35}
       style={
         {
           "color": "#dc2626",
@@ -5629,8 +5682,8 @@ exports[`Nocturne set — light palette PillButton/plain renders unchanged 1`] =
           "borderWidth": 0,
           "flexDirection": "row",
           "gap": 7,
-          "height": 52,
           "justifyContent": "center",
+          "minHeight": 52,
           "paddingHorizontal": 18,
         },
         undefined,
@@ -5638,6 +5691,7 @@ exports[`Nocturne set — light palette PillButton/plain renders unchanged 1`] =
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
       style={
         {
           "color": "#20222f",
@@ -5704,8 +5758,8 @@ exports[`Nocturne set — light palette PillButton/primary renders unchanged 1`]
           "borderWidth": 1,
           "flexDirection": "row",
           "gap": 7,
-          "height": 52,
           "justifyContent": "center",
+          "minHeight": 52,
           "paddingHorizontal": 18,
         },
         undefined,
@@ -5713,6 +5767,7 @@ exports[`Nocturne set — light palette PillButton/primary renders unchanged 1`]
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
       style={
         {
           "color": "#6a5cc4",
@@ -5779,8 +5834,8 @@ exports[`Nocturne set — light palette PillButton/secondary renders unchanged 1
           "borderWidth": 1,
           "flexDirection": "row",
           "gap": 7,
-          "height": 52,
           "justifyContent": "center",
+          "minHeight": 52,
           "paddingHorizontal": 18,
         },
         undefined,
@@ -5788,6 +5843,7 @@ exports[`Nocturne set — light palette PillButton/secondary renders unchanged 1
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
       style={
         {
           "color": "#20222f",
@@ -5815,6 +5871,7 @@ exports[`Nocturne set — light palette SectionLabel renders unchanged 1`] = `
   }
 >
   <Text
+    maxFontSizeMultiplier={2}
     style={
       [
         {
@@ -5926,6 +5983,7 @@ exports[`Nocturne set — light palette StatCard renders unchanged 1`] = `
     }
   >
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#20222f",
@@ -5938,6 +5996,7 @@ exports[`Nocturne set — light palette StatCard renders unchanged 1`] = `
       1,284
     </Text>
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#666a82",
@@ -5978,6 +6037,8 @@ exports[`Nocturne set — light palette StatusPill/Cancelled renders unchanged 1
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#666a82",
@@ -6017,6 +6078,8 @@ exports[`Nocturne set — light palette StatusPill/Draft renders unchanged 1`] =
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#666a82",
@@ -6056,6 +6119,8 @@ exports[`Nocturne set — light palette StatusPill/Failed renders unchanged 1`] 
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#f87171",
@@ -6095,6 +6160,8 @@ exports[`Nocturne set — light palette StatusPill/Held renders unchanged 1`] = 
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#fbbf24",
@@ -6134,6 +6201,8 @@ exports[`Nocturne set — light palette StatusPill/Live renders unchanged 1`] = 
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#34d399",
@@ -6173,6 +6242,8 @@ exports[`Nocturne set — light palette StatusPill/Paused renders unchanged 1`] 
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#fbbf24",
@@ -6212,6 +6283,8 @@ exports[`Nocturne set — light palette StatusPill/Queued renders unchanged 1`] 
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#666a82",
@@ -6251,6 +6324,8 @@ exports[`Nocturne set — light palette StatusPill/Running renders unchanged 1`]
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#5548ab",
@@ -6290,6 +6365,8 @@ exports[`Nocturne set — light palette StatusPill/Success renders unchanged 1`]
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#34d399",
@@ -6444,6 +6521,7 @@ exports[`Nocturne set — light palette StepCard renders unchanged 1`] = `
       }
     >
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -6459,6 +6537,7 @@ exports[`Nocturne set — light palette StepCard renders unchanged 1`] = `
         TRIGGER
       </Text>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -6475,6 +6554,7 @@ exports[`Nocturne set — light palette StepCard renders unchanged 1`] = `
         New email in AP inbox
       </Text>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -6611,7 +6691,7 @@ exports[`Nocturne set — light palette TabBar renders unchanged 1`] = `
           {
             "alignItems": "center",
             "flexDirection": "row",
-            "height": 62,
+            "minHeight": 62,
             "paddingHorizontal": 4,
           }
         }
@@ -6731,6 +6811,8 @@ exports[`Nocturne set — light palette TabBar renders unchanged 1`] = `
             </RNSVGGroup>
           </RNSVGSvgView>
           <Text
+            maxFontSizeMultiplier={1.35}
+            numberOfLines={1}
             style={
               {
                 "color": "#6a5cc4",
@@ -6856,6 +6938,8 @@ exports[`Nocturne set — light palette TabBar renders unchanged 1`] = `
             </RNSVGGroup>
           </RNSVGSvgView>
           <Text
+            maxFontSizeMultiplier={1.35}
+            numberOfLines={1}
             style={
               {
                 "color": "#7c8095",
@@ -6981,6 +7065,8 @@ exports[`Nocturne set — light palette TabBar renders unchanged 1`] = `
             </RNSVGGroup>
           </RNSVGSvgView>
           <Text
+            maxFontSizeMultiplier={1.35}
+            numberOfLines={1}
             style={
               {
                 "color": "#7c8095",
@@ -7106,6 +7192,8 @@ exports[`Nocturne set — light palette TabBar renders unchanged 1`] = `
             </RNSVGGroup>
           </RNSVGSvgView>
           <Text
+            maxFontSizeMultiplier={1.35}
+            numberOfLines={1}
             style={
               {
                 "color": "#7c8095",
@@ -7146,6 +7234,7 @@ exports[`Nocturne set — light palette TextField renders unchanged 1`] = `
     }
   >
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#666a82",
@@ -7165,7 +7254,7 @@ exports[`Nocturne set — light palette TextField renders unchanged 1`] = `
           "borderRadius": 12,
           "borderWidth": 1,
           "flexDirection": "row",
-          "height": 50,
+          "minHeight": 50,
           "paddingHorizontal": 14,
         }
       }
@@ -7173,6 +7262,7 @@ exports[`Nocturne set — light palette TextField renders unchanged 1`] = `
       <TextInput
         accessibilityLabel="Email"
         autoCapitalize="none"
+        maxFontSizeMultiplier={2}
         onChangeText={[Function]}
         placeholderTextColor="#7c8095"
         secureTextEntry={false}
@@ -7216,6 +7306,7 @@ exports[`Nocturne set — light palette TextField/secure renders unchanged 1`] =
     }
   >
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#666a82",
@@ -7235,7 +7326,7 @@ exports[`Nocturne set — light palette TextField/secure renders unchanged 1`] =
           "borderRadius": 12,
           "borderWidth": 1,
           "flexDirection": "row",
-          "height": 50,
+          "minHeight": 50,
           "paddingHorizontal": 14,
         }
       }
@@ -7243,6 +7334,7 @@ exports[`Nocturne set — light palette TextField/secure renders unchanged 1`] =
       <TextInput
         accessibilityLabel="Password"
         autoCapitalize="none"
+        maxFontSizeMultiplier={2}
         onChangeText={[Function]}
         placeholderTextColor="#7c8095"
         secureTextEntry={true}

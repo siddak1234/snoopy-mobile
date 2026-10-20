@@ -2,7 +2,7 @@ import { File, Paths } from 'expo-file-system';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { DownloadSimple, FlowArrow, StopCircle } from 'phosphor-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Platform, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, Share, StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
   cancelAnimation,
@@ -23,6 +23,7 @@ import { SurfaceCard } from '@/components/nocturne/surface-card';
 import type { InboxRunPath } from '@/components/notifications/inbox';
 import { Pressable } from '@/components/pressable';
 import { DocumentCard } from '@/components/runs/document-card';
+import { Text } from '@/components/text';
 import { em, fonts, iconSize, layout, status, typeScale } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useTheme } from '@/hooks/use-theme';

@@ -1,11 +1,12 @@
 import { CaretRight, UserCircle } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { SettingsRow } from '@/components/settings/settings-row';
+import { Text } from '@/components/text';
 import { fonts, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useTheme } from '@/hooks/use-theme';

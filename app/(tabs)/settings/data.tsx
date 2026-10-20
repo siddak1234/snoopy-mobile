@@ -2,7 +2,7 @@ import { File, Paths } from 'expo-file-system';
 import { useRouter } from 'expo-router';
 import { DownloadSimple, Export } from 'phosphor-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { Linking, Platform, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BackCircle } from '@/components/nocturne/back-circle';
@@ -10,6 +10,7 @@ import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
+import { Text } from '@/components/text';
 import { em, fonts, layout, status, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { busyBody, useWorkspaceResource } from '@/hooks/use-resource';

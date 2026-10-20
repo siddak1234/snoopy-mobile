@@ -1,11 +1,12 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { Linking, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { pressed } from '@/components/pressable';
+import { Text } from '@/components/text';
 import { em, fonts, layout, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { websiteOrigin } from '@/lib/platform/native-auth';

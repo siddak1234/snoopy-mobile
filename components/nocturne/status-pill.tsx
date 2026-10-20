@@ -1,7 +1,8 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
-import { fonts, status, typeScale, withAlpha } from '@/constants/theme';
+import { Text } from '@/components/text';
+import { fontScaleLimit, fonts, status, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { StatusPillLabel } from '@/lib/view/status';
 
@@ -64,7 +65,12 @@ export function StatusPill({ label }: { label: StatusPillLabel }) {
         borderWidth: 1,
         borderColor: t.border,
       }}>
-      <Text style={{ fontFamily: fonts.medium, fontSize: typeScale.caption.fontSize, color: t.color }}>{label}</Text>
+      <Text
+        numberOfLines={1}
+        maxFontSizeMultiplier={fontScaleLimit.chrome}
+        style={{ fontFamily: fonts.medium, fontSize: typeScale.caption.fontSize, color: t.color }}>
+        {label}
+      </Text>
     </View>
   );
 }

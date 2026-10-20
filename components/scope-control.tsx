@@ -1,12 +1,13 @@
 import { Buildings, CaretDown, Stack, User, type Icon } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { Dropdown } from '@/components/dropdown';
 import { GlassSurface } from '@/components/glass-surface';
 import { Pressable } from '@/components/pressable';
 import { WorkspaceSwitcher } from '@/components/settings/workspace-switcher';
-import { fonts, typeScale, withAlpha } from '@/constants/theme';
+import { Text } from '@/components/text';
+import { fontScaleLimit, fonts, typeScale, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useScope } from '@/hooks/use-scope';
 import { useSession } from '@/hooks/use-session';
@@ -74,7 +75,7 @@ export function ScopePill({
         { borderColor: palette.neutral[800], backgroundColor: withAlpha(palette.surface, pressed ? 0.9 : 0.6) },
       ]}>
       <IconCmp size={15} color={palette.accentRamp[300]} />
-      <Text numberOfLines={1} style={[styles.pillLabel, { color: palette.text }]}>
+      <Text numberOfLines={1} maxFontSizeMultiplier={fontScaleLimit.chrome} style={[styles.pillLabel, { color: palette.text }]}>
         {label}
       </Text>
       {onPress ? <CaretDown size={12} color={palette.neutral[500]} /> : null}
@@ -203,7 +204,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    height: 34,
+    minHeight: 34,
     // A name is cut short only where it is wider than the whole row; capped at
     // 60% it lost its last few letters at the bigger type.
     maxWidth: '100%',

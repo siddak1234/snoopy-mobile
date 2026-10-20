@@ -1,7 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { Text } from '@/components/text';
 import { fonts, status, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { DOCUMENT_MORE_LINES } from '@/lib/content/screen-states';

@@ -181,6 +181,17 @@ export const typeScale = {
 } as const;
 
 /**
+ * How far text follows the phone's text size (round 24 P3; the owner's build 23
+ * F14: "based on the users phone size and font size from their native ios
+ * system"). Every `Text` and `TextInput` (`components/text.tsx`) follows iOS's
+ * size up to `content` × the scale's size (2.0, iOS AX2: 15 pt body prints at
+ * 30 pt); text in a fixed bar — the tab labels, pills, badges, a title row's
+ * title — up to `chrome` (1.35, xxxLarge), as Apple's own tab bar stops. Session's
+ * choice S4: beyond AX2 a 375-pt phone holds ~12 characters a line.
+ */
+export const fontScaleLimit = { content: 2, chrome: 1.35 } as const;
+
+/**
  * Icon sizes (the Invoice Processing update, 2026-10-14; the owner's build 19
  * item 8: "Small icons"): 24 for anything that labels a row, a field, a vendor,
  * a step group or a detail, 20 inside a button. A screen takes its glyph size

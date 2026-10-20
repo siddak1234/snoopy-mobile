@@ -51,7 +51,8 @@ The individual architecture gates are:
 - `audit:type`: no font size outside the type scale — every `fontSize`,
   `lineHeight` and `em()` size is a step of `typeScale` in
   `constants/theme.ts`, followed through a `const`, a default or a local table
-  of sizes (24.12).
+  of sizes (24.12); and no `Text` or `TextInput` imported from react-native
+  outside `components/text.tsx`, the text-size limit (round 24 P3).
 - `audit:vocabulary`: no copy says "project" or "automation" — the app says
   team and flow; the code keeps the contract's names (24.11.7).
 - `audit:haptics`: every press ticks through `components/pressable.tsx` (build
@@ -109,9 +110,13 @@ components in dark and light palettes. Do not update those snapshots unless a
 visual change is explicitly authorized. Each authorized re-pin is recorded in
 `DESIGN-GAPS.md`: the owner's bigger type (decision 11, 2026-10-02, "whole app —
 easy to read"), re-pinned in build 10 (24.12) — 48 of the 64 Nocturne entries and
-10 of the 14 in `screen-state.test.tsx`; the other 20 set no font size — and
+10 of the 14 in `screen-state.test.tsx`; the other 20 set no font size —
 round 23's Liquid Glass (the owner's build 22 items 5–6: the tab bar, the back
-circle and the screen states that draw it; "Round 23 — build 22's feedback").
+circle and the screen states that draw it; "Round 23 — build 22's feedback"),
+and round 24's text-size limit (the owner's build 23 F14: every text gains
+`maxFontSizeMultiplier`, a fixed height that holds text becomes `minHeight`) —
+50 of the 66 Nocturne entries, 10 of the 14 screen states and both connection
+rows, props only ("Round 24 — build 23's feedback").
 
 CI runs lint, typecheck, Jest, all architecture/dependency gates (the docs
 checks among them, on the PR's whole range: `fetch-depth: 0` and

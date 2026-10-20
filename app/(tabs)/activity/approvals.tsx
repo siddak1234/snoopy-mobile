@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { CheckCircle, Warning } from 'phosphor-react-native';
 import React, { useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BackCircle } from '@/components/nocturne/back-circle';
@@ -9,7 +9,8 @@ import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
-import { em, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
+import { Text } from '@/components/text';
+import { em, fontScaleLimit, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
@@ -252,7 +253,9 @@ export default function ApprovalsScreen() {
         <BackCircle onPress={() => router.back()} />
         <Text style={[styles.h1, { color: palette.text }]}>Needs review</Text>
         <View style={[styles.badge, { backgroundColor: withAlpha(palette.accent, 0.16) }]}>
-          <Text style={[styles.badgeLabel, { color: palette.accentRamp[200] }]}>{pending}</Text>
+          <Text maxFontSizeMultiplier={fontScaleLimit.chrome} style={[styles.badgeLabel, { color: palette.accentRamp[200] }]}>
+            {pending}
+          </Text>
         </View>
       </View>
       {allDone ? (
@@ -298,7 +301,7 @@ const styles = StyleSheet.create({
   },
   badge: {
     minWidth: 26,
-    height: 26,
+    minHeight: 26,
     paddingHorizontal: 8,
     borderRadius: 999,
     alignItems: 'center',

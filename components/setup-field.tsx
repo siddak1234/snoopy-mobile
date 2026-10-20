@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { EnvelopeSimple, HandPalm, PlugsConnected, Sliders, Tray, type Icon } from 'phosphor-react-native';
 
 import { NocToggle } from '@/components/nocturne/noc-toggle';
 import { SectionLabel } from '@/components/nocturne/section-label';
+import { Text, TextInput } from '@/components/text';
 import { fonts, iconSize, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { NEWER_CONTROL_NOTE } from '@/lib/content/screen-states';

@@ -1,12 +1,13 @@
 import { useRouter } from 'expo-router';
 import * as LocalAuthentication from 'expo-local-authentication';
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { UserFocus } from 'phosphor-react-native';
 
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { Text } from '@/components/text';
 import { em, fonts, layout, status, typeScale } from '@/constants/theme';
 import { useBiometricWording } from '@/hooks/use-biometric-wording';
 import { useTheme } from '@/hooks/use-theme';

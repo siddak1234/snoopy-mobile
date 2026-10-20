@@ -5,7 +5,6 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -20,6 +19,7 @@ import { Skeleton } from '@/components/nocturne/skeleton';
 import { OrDivider } from '@/components/nocturne/or-divider';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { pressed } from '@/components/pressable';
+import { Text } from '@/components/text';
 import { em, fonts, layout, radius, status, typeScale } from '@/constants/theme';
 import { useBiometricWording } from '@/hooks/use-biometric-wording';
 import { useSession } from '@/hooks/use-session';

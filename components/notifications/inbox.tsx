@@ -1,13 +1,14 @@
 import { useRouter } from 'expo-router';
 import { BellRinging, CheckCircle, CrownSimple, HandPalm, X, XCircle } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable, pressed } from '@/components/pressable';
+import { Text } from '@/components/text';
 import { em, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
 import { usePushAsk } from '@/hooks/use-push-registration';
 import { useTheme } from '@/hooks/use-theme';
