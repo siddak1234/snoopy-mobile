@@ -326,6 +326,15 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   session credential goes with it, and the token it answers reaches the
   platform only through `lib/platform/devices.ts`, in the
   `PUT /v1/session/devices` body — never a log, a URL or the enclave.
+- The A8X run package (round 24 P12; backend ADR-0045): `lib/platform/runs.ts`
+  `createRunPackageFile` (`POST …/runs/{runId}/package`) answers a signed link,
+  never bytes; `requestRunPackageFile` asks once more after a busy answer's wait
+  — a 503 with `retry-after` is `PlatformBusyError` in the transport
+  (`lib/platform/client.ts`), still a 503. The file is saved through
+  `downloadSignedFile` (still the one native download). The package page draws
+  the saved PDF in `react-native-webview` (13.15.0, MIT, the SDK 54 pin; a new
+  native module, so build 24 is a new build): the cached file only, its folder
+  the only one it may read — it loads nothing over the network.
 - Liquid Glass (round 23, A3): `expo-glass-effect` at the SDK 54 pin, drawn
   only through `components/glass-surface.tsx` — the system's glass on iOS 26,
   `expo-blur` under a tint below it, the opaque card on Android — on the tab

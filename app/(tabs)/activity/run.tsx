@@ -1,8 +1,7 @@
-import { File, Paths } from 'expo-file-system';
 import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
-import { DownloadSimple, FlowArrow, StopCircle } from 'phosphor-react-native';
+import { DownloadSimple, FileText, FlowArrow, StopCircle } from 'phosphor-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Platform, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
   cancelAnimation,
@@ -26,6 +25,7 @@ import { Text } from '@/components/text';
 import { em, fonts, iconSize, layout, status, typeScale } from '@/constants/theme';
 import { useApprovalDecision } from '@/hooks/use-approval-decision';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
+import { useRunPackageDownload } from '@/hooks/use-run-package';
 import { useTheme } from '@/hooks/use-theme';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { useResource, busyBody } from '@/hooks/use-resource';
@@ -34,9 +34,10 @@ import { refusalMessage, WORKSPACE_CHANGED } from '@/lib/content/refusals';
 import {
   DETAILS_LABEL,
   DOCUMENTS_LABEL,
-  DOWNLOAD_FAILED,
-  DOWNLOAD_JSON_LABEL,
+  DOWNLOAD_EXCEL_LABEL,
+  DOWNLOAD_PDF_LABEL,
   STEPS_LABEL,
+  VIEW_PACKAGE_LABEL,
   errorTitleFor,
 } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
@@ -45,14 +46,13 @@ import {
   readAllApprovals,
   readRemovedSubscriptionsOrNone,
   readRun,
-  readRunDocuments,
   readSubscriptions,
   type Subscription,
 } from '@/lib/platform/runs';
 import { PlatformError, PlatformNotConfiguredError } from '@/lib/platform/problem';
 import { readWorkspaces } from '@/lib/platform/workspaces';
 import { duration, timeOfDay } from '@/lib/view/format';
-import { documentsFileName, toDocumentCards } from '@/lib/view/documents';
+import { toDocumentCards } from '@/lib/view/documents';
 import { decidersLine, decides } from '@/lib/view/roles';
 import { statusLabel, type StatusPillLabel } from '@/lib/view/status';
 import {
@@ -183,8 +183,7 @@ export default function RunDetailScreen() {
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const decisions = useApprovalDecision(openedIn);
-  const [downloading, setDownloading] = useState(false);
-  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const packageFile = useRunPackageDownload(openedIn, runId);
 
   /**
    * The prototype's retry was theatre: idle → 1600ms → swap to a 'retried'
@@ -330,44 +329,6 @@ export default function RunDetailScreen() {
         cancellable: liveRun.detail.run.status === 'pending' || liveRun.detail.run.status === 'running',
       }
     : null;
-
-  /**
-   * Download JSON (spec A7, C2; the session's S25): the run's documents as the
-   * platform serves them for keeping (`readRunDocuments`), read at the press,
-   * handed to the share sheet as `run-{full id}.json` — on iOS the file itself,
-   * on Android the text, which is what its share intent carries — the pattern
-   * of Settings › Data's export. The file is removed once shared.
-   */
-  const downloadJson = async () => {
-    if (!run || downloading) return;
-    const workspaceId = workspaceIfShown(session, openedIn);
-    if (!workspaceId) {
-      setDownloadError(WORKSPACE_CHANGED);
-      return;
-    }
-    setDownloading(true);
-    setDownloadError(null);
-    try {
-      const file = await readRunDocuments(workspaceId, run.id);
-      const json = JSON.stringify(file, null, 2);
-      if (Platform.OS !== 'ios') {
-        await Share.share({ message: json });
-        return;
-      }
-      const saved = new File(Paths.cache, documentsFileName(run.id));
-      saved.create({ overwrite: true });
-      saved.write(json);
-      try {
-        await Share.share({ url: saved.uri });
-      } finally {
-        if (saved.exists) saved.delete();
-      }
-    } catch {
-      setDownloadError(DOWNLOAD_FAILED);
-    } finally {
-      setDownloading(false);
-    }
-  };
 
   /**
    * Cancel a run that has not ended, confirmed first because a cancelled run is
@@ -551,22 +512,53 @@ export default function RunDetailScreen() {
         ))}
       </SurfaceCard>
 
-      {run.documents.length > 0 ? (
+      {/*
+        The A8X run package (round 24 P12; the owner's build 23 F16: "No more
+        download json"; ~~Download JSON~~): once the job has documents and has
+        stopped going — View package opens the PDF on its own page; Download
+        PDF and Download Excel hand the file to the share sheet.
+      */}
+      {run.documents.length > 0 && !run.cancellable ? (
         <View style={styles.download}>
           <PillButton
-            testID="run-download-json"
-            label={DOWNLOAD_JSON_LABEL}
+            testID="run-view-package"
+            label={VIEW_PACKAGE_LABEL}
             variant="secondary"
             height={46}
             fontSize={typeScale.label.fontSize}
-            icon={DownloadSimple}
+            icon={FileText}
             iconSize={iconSize.button}
-            disabled={downloading}
-            onPress={downloadJson}
+            onPress={() => router.push({ pathname: '/(tabs)/activity/package', params: { runId: run.id } })}
           />
-          {downloadError ? (
+          <View style={styles.actions}>
+            <PillButton
+              testID="run-download-pdf"
+              label={DOWNLOAD_PDF_LABEL}
+              variant="secondary"
+              height={46}
+              fontSize={typeScale.label.fontSize}
+              icon={DownloadSimple}
+              iconSize={iconSize.button}
+              disabled={packageFile.busy !== null}
+              style={styles.actionBtn}
+              onPress={() => packageFile.download('pdf')}
+            />
+            <PillButton
+              testID="run-download-excel"
+              label={DOWNLOAD_EXCEL_LABEL}
+              variant="secondary"
+              height={46}
+              fontSize={typeScale.label.fontSize}
+              icon={DownloadSimple}
+              iconSize={iconSize.button}
+              disabled={packageFile.busy !== null}
+              style={styles.actionBtn}
+              onPress={() => packageFile.download('xlsx')}
+            />
+          </View>
+          {packageFile.error ? (
             <Text accessibilityRole="alert" style={[styles.downloadError, { color: status.err }]}>
-              {downloadError}
+              {packageFile.error}
             </Text>
           ) : null}
         </View>

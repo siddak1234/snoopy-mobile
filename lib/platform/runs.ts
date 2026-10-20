@@ -1,5 +1,6 @@
 import type { components } from '@/lib/generated/platform-contracts/automations';
 import { platformOperation } from './client';
+import { PlatformBusyError } from './problem';
 import { invalidateShared, shared } from './snapshot';
 
 /**
@@ -239,20 +240,54 @@ export function readRun(workspaceId: string, runId: string): Promise<RunDetail> 
 }
 
 export type RunDocument = components['schemas']['RunDocument'];
-export type RunDocumentsFile = components['schemas']['RunDocumentsFile'];
+export type RunPackageFile = components['schemas']['RunPackageFile'];
+export type RunPackageFormat = RunPackageFile['format'];
 
 /**
- * One run's documents, as the JSON file the platform serves for keeping
- * (`readRunDocuments`, backend ADR-0039, BUILD-PLAN 25.4.28; Build 21's C2):
- * `{ runId, templateId, templateVersion, status, startedAt, endedAt,
- * documents }` — what "Download JSON" hands to the share sheet (A7). Read at the
- * press, never kept.
+ * The A8X run package as a file (round 24 P12; the owner's build 23 F16; backend
+ * ADR-0045): the PDF (cover, summary, one page per invoice, then the original
+ * pages) or the Excel workbook, built by the platform for the job and answered
+ * as a short-lived signed link — never bytes, never through the Edge. Times
+ * print in `timeZone`. ~~`readRunDocuments`, the JSON file "Download JSON"
+ * shared~~ until round 24 (the endpoint stays; the app no longer reads it).
  */
-export function readRunDocuments(workspaceId: string, runId: string): Promise<RunDocumentsFile> {
-  return platformOperation(`/v1/workspaces/${workspaceId}/runs/${runId}/documents`, ({ automations }, signal) =>
-    automations.GET('/v1/workspaces/{workspaceId}/runs/{runId}/documents', {
-      params: { path: { workspaceId, runId } },
+export function createRunPackageFile(
+  workspaceId: string,
+  runId: string,
+  format: RunPackageFormat,
+  idempotencyKey: string,
+  timeZone?: string,
+): Promise<RunPackageFile> {
+  return platformOperation(`/v1/workspaces/${workspaceId}/runs/${runId}/package`, ({ automations }, signal) =>
+    automations.POST('/v1/workspaces/{workspaceId}/runs/{runId}/package', {
+      params: { path: { workspaceId, runId }, header: { 'Idempotency-Key': idempotencyKey } },
+      body: timeZone ? { format, timeZone } : { format },
       signal,
     }),
   );
+}
+
+/** The longest a busy platform's stated wait is honoured before asking once more. */
+const PACKAGE_WAIT_CAP_S = 15;
+
+/**
+ * `createRunPackageFile`, asked once more after the wait a busy platform states
+ * (503 `package_busy`, `Retry-After`), with the same key; busy again, or any
+ * other refusal, is thrown to the screen. `sleep` is for tests.
+ */
+export async function requestRunPackageFile(
+  workspaceId: string,
+  runId: string,
+  format: RunPackageFormat,
+  idempotencyKey: string,
+  timeZone: string | undefined,
+  sleep: (ms: number) => Promise<void> = (ms) => new Promise((done) => setTimeout(done, ms)),
+): Promise<RunPackageFile> {
+  try {
+    return await createRunPackageFile(workspaceId, runId, format, idempotencyKey, timeZone);
+  } catch (error) {
+    if (!(error instanceof PlatformBusyError)) throw error;
+    await sleep(Math.min(error.retryAfterSeconds, PACKAGE_WAIT_CAP_S) * 1000);
+    return createRunPackageFile(workspaceId, runId, format, idempotencyKey, timeZone);
+  }
 }

@@ -3,7 +3,6 @@ import {
   documentDate,
   documentMoney,
   documentTime,
-  documentsFileName,
   formatFor,
   formatLabel,
   toDocumentCard,
@@ -177,10 +176,9 @@ describe('the tracker: every step from the start, and where the run is (spec A7;
 });
 
 describe('a run is named by its full id (spec A8; the owner\'s D4, AM2)', () => {
-  it('runLabel and the JSON file name carry the whole id', () => {
+  it('runLabel carries the whole id (~~and the JSON file name~~: no Download JSON since round 24, P12)', () => {
     const id = '793eef82-102d-81be-a2d3-9e8d4e2b2c36';
     expect(runLabel({ id })).toBe(`Run ${id}`);
-    expect(documentsFileName(id)).toBe(`run-${id}.json`);
   });
 });
 

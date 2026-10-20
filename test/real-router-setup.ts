@@ -18,6 +18,8 @@
 jest.mock('@/lib/platform/client', () => ({
   platformOperation: jest.fn(),
   newIdempotencyKey: jest.fn(() => 'test-intent'),
+  // The one native download (round 24 P12: the run package): saved into a cache that is a name.
+  downloadSignedFile: jest.fn(async (_url: string, name: string) => ({ uri: `file:///cache/${name}`, exists: true, delete: () => undefined })),
 }));
 
 jest.mock('expo-secure-store', () => {

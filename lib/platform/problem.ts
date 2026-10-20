@@ -70,6 +70,25 @@ export class PlatformRateLimitedError extends PlatformError {
 }
 
 /**
+ * The platform answered 503 and said when to ask again (`retry-after`): busy,
+ * not broken — the run package's `package_busy` (round 24 P12; backend
+ * ADR-0045: one build at a time per host). A subclass of `PlatformError`, so
+ * `status === 503` keeps working everywhere.
+ */
+export class PlatformBusyError extends PlatformError {
+  constructor(
+    message: string,
+    /** The wait the platform asked for, in seconds. */
+    public readonly retryAfterSeconds: number,
+    code?: string,
+    details?: Record<string, unknown>,
+  ) {
+    super(message, 503, code, details);
+    this.name = 'PlatformBusyError';
+  }
+}
+
+/**
  * Thrown when the app has no backend origin configured.
  *
  * Distinct from a failed request on purpose: an unconfigured client renders an

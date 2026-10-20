@@ -256,10 +256,3 @@ export function toDocumentCards(
   return list.map((document) => toDocumentCard(document, list.length, approval, files));
 }
 
-/**
- * The JSON file's name: `run-{the full run id}.json` (the owner's AM2, ~22:15Z:
- * "runs should have the full ID"; ~~the first eight~~ of the spec's S4).
- */
-export function documentsFileName(runId: string): string {
-  return `run-${runId}.json`;
-}

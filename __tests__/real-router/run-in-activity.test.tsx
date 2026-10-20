@@ -1,5 +1,6 @@
 import { act, fireEvent, screen, within } from 'expo-router/testing-library';
 
+import { runDetailPayload, type RouteOverrides } from '@/test/platform';
 import { answerPlatform, flush, launch, pressTab, signedInOnThisPhone } from '@/test/real-router';
 
 /**
@@ -150,4 +151,59 @@ it('a push for a failed run opens it in Activity; Back goes to Activity', async 
   await pressBack();
   expect(view.getPathname()).toBe('/activity');
   expect(selectedTab()).toBe('Activity');
+});
+
+it('a run\'s View package opens the package page in Activity, with its runId; Back returns to the run', async () => {
+  signedInOnThisPhone();
+  const run = runDetailPayload('run-0');
+  answerPlatform({}, {
+    '/runs/run-0': {
+      ...run,
+      run: { ...run.run, status: 'succeeded' },
+      documents: [
+        {
+          index: 1,
+          status: 'saved',
+          statusText: 'Saved',
+          type: 'invoice',
+          vendor: { name: 'Northwind Supply', address: null, city: null, storeNumber: null },
+          number: 'NW-100',
+          numberLabel: 'Invoice #',
+          references: [],
+          date: '2026-10-14',
+          time: null,
+          currency: 'USD',
+          lineItems: [],
+          lineItemsComplete: true,
+          subtotal: '90.00',
+          tax: '10.00',
+          tip: null,
+          discount: null,
+          total: '100.00',
+          payment: { method: 'not_shown', cardLast4: null },
+          recordedIn: null,
+          details: [],
+        },
+      ],
+    },
+    '/runs/run-0/package': {
+      format: 'pdf',
+      filename: 'run-run-0.pdf',
+      contentType: 'application/pdf',
+      sizeBytes: 1000,
+      downloadUrl: 'https://files.example.test/run-0.pdf?sig=1',
+      expiresAt: '2026-10-20T12:00:00Z',
+    },
+    // One run and its package by path, which the typed fragments do not name.
+  } as RouteOverrides);
+  const view = await launch();
+  await open({ text: 'Run #4821 · posted to QuickBooks' });
+  await open({ testID: 'run-view-package' });
+  expect(view.getSegments()).toEqual(['(tabs)', 'activity', 'package']);
+  expect(view.getSearchParams()).toMatchObject({ runId: 'run-0' });
+  expect(selectedTab()).toBe('Activity');
+  expect((await screen.findByTestId('package-webview')).props.source).toEqual({ uri: 'file:///cache/view-run-run-0.pdf' });
+
+  await pressBack();
+  expect(view.getSegments()).toEqual(['(tabs)', 'activity', 'run']);
 });

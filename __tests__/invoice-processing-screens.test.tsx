@@ -36,13 +36,14 @@ import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
 jest.mock('@/lib/platform/client', () => ({
   platformOperation: jest.fn(),
   newIdempotencyKey: jest.fn(() => 'key'),
+  // The one native download (round 24 P12): the signed link saved into the cache.
+  downloadSignedFile: jest.fn(async (_url: string, name: string) => ({ uri: `file:///cache/${name}`, exists: true, delete: jest.fn() })),
 }));
 jest.mock('@/lib/platform/connections', () => ({
   ...jest.requireActual('@/lib/platform/connections'),
   connectOAuthProvider: jest.fn(),
 }));
-// The run form's file field reads the document picker and the file system; the
-// run page's Download JSON writes a file to the cache.
+// The run form's file field reads the document picker and the file system.
 jest.mock('expo-document-picker', () => ({ getDocumentAsync: jest.fn() }));
 const mockFiles: { name: string; text?: string; deleted: boolean }[] = [];
 jest.mock('expo-file-system', () => ({
@@ -72,7 +73,7 @@ jest.mock('@/lib/platform/automations', () => {
 });
 // The flow page's DASHBOARD reads again every 5 s while a run goes on: 20 ms here.
 jest.mock('@/lib/view/runs', () => ({ ...jest.requireActual('@/lib/view/runs'), FLOW_STATS_REREAD_MS: 20 }));
-const { platformOperation } = jest.requireMock('@/lib/platform/client');
+const { platformOperation, downloadSignedFile } = jest.requireMock('@/lib/platform/client');
 const mockConnect = connectOAuthProvider as jest.Mock;
 
 /**
@@ -730,6 +731,8 @@ function openRun(
     approvals?: Answer<'GET /v1/workspaces/{workspaceId}/approvals'>;
     /** This person's role in the workspace, as the collection says it (round 24 P6). */
     role?: 'owner' | 'admin' | 'member';
+    /** What a package request answers, given what was sent (round 24 P12). */
+    packageFile?: (sent: { body: unknown; key?: string }) => unknown;
   } = {},
 ) {
   routePlatform(platformOperation, {
@@ -748,6 +751,15 @@ function openRun(
   platformOperation.mockImplementation((path: string, ...rest: unknown[]) => {
     if (path.endsWith(`/runs/${RUN_ID}/documents`)) {
       return options.documents ? Promise.resolve().then(options.documents) : Promise.reject(new Error('no file'));
+    }
+    if (path.endsWith(`/runs/${RUN_ID}/package`)) {
+      if (!options.packageFile) return Promise.reject(new Error('no package'));
+      // The generated client's POST, as `createRunPackageFile` calls it: what was sent is seen.
+      const execute = rest[0] as (clients: unknown, signal?: AbortSignal) => Promise<{ data: unknown }>;
+      const post = async (_template: string, init: { body: unknown; params: { header: Record<string, string> } }) => ({
+        data: await options.packageFile!({ body: init.body, key: init.params.header['Idempotency-Key'] }),
+      });
+      return execute({ automations: { POST: post } }).then((answer) => answer.data);
     }
     return path.endsWith(`/runs/${RUN_ID}`) ? Promise.resolve(detail) : routed(path, ...rest);
   });
@@ -1028,7 +1040,7 @@ describe("a held run's step 4: Approve or Deny there (round 24, P6)", () => {
   });
 });
 
-describe("a run's documents and Download JSON (spec A7, C2; the owner's ~04:05Z and AM7)", () => {
+describe("a run's documents and its package (spec A7, C2; the owner's ~04:05Z and AM7; round 24 P10, P12)", () => {
   const three = [
     receipt(1),
     receipt(2, {
@@ -1130,32 +1142,63 @@ describe("a run's documents and Download JSON (spec A7, C2; the owner's ~04:05Z 
     expect(within(screen.getByTestId('document-3-body')).getByText('JPEG')).toBeTruthy();
   });
 
-  it('Download JSON hands the platform\'s file to the share sheet as run-{full id}.json, then removes it', async () => {
-    const file = { runId: RUN_ID, templateId: 'invoice-processing', templateVersion: 3, status: 'succeeded', startedAt: null, endedAt: null, documents: three };
+  /** The package file the platform answers (round 24 P12): a signed https link. */
+  const pdfLink = (format: 'pdf' | 'xlsx' = 'pdf') => ({
+    format,
+    filename: `run-${RUN_ID}.${format}`,
+    contentType: format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    sizeBytes: 52000,
+    downloadUrl: `https://files.example.test/run.${format}?sig=1`,
+    expiresAt: '2026-10-20T12:00:00Z',
+  });
+
+  it('the run package replaces Download JSON (round 24 P12): View package opens the package page; no Download JSON', async () => {
+    await openRun(ipRun('succeeded', [], { documents: three }));
+    await fireEvent.press(await screen.findByTestId('run-view-package'));
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/activity/package', params: { runId: RUN_ID } });
+    expect(screen.queryByTestId('run-download-json')).toBeNull();
+    expect(screen.queryByText('Download JSON')).toBeNull();
+    expect(screen.getByText('Download PDF')).toBeTruthy();
+    expect(screen.getByText('Download Excel')).toBeTruthy();
+  });
+
+  it.each([
+    ['run-download-pdf', 'pdf'],
+    ['run-download-excel', 'xlsx'],
+  ] as const)('%s asks the platform for the %s with a key and the phone\'s zone, saves the signed link, shares it, then removes it', async (testID, format) => {
     const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
+    const sent: { body: unknown; key?: string }[] = [];
     const os = Platform.OS;
     Platform.OS = 'ios';
     try {
-      await openRun(ipRun('succeeded', [], { documents: three }), { documents: () => file });
-      await fireEvent.press(await screen.findByTestId('run-download-json'));
-      await waitFor(() => expect(share).toHaveBeenCalledWith({ url: `file:///cache/run-${RUN_ID}.json` }));
-      expect(mockFiles).toEqual([{ name: `run-${RUN_ID}.json`, text: JSON.stringify(file, null, 2), deleted: true }]);
-      expect(platformOperation).toHaveBeenCalledWith(`/v1/workspaces/${TEST_WORKSPACE}/runs/${RUN_ID}/documents`, expect.any(Function));
+      await openRun(ipRun('succeeded', [], { documents: three }), { packageFile: (request) => (sent.push(request), pdfLink(format)) });
+      await fireEvent.press(await screen.findByTestId(testID));
+      await waitFor(() => expect(share).toHaveBeenCalledWith({ url: `file:///cache/run-${RUN_ID}.${format}` }));
+      expect(sent).toEqual([{ body: { format, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }, key: 'key' }]);
+      expect(downloadSignedFile).toHaveBeenCalledWith(`https://files.example.test/run.${format}?sig=1`, `run-${RUN_ID}.${format}`);
+      const saved = await (downloadSignedFile as jest.Mock).mock.results.at(-1)!.value;
+      expect(saved.delete).toHaveBeenCalledTimes(1);
     } finally {
       Platform.OS = os;
       share.mockRestore();
     }
   });
 
-  it('says "Could not download. Try again." when the file could not be read, and offers no Download JSON without documents', async () => {
+  it('says "Could not download. Try again." when the package cannot be made; no package while the job goes on, or without documents', async () => {
     const view = await openRun(ipRun('succeeded', [], { documents: three }));
-    await fireEvent.press(await screen.findByTestId('run-download-json'));
+    await fireEvent.press(await screen.findByTestId('run-download-pdf'));
     expect(await screen.findByText('Could not download. Try again.')).toBeTruthy();
     await view.unmount();
     resetSnapshot();
+    const going = await openRun(ipRun('running', [], { documents: three }));
+    await screen.findByTestId('run-progress');
+    expect(screen.queryByTestId('run-view-package')).toBeNull();
+    await going.unmount();
+    resetSnapshot();
     await openRun(ipRun('succeeded', []));
     await screen.findByTestId('run-progress');
-    expect(screen.queryByTestId('run-download-json')).toBeNull();
+    expect(screen.queryByTestId('run-view-package')).toBeNull();
+    expect(screen.queryByTestId('run-download-pdf')).toBeNull();
     expect(screen.queryByText('DOCUMENTS')).toBeNull();
   });
 

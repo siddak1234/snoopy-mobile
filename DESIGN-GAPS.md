@@ -1990,6 +1990,17 @@ drop-down, the status-bar strip, and the A8X run package.
   and `{vendor} · {total}` (S9); the body only when open (`FadeIn`, the card `LinearTransition`, none
   under Reduce Motion), starting with Document type and Format (`kind`); `formatFor(document, files)`
   and `formatLabel(contentType)` in `lib/view/documents.ts`. Website: its lane (`<details>`).
+- **P12 the A8X run package, the app half** (F16; the main session's correction 1 overrides S16): the run
+  page's View package / Download PDF / Download Excel replace Download JSON (`readRunDocuments`,
+  `DOWNLOAD_JSON_LABEL`, `documentsFileName`, `downloadJson` deleted; the endpoint stays). New:
+  `createRunPackageFile` + `requestRunPackageFile` (`lib/platform/runs.ts`), `PlatformBusyError`
+  (`lib/platform/problem.ts`, mapped in `client.ts` for a 503 with `retry-after`, capped at 15 s),
+  `hooks/use-run-package.tsx` (the one download path, for the run page and the package page — the
+  reason for the new file), `app/(tabs)/activity/package.tsx` (the PDF in a WebView from the cache,
+  `view-` prefixed so a header share never removes it; deleted on close). No `readRunPackage` and no
+  package view model (correction 1). `react-native-webview` 13.15.0 (MIT) added by `npx expo install`;
+  jest mocks it as a view (`test/jest-setup.js`). **Finding**: Android's WebView does not draw a PDF;
+  the app ships to iOS, so the Android package page is NOT OBSERVED and left as it draws.
 - **P11 the status-bar strip** (seen in fb09, fb10, fb15, fb16): `components/status-bar-strip.tsx`, a
   `GlassSurface radius={0} backing="page"` as tall as the top inset, absolute, `pointerEvents="none"`,
   rendered once after `<Tabs>` in `app/(tabs)/_layout.tsx` and once after the auth `Stack` (Sign in
@@ -2034,6 +2045,13 @@ drop-down, the status-bar strip, and the A8X run package.
 | P10 · closed at first | `useState(true)` (`components/runs/document-card.tsx`) | `invoice-processing-screens` "each invoice is a closed drop-down…" |
 | P10 · Format from the file its source names | the first file taken (`formatFor`) | `build21-views` "opens with Document type and Format…", `invoice-processing-screens` the drop-down case |
 | P10 · `{vendor} · {total}` while closed | the type alone | `build21-views` "closed, a card says…", the drop-down case |
+| P12 · View package opens the package page | pushed to the run page (`app/(tabs)/activity/run.tsx`) | `invoice-processing-screens` "the run package replaces Download JSON…" |
+| P12 · Download PDF asks for the PDF | `xlsx` asked | `invoice-processing-screens` "run-download-pdf asks the platform…" |
+| P12 · the WebView draws the cached file | the signed link drawn (`app/(tabs)/activity/package.tsx`) | `package-screen` "prepares, asks for the PDF…" |
+| P12 · the cache is emptied on close | `forget()` dropped from the cleanup | `package-screen` "deletes the cached file…" |
+| P12 · busy twice says so | the busy state never chosen | `package-screen` "busy after the wait…" |
+| P12 · asked once more after a busy wait | the retry dropped (`lib/platform/runs.ts`) | `platform-request` "busy once…", `package-screen` "busy after the wait…" |
+| P12 · a 503 with its wait is busy | the 503 mapping off (`lib/platform/client.ts`) | `platform-request` "a 503 that states its wait…", "busy once…" |
 
 (Each run by the lane's bite script in the round's scratchpad, Node 22.23.2: broken, red — a test failed —
 the file restored sha256-equal, green.)

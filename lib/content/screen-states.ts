@@ -36,7 +36,8 @@ export type ScreenKey =
   | 'billing'
   | 'account'
   | 'data'
-  | 'vendor';
+  | 'vendor'
+  | 'package';
 
 /** `gErrTitle` — the design names the thing that failed, never the mechanism. */
 const ERROR_TITLES: Record<ScreenKey, string> = {
@@ -59,6 +60,7 @@ const ERROR_TITLES: Record<ScreenKey, string> = {
   account: "Couldn't load your account",
   data: "Couldn't load data export",
   vendor: "Couldn't load this flow's integrations",
+  package: "Couldn't open the run package",
 };
 
 /** The design's own fallback for a screen not in the map. */
@@ -436,7 +438,18 @@ export function documentOf(index: number, count: number): string {
 export const DOCUMENT_TYPE_LABEL = 'Document type';
 export const DOCUMENT_FORMAT_LABEL = 'Format';
 export const DOCUMENT_MORE_LINES = 'More lines on the document.';
-export const DOWNLOAD_JSON_LABEL = 'Download JSON';
+/**
+ * The A8X run package (round 24 P12; the owner's build 23 F16: "No more
+ * download json"; ~~Download JSON~~): View package opens the PDF on its own
+ * page; Download PDF and Download Excel hand the file to the share sheet.
+ */
+export const VIEW_PACKAGE_LABEL = 'View package';
+export const DOWNLOAD_PDF_LABEL = 'Download PDF';
+export const DOWNLOAD_EXCEL_LABEL = 'Download Excel';
+export const RUN_PACKAGE_TITLE = 'Run package';
+export const PACKAGE_PREPARING = 'Preparing the package…';
+/** Busy still after the wait it asked for (503 `package_busy`, asked twice). */
+export const PACKAGE_BUSY = 'Could not open the package. Try again.';
 export const DOWNLOAD_FAILED = 'Could not download. Try again.';
 export const RUN_ID_LABEL = 'Run ID';
 

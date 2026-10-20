@@ -47,6 +47,14 @@ jest.mock('expo-blur', () => {
   return { BlurView: View };
 });
 
+// The run package's WebView (`app/(tabs)/activity/package.tsx`, round 24 P12):
+// a view whose props a test reads; its native module is the phone's.
+jest.mock('react-native-webview', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return { WebView: (props) => React.createElement(View, props) };
+});
+
 // Liquid Glass (`components/glass-surface.tsx`): a View, and not available by
 // default, so a surface draws its iOS < 26 or Android form until a test says so.
 jest.mock('expo-glass-effect', () => {

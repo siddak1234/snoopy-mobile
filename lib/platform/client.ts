@@ -7,6 +7,7 @@ import type { paths as ConnectionPaths } from '@/lib/generated/platform-contract
 import type { paths as PlatformPaths } from '@/lib/generated/platform-contracts/platform';
 import { backendApiOrigin } from './origin';
 import {
+  PlatformBusyError,
   PlatformError,
   PlatformNotConfiguredError,
   PlatformRateLimitedError,
@@ -155,6 +156,17 @@ async function sendOnce<T>(
       if (result.response.status === 429) {
         const seconds = retryAfterSeconds(result.response.headers.get('retry-after'));
         throw new PlatformRateLimitedError(busyMessage(seconds), seconds, problem.details);
+      }
+      // A 503 that says when to ask again is busy, not broken (round 24 P12: the
+      // run package's `package_busy`): the wait travels with it.
+      const busyFor = result.response.status === 503 ? retryAfterSeconds(result.response.headers.get('retry-after')) : undefined;
+      if (busyFor !== undefined) {
+        throw new PlatformBusyError(
+          problem.title ?? fallbackProblemTitle(503),
+          busyFor,
+          problem.code,
+          problem.details,
+        );
       }
       throw new PlatformError(
         problem.title ?? fallbackProblemTitle(result.response.status),
