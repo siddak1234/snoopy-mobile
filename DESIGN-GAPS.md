@@ -2013,6 +2013,12 @@ drop-down, the status-bar strip, and the A8X run package.
   rendered once after `<Tabs>` in `app/(tabs)/_layout.tsx` and once after the auth `Stack` (Sign in
   scrolls). Both new surfaces are pinned in both palettes and both iOS forms (`nocturne-visual`).
 
+**Parity** (app/CLAUDE.md): the website's lane matches P6 (Approve / Deny in its run page's step 4,
+Deny danger), P7 (a decided row leaves; none left → `/account/runs`), P9 (one id per job) and P10
+(`<details>` "Invoice n of m"), and P12 (View package, Download PDF and Excel); P1 and P5 are verified
+there with no change; the website has no inbox, so P8 has nothing to match. P2, P3 and P11 are the app's
+own (its tab bar, its text sizes, its status bar).
+
 ### Guards proved to bite, round 24
 
 | Guard | Broken by | What failed |

@@ -97,6 +97,17 @@ describe('the run package page', () => {
     expect(sent).toHaveLength(3);
   });
 
+  it('busy: Back leaves', async () => {
+    const busy = () => {
+      throw new PlatformBusyError('Busy', 0, 'package_busy');
+    };
+    answers.push(busy, busy);
+    await renderWithProviders(<RunPackageScreen />, signedInSession);
+    await screen.findByText('Could not open the package. Try again.');
+    await fireEvent.press(screen.getByLabelText('Back'));
+    expect(mockRouter.back).toHaveBeenCalledTimes(1);
+  });
+
   it('a refusal: the error state in the platform\'s words, with Retry and Back', async () => {
     answers.push(() => {
       throw new PlatformError('This run has no documents to package.', 409, 'no_documents');
@@ -106,6 +117,10 @@ describe('the run package page', () => {
     expect(screen.getByText('This run has no documents to package.')).toBeTruthy();
     await fireEvent.press(screen.getByLabelText('Back'));
     expect(mockRouter.back).toHaveBeenCalled();
+    // Retry asks again, and this time the PDF is drawn.
+    await fireEvent.press(screen.getByText('Retry'));
+    expect(await screen.findByTestId('package-webview')).toBeTruthy();
+    expect(sent).toHaveLength(2);
   });
 
   it('no run named: unavailable, no request', async () => {
@@ -113,6 +128,9 @@ describe('the run package page', () => {
     await renderWithProviders(<RunPackageScreen />, signedInSession);
     expect(await screen.findByText("Couldn't open the run package")).toBeTruthy();
     expect(platformOperation).not.toHaveBeenCalled();
+    expect(screen.queryByText('Retry')).toBeNull();
+    await fireEvent.press(screen.getByLabelText('Back'));
+    expect(mockRouter.back).toHaveBeenCalledTimes(1);
   });
 
   it.each([
