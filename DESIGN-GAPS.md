@@ -1979,6 +1979,17 @@ drop-down, the status-bar strip, and the A8X run package.
   both offers draw one layout — the reason for the new file; pinned in both palettes. The real-router
   project's default iOS answer is "no" so a sign-in test meets no offer unless it asks for one. Parity:
   the website has no inbox, nothing to match.
+- **P9 one run id per job, the client half** (F12): `metaFor` drops "After approval ·", the approved
+  line is "Approved" (~~"Approved — continued in a new run"~~), `stepStates` drops the continuation
+  branch and counts a held step done once the job runs on (the job's steps are its runs' together,
+  backend ADR-0044) — the fallback rows too; `jobApproval` (P6) picks the newest approval; the run
+  page's `run-continues` link and `isContinuation` (unused) are gone. `runOriginLabel` keeps its
+  words. The deprecated `continuesRunId`/`continuationRunId` stay in the generated types, unread.
+- **P10 each invoice a closed drop-down** (F15): `DocumentCard` — a `Pressable` header (button,
+  `expanded`, 44 pt) with "Invoice i of n" (`documentOf`), the chip (one line, chrome limit), a caret
+  and `{vendor} · {total}` (S9); the body only when open (`FadeIn`, the card `LinearTransition`, none
+  under Reduce Motion), starting with Document type and Format (`kind`); `formatFor(document, files)`
+  and `formatLabel(contentType)` in `lib/view/documents.ts`. Website: its lane (`<details>`).
 - **P11 the status-bar strip** (seen in fb09, fb10, fb15, fb16): `components/status-bar-strip.tsx`, a
   `GlassSurface radius={0} backing="page"` as tall as the top inset, absolute, `pointerEvents="none"`,
   rendered once after `<Tabs>` in `app/(tabs)/_layout.tsx` and once after the auth `Stack` (Sign in
@@ -2016,6 +2027,13 @@ drop-down, the status-bar strip, and the A8X run package.
 | P8 · only where iOS can still ask | `!== 'denied'` for `=== 'ask'` (`hooks/use-push-registration.tsx`) | `notifications-offer` "iOS allows already", `real-router/notifications-offer` "iOS already allows…" |
 | P8 · Not now is kept | the offer's Not now a no-op (`app/(auth)/notifications-offer.tsx`) | `notifications-offer` "Not now is kept…", `real-router/notifications-offer` the first case |
 | P8 · a sign-in routes to the offer | the notifications step dropped (`lib/view/return-to.ts`) | `notifications-offer` the `nextAfterSignIn` table, `real-router/notifications-offer` |
+| P9 · no "After approval ·" | the prefix put back (`lib/view/runs.ts`) | `flows-view` "a row is a job…", `gate24-parity-activity` "a job held again…" |
+| P9 · approved says "Approved" | the old line put back | `flows-view` "is pending, approved…", `tab-screens` "leaves a decided held run…" |
+| P9 · a held step done once the job runs on | the held state kept | `build21-views` "an approved job…" (two), `invoice-processing-screens` "an approved job…" |
+| P10 · "Invoice i of n" | `documentOf` says Document (`lib/content/screen-states.ts`) | `build21-views` headings, `invoice-processing-screens` the document cases |
+| P10 · closed at first | `useState(true)` (`components/runs/document-card.tsx`) | `invoice-processing-screens` "each invoice is a closed drop-down…" |
+| P10 · Format from the file its source names | the first file taken (`formatFor`) | `build21-views` "opens with Document type and Format…", `invoice-processing-screens` the drop-down case |
+| P10 · `{vendor} · {total}` while closed | the type alone | `build21-views` "closed, a card says…", the drop-down case |
 
 (Each run by the lane's bite script in the round's scratchpad, Node 22.23.2: broken, red — a test failed —
 the file restored sha256-equal, green.)

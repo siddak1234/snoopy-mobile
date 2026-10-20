@@ -4,6 +4,8 @@ import {
   documentMoney,
   documentTime,
   documentsFileName,
+  formatFor,
+  formatLabel,
   toDocumentCard,
   toDocumentCards,
 } from '@/lib/view/documents';
@@ -52,10 +54,24 @@ describe('the tracker: every step from the start, and where the run is (spec A7;
     ],
     ['cancelled before it read', { status: 'cancelled' }, steps(['receive', 'ok']), ['done', 'stopped', 'stopped', 'stopped']],
     [
-      'a continuation: the groups before its first step done',
+      // A job is its runs' steps together (round 24 P9): approved, its held step is done once it runs on.
+      'an approved job: the held step done, then the steps after it',
+      { status: 'succeeded' },
+      steps(['receive', 'ok'], ['extract', 'ok'], ['check-documents', 'ok'], ['decide', 'ok'], ['ask-approval', 'held'], ['confirm-company', 'ok'], ['create-approved-records', 'ok']),
+      ['done', 'done', 'done', 'done'],
+    ],
+    [
+      'an approved job still running: the held step done, the next working',
+      { status: 'running' },
+      steps(['receive', 'ok'], ['extract', 'ok'], ['check-documents', 'ok'], ['decide', 'ok'], ['ask-approval', 'held']),
+      ['done', 'done', 'done', 'working'],
+    ],
+    [
+      // ~~A continuation's groups before its first step, done~~ until round 24: no such run is drawn.
+      'a continuation alone is drawn as what it reported, nothing assumed done before it',
       { status: 'succeeded', origin: 'approval-continuation' },
       steps(['confirm-company', 'ok'], ['create-approved-records', 'ok']),
-      ['done', 'done', 'done', 'done'],
+      ['skipped', 'skipped', 'skipped', 'done'],
     ],
   ])('%s', (_case, run, reported, groups) => {
     const rows = toTracker(reported, V3.pipeline, V3.groups, run, clock);
@@ -256,7 +272,7 @@ describe("a document's card (spec A7; the owner's ~04:05Z and AM7)", () => {
       { description: '—', amount: null, each: null },
     ]);
     expect(card.moreLines).toBe(true);
-    expect(card.heading).toBe('Document 1 of 2');
+    expect(card.heading).toBe('Invoice 1 of 2');
   });
 
   it('the rows: totals, the discount as taken off, how it was paid, the result, then the automation\'s own lines', () => {
@@ -305,9 +321,45 @@ describe("a document's card (spec A7; the owner's ~04:05Z and AM7)", () => {
     expect(toDocumentCard(doc({ vendor: { name: 'X', address: null, city: 'Oakland, CA', storeNumber: null } }), 1).location).toBe('Oakland, CA');
   });
 
-  it('cards come in the file\'s order, each "Document i of n"', () => {
+  it('cards come in the file\'s order, each "Invoice i of n" (round 24 P10; ~~Document i of n~~)', () => {
     const cards = toDocumentCards([doc({ index: 3 }), doc({ index: 1 }), doc({ index: 2 })]);
-    expect(cards.map((card) => card.heading)).toEqual(['Document 1 of 3', 'Document 2 of 3', 'Document 3 of 3']);
+    expect(cards.map((card) => card.heading)).toEqual(['Invoice 1 of 3', 'Invoice 2 of 3', 'Invoice 3 of 3']);
     expect(toDocumentCards(undefined)).toEqual([]);
+  });
+
+  it('closed, a card says {vendor} · {total} (S9); without a seller its type, without a total the name alone', () => {
+    expect(toDocumentCard(doc(), 1).summary).toBe("Lowe's · $17.19");
+    expect(toDocumentCard(doc({ type: 'bill', vendor: { name: null, address: null, city: null, storeNumber: null } }), 1).summary).toBe('Bill · $17.19');
+    expect(toDocumentCard(doc({ total: null }), 1).summary).toBe("Lowe's");
+  });
+
+  it('opens with Document type and Format: the file its source names, else the job\'s only file, else no Format row', () => {
+    const pdf = { id: '11111111-1111-4111-8111-111111111111', filename: 'scan.pdf', contentType: 'application/pdf', format: 'PDF', sizeBytes: 1000, pages: 2 };
+    const png = { id: '22222222-2222-4222-8222-222222222222', filename: 'photo.png', contentType: 'image/png', format: 'PNG', sizeBytes: 900, pages: 1 };
+    expect(toDocumentCard(doc({ source: { file: png.id } }), 1, null, [pdf, png]).kind).toEqual([
+      { label: 'Document type', value: 'Receipt' },
+      { label: 'Format', value: 'PNG' },
+    ]);
+    expect(toDocumentCard(doc(), 1, null, [pdf]).kind).toEqual([
+      { label: 'Document type', value: 'Receipt' },
+      { label: 'Format', value: 'PDF' },
+    ]);
+    // Two files and no source: which is not known, so no Format row; none listed, none either.
+    expect(toDocumentCard(doc(), 1, null, [pdf, png]).kind).toEqual([{ label: 'Document type', value: 'Receipt' }]);
+    expect(toDocumentCard(doc(), 1).kind).toEqual([{ label: 'Document type', value: 'Receipt' }]);
+    // A file listed without its format: read from its content type.
+    expect(formatFor(doc(), [{ ...pdf, format: '' }])).toBe('PDF');
+  });
+
+  it.each([
+    ['application/pdf', 'PDF'],
+    ['image/jpeg', 'JPEG'],
+    ['image/jpg', 'JPEG'],
+    ['image/png', 'PNG'],
+    ['image/heic', 'HEIC'],
+    ['image/heif', 'HEIC'],
+    ['image/tiff; charset=binary', 'TIFF'],
+  ])('formatLabel(%s) is %s', (contentType, label) => {
+    expect(formatLabel(contentType)).toBe(label);
   });
 });

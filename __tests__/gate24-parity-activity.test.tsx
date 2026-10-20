@@ -69,7 +69,7 @@ describe('Activity says a run as the website does: when, the run by its full id,
     expect(within(row).getByText(/^\d+d$/u)).toBeTruthy();
   });
 
-  it('keeps "After approval" on a continuation held again, beside where its approval stands — the tag a held one lost', async () => {
+  it('a job held again says where its newest approval stands, under its one id — no "After approval" tag (round 24 P9)', async () => {
     const held: Run = {
       ...runsPayload().runs[0]!,
       id: 'held-again',
@@ -84,9 +84,10 @@ describe('Activity says a run as the website does: when, the run by its full id,
       '/approvals': { approvals: [waiting] },
     });
     await renderWithProviders(<ActivityScreen />, signedInSession);
-    expect(await screen.findByText('After approval · Waiting for approval')).toBeTruthy();
+    expect(await screen.findByText('Waiting for approval')).toBeTruthy();
+    expect(screen.queryByText(/After approval/u)).toBeNull();
     // The rule itself, for Home's recent runs too.
-    expect(metaFor(held, [waiting])).toBe('After approval · Waiting for approval');
+    expect(metaFor(held, [waiting])).toBe('Waiting for approval');
     expect(metaFor({ ...held, origin: 'trigger' }, [waiting])).toBe('Waiting for approval');
   });
 });
@@ -205,22 +206,18 @@ describe("a run's page says what the website's says (G18)", () => {
     expect(fact('Trigger')).toEqual(['Trigger', 'Manual']);
   });
 
-  it('links a continuation to the run that was held, on the one run page in Activity (round 24 P5)', async () => {
+  it('one id per job: no "Continues the run that was held." link, whatever the run reports (round 24 P9)', async () => {
     routeRun(
       detail({ status: 'succeeded', origin: 'approval-continuation', continuesRunId: 'run-held', resultSummary: 'Recorded INV-7' }, [
         { stepId: 'receive' },
       ]),
     );
     setMockParams({ runId: 'run-1' });
-    const home = await renderWithProviders(<RunDetailScreen />, signedInSession);
-    expect(fact('Trigger')).toEqual(['Trigger', 'After approval']);
-    // Its id's first characters, which nothing opened, are gone.
-    expect(screen.queryByText(/continues run /u)).toBeNull();
-    expect(colorOf(screen.getByText('the run that was held'))).toBe(nocturneDark.accentRamp[300]);
-    await fireEvent.press(screen.getByTestId('run-continues'));
-    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/activity/run', params: { runId: 'run-held' } });
-    expect(mockRouter.push).toHaveBeenCalledTimes(1);
-    await home.unmount();
+    await renderWithProviders(<RunDetailScreen />, signedInSession);
+    await screen.findByTestId('run-fact-Trigger');
+    expect(screen.queryByTestId('run-continues')).toBeNull();
+    expect(screen.queryByText('the run that was held')).toBeNull();
+    expect(screen.queryByText(/Continues/u)).toBeNull();
   });
 
   it('says a held step waits for approval and why, in the warning colour — never its own summary — and when each step was done (Build 21, spec A7)', async () => {

@@ -644,30 +644,31 @@ describe('Activity', () => {
     expect(mockRouter.push).not.toHaveBeenCalled();
   });
 
-  it('leaves a decided held run out of Needs review and says how it was decided (feedback #5, #7)', async () => {
-    // A run stays `held` after its approval, because the approval starts a new
-    // run (FR-15). The first signed-in session saw five "held" rows from
-    // September under Needs review with nothing to approve.
+  it('leaves a decided held run out of Needs review and says how it was decided (feedback #5, #7; round 24 P9)', async () => {
+    // A denied job stays `held` (its approval ran nothing more). The first
+    // signed-in session saw five "held" rows from September under Needs review
+    // with nothing to approve. Since round 24 a job is one row under its first
+    // run's id: an approved one is listed at its newest status, not twice.
     const held: Run = { ...runsPayload().runs[0]!, id: 'held-decided', status: 'held' };
-    const continuation: Run = {
-      ...runsPayload().runs[0]!,
-      id: 'held-continued',
-      status: 'succeeded',
-      origin: 'approval-continuation',
-      continuesRunId: 'held-decided',
-      resultSummary: 'Recorded INV-7',
-    };
+    const approvedJob: Run = { ...runsPayload().runs[0]!, id: 'held-approved', status: 'succeeded', resultSummary: 'Recorded INV-7' };
     routePlatform(platformOperation, {
-      '/runs': { runs: [held, continuation] },
-      '/approvals': { approvals: [{ ...approvalsPayload().approvals[0]!, runId: 'held-decided', status: 'approved' }] },
+      '/runs': { runs: [held, approvedJob] },
+      '/approvals': {
+        approvals: [
+          { ...approvalsPayload().approvals[0]!, runId: 'held-decided', status: 'rejected' },
+          { ...approvalsPayload().approvals[1]!, runId: 'held-approved', status: 'approved' },
+        ],
+      },
     });
     const { getByText, queryByText } = await renderWithProviders(<ActivityScreen />, signedInSession);
-    expect(getByText('Approved — continued in a new run')).toBeTruthy();
-    expect(getByText('After approval · Recorded INV-7')).toBeTruthy();
+    expect(getByText('Denied')).toBeTruthy();
+    expect(getByText('Recorded INV-7')).toBeTruthy();
+    expect(queryByText(/After approval/u)).toBeNull();
+    expect(queryByText('Approved — continued in a new run')).toBeNull();
     await fireEvent.press(screen.getByTestId('activity-outcome'));
     await fireEvent.press(screen.getByTestId('activity-outcome-option-Needs review'));
     expect(getByText('No held runs.')).toBeTruthy();
-    expect(queryByText('Approved — continued in a new run')).toBeNull();
+    expect(queryByText('Denied')).toBeNull();
   });
 
   it('filters to successes only', async () => {

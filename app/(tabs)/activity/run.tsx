@@ -20,7 +20,6 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { StatCard } from '@/components/nocturne/stat-card';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
-import { Pressable } from '@/components/pressable';
 import { DecisionButtons } from '@/components/runs/decision-buttons';
 import { DocumentCard } from '@/components/runs/document-card';
 import { Text } from '@/components/text';
@@ -312,17 +311,15 @@ export default function RunDetailScreen() {
         result: runResultLine(liveRun.detail.run, liveRun.approvals),
         status: statusLabel(liveRun.detail.run.status) as StatusPillLabel,
         stats: toRunStats(tracker, duration(liveRun.detail.run.startedAt, liveRun.detail.run.endedAt)),
-        // Started, Ended, Trigger, Run ID: the website's facts.
+        // Started, Ended, Trigger, Run ID: the website's facts. One id per job since
+        // round 24 (P9): ~~"Continues the run that was held."~~, nothing to link.
         facts: toRunFacts(liveRun.detail.run),
-        // The run a continuation continues, a tap away, as the website links "the
-        // run that was held" (until Gate 24's parity pass, its id's first eight
-        // characters, which nothing opened).
-        continues: liveRun.detail.run.continuesRunId,
         tracker,
         // Each document it read, on a card of its own (backend ADR-0039).
         documents: toDocumentCards(
           liveRun.detail.documents,
           decided === 'rejected' ? 'rejected' : decided === 'closed' ? 'expired' : null,
+          liveRun.detail.files,
         ),
         // What a v1/v2 run saved, as its automation wrote it for people (backend
         // ADR-0037; the one-run read only) — drawn only where no documents are.
@@ -429,7 +426,6 @@ export default function RunDetailScreen() {
       />
     );
   }
-  const continued = run.continues;
 
   /**
    * Approve / Deny inside step 4 (round 24 P6; the owner's build 23 F7–F10: "It
@@ -503,18 +499,6 @@ export default function RunDetailScreen() {
           <StatCard key={s.label} value={s.value} label={s.label} size="sm" />
         ))}
       </View>
-
-      {continued ? (
-        <Pressable
-          testID="run-continues"
-          accessibilityRole="link"
-          onPress={() => router.push({ pathname: '/(tabs)/activity/run', params: { runId: continued } })}
-          style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
-          <Text style={[styles.continues, { color: palette.neutral[400] }]}>
-            Continues <Text style={{ color: palette.accentRamp[300] }}>the run that was held</Text>.
-          </Text>
-        </Pressable>
-      ) : null}
 
       <View testID="run-progress">
         <SectionLabel>{STEPS_LABEL}</SectionLabel>
@@ -707,10 +691,6 @@ const styles = StyleSheet.create({
     marginTop: 1,
     fontFamily: fonts.regular,
     fontSize: typeScale.small.fontSize,
-  },
-  continues: {
-    fontFamily: fonts.regular,
-    fontSize: typeScale.body.fontSize,
   },
   decision: {
     marginTop: 10,

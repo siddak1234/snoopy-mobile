@@ -164,8 +164,3 @@ export function runOriginLabel(origin: string | null | undefined): string {
   }
 }
 
-/** True when a run continues an earlier one, so the UI can group by `rootRunId`. */
-export function isContinuation(origin: string | null | undefined): boolean {
-  const key = origin?.toLowerCase().trim();
-  return key === 'approval-continuation' || key === 'retry-continuation';
-}

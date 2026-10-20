@@ -424,10 +424,17 @@ export const EMAIL_OWED = 'Sending email…';
 export function emailSentLine(time: string): string {
   return `Email sent · ${time}`;
 }
-/** "Document 1 of 3" (the owner's ~04:05Z: "a json out that clearly seperates accordingly"). */
+/**
+ * "Invoice 1 of 3" (round 24 P10; the owner's build 23 F15: "It should also be
+ * invoice not document"; ~~"Document 1 of 3"~~, the owner's ~04:05Z: "a json
+ * out that clearly seperates accordingly").
+ */
 export function documentOf(index: number, count: number): string {
-  return `Document ${index} of ${count}`;
+  return `Invoice ${index} of ${count}`;
 }
+/** The first two rows inside an invoice (round 24 P10): what it is and the file's format. */
+export const DOCUMENT_TYPE_LABEL = 'Document type';
+export const DOCUMENT_FORMAT_LABEL = 'Format';
 export const DOCUMENT_MORE_LINES = 'More lines on the document.';
 export const DOWNLOAD_JSON_LABEL = 'Download JSON';
 export const DOWNLOAD_FAILED = 'Could not download. Try again.';

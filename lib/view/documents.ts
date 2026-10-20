@@ -1,5 +1,8 @@
-import type { RunDocument } from '@/lib/platform/runs';
-import { documentOf } from '@/lib/content/screen-states';
+import type { RunDetail, RunDocument } from '@/lib/platform/runs';
+import { DOCUMENT_FORMAT_LABEL, DOCUMENT_TYPE_LABEL, documentOf } from '@/lib/content/screen-states';
+
+/** A file uploaded for the job, as the run's detail lists it (round 24; backend ADR-0045). */
+export type RunFile = NonNullable<RunDetail['files']>[number];
 
 /**
  * A run's documents, as the run page's DOCUMENTS cards draw them (Build 21,
@@ -111,7 +114,10 @@ export type DocumentRowView = { label: string; value: string; strong?: true };
 /** One document's card. */
 export type DocumentCardView = {
   index: number;
+  /** "Invoice 1 of 3" (round 24 P10). */
   heading: string;
+  /** The closed card's one line, `{vendor} · {total}` (S9: three closed rows reading the same would hide which is which). */
+  summary: string;
   chip: string;
   tone: DocumentTone;
   /** `{Type} · {vendor}`, or the type alone when no seller was read. */
@@ -131,21 +137,51 @@ export type DocumentCardView = {
   lines: DocumentLineView[];
   /** Said when the document has more lines than were read. */
   moreLines: boolean;
+  /** What opens the card (round 24 P10): Document type, and Format when the file is known. */
+  kind: DocumentRowView[];
   /** Subtotal, Tax, Tip, Discount, Total (medium), Paid, Result, then the automation's own details. */
   rows: DocumentRowView[];
 };
 
 /**
- * A document's card (spec A7): "Document 1 of 3" and its chip; the type and
- * seller; where; when; its numbers; each line — description, amount, and
- * "{quantity} × {unit price}" under it when both were printed; the totals; how
- * it was paid ("Card ending 4417", none when not shown); what happened to it;
- * then the automation's own detail lines.
+ * A file's format as a person reads it (round 24 P10): PDF, JPEG, PNG or HEIC,
+ * otherwise the content type's subtype in capitals — the platform's own rule
+ * for `RunFile.format`, for a file it sent without one.
+ */
+export function formatLabel(contentType: string): string {
+  const subtype = contentType.split(';')[0]!.trim().toLowerCase().split('/')[1] ?? '';
+  if (subtype === 'pdf') return 'PDF';
+  if (subtype === 'jpeg' || subtype === 'jpg' || subtype === 'pjpeg') return 'JPEG';
+  if (subtype === 'png') return 'PNG';
+  if (subtype === 'heic' || subtype === 'heif') return 'HEIC';
+  return subtype.toUpperCase();
+}
+
+/**
+ * The format of the file a document was read from (round 24 P10): the file its
+ * `source` names (Invoice Processing v6), else the job's only file (one file
+ * per run until v6), else none — and the row is left out.
+ */
+export function formatFor(document: Pick<RunDocument, 'source'>, files: readonly RunFile[] | undefined): string | null {
+  const list = files ?? [];
+  const file = document.source ? list.find((candidate) => candidate.id === document.source!.file) : list.length === 1 ? list[0] : undefined;
+  if (!file) return null;
+  return file.format || formatLabel(file.contentType) || null;
+}
+
+/**
+ * A document's card (spec A7): "Invoice 1 of 3" and its chip, `{vendor} ·
+ * {total}` while it is closed (round 24 P10); open, the type and seller; where;
+ * when; its numbers; each line — description, amount, and "{quantity} × {unit
+ * price}" under it when both were printed; the totals, how it was paid ("Card
+ * ending 4417", none when not shown), what happened to it and the automation's
+ * own detail lines — opened by Document type and Format.
  */
 export function toDocumentCard(
   document: RunDocument,
   count: number,
   approval?: 'rejected' | 'expired' | null,
+  files?: readonly RunFile[],
 ): DocumentCardView {
   const money = (value: string | null) => documentMoney(value, document.currency);
   const notApproved = document.status === 'waiting' && (approval === 'rejected' || approval === 'expired');
@@ -159,6 +195,9 @@ export function toDocumentCard(
     ...(document.number ? [{ label: document.numberLabel ?? 'No.', value: document.number }] : []),
     ...document.references.map((reference) => ({ label: reference.label, value: reference.value })),
   ];
+  const kind: DocumentRowView[] = [{ label: DOCUMENT_TYPE_LABEL, value: type }];
+  const format = formatFor(document, files);
+  if (format) kind.push({ label: DOCUMENT_FORMAT_LABEL, value: format });
   const rows: DocumentRowView[] = [];
   const amount = (label: string, value: string | null, strong?: true) => {
     const text = money(value);
@@ -181,9 +220,11 @@ export function toDocumentCard(
   }
   rows.push({ label: 'Result', value: document.statusText });
   for (const detail of document.details) rows.push({ label: detail.label, value: detail.value });
+  const total = money(document.total);
   return {
     index: document.index,
     heading: documentOf(document.index, count),
+    summary: [document.vendor.name ?? type, total].filter(Boolean).join(' · '),
     chip: notApproved ? 'Not approved' : STATUS_CHIPS[document.status],
     tone: notApproved ? 'muted' : STATUS_TONES[document.status],
     title: document.vendor.name ? `${type} · ${document.vendor.name}` : type,
@@ -200,17 +241,19 @@ export function toDocumentCard(
       };
     }),
     moreLines: !document.lineItemsComplete,
+    kind,
     rows,
   };
 }
 
-/** Every document's card, in the file's order. */
+/** Every document's card, in the file's order; `files`, the job's uploads, give each its Format. */
 export function toDocumentCards(
   documents: readonly RunDocument[] | undefined,
   approval?: 'rejected' | 'expired' | null,
+  files?: readonly RunFile[],
 ): DocumentCardView[] {
   const list = [...(documents ?? [])].sort((a, b) => a.index - b.index);
-  return list.map((document) => toDocumentCard(document, list.length, approval));
+  return list.map((document) => toDocumentCard(document, list.length, approval, files));
 }
 
 /**

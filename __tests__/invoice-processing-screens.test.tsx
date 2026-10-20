@@ -898,17 +898,23 @@ describe("a run's page — every step from the start, a live tracker (spec A7; t
     expect(within(screen.getByTestId('run-step-group:checked')).getByText(/^Done · /u)).toBeTruthy();
   });
 
-  it('a continuation: the groups before its first step are done', async () => {
+  it('an approved job (round 24 P9: its runs\' steps together under one id): the held step is done once it runs on, every group Done', async () => {
     await openRun(
-      ipRun('succeeded', [['confirm-company', 'ok', 'Checked', 0], ['create-approved-records', 'ok', 'Recorded', 1]], {}, {
-        origin: 'approval-continuation',
-      }),
+      ipRun('succeeded', [
+        ['receive', 'ok', 'PDF, 1 page', 0],
+        ['extract', 'ok', 'Read 3 documents', 1],
+        ['decide', 'ok', 'Ready', 2],
+        ['ask-approval', 'held', 'Waiting for approval', 3, 'Document 2: the total can\'t be read.'],
+        ['confirm-company', 'ok', 'Checked', 10],
+        ['create-approved-records', 'ok', 'Recorded', 11],
+      ]),
     );
     await screen.findByTestId('run-progress');
     for (const id of ['received', 'read', 'checked', 'done']) {
       expect([id, within(screen.getByTestId(`run-step-group:${id}`)).queryByText(/^Done/u) !== null]).toEqual([id, true]);
     }
     expect(within(screen.getByText('Steps done').parent!).getByText('4 / 4')).toBeTruthy();
+    expect(screen.queryByText(/Waiting for approval/u)).toBeNull();
   });
 
   it("a run of an older version is drawn by the steps it reported — titled from the catalog where it names them — never another version's groups", async () => {
@@ -1047,14 +1053,15 @@ describe("a run's documents and Download JSON (spec A7, C2; the owner's ~04:05Z 
     receipt(3, { vendor: { name: null, address: null, city: null, storeNumber: null }, currency: 'CAD', total: '1234.5', number: null, numberLabel: null, references: [], payment: { method: 'not_shown', cardLast4: null } }),
   ];
 
-  it('three receipts from one photo: "Document 1 of 3" … each its own vendor, place, numbers, lines with "quantity × unit price", totals and result', async () => {
+  it('three receipts from one photo: "Invoice 1 of 3" … each, opened, its own vendor, place, numbers, lines with "quantity × unit price", totals and result', async () => {
     await openRun(ipRun('succeeded', [['receive', 'ok', 'Photo', 0]], { documents: three, details: [{ label: 'Total', value: '$1' }] }));
     const documents = await screen.findByTestId('run-documents');
     expect(within(documents).getByText('DOCUMENTS')).toBeTruthy();
     expect(screen.queryByTestId('run-details')).toBeNull();
+    for (const index of [1, 2, 3]) await fireEvent.press(screen.getByTestId(`document-${index}-toggle`));
 
     const first = within(screen.getByTestId('document-1'));
-    expect(first.getByText('Document 1 of 3')).toBeTruthy();
+    expect(first.getByText('Invoice 1 of 3')).toBeTruthy();
     expect(screen.getByTestId('document-1-chip').props.children).toBe('Saved');
     expect(first.getByText("Receipt · Lowe's")).toBeTruthy();
     expect(first.getByText('2150 W Shaw Ave, Fresno, CA 93711 · Store 1234')).toBeTruthy();
@@ -1071,7 +1078,7 @@ describe("a run's documents and Download JSON (spec A7, C2; the owner's ~04:05Z 
     expect(first.getByText('Materials')).toBeTruthy();
 
     const second = within(screen.getByTestId('document-2'));
-    expect(second.getByText('Document 2 of 3')).toBeTruthy();
+    expect(second.getByText('Invoice 2 of 3')).toBeTruthy();
     expect(screen.getByTestId('document-2-chip').props.children).toBe('Recorded');
     expect(second.getByText('Invoice · Blue Bottle')).toBeTruthy();
     expect(second.getByText('Invoice #')).toBeTruthy();
@@ -1084,10 +1091,43 @@ describe("a run's documents and Download JSON (spec A7, C2; the owner's ~04:05Z 
     expect(within(screen.getByTestId('document-2-line-2')).queryByText(/×/u)).toBeNull();
 
     const third = within(screen.getByTestId('document-3'));
-    expect(third.getByText('Document 3 of 3')).toBeTruthy();
-    expect(third.getByText('Receipt')).toBeTruthy();
+    expect(third.getByText('Invoice 3 of 3')).toBeTruthy();
+    expect(third.getAllByText('Receipt').length).toBeGreaterThan(0);
     expect(third.getByText('1,234.5 CAD')).toBeTruthy();
     expect(third.queryByText('Paid')).toBeNull();
+  });
+
+  it('each invoice is a closed drop-down: no lines in the tree until opened; pressing #2 opens only #2, which starts with Document type and Format (round 24 P10)', async () => {
+    const pdf = { id: '33333333-3333-4333-8333-333333333333', filename: 'bills.pdf', contentType: 'application/pdf', format: 'PDF', sizeBytes: 2048, pages: 3 };
+    const photo = { id: '44444444-4444-4444-8444-444444444444', filename: 'extra.jpg', contentType: 'image/jpeg', format: 'JPEG', sizeBytes: 1024, pages: 1 };
+    const withSource = three.map((document) => ({ ...document, source: { file: document.index === 3 ? photo.id : pdf.id } }));
+    await openRun(ipRun('succeeded', [['receive', 'ok', 'Photo', 0]], { documents: withSource, files: [pdf, photo] }));
+    await screen.findByTestId('run-documents');
+    // Closed: the heading, the chip, the caret, and {vendor} · {total}; no line item, no body.
+    for (const index of [1, 2, 3]) {
+      expect(screen.getByTestId(`document-${index}-toggle`).props.accessibilityState).toMatchObject({ expanded: false });
+      expect(screen.queryByTestId(`document-${index}-body`)).toBeNull();
+      expect(screen.queryByTestId(`document-${index}-line-1`)).toBeNull();
+    }
+    expect(screen.getByTestId('document-1-summary').props.children).toBe("Lowe's · $17.19");
+    expect(screen.queryByText('2X4-8 STUD')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('document-2-toggle'));
+    expect(screen.getByTestId('document-2-toggle').props.accessibilityState).toMatchObject({ expanded: true });
+    expect(screen.queryByTestId('document-1-body')).toBeNull();
+    expect(screen.queryByTestId('document-3-body')).toBeNull();
+    const second = within(screen.getByTestId('document-2-body'));
+    expect(within(screen.getByTestId('document-2')).getByText('Invoice 2 of 3')).toBeTruthy();
+    expect(second.getByText('Document type')).toBeTruthy();
+    expect(second.getByText('Invoice')).toBeTruthy();
+    expect(second.getByText('Format')).toBeTruthy();
+    expect(second.getByText('PDF')).toBeTruthy();
+    // Pressed again, it closes.
+    await fireEvent.press(screen.getByTestId('document-2-toggle'));
+    expect(screen.queryByTestId('document-2-body')).toBeNull();
+    // The third names the photo.
+    await fireEvent.press(screen.getByTestId('document-3-toggle'));
+    expect(within(screen.getByTestId('document-3-body')).getByText('JPEG')).toBeTruthy();
   });
 
   it('Download JSON hands the platform\'s file to the share sheet as run-{full id}.json, then removes it', async () => {
