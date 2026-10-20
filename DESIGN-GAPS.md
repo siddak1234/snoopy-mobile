@@ -1919,6 +1919,11 @@ session's): one drop-down standard, the tab lens, iOS text size, runs in Activit
 step 4, Needs review, Clear all and the notifications offer, one run id per job, each invoice a
 drop-down, the status-bar strip, and the A8X run package.
 
+- **The contract**: the generated types come from the backend's round 24 contract (`snoopy-backend`
+  `3b5ac97`, amended `84ed9bc`): the job's runs by its first run's id, `continuesRunId`,
+  `continuationRunId` and the decision's `continuation` deprecated; `POST …/runs/{runId}/package`
+  (a signed link); `POST …/notifications/clear`; `RunDetail.files`, `RunDocument.source`,
+  `recordedIn.accountName`. CI's Deployed-contract job is red by design until the platform release.
 - **P1 one drop-down standard** (F1, F13, F14): `GlassSurface` gains `backing` (`panel` the card
   colour, `page` the page colour) at `GLASS_BACKING_ALPHA` 0.94 (S3) under its children in all three
   forms; `Dropdown` passes `backing="panel"` to its one surface — the workspace and department
