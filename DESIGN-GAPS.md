@@ -2182,7 +2182,10 @@ for every rule the two clients share; the main session's decisions bind each fix
   232-pt panel at every size). P3 had said anything that clips is fixed in the component that
   clips; these are: `ACCESSIBILITY_TEXT_SCALE` (×1.786, iOS's first accessibility size, from React
   Native's `RCTAccessibilityManager`) and `useAccessibilityTextSize`; `StatTileRow` (Home's and a
-  flow's tiles; the two pages' copies of the row's style folded into it) stacks; Add a flow's card
+  flow's tiles; the two pages' copies of the row's style folded into it) stacks once a tile would be
+  narrower than `TILE_LEAST_WIDTH` (100 pt) × the text size (`tilesStack`, the row's measured width) —
+  the audit's xxxLarge pass found "Successe/s" in a 114-pt tile at ×1.353, below the accessibility
+  sizes, and the frozen StatCard is not touched (~~stacked at the accessibility sizes only~~); Add a flow's card
   stacks; the inbox's Clear all goes under its title, whose title takes the chrome limit; the card's
   name `flexShrink`s and its time does not; `placeDropdown`'s least width is 232 × the text size (up
   to the content limit) and the rows wrap. Jest's default text size is now 1 (`test/jest-setup.js`;
@@ -2201,6 +2204,9 @@ for every rule the two clients share; the main session's decisions bind each fix
 | The spinner stands upright under a late Reduce Motion | `if (reduceMotion) return;` put back (`app/(tabs)/activity/run.tsx`) | `invoice-processing-screens` "…answered on after it started turning…", 5 of 5 runs (fixed: 10 of 10 green) |
 | Every drop-down and the strip are opaque | `GLASS_BACKING_ALPHA` back to 0.94 (`constants/theme.ts`) | `dropdown-backing` all three forms |
 | Home's and a flow's tiles stack at an accessibility size | `StatTileRow` always a row | `accessibility-text-size` "one under another…" |
+| The tiles' width rule counts the text size | `tilesStack` without the size (`components/stat-tile-button.tsx`) | `accessibility-text-size` the measured table and both stacked cases |
+| The rule reads the row's measured width | `onLayout` ignored | `accessibility-text-size` both stacked cases |
+| A tile follows its row | the tile ignores the row's decision | `accessibility-text-size` both stacked cases |
 | Add a flow's card stacks | `cardStacked` dropped (`app/(tabs)/flows/add.tsx`) | `tab-screens` "a card at text size x3.571…" |
 | The inbox's Clear all goes under the title | Clear all always beside it (`components/notifications/inbox.tsx`) | `presses-home-activity` "the header at text size x3.571…" |
 | The inbox's title stops at the chrome limit | `maxFontSizeMultiplier` dropped | `presses-home-activity` both header cases |

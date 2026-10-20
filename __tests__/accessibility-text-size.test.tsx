@@ -1,8 +1,8 @@
-import { screen } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
 
-import { StatTileButton, StatTileRow } from '@/components/stat-tile-button';
+import { StatTileButton, StatTileRow, TILE_LEAST_WIDTH, tilesStack } from '@/components/stat-tile-button';
 import { ACCESSIBILITY_TEXT_SCALE } from '@/constants/theme';
 import { useAccessibilityTextSize } from '@/hooks/use-accessibility-text-size';
 import { renderWithProviders, setTextSize } from '@/test/render';
@@ -48,21 +48,45 @@ describe('useAccessibilityTextSize', () => {
   });
 });
 
-describe('StatTileRow', () => {
-  it('side by side at the standard sizes, each tile a third', async () => {
+/** The row laid out at a phone's width: an iPhone 17 Pro (402 pt) less Home's 20-pt gutters. */
+async function tilesAt(fontScale: number, rowWidth = 362) {
+  const restore = setTextSize(fontScale);
+  try {
     await renderWithProviders(<Tiles />);
-    expect(StyleSheet.flatten(screen.getByTestId('tiles').props.style).flexDirection).toBe('row');
-    expect(StyleSheet.flatten(screen.getByTestId('tile-Successes').props.style)?.flex).toBe(1);
+    await fireEvent(screen.getByTestId('tiles'), 'layout', { nativeEvent: { layout: { width: rowWidth, height: 80, x: 0, y: 0 } } });
+    return {
+      direction: StyleSheet.flatten(screen.getByTestId('tiles').props.style).flexDirection,
+      flex: StyleSheet.flatten(screen.getByTestId('tile-Successes').props.style)?.flex,
+    };
+  } finally {
+    restore();
+  }
+}
+
+describe('tilesStack — measured on the round 24 simulator audit', () => {
+  it('a tile needs 100 pt per unit of text size', () => {
+    expect(TILE_LEAST_WIDTH).toBe(100);
   });
 
-  it('one under another at the largest size, each tile the row\'s width (no third to break a word in)', async () => {
-    const restore = setTextSize(3.571);
-    try {
-      await renderWithProviders(<Tiles />);
-      expect(StyleSheet.flatten(screen.getByTestId('tiles').props.style).flexDirection).toBeUndefined();
-      expect(StyleSheet.flatten(screen.getByTestId('tile-Successes').props.style)?.flex).toBeUndefined();
-    } finally {
-      restore();
-    }
+  it.each([
+    ['iPhone SE, standard: "Successes" fits a 105-pt tile', 335, 1, false],
+    ['iPhone SE, xLarge', 335, 1.118, true],
+    ['iPhone 17 Pro, standard', 362, 1, false],
+    ['iPhone 17 Pro, xLarge', 362, 1.118, false],
+    ['iPhone 17 Pro, xxxLarge: "Successe/s" broke in a 114-pt tile', 362, 1.353, true],
+    ['iPhone 17 Pro Max, xxLarge', 400, 1.235, false],
+    ['any phone at the largest size', 400, 3.571, true],
+  ])('%s', (_case, rowWidth, fontScale, stacks) => {
+    expect(tilesStack(rowWidth, 3, fontScale)).toBe(stacks);
+  });
+});
+
+describe('StatTileRow', () => {
+  it('side by side at the standard size, each tile a third', async () => {
+    expect(await tilesAt(1)).toEqual({ direction: 'row', flex: 1 });
+  });
+
+  it.each([1.353, 3.571])('one under another at x%s, each tile the row\'s width (no third to break a word in)', async (fontScale) => {
+    expect(await tilesAt(fontScale)).toEqual({ direction: undefined, flex: undefined });
   });
 });

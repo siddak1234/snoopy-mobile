@@ -739,7 +739,9 @@ simulator audit, the largest size: "Succe/sses", "Failure/s", "QuickBoo/ks.",
 "Notificat/ions", "38m ago" pushed off a card, "Harbor…" and "All categ…" cut short):
 from iOS's first accessibility size (Accessibility Medium, ×1.786,
 `ACCESSIBILITY_TEXT_SCALE`) what sits side by side stacks (`useAccessibilityTextSize`)
-— Home's and a flow's tiles one under another (`StatTileRow`), Add a flow's card its
+— Home's and a flow's tiles one under another sooner, once a tile would be narrower than
+100 pt × the text size (`StatTileRow`, `tilesStack`: from xxxLarge on an iPhone 17 Pro, from
+xLarge on an iPhone SE, measured on the audit), Add a flow's card its
 icon, words and Add, the inbox's Clear all under its title, whose title stops at the
 chrome limit as a title row's does; a drop-down's least width follows the text size
 (232 × the size, up to the content limit, never past the screen's gutters) and its rows
