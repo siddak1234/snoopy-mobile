@@ -2107,6 +2107,13 @@ for every rule the two clients share; the main session's decisions bind each fix
   deleted — it said JPEG and HEIC where the platform says JPG and HEIF); a `source.file` not among
   the job's files falls back to the job's only file; with no seller the closed line is the total alone,
   with neither no line (`summary` may be null; `DocumentCard` then draws the heading alone).
+- **Tests the review found missing** (findings 5 and 7): Clear all pressed again after a refusal sends
+  a new key (`notifications-clear-1`, then `-2`); the sign-in stack's strip is held by a
+  `tab-layout` case (59 tall, last, the page-colour backing; the router mock gains
+  `Stack.Protected`).
+- **Out-of-date words** (finding 9): a `presses-home-activity` title says Activity's stack (~~the
+  Home stack~~); DESIGN-CONTRACT's Notifications row strikes Mark all read's sentence and gains its
+  missing full stop.
 
 ### Guards proved to bite, the review's findings
 
@@ -2133,3 +2140,5 @@ for every rule the two clients share; the main session's decisions bind each fix
 | Format is the platform's word | the content type's subtype shown in its place | `build21-views` "Format is the platform's word as given…" |
 | No seller: the total alone | the type put back before the total | `build21-views` "closed, a card says…", `invoice-processing-screens` "a closed invoice with no seller…" and "three receipts…" |
 | Neither: no closed line | the summary line always drawn (`components/runs/document-card.tsx`) | `invoice-processing-screens` "a closed invoice with no seller…" |
+| Clear all: a new key per press | a fixed `'notifications-clear-1'` (`components/notifications/inbox.tsx`) | `presses-home-activity` "Clear all pressed again after a refusal…" |
+| The strip over the sign-in stack | `<StatusBarStrip />` removed (`app/(auth)/_layout.tsx`) | `tab-layout` "the sign-in stack's layout…" |

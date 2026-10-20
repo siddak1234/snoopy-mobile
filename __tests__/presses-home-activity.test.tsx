@@ -134,7 +134,7 @@ describe('the run page: its cancel dialog and View flow (24.4.2)', () => {
 /* -------------------------------------------------------------------- Activity */
 
 describe('Activity: a row opens its own run (24.4.4)', () => {
-  it("opens the run page, in the Home stack, with THAT row's run — today's row and yesterday's alike", async () => {
+  it("opens the run page, in Activity's stack, with THAT row's run — today's row and yesterday's alike", async () => {
     routePlatform(platformOperation, { '/automations': flowCatalogPayload() });
     await renderWithProviders(<ActivityScreen />, signedInSession);
 
@@ -367,6 +367,25 @@ describe('Notifications: read and dismissed on the platform (the owner\'s build 
     expect(screen.getAllByText(TITLES)).toHaveLength(4);
     expect(dots()).toEqual([UNREAD, UNREAD, UNREAD, UNREAD]);
     expect(fake.to(INBOX)).toHaveLength(1);
+  });
+
+  it('Clear all pressed again after a refusal is a new intent: a new key, never the refused one', async () => {
+    const fake = routeInbox(inboxPayload(), { items: [], unreadCount: 0 });
+    fake.once(CLEAR, () => {
+      throw new PlatformError('Service Unavailable', 503);
+    });
+    fake.always(CLEAR, { unreadCount: 0 });
+    await renderWithProviders(<NotificationsScreen />, signedInSession);
+    expect(await screen.findAllByText(TITLES)).toHaveLength(4);
+
+    await fireEvent.press(screen.getByTestId('inbox-clear-all'));
+    expect(await screen.findByText('Service Unavailable')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('inbox-clear-all'));
+
+    await waitFor(() => expect(fake.to(CLEAR)).toHaveLength(2));
+    expect(fake.to(CLEAR).map((entry) => entry.key)).toEqual(['notifications-clear-1', 'notifications-clear-2']);
+    await waitFor(() => expect(fake.to(INBOX)).toHaveLength(2));
+    expect(screen.queryAllByText(TITLES)).toHaveLength(0);
   });
 
   it('Clear all clears the rows it was pressed on: one that arrives after is listed', async () => {

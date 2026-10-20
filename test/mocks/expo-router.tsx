@@ -67,10 +67,16 @@ function Screen(_props: { name: string; options?: unknown }) {
   return null;
 }
 
+/** A guarded group of declarations (`Stack.Protected`): its screens draw nothing here either. */
+function Protected({ children }: { guard: boolean; children?: React.ReactNode }) {
+  return <>{children}</>;
+}
+
 export function Stack({ children }: { children?: React.ReactNode }) {
   return <>{children}</>;
 }
 Stack.Screen = Screen;
+Stack.Protected = Protected;
 
 /** Records each time a layout draws its tab navigator: a guard's test says whether the tabs were drawn. */
 export const mockTabsDrawn = jest.fn();
