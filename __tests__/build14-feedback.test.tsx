@@ -3,7 +3,7 @@ import React from 'react';
 import { Platform, StyleSheet } from 'react-native';
 
 import NotificationsScreen from '@/app/(tabs)/(home)/notifications';
-import RunDetailScreen from '@/app/(tabs)/(home)/run';
+import RunDetailScreen from '@/app/(tabs)/activity/run';
 import BillingScreen from '@/app/(tabs)/settings/billing';
 import { resetPushForTests } from '@/hooks/use-push-registration';
 import type { WorkspaceBilling } from '@/lib/platform/billing';

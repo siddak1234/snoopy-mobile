@@ -16,7 +16,7 @@ import {
   UsersThree,
 } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SectionLabel } from '@/components/nocturne/section-label';
@@ -26,6 +26,7 @@ import { ConfirmDialog } from '@/components/confirm-dialog';
 import { FaceIdRow } from '@/components/settings/face-id-row';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { WorkspaceSwitcher } from '@/components/settings/workspace-switcher';
+import { Text } from '@/components/text';
 import { em, fonts, layout, typeScale } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useSession } from '@/hooks/use-session';
@@ -385,7 +386,7 @@ const styles = StyleSheet.create({
   },
   segOpt: {
     flex: 1,
-    height: 34,
+    minHeight: 34,
     borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',

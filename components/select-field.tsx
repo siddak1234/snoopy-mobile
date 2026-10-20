@@ -1,8 +1,9 @@
 import { CaretDown, CaretUp, Check } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { Pressable } from '@/components/pressable';
+import { Text } from '@/components/text';
 import { fonts, radius, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -106,7 +107,7 @@ const styles = StyleSheet.create({
   raised: { zIndex: 20 },
   label: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
   box: {
-    height: 50,
+    minHeight: 50,
     borderRadius: radius.input,
     borderWidth: 1,
     flexDirection: 'row',

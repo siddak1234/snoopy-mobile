@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -24,7 +24,8 @@ import { Skeleton } from '@/components/nocturne/skeleton';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable, pressed } from '@/components/pressable';
 import { ScopeIcons } from '@/components/scope-control';
-import { StatTileButton } from '@/components/stat-tile-button';
+import { StatTileButton, StatTileRow } from '@/components/stat-tile-button';
+import { Text } from '@/components/text';
 import { em, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource, type ResourceState } from '@/hooks/use-resource';
 import { useScope } from '@/hooks/use-scope';
@@ -442,7 +443,7 @@ export default function HomeScreen() {
       <View>
         <SectionLabel>TODAY</SectionLabel>
         {tiles ? (
-          <View style={[styles.statsRow, styles.statsUnderLabel]} testID="home-stats">
+          <StatTileRow style={styles.statsUnderLabel} testID="home-stats">
             {/* A tile opens Activity for that outcome AND today — the runs it counts (24.11.9; build 12 item 1). */}
             {tiles.map((s) => (
               <StatTileButton
@@ -460,7 +461,7 @@ export default function HomeScreen() {
                 valueColor={s.tone === 'ok' ? status.ok : s.tone === 'err' ? status.err : undefined}
               />
             ))}
-          </View>
+          </StatTileRow>
         ) : (
           // Today's counts could not be read: said in their place (G6).
           <SurfaceCard level="sm" style={styles.runsCard}>
@@ -553,10 +554,10 @@ export default function HomeScreen() {
                 key={r.runId}
                 testID={`home-run-${r.runId}`}
                 onPress={() =>
-                  router.push({
-                    pathname: '/(tabs)/(home)/run',
-                    params: { runId: r.runId },
-                  })
+                  router.push(
+                    { pathname: '/(tabs)/activity/run', params: { runId: r.runId, returnTo: 'home' } },
+                    { withAnchor: true },
+                  )
                 }
                 style={({ pressed }) => [
                   styles.runRow,

@@ -17,6 +17,11 @@
  * scale in practice. A comparison (`height >= 52 ? … : …`) yields no size, and a
  * value read from the scale passes. The scale's own file is where a size is a
  * number; generated contracts are not scanned.
+ *
+ * Round 24 P3 (the owner's build 23 F14): text follows the phone's text size
+ * within `fontScaleLimit`, and only `components/text.tsx` applies it, so it
+ * also fails `Text` or `TextInput` imported from react-native anywhere else —
+ * a screen importing react-native's own would follow iOS's size without a limit.
  */
 import { readdirSync, statSync } from "node:fs";
 import { extname, join, relative } from "node:path";
@@ -28,6 +33,11 @@ const GENERATED = "lib/generated/";
 
 /** The type scale is where a size is allowed to be a number. */
 const TYPE_SCALE = "constants/theme.ts";
+
+/** The one file that may import react-native's text components (round 24 P3). */
+const TEXT_WRAPPER = "components/text.tsx";
+/** React-native's text components, imported only by the wrapper. */
+const WRAPPED = new Set(["Text", "TextInput"]);
 
 /** The style properties whose value is a size from the scale. */
 const SIZE_PROPERTIES = new Set(["fontSize", "lineHeight"]);
@@ -63,10 +73,28 @@ const program = ts.createProgram({
 const checker = program.getTypeChecker();
 
 const findings = new Map();
+const textImports = new Map();
 
 for (const file of files) {
   const source = program.getSourceFile(file);
-  if (source) visit(source, source);
+  if (!source) continue;
+  visit(source, source);
+  if (relative(root, file) !== TEXT_WRAPPER) findTextImports(source);
+}
+
+/** `import { Text }` / `{ TextInput }` from react-native (a type-only import passes). */
+function findTextImports(source) {
+  for (const statement of source.statements) {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) continue;
+    if (statement.moduleSpecifier.text !== "react-native") continue;
+    const clause = statement.importClause;
+    if (!clause || clause.isTypeOnly || !clause.namedBindings || !ts.isNamedImports(clause.namedBindings)) continue;
+    for (const element of clause.namedBindings.elements) {
+      if (element.isTypeOnly || !WRAPPED.has((element.propertyName ?? element.name).text)) continue;
+      const { line } = source.getLineAndCharacterOfPosition(element.getStart(source));
+      textImports.set(`${relative(root, source.fileName)}:${line + 1}`, (element.propertyName ?? element.name).text);
+    }
+  }
 }
 
 function visit(node, source) {
@@ -157,15 +185,25 @@ function nameOf(name) {
   return null;
 }
 
-if (findings.size > 0) {
-  console.error(
-    `Type audit failed. A size is a step of the type scale in ${TYPE_SCALE} (typeScale.body.fontSize, …typeScale.body); use one instead of a number:\n`,
-  );
-  for (const [location, line] of findings) console.error(`  ${location}: ${line}`);
+if (findings.size > 0 || textImports.size > 0) {
+  if (findings.size > 0) {
+    console.error(
+      `Type audit failed. A size is a step of the type scale in ${TYPE_SCALE} (typeScale.body.fontSize, …typeScale.body); use one instead of a number:\n`,
+    );
+    for (const [location, line] of findings) console.error(`  ${location}: ${line}`);
+  }
+  if (textImports.size > 0) {
+    console.error(
+      `Type audit failed. Text and TextInput come from @/components/text (the text-size limit), never from react-native:\n`,
+    );
+    for (const [location, name] of textImports) console.error(`  ${location}: ${name}`);
+  }
   process.exit(1);
 }
 
-console.log(`Type audit passed. Every font size comes from the type scale in ${TYPE_SCALE}.`);
+console.log(
+  `Type audit passed. Every font size comes from the type scale in ${TYPE_SCALE}, and every Text from ${TEXT_WRAPPER}.`,
+);
 
 function walk(path) {
   let entries;

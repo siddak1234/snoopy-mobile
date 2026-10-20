@@ -318,8 +318,9 @@ describe('a held run says how it was decided (24.7.3 attempt 2, feedback #5 and 
 
   it('is pending, approved, rejected, or closed by its approval, and "held" without one', () => {
     expect(heldDecisionLine(held, [approval('pending')])).toBe('Waiting for approval');
-    expect(heldDecisionLine(held, [approval('approved')])).toBe('Approved — continued in a new run');
-    expect(heldDecisionLine(held, [approval('rejected')])).toBe('Rejected');
+    // One job, one id (round 24 P9); Deny's word (S6).
+    expect(heldDecisionLine(held, [approval('approved')])).toBe('Approved');
+    expect(heldDecisionLine(held, [approval('rejected')])).toBe('Denied');
     expect(heldDecisionLine(held, [approval('cancelled')])).toBe('No longer awaiting approval');
     expect(heldDecisionLine(held, [])).toBe('Held for review');
   });
@@ -332,10 +333,10 @@ describe('a held run says how it was decided (24.7.3 attempt 2, feedback #5 and 
     expect(needsReview({ id: 'r2', status: 'succeeded' } as never, [])).toBe(false);
   });
 
-  it('prefixes a continuation the way the website labels it, and lets a held row carry its decision', () => {
+  it('a row is a job: no "After approval" prefix (round 24 P9), and a held row carries its decision', () => {
     const continuation = { id: 'r3', status: 'succeeded', origin: 'approval-continuation', resultSummary: 'Posted' } as never;
-    expect(metaFor(continuation)).toBe('After approval · Posted');
-    expect(metaFor(held, [approval('approved')])).toBe('Approved — continued in a new run');
+    expect(metaFor(continuation)).toBe('Posted');
+    expect(metaFor(held, [approval('approved')])).toBe('Approved');
     // Without the approvals beside it, a held run still reads as the status word.
     expect(metaFor(held)).toBe('Held');
   });

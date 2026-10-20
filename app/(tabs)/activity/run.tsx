@@ -1,8 +1,7 @@
-import { File, Paths } from 'expo-file-system';
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { DownloadSimple, FlowArrow, StopCircle } from 'phosphor-react-native';
+import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { DownloadSimple, FileText, FlowArrow, StopCircle } from 'phosphor-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Platform, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
   cancelAnimation,
@@ -20,11 +19,13 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { StatCard } from '@/components/nocturne/stat-card';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
-import type { InboxRunPath } from '@/components/notifications/inbox';
-import { Pressable } from '@/components/pressable';
+import { DecisionButtons } from '@/components/runs/decision-buttons';
 import { DocumentCard } from '@/components/runs/document-card';
+import { Text } from '@/components/text';
 import { em, fonts, iconSize, layout, status, typeScale } from '@/constants/theme';
+import { useApprovalDecision } from '@/hooks/use-approval-decision';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
+import { useRunPackageDownload } from '@/hooks/use-run-package';
 import { useTheme } from '@/hooks/use-theme';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { useResource, busyBody } from '@/hooks/use-resource';
@@ -33,9 +34,10 @@ import { refusalMessage, WORKSPACE_CHANGED } from '@/lib/content/refusals';
 import {
   DETAILS_LABEL,
   DOCUMENTS_LABEL,
-  DOWNLOAD_FAILED,
-  DOWNLOAD_JSON_LABEL,
+  DOWNLOAD_EXCEL_LABEL,
+  DOWNLOAD_PDF_LABEL,
   STEPS_LABEL,
+  VIEW_PACKAGE_LABEL,
   errorTitleFor,
 } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
@@ -44,18 +46,22 @@ import {
   readAllApprovals,
   readRemovedSubscriptionsOrNone,
   readRun,
-  readRunDocuments,
   readSubscriptions,
   type Subscription,
 } from '@/lib/platform/runs';
 import { PlatformError, PlatformNotConfiguredError } from '@/lib/platform/problem';
+import { readWorkspaces } from '@/lib/platform/workspaces';
 import { duration, timeOfDay } from '@/lib/view/format';
-import { documentsFileName, toDocumentCards } from '@/lib/view/documents';
+import { toDocumentCards } from '@/lib/view/documents';
+import { decidersLine, decides } from '@/lib/view/roles';
 import { statusLabel, type StatusPillLabel } from '@/lib/view/status';
 import {
+  RUN_ORIGIN_TAB,
   RUN_REREAD_MS,
   heldDecision,
+  jobApproval,
   runLabel,
+  runOrigin,
   runResultLine,
   toRunFacts,
   toRunStats,
@@ -68,13 +74,20 @@ import {
 /**
  * A working step's icon turns (round 23, A4 — the owner's build 22 item 7: the
  * running step spins): a full turn every 900 ms, steadily, for as long as the
- * step works; still under Reduce Motion.
+ * step works; still and upright under Reduce Motion.
  */
 function StepSpinner({ children }: { children: React.ReactNode }) {
   const reduceMotion = useReducedMotion();
   const turn = useSharedValue(0);
   useEffect(() => {
-    if (reduceMotion) return;
+    // Reduce Motion is known only after the first frame (`useReducedMotion`
+    // answers off until the system does): a turn already started is stopped
+    // and set upright, never left tilted where it stopped.
+    if (reduceMotion) {
+      cancelAnimation(turn);
+      turn.value = 0;
+      return;
+    }
     turn.value = withRepeat(withTiming(360, { duration: 900, easing: Easing.linear }), -1, false);
     return () => cancelAnimation(turn);
   }, [reduceMotion, turn]);
@@ -93,7 +106,7 @@ function StepSpinner({ children }: { children: React.ReactNode }) {
  * Done and when, Waiting for approval and why, the run's failure, Skipped or
  * Stopped — never a step's own summary and never a step id (B6).
  */
-function TrackerStep({ row, divider }: { row: TrackerRow; divider: boolean }) {
+function TrackerStep({ row, divider, children }: { row: TrackerRow; divider: boolean; children?: React.ReactNode }) {
   const { palette } = useTheme();
   const tone =
     row.tone === 'ok'
@@ -124,21 +137,41 @@ function TrackerStep({ row, divider }: { row: TrackerRow; divider: boolean }) {
         {row.sub ? (
           <Text style={[styles.trackerSub, { color: row.tone === 'muted' ? palette.neutral[500] : tone }]}>{row.sub}</Text>
         ) : null}
+        {/* The held step's decision, in the step (round 24 P6). */}
+        {children}
       </View>
     </View>
   );
 }
 
 /**
- * A run's page. Registered in two stacks — Home's, and Settings' for its inbox
- * (`app/(tabs)/settings/run.tsx`) — and `runPath` is the one it is in, so the
- * run it continues opens in the same stack and Back returns here.
+ * A run's page — the one, in Activity's stack (round 24 P5; the owner's build 23
+ * F4, F5; ~~registered in Home's stack and again in Settings'~~ until round 24).
+ * A push from another tab passes `returnTo` (`RUN_ORIGIN_TAB`): Back — the
+ * circle or the swipe, a `GO_BACK` or `POP`, never re-tapping Activity's tab
+ * (`POP_TO_TOP`) — pops the run off Activity's stack and switches to that tab,
+ * its stack as it was. A push from outside Activity asks for its anchor
+ * (`withAnchor`; `unstable_settings` in its layout), so Activity's index is
+ * under the run, and a run opened by a notification or a link goes back to
+ * Activity.
  */
-export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { runPath?: InboxRunPath }) {
+export default function RunDetailScreen() {
   const { palette } = useTheme();
   const router = useRouter();
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { runId } = useLocalSearchParams<{ runId?: string }>();
+  const { runId, returnTo } = useLocalSearchParams<{ runId?: string; returnTo?: string }>();
+  const origin = runOrigin(returnTo);
+  useEffect(() => {
+    if (!origin) return;
+    // Never prevented: the swipe has already taken the page away natively. The
+    // pop goes on, and the tabs switch to the origin with it.
+    return navigation.addListener('beforeRemove', (event) => {
+      const type = event.data.action.type;
+      if (type !== 'GO_BACK' && type !== 'POP') return;
+      navigation.getParent()?.navigate(RUN_ORIGIN_TAB[origin]);
+    });
+  }, [navigation, origin]);
   const session = useSession();
   // **A run belongs to the workspace it was opened in.** The read is bound to
   // that workspace, not to whichever is active: re-reading a run id in another
@@ -156,8 +189,8 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState(false);
-  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const decisions = useApprovalDecision(openedIn);
+  const packageFile = useRunPackageDownload(openedIn, runId);
 
   /**
    * The prototype's retry was theatre: idle → 1600ms → swap to a 'retried'
@@ -191,12 +224,21 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
   const detail = useResource(async () => {
     try {
       if (!runId || !openedIn) throw new PlatformNotConfiguredError();
-      const [run, catalog, approvals, live] = await Promise.all([
+      const [run, catalog, approvals, live, role] = await Promise.all([
         readRun(openedIn, runId),
         readCatalog(openedIn),
-        readAllApprovals(openedIn),
+        // Unreadable, the page still draws (round 24 P6): a held step says why, with no buttons.
+        readAllApprovals(openedIn).then(
+          (answer) => answer.approvals,
+          () => null,
+        ),
         readSubscriptions(openedIn).then(
           (answer) => answer.subscriptions,
+          () => null,
+        ),
+        // This person's role in the workspace, from the collection, as Approvals reads it (G20); null unread.
+        readWorkspaces().then(
+          ({ workspaces }) => workspaces.find((workspace) => workspace.id === openedIn)?.role ?? null,
           () => null,
         ),
       ]);
@@ -204,7 +246,7 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
       const own = (rows: Subscription[] | null) => rows?.find((row) => row.id === run.run.subscriptionId);
       const flow =
         own(live) ?? (live === null ? undefined : own((await readRemovedSubscriptionsOrNone(openedIn)).subscriptions));
-      return { detail: run, entry, approvals: approvals.approvals, flow };
+      return { detail: run, entry, approvals: approvals ?? [], approvalsRead: approvals !== null, flow, role };
     } finally {
       setReads((n) => n + 1);
     }
@@ -236,6 +278,8 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
   }, [going, focused, reads, refresh]);
 
   const liveRun = detail.status === 'ready' ? detail.data : null;
+  // A waiting document whose approval was refused or ran out says "Not approved" (S21); a denied step says so (P6).
+  const decided = liveRun ? heldDecision(liveRun.detail.run, liveRun.approvals) : null;
   // Every step from the start, each where the run is (spec A7; the session's
   // S14) — by the catalog's groups, the newest version's, for any run whose
   // every reported step they still declare (Build 22, the session's S25: a v3
@@ -260,11 +304,9 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
         liveRun.detail.run,
         timeOfDay,
         liveRun.entry?.pipeline,
-        { flow: trackerFlow, email: liveRun.detail.email },
+        { flow: trackerFlow, email: liveRun.detail.email, decision: decided },
       )
     : [];
-  // A waiting document whose approval was refused or ran out says "Not approved" (S21).
-  const decided = liveRun ? heldDecision(liveRun.detail.run, liveRun.approvals) : null;
   const run = liveRun
     ? {
         // The run by its FULL id (the owner's D4 and AM2); never the request id.
@@ -275,17 +317,15 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
         result: runResultLine(liveRun.detail.run, liveRun.approvals),
         status: statusLabel(liveRun.detail.run.status) as StatusPillLabel,
         stats: toRunStats(tracker, duration(liveRun.detail.run.startedAt, liveRun.detail.run.endedAt)),
-        // Started, Ended, Trigger, Run ID: the website's facts.
+        // Started, Ended, Trigger, Run ID: the website's facts. One id per job since
+        // round 24 (P9): ~~"Continues the run that was held."~~, nothing to link.
         facts: toRunFacts(liveRun.detail.run),
-        // The run a continuation continues, a tap away, as the website links "the
-        // run that was held" (until Gate 24's parity pass, its id's first eight
-        // characters, which nothing opened).
-        continues: liveRun.detail.run.continuesRunId,
         tracker,
         // Each document it read, on a card of its own (backend ADR-0039).
         documents: toDocumentCards(
           liveRun.detail.documents,
           decided === 'rejected' ? 'rejected' : decided === 'closed' ? 'expired' : null,
+          liveRun.detail.files,
         ),
         // What a v1/v2 run saved, as its automation wrote it for people (backend
         // ADR-0037; the one-run read only) — drawn only where no documents are.
@@ -296,44 +336,6 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
         cancellable: liveRun.detail.run.status === 'pending' || liveRun.detail.run.status === 'running',
       }
     : null;
-
-  /**
-   * Download JSON (spec A7, C2; the session's S25): the run's documents as the
-   * platform serves them for keeping (`readRunDocuments`), read at the press,
-   * handed to the share sheet as `run-{full id}.json` — on iOS the file itself,
-   * on Android the text, which is what its share intent carries — the pattern
-   * of Settings › Data's export. The file is removed once shared.
-   */
-  const downloadJson = async () => {
-    if (!run || downloading) return;
-    const workspaceId = workspaceIfShown(session, openedIn);
-    if (!workspaceId) {
-      setDownloadError(WORKSPACE_CHANGED);
-      return;
-    }
-    setDownloading(true);
-    setDownloadError(null);
-    try {
-      const file = await readRunDocuments(workspaceId, run.id);
-      const json = JSON.stringify(file, null, 2);
-      if (Platform.OS !== 'ios') {
-        await Share.share({ message: json });
-        return;
-      }
-      const saved = new File(Paths.cache, documentsFileName(run.id));
-      saved.create({ overwrite: true });
-      saved.write(json);
-      try {
-        await Share.share({ url: saved.uri });
-      } finally {
-        if (saved.exists) saved.delete();
-      }
-    } catch {
-      setDownloadError(DOWNLOAD_FAILED);
-    } finally {
-      setDownloading(false);
-    }
-  };
 
   /**
    * Cancel a run that has not ended, confirmed first because a cancelled run is
@@ -392,7 +394,45 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
       />
     );
   }
-  const continued = run.continues;
+
+  /**
+   * Approve / Deny inside step 4 (round 24 P6; the owner's build 23 F7–F10: "It
+   * should be easy for a user to approve or deny not many clicks"): the held
+   * step of a job whose newest approval waits shows the pair to a role the
+   * approval names; to anyone else, who can decide; with the approvals or the
+   * role unread, neither — the step says why it waits. One tap, then the page
+   * reads the run again at once: approved, it is running again under the same
+   * id; denied, step 4 says Denied.
+   */
+  const approval = liveRun && liveRun.detail.run.status === 'held' ? jobApproval(liveRun.detail.run, liveRun.approvals) : undefined;
+  const waiting = approval?.status === 'pending' && liveRun?.approvalsRead ? approval : undefined;
+  const decision = (() => {
+    if (!waiting || liveRun?.role === undefined || liveRun.role === null) return null;
+    if (!decides(liveRun.role, waiting.eligibleRoles)) {
+      return (
+        <Text testID="run-deciders" style={[styles.decisionNote, { color: palette.neutral[400] }]}>
+          {decidersLine(waiting.eligibleRoles)}
+        </Text>
+      );
+    }
+    const error = decisions.errorFor(waiting.id);
+    return (
+      <View style={styles.decision}>
+        <DecisionButtons
+          testID="run-decision"
+          busy={decisions.busyFor(waiting.id)}
+          onDecide={async (choice) => {
+            if (await decisions.decide(waiting.id, choice)) detail.refresh();
+          }}
+        />
+        {error ? (
+          <Text accessibilityRole="alert" style={[styles.decisionNote, { color: status.err }]}>
+            {error}
+          </Text>
+        ) : null}
+      </View>
+    );
+  })();
 
   return (
     <ScrollView
@@ -428,23 +468,13 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
         ))}
       </View>
 
-      {continued ? (
-        <Pressable
-          testID="run-continues"
-          accessibilityRole="link"
-          onPress={() => router.push({ pathname: runPath, params: { runId: continued } })}
-          style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
-          <Text style={[styles.continues, { color: palette.neutral[400] }]}>
-            Continues <Text style={{ color: palette.accentRamp[300] }}>the run that was held</Text>.
-          </Text>
-        </Pressable>
-      ) : null}
-
       <View testID="run-progress">
         <SectionLabel>{STEPS_LABEL}</SectionLabel>
         <SurfaceCard style={styles.sectionCard}>
           {run.tracker.map((row, i) => (
-            <TrackerStep key={row.id} row={row} divider={i < run.tracker.length - 1} />
+            <TrackerStep key={row.id} row={row} divider={i < run.tracker.length - 1}>
+              {row.state === 'held' ? decision : null}
+            </TrackerStep>
           ))}
         </SurfaceCard>
       </View>
@@ -489,22 +519,53 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
         ))}
       </SurfaceCard>
 
-      {run.documents.length > 0 ? (
+      {/*
+        The A8X run package (round 24 P12; the owner's build 23 F16: "No more
+        download json"; ~~Download JSON~~): once the job has documents and has
+        stopped going — View package opens the PDF on its own page; Download
+        PDF and Download Excel hand the file to the share sheet.
+      */}
+      {run.documents.length > 0 && !run.cancellable ? (
         <View style={styles.download}>
           <PillButton
-            testID="run-download-json"
-            label={DOWNLOAD_JSON_LABEL}
+            testID="run-view-package"
+            label={VIEW_PACKAGE_LABEL}
             variant="secondary"
             height={46}
             fontSize={typeScale.label.fontSize}
-            icon={DownloadSimple}
+            icon={FileText}
             iconSize={iconSize.button}
-            disabled={downloading}
-            onPress={downloadJson}
+            onPress={() => router.push({ pathname: '/(tabs)/activity/package', params: { runId: run.id } })}
           />
-          {downloadError ? (
+          <View style={styles.actions}>
+            <PillButton
+              testID="run-download-pdf"
+              label={DOWNLOAD_PDF_LABEL}
+              variant="secondary"
+              height={46}
+              fontSize={typeScale.label.fontSize}
+              icon={DownloadSimple}
+              iconSize={iconSize.button}
+              disabled={packageFile.busy !== null}
+              style={styles.actionBtn}
+              onPress={() => packageFile.download('pdf')}
+            />
+            <PillButton
+              testID="run-download-excel"
+              label={DOWNLOAD_EXCEL_LABEL}
+              variant="secondary"
+              height={46}
+              fontSize={typeScale.label.fontSize}
+              icon={DownloadSimple}
+              iconSize={iconSize.button}
+              disabled={packageFile.busy !== null}
+              style={styles.actionBtn}
+              onPress={() => packageFile.download('xlsx')}
+            />
+          </View>
+          {packageFile.error ? (
             <Text accessibilityRole="alert" style={[styles.downloadError, { color: status.err }]}>
-              {downloadError}
+              {packageFile.error}
             </Text>
           ) : null}
         </View>
@@ -630,9 +691,14 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     fontSize: typeScale.small.fontSize,
   },
-  continues: {
+  decision: {
+    marginTop: 10,
+    gap: 6,
+  },
+  decisionNote: {
+    marginTop: 6,
     fontFamily: fonts.regular,
-    fontSize: typeScale.body.fontSize,
+    ...typeScale.small,
   },
   // A label and its value on one line; a long value — the run's id — wraps under its own column.
   fieldRow: {

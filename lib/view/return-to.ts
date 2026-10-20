@@ -71,6 +71,24 @@ export function afterSignIn(): Href {
  */
 export const RETURN_OPTIONS = { withAnchor: true } as const;
 
+/**
+ * The questions a sign-in asks, once each, before the app (round 24 P8; the
+ * owner's build 23 F6: "initially when logging into the app we see face id
+ * allow. Just like that it should be notifications allow"): the Face ID offer
+ * where it is asked, then the notifications offer where this phone can still be
+ * asked, then where the sign-in goes (`afterSignIn`). Each screen asks what it
+ * knows — login both, the Face ID offer the second, the notifications offer
+ * none — and goes where this says.
+ */
+export function nextAfterSignIn(
+  from: 'login' | 'faceid-offer' | 'notifications-offer',
+  offers: { faceId: boolean; notifications: boolean },
+): { href: Href; options?: typeof RETURN_OPTIONS } {
+  if (from === 'login' && offers.faceId) return { href: '/(auth)/faceid-offer' };
+  if (from !== 'notifications-offer' && offers.notifications) return { href: '/(auth)/notifications-offer' };
+  return { href: afterSignIn(), options: RETURN_OPTIONS };
+}
+
 /** For tests: a fresh process. */
 export function resetReturnForTests(): void {
   open = null;

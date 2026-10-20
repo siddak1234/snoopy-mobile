@@ -1,11 +1,12 @@
 import { PlayCircle } from 'phosphor-react-native';
 import React, { useCallback, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { RunFileField } from '@/components/automations/run-file-field';
 import { InlineBoundary } from '@/components/dialog-boundary';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SetupFieldRow, declaredValues } from '@/components/setup-field';
+import { Text } from '@/components/text';
 import { fonts, iconSize, status, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';

@@ -1,6 +1,6 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { InlineBoundary } from '@/components/dialog-boundary';
@@ -27,6 +27,7 @@ import {
 } from '@/components/screen-state';
 import { Pressable } from '@/components/pressable';
 import { ConnectionsCard } from '@/components/settings/connections-card';
+import { Text } from '@/components/text';
 import { em, fonts, layout, typeScale, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { roleIn, useSession, workspaceIfShown } from '@/hooks/use-session';

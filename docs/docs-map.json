@@ -37,7 +37,7 @@
   ],
   "facts": [
     { "key": "nocturne-components", "home": "README.md", "pattern": "\\b18 Nocturne\\b|\\b18 components\\b" },
-    { "key": "snapshot-repin", "home": "README.md", "pattern": "48 of the 64 Nocturne entries" },
+    { "key": "snapshot-repin", "home": "README.md", "pattern": "48 of the 64 Nocturne entries|50 of the 66 Nocturne entries" },
     { "key": "pre-push-timing", "home": "README.md", "pattern": "\\b111 s to green\\b" },
     { "key": "pods-warnings", "home": "README.md", "pattern": "~2,700 warnings" }
   ],

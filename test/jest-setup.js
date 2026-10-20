@@ -47,6 +47,14 @@ jest.mock('expo-blur', () => {
   return { BlurView: View };
 });
 
+// The run package's WebView (`app/(tabs)/activity/package.tsx`, round 24 P12):
+// a view whose props a test reads; its native module is the phone's.
+jest.mock('react-native-webview', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return { WebView: (props) => React.createElement(View, props) };
+});
+
 // Liquid Glass (`components/glass-surface.tsx`): a View, and not available by
 // default, so a surface draws its iOS < 26 or Android form until a test says so.
 jest.mock('expo-glass-effect', () => {
@@ -73,3 +81,15 @@ jest.mock('expo-crypto', () => {
         .digest(options?.encoding === 'base64' ? 'base64' : 'hex'),
   };
 });
+
+// React Native's own mock answers a text size of 2 (`node_modules/react-native/jest/mocks/NativeModules.js`),
+// past iOS's first accessibility size, where what sits side by side stacks
+// (`useAccessibilityTextSize`). A phone's standard size is 1; a test that wants
+// another sets it (`setTextSize`, `test/render.tsx`).
+{
+  const { Dimensions } = require('react-native');
+  Dimensions.set({
+    window: { ...Dimensions.get('window'), fontScale: 1 },
+    screen: { ...Dimensions.get('screen'), fontScale: 1 },
+  });
+}

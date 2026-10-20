@@ -1,9 +1,10 @@
 import { Prohibit, type Icon } from 'phosphor-react-native';
 import React from 'react';
-import { Image, StyleSheet, Text, View, type AccessibilityRole, type AccessibilityState } from 'react-native';
+import { Image, StyleSheet, View, type AccessibilityRole, type AccessibilityState } from 'react-native';
 
 import { ProviderGlyph } from '@/components/nocturne/oauth-button';
 import { Pressable } from '@/components/pressable';
+import { Text } from '@/components/text';
 import { fonts, iconSize, status, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { DISCONNECT_LABEL } from '@/lib/content/screen-states';

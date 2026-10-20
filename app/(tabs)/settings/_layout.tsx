@@ -11,8 +11,8 @@ import { useTheme } from '@/hooks/use-theme';
  * pages here, while the Face ID row, the workspace rows and Appearance sit on
  * the index itself — the Security, Workspace and Appearance pages of 24.12
  * went with their routes. Archived flows and the notifications inbox have
- * their own copies here — with the flow and run pages they open — so Back
- * stays in Settings.
+ * their own copies here — with the flow page they open — so Back stays in
+ * Settings; a run opens in Activity and Back returns here (round 24 P5).
  */
 export default function SettingsLayout() {
   const { palette } = useTheme();
@@ -32,7 +32,6 @@ export default function SettingsLayout() {
       <Stack.Screen name="support" />
       <Stack.Screen name="connections" />
       <Stack.Screen name="notifications" />
-      <Stack.Screen name="run" />
       <Stack.Screen name="archived" />
       <Stack.Screen name="archived-flow" />
     </Stack>

@@ -7,7 +7,7 @@ import ApprovalsScreen from '@/app/(tabs)/activity/approvals';
 import FlowsScreen from '@/app/(tabs)/flows/index';
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import HomeScreen from '@/app/(tabs)/(home)/index';
-import RunDetailScreen from '@/app/(tabs)/(home)/run';
+import RunDetailScreen from '@/app/(tabs)/activity/run';
 import SettingsScreen from '@/app/(tabs)/settings';
 import SettingsArchivedFlowsScreen from '@/app/(tabs)/settings/archived';
 import SettingsArchivedFlowScreen from '@/app/(tabs)/settings/archived-flow';
@@ -36,7 +36,7 @@ import {
   unpublishedAnswer,
   type RouteOverrides,
 } from '@/test/platform';
-import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
+import { mockRouter, renderWithProviders, setMockParams, setTextSize } from '@/test/render';
 import { touch } from '@/test/touch';
 import type { SessionContextValue } from '@/hooks/use-session';
 import type { Run, Subscription } from '@/lib/platform/automations';
@@ -118,10 +118,11 @@ describe('Home dashboard', () => {
     const { getByText, getAllByText, queryByText } = await renderWithProviders(<HomeScreen />, signedInSession);
     await fireEvent.press(await screen.findByText('Run #4821 · posted to QuickBooks'));
     // A real run id now, not a prototype variant.
+    // In Activity, Back returning to Home (round 24 P5).
     expect(mockRouter.push).toHaveBeenCalledWith({
-      pathname: '/(tabs)/(home)/run',
-      params: { runId: 'run-0' },
-    });
+      pathname: '/(tabs)/activity/run',
+      params: { runId: 'run-0', returnTo: 'home' },
+    }, { withAnchor: true });
   });
 });
 
@@ -193,6 +194,21 @@ describe('Add a flow — the catalog inside Flows (24.9.3)', () => {
 
   beforeEach(() => {
     routePlatform(platformOperation, { '/subscriptions': planSubscriptionsPayload() });
+  });
+
+  it.each([
+    [1, 'row'],
+    [3.571, 'column'],
+  ])('a card at text size x%s lays out as a %s — at the largest its words keep the card\'s width (round 24\'s simulator audit: "QuickBoo/ks.")', async (fontScale, direction) => {
+    const restore = setTextSize(fontScale);
+    try {
+      await renderWithProviders(<SolutionsScreen />, signedInSession);
+      const name = (await screen.findAllByText('Weekly KPI digest'))[0]!;
+      const card = name.parent!.parent!;
+      expect(StyleSheet.flatten(card.props.style).flexDirection).toBe(direction);
+    } finally {
+      restore();
+    }
   });
 
   it('lists the catalog with categories and prices — no version (the spec\'s S9) — Added ✓ for what the workspace holds and Add for the rest, no plan banner', async () => {
@@ -626,7 +642,7 @@ describe('Activity', () => {
     await fireEvent.press(getByText('32 emails routed · 3 escalated'));
     expect(mockRouter.push).toHaveBeenCalledTimes(1);
     const target = mockRouter.push.mock.calls[0]?.[0] as { pathname: string; params: { runId: string } };
-    expect(target.pathname).toBe('/(tabs)/(home)/run');
+    expect(target.pathname).toBe('/(tabs)/activity/run');
     expect(typeof target.params.runId).toBe('string');
     expect(target.params.runId.length).toBeGreaterThan(0);
   });
@@ -643,30 +659,31 @@ describe('Activity', () => {
     expect(mockRouter.push).not.toHaveBeenCalled();
   });
 
-  it('leaves a decided held run out of Needs review and says how it was decided (feedback #5, #7)', async () => {
-    // A run stays `held` after its approval, because the approval starts a new
-    // run (FR-15). The first signed-in session saw five "held" rows from
-    // September under Needs review with nothing to approve.
+  it('leaves a decided held run out of Needs review and says how it was decided (feedback #5, #7; round 24 P9)', async () => {
+    // A denied job stays `held` (its approval ran nothing more). The first
+    // signed-in session saw five "held" rows from September under Needs review
+    // with nothing to approve. Since round 24 a job is one row under its first
+    // run's id: an approved one is listed at its newest status, not twice.
     const held: Run = { ...runsPayload().runs[0]!, id: 'held-decided', status: 'held' };
-    const continuation: Run = {
-      ...runsPayload().runs[0]!,
-      id: 'held-continued',
-      status: 'succeeded',
-      origin: 'approval-continuation',
-      continuesRunId: 'held-decided',
-      resultSummary: 'Recorded INV-7',
-    };
+    const approvedJob: Run = { ...runsPayload().runs[0]!, id: 'held-approved', status: 'succeeded', resultSummary: 'Recorded INV-7' };
     routePlatform(platformOperation, {
-      '/runs': { runs: [held, continuation] },
-      '/approvals': { approvals: [{ ...approvalsPayload().approvals[0]!, runId: 'held-decided', status: 'approved' }] },
+      '/runs': { runs: [held, approvedJob] },
+      '/approvals': {
+        approvals: [
+          { ...approvalsPayload().approvals[0]!, runId: 'held-decided', status: 'rejected' },
+          { ...approvalsPayload().approvals[1]!, runId: 'held-approved', status: 'approved' },
+        ],
+      },
     });
     const { getByText, queryByText } = await renderWithProviders(<ActivityScreen />, signedInSession);
-    expect(getByText('Approved — continued in a new run')).toBeTruthy();
-    expect(getByText('After approval · Recorded INV-7')).toBeTruthy();
+    expect(getByText('Denied')).toBeTruthy();
+    expect(getByText('Recorded INV-7')).toBeTruthy();
+    expect(queryByText(/After approval/u)).toBeNull();
+    expect(queryByText('Approved — continued in a new run')).toBeNull();
     await fireEvent.press(screen.getByTestId('activity-outcome'));
     await fireEvent.press(screen.getByTestId('activity-outcome-option-Needs review'));
     expect(getByText('No held runs.')).toBeTruthy();
-    expect(queryByText('Approved — continued in a new run')).toBeNull();
+    expect(queryByText('Denied')).toBeNull();
   });
 
   it('filters to successes only', async () => {
@@ -728,31 +745,38 @@ describe('Activity', () => {
 
 describe('Approvals inbox', () => {
   beforeEach(() => routePlatform(platformOperation, { '/automations': flowCatalogPayload() }));
-  it('approves and rejects independently, matching the design done-states', async () => {
-    const { getAllByText, getByText, queryAllByText, queryByText } = await renderWithProviders(<ApprovalsScreen />, signedInSession);
+  it('approves and denies independently: a decided card leaves, the rest stay; Deny is the danger pill (round 24 P6, P7)', async () => {
+    const { getAllByText, queryAllByText } = await renderWithProviders(<ApprovalsScreen />, signedInSession);
     expect(getAllByText('Approve')).toHaveLength(3);
-    // Reject is an answer, not a removal: plain, as the design draws it (the owner's build 12 item 5).
-    expect((StyleSheet.flatten(getAllByText('Reject')[0]!.props.style) as { color?: string }).color).toBe(nocturneDark.neutral[300]);
+    // Deny ends the run: the danger colour (the owner's build 23 F8; ~~Reject, plain~~).
+    expect((StyleSheet.flatten(getAllByText('Deny')[0]!.props.style) as { color?: string }).color).toBe(nocturneDark.danger);
 
     await fireEvent.press(getAllByText('Approve')[0]);
-    expect(getByText('Approved ✓ — agent resuming')).toBeTruthy();
+    await waitFor(() => expect(screen.queryByTestId('approval-apr-0')).toBeNull());
     expect(queryAllByText('Approve')).toHaveLength(2);
+    // ~~"Approved ✓ — agent resuming"~~: the card is gone instead.
+    expect(screen.queryByText('Approved ✓ — agent resuming')).toBeNull();
 
-    await fireEvent.press(getAllByText('Reject')[0]);
-    expect(getByText('Rejected — sent back to sender')).toBeTruthy();
+    await fireEvent.press(getAllByText('Deny')[0]);
+    await waitFor(() => expect(screen.queryByTestId('approval-apr-1')).toBeNull());
     expect(queryAllByText('Approve')).toHaveLength(1);
+    expect(screen.getByTestId('approval-apr-2')).toBeTruthy();
   });
 
-  it('decrements the pending count and shows the all-caught-up banner', async () => {
-    const { getAllByText, getByText, queryByText } = await renderWithProviders(<ApprovalsScreen />, signedInSession);
+  it('counts down as cards leave; the last one decided goes to Activity, with no banner (round 24 P7)', async () => {
+    const { getAllByText, getByText } = await renderWithProviders(<ApprovalsScreen />, signedInSession);
     expect(getByText('3')).toBeTruthy();
     await fireEvent.press(getAllByText('Approve')[0]);
-    expect(getByText('2')).toBeTruthy();
-    expect(queryByText('All caught up — decisions synced to your workflows.')).toBeNull();
+    expect(await screen.findByText('2')).toBeTruthy();
     await fireEvent.press(getAllByText('Approve')[0]);
-    await fireEvent.press(getAllByText('Reject')[0]);
-    expect(getByText('0')).toBeTruthy();
-    expect(getByText('All caught up — decisions synced to your workflows.')).toBeTruthy();
+    expect(await screen.findByText('1')).toBeTruthy();
+    expect(mockRouter.dismissTo).not.toHaveBeenCalled();
+    await fireEvent.press(getAllByText('Deny')[0]);
+    expect(await screen.findByText('0')).toBeTruthy();
+    await waitFor(() => expect(mockRouter.dismissTo).toHaveBeenCalledWith('/(tabs)/activity'));
+    expect(mockRouter.dismissTo).toHaveBeenCalledTimes(1);
+    // ~~"All caught up — decisions synced to your workflows."~~ until round 24.
+    expect(screen.queryByText('All caught up — decisions synced to your workflows.')).toBeNull();
   });
 
   it('shows the review reasons verbatim', async () => {
@@ -784,8 +808,8 @@ describe('Approvals inbox', () => {
     );
     await fireEvent.press(getAllByText('Approve')[0]);
     expect(await findByText('Temporary refusal')).toBeTruthy();
-    await fireEvent.press(getAllByText('Reject')[0]);
-    expect(await findByText('Rejected — sent back to sender')).toBeTruthy();
+    await fireEvent.press(getAllByText('Deny')[0]);
+    await waitFor(() => expect(screen.queryByTestId('approval-apr-0')).toBeNull());
     expect(newIdempotencyKey).toHaveBeenNthCalledWith(1, 'decision');
     expect(newIdempotencyKey).toHaveBeenNthCalledWith(2, 'decision');
   });
@@ -818,10 +842,10 @@ describe('Notifications inbox (design sNotifs)', () => {
     expect(queryByText('Invoice paid')).toBeNull();
     await fireEvent.press(getByText('Run failed'));
     expect(mockRouter.push).toHaveBeenCalledWith({
-      pathname: '/(tabs)/(home)/run',
-      // A row points at the real run, not a prototype variant.
-      params: { runId: 'run-4' },
-    });
+      pathname: '/(tabs)/activity/run',
+      // A row points at the real run, not a prototype variant; Back returns to Home (round 24 P5).
+      params: { runId: 'run-4', returnTo: 'home' },
+    }, { withAnchor: true });
     // "Digest posted" was a prototype success notice. The inbox has only held
     // runs and failed runs, and a held row opens Approvals, where it is decided
     // (Gate 24's parity pass; Activity until then).
@@ -1122,9 +1146,9 @@ describe('Settings — one grouped page (build 11, D1)', () => {
     expect(getByText('Notifications')).toBeTruthy();
     expect(getAllByText('Run held for review').length).toBeGreaterThan(0);
     expect(queryByText('Open inbox')).toBeNull();
-    // A failed run opens in the Settings stack, so Back returns to Settings.
+    // A failed run opens in Activity, and Back returns to Settings (round 24 P5).
     await fireEvent.press(getByText('Run failed'));
-    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/settings/run', params: { runId: 'run-4' } });
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/activity/run', params: { runId: 'run-4', returnTo: 'settings' } }, { withAnchor: true });
     // A held run opens Approvals, where it is decided, as from Home (Gate 24's
     // parity pass; Activity until then).
     await fireEvent.press(getAllByText('Run held for review')[0]);
@@ -1133,7 +1157,7 @@ describe('Settings — one grouped page (build 11, D1)', () => {
     await fireEvent.press(screen.getByLabelText('Back'));
     expect(mockRouter.back).toHaveBeenCalled();
     expect(mockRouter.push).not.toHaveBeenCalledWith('/(tabs)/(home)/notifications');
-    expect(mockRouter.push).not.toHaveBeenCalledWith(expect.objectContaining({ pathname: '/(tabs)/(home)/run' }));
+    expect(mockRouter.push).not.toHaveBeenCalledWith(expect.objectContaining({ params: expect.objectContaining({ returnTo: 'home' }) }));
   });
 
   it('shows Billing without the plan totals (24.9.5)', async () => {

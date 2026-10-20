@@ -1,11 +1,12 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { ArrowClockwise, WarningCircle, WifiSlash, type Icon } from 'phosphor-react-native';
 
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { Skeleton } from '@/components/nocturne/skeleton';
 import { pressed } from '@/components/pressable';
+import { Text } from '@/components/text';
 import { em, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import {

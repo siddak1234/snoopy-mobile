@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 
 import { ScopeIcons } from '@/components/scope-control';
-import { em, fonts, typeScale } from '@/constants/theme';
+import { Text } from '@/components/text';
+import { em, fontScaleLimit, fonts, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-/** The row's height: the circles' 38, so every item in it is centred on one line (F3). */
+/** The row's least height: the circles' 38, so every item in it is centred on one line (F3); taller only at a large text size (round 24 P3). */
 export const TITLE_ROW_HEIGHT = 38;
 /** The least space after the title, and the space between every item on the right. */
 export const TITLE_ROW_GAP = 8;
@@ -86,6 +87,7 @@ export function TitleRow({
       <Text
         testID={`${testID}-title`}
         numberOfLines={1}
+        maxFontSizeMultiplier={fontScaleLimit.chrome}
         onLayout={width(setTitleWidth)}
         style={[styles.title, { color: palette.text }]}>
         {title}
@@ -105,7 +107,7 @@ export function TitleRow({
 
 const styles = StyleSheet.create({
   row: {
-    height: TITLE_ROW_HEIGHT,
+    minHeight: TITLE_ROW_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
   },

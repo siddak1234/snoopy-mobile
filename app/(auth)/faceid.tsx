@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import * as LocalAuthentication from 'expo-local-authentication';
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
   interpolate,
@@ -15,6 +15,7 @@ import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from 'react-nativ
 import { BrandMark } from '@/components/nocturne/brand-mark';
 import { GlowBackground } from '@/components/nocturne/glow-background';
 import { PillButton } from '@/components/nocturne/pill-button';
+import { Text } from '@/components/text';
 import { fonts, layout, radius, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useBiometricWording } from '@/hooks/use-biometric-wording';

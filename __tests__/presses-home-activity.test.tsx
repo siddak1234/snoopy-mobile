@@ -3,11 +3,11 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 
 import NotificationsScreen from '@/app/(tabs)/(home)/notifications';
-import RunDetailScreen from '@/app/(tabs)/(home)/run';
+import RunDetailScreen from '@/app/(tabs)/activity/run';
 import ApprovalsScreen from '@/app/(tabs)/activity/approvals';
 import ActivityScreen from '@/app/(tabs)/activity/index';
 import { ScopeIcons } from '@/components/scope-control';
-import { nocturneDark } from '@/constants/theme';
+import { fontScaleLimit, nocturneDark, status, typeScale } from '@/constants/theme';
 import { resetPushForTests } from '@/hooks/use-push-registration';
 import type { SessionContextValue } from '@/hooks/use-session';
 import type { Approval, Run } from '@/lib/platform/automations';
@@ -25,7 +25,7 @@ import {
   signedInSession,
   subscriptionsPayload,
 } from '@/test/platform';
-import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
+import { mockRouter, renderWithProviders, setMockParams, setTextSize } from '@/test/render';
 
 /**
  * The button audit (build 13, B9): the presses of Home, Activity, the inbox and
@@ -134,7 +134,7 @@ describe('the run page: its cancel dialog and View flow (24.4.2)', () => {
 /* -------------------------------------------------------------------- Activity */
 
 describe('Activity: a row opens its own run (24.4.4)', () => {
-  it("opens the run page, in the Home stack, with THAT row's run — today's row and yesterday's alike", async () => {
+  it("opens the run page, in Activity's stack, with THAT row's run — today's row and yesterday's alike", async () => {
     routePlatform(platformOperation, { '/automations': flowCatalogPayload() });
     await renderWithProviders(<ActivityScreen />, signedInSession);
 
@@ -144,14 +144,14 @@ describe('Activity: a row opens its own run (24.4.4)', () => {
     ] as const) {
       mockRouter.push.mockClear();
       await fireEvent.press(await screen.findByText(line));
-      expect(mockRouter.push.mock.calls).toEqual([[{ pathname: '/(tabs)/(home)/run', params: { runId } }]]);
+      expect(mockRouter.push.mock.calls).toEqual([[{ pathname: '/(tabs)/activity/run', params: { runId } }]]);
     }
   });
 });
 
 /* ------------------------------------------------------------------- Approvals */
 
-describe("Approvals: Approve and Reject post that approval's decision (DESIGN-CONTRACT, Mutations)", () => {
+describe("Approvals: Approve and Deny post that approval's decision (DESIGN-CONTRACT, Mutations)", () => {
   const DECISION = 'POST /v1/workspaces/{workspaceId}/approvals/{approvalId}/decision';
 
   function routeInbox() {
@@ -167,12 +167,22 @@ describe("Approvals: Approve and Reject post that approval's decision (DESIGN-CO
     return fake;
   }
 
+  it('a card\'s top line: the flow\'s name wraps, its time keeps its place (round 24\'s simulator audit: "38m ago" pushed off the card)', async () => {
+    routeInbox();
+    await renderWithProviders(<ApprovalsScreen />, signedInSession);
+    const time = (await screen.findAllByText(/^(just now|.+ ago)$/u))[0]!;
+    const name = time.parent!.children[0];
+    if (name === undefined || typeof name === 'string') throw new Error('the name comes first');
+    expect(StyleSheet.flatten(name.props.style).flexShrink).toBe(1);
+    expect(StyleSheet.flatten(time.props.style).flexShrink).toBe(0);
+  });
+
   it.each([
-    ['Approve', 'approved', 'Approved ✓ — agent resuming'],
-    ['Reject', 'rejected', 'Rejected — sent back to sender'],
+    ['Approve', 'approved'],
+    ['Deny', 'rejected'],
   ] as const)(
-    '%s on the second card posts { decision: "%s" } to ITS approval with a key; refused, the card says why and the retry sends the same key; then the card says "%s"',
-    async (label, decision, done) => {
+    '%s on the second card posts { decision: "%s" } to ITS approval with a key; refused, the card says why and the retry sends the same key; then the card leaves',
+    async (label, decision) => {
       const fake = routeInbox();
       fake.once(DECISION, () => {
         throw new PlatformError('Service Unavailable', 503);
@@ -188,7 +198,7 @@ describe("Approvals: Approve and Reject post that approval's decision (DESIGN-CO
       expect(screen.getAllByText(label)).toHaveLength(3);
 
       await fireEvent.press(screen.getAllByText(label)[1]!);
-      expect(await screen.findByText(done)).toBeTruthy();
+      await waitFor(() => expect(screen.queryByTestId('approval-apr-1')).toBeNull());
       expect(screen.queryByText('Service Unavailable')).toBeNull();
       expect(screen.getAllByText(label)).toHaveLength(2);
 
@@ -202,6 +212,99 @@ describe("Approvals: Approve and Reject post that approval's decision (DESIGN-CO
       expect(fake.to(DECISION)).toEqual([posted, posted]);
     },
   );
+});
+
+/**
+ * Needs review after a decision (round 24 P7; the owner's build 23 F11: "After
+ * approving why do i still see the card. Shiuldnt that card slide away or
+ * dissapear. If none are left it should take me back to activity main page").
+ */
+describe('Needs review: a decided card leaves (round 24, P7)', () => {
+  const DECISION = 'POST /v1/workspaces/{workspaceId}/approvals/{approvalId}/decision';
+
+  function routeTwo(count: number) {
+    const fake = fakePlatform(platformOperation);
+    fake.always('GET /v1/workspaces/{workspaceId}/approvals', { approvals: approvalsPayload().approvals.slice(0, count) });
+    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', subscriptionsPayload());
+    fake.always('GET /v1/workspaces/{workspaceId}/automations', flowCatalogPayload());
+    fake.always('GET /v1/workspaces', {
+      workspaces: [{ id: TEST_WORKSPACE, name: 'Acme Operations', type: 'organization', role: 'owner' }],
+      activeWorkspaceId: TEST_WORKSPACE,
+    });
+    fake.always(DECISION, (sent: Sent) => ({
+      approval: { ...approvalsPayload().approvals[0]!, status: (sent.body as { decision: Approval['status'] }).decision },
+    }));
+    return fake;
+  }
+
+  it('deciding the only card goes back to Activity', async () => {
+    const fake = routeTwo(1);
+    await renderWithProviders(<ApprovalsScreen />, signedInSession);
+    await fireEvent.press(await screen.findByTestId('decide-apr-0-approve'));
+    await waitFor(() => expect(mockRouter.dismissTo).toHaveBeenCalledWith('/(tabs)/activity'));
+    expect(fake.to(DECISION)).toHaveLength(1);
+    expect(screen.queryByTestId('approval-apr-0')).toBeNull();
+    // Not the empty state of a queue that was empty on arrival.
+    expect(screen.queryByText('Go back')).toBeNull();
+  });
+
+  it('deciding one of two: that card goes, the other stays — and its pill never says Pending beside the decision', async () => {
+    jest.useFakeTimers();
+    try {
+      routeTwo(2);
+      await renderWithProviders(<ApprovalsScreen />, signedInSession);
+      await act(async () => {
+        await jest.runOnlyPendingTimersAsync();
+      });
+      const first = await screen.findByTestId('approval-apr-0');
+      expect(within(first).getByText('Pending')).toBeTruthy();
+      await fireEvent.press(screen.getByTestId('decide-apr-0-deny'));
+      // Saved: before it leaves, its pill says how it was decided, and its buttons are gone.
+      await act(async () => {
+        await Promise.resolve();
+      });
+      const leaving = screen.getByTestId('approval-apr-0');
+      expect(within(leaving).getByText('Denied')).toBeTruthy();
+      expect(within(leaving).queryByText('Pending')).toBeNull();
+      expect(within(leaving).queryByText('Approve')).toBeNull();
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(300);
+      });
+      expect(screen.queryByTestId('approval-apr-0')).toBeNull();
+      expect(within(screen.getByTestId('approval-apr-1')).getByText('Pending')).toBeTruthy();
+      expect(screen.getByTestId('approvals-count').props.children).toBe(1);
+      expect(mockRouter.dismissTo).not.toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('a decided pill is the decision\'s colour: Approved ok, Denied the error tone', async () => {
+    jest.useFakeTimers();
+    try {
+      routeTwo(2);
+      await renderWithProviders(<ApprovalsScreen />, signedInSession);
+      await act(async () => {
+        await jest.runOnlyPendingTimersAsync();
+      });
+      await fireEvent.press(await screen.findByTestId('decide-apr-1-approve'));
+      await act(async () => {
+        await Promise.resolve();
+      });
+      const pill = within(screen.getByTestId('approval-apr-1')).getByText('Approved');
+      expect(StyleSheet.flatten(pill.props.style).color).toBe(status.ok);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('the warning callout\'s icon sits centred on its first line', async () => {
+    routeTwo(1);
+    await renderWithProviders(<ApprovalsScreen />, signedInSession);
+    await screen.findByTestId('approval-apr-0');
+    const icon = screen.getByTestId('callout-icon-apr-0', { includeHiddenElements: true });
+    expect(StyleSheet.flatten(icon.props.style).marginTop).toBe((typeScale.body.lineHeight - 16) / 2);
+  });
 });
 
 /* --------------------------------------------------------------- Notifications */
@@ -229,73 +332,100 @@ describe('Notifications: read and dismissed on the platform (the owner\'s build 
     return fake;
   }
 
-  it('Mark all read saves the rows on screen read, by id (DESIGN-GAPS.archive.md: "not rows a later re-read brings in"), and draws what the platform answers', async () => {
-    const inbox = inboxPayload();
-    // By the time the save lands, one more run has failed: the platform lists it, unread.
-    const later = { ...inbox.items[3]!, id: 'run:run-later', runId: 'run-later', failureReason: 'Reason run-later' };
-    // The re-read after the save is held, so what the screen shows meanwhile can be seen.
+  /**
+   * Clear all (round 24 P8; the owner's build 23 F6: "The mark all as read does
+   * not clear. Rename it to clear all and it should wipe the notifications").
+   */
+  const CLEAR = 'POST /v1/workspaces/{workspaceId}/notifications/clear';
+
+  it.each([
+    [1, true],
+    [3.571, false],
+  ])('the header at text size x%s: the title stops at the chrome limit; Clear all beside it: %s (round 24\'s simulator audit: "Notificat/ions")', async (fontScale, beside) => {
+    const restore = setTextSize(fontScale);
+    try {
+      routeInbox(inboxPayload());
+      await renderWithProviders(<NotificationsScreen />, signedInSession);
+      const title = await screen.findByText('Notifications');
+      expect(title.props.maxFontSizeMultiplier).toBe(fontScaleLimit.chrome);
+      const header = title.parent!;
+      expect(within(header).queryByTestId('inbox-clear-all') !== null).toBe(beside);
+      expect(screen.getByTestId('inbox-clear-all')).toBeTruthy();
+    } finally {
+      restore();
+    }
+  });
+
+  it('Clear all: the rows leave at the tap, the platform is asked once with a key, and the empty inbox is drawn', async () => {
     let answer!: () => void;
     const held = new Promise<void>((resolve) => (answer = resolve));
-    const fake = fakePlatform(platformOperation);
-    fake.always('GET /v1/workspaces/{workspaceId}/automations', flowCatalogPayload());
-    fake.once(INBOX, inbox);
-    fake.always(INBOX, async () => {
+    const fake = routeInbox(inboxPayload(), { items: [], unreadCount: 0 });
+    fake.always(CLEAR, async () => {
       await held;
-      return { items: [later, ...inbox.items.map((item) => ({ ...item, read: true }))], unreadCount: 1 };
+      return { unreadCount: 0 };
     });
-    fake.always(READ, { unreadCount: 1 });
     await renderWithProviders(<NotificationsScreen />, signedInSession);
-    // Three held for review and one failed, every one unread, as the platform lists them.
     expect(await screen.findAllByText(TITLES)).toHaveLength(4);
-    expect(dots()).toEqual([UNREAD, UNREAD, UNREAD, UNREAD]);
+    expect(screen.queryByText('Mark all read')).toBeNull();
 
-    await fireEvent.press(screen.getByText('Mark all read'));
-
-    expect(fake.to(READ)).toEqual([
-      {
-        method: 'POST',
-        path: '/v1/workspaces/{workspaceId}/notifications/read',
-        values: { workspaceId: TEST_WORKSPACE },
-        key: 'notifications-read-1',
-        body: { ids: inbox.items.map((item) => item.id) },
-      },
+    await fireEvent.press(screen.getByTestId('inbox-clear-all'));
+    // Gone before the platform answers.
+    expect(screen.queryAllByText(TITLES)).toHaveLength(0);
+    expect(fake.to(CLEAR)).toEqual([
+      { method: 'POST', path: '/v1/workspaces/{workspaceId}/notifications/clear', values: { workspaceId: TEST_WORKSPACE }, key: 'notifications-clear-1' },
     ]);
-    // The rows stay while the inbox is re-read: no skeleton to confirm a dot.
-    await waitFor(() => expect(fake.to(INBOX)).toHaveLength(2));
-    expect(screen.queryByTestId('screen-loading')).toBeNull();
-    expect(screen.getAllByText(TITLES)).toHaveLength(4);
     await act(async () => answer());
-    expect(await screen.findByText(/Reason run-later/u)).toBeTruthy();
-    expect(dotOf(screen.getByText(/Reason run-later/u))).toBe(UNREAD);
-    expect(dots()).toEqual([UNREAD, 'transparent', 'transparent', 'transparent', 'transparent']);
-
-    // Nothing unread on screen but the newcomer: a second press names only it.
-    await fireEvent.press(screen.getByText('Mark all read'));
-    expect(fake.to(READ)[1]?.body).toEqual({ ids: ['run:run-later'] });
+    // The inbox read again: empty.
+    await waitFor(() => expect(fake.to(INBOX)).toHaveLength(2));
+    expect(screen.queryAllByText(TITLES)).toHaveLength(0);
+    expect(fake.to(CLEAR)).toHaveLength(1);
   });
 
-  it('Mark all read with every row read sends nothing', async () => {
-    const inbox = inboxPayload();
-    const fake = routeInbox({ items: inbox.items.map((item) => ({ ...item, read: true })), unreadCount: 0 });
-    await renderWithProviders(<NotificationsScreen />, signedInSession);
-    expect(await screen.findAllByText(TITLES)).toHaveLength(4);
-    await fireEvent.press(screen.getByText('Mark all read'));
-    expect(fake.to(READ)).toEqual([]);
-  });
-
-  it('a refused save says so and changes nothing on screen', async () => {
+  it('Clear all refused: the rows come back, with the reason', async () => {
     const fake = routeInbox(inboxPayload());
-    fake.once(READ, () => {
+    fake.once(CLEAR, () => {
       throw new PlatformError('Service Unavailable', 503);
     });
     await renderWithProviders(<NotificationsScreen />, signedInSession);
     expect(await screen.findAllByText(TITLES)).toHaveLength(4);
 
-    await fireEvent.press(screen.getByText('Mark all read'));
+    await fireEvent.press(screen.getByTestId('inbox-clear-all'));
 
     expect(await screen.findByText('Service Unavailable')).toBeTruthy();
+    expect(screen.getAllByText(TITLES)).toHaveLength(4);
     expect(dots()).toEqual([UNREAD, UNREAD, UNREAD, UNREAD]);
     expect(fake.to(INBOX)).toHaveLength(1);
+  });
+
+  it('Clear all pressed again after a refusal is a new intent: a new key, never the refused one', async () => {
+    const fake = routeInbox(inboxPayload(), { items: [], unreadCount: 0 });
+    fake.once(CLEAR, () => {
+      throw new PlatformError('Service Unavailable', 503);
+    });
+    fake.always(CLEAR, { unreadCount: 0 });
+    await renderWithProviders(<NotificationsScreen />, signedInSession);
+    expect(await screen.findAllByText(TITLES)).toHaveLength(4);
+
+    await fireEvent.press(screen.getByTestId('inbox-clear-all'));
+    expect(await screen.findByText('Service Unavailable')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('inbox-clear-all'));
+
+    await waitFor(() => expect(fake.to(CLEAR)).toHaveLength(2));
+    expect(fake.to(CLEAR).map((entry) => entry.key)).toEqual(['notifications-clear-1', 'notifications-clear-2']);
+    await waitFor(() => expect(fake.to(INBOX)).toHaveLength(2));
+    expect(screen.queryAllByText(TITLES)).toHaveLength(0);
+  });
+
+  it('Clear all clears the rows it was pressed on: one that arrives after is listed', async () => {
+    const inbox = inboxPayload();
+    const later = { ...inbox.items[3]!, id: 'run:run-later', runId: 'run-later', failureReason: 'Reason run-later' };
+    const fake = routeInbox(inbox, { items: [later], unreadCount: 1 });
+    fake.always(CLEAR, { unreadCount: 0 });
+    await renderWithProviders(<NotificationsScreen />, signedInSession);
+    expect(await screen.findAllByText(TITLES)).toHaveLength(4);
+    await fireEvent.press(screen.getByTestId('inbox-clear-all'));
+    expect(await screen.findByText(/Reason run-later/u)).toBeTruthy();
+    expect(screen.getAllByText(TITLES)).toHaveLength(1);
   });
 
   it('opening an unread row reads it on the platform and still opens it; a read row sends nothing', async () => {
@@ -307,7 +437,7 @@ describe('Notifications: read and dismissed on the platform (the owner\'s build 
 
     await fireEvent.press(await screen.findByText('Run failed'));
 
-    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/(home)/run', params: { runId: 'run-4' } });
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/activity/run', params: { runId: 'run-4', returnTo: 'home' } }, { withAnchor: true });
     expect(fake.to(READ)).toEqual([
       {
         method: 'POST',

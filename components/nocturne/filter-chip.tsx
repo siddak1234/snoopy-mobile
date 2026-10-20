@@ -1,7 +1,7 @@
 import React from 'react';
-import { Text } from 'react-native';
 
 import { Pressable } from '@/components/pressable';
+import { Text } from '@/components/text';
 import { fonts, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 

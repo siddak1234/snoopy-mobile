@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { EnvelopeSimple, Plus, UserCircle, X } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConnectionRow, GlyphMark, NoneMark } from '@/components/connection-row';
@@ -11,6 +11,7 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
+import { Text, TextInput } from '@/components/text';
 import { em, fonts, iconSize, layout, radius, status, typeScale, withAlpha } from '@/constants/theme';
 import { busyBody, useWorkspaceResource } from '@/hooks/use-resource';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
@@ -326,7 +327,7 @@ const styles = StyleSheet.create({
   addRow: { marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
   input: {
     flex: 1,
-    height: 44,
+    minHeight: 44,
     borderRadius: radius.input,
     borderWidth: 1,
     paddingHorizontal: 13,

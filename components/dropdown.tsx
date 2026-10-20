@@ -1,12 +1,13 @@
 import { Check, type Icon } from 'phosphor-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { Modal, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Modal, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { GlassSurface } from '@/components/glass-surface';
 import { Pressable } from '@/components/pressable';
+import { Text } from '@/components/text';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
-import { elevation, em, fonts, status as statusColor, typeScale, withAlpha } from '@/constants/theme';
+import { elevation, em, fontScaleLimit, fonts, status as statusColor, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type DropdownOption<T extends string> = { value: T; label: string; sub?: string; icon?: Icon; testID?: string };
@@ -40,17 +41,21 @@ export type DropdownFrame = {
  * Where a panel goes (the owner's build 22 items 3–4, D1): under its trigger
  * 6 pt down, or over it when there are fewer than 240 pt below and more above;
  * on the trigger's start or end edge — the screen edge it is nearer, unless the
- * page says — 16 pt clear of each side; at least 232 wide, the trigger's width
- * if wider, never wider than the screen less its gutters; at most 380 tall, and
- * never taller than its room less 16. Pure, so the sums are tested on their own.
+ * page says — 16 pt clear of each side; at least 232 wide times the phone's
+ * text size (up to `fontScaleLimit.content`; ~~232 at every size~~ until round
+ * 24's simulator audit, where the largest size cut "Harbor…" and "All categ…"),
+ * the trigger's width if wider, never wider than the screen less its gutters;
+ * at most 380 tall, and never taller than its room less 16. Pure, so the sums
+ * are tested on their own.
  */
 export function placeDropdown(
   anchor: DropdownAnchor,
-  screen: { width: number; height: number },
+  screen: { width: number; height: number; fontScale?: number },
   align?: 'start' | 'end',
 ): DropdownFrame {
   const side = align ?? (anchor.x + anchor.width / 2 < screen.width / 2 ? 'start' : 'end');
-  const width = Math.min(Math.max(anchor.width, MIN_WIDTH), screen.width - GUTTER * 2);
+  const least = MIN_WIDTH * Math.min(Math.max(screen.fontScale ?? 1, 1), fontScaleLimit.content);
+  const width = Math.min(Math.max(anchor.width, least), screen.width - GUTTER * 2);
   const wanted = side === 'start' ? anchor.x : anchor.x + anchor.width - width;
   const left = Math.min(Math.max(wanted, GUTTER), screen.width - GUTTER - width);
   const below = screen.height - (anchor.y + anchor.height + GAP);
@@ -205,7 +210,7 @@ export function Dropdown<T extends string>({
             },
             enter,
           ]}>
-          <GlassSurface radius={RADIUS} testID={`${testID}-menu`} style={{ maxHeight: frame.maxHeight }}>
+          <GlassSurface radius={RADIUS} backing="panel" testID={`${testID}-menu`} style={{ maxHeight: frame.maxHeight }}>
             <View accessibilityViewIsModal>
               <ScrollView bounces={false} style={{ maxHeight: frame.maxHeight }}>
                 {title ? (
@@ -232,11 +237,12 @@ export function Dropdown<T extends string>({
                       ]}>
                       {IconCmp ? <IconCmp size={20} color={palette.neutral[300]} /> : null}
                       <View style={styles.rowBody}>
-                        <Text numberOfLines={1} style={[styles.label, { color: palette.text }]}>
+                        {/* A long name wraps rather than being cut short, as iOS's own menus do (~~one line~~ until round 24's simulator audit). */}
+                        <Text style={[styles.label, { color: palette.text }]}>
                           {option.label}
                         </Text>
                         {option.sub ? (
-                          <Text numberOfLines={1} style={[styles.sub, { color: palette.neutral[400] }]}>
+                          <Text style={[styles.sub, { color: palette.neutral[400] }]}>
                             {option.sub}
                           </Text>
                         ) : null}

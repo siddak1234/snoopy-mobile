@@ -19,7 +19,7 @@ export function administers(role: WorkspaceRole | null | undefined): boolean {
  * Whether this person may decide an approval: their role in its workspace is
  * one the approval names (`eligibleRoles`, "Which workspace roles may decide.
  * Checked server-side."). The Edge checks it again and refuses a 403; Approvals
- * asks only so it does not offer Approve and Reject to someone certain to be
+ * asks only so it does not offer Approve and Deny to someone certain to be
  * refused. Ported from the website's Approvals
  * (`role && approval.eligibleRoles.includes(role)`), so both clients draw the
  * same line (Gate 24's parity pass, G20).

@@ -13,8 +13,19 @@ export const mockRouter = {
 
 export const useRouter = () => mockRouter;
 
-/** A screen's own navigation object: what a screen uses to change its own route's params. */
-export const mockNavigation = { setParams: jest.fn() };
+/**
+ * A screen's own navigation object: what a screen uses to change its own route's
+ * params, and — the run page's Back to the tab it came from (round 24 P5) — its
+ * `beforeRemove` listener (`addListener` records it), the pop it dispatches and
+ * its tab navigator (`mockTabs`).
+ */
+export const mockTabs = { navigate: jest.fn() };
+export const mockNavigation = {
+  setParams: jest.fn(),
+  addListener: jest.fn((_event: string, _listener: (event: unknown) => void) => () => {}),
+  dispatch: jest.fn(),
+  getParent: jest.fn(() => mockTabs),
+};
 
 export const useNavigation = () => mockNavigation;
 
@@ -56,10 +67,16 @@ function Screen(_props: { name: string; options?: unknown }) {
   return null;
 }
 
+/** A guarded group of declarations (`Stack.Protected`): its screens draw nothing here either. */
+function Protected({ children }: { guard: boolean; children?: React.ReactNode }) {
+  return <>{children}</>;
+}
+
 export function Stack({ children }: { children?: React.ReactNode }) {
   return <>{children}</>;
 }
 Stack.Screen = Screen;
+Stack.Protected = Protected;
 
 /** Records each time a layout draws its tab navigator: a guard's test says whether the tabs were drawn. */
 export const mockTabsDrawn = jest.fn();

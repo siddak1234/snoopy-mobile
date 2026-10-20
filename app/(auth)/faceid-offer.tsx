@@ -1,17 +1,13 @@
 import { useRouter } from 'expo-router';
 import * as LocalAuthentication from 'expo-local-authentication';
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { UserFocus } from 'phosphor-react-native';
 
-import { PillButton } from '@/components/nocturne/pill-button';
-import { SurfaceCard } from '@/components/nocturne/surface-card';
-import { em, fonts, layout, status, typeScale } from '@/constants/theme';
+import { OfferScreen } from '@/components/offer-screen';
 import { useBiometricWording } from '@/hooks/use-biometric-wording';
-import { useTheme } from '@/hooks/use-theme';
+import { offersPushAsk } from '@/hooks/use-push-registration';
 import { writeFaceIdEnabled } from '@/lib/platform/session-store';
-import { RETURN_OPTIONS, afterSignIn } from '@/lib/view/return-to';
+import { nextAfterSignIn } from '@/lib/view/return-to';
 
 /**
  * The one-time Face ID question, asked right after a remembered sign-in.
@@ -22,18 +18,22 @@ import { RETURN_OPTIONS, afterSignIn } from '@/lib/view/return-to';
  * now (which is when iOS asks its permission), "Not now" records the answer so
  * the question is not asked again. Either way the session is already signed in;
  * biometrics never create one (ADR-0017). Settings keeps the toggle for later.
- * Answered, it goes where the sign-in would have: the screen an ended session
- * left, or Home (Gate 24 parity, G4).
+ * Answered, it goes where the sign-in would have: the notifications offer when
+ * this phone can still be asked (round 24 P8), else the screen an ended
+ * session left, or Home (Gate 24 parity, G4) — `nextAfterSignIn`. Its layout is
+ * `OfferScreen`, shared with the notifications offer.
  */
 export default function FaceIdOfferScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { palette } = useTheme();
   const biometric = useBiometricWording();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const finish = () => router.replace(afterSignIn(), RETURN_OPTIONS);
+  const finish = async () => {
+    const next = nextAfterSignIn('faceid-offer', { faceId: false, notifications: await offersPushAsk() });
+    if (next.options) router.replace(next.href, next.options);
+    else router.replace(next.href);
+  };
 
   const enable = async () => {
     if (busy) return;
@@ -55,7 +55,7 @@ export default function FaceIdOfferScreen() {
         return;
       }
       await writeFaceIdEnabled(true);
-      finish();
+      await finish();
     } catch {
       setMessage(biometric.notSaved);
     } finally {
@@ -74,55 +74,19 @@ export default function FaceIdOfferScreen() {
       // written only means the question may be asked again next time.
     } finally {
       setBusy(false);
-      finish();
+      await finish();
     }
   };
 
   return (
-    <View
-      style={[
-        styles.screen,
-        { backgroundColor: palette.bg, paddingTop: insets.top + (layout.designTop.auth - layout.statusArea) },
-      ]}>
-      <SurfaceCard style={styles.card}>
-        <View style={[styles.glyph, { borderColor: palette.accentRamp[700] }]}>
-          <UserFocus size={28} color={palette.accentRamp[300]} />
-        </View>
-        <Text style={[styles.title, { color: palette.text }]}>{biometric.offerTitle}</Text>
-        <Text style={[styles.body, { color: palette.neutral[400] }]}>{biometric.offerBody}</Text>
-        {message ? <Text style={[styles.message, { color: status.err }]}>{message}</Text> : null}
-        <View style={styles.actions}>
-          <PillButton
-            label={biometric.offerAccept}
-            variant="primary"
-            height={48}
-            fontSize={typeScale.lead.fontSize}
-            disabled={busy}
-            onPress={enable}
-            style={styles.action}
-          />
-          <PillButton label="Not now" variant="plain" height={44} fontSize={typeScale.label.fontSize} disabled={busy} onPress={decline} />
-        </View>
-      </SurfaceCard>
-    </View>
+    <OfferScreen
+      icon={UserFocus}
+      title={biometric.offerTitle}
+      body={biometric.offerBody}
+      message={message}
+      accept={{ label: biometric.offerAccept, onPress: enable }}
+      decline={{ label: 'Not now', onPress: decline }}
+      busy={busy}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, paddingHorizontal: layout.authX },
-  card: { padding: 22, alignItems: 'center', gap: 10 },
-  glyph: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  title: { fontFamily: fonts.medium, fontSize: typeScale.title.fontSize, letterSpacing: em(-0.01, typeScale.title.fontSize), textAlign: 'center' },
-  body: { fontFamily: fonts.regular, ...typeScale.label, textAlign: 'center' },
-  message: { fontFamily: fonts.regular, fontSize: typeScale.body.fontSize, textAlign: 'center' },
-  actions: { alignSelf: 'stretch', marginTop: 8, gap: 6 },
-  action: { alignSelf: 'stretch' },
-});

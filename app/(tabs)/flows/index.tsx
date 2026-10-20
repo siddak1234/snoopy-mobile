@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Archive, FlowArrow, MagnifyingGlass, Plus, Warning } from 'phosphor-react-native';
@@ -9,6 +9,7 @@ import { PillButton } from '@/components/nocturne/pill-button';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { CircleButton } from '@/components/scope-control';
+import { Text, TextInput } from '@/components/text';
 import { TitleRow } from '@/components/title-row';
 import { fonts, iconSize, layout, radius, status, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -303,7 +304,7 @@ const styles = StyleSheet.create({
     color: status.warnText,
   },
   search: {
-    height: 44,
+    minHeight: 44,
     borderRadius: radius.input,
     borderWidth: 1,
     flexDirection: 'row',

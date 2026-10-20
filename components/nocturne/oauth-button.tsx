@@ -1,8 +1,8 @@
 import React from 'react';
-import { Text } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 
 import { Pressable } from '@/components/pressable';
+import { Text } from '@/components/text';
 import { fonts, radius, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -68,7 +68,7 @@ export function OAuthButton({ provider, label, onPress, disabled = false }: Prop
       disabled={disabled || undefined}
       accessibilityState={disabled ? { disabled: true } : undefined}
       style={({ pressed }) => ({
-        height: 48,
+        minHeight: 48,
         borderRadius: radius.input,
         borderWidth: 1,
         borderColor: palette.neutral[700],

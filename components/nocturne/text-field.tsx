@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Text, TextInput, View, type StyleProp, type ViewStyle } from 'react-native';
+import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { Eye, EyeSlash } from 'phosphor-react-native';
 
 import { Pressable } from '@/components/pressable';
+import { Text, TextInput } from '@/components/text';
 import { fonts, radius, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -40,7 +41,7 @@ export function TextField({
       </Text>
       <View
         style={{
-          height: 50,
+          minHeight: 50,
           borderRadius: radius.input,
           borderWidth: 1,
           borderColor: palette.neutral[700],

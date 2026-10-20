@@ -16,6 +16,7 @@ import { Linking, Platform, Share } from 'react-native';
 import DataExportScreen from '@/app/(tabs)/settings/data';
 import SupportScreen from '@/app/(tabs)/settings/support';
 import type { ExportJob } from '@/lib/platform/exports';
+import { FileNotSavedError } from '@/lib/platform/problem';
 import { fakePlatform } from '@/test/fake-platform';
 import { TEST_WORKSPACE, sessionAs, signedInSession } from '@/test/platform';
 import { renderWithProviders } from '@/test/render';
@@ -74,7 +75,7 @@ describe('Data export (24.6.3)', () => {
   });
 
   /** Started, followed until ready, with an older link first and the fresh one read at the download. */
-  async function readyToDownload() {
+  async function readyToDownload(fresh = 'https://store.example.test/fresh') {
     jest.useFakeTimers();
     const fake = routeData('owner');
     const file = (downloadUrl: string) => ({ downloadUrl, artifactId: 'a', filename: 'exports/acme-export.json', sizeBytes: 1, expiresAt: 'x' });
@@ -83,7 +84,7 @@ describe('Data export (24.6.3)', () => {
       export: job('ready', { complete: true, file: file('https://store.example.test/old') }),
     });
     fake.always('GET /v1/workspaces/{workspaceId}/exports/{exportId}', {
-      export: job('ready', { complete: true, file: file('https://store.example.test/fresh') }),
+      export: job('ready', { complete: true, file: file(fresh) }),
     });
     await renderWithProviders(<DataExportScreen />, sessionAs('owner'));
     await fireEvent.press(await screen.findByText('Export everything'));
@@ -117,12 +118,22 @@ describe('Data export (24.6.3)', () => {
 
   it('says so when the file could not be saved', async () => {
     const ios = jest.replaceProperty(Platform, 'OS', 'ios');
-    downloadSignedFile.mockRejectedValue(new Error('The file could not be saved.'));
+    downloadSignedFile.mockRejectedValue(new FileNotSavedError());
     await readyToDownload();
     await fireEvent.press(screen.getByText('Download file'));
     expect(await screen.findByText('The file could not be saved.')).toBeTruthy();
     expect(openURL).not.toHaveBeenCalled();
     ios.restore();
+  });
+
+  it.each(['ios', 'android'] as const)('on %s says "The link to the file cannot be used." for a link that is not https: nothing saved, nothing opened', async (platform) => {
+    const os = jest.replaceProperty(Platform, 'OS', platform);
+    await readyToDownload('http://store.example.test/fresh');
+    await fireEvent.press(screen.getByText('Download file'));
+    expect(await screen.findByText('The link to the file cannot be used.')).toBeTruthy();
+    expect(downloadSignedFile).not.toHaveBeenCalled();
+    expect(openURL).not.toHaveBeenCalled();
+    os.restore();
   });
 
   it("on Android, whose share sheet carries text, opens the fresh link as before", async () => {

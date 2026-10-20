@@ -3,7 +3,7 @@ import React from 'react';
 
 import HomeScreen from '@/app/(tabs)/(home)/index';
 import NotificationsScreen from '@/app/(tabs)/(home)/notifications';
-import RunDetailScreen from '@/app/(tabs)/(home)/run';
+import RunDetailScreen from '@/app/(tabs)/activity/run';
 import ApprovalsScreen from '@/app/(tabs)/activity/approvals';
 import ActivityScreen from '@/app/(tabs)/activity/index';
 import AddFlowScreen from '@/app/(tabs)/flows/add';
@@ -106,9 +106,9 @@ const CASES: Case[] = [
   ['Home', 'offline', 'app/(tabs)/(home)/index.tsx:361', false],
   ['Home', 'unavailable', 'app/(tabs)/(home)/index.tsx:361', false],
   ['Home', 'error', 'app/(tabs)/(home)/index.tsx:361', false],
-  ['Run', 'offline', 'app/(tabs)/(home)/run.tsx:189', true],
-  ['Run', 'unavailable', 'app/(tabs)/(home)/run.tsx:198', true],
-  ['Run', 'error', 'app/(tabs)/(home)/run.tsx:207-208', true],
+  ['Run', 'offline', 'app/(tabs)/activity/run.tsx:189', true],
+  ['Run', 'unavailable', 'app/(tabs)/activity/run.tsx:198', true],
+  ['Run', 'error', 'app/(tabs)/activity/run.tsx:207-208', true],
   ['Approvals', 'offline', 'app/(tabs)/activity/approvals.tsx:174', true],
   ['Approvals', 'unavailable', 'app/(tabs)/activity/approvals.tsx:180', true],
   ['Approvals', 'error', 'app/(tabs)/activity/approvals.tsx:189-190', true],

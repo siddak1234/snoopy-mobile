@@ -13,7 +13,6 @@ import {
 import { hasIcon, iconFor } from '@/lib/view/icon-registry';
 import { organizationValue } from '@/lib/view/organization';
 import {
-  isContinuation,
   runOriginLabel,
   statusLabel,
   statusTone,
@@ -101,12 +100,6 @@ describe('run origin — not a status', () => {
     expect(runOriginLabel('approval-continuation')).toBe('After approval');
   });
 
-  it('knows which origins continue an earlier run', () => {
-    expect(isContinuation('retry-continuation')).toBe(true);
-    expect(isContinuation('approval-continuation')).toBe(true);
-    expect(isContinuation('trigger')).toBe(false);
-    expect(isContinuation('manual')).toBe(false);
-  });
 });
 
 describe('count', () => {

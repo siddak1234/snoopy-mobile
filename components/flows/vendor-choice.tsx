@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router';
 import { CheckCircle } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { ConnectionMark, ConnectionRow, NoneMark } from '@/components/connection-row';
+import { Text } from '@/components/text';
 import { fonts, iconSize, status, typeScale } from '@/constants/theme';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';

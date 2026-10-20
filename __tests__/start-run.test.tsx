@@ -309,7 +309,7 @@ describe("the flow page's start controls (25.8.3; in Step 1 since Build 21)", ()
     expect(screen.getByLabelText('Hold above').props.value).toBe('750.00');
     await fireEvent.press(screen.getByText('Start run'));
     await waitFor(() =>
-      expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/(home)/run', params: { runId: 'run-1' } }),
+      expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/activity/run', params: { runId: 'run-1', returnTo: 'flows' } }, { withAnchor: true }),
     );
     expect(writes).toEqual([
       {
@@ -328,7 +328,7 @@ describe("the flow page's start controls (25.8.3; in Step 1 since Build 21)", ()
     await fireEvent.changeText(screen.getByLabelText('Hold above'), '75000');
     await fireEvent.press(screen.getByText('Start run'));
     await waitFor(() =>
-      expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/(home)/run', params: { runId: 'run-2' } }),
+      expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/activity/run', params: { runId: 'run-2', returnTo: 'flows' } }, { withAnchor: true }),
     );
     expect(writes[1]!.body).toEqual(writes[0]!.body);
     expect(writes[1]!.key).not.toBe(writes[0]!.key);

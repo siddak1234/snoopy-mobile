@@ -431,6 +431,36 @@ describe('the type audit (24.12)', () => {
     );
     expect(run(typeAudit).status).toBe(0);
   });
+
+  it("round 24 P3: Text or TextInput from react-native outside components/text.tsx fails; the wrapper, its users and a type import pass", () => {
+    for (const [file, source, name] of [
+      ['app/screen.tsx', "import { ScrollView, Text, View } from 'react-native';", 'Text'],
+      ['components/field.tsx', "import {\n  StyleSheet,\n  TextInput,\n} from 'react-native';", 'TextInput'],
+      ['hooks/label.tsx', "import { Text as Label } from 'react-native';", 'Text'],
+    ]) {
+      writeFileSync(join(root, file), source);
+      const result = run(typeAudit);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('Text and TextInput come from @/components/text');
+      expect(result.stderr).toContain(`${file}:`);
+      expect(result.stderr).toContain(`: ${name}`);
+      rmSync(join(root, file));
+    }
+
+    writeFileSync(
+      join(root, 'components/text.tsx'),
+      "import { Text as NativeText, TextInput as NativeTextInput } from 'react-native';\nexport const Text = NativeText;\nexport const TextInput = NativeTextInput;",
+    );
+    writeFileSync(
+      join(root, 'app/fine.tsx'),
+      [
+        "import { View, type TextProps, type TextStyle } from 'react-native';",
+        "import type { Text as T } from 'react-native';",
+        "import { Text, TextInput } from '@/components/text';",
+      ].join('\n'),
+    );
+    expect(run(typeAudit).status).toBe(0);
+  });
 });
 
 describe('the haptics audit (build 11, D7)', () => {

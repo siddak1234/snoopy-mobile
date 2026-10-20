@@ -36,7 +36,11 @@ async function endTheSession() {
 /** The run page of the newest run, opened from Home's recent runs. */
 async function openTheRun(view: Awaited<ReturnType<typeof launch>>) {
   await press('Run #4821 · posted to QuickBooks');
-  expect([view.getSegments(), view.getSearchParams()]).toEqual([['(tabs)', '(home)', 'run'], { runId: 'run-0' }]);
+  // In Activity since round 24 (P5), Back returning to Home; `initial` is the router's own, from the push's anchor.
+  expect([view.getSegments(), view.getSearchParams()]).toEqual([
+    ['(tabs)', 'activity', 'run'],
+    expect.objectContaining({ runId: 'run-0', returnTo: 'home' }),
+  ]);
   expectTheRun(view);
 }
 
@@ -46,7 +50,7 @@ async function openTheRun(view: Awaited<ReturnType<typeof launch>>) {
  * screen its params while the address keeps none.
  */
 function expectTheRun(view: Awaited<ReturnType<typeof launch>>) {
-  expect(view.getSegments()).toEqual(['(tabs)', '(home)', 'run']);
+  expect(view.getSegments()).toEqual(['(tabs)', 'activity', 'run']);
   expect(screen.getByText('Run run-0')).toBeTruthy();
   // The run's subheader: its flow (Gate 24 parity, G18; the version gone with the
   // Invoice Processing update, as on the website); how it ended on its own line (spec §3.E).

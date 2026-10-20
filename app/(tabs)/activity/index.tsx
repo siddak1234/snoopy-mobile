@@ -2,7 +2,7 @@ import type { NavigationProp } from '@react-navigation/native';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { CalendarBlank, CaretRight, CheckCircle, Funnel, HandPalm } from 'phosphor-react-native';
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Dropdown } from '@/components/dropdown';
@@ -11,6 +11,7 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
 import { CircleButton, ScopePill } from '@/components/scope-control';
+import { Text } from '@/components/text';
 import { TitleRow } from '@/components/title-row';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { SettingsRow } from '@/components/settings/settings-row';
@@ -64,7 +65,7 @@ function ActivityRow({ item, last }: { item: ActivityItem; last: boolean }) {
     <Pressable
       testID={`activity-row-${item.id}`}
       accessibilityRole="button"
-      onPress={() => router.push({ pathname: '/(tabs)/(home)/run', params: { runId: item.id } })}
+      onPress={() => router.push({ pathname: '/(tabs)/activity/run', params: { runId: item.id } })}
       style={({ pressed }) => [
         styles.row,
         // The last row draws no border: it would run square past the card's rounded

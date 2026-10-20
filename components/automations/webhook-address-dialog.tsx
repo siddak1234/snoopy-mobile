@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
+import { Text } from '@/components/text';
 import { fonts, typeScale } from '@/constants/theme';
 import type { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';

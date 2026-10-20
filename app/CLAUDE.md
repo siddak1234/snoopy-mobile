@@ -10,7 +10,7 @@ Loads when a file here is read or edited. The root `CLAUDE.md` rules apply too.
 
 - The Nocturne components are snapshot-pinned in both palettes (`__tests__/nocturne-visual.test.tsx`); disabled support may not change their default render.
 - New screens mirror the website's pages and are composed from those components, the shared `components/dialog.tsx` and the theme tokens. A new primitive is added only when none fits, snapshot-pinned in both palettes (ADR-0032).
-- Every size is a step of `typeScale` (`constants/theme.ts`) and every press ticks through `components/pressable.tsx`; why, and the one authorised re-pin: `DESIGN-CONTRACT.md` "The type is the app's own scale" and "Every press ticks".
+- Every size is a step of `typeScale` (`constants/theme.ts`), every text is `components/text.tsx`'s (the text-size limit), and every press ticks through `components/pressable.tsx`; why, and the authorised re-pins: `DESIGN-CONTRACT.md` "The type is the app's own scale" and "Every press ticks".
 
 ## Plain words (the owner's rule)
 

@@ -1,7 +1,9 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
+import { View } from 'react-native';
 
 import { NocturneTabBar } from '@/components/nocturne/tab-bar';
+import { StatusBarStrip } from '@/components/status-bar-strip';
 import { usePushRegistration } from '@/hooks/use-push-registration';
 import { useSession } from '@/hooks/use-session';
 
@@ -22,6 +24,9 @@ import { useSession } from '@/hooks/use-session';
  * 13 review). It never navigates: from inside the tabs "/" names Home, not the
  * cover, and the redirect to it that stood here replaced the tabs with
  * themselves, again and again (the owner's build 12 item 6).
+ *
+ * Over every tab's screens, one strip behind the status bar (round 24 P11,
+ * `components/status-bar-strip.tsx`), so nothing scrolls under the clock.
  */
 export default function TabLayout() {
   const session = useSession();
@@ -36,13 +41,16 @@ export default function TabLayout() {
   if (!open) return null;
 
   return (
-    <Tabs
-      tabBar={(props) => <NocturneTabBar {...props} />}
-      screenOptions={{ headerShown: false }}>
-      <Tabs.Screen name="(home)" options={{ title: 'Home' }} />
-      <Tabs.Screen name="flows" options={{ title: 'Flows' }} />
-      <Tabs.Screen name="activity" options={{ title: 'Activity' }} />
-      <Tabs.Screen name="settings" options={{ title: 'Settings' }} />
-    </Tabs>
+    <View style={{ flex: 1 }}>
+      <Tabs
+        tabBar={(props) => <NocturneTabBar {...props} />}
+        screenOptions={{ headerShown: false }}>
+        <Tabs.Screen name="(home)" options={{ title: 'Home' }} />
+        <Tabs.Screen name="flows" options={{ title: 'Flows' }} />
+        <Tabs.Screen name="activity" options={{ title: 'Activity' }} />
+        <Tabs.Screen name="settings" options={{ title: 'Settings' }} />
+      </Tabs>
+      <StatusBarStrip />
+    </View>
   );
 }

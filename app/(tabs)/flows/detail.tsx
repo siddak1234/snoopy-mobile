@@ -1,7 +1,7 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { CaretRight, EnvelopeSimple, Pause, Play, RocketLaunch } from 'phosphor-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AutomationActions } from '@/components/automations/automation-actions';
@@ -15,7 +15,8 @@ import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { pressed } from '@/components/pressable';
 import { chosenVendor, connectionFields } from '@/components/setup-field';
-import { StatTileButton } from '@/components/stat-tile-button';
+import { StatTileButton, StatTileRow } from '@/components/stat-tile-button';
+import { Text } from '@/components/text';
 import { em, fonts, iconSize, layout, status, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ActionFailure, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
@@ -378,7 +379,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
           subscriptionId={subscription.id}
           shownWorkspaceId={flows.loadedFor}
           runInput={subscription.runInput ?? []}
-          onStarted={(runId) => router.push({ pathname: '/(tabs)/(home)/run', params: { runId } })}
+          onStarted={(runId) => router.push({ pathname: '/(tabs)/activity/run', params: { runId, returnTo: 'flows' } }, { withAnchor: true })}
         />
       ) : current !== 'Live' ? (
         (subscription.runInput ?? []).length > 0 ? (
@@ -387,7 +388,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
             subscriptionId={subscription.id}
             shownWorkspaceId={flows.loadedFor}
             runInput={subscription.runInput ?? []}
-            onStarted={(runId) => router.push({ pathname: '/(tabs)/(home)/run', params: { runId } })}
+            onStarted={(runId) => router.push({ pathname: '/(tabs)/activity/run', params: { runId, returnTo: 'flows' } }, { withAnchor: true })}
             action={turnOn}
           />
         ) : (
@@ -466,7 +467,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
       {/* DASHBOARD: the three tiles open Activity for this flow and that outcome, over all time (24.11.9). */}
       <View testID="flow-dashboard">
         <SectionLabel>{DASHBOARD_LABEL}</SectionLabel>
-        <View style={[styles.statsRow, styles.underLabel]}>
+        <StatTileRow style={styles.underLabel}>
           {(
             [
               ['Runs', tile(counts?.total), 'All', undefined],
@@ -487,7 +488,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
               valueColor={dash(value) ? palette.neutral[500] : tone}
             />
           ))}
-        </View>
+        </StatTileRow>
       </View>
 
       {olderArchived ? null : (
@@ -605,7 +606,6 @@ const styles = StyleSheet.create({
     letterSpacing: em(-0.01, typeScale.heading.fontSize),
   },
   team: { marginTop: 1, fontFamily: fonts.regular, fontSize: typeScale.body.fontSize },
-  statsRow: { flexDirection: 'row', gap: 10 },
   underLabel: { marginTop: 9 },
   stepRow: { paddingVertical: 12, paddingHorizontal: 14 },
   stepLabel: { fontFamily: fonts.medium, fontSize: typeScale.label.fontSize },
