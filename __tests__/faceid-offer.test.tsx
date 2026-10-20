@@ -5,10 +5,15 @@ import FaceIdOfferScreen from '@/app/(auth)/faceid-offer';
 import { signedInSession } from '@/test/platform';
 import { mockRouter, renderWithProviders } from '@/test/render';
 
-jest.mock('@/lib/platform/session-store', () => ({ writeFaceIdEnabled: jest.fn() }));
+jest.mock('@/lib/platform/session-store', () => ({
+  writeFaceIdEnabled: jest.fn(),
+  // Push's "Not now", which the notifications offer reads (round 24 P8): said, unless a test says not.
+  readPushNotNow: jest.fn(async () => true),
+  writePushNotNow: jest.fn(),
+}));
 
 const LocalAuthentication = jest.requireMock('expo-local-authentication');
-const { writeFaceIdEnabled } = jest.requireMock('@/lib/platform/session-store');
+const { writeFaceIdEnabled, readPushNotNow } = jest.requireMock('@/lib/platform/session-store');
 
 /**
  * The one-time Face ID question after a remembered sign-in (owner, 2026-10-02):
@@ -17,6 +22,7 @@ const { writeFaceIdEnabled } = jest.requireMock('@/lib/platform/session-store');
  * already signed in, and biometrics never mint one (ADR-0017).
  */
 beforeEach(() => {
+  readPushNotNow.mockReset().mockResolvedValue(true);
   writeFaceIdEnabled.mockReset().mockResolvedValue(undefined);
   LocalAuthentication.hasHardwareAsync.mockReset().mockResolvedValue(true);
   LocalAuthentication.isEnrolledAsync.mockReset().mockResolvedValue(true);
@@ -48,5 +54,15 @@ describe('the Face ID offer', () => {
     expect(await screen.findByText('Face ID unlock was not enabled.')).toBeTruthy();
     expect(writeFaceIdEnabled).not.toHaveBeenCalled();
     expect(mockRouter.replace).not.toHaveBeenCalled();
+  });
+});
+
+describe('then the notifications offer (round 24 P8)', () => {
+  it.each(['Use Face ID', 'Not now'])('answered with %s on an iPhone iOS has not asked yet, it goes to the notifications offer', async (answer) => {
+    readPushNotNow.mockResolvedValue(false);
+    await renderWithProviders(<FaceIdOfferScreen />, signedInSession);
+    await fireEvent.press(screen.getByText(answer));
+    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith('/(auth)/notifications-offer'));
+    expect(mockRouter.replace).toHaveBeenCalledTimes(1);
   });
 });

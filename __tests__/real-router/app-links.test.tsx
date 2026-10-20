@@ -76,7 +76,7 @@ it("a run link in another of the person's workspaces switches to it, then opens 
   await flush(1000);
   expect(platform.switched).toEqual([OTHER]);
   expect(platform.active()).toBe(OTHER);
-  expect(view.getPathname()).toBe('/run');
+  expect(view.getPathname()).toBe('/activity/run');
   expect(view.getSearchParams()).toMatchObject({ runId: 'run-0' });
   // The switch, then the session read again, before the run's page read anything.
   const switchedAt = platform.calls.indexOf('/v1/session/active-workspace');
@@ -136,7 +136,7 @@ it('a run link that arrives while the app is open opens the run from the tabs, n
   }
   // The cover (`app/index.tsx`) is the root's empty segment list.
   expect(seen.filter((segments) => segments.length === 0)).toEqual([]);
-  expect(view.getPathname()).toBe('/run');
+  expect(view.getPathname()).toBe('/activity/run');
   expect(view.getSearchParams()).toMatchObject({ runId: 'run-0' });
 });
 
@@ -163,6 +163,6 @@ it('a link that arrives on Sign in leaves Sign in where it is, never sending it 
     await press('Sign in with Google');
   });
   await flush(1000);
-  expect(view.getPathname()).toBe('/run');
+  expect(view.getPathname()).toBe('/activity/run');
   expect(view.getSearchParams()).toMatchObject({ runId: 'run-0' });
 });

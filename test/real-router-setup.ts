@@ -18,6 +18,8 @@
 jest.mock('@/lib/platform/client', () => ({
   platformOperation: jest.fn(),
   newIdempotencyKey: jest.fn(() => 'test-intent'),
+  // The one native download (round 24 P12: the run package): saved into a cache that is a name.
+  downloadSignedFile: jest.fn(async (_url: string, name: string) => ({ uri: `file:///cache/${name}`, exists: true, delete: () => undefined })),
 }));
 
 jest.mock('expo-secure-store', () => {
@@ -47,4 +49,15 @@ jest.mock('@/lib/platform/native-auth', () => {
       return { status: 'signed-in' };
     }),
   };
+});
+
+/**
+ * Round 24 P8: a sign-in offers notifications where iOS can still ask. These
+ * tests are about where a screen goes, so by default iOS has already answered
+ * (no: nothing to offer, nothing registers), and a test about the offer says
+ * otherwise (`__tests__/real-router/notifications-offer.test.tsx`).
+ */
+beforeEach(() => {
+  const Notifications = jest.requireMock('expo-notifications') as { getPermissionsAsync: jest.Mock };
+  Notifications.getPermissionsAsync.mockResolvedValue({ status: 'denied', granted: false, canAskAgain: false, expires: 'never' });
 });

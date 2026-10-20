@@ -181,6 +181,26 @@ export const typeScale = {
 } as const;
 
 /**
+ * How far text follows the phone's text size (round 24 P3; the owner's build 23
+ * F14: "based on the users phone size and font size from their native ios
+ * system"). Every `Text` and `TextInput` (`components/text.tsx`) follows iOS's
+ * size up to `content` × the scale's size (2.0, iOS AX2: 15 pt body prints at
+ * 30 pt); text in a fixed bar — the tab labels, pills, badges, a title row's
+ * title — up to `chrome` (1.35, xxxLarge), as Apple's own tab bar stops. Session's
+ * choice S4: beyond AX2 a 375-pt phone holds ~12 characters a line.
+ */
+export const fontScaleLimit = { content: 2, chrome: 1.35 } as const;
+
+/**
+ * The first of iOS's accessibility text sizes: Accessibility Medium, ×1.786 in
+ * React Native's `RCTAccessibilityManager` (xxxLarge, the largest standard
+ * size, is ×1.353). From here what sits side by side stacks
+ * (`useAccessibilityTextSize`), as Apple's guidance has it, so no word breaks
+ * inside itself (round 24's simulator audit; the owner's build 23 F14).
+ */
+export const ACCESSIBILITY_TEXT_SCALE = 1.786;
+
+/**
  * Icon sizes (the Invoice Processing update, 2026-10-14; the owner's build 19
  * item 8: "Small icons"): 24 for anything that labels a row, a field, a vendor,
  * a step group or a detail, 20 inside a button. A screen takes its glyph size
@@ -274,3 +294,14 @@ export function kicker(p: NocturnePalette, size: number = typeScale.caption.font
 export function glassTint(p: NocturnePalette, tone: 'neutral' | 'accent' = 'neutral'): string {
   return tone === 'accent' ? withAlpha(p.accent, 0.22) : withAlpha(p.surface, 0.35);
 }
+
+/**
+ * How solid a glass surface's backing is (`GlassSurface backing`; round 24 P1,
+ * the owner's build 23 F1/F13/F14): opaque — the card colour (a drop-down
+ * panel) or the page colour (the status-bar strip) under the surface's content,
+ * so a panel reads over a busy page as it does over an empty one, as the
+ * website's switcher panel does, while the glass edge stays. ~~94%, the
+ * session's choice S3~~ until the round's simulator audit: on iOS 26.1 a busy
+ * page still showed through at 3–6%, Home's headline readable under the panel.
+ */
+export const GLASS_BACKING_ALPHA = 1;

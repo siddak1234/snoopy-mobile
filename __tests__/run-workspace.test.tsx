@@ -1,7 +1,7 @@
 import { act, screen } from '@testing-library/react-native';
 import React, { useState } from 'react';
 
-import RunDetailScreen from '@/app/(tabs)/(home)/run';
+import RunDetailScreen from '@/app/(tabs)/activity/run';
 import { SessionContext, type SessionContextValue } from '@/hooks/use-session';
 import { TEST_WORKSPACE, routePlatform, signedInSession } from '@/test/platform';
 import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';

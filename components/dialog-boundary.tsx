@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { Dialog, DialogButton } from '@/components/dialog';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { Text } from '@/components/text';
 import { fonts, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ERROR_BODY, TRY_AGAIN_LABEL } from '@/lib/content/screen-states';

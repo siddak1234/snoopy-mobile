@@ -36,7 +36,8 @@ export type ScreenKey =
   | 'billing'
   | 'account'
   | 'data'
-  | 'vendor';
+  | 'vendor'
+  | 'package';
 
 /** `gErrTitle` — the design names the thing that failed, never the mechanism. */
 const ERROR_TITLES: Record<ScreenKey, string> = {
@@ -59,6 +60,7 @@ const ERROR_TITLES: Record<ScreenKey, string> = {
   account: "Couldn't load your account",
   data: "Couldn't load data export",
   vendor: "Couldn't load this flow's integrations",
+  package: "Couldn't open the run package",
 };
 
 /** The design's own fallback for a screen not in the map. */
@@ -424,12 +426,34 @@ export const EMAIL_OWED = 'Sending email…';
 export function emailSentLine(time: string): string {
   return `Email sent · ${time}`;
 }
-/** "Document 1 of 3" (the owner's ~04:05Z: "a json out that clearly seperates accordingly"). */
+/**
+ * "Invoice 1 of 3" (round 24 P10; the owner's build 23 F15: "It should also be
+ * invoice not document"; ~~"Document 1 of 3"~~, the owner's ~04:05Z: "a json
+ * out that clearly seperates accordingly").
+ */
 export function documentOf(index: number, count: number): string {
-  return `Document ${index} of ${count}`;
+  return `Invoice ${index} of ${count}`;
 }
+/** The first two rows inside an invoice (round 24 P10): what it is and the file's format. */
+export const DOCUMENT_TYPE_LABEL = 'Document type';
+export const DOCUMENT_FORMAT_LABEL = 'Format';
 export const DOCUMENT_MORE_LINES = 'More lines on the document.';
-export const DOWNLOAD_JSON_LABEL = 'Download JSON';
+/**
+ * The A8X run package (round 24 P12; the owner's build 23 F16: "No more
+ * download json"; ~~Download JSON~~): View package opens the PDF on its own
+ * page; Download PDF and Download Excel hand the file to the share sheet.
+ */
+export const VIEW_PACKAGE_LABEL = 'View package';
+export const DOWNLOAD_PDF_LABEL = 'Download PDF';
+export const DOWNLOAD_EXCEL_LABEL = 'Download Excel';
+export const RUN_PACKAGE_TITLE = 'Run package';
+export const PACKAGE_PREPARING = 'Preparing the package…';
+/**
+ * The package page when the PDF cannot be shown: the platform still busy after
+ * its wait (any 503, asked twice), or a file that is not a PDF or is over
+ * 25 MiB — the website's package route's words for both.
+ */
+export const PACKAGE_NOT_OPENED = 'Could not open the package. Try again.';
 export const DOWNLOAD_FAILED = 'Could not download. Try again.';
 export const RUN_ID_LABEL = 'Run ID';
 
@@ -448,7 +472,8 @@ export const RUN_ID_LABEL = 'Run ID';
  * person who arrived with an empty queue and decided nothing. Claiming a
  * synchronisation that never happened is the same class of untruth as a
  * fabricated count; the design splits `apprEmpty` from `apprAllDone` for
- * exactly this reason.
+ * exactly this reason. Since round 24 (P7) a cleared queue is not drawn at all:
+ * the last decided card leaves and the screen returns to Activity.
  */
 export const APPROVALS_EMPTY_TITLE = 'Nothing needs review';
 export const APPROVALS_EMPTY_BODY =
@@ -472,6 +497,11 @@ export const NOTIFICATIONS_EMPTY_BODY =
 export const PUSH_CARD_TITLE = 'Know the moment something needs you';
 export const PUSH_CARD_BODY = 'Get a notification on this phone when a run is held or fails.';
 export const PUSH_TURN_ON_LABEL = 'Turn on';
+/** The inbox's header action (round 24 P8; ~~Mark all read~~): empties it. */
+export const CLEAR_ALL_LABEL = 'Clear all';
+/** The notifications offer after a sign-in (round 24 P8; the owner's build 23 F6), as the Face ID offer asks. */
+export const NOTIFICATIONS_OFFER_TITLE = 'Turn on notifications';
+export const NOTIFICATIONS_OFFER_BODY = 'Know when a run needs your approval or something goes wrong.';
 export const PUSH_NOT_NOW_LABEL = 'Not now';
 /** iOS will not ask again: only its Settings can turn notifications on. */
 export const PUSH_DENIED_BODY = 'Notifications for Autom8x are off in iOS Settings.';
@@ -557,8 +587,17 @@ export type ActivityItem = {
   createdAt: string;
 };
 
-/** The approvals card's confirmation copy. */
-export const APPROVAL_DONE_TEXT = {
-  approved: 'Approved ✓ — agent resuming',
-  rejected: 'Rejected — sent back to sender',
-} as const;
+/**
+ * One decision, in the run's step 4 and on a Needs-review card (round 24 P6,
+ * P7; the owner's build 23 F7–F11): Approve, and Deny in the danger colour (S6:
+ * the owner says deny; the API's value stays `rejected`), each saying it is
+ * saving while it is. ~~"Approved ✓ — agent resuming", "Rejected — sent back to
+ * sender"~~ until round 24: a decided card leaves.
+ */
+export const APPROVE_LABEL = 'Approve';
+export const DENY_LABEL = 'Deny';
+export const APPROVING_LABEL = 'Approving…';
+export const DENYING_LABEL = 'Denying…';
+export const DECISION_NOT_SAVED = 'The decision was not saved.';
+/** A held step whose approval was denied (round 24 P6, S6). */
+export const STEP_DENIED = 'Denied';

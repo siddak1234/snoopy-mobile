@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
   interpolate,
@@ -17,6 +17,7 @@ import { BrandMark } from '@/components/nocturne/brand-mark';
 import { GlowBackground } from '@/components/nocturne/glow-background';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { Pressable } from '@/components/pressable';
+import { Text } from '@/components/text';
 import { em, fonts, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useSession } from '@/hooks/use-session';

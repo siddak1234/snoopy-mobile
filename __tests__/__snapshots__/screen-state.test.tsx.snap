@@ -114,6 +114,7 @@ exports[`screen states — dark palette ActionFailure renders unchanged 1`] = `
       }
     >
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -131,6 +132,7 @@ exports[`screen states — dark palette ActionFailure renders unchanged 1`] = `
       </Text>
       <Text
         accessibilityRole="button"
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -283,6 +285,7 @@ exports[`screen states — dark palette ScreenEmpty/no-action renders unchanged 
         </RNSVGSvgView>
       </View>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -301,6 +304,7 @@ exports[`screen states — dark palette ScreenEmpty/no-action renders unchanged 
         Quiet, as designed
       </Text>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -455,6 +459,7 @@ exports[`screen states — dark palette ScreenEmpty/two-actions renders unchange
         </RNSVGSvgView>
       </View>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -473,6 +478,7 @@ exports[`screen states — dark palette ScreenEmpty/two-actions renders unchange
         No flows yet
       </Text>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -530,8 +536,8 @@ exports[`screen states — dark palette ScreenEmpty/two-actions renders unchange
               "borderWidth": 1,
               "flexDirection": "row",
               "gap": 7,
-              "height": 48,
               "justifyContent": "center",
+              "minHeight": 48,
               "paddingHorizontal": 18,
             },
             {
@@ -614,6 +620,7 @@ exports[`screen states — dark palette ScreenEmpty/two-actions renders unchange
           </RNSVGGroup>
         </RNSVGSvgView>
         <Text
+          maxFontSizeMultiplier={1.35}
           style={
             {
               "color": "#9184d9",
@@ -665,8 +672,8 @@ exports[`screen states — dark palette ScreenEmpty/two-actions renders unchange
               "borderWidth": 0,
               "flexDirection": "row",
               "gap": 7,
-              "height": 44,
               "justifyContent": "center",
+              "minHeight": 44,
               "paddingHorizontal": 18,
             },
             {
@@ -676,6 +683,7 @@ exports[`screen states — dark palette ScreenEmpty/two-actions renders unchange
         }
       >
         <Text
+          maxFontSizeMultiplier={1.35}
           style={
             {
               "color": "#e9e9ed",
@@ -988,6 +996,7 @@ exports[`screen states — dark palette ScreenError renders unchanged 1`] = `
         </RNSVGSvgView>
       </View>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -1006,6 +1015,7 @@ exports[`screen states — dark palette ScreenError renders unchanged 1`] = `
         Couldn't load this run
       </Text>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -1063,8 +1073,8 @@ exports[`screen states — dark palette ScreenError renders unchanged 1`] = `
               "borderWidth": 1,
               "flexDirection": "row",
               "gap": 8,
-              "height": 44,
               "justifyContent": "center",
+              "minHeight": 44,
               "paddingHorizontal": 18,
             },
             {
@@ -1147,6 +1157,7 @@ exports[`screen states — dark palette ScreenError renders unchanged 1`] = `
           </RNSVGGroup>
         </RNSVGSvgView>
         <Text
+          maxFontSizeMultiplier={1.35}
           style={
             {
               "color": "#9184d9",
@@ -1198,8 +1209,8 @@ exports[`screen states — dark palette ScreenError renders unchanged 1`] = `
               "borderWidth": 0,
               "flexDirection": "row",
               "gap": 7,
-              "height": 40,
               "justifyContent": "center",
+              "minHeight": 40,
               "paddingHorizontal": 18,
             },
             undefined,
@@ -1207,6 +1218,7 @@ exports[`screen states — dark palette ScreenError renders unchanged 1`] = `
         }
       >
         <Text
+          maxFontSizeMultiplier={1.35}
           style={
             {
               "color": "#e9e9ed",
@@ -2437,6 +2449,7 @@ exports[`screen states — dark palette ScreenOffline renders unchanged 1`] = `
         </RNSVGSvgView>
       </View>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -2455,6 +2468,7 @@ exports[`screen states — dark palette ScreenOffline renders unchanged 1`] = `
         You're offline
       </Text>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -2512,8 +2526,8 @@ exports[`screen states — dark palette ScreenOffline renders unchanged 1`] = `
               "borderWidth": 1,
               "flexDirection": "row",
               "gap": 8,
-              "height": 44,
               "justifyContent": "center",
+              "minHeight": 44,
               "paddingHorizontal": 18,
             },
             {
@@ -2596,6 +2610,7 @@ exports[`screen states — dark palette ScreenOffline renders unchanged 1`] = `
           </RNSVGGroup>
         </RNSVGSvgView>
         <Text
+          maxFontSizeMultiplier={1.35}
           style={
             {
               "color": "#9184d9",
@@ -2726,6 +2741,7 @@ exports[`screen states — light palette ActionFailure renders unchanged 1`] = `
       }
     >
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -2743,6 +2759,7 @@ exports[`screen states — light palette ActionFailure renders unchanged 1`] = `
       </Text>
       <Text
         accessibilityRole="button"
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -2895,6 +2912,7 @@ exports[`screen states — light palette ScreenEmpty/no-action renders unchanged
         </RNSVGSvgView>
       </View>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -2913,6 +2931,7 @@ exports[`screen states — light palette ScreenEmpty/no-action renders unchanged
         Quiet, as designed
       </Text>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -3067,6 +3086,7 @@ exports[`screen states — light palette ScreenEmpty/two-actions renders unchang
         </RNSVGSvgView>
       </View>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -3085,6 +3105,7 @@ exports[`screen states — light palette ScreenEmpty/two-actions renders unchang
         No flows yet
       </Text>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -3142,8 +3163,8 @@ exports[`screen states — light palette ScreenEmpty/two-actions renders unchang
               "borderWidth": 1,
               "flexDirection": "row",
               "gap": 7,
-              "height": 48,
               "justifyContent": "center",
+              "minHeight": 48,
               "paddingHorizontal": 18,
             },
             {
@@ -3226,6 +3247,7 @@ exports[`screen states — light palette ScreenEmpty/two-actions renders unchang
           </RNSVGGroup>
         </RNSVGSvgView>
         <Text
+          maxFontSizeMultiplier={1.35}
           style={
             {
               "color": "#6a5cc4",
@@ -3277,8 +3299,8 @@ exports[`screen states — light palette ScreenEmpty/two-actions renders unchang
               "borderWidth": 0,
               "flexDirection": "row",
               "gap": 7,
-              "height": 44,
               "justifyContent": "center",
+              "minHeight": 44,
               "paddingHorizontal": 18,
             },
             {
@@ -3288,6 +3310,7 @@ exports[`screen states — light palette ScreenEmpty/two-actions renders unchang
         }
       >
         <Text
+          maxFontSizeMultiplier={1.35}
           style={
             {
               "color": "#20222f",
@@ -3600,6 +3623,7 @@ exports[`screen states — light palette ScreenError renders unchanged 1`] = `
         </RNSVGSvgView>
       </View>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -3618,6 +3642,7 @@ exports[`screen states — light palette ScreenError renders unchanged 1`] = `
         Couldn't load this run
       </Text>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -3675,8 +3700,8 @@ exports[`screen states — light palette ScreenError renders unchanged 1`] = `
               "borderWidth": 1,
               "flexDirection": "row",
               "gap": 8,
-              "height": 44,
               "justifyContent": "center",
+              "minHeight": 44,
               "paddingHorizontal": 18,
             },
             {
@@ -3759,6 +3784,7 @@ exports[`screen states — light palette ScreenError renders unchanged 1`] = `
           </RNSVGGroup>
         </RNSVGSvgView>
         <Text
+          maxFontSizeMultiplier={1.35}
           style={
             {
               "color": "#6a5cc4",
@@ -3810,8 +3836,8 @@ exports[`screen states — light palette ScreenError renders unchanged 1`] = `
               "borderWidth": 0,
               "flexDirection": "row",
               "gap": 7,
-              "height": 40,
               "justifyContent": "center",
+              "minHeight": 40,
               "paddingHorizontal": 18,
             },
             undefined,
@@ -3819,6 +3845,7 @@ exports[`screen states — light palette ScreenError renders unchanged 1`] = `
         }
       >
         <Text
+          maxFontSizeMultiplier={1.35}
           style={
             {
               "color": "#20222f",
@@ -5049,6 +5076,7 @@ exports[`screen states — light palette ScreenOffline renders unchanged 1`] = `
         </RNSVGSvgView>
       </View>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -5067,6 +5095,7 @@ exports[`screen states — light palette ScreenOffline renders unchanged 1`] = `
         You're offline
       </Text>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -5124,8 +5153,8 @@ exports[`screen states — light palette ScreenOffline renders unchanged 1`] = `
               "borderWidth": 1,
               "flexDirection": "row",
               "gap": 8,
-              "height": 44,
               "justifyContent": "center",
+              "minHeight": 44,
               "paddingHorizontal": 18,
             },
             {
@@ -5208,6 +5237,7 @@ exports[`screen states — light palette ScreenOffline renders unchanged 1`] = `
           </RNSVGGroup>
         </RNSVGSvgView>
         <Text
+          maxFontSizeMultiplier={1.35}
           style={
             {
               "color": "#6a5cc4",

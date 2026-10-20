@@ -192,6 +192,188 @@ exports[`GlassSurface — dark palette, Liquid Glass available: false GlassSurfa
 </RNCSafeAreaProvider>
 `;
 
+exports[`GlassSurface — dark palette, Liquid Glass available: false GlassSurface/panel-backing renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "borderRadius": 18,
+          "overflow": "hidden",
+        },
+        {
+          "borderColor": "#3f424d",
+          "borderWidth": 1,
+        },
+        undefined,
+      ]
+    }
+  >
+    <View
+      intensity={40}
+      style={
+        {
+          "bottom": 0,
+          "left": 0,
+          "position": "absolute",
+          "right": 0,
+          "top": 0,
+        }
+      }
+      tint="dark"
+    />
+    <View
+      pointerEvents="none"
+      style={
+        [
+          {
+            "bottom": 0,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+            "top": 0,
+          },
+          {
+            "backgroundColor": "rgba(35,37,50,0.55)",
+          },
+        ]
+      }
+    />
+    <View
+      pointerEvents="none"
+      style={
+        [
+          {
+            "bottom": 0,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+            "top": 0,
+          },
+          {
+            "backgroundColor": "rgba(35,37,50,1)",
+          },
+        ]
+      }
+    />
+    <Text>
+      Menu
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`GlassSurface — dark palette, Liquid Glass available: false StatusBarStrip renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    pointerEvents="none"
+    style={
+      [
+        {
+          "left": 0,
+          "position": "absolute",
+          "right": 0,
+          "top": 0,
+        },
+        {
+          "height": 59,
+        },
+      ]
+    }
+  >
+    <View
+      style={
+        [
+          {
+            "borderRadius": 0,
+            "overflow": "hidden",
+          },
+          {
+            "borderColor": "#3f424d",
+            "borderWidth": 1,
+          },
+          {
+            "borderWidth": 0,
+            "flex": 1,
+          },
+        ]
+      }
+      testID="status-bar-strip"
+    >
+      <View
+        intensity={40}
+        style={
+          {
+            "bottom": 0,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+            "top": 0,
+          }
+        }
+        testID="status-bar-strip-blur"
+        tint="dark"
+      />
+      <View
+        pointerEvents="none"
+        style={
+          [
+            {
+              "bottom": 0,
+              "left": 0,
+              "position": "absolute",
+              "right": 0,
+              "top": 0,
+            },
+            {
+              "backgroundColor": "rgba(35,37,50,0.55)",
+            },
+          ]
+        }
+      />
+      <View
+        pointerEvents="none"
+        style={
+          [
+            {
+              "bottom": 0,
+              "left": 0,
+              "position": "absolute",
+              "right": 0,
+              "top": 0,
+            },
+            {
+              "backgroundColor": "rgba(22,24,38,1)",
+            },
+          ]
+        }
+        testID="status-bar-strip-backing"
+      />
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
 exports[`GlassSurface — dark palette, Liquid Glass available: true GlassSurface/accent renders unchanged 1`] = `
 <RNCSafeAreaProvider
   onInsetsChange={[Function]}
@@ -288,6 +470,127 @@ exports[`GlassSurface — dark palette, Liquid Glass available: true GlassSurfac
     <Text>
       Menu
     </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`GlassSurface — dark palette, Liquid Glass available: true GlassSurface/panel-backing renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    colorScheme="dark"
+    glassEffectStyle="regular"
+    isInteractive={false}
+    style={
+      [
+        {
+          "borderRadius": 18,
+          "overflow": "hidden",
+        },
+        undefined,
+      ]
+    }
+    tintColor="rgba(35,37,50,0.35)"
+  >
+    <View
+      pointerEvents="none"
+      style={
+        [
+          {
+            "bottom": 0,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+            "top": 0,
+          },
+          {
+            "backgroundColor": "rgba(35,37,50,1)",
+          },
+        ]
+      }
+    />
+    <Text>
+      Menu
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`GlassSurface — dark palette, Liquid Glass available: true StatusBarStrip renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    pointerEvents="none"
+    style={
+      [
+        {
+          "left": 0,
+          "position": "absolute",
+          "right": 0,
+          "top": 0,
+        },
+        {
+          "height": 59,
+        },
+      ]
+    }
+  >
+    <View
+      colorScheme="dark"
+      glassEffectStyle="regular"
+      isInteractive={false}
+      style={
+        [
+          {
+            "borderRadius": 0,
+            "overflow": "hidden",
+          },
+          {
+            "borderWidth": 0,
+            "flex": 1,
+          },
+        ]
+      }
+      testID="status-bar-strip"
+      tintColor="rgba(35,37,50,0.35)"
+    >
+      <View
+        pointerEvents="none"
+        style={
+          [
+            {
+              "bottom": 0,
+              "left": 0,
+              "position": "absolute",
+              "right": 0,
+              "top": 0,
+            },
+            {
+              "backgroundColor": "rgba(22,24,38,1)",
+            },
+          ]
+        }
+        testID="status-bar-strip-backing"
+      />
+    </View>
   </View>
 </RNCSafeAreaProvider>
 `;
@@ -484,6 +787,188 @@ exports[`GlassSurface — light palette, Liquid Glass available: false GlassSurf
 </RNCSafeAreaProvider>
 `;
 
+exports[`GlassSurface — light palette, Liquid Glass available: false GlassSurface/panel-backing renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "borderRadius": 18,
+          "overflow": "hidden",
+        },
+        {
+          "borderColor": "#dfe0ea",
+          "borderWidth": 1,
+        },
+        undefined,
+      ]
+    }
+  >
+    <View
+      intensity={40}
+      style={
+        {
+          "bottom": 0,
+          "left": 0,
+          "position": "absolute",
+          "right": 0,
+          "top": 0,
+        }
+      }
+      tint="light"
+    />
+    <View
+      pointerEvents="none"
+      style={
+        [
+          {
+            "bottom": 0,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+            "top": 0,
+          },
+          {
+            "backgroundColor": "rgba(255,255,255,0.55)",
+          },
+        ]
+      }
+    />
+    <View
+      pointerEvents="none"
+      style={
+        [
+          {
+            "bottom": 0,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+            "top": 0,
+          },
+          {
+            "backgroundColor": "rgba(255,255,255,1)",
+          },
+        ]
+      }
+    />
+    <Text>
+      Menu
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`GlassSurface — light palette, Liquid Glass available: false StatusBarStrip renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    pointerEvents="none"
+    style={
+      [
+        {
+          "left": 0,
+          "position": "absolute",
+          "right": 0,
+          "top": 0,
+        },
+        {
+          "height": 59,
+        },
+      ]
+    }
+  >
+    <View
+      style={
+        [
+          {
+            "borderRadius": 0,
+            "overflow": "hidden",
+          },
+          {
+            "borderColor": "#dfe0ea",
+            "borderWidth": 1,
+          },
+          {
+            "borderWidth": 0,
+            "flex": 1,
+          },
+        ]
+      }
+      testID="status-bar-strip"
+    >
+      <View
+        intensity={40}
+        style={
+          {
+            "bottom": 0,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+            "top": 0,
+          }
+        }
+        testID="status-bar-strip-blur"
+        tint="light"
+      />
+      <View
+        pointerEvents="none"
+        style={
+          [
+            {
+              "bottom": 0,
+              "left": 0,
+              "position": "absolute",
+              "right": 0,
+              "top": 0,
+            },
+            {
+              "backgroundColor": "rgba(255,255,255,0.55)",
+            },
+          ]
+        }
+      />
+      <View
+        pointerEvents="none"
+        style={
+          [
+            {
+              "bottom": 0,
+              "left": 0,
+              "position": "absolute",
+              "right": 0,
+              "top": 0,
+            },
+            {
+              "backgroundColor": "rgba(245,245,248,1)",
+            },
+          ]
+        }
+        testID="status-bar-strip-backing"
+      />
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
 exports[`GlassSurface — light palette, Liquid Glass available: true GlassSurface/accent renders unchanged 1`] = `
 <RNCSafeAreaProvider
   onInsetsChange={[Function]}
@@ -584,6 +1069,127 @@ exports[`GlassSurface — light palette, Liquid Glass available: true GlassSurfa
 </RNCSafeAreaProvider>
 `;
 
+exports[`GlassSurface — light palette, Liquid Glass available: true GlassSurface/panel-backing renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    colorScheme="light"
+    glassEffectStyle="regular"
+    isInteractive={false}
+    style={
+      [
+        {
+          "borderRadius": 18,
+          "overflow": "hidden",
+        },
+        undefined,
+      ]
+    }
+    tintColor="rgba(255,255,255,0.35)"
+  >
+    <View
+      pointerEvents="none"
+      style={
+        [
+          {
+            "bottom": 0,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+            "top": 0,
+          },
+          {
+            "backgroundColor": "rgba(255,255,255,1)",
+          },
+        ]
+      }
+    />
+    <Text>
+      Menu
+    </Text>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`GlassSurface — light palette, Liquid Glass available: true StatusBarStrip renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    pointerEvents="none"
+    style={
+      [
+        {
+          "left": 0,
+          "position": "absolute",
+          "right": 0,
+          "top": 0,
+        },
+        {
+          "height": 59,
+        },
+      ]
+    }
+  >
+    <View
+      colorScheme="light"
+      glassEffectStyle="regular"
+      isInteractive={false}
+      style={
+        [
+          {
+            "borderRadius": 0,
+            "overflow": "hidden",
+          },
+          {
+            "borderWidth": 0,
+            "flex": 1,
+          },
+        ]
+      }
+      testID="status-bar-strip"
+      tintColor="rgba(255,255,255,0.35)"
+    >
+      <View
+        pointerEvents="none"
+        style={
+          [
+            {
+              "bottom": 0,
+              "left": 0,
+              "position": "absolute",
+              "right": 0,
+              "top": 0,
+            },
+            {
+              "backgroundColor": "rgba(245,245,248,1)",
+            },
+          ]
+        }
+        testID="status-bar-strip-backing"
+      />
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
 exports[`Nocturne set — dark palette AvatarBadge renders unchanged 1`] = `
 <RNCSafeAreaProvider
   onInsetsChange={[Function]}
@@ -611,6 +1217,7 @@ exports[`Nocturne set — dark palette AvatarBadge renders unchanged 1`] = `
     }
   >
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#e7e5fe",
@@ -895,6 +1502,7 @@ exports[`Nocturne set — dark palette FilterChip/active renders unchanged 1`] =
     }
   >
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#9184d9",
@@ -965,6 +1573,7 @@ exports[`Nocturne set — dark palette FilterChip/inactive renders unchanged 1`]
     }
   >
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#b2b6ca",
@@ -1531,8 +2140,8 @@ exports[`Nocturne set — dark palette OAuthButton renders unchanged 1`] = `
         "borderWidth": 1,
         "flexDirection": "row",
         "gap": 9,
-        "height": 48,
         "justifyContent": "center",
+        "minHeight": 48,
       }
     }
   >
@@ -1587,6 +2196,7 @@ exports[`Nocturne set — dark palette OAuthButton renders unchanged 1`] = `
       </RNSVGGroup>
     </RNSVGSvgView>
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#e9e9ed",
@@ -1637,6 +2247,7 @@ exports[`Nocturne set — dark palette OrDivider renders unchanged 1`] = `
       }
     />
     <Text
+      maxFontSizeMultiplier={2}
       style={
         [
           {
@@ -1720,8 +2331,8 @@ exports[`Nocturne set — dark palette PillButton/accent-ghost renders unchanged
           "borderWidth": 0,
           "flexDirection": "row",
           "gap": 7,
-          "height": 52,
           "justifyContent": "center",
+          "minHeight": 52,
           "paddingHorizontal": 18,
         },
         undefined,
@@ -1729,6 +2340,7 @@ exports[`Nocturne set — dark palette PillButton/accent-ghost renders unchanged
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
       style={
         {
           "color": "#d2cefd",
@@ -1795,8 +2407,8 @@ exports[`Nocturne set — dark palette PillButton/danger renders unchanged 1`] =
           "borderWidth": 1,
           "flexDirection": "row",
           "gap": 7,
-          "height": 52,
           "justifyContent": "center",
+          "minHeight": 52,
           "paddingHorizontal": 18,
         },
         undefined,
@@ -1876,6 +2488,7 @@ exports[`Nocturne set — dark palette PillButton/danger renders unchanged 1`] =
       </RNSVGGroup>
     </RNSVGSvgView>
     <Text
+      maxFontSizeMultiplier={1.35}
       style={
         {
           "color": "#f87171",
@@ -1942,8 +2555,8 @@ exports[`Nocturne set — dark palette PillButton/plain renders unchanged 1`] = 
           "borderWidth": 0,
           "flexDirection": "row",
           "gap": 7,
-          "height": 52,
           "justifyContent": "center",
+          "minHeight": 52,
           "paddingHorizontal": 18,
         },
         undefined,
@@ -1951,6 +2564,7 @@ exports[`Nocturne set — dark palette PillButton/plain renders unchanged 1`] = 
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
       style={
         {
           "color": "#e9e9ed",
@@ -2017,8 +2631,8 @@ exports[`Nocturne set — dark palette PillButton/primary renders unchanged 1`] 
           "borderWidth": 1,
           "flexDirection": "row",
           "gap": 7,
-          "height": 52,
           "justifyContent": "center",
+          "minHeight": 52,
           "paddingHorizontal": 18,
         },
         undefined,
@@ -2026,6 +2640,7 @@ exports[`Nocturne set — dark palette PillButton/primary renders unchanged 1`] 
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
       style={
         {
           "color": "#9184d9",
@@ -2092,8 +2707,8 @@ exports[`Nocturne set — dark palette PillButton/secondary renders unchanged 1`
           "borderWidth": 1,
           "flexDirection": "row",
           "gap": 7,
-          "height": 52,
           "justifyContent": "center",
+          "minHeight": 52,
           "paddingHorizontal": 18,
         },
         undefined,
@@ -2101,6 +2716,7 @@ exports[`Nocturne set — dark palette PillButton/secondary renders unchanged 1`
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
       style={
         {
           "color": "#e9e9ed",
@@ -2128,6 +2744,7 @@ exports[`Nocturne set — dark palette SectionLabel renders unchanged 1`] = `
   }
 >
   <Text
+    maxFontSizeMultiplier={2}
     style={
       [
         {
@@ -2233,6 +2850,7 @@ exports[`Nocturne set — dark palette StatCard renders unchanged 1`] = `
     }
   >
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#e9e9ed",
@@ -2245,6 +2863,7 @@ exports[`Nocturne set — dark palette StatCard renders unchanged 1`] = `
       1,284
     </Text>
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#b2b6ca",
@@ -2285,6 +2904,8 @@ exports[`Nocturne set — dark palette StatusPill/Cancelled renders unchanged 1`
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#b2b6ca",
@@ -2324,6 +2945,8 @@ exports[`Nocturne set — dark palette StatusPill/Draft renders unchanged 1`] = 
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#b2b6ca",
@@ -2363,6 +2986,8 @@ exports[`Nocturne set — dark palette StatusPill/Failed renders unchanged 1`] =
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#f87171",
@@ -2402,6 +3027,8 @@ exports[`Nocturne set — dark palette StatusPill/Held renders unchanged 1`] = `
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#fbbf24",
@@ -2441,6 +3068,8 @@ exports[`Nocturne set — dark palette StatusPill/Live renders unchanged 1`] = `
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#34d399",
@@ -2480,6 +3109,8 @@ exports[`Nocturne set — dark palette StatusPill/Paused renders unchanged 1`] =
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#fbbf24",
@@ -2519,6 +3150,8 @@ exports[`Nocturne set — dark palette StatusPill/Queued renders unchanged 1`] =
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#b2b6ca",
@@ -2558,6 +3191,8 @@ exports[`Nocturne set — dark palette StatusPill/Running renders unchanged 1`] 
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#d2cefd",
@@ -2597,6 +3232,8 @@ exports[`Nocturne set — dark palette StatusPill/Success renders unchanged 1`] 
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#34d399",
@@ -2745,6 +3382,7 @@ exports[`Nocturne set — dark palette StepCard renders unchanged 1`] = `
       }
     >
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -2760,6 +3398,7 @@ exports[`Nocturne set — dark palette StepCard renders unchanged 1`] = `
         TRIGGER
       </Text>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -2776,6 +3415,7 @@ exports[`Nocturne set — dark palette StepCard renders unchanged 1`] = `
         New email in AP inbox
       </Text>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -2906,7 +3546,7 @@ exports[`Nocturne set — dark palette TabBar renders unchanged 1`] = `
           {
             "alignItems": "center",
             "flexDirection": "row",
-            "height": 62,
+            "minHeight": 62,
             "paddingHorizontal": 4,
           }
         }
@@ -3026,6 +3666,8 @@ exports[`Nocturne set — dark palette TabBar renders unchanged 1`] = `
             </RNSVGGroup>
           </RNSVGSvgView>
           <Text
+            maxFontSizeMultiplier={1.35}
+            numberOfLines={1}
             style={
               {
                 "color": "#9184d9",
@@ -3151,6 +3793,8 @@ exports[`Nocturne set — dark palette TabBar renders unchanged 1`] = `
             </RNSVGGroup>
           </RNSVGSvgView>
           <Text
+            maxFontSizeMultiplier={1.35}
+            numberOfLines={1}
             style={
               {
                 "color": "#9397ab",
@@ -3276,6 +3920,8 @@ exports[`Nocturne set — dark palette TabBar renders unchanged 1`] = `
             </RNSVGGroup>
           </RNSVGSvgView>
           <Text
+            maxFontSizeMultiplier={1.35}
+            numberOfLines={1}
             style={
               {
                 "color": "#9397ab",
@@ -3401,6 +4047,8 @@ exports[`Nocturne set — dark palette TabBar renders unchanged 1`] = `
             </RNSVGGroup>
           </RNSVGSvgView>
           <Text
+            maxFontSizeMultiplier={1.35}
+            numberOfLines={1}
             style={
               {
                 "color": "#9397ab",
@@ -3441,6 +4089,7 @@ exports[`Nocturne set — dark palette TextField renders unchanged 1`] = `
     }
   >
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#b2b6ca",
@@ -3460,7 +4109,7 @@ exports[`Nocturne set — dark palette TextField renders unchanged 1`] = `
           "borderRadius": 12,
           "borderWidth": 1,
           "flexDirection": "row",
-          "height": 50,
+          "minHeight": 50,
           "paddingHorizontal": 14,
         }
       }
@@ -3468,6 +4117,7 @@ exports[`Nocturne set — dark palette TextField renders unchanged 1`] = `
       <TextInput
         accessibilityLabel="Email"
         autoCapitalize="none"
+        maxFontSizeMultiplier={2}
         onChangeText={[Function]}
         placeholderTextColor="#9397ab"
         secureTextEntry={false}
@@ -3511,6 +4161,7 @@ exports[`Nocturne set — dark palette TextField/secure renders unchanged 1`] = 
     }
   >
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#b2b6ca",
@@ -3530,7 +4181,7 @@ exports[`Nocturne set — dark palette TextField/secure renders unchanged 1`] = 
           "borderRadius": 12,
           "borderWidth": 1,
           "flexDirection": "row",
-          "height": 50,
+          "minHeight": 50,
           "paddingHorizontal": 14,
         }
       }
@@ -3538,6 +4189,7 @@ exports[`Nocturne set — dark palette TextField/secure renders unchanged 1`] = 
       <TextInput
         accessibilityLabel="Password"
         autoCapitalize="none"
+        maxFontSizeMultiplier={2}
         onChangeText={[Function]}
         placeholderTextColor="#9397ab"
         secureTextEntry={true}
@@ -3692,6 +4344,7 @@ exports[`Nocturne set — light palette AvatarBadge renders unchanged 1`] = `
     }
   >
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#453a91",
@@ -3976,6 +4629,7 @@ exports[`Nocturne set — light palette FilterChip/active renders unchanged 1`] 
     }
   >
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#6a5cc4",
@@ -4046,6 +4700,7 @@ exports[`Nocturne set — light palette FilterChip/inactive renders unchanged 1`
     }
   >
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#666a82",
@@ -4612,8 +5267,8 @@ exports[`Nocturne set — light palette OAuthButton renders unchanged 1`] = `
         "borderWidth": 1,
         "flexDirection": "row",
         "gap": 9,
-        "height": 48,
         "justifyContent": "center",
+        "minHeight": 48,
       }
     }
   >
@@ -4668,6 +5323,7 @@ exports[`Nocturne set — light palette OAuthButton renders unchanged 1`] = `
       </RNSVGGroup>
     </RNSVGSvgView>
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#20222f",
@@ -4718,6 +5374,7 @@ exports[`Nocturne set — light palette OrDivider renders unchanged 1`] = `
       }
     />
     <Text
+      maxFontSizeMultiplier={2}
       style={
         [
           {
@@ -4801,8 +5458,8 @@ exports[`Nocturne set — light palette PillButton/accent-ghost renders unchange
           "borderWidth": 0,
           "flexDirection": "row",
           "gap": 7,
-          "height": 52,
           "justifyContent": "center",
+          "minHeight": 52,
           "paddingHorizontal": 18,
         },
         undefined,
@@ -4810,6 +5467,7 @@ exports[`Nocturne set — light palette PillButton/accent-ghost renders unchange
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
       style={
         {
           "color": "#5548ab",
@@ -4876,8 +5534,8 @@ exports[`Nocturne set — light palette PillButton/danger renders unchanged 1`] 
           "borderWidth": 1,
           "flexDirection": "row",
           "gap": 7,
-          "height": 52,
           "justifyContent": "center",
+          "minHeight": 52,
           "paddingHorizontal": 18,
         },
         undefined,
@@ -4957,6 +5615,7 @@ exports[`Nocturne set — light palette PillButton/danger renders unchanged 1`] 
       </RNSVGGroup>
     </RNSVGSvgView>
     <Text
+      maxFontSizeMultiplier={1.35}
       style={
         {
           "color": "#dc2626",
@@ -5023,8 +5682,8 @@ exports[`Nocturne set — light palette PillButton/plain renders unchanged 1`] =
           "borderWidth": 0,
           "flexDirection": "row",
           "gap": 7,
-          "height": 52,
           "justifyContent": "center",
+          "minHeight": 52,
           "paddingHorizontal": 18,
         },
         undefined,
@@ -5032,6 +5691,7 @@ exports[`Nocturne set — light palette PillButton/plain renders unchanged 1`] =
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
       style={
         {
           "color": "#20222f",
@@ -5098,8 +5758,8 @@ exports[`Nocturne set — light palette PillButton/primary renders unchanged 1`]
           "borderWidth": 1,
           "flexDirection": "row",
           "gap": 7,
-          "height": 52,
           "justifyContent": "center",
+          "minHeight": 52,
           "paddingHorizontal": 18,
         },
         undefined,
@@ -5107,6 +5767,7 @@ exports[`Nocturne set — light palette PillButton/primary renders unchanged 1`]
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
       style={
         {
           "color": "#6a5cc4",
@@ -5173,8 +5834,8 @@ exports[`Nocturne set — light palette PillButton/secondary renders unchanged 1
           "borderWidth": 1,
           "flexDirection": "row",
           "gap": 7,
-          "height": 52,
           "justifyContent": "center",
+          "minHeight": 52,
           "paddingHorizontal": 18,
         },
         undefined,
@@ -5182,6 +5843,7 @@ exports[`Nocturne set — light palette PillButton/secondary renders unchanged 1
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
       style={
         {
           "color": "#20222f",
@@ -5209,6 +5871,7 @@ exports[`Nocturne set — light palette SectionLabel renders unchanged 1`] = `
   }
 >
   <Text
+    maxFontSizeMultiplier={2}
     style={
       [
         {
@@ -5320,6 +5983,7 @@ exports[`Nocturne set — light palette StatCard renders unchanged 1`] = `
     }
   >
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#20222f",
@@ -5332,6 +5996,7 @@ exports[`Nocturne set — light palette StatCard renders unchanged 1`] = `
       1,284
     </Text>
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#666a82",
@@ -5372,6 +6037,8 @@ exports[`Nocturne set — light palette StatusPill/Cancelled renders unchanged 1
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#666a82",
@@ -5411,6 +6078,8 @@ exports[`Nocturne set — light palette StatusPill/Draft renders unchanged 1`] =
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#666a82",
@@ -5450,6 +6119,8 @@ exports[`Nocturne set — light palette StatusPill/Failed renders unchanged 1`] 
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#f87171",
@@ -5489,6 +6160,8 @@ exports[`Nocturne set — light palette StatusPill/Held renders unchanged 1`] = 
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#fbbf24",
@@ -5528,6 +6201,8 @@ exports[`Nocturne set — light palette StatusPill/Live renders unchanged 1`] = 
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#34d399",
@@ -5567,6 +6242,8 @@ exports[`Nocturne set — light palette StatusPill/Paused renders unchanged 1`] 
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#fbbf24",
@@ -5606,6 +6283,8 @@ exports[`Nocturne set — light palette StatusPill/Queued renders unchanged 1`] 
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#666a82",
@@ -5645,6 +6324,8 @@ exports[`Nocturne set — light palette StatusPill/Running renders unchanged 1`]
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#5548ab",
@@ -5684,6 +6365,8 @@ exports[`Nocturne set — light palette StatusPill/Success renders unchanged 1`]
     }
   >
     <Text
+      maxFontSizeMultiplier={1.35}
+      numberOfLines={1}
       style={
         {
           "color": "#34d399",
@@ -5838,6 +6521,7 @@ exports[`Nocturne set — light palette StepCard renders unchanged 1`] = `
       }
     >
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -5853,6 +6537,7 @@ exports[`Nocturne set — light palette StepCard renders unchanged 1`] = `
         TRIGGER
       </Text>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -5869,6 +6554,7 @@ exports[`Nocturne set — light palette StepCard renders unchanged 1`] = `
         New email in AP inbox
       </Text>
       <Text
+        maxFontSizeMultiplier={2}
         style={
           [
             {
@@ -6005,7 +6691,7 @@ exports[`Nocturne set — light palette TabBar renders unchanged 1`] = `
           {
             "alignItems": "center",
             "flexDirection": "row",
-            "height": 62,
+            "minHeight": 62,
             "paddingHorizontal": 4,
           }
         }
@@ -6125,6 +6811,8 @@ exports[`Nocturne set — light palette TabBar renders unchanged 1`] = `
             </RNSVGGroup>
           </RNSVGSvgView>
           <Text
+            maxFontSizeMultiplier={1.35}
+            numberOfLines={1}
             style={
               {
                 "color": "#6a5cc4",
@@ -6250,6 +6938,8 @@ exports[`Nocturne set — light palette TabBar renders unchanged 1`] = `
             </RNSVGGroup>
           </RNSVGSvgView>
           <Text
+            maxFontSizeMultiplier={1.35}
+            numberOfLines={1}
             style={
               {
                 "color": "#7c8095",
@@ -6375,6 +7065,8 @@ exports[`Nocturne set — light palette TabBar renders unchanged 1`] = `
             </RNSVGGroup>
           </RNSVGSvgView>
           <Text
+            maxFontSizeMultiplier={1.35}
+            numberOfLines={1}
             style={
               {
                 "color": "#7c8095",
@@ -6500,6 +7192,8 @@ exports[`Nocturne set — light palette TabBar renders unchanged 1`] = `
             </RNSVGGroup>
           </RNSVGSvgView>
           <Text
+            maxFontSizeMultiplier={1.35}
+            numberOfLines={1}
             style={
               {
                 "color": "#7c8095",
@@ -6540,6 +7234,7 @@ exports[`Nocturne set — light palette TextField renders unchanged 1`] = `
     }
   >
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#666a82",
@@ -6559,7 +7254,7 @@ exports[`Nocturne set — light palette TextField renders unchanged 1`] = `
           "borderRadius": 12,
           "borderWidth": 1,
           "flexDirection": "row",
-          "height": 50,
+          "minHeight": 50,
           "paddingHorizontal": 14,
         }
       }
@@ -6567,6 +7262,7 @@ exports[`Nocturne set — light palette TextField renders unchanged 1`] = `
       <TextInput
         accessibilityLabel="Email"
         autoCapitalize="none"
+        maxFontSizeMultiplier={2}
         onChangeText={[Function]}
         placeholderTextColor="#7c8095"
         secureTextEntry={false}
@@ -6610,6 +7306,7 @@ exports[`Nocturne set — light palette TextField/secure renders unchanged 1`] =
     }
   >
     <Text
+      maxFontSizeMultiplier={2}
       style={
         {
           "color": "#666a82",
@@ -6629,7 +7326,7 @@ exports[`Nocturne set — light palette TextField/secure renders unchanged 1`] =
           "borderRadius": 12,
           "borderWidth": 1,
           "flexDirection": "row",
-          "height": 50,
+          "minHeight": 50,
           "paddingHorizontal": 14,
         }
       }
@@ -6637,6 +7334,7 @@ exports[`Nocturne set — light palette TextField/secure renders unchanged 1`] =
       <TextInput
         accessibilityLabel="Password"
         autoCapitalize="none"
+        maxFontSizeMultiplier={2}
         onChangeText={[Function]}
         placeholderTextColor="#7c8095"
         secureTextEntry={true}
@@ -6758,6 +7456,1246 @@ exports[`Nocturne set — light palette TextField/secure renders unchanged 1`] =
             </RNSVGGroup>
           </RNSVGGroup>
         </RNSVGSvgView>
+      </View>
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Round 24 — dark palette DecisionButtons/denying renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "flexDirection": "row",
+        "gap": 10,
+      }
+    }
+  >
+    <View
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": true,
+          "expanded": undefined,
+          "selected": undefined,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        [
+          {
+            "alignItems": "center",
+            "backgroundColor": "transparent",
+            "borderColor": "#9184d9",
+            "borderRadius": 999,
+            "borderWidth": 1,
+            "flexDirection": "row",
+            "gap": 7,
+            "justifyContent": "center",
+            "minHeight": 44,
+            "opacity": 0.5,
+            "paddingHorizontal": 18,
+          },
+          {
+            "flex": 1,
+          },
+        ]
+      }
+      testID="d-approve"
+    >
+      <Text
+        maxFontSizeMultiplier={1.35}
+        style={
+          {
+            "color": "#9184d9",
+            "fontFamily": "Inter_500Medium",
+            "fontSize": 16,
+          }
+        }
+      >
+        Approve
+      </Text>
+    </View>
+    <View
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": true,
+          "expanded": undefined,
+          "selected": undefined,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        [
+          {
+            "alignItems": "center",
+            "backgroundColor": "transparent",
+            "borderColor": "#f87171",
+            "borderRadius": 999,
+            "borderWidth": 1,
+            "flexDirection": "row",
+            "gap": 7,
+            "justifyContent": "center",
+            "minHeight": 44,
+            "opacity": 0.5,
+            "paddingHorizontal": 18,
+          },
+          {
+            "flex": 1,
+          },
+        ]
+      }
+      testID="d-deny"
+    >
+      <Text
+        maxFontSizeMultiplier={1.35}
+        style={
+          {
+            "color": "#f87171",
+            "fontFamily": "Inter_500Medium",
+            "fontSize": 16,
+          }
+        }
+      >
+        Denying…
+      </Text>
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Round 24 — dark palette DecisionButtons/idle renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "flexDirection": "row",
+        "gap": 10,
+      }
+    }
+  >
+    <View
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": undefined,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        [
+          {
+            "alignItems": "center",
+            "backgroundColor": "transparent",
+            "borderColor": "#9184d9",
+            "borderRadius": 999,
+            "borderWidth": 1,
+            "flexDirection": "row",
+            "gap": 7,
+            "justifyContent": "center",
+            "minHeight": 44,
+            "paddingHorizontal": 18,
+          },
+          {
+            "flex": 1,
+          },
+        ]
+      }
+      testID="d-approve"
+    >
+      <Text
+        maxFontSizeMultiplier={1.35}
+        style={
+          {
+            "color": "#9184d9",
+            "fontFamily": "Inter_500Medium",
+            "fontSize": 16,
+          }
+        }
+      >
+        Approve
+      </Text>
+    </View>
+    <View
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": undefined,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        [
+          {
+            "alignItems": "center",
+            "backgroundColor": "transparent",
+            "borderColor": "#f87171",
+            "borderRadius": 999,
+            "borderWidth": 1,
+            "flexDirection": "row",
+            "gap": 7,
+            "justifyContent": "center",
+            "minHeight": 44,
+            "paddingHorizontal": 18,
+          },
+          {
+            "flex": 1,
+          },
+        ]
+      }
+      testID="d-deny"
+    >
+      <Text
+        maxFontSizeMultiplier={1.35}
+        style={
+          {
+            "color": "#f87171",
+            "fontFamily": "Inter_500Medium",
+            "fontSize": 16,
+          }
+        }
+      >
+        Deny
+      </Text>
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Round 24 — dark palette OfferScreen renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "flex": 1,
+          "paddingHorizontal": 24,
+        },
+        {
+          "backgroundColor": "#161826",
+          "paddingTop": 78,
+        },
+      ]
+    }
+  >
+    <View
+      style={
+        [
+          {
+            "backgroundColor": "#232532",
+            "borderRadius": 14,
+          },
+          {
+            "borderColor": "#3f424d",
+            "borderWidth": 1,
+          },
+          {
+            "alignItems": "center",
+            "gap": 10,
+            "padding": 22,
+          },
+        ]
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 16,
+              "borderWidth": 1,
+              "height": 56,
+              "justifyContent": "center",
+              "marginBottom": 4,
+              "width": 56,
+            },
+            {
+              "borderColor": "#5d5294",
+            },
+          ]
+        }
+      >
+        <RNSVGSvgView
+          align="xMidYMid"
+          bbHeight={28}
+          bbWidth={28}
+          className="bell-ringing-undefined__svg-icon-phosphor"
+          color="#d2cefd"
+          fill="currentColor"
+          focusable={false}
+          height={28}
+          meetOrSlice={0}
+          minX={0}
+          minY={0}
+          style={
+            [
+              {
+                "backgroundColor": "transparent",
+                "borderWidth": 0,
+              },
+              [
+                undefined,
+                undefined,
+                {},
+              ],
+              {
+                "flex": 0,
+                "height": 28,
+                "width": 28,
+              },
+            ]
+          }
+          testID="phosphor-react-native-bell-ringing-undefined"
+          vbHeight={256}
+          vbWidth={256}
+          width={28}
+        >
+          <RNSVGGroup
+            fill={
+              {
+                "type": 2,
+              }
+            }
+            propList={
+              [
+                "fill",
+              ]
+            }
+          >
+            <RNSVGGroup
+              fill={
+                {
+                  "payload": 4292005629,
+                  "type": 0,
+                }
+              }
+              propList={
+                [
+                  "fill",
+                ]
+              }
+            >
+              <RNSVGPath
+                d="M224 71.1a8 8 0 0 1-10.78-3.42 94.13 94.13 0 0 0-33.46-36.91 8 8 0 1 1 8.54-13.54 111.46 111.46 0 0 1 39.12 43.09A8 8 0 0 1 224 71.1M35.71 72a8 8 0 0 0 7.1-4.32 94.13 94.13 0 0 1 33.46-36.91 8 8 0 1 0-8.54-13.54 111.46 111.46 0 0 0-39.12 43.09A8 8 0 0 0 35.71 72m186.1 103.94A16 16 0 0 1 208 200h-40.8a40 40 0 0 1-78.4 0H48a16 16 0 0 1-13.79-24.06C43.22 160.39 48 138.28 48 112a80 80 0 0 1 160 0c0 26.27 4.78 48.38 13.81 63.94M150.62 200h-45.24a24 24 0 0 0 45.24 0M208 184c-10.64-18.27-16-42.49-16-72a64 64 0 0 0-128 0c0 29.52-5.38 53.74-16 72Z"
+                fill={
+                  {
+                    "payload": 4278190080,
+                    "type": 0,
+                  }
+                }
+              />
+            </RNSVGGroup>
+          </RNSVGGroup>
+        </RNSVGSvgView>
+      </View>
+      <Text
+        maxFontSizeMultiplier={2}
+        style={
+          [
+            {
+              "fontFamily": "Inter_500Medium",
+              "fontSize": 21,
+              "letterSpacing": -0.21,
+              "textAlign": "center",
+            },
+            {
+              "color": "#e9e9ed",
+            },
+          ]
+        }
+      >
+        Turn on notifications
+      </Text>
+      <Text
+        maxFontSizeMultiplier={2}
+        style={
+          [
+            {
+              "fontFamily": "Inter_400Regular",
+              "fontSize": 16,
+              "lineHeight": 23,
+              "textAlign": "center",
+            },
+            {
+              "color": "#b2b6ca",
+            },
+          ]
+        }
+      >
+        Know when a run needs your approval or something goes wrong.
+      </Text>
+      <View
+        style={
+          {
+            "alignSelf": "stretch",
+            "gap": 6,
+            "marginTop": 8,
+          }
+        }
+      >
+        <View
+          accessibilityState={
+            {
+              "busy": undefined,
+              "checked": undefined,
+              "disabled": undefined,
+              "expanded": undefined,
+              "selected": undefined,
+            }
+          }
+          accessibilityValue={
+            {
+              "max": undefined,
+              "min": undefined,
+              "now": undefined,
+              "text": undefined,
+            }
+          }
+          accessible={true}
+          collapsable={false}
+          focusable={true}
+          onBlur={[Function]}
+          onClick={[Function]}
+          onFocus={[Function]}
+          onResponderGrant={[Function]}
+          onResponderMove={[Function]}
+          onResponderRelease={[Function]}
+          onResponderTerminate={[Function]}
+          onResponderTerminationRequest={[Function]}
+          onStartShouldSetResponder={[Function]}
+          style={
+            [
+              {
+                "alignItems": "center",
+                "backgroundColor": "transparent",
+                "borderColor": "#9184d9",
+                "borderRadius": 999,
+                "borderWidth": 1,
+                "flexDirection": "row",
+                "gap": 7,
+                "justifyContent": "center",
+                "minHeight": 48,
+                "paddingHorizontal": 18,
+              },
+              {
+                "alignSelf": "stretch",
+              },
+            ]
+          }
+        >
+          <Text
+            maxFontSizeMultiplier={1.35}
+            style={
+              {
+                "color": "#9184d9",
+                "fontFamily": "Inter_500Medium",
+                "fontSize": 17,
+              }
+            }
+          >
+            Turn on
+          </Text>
+        </View>
+        <View
+          accessibilityState={
+            {
+              "busy": undefined,
+              "checked": undefined,
+              "disabled": undefined,
+              "expanded": undefined,
+              "selected": undefined,
+            }
+          }
+          accessibilityValue={
+            {
+              "max": undefined,
+              "min": undefined,
+              "now": undefined,
+              "text": undefined,
+            }
+          }
+          accessible={true}
+          collapsable={false}
+          focusable={true}
+          onBlur={[Function]}
+          onClick={[Function]}
+          onFocus={[Function]}
+          onResponderGrant={[Function]}
+          onResponderMove={[Function]}
+          onResponderRelease={[Function]}
+          onResponderTerminate={[Function]}
+          onResponderTerminationRequest={[Function]}
+          onStartShouldSetResponder={[Function]}
+          style={
+            [
+              {
+                "alignItems": "center",
+                "backgroundColor": "transparent",
+                "borderColor": "transparent",
+                "borderRadius": 999,
+                "borderWidth": 0,
+                "flexDirection": "row",
+                "gap": 7,
+                "justifyContent": "center",
+                "minHeight": 44,
+                "paddingHorizontal": 18,
+              },
+              undefined,
+            ]
+          }
+        >
+          <Text
+            maxFontSizeMultiplier={1.35}
+            style={
+              {
+                "color": "#e9e9ed",
+                "fontFamily": "Inter_500Medium",
+                "fontSize": 16,
+              }
+            }
+          >
+            Not now
+          </Text>
+        </View>
+      </View>
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Round 24 — light palette DecisionButtons/denying renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "flexDirection": "row",
+        "gap": 10,
+      }
+    }
+  >
+    <View
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": true,
+          "expanded": undefined,
+          "selected": undefined,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        [
+          {
+            "alignItems": "center",
+            "backgroundColor": "transparent",
+            "borderColor": "#6a5cc4",
+            "borderRadius": 999,
+            "borderWidth": 1,
+            "flexDirection": "row",
+            "gap": 7,
+            "justifyContent": "center",
+            "minHeight": 44,
+            "opacity": 0.5,
+            "paddingHorizontal": 18,
+          },
+          {
+            "flex": 1,
+          },
+        ]
+      }
+      testID="d-approve"
+    >
+      <Text
+        maxFontSizeMultiplier={1.35}
+        style={
+          {
+            "color": "#6a5cc4",
+            "fontFamily": "Inter_500Medium",
+            "fontSize": 16,
+          }
+        }
+      >
+        Approve
+      </Text>
+    </View>
+    <View
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": true,
+          "expanded": undefined,
+          "selected": undefined,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        [
+          {
+            "alignItems": "center",
+            "backgroundColor": "transparent",
+            "borderColor": "#dc2626",
+            "borderRadius": 999,
+            "borderWidth": 1,
+            "flexDirection": "row",
+            "gap": 7,
+            "justifyContent": "center",
+            "minHeight": 44,
+            "opacity": 0.5,
+            "paddingHorizontal": 18,
+          },
+          {
+            "flex": 1,
+          },
+        ]
+      }
+      testID="d-deny"
+    >
+      <Text
+        maxFontSizeMultiplier={1.35}
+        style={
+          {
+            "color": "#dc2626",
+            "fontFamily": "Inter_500Medium",
+            "fontSize": 16,
+          }
+        }
+      >
+        Denying…
+      </Text>
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Round 24 — light palette DecisionButtons/idle renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "flexDirection": "row",
+        "gap": 10,
+      }
+    }
+  >
+    <View
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": undefined,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        [
+          {
+            "alignItems": "center",
+            "backgroundColor": "transparent",
+            "borderColor": "#6a5cc4",
+            "borderRadius": 999,
+            "borderWidth": 1,
+            "flexDirection": "row",
+            "gap": 7,
+            "justifyContent": "center",
+            "minHeight": 44,
+            "paddingHorizontal": 18,
+          },
+          {
+            "flex": 1,
+          },
+        ]
+      }
+      testID="d-approve"
+    >
+      <Text
+        maxFontSizeMultiplier={1.35}
+        style={
+          {
+            "color": "#6a5cc4",
+            "fontFamily": "Inter_500Medium",
+            "fontSize": 16,
+          }
+        }
+      >
+        Approve
+      </Text>
+    </View>
+    <View
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": undefined,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        [
+          {
+            "alignItems": "center",
+            "backgroundColor": "transparent",
+            "borderColor": "#dc2626",
+            "borderRadius": 999,
+            "borderWidth": 1,
+            "flexDirection": "row",
+            "gap": 7,
+            "justifyContent": "center",
+            "minHeight": 44,
+            "paddingHorizontal": 18,
+          },
+          {
+            "flex": 1,
+          },
+        ]
+      }
+      testID="d-deny"
+    >
+      <Text
+        maxFontSizeMultiplier={1.35}
+        style={
+          {
+            "color": "#dc2626",
+            "fontFamily": "Inter_500Medium",
+            "fontSize": 16,
+          }
+        }
+      >
+        Deny
+      </Text>
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Round 24 — light palette OfferScreen renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "flex": 1,
+          "paddingHorizontal": 24,
+        },
+        {
+          "backgroundColor": "#f5f5f8",
+          "paddingTop": 78,
+        },
+      ]
+    }
+  >
+    <View
+      style={
+        [
+          {
+            "backgroundColor": "#ffffff",
+            "borderRadius": 14,
+          },
+          {
+            "elevation": 1,
+            "shadowColor": "#1e1e3c",
+            "shadowOffset": {
+              "height": 1,
+              "width": 0,
+            },
+            "shadowOpacity": 0.12,
+            "shadowRadius": 1.5,
+          },
+          {
+            "alignItems": "center",
+            "gap": 10,
+            "padding": 22,
+          },
+        ]
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 16,
+              "borderWidth": 1,
+              "height": 56,
+              "justifyContent": "center",
+              "marginBottom": 4,
+              "width": 56,
+            },
+            {
+              "borderColor": "#c3bcec",
+            },
+          ]
+        }
+      >
+        <RNSVGSvgView
+          align="xMidYMid"
+          bbHeight={28}
+          bbWidth={28}
+          className="bell-ringing-undefined__svg-icon-phosphor"
+          color="#5548ab"
+          fill="currentColor"
+          focusable={false}
+          height={28}
+          meetOrSlice={0}
+          minX={0}
+          minY={0}
+          style={
+            [
+              {
+                "backgroundColor": "transparent",
+                "borderWidth": 0,
+              },
+              [
+                undefined,
+                undefined,
+                {},
+              ],
+              {
+                "flex": 0,
+                "height": 28,
+                "width": 28,
+              },
+            ]
+          }
+          testID="phosphor-react-native-bell-ringing-undefined"
+          vbHeight={256}
+          vbWidth={256}
+          width={28}
+        >
+          <RNSVGGroup
+            fill={
+              {
+                "type": 2,
+              }
+            }
+            propList={
+              [
+                "fill",
+              ]
+            }
+          >
+            <RNSVGGroup
+              fill={
+                {
+                  "payload": 4283779243,
+                  "type": 0,
+                }
+              }
+              propList={
+                [
+                  "fill",
+                ]
+              }
+            >
+              <RNSVGPath
+                d="M224 71.1a8 8 0 0 1-10.78-3.42 94.13 94.13 0 0 0-33.46-36.91 8 8 0 1 1 8.54-13.54 111.46 111.46 0 0 1 39.12 43.09A8 8 0 0 1 224 71.1M35.71 72a8 8 0 0 0 7.1-4.32 94.13 94.13 0 0 1 33.46-36.91 8 8 0 1 0-8.54-13.54 111.46 111.46 0 0 0-39.12 43.09A8 8 0 0 0 35.71 72m186.1 103.94A16 16 0 0 1 208 200h-40.8a40 40 0 0 1-78.4 0H48a16 16 0 0 1-13.79-24.06C43.22 160.39 48 138.28 48 112a80 80 0 0 1 160 0c0 26.27 4.78 48.38 13.81 63.94M150.62 200h-45.24a24 24 0 0 0 45.24 0M208 184c-10.64-18.27-16-42.49-16-72a64 64 0 0 0-128 0c0 29.52-5.38 53.74-16 72Z"
+                fill={
+                  {
+                    "payload": 4278190080,
+                    "type": 0,
+                  }
+                }
+              />
+            </RNSVGGroup>
+          </RNSVGGroup>
+        </RNSVGSvgView>
+      </View>
+      <Text
+        maxFontSizeMultiplier={2}
+        style={
+          [
+            {
+              "fontFamily": "Inter_500Medium",
+              "fontSize": 21,
+              "letterSpacing": -0.21,
+              "textAlign": "center",
+            },
+            {
+              "color": "#20222f",
+            },
+          ]
+        }
+      >
+        Turn on notifications
+      </Text>
+      <Text
+        maxFontSizeMultiplier={2}
+        style={
+          [
+            {
+              "fontFamily": "Inter_400Regular",
+              "fontSize": 16,
+              "lineHeight": 23,
+              "textAlign": "center",
+            },
+            {
+              "color": "#666a82",
+            },
+          ]
+        }
+      >
+        Know when a run needs your approval or something goes wrong.
+      </Text>
+      <View
+        style={
+          {
+            "alignSelf": "stretch",
+            "gap": 6,
+            "marginTop": 8,
+          }
+        }
+      >
+        <View
+          accessibilityState={
+            {
+              "busy": undefined,
+              "checked": undefined,
+              "disabled": undefined,
+              "expanded": undefined,
+              "selected": undefined,
+            }
+          }
+          accessibilityValue={
+            {
+              "max": undefined,
+              "min": undefined,
+              "now": undefined,
+              "text": undefined,
+            }
+          }
+          accessible={true}
+          collapsable={false}
+          focusable={true}
+          onBlur={[Function]}
+          onClick={[Function]}
+          onFocus={[Function]}
+          onResponderGrant={[Function]}
+          onResponderMove={[Function]}
+          onResponderRelease={[Function]}
+          onResponderTerminate={[Function]}
+          onResponderTerminationRequest={[Function]}
+          onStartShouldSetResponder={[Function]}
+          style={
+            [
+              {
+                "alignItems": "center",
+                "backgroundColor": "transparent",
+                "borderColor": "#6a5cc4",
+                "borderRadius": 999,
+                "borderWidth": 1,
+                "flexDirection": "row",
+                "gap": 7,
+                "justifyContent": "center",
+                "minHeight": 48,
+                "paddingHorizontal": 18,
+              },
+              {
+                "alignSelf": "stretch",
+              },
+            ]
+          }
+        >
+          <Text
+            maxFontSizeMultiplier={1.35}
+            style={
+              {
+                "color": "#6a5cc4",
+                "fontFamily": "Inter_500Medium",
+                "fontSize": 17,
+              }
+            }
+          >
+            Turn on
+          </Text>
+        </View>
+        <View
+          accessibilityState={
+            {
+              "busy": undefined,
+              "checked": undefined,
+              "disabled": undefined,
+              "expanded": undefined,
+              "selected": undefined,
+            }
+          }
+          accessibilityValue={
+            {
+              "max": undefined,
+              "min": undefined,
+              "now": undefined,
+              "text": undefined,
+            }
+          }
+          accessible={true}
+          collapsable={false}
+          focusable={true}
+          onBlur={[Function]}
+          onClick={[Function]}
+          onFocus={[Function]}
+          onResponderGrant={[Function]}
+          onResponderMove={[Function]}
+          onResponderRelease={[Function]}
+          onResponderTerminate={[Function]}
+          onResponderTerminationRequest={[Function]}
+          onStartShouldSetResponder={[Function]}
+          style={
+            [
+              {
+                "alignItems": "center",
+                "backgroundColor": "transparent",
+                "borderColor": "transparent",
+                "borderRadius": 999,
+                "borderWidth": 0,
+                "flexDirection": "row",
+                "gap": 7,
+                "justifyContent": "center",
+                "minHeight": 44,
+                "paddingHorizontal": 18,
+              },
+              undefined,
+            ]
+          }
+        >
+          <Text
+            maxFontSizeMultiplier={1.35}
+            style={
+              {
+                "color": "#20222f",
+                "fontFamily": "Inter_500Medium",
+                "fontSize": 16,
+              }
+            }
+          >
+            Not now
+          </Text>
+        </View>
       </View>
     </View>
   </View>

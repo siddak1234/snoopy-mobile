@@ -2,8 +2,8 @@ import { Stack } from 'expo-router';
 
 import { useTheme } from '@/hooks/use-theme';
 
-/** Home tab stack — Run detail lives here so it keeps the Home tab
- *  highlighted, matching the design's tab map (run → home). */
+/** Home tab stack: Home and its Notifications. ~~Run detail~~ lives in
+ *  Activity's since round 24 (P5; the owner's build 23 F4, F5). */
 export default function HomeLayout() {
   const { palette } = useTheme();
   return (
@@ -13,7 +13,6 @@ export default function HomeLayout() {
         contentStyle: { backgroundColor: palette.bg },
       }}>
       <Stack.Screen name="index" />
-      <Stack.Screen name="run" />
       <Stack.Screen name="notifications" />
     </Stack>
   );

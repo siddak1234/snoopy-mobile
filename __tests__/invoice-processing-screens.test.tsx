@@ -2,15 +2,17 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-
 import React from 'react';
 import { AccessibilityInfo, Platform, Share, StyleSheet } from 'react-native';
 
-import RunDetailScreen from '@/app/(tabs)/(home)/run';
+import RunDetailScreen from '@/app/(tabs)/activity/run';
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import SetupScreen from '@/app/(tabs)/flows/setup';
 import ConnectionsScreen from '@/app/(tabs)/settings/connections';
-import type { Subscription } from '@/lib/platform/automations';
+import { decideApproval, type Subscription } from '@/lib/platform/automations';
+import { PlatformError } from '@/lib/platform/problem';
 import type { Connection } from '@/lib/platform/catalog';
 import { connectOAuthProvider } from '@/lib/platform/connections';
 import { readProjects, type Project } from '@/lib/platform/projects';
 import { resetSnapshot } from '@/lib/platform/snapshot';
+import { nocturneDark } from '@/constants/theme';
 import { flowStepPlan } from '@/lib/view/pipeline';
 import { toFlows } from '@/lib/view/catalog';
 import { resetPushForTests } from '@/hooks/use-push-registration';
@@ -34,13 +36,14 @@ import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
 jest.mock('@/lib/platform/client', () => ({
   platformOperation: jest.fn(),
   newIdempotencyKey: jest.fn(() => 'key'),
+  // The one native download (round 24 P12): the signed link saved into the cache.
+  downloadSignedFile: jest.fn(async (_url: string, name: string) => ({ uri: `file:///cache/${name}`, exists: true, delete: jest.fn() })),
 }));
 jest.mock('@/lib/platform/connections', () => ({
   ...jest.requireActual('@/lib/platform/connections'),
   connectOAuthProvider: jest.fn(),
 }));
-// The run form's file field reads the document picker and the file system; the
-// run page's Download JSON writes a file to the cache.
+// The run form's file field reads the document picker and the file system.
 jest.mock('expo-document-picker', () => ({ getDocumentAsync: jest.fn() }));
 const mockFiles: { name: string; text?: string; deleted: boolean }[] = [];
 jest.mock('expo-file-system', () => ({
@@ -63,9 +66,14 @@ jest.mock('expo-file-system', () => ({
     };
   }),
 }));
+// The decision a run's step 4 sends (round 24 P6): the real call, watched.
+jest.mock('@/lib/platform/automations', () => {
+  const actual = jest.requireActual('@/lib/platform/automations');
+  return { ...actual, decideApproval: jest.fn(actual.decideApproval) };
+});
 // The flow page's DASHBOARD reads again every 5 s while a run goes on: 20 ms here.
 jest.mock('@/lib/view/runs', () => ({ ...jest.requireActual('@/lib/view/runs'), FLOW_STATS_REREAD_MS: 20 }));
-const { platformOperation } = jest.requireMock('@/lib/platform/client');
+const { platformOperation, downloadSignedFile } = jest.requireMock('@/lib/platform/client');
 const mockConnect = connectOAuthProvider as jest.Mock;
 
 /**
@@ -73,8 +81,8 @@ const mockConnect = connectOAuthProvider as jest.Mock;
  * D4, AM2, AM4, AM5): Set up once, simple; the flow page as the run page —
  * DASHBOARD, STEPS with the document and Start run in Step 1 and the vendor in
  * its step, CONNECTIONS, Edit setup at the bottom; a run's page with every
- * step from the start, its documents and Download JSON; every run by its full
- * id. Drawn from the platform's contract (backend ADR-0037, ADR-0039,
+ * step from the start, its documents and ~~Download JSON~~ (the run package
+ * since round 24, P12); every run by its full id. Drawn from the platform's contract (backend ADR-0037, ADR-0039,
  * ADR-0040), so any flow that declares groups, a vendor per step or documents
  * is drawn alike.
  */
@@ -717,16 +725,41 @@ function ipRun(
 
 function openRun(
   detail: RunDetail,
-  options: { entry?: ReturnType<typeof invoiceProcessingV3Entry>; documents?: () => unknown; approvals?: Answer<'GET /v1/workspaces/{workspaceId}/approvals'> } = {},
+  options: {
+    entry?: ReturnType<typeof invoiceProcessingV3Entry>;
+    documents?: () => unknown;
+    approvals?: Answer<'GET /v1/workspaces/{workspaceId}/approvals'>;
+    /** This person's role in the workspace, as the collection says it (round 24 P6). */
+    role?: 'owner' | 'admin' | 'member';
+    /** What a package request answers, given what was sent (round 24 P12). */
+    packageFile?: (sent: { body: unknown; key?: string }) => unknown;
+  } = {},
 ) {
   routePlatform(platformOperation, {
     '/automations': { automations: [options.entry ?? invoiceProcessingV3Entry()], categories: ['All', 'Accounting'] },
     ...(options.approvals ? { '/approvals': options.approvals } : {}),
+    ...(options.role
+      ? {
+          '/v1/workspaces': {
+            workspaces: [{ id: TEST_WORKSPACE, name: 'Acme Operations', type: 'organization', role: options.role }],
+            activeWorkspaceId: TEST_WORKSPACE,
+          },
+        }
+      : {}),
   });
   const routed = platformOperation.getMockImplementation()!;
   platformOperation.mockImplementation((path: string, ...rest: unknown[]) => {
     if (path.endsWith(`/runs/${RUN_ID}/documents`)) {
       return options.documents ? Promise.resolve().then(options.documents) : Promise.reject(new Error('no file'));
+    }
+    if (path.endsWith(`/runs/${RUN_ID}/package`)) {
+      if (!options.packageFile) return Promise.reject(new Error('no package'));
+      // The generated client's POST, as `createRunPackageFile` calls it: what was sent is seen.
+      const execute = rest[0] as (clients: unknown, signal?: AbortSignal) => Promise<{ data: unknown }>;
+      const post = async (_template: string, init: { body: unknown; params: { header: Record<string, string> } }) => ({
+        data: await options.packageFile!({ body: init.body, key: init.params.header['Idempotency-Key'] }),
+      });
+      return execute({ automations: { POST: post } }).then((answer) => answer.data);
     }
     return path.endsWith(`/runs/${RUN_ID}`) ? Promise.resolve(detail) : routed(path, ...rest);
   });
@@ -817,6 +850,30 @@ describe("a run's page — every step from the start, a live tracker (spec A7; t
     }
   });
 
+  it('the working step\'s icon, Reduce Motion answered on after it started turning: it stands upright, never tilted where it stopped (the round 24 second review)', async () => {
+    // The system answers late: the icon turns first, as on a phone, then Reduce Motion is on.
+    const motion = AccessibilityInfo.isReduceMotionEnabled as jest.Mock;
+    const asItWas = motion.getMockImplementation();
+    const answers: ((reduced: boolean) => void)[] = [];
+    motion.mockImplementation(() => new Promise<boolean>((answer) => answers.push(answer)));
+    try {
+      await openRun(ipRun('pending', []));
+      const spinner = await screen.findByTestId('run-step-spinner');
+      const rotate = () => (spinner.props.jestAnimatedStyle.value as { transform: [{ rotate: string }] }).transform[0].rotate;
+      await act(async () => {
+        await new Promise((settle) => setTimeout(settle, 300));
+      });
+      expect(rotate()).not.toBe('0deg');
+      await act(async () => {
+        for (const answer of answers) answer(true);
+        await new Promise((settle) => setTimeout(settle, 50));
+      });
+      expect(rotate()).toBe('0deg');
+    } finally {
+      motion.mockImplementation(asItWas);
+    }
+  });
+
   it('while running: done groups say Done and when, the next Working…, and Steps done never runs ahead (fb10\'s "1 / 1" impossible)', async () => {
     await openRun(ipRun('running', [['receive', 'ok', 'PDF, 2 pages', 0]]));
     const received = await screen.findByTestId('run-step-group:received');
@@ -877,17 +934,23 @@ describe("a run's page — every step from the start, a live tracker (spec A7; t
     expect(within(screen.getByTestId('run-step-group:checked')).getByText(/^Done · /u)).toBeTruthy();
   });
 
-  it('a continuation: the groups before its first step are done', async () => {
+  it('an approved job (round 24 P9: its runs\' steps together under one id): the held step is done once it runs on, every group Done', async () => {
     await openRun(
-      ipRun('succeeded', [['confirm-company', 'ok', 'Checked', 0], ['create-approved-records', 'ok', 'Recorded', 1]], {}, {
-        origin: 'approval-continuation',
-      }),
+      ipRun('succeeded', [
+        ['receive', 'ok', 'PDF, 1 page', 0],
+        ['extract', 'ok', 'Read 3 documents', 1],
+        ['decide', 'ok', 'Ready', 2],
+        ['ask-approval', 'held', 'Waiting for approval', 3, 'Document 2: the total can\'t be read.'],
+        ['confirm-company', 'ok', 'Checked', 10],
+        ['create-approved-records', 'ok', 'Recorded', 11],
+      ]),
     );
     await screen.findByTestId('run-progress');
     for (const id of ['received', 'read', 'checked', 'done']) {
       expect([id, within(screen.getByTestId(`run-step-group:${id}`)).queryByText(/^Done/u) !== null]).toEqual([id, true]);
     }
     expect(within(screen.getByText('Steps done').parent!).getByText('4 / 4')).toBeTruthy();
+    expect(screen.queryByText(/Waiting for approval/u)).toBeNull();
   });
 
   it("a run of an older version is drawn by the steps it reported — titled from the catalog where it names them — never another version's groups", async () => {
@@ -902,7 +965,106 @@ describe("a run's page — every step from the start, a live tracker (spec A7; t
   });
 });
 
-describe("a run's documents and Download JSON (spec A7, C2; the owner's ~04:05Z and AM7)", () => {
+/** An approval of this run, as the platform lists it. */
+function runApproval(id: string, status: 'pending' | 'approved' | 'rejected' | 'expired', createdAt: string, eligibleRoles: ('owner' | 'admin' | 'member')[] = ['owner', 'admin']) {
+  return {
+    id,
+    workspaceId: TEST_WORKSPACE,
+    runId: RUN_ID,
+    subscriptionId: 'invoice',
+    stepId: 'ask-approval',
+    status,
+    reason: 'Document 2: the total can\'t be read.',
+    eligibleRoles,
+    createdAt,
+    expiresAt: '2026-10-21T20:00:00Z',
+  };
+}
+
+const HELD: Reported[] = [
+  ['receive', 'ok', 'PDF, 1 page', 0],
+  ['extract', 'ok', 'Read 3 documents', 1],
+  ['ask-approval', 'held', 'Waiting for approval', 3, "Document 2: the total can't be read."],
+];
+
+/**
+ * Approve / Deny inside step 4 (round 24 P6; the owner's build 23 F7–F10: "It
+ * should be step 4 approve or deny", "Deny should be red", "not many clicks").
+ */
+describe("a held run's step 4: Approve or Deny there (round 24, P6)", () => {
+  const runReads = () =>
+    platformOperation.mock.calls.filter((call: unknown[]) => String(call[0]).endsWith(`/runs/${RUN_ID}`)).length;
+
+  it('the newest pending approval and a role it names: both buttons in the held step, Deny the danger pill; Approve sends the decision with a key, then reads the run again', async () => {
+    await openRun(ipRun('held', HELD), {
+      // An older decision of the same job, then the one that waits: the newest decides.
+      approvals: { approvals: [runApproval('ap-old', 'rejected', '2026-10-14T19:00:00Z'), runApproval('ap-new', 'pending', '2026-10-14T20:03:00Z')] as never },
+      role: 'admin',
+    });
+    const step = within(await screen.findByTestId('run-step-group:done'));
+    expect(step.getByText("Waiting for approval: Document 2: the total can't be read.")).toBeTruthy();
+    expect(step.getByText('Approve')).toBeTruthy();
+    expect((StyleSheet.flatten(step.getByText('Deny').props.style) as { color?: string }).color).toBe(nocturneDark.danger);
+    expect(screen.queryByTestId('run-deciders')).toBeNull();
+
+    const before = runReads();
+    await fireEvent.press(screen.getByTestId('run-decision-approve'));
+    await waitFor(() => expect(decideApproval).toHaveBeenCalledWith(TEST_WORKSPACE, 'ap-new', 'approved', 'key'));
+    await waitFor(() => expect(runReads()).toBeGreaterThan(before));
+    expect(decideApproval).toHaveBeenCalledTimes(1);
+  });
+
+  it('while it saves both wait and the pressed one says "Denying…"; refused, the step says why and offers both again', async () => {
+    let refuse: (error: Error) => void = () => undefined;
+    (decideApproval as jest.Mock).mockImplementationOnce(() => new Promise((_resolve, reject) => (refuse = reject)));
+    await openRun(ipRun('held', HELD), { approvals: { approvals: [runApproval('ap-1', 'pending', '2026-10-14T20:03:00Z')] as never }, role: 'owner' });
+    await fireEvent.press(await screen.findByTestId('run-decision-deny'));
+    expect(decideApproval).toHaveBeenCalledWith(TEST_WORKSPACE, 'ap-1', 'rejected', 'key');
+    expect(screen.getByText('Denying…')).toBeTruthy();
+    expect(screen.getByTestId('run-decision-approve').props.accessibilityState).toMatchObject({ disabled: true });
+    expect(screen.getByTestId('run-decision-deny').props.accessibilityState).toMatchObject({ disabled: true });
+    await act(async () => refuse(new PlatformError('This approval was already decided.', 409, 'CONFLICT')));
+    expect(await screen.findByText('This approval was already decided.')).toBeTruthy();
+    expect(screen.getByText('Deny')).toBeTruthy();
+  });
+
+  it('a role the approval does not name: who can decide, and no buttons', async () => {
+    await openRun(ipRun('held', HELD), {
+      approvals: { approvals: [runApproval('ap-1', 'pending', '2026-10-14T20:03:00Z', ['owner'])] as never },
+      role: 'member',
+    });
+    expect(await screen.findByTestId('run-deciders')).toBeTruthy();
+    expect(screen.getByText('Only owner can decide this.')).toBeTruthy();
+    expect(screen.queryByText('Approve')).toBeNull();
+    expect(screen.queryByText('Deny')).toBeNull();
+  });
+
+  it('approvals that cannot be read: the page still draws, the step says why it waits, no buttons', async () => {
+    routePlatform(platformOperation, { '/automations': { automations: [invoiceProcessingV3Entry()], categories: ['All', 'Accounting'] } });
+    const routed = platformOperation.getMockImplementation()!;
+    const detail = ipRun('held', HELD);
+    platformOperation.mockImplementation((path: string, ...rest: unknown[]) => {
+      if (path.includes('/approvals')) return Promise.reject(new PlatformError('Service Unavailable', 503));
+      return path.endsWith(`/runs/${RUN_ID}`) ? Promise.resolve(detail) : routed(path, ...rest);
+    });
+    setMockParams({ runId: RUN_ID });
+    await renderWithProviders(<RunDetailScreen />, signedInSession);
+    const step = within(await screen.findByTestId('run-step-group:done'));
+    expect(step.getByText("Waiting for approval: Document 2: the total can't be read.")).toBeTruthy();
+    expect(screen.queryByText('Approve')).toBeNull();
+    expect(screen.queryByTestId('run-deciders')).toBeNull();
+  });
+
+  it('denied: step 4 says Denied, the result line too — no buttons', async () => {
+    await openRun(ipRun('held', HELD), { approvals: { approvals: [runApproval('ap-1', 'rejected', '2026-10-14T20:03:00Z')] as never }, role: 'owner' });
+    const step = within(await screen.findByTestId('run-step-group:done'));
+    expect(step.getByText('Denied')).toBeTruthy();
+    expect(screen.getByTestId('run-result').props.children).toBe('Denied');
+    expect(screen.queryByText('Approve')).toBeNull();
+  });
+});
+
+describe("a run's documents and its package (spec A7, C2; the owner's ~04:05Z and AM7; round 24 P10, P12)", () => {
   const three = [
     receipt(1),
     receipt(2, {
@@ -927,14 +1089,15 @@ describe("a run's documents and Download JSON (spec A7, C2; the owner's ~04:05Z 
     receipt(3, { vendor: { name: null, address: null, city: null, storeNumber: null }, currency: 'CAD', total: '1234.5', number: null, numberLabel: null, references: [], payment: { method: 'not_shown', cardLast4: null } }),
   ];
 
-  it('three receipts from one photo: "Document 1 of 3" … each its own vendor, place, numbers, lines with "quantity × unit price", totals and result', async () => {
+  it('three receipts from one photo: "Invoice 1 of 3" … each, opened, its own vendor, place, numbers, lines with "quantity × unit price", totals and result', async () => {
     await openRun(ipRun('succeeded', [['receive', 'ok', 'Photo', 0]], { documents: three, details: [{ label: 'Total', value: '$1' }] }));
     const documents = await screen.findByTestId('run-documents');
     expect(within(documents).getByText('DOCUMENTS')).toBeTruthy();
     expect(screen.queryByTestId('run-details')).toBeNull();
+    for (const index of [1, 2, 3]) await fireEvent.press(screen.getByTestId(`document-${index}-toggle`));
 
     const first = within(screen.getByTestId('document-1'));
-    expect(first.getByText('Document 1 of 3')).toBeTruthy();
+    expect(first.getByText('Invoice 1 of 3')).toBeTruthy();
     expect(screen.getByTestId('document-1-chip').props.children).toBe('Saved');
     expect(first.getByText("Receipt · Lowe's")).toBeTruthy();
     expect(first.getByText('2150 W Shaw Ave, Fresno, CA 93711 · Store 1234')).toBeTruthy();
@@ -951,7 +1114,7 @@ describe("a run's documents and Download JSON (spec A7, C2; the owner's ~04:05Z 
     expect(first.getByText('Materials')).toBeTruthy();
 
     const second = within(screen.getByTestId('document-2'));
-    expect(second.getByText('Document 2 of 3')).toBeTruthy();
+    expect(second.getByText('Invoice 2 of 3')).toBeTruthy();
     expect(screen.getByTestId('document-2-chip').props.children).toBe('Recorded');
     expect(second.getByText('Invoice · Blue Bottle')).toBeTruthy();
     expect(second.getByText('Invoice #')).toBeTruthy();
@@ -964,38 +1127,124 @@ describe("a run's documents and Download JSON (spec A7, C2; the owner's ~04:05Z 
     expect(within(screen.getByTestId('document-2-line-2')).queryByText(/×/u)).toBeNull();
 
     const third = within(screen.getByTestId('document-3'));
-    expect(third.getByText('Document 3 of 3')).toBeTruthy();
-    expect(third.getByText('Receipt')).toBeTruthy();
-    expect(third.getByText('1,234.5 CAD')).toBeTruthy();
+    expect(third.getByText('Invoice 3 of 3')).toBeTruthy();
+    expect(third.getAllByText('Receipt').length).toBeGreaterThan(0);
+    // The closed line (no seller: the total alone, the website's) and the Total row.
+    expect(third.getAllByText('1,234.5 CAD')).toHaveLength(2);
     expect(third.queryByText('Paid')).toBeNull();
   });
 
-  it('Download JSON hands the platform\'s file to the share sheet as run-{full id}.json, then removes it', async () => {
-    const file = { runId: RUN_ID, templateId: 'invoice-processing', templateVersion: 3, status: 'succeeded', startedAt: null, endedAt: null, documents: three };
+  it('each invoice is a closed drop-down: no lines in the tree until opened; pressing #2 opens only #2, which starts with Document type and Format (round 24 P10)', async () => {
+    const pdf = { id: '33333333-3333-4333-8333-333333333333', filename: 'bills.pdf', contentType: 'application/pdf', format: 'PDF', sizeBytes: 2048, pages: 3 };
+    const photo = { id: '44444444-4444-4444-8444-444444444444', filename: 'extra.jpg', contentType: 'image/jpeg', format: 'JPEG', sizeBytes: 1024, pages: 1 };
+    const withSource = three.map((document) => ({ ...document, source: { file: document.index === 3 ? photo.id : pdf.id } }));
+    await openRun(ipRun('succeeded', [['receive', 'ok', 'Photo', 0]], { documents: withSource, files: [pdf, photo] }));
+    await screen.findByTestId('run-documents');
+    // Closed: the heading, the chip, the caret, and {vendor} · {total}; no line item, no body.
+    for (const index of [1, 2, 3]) {
+      expect(screen.getByTestId(`document-${index}-toggle`).props.accessibilityState).toMatchObject({ expanded: false });
+      expect(screen.queryByTestId(`document-${index}-body`)).toBeNull();
+      expect(screen.queryByTestId(`document-${index}-line-1`)).toBeNull();
+    }
+    expect(screen.getByTestId('document-1-summary').props.children).toBe("Lowe's · $17.19");
+    expect(screen.queryByText('2X4-8 STUD')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('document-2-toggle'));
+    expect(screen.getByTestId('document-2-toggle').props.accessibilityState).toMatchObject({ expanded: true });
+    expect(screen.queryByTestId('document-1-body')).toBeNull();
+    expect(screen.queryByTestId('document-3-body')).toBeNull();
+    const second = within(screen.getByTestId('document-2-body'));
+    expect(within(screen.getByTestId('document-2')).getByText('Invoice 2 of 3')).toBeTruthy();
+    expect(second.getByText('Document type')).toBeTruthy();
+    expect(second.getByText('Invoice')).toBeTruthy();
+    expect(second.getByText('Format')).toBeTruthy();
+    expect(second.getByText('PDF')).toBeTruthy();
+    // Pressed again, it closes.
+    await fireEvent.press(screen.getByTestId('document-2-toggle'));
+    expect(screen.queryByTestId('document-2-body')).toBeNull();
+    // The third names the photo.
+    await fireEvent.press(screen.getByTestId('document-3-toggle'));
+    expect(within(screen.getByTestId('document-3-body')).getByText('JPEG')).toBeTruthy();
+  });
+
+  it("a closed invoice with no seller says its total alone, and with neither, no second line — the website's (the round's review)", async () => {
+    const noSeller = { name: null, address: null, city: null, storeNumber: null };
+    await openRun(ipRun('succeeded', [], { documents: [receipt(1, { vendor: noSeller }), receipt(2, { vendor: noSeller, total: null })] }));
+    expect((await screen.findByTestId('document-1-summary')).props.children).toBe('$17.19');
+    expect(screen.getByTestId('document-1-toggle').props.accessibilityLabel).toBe('Invoice 1 of 2, $17.19');
+    expect(screen.queryByTestId('document-2-summary')).toBeNull();
+    expect(screen.getByTestId('document-2-toggle').props.accessibilityLabel).toBe('Invoice 2 of 2');
+  });
+
+  /** The package file the platform answers (round 24 P12): a signed https link. */
+  const pdfLink = (format: 'pdf' | 'xlsx' = 'pdf') => ({
+    format,
+    filename: `run-${RUN_ID}.${format}`,
+    contentType: format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    sizeBytes: 52000,
+    downloadUrl: `https://files.example.test/run.${format}?sig=1`,
+    expiresAt: '2026-10-20T12:00:00Z',
+  });
+
+  it('the run package replaces Download JSON (round 24 P12): View package opens the package page; no Download JSON', async () => {
+    await openRun(ipRun('succeeded', [], { documents: three }));
+    await fireEvent.press(await screen.findByTestId('run-view-package'));
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/activity/package', params: { runId: RUN_ID } });
+    expect(screen.queryByTestId('run-download-json')).toBeNull();
+    expect(screen.queryByText('Download JSON')).toBeNull();
+    expect(screen.getByText('Download PDF')).toBeTruthy();
+    expect(screen.getByText('Download Excel')).toBeTruthy();
+  });
+
+  it.each([
+    ['run-download-pdf', 'pdf'],
+    ['run-download-excel', 'xlsx'],
+  ] as const)('%s asks the platform for the %s with a key and the phone\'s zone, saves the signed link, shares it, then removes it', async (testID, format) => {
     const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
+    const sent: { body: unknown; key?: string }[] = [];
     const os = Platform.OS;
     Platform.OS = 'ios';
     try {
-      await openRun(ipRun('succeeded', [], { documents: three }), { documents: () => file });
-      await fireEvent.press(await screen.findByTestId('run-download-json'));
-      await waitFor(() => expect(share).toHaveBeenCalledWith({ url: `file:///cache/run-${RUN_ID}.json` }));
-      expect(mockFiles).toEqual([{ name: `run-${RUN_ID}.json`, text: JSON.stringify(file, null, 2), deleted: true }]);
-      expect(platformOperation).toHaveBeenCalledWith(`/v1/workspaces/${TEST_WORKSPACE}/runs/${RUN_ID}/documents`, expect.any(Function));
+      await openRun(ipRun('succeeded', [], { documents: three }), { packageFile: (request) => (sent.push(request), pdfLink(format)) });
+      await fireEvent.press(await screen.findByTestId(testID));
+      await waitFor(() => expect(share).toHaveBeenCalledWith({ url: `file:///cache/run-${RUN_ID}.${format}` }));
+      expect(sent).toEqual([{ body: { format, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }, key: 'key' }]);
+      expect(downloadSignedFile).toHaveBeenCalledWith(`https://files.example.test/run.${format}?sig=1`, `run-${RUN_ID}.${format}`);
+      const saved = await (downloadSignedFile as jest.Mock).mock.results.at(-1)!.value;
+      expect(saved.delete).toHaveBeenCalledTimes(1);
     } finally {
       Platform.OS = os;
       share.mockRestore();
     }
   });
 
-  it('says "Could not download. Try again." when the file could not be read, and offers no Download JSON without documents', async () => {
+  it('Download Excel answered with a file that is not a workbook, or one over 25 MiB: "Could not download. Try again.", nothing saved', async () => {
+    for (const answer of [pdfLink('pdf'), { ...pdfLink('xlsx'), sizeBytes: 26_214_401 }]) {
+      (downloadSignedFile as jest.Mock).mockClear();
+      const view = await openRun(ipRun('succeeded', [], { documents: three }), { packageFile: () => answer });
+      await fireEvent.press(await screen.findByTestId('run-download-excel'));
+      expect(await screen.findByText('Could not download. Try again.')).toBeTruthy();
+      expect(downloadSignedFile).not.toHaveBeenCalled();
+      await view.unmount();
+      resetSnapshot();
+    }
+  });
+
+  it('says "Could not download. Try again." when the package cannot be made; no package while the job goes on, or without documents', async () => {
     const view = await openRun(ipRun('succeeded', [], { documents: three }));
-    await fireEvent.press(await screen.findByTestId('run-download-json'));
+    await fireEvent.press(await screen.findByTestId('run-download-pdf'));
     expect(await screen.findByText('Could not download. Try again.')).toBeTruthy();
     await view.unmount();
     resetSnapshot();
+    const going = await openRun(ipRun('running', [], { documents: three }));
+    await screen.findByTestId('run-progress');
+    expect(screen.queryByTestId('run-view-package')).toBeNull();
+    await going.unmount();
+    resetSnapshot();
     await openRun(ipRun('succeeded', []));
     await screen.findByTestId('run-progress');
-    expect(screen.queryByTestId('run-download-json')).toBeNull();
+    expect(screen.queryByTestId('run-view-package')).toBeNull();
+    expect(screen.queryByTestId('run-download-pdf')).toBeNull();
     expect(screen.queryByText('DOCUMENTS')).toBeNull();
   });
 

@@ -19,6 +19,7 @@ import {
   STEP_FAILED,
   STEP_SKIPPED,
   STEP_STOPPED,
+  STEP_DENIED,
   STEP_WAITING,
   emailSentLine,
   stepHeld,
@@ -83,24 +84,36 @@ export function nameFor(run: Run, catalog: Map<string, CatalogEntry>): string {
  * degrades to the run's status word rather than leaving the line blank.
  */
 export function metaFor(run: Run, approvals?: readonly Approval[]): string {
-  // A continuation is part of the run it continues, as the website says beside
-  // its name ("after approval"); a held run says how it was decided, because its
-  // status never changes after the decision (FR-15). A continuation held again
-  // says both: the website's tag sits beside the name whatever the status, and
-  // until Gate 24's parity pass a held one lost it here.
-  const prefix = run.origin === 'approval-continuation' ? 'After approval · ' : '';
-  if (run.status === 'held' && approvals) return prefix + heldDecisionLine(run, approvals);
-  if (run.status === 'succeeded' && run.resultSummary) return prefix + run.resultSummary;
-  if (run.status === 'failed' && run.failureReason) return prefix + run.failureReason;
-  return prefix + statusLabel(run.status);
+  // A held job says how it was decided. One row per job since round 24 (P9;
+  // the owner's build 23 F12: "Why do i have 2 run ids for one job"): the
+  // platform lists a job by its first run's id at its newest status, so no row
+  // is a continuation (~~"After approval · …"~~ until round 24).
+  if (run.status === 'held' && approvals) return heldDecisionLine(run, approvals);
+  if (run.status === 'succeeded' && run.resultSummary) return run.resultSummary;
+  if (run.status === 'failed' && run.failureReason) return run.failureReason;
+  return statusLabel(run.status);
 }
 
 /** How a held run was decided, from the approvals read beside it. */
 export type HeldDecision = 'pending' | 'approved' | 'rejected' | 'closed' | 'unknown';
 
+/**
+ * The job's approval: the newest the platform lists for this run's id (round 24
+ * P6, P9 — a job is its first run, so an approval asked again after another
+ * hold names the same id; the newest decides what the page shows), or none.
+ */
+export function jobApproval(run: Pick<Run, 'id'>, approvals: readonly Approval[]): Approval | undefined {
+  let newest: Approval | undefined;
+  for (const approval of approvals) {
+    if (approval.runId !== run.id) continue;
+    if (!newest || Date.parse(approval.createdAt) > Date.parse(newest.createdAt)) newest = approval;
+  }
+  return newest;
+}
+
 export function heldDecision(run: Run, approvals: readonly Approval[]): HeldDecision | null {
   if (run.status !== 'held') return null;
-  const approval = approvals.find((a) => a.runId === run.id);
+  const approval = jobApproval(run, approvals);
   if (!approval) return 'unknown';
   if (approval.status === 'pending') return 'pending';
   if (approval.status === 'approved') return 'approved';
@@ -110,8 +123,10 @@ export function heldDecision(run: Run, approvals: readonly Approval[]): HeldDeci
 
 const HELD_DECISION_LINE: Record<HeldDecision, string> = {
   pending: 'Waiting for approval',
-  approved: 'Approved — continued in a new run',
-  rejected: 'Rejected',
+  // The job goes on under the same id (round 24 P9; ~~"Approved — continued in a new run"~~).
+  approved: 'Approved',
+  // S6: the owner says deny (round 24 P6); ~~Rejected~~.
+  rejected: STEP_DENIED,
   closed: 'No longer awaiting approval',
   unknown: 'Held for review',
 };
@@ -294,7 +309,7 @@ export type ApprovalItem = {
   expires: string;
   /** Its status, as the website's pill beside it says it; Pending, the one status this list holds. */
   status: StatusPillLabel | null;
-  /** Whether this person's role is one the approval names: Approve and Reject only then. */
+  /** Whether this person's role is one the approval names: Approve and Deny only then. */
   canDecide: boolean;
   /** The roles it names, said to someone whose role it does not. */
   deciders: readonly WorkspaceRole[];
@@ -422,6 +437,21 @@ export type TrackerRow = {
 export const RUN_REREAD_MS = 2_000;
 
 /**
+ * Runs live in Activity (round 24 P5; the owner's build 23 F4, F5: "Shouldnt it
+ * be in activity"): the one run page is `/(tabs)/activity/run`. A push from
+ * another tab says where it came from (`returnTo`), and Back — the circle or the
+ * swipe — pops the run off Activity's stack and returns to that tab, its stack as
+ * it was (Home › Notifications stays open). Each origin and its tab's route.
+ */
+export const RUN_ORIGIN_TAB = { home: '(home)', flows: 'flows', settings: 'settings' } as const;
+export type RunOrigin = keyof typeof RUN_ORIGIN_TAB;
+
+/** The run page's `returnTo` param as an origin, or null (none, or not one). */
+export function runOrigin(param: unknown): RunOrigin | null {
+  return typeof param === 'string' && Object.hasOwn(RUN_ORIGIN_TAB, param) ? (param as RunOrigin) : null;
+}
+
+/**
  * How long a flow page waits, while a run of the flow is pending or running,
  * before it reads its DASHBOARD again (Build 21, spec A6; the session's S30).
  */
@@ -449,8 +479,9 @@ type RunState = Pick<Run, 'status'> & Partial<Pick<Run, 'origin' | 'failureReaso
  *   rest waiting; waiting while the run is held; skipped once it succeeded;
  *   stopped once it failed or was cancelled.
  *
- * A continuation (`approval-continuation`) did its first steps in the run it
- * continues: every step before its first reported one is done.
+ * A held step is held while the job is; once it runs on (approved), it is done
+ * — the job's steps are its runs' together, in time order (round 24 P9,
+ * backend ADR-0044; ~~a continuation's steps before its first, done~~).
  */
 export function stepStates(
   pipeline: readonly { id: string }[],
@@ -466,18 +497,15 @@ export function stepStates(
   for (const step of ordered) latest.set(step.stepId, step);
   const reported = [...latest.keys()].flatMap((id) => (order.has(id) ? [order.get(id)!] : []));
   const furthest = reported.length > 0 ? Math.max(...reported) : -1;
-  const first = reported.length > 0 ? Math.min(...reported) : -1;
   const lastId = ordered[ordered.length - 1]?.stepId;
   const going = run.status === 'pending' || run.status === 'running';
-  const continued = run.origin === 'approval-continuation';
   return pipeline.map((declared, index) => {
     const step = latest.get(declared.id);
     if (step) {
-      if (step.outcome === 'held') return { state: 'held', step };
+      if (step.outcome === 'held') return { state: run.status === 'held' ? 'held' : 'done', step };
       if (step.outcome === 'failed' && run.status === 'failed' && declared.id === lastId) return { state: 'failed', step };
       return { state: 'done', step };
     }
-    if (continued && index < first) return { state: 'done' };
     if (index < furthest) return { state: 'skipped' };
     if (going) return { state: index === furthest + 1 ? 'working' : 'waiting' };
     if (run.status === 'held') return { state: 'waiting' };
@@ -515,13 +543,23 @@ const TRACKER_LOOK: Record<TrackerState, { icon: Icon; tone: TrackerRow['tone'] 
  * tracker of which ones are done", and item 11's "What is the checked issue?"
  * over "34 accounts read" under Received).
  */
-function trackerSub(state: TrackerState, steps: readonly ReportedStep[], run: RunState, clock: (iso: string) => string): string {
+function trackerSub(
+  state: TrackerState,
+  steps: readonly ReportedStep[],
+  run: RunState,
+  clock: (iso: string) => string,
+  decision?: HeldDecision | null,
+): string {
   if (state === 'working') return RUN_WORKING;
   if (state === 'waiting') return STEP_WAITING;
   if (state === 'skipped') return STEP_SKIPPED;
   if (state === 'stopped') return STEP_STOPPED;
   if (state === 'failed') return run.failureReason ?? STEP_FAILED;
-  if (state === 'held') return stepHeld(steps.find((step) => step.outcome === 'held')?.heldReason);
+  // A held step says why it waits until its approval is denied, then "Denied"
+  // (round 24 P6) — the website's words (`snoopy/lib/run-progress.ts`); once the job
+  // runs on, the step is done. ~~"Approved", "No longer awaiting approval"~~ on
+  // the step until the round's review.
+  if (state === 'held') return decision === 'rejected' ? STEP_DENIED : stepHeld(steps.find((step) => step.outcome === 'held')?.heldReason);
   const last = steps.reduce<ReportedStep | undefined>(
     (latest, step) => (!latest || Date.parse(step.occurredAt) >= Date.parse(latest.occurredAt) ? step : latest),
     undefined,
@@ -610,18 +648,18 @@ export function toTracker(
   clock: (iso: string) => string,
   /** The catalog's steps, to title a run of another version by (`declared` absent). */
   titles: readonly { id: string; title: string }[] | undefined = declared,
-  /** The flow as read now, and the run's email (Build 22). */
-  context: { flow?: TrackerFlow; email?: RunDetail['email'] } = {},
+  /** The flow as read now, and the run's email (Build 22); how its approval was decided (round 24 P6). */
+  context: { flow?: TrackerFlow; email?: RunDetail['email']; decision?: HeldDecision | null } = {},
 ): TrackerRow[] {
   const known = new Set((declared ?? []).map((step) => step.id));
   const covered = declared && declared.length > 0 && steps.every((step) => known.has(step.stepId));
-  if (!covered) return reportedRows(steps, titles, run, clock);
+  if (!covered) return reportedRows(steps, titles, run, clock, context.decision);
   const pipeline = declared!;
   const states = stepStates(pipeline, steps, run);
   const row = (id: string, title: string, members: number[]): TrackerRow => {
     const state = groupState(members.map((index) => states[index]!.state));
     const reported = members.flatMap((index) => (states[index]!.step ? [states[index]!.step!] : []));
-    return { id, title, state, ...TRACKER_LOOK[state], sub: trackerSub(state, reported, run, clock) };
+    return { id, title, state, ...TRACKER_LOOK[state], sub: trackerSub(state, reported, run, clock, context.decision) };
   };
   if (groups && groups.length > 0) {
     const named = new Set(pipeline.flatMap((step) => (step.group ? [step.group] : [])));
@@ -647,18 +685,19 @@ function reportedRows(
   declared: readonly { id: string; title: string }[] | undefined,
   run: RunState,
   clock: (iso: string) => string,
+  decision?: HeldDecision | null,
 ): TrackerRow[] {
   const titles = new Map((declared ?? []).map((step) => [step.id, step.title]));
   const ordered = [...steps].sort((a, b) => Date.parse(a.occurredAt) - Date.parse(b.occurredAt));
   const rows = ordered.map((step, index): TrackerRow => {
     const failedRun = step.outcome === 'failed' && run.status === 'failed' && index === ordered.length - 1;
-    const state: TrackerState = step.outcome === 'held' ? 'held' : failedRun ? 'failed' : 'done';
+    const state: TrackerState = step.outcome === 'held' && run.status === 'held' ? 'held' : failedRun ? 'failed' : 'done';
     return {
       id: `reported:${index}:${step.stepId}`,
       title: `${index + 1} · ${titles.get(step.stepId) ?? `Step ${index + 1}`}`,
       state,
       ...TRACKER_LOOK[state],
-      sub: trackerSub(state, [step], run, clock),
+      sub: trackerSub(state, [step], run, clock, decision),
     };
   });
   if (run.status === 'pending' || run.status === 'running') {

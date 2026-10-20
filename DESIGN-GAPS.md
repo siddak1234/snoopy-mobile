@@ -1733,10 +1733,10 @@ failed), the file restored from its saved copy — its SHA-256 equal every time 
 | S30 · X says Removing… meanwhile | no "Removing…" (`app/(tabs)/flows/email.tsx`) | `build22-screens` "X removes the address at once…" |
 | S30 · Could not save. Try again. | a failed save says nothing (`app/(tabs)/flows/email.tsx`) | `build22-screens` "a refusal or a failure says…" |
 | S23 · a setting step says the integration | a setting step always "Done" (`lib/view/runs.ts`) | `build22-screens` "succeeded and emailed…" |
-| S23 · the run page's step 4 by the flow's choice | the flow's settings read as none (`app/(tabs)/(home)/run.tsx`) | `build22-screens` "succeeded and emailed…" |
+| S23 · the run page's step 4 by the flow's choice | the flow's settings read as none (~~`app/(tabs)/(home)/run.tsx`~~ (`app/(tabs)/activity/run.tsx` since round 24)) | `build22-screens` "succeeded and emailed…" |
 | S24 · Sending… while owed | "Waiting" for an owed email (`lib/view/runs.ts`) | `build22-screens` "its email owed…" |
 | S24 · a cancelled run: Stopped | a cancelled run's email by its email state (`lib/view/runs.ts`) | `build22-screens` "running: 5 Waiting; cancelled: 5 Stopped…" |
-| S25 · no version gate on the run page | the version gate back on the groups (`app/(tabs)/(home)/run.tsx`) | `build22-screens` "is drawn by the five steps…" |
+| S25 · no version gate on the run page | the version gate back on the groups (~~`app/(tabs)/(home)/run.tsx`~~ (`app/(tabs)/activity/run.tsx` since round 24)) | `build22-screens` "is drawn by the five steps…" |
 | a step with no state is not counted | a step with no state counted (`lib/view/runs.ts`) | `build22-views` "a platform step this build does not know: its title…" |
 | vocabulary · "Move to v" banned | "Move to v" taken off the ban (`scripts/audit-vocabulary.mjs`) | `audit-gates` "Build 22…" |
 | vocabulary · "Connect vendor" in any form | the ban back to "Connect vendor ›" (`scripts/audit-vocabulary.mjs`) | `audit-gates` "Build 22…" |
@@ -1888,7 +1888,7 @@ Deployed contract check (it reads production).
 | A2 · Department sets the scope | its `onChange` a no-op (`components/scope-control.tsx`) | `presses-home-activity` "the Department drop-down…" |
 | A1 · the circles in the right group | the circles moved back beside the title (`components/title-row.tsx`) | `build22-screens` "Flows: the title first…" |
 | A1 · Archived its circle at every width | Archived drawn as its pill (`app/(tabs)/flows/index.tsx`) | `build22-screens` "Archived is its circle at every width…" |
-| A4 · only a working step turns | the spinner on every row but a skipped one (`app/(tabs)/(home)/run.tsx`) | `invoice-processing-screens` "at the start…", "while running…" |
+| A4 · only a working step turns | the spinner on every row but a skipped one (~~`app/(tabs)/(home)/run.tsx`~~ (`app/(tabs)/activity/run.tsx` since round 24)) | `invoice-processing-screens` "at the start…", "while running…" |
 | A7 · held waits | Waiting only for pending/running (`lib/view/runs.ts`) | `build22-views` "held: … step 5 waits too…" |
 | A7 · failed is Failed | the failed line removed | `build22-views` "a run failed…" |
 | A5 · run/approval paths to the splash | `redirectSystemPath` returns the path (`app/+native-intent.tsx`) | `round23` the native-intent table |
@@ -1902,7 +1902,7 @@ Deployed contract check (it reads production).
 | B3 · a member's rows inert | `readOnly` ignored (`components/flows/vendor-choice.tsx`) | `vendor-page` "a member (round 23, B3)…" |
 | B3 · Set up read-only for a member on a live flow | `readOnly={false}` (`app/(tabs)/flows/setup.tsx`) | `invoice-processing-screens` "a member on a live flow…" |
 | B3 · a member adding a flow still chooses | `readOnly={!canManage}` | `invoice-processing-screens` "a member adding a flow…" |
-| A4 · still under Reduce Motion | `if (reduceMotion) return` removed (`app/(tabs)/(home)/run.tsx`) | `invoice-processing-screens` "…Reduce Motion true…" |
+| A4 · still under Reduce Motion | `if (reduceMotion) return` removed (~~`app/(tabs)/(home)/run.tsx`~~ (`app/(tabs)/activity/run.tsx` since round 24)) | `invoice-processing-screens` "…Reduce Motion true…" |
 | A2 · only a fade under Reduce Motion | the scale kept under Reduce Motion (`components/dropdown.tsx`) | `round23` "opening it, Reduce Motion true…" |
 | A2 · Reload session busy | its label kept, or `disabled` dropped (`components/settings/workspace-switcher.tsx`) | `workspace-switcher` "Reload session says \"Working…\"…" |
 | B3 · a 403 in its words | the 403 check never true (`app/(tabs)/flows/vendor.tsx`) | `vendor-page` "a 403 from the platform…" |
@@ -1911,3 +1911,306 @@ Deployed contract check (it reads production).
 file restored sha256-equal, green — a test passed. The locked guard's row is `round23`'s: the
 switcher's own `close` also refuses while switching, so `workspace-switcher` stays green without it. The rows the review of round 23 added — the open-app link, Set up's two, Reduce Motion's two and Reload
 session's — were run the same way by hand: broken, red, restored sha256-equal, green.)
+
+### Round 24 — build 23's feedback (Round 17; 2026-10-20)
+
+The owner's build 23 items F1–F16 (memory `build-23-feedback-2026-10-20`; the round's plan, its "S" the
+session's): one drop-down standard, the tab lens, iOS text size, runs in Activity, Approve / Deny in
+step 4, Needs review, Clear all and the notifications offer, one run id per job, each invoice a
+drop-down, the status-bar strip, and the A8X run package.
+
+- **The contract**: the generated types come from the backend's round 24 contract (`snoopy-backend`
+  `3b5ac97`, amended `84ed9bc`; regenerated at `f122361`, whose package description says 25 MiB): the job's runs by its first run's id, `continuesRunId`,
+  `continuationRunId` and the decision's `continuation` deprecated; `POST …/runs/{runId}/package`
+  (a signed link); `POST …/notifications/clear`; `RunDetail.files`, `RunDocument.source`,
+  `recordedIn.accountName`. CI's Deployed-contract job is red by design until the platform release.
+- **P1 one drop-down standard** (F1, F13, F14): `GlassSurface` gains `backing` (`panel` the card
+  colour, `page` the page colour) at `GLASS_BACKING_ALPHA` (~~0.94, S3~~; 1 since the second review's simulator audit, below) under its children in all three
+  forms; `Dropdown` passes `backing="panel"` to its one surface — the workspace and department
+  drop-downs, Activity's two and Add a flow's category, fixed in one place. The website's switcher panel
+  is already opaque (`bg-[var(--surface)]`): verified, no change.
+- **P2 the tab lens** (F2, F3): `LinearTransition.springify()` (a spring that overshot and animated
+  its first layout too) is gone; the lens's `translateX` is a shared value, set on the first layout
+  and on a new row width, `withTiming` 240 ms `Easing.out(cubic)` on a focus change, set at once under
+  Reduce Motion; hidden until first set, so it never shows at the row's start. `lensOffset(slot,
+  rowWidth, count)` = the pad plus whole tab widths, the sum the tabs' `flex: 1` lays out.
+- **P3 iOS text size** (F14): before, no `allowFontScaling`/`maxFontSizeMultiplier` anywhere, so text
+  followed iOS's size without a limit and fixed heights clipped. Now `components/text.tsx` (`Text`,
+  `TextInput`, React 19 has no `defaultProps` for a function component) defaults
+  `maxFontSizeMultiplier` to `fontScaleLimit.content` 2; chrome 1.35 (S4) on the tab labels,
+  `StatusPill` (one line), `PillButton`'s label, `ScopePill`'s label (one line), the Needs-review count
+  and the title row's title (one line, a fixed bar beside its circles). A codemod moved 61 files'
+  imports; `audit:type` fails `Text`/`TextInput` from react-native outside the wrapper. `minHeight` for
+  the tab row 62, `PillButton`, the title row 38, `ScopePill` 34, the badge 26, the text and select
+  fields 50, the OAuth button 48, Flows' search and the email input 44, Settings' segments and Add a
+  flow's button 34. **The second authorised re-pin** (F14; the counts are README's re-pin fact) — props
+  only. Phone size: the A4 captures on iPhone SE (3rd
+  generation) and 17 Pro Max at the default and the largest size.
+- **P5 runs live in Activity** (F4, F5): ~~`app/(tabs)/(home)/run.tsx`~~ → `app/(tabs)/activity/run.tsx`,
+  ~~`app/(tabs)/settings/run.tsx`~~ deleted, `run` registered in Activity's stack only; every push names
+  `/(tabs)/activity/run`. From another tab — Home's recent runs (`home`), the two inboxes (`home`,
+  `settings`, the `Inbox` prop that replaced `runPath`), a flow's Run now (`flows`) — with `returnTo`
+  (`RUN_ORIGIN_TAB`, `runOrigin`, `lib/view/runs.ts`) and `withAnchor` (Activity's layout
+  `unstable_settings = { anchor: 'index' }`), as a notification's and a link's tap now are too. The
+  run page's `beforeRemove` listener, on a `GO_BACK` or `POP` (never `POP_TO_TOP`), lets the pop go on
+  (a swipe has already gone natively) and navigates the tab navigator to the origin, which keeps that
+  tab's stack. S5: the swipe returns to the origin too. The website: `/account/runs/[runId]` already
+  highlights Activity and its Back is `/account/runs` — verified, no change.
+- **P6 Approve / Deny in step 4** (F7–F10): `hooks/use-approval-decision.ts` (the decision logic,
+  extracted from Approvals: workspace bound, an intent key per approval and decision, busy, error) and
+  `components/runs/decision-buttons.tsx` (the one pair on `PillButton`, Approve primary, Deny danger,
+  "Approving…"/"Denying…"; pinned in both palettes) serve the run page's held step and the Needs-review
+  card. The run page reads the role from the workspace collection (fail-open: none, no buttons), the
+  approvals fail-open, the newest approval for the job (`jobApproval`, also P9's rule); saved →
+  `refresh`. S6: Deny/Denied everywhere a person reads it (`HELD_DECISION_LINE`, step 4, the pills);
+  the API value stays `rejected`. Website: its lane (`RunLive` step 4, `ApprovalDecision` Deny danger).
+- **P7 Needs review** (F11): a decided card's pill turns Approved/Denied (`StatusPill` gains both
+  tones), then the card leaves — `SlideOutLeft.duration(220)`, the rest `LinearTransition`, none under
+  Reduce Motion — and the count counts down; the last one decided `dismissTo('/(tabs)/activity')`. The
+  banner and the done notes went (`APPROVAL_DONE_TEXT` deleted). The callout icon's `marginTop` is
+  `(lineHeight − 16) / 2`. Website: its lane.
+- **P8 Clear all and the notifications offer** (F6): `clearInbox()` (`lib/platform/notifications.ts`,
+  key prefix `notifications-clear`) behind the inbox header's **Clear all** (~~Mark all read~~): the
+  rows on screen leave at the tap (the dismissed set), back with the reason if refused; S7 the platform
+  clears past the 50 listed. `app/(auth)/notifications-offer.tsx`: guarded with the Face ID offer,
+  `usePushAsk().turnOn`/`notNow`, then `nextAfterSignIn` (`lib/view/return-to.ts`; login asks for
+  both offers, the Face ID offer for the second); `offersPushAsk()` (an iPhone, iOS not asked, no Not
+  now). The Face ID offer's layout is extracted to `components/offer-screen.tsx` (`OfferScreen`), so
+  both offers draw one layout — the reason for the new file; pinned in both palettes. The real-router
+  project's default iOS answer is "no" so a sign-in test meets no offer unless it asks for one. Parity:
+  the website has no inbox, nothing to match.
+- **P9 one run id per job, the client half** (F12): `metaFor` drops "After approval ·", the approved
+  line is "Approved" (~~"Approved — continued in a new run"~~), `stepStates` drops the continuation
+  branch and counts a held step done once the job runs on (the job's steps are its runs' together,
+  backend ADR-0044) — the fallback rows too; `jobApproval` (P6) picks the newest approval; the run
+  page's `run-continues` link and `isContinuation` (unused) are gone. `runOriginLabel` keeps its
+  words. The deprecated `continuesRunId`/`continuationRunId` stay in the generated types, unread.
+- **P10 each invoice a closed drop-down** (F15): `DocumentCard` — a `Pressable` header (button,
+  `expanded`, 44 pt) with "Invoice i of n" (`documentOf`), the chip (one line, chrome limit), a caret
+  and `{vendor} · {total}` (S9); the body only when open (`FadeIn`, the card `LinearTransition`, none
+  under Reduce Motion), starting with Document type and Format (`kind`); `formatFor(document, files)`
+  and ~~`formatLabel(contentType)`~~ (deleted in the review below) in `lib/view/documents.ts`. Website: its lane (`<details>`).
+- **P12 the A8X run package, the app half** (F16; the main session's correction 1 overrides S16): the run
+  page's View package / Download PDF / Download Excel replace Download JSON (`readRunDocuments`,
+  `DOWNLOAD_JSON_LABEL`, `documentsFileName`, `downloadJson` deleted; the endpoint stays). New:
+  `createRunPackageFile` + `requestRunPackageFile` (`lib/platform/runs.ts`), `PlatformBusyError`
+  (`lib/platform/problem.ts`, mapped in `client.ts` for a 503 with `retry-after`; ~~capped at 15 s~~, the website's rule since the review below),
+  `hooks/use-run-package.tsx` (the one download path, for the run page and the package page — the
+  reason for the new file), `app/(tabs)/activity/package.tsx` (the PDF in a WebView from the cache,
+  `view-` prefixed so a header share never removes it; deleted on close). No `readRunPackage` and no
+  package view model (correction 1). `react-native-webview` 13.15.0 (MIT) added by `npx expo install`;
+  jest mocks it as a view (`test/jest-setup.js`). **Finding**: Android's WebView does not draw a PDF;
+  the app ships to iOS, so the Android package page is NOT OBSERVED and left as it draws.
+- **A4 the simulator visual audit — built, run, failed, taken out of this lane** (the main session's
+  stop order): the lane's script (`6b62e60`, fixed in `aa3bbbc`; reverted here, kept in history) created
+  three iOS 26.1 simulators (iPhone 17 Pro, SE 3rd generation, 17 Pro Max) and booted them at once,
+  built the Debug app (`expo prebuild`, `pod install`, `xcodebuild`, `CODE_SIGNING_ALLOWED=NO`), and
+  drove Maestro against a fixture Edge with a Metro-time swap of the session and appearance stores. Run
+  1 reached Home (the session swap and the fixture Edge worked) but Maestro 2.11 refused the screenshot
+  paths; SpringBoard crashed on one simulator (00:38). Run 2's build launched and died: dyld "Library not
+  loaded: @rpath/ReactNativeDependencies.framework" (the Debug simulator build did not embed React
+  Native's prebuilt dependencies framework). No screenshot was taken: every surface is **NOT
+  OBSERVED** on a simulator. The main session runs the audit itself, on one simulator, headless, with a
+  working build.
+- **P11 the status-bar strip** (seen in fb09, fb10, fb15, fb16): `components/status-bar-strip.tsx`, a
+  `GlassSurface radius={0} backing="page"` as tall as the top inset, absolute, `pointerEvents="none"`,
+  rendered once after `<Tabs>` in `app/(tabs)/_layout.tsx` and once after the auth `Stack` (Sign in
+  scrolls). Both new surfaces are pinned in both palettes and both iOS forms (`nocturne-visual`).
+
+**Parity** (app/CLAUDE.md): the website's lane matches P6 (Approve / Deny in its run page's step 4,
+Deny danger), P7 (a decided row leaves; none left → `/account/runs`), P9 (one id per job) and P10
+(`<details>` "Invoice n of m"), and P12 (View package, Download PDF and Excel); P1 and P5 are verified
+there with no change; the website has no inbox, so P8 has nothing to match. P2, P3 and P11 are the app's
+own (its tab bar, its text sizes, its status bar).
+
+### Guards proved to bite, round 24
+
+| Guard | Broken by | What failed |
+| --- | --- | --- |
+| P1 · every drop-down on a 94% backing | `backing="panel"` removed (`components/dropdown.tsx`) | `dropdown-backing` all three forms |
+| P11 · the strip over the tabs | `<StatusBarStrip />` removed (`app/(tabs)/_layout.tsx`) | `tab-layout` "draws the status-bar strip 59 tall…" |
+| P2 · a timing, never a spring | `withTiming` swapped for `withSpring` (`components/nocturne/tab-bar.tsx`) | `tab-bar` "a new focus slides it with a 240-ms timing…" and the slide test |
+| P2 · the first layout latches | the first set animated too | `tab-bar` "the first layout sets the lens…", "a new row width…" |
+| P2 · Reduce Motion moves it at once | `!reduceMotion` removed | `tab-bar` "under Reduce Motion…" |
+| P2 · centred under its tab | `lensOffset` without the pad | `tab-bar` the three `lensOffset` rows and the lens tests |
+| P3 · the content limit by default | the default dropped (`components/text.tsx`) | `text` "Text follows the phone up to the content limit…" |
+| P3 · the caller's limit wins | the default spread after the props | `text` "the caller's limit wins" |
+| P3 · react-native's Text only in the wrapper | the import check not run (`scripts/audit-type.mjs`) | `audit-gates` "round 24 P3: Text or TextInput from react-native…" |
+| P5 · Back returns to the origin tab | the tab navigator's `navigate` removed (`app/(tabs)/activity/run.tsx`) | `real-router/run-in-activity` Home's run, the bell's and Settings' |
+| P5 · Activity's page under a run from elsewhere | `withAnchor` dropped (`components/notifications/inbox.tsx`) | `real-router/run-in-activity` "Settings › Notifications…" |
+| P5 · Home's run says where it came from | `returnTo: 'home'` dropped (`app/(tabs)/(home)/index.tsx`) | `real-router/run-in-activity` Home's run, `tab-screens` "opens Run detail…" |
+| P5 · re-tapping Activity stays | `POP_TO_TOP` returns to the origin too | `real-router/run-in-activity` "re-tapping Activity's tab…" |
+| P6 · the pair inside step 4 | the held step drawn without it (`app/(tabs)/activity/run.tsx`) | `invoice-processing-screens` the three P6 cases with buttons |
+| P6 · Deny is the danger pill | `variant="secondary"` (`components/runs/decision-buttons.tsx`) | `invoice-processing-screens` "…Deny the danger pill…", `tab-screens` "approves and denies…" |
+| P6 · the page reads again once saved | `detail.refresh()` dropped | `invoice-processing-screens` "…then reads the run again" |
+| P6 · the newest approval decides | the oldest kept (`jobApproval`, `lib/view/runs.ts`) | `invoice-processing-screens` "the newest pending approval…" |
+| P6 · a role not named is told who decides | the role check skipped | `invoice-processing-screens` "a role the approval does not name…" |
+| P7 · a decided card leaves | the removal never made (`app/(tabs)/activity/approvals.tsx`) | `presses-home-activity` P7 and decision cases, `tab-screens` approvals cases |
+| P7 · the last one decided → Activity | `dismissTo` dropped | `presses-home-activity` "deciding the only card…", `tab-screens` "counts down…" |
+| P7 · the pill follows the decision | the pill kept as listed | `presses-home-activity` "…never says Pending…", "a decided pill…" |
+| P7 · the callout icon centred | `marginTop: 1` | `presses-home-activity` "the warning callout's icon…" |
+| P8 · Clear all empties the inbox | `markInboxRead` sent in its place (`components/notifications/inbox.tsx`) | `presses-home-activity` the three Clear all cases |
+| P8 · refused, the rows come back | the restore dropped | `presses-home-activity` "Clear all refused…" |
+| P8 · the offer after the Face ID offer | `notifications: false` (`app/(auth)/faceid-offer.tsx`) | `faceid-offer` "then the notifications offer", `real-router/notifications-offer` "after the Face ID offer…" |
+| P8 · only where iOS can still ask | `!== 'denied'` for `=== 'ask'` (`hooks/use-push-registration.tsx`) | `notifications-offer` "iOS allows already", `real-router/notifications-offer` "iOS already allows…" |
+| P8 · Not now is kept | the offer's Not now a no-op (`app/(auth)/notifications-offer.tsx`) | `notifications-offer` "Not now is kept…", `real-router/notifications-offer` the first case |
+| P8 · a sign-in routes to the offer | the notifications step dropped (`lib/view/return-to.ts`) | `notifications-offer` the `nextAfterSignIn` table, `real-router/notifications-offer` |
+| P9 · no "After approval ·" | the prefix put back (`lib/view/runs.ts`) | `flows-view` "a row is a job…", `gate24-parity-activity` "a job held again…" |
+| P9 · approved says "Approved" | the old line put back | `flows-view` "is pending, approved…", `tab-screens` "leaves a decided held run…" |
+| P9 · a held step done once the job runs on | the held state kept | `build21-views` "an approved job…" (two), `invoice-processing-screens` "an approved job…" |
+| P10 · "Invoice i of n" | `documentOf` says Document (`lib/content/screen-states.ts`) | `build21-views` headings, `invoice-processing-screens` the document cases |
+| P10 · closed at first | `useState(true)` (`components/runs/document-card.tsx`) | `invoice-processing-screens` "each invoice is a closed drop-down…" |
+| P10 · Format from the file its source names | the first file taken (`formatFor`) | `build21-views` "opens with Document type and Format…", `invoice-processing-screens` the drop-down case |
+| P10 · `{vendor} · {total}` while closed | the type alone | `build21-views` "closed, a card says…", the drop-down case |
+| P12 · View package opens the package page | pushed to the run page (`app/(tabs)/activity/run.tsx`) | `invoice-processing-screens` "the run package replaces Download JSON…" |
+| P12 · Download PDF asks for the PDF | `xlsx` asked | `invoice-processing-screens` "run-download-pdf asks the platform…" |
+| P12 · the WebView draws the cached file | the signed link drawn (`app/(tabs)/activity/package.tsx`) | `package-screen` "prepares, asks for the PDF…" |
+| P12 · the cache is emptied on close | `forget()` dropped from the cleanup | `package-screen` "deletes the cached file…" |
+| P12 · busy twice says so | the busy state never chosen | `package-screen` "busy after the wait…" |
+| P12 · asked once more after a busy wait | the retry dropped (`lib/platform/runs.ts`) | `platform-request` "busy once…", `package-screen` "busy after the wait…" |
+| P12 · a 503 with its wait is busy | the 503 mapping off (`lib/platform/client.ts`) | `platform-request` "a 503 that states its wait…", "busy once…" |
+
+(Each run by the lane's bite script in the round's scratchpad, Node 22.23.2: broken, red — a test failed —
+the file restored sha256-equal, green.)
+
+### Round 24 — the review's ten findings (Round 17; 2026-10-20)
+
+The app lane's one review pass (FAIL, ten findings). The website's branch of the round is the reference
+for every rule the two clients share; the main session's decisions bind each fix.
+
+- **Step 4's words** (finding 1): `trackerSub` says "Denied" for a denied approval and "Waiting for
+  approval: {reason}" otherwise, as `web lib/run-progress.ts` does — ~~`HELD_DECISION_LINE`'s
+  "Approved" and "No longer awaiting approval" on the held step~~ (the list's line keeps them); the
+  fallback rows of a run of another version now get the decision too. Once the job runs on, the step
+  is done (P9, unchanged).
+- **Two approvals at one moment** (finding 6): `jobApproval`'s strict `>` — the first listed wins — is
+  now held by a test.
+- **The package's bound and format** (finding 2): `RUN_PACKAGE_MAXIMUM_BYTES` (25 MiB, 26,214,400
+  bytes — the platform's bound, the website's constant) and the format asked for, checked by
+  `requestRunPackageFile` before anything is saved (`RunPackageFileRefusedError`): View package then
+  says "Could not open the package. Try again." (the website's route's words for that case), each
+  download "Could not download. Try again.".
+- **The busy retry** (finding 3): `packageRetryWaitMs` ported rule for rule — any 503 is asked once
+  more, after its `retry-after` up to 10 s or 2 s when it names none; a longer wait is said at once
+  (~~only a 503 with `retry-after`, capped at 15 s~~). The package page says "Could not open the
+  package. Try again." for any 503 left (`packageNotOpened`; `PACKAGE_BUSY` renamed
+  `PACKAGE_NOT_OPENED`); the website's route now says the same words.
+- **One way to hand on a signed file** (finding 8): `lib/platform/signed-file.ts`, beside the
+  download it calls — `signedLink` (https only; ~~`usableLink`~~ and Data's own check folded in) and
+  `shareSignedFile` (iOS saves, shares, removes; Android opens) — used by `hooks/use-run-package.tsx`
+  and `app/(tabs)/settings/data.tsx`. A non-https export link now says "The link to the file cannot be
+  used." (~~"The export answered an unusable address."~~).
+- **Out-of-date words** (finding 9, in part): `invoice-processing-screens`' header strikes Download
+  JSON.
+- **The invoice card's three rules** (finding 4), now the website's (`snoopy/lib/run-documents.ts`): Format is
+  the platform's `RunFile.format` word shown as given (`formatLabel`, the app's content-type mapping,
+  deleted — it said JPEG and HEIC where the platform says JPG and HEIF); a `source.file` not among
+  the job's files falls back to the job's only file; with no seller the closed line is the total alone,
+  with neither no line (`summary` may be null; `DocumentCard` then draws the heading alone).
+- **Tests the review found missing** (findings 5 and 7): Clear all pressed again after a refusal sends
+  a new key (`notifications-clear-1`, then `-2`); the sign-in stack's strip is held by a
+  `tab-layout` case (59 tall, last, the page-colour backing; the router mock gains
+  `Stack.Protected`).
+- **Out-of-date words** (finding 9): a `presses-home-activity` title says Activity's stack (~~the
+  Home stack~~); DESIGN-CONTRACT's Notifications row strikes Mark all read's sentence and gains its
+  missing full stop.
+
+### Guards proved to bite, the review's findings
+
+(Run as the round's table above: broken, red, restored sha256-equal, green.)
+
+| Guard | Broken by | What failed |
+| --- | --- | --- |
+| Step 4 says only "Denied" or why it waits | the old `HELD_DECISION_LINE` line put back (`lib/view/runs.ts`) | `build21-views` step 4 approved, expired |
+| The fallback rows say "Denied" | the decision not passed to `reportedRows` | `build21-views` "the fallback rows…" |
+| The first listed of two at one moment | `>=` for `>` in `jobApproval` | `build21-views` "of two approvals asked at the same moment…" |
+| A package file within 25 MiB | the size check dropped (`lib/platform/runs.ts`) | `platform-request` "refuses a file over 25 MiB…", `package-screen` 26,214,401 bytes and the two download cases, `invoice-processing-screens` "Download Excel answered…" |
+| The format asked for | the format check dropped | `platform-request`, `package-screen` "not a PDF" and the three download cases, `invoice-processing-screens` |
+| A refused file says the website's words | `packageNotOpened` without the refusal | `package-screen` the two refused-file cases |
+| 2 s when no wait is named | no retry without `retry-after` | `platform-request` the table and "a 503 naming no wait…" |
+| No retry past 10 s | a 15 s cap | `platform-request` the table and "…one of 11 s is not" |
+| Any 503 is asked again | only `PlatformBusyError` retried | `platform-request` "a 503 naming no wait…" |
+| Any 503 left says so on the page | only `PlatformBusyError` mapped | `package-screen` "busy, then a 503 naming no wait…" |
+| https only | the check skipped (`lib/platform/signed-file.ts`) | `signed-file` both platforms and `signedLink` |
+| Removed once shared | the delete dropped | `signed-file`, `data-support-screens`, `package-screen`, `invoice-processing-screens` |
+| Android opens the link | iOS's path on Android | `signed-file` "on Android…", `data-support-screens` "on Android…" |
+| Data's export takes the helper | the call replaced (`app/(tabs)/settings/data.tsx`) | `data-support-screens` the three download cases |
+| The package's downloads take the helper | the call replaced (`hooks/use-run-package.tsx`) | `package-screen`, `invoice-processing-screens` the download cases |
+| Format falls back to the only file | the fallback kept for a document with no source only (`lib/view/documents.ts`) | `build21-views` "opens with Document type and Format…" |
+| Format is the platform's word | the content type's subtype shown in its place | `build21-views` "Format is the platform's word as given…" |
+| No seller: the total alone | the type put back before the total | `build21-views` "closed, a card says…", `invoice-processing-screens` "a closed invoice with no seller…" and "three receipts…" |
+| Neither: no closed line | the summary line always drawn (`components/runs/document-card.tsx`) | `invoice-processing-screens` "a closed invoice with no seller…" |
+| Clear all: a new key per press | a fixed `'notifications-clear-1'` (`components/notifications/inbox.tsx`) | `presses-home-activity` "Clear all pressed again after a refusal…" |
+| The strip over the sign-in stack | `<StatusBarStrip />` removed (`app/(auth)/_layout.tsx`) | `tab-layout` "the sign-in stack's layout…" |
+
+### Round 24 — the second review (Round 17; 2026-10-20)
+
+- **The package page's words for a bad link or a failed save** (finding 1): `SignedLinkUnusableError`
+  and `FileNotSavedError` (`lib/platform/problem.ts`, beside the platform's other errors, so a test
+  that mocks the client still has them) are thrown by `signedLink` and `downloadSignedFile`;
+  `packageNotOpened` takes both, so View package says the website's "Could not open the package. Try
+  again." for them as its route does (~~"The link to the file cannot be used." / "The file could not
+  be saved." under "Couldn't open the run package"~~). Settings › Data still says those two sentences,
+  now held word for word by `data-support-screens`.
+- **One place for the package's numbers** (finding 2): the retry wait and the 25 MiB bound are
+  README "Runtime architecture"'s; DESIGN-CONTRACT's Run package row says what a person sees and
+  points there.
+- **The one native download's callers** (finding 3): README and DESIGN-CONTRACT say
+  `downloadSignedFile` saves a signed file's link — the complete export, and the run package's PDF
+  and Excel (~~"the complete export's signed link … for the share sheet"~~, out of date since round 24).
+- **Rule 10 names the helper** (finding 4): `signedLink()` and `shareSignedFile()` in CLAUDE.md.
+- **The step spinner under Reduce Motion** (reported only; a round 23 flake): `useReducedMotion`
+  answers off until the system does, so the icon could start turning and then stop part-way — the
+  test's "0.4deg", and on a phone an icon left tilted. Under Reduce Motion the turn is now cancelled
+  and set to 0; a new case answers Reduce Motion late, after the icon has turned, and fails every
+  time without the fix (the old case failed 2 runs in 6).
+
+- **The drop-down was still see-through on the simulator** (the main session's simulator audit, the
+  owner's F1: "glass drop-down see-through on Home"): Home's workspace drop-down, iOS 26.1, dark and
+  light — Home's headline readable under the panel. Measured from the screenshots' pixels, the page
+  showed through at 2.9% (dark) and 5.6% (light): the 94% backing (S3) working as written, and not
+  enough over large text. Drawing the backing under the glass instead of inside it was tried and
+  changed nothing (2.9% both ways), so it was not kept. `GLASS_BACKING_ALPHA` is now 1 — opaque, as
+  the website's switcher panel is — for every drop-down and the status-bar strip; the glass stays as
+  the edge. The test now asks for opaque (~~0.9 or more~~); 8 Nocturne snapshots re-pinned, alpha only
+  (README's re-pin fact). The unit test had passed throughout — the simulator found it.
+
+- **The largest text size broke words and cut names** (the main session's simulator audit, all
+  four passes; the owner's F14: "not random ai slop"): Home's tiles "Succe/sses" and "Failure/s",
+  an Add a flow card "QuickBoo/ks.", the inbox's title "Notificat/ions", a Needs-review card's
+  "38m ago" pushed off the card, and the drop-downs' "Harbor…", "Organiz…", "All categ…" (a
+  232-pt panel at every size). P3 had said anything that clips is fixed in the component that
+  clips; these are: `ACCESSIBILITY_TEXT_SCALE` (×1.786, iOS's first accessibility size, from React
+  Native's `RCTAccessibilityManager`) and `useAccessibilityTextSize`; `StatTileRow` (Home's and a
+  flow's tiles; the two pages' copies of the row's style folded into it) stacks once a tile would be
+  narrower than `TILE_LEAST_WIDTH` (100 pt) × the text size (`tilesStack`, the row's measured width) —
+  the audit's xxxLarge pass found "Successe/s" in a 114-pt tile at ×1.353, below the accessibility
+  sizes, and the frozen StatCard is not touched (~~stacked at the accessibility sizes only~~); Add a flow's card
+  stacks; the inbox's Clear all goes under its title, whose title takes the chrome limit; the card's
+  name `flexShrink`s and its time does not; `placeDropdown`'s least width is 232 × the text size (up
+  to the content limit) and the rows wrap. Jest's default text size is now 1 (`test/jest-setup.js`;
+  React Native's mock answers 2, past the new threshold) and `setTextSize` (`test/render.tsx`) sets
+  another. No snapshot moved.
+
+### Guards proved to bite, the second review
+
+(Run as the round's tables above: broken, red, restored sha256-equal, green.)
+
+| Guard | Broken by | What failed |
+| --- | --- | --- |
+| A link that is not https says the website's words on the package page | `packageNotOpened` without `SignedLinkUnusableError` (`lib/platform/runs.ts`) | `package-screen` "a link that is not https…" |
+| A file not saved says the website's words on the package page | `packageNotOpened` without `FileNotSavedError` | `package-screen` "a file that could not be saved…" |
+| Settings › Data says "The link to the file cannot be used." | the sentence changed (`lib/platform/problem.ts`) | `data-support-screens` both platforms' http-link case |
+| The spinner stands upright under a late Reduce Motion | `if (reduceMotion) return;` put back (`app/(tabs)/activity/run.tsx`) | `invoice-processing-screens` "…answered on after it started turning…", 5 of 5 runs (fixed: 10 of 10 green) |
+| Every drop-down and the strip are opaque | `GLASS_BACKING_ALPHA` back to 0.94 (`constants/theme.ts`) | `dropdown-backing` all three forms |
+| Home's and a flow's tiles stack at an accessibility size | `StatTileRow` always a row | `accessibility-text-size` "one under another…" |
+| The tiles' width rule counts the text size | `tilesStack` without the size (`components/stat-tile-button.tsx`) | `accessibility-text-size` the measured table and both stacked cases |
+| The rule reads the row's measured width | `onLayout` ignored | `accessibility-text-size` both stacked cases |
+| A tile follows its row | the tile ignores the row's decision | `accessibility-text-size` both stacked cases |
+| Add a flow's card stacks | `cardStacked` dropped (`app/(tabs)/flows/add.tsx`) | `tab-screens` "a card at text size x3.571…" |
+| The inbox's Clear all goes under the title | Clear all always beside it (`components/notifications/inbox.tsx`) | `presses-home-activity` "the header at text size x3.571…" |
+| The inbox's title stops at the chrome limit | `maxFontSizeMultiplier` dropped | `presses-home-activity` both header cases |
+| A card's time keeps its place | the name's `flexShrink` dropped (`app/(tabs)/activity/approvals.tsx`) | `presses-home-activity` "a card's top line…" |
+| A drop-down's least width follows the text size | `least = MIN_WIDTH` (`components/dropdown.tsx`) | `round23` the placement table |
+| A drop-down's rows wrap | `numberOfLines={1}` back on the label | `dropdown-backing` "wrap a long name…" |
+| The threshold is Accessibility Medium itself | `>` for `>=` (`hooks/use-accessibility-text-size.ts`) | `accessibility-text-size` "at x1.786: stacked" |

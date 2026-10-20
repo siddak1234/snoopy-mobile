@@ -38,6 +38,20 @@ export function markInboxRead(
   ).then(changedInbox(workspaceId));
 }
 
+/**
+ * Empties the inbox — Clear all (round 24 P8; the owner's build 23 F6: "it
+ * should wipe the notifications"): every item it holds for this person, past
+ * the ones listed (S7), on every device. Answers the unread count after (0).
+ */
+export function clearInbox(workspaceId: string, idempotencyKey: string): Promise<{ unreadCount: number }> {
+  return platformOperation(`/v1/workspaces/${workspaceId}/notifications/clear`, ({ automations }, signal) =>
+    automations.POST('/v1/workspaces/{workspaceId}/notifications/clear', {
+      params: { path: { workspaceId }, header: { 'Idempotency-Key': idempotencyKey } },
+      signal,
+    }),
+  ).then(changedInbox(workspaceId));
+}
+
 /** Dismisses one item: it leaves the inbox, read, on every device. */
 export function dismissInboxItem(
   workspaceId: string,

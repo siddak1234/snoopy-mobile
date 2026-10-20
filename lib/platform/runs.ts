@@ -1,5 +1,6 @@
 import type { components } from '@/lib/generated/platform-contracts/automations';
 import { platformOperation } from './client';
+import { FileNotSavedError, PlatformBusyError, PlatformError, SignedLinkUnusableError } from './problem';
 import { invalidateShared, shared } from './snapshot';
 
 /**
@@ -239,20 +240,113 @@ export function readRun(workspaceId: string, runId: string): Promise<RunDetail> 
 }
 
 export type RunDocument = components['schemas']['RunDocument'];
-export type RunDocumentsFile = components['schemas']['RunDocumentsFile'];
+export type RunPackageFile = components['schemas']['RunPackageFile'];
+export type RunPackageFormat = RunPackageFile['format'];
 
 /**
- * One run's documents, as the JSON file the platform serves for keeping
- * (`readRunDocuments`, backend ADR-0039, BUILD-PLAN 25.4.28; Build 21's C2):
- * `{ runId, templateId, templateVersion, status, startedAt, endedAt,
- * documents }` — what "Download JSON" hands to the share sheet (A7). Read at the
- * press, never kept.
+ * The A8X run package as a file (round 24 P12; the owner's build 23 F16; backend
+ * ADR-0045): the PDF (cover, summary, one page per invoice, then the original
+ * pages) or the Excel workbook, built by the platform for the job and answered
+ * as a short-lived signed link — never bytes, never through the Edge. Times
+ * print in `timeZone`. ~~`readRunDocuments`, the JSON file "Download JSON"
+ * shared~~ until round 24 (the endpoint stays; the app no longer reads it).
  */
-export function readRunDocuments(workspaceId: string, runId: string): Promise<RunDocumentsFile> {
-  return platformOperation(`/v1/workspaces/${workspaceId}/runs/${runId}/documents`, ({ automations }, signal) =>
-    automations.GET('/v1/workspaces/{workspaceId}/runs/{runId}/documents', {
-      params: { path: { workspaceId, runId } },
+export function createRunPackageFile(
+  workspaceId: string,
+  runId: string,
+  format: RunPackageFormat,
+  idempotencyKey: string,
+  timeZone?: string,
+): Promise<RunPackageFile> {
+  return platformOperation(`/v1/workspaces/${workspaceId}/runs/${runId}/package`, ({ automations }, signal) =>
+    automations.POST('/v1/workspaces/{workspaceId}/runs/{runId}/package', {
+      params: { path: { workspaceId, runId }, header: { 'Idempotency-Key': idempotencyKey } },
+      body: timeZone ? { format, timeZone } : { format },
       signal,
     }),
+  );
+}
+
+/**
+ * The largest package file the app takes: the platform's own bound, 25 MiB
+ * (26,214,400 bytes) — the file store's ceiling, past which
+ * `createRunPackageFile` answers 422 `package_too_large` — so no file the
+ * platform built is refused; the website's `RUN_PACKAGE_MAXIMUM_BYTES`.
+ */
+export const RUN_PACKAGE_MAXIMUM_BYTES = 25 * 1024 * 1024;
+
+/**
+ * A package file answered in another format than the one asked for, or past
+ * `RUN_PACKAGE_MAXIMUM_BYTES`: refused before anything is downloaded, as the
+ * website's package route refuses it.
+ */
+export class RunPackageFileRefusedError extends Error {
+  constructor() {
+    super('The package file is not the one asked for.');
+    this.name = 'RunPackageFileRefusedError';
+  }
+}
+
+/** The longest `retry-after` a package request waits out before asking once more. */
+const PACKAGE_LONGEST_WAIT_SECONDS = 10;
+
+/**
+ * How long to wait before asking once more for a package the platform is too
+ * busy to build (503 `package_busy`): its `retry-after` (2 s when it names
+ * none), or `null` — not waited out, said at once — when that is over 10 s.
+ * The website's `packageRetryWaitMs` (`snoopy/lib/run-documents.ts`), rule
+ * for rule. ~~Only a 503 naming its wait, capped at 15 s~~ until the round's
+ * review.
+ */
+export function packageRetryWaitMs(retryAfterSeconds: number | undefined): number | null {
+  if (retryAfterSeconds === undefined) return 2_000;
+  return retryAfterSeconds <= PACKAGE_LONGEST_WAIT_SECONDS ? retryAfterSeconds * 1_000 : null;
+}
+
+/**
+ * `createRunPackageFile` as both screens ask it: a 503 is asked once more,
+ * with the same key, after `packageRetryWaitMs` (a `PlatformBusyError` names
+ * its wait; a plain 503 names none); busy again, a wait over 10 s, or any other
+ * refusal is thrown to the screen. The file answered must be the format asked
+ * for and within `RUN_PACKAGE_MAXIMUM_BYTES`, else `RunPackageFileRefusedError`.
+ * `sleep` is for tests.
+ */
+export async function requestRunPackageFile(
+  workspaceId: string,
+  runId: string,
+  format: RunPackageFormat,
+  idempotencyKey: string,
+  timeZone: string | undefined,
+  sleep: (ms: number) => Promise<void> = (ms) => new Promise((done) => setTimeout(done, ms)),
+): Promise<RunPackageFile> {
+  const ask = () => createRunPackageFile(workspaceId, runId, format, idempotencyKey, timeZone);
+  let file: RunPackageFile;
+  try {
+    file = await ask();
+  } catch (error) {
+    const wait =
+      error instanceof PlatformError && error.status === 503
+        ? packageRetryWaitMs(error instanceof PlatformBusyError ? error.retryAfterSeconds : undefined)
+        : null;
+    if (wait === null) throw error;
+    await sleep(wait);
+    file = await ask();
+  }
+  if (file.format !== format || file.sizeBytes > RUN_PACKAGE_MAXIMUM_BYTES) throw new RunPackageFileRefusedError();
+  return file;
+}
+
+/**
+ * Whether the package page says "Could not open the package. Try again." —
+ * still busy (any 503), the file refused, a link the app will not follow, or a
+ * file not saved: the website's package route says those words for each
+ * (`snoopy/app/account/runs/[runId]/package/file/route.ts`).
+ */
+export function packageNotOpened(error: unknown): boolean {
+  return (
+    error instanceof RunPackageFileRefusedError ||
+    error instanceof SignedLinkUnusableError ||
+    error instanceof FileNotSavedError ||
+    (error instanceof PlatformError && error.status === 503)
   );
 }

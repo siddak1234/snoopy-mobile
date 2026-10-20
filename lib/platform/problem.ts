@@ -70,6 +70,25 @@ export class PlatformRateLimitedError extends PlatformError {
 }
 
 /**
+ * The platform answered 503 and said when to ask again (`retry-after`): busy,
+ * not broken — the run package's `package_busy` (round 24 P12; backend
+ * ADR-0045: one build at a time per host). A subclass of `PlatformError`, so
+ * `status === 503` keeps working everywhere.
+ */
+export class PlatformBusyError extends PlatformError {
+  constructor(
+    message: string,
+    /** The wait the platform asked for, in seconds. */
+    public readonly retryAfterSeconds: number,
+    code?: string,
+    details?: Record<string, unknown>,
+  ) {
+    super(message, 503, code, details);
+    this.name = 'PlatformBusyError';
+  }
+}
+
+/**
  * Thrown when the app has no backend origin configured.
  *
  * Distinct from a failed request on purpose: an unconfigured client renders an
@@ -80,6 +99,30 @@ export class PlatformNotConfiguredError extends Error {
   constructor() {
     super('backendApiOrigin is not configured');
     this.name = 'PlatformNotConfiguredError';
+  }
+}
+
+/**
+ * A signed file's link the app will not follow — not https, or not an address
+ * (`signedLink`). Settings › Data says these words; the run package page says
+ * the website's "Could not open the package. Try again." (`packageNotOpened`).
+ */
+export class SignedLinkUnusableError extends Error {
+  constructor() {
+    super('The link to the file cannot be used.');
+    this.name = 'SignedLinkUnusableError';
+  }
+}
+
+/**
+ * A signed file the native download could not save, refused or lost
+ * (`downloadSignedFile`): said in words, never the store's own. Settings › Data
+ * says these words; the run package page says the website's (`packageNotOpened`).
+ */
+export class FileNotSavedError extends Error {
+  constructor() {
+    super('The file could not be saved.');
+    this.name = 'FileNotSavedError';
   }
 }
 

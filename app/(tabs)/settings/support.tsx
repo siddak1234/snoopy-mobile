@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { FileText, ShieldCheck } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BackCircle } from '@/components/nocturne/back-circle';
@@ -10,6 +10,7 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { TextField } from '@/components/nocturne/text-field';
 import { SettingsRow } from '@/components/settings/settings-row';
+import { Text } from '@/components/text';
 import { em, fonts, layout, status, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { refusalMessage } from '@/lib/content/refusals';

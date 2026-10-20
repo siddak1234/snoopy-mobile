@@ -51,7 +51,8 @@ The individual architecture gates are:
 - `audit:type`: no font size outside the type scale — every `fontSize`,
   `lineHeight` and `em()` size is a step of `typeScale` in
   `constants/theme.ts`, followed through a `const`, a default or a local table
-  of sizes (24.12).
+  of sizes (24.12); and no `Text` or `TextInput` imported from react-native
+  outside `components/text.tsx`, the text-size limit (round 24 P3).
 - `audit:vocabulary`: no copy says "project" or "automation" — the app says
   team and flow; the code keeps the contract's names (24.11.7).
 - `audit:haptics`: every press ticks through `components/pressable.tsx` (build
@@ -109,9 +110,17 @@ components in dark and light palettes. Do not update those snapshots unless a
 visual change is explicitly authorized. Each authorized re-pin is recorded in
 `DESIGN-GAPS.md`: the owner's bigger type (decision 11, 2026-10-02, "whole app —
 easy to read"), re-pinned in build 10 (24.12) — 48 of the 64 Nocturne entries and
-10 of the 14 in `screen-state.test.tsx`; the other 20 set no font size — and
+10 of the 14 in `screen-state.test.tsx`; the other 20 set no font size —
 round 23's Liquid Glass (the owner's build 22 items 5–6: the tab bar, the back
-circle and the screen states that draw it; "Round 23 — build 22's feedback").
+circle and the screen states that draw it; "Round 23 — build 22's feedback"),
+and round 24's text-size limit (the owner's build 23 F14: every text gains
+`maxFontSizeMultiplier`, a fixed height that holds text becomes `minHeight`) —
+50 of the 66 Nocturne entries, 10 of the 14 screen states and both connection
+rows, props only ("Round 24 — build 23's feedback") — and round 24's opaque
+drop-down backing (the owner's build 23 F1, found see-through on the simulator):
+8 Nocturne entries, the backed panel and the status-bar strip in both palettes
+with and without Liquid Glass, `backgroundColor` alpha 0.94 → 1 only ("Round 24
+— the second review").
 
 CI runs lint, typecheck, Jest, all architecture/dependency gates (the docs
 checks among them, on the PR's whole range: `fetch-depth: 0` and
@@ -286,9 +295,9 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   signed out. Its one raw `fetch` is `putFileToSignedUrl`, the credential-less
   PUT of a file's bytes to the URL the platform signed; `audit:platform` admits
   exactly that one. Since 24.12 its one native download is
-  `downloadSignedFile`, the credential-less save of the complete export's
-  signed link into the app's cache, which iOS then hands to the share sheet;
-  `audit:platform` admits exactly one `downloadFileAsync(`, there.
+  `downloadSignedFile`, the credential-less save of a signed file's link into
+  the app's cache (the complete export; the run package's PDF and Excel since
+  round 24); `audit:platform` admits exactly one `downloadFileAsync(`, there.
 - `lib/platform/*.ts` exposes typed reads and mutations. Screens do not call a
   network primitive.
 - `lib/platform/session-store.ts` stores access/refresh credentials only in
@@ -309,14 +318,37 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   (`linkTargetOf`; `app/+native-intent.tsx` sends both paths to the splash when
   they start the app, and leaves the open screen when it is already open;
   `app.config.js` adds the two Android path prefixes, iOS's `applinks` claim
-  covers them); the inbox's card is the only ask. Android and a
-  simulator register nothing. The library's own request to Expo's token service
+  covers them); the inbox's card and, once after a sign-in, the notifications
+  offer (`app/(auth)/notifications-offer.tsx`, round 24 P8) are the only asks.
+  `lib/platform/notifications.ts` reads the inbox, marks rows read, dismisses
+  one and — since round 24 — empties it (`clearInbox`,
+  `POST …/notifications/clear`, Clear all). Android and a simulator register
+  nothing. The library's own request to Expo's token service
   (`getExpoPushTokenAsync`, since build 11, D8) is the transport's third
   credential-less exception, in no file of this repository, which
   `audit:platform` does not see because it reads this repository's source. No
   session credential goes with it, and the token it answers reaches the
   platform only through `lib/platform/devices.ts`, in the
   `PUT /v1/session/devices` body — never a log, a URL or the enclave.
+- The A8X run package (round 24 P12; backend ADR-0045): `lib/platform/runs.ts`
+  `createRunPackageFile` (`POST …/runs/{runId}/package`) answers a signed link,
+  never bytes; `requestRunPackageFile` asks once more after any 503, waiting
+  `packageRetryWaitMs` — its `retry-after` up to 10 s, 2 s when it names none,
+  no retry past 10 s (the website's rule; a 503 with `retry-after` is
+  `PlatformBusyError` in the transport, `lib/platform/client.ts`, still a 503) —
+  and refuses a file in another format than asked or over
+  `RUN_PACKAGE_MAXIMUM_BYTES` (25 MiB, the platform's bound) with
+  `RunPackageFileRefusedError`. The file is saved through `downloadSignedFile`.
+  A link that is not https (`SignedLinkUnusableError`) or a file not saved
+  (`FileNotSavedError`, both `lib/platform/problem.ts`) is said in those words
+  on Settings › Data and as the website's "Could not open the package. Try
+  again." on the package page (`packageNotOpened`). `lib/platform/signed-file.ts` holds the one
+  way a signed file is handed on, for the run package's downloads and Settings ›
+  Data's export alike: `signedLink` (https only) and `shareSignedFile` (iOS
+  saves, shares and removes it; Android opens the link). The package page draws
+  the saved PDF in `react-native-webview` (13.15.0, MIT, the SDK 54 pin; a new
+  native module, so build 24 is a new build): the cached file only, its folder
+  the only one it may read — it loads nothing over the network.
 - Liquid Glass (round 23, A3): `expo-glass-effect` at the SDK 54 pin, drawn
   only through `components/glass-surface.tsx` — the system's glass on iOS 26,
   `expo-blur` under a tint below it, the opaque card on Android — on the tab

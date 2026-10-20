@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { Text } from '@/components/text';
 import { fonts, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { IconTile } from '@/components/nocturne/icon-tile';

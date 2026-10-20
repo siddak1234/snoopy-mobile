@@ -1,7 +1,8 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
-import { fonts, status, typeScale, withAlpha } from '@/constants/theme';
+import { Text } from '@/components/text';
+import { fontScaleLimit, fonts, status, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { StatusPillLabel } from '@/lib/view/status';
 
@@ -50,6 +51,9 @@ export function StatusPill({ label }: { label: StatusPillLabel }) {
       bg: withAlpha(palette.accent, 0.12),
       border: palette.accentRamp[700],
     },
+    // A decided approval's pill while its card leaves (round 24 P7): never "Pending" beside a decision.
+    Approved: { color: status.ok, bg: status.okBg, border: status.okBorder },
+    Denied: { color: status.err, bg: status.errBg, border: status.errBorder },
     'Past due': { color: status.warnText, bg: status.warnBg, border: status.warnBorder },
     Incomplete: { color: status.warnText, bg: status.warnBg, border: status.warnBorder },
   } as const;
@@ -64,7 +68,12 @@ export function StatusPill({ label }: { label: StatusPillLabel }) {
         borderWidth: 1,
         borderColor: t.border,
       }}>
-      <Text style={{ fontFamily: fonts.medium, fontSize: typeScale.caption.fontSize, color: t.color }}>{label}</Text>
+      <Text
+        numberOfLines={1}
+        maxFontSizeMultiplier={fontScaleLimit.chrome}
+        style={{ fontFamily: fonts.medium, fontSize: typeScale.caption.fontSize, color: t.color }}>
+        {label}
+      </Text>
     </View>
   );
 }

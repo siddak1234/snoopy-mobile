@@ -2,7 +2,7 @@ import { File, Paths } from 'expo-file-system';
 import { useRouter } from 'expo-router';
 import { DownloadSimple, Export } from 'phosphor-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { Linking, Platform, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BackCircle } from '@/components/nocturne/back-circle';
@@ -10,6 +10,7 @@ import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
+import { Text } from '@/components/text';
 import { em, fonts, layout, status, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { busyBody, useWorkspaceResource } from '@/hooks/use-resource';
@@ -17,7 +18,6 @@ import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
 import { errorTitleFor } from '@/lib/content/screen-states';
-import { downloadSignedFile } from '@/lib/platform/client';
 import {
   isPartialExport,
   readBoundedExport,
@@ -26,6 +26,7 @@ import {
   type ExportJob,
   type WorkspaceExport,
 } from '@/lib/platform/exports';
+import { shareSignedFile } from '@/lib/platform/signed-file';
 import { readWorkspaces } from '@/lib/platform/workspaces';
 import { administers } from '@/lib/view/roles';
 
@@ -170,18 +171,8 @@ export default function DataExportScreen() {
         setJob(fresh);
         const file = fresh.file;
         if (!file?.downloadUrl) return;
-        if (new URL(file.downloadUrl).protocol !== 'https:') throw new Error('The export answered an unusable address.');
-        if (Platform.OS !== 'ios') {
-          await Linking.openURL(file.downloadUrl);
-          return;
-        }
-        // Saved in the app's cache, handed to the share sheet, removed once shared.
-        const saved = await downloadSignedFile(file.downloadUrl, file.filename);
-        try {
-          await Share.share({ url: saved.uri });
-        } finally {
-          if (saved.exists) saved.delete();
-        }
+        // iOS: saved in the app's cache, handed to the share sheet, removed once shared; Android: the link opened.
+        await shareSignedFile({ downloadUrl: file.downloadUrl, filename: file.filename });
       },
       'The file could not be saved.',
     );

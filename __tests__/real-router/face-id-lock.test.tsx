@@ -256,7 +256,7 @@ describe('the Face ID lock gates the session (the build 13 review)', () => {
     });
 
     expect(Notifications.getLastNotificationResponseAsync).toHaveBeenCalled();
-    expect(view.getSegments()).toEqual(['(tabs)', '(home)', 'run']);
+    expect(view.getSegments()).toEqual(['(tabs)', 'activity', 'run']);
     expect(unhandled).toEqual([]);
   });
 });

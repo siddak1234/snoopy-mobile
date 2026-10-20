@@ -75,11 +75,13 @@
 - `/faceid-offer`: [app/(auth)/faceid-offer.tsx](../app/(auth)/faceid-offer.tsx)
 - `/faceid`: [app/(auth)/faceid.tsx](../app/(auth)/faceid.tsx)
 - `/login`: [app/(auth)/login.tsx](../app/(auth)/login.tsx)
+- `/notifications-offer`: [app/(auth)/notifications-offer.tsx](../app/(auth)/notifications-offer.tsx)
 - `/`: [app/(tabs)/(home)/index.tsx](../app/(tabs)/(home)/index.tsx)
 - `/notifications`: [app/(tabs)/(home)/notifications.tsx](../app/(tabs)/(home)/notifications.tsx)
-- `/run`: [app/(tabs)/(home)/run.tsx](../app/(tabs)/(home)/run.tsx)
 - `/activity/approvals`: [app/(tabs)/activity/approvals.tsx](../app/(tabs)/activity/approvals.tsx)
 - `/activity`: [app/(tabs)/activity/index.tsx](../app/(tabs)/activity/index.tsx)
+- `/activity/package`: [app/(tabs)/activity/package.tsx](../app/(tabs)/activity/package.tsx)
+- `/activity/run`: [app/(tabs)/activity/run.tsx](../app/(tabs)/activity/run.tsx)
 - `/flows/add`: [app/(tabs)/flows/add.tsx](../app/(tabs)/flows/add.tsx)
 - `/flows/archived`: [app/(tabs)/flows/archived.tsx](../app/(tabs)/flows/archived.tsx)
 - `/flows/detail`: [app/(tabs)/flows/detail.tsx](../app/(tabs)/flows/detail.tsx)
@@ -96,7 +98,6 @@
 - `/settings`: [app/(tabs)/settings/index.tsx](../app/(tabs)/settings/index.tsx)
 - `/settings/notifications`: [app/(tabs)/settings/notifications.tsx](../app/(tabs)/settings/notifications.tsx)
 - `/settings/organization`: [app/(tabs)/settings/organization.tsx](../app/(tabs)/settings/organization.tsx)
-- `/settings/run`: [app/(tabs)/settings/run.tsx](../app/(tabs)/settings/run.tsx)
 - `/settings/support`: [app/(tabs)/settings/support.tsx](../app/(tabs)/settings/support.tsx)
 - `/settings/team`: [app/(tabs)/settings/team.tsx](../app/(tabs)/settings/team.tsx)
 - `/settings/teams`: [app/(tabs)/settings/teams.tsx](../app/(tabs)/settings/teams.tsx)
@@ -128,9 +129,9 @@
 
 ### Tests
 
-- `__tests__/`: account, android, app, audit, auth, automation, billing, build13, build14, build21, build22, components, connection, connections, cover, data, deep, deletion, dialog, doc, faceid, flows, gate24, identity, invoice, kit, native, nocturne, organization, override, paging, parity, pipeline, platform, pressable, presses, published, push, removed, repo, return, round23, run, scope, screen, select, session, settings, setup, shared, sign, snapshot, splash, start, tab, teams, theme, timed, upload, use, vendor, verify, view, workspace
+- `__tests__/`: accessibility, account, android, app, audit, auth, automation, billing, build13, build14, build21, build22, components, connection, connections, cover, data, deep, deletion, dialog, doc, dropdown, faceid, flows, gate24, identity, invoice, kit, native, nocturne, notifications, organization, override, package, paging, parity, pipeline, platform, pressable, presses, published, push, removed, repo, return, round23, run, scope, screen, select, session, settings, setup, shared, sign, signed, snapshot, splash, start, tab, teams, text, theme, timed, upload, use, vendor, verify, view, workspace
 - `__tests__/__snapshots__/`: connection, nocturne, screen
-- `__tests__/real-router/`: activity, app, appearance, connect, face, held, home, session, sign
+- `__tests__/real-router/`: activity, app, appearance, connect, face, held, home, notifications, run, session, sign
 
 ## Skills, agents and hooks
 
@@ -149,7 +150,6 @@
 ### Under 100 KB
 
 - [CLAUDE.md](../CLAUDE.md) (doc)
-- [DESIGN-CONTRACT.md](../DESIGN-CONTRACT.md) (doc)
 - [README.md](../README.md) (doc)
 - [ROUND-7.5-OBSERVATIONS.md](../ROUND-7.5-OBSERVATIONS.md) (archive)
 - [docs/records/round-record.md](records/round-record.md) (current)
@@ -157,6 +157,7 @@
 
 ### 100 KB to 1 MB
 
+- [DESIGN-CONTRACT.md](../DESIGN-CONTRACT.md) (doc)
 - [DESIGN-GAPS.archive.md](../DESIGN-GAPS.archive.md) (archive)
 - [DESIGN-GAPS.md](../DESIGN-GAPS.md) (current)
 

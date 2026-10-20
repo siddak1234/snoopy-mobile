@@ -94,6 +94,10 @@ describe('placeDropdown (A2): where a panel goes', () => {
   it('never past a 16-pt gutter, never wider than the screen less its gutters', () => {
     expect(placeDropdown({ x: 380, y: 100, width: 10, height: 30 }, phone, 'start').left).toBe(402 - 16 - 232);
     expect(placeDropdown({ x: 0, y: 100, width: 600, height: 30 }, phone).width).toBe(402 - 32);
+    // Round 24's simulator audit: the least width follows the text size, up to the content limit, never under 232.
+    expect(placeDropdown({ x: 20, y: 100, width: 120, height: 34 }, { ...phone, fontScale: 1.353 }).width).toBeCloseTo(232 * 1.353);
+    expect(placeDropdown({ x: 20, y: 100, width: 120, height: 34 }, { ...phone, fontScale: 3.571 }).width).toBe(402 - 32);
+    expect(placeDropdown({ x: 20, y: 100, width: 120, height: 34 }, { ...phone, fontScale: 0.823 }).width).toBe(232);
   });
 
   it('above when fewer than 240 pt are left below and more above; its height the room less 16', () => {
@@ -242,9 +246,9 @@ describe('links (A5): the router starts at the splash on a run or approval link,
   const WS = '5d0f3a8e-2c41-4b7a-9e15-0a6c3f2b7d94';
 
   it.each([
-    [`https://${HOST}/runs/run-7?workspace=${WS}`, { target: { pathname: '/(tabs)/(home)/run', params: { runId: 'run-7' } }, workspaceId: WS }],
+    [`https://${HOST}/runs/run-7?workspace=${WS}`, { target: { pathname: '/(tabs)/activity/run', params: { runId: 'run-7' } }, workspaceId: WS }],
     [`https://${HOST}/approvals/apr-1?workspace=${WS}`, { target: '/(tabs)/activity/approvals', workspaceId: WS }],
-    [`https://${HOST}/runs/run-7`, { target: { pathname: '/(tabs)/(home)/run', params: { runId: 'run-7' } }, workspaceId: undefined }],
+    [`https://${HOST}/runs/run-7`, { target: { pathname: '/(tabs)/activity/run', params: { runId: 'run-7' } }, workspaceId: undefined }],
     [`https://www.autom8x.ai/runs/run-7?workspace=${WS}`, null],
     [`http://${HOST}/runs/run-7`, null],
     [`https://${HOST}/runs/..%2Fsettings`, null],
