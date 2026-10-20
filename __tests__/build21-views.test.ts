@@ -1,3 +1,4 @@
+import type { Approval, Run } from '@/lib/platform/automations';
 import type { RunDocument } from '@/lib/platform/runs';
 import {
   documentDate,
@@ -8,7 +9,7 @@ import {
   toDocumentCard,
   toDocumentCards,
 } from '@/lib/view/documents';
-import { groupState, runLabel, stepStates, toRunStats, toTracker, type TrackerState } from '@/lib/view/runs';
+import { groupState, heldDecision, jobApproval, runLabel, stepStates, toRunStats, toTracker, type TrackerState } from '@/lib/view/runs';
 import { invoiceProcessingEntry, invoiceProcessingV3Entry } from '@/test/platform';
 
 /**
@@ -172,6 +173,58 @@ describe('the tracker: every step from the start, and where the run is (spec A7;
       ['2 · Step 2', 'Done · 01:01'],
       ['3 · Step 3', 'Working…'],
     ]);
+  });
+});
+
+describe("step 4's words, the website's (round 24 P6; the review's first and sixth findings)", () => {
+  const JOB = '793eef82-102d-81be-a2d3-9e8d4e2b2c36';
+  const held = { id: JOB, status: 'held' } as Run;
+  const approval = (status: Approval['status'], createdAt = at(30)): Approval => ({
+    id: `ap-${status}`,
+    runId: JOB,
+    workspaceId: '5e4d1b90-2c77-4f16-8a03-9d61e4b7c520',
+    subscriptionId: 'invoice',
+    stepId: 'ask-approval',
+    status,
+    reason: 'Document 1: needs a look.',
+    eligibleRoles: ['owner'],
+    createdAt,
+    expiresAt: at(59),
+  });
+  const reported: Step[] = [
+    ...steps(['receive', 'ok', 32], ['extract', 'ok', 33]),
+    { stepId: 'ask-approval', outcome: 'held', summary: 'held said', occurredAt: at(34), heldReason: 'Document 1: needs a look.' },
+  ];
+  const stepFour = (decision: ReturnType<typeof heldDecision>) =>
+    toTracker(reported, V3.pipeline, V3.groups, { status: 'held' }, clock, V3.pipeline, { decision })[3]!;
+
+  it.each<[Approval['status'], string]>([
+    ['pending', 'Waiting for approval: Document 1: needs a look.'],
+    // Decided while the job still reads held: it waits on, as the website says — never "Approved".
+    ['approved', 'Waiting for approval: Document 1: needs a look.'],
+    // Ran out: never "No longer awaiting approval" on the step.
+    ['expired', 'Waiting for approval: Document 1: needs a look.'],
+    ['rejected', 'Denied'],
+  ])('a held job whose approval is %s: step 4 says "%s"', (status, words) => {
+    const row = stepFour(heldDecision(held, [approval(status)]));
+    expect([row.title, row.state, row.sub]).toEqual(['4 · Done', 'held', words]);
+  });
+
+  it('the fallback rows (a run of another version) say "Denied" too, and why it waits until then', () => {
+    const fallback = (decision: ReturnType<typeof heldDecision>) =>
+      toTracker(reported, undefined, undefined, { status: 'held' }, clock, V3.pipeline, { decision }).at(-1)!;
+    expect(fallback('rejected')).toMatchObject({ state: 'held', sub: 'Denied' });
+    expect(fallback('closed')).toMatchObject({ state: 'held', sub: 'Waiting for approval: Document 1: needs a look.' });
+  });
+
+  it('of two approvals asked at the same moment, the first listed decides: pending, so step 4 waits with its buttons', () => {
+    const same = at(30);
+    const approvals = [approval('pending', same), approval('rejected', same)];
+    expect(jobApproval(held, approvals)?.status).toBe('pending');
+    expect(heldDecision(held, approvals)).toBe('pending');
+    expect(stepFour(heldDecision(held, approvals)).sub).toBe('Waiting for approval: Document 1: needs a look.');
+    // A later one still wins.
+    expect(heldDecision(held, [approval('pending', same), approval('rejected', at(31))])).toBe('rejected');
   });
 });
 

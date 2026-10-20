@@ -2072,3 +2072,26 @@ own (its tab bar, its text sizes, its status bar).
 
 (Each run by the lane's bite script in the round's scratchpad, Node 22.23.2: broken, red — a test failed —
 the file restored sha256-equal, green.)
+
+### Round 24 — the review's ten findings (Round 17; 2026-10-20)
+
+The app lane's one review pass (FAIL, ten findings). The website's branch of the round is the reference
+for every rule the two clients share; the main session's decisions bind each fix.
+
+- **Step 4's words** (finding 1): `trackerSub` says "Denied" for a denied approval and "Waiting for
+  approval: {reason}" otherwise, as `web lib/run-progress.ts` does — ~~`HELD_DECISION_LINE`'s
+  "Approved" and "No longer awaiting approval" on the held step~~ (the list's line keeps them); the
+  fallback rows of a run of another version now get the decision too. Once the job runs on, the step
+  is done (P9, unchanged).
+- **Two approvals at one moment** (finding 6): `jobApproval`'s strict `>` — the first listed wins — is
+  now held by a test.
+
+### Guards proved to bite, the review's findings
+
+(Run as the round's table above: broken, red, restored sha256-equal, green.)
+
+| Guard | Broken by | What failed |
+| --- | --- | --- |
+| Step 4 says only "Denied" or why it waits | the old `HELD_DECISION_LINE` line put back (`lib/view/runs.ts`) | `build21-views` step 4 approved, expired |
+| The fallback rows say "Denied" | the decision not passed to `reportedRows` | `build21-views` "the fallback rows…" |
+| The first listed of two at one moment | `>=` for `>` in `jobApproval` | `build21-views` "of two approvals asked at the same moment…" |

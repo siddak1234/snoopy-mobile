@@ -555,9 +555,11 @@ function trackerSub(
   if (state === 'skipped') return STEP_SKIPPED;
   if (state === 'stopped') return STEP_STOPPED;
   if (state === 'failed') return run.failureReason ?? STEP_FAILED;
-  // A held step says why while it waits, and how it was decided once it was (round 24 P6: "Denied").
-  if (state === 'held' && decision && decision !== 'pending' && decision !== 'unknown') return HELD_DECISION_LINE[decision];
-  if (state === 'held') return stepHeld(steps.find((step) => step.outcome === 'held')?.heldReason);
+  // A held step says why it waits until its approval is denied, then "Denied"
+  // (round 24 P6) — the website's words (`web lib/run-progress.ts`); once the job
+  // runs on, the step is done. ~~"Approved", "No longer awaiting approval"~~ on
+  // the step until the round's review.
+  if (state === 'held') return decision === 'rejected' ? STEP_DENIED : stepHeld(steps.find((step) => step.outcome === 'held')?.heldReason);
   const last = steps.reduce<ReportedStep | undefined>(
     (latest, step) => (!latest || Date.parse(step.occurredAt) >= Date.parse(latest.occurredAt) ? step : latest),
     undefined,
@@ -651,7 +653,7 @@ export function toTracker(
 ): TrackerRow[] {
   const known = new Set((declared ?? []).map((step) => step.id));
   const covered = declared && declared.length > 0 && steps.every((step) => known.has(step.stepId));
-  if (!covered) return reportedRows(steps, titles, run, clock);
+  if (!covered) return reportedRows(steps, titles, run, clock, context.decision);
   const pipeline = declared!;
   const states = stepStates(pipeline, steps, run);
   const row = (id: string, title: string, members: number[]): TrackerRow => {
@@ -683,6 +685,7 @@ function reportedRows(
   declared: readonly { id: string; title: string }[] | undefined,
   run: RunState,
   clock: (iso: string) => string,
+  decision?: HeldDecision | null,
 ): TrackerRow[] {
   const titles = new Map((declared ?? []).map((step) => [step.id, step.title]));
   const ordered = [...steps].sort((a, b) => Date.parse(a.occurredAt) - Date.parse(b.occurredAt));
@@ -694,7 +697,7 @@ function reportedRows(
       title: `${index + 1} · ${titles.get(step.stepId) ?? `Step ${index + 1}`}`,
       state,
       ...TRACKER_LOOK[state],
-      sub: trackerSub(state, [step], run, clock),
+      sub: trackerSub(state, [step], run, clock, decision),
     };
   });
   if (run.status === 'pending' || run.status === 'running') {
