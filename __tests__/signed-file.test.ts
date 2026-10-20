@@ -1,6 +1,6 @@
 import { Linking, Platform, Share } from 'react-native';
 
-import { SIGNED_LINK_UNUSABLE, shareSignedFile, signedLink } from '@/lib/platform/signed-file';
+import { shareSignedFile, signedLink } from '@/lib/platform/signed-file';
 
 jest.mock('@/lib/platform/client', () => ({
   downloadSignedFile: jest.fn(),
@@ -60,7 +60,7 @@ describe('shareSignedFile', () => {
 
   it.each(['ios', 'android'] as const)('on %s refuses a link that is not https: nothing opened, nothing saved', async (platform) => {
     Platform.OS = platform;
-    await expect(shareSignedFile({ ...FILE, downloadUrl: 'http://files.example.test/run.pdf' })).rejects.toThrow(SIGNED_LINK_UNUSABLE);
+    await expect(shareSignedFile({ ...FILE, downloadUrl: 'http://files.example.test/run.pdf' })).rejects.toThrow('The link to the file cannot be used.');
     expect(openURL).not.toHaveBeenCalled();
     expect(downloadSignedFile).not.toHaveBeenCalled();
   });
@@ -70,7 +70,7 @@ describe('signedLink', () => {
   it('passes an https link as it is and refuses any other, or no address at all', () => {
     expect(signedLink(FILE.downloadUrl)).toBe(FILE.downloadUrl);
     for (const url of ['http://files.example.test/a', 'file:///cache/a', 'javascript:alert(1)', 'not a link', '']) {
-      expect(() => signedLink(url)).toThrow(SIGNED_LINK_UNUSABLE);
+      expect(() => signedLink(url)).toThrow('The link to the file cannot be used.');
     }
   });
 });

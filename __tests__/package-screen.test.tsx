@@ -3,7 +3,7 @@ import React from 'react';
 import { Platform, Share } from 'react-native';
 
 import RunPackageScreen from '@/app/(tabs)/activity/package';
-import { PlatformBusyError, PlatformError } from '@/lib/platform/problem';
+import { FileNotSavedError, PlatformBusyError, PlatformError } from '@/lib/platform/problem';
 import { TEST_WORKSPACE, signedInSession } from '@/test/platform';
 import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
 
@@ -120,6 +120,26 @@ describe('the run package page', () => {
     await renderWithProviders(<RunPackageScreen />, signedInSession);
     expect(await screen.findByText('Could not open the package. Try again.')).toBeTruthy();
     expect(downloadSignedFile).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('package-webview')).toBeNull();
+    await fireEvent.press(screen.getByText('Retry'));
+    expect(await screen.findByTestId('package-webview')).toBeTruthy();
+  });
+
+  it('a link that is not https: the website\'s words, nothing saved — Retry asks again and draws it', async () => {
+    answers.push(() => ({ ...link('pdf'), downloadUrl: 'http://files.example.test/run.pdf?sig=1' }));
+    await renderWithProviders(<RunPackageScreen />, signedInSession);
+    expect(await screen.findByText('Could not open the package. Try again.')).toBeTruthy();
+    expect(screen.queryByText('The link to the file cannot be used.')).toBeNull();
+    expect(downloadSignedFile).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByText('Retry'));
+    expect(await screen.findByTestId('package-webview')).toBeTruthy();
+  });
+
+  it('a file that could not be saved: the website\'s words — Retry saves it and draws it', async () => {
+    downloadSignedFile.mockRejectedValueOnce(new FileNotSavedError());
+    await renderWithProviders(<RunPackageScreen />, signedInSession);
+    expect(await screen.findByText('Could not open the package. Try again.')).toBeTruthy();
+    expect(screen.queryByText('The file could not be saved.')).toBeNull();
     expect(screen.queryByTestId('package-webview')).toBeNull();
     await fireEvent.press(screen.getByText('Retry'));
     expect(await screen.findByTestId('package-webview')).toBeTruthy();

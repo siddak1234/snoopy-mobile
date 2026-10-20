@@ -102,6 +102,30 @@ export class PlatformNotConfiguredError extends Error {
   }
 }
 
+/**
+ * A signed file's link the app will not follow — not https, or not an address
+ * (`signedLink`). Settings › Data says these words; the run package page says
+ * the website's "Could not open the package. Try again." (`packageNotOpened`).
+ */
+export class SignedLinkUnusableError extends Error {
+  constructor() {
+    super('The link to the file cannot be used.');
+    this.name = 'SignedLinkUnusableError';
+  }
+}
+
+/**
+ * A signed file the native download could not save, refused or lost
+ * (`downloadSignedFile`): said in words, never the store's own. Settings › Data
+ * says these words; the run package page says the website's (`packageNotOpened`).
+ */
+export class FileNotSavedError extends Error {
+  constructor() {
+    super('The file could not be saved.');
+    this.name = 'FileNotSavedError';
+  }
+}
+
 export type Problem = {
   title?: string;
   code?: string;

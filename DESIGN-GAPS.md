@@ -2142,3 +2142,36 @@ for every rule the two clients share; the main session's decisions bind each fix
 | Neither: no closed line | the summary line always drawn (`components/runs/document-card.tsx`) | `invoice-processing-screens` "a closed invoice with no seller…" |
 | Clear all: a new key per press | a fixed `'notifications-clear-1'` (`components/notifications/inbox.tsx`) | `presses-home-activity` "Clear all pressed again after a refusal…" |
 | The strip over the sign-in stack | `<StatusBarStrip />` removed (`app/(auth)/_layout.tsx`) | `tab-layout` "the sign-in stack's layout…" |
+
+### Round 24 — the second review (Round 17; 2026-10-20)
+
+- **The package page's words for a bad link or a failed save** (finding 1): `SignedLinkUnusableError`
+  and `FileNotSavedError` (`lib/platform/problem.ts`, beside the platform's other errors, so a test
+  that mocks the client still has them) are thrown by `signedLink` and `downloadSignedFile`;
+  `packageNotOpened` takes both, so View package says the website's "Could not open the package. Try
+  again." for them as its route does (~~"The link to the file cannot be used." / "The file could not
+  be saved." under "Couldn't open the run package"~~). Settings › Data still says those two sentences,
+  now held word for word by `data-support-screens`.
+- **One place for the package's numbers** (finding 2): the retry wait and the 25 MiB bound are
+  README "Runtime architecture"'s; DESIGN-CONTRACT's Run package row says what a person sees and
+  points there.
+- **The one native download's callers** (finding 3): README and DESIGN-CONTRACT say
+  `downloadSignedFile` saves a signed file's link — the complete export, and the run package's PDF
+  and Excel (~~"the complete export's signed link … for the share sheet"~~, out of date since round 24).
+- **Rule 10 names the helper** (finding 4): `signedLink()` and `shareSignedFile()` in CLAUDE.md.
+- **The step spinner under Reduce Motion** (reported only; a round 23 flake): `useReducedMotion`
+  answers off until the system does, so the icon could start turning and then stop part-way — the
+  test's "0.4deg", and on a phone an icon left tilted. Under Reduce Motion the turn is now cancelled
+  and set to 0; a new case answers Reduce Motion late, after the icon has turned, and fails every
+  time without the fix (the old case failed 2 runs in 6).
+
+### Guards proved to bite, the second review
+
+(Run as the round's tables above: broken, red, restored sha256-equal, green.)
+
+| Guard | Broken by | What failed |
+| --- | --- | --- |
+| A link that is not https says the website's words on the package page | `packageNotOpened` without `SignedLinkUnusableError` (`lib/platform/runs.ts`) | `package-screen` "a link that is not https…" |
+| A file not saved says the website's words on the package page | `packageNotOpened` without `FileNotSavedError` | `package-screen` "a file that could not be saved…" |
+| Settings › Data says "The link to the file cannot be used." | the sentence changed (`lib/platform/problem.ts`) | `data-support-screens` both platforms' http-link case |
+| The spinner stands upright under a late Reduce Motion | `if (reduceMotion) return;` put back (`app/(tabs)/activity/run.tsx`) | `invoice-processing-screens` "…answered on after it started turning…", 5 of 5 runs (fixed: 10 of 10 green) |

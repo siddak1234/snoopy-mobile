@@ -48,8 +48,9 @@ type Shown =
  * share from the header never removes it) and drawn in a WebView from that
  * file. The header holds Back, Download PDF and Download Excel — the run page's
  * download path (`useRunPackageDownload`). States: preparing; not opened —
- * still busy, or the file refused — "Could not open the package. Try again.",
- * the website's words for both, with Retry; error (the refusal's words). The
+ * still busy, the file refused, a link that is not https, or a file not saved
+ * (`packageNotOpened`) — "Could not open the package. Try again.", the
+ * website's words for each, with Retry; error (the refusal's words). The
  * cached file is deleted when the page closes.
  */
 export default function RunPackageScreen() {

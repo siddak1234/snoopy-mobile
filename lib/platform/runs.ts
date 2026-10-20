@@ -1,6 +1,6 @@
 import type { components } from '@/lib/generated/platform-contracts/automations';
 import { platformOperation } from './client';
-import { PlatformBusyError, PlatformError } from './problem';
+import { FileNotSavedError, PlatformBusyError, PlatformError, SignedLinkUnusableError } from './problem';
 import { invalidateShared, shared } from './snapshot';
 
 /**
@@ -336,7 +336,17 @@ export async function requestRunPackageFile(
   return file;
 }
 
-/** Whether the package page says "Could not open the package. Try again.": still busy (any 503), or the file refused. */
+/**
+ * Whether the package page says "Could not open the package. Try again." —
+ * still busy (any 503), the file refused, a link the app will not follow, or a
+ * file not saved: the website's package route says those words for each
+ * (`snoopy/app/account/runs/[runId]/package/file/route.ts`).
+ */
 export function packageNotOpened(error: unknown): boolean {
-  return error instanceof RunPackageFileRefusedError || (error instanceof PlatformError && error.status === 503);
+  return (
+    error instanceof RunPackageFileRefusedError ||
+    error instanceof SignedLinkUnusableError ||
+    error instanceof FileNotSavedError ||
+    (error instanceof PlatformError && error.status === 503)
+  );
 }

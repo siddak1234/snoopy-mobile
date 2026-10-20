@@ -291,9 +291,9 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   signed out. Its one raw `fetch` is `putFileToSignedUrl`, the credential-less
   PUT of a file's bytes to the URL the platform signed; `audit:platform` admits
   exactly that one. Since 24.12 its one native download is
-  `downloadSignedFile`, the credential-less save of the complete export's
-  signed link into the app's cache, which iOS then hands to the share sheet;
-  `audit:platform` admits exactly one `downloadFileAsync(`, there.
+  `downloadSignedFile`, the credential-less save of a signed file's link into
+  the app's cache (the complete export; the run package's PDF and Excel since
+  round 24); `audit:platform` admits exactly one `downloadFileAsync(`, there.
 - `lib/platform/*.ts` exposes typed reads and mutations. Screens do not call a
   network primitive.
 - `lib/platform/session-store.ts` stores access/refresh credentials only in
@@ -334,8 +334,11 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   `PlatformBusyError` in the transport, `lib/platform/client.ts`, still a 503) —
   and refuses a file in another format than asked or over
   `RUN_PACKAGE_MAXIMUM_BYTES` (25 MiB, the platform's bound) with
-  `RunPackageFileRefusedError`. The file is saved through `downloadSignedFile`
-  (still the one native download). `lib/platform/signed-file.ts` holds the one
+  `RunPackageFileRefusedError`. The file is saved through `downloadSignedFile`.
+  A link that is not https (`SignedLinkUnusableError`) or a file not saved
+  (`FileNotSavedError`, both `lib/platform/problem.ts`) is said in those words
+  on Settings › Data and as the website's "Could not open the package. Try
+  again." on the package page (`packageNotOpened`). `lib/platform/signed-file.ts` holds the one
   way a signed file is handed on, for the run package's downloads and Settings ›
   Data's export alike: `signedLink` (https only) and `shareSignedFile` (iOS
   saves, shares and removes it; Android opens the link). The package page draws

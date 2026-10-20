@@ -74,13 +74,20 @@ import {
 /**
  * A working step's icon turns (round 23, A4 — the owner's build 22 item 7: the
  * running step spins): a full turn every 900 ms, steadily, for as long as the
- * step works; still under Reduce Motion.
+ * step works; still and upright under Reduce Motion.
  */
 function StepSpinner({ children }: { children: React.ReactNode }) {
   const reduceMotion = useReducedMotion();
   const turn = useSharedValue(0);
   useEffect(() => {
-    if (reduceMotion) return;
+    // Reduce Motion is known only after the first frame (`useReducedMotion`
+    // answers off until the system does): a turn already started is stopped
+    // and set upright, never left tilted where it stopped.
+    if (reduceMotion) {
+      cancelAnimation(turn);
+      turn.value = 0;
+      return;
+    }
     turn.value = withRepeat(withTiming(360, { duration: 900, easing: Easing.linear }), -1, false);
     return () => cancelAnimation(turn);
   }, [reduceMotion, turn]);

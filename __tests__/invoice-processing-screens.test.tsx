@@ -850,6 +850,30 @@ describe("a run's page — every step from the start, a live tracker (spec A7; t
     }
   });
 
+  it('the working step\'s icon, Reduce Motion answered on after it started turning: it stands upright, never tilted where it stopped (the round 24 second review)', async () => {
+    // The system answers late: the icon turns first, as on a phone, then Reduce Motion is on.
+    const motion = AccessibilityInfo.isReduceMotionEnabled as jest.Mock;
+    const asItWas = motion.getMockImplementation();
+    const answers: ((reduced: boolean) => void)[] = [];
+    motion.mockImplementation(() => new Promise<boolean>((answer) => answers.push(answer)));
+    try {
+      await openRun(ipRun('pending', []));
+      const spinner = await screen.findByTestId('run-step-spinner');
+      const rotate = () => (spinner.props.jestAnimatedStyle.value as { transform: [{ rotate: string }] }).transform[0].rotate;
+      await act(async () => {
+        await new Promise((settle) => setTimeout(settle, 300));
+      });
+      expect(rotate()).not.toBe('0deg');
+      await act(async () => {
+        for (const answer of answers) answer(true);
+        await new Promise((settle) => setTimeout(settle, 50));
+      });
+      expect(rotate()).toBe('0deg');
+    } finally {
+      motion.mockImplementation(asItWas);
+    }
+  });
+
   it('while running: done groups say Done and when, the next Working…, and Steps done never runs ahead (fb10\'s "1 / 1" impossible)', async () => {
     await openRun(ipRun('running', [['receive', 'ok', 'PDF, 2 pages', 0]]));
     const received = await screen.findByTestId('run-step-group:received');

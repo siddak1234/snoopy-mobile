@@ -7,6 +7,7 @@ import type { paths as ConnectionPaths } from '@/lib/generated/platform-contract
 import type { paths as PlatformPaths } from '@/lib/generated/platform-contracts/platform';
 import { backendApiOrigin } from './origin';
 import {
+  FileNotSavedError,
   PlatformBusyError,
   PlatformError,
   PlatformNotConfiguredError,
@@ -253,7 +254,7 @@ export async function downloadSignedFile(url: string, filename: string): Promise
   try {
     return await File.downloadFileAsync(url, new File(Paths.cache, name), { idempotent: true });
   } catch {
-    throw new Error('The file could not be saved.');
+    throw new FileNotSavedError();
   }
 }
 

@@ -1,13 +1,11 @@
 import { Linking, Platform, Share } from 'react-native';
 
 import { downloadSignedFile } from './client';
-
-/** Said when the platform answers a file's link the app will not follow: not https. */
-export const SIGNED_LINK_UNUSABLE = 'The link to the file cannot be used.';
+import { SignedLinkUnusableError } from './problem';
 
 /**
  * A signed link the app may open or save: https only — anything else, or no
- * address at all, is refused and never followed.
+ * address at all, is refused (`SignedLinkUnusableError`) and never followed.
  */
 export function signedLink(url: string): string {
   let protocol = '';
@@ -16,7 +14,7 @@ export function signedLink(url: string): string {
   } catch {
     // Not an address: refused below.
   }
-  if (protocol !== 'https:') throw new Error(SIGNED_LINK_UNUSABLE);
+  if (protocol !== 'https:') throw new SignedLinkUnusableError();
   return url;
 }
 
