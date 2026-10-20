@@ -1105,7 +1105,8 @@ describe("a run's documents and its package (spec A7, C2; the owner's ~04:05Z an
     const third = within(screen.getByTestId('document-3'));
     expect(third.getByText('Invoice 3 of 3')).toBeTruthy();
     expect(third.getAllByText('Receipt').length).toBeGreaterThan(0);
-    expect(third.getByText('1,234.5 CAD')).toBeTruthy();
+    // The closed line (no seller: the total alone, the website's) and the Total row.
+    expect(third.getAllByText('1,234.5 CAD')).toHaveLength(2);
     expect(third.queryByText('Paid')).toBeNull();
   });
 
@@ -1140,6 +1141,15 @@ describe("a run's documents and its package (spec A7, C2; the owner's ~04:05Z an
     // The third names the photo.
     await fireEvent.press(screen.getByTestId('document-3-toggle'));
     expect(within(screen.getByTestId('document-3-body')).getByText('JPEG')).toBeTruthy();
+  });
+
+  it("a closed invoice with no seller says its total alone, and with neither, no second line — the website's (the round's review)", async () => {
+    const noSeller = { name: null, address: null, city: null, storeNumber: null };
+    await openRun(ipRun('succeeded', [], { documents: [receipt(1, { vendor: noSeller }), receipt(2, { vendor: noSeller, total: null })] }));
+    expect((await screen.findByTestId('document-1-summary')).props.children).toBe('$17.19');
+    expect(screen.getByTestId('document-1-toggle').props.accessibilityLabel).toBe('Invoice 1 of 2, $17.19');
+    expect(screen.queryByTestId('document-2-summary')).toBeNull();
+    expect(screen.getByTestId('document-2-toggle').props.accessibilityLabel).toBe('Invoice 2 of 2');
   });
 
   /** The package file the platform answers (round 24 P12): a signed https link. */

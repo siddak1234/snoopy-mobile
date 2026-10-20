@@ -116,8 +116,12 @@ export type DocumentCardView = {
   index: number;
   /** "Invoice 1 of 3" (round 24 P10). */
   heading: string;
-  /** The closed card's one line, `{vendor} · {total}` (S9: three closed rows reading the same would hide which is which). */
-  summary: string;
+  /**
+   * The closed card's one line, `{vendor} · {total}` — the parts printed, the
+   * total alone without a seller, none without either (S9: three closed rows
+   * reading the same would hide which is which; the website's `glance`).
+   */
+  summary: string | null;
   chip: string;
   tone: DocumentTone;
   /** `{Type} · {vendor}`, or the type alone when no seller was read. */
@@ -144,29 +148,19 @@ export type DocumentCardView = {
 };
 
 /**
- * A file's format as a person reads it (round 24 P10): PDF, JPEG, PNG or HEIC,
- * otherwise the content type's subtype in capitals — the platform's own rule
- * for `RunFile.format`, for a file it sent without one.
- */
-export function formatLabel(contentType: string): string {
-  const subtype = contentType.split(';')[0]!.trim().toLowerCase().split('/')[1] ?? '';
-  if (subtype === 'pdf') return 'PDF';
-  if (subtype === 'jpeg' || subtype === 'jpg' || subtype === 'pjpeg') return 'JPEG';
-  if (subtype === 'png') return 'PNG';
-  if (subtype === 'heic' || subtype === 'heif') return 'HEIC';
-  return subtype.toUpperCase();
-}
-
-/**
  * The format of the file a document was read from (round 24 P10): the file its
- * `source` names (Invoice Processing v6), else the job's only file (one file
- * per run until v6), else none — and the row is left out.
+ * `source` names (Invoice Processing v6), else — no source, or one not among
+ * the job's files — the job's only file, else none, and the row is left out.
+ * The word is the platform's (`RunFile.format`: PDF, JPEG, PNG or HEIC, else
+ * the content type's subtype in capitals), shown as given — one source for
+ * both clients, as the website's `formatFor`. ~~`formatLabel`, the app's own
+ * content-type mapping~~ until the round's review.
  */
 export function formatFor(document: Pick<RunDocument, 'source'>, files: readonly RunFile[] | undefined): string | null {
   const list = files ?? [];
-  const file = document.source ? list.find((candidate) => candidate.id === document.source!.file) : list.length === 1 ? list[0] : undefined;
-  if (!file) return null;
-  return file.format || formatLabel(file.contentType) || null;
+  const own = document.source ? list.find((candidate) => candidate.id === document.source!.file) : undefined;
+  const file = own ?? (list.length === 1 ? list[0] : undefined);
+  return file ? file.format : null;
 }
 
 /**
@@ -224,7 +218,7 @@ export function toDocumentCard(
   return {
     index: document.index,
     heading: documentOf(document.index, count),
-    summary: [document.vendor.name ?? type, total].filter(Boolean).join(' · '),
+    summary: [document.vendor.name, total].filter(Boolean).join(' · ') || null,
     chip: notApproved ? 'Not approved' : STATUS_CHIPS[document.status],
     tone: notApproved ? 'muted' : STATUS_TONES[document.status],
     title: document.vendor.name ? `${type} · ${document.vendor.name}` : type,

@@ -5,7 +5,6 @@ import {
   documentMoney,
   documentTime,
   formatFor,
-  formatLabel,
   toDocumentCard,
   toDocumentCards,
 } from '@/lib/view/documents';
@@ -378,10 +377,12 @@ describe("a document's card (spec A7; the owner's ~04:05Z and AM7)", () => {
     expect(toDocumentCards(undefined)).toEqual([]);
   });
 
-  it('closed, a card says {vendor} · {total} (S9); without a seller its type, without a total the name alone', () => {
+  it("closed, a card says {vendor} · {total} (S9): without a seller the total alone, without a total the name alone, without both nothing — the website's", () => {
+    const noSeller = { name: null, address: null, city: null, storeNumber: null };
     expect(toDocumentCard(doc(), 1).summary).toBe("Lowe's · $17.19");
-    expect(toDocumentCard(doc({ type: 'bill', vendor: { name: null, address: null, city: null, storeNumber: null } }), 1).summary).toBe('Bill · $17.19');
+    expect(toDocumentCard(doc({ type: 'bill', vendor: noSeller }), 1).summary).toBe('$17.19');
     expect(toDocumentCard(doc({ total: null }), 1).summary).toBe("Lowe's");
+    expect(toDocumentCard(doc({ vendor: noSeller, total: null }), 1).summary).toBeNull();
   });
 
   it('opens with Document type and Format: the file its source names, else the job\'s only file, else no Format row', () => {
@@ -398,19 +399,17 @@ describe("a document's card (spec A7; the owner's ~04:05Z and AM7)", () => {
     // Two files and no source: which is not known, so no Format row; none listed, none either.
     expect(toDocumentCard(doc(), 1, null, [pdf, png]).kind).toEqual([{ label: 'Document type', value: 'Receipt' }]);
     expect(toDocumentCard(doc(), 1).kind).toEqual([{ label: 'Document type', value: 'Receipt' }]);
-    // A file listed without its format: read from its content type.
-    expect(formatFor(doc(), [{ ...pdf, format: '' }])).toBe('PDF');
+    // A source not among the job's files: the job's only file, as the website's; of two, none.
+    const elsewhere = { source: { file: '99999999-9999-4999-8999-999999999999' } };
+    expect(formatFor(doc(elsewhere), [png])).toBe('PNG');
+    expect(formatFor(doc(elsewhere), [pdf, png])).toBeNull();
   });
 
-  it.each([
-    ['application/pdf', 'PDF'],
-    ['image/jpeg', 'JPEG'],
-    ['image/jpg', 'JPEG'],
-    ['image/png', 'PNG'],
-    ['image/heic', 'HEIC'],
-    ['image/heif', 'HEIC'],
-    ['image/tiff; charset=binary', 'TIFF'],
-  ])('formatLabel(%s) is %s', (contentType, label) => {
-    expect(formatLabel(contentType)).toBe(label);
+  it("Format is the platform's word as given — never the app's own reading of the content type", () => {
+    const heif = { id: '33333333-3333-4333-8333-333333333333', filename: 'p.heif', contentType: 'image/heif', format: 'HEIF', sizeBytes: 900, pages: 1 };
+    expect(formatFor(doc(), [heif])).toBe('HEIF');
+    expect(formatFor(doc(), [{ ...heif, contentType: 'image/jpg', format: 'JPG' }])).toBe('JPG');
+    // A file listed without its word: no Format row.
+    expect(toDocumentCard(doc(), 1, null, [{ ...heif, format: '' }]).kind).toEqual([{ label: 'Document type', value: 'Receipt' }]);
   });
 });

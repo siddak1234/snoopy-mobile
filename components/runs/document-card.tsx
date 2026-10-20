@@ -56,7 +56,7 @@ export function DocumentCard({ card }: { card: DocumentCardView }) {
           testID={`document-${card.index}-toggle`}
           accessibilityRole="button"
           accessibilityState={{ expanded: open }}
-          accessibilityLabel={`${card.heading}, ${card.summary}`}
+          accessibilityLabel={card.summary ? `${card.heading}, ${card.summary}` : card.heading}
           onPress={() => setOpen((was) => !was)}
           style={({ pressed }) => [styles.toggle, pressed && { opacity: 0.7 }]}>
           <View style={styles.headRow}>
@@ -74,9 +74,11 @@ export function DocumentCard({ card }: { card: DocumentCardView }) {
               style={{ transform: [{ rotate: open ? '180deg' : '0deg' }] }}
             />
           </View>
-          <Text testID={`document-${card.index}-summary`} style={[styles.small, muted]}>
-            {card.summary}
-          </Text>
+          {card.summary ? (
+            <Text testID={`document-${card.index}-summary`} style={[styles.small, muted]}>
+              {card.summary}
+            </Text>
+          ) : null}
         </Pressable>
         {open ? (
           <Animated.View

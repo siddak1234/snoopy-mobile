@@ -1989,7 +1989,7 @@ drop-down, the status-bar strip, and the A8X run package.
   `expanded`, 44 pt) with "Invoice i of n" (`documentOf`), the chip (one line, chrome limit), a caret
   and `{vendor} · {total}` (S9); the body only when open (`FadeIn`, the card `LinearTransition`, none
   under Reduce Motion), starting with Document type and Format (`kind`); `formatFor(document, files)`
-  and `formatLabel(contentType)` in `lib/view/documents.ts`. Website: its lane (`<details>`).
+  and ~~`formatLabel(contentType)`~~ (deleted in the review below) in `lib/view/documents.ts`. Website: its lane (`<details>`).
 - **P12 the A8X run package, the app half** (F16; the main session's correction 1 overrides S16): the run
   page's View package / Download PDF / Download Excel replace Download JSON (`readRunDocuments`,
   `DOWNLOAD_JSON_LABEL`, `documentsFileName`, `downloadJson` deleted; the endpoint stays). New:
@@ -2102,6 +2102,11 @@ for every rule the two clients share; the main session's decisions bind each fix
   used." (~~"The export answered an unusable address."~~).
 - **Out-of-date words** (finding 9, in part): `invoice-processing-screens`' header strikes Download
   JSON.
+- **The invoice card's three rules** (finding 4), now the website's (`snoopy/lib/run-documents.ts`): Format is
+  the platform's `RunFile.format` word shown as given (`formatLabel`, the app's content-type mapping,
+  deleted — it said JPEG and HEIC where the platform says JPG and HEIF); a `source.file` not among
+  the job's files falls back to the job's only file; with no seller the closed line is the total alone,
+  with neither no line (`summary` may be null; `DocumentCard` then draws the heading alone).
 
 ### Guards proved to bite, the review's findings
 
@@ -2124,3 +2129,7 @@ for every rule the two clients share; the main session's decisions bind each fix
 | Android opens the link | iOS's path on Android | `signed-file` "on Android…", `data-support-screens` "on Android…" |
 | Data's export takes the helper | the call replaced (`app/(tabs)/settings/data.tsx`) | `data-support-screens` the three download cases |
 | The package's downloads take the helper | the call replaced (`hooks/use-run-package.tsx`) | `package-screen`, `invoice-processing-screens` the download cases |
+| Format falls back to the only file | the fallback kept for a document with no source only (`lib/view/documents.ts`) | `build21-views` "opens with Document type and Format…" |
+| Format is the platform's word | the content type's subtype shown in its place | `build21-views` "Format is the platform's word as given…" |
+| No seller: the total alone | the type put back before the total | `build21-views` "closed, a card says…", `invoice-processing-screens` "a closed invoice with no seller…" and "three receipts…" |
+| Neither: no closed line | the summary line always drawn (`components/runs/document-card.tsx`) | `invoice-processing-screens` "a closed invoice with no seller…" |
