@@ -1,0 +1,234 @@
+{
+  "run": {
+    "id": "0a1b2c3d-0000-4a00-8a00-000000000003",
+    "workspaceId": "7f3b6c2a-1d4e-4a8b-9c0d-2e5f6a7b8c9d",
+    "subscriptionId": "5c6d7e8f-9a0b-4c1d-8e2f-3a4b5c6d7e8f",
+    "templateId": "invoice-processing",
+    "templateVersion": 5,
+    "status": "succeeded",
+    "origin": "manual",
+    "rootRunId": "0a1b2c3d-0000-4a00-8a00-000000000003",
+    "requestId": "5d5d5d5d-0000-4d00-8d00-000000000003",
+    "createdAt": "$NOW-3h",
+    "updatedAt": "$NOW-3h",
+    "startedAt": "$NOW-3h",
+    "endedAt": "$NOW-3h",
+    "resultSummary": "3 invoices saved."
+  },
+  "steps": [
+    {
+      "id": "6e6e6e6e-0000-4e00-8e03-000000000000",
+      "runId": "0a1b2c3d-0000-4a00-8a00-000000000003",
+      "workspaceId": "7f3b6c2a-1d4e-4a8b-9c0d-2e5f6a7b8c9d",
+      "stepId": "receive",
+      "outcome": "ok",
+      "summary": "PDF and a photo",
+      "occurredAt": "$NOW-3h"
+    },
+    {
+      "id": "6e6e6e6e-0000-4e00-8e03-000000000001",
+      "runId": "0a1b2c3d-0000-4a00-8a00-000000000003",
+      "workspaceId": "7f3b6c2a-1d4e-4a8b-9c0d-2e5f6a7b8c9d",
+      "stepId": "extract",
+      "outcome": "ok",
+      "summary": "Read 3 documents",
+      "occurredAt": "$NOW-3h"
+    },
+    {
+      "id": "6e6e6e6e-0000-4e00-8e03-000000000002",
+      "runId": "0a1b2c3d-0000-4a00-8a00-000000000003",
+      "workspaceId": "7f3b6c2a-1d4e-4a8b-9c0d-2e5f6a7b8c9d",
+      "stepId": "check-documents",
+      "outcome": "ok",
+      "summary": "Checked",
+      "occurredAt": "$NOW-3h"
+    },
+    {
+      "id": "6e6e6e6e-0000-4e00-8e03-000000000003",
+      "runId": "0a1b2c3d-0000-4a00-8a00-000000000003",
+      "workspaceId": "7f3b6c2a-1d4e-4a8b-9c0d-2e5f6a7b8c9d",
+      "stepId": "decide",
+      "outcome": "ok",
+      "summary": "Ready",
+      "occurredAt": "$NOW-3h"
+    },
+    {
+      "id": "6e6e6e6e-0000-4e00-8e03-000000000004",
+      "runId": "0a1b2c3d-0000-4a00-8a00-000000000003",
+      "workspaceId": "7f3b6c2a-1d4e-4a8b-9c0d-2e5f6a7b8c9d",
+      "stepId": "save-documents",
+      "outcome": "ok",
+      "summary": "Saved",
+      "occurredAt": "$NOW-3h"
+    }
+  ],
+  "events": [],
+  "documents": [
+    {
+      "index": 1,
+      "status": "saved",
+      "statusText": "Saved",
+      "type": "invoice",
+      "vendor": {
+        "name": "Northgate Hardware",
+        "address": "120 Market St",
+        "city": "Portland, OR 97209",
+        "storeNumber": null
+      },
+      "number": "NG-1093",
+      "numberLabel": "Invoice #",
+      "references": [],
+      "date": "2026-10-12",
+      "time": null,
+      "currency": "USD",
+      "lineItems": [
+        {
+          "description": "Hinges, brass",
+          "quantity": "12",
+          "unitPrice": "4.25",
+          "amount": "51.00"
+        },
+        {
+          "description": "Wood screws, 200",
+          "quantity": "3",
+          "unitPrice": "20.75",
+          "amount": "62.25"
+        }
+      ],
+      "lineItemsComplete": true,
+      "subtotal": "113.25",
+      "tax": "5.00",
+      "tip": null,
+      "discount": null,
+      "total": "118.25",
+      "payment": {
+        "method": "not_shown",
+        "cardLast4": null
+      },
+      "recordedIn": null,
+      "details": [
+        {
+          "label": "Category",
+          "value": "Supplies"
+        }
+      ],
+      "source": {
+        "file": "3f4e5d6c-0000-4c00-8c00-000000000001"
+      }
+    },
+    {
+      "index": 2,
+      "status": "saved",
+      "statusText": "Saved",
+      "type": "invoice",
+      "vendor": {
+        "name": "Lakeview Print Shop",
+        "address": "120 Market St",
+        "city": "Portland, OR 97209",
+        "storeNumber": null
+      },
+      "number": "LV-5520",
+      "numberLabel": "Invoice #",
+      "references": [],
+      "date": "2026-10-12",
+      "time": null,
+      "currency": "USD",
+      "lineItems": [
+        {
+          "description": "Flyers, 1,000",
+          "quantity": "1",
+          "unitPrice": "220.00",
+          "amount": "220.00"
+        }
+      ],
+      "lineItemsComplete": true,
+      "subtotal": "220.00",
+      "tax": "20.00",
+      "tip": null,
+      "discount": null,
+      "total": "240.00",
+      "payment": {
+        "method": "not_shown",
+        "cardLast4": null
+      },
+      "recordedIn": null,
+      "details": [
+        {
+          "label": "Category",
+          "value": "Supplies"
+        }
+      ],
+      "source": {
+        "file": "3f4e5d6c-0000-4c00-8c00-000000000001"
+      }
+    },
+    {
+      "index": 3,
+      "status": "saved",
+      "statusText": "Saved",
+      "type": "receipt",
+      "vendor": {
+        "name": "Sunrise Café Catering",
+        "address": "120 Market St",
+        "city": "Portland, OR 97209",
+        "storeNumber": null
+      },
+      "number": "SC-318",
+      "numberLabel": "Invoice #",
+      "references": [],
+      "date": "2026-10-12",
+      "time": null,
+      "currency": "USD",
+      "lineItems": [
+        {
+          "description": "Lunch for 8",
+          "quantity": "1",
+          "unitPrice": "90.00",
+          "amount": "90.00"
+        }
+      ],
+      "lineItemsComplete": true,
+      "subtotal": "90.00",
+      "tax": "6.50",
+      "tip": null,
+      "discount": null,
+      "total": "96.50",
+      "payment": {
+        "method": "not_shown",
+        "cardLast4": null
+      },
+      "recordedIn": null,
+      "details": [
+        {
+          "label": "Category",
+          "value": "Supplies"
+        }
+      ],
+      "source": {
+        "file": "3f4e5d6c-0000-4c00-8c00-000000000002"
+      }
+    }
+  ],
+  "email": {
+    "status": "sent",
+    "sentAt": "$NOW-3h"
+  },
+  "files": [
+    {
+      "id": "3f4e5d6c-0000-4c00-8c00-000000000001",
+      "filename": "supplier-bills.pdf",
+      "contentType": "application/pdf",
+      "format": "PDF",
+      "sizeBytes": 245760,
+      "pages": 2
+    },
+    {
+      "id": "3f4e5d6c-0000-4c00-8c00-000000000002",
+      "filename": "catering-receipt.jpg",
+      "contentType": "image/jpeg",
+      "format": "JPEG",
+      "sizeBytes": 98304,
+      "pages": 1
+    }
+  ]
+}

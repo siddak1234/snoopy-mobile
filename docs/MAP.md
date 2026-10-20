@@ -16,7 +16,7 @@
 - **view**: `lib/view/**` → [DESIGN-GAPS.md](../DESIGN-GAPS.md)
 - **content**: `lib/content/**` → [DESIGN-CONTRACT.md](../DESIGN-CONTRACT.md), [DESIGN-GAPS.md](../DESIGN-GAPS.md)
 - **platform**: `lib/platform/**` → [README.md](../README.md), [lib/platform/CLAUDE.md](../lib/platform/CLAUDE.md)
-- **tooling**: `scripts/**`, `.github/**`, `.githooks/**`, `app.config.js`, `app.json`, `eas.json` → [README.md](../README.md)
+- **tooling**: `scripts/**`, `.github/**`, `.githooks/**`, `app.config.js`, `app.json`, `eas.json`, `metro.config.js`, `.maestro/**` → [README.md](../README.md)
 - **claude**: `.claude/**` → [CLAUDE.md](../CLAUDE.md)
 
 ## Folders
@@ -24,6 +24,7 @@
 - `.claude/`: no description
 - `.githooks/`: no description
 - `.github/`: no description
+- `.maestro/`: no description
 - `.vscode/`: no description
 - `__tests__/`: no description
 - `app/`: `app/` — the screens
@@ -129,7 +130,7 @@
 
 ### Tests
 
-- `__tests__/`: account, android, app, audit, auth, automation, billing, build13, build14, build21, build22, components, connection, connections, cover, data, deep, deletion, dialog, doc, dropdown, faceid, flows, gate24, identity, invoice, kit, native, nocturne, notifications, organization, override, package, paging, parity, pipeline, platform, pressable, presses, published, push, removed, repo, return, round23, run, scope, screen, select, session, settings, setup, shared, sign, snapshot, splash, start, tab, teams, text, theme, timed, upload, use, vendor, verify, view, workspace
+- `__tests__/`: account, android, app, audit, auth, automation, billing, build13, build14, build21, build22, components, connection, connections, cover, data, deep, deletion, dialog, doc, dropdown, faceid, flows, gate24, identity, invoice, kit, native, nocturne, notifications, organization, override, package, paging, parity, pipeline, platform, pressable, presses, published, push, removed, repo, return, round23, run, scope, screen, select, session, settings, setup, shared, sign, snapshot, splash, start, tab, teams, text, theme, timed, upload, use, vendor, verify, view, visual, workspace
 - `__tests__/__snapshots__/`: connection, nocturne, screen
 - `__tests__/real-router/`: activity, app, appearance, connect, face, held, home, notifications, run, session, sign
 

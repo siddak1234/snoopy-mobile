@@ -172,6 +172,32 @@ refusal and auth states, compare every screen with the website's page list,
 validate EAS configuration, and report any live journey that external
 configuration makes NOT OBSERVED. It must not convert NOT OBSERVED into PASS.
 
+### Visual audit
+
+`bash scripts/visual-audit/run.sh` (round 24 A4; heavy — under the session's gate
+lock) captures every changed surface on an iOS 26.1 simulator, light and dark, at
+the default and the largest text size (`accessibility-extra-extra-extra-large`):
+every surface on iPhone 17 Pro, and Home, the run page, Needs review and the
+package on iPhone SE (3rd generation; iPhone 16e when it cannot take the runtime)
+and iPhone 17 Pro Max, plus a video of the tab bar's lens per phone. It creates
+the three simulators, builds the Debug app once (`expo prebuild`, `pod install`,
+`xcodebuild` into a temporary folder), starts the fixture Edge
+(`scripts/visual-audit/fixture-edge.mjs`, Node built-ins, localhost only:
+`fixtures/*.json` with made-up businesses and numbers, and the https file a
+package answer names, under a throwaway certificate the simulators trust) and
+Metro with `VISUAL_AUDIT=1`, under which `metro.config.js` swaps the session store
+and the appearance store for `scripts/visual-audit/`'s (a session that needs no
+sign-in; the simulator's appearance) — refused for a production or EAS build, and
+no file under `app/ components/ hooks/ lib/ constants/` changes for it. Maestro
+(`.maestro/visual-audit/`) opens each surface by its link and test ids and writes
+`<OUT>/<phone>/NN-<surface>--<appearance>--<size>.png` (`OUT` is
+`VISUAL_AUDIT_OUT`, else `artifacts/visual-audit/`, gitignored). On exit, success
+or not, it stops Metro and the Edge and deletes the simulators, the build, the
+certificate and an `ios/` or `.expo/` folder it made. `__tests__/visual-audit-fixtures.test.ts`
+type-checks every fixture against its route's answer in the generated contract
+and holds the swaps to the real modules' names. A capture is evidence for a
+person to review; what it does not show stays NOT OBSERVED.
+
 ## Release configuration, pinned
 
 Three values differ between a simulator, a preview build and production, and

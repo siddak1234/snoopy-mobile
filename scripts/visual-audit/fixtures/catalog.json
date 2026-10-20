@@ -1,0 +1,206 @@
+{
+  "automations": [
+    {
+      "templateId": "invoice-processing",
+      "version": 5,
+      "name": "Invoice Processing",
+      "description": "Reads bills and receipts, then saves the details or records them in QuickBooks.",
+      "category": "Accounting",
+      "icon": "Receipt",
+      "monthlyPriceUsd": 0,
+      "subscribed": true,
+      "available": true,
+      "usesAi": true,
+      "requiredConnections": [
+        {
+          "providerId": "quickbooks",
+          "displayName": "QuickBooks Online",
+          "purpose": "Records bills and receipts.",
+          "optional": true
+        }
+      ],
+      "setup": [
+        {
+          "section": "connections",
+          "key": "vendor",
+          "title": "Integration",
+          "description": "Where the details go.",
+          "control": "connection",
+          "defaultValue": "none",
+          "required": false,
+          "providers": [
+            "quickbooks"
+          ],
+          "group": "connect"
+        },
+        {
+          "section": "rules",
+          "key": "holdAboveAmount",
+          "title": "Approval limit",
+          "description": "Amounts over this wait for approval.",
+          "control": "money",
+          "defaultValue": 500,
+          "required": false
+        }
+      ],
+      "groups": [
+        {
+          "id": "upload",
+          "title": "Upload invoice",
+          "description": "Add a PDF or photo."
+        },
+        {
+          "id": "connect",
+          "title": "Connect integration",
+          "description": "QuickBooks, or None."
+        },
+        {
+          "id": "process",
+          "title": "AI processing",
+          "description": "AI reads and checks each document."
+        },
+        {
+          "id": "record",
+          "title": "Details saved",
+          "description": "Saved, or recorded in QuickBooks.",
+          "titleByConnection": {
+            "field": "vendor",
+            "titles": [
+              {
+                "providerId": "quickbooks",
+                "title": "QuickBooks updated"
+              }
+            ]
+          }
+        },
+        {
+          "id": "email",
+          "title": "Run completed",
+          "description": "The results are emailed.",
+          "platform": "email"
+        }
+      ],
+      "pipeline": [
+        {
+          "id": "receive",
+          "kicker": "TRIGGER",
+          "group": "upload",
+          "title": "Document received",
+          "description": "Document received"
+        },
+        {
+          "id": "extract",
+          "kicker": "AI STEP",
+          "group": "process",
+          "title": "Documents read",
+          "description": "Documents read"
+        },
+        {
+          "id": "check-documents",
+          "kicker": "ACTION",
+          "group": "process",
+          "title": "Documents checked",
+          "description": "Documents checked"
+        },
+        {
+          "id": "verify-read",
+          "kicker": "AI STEP",
+          "group": "process",
+          "title": "Read again",
+          "description": "Read again"
+        },
+        {
+          "id": "read-company",
+          "kicker": "ACTION",
+          "group": "record",
+          "title": "QuickBooks checked",
+          "description": "QuickBooks checked"
+        },
+        {
+          "id": "find-accounts",
+          "kicker": "ACTION",
+          "group": "record",
+          "title": "Accounts read",
+          "description": "Accounts read"
+        },
+        {
+          "id": "find-vendors",
+          "kicker": "ACTION",
+          "group": "record",
+          "title": "Vendors looked up",
+          "description": "Vendors looked up"
+        },
+        {
+          "id": "find-duplicates",
+          "kicker": "ACTION",
+          "group": "record",
+          "title": "Duplicates checked",
+          "description": "Duplicates checked"
+        },
+        {
+          "id": "decide",
+          "kicker": "ACTION",
+          "group": "record",
+          "title": "Ready to record?",
+          "description": "Ready to record?"
+        },
+        {
+          "id": "save-documents",
+          "kicker": "ACTION",
+          "group": "record",
+          "title": "Details saved",
+          "description": "Details saved"
+        },
+        {
+          "id": "ask-approval",
+          "kicker": "ACTION",
+          "group": "record",
+          "title": "Needs your approval",
+          "description": "Needs your approval"
+        },
+        {
+          "id": "save-approved",
+          "kicker": "ACTION",
+          "group": "record",
+          "title": "Approved details saved",
+          "description": "Approved details saved"
+        }
+      ]
+    },
+    {
+      "templateId": "receipt-sorter",
+      "version": 1,
+      "name": "Receipt Sorter",
+      "description": "Sorts receipts into folders by month.",
+      "category": "Operations",
+      "icon": "Folder",
+      "monthlyPriceUsd": 0,
+      "subscribed": false,
+      "available": true,
+      "usesAi": false,
+      "requiredConnections": [],
+      "setup": [],
+      "pipeline": [
+        {
+          "id": "receive",
+          "kicker": "TRIGGER",
+          "group": "upload",
+          "title": "Receipt received",
+          "description": "Receipt received"
+        }
+      ],
+      "groups": [
+        {
+          "id": "upload",
+          "title": "Upload receipt",
+          "description": "Add a photo."
+        }
+      ]
+    }
+  ],
+  "categories": [
+    "All",
+    "Accounting",
+    "Operations"
+  ]
+}

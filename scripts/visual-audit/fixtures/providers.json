@@ -1,0 +1,14 @@
+{
+  "providers": [
+    {
+      "providerId": "quickbooks",
+      "displayName": "QuickBooks Online",
+      "description": "Records bills and receipts.",
+      "scopes": [
+        "com.intuit.quickbooks.accounting"
+      ],
+      "authType": "oauth2",
+      "icon": "quickbooks"
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "items": [
+    {
+      "id": "approval:9e8d7c6b-0000-4b00-8b00-000000000001",
+      "kind": "approval-requested",
+      "runId": "0a1b2c3d-0000-4a00-8a00-000000000002",
+      "approvalId": "9e8d7c6b-0000-4b00-8b00-000000000001",
+      "subscriptionId": "5c6d7e8f-9a0b-4c1d-8e2f-3a4b5c6d7e8f",
+      "templateId": "invoice-processing",
+      "stepId": "ask-approval",
+      "reason": "Document 1: over the $500 approval limit.",
+      "occurredAt": "$NOW-38m",
+      "read": false
+    },
+    {
+      "id": "approval:9e8d7c6b-0000-4b00-8b00-000000000002",
+      "kind": "approval-requested",
+      "runId": "0a1b2c3d-0000-4a00-8a00-000000000005",
+      "approvalId": "9e8d7c6b-0000-4b00-8b00-000000000002",
+      "subscriptionId": "5c6d7e8f-9a0b-4c1d-8e2f-3a4b5c6d7e8f",
+      "templateId": "invoice-processing",
+      "stepId": "ask-approval",
+      "reason": "Document 2: the total can’t be read.",
+      "occurredAt": "$NOW-2d",
+      "read": true
+    },
+    {
+      "id": "run:0a1b2c3d-0000-4a00-8a00-000000000004",
+      "kind": "run-failed",
+      "runId": "0a1b2c3d-0000-4a00-8a00-000000000004",
+      "subscriptionId": "5c6d7e8f-9a0b-4c1d-8e2f-3a4b5c6d7e8f",
+      "templateId": "invoice-processing",
+      "failureReason": "The document can't be read. Try a clearer photo.",
+      "occurredAt": "$NOW-1d",
+      "read": false
+    }
+  ],
+  "unreadCount": 2
+}

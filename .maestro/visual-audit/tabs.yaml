@@ -1,0 +1,17 @@
+# The tab bar's lens (round 24 P2), recorded by scripts/visual-audit/run.sh:
+# Home, then Flows, Activity and Home again — it slides and latches, no shake.
+appId: ai.autom8x.snoopy
+---
+- launchApp:
+    stopApp: true
+- extendedWaitUntil:
+    visible:
+      id: "home-header"
+    timeout: 300000
+- waitForAnimationToEnd
+- tapOn: "Flows"
+- waitForAnimationToEnd
+- tapOn: "Activity"
+- waitForAnimationToEnd
+- tapOn: "Home"
+- waitForAnimationToEnd

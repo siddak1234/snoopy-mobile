@@ -2001,6 +2001,13 @@ drop-down, the status-bar strip, and the A8X run package.
   package view model (correction 1). `react-native-webview` 13.15.0 (MIT) added by `npx expo install`;
   jest mocks it as a view (`test/jest-setup.js`). **Finding**: Android's WebView does not draw a PDF;
   the app ships to iOS, so the Android package page is NOT OBSERVED and left as it draws.
+- **A4 the simulator visual audit** (owner: "ensure there is an audit"; S17): `scripts/visual-audit/`
+  (`run.sh`, `fixture-edge.mjs`, `session-store.ts`, `appearance-store.ts`, `fixtures/*.json`),
+  `.maestro/visual-audit/` (`surfaces.yaml`, `tabs.yaml`), `metro.config.js` (Expo's default plus the
+  `VISUAL_AUDIT=1` swap), `artifacts/` gitignored — README "Verification", "Visual audit". Deviation from
+  the plan: the appearance store is swapped too (the app opens in Dark unless told Auto, so the
+  simulator's appearance would not show), and the build is `expo prebuild` + `pod install` +
+  `xcodebuild` with a temporary derived-data folder rather than `expo run:ios`, so it leaves nothing.
 - **P11 the status-bar strip** (seen in fb09, fb10, fb15, fb16): `components/status-bar-strip.tsx`, a
   `GlassSurface radius={0} backing="page"` as tall as the top inset, absolute, `pointerEvents="none"`,
   rendered once after `<Tabs>` in `app/(tabs)/_layout.tsx` and once after the auth `Stack` (Sign in
@@ -2052,6 +2059,7 @@ drop-down, the status-bar strip, and the A8X run package.
 | P12 · busy twice says so | the busy state never chosen | `package-screen` "busy after the wait…" |
 | P12 · asked once more after a busy wait | the retry dropped (`lib/platform/runs.ts`) | `platform-request` "busy once…", `package-screen` "busy after the wait…" |
 | P12 · a 503 with its wait is busy | the 503 mapping off (`lib/platform/client.ts`) | `platform-request` "a 503 that states its wait…", "busy once…" |
+| A4 · fixtures the contract allows | a run's status made `"done"` (in the test's own copy) | `visual-audit-fixtures` "the check bites…" |
 
 (Each run by the lane's bite script in the round's scratchpad, Node 22.23.2: broken, red — a test failed —
 the file restored sha256-equal, green.)

@@ -1,0 +1,37 @@
+{
+  "run": {
+    "id": "0a1b2c3d-0000-4a00-8a00-000000000001",
+    "workspaceId": "7f3b6c2a-1d4e-4a8b-9c0d-2e5f6a7b8c9d",
+    "subscriptionId": "5c6d7e8f-9a0b-4c1d-8e2f-3a4b5c6d7e8f",
+    "templateId": "invoice-processing",
+    "templateVersion": 5,
+    "status": "running",
+    "origin": "manual",
+    "rootRunId": "0a1b2c3d-0000-4a00-8a00-000000000001",
+    "requestId": "5d5d5d5d-0000-4d00-8d00-000000000001",
+    "createdAt": "$NOW-2m",
+    "updatedAt": "$NOW-2m",
+    "startedAt": "$NOW-2m"
+  },
+  "steps": [
+    {
+      "id": "6e6e6e6e-0000-4e00-8e01-000000000000",
+      "runId": "0a1b2c3d-0000-4a00-8a00-000000000001",
+      "workspaceId": "7f3b6c2a-1d4e-4a8b-9c0d-2e5f6a7b8c9d",
+      "stepId": "receive",
+      "outcome": "ok",
+      "summary": "PDF, 2 pages",
+      "occurredAt": "$NOW-2m"
+    },
+    {
+      "id": "6e6e6e6e-0000-4e00-8e01-000000000001",
+      "runId": "0a1b2c3d-0000-4a00-8a00-000000000001",
+      "workspaceId": "7f3b6c2a-1d4e-4a8b-9c0d-2e5f6a7b8c9d",
+      "stepId": "extract",
+      "outcome": "ok",
+      "summary": "Read 2 documents",
+      "occurredAt": "$NOW-1m"
+    }
+  ],
+  "events": []
+}
