@@ -13,6 +13,7 @@ import { ScopePill } from '@/components/scope-control';
 import { ScreenEmpty, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { Text } from '@/components/text';
 import { em, fonts, iconSize, layout, status, typeScale, withAlpha } from '@/constants/theme';
+import { useAccessibilityTextSize } from '@/hooks/use-accessibility-text-size';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { useTheme } from '@/hooks/use-theme';
 import {
@@ -46,6 +47,8 @@ const categoryLabel = (category: string) => (category === 'All' ? 'All categorie
  */
 export default function AddFlowScreen() {
   const { palette } = useTheme();
+  // At iOS's accessibility sizes a card's icon, words and Add stack, so the words keep the card's width.
+  const stacked = useAccessibilityTextSize();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [category, setCategory] = useState('All');
@@ -156,9 +159,9 @@ export default function AddFlowScreen() {
             ? () => router.push({ pathname: '/(tabs)/flows/detail', params: { flow: here.id } })
             : undefined;
           return (
-            <SurfaceCard key={sol.templateId} style={styles.card} onPress={openFlow}>
+            <SurfaceCard key={sol.templateId} style={[styles.card, stacked && styles.cardStacked]} onPress={openFlow}>
               <IconTile icon={sol.icon} size={42} iconSize={iconSize.row} borderRadius={12} bordered />
-              <View style={styles.cardBody}>
+              <View style={stacked ? styles.cardBodyStacked : styles.cardBody}>
                 <Text style={[styles.cardName, { color: palette.text }]}>{sol.name}</Text>
                 <Text style={[styles.cardDesc, { color: palette.neutral[400] }]}>{sol.desc}</Text>
                 {/* Its category — the team it goes to — and its price (spec §3.A). */}
@@ -262,6 +265,14 @@ const styles = StyleSheet.create({
   cardBody: {
     flex: 1,
     minWidth: 0,
+  },
+  // Round 24's simulator audit: beside Add or "Added ✓" at the largest size, "QuickBoo/ks." broke inside the word.
+  cardStacked: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  cardBodyStacked: {
+    alignSelf: 'stretch',
   },
   cardName: {
     fontFamily: fonts.medium,

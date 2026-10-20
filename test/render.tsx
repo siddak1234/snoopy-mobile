@@ -1,5 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
+import { Dimensions } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { SessionContext, type SessionContextValue } from '@/hooks/use-session';
@@ -32,6 +33,18 @@ const defaultSession: SessionContextValue = {
   signIn: async () => ({ status: 'unconfigured', message: 'no backend in tests' }),
   signOut: async () => ({ revoked: true }),
 };
+
+/**
+ * The phone's text size for a test, set before rendering: `Dimensions`' window
+ * and screen `fontScale` (iOS's multipliers: xxxLarge 1.353, Accessibility
+ * Medium 1.786, the largest 3.571). Returns the restore, for a `finally`.
+ */
+export function setTextSize(fontScale: number): () => void {
+  const window = Dimensions.get('window');
+  const screen = Dimensions.get('screen');
+  Dimensions.set({ window: { ...window, fontScale }, screen: { ...screen, fontScale } });
+  return () => Dimensions.set({ window, screen });
+}
 
 /** RTL v14 render is async — always await this. */
 export function renderWithProviders(

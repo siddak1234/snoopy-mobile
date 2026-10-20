@@ -734,7 +734,17 @@ and a chip keeps one line; a fixed height that holds text is a least height
 badge, the fields), so a large size grows a row rather than clipping it. `audit:type`
 fails `Text` or `TextInput` imported from react-native anywhere else. **The second
 authorised re-pin** (props only: `maxFontSizeMultiplier`, `numberOfLines`,
-`minHeight`) is README's re-pin fact.
+`minHeight`) is README's re-pin fact. **No word breaks inside itself** (round 24's
+simulator audit, the largest size: "Succe/sses", "Failure/s", "QuickBoo/ks.",
+"Notificat/ions", "38m ago" pushed off a card, "Harbor…" and "All categ…" cut short):
+from iOS's first accessibility size (Accessibility Medium, ×1.786,
+`ACCESSIBILITY_TEXT_SCALE`) what sits side by side stacks (`useAccessibilityTextSize`)
+— Home's and a flow's tiles one under another (`StatTileRow`), Add a flow's card its
+icon, words and Add, the inbox's Clear all under its title, whose title stops at the
+chrome limit as a title row's does; a drop-down's least width follows the text size
+(232 × the size, up to the content limit, never past the screen's gutters) and its rows
+wrap a long name rather than cut it; a Needs-review card's flow name wraps and its
+time keeps its place.
 
 **The Home mark fills its row** (build 11, D9; the owner's build 10 item 12:
 "should fill up that empty space top left"). The design drew it at 17 in a row

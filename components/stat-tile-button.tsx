@@ -1,10 +1,11 @@
 import { CaretRight } from 'phosphor-react-native';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { StatCard } from '@/components/nocturne/stat-card';
 import { Pressable } from '@/components/pressable';
 import { radius, withAlpha } from '@/constants/theme';
+import { useAccessibilityTextSize } from '@/hooks/use-accessibility-text-size';
 import { useTheme } from '@/hooks/use-theme';
 
 type Props = React.ComponentProps<typeof StatCard> & {
@@ -27,13 +28,14 @@ type Props = React.ComponentProps<typeof StatCard> & {
  */
 export function StatTileButton({ testID, accessibilityLabel, onPress, ...card }: Props) {
   const { palette } = useTheme();
+  const stacked = useAccessibilityTextSize();
   return (
     <Pressable
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       onPress={onPress}
-      style={styles.tile}>
+      style={stacked ? undefined : styles.tile}>
       {({ pressed }) => (
         <>
           <StatCard {...card} />
@@ -56,9 +58,39 @@ export function StatTileButton({ testID, accessibilityLabel, onPress, ...card }:
 /** The review banner's own tint while pressed (Home's approvals banner). */
 export const PRESSED_TINT = 0.15;
 
+/**
+ * The tiles' row, Home's and a flow page's: side by side, 10 apart — and one
+ * under another at iOS's accessibility text sizes (`useAccessibilityTextSize`;
+ * round 24's simulator audit: "Succe/sses" and "Failure/s" broke inside the
+ * word in a third of the row), each tile the row's width.
+ */
+export function StatTileRow({
+  testID,
+  style,
+  children,
+}: {
+  testID?: string;
+  style?: StyleProp<ViewStyle>;
+  children: React.ReactNode;
+}) {
+  const stacked = useAccessibilityTextSize();
+  return (
+    <View testID={testID} style={[stacked ? styles.column : styles.row, style]}>
+      {children}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   tile: {
     flex: 1,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  column: {
+    gap: 10,
   },
   // Level with the number: the tile's top padding plus half its line, less half the caret.
   caret: {

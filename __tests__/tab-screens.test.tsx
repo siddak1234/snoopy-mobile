@@ -36,7 +36,7 @@ import {
   unpublishedAnswer,
   type RouteOverrides,
 } from '@/test/platform';
-import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
+import { mockRouter, renderWithProviders, setMockParams, setTextSize } from '@/test/render';
 import { touch } from '@/test/touch';
 import type { SessionContextValue } from '@/hooks/use-session';
 import type { Run, Subscription } from '@/lib/platform/automations';
@@ -194,6 +194,21 @@ describe('Add a flow — the catalog inside Flows (24.9.3)', () => {
 
   beforeEach(() => {
     routePlatform(platformOperation, { '/subscriptions': planSubscriptionsPayload() });
+  });
+
+  it.each([
+    [1, 'row'],
+    [3.571, 'column'],
+  ])('a card at text size x%s lays out as a %s — at the largest its words keep the card\'s width (round 24\'s simulator audit: "QuickBoo/ks.")', async (fontScale, direction) => {
+    const restore = setTextSize(fontScale);
+    try {
+      await renderWithProviders(<SolutionsScreen />, signedInSession);
+      const name = (await screen.findAllByText('Weekly KPI digest'))[0]!;
+      const card = name.parent!.parent!;
+      expect(StyleSheet.flatten(card.props.style).flexDirection).toBe(direction);
+    } finally {
+      restore();
+    }
   });
 
   it('lists the catalog with categories and prices — no version (the spec\'s S9) — Added ✓ for what the workspace holds and Add for the rest, no plan banner', async () => {

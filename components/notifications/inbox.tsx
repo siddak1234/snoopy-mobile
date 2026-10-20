@@ -9,7 +9,8 @@ import { PillButton } from '@/components/nocturne/pill-button';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable, pressed } from '@/components/pressable';
 import { Text } from '@/components/text';
-import { em, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
+import { em, fontScaleLimit, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
+import { useAccessibilityTextSize } from '@/hooks/use-accessibility-text-size';
 import { usePushAsk } from '@/hooks/use-push-registration';
 import { useTheme } from '@/hooks/use-theme';
 import type { NotificationItem, RunOrigin } from '@/lib/view/runs';
@@ -62,6 +63,8 @@ export function Inbox({ returnTo }: { returnTo: Extract<RunOrigin, 'home' | 'set
   const { palette } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  // At iOS's accessibility sizes Clear all goes under the title, so "Notifications" keeps its line.
+  const stacked = useAccessibilityTextSize();
 
   /**
    * The platform's inbox (the owner's build 13 decision 3A, reversing §12.1 #71):
@@ -222,6 +225,17 @@ export function Inbox({ returnTo }: { returnTo: Extract<RunOrigin, 'home' | 'set
     }
   };
 
+  const clearAllButton = (
+    <Text
+      testID="inbox-clear-all"
+      accessibilityRole="button"
+      onPress={pressed(clearAll)}
+      suppressHighlighting
+      style={[styles.markAll, { color: palette.accentRamp[300] }]}>
+      {CLEAR_ALL_LABEL}
+    </Text>
+  );
+
   return (
     <ScrollView
       style={{ backgroundColor: palette.bg }}
@@ -230,18 +244,16 @@ export function Inbox({ returnTo }: { returnTo: Extract<RunOrigin, 'home' | 'set
         { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) },
       ]}
       showsVerticalScrollIndicator={false}>
+      {/* A title row's title stops at the chrome limit, as every title row's does (round 24's
+          simulator audit: "Notificat/ions" at the largest size). */}
       <View style={styles.header}>
         <BackCircle onPress={() => router.back()} />
-        <Text style={[styles.title, { color: palette.text }]}>Notifications</Text>
-        <Text
-          testID="inbox-clear-all"
-          accessibilityRole="button"
-          onPress={pressed(clearAll)}
-          suppressHighlighting
-          style={[styles.markAll, { color: palette.accentRamp[300] }]}>
-          {CLEAR_ALL_LABEL}
+        <Text maxFontSizeMultiplier={fontScaleLimit.chrome} style={[styles.title, { color: palette.text }]}>
+          Notifications
         </Text>
+        {stacked ? null : clearAllButton}
       </View>
+      {stacked ? <View style={styles.headerStacked}>{clearAllButton}</View> : null}
 
       <PushCard />
 
@@ -394,6 +406,9 @@ const styles = StyleSheet.create({
   markAll: {
     fontFamily: fonts.regular,
     fontSize: typeScale.small.fontSize,
+  },
+  headerStacked: {
+    alignItems: 'flex-end',
   },
   pushCard: {
     borderWidth: 1,

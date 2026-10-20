@@ -2175,6 +2175,20 @@ for every rule the two clients share; the main session's decisions bind each fix
   the edge. The test now asks for opaque (~~0.9 or more~~); 8 Nocturne snapshots re-pinned, alpha only
   (README's re-pin fact). The unit test had passed throughout — the simulator found it.
 
+- **The largest text size broke words and cut names** (the main session's simulator audit, all
+  four passes; the owner's F14: "not random ai slop"): Home's tiles "Succe/sses" and "Failure/s",
+  an Add a flow card "QuickBoo/ks.", the inbox's title "Notificat/ions", a Needs-review card's
+  "38m ago" pushed off the card, and the drop-downs' "Harbor…", "Organiz…", "All categ…" (a
+  232-pt panel at every size). P3 had said anything that clips is fixed in the component that
+  clips; these are: `ACCESSIBILITY_TEXT_SCALE` (×1.786, iOS's first accessibility size, from React
+  Native's `RCTAccessibilityManager`) and `useAccessibilityTextSize`; `StatTileRow` (Home's and a
+  flow's tiles; the two pages' copies of the row's style folded into it) stacks; Add a flow's card
+  stacks; the inbox's Clear all goes under its title, whose title takes the chrome limit; the card's
+  name `flexShrink`s and its time does not; `placeDropdown`'s least width is 232 × the text size (up
+  to the content limit) and the rows wrap. Jest's default text size is now 1 (`test/jest-setup.js`;
+  React Native's mock answers 2, past the new threshold) and `setTextSize` (`test/render.tsx`) sets
+  another. No snapshot moved.
+
 ### Guards proved to bite, the second review
 
 (Run as the round's tables above: broken, red, restored sha256-equal, green.)
@@ -2186,3 +2200,11 @@ for every rule the two clients share; the main session's decisions bind each fix
 | Settings › Data says "The link to the file cannot be used." | the sentence changed (`lib/platform/problem.ts`) | `data-support-screens` both platforms' http-link case |
 | The spinner stands upright under a late Reduce Motion | `if (reduceMotion) return;` put back (`app/(tabs)/activity/run.tsx`) | `invoice-processing-screens` "…answered on after it started turning…", 5 of 5 runs (fixed: 10 of 10 green) |
 | Every drop-down and the strip are opaque | `GLASS_BACKING_ALPHA` back to 0.94 (`constants/theme.ts`) | `dropdown-backing` all three forms |
+| Home's and a flow's tiles stack at an accessibility size | `StatTileRow` always a row | `accessibility-text-size` "one under another…" |
+| Add a flow's card stacks | `cardStacked` dropped (`app/(tabs)/flows/add.tsx`) | `tab-screens` "a card at text size x3.571…" |
+| The inbox's Clear all goes under the title | Clear all always beside it (`components/notifications/inbox.tsx`) | `presses-home-activity` "the header at text size x3.571…" |
+| The inbox's title stops at the chrome limit | `maxFontSizeMultiplier` dropped | `presses-home-activity` both header cases |
+| A card's time keeps its place | the name's `flexShrink` dropped (`app/(tabs)/activity/approvals.tsx`) | `presses-home-activity` "a card's top line…" |
+| A drop-down's least width follows the text size | `least = MIN_WIDTH` (`components/dropdown.tsx`) | `round23` the placement table |
+| A drop-down's rows wrap | `numberOfLines={1}` back on the label | `dropdown-backing` "wrap a long name…" |
+| The threshold is Accessibility Medium itself | `>` for `>=` (`hooks/use-accessibility-text-size.ts`) | `accessibility-text-size` "at x1.786: stacked" |

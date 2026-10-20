@@ -7,7 +7,7 @@ import RunDetailScreen from '@/app/(tabs)/activity/run';
 import ApprovalsScreen from '@/app/(tabs)/activity/approvals';
 import ActivityScreen from '@/app/(tabs)/activity/index';
 import { ScopeIcons } from '@/components/scope-control';
-import { nocturneDark, status, typeScale } from '@/constants/theme';
+import { fontScaleLimit, nocturneDark, status, typeScale } from '@/constants/theme';
 import { resetPushForTests } from '@/hooks/use-push-registration';
 import type { SessionContextValue } from '@/hooks/use-session';
 import type { Approval, Run } from '@/lib/platform/automations';
@@ -25,7 +25,7 @@ import {
   signedInSession,
   subscriptionsPayload,
 } from '@/test/platform';
-import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
+import { mockRouter, renderWithProviders, setMockParams, setTextSize } from '@/test/render';
 
 /**
  * The button audit (build 13, B9): the presses of Home, Activity, the inbox and
@@ -166,6 +166,16 @@ describe("Approvals: Approve and Deny post that approval's decision (DESIGN-CONT
     });
     return fake;
   }
+
+  it('a card\'s top line: the flow\'s name wraps, its time keeps its place (round 24\'s simulator audit: "38m ago" pushed off the card)', async () => {
+    routeInbox();
+    await renderWithProviders(<ApprovalsScreen />, signedInSession);
+    const time = (await screen.findAllByText(/^(just now|.+ ago)$/u))[0]!;
+    const name = time.parent!.children[0];
+    if (name === undefined || typeof name === 'string') throw new Error('the name comes first');
+    expect(StyleSheet.flatten(name.props.style).flexShrink).toBe(1);
+    expect(StyleSheet.flatten(time.props.style).flexShrink).toBe(0);
+  });
 
   it.each([
     ['Approve', 'approved'],
@@ -327,6 +337,24 @@ describe('Notifications: read and dismissed on the platform (the owner\'s build 
    * not clear. Rename it to clear all and it should wipe the notifications").
    */
   const CLEAR = 'POST /v1/workspaces/{workspaceId}/notifications/clear';
+
+  it.each([
+    [1, true],
+    [3.571, false],
+  ])('the header at text size x%s: the title stops at the chrome limit; Clear all beside it: %s (round 24\'s simulator audit: "Notificat/ions")', async (fontScale, beside) => {
+    const restore = setTextSize(fontScale);
+    try {
+      routeInbox(inboxPayload());
+      await renderWithProviders(<NotificationsScreen />, signedInSession);
+      const title = await screen.findByText('Notifications');
+      expect(title.props.maxFontSizeMultiplier).toBe(fontScaleLimit.chrome);
+      const header = title.parent!;
+      expect(within(header).queryByTestId('inbox-clear-all') !== null).toBe(beside);
+      expect(screen.getByTestId('inbox-clear-all')).toBeTruthy();
+    } finally {
+      restore();
+    }
+  });
 
   it('Clear all: the rows leave at the tap, the platform is asked once with a key, and the empty inbox is drawn', async () => {
     let answer!: () => void;

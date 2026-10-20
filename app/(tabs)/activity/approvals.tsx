@@ -292,12 +292,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  // Round 24's simulator audit: at the largest size the name pushed "38m ago" off the card; the name wraps instead.
   kicker: {
+    flexShrink: 1,
     fontFamily: fonts.regular,
     fontSize: typeScale.micro.fontSize,
     letterSpacing: em(0.14, typeScale.micro.fontSize),
   },
   time: {
+    flexShrink: 0,
+    marginLeft: 8,
     fontFamily: fonts.regular,
     fontSize: typeScale.caption.fontSize,
   },

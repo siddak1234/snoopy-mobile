@@ -81,3 +81,15 @@ jest.mock('expo-crypto', () => {
         .digest(options?.encoding === 'base64' ? 'base64' : 'hex'),
   };
 });
+
+// React Native's own mock answers a text size of 2 (`node_modules/react-native/jest/mocks/NativeModules.js`),
+// past iOS's first accessibility size, where what sits side by side stacks
+// (`useAccessibilityTextSize`). A phone's standard size is 1; a test that wants
+// another sets it (`setTextSize`, `test/render.tsx`).
+{
+  const { Dimensions } = require('react-native');
+  Dimensions.set({
+    window: { ...Dimensions.get('window'), fontScale: 1 },
+    screen: { ...Dimensions.get('screen'), fontScale: 1 },
+  });
+}

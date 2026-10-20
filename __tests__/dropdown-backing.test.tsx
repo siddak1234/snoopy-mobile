@@ -81,3 +81,11 @@ describe('GlassSurface backing', () => {
     );
   });
 });
+
+describe('Dropdown rows', () => {
+  it('wrap a long name rather than cut it short, as iOS\'s own menus do (round 24\'s simulator audit: "Harbor…", "All categ…")', async () => {
+    await renderWithProviders(<Menu />);
+    await fireEvent.press(screen.getByTestId('pick-trigger'));
+    expect(screen.getByText('Alpha').props.numberOfLines).toBeUndefined();
+  });
+});
