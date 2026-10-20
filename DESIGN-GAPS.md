@@ -1920,7 +1920,7 @@ step 4, Needs review, Clear all and the notifications offer, one run id per job,
 drop-down, the status-bar strip, and the A8X run package.
 
 - **The contract**: the generated types come from the backend's round 24 contract (`snoopy-backend`
-  `3b5ac97`, amended `84ed9bc`): the job's runs by its first run's id, `continuesRunId`,
+  `3b5ac97`, amended `84ed9bc`; regenerated at `f122361`, whose package description says 25 MiB): the job's runs by its first run's id, `continuesRunId`,
   `continuationRunId` and the decision's `continuation` deprecated; `POST …/runs/{runId}/package`
   (a signed link); `POST …/notifications/clear`; `RunDetail.files`, `RunDocument.source`,
   `recordedIn.accountName`. CI's Deployed-contract job is red by design until the platform release.
