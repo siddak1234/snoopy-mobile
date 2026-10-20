@@ -2001,13 +2001,17 @@ drop-down, the status-bar strip, and the A8X run package.
   package view model (correction 1). `react-native-webview` 13.15.0 (MIT) added by `npx expo install`;
   jest mocks it as a view (`test/jest-setup.js`). **Finding**: Android's WebView does not draw a PDF;
   the app ships to iOS, so the Android package page is NOT OBSERVED and left as it draws.
-- **A4 the simulator visual audit** (owner: "ensure there is an audit"; S17): `scripts/visual-audit/`
-  (`run.sh`, `fixture-edge.mjs`, `session-store.ts`, `appearance-store.ts`, `fixtures/*.json`),
-  `.maestro/visual-audit/` (`surfaces.yaml`, `tabs.yaml`), `metro.config.js` (Expo's default plus the
-  `VISUAL_AUDIT=1` swap), `artifacts/` gitignored — README "Verification", "Visual audit". Deviation from
-  the plan: the appearance store is swapped too (the app opens in Dark unless told Auto, so the
-  simulator's appearance would not show), and the build is `expo prebuild` + `pod install` +
-  `xcodebuild` with a temporary derived-data folder rather than `expo run:ios`, so it leaves nothing.
+- **A4 the simulator visual audit — built, run, failed, taken out of this lane** (the main session's
+  stop order): the lane's script (`6b62e60`, fixed in `aa3bbbc`; reverted here, kept in history) created
+  three iOS 26.1 simulators (iPhone 17 Pro, SE 3rd generation, 17 Pro Max) and booted them at once,
+  built the Debug app (`expo prebuild`, `pod install`, `xcodebuild`, `CODE_SIGNING_ALLOWED=NO`), and
+  drove Maestro against a fixture Edge with a Metro-time swap of the session and appearance stores. Run
+  1 reached Home (the session swap and the fixture Edge worked) but Maestro 2.11 refused the screenshot
+  paths; SpringBoard crashed on one simulator (00:38). Run 2's build launched and died: dyld "Library not
+  loaded: @rpath/ReactNativeDependencies.framework" (the Debug simulator build did not embed React
+  Native's prebuilt dependencies framework). No screenshot was taken: every surface is **NOT
+  OBSERVED** on a simulator. The main session runs the audit itself, on one simulator, headless, with a
+  working build.
 - **P11 the status-bar strip** (seen in fb09, fb10, fb15, fb16): `components/status-bar-strip.tsx`, a
   `GlassSurface radius={0} backing="page"` as tall as the top inset, absolute, `pointerEvents="none"`,
   rendered once after `<Tabs>` in `app/(tabs)/_layout.tsx` and once after the auth `Stack` (Sign in
@@ -2065,7 +2069,6 @@ own (its tab bar, its text sizes, its status bar).
 | P12 · busy twice says so | the busy state never chosen | `package-screen` "busy after the wait…" |
 | P12 · asked once more after a busy wait | the retry dropped (`lib/platform/runs.ts`) | `platform-request` "busy once…", `package-screen` "busy after the wait…" |
 | P12 · a 503 with its wait is busy | the 503 mapping off (`lib/platform/client.ts`) | `platform-request` "a 503 that states its wait…", "busy once…" |
-| A4 · fixtures the contract allows | a run's status made `"done"` (in the test's own copy) | `visual-audit-fixtures` "the check bites…" |
 
 (Each run by the lane's bite script in the round's scratchpad, Node 22.23.2: broken, red — a test failed —
 the file restored sha256-equal, green.)

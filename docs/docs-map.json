@@ -29,7 +29,7 @@
     { "id": "platform", "code": ["lib/platform/**"], "docs": ["README.md", "lib/platform/CLAUDE.md"], "need": "any" },
     {
       "id": "tooling",
-      "code": ["scripts/**", ".github/**", ".githooks/**", "app.config.js", "app.json", "eas.json", "metro.config.js", ".maestro/**"],
+      "code": ["scripts/**", ".github/**", ".githooks/**", "app.config.js", "app.json", "eas.json"],
       "docs": ["README.md"],
       "need": "any"
     },

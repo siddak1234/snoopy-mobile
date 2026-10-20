@@ -1,8 +1,0 @@
-{
-  "format": "pdf",
-  "filename": "run-0a1b2c3d-0000-4a00-8a00-000000000003.pdf",
-  "contentType": "application/pdf",
-  "sizeBytes": 2048,
-  "downloadUrl": "https://localhost:8443/files/run-package.pdf",
-  "expiresAt": "$NOW+15m"
-}
