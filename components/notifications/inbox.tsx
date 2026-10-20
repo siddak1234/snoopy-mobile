@@ -12,7 +12,7 @@ import { Text } from '@/components/text';
 import { em, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
 import { usePushAsk } from '@/hooks/use-push-registration';
 import { useTheme } from '@/hooks/use-theme';
-import type { NotificationItem } from '@/lib/view/runs';
+import type { NotificationItem, RunOrigin } from '@/lib/view/runs';
 import { readCatalog } from '@/lib/platform/catalog';
 import { newIdempotencyKey } from '@/lib/platform/client';
 import { dismissInboxItem, markInboxRead, readInbox } from '@/lib/platform/notifications';
@@ -37,8 +37,6 @@ import {
   errorTitleFor,
 } from '@/lib/content/screen-states';
 
-/** Where a failed run's page opens: in the stack its inbox was reached in. */
-export type InboxRunPath = '/(tabs)/(home)/run' | '/(tabs)/settings/run';
 
 /** Tone → glyph, so a composed row draws what the design draws for that kind. */
 const NOTIFICATION_ICON = {
@@ -53,13 +51,13 @@ const NOTIFICATION_ICON = {
  * push (build 11, D8).
  *
  * Reached from Home's bell and from Settings › Notifications, each in its own
- * stack: a run opened from the Settings copy opens in Settings too, so Back
- * returns to Settings rather than switching to Home (24.12, the owner's
- * default: "Settings › Notifications shows the inbox itself"). A held run
+ * stack: a run opens in Activity, the one run page (round 24 P5), and Back
+ * returns to the tab the inbox is in (`returnTo`; 24.12, the owner's default:
+ * "Settings › Notifications shows the inbox itself"). A held run
  * opens Approvals from either, where it is decided — the website's page for it
  * — as a push for one does (Gate 24's parity pass; Activity until then).
  */
-export function Inbox({ runPath }: { runPath: InboxRunPath }) {
+export function Inbox({ returnTo }: { returnTo: Extract<RunOrigin, 'home' | 'settings'> }) {
   const { palette } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -194,12 +192,15 @@ export function Inbox({ runPath }: { runPath: InboxRunPath }) {
     // platform, without holding the way on.
     if (item.unread) void act((workspaceId) => markInboxRead(workspaceId, [item.id], newIdempotencyKey('notifications-read')));
     if (item.target === 'run') {
-      router.push({
-        pathname: runPath,
-        // A composed row points at a real run when it has one; the prototype's
-        // `runVariant` is gone with the fixtures.
-        params: item.runId ? { runId: item.runId } : {},
-      });
+      router.push(
+        {
+          pathname: '/(tabs)/activity/run',
+          // A composed row points at a real run when it has one; the prototype's
+          // `runVariant` is gone with the fixtures.
+          params: item.runId ? { runId: item.runId, returnTo } : { returnTo },
+        },
+        { withAnchor: true },
+      );
     } else if (item.target === 'approvals') {
       router.push('/(tabs)/activity/approvals');
     } else {

@@ -379,7 +379,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
           subscriptionId={subscription.id}
           shownWorkspaceId={flows.loadedFor}
           runInput={subscription.runInput ?? []}
-          onStarted={(runId) => router.push({ pathname: '/(tabs)/(home)/run', params: { runId } })}
+          onStarted={(runId) => router.push({ pathname: '/(tabs)/activity/run', params: { runId, returnTo: 'flows' } }, { withAnchor: true })}
         />
       ) : current !== 'Live' ? (
         (subscription.runInput ?? []).length > 0 ? (
@@ -388,7 +388,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
             subscriptionId={subscription.id}
             shownWorkspaceId={flows.loadedFor}
             runInput={subscription.runInput ?? []}
-            onStarted={(runId) => router.push({ pathname: '/(tabs)/(home)/run', params: { runId } })}
+            onStarted={(runId) => router.push({ pathname: '/(tabs)/activity/run', params: { runId, returnTo: 'flows' } }, { withAnchor: true })}
             action={turnOn}
           />
         ) : (

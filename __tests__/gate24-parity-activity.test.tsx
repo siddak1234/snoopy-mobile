@@ -2,10 +2,9 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react-nativ
 import React from 'react';
 import { StyleSheet } from 'react-native';
 
-import RunDetailScreen from '@/app/(tabs)/(home)/run';
+import RunDetailScreen from '@/app/(tabs)/activity/run';
 import ActivityScreen from '@/app/(tabs)/activity/index';
 import ApprovalsScreen from '@/app/(tabs)/activity/approvals';
-import SettingsRunScreen from '@/app/(tabs)/settings/run';
 import TeamsScreen from '@/app/(tabs)/settings/teams';
 import { OrgPeople } from '@/components/organization/org-people';
 import { TeamMembers } from '@/components/teams/team-members';
@@ -206,7 +205,7 @@ describe("a run's page says what the website's says (G18)", () => {
     expect(fact('Trigger')).toEqual(['Trigger', 'Manual']);
   });
 
-  it('links a continuation to the run that was held, in the stack it is in — Home’s, and Settings’ from its inbox', async () => {
+  it('links a continuation to the run that was held, on the one run page in Activity (round 24 P5)', async () => {
     routeRun(
       detail({ status: 'succeeded', origin: 'approval-continuation', continuesRunId: 'run-held', resultSummary: 'Recorded INV-7' }, [
         { stepId: 'receive' },
@@ -219,14 +218,9 @@ describe("a run's page says what the website's says (G18)", () => {
     expect(screen.queryByText(/continues run /u)).toBeNull();
     expect(colorOf(screen.getByText('the run that was held'))).toBe(nocturneDark.accentRamp[300]);
     await fireEvent.press(screen.getByTestId('run-continues'));
-    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/(home)/run', params: { runId: 'run-held' } });
-    await home.unmount();
-
-    mockRouter.push.mockClear();
-    await renderWithProviders(<SettingsRunScreen />, signedInSession);
-    await fireEvent.press(await screen.findByTestId('run-continues'));
-    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/settings/run', params: { runId: 'run-held' } });
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/activity/run', params: { runId: 'run-held' } });
     expect(mockRouter.push).toHaveBeenCalledTimes(1);
+    await home.unmount();
   });
 
   it('says a held step waits for approval and why, in the warning colour — never its own summary — and when each step was done (Build 21, spec A7)', async () => {
@@ -323,7 +317,7 @@ describe("Approvals says each approval as the website's does: its status, its ex
     expect(screen.getByTestId('approval-run-a2').props.children).toBe('Run run-of-a2');
 
     await fireEvent.press(screen.getByTestId('view-run-a2'));
-    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/(home)/run', params: { runId: 'run-of-a2' } });
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/activity/run', params: { runId: 'run-of-a2' } });
     expect(fake.to(DECISION)).toHaveLength(0);
   });
 });
@@ -342,7 +336,7 @@ describe('Approvals offers Approve and Reject only to a role the approval names 
     expect(fake.to(DECISION)[0]!.values).toEqual({ workspaceId: TEST_WORKSPACE, approvalId: 'y' });
     // The run it holds is anyone's to look at.
     await fireEvent.press(screen.getByTestId('view-run-x'));
-    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/(home)/run', params: { runId: 'run-of-x' } });
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/activity/run', params: { runId: 'run-of-x' } });
   });
 
   it('an admin an owner-only approval does not name is not offered it; an admin it names decides', async () => {

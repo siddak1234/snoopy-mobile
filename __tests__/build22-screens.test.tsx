@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react-nativ
 import React from 'react';
 import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
-import RunDetailScreen from '@/app/(tabs)/(home)/run';
+import RunDetailScreen from '@/app/(tabs)/activity/run';
 import ActivityScreen from '@/app/(tabs)/activity/index';
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import FlowEmailScreen from '@/app/(tabs)/flows/email';

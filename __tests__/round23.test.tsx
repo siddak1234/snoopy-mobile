@@ -242,9 +242,9 @@ describe('links (A5): the router starts at the splash on a run or approval link,
   const WS = '5d0f3a8e-2c41-4b7a-9e15-0a6c3f2b7d94';
 
   it.each([
-    [`https://${HOST}/runs/run-7?workspace=${WS}`, { target: { pathname: '/(tabs)/(home)/run', params: { runId: 'run-7' } }, workspaceId: WS }],
+    [`https://${HOST}/runs/run-7?workspace=${WS}`, { target: { pathname: '/(tabs)/activity/run', params: { runId: 'run-7' } }, workspaceId: WS }],
     [`https://${HOST}/approvals/apr-1?workspace=${WS}`, { target: '/(tabs)/activity/approvals', workspaceId: WS }],
-    [`https://${HOST}/runs/run-7`, { target: { pathname: '/(tabs)/(home)/run', params: { runId: 'run-7' } }, workspaceId: undefined }],
+    [`https://${HOST}/runs/run-7`, { target: { pathname: '/(tabs)/activity/run', params: { runId: 'run-7' } }, workspaceId: undefined }],
     [`https://www.autom8x.ai/runs/run-7?workspace=${WS}`, null],
     [`http://${HOST}/runs/run-7`, null],
     [`https://${HOST}/runs/..%2Fsettings`, null],

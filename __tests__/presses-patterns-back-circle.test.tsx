@@ -1,7 +1,7 @@
 import { fireEvent, screen } from '@testing-library/react-native';
 import React from 'react';
 
-import RunDetailScreen from '@/app/(tabs)/(home)/run';
+import RunDetailScreen from '@/app/(tabs)/activity/run';
 import ApprovalsScreen from '@/app/(tabs)/activity/approvals';
 import AddFlowScreen from '@/app/(tabs)/flows/add';
 import ArchivedFlowsScreen from '@/app/(tabs)/flows/archived';
@@ -87,7 +87,7 @@ const PAGES: {
 }[] = [
   {
     page: 'Run detail',
-    site: 'app/(tabs)/(home)/run.tsx:223',
+    site: 'app/(tabs)/activity/run.tsx:223',
     Screen: RunDetailScreen,
     params: { runId: 'run-0' },
     loaded: () => screen.findByText('Duration'),

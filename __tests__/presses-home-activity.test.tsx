@@ -3,7 +3,7 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 
 import NotificationsScreen from '@/app/(tabs)/(home)/notifications';
-import RunDetailScreen from '@/app/(tabs)/(home)/run';
+import RunDetailScreen from '@/app/(tabs)/activity/run';
 import ApprovalsScreen from '@/app/(tabs)/activity/approvals';
 import ActivityScreen from '@/app/(tabs)/activity/index';
 import { ScopeIcons } from '@/components/scope-control';
@@ -144,7 +144,7 @@ describe('Activity: a row opens its own run (24.4.4)', () => {
     ] as const) {
       mockRouter.push.mockClear();
       await fireEvent.press(await screen.findByText(line));
-      expect(mockRouter.push.mock.calls).toEqual([[{ pathname: '/(tabs)/(home)/run', params: { runId } }]]);
+      expect(mockRouter.push.mock.calls).toEqual([[{ pathname: '/(tabs)/activity/run', params: { runId } }]]);
     }
   });
 });
@@ -307,7 +307,7 @@ describe('Notifications: read and dismissed on the platform (the owner\'s build 
 
     await fireEvent.press(await screen.findByText('Run failed'));
 
-    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/(home)/run', params: { runId: 'run-4' } });
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/activity/run', params: { runId: 'run-4', returnTo: 'home' } }, { withAnchor: true });
     expect(fake.to(READ)).toEqual([
       {
         method: 'POST',

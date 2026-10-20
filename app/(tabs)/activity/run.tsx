@@ -1,5 +1,5 @@
 import { File, Paths } from 'expo-file-system';
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { DownloadSimple, FlowArrow, StopCircle } from 'phosphor-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Platform, ScrollView, Share, StyleSheet, View } from 'react-native';
@@ -20,7 +20,6 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { StatCard } from '@/components/nocturne/stat-card';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
-import type { InboxRunPath } from '@/components/notifications/inbox';
 import { Pressable } from '@/components/pressable';
 import { DocumentCard } from '@/components/runs/document-card';
 import { Text } from '@/components/text';
@@ -54,9 +53,11 @@ import { duration, timeOfDay } from '@/lib/view/format';
 import { documentsFileName, toDocumentCards } from '@/lib/view/documents';
 import { statusLabel, type StatusPillLabel } from '@/lib/view/status';
 import {
+  RUN_ORIGIN_TAB,
   RUN_REREAD_MS,
   heldDecision,
   runLabel,
+  runOrigin,
   runResultLine,
   toRunFacts,
   toRunStats,
@@ -131,15 +132,33 @@ function TrackerStep({ row, divider }: { row: TrackerRow; divider: boolean }) {
 }
 
 /**
- * A run's page. Registered in two stacks — Home's, and Settings' for its inbox
- * (`app/(tabs)/settings/run.tsx`) — and `runPath` is the one it is in, so the
- * run it continues opens in the same stack and Back returns here.
+ * A run's page — the one, in Activity's stack (round 24 P5; the owner's build 23
+ * F4, F5; ~~registered in Home's stack and again in Settings'~~ until round 24).
+ * A push from another tab passes `returnTo` (`RUN_ORIGIN_TAB`): Back — the
+ * circle or the swipe, a `GO_BACK` or `POP`, never re-tapping Activity's tab
+ * (`POP_TO_TOP`) — pops the run off Activity's stack and switches to that tab,
+ * its stack as it was. A push from outside Activity asks for its anchor
+ * (`withAnchor`; `unstable_settings` in its layout), so Activity's index is
+ * under the run, and a run opened by a notification or a link goes back to
+ * Activity.
  */
-export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { runPath?: InboxRunPath }) {
+export default function RunDetailScreen() {
   const { palette } = useTheme();
   const router = useRouter();
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { runId } = useLocalSearchParams<{ runId?: string }>();
+  const { runId, returnTo } = useLocalSearchParams<{ runId?: string; returnTo?: string }>();
+  const origin = runOrigin(returnTo);
+  useEffect(() => {
+    if (!origin) return;
+    // Never prevented: the swipe has already taken the page away natively. The
+    // pop goes on, and the tabs switch to the origin with it.
+    return navigation.addListener('beforeRemove', (event) => {
+      const type = event.data.action.type;
+      if (type !== 'GO_BACK' && type !== 'POP') return;
+      navigation.getParent()?.navigate(RUN_ORIGIN_TAB[origin]);
+    });
+  }, [navigation, origin]);
   const session = useSession();
   // **A run belongs to the workspace it was opened in.** The read is bound to
   // that workspace, not to whichever is active: re-reading a run id in another
@@ -433,7 +452,7 @@ export default function RunDetailScreen({ runPath = '/(tabs)/(home)/run' }: { ru
         <Pressable
           testID="run-continues"
           accessibilityRole="link"
-          onPress={() => router.push({ pathname: runPath, params: { runId: continued } })}
+          onPress={() => router.push({ pathname: '/(tabs)/activity/run', params: { runId: continued } })}
           style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
           <Text style={[styles.continues, { color: palette.neutral[400] }]}>
             Continues <Text style={{ color: palette.accentRamp[300] }}>the run that was held</Text>.

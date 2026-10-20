@@ -1733,10 +1733,10 @@ failed), the file restored from its saved copy — its SHA-256 equal every time 
 | S30 · X says Removing… meanwhile | no "Removing…" (`app/(tabs)/flows/email.tsx`) | `build22-screens` "X removes the address at once…" |
 | S30 · Could not save. Try again. | a failed save says nothing (`app/(tabs)/flows/email.tsx`) | `build22-screens` "a refusal or a failure says…" |
 | S23 · a setting step says the integration | a setting step always "Done" (`lib/view/runs.ts`) | `build22-screens` "succeeded and emailed…" |
-| S23 · the run page's step 4 by the flow's choice | the flow's settings read as none (`app/(tabs)/(home)/run.tsx`) | `build22-screens` "succeeded and emailed…" |
+| S23 · the run page's step 4 by the flow's choice | the flow's settings read as none (~~`app/(tabs)/(home)/run.tsx`~~ (`app/(tabs)/activity/run.tsx` since round 24)) | `build22-screens` "succeeded and emailed…" |
 | S24 · Sending… while owed | "Waiting" for an owed email (`lib/view/runs.ts`) | `build22-screens` "its email owed…" |
 | S24 · a cancelled run: Stopped | a cancelled run's email by its email state (`lib/view/runs.ts`) | `build22-screens` "running: 5 Waiting; cancelled: 5 Stopped…" |
-| S25 · no version gate on the run page | the version gate back on the groups (`app/(tabs)/(home)/run.tsx`) | `build22-screens` "is drawn by the five steps…" |
+| S25 · no version gate on the run page | the version gate back on the groups (~~`app/(tabs)/(home)/run.tsx`~~ (`app/(tabs)/activity/run.tsx` since round 24)) | `build22-screens` "is drawn by the five steps…" |
 | a step with no state is not counted | a step with no state counted (`lib/view/runs.ts`) | `build22-views` "a platform step this build does not know: its title…" |
 | vocabulary · "Move to v" banned | "Move to v" taken off the ban (`scripts/audit-vocabulary.mjs`) | `audit-gates` "Build 22…" |
 | vocabulary · "Connect vendor" in any form | the ban back to "Connect vendor ›" (`scripts/audit-vocabulary.mjs`) | `audit-gates` "Build 22…" |
@@ -1888,7 +1888,7 @@ Deployed contract check (it reads production).
 | A2 · Department sets the scope | its `onChange` a no-op (`components/scope-control.tsx`) | `presses-home-activity` "the Department drop-down…" |
 | A1 · the circles in the right group | the circles moved back beside the title (`components/title-row.tsx`) | `build22-screens` "Flows: the title first…" |
 | A1 · Archived its circle at every width | Archived drawn as its pill (`app/(tabs)/flows/index.tsx`) | `build22-screens` "Archived is its circle at every width…" |
-| A4 · only a working step turns | the spinner on every row but a skipped one (`app/(tabs)/(home)/run.tsx`) | `invoice-processing-screens` "at the start…", "while running…" |
+| A4 · only a working step turns | the spinner on every row but a skipped one (~~`app/(tabs)/(home)/run.tsx`~~ (`app/(tabs)/activity/run.tsx` since round 24)) | `invoice-processing-screens` "at the start…", "while running…" |
 | A7 · held waits | Waiting only for pending/running (`lib/view/runs.ts`) | `build22-views` "held: … step 5 waits too…" |
 | A7 · failed is Failed | the failed line removed | `build22-views` "a run failed…" |
 | A5 · run/approval paths to the splash | `redirectSystemPath` returns the path (`app/+native-intent.tsx`) | `round23` the native-intent table |
@@ -1902,7 +1902,7 @@ Deployed contract check (it reads production).
 | B3 · a member's rows inert | `readOnly` ignored (`components/flows/vendor-choice.tsx`) | `vendor-page` "a member (round 23, B3)…" |
 | B3 · Set up read-only for a member on a live flow | `readOnly={false}` (`app/(tabs)/flows/setup.tsx`) | `invoice-processing-screens` "a member on a live flow…" |
 | B3 · a member adding a flow still chooses | `readOnly={!canManage}` | `invoice-processing-screens` "a member adding a flow…" |
-| A4 · still under Reduce Motion | `if (reduceMotion) return` removed (`app/(tabs)/(home)/run.tsx`) | `invoice-processing-screens` "…Reduce Motion true…" |
+| A4 · still under Reduce Motion | `if (reduceMotion) return` removed (~~`app/(tabs)/(home)/run.tsx`~~ (`app/(tabs)/activity/run.tsx` since round 24)) | `invoice-processing-screens` "…Reduce Motion true…" |
 | A2 · only a fade under Reduce Motion | the scale kept under Reduce Motion (`components/dropdown.tsx`) | `round23` "opening it, Reduce Motion true…" |
 | A2 · Reload session busy | its label kept, or `disabled` dropped (`components/settings/workspace-switcher.tsx`) | `workspace-switcher` "Reload session says \"Working…\"…" |
 | B3 · a 403 in its words | the 403 check never true (`app/(tabs)/flows/vendor.tsx`) | `vendor-page` "a 403 from the platform…" |
@@ -1946,6 +1946,16 @@ drop-down, the status-bar strip, and the A8X run package.
   flow's button 34. **The second authorised re-pin** (F14; the counts are README's re-pin fact) — props
   only. Phone size: the A4 captures on iPhone SE (3rd
   generation) and 17 Pro Max at the default and the largest size.
+- **P5 runs live in Activity** (F4, F5): ~~`app/(tabs)/(home)/run.tsx`~~ → `app/(tabs)/activity/run.tsx`,
+  ~~`app/(tabs)/settings/run.tsx`~~ deleted, `run` registered in Activity's stack only; every push names
+  `/(tabs)/activity/run`. From another tab — Home's recent runs (`home`), the two inboxes (`home`,
+  `settings`, the `Inbox` prop that replaced `runPath`), a flow's Run now (`flows`) — with `returnTo`
+  (`RUN_ORIGIN_TAB`, `runOrigin`, `lib/view/runs.ts`) and `withAnchor` (Activity's layout
+  `unstable_settings = { anchor: 'index' }`), as a notification's and a link's tap now are too. The
+  run page's `beforeRemove` listener, on a `GO_BACK` or `POP` (never `POP_TO_TOP`), lets the pop go on
+  (a swipe has already gone natively) and navigates the tab navigator to the origin, which keeps that
+  tab's stack. S5: the swipe returns to the origin too. The website: `/account/runs/[runId]` already
+  highlights Activity and its Back is `/account/runs` — verified, no change.
 - **P11 the status-bar strip** (seen in fb09, fb10, fb15, fb16): `components/status-bar-strip.tsx`, a
   `GlassSurface radius={0} backing="page"` as tall as the top inset, absolute, `pointerEvents="none"`,
   rendered once after `<Tabs>` in `app/(tabs)/_layout.tsx` and once after the auth `Stack` (Sign in
@@ -1964,6 +1974,10 @@ drop-down, the status-bar strip, and the A8X run package.
 | P3 · the content limit by default | the default dropped (`components/text.tsx`) | `text` "Text follows the phone up to the content limit…" |
 | P3 · the caller's limit wins | the default spread after the props | `text` "the caller's limit wins" |
 | P3 · react-native's Text only in the wrapper | the import check not run (`scripts/audit-type.mjs`) | `audit-gates` "round 24 P3: Text or TextInput from react-native…" |
+| P5 · Back returns to the origin tab | the tab navigator's `navigate` removed (`app/(tabs)/activity/run.tsx`) | `real-router/run-in-activity` Home's run, the bell's and Settings' |
+| P5 · Activity's page under a run from elsewhere | `withAnchor` dropped (`components/notifications/inbox.tsx`) | `real-router/run-in-activity` "Settings › Notifications…" |
+| P5 · Home's run says where it came from | `returnTo: 'home'` dropped (`app/(tabs)/(home)/index.tsx`) | `real-router/run-in-activity` Home's run, `tab-screens` "opens Run detail…" |
+| P5 · re-tapping Activity stays | `POP_TO_TOP` returns to the origin too | `real-router/run-in-activity` "re-tapping Activity's tab…" |
 
 (Each run by the lane's bite script in the round's scratchpad, Node 22.23.2: broken, red — a test failed —
 the file restored sha256-equal, green.)

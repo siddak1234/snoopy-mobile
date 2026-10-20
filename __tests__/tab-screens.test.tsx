@@ -7,7 +7,7 @@ import ApprovalsScreen from '@/app/(tabs)/activity/approvals';
 import FlowsScreen from '@/app/(tabs)/flows/index';
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import HomeScreen from '@/app/(tabs)/(home)/index';
-import RunDetailScreen from '@/app/(tabs)/(home)/run';
+import RunDetailScreen from '@/app/(tabs)/activity/run';
 import SettingsScreen from '@/app/(tabs)/settings';
 import SettingsArchivedFlowsScreen from '@/app/(tabs)/settings/archived';
 import SettingsArchivedFlowScreen from '@/app/(tabs)/settings/archived-flow';
@@ -118,10 +118,11 @@ describe('Home dashboard', () => {
     const { getByText, getAllByText, queryByText } = await renderWithProviders(<HomeScreen />, signedInSession);
     await fireEvent.press(await screen.findByText('Run #4821 · posted to QuickBooks'));
     // A real run id now, not a prototype variant.
+    // In Activity, Back returning to Home (round 24 P5).
     expect(mockRouter.push).toHaveBeenCalledWith({
-      pathname: '/(tabs)/(home)/run',
-      params: { runId: 'run-0' },
-    });
+      pathname: '/(tabs)/activity/run',
+      params: { runId: 'run-0', returnTo: 'home' },
+    }, { withAnchor: true });
   });
 });
 
@@ -626,7 +627,7 @@ describe('Activity', () => {
     await fireEvent.press(getByText('32 emails routed · 3 escalated'));
     expect(mockRouter.push).toHaveBeenCalledTimes(1);
     const target = mockRouter.push.mock.calls[0]?.[0] as { pathname: string; params: { runId: string } };
-    expect(target.pathname).toBe('/(tabs)/(home)/run');
+    expect(target.pathname).toBe('/(tabs)/activity/run');
     expect(typeof target.params.runId).toBe('string');
     expect(target.params.runId.length).toBeGreaterThan(0);
   });
@@ -818,10 +819,10 @@ describe('Notifications inbox (design sNotifs)', () => {
     expect(queryByText('Invoice paid')).toBeNull();
     await fireEvent.press(getByText('Run failed'));
     expect(mockRouter.push).toHaveBeenCalledWith({
-      pathname: '/(tabs)/(home)/run',
-      // A row points at the real run, not a prototype variant.
-      params: { runId: 'run-4' },
-    });
+      pathname: '/(tabs)/activity/run',
+      // A row points at the real run, not a prototype variant; Back returns to Home (round 24 P5).
+      params: { runId: 'run-4', returnTo: 'home' },
+    }, { withAnchor: true });
     // "Digest posted" was a prototype success notice. The inbox has only held
     // runs and failed runs, and a held row opens Approvals, where it is decided
     // (Gate 24's parity pass; Activity until then).
@@ -1122,9 +1123,9 @@ describe('Settings — one grouped page (build 11, D1)', () => {
     expect(getByText('Notifications')).toBeTruthy();
     expect(getAllByText('Run held for review').length).toBeGreaterThan(0);
     expect(queryByText('Open inbox')).toBeNull();
-    // A failed run opens in the Settings stack, so Back returns to Settings.
+    // A failed run opens in Activity, and Back returns to Settings (round 24 P5).
     await fireEvent.press(getByText('Run failed'));
-    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/settings/run', params: { runId: 'run-4' } });
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/activity/run', params: { runId: 'run-4', returnTo: 'settings' } }, { withAnchor: true });
     // A held run opens Approvals, where it is decided, as from Home (Gate 24's
     // parity pass; Activity until then).
     await fireEvent.press(getAllByText('Run held for review')[0]);
@@ -1133,7 +1134,7 @@ describe('Settings — one grouped page (build 11, D1)', () => {
     await fireEvent.press(screen.getByLabelText('Back'));
     expect(mockRouter.back).toHaveBeenCalled();
     expect(mockRouter.push).not.toHaveBeenCalledWith('/(tabs)/(home)/notifications');
-    expect(mockRouter.push).not.toHaveBeenCalledWith(expect.objectContaining({ pathname: '/(tabs)/(home)/run' }));
+    expect(mockRouter.push).not.toHaveBeenCalledWith(expect.objectContaining({ params: expect.objectContaining({ returnTo: 'home' }) }));
   });
 
   it('shows Billing without the plan totals (24.9.5)', async () => {

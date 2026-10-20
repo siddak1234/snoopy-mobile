@@ -54,4 +54,4 @@ export function renderWithProviders(
   );
 }
 
-export { mockRedirect, mockRouter, mockTabsDrawn, setMockParams } from '@/test/mocks/expo-router';
+export { mockNavigation, mockRedirect, mockRouter, mockTabs, mockTabsDrawn, setMockParams } from '@/test/mocks/expo-router';

@@ -422,6 +422,21 @@ export type TrackerRow = {
 export const RUN_REREAD_MS = 2_000;
 
 /**
+ * Runs live in Activity (round 24 P5; the owner's build 23 F4, F5: "Shouldnt it
+ * be in activity"): the one run page is `/(tabs)/activity/run`. A push from
+ * another tab says where it came from (`returnTo`), and Back — the circle or the
+ * swipe — pops the run off Activity's stack and returns to that tab, its stack as
+ * it was (Home › Notifications stays open). Each origin and its tab's route.
+ */
+export const RUN_ORIGIN_TAB = { home: '(home)', flows: 'flows', settings: 'settings' } as const;
+export type RunOrigin = keyof typeof RUN_ORIGIN_TAB;
+
+/** The run page's `returnTo` param as an origin, or null (none, or not one). */
+export function runOrigin(param: unknown): RunOrigin | null {
+  return typeof param === 'string' && Object.hasOwn(RUN_ORIGIN_TAB, param) ? (param as RunOrigin) : null;
+}
+
+/**
  * How long a flow page waits, while a run of the flow is pending or running,
  * before it reads its DASHBOARD again (Build 21, spec A6; the session's S30).
  */

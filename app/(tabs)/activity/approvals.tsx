@@ -275,7 +275,7 @@ export default function ApprovalsScreen() {
           error={errors[item.id]}
           onDecide={(decision) => submitDecision(item.id, decision)}
           // The held run's page, where Activity's rows open a run (24.4.4).
-          onView={() => router.push({ pathname: '/(tabs)/(home)/run', params: { runId: item.runId } })}
+          onView={() => router.push({ pathname: '/(tabs)/activity/run', params: { runId: item.runId } })}
         />
       ))}
     </ScrollView>

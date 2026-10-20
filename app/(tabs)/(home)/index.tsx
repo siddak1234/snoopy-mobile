@@ -554,10 +554,10 @@ export default function HomeScreen() {
                 key={r.runId}
                 testID={`home-run-${r.runId}`}
                 onPress={() =>
-                  router.push({
-                    pathname: '/(tabs)/(home)/run',
-                    params: { runId: r.runId },
-                  })
+                  router.push(
+                    { pathname: '/(tabs)/activity/run', params: { runId: r.runId, returnTo: 'home' } },
+                    { withAnchor: true },
+                  )
                 }
                 style={({ pressed }) => [
                   styles.runRow,

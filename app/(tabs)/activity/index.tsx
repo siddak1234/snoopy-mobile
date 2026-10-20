@@ -65,7 +65,7 @@ function ActivityRow({ item, last }: { item: ActivityItem; last: boolean }) {
     <Pressable
       testID={`activity-row-${item.id}`}
       accessibilityRole="button"
-      onPress={() => router.push({ pathname: '/(tabs)/(home)/run', params: { runId: item.id } })}
+      onPress={() => router.push({ pathname: '/(tabs)/activity/run', params: { runId: item.id } })}
       style={({ pressed }) => [
         styles.row,
         // The last row draws no border: it would run square past the card's rounded

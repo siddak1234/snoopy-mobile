@@ -229,7 +229,7 @@ function targetOf(data: PushData): Href | null {
     typeof data.runId === 'string' &&
     RUN_ID.test(data.runId)
   ) {
-    return { pathname: '/(tabs)/(home)/run', params: { runId: data.runId } };
+    return { pathname: '/(tabs)/activity/run', params: { runId: data.runId } };
   }
   if (data.event === 'approval-requested') return '/(tabs)/activity/approvals';
   return null;
@@ -261,7 +261,7 @@ export function linkTargetOf(
   if (!match || !RUN_ID.test(match[2]!)) return null;
   const workspaceId = url.searchParams.get('workspace') ?? undefined;
   const target: Href =
-    match[1] === 'runs' ? { pathname: '/(tabs)/(home)/run', params: { runId: match[2]! } } : '/(tabs)/activity/approvals';
+    match[1] === 'runs' ? { pathname: '/(tabs)/activity/run', params: { runId: match[2]! } } : '/(tabs)/activity/approvals';
   return { target, workspaceId };
 }
 
@@ -363,7 +363,8 @@ export function usePushRegistration(signedIn: boolean): void {
     (target: Href, named: PushData['workspaceId'], isLive: () => boolean) => {
       const workspaceId = switchFor(named, drawn.current);
       if (workspaceId === null) {
-        router.push(target);
+        // Over the target tab's first page (round 24 P5), so Back stays in that tab.
+        router.push(target, { withAnchor: true });
         return;
       }
       const { reload } = drawn.current;
@@ -452,7 +453,7 @@ export function usePushRegistration(signedIn: boolean): void {
   useEffect(() => {
     if (!owed) return;
     setOwed(null);
-    if (active === owed.workspaceId) router.push(owed.target);
+    if (active === owed.workspaceId) router.push(owed.target, { withAnchor: true });
   }, [owed, active, router]);
 }
 

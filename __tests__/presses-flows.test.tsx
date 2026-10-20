@@ -417,7 +417,7 @@ describe("The flow page's start controls (24.4.1: the run's page shows each step
     await fireEvent.changeText(within(screen.getByTestId('start-run')).getByLabelText('Note'), 'Pay the Acme invoice');
     await fireEvent.press(screen.getByText('Start run'));
     await waitFor(() =>
-      expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/(home)/run', params: { runId: 'run-42' } }),
+      expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/activity/run', params: { runId: 'run-42', returnTo: 'flows' } }, { withAnchor: true }),
     );
     expect(writes).toEqual([
       {
