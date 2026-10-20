@@ -10,13 +10,13 @@ import { PillButton } from '@/components/nocturne/pill-button';
 import { ScreenError, ScreenUnavailable } from '@/components/screen-state';
 import { Text } from '@/components/text';
 import { em, fonts, iconSize, layout, status, typeScale } from '@/constants/theme';
-import { deviceTimeZone, usableLink, useRunPackageDownload } from '@/hooks/use-run-package';
+import { deviceTimeZone, useRunPackageDownload } from '@/hooks/use-run-package';
 import { activeWorkspaceId, useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import {
   DOWNLOAD_EXCEL_LABEL,
   DOWNLOAD_PDF_LABEL,
-  PACKAGE_BUSY,
+  PACKAGE_NOT_OPENED,
   PACKAGE_PREPARING,
   RUN_PACKAGE_TITLE,
   SESSION_KEPT,
@@ -24,13 +24,13 @@ import {
 } from '@/lib/content/screen-states';
 import { refusalMessage } from '@/lib/content/refusals';
 import { downloadSignedFile, newIdempotencyKey, type SavedFile } from '@/lib/platform/client';
-import { PlatformBusyError } from '@/lib/platform/problem';
-import { requestRunPackageFile } from '@/lib/platform/runs';
+import { packageNotOpened, requestRunPackageFile } from '@/lib/platform/runs';
+import { signedLink } from '@/lib/platform/signed-file';
 
 type Shown =
   | { kind: 'preparing' }
   | { kind: 'ready'; uri: string }
-  | { kind: 'busy' }
+  | { kind: 'notOpened' }
   | { kind: 'error'; body: string }
   | { kind: 'unavailable' };
 
@@ -41,14 +41,16 @@ type Shown =
  * page of the package's sections~~). In Activity's stack, `?runId=`.
  *
  * The platform builds the job's PDF (`requestRunPackageFile`, the phone's zone;
- * a busy answer is asked once more after its wait); the signed link is saved
- * into the app's cache (`downloadSignedFile`, the one native download, under a
- * name of its own so a share from the header never removes it) and drawn in a
- * WebView from that file. The header holds Back, Download PDF and Download
- * Excel — the run page's download path (`useRunPackageDownload`). States:
- * preparing; busy ("Could not open the package. Try again.", with Retry);
- * error (the refusal's words). The cached file is deleted when the page
- * closes.
+ * a 503 is asked once more after its wait, the website's rule); a file that is
+ * not a PDF or is over 25 MiB is refused before anything is saved; the signed
+ * link (https only, `signedLink`) is saved into the app's cache
+ * (`downloadSignedFile`, the one native download, under a name of its own so a
+ * share from the header never removes it) and drawn in a WebView from that
+ * file. The header holds Back, Download PDF and Download Excel — the run page's
+ * download path (`useRunPackageDownload`). States: preparing; not opened —
+ * still busy, or the file refused — "Could not open the package. Try again.",
+ * the website's words for both, with Retry; error (the refusal's words). The
+ * cached file is deleted when the page closes.
  */
 export default function RunPackageScreen() {
   const { palette } = useTheme();
@@ -80,10 +82,8 @@ export default function RunPackageScreen() {
     }
     setShown({ kind: 'preparing' });
     try {
-      const file = usableLink(
-        await requestRunPackageFile(openedIn, runId, 'pdf', newIdempotencyKey('run-package-pdf'), deviceTimeZone()),
-      );
-      const saved = await downloadSignedFile(file.downloadUrl, `view-${file.filename}`);
+      const file = await requestRunPackageFile(openedIn, runId, 'pdf', newIdempotencyKey('run-package-pdf'), deviceTimeZone());
+      const saved = await downloadSignedFile(signedLink(file.downloadUrl), `view-${file.filename}`);
       if (!live.current) {
         if (saved.exists) saved.delete();
         return;
@@ -93,7 +93,7 @@ export default function RunPackageScreen() {
       setShown({ kind: 'ready', uri: saved.uri });
     } catch (error) {
       if (!live.current) return;
-      setShown(error instanceof PlatformBusyError ? { kind: 'busy' } : { kind: 'error', body: refusalMessage(error) });
+      setShown(packageNotOpened(error) ? { kind: 'notOpened' } : { kind: 'error', body: refusalMessage(error) });
     }
   }, [openedIn, runId]);
 
@@ -109,9 +109,9 @@ export default function RunPackageScreen() {
   if (shown.kind === 'unavailable') {
     return <ScreenUnavailable title={errorTitleFor('package')} onBack={() => router.back()} topInset={insets.top} />;
   }
-  if (shown.kind === 'busy') {
+  if (shown.kind === 'notOpened') {
     return (
-      <ScreenError title={PACKAGE_BUSY} body={SESSION_KEPT} onRetry={() => void load()} onBack={() => router.back()} topInset={insets.top} />
+      <ScreenError title={PACKAGE_NOT_OPENED} body={SESSION_KEPT} onRetry={() => void load()} onBack={() => router.back()} topInset={insets.top} />
     );
   }
   if (shown.kind === 'error') {

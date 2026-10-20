@@ -1994,7 +1994,7 @@ drop-down, the status-bar strip, and the A8X run package.
   page's View package / Download PDF / Download Excel replace Download JSON (`readRunDocuments`,
   `DOWNLOAD_JSON_LABEL`, `documentsFileName`, `downloadJson` deleted; the endpoint stays). New:
   `createRunPackageFile` + `requestRunPackageFile` (`lib/platform/runs.ts`), `PlatformBusyError`
-  (`lib/platform/problem.ts`, mapped in `client.ts` for a 503 with `retry-after`, capped at 15 s),
+  (`lib/platform/problem.ts`, mapped in `client.ts` for a 503 with `retry-after`; ~~capped at 15 s~~, the website's rule since the review below),
   `hooks/use-run-package.tsx` (the one download path, for the run page and the package page — the
   reason for the new file), `app/(tabs)/activity/package.tsx` (the PDF in a WebView from the cache,
   `view-` prefixed so a header share never removes it; deleted on close). No `readRunPackage` and no
@@ -2085,6 +2085,23 @@ for every rule the two clients share; the main session's decisions bind each fix
   is done (P9, unchanged).
 - **Two approvals at one moment** (finding 6): `jobApproval`'s strict `>` — the first listed wins — is
   now held by a test.
+- **The package's bound and format** (finding 2): `RUN_PACKAGE_MAXIMUM_BYTES` (25 MiB, 26,214,400
+  bytes — the platform's bound, the website's constant) and the format asked for, checked by
+  `requestRunPackageFile` before anything is saved (`RunPackageFileRefusedError`): View package then
+  says "Could not open the package. Try again." (the website's route's words for that case), each
+  download "Could not download. Try again.".
+- **The busy retry** (finding 3): `packageRetryWaitMs` ported rule for rule — any 503 is asked once
+  more, after its `retry-after` up to 10 s or 2 s when it names none; a longer wait is said at once
+  (~~only a 503 with `retry-after`, capped at 15 s~~). The package page says "Could not open the
+  package. Try again." for any 503 left (`packageNotOpened`; `PACKAGE_BUSY` renamed
+  `PACKAGE_NOT_OPENED`); the website's route now says the same words.
+- **One way to hand on a signed file** (finding 8): `lib/platform/signed-file.ts`, beside the
+  download it calls — `signedLink` (https only; ~~`usableLink`~~ and Data's own check folded in) and
+  `shareSignedFile` (iOS saves, shares, removes; Android opens) — used by `hooks/use-run-package.tsx`
+  and `app/(tabs)/settings/data.tsx`. A non-https export link now says "The link to the file cannot be
+  used." (~~"The export answered an unusable address."~~).
+- **Out-of-date words** (finding 9, in part): `invoice-processing-screens`' header strikes Download
+  JSON.
 
 ### Guards proved to bite, the review's findings
 
@@ -2095,3 +2112,15 @@ for every rule the two clients share; the main session's decisions bind each fix
 | Step 4 says only "Denied" or why it waits | the old `HELD_DECISION_LINE` line put back (`lib/view/runs.ts`) | `build21-views` step 4 approved, expired |
 | The fallback rows say "Denied" | the decision not passed to `reportedRows` | `build21-views` "the fallback rows…" |
 | The first listed of two at one moment | `>=` for `>` in `jobApproval` | `build21-views` "of two approvals asked at the same moment…" |
+| A package file within 25 MiB | the size check dropped (`lib/platform/runs.ts`) | `platform-request` "refuses a file over 25 MiB…", `package-screen` 26,214,401 bytes and the two download cases, `invoice-processing-screens` "Download Excel answered…" |
+| The format asked for | the format check dropped | `platform-request`, `package-screen` "not a PDF" and the three download cases, `invoice-processing-screens` |
+| A refused file says the website's words | `packageNotOpened` without the refusal | `package-screen` the two refused-file cases |
+| 2 s when no wait is named | no retry without `retry-after` | `platform-request` the table and "a 503 naming no wait…" |
+| No retry past 10 s | a 15 s cap | `platform-request` the table and "…one of 11 s is not" |
+| Any 503 is asked again | only `PlatformBusyError` retried | `platform-request` "a 503 naming no wait…" |
+| Any 503 left says so on the page | only `PlatformBusyError` mapped | `package-screen` "busy, then a 503 naming no wait…" |
+| https only | the check skipped (`lib/platform/signed-file.ts`) | `signed-file` both platforms and `signedLink` |
+| Removed once shared | the delete dropped | `signed-file`, `data-support-screens`, `package-screen`, `invoice-processing-screens` |
+| Android opens the link | iOS's path on Android | `signed-file` "on Android…", `data-support-screens` "on Android…" |
+| Data's export takes the helper | the call replaced (`app/(tabs)/settings/data.tsx`) | `data-support-screens` the three download cases |
+| The package's downloads take the helper | the call replaced (`hooks/use-run-package.tsx`) | `package-screen`, `invoice-processing-screens` the download cases |

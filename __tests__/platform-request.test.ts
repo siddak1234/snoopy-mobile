@@ -8,7 +8,13 @@ import {
   resetPlatformClientsForTests,
 } from '@/lib/platform/client';
 import { PlatformBusyError, PlatformError, PlatformRateLimitedError } from '@/lib/platform/problem';
-import { createRunPackageFile, requestRunPackageFile } from '@/lib/platform/runs';
+import {
+  RUN_PACKAGE_MAXIMUM_BYTES,
+  RunPackageFileRefusedError,
+  createRunPackageFile,
+  packageRetryWaitMs,
+  requestRunPackageFile,
+} from '@/lib/platform/runs';
 import { sendRunFile } from '@/lib/platform/run-file';
 
 jest.mock('expo-constants', () => ({
@@ -468,5 +474,51 @@ describe('the run package file', () => {
     fetchMock.mockResolvedValueOnce(busy()).mockResolvedValueOnce(busy());
     await expect(requestRunPackageFile(WS, RUN, 'pdf', 'k-2', undefined, sleep)).rejects.toBeInstanceOf(PlatformBusyError);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  /** A 503 as the platform says it: with `retry-after` when given, or with none. */
+  const unavailable = (retryAfter?: string) =>
+    new Response(JSON.stringify({ status: 503, code: 'package_busy', title: 'Busy' }), {
+      status: 503,
+      headers: { 'content-type': 'application/problem+json', ...(retryAfter === undefined ? {} : { 'retry-after': retryAfter }) },
+    });
+
+  it("waits as the website's packageRetryWaitMs does: 2 s when no wait is named, the named wait up to 10 s, else none", () => {
+    expect(packageRetryWaitMs(undefined)).toBe(2_000);
+    expect(packageRetryWaitMs(0)).toBe(0);
+    expect(packageRetryWaitMs(10)).toBe(10_000);
+    expect(packageRetryWaitMs(11)).toBeNull();
+  });
+
+  it('a 503 naming no wait is asked again after 2 s, with the same key', async () => {
+    const sleep = jest.fn(async () => undefined);
+    fetchMock.mockResolvedValueOnce(unavailable()).mockResolvedValueOnce(jsonResponse(200, FILE));
+    await expect(requestRunPackageFile(WS, RUN, 'pdf', 'k-none', undefined, sleep)).resolves.toEqual(FILE);
+    expect(sleep).toHaveBeenCalledWith(2_000);
+    expect(fetchMock.mock.calls.map((call) => (call[0] as Request).headers.get('idempotency-key'))).toEqual(['k-none', 'k-none']);
+  });
+
+  it('a named wait of 10 s is waited out; one of 11 s is not — said at once, after one request', async () => {
+    const sleep = jest.fn(async () => undefined);
+    fetchMock.mockResolvedValueOnce(unavailable('10')).mockResolvedValueOnce(jsonResponse(200, FILE));
+    await expect(requestRunPackageFile(WS, RUN, 'pdf', 'k-10', undefined, sleep)).resolves.toEqual(FILE);
+    expect(sleep).toHaveBeenCalledWith(10_000);
+
+    fetchMock.mockReset();
+    sleep.mockClear();
+    fetchMock.mockResolvedValueOnce(unavailable('11'));
+    await expect(requestRunPackageFile(WS, RUN, 'pdf', 'k-11', undefined, sleep)).rejects.toMatchObject({ status: 503 });
+    expect(sleep).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses a file over 25 MiB or in another format than asked; 26,214,400 bytes is taken', async () => {
+    expect(RUN_PACKAGE_MAXIMUM_BYTES).toBe(26_214_400);
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { ...FILE, sizeBytes: 26_214_400 }));
+    await expect(requestRunPackageFile(WS, RUN, 'pdf', 'k-a', undefined)).resolves.toMatchObject({ sizeBytes: 26_214_400 });
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { ...FILE, sizeBytes: 26_214_401 }));
+    await expect(requestRunPackageFile(WS, RUN, 'pdf', 'k-b', undefined)).rejects.toBeInstanceOf(RunPackageFileRefusedError);
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, FILE));
+    await expect(requestRunPackageFile(WS, RUN, 'xlsx', 'k-c', undefined)).rejects.toBeInstanceOf(RunPackageFileRefusedError);
   });
 });

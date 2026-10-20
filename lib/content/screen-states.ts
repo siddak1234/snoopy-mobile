@@ -448,8 +448,12 @@ export const DOWNLOAD_PDF_LABEL = 'Download PDF';
 export const DOWNLOAD_EXCEL_LABEL = 'Download Excel';
 export const RUN_PACKAGE_TITLE = 'Run package';
 export const PACKAGE_PREPARING = 'Preparing the package…';
-/** Busy still after the wait it asked for (503 `package_busy`, asked twice). */
-export const PACKAGE_BUSY = 'Could not open the package. Try again.';
+/**
+ * The package page when the PDF cannot be shown: the platform still busy after
+ * its wait (any 503, asked twice), or a file that is not a PDF or is over
+ * 25 MiB — the website's package route's words for both.
+ */
+export const PACKAGE_NOT_OPENED = 'Could not open the package. Try again.';
 export const DOWNLOAD_FAILED = 'Could not download. Try again.';
 export const RUN_ID_LABEL = 'Run ID';
 

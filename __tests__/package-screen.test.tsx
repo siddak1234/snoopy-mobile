@@ -97,6 +97,34 @@ describe('the run package page', () => {
     expect(sent).toHaveLength(3);
   });
 
+  it('busy, then a 503 naming no wait: the same words, nothing saved', async () => {
+    answers.push(
+      () => {
+        throw new PlatformBusyError('Busy', 0, 'package_busy');
+      },
+      () => {
+        throw new PlatformError('Service Unavailable', 503);
+      },
+    );
+    await renderWithProviders(<RunPackageScreen />, signedInSession);
+    expect(await screen.findByText('Could not open the package. Try again.')).toBeTruthy();
+    expect(sent).toHaveLength(2);
+    expect(downloadSignedFile).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['over 25 MiB (26,214,401 bytes)', () => ({ ...link('pdf'), sizeBytes: 26_214_401 })],
+    ['not a PDF', () => link('xlsx')],
+  ])('a file %s is refused before anything is saved, in the website\'s words — Retry asks again', async (_case, answer) => {
+    answers.push(answer);
+    await renderWithProviders(<RunPackageScreen />, signedInSession);
+    expect(await screen.findByText('Could not open the package. Try again.')).toBeTruthy();
+    expect(downloadSignedFile).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('package-webview')).toBeNull();
+    await fireEvent.press(screen.getByText('Retry'));
+    expect(await screen.findByTestId('package-webview')).toBeTruthy();
+  });
+
   it('busy: Back leaves', async () => {
     const busy = () => {
       throw new PlatformBusyError('Busy', 0, 'package_busy');
@@ -153,6 +181,20 @@ describe('the run package page', () => {
       Platform.OS = os;
       share.mockRestore();
     }
+  });
+
+  it.each([
+    ['package-download-excel', 'not a workbook', () => link('pdf')],
+    ['package-download-excel', 'over 25 MiB', () => ({ ...link('xlsx'), sizeBytes: 26_214_401 })],
+    ['package-download-pdf', 'not a PDF', () => link('xlsx')],
+  ])('%s answered with a file %s: "Could not download. Try again.", nothing saved', async (testID, _case, answer) => {
+    await renderWithProviders(<RunPackageScreen />, signedInSession);
+    await screen.findByTestId('package-webview');
+    answers.push(answer);
+    await fireEvent.press(screen.getByTestId(testID));
+    expect(await screen.findByText('Could not download. Try again.')).toBeTruthy();
+    // Only the page's own PDF was ever saved.
+    expect(downloadSignedFile).toHaveBeenCalledTimes(1);
   });
 
   it('a download that fails says "Could not download. Try again." under the buttons', async () => {

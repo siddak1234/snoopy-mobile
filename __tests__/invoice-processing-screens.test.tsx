@@ -81,8 +81,8 @@ const mockConnect = connectOAuthProvider as jest.Mock;
  * D4, AM2, AM4, AM5): Set up once, simple; the flow page as the run page —
  * DASHBOARD, STEPS with the document and Start run in Step 1 and the vendor in
  * its step, CONNECTIONS, Edit setup at the bottom; a run's page with every
- * step from the start, its documents and Download JSON; every run by its full
- * id. Drawn from the platform's contract (backend ADR-0037, ADR-0039,
+ * step from the start, its documents and ~~Download JSON~~ (the run package
+ * since round 24, P12); every run by its full id. Drawn from the platform's contract (backend ADR-0037, ADR-0039,
  * ADR-0040), so any flow that declares groups, a vendor per step or documents
  * is drawn alike.
  */
@@ -1181,6 +1181,18 @@ describe("a run's documents and its package (spec A7, C2; the owner's ~04:05Z an
     } finally {
       Platform.OS = os;
       share.mockRestore();
+    }
+  });
+
+  it('Download Excel answered with a file that is not a workbook, or one over 25 MiB: "Could not download. Try again.", nothing saved', async () => {
+    for (const answer of [pdfLink('pdf'), { ...pdfLink('xlsx'), sizeBytes: 26_214_401 }]) {
+      (downloadSignedFile as jest.Mock).mockClear();
+      const view = await openRun(ipRun('succeeded', [], { documents: three }), { packageFile: () => answer });
+      await fireEvent.press(await screen.findByTestId('run-download-excel'));
+      expect(await screen.findByText('Could not download. Try again.')).toBeTruthy();
+      expect(downloadSignedFile).not.toHaveBeenCalled();
+      await view.unmount();
+      resetSnapshot();
     }
   });
 

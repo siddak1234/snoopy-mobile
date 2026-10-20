@@ -556,7 +556,7 @@ function trackerSub(
   if (state === 'stopped') return STEP_STOPPED;
   if (state === 'failed') return run.failureReason ?? STEP_FAILED;
   // A held step says why it waits until its approval is denied, then "Denied"
-  // (round 24 P6) — the website's words (`web lib/run-progress.ts`); once the job
+  // (round 24 P6) — the website's words (`snoopy/lib/run-progress.ts`); once the job
   // runs on, the step is done. ~~"Approved", "No longer awaiting approval"~~ on
   // the step until the round's review.
   if (state === 'held') return decision === 'rejected' ? STEP_DENIED : stepHeld(steps.find((step) => step.outcome === 'held')?.heldReason);

@@ -328,10 +328,17 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   `PUT /v1/session/devices` body — never a log, a URL or the enclave.
 - The A8X run package (round 24 P12; backend ADR-0045): `lib/platform/runs.ts`
   `createRunPackageFile` (`POST …/runs/{runId}/package`) answers a signed link,
-  never bytes; `requestRunPackageFile` asks once more after a busy answer's wait
-  — a 503 with `retry-after` is `PlatformBusyError` in the transport
-  (`lib/platform/client.ts`), still a 503. The file is saved through
-  `downloadSignedFile` (still the one native download). The package page draws
+  never bytes; `requestRunPackageFile` asks once more after any 503, waiting
+  `packageRetryWaitMs` — its `retry-after` up to 10 s, 2 s when it names none,
+  no retry past 10 s (the website's rule; a 503 with `retry-after` is
+  `PlatformBusyError` in the transport, `lib/platform/client.ts`, still a 503) —
+  and refuses a file in another format than asked or over
+  `RUN_PACKAGE_MAXIMUM_BYTES` (25 MiB, the platform's bound) with
+  `RunPackageFileRefusedError`. The file is saved through `downloadSignedFile`
+  (still the one native download). `lib/platform/signed-file.ts` holds the one
+  way a signed file is handed on, for the run package's downloads and Settings ›
+  Data's export alike: `signedLink` (https only) and `shareSignedFile` (iOS
+  saves, shares and removes it; Android opens the link). The package page draws
   the saved PDF in `react-native-webview` (13.15.0, MIT, the SDK 54 pin; a new
   native module, so build 24 is a new build): the cached file only, its folder
   the only one it may read — it loads nothing over the network.
