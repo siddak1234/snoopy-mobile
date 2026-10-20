@@ -1925,7 +1925,7 @@ drop-down, the status-bar strip, and the A8X run package.
   (a signed link); `POST …/notifications/clear`; `RunDetail.files`, `RunDocument.source`,
   `recordedIn.accountName`. CI's Deployed-contract job is red by design until the platform release.
 - **P1 one drop-down standard** (F1, F13, F14): `GlassSurface` gains `backing` (`panel` the card
-  colour, `page` the page colour) at `GLASS_BACKING_ALPHA` 0.94 (S3) under its children in all three
+  colour, `page` the page colour) at `GLASS_BACKING_ALPHA` (~~0.94, S3~~; 1 since the second review's simulator audit, below) under its children in all three
   forms; `Dropdown` passes `backing="panel"` to its one surface — the workspace and department
   drop-downs, Activity's two and Add a flow's category, fixed in one place. The website's switcher panel
   is already opaque (`bg-[var(--surface)]`): verified, no change.
@@ -2165,6 +2165,16 @@ for every rule the two clients share; the main session's decisions bind each fix
   and set to 0; a new case answers Reduce Motion late, after the icon has turned, and fails every
   time without the fix (the old case failed 2 runs in 6).
 
+- **The drop-down was still see-through on the simulator** (the main session's simulator audit, the
+  owner's F1: "glass drop-down see-through on Home"): Home's workspace drop-down, iOS 26.1, dark and
+  light — Home's headline readable under the panel. Measured from the screenshots' pixels, the page
+  showed through at 2.9% (dark) and 5.6% (light): the 94% backing (S3) working as written, and not
+  enough over large text. Drawing the backing under the glass instead of inside it was tried and
+  changed nothing (2.9% both ways), so it was not kept. `GLASS_BACKING_ALPHA` is now 1 — opaque, as
+  the website's switcher panel is — for every drop-down and the status-bar strip; the glass stays as
+  the edge. The test now asks for opaque (~~0.9 or more~~); 8 Nocturne snapshots re-pinned, alpha only
+  (README's re-pin fact). The unit test had passed throughout — the simulator found it.
+
 ### Guards proved to bite, the second review
 
 (Run as the round's tables above: broken, red, restored sha256-equal, green.)
@@ -2175,3 +2185,4 @@ for every rule the two clients share; the main session's decisions bind each fix
 | A file not saved says the website's words on the package page | `packageNotOpened` without `FileNotSavedError` | `package-screen` "a file that could not be saved…" |
 | Settings › Data says "The link to the file cannot be used." | the sentence changed (`lib/platform/problem.ts`) | `data-support-screens` both platforms' http-link case |
 | The spinner stands upright under a late Reduce Motion | `if (reduceMotion) return;` put back (`app/(tabs)/activity/run.tsx`) | `invoice-processing-screens` "…answered on after it started turning…", 5 of 5 runs (fixed: 10 of 10 green) |
+| Every drop-down and the strip are opaque | `GLASS_BACKING_ALPHA` back to 0.94 (`constants/theme.ts`) | `dropdown-backing` all three forms |

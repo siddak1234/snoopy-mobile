@@ -261,7 +261,7 @@ exports[`GlassSurface — dark palette, Liquid Glass available: false GlassSurfa
             "top": 0,
           },
           {
-            "backgroundColor": "rgba(35,37,50,0.94)",
+            "backgroundColor": "rgba(35,37,50,1)",
           },
         ]
       }
@@ -363,7 +363,7 @@ exports[`GlassSurface — dark palette, Liquid Glass available: false StatusBarS
               "top": 0,
             },
             {
-              "backgroundColor": "rgba(22,24,38,0.94)",
+              "backgroundColor": "rgba(22,24,38,1)",
             },
           ]
         }
@@ -513,7 +513,7 @@ exports[`GlassSurface — dark palette, Liquid Glass available: true GlassSurfac
             "top": 0,
           },
           {
-            "backgroundColor": "rgba(35,37,50,0.94)",
+            "backgroundColor": "rgba(35,37,50,1)",
           },
         ]
       }
@@ -584,7 +584,7 @@ exports[`GlassSurface — dark palette, Liquid Glass available: true StatusBarSt
               "top": 0,
             },
             {
-              "backgroundColor": "rgba(22,24,38,0.94)",
+              "backgroundColor": "rgba(22,24,38,1)",
             },
           ]
         }
@@ -856,7 +856,7 @@ exports[`GlassSurface — light palette, Liquid Glass available: false GlassSurf
             "top": 0,
           },
           {
-            "backgroundColor": "rgba(255,255,255,0.94)",
+            "backgroundColor": "rgba(255,255,255,1)",
           },
         ]
       }
@@ -958,7 +958,7 @@ exports[`GlassSurface — light palette, Liquid Glass available: false StatusBar
               "top": 0,
             },
             {
-              "backgroundColor": "rgba(245,245,248,0.94)",
+              "backgroundColor": "rgba(245,245,248,1)",
             },
           ]
         }
@@ -1108,7 +1108,7 @@ exports[`GlassSurface — light palette, Liquid Glass available: true GlassSurfa
             "top": 0,
           },
           {
-            "backgroundColor": "rgba(255,255,255,0.94)",
+            "backgroundColor": "rgba(255,255,255,1)",
           },
         ]
       }
@@ -1179,7 +1179,7 @@ exports[`GlassSurface — light palette, Liquid Glass available: true StatusBarS
               "top": 0,
             },
             {
-              "backgroundColor": "rgba(245,245,248,0.94)",
+              "backgroundColor": "rgba(245,245,248,1)",
             },
           ]
         }

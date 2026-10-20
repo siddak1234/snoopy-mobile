@@ -176,10 +176,10 @@ then each; its load error in it — the card's sentence gone, S3), Activity's ti
 outcome (All runs, Success, Needs review, Failed — one drop-down where four chips were), and Add a
 flow's category (All categories, then each). Its panel, the tab bar's capsule and the header circles
 are Liquid Glass (`components/glass-surface.tsx`, A3). **Since round 24** (the owner's build 23 F1,
-F13, F14) the panel lays the card colour at 94% under its rows (`GlassSurface backing="panel"`,
+F13, F14) the panel lays the card colour, opaque, under its rows (~~at 94%~~ until the round's simulator audit; `GlassSurface backing="panel"`,
 `GLASS_BACKING_ALPHA`), so every drop-down reads over a busy page as Add a flow's does over an empty one
 — fixed in the one component; and one strip behind the status bar (`components/status-bar-strip.tsx`,
-the page colour at 94% on the same glass, as tall as the top safe area, no touch), drawn once by the
+the page colour, opaque, on the same glass, as tall as the top safe area, no touch), drawn once by the
 tabs' layout and once by the sign-in stack's, keeps content from scrolling under the clock (P11).
 The tab bar's lens latches under its tab on the first layout (nothing animates) and slides to a new
 tab in 240 ms, eased out — never a spring, so it cannot overshoot and shake — and moves at once under

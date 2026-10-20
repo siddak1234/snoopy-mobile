@@ -288,9 +288,11 @@ export function glassTint(p: NocturnePalette, tone: 'neutral' | 'accent' = 'neut
 
 /**
  * How solid a glass surface's backing is (`GlassSurface backing`; round 24 P1,
- * the owner's build 23 F1/F13/F14): the card colour (a drop-down panel) or the
- * page colour (the status-bar strip) at 94% under the surface's content, so a
- * panel reads over a busy page as it does over an empty one while the glass
- * edge stays. Session's choice S3.
+ * the owner's build 23 F1/F13/F14): opaque — the card colour (a drop-down
+ * panel) or the page colour (the status-bar strip) under the surface's content,
+ * so a panel reads over a busy page as it does over an empty one, as the
+ * website's switcher panel does, while the glass edge stays. ~~94%, the
+ * session's choice S3~~ until the round's simulator audit: on iOS 26.1 a busy
+ * page still showed through at 3–6%, Home's headline readable under the panel.
  */
-export const GLASS_BACKING_ALPHA = 0.94;
+export const GLASS_BACKING_ALPHA = 1;

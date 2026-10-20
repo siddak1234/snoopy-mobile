@@ -10,7 +10,7 @@ import { renderWithProviders } from '@/test/render';
 
 /**
  * Round 24 P1 (the owner's build 23 F1, F13, F14): one drop-down standard. The
- * one `Dropdown` lays a 94% card-colour backing under its glass, so a panel
+ * one `Dropdown` lays an opaque card-colour backing under its glass, so a panel
  * reads over a busy page (Home) as it does over an empty one (Add a flow), on
  * every form of the glass.
  */
@@ -50,7 +50,7 @@ describe.each<[string, 'ios' | 'android', boolean]>([
   ['iOS before 26 (blur)', 'ios', false],
   ['Android', 'android', false],
 ])('Dropdown on %s', (_name, os, liquid) => {
-  it('opens on a backing of the card colour at 0.9 or more, under the rows', async () => {
+  it('opens on an opaque backing of the card colour, under the rows — nothing of the page shows through (~~0.9 or more~~ until the simulator audit)', async () => {
     const platform = jest.replaceProperty(Platform, 'OS', os);
     try {
       glass.isLiquidGlassAvailable.mockReturnValue(liquid);
@@ -59,7 +59,7 @@ describe.each<[string, 'ios' | 'android', boolean]>([
       // Decorative: hidden from VoiceOver beside the menu's modal content, so asked for with hidden elements.
       const backing = screen.getByTestId('pick-menu-backing', { includeHiddenElements: true });
       const color = StyleSheet.flatten(backing.props.style).backgroundColor as string;
-      expect(alphaOf(color)).toBeGreaterThanOrEqual(0.9);
+      expect(alphaOf(color)).toBe(1);
       expect(color).toBe(withAlpha(nocturneDark.surface, GLASS_BACKING_ALPHA));
       expect(backing.props.pointerEvents).toBe('none');
       // Under the rows: the menu's content comes after it.

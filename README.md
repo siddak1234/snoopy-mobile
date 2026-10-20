@@ -116,7 +116,11 @@ circle and the screen states that draw it; "Round 23 — build 22's feedback"),
 and round 24's text-size limit (the owner's build 23 F14: every text gains
 `maxFontSizeMultiplier`, a fixed height that holds text becomes `minHeight`) —
 50 of the 66 Nocturne entries, 10 of the 14 screen states and both connection
-rows, props only ("Round 24 — build 23's feedback").
+rows, props only ("Round 24 — build 23's feedback") — and round 24's opaque
+drop-down backing (the owner's build 23 F1, found see-through on the simulator):
+8 Nocturne entries, the backed panel and the status-bar strip in both palettes
+with and without Liquid Glass, `backgroundColor` alpha 0.94 → 1 only ("Round 24
+— the second review").
 
 CI runs lint, typecheck, Jest, all architecture/dependency gates (the docs
 checks among them, on the PR's whole range: `fetch-depth: 0` and
