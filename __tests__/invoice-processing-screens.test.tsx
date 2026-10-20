@@ -6,11 +6,13 @@ import RunDetailScreen from '@/app/(tabs)/activity/run';
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import SetupScreen from '@/app/(tabs)/flows/setup';
 import ConnectionsScreen from '@/app/(tabs)/settings/connections';
-import type { Subscription } from '@/lib/platform/automations';
+import { decideApproval, type Subscription } from '@/lib/platform/automations';
+import { PlatformError } from '@/lib/platform/problem';
 import type { Connection } from '@/lib/platform/catalog';
 import { connectOAuthProvider } from '@/lib/platform/connections';
 import { readProjects, type Project } from '@/lib/platform/projects';
 import { resetSnapshot } from '@/lib/platform/snapshot';
+import { nocturneDark } from '@/constants/theme';
 import { flowStepPlan } from '@/lib/view/pipeline';
 import { toFlows } from '@/lib/view/catalog';
 import { resetPushForTests } from '@/hooks/use-push-registration';
@@ -63,6 +65,11 @@ jest.mock('expo-file-system', () => ({
     };
   }),
 }));
+// The decision a run's step 4 sends (round 24 P6): the real call, watched.
+jest.mock('@/lib/platform/automations', () => {
+  const actual = jest.requireActual('@/lib/platform/automations');
+  return { ...actual, decideApproval: jest.fn(actual.decideApproval) };
+});
 // The flow page's DASHBOARD reads again every 5 s while a run goes on: 20 ms here.
 jest.mock('@/lib/view/runs', () => ({ ...jest.requireActual('@/lib/view/runs'), FLOW_STATS_REREAD_MS: 20 }));
 const { platformOperation } = jest.requireMock('@/lib/platform/client');
@@ -717,11 +724,25 @@ function ipRun(
 
 function openRun(
   detail: RunDetail,
-  options: { entry?: ReturnType<typeof invoiceProcessingV3Entry>; documents?: () => unknown; approvals?: Answer<'GET /v1/workspaces/{workspaceId}/approvals'> } = {},
+  options: {
+    entry?: ReturnType<typeof invoiceProcessingV3Entry>;
+    documents?: () => unknown;
+    approvals?: Answer<'GET /v1/workspaces/{workspaceId}/approvals'>;
+    /** This person's role in the workspace, as the collection says it (round 24 P6). */
+    role?: 'owner' | 'admin' | 'member';
+  } = {},
 ) {
   routePlatform(platformOperation, {
     '/automations': { automations: [options.entry ?? invoiceProcessingV3Entry()], categories: ['All', 'Accounting'] },
     ...(options.approvals ? { '/approvals': options.approvals } : {}),
+    ...(options.role
+      ? {
+          '/v1/workspaces': {
+            workspaces: [{ id: TEST_WORKSPACE, name: 'Acme Operations', type: 'organization', role: options.role }],
+            activeWorkspaceId: TEST_WORKSPACE,
+          },
+        }
+      : {}),
   });
   const routed = platformOperation.getMockImplementation()!;
   platformOperation.mockImplementation((path: string, ...rest: unknown[]) => {
@@ -899,6 +920,105 @@ describe("a run's page — every step from the start, a live tracker (spec A7; t
     expect(within(steps).getByText('2 · Step 2')).toBeTruthy();
     expect(within(steps).queryByText('Paid with the company card')).toBeNull();
     expect(within(steps).queryByText('find-payer')).toBeNull();
+  });
+});
+
+/** An approval of this run, as the platform lists it. */
+function runApproval(id: string, status: 'pending' | 'approved' | 'rejected' | 'expired', createdAt: string, eligibleRoles: ('owner' | 'admin' | 'member')[] = ['owner', 'admin']) {
+  return {
+    id,
+    workspaceId: TEST_WORKSPACE,
+    runId: RUN_ID,
+    subscriptionId: 'invoice',
+    stepId: 'ask-approval',
+    status,
+    reason: 'Document 2: the total can\'t be read.',
+    eligibleRoles,
+    createdAt,
+    expiresAt: '2026-10-21T20:00:00Z',
+  };
+}
+
+const HELD: Reported[] = [
+  ['receive', 'ok', 'PDF, 1 page', 0],
+  ['extract', 'ok', 'Read 3 documents', 1],
+  ['ask-approval', 'held', 'Waiting for approval', 3, "Document 2: the total can't be read."],
+];
+
+/**
+ * Approve / Deny inside step 4 (round 24 P6; the owner's build 23 F7–F10: "It
+ * should be step 4 approve or deny", "Deny should be red", "not many clicks").
+ */
+describe("a held run's step 4: Approve or Deny there (round 24, P6)", () => {
+  const runReads = () =>
+    platformOperation.mock.calls.filter((call: unknown[]) => String(call[0]).endsWith(`/runs/${RUN_ID}`)).length;
+
+  it('the newest pending approval and a role it names: both buttons in the held step, Deny the danger pill; Approve sends the decision with a key, then reads the run again', async () => {
+    await openRun(ipRun('held', HELD), {
+      // An older decision of the same job, then the one that waits: the newest decides.
+      approvals: { approvals: [runApproval('ap-old', 'rejected', '2026-10-14T19:00:00Z'), runApproval('ap-new', 'pending', '2026-10-14T20:03:00Z')] as never },
+      role: 'admin',
+    });
+    const step = within(await screen.findByTestId('run-step-group:done'));
+    expect(step.getByText("Waiting for approval: Document 2: the total can't be read.")).toBeTruthy();
+    expect(step.getByText('Approve')).toBeTruthy();
+    expect((StyleSheet.flatten(step.getByText('Deny').props.style) as { color?: string }).color).toBe(nocturneDark.danger);
+    expect(screen.queryByTestId('run-deciders')).toBeNull();
+
+    const before = runReads();
+    await fireEvent.press(screen.getByTestId('run-decision-approve'));
+    await waitFor(() => expect(decideApproval).toHaveBeenCalledWith(TEST_WORKSPACE, 'ap-new', 'approved', 'key'));
+    await waitFor(() => expect(runReads()).toBeGreaterThan(before));
+    expect(decideApproval).toHaveBeenCalledTimes(1);
+  });
+
+  it('while it saves both wait and the pressed one says "Denying…"; refused, the step says why and offers both again', async () => {
+    let refuse: (error: Error) => void = () => undefined;
+    (decideApproval as jest.Mock).mockImplementationOnce(() => new Promise((_resolve, reject) => (refuse = reject)));
+    await openRun(ipRun('held', HELD), { approvals: { approvals: [runApproval('ap-1', 'pending', '2026-10-14T20:03:00Z')] as never }, role: 'owner' });
+    await fireEvent.press(await screen.findByTestId('run-decision-deny'));
+    expect(decideApproval).toHaveBeenCalledWith(TEST_WORKSPACE, 'ap-1', 'rejected', 'key');
+    expect(screen.getByText('Denying…')).toBeTruthy();
+    expect(screen.getByTestId('run-decision-approve').props.accessibilityState).toMatchObject({ disabled: true });
+    expect(screen.getByTestId('run-decision-deny').props.accessibilityState).toMatchObject({ disabled: true });
+    await act(async () => refuse(new PlatformError('This approval was already decided.', 409, 'CONFLICT')));
+    expect(await screen.findByText('This approval was already decided.')).toBeTruthy();
+    expect(screen.getByText('Deny')).toBeTruthy();
+  });
+
+  it('a role the approval does not name: who can decide, and no buttons', async () => {
+    await openRun(ipRun('held', HELD), {
+      approvals: { approvals: [runApproval('ap-1', 'pending', '2026-10-14T20:03:00Z', ['owner'])] as never },
+      role: 'member',
+    });
+    expect(await screen.findByTestId('run-deciders')).toBeTruthy();
+    expect(screen.getByText('Only owner can decide this.')).toBeTruthy();
+    expect(screen.queryByText('Approve')).toBeNull();
+    expect(screen.queryByText('Deny')).toBeNull();
+  });
+
+  it('approvals that cannot be read: the page still draws, the step says why it waits, no buttons', async () => {
+    routePlatform(platformOperation, { '/automations': { automations: [invoiceProcessingV3Entry()], categories: ['All', 'Accounting'] } });
+    const routed = platformOperation.getMockImplementation()!;
+    const detail = ipRun('held', HELD);
+    platformOperation.mockImplementation((path: string, ...rest: unknown[]) => {
+      if (path.includes('/approvals')) return Promise.reject(new PlatformError('Service Unavailable', 503));
+      return path.endsWith(`/runs/${RUN_ID}`) ? Promise.resolve(detail) : routed(path, ...rest);
+    });
+    setMockParams({ runId: RUN_ID });
+    await renderWithProviders(<RunDetailScreen />, signedInSession);
+    const step = within(await screen.findByTestId('run-step-group:done'));
+    expect(step.getByText("Waiting for approval: Document 2: the total can't be read.")).toBeTruthy();
+    expect(screen.queryByText('Approve')).toBeNull();
+    expect(screen.queryByTestId('run-deciders')).toBeNull();
+  });
+
+  it('denied: step 4 says Denied, the result line too — no buttons', async () => {
+    await openRun(ipRun('held', HELD), { approvals: { approvals: [runApproval('ap-1', 'rejected', '2026-10-14T20:03:00Z')] as never }, role: 'owner' });
+    const step = within(await screen.findByTestId('run-step-group:done'));
+    expect(step.getByText('Denied')).toBeTruthy();
+    expect(screen.getByTestId('run-result').props.children).toBe('Denied');
+    expect(screen.queryByText('Approve')).toBeNull();
   });
 });
 

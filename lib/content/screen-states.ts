@@ -448,7 +448,8 @@ export const RUN_ID_LABEL = 'Run ID';
  * person who arrived with an empty queue and decided nothing. Claiming a
  * synchronisation that never happened is the same class of untruth as a
  * fabricated count; the design splits `apprEmpty` from `apprAllDone` for
- * exactly this reason.
+ * exactly this reason. Since round 24 (P7) a cleared queue is not drawn at all:
+ * the last decided card leaves and the screen returns to Activity.
  */
 export const APPROVALS_EMPTY_TITLE = 'Nothing needs review';
 export const APPROVALS_EMPTY_BODY =
@@ -557,8 +558,17 @@ export type ActivityItem = {
   createdAt: string;
 };
 
-/** The approvals card's confirmation copy. */
-export const APPROVAL_DONE_TEXT = {
-  approved: 'Approved ✓ — agent resuming',
-  rejected: 'Rejected — sent back to sender',
-} as const;
+/**
+ * One decision, in the run's step 4 and on a Needs-review card (round 24 P6,
+ * P7; the owner's build 23 F7–F11): Approve, and Deny in the danger colour (S6:
+ * the owner says deny; the API's value stays `rejected`), each saying it is
+ * saving while it is. ~~"Approved ✓ — agent resuming", "Rejected — sent back to
+ * sender"~~ until round 24: a decided card leaves.
+ */
+export const APPROVE_LABEL = 'Approve';
+export const DENY_LABEL = 'Deny';
+export const APPROVING_LABEL = 'Approving…';
+export const DENYING_LABEL = 'Denying…';
+export const DECISION_NOT_SAVED = 'The decision was not saved.';
+/** A held step whose approval was denied (round 24 P6, S6). */
+export const STEP_DENIED = 'Denied';

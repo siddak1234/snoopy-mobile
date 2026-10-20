@@ -7461,3 +7461,615 @@ exports[`Nocturne set — light palette TextField/secure renders unchanged 1`] =
   </View>
 </RNCSafeAreaProvider>
 `;
+
+exports[`Round 24 — dark palette DecisionButtons/denying renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "flexDirection": "row",
+        "gap": 10,
+      }
+    }
+  >
+    <View
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": true,
+          "expanded": undefined,
+          "selected": undefined,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        [
+          {
+            "alignItems": "center",
+            "backgroundColor": "transparent",
+            "borderColor": "#9184d9",
+            "borderRadius": 999,
+            "borderWidth": 1,
+            "flexDirection": "row",
+            "gap": 7,
+            "justifyContent": "center",
+            "minHeight": 44,
+            "opacity": 0.5,
+            "paddingHorizontal": 18,
+          },
+          {
+            "flex": 1,
+          },
+        ]
+      }
+      testID="d-approve"
+    >
+      <Text
+        maxFontSizeMultiplier={1.35}
+        style={
+          {
+            "color": "#9184d9",
+            "fontFamily": "Inter_500Medium",
+            "fontSize": 16,
+          }
+        }
+      >
+        Approve
+      </Text>
+    </View>
+    <View
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": true,
+          "expanded": undefined,
+          "selected": undefined,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        [
+          {
+            "alignItems": "center",
+            "backgroundColor": "transparent",
+            "borderColor": "#f87171",
+            "borderRadius": 999,
+            "borderWidth": 1,
+            "flexDirection": "row",
+            "gap": 7,
+            "justifyContent": "center",
+            "minHeight": 44,
+            "opacity": 0.5,
+            "paddingHorizontal": 18,
+          },
+          {
+            "flex": 1,
+          },
+        ]
+      }
+      testID="d-deny"
+    >
+      <Text
+        maxFontSizeMultiplier={1.35}
+        style={
+          {
+            "color": "#f87171",
+            "fontFamily": "Inter_500Medium",
+            "fontSize": 16,
+          }
+        }
+      >
+        Denying…
+      </Text>
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Round 24 — dark palette DecisionButtons/idle renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "flexDirection": "row",
+        "gap": 10,
+      }
+    }
+  >
+    <View
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": undefined,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        [
+          {
+            "alignItems": "center",
+            "backgroundColor": "transparent",
+            "borderColor": "#9184d9",
+            "borderRadius": 999,
+            "borderWidth": 1,
+            "flexDirection": "row",
+            "gap": 7,
+            "justifyContent": "center",
+            "minHeight": 44,
+            "paddingHorizontal": 18,
+          },
+          {
+            "flex": 1,
+          },
+        ]
+      }
+      testID="d-approve"
+    >
+      <Text
+        maxFontSizeMultiplier={1.35}
+        style={
+          {
+            "color": "#9184d9",
+            "fontFamily": "Inter_500Medium",
+            "fontSize": 16,
+          }
+        }
+      >
+        Approve
+      </Text>
+    </View>
+    <View
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": undefined,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        [
+          {
+            "alignItems": "center",
+            "backgroundColor": "transparent",
+            "borderColor": "#f87171",
+            "borderRadius": 999,
+            "borderWidth": 1,
+            "flexDirection": "row",
+            "gap": 7,
+            "justifyContent": "center",
+            "minHeight": 44,
+            "paddingHorizontal": 18,
+          },
+          {
+            "flex": 1,
+          },
+        ]
+      }
+      testID="d-deny"
+    >
+      <Text
+        maxFontSizeMultiplier={1.35}
+        style={
+          {
+            "color": "#f87171",
+            "fontFamily": "Inter_500Medium",
+            "fontSize": 16,
+          }
+        }
+      >
+        Deny
+      </Text>
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Round 24 — light palette DecisionButtons/denying renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "flexDirection": "row",
+        "gap": 10,
+      }
+    }
+  >
+    <View
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": true,
+          "expanded": undefined,
+          "selected": undefined,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        [
+          {
+            "alignItems": "center",
+            "backgroundColor": "transparent",
+            "borderColor": "#6a5cc4",
+            "borderRadius": 999,
+            "borderWidth": 1,
+            "flexDirection": "row",
+            "gap": 7,
+            "justifyContent": "center",
+            "minHeight": 44,
+            "opacity": 0.5,
+            "paddingHorizontal": 18,
+          },
+          {
+            "flex": 1,
+          },
+        ]
+      }
+      testID="d-approve"
+    >
+      <Text
+        maxFontSizeMultiplier={1.35}
+        style={
+          {
+            "color": "#6a5cc4",
+            "fontFamily": "Inter_500Medium",
+            "fontSize": 16,
+          }
+        }
+      >
+        Approve
+      </Text>
+    </View>
+    <View
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": true,
+          "expanded": undefined,
+          "selected": undefined,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        [
+          {
+            "alignItems": "center",
+            "backgroundColor": "transparent",
+            "borderColor": "#dc2626",
+            "borderRadius": 999,
+            "borderWidth": 1,
+            "flexDirection": "row",
+            "gap": 7,
+            "justifyContent": "center",
+            "minHeight": 44,
+            "opacity": 0.5,
+            "paddingHorizontal": 18,
+          },
+          {
+            "flex": 1,
+          },
+        ]
+      }
+      testID="d-deny"
+    >
+      <Text
+        maxFontSizeMultiplier={1.35}
+        style={
+          {
+            "color": "#dc2626",
+            "fontFamily": "Inter_500Medium",
+            "fontSize": 16,
+          }
+        }
+      >
+        Denying…
+      </Text>
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;
+
+exports[`Round 24 — light palette DecisionButtons/idle renders unchanged 1`] = `
+<RNCSafeAreaProvider
+  onInsetsChange={[Function]}
+  style={
+    [
+      {
+        "flex": 1,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "flexDirection": "row",
+        "gap": 10,
+      }
+    }
+  >
+    <View
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": undefined,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        [
+          {
+            "alignItems": "center",
+            "backgroundColor": "transparent",
+            "borderColor": "#6a5cc4",
+            "borderRadius": 999,
+            "borderWidth": 1,
+            "flexDirection": "row",
+            "gap": 7,
+            "justifyContent": "center",
+            "minHeight": 44,
+            "paddingHorizontal": 18,
+          },
+          {
+            "flex": 1,
+          },
+        ]
+      }
+      testID="d-approve"
+    >
+      <Text
+        maxFontSizeMultiplier={1.35}
+        style={
+          {
+            "color": "#6a5cc4",
+            "fontFamily": "Inter_500Medium",
+            "fontSize": 16,
+          }
+        }
+      >
+        Approve
+      </Text>
+    </View>
+    <View
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": undefined,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        [
+          {
+            "alignItems": "center",
+            "backgroundColor": "transparent",
+            "borderColor": "#dc2626",
+            "borderRadius": 999,
+            "borderWidth": 1,
+            "flexDirection": "row",
+            "gap": 7,
+            "justifyContent": "center",
+            "minHeight": 44,
+            "paddingHorizontal": 18,
+          },
+          {
+            "flex": 1,
+          },
+        ]
+      }
+      testID="d-deny"
+    >
+      <Text
+        maxFontSizeMultiplier={1.35}
+        style={
+          {
+            "color": "#dc2626",
+            "fontFamily": "Inter_500Medium",
+            "fontSize": 16,
+          }
+        }
+      >
+        Deny
+      </Text>
+    </View>
+  </View>
+</RNCSafeAreaProvider>
+`;

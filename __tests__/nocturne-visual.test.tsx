@@ -4,6 +4,7 @@ import { Receipt, Trash } from 'phosphor-react-native';
 
 import { GlassSurface } from '@/components/glass-surface';
 import { StatusBarStrip } from '@/components/status-bar-strip';
+import { DecisionButtons } from '@/components/runs/decision-buttons';
 import { AvatarBadge } from '@/components/nocturne/avatar-badge';
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { BrandMark } from '@/components/nocturne/brand-mark';
@@ -148,6 +149,20 @@ describe.each<[ThemeMode, boolean]>([
 ])('GlassSurface — %s palette, Liquid Glass available: %s', (mode, glass) => {
   it.each(GLASS.map((c) => [c.name, c.element] as const))('%s renders unchanged', async (_name, element) => {
     jest.requireMock('expo-glass-effect').isLiquidGlassAvailable.mockReturnValue(glass);
+    const { toJSON } = await renderWithProviders(element, undefined, mode);
+    expect(toJSON()).toMatchSnapshot();
+  });
+});
+
+/**
+ * Round 24's new piece outside the Nocturne set (P6, P7): the one Approve / Deny
+ * pair, idle and saving, pinned in both palettes.
+ */
+describe.each<ThemeMode>(['dark', 'light'])('Round 24 — %s palette', (mode) => {
+  it.each([
+    ['DecisionButtons/idle', <DecisionButtons key="idle" testID="d" busy={null} onDecide={() => {}} />],
+    ['DecisionButtons/denying', <DecisionButtons key="denying" testID="d" busy="rejected" onDecide={() => {}} />],
+  ] as const)('%s renders unchanged', async (_name, element) => {
     const { toJSON } = await renderWithProviders(element, undefined, mode);
     expect(toJSON()).toMatchSnapshot();
   });

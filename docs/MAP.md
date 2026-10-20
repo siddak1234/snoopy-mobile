@@ -148,7 +148,6 @@
 ### Under 100 KB
 
 - [CLAUDE.md](../CLAUDE.md) (doc)
-- [DESIGN-CONTRACT.md](../DESIGN-CONTRACT.md) (doc)
 - [README.md](../README.md) (doc)
 - [ROUND-7.5-OBSERVATIONS.md](../ROUND-7.5-OBSERVATIONS.md) (archive)
 - [docs/records/round-record.md](records/round-record.md) (current)
@@ -156,6 +155,7 @@
 
 ### 100 KB to 1 MB
 
+- [DESIGN-CONTRACT.md](../DESIGN-CONTRACT.md) (doc)
 - [DESIGN-GAPS.archive.md](../DESIGN-GAPS.archive.md) (archive)
 - [DESIGN-GAPS.md](../DESIGN-GAPS.md) (current)
 

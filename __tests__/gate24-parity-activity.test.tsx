@@ -322,7 +322,7 @@ describe("Approvals says each approval as the website's does: its status, its ex
   });
 });
 
-describe('Approvals offers Approve and Reject only to a role the approval names (G20)', () => {
+describe('Approvals offers Approve and Deny only to a role the approval names (G20; Deny since round 24, S6)', () => {
   it('a role it does not name is told which roles can decide, and offered nothing to press — its role read from the workspace collection, as the website reads it', async () => {
     // The session says owner; the collection, which decides, says member.
     const fake = routeApprovals('member', [approval('x', ['owner', 'admin']), approval('y', ['owner', 'admin', 'member'])]);
@@ -330,7 +330,7 @@ describe('Approvals offers Approve and Reject only to a role the approval names 
     expect(await screen.findByText('Only owner or admin can decide this.')).toBeTruthy();
     // One card offers its answers: the one that names a member.
     expect(screen.getAllByText('Approve')).toHaveLength(1);
-    expect(screen.getAllByText('Reject')).toHaveLength(1);
+    expect(screen.getAllByText('Deny')).toHaveLength(1);
     await fireEvent.press(screen.getByText('Approve'));
     await waitFor(() => expect(fake.to(DECISION)).toHaveLength(1));
     expect(fake.to(DECISION)[0]!.values).toEqual({ workspaceId: TEST_WORKSPACE, approvalId: 'y' });
@@ -344,8 +344,8 @@ describe('Approvals offers Approve and Reject only to a role the approval names 
     await renderWithProviders(<ApprovalsScreen />, signedInSession);
     expect(await screen.findByText('Only owner can decide this.')).toBeTruthy();
     expect(screen.queryByText('Only owner or admin can decide this.')).toBeNull();
-    expect(screen.getAllByText('Reject')).toHaveLength(1);
-    await fireEvent.press(screen.getByText('Reject'));
+    expect(screen.getAllByText('Deny')).toHaveLength(1);
+    await fireEvent.press(screen.getByText('Deny'));
     await waitFor(() => expect(fake.to(DECISION)).toHaveLength(1));
     expect(fake.to(DECISION)[0]!.values.approvalId).toBe('admins-too');
     expect(fake.to(DECISION)[0]!.body).toEqual({ decision: 'rejected' });
@@ -356,7 +356,7 @@ describe('Approvals offers Approve and Reject only to a role the approval names 
     await renderWithProviders(<ApprovalsScreen />, signedInSession);
     expect(await screen.findByText('Only owner or admin or member can decide this.')).toBeTruthy();
     expect(screen.queryByText('Approve')).toBeNull();
-    expect(screen.queryByText('Reject')).toBeNull();
+    expect(screen.queryByText('Deny')).toBeNull();
   });
 });
 

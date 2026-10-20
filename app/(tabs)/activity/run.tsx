@@ -21,9 +21,11 @@ import { StatCard } from '@/components/nocturne/stat-card';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
+import { DecisionButtons } from '@/components/runs/decision-buttons';
 import { DocumentCard } from '@/components/runs/document-card';
 import { Text } from '@/components/text';
 import { em, fonts, iconSize, layout, status, typeScale } from '@/constants/theme';
+import { useApprovalDecision } from '@/hooks/use-approval-decision';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useTheme } from '@/hooks/use-theme';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
@@ -49,13 +51,16 @@ import {
   type Subscription,
 } from '@/lib/platform/runs';
 import { PlatformError, PlatformNotConfiguredError } from '@/lib/platform/problem';
+import { readWorkspaces } from '@/lib/platform/workspaces';
 import { duration, timeOfDay } from '@/lib/view/format';
 import { documentsFileName, toDocumentCards } from '@/lib/view/documents';
+import { decidersLine, decides } from '@/lib/view/roles';
 import { statusLabel, type StatusPillLabel } from '@/lib/view/status';
 import {
   RUN_ORIGIN_TAB,
   RUN_REREAD_MS,
   heldDecision,
+  jobApproval,
   runLabel,
   runOrigin,
   runResultLine,
@@ -95,7 +100,7 @@ function StepSpinner({ children }: { children: React.ReactNode }) {
  * Done and when, Waiting for approval and why, the run's failure, Skipped or
  * Stopped — never a step's own summary and never a step id (B6).
  */
-function TrackerStep({ row, divider }: { row: TrackerRow; divider: boolean }) {
+function TrackerStep({ row, divider, children }: { row: TrackerRow; divider: boolean; children?: React.ReactNode }) {
   const { palette } = useTheme();
   const tone =
     row.tone === 'ok'
@@ -126,6 +131,8 @@ function TrackerStep({ row, divider }: { row: TrackerRow; divider: boolean }) {
         {row.sub ? (
           <Text style={[styles.trackerSub, { color: row.tone === 'muted' ? palette.neutral[500] : tone }]}>{row.sub}</Text>
         ) : null}
+        {/* The held step's decision, in the step (round 24 P6). */}
+        {children}
       </View>
     </View>
   );
@@ -176,6 +183,7 @@ export default function RunDetailScreen() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const decisions = useApprovalDecision(openedIn);
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
 
@@ -211,12 +219,21 @@ export default function RunDetailScreen() {
   const detail = useResource(async () => {
     try {
       if (!runId || !openedIn) throw new PlatformNotConfiguredError();
-      const [run, catalog, approvals, live] = await Promise.all([
+      const [run, catalog, approvals, live, role] = await Promise.all([
         readRun(openedIn, runId),
         readCatalog(openedIn),
-        readAllApprovals(openedIn),
+        // Unreadable, the page still draws (round 24 P6): a held step says why, with no buttons.
+        readAllApprovals(openedIn).then(
+          (answer) => answer.approvals,
+          () => null,
+        ),
         readSubscriptions(openedIn).then(
           (answer) => answer.subscriptions,
+          () => null,
+        ),
+        // This person's role in the workspace, from the collection, as Approvals reads it (G20); null unread.
+        readWorkspaces().then(
+          ({ workspaces }) => workspaces.find((workspace) => workspace.id === openedIn)?.role ?? null,
           () => null,
         ),
       ]);
@@ -224,7 +241,7 @@ export default function RunDetailScreen() {
       const own = (rows: Subscription[] | null) => rows?.find((row) => row.id === run.run.subscriptionId);
       const flow =
         own(live) ?? (live === null ? undefined : own((await readRemovedSubscriptionsOrNone(openedIn)).subscriptions));
-      return { detail: run, entry, approvals: approvals.approvals, flow };
+      return { detail: run, entry, approvals: approvals ?? [], approvalsRead: approvals !== null, flow, role };
     } finally {
       setReads((n) => n + 1);
     }
@@ -256,6 +273,8 @@ export default function RunDetailScreen() {
   }, [going, focused, reads, refresh]);
 
   const liveRun = detail.status === 'ready' ? detail.data : null;
+  // A waiting document whose approval was refused or ran out says "Not approved" (S21); a denied step says so (P6).
+  const decided = liveRun ? heldDecision(liveRun.detail.run, liveRun.approvals) : null;
   // Every step from the start, each where the run is (spec A7; the session's
   // S14) — by the catalog's groups, the newest version's, for any run whose
   // every reported step they still declare (Build 22, the session's S25: a v3
@@ -280,11 +299,9 @@ export default function RunDetailScreen() {
         liveRun.detail.run,
         timeOfDay,
         liveRun.entry?.pipeline,
-        { flow: trackerFlow, email: liveRun.detail.email },
+        { flow: trackerFlow, email: liveRun.detail.email, decision: decided },
       )
     : [];
-  // A waiting document whose approval was refused or ran out says "Not approved" (S21).
-  const decided = liveRun ? heldDecision(liveRun.detail.run, liveRun.approvals) : null;
   const run = liveRun
     ? {
         // The run by its FULL id (the owner's D4 and AM2); never the request id.
@@ -414,6 +431,45 @@ export default function RunDetailScreen() {
   }
   const continued = run.continues;
 
+  /**
+   * Approve / Deny inside step 4 (round 24 P6; the owner's build 23 F7–F10: "It
+   * should be easy for a user to approve or deny not many clicks"): the held
+   * step of a job whose newest approval waits shows the pair to a role the
+   * approval names; to anyone else, who can decide; with the approvals or the
+   * role unread, neither — the step says why it waits. One tap, then the page
+   * reads the run again at once: approved, it is running again under the same
+   * id; denied, step 4 says Denied.
+   */
+  const approval = liveRun && liveRun.detail.run.status === 'held' ? jobApproval(liveRun.detail.run, liveRun.approvals) : undefined;
+  const waiting = approval?.status === 'pending' && liveRun?.approvalsRead ? approval : undefined;
+  const decision = (() => {
+    if (!waiting || liveRun?.role === undefined || liveRun.role === null) return null;
+    if (!decides(liveRun.role, waiting.eligibleRoles)) {
+      return (
+        <Text testID="run-deciders" style={[styles.decisionNote, { color: palette.neutral[400] }]}>
+          {decidersLine(waiting.eligibleRoles)}
+        </Text>
+      );
+    }
+    const error = decisions.errorFor(waiting.id);
+    return (
+      <View style={styles.decision}>
+        <DecisionButtons
+          testID="run-decision"
+          busy={decisions.busyFor(waiting.id)}
+          onDecide={async (choice) => {
+            if (await decisions.decide(waiting.id, choice)) detail.refresh();
+          }}
+        />
+        {error ? (
+          <Text accessibilityRole="alert" style={[styles.decisionNote, { color: status.err }]}>
+            {error}
+          </Text>
+        ) : null}
+      </View>
+    );
+  })();
+
   return (
     <ScrollView
       style={{ backgroundColor: palette.bg }}
@@ -464,7 +520,9 @@ export default function RunDetailScreen() {
         <SectionLabel>{STEPS_LABEL}</SectionLabel>
         <SurfaceCard style={styles.sectionCard}>
           {run.tracker.map((row, i) => (
-            <TrackerStep key={row.id} row={row} divider={i < run.tracker.length - 1} />
+            <TrackerStep key={row.id} row={row} divider={i < run.tracker.length - 1}>
+              {row.state === 'held' ? decision : null}
+            </TrackerStep>
           ))}
         </SurfaceCard>
       </View>
@@ -653,6 +711,15 @@ const styles = StyleSheet.create({
   continues: {
     fontFamily: fonts.regular,
     fontSize: typeScale.body.fontSize,
+  },
+  decision: {
+    marginTop: 10,
+    gap: 6,
+  },
+  decisionNote: {
+    marginTop: 6,
+    fontFamily: fonts.regular,
+    ...typeScale.small,
   },
   // A label and its value on one line; a long value — the run's id — wraps under its own column.
   fieldRow: {

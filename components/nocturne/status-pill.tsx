@@ -51,6 +51,9 @@ export function StatusPill({ label }: { label: StatusPillLabel }) {
       bg: withAlpha(palette.accent, 0.12),
       border: palette.accentRamp[700],
     },
+    // A decided approval's pill while its card leaves (round 24 P7): never "Pending" beside a decision.
+    Approved: { color: status.ok, bg: status.okBg, border: status.okBorder },
+    Denied: { color: status.err, bg: status.errBg, border: status.errBorder },
     'Past due': { color: status.warnText, bg: status.warnBg, border: status.warnBorder },
     Incomplete: { color: status.warnText, bg: status.warnBg, border: status.warnBorder },
   } as const;

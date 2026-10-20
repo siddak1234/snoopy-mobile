@@ -19,6 +19,7 @@ import {
   STEP_FAILED,
   STEP_SKIPPED,
   STEP_STOPPED,
+  STEP_DENIED,
   STEP_WAITING,
   emailSentLine,
   stepHeld,
@@ -98,9 +99,23 @@ export function metaFor(run: Run, approvals?: readonly Approval[]): string {
 /** How a held run was decided, from the approvals read beside it. */
 export type HeldDecision = 'pending' | 'approved' | 'rejected' | 'closed' | 'unknown';
 
+/**
+ * The job's approval: the newest the platform lists for this run's id (round 24
+ * P6, P9 — a job is its first run, so an approval asked again after another
+ * hold names the same id; the newest decides what the page shows), or none.
+ */
+export function jobApproval(run: Pick<Run, 'id'>, approvals: readonly Approval[]): Approval | undefined {
+  let newest: Approval | undefined;
+  for (const approval of approvals) {
+    if (approval.runId !== run.id) continue;
+    if (!newest || Date.parse(approval.createdAt) > Date.parse(newest.createdAt)) newest = approval;
+  }
+  return newest;
+}
+
 export function heldDecision(run: Run, approvals: readonly Approval[]): HeldDecision | null {
   if (run.status !== 'held') return null;
-  const approval = approvals.find((a) => a.runId === run.id);
+  const approval = jobApproval(run, approvals);
   if (!approval) return 'unknown';
   if (approval.status === 'pending') return 'pending';
   if (approval.status === 'approved') return 'approved';
@@ -111,7 +126,8 @@ export function heldDecision(run: Run, approvals: readonly Approval[]): HeldDeci
 const HELD_DECISION_LINE: Record<HeldDecision, string> = {
   pending: 'Waiting for approval',
   approved: 'Approved — continued in a new run',
-  rejected: 'Rejected',
+  // S6: the owner says deny (round 24 P6); ~~Rejected~~.
+  rejected: STEP_DENIED,
   closed: 'No longer awaiting approval',
   unknown: 'Held for review',
 };
@@ -294,7 +310,7 @@ export type ApprovalItem = {
   expires: string;
   /** Its status, as the website's pill beside it says it; Pending, the one status this list holds. */
   status: StatusPillLabel | null;
-  /** Whether this person's role is one the approval names: Approve and Reject only then. */
+  /** Whether this person's role is one the approval names: Approve and Deny only then. */
   canDecide: boolean;
   /** The roles it names, said to someone whose role it does not. */
   deciders: readonly WorkspaceRole[];
@@ -530,12 +546,20 @@ const TRACKER_LOOK: Record<TrackerState, { icon: Icon; tone: TrackerRow['tone'] 
  * tracker of which ones are done", and item 11's "What is the checked issue?"
  * over "34 accounts read" under Received).
  */
-function trackerSub(state: TrackerState, steps: readonly ReportedStep[], run: RunState, clock: (iso: string) => string): string {
+function trackerSub(
+  state: TrackerState,
+  steps: readonly ReportedStep[],
+  run: RunState,
+  clock: (iso: string) => string,
+  decision?: HeldDecision | null,
+): string {
   if (state === 'working') return RUN_WORKING;
   if (state === 'waiting') return STEP_WAITING;
   if (state === 'skipped') return STEP_SKIPPED;
   if (state === 'stopped') return STEP_STOPPED;
   if (state === 'failed') return run.failureReason ?? STEP_FAILED;
+  // A held step says why while it waits, and how it was decided once it was (round 24 P6: "Denied").
+  if (state === 'held' && decision && decision !== 'pending' && decision !== 'unknown') return HELD_DECISION_LINE[decision];
   if (state === 'held') return stepHeld(steps.find((step) => step.outcome === 'held')?.heldReason);
   const last = steps.reduce<ReportedStep | undefined>(
     (latest, step) => (!latest || Date.parse(step.occurredAt) >= Date.parse(latest.occurredAt) ? step : latest),
@@ -625,8 +649,8 @@ export function toTracker(
   clock: (iso: string) => string,
   /** The catalog's steps, to title a run of another version by (`declared` absent). */
   titles: readonly { id: string; title: string }[] | undefined = declared,
-  /** The flow as read now, and the run's email (Build 22). */
-  context: { flow?: TrackerFlow; email?: RunDetail['email'] } = {},
+  /** The flow as read now, and the run's email (Build 22); how its approval was decided (round 24 P6). */
+  context: { flow?: TrackerFlow; email?: RunDetail['email']; decision?: HeldDecision | null } = {},
 ): TrackerRow[] {
   const known = new Set((declared ?? []).map((step) => step.id));
   const covered = declared && declared.length > 0 && steps.every((step) => known.has(step.stepId));
@@ -636,7 +660,7 @@ export function toTracker(
   const row = (id: string, title: string, members: number[]): TrackerRow => {
     const state = groupState(members.map((index) => states[index]!.state));
     const reported = members.flatMap((index) => (states[index]!.step ? [states[index]!.step!] : []));
-    return { id, title, state, ...TRACKER_LOOK[state], sub: trackerSub(state, reported, run, clock) };
+    return { id, title, state, ...TRACKER_LOOK[state], sub: trackerSub(state, reported, run, clock, context.decision) };
   };
   if (groups && groups.length > 0) {
     const named = new Set(pipeline.flatMap((step) => (step.group ? [step.group] : [])));

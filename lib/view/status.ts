@@ -35,7 +35,7 @@ export type StatusTone = 'ok' | 'warn' | 'err' | 'neutral' | 'accent';
  * A workflow's status, in the design's words.
  *
  * The platform's `SubscriptionStatus` is the same three states lowercased —
- * `packages/contracts/src/index.ts` annotates it "Mirrors the reference UI's
+ * `snoopy-backend/packages/contracts/src/index.ts` annotates it "Mirrors the reference UI's
  * FlowStatus". `statusLabel` is the conversion.
  */
 export type FlowStatus = 'Live' | 'Paused' | 'Draft';
@@ -65,6 +65,9 @@ export type StatusPillLabel =
   | 'Cancelled'
   | 'Active'
   | 'Pending'
+  // A Needs-review card's pill once it is decided, while it leaves (round 24 P7).
+  | 'Approved'
+  | 'Denied'
   | 'Trialing'
   | 'Past due'
   | 'Incomplete';

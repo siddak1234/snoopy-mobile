@@ -7,7 +7,7 @@ import RunDetailScreen from '@/app/(tabs)/activity/run';
 import ApprovalsScreen from '@/app/(tabs)/activity/approvals';
 import ActivityScreen from '@/app/(tabs)/activity/index';
 import { ScopeIcons } from '@/components/scope-control';
-import { nocturneDark } from '@/constants/theme';
+import { nocturneDark, status, typeScale } from '@/constants/theme';
 import { resetPushForTests } from '@/hooks/use-push-registration';
 import type { SessionContextValue } from '@/hooks/use-session';
 import type { Approval, Run } from '@/lib/platform/automations';
@@ -151,7 +151,7 @@ describe('Activity: a row opens its own run (24.4.4)', () => {
 
 /* ------------------------------------------------------------------- Approvals */
 
-describe("Approvals: Approve and Reject post that approval's decision (DESIGN-CONTRACT, Mutations)", () => {
+describe("Approvals: Approve and Deny post that approval's decision (DESIGN-CONTRACT, Mutations)", () => {
   const DECISION = 'POST /v1/workspaces/{workspaceId}/approvals/{approvalId}/decision';
 
   function routeInbox() {
@@ -168,11 +168,11 @@ describe("Approvals: Approve and Reject post that approval's decision (DESIGN-CO
   }
 
   it.each([
-    ['Approve', 'approved', 'Approved ✓ — agent resuming'],
-    ['Reject', 'rejected', 'Rejected — sent back to sender'],
+    ['Approve', 'approved'],
+    ['Deny', 'rejected'],
   ] as const)(
-    '%s on the second card posts { decision: "%s" } to ITS approval with a key; refused, the card says why and the retry sends the same key; then the card says "%s"',
-    async (label, decision, done) => {
+    '%s on the second card posts { decision: "%s" } to ITS approval with a key; refused, the card says why and the retry sends the same key; then the card leaves',
+    async (label, decision) => {
       const fake = routeInbox();
       fake.once(DECISION, () => {
         throw new PlatformError('Service Unavailable', 503);
@@ -188,7 +188,7 @@ describe("Approvals: Approve and Reject post that approval's decision (DESIGN-CO
       expect(screen.getAllByText(label)).toHaveLength(3);
 
       await fireEvent.press(screen.getAllByText(label)[1]!);
-      expect(await screen.findByText(done)).toBeTruthy();
+      await waitFor(() => expect(screen.queryByTestId('approval-apr-1')).toBeNull());
       expect(screen.queryByText('Service Unavailable')).toBeNull();
       expect(screen.getAllByText(label)).toHaveLength(2);
 
@@ -202,6 +202,99 @@ describe("Approvals: Approve and Reject post that approval's decision (DESIGN-CO
       expect(fake.to(DECISION)).toEqual([posted, posted]);
     },
   );
+});
+
+/**
+ * Needs review after a decision (round 24 P7; the owner's build 23 F11: "After
+ * approving why do i still see the card. Shiuldnt that card slide away or
+ * dissapear. If none are left it should take me back to activity main page").
+ */
+describe('Needs review: a decided card leaves (round 24, P7)', () => {
+  const DECISION = 'POST /v1/workspaces/{workspaceId}/approvals/{approvalId}/decision';
+
+  function routeTwo(count: number) {
+    const fake = fakePlatform(platformOperation);
+    fake.always('GET /v1/workspaces/{workspaceId}/approvals', { approvals: approvalsPayload().approvals.slice(0, count) });
+    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', subscriptionsPayload());
+    fake.always('GET /v1/workspaces/{workspaceId}/automations', flowCatalogPayload());
+    fake.always('GET /v1/workspaces', {
+      workspaces: [{ id: TEST_WORKSPACE, name: 'Acme Operations', type: 'organization', role: 'owner' }],
+      activeWorkspaceId: TEST_WORKSPACE,
+    });
+    fake.always(DECISION, (sent: Sent) => ({
+      approval: { ...approvalsPayload().approvals[0]!, status: (sent.body as { decision: Approval['status'] }).decision },
+    }));
+    return fake;
+  }
+
+  it('deciding the only card goes back to Activity', async () => {
+    const fake = routeTwo(1);
+    await renderWithProviders(<ApprovalsScreen />, signedInSession);
+    await fireEvent.press(await screen.findByTestId('decide-apr-0-approve'));
+    await waitFor(() => expect(mockRouter.dismissTo).toHaveBeenCalledWith('/(tabs)/activity'));
+    expect(fake.to(DECISION)).toHaveLength(1);
+    expect(screen.queryByTestId('approval-apr-0')).toBeNull();
+    // Not the empty state of a queue that was empty on arrival.
+    expect(screen.queryByText('Go back')).toBeNull();
+  });
+
+  it('deciding one of two: that card goes, the other stays — and its pill never says Pending beside the decision', async () => {
+    jest.useFakeTimers();
+    try {
+      routeTwo(2);
+      await renderWithProviders(<ApprovalsScreen />, signedInSession);
+      await act(async () => {
+        await jest.runOnlyPendingTimersAsync();
+      });
+      const first = await screen.findByTestId('approval-apr-0');
+      expect(within(first).getByText('Pending')).toBeTruthy();
+      await fireEvent.press(screen.getByTestId('decide-apr-0-deny'));
+      // Saved: before it leaves, its pill says how it was decided, and its buttons are gone.
+      await act(async () => {
+        await Promise.resolve();
+      });
+      const leaving = screen.getByTestId('approval-apr-0');
+      expect(within(leaving).getByText('Denied')).toBeTruthy();
+      expect(within(leaving).queryByText('Pending')).toBeNull();
+      expect(within(leaving).queryByText('Approve')).toBeNull();
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(300);
+      });
+      expect(screen.queryByTestId('approval-apr-0')).toBeNull();
+      expect(within(screen.getByTestId('approval-apr-1')).getByText('Pending')).toBeTruthy();
+      expect(screen.getByTestId('approvals-count').props.children).toBe(1);
+      expect(mockRouter.dismissTo).not.toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('a decided pill is the decision\'s colour: Approved ok, Denied the error tone', async () => {
+    jest.useFakeTimers();
+    try {
+      routeTwo(2);
+      await renderWithProviders(<ApprovalsScreen />, signedInSession);
+      await act(async () => {
+        await jest.runOnlyPendingTimersAsync();
+      });
+      await fireEvent.press(await screen.findByTestId('decide-apr-1-approve'));
+      await act(async () => {
+        await Promise.resolve();
+      });
+      const pill = within(screen.getByTestId('approval-apr-1')).getByText('Approved');
+      expect(StyleSheet.flatten(pill.props.style).color).toBe(status.ok);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('the warning callout\'s icon sits centred on its first line', async () => {
+    routeTwo(1);
+    await renderWithProviders(<ApprovalsScreen />, signedInSession);
+    await screen.findByTestId('approval-apr-0');
+    const icon = screen.getByTestId('callout-icon-apr-0', { includeHiddenElements: true });
+    expect(StyleSheet.flatten(icon.props.style).marginTop).toBe((typeScale.body.lineHeight - 16) / 2);
+  });
 });
 
 /* --------------------------------------------------------------- Notifications */

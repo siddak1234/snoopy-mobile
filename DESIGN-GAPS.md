@@ -1956,6 +1956,19 @@ drop-down, the status-bar strip, and the A8X run package.
   (a swipe has already gone natively) and navigates the tab navigator to the origin, which keeps that
   tab's stack. S5: the swipe returns to the origin too. The website: `/account/runs/[runId]` already
   highlights Activity and its Back is `/account/runs` — verified, no change.
+- **P6 Approve / Deny in step 4** (F7–F10): `hooks/use-approval-decision.ts` (the decision logic,
+  extracted from Approvals: workspace bound, an intent key per approval and decision, busy, error) and
+  `components/runs/decision-buttons.tsx` (the one pair on `PillButton`, Approve primary, Deny danger,
+  "Approving…"/"Denying…"; pinned in both palettes) serve the run page's held step and the Needs-review
+  card. The run page reads the role from the workspace collection (fail-open: none, no buttons), the
+  approvals fail-open, the newest approval for the job (`jobApproval`, also P9's rule); saved →
+  `refresh`. S6: Deny/Denied everywhere a person reads it (`HELD_DECISION_LINE`, step 4, the pills);
+  the API value stays `rejected`. Website: its lane (`RunLive` step 4, `ApprovalDecision` Deny danger).
+- **P7 Needs review** (F11): a decided card's pill turns Approved/Denied (`StatusPill` gains both
+  tones), then the card leaves — `SlideOutLeft.duration(220)`, the rest `LinearTransition`, none under
+  Reduce Motion — and the count counts down; the last one decided `dismissTo('/(tabs)/activity')`. The
+  banner and the done notes went (`APPROVAL_DONE_TEXT` deleted). The callout icon's `marginTop` is
+  `(lineHeight − 16) / 2`. Website: its lane.
 - **P11 the status-bar strip** (seen in fb09, fb10, fb15, fb16): `components/status-bar-strip.tsx`, a
   `GlassSurface radius={0} backing="page"` as tall as the top inset, absolute, `pointerEvents="none"`,
   rendered once after `<Tabs>` in `app/(tabs)/_layout.tsx` and once after the auth `Stack` (Sign in
@@ -1978,6 +1991,15 @@ drop-down, the status-bar strip, and the A8X run package.
 | P5 · Activity's page under a run from elsewhere | `withAnchor` dropped (`components/notifications/inbox.tsx`) | `real-router/run-in-activity` "Settings › Notifications…" |
 | P5 · Home's run says where it came from | `returnTo: 'home'` dropped (`app/(tabs)/(home)/index.tsx`) | `real-router/run-in-activity` Home's run, `tab-screens` "opens Run detail…" |
 | P5 · re-tapping Activity stays | `POP_TO_TOP` returns to the origin too | `real-router/run-in-activity` "re-tapping Activity's tab…" |
+| P6 · the pair inside step 4 | the held step drawn without it (`app/(tabs)/activity/run.tsx`) | `invoice-processing-screens` the three P6 cases with buttons |
+| P6 · Deny is the danger pill | `variant="secondary"` (`components/runs/decision-buttons.tsx`) | `invoice-processing-screens` "…Deny the danger pill…", `tab-screens` "approves and denies…" |
+| P6 · the page reads again once saved | `detail.refresh()` dropped | `invoice-processing-screens` "…then reads the run again" |
+| P6 · the newest approval decides | the oldest kept (`jobApproval`, `lib/view/runs.ts`) | `invoice-processing-screens` "the newest pending approval…" |
+| P6 · a role not named is told who decides | the role check skipped | `invoice-processing-screens` "a role the approval does not name…" |
+| P7 · a decided card leaves | the removal never made (`app/(tabs)/activity/approvals.tsx`) | `presses-home-activity` P7 and decision cases, `tab-screens` approvals cases |
+| P7 · the last one decided → Activity | `dismissTo` dropped | `presses-home-activity` "deciding the only card…", `tab-screens` "counts down…" |
+| P7 · the pill follows the decision | the pill kept as listed | `presses-home-activity` "…never says Pending…", "a decided pill…" |
+| P7 · the callout icon centred | `marginTop: 1` | `presses-home-activity` "the warning callout's icon…" |
 
 (Each run by the lane's bite script in the round's scratchpad, Node 22.23.2: broken, red — a test failed —
 the file restored sha256-equal, green.)

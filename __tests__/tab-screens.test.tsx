@@ -729,31 +729,38 @@ describe('Activity', () => {
 
 describe('Approvals inbox', () => {
   beforeEach(() => routePlatform(platformOperation, { '/automations': flowCatalogPayload() }));
-  it('approves and rejects independently, matching the design done-states', async () => {
-    const { getAllByText, getByText, queryAllByText, queryByText } = await renderWithProviders(<ApprovalsScreen />, signedInSession);
+  it('approves and denies independently: a decided card leaves, the rest stay; Deny is the danger pill (round 24 P6, P7)', async () => {
+    const { getAllByText, queryAllByText } = await renderWithProviders(<ApprovalsScreen />, signedInSession);
     expect(getAllByText('Approve')).toHaveLength(3);
-    // Reject is an answer, not a removal: plain, as the design draws it (the owner's build 12 item 5).
-    expect((StyleSheet.flatten(getAllByText('Reject')[0]!.props.style) as { color?: string }).color).toBe(nocturneDark.neutral[300]);
+    // Deny ends the run: the danger colour (the owner's build 23 F8; ~~Reject, plain~~).
+    expect((StyleSheet.flatten(getAllByText('Deny')[0]!.props.style) as { color?: string }).color).toBe(nocturneDark.danger);
 
     await fireEvent.press(getAllByText('Approve')[0]);
-    expect(getByText('Approved ✓ — agent resuming')).toBeTruthy();
+    await waitFor(() => expect(screen.queryByTestId('approval-apr-0')).toBeNull());
     expect(queryAllByText('Approve')).toHaveLength(2);
+    // ~~"Approved ✓ — agent resuming"~~: the card is gone instead.
+    expect(screen.queryByText('Approved ✓ — agent resuming')).toBeNull();
 
-    await fireEvent.press(getAllByText('Reject')[0]);
-    expect(getByText('Rejected — sent back to sender')).toBeTruthy();
+    await fireEvent.press(getAllByText('Deny')[0]);
+    await waitFor(() => expect(screen.queryByTestId('approval-apr-1')).toBeNull());
     expect(queryAllByText('Approve')).toHaveLength(1);
+    expect(screen.getByTestId('approval-apr-2')).toBeTruthy();
   });
 
-  it('decrements the pending count and shows the all-caught-up banner', async () => {
-    const { getAllByText, getByText, queryByText } = await renderWithProviders(<ApprovalsScreen />, signedInSession);
+  it('counts down as cards leave; the last one decided goes to Activity, with no banner (round 24 P7)', async () => {
+    const { getAllByText, getByText } = await renderWithProviders(<ApprovalsScreen />, signedInSession);
     expect(getByText('3')).toBeTruthy();
     await fireEvent.press(getAllByText('Approve')[0]);
-    expect(getByText('2')).toBeTruthy();
-    expect(queryByText('All caught up — decisions synced to your workflows.')).toBeNull();
+    expect(await screen.findByText('2')).toBeTruthy();
     await fireEvent.press(getAllByText('Approve')[0]);
-    await fireEvent.press(getAllByText('Reject')[0]);
-    expect(getByText('0')).toBeTruthy();
-    expect(getByText('All caught up — decisions synced to your workflows.')).toBeTruthy();
+    expect(await screen.findByText('1')).toBeTruthy();
+    expect(mockRouter.dismissTo).not.toHaveBeenCalled();
+    await fireEvent.press(getAllByText('Deny')[0]);
+    expect(await screen.findByText('0')).toBeTruthy();
+    await waitFor(() => expect(mockRouter.dismissTo).toHaveBeenCalledWith('/(tabs)/activity'));
+    expect(mockRouter.dismissTo).toHaveBeenCalledTimes(1);
+    // ~~"All caught up — decisions synced to your workflows."~~ until round 24.
+    expect(screen.queryByText('All caught up — decisions synced to your workflows.')).toBeNull();
   });
 
   it('shows the review reasons verbatim', async () => {
@@ -785,8 +792,8 @@ describe('Approvals inbox', () => {
     );
     await fireEvent.press(getAllByText('Approve')[0]);
     expect(await findByText('Temporary refusal')).toBeTruthy();
-    await fireEvent.press(getAllByText('Reject')[0]);
-    expect(await findByText('Rejected — sent back to sender')).toBeTruthy();
+    await fireEvent.press(getAllByText('Deny')[0]);
+    await waitFor(() => expect(screen.queryByTestId('approval-apr-0')).toBeNull());
     expect(newIdempotencyKey).toHaveBeenNthCalledWith(1, 'decision');
     expect(newIdempotencyKey).toHaveBeenNthCalledWith(2, 'decision');
   });

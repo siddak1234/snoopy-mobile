@@ -1,43 +1,41 @@
 import { useRouter } from 'expo-router';
 import { CheckCircle, Warning } from 'phosphor-react-native';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
+import Animated, { LinearTransition, SlideOutLeft } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
+import { DecisionButtons } from '@/components/runs/decision-buttons';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { Text } from '@/components/text';
 import { em, fontScaleLimit, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
+import { useApprovalDecision, type Decision } from '@/hooks/use-approval-decision';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
-import { useSession, workspaceIfShown } from '@/hooks/use-session';
-import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
 import { useTheme } from '@/hooks/use-theme';
-import {
-  APPROVALS_EMPTY_BODY,
-  APPROVALS_EMPTY_TITLE,
-  APPROVAL_DONE_TEXT as approvalDoneText,
-  errorTitleFor,
-} from '@/lib/content/screen-states';
+import { APPROVALS_EMPTY_BODY, APPROVALS_EMPTY_TITLE, errorTitleFor } from '@/lib/content/screen-states';
 import type { ApprovalItem } from '@/lib/view/runs';
 import { readCatalog } from '@/lib/platform/catalog';
-import { decideApproval } from '@/lib/platform/automations';
-import { newIdempotencyKey } from '@/lib/platform/client';
 import { readApprovals, readSubscriptions } from '@/lib/platform/runs';
 import { readWorkspaces } from '@/lib/platform/workspaces';
 import { EMPTY } from '@/lib/view/format';
 import { decidersLine } from '@/lib/view/roles';
 import { catalogIndex, subscriptionIndex, toApprovalItem } from '@/lib/view/runs';
 
-type Decision = 'approved' | 'rejected';
+/** How long a decided card takes to slide away, and the rest to close up (round 24 P7). */
+const LEAVE_MS = 220;
 
 /**
  * One approval, as the website's row says it (Gate 24's parity pass, G19, G20):
  * the design's card, with the approval's status and its expiry, Approve and
- * Reject only for a role the approval names — anyone else is told which roles
- * do — and the run it holds, a tap away.
+ * Deny (`DecisionButtons`; round 24 P6, P7) only for a role the approval names
+ * — anyone else is told which roles do — and the run it holds, a tap away.
+ * Decided, its pill says how while it leaves (never "Pending" beside a
+ * decision).
  */
 function ApprovalCard({
   item,
@@ -49,12 +47,13 @@ function ApprovalCard({
 }: {
   item: ApprovalItem;
   decision: Decision | undefined;
-  busy: boolean;
+  busy: Decision | null;
   error?: string;
   onDecide: (d: Decision) => void;
   onView: () => void;
 }) {
   const { palette } = useTheme();
+  const pill = decision === 'approved' ? 'Approved' : decision === 'rejected' ? 'Denied' : item.status;
   return (
     <SurfaceCard style={styles.card}>
       <View style={styles.cardHead}>
@@ -63,47 +62,26 @@ function ApprovalCard({
       </View>
       <View style={styles.titleRow}>
         <Text style={[styles.title, { color: palette.text }]}>{item.title}</Text>
-        {item.status ? <StatusPill label={item.status} /> : null}
+        {pill ? <StatusPill label={pill} /> : null}
       </View>
       <View style={styles.callout}>
-        <Warning size={16} color={status.warnText} style={styles.calloutIcon} />
+        <Warning testID={`callout-icon-${item.id}`} size={16} color={status.warnText} style={styles.calloutIcon} />
         <Text style={styles.calloutText}>{item.why}</Text>
       </View>
       {item.expires !== EMPTY ? (
         <Text style={[styles.note, { color: palette.neutral[400] }]}>Expires {item.expires}</Text>
       ) : null}
-      {decision ? (
-        <Text style={[styles.doneNote, { color: palette.accentRamp[300] }]}>
-          {approvalDoneText[decision]}
-        </Text>
-      ) : !item.canDecide ? (
+      {decision ? null : !item.canDecide ? (
         // The server would refuse it (403): no button, and who may decide.
         <Text style={[styles.note, { color: palette.neutral[400] }]}>{decidersLine(item.deciders)}</Text>
       ) : (
-        <View style={styles.actions}>
-          <Pressable
-            disabled={busy}
-            onPress={() => onDecide('approved')}
-            style={({ pressed }) => [
-              styles.actionBtn,
-              { borderColor: palette.accent },
-              pressed && { backgroundColor: withAlpha(palette.accent, 0.12) },
-            ]}>
-            <Text style={[styles.actionLabel, { color: palette.accent }]}>Approve</Text>
-          </Pressable>
-          <Pressable
-            disabled={busy}
-            onPress={() => onDecide('rejected')}
-            style={({ pressed }) => [
-              styles.actionBtn,
-              { borderColor: palette.neutral[700] },
-              pressed && { backgroundColor: withAlpha(palette.text, 0.06) },
-            ]}>
-            <Text style={[styles.actionLabel, { color: palette.neutral[300] }]}>Reject</Text>
-          </Pressable>
-        </View>
+        <DecisionButtons testID={`decide-${item.id}`} busy={busy} onDecide={onDecide} />
       )}
-      {error ? <Text style={[styles.doneNote, { color: status.err }]}>{error}</Text> : null}
+      {error ? (
+        <Text accessibilityRole="alert" style={[styles.errorNote, { color: status.err }]}>
+          {error}
+        </Text>
+      ) : null}
       <Pressable
         testID={`view-run-${item.id}`}
         accessibilityRole="link"
@@ -123,11 +101,7 @@ export default function ApprovalsScreen() {
   const { palette } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const session = useSession();
-  const [decisions, setDecisions] = useState<Record<string, Decision>>({});
-  const [busy, setBusy] = useState<Record<string, boolean>>({});
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const intentKeys = useRef<Record<string, { decision: Decision; key: string }>>({});
+  const reduceMotion = useReducedMotion();
 
   /**
    * The inbox, and the three-hop join its headline needs.
@@ -163,45 +137,41 @@ export default function ApprovalsScreen() {
       toApprovalItem(approval, subIndex, catIndex, role),
     );
   });
+  const decisions = useApprovalDecision(inbox.loadedFor);
 
+  /**
+   * A decided card leaves (round 24 P7; the owner's build 23 F11: "After
+   * approving why do i still see the card. Shiuldnt that card slide away"): its
+   * pill says the decision for a frame, then it slides out left in 220 ms while
+   * the rest close up (at once under Reduce Motion); none left, Activity's main
+   * page (`dismissTo`: back to it when it is beneath, else in its place). ~~The
+   * "All caught up" banner and "Approved ✓ — agent resuming"~~ until round 24.
+   */
+  const [decided, setDecided] = useState<Record<string, Decision>>({});
+  const [gone, setGone] = useState<ReadonlySet<string>>(new Set());
   const items = inbox.status === 'ready' ? inbox.data : [];
-  // Only decisions on approvals still listed: a re-read drops the decided ones,
-  // and counting them against the new list would claim the queue is clear.
-  const decided = items.filter((item) => item.id in decisions).length;
-  const pending = items.length - decided;
-  // `decided > 0` is the difference between "you cleared the queue" and "the
-  // queue was already empty"; only the first is a synchronisation.
-  const allDone = decided > 0 && decided === items.length;
+  const shown = items.filter((item) => !gone.has(item.id));
+  const pending = items.filter((item) => !(item.id in decided)).length;
 
-  const submitDecision = async (approvalId: string, decision: Decision) => {
-    if (busy[approvalId]) return;
-    const workspaceId = workspaceIfShown(session, inbox.loadedFor);
-    if (!workspaceId) {
-      setErrors((previous) => ({ ...previous, [approvalId]: WORKSPACE_CHANGED }));
-      return;
-    }
-    const previousIntent = intentKeys.current[approvalId];
-    const intent = previousIntent?.decision === decision
-      ? previousIntent
-      : { decision, key: newIdempotencyKey('decision') };
-    intentKeys.current[approvalId] = intent;
-    setBusy((previous) => ({ ...previous, [approvalId]: true }));
-    setErrors((previous) => {
-      const next = { ...previous };
-      delete next[approvalId];
-      return next;
-    });
-    try {
-      await decideApproval(workspaceId, approvalId, decision, intent.key);
-      setDecisions((previous) => ({ ...previous, [approvalId]: decision }));
-      delete intentKeys.current[approvalId];
-    } catch (error) {
-      setErrors((previous) => ({
-        ...previous,
-        [approvalId]: refusalMessage(error, {}, 'The decision was not saved.'),
-      }));
-    } finally {
-      setBusy((previous) => ({ ...previous, [approvalId]: false }));
+  useEffect(() => {
+    const leaving = Object.keys(decided).filter((id) => !gone.has(id));
+    if (leaving.length === 0) return;
+    const timer = setTimeout(() => setGone((before) => new Set([...before, ...leaving])), 0);
+    return () => clearTimeout(timer);
+  }, [decided, gone]);
+
+  // Something was decided here and nothing is left: a queue already empty on arrival is not this.
+  const anyDecided = Object.keys(decided).length > 0;
+  const cleared = anyDecided && shown.length === 0;
+  useEffect(() => {
+    if (!cleared) return;
+    const timer = setTimeout(() => router.dismissTo('/(tabs)/activity'), reduceMotion ? 0 : LEAVE_MS);
+    return () => clearTimeout(timer);
+  }, [cleared, reduceMotion, router]);
+
+  const decide = async (approvalId: string, decision: Decision) => {
+    if (await decisions.decide(approvalId, decision)) {
+      setDecided((before) => ({ ...before, [approvalId]: decision }));
     }
   };
 
@@ -228,8 +198,8 @@ export default function ApprovalsScreen() {
       />
     );
   }
-  // Arriving with an empty queue is not "all caught up" — nothing was decided.
-  if (items.length === 0) {
+  // Arriving with an empty queue: nothing to decide, and nothing was.
+  if (items.length === 0 && !anyDecided) {
     return (
       <ScreenEmpty
         icon={<CheckCircle size={40} color={status.ok} />}
@@ -253,30 +223,30 @@ export default function ApprovalsScreen() {
         <BackCircle onPress={() => router.back()} />
         <Text style={[styles.h1, { color: palette.text }]}>Needs review</Text>
         <View style={[styles.badge, { backgroundColor: withAlpha(palette.accent, 0.16) }]}>
-          <Text maxFontSizeMultiplier={fontScaleLimit.chrome} style={[styles.badgeLabel, { color: palette.accentRamp[200] }]}>
+          <Text
+            testID="approvals-count"
+            maxFontSizeMultiplier={fontScaleLimit.chrome}
+            style={[styles.badgeLabel, { color: palette.accentRamp[200] }]}>
             {pending}
           </Text>
         </View>
       </View>
-      {allDone ? (
-        <View style={styles.allDone}>
-          <CheckCircle size={18} color={status.ok} />
-          <Text style={[styles.allDoneText, { color: status.ok }]}>
-            All caught up — decisions synced to your workflows.
-          </Text>
-        </View>
-      ) : null}
-      {items.map((item) => (
-        <ApprovalCard
+      {shown.map((item) => (
+        <Animated.View
           key={item.id}
-          item={item}
-          decision={decisions[item.id]}
-          busy={busy[item.id] ?? false}
-          error={errors[item.id]}
-          onDecide={(decision) => submitDecision(item.id, decision)}
-          // The held run's page, where Activity's rows open a run (24.4.4).
-          onView={() => router.push({ pathname: '/(tabs)/activity/run', params: { runId: item.runId } })}
-        />
+          testID={`approval-${item.id}`}
+          exiting={reduceMotion ? undefined : SlideOutLeft.duration(LEAVE_MS)}
+          layout={reduceMotion ? undefined : LinearTransition.duration(LEAVE_MS)}>
+          <ApprovalCard
+            item={item}
+            decision={decided[item.id]}
+            busy={decisions.busyFor(item.id)}
+            error={decisions.errorFor(item.id)}
+            onDecide={(decision) => decide(item.id, decision)}
+            // The held run's page, where Activity's rows open a run (24.4.4).
+            onView={() => router.push({ pathname: '/(tabs)/activity/run', params: { runId: item.runId } })}
+          />
+        </Animated.View>
       ))}
     </ScrollView>
   );
@@ -310,24 +280,6 @@ const styles = StyleSheet.create({
   badgeLabel: {
     fontFamily: fonts.semibold,
     fontSize: typeScale.small.fontSize,
-  },
-  allDone: {
-    marginTop: 8,
-    marginHorizontal: layout.screenX,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: status.okBannerBorder,
-    backgroundColor: status.okBannerBg,
-  },
-  allDoneText: {
-    fontFamily: fonts.medium,
-    fontSize: typeScale.body.fontSize,
   },
   card: {
     marginHorizontal: layout.screenX,
@@ -385,34 +337,20 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     paddingHorizontal: 12,
   },
+  // Centred on the first line of its words (round 24 P7; the owner's build 23 F11: "off center").
   calloutIcon: {
-    marginTop: 1,
+    marginTop: (typeScale.body.lineHeight - 16) / 2,
+  },
+  errorNote: {
+    fontFamily: fonts.medium,
+    fontSize: typeScale.body.fontSize,
+    paddingVertical: 4,
+    paddingHorizontal: 2,
   },
   calloutText: {
     flex: 1,
     fontFamily: fonts.regular,
     ...typeScale.body,
     color: status.warnText,
-  },
-  doneNote: {
-    fontFamily: fonts.medium,
-    fontSize: typeScale.body.fontSize,
-    paddingVertical: 4,
-    paddingHorizontal: 2,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  actionBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  actionLabel: {
-    fontFamily: fonts.medium,
-    fontSize: typeScale.label.fontSize,
   },
 });
