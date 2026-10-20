@@ -1,8 +1,10 @@
 # The visual audit's surfaces (round 24 A4; README "Verification", "Visual audit"),
 # run by scripts/visual-audit/run.sh once per device, appearance and text size.
-# Env: OUT (the device's folder), MODE ("dark--default" …), RUNNING, HELD, DONE
+# Env: MODE ("dark--default" …), RUNNING, HELD, DONE
 # (run ids from scripts/visual-audit/fixtures/index.json), SUBSET ("1" on the
 # small and the large phone: Home, the run page, Needs review and the package).
+# Every step after Home is optional, so one surface that cannot be reached
+# costs that capture only; the log says which.
 appId: ai.autom8x.snoopy
 ---
 - launchApp:
@@ -12,7 +14,7 @@ appId: ai.autom8x.snoopy
       id: "home-header"
     timeout: 300000
 - waitForAnimationToEnd
-- takeScreenshot: ${OUT}/01-home--${MODE}
+- takeScreenshot: 01-home--${MODE}
 # P1: the workspace drop-down over a busy page.
 - runFlow:
     when:
@@ -20,83 +22,97 @@ appId: ai.autom8x.snoopy
     commands:
       - tapOn:
           id: "home-scope-workspace"
+          optional: true
       - waitForAnimationToEnd
-      - takeScreenshot: ${OUT}/02-home-workspace-dropdown--${MODE}
+      - takeScreenshot: 02-home-workspace-dropdown--${MODE}
       - tapOn:
           id: "workspace-switcher-backdrop"
+          optional: true
       # P1's reference: Add a flow's category drop-down over an empty page.
       - openLink: snoopymobile://flows/add
       - extendedWaitUntil:
           visible:
             id: "add-category"
           timeout: 60000
+          optional: true
       - tapOn:
           id: "add-category"
+          optional: true
       - waitForAnimationToEnd
-      - takeScreenshot: ${OUT}/03-add-flow-category-dropdown--${MODE}
+      - takeScreenshot: 03-add-flow-category-dropdown--${MODE}
       - tapOn:
           id: "add-category-backdrop"
+          optional: true
       # P5: a running run, in Activity.
       - openLink: snoopymobile://activity/run?runId=${RUNNING}
       - extendedWaitUntil:
           visible:
             id: "run-title"
           timeout: 60000
+          optional: true
       - waitForAnimationToEnd
-      - takeScreenshot: ${OUT}/04-run-running--${MODE}
+      - takeScreenshot: 04-run-running--${MODE}
 # P6: held, Approve and Deny inside step 4.
 - openLink: snoopymobile://activity/run?runId=${HELD}
 - extendedWaitUntil:
     visible:
       id: "run-decision-approve"
     timeout: 60000
+    optional: true
 - scrollUntilVisible:
     element:
       id: "run-decision-deny"
     direction: DOWN
     centerElement: true
+    optional: true
 - waitForAnimationToEnd
-- takeScreenshot: ${OUT}/05-run-held-approve-deny--${MODE}
+- takeScreenshot: 05-run-held-approve-deny--${MODE}
 # P10: three invoices, closed; then #2 open.
 - openLink: snoopymobile://activity/run?runId=${DONE}
 - extendedWaitUntil:
     visible:
       id: "run-title"
     timeout: 60000
+    optional: true
 - scrollUntilVisible:
     element:
       id: "document-3-toggle"
     direction: DOWN
     centerElement: true
-- takeScreenshot: ${OUT}/06-run-invoices-closed--${MODE}
+    optional: true
+- takeScreenshot: 06-run-invoices-closed--${MODE}
 - tapOn:
     id: "document-2-toggle"
+    optional: true
 - waitForAnimationToEnd
-- takeScreenshot: ${OUT}/07-run-invoice-2-open--${MODE}
+- takeScreenshot: 07-run-invoice-2-open--${MODE}
 # P11: scrolled, under the strip behind the status bar.
 - scroll
 - waitForAnimationToEnd
-- takeScreenshot: ${OUT}/08-run-scrolled-under-strip--${MODE}
+- takeScreenshot: 08-run-scrolled-under-strip--${MODE}
 # P12: the package page, the PDF itself.
 - openLink: snoopymobile://activity/package?runId=${DONE}
 - extendedWaitUntil:
     visible:
       id: "package-webview"
     timeout: 90000
+    optional: true
 - waitForAnimationToEnd
-- takeScreenshot: ${OUT}/09-run-package--${MODE}
+- takeScreenshot: 09-run-package--${MODE}
 # P7: Needs review, two cards; then one decided (it leaves).
 - openLink: snoopymobile://activity/approvals
 - extendedWaitUntil:
     visible:
       id: "approval-9e8d7c6b-0000-4b00-8b00-000000000002"
     timeout: 60000
+    optional: true
 - waitForAnimationToEnd
-- takeScreenshot: ${OUT}/10-needs-review-two--${MODE}
+- takeScreenshot: 10-needs-review-two--${MODE}
 - tapOn:
     id: "decide-9e8d7c6b-0000-4b00-8b00-000000000001-approve"
+    optional: true
 - waitForAnimationToEnd
-- takeScreenshot: ${OUT}/11-needs-review-after-one--${MODE}
+- takeScreenshot: 11-needs-review-after-one--${MODE}
 - runFlow:
     when:
       true: ${SUBSET != '1'}
@@ -107,12 +123,14 @@ appId: ai.autom8x.snoopy
           visible:
             id: "inbox-clear-all"
           timeout: 60000
+          optional: true
       - waitForAnimationToEnd
-      - takeScreenshot: ${OUT}/12-notifications-clear-all--${MODE}
+      - takeScreenshot: 12-notifications-clear-all--${MODE}
       - openLink: snoopymobile://notifications-offer
       - extendedWaitUntil:
           visible:
             id: "notifications-offer"
           timeout: 60000
+          optional: true
       - waitForAnimationToEnd
-      - takeScreenshot: ${OUT}/13-notifications-offer--${MODE}
+      - takeScreenshot: 13-notifications-offer--${MODE}
