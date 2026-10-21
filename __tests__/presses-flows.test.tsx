@@ -62,7 +62,7 @@ jest.mock('expo-router', () => {
  * opens, the request it sends, or the refusal it says — where no earlier test
  * held it. The rest of the flows' presses are held already, each where the
  * report of this pass names it (tab-screens, automation-actions,
- * build13-unarchive-and-one-flow, select-field).
+ * build13-unarchive-and-one-flow).
  */
 
 const WS = `/v1/workspaces/${TEST_WORKSPACE}`;

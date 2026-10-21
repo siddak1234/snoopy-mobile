@@ -68,9 +68,11 @@ describe('Nocturne light palette — .thm-light overrides + inheritance', () => 
     expect(nocturneLight.accentRamp[600]).toBe(nocturneDark.accentRamp[600]);
   });
 
-  it('tints the brand mark on light only (design invert(.87))', () => {
-    expect(nocturneDark.brandTint).toBeUndefined();
-    expect(nocturneLight.brandTint).toBe('#383838');
+  it('tints the brand mark in both palettes: the PNG\'s white on dark, the design\'s invert(.87) on light (~~light only~~ until the owner\'s build 24 item 2)', () => {
+    // Never none: iOS makes an image tintable only when it loads with a tint, so a mark loaded untinted
+    // on dark stayed white after a switch to light.
+    expect(nocturneDark.brandTint).toBe('#ffffff');
+    expect(nocturneLight.brandTint).toBe('#212121');
   });
 });
 

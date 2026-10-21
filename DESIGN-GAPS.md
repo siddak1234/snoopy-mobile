@@ -1834,7 +1834,8 @@ read-only.
   then each, its load error in it) and the workspace switcher (controlled; title Workspace; Switching…
   and `locked`; Reload session at its foot when owed, "Working…" and disabled while it re-reads, as
   the dialog's button was). S3: the two cards' explanatory sentences are
-  gone. `picker-dialog`, `select-field`, `choice-chips` and the confirm dialogs are unchanged.
+  gone. `picker-dialog`, `choice-chips` and the confirm dialogs are unchanged. ~~`select-field`
+  unchanged~~: no screen used it after this, and round 25 deleted it (the review's R5c 4).
 - **A3 Liquid Glass** (`components/glass-surface.tsx`, `glassTint`; `expo-glass-effect` ~0.1.10, the
   SDK 54 pin): the system's glass on iOS 26 (`regular`, tinted, the palette's scheme, interactive on a
   button), a blur under the card at 55% in a hairline ring below it, the card at 92% on Android. On the
@@ -2214,3 +2215,44 @@ for every rule the two clients share; the main session's decisions bind each fix
 | A drop-down's least width follows the text size | `least = MIN_WIDTH` (`components/dropdown.tsx`) | `round23` the placement table |
 | A drop-down's rows wrap | `numberOfLines={1}` back on the label | `dropdown-backing` "wrap a long name…" |
 | The threshold is Accessibility Medium itself | `>` for `>=` (`hooks/use-accessibility-text-size.ts`) | `accessibility-text-size` "at x1.786: stacked" |
+
+### Round 25 — build 24's feedback (Round 17; 2026-10-21)
+
+- **The A8X mark in light mode** (the owner's build 24 item 2: "In light mode the logo should be black right or
+  the purple matching automation x AI"; near-black `#212121`, the design's invert(.87) of the pure-white PNG (~~`#383838`~~: the session's
+  first number was wrong, and the app had carried it since the Nocturne revamp; the website's change audit
+  measured it), on the session's
+  recommendation of the design standard, the website aligned): the mark stayed white after Settings ›
+  Appearance moved to Light while Home was open. Cause, from React Native 0.81.5's
+  RCTImageComponentView: an image is made tintable (template rendering) only when it loads with a tint, and a
+  later `tintColor` only recolours a template — so a mark loaded untinted on dark kept its white. A cold start
+  in Light was right (the root layout waits for the kept appearance). `palette.brandTint` is now a colour in
+  both palettes — the PNG's own white (`#ffffff`, its glyphs are pure white) on dark, `#212121` on light — so the
+  mark is tintable from its first load and a switch recolours it at once. Two Nocturne snapshots re-pinned,
+  the BrandMarks' `tintColor` only (dark none → `#ffffff`, light `#383838` → `#212121`) (README's re-pin fact). No simulator: the session's repro run crashed
+  the simulator's SpringBoard and was stopped (the owner's rule since); the source is the evidence and the
+  owner's TestFlight 25 check the proof on a phone.
+- **Approve and Deny with no reload** (the Gate 25 review R5c 1; the website alike): a run that reached its
+  approval step while its page was open said "Waiting for approval: …" in step 4 with no buttons until the
+  page was opened again. The 2 s re-reads stop at held, and the read that first saw held took its approvals
+  from the 15 s snapshot (`shared(…, 'volatile')`), from before the approval was asked. Now a run held with no
+  approval of its job listed is read again every 2 s, one read at a time and at most ten times
+  (`HELD_APPROVAL_REREADS`), its approvals past the snapshot (`readAllApprovalsNow`), until the approval is
+  listed or the run leaves held (`rereadForApproval` in `lib/view/runs.ts`, the website's rule for rule). A
+  job whose approval is listed, waiting or decided, is not read again for it.
+- **Unused components deleted** (the review's R5c 4): `select-field` and `nocturne/step-card`, which no screen
+  had used since round 23, and their tests and the two StepCard snapshots (dark and light). Nothing else
+  imported them (`git grep`). README's count of Nocturne components moved with them.
+
+### Guards proved to bite, round 25
+
+(Run as the round's tables above: broken, red, restored sha256-equal, green.)
+
+| Guard | Broken by | What failed |
+| --- | --- | --- |
+| The mark is tinted in both palettes, through a switch | a light-only tint put back (`components/nocturne/brand-mark.tsx`) | `brand-mark` "is tinted in both palettes…" |
+| A run that turns held is read again for its approval (R5c 1) | the re-read at held made to return at once (`app/(tabs)/activity/run.tsx`) | `build14-feedback` "reads its approvals again, past the 15 s snapshot…", "never listed: …" |
+| …past the 15 s snapshot | `readAllApprovals` in place of `readAllApprovalsNow` there | the same two |
+| …at most ten times | `rereadForApproval`'s bound taken off (`lib/view/runs.ts`) | `build21-views` "a held run with no approval of its job listed…", `build14-feedback` "never listed: …" |
+| A listed approval, waiting or decided, ends the reads | `rereadForApproval` reading again for any decision but pending | `build21-views` the same, `build14-feedback` "…is listed (rejected) is read once" |
+

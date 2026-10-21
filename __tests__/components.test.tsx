@@ -13,12 +13,10 @@ import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { StatCard } from '@/components/nocturne/stat-card';
 import { StatusPill } from '@/components/nocturne/status-pill';
-import { StepCard } from '@/components/nocturne/step-card';
 import { TextField } from '@/components/nocturne/text-field';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { DialogButton } from '@/components/dialog';
 import { layout, nocturneDark, nocturneLight, status, typeScale, withAlpha } from '@/constants/theme';
-import { steps } from '@/test/design-data';
 import { renderWithProviders } from '@/test/render';
 import { touch } from '@/test/touch';
 
@@ -291,13 +289,6 @@ describe('small components', () => {
     expect(getByText('Runs today')).toBeTruthy();
   });
 
-  it('StepCard shows kicker, title and description', async () => {
-    const { getByText } = await renderWithProviders(<StepCard step={steps[0]} />);
-    expect(getByText('TRIGGER')).toBeTruthy();
-    expect(getByText('New email in AP inbox')).toBeTruthy();
-    expect(getByText('Gmail · ap@acme.co')).toBeTruthy();
-  });
-
   it('AvatarBadge renders initials in accent-200', async () => {
     const { getByText } = await renderWithProviders(<AvatarBadge initials="AK" />);
     expect(textColor(getByText('AK'))).toBe(nocturneDark.accentRamp[200]);
@@ -313,7 +304,7 @@ describe('small components', () => {
     expect(getByText('or')).toBeTruthy();
   });
 
-  it('IconTile-based StatusPill/StepCard consumers accept phosphor icons', async () => {
+  it('IconTile-based StatusPill consumers accept phosphor icons', async () => {
     expect(Receipt).toBeDefined();
   });
 });

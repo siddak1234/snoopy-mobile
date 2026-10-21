@@ -174,6 +174,85 @@ describe('a run that has not ended is read again until it has (feedback #3)', ()
   });
 });
 
+const APPROVALS = 'GET /v1/workspaces/{workspaceId}/approvals';
+
+/** The run's approval at its held step, as the platform lists it. */
+function approvalFor(status: 'pending' | 'approved' | 'rejected' | 'expired') {
+  return {
+    id: 'ap-1',
+    workspaceId: TEST_WORKSPACE,
+    runId: 'run-1',
+    subscriptionId: 'invoice',
+    stepId: 'validate',
+    status,
+    reason: 'Above the threshold.',
+    eligibleRoles: ['owner', 'admin'] as ('owner' | 'admin')[],
+    createdAt: '2026-10-20T12:00:00Z',
+    expiresAt: '2026-10-21T12:00:00Z',
+  };
+}
+
+/** The run answering `reads` in turn, its approvals answering `lists` in turn (the last for ever), and this person an owner. */
+function routeHeld(reads: Detail[], lists: ReturnType<typeof approvalFor>[][]) {
+  const fake = routeRun(...reads);
+  for (const list of lists.slice(0, -1)) fake.once(APPROVALS, { approvals: list });
+  fake.always(APPROVALS, { approvals: lists[lists.length - 1]! });
+  fake.always('GET /v1/workspaces', {
+    workspaces: [{ id: TEST_WORKSPACE, name: 'Acme Operations', type: 'organization', role: 'owner' }],
+    activeWorkspaceId: TEST_WORKSPACE,
+  } as never);
+  return fake;
+}
+
+const HELD_AT_VALIDATE: [string, Outcome][] = [
+  ['receive', 'ok'],
+  ['validate', 'held'],
+];
+
+describe("a run that turns held while its page is open offers Approve and Deny with no reload (round 25, the review's R5c 1)", () => {
+  it('reads its approvals again, past the 15 s snapshot, until the waiting one is listed — then both buttons in the held step', async () => {
+    // Running at the first read, its approvals none; held at the next, which
+    // the snapshot answers with the same none; the platform lists it since.
+    const fake = routeHeld([detail('running', [['receive', 'ok']]), detail('held', HELD_AT_VALIDATE)], [[], [approvalFor('pending')]]);
+    setMockParams({ runId: 'run-1' });
+    await renderWithProviders(<RunDetailScreen />, signedInSession);
+    expect(await screen.findByText('Running')).toBeTruthy();
+    const step = within(await screen.findByTestId('run-step-step:validate'));
+    expect(await step.findByTestId('run-decision-approve')).toBeTruthy();
+    expect(step.getByTestId('run-decision-deny')).toBeTruthy();
+    // The approvals were read twice: at the start, then past the snapshot.
+    expect(fake.to(APPROVALS)).toHaveLength(2);
+    // Listed: no more reads for it, however long the page stays open.
+    const runs = fake.to(RUN).length;
+    await aWhile();
+    expect(fake.to(RUN)).toHaveLength(runs);
+    expect(fake.to(APPROVALS)).toHaveLength(2);
+  });
+
+  it('never listed: read again at most HELD_APPROVAL_REREADS times, then it stops — never for ever', async () => {
+    const { HELD_APPROVAL_REREADS } = jest.requireActual('@/lib/view/runs');
+    const fake = routeHeld([detail('held', HELD_AT_VALIDATE)], [[]]);
+    setMockParams({ runId: 'run-1' });
+    await renderWithProviders(<RunDetailScreen />, signedInSession);
+    expect(await screen.findByText('2 · Check the amount')).toBeTruthy();
+    await waitFor(() => expect(fake.to(APPROVALS)).toHaveLength(1 + HELD_APPROVAL_REREADS), { timeout: 3000 });
+    await aWhile();
+    expect(fake.to(APPROVALS)).toHaveLength(1 + HELD_APPROVAL_REREADS);
+    expect(fake.to(RUN)).toHaveLength(1 + HELD_APPROVAL_REREADS);
+    expect(screen.queryByTestId('run-decision-approve')).toBeNull();
+  });
+
+  it.each(['pending', 'rejected'] as const)('a held run whose approval is listed (%s) is read once', async (status) => {
+    const fake = routeHeld([detail('held', HELD_AT_VALIDATE)], [[approvalFor(status)]]);
+    setMockParams({ runId: 'run-1' });
+    await renderWithProviders(<RunDetailScreen />, signedInSession);
+    expect(await screen.findByText('2 · Check the amount')).toBeTruthy();
+    await aWhile();
+    expect(fake.to(RUN)).toHaveLength(1);
+    expect(fake.to(APPROVALS)).toHaveLength(1);
+  });
+});
+
 describe('a finished run shows every step and where it ended (Build 21, spec A7; the owner\'s build 20 item 10, over build 19\'s item 6)', () => {
   it('a success with no address set: three steps done, and the email it did not send Skipped — every step counted', async () => {
     routeRun(detail('succeeded', [['receive', 'ok'], ['validate', 'ok'], ['post', 'ok']]));

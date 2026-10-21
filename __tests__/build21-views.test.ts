@@ -8,7 +8,18 @@ import {
   toDocumentCard,
   toDocumentCards,
 } from '@/lib/view/documents';
-import { groupState, heldDecision, jobApproval, runLabel, stepStates, toRunStats, toTracker, type TrackerState } from '@/lib/view/runs';
+import {
+  HELD_APPROVAL_REREADS,
+  groupState,
+  heldDecision,
+  jobApproval,
+  rereadForApproval,
+  runLabel,
+  stepStates,
+  toRunStats,
+  toTracker,
+  type TrackerState,
+} from '@/lib/view/runs';
 import { invoiceProcessingEntry, invoiceProcessingV3Entry } from '@/test/platform';
 
 /**
@@ -224,6 +235,24 @@ describe("step 4's words, the website's (round 24 P6; the review's first and six
     expect(stepFour(heldDecision(held, approvals)).sub).toBe('Waiting for approval: Document 1: needs a look.');
     // A later one still wins.
     expect(heldDecision(held, [approval('pending', same), approval('rejected', at(31))])).toBe('rejected');
+  });
+
+  it("a held run with no approval of its job listed is read again for it, at most 10 times; one whose approval is listed — waiting or decided — or that is not held, never (round 25, the review's R5c 1; the website's rereadForApproval)", () => {
+    expect(HELD_APPROVAL_REREADS).toBe(10);
+    // None listed yet — it turned held while the page was open — or only another job's: read again, up to the bound.
+    for (const approvals of [[], [{ ...approval('pending'), runId: 'another-job' }]]) {
+      for (let reads = 0; reads < 10; reads += 1) expect(rereadForApproval(held, approvals, reads)).toBe(true);
+      expect(rereadForApproval(held, approvals, 10)).toBe(false);
+      expect(rereadForApproval(held, approvals, 11)).toBe(false);
+    }
+    // Its approval listed, whatever became of it: no more reads for it.
+    for (const status of ['pending', 'approved', 'rejected', 'expired'] as const) {
+      expect(rereadForApproval(held, [approval(status)], 0)).toBe(false);
+    }
+    // Not held: never.
+    for (const status of ['pending', 'running', 'succeeded', 'failed', 'cancelled'] as const) {
+      expect(rereadForApproval({ ...held, status }, [], 0)).toBe(false);
+    }
   });
 });
 

@@ -437,6 +437,31 @@ export type TrackerRow = {
 export const RUN_REREAD_MS = 2_000;
 
 /**
+ * How many times a held run's page reads it again for its approval: 10, each
+ * `RUN_REREAD_MS` after the last one settled, about 20 s. Then it stops, so a
+ * job whose approval is never listed is not read for ever. The website's
+ * `HELD_APPROVAL_REREADS`.
+ */
+export const HELD_APPROVAL_REREADS = 10;
+
+/**
+ * Whether a held run's page reads it again for its approval (round 25, the
+ * review's R5c 1): the run is held, no approval of the job is listed yet, and
+ * fewer than `HELD_APPROVAL_REREADS` such reads were made. That is a run that
+ * turned held while its page was open — the read that saw it took the
+ * approvals from the 15 s snapshot, from before the approval was asked — or
+ * one read before its approval was. Each such read takes the approvals past
+ * the snapshot (`readAllApprovalsNow`); once the approval is listed, step 4
+ * offers Approve and Deny with no reload. A job whose newest approval is
+ * listed, waiting or decided, is not read again for it, and neither is a run
+ * that left held. The website's `rereadForApproval`
+ * (`snoopy/lib/run-progress.ts`), rule for rule.
+ */
+export function rereadForApproval(run: Run, approvals: readonly Approval[], reads: number): boolean {
+  return heldDecision(run, approvals) === 'unknown' && reads < HELD_APPROVAL_REREADS;
+}
+
+/**
  * Runs live in Activity (round 24 P5; the owner's build 23 F4, F5: "Shouldnt it
  * be in activity"): the one run page is `/(tabs)/activity/run`. A push from
  * another tab says where it came from (`returnTo`), and Back — the circle or the
