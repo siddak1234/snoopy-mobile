@@ -105,7 +105,7 @@ ID lock (`locked`, `hooks/use-session.tsx`; the build 13 review); nothing
 inside the tabs navigates to "/", which there names Home, not the cover.
 
 The gate suites include negative tests that inject forbidden source and prove
-the audits fail. `__tests__/nocturne-visual.test.tsx` snapshots all 18 Nocturne
+the audits fail. `__tests__/nocturne-visual.test.tsx` snapshots all 17 Nocturne
 components in dark and light palettes. Do not update those snapshots unless a
 visual change is explicitly authorized. Each authorized re-pin is recorded in
 `DESIGN-GAPS.md`: the owner's bigger type (decision 11, 2026-10-02, "whole app —
@@ -383,6 +383,12 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   `/v1/session` through `useSession().reload()`. A rename, a new organization
   and a join drop the shared snapshot's copy of the list, and the whole
   snapshot is emptied when a session ends or begins (24.12).
+- `lib/platform/runs.ts`'s `readAllApprovalsNow` reads the approvals past the
+  shared snapshot. A run's page whose run is held with no approval of its job
+  listed reads them that way, every 2 s and at most ten times, until the
+  approval is listed or the run leaves held. The read that saw the run turn
+  held took the approvals from the 15 s snapshot, from before the approval was
+  asked (round 25, the review's R5c 1).
 - `hooks/use-resource.tsx` and `components/screen-state.tsx` provide explicit
   loading, offline, platform-error, and empty states.
 - `lib/view/` performs the published wire-to-Nocturne mapping and owns no

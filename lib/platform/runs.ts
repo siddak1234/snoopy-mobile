@@ -159,6 +159,20 @@ export function readAllApprovals(workspaceId: string): Promise<{ approvals: Appr
   );
 }
 
+/**
+ * Every approval as the platform holds it now, never an answer the snapshot
+ * kept: a run's page whose run is held with no approval of its job listed
+ * reads them so, every 2 s and at most ten times, until it is listed (round
+ * 25, the review's R5c 1; `rereadForApproval`). The read that saw the run turn
+ * held took its approvals from the 15 s snapshot, from before the approval
+ * was asked. The answer becomes the snapshot's, so Approvals and Activity then
+ * read what this one saw.
+ */
+export function readAllApprovalsNow(workspaceId: string): Promise<{ approvals: Approval[] }> {
+  invalidateShared(workspaceId, ['approvals']);
+  return readAllApprovals(workspaceId);
+}
+
 /** The workspace's subscriptions — the middle hop of the approval-title join. */
 export function readSubscriptions(
   workspaceId: string,
