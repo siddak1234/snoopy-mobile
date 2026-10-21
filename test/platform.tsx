@@ -427,6 +427,8 @@ export function invoiceProcessingEntry(): CatalogEntry {
     description: 'Reads bills and receipts, then saves the details or records them in QuickBooks.',
     category: 'Accounting',
     icon: 'Receipt',
+    // Its words for its documents, as its manifest declares them from v7 (backend BUILD-PLAN 27.2.1).
+    documentWords: { singular: 'Invoice', plural: 'Invoices' },
     monthlyPriceUsd: 0,
     subscribed: false,
     available: true,
@@ -518,7 +520,7 @@ export function invoiceProcessingV3Entry(): CatalogEntry {
 
 /**
  * Invoice Processing v4 as the round's manifest declares it (Build 22, spec §3;
- * `b22/invoice-processing.v4.json`): v3's 22 steps and settings' keys, in five
+ * `snoopy-automations/manifests/invoice-processing.v4.json`): v3's 22 steps and settings' keys, in five
  * steps — Upload invoice (receive); Connect integration, a setting step the
  * `vendor` field names ("Integration"); AI processing (extract, check-documents,
  * verify-read); Details saved, "QuickBooks updated" while QuickBooks is chosen
