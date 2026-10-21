@@ -1313,7 +1313,7 @@ describe('Home header — the mark fills its row and draws nothing else (D9, 202
   // since the scope became two icons beside the bell (the owner's build 13 decision 2).
   const BUTTONS = 4 * 38 + 3 * 10;
 
-  function expectMarkFillsTheRow(mark: { props: Record<string, unknown> }, tint: string | undefined) {
+  function expectMarkFillsTheRow(mark: { props: Record<string, unknown> }, tint: string) {
     const style = StyleSheet.flatten(mark.props.style as never) as Record<string, unknown>;
     expect(style.height).toBe(ROW);
     expect(style.width).toBeCloseTo(MARK_WIDTH, 5);
@@ -1328,7 +1328,7 @@ describe('Home header — the mark fills its row and draws nothing else (D9, 202
   it('fills the 38-pt row on the dashboard, beside the scope icons, the bell and the avatar it leaves untouched', async () => {
     const { getByTestId, getByLabelText } = await renderWithProviders(<HomeScreen />, signedInSession);
     expect(await screen.findByText('Welcome back, Alex')).toBeTruthy();
-    expectMarkFillsTheRow(getByTestId('home-mark'), undefined);
+    expectMarkFillsTheRow(getByTestId('home-mark'), nocturneDark.brandTint);
     // The row sizes to its content: no fixed height that the mark could overflow.
     const row = StyleSheet.flatten(getByTestId('home-header').props.style);
     expect(row).toMatchObject({ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' });
@@ -1354,7 +1354,7 @@ describe('Home header — the mark fills its row and draws nothing else (D9, 202
   it('is the same size while the dashboard loads, beside a circle for each of the four buttons to come', async () => {
     platformOperation.mockImplementation(() => new Promise(() => {}));
     const { getByTestId } = await renderWithProviders(<HomeScreen />, signedInSession);
-    expectMarkFillsTheRow(getByTestId('home-mark'), undefined);
+    expectMarkFillsTheRow(getByTestId('home-mark'), nocturneDark.brandTint);
     // The workspace, the team, the bell and the avatar (four since build 14): nothing moves when it loads.
     expect(getByTestId('home-header-actions').children).toHaveLength(4);
   });
@@ -1365,14 +1365,14 @@ describe('Home header — the mark fills its row and draws nothing else (D9, 202
     routePlatform(platformOperation, { '/automations': emptyCatalog });
     const { getByTestId } = await renderWithProviders(<HomeScreen />, signedInSession);
     expect(await screen.findByText('Nothing automated. Yet.')).toBeTruthy();
-    expectMarkFillsTheRow(getByTestId('home-mark'), undefined);
+    expectMarkFillsTheRow(getByTestId('home-mark'), nocturneDark.brandTint);
   });
 
   it('is the same size when the platform is unreachable', async () => {
     platformOperation.mockRejectedValue(new PlatformUnreachableError());
     const { getByTestId } = await renderWithProviders(<HomeScreen />, signedInSession);
     expect(await screen.findByText("Can't reach Autom8x")).toBeTruthy();
-    expectMarkFillsTheRow(getByTestId('home-mark'), undefined);
+    expectMarkFillsTheRow(getByTestId('home-mark'), nocturneDark.brandTint);
   });
 });
 
