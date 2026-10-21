@@ -4375,7 +4375,7 @@ exports[`Nocturne set — light palette BrandMark renders unchanged 1`] = `
         {
           "height": 41.99666666666667,
           "opacity": 1,
-          "tintColor": "#383838",
+          "tintColor": "#212121",
           "width": 86,
         },
         undefined,

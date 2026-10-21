@@ -12,7 +12,7 @@ import { renderWithProviders } from '@/test/render';
  * automation x AI" — the mark stayed white after Settings › Appearance moved to Light while Home was
  * open. iOS makes an image tintable only when it loads with a tint (React Native 0.81's
  * RCTImageComponentView: the template rendering at load, a later `tintColor` only recolours a
- * template), so the mark is tinted in both palettes — white on dark, #383838 on light — and a switch
+ * template), so the mark is tinted in both palettes — white on dark, #212121 (the design's invert(.87)) on light — and a switch
  * recolours it at once.
  */
 
@@ -38,7 +38,7 @@ describe('BrandMark', () => {
     );
     expect(tintOf()).toBe('#ffffff');
     await fireEvent.press(screen.getByTestId('to-light'));
-    expect(tintOf()).toBe('#383838');
+    expect(tintOf()).toBe('#212121');
     await fireEvent.press(screen.getByTestId('to-dark'));
     expect(tintOf()).toBe('#ffffff');
   });

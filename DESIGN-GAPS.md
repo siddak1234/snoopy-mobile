@@ -2219,15 +2219,17 @@ for every rule the two clients share; the main session's decisions bind each fix
 ### Round 25 — build 24's feedback (Round 17; 2026-10-21)
 
 - **The A8X mark in light mode** (the owner's build 24 item 2: "In light mode the logo should be black right or
-  the purple matching automation x AI"; near-black `#383838`, the design's invert(.87), on the session's
+  the purple matching automation x AI"; near-black `#212121`, the design's invert(.87) of the pure-white PNG (~~`#383838`~~: the session's
+  first number was wrong, and the app had carried it since the Nocturne revamp; the website's change audit
+  measured it), on the session's
   recommendation of the design standard, the website aligned): the mark stayed white after Settings ›
   Appearance moved to Light while Home was open. Cause, from React Native 0.81.5's
   RCTImageComponentView: an image is made tintable (template rendering) only when it loads with a tint, and a
   later `tintColor` only recolours a template — so a mark loaded untinted on dark kept its white. A cold start
   in Light was right (the root layout waits for the kept appearance). `palette.brandTint` is now a colour in
-  both palettes — the PNG's own white (`#ffffff`, its glyphs are pure white) on dark, `#383838` on light — so the
-  mark is tintable from its first load and a switch recolours it at once. One Nocturne snapshot re-pinned,
-  the dark BrandMark's `tintColor` only (README's re-pin fact). No simulator: the session's repro run crashed
+  both palettes — the PNG's own white (`#ffffff`, its glyphs are pure white) on dark, `#212121` on light — so the
+  mark is tintable from its first load and a switch recolours it at once. Two Nocturne snapshots re-pinned,
+  the BrandMarks' `tintColor` only (dark none → `#ffffff`, light `#383838` → `#212121`) (README's re-pin fact). No simulator: the session's repro run crashed
   the simulator's SpringBoard and was stopped (the owner's rule since); the source is the evidence and the
   owner's TestFlight 25 check the proof on a phone.
 - **Approve and Deny with no reload** (the Gate 25 review R5c 1; the website alike): a run that reached its

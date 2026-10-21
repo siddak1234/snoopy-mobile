@@ -19,7 +19,8 @@ type Props = {
 
 /** The A8X wordmark. The PNG is white glyphs on a transparent ground — the mark
  *  draws nothing behind them; on light theme the design inverts it
- *  (invert(.87) ≈ #383838), which tintColor reproduces. It is tinted in both
+ *  (invert(.87) of its pure white = #212121; ~~≈ #383838~~), which tintColor
+ *  reproduces. It is tinted in both
  *  palettes (white on dark), so the image is tintable from its first load and a
  *  switch of Settings › Appearance recolours it at once (`palette.brandTint`). */
 export function BrandMark({ width, height, opacity = 1, style, testID }: Props) {

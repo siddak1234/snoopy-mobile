@@ -72,7 +72,7 @@ describe('Nocturne light palette — .thm-light overrides + inheritance', () => 
     // Never none: iOS makes an image tintable only when it loads with a tint, so a mark loaded untinted
     // on dark stayed white after a switch to light.
     expect(nocturneDark.brandTint).toBe('#ffffff');
-    expect(nocturneLight.brandTint).toBe('#383838');
+    expect(nocturneLight.brandTint).toBe('#212121');
   });
 });
 

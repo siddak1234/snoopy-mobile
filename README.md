@@ -121,7 +121,8 @@ drop-down backing (the owner's build 23 F1, found see-through on the simulator):
 8 Nocturne entries, the backed panel and the status-bar strip in both palettes
 with and without Liquid Glass, `backgroundColor` alpha 0.94 → 1 only ("Round 24
 — the second review") — and round 25's mark tinted in both palettes (the owner's
-build 24 item 2): the dark BrandMark entry, `tintColor` none → `#ffffff` only
+build 24 item 2): the BrandMark entries, `tintColor` only: dark none → `#ffffff`, light `#383838` →
+`#212121`, the design's invert(.87)
 ("Round 25 — build 24's feedback").
 
 CI runs lint, typecheck, Jest, all architecture/dependency gates (the docs

@@ -44,7 +44,8 @@ export type NocturnePalette = {
   neutral: Ramp;
   accentRamp: Ramp;
   /** Brand mark tint, in BOTH palettes: the PNG's own white on dark, the
-   *  design's invert(.87) on light (~#383838). Never none: iOS makes an image
+   *  design's invert(.87) on light: #212121, 13% of the PNG's pure white
+   *  (~~#383838~~, which the design never gave). Never none: iOS makes an image
    *  tintable only when it loads with a tint (React Native 0.81's
    *  RCTImageComponentView), so a mark that loaded untinted on dark stayed white
    *  after a switch to light (the owner's build 24 item 2). */
@@ -101,7 +102,7 @@ export const nocturneLight: NocturnePalette = {
     200: '#453a91', 300: '#5548ab', 400: '#5d50b5',
     700: '#c3bcec', 800: '#dcd8f4', 900: '#e9e6f8',
   },
-  brandTint: '#383838',
+  brandTint: '#212121',
   danger: '#dc2626',
 };
 
