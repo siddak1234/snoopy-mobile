@@ -21,12 +21,10 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { Skeleton } from '@/components/nocturne/skeleton';
 import { StatCard } from '@/components/nocturne/stat-card';
 import { StatusPill } from '@/components/nocturne/status-pill';
-import { StepCard } from '@/components/nocturne/step-card';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { NocturneTabBar } from '@/components/nocturne/tab-bar';
 import { TextField } from '@/components/nocturne/text-field';
 import type { ThemeMode } from '@/hooks/use-theme';
-import type { PipelineStep } from '@/lib/view/pipeline';
 import { renderWithProviders } from '@/test/render';
 import { stabilizeAnimated } from '@/test/stabilize';
 import { makeTabBarProps } from '@/test/tab-bar-props';
@@ -59,15 +57,6 @@ import { makeTabBarProps } from '@/test/tab-bar-props';
  * existed and was already trusted, so excluding it bought nothing.
  */
 
-const PIPELINE_STEP: PipelineStep = {
-  id: 'visual-step',
-  icon: Receipt,
-  kicker: 'TRIGGER',
-  title: 'New email in AP inbox',
-  desc: 'Gmail · ap@acme.co',
-  more: true,
-};
-
 /** One representative mounting per component, in the design's own vocabulary. */
 const CASES: { name: string; element: React.ReactElement }[] = [
   { name: 'AvatarBadge', element: <AvatarBadge initials="DW" /> },
@@ -99,7 +88,6 @@ const CASES: { name: string; element: React.ReactElement }[] = [
   { name: 'StatusPill/Running', element: <StatusPill label="Running" /> },
   { name: 'StatusPill/Queued', element: <StatusPill label="Queued" /> },
   { name: 'StatusPill/Cancelled', element: <StatusPill label="Cancelled" /> },
-  { name: 'StepCard', element: <StepCard step={PIPELINE_STEP} /> },
   {
     name: 'SurfaceCard',
     element: (

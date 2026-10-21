@@ -43,9 +43,13 @@ export type NocturnePalette = {
   divider: string;
   neutral: Ramp;
   accentRamp: Ramp;
-  /** Brand mark tint: design renders the (light-grey) PNG as-is on dark and
-   *  applies CSS invert(.87) on light, which computes to ~#383838. */
-  brandTint: string | undefined;
+  /** Brand mark tint, in BOTH palettes: the PNG's own white on dark, the
+   *  design's invert(.87) on light: #212121, 13% of the PNG's pure white
+   *  (~~#383838~~, which the design never gave). Never none: iOS makes an image
+   *  tintable only when it loads with a tint (React Native 0.81's
+   *  RCTImageComponentView), so a mark that loaded untinted on dark stayed white
+   *  after a switch to light (the owner's build 24 item 2). */
+  brandTint: string;
   /**
    * An action that removes or ends something and cannot be undone with a tap —
    * Delete account, Delete or Leave team, Cancel run, Archive flow, Unlink, Sign
@@ -76,7 +80,7 @@ export const nocturneDark: NocturnePalette = {
   divider: withAlpha('#e9e9ed', 0.16),
   neutral: darkNeutral,
   accentRamp: darkAccent,
-  brandTint: undefined,
+  brandTint: '#ffffff',
   // status.err, the design's own red.
   danger: '#f87171',
 };
@@ -98,7 +102,7 @@ export const nocturneLight: NocturnePalette = {
     200: '#453a91', 300: '#5548ab', 400: '#5d50b5',
     700: '#c3bcec', 800: '#dcd8f4', 900: '#e9e6f8',
   },
-  brandTint: '#383838',
+  brandTint: '#212121',
   danger: '#dc2626',
 };
 

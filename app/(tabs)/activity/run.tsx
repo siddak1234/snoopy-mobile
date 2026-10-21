@@ -1,6 +1,6 @@
 import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { DownloadSimple, FileText, FlowArrow, StopCircle } from 'phosphor-react-native';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
@@ -44,6 +44,7 @@ import { readCatalog } from '@/lib/platform/catalog';
 import { cancelRun } from '@/lib/platform/automations';
 import {
   readAllApprovals,
+  readAllApprovalsNow,
   readRemovedSubscriptionsOrNone,
   readRun,
   readSubscriptions,
@@ -60,6 +61,7 @@ import {
   RUN_REREAD_MS,
   heldDecision,
   jobApproval,
+  rereadForApproval,
   runLabel,
   runOrigin,
   runResultLine,
@@ -221,14 +223,20 @@ export default function RunDetailScreen() {
    */
   // Reads that have settled, either way: what schedules the next one while the run goes on.
   const [reads, setReads] = useState(0);
+  // Whether the next read takes the approvals past the snapshot, and how many
+  // such reads have settled: a held run's approval not listed yet (R5c 1).
+  const freshApprovals = useRef(false);
+  const [approvalReads, setApprovalReads] = useState(0);
   const detail = useResource(async () => {
+    const fresh = freshApprovals.current;
+    freshApprovals.current = false;
     try {
       if (!runId || !openedIn) throw new PlatformNotConfiguredError();
       const [run, catalog, approvals, live, role] = await Promise.all([
         readRun(openedIn, runId),
         readCatalog(openedIn),
         // Unreadable, the page still draws (round 24 P6): a held step says why, with no buttons.
-        readAllApprovals(openedIn).then(
+        (fresh ? readAllApprovalsNow : readAllApprovals)(openedIn).then(
           (answer) => answer.approvals,
           () => null,
         ),
@@ -249,6 +257,7 @@ export default function RunDetailScreen() {
       return { detail: run, entry, approvals: approvals ?? [], approvalsRead: approvals !== null, flow, role };
     } finally {
       setReads((n) => n + 1);
+      if (fresh) setApprovalReads((n) => n + 1);
     }
   }, [runId, openedIn]);
 
@@ -276,6 +285,27 @@ export default function RunDetailScreen() {
     const timer = setTimeout(refresh, RUN_REREAD_MS);
     return () => clearTimeout(timer);
   }, [going, focused, reads, refresh]);
+
+  /**
+   * A run held with no approval of its job listed yet is read again for it
+   * (round 25, the review's R5c 1): the read that saw it turn held took the
+   * approvals from the 15 s snapshot, from before the approval was asked, and
+   * the reads above stop at held. So, every `RUN_REREAD_MS`, one at a time
+   * and at most `HELD_APPROVAL_REREADS` times, the run and its approvals are
+   * read again, the approvals past the snapshot (`readAllApprovalsNow`),
+   * until the approval is listed or the run leaves held (`rereadForApproval`,
+   * the website's rule). Approve and Deny then appear with no reload.
+   */
+  const owed =
+    detail.status === 'ready' && rereadForApproval(detail.data.detail.run, detail.data.approvals, approvalReads);
+  useEffect(() => {
+    if (!owed || !focused) return;
+    const timer = setTimeout(() => {
+      freshApprovals.current = true;
+      refresh();
+    }, RUN_REREAD_MS);
+    return () => clearTimeout(timer);
+  }, [owed, focused, reads, refresh]);
 
   const liveRun = detail.status === 'ready' ? detail.data : null;
   // A waiting document whose approval was refused or ran out says "Not approved" (S21); a denied step says so (P6).
