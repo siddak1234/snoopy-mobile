@@ -356,6 +356,7 @@ export default function RunDetailScreen() {
           liveRun.detail.documents,
           decided === 'rejected' ? 'rejected' : decided === 'closed' ? 'expired' : null,
           liveRun.detail.files,
+          liveRun.entry?.documentWords,
         ),
         // What a v1/v2 run saved, as its automation wrote it for people (backend
         // ADR-0037; the one-run read only) — drawn only where no documents are.

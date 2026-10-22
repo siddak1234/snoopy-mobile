@@ -351,7 +351,7 @@ describe("a document's card (spec A7; the owner's ~04:05Z and AM7)", () => {
       { description: '—', amount: null, each: null },
     ]);
     expect(card.moreLines).toBe(true);
-    expect(card.heading).toBe('Invoice 1 of 2');
+    expect(card.heading).toBe('Document 1 of 2'); // a flow that names no word
   });
 
   it('the rows: totals, the discount as taken off, how it was paid, the result, then the automation\'s own lines', () => {
@@ -400,9 +400,16 @@ describe("a document's card (spec A7; the owner's ~04:05Z and AM7)", () => {
     expect(toDocumentCard(doc({ vendor: { name: 'X', address: null, city: 'Oakland, CA', storeNumber: null } }), 1).location).toBe('Oakland, CA');
   });
 
-  it('cards come in the file\'s order, each "Invoice i of n" (round 24 P10; ~~Document i of n~~)', () => {
-    const cards = toDocumentCards([doc({ index: 3 }), doc({ index: 1 }), doc({ index: 2 })]);
-    expect(cards.map((card) => card.heading)).toEqual(['Invoice 1 of 3', 'Invoice 2 of 3', 'Invoice 3 of 3']);
+  it('cards come in the file\'s order, each "{its flow\'s word} i of n", "Document i of n" for a flow that names none (backend BUILD-PLAN 27.2.1)', () => {
+    const documents = [doc({ index: 3 }), doc({ index: 1 }), doc({ index: 2 })];
+    const invoices = toDocumentCards(documents, null, undefined, { singular: 'Invoice', plural: 'Invoices' });
+    expect(invoices.map((card) => card.heading)).toEqual(['Invoice 1 of 3', 'Invoice 2 of 3', 'Invoice 3 of 3']);
+    for (const words of [undefined, null])
+      expect(toDocumentCards(documents, null, undefined, words).map((card) => card.heading)).toEqual([
+        'Document 1 of 3',
+        'Document 2 of 3',
+        'Document 3 of 3',
+      ]);
     expect(toDocumentCards(undefined)).toEqual([]);
   });
 
