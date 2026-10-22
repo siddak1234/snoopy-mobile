@@ -48,7 +48,7 @@ const CONNECTED_GMAIL: Connection = {
   id: 'c1',
   providerId: 'gmail',
   workspaceId: TEST_WORKSPACE,
-  externalAccount: { id: 'a1', displayName: 'alex@acme.co' },
+  externalAccount: { displayName: 'alex@acme.co' },
   status: 'connected',
   requiredScopes: [],
   grantedScopes: [],
@@ -61,7 +61,7 @@ const CONNECTED_TWILIO: Connection = {
   ...CONNECTED_GMAIL,
   id: 'c2',
   providerId: 'twilio',
-  externalAccount: { id: 'AC123', displayName: 'AC123' },
+  externalAccount: { displayName: 'AC123' },
   usedByCount: 1,
 };
 

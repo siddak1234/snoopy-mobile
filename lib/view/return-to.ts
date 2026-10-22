@@ -89,6 +89,17 @@ export function nextAfterSignIn(
   return { href: afterSignIn(), options: RETURN_OPTIONS };
 }
 
+/**
+ * Where a kept session opens, past the cover or the Face ID lock (backend §12.1 #301): the
+ * notifications offer where this phone can still be asked, else Home. The offer is asked
+ * after a sign-in (`nextAfterSignIn`), and a reinstall asks for none: it keeps the session
+ * in the Keychain while iOS forgets its answer, so the person was never asked again (the
+ * owner's build 25 feedback). The offer's answer goes where a sign-in's does — Home here.
+ */
+export function nextAfterColdStart(offers: { notifications: boolean }): Href {
+  return offers.notifications ? '/(auth)/notifications-offer' : '/(tabs)/(home)';
+}
+
 /** For tests: a fresh process. */
 export function resetReturnForTests(): void {
   open = null;

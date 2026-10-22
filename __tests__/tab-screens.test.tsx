@@ -1420,7 +1420,7 @@ describe('Setup (design sSetup; the Invoice Processing update, spec §3.B)', () 
         id: 'c-qb',
         providerId: 'quickbooks',
         workspaceId: TEST_WORKSPACE,
-        externalAccount: { id: 'realm-1', displayName: 'Acme Books' },
+        externalAccount: { displayName: 'Acme Books' },
         status: 'connected',
         requiredScopes: [],
         grantedScopes: [],

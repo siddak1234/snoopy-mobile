@@ -140,7 +140,7 @@ function quickbooks(overrides: Partial<Connection> = {}): Connection {
     id: 'c-qb',
     providerId: 'quickbooks',
     workspaceId: TEST_WORKSPACE,
-    externalAccount: { id: 'realm-1', displayName: 'books@example.com' },
+    externalAccount: { displayName: 'books@example.com' },
     status: 'connected',
     requiredScopes: [],
     grantedScopes: [],
@@ -661,7 +661,7 @@ describe('Set up for a flow the workspace holds on an older version', () => {
     const v1 = { ...heldV1([]), status: 'paused' as const };
     fake.always('GET /v1/workspaces/{workspaceId}/automations', { automations: [invoiceProcessingV3Entry()], categories: ['All', 'Accounting'] });
     fake.always('GET /v1/connections/providers', providersWithQuickBooks());
-    fake.always('GET /v1/workspaces/{workspaceId}/connections', { connections: [quickbooks({ externalAccount: { id: 'realm-1', displayName: 'Acme Books' } })] });
+    fake.always('GET /v1/workspaces/{workspaceId}/connections', { connections: [quickbooks({ externalAccount: { displayName: 'Acme Books' } })] });
     fake.always('GET /v1/workspaces/{workspaceId}/projects', { projects: [] });
     fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', { subscriptions: [v1] });
     fake.always('PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}', { subscription: { ...v1, status: 'live' } });

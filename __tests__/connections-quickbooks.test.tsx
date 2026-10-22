@@ -35,7 +35,7 @@ const qbConnection = {
   id: 'c-qb',
   providerId: 'quickbooks',
   workspaceId: TEST_WORKSPACE,
-  externalAccount: { id: 'realm-1', displayName: 'books@example.com' },
+  externalAccount: { displayName: 'books@example.com' },
   status: 'connected',
   requiredScopes: [],
   grantedScopes: [],

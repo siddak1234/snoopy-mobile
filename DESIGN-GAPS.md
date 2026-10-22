@@ -2273,3 +2273,38 @@ updates." Each change as the website makes it (`snoopy/lib/run-documents.ts`, `s
 - `no-flow-code`: a line comparing `templateId` with `'invoice-processing'` planted in `lib/view/documents.ts` fails it (1 of 2); restored, both pass.
 - `build21-views`: with `documentOf` writing "Invoice" whatever the words, the "Document i of n" case fails; the "Invoice i of n" case holds Invoice Processing's.
 
+
+**TestFlight 26** (2026-10-22): 1.0.0 (26) from `main` `30495eb` (#72), built on this Mac
+(`npm run release:ios -- --local`; ipa `.autom8x/release-ios/ipa/app.ipa`), entitlements checked
+(`ENTITLEMENTS_OK`), submission `db141e12-41da-4462-b579-9a0e1a08eef8` FINISHED 05:02:19Z, VALID in App
+Store Connect about 05:04Z.
+
+## Round 18 — the carried items (backend BUILD-PLAN 27.8; 2026-10-22)
+
+The owner, 2026-10-22: "complete. tell me when the prs are ready. no assumptions actually read the code
+and confirm first." Each read in the code before it was built.
+
+| What | Where | Held by |
+| --- | --- | --- |
+| A kept session iOS can still ask about opens on the notifications offer (backend §12.1 #301) | `nextAfterColdStart`, `lib/view/return-to.ts`; the cover (`app/index.tsx`) and the Face ID lock (`app/(auth)/faceid.tsx`) | `real-router/notifications-offer` (four cases) |
+| The account's label only: `externalAccount.id` is no longer published (backend 25.2.37) | `lib/generated/platform-contracts/connections.d.ts`, from `snoopy-backend` #233; the fixtures that wrote it | `tsc`; `verify:platform-contracts` |
+
+- **#301, read against the records' times.** The owner's build 25 feedback ("Wht about notifications pop
+  up?", 15:11:48Z) came before the sign-out at 15:57:23Z, and no device was registered or removed between
+  02:35:38Z and then. So the reinstall kept build 24's session in the Keychain — its device id lasted to
+  that sign-out — and no sign-in followed; the offer was asked only after a sign-in (`login.tsx`,
+  `faceid-offer.tsx`). No cold start registered either, though every signed-in cold start does where iOS
+  allows notifications: deleting the app had reset iOS's answer. Not the kept "Not now" the row first
+  named. Now the cold start asks, past the cover or the lock, where iOS has never asked and no Not now is
+  kept; the offer's answer goes where a sign-in's does, Home here.
+- **25.2.37** ships with the platform's release of #233: the app reads `displayName` alone, and the
+  release script's deployed-contract check passes only once production serves this contract, so the next
+  TestFlight build follows that release.
+
+### Guards proved to bite, Round 18's carried items (2026-10-22)
+
+- `real-router/notifications-offer`: with the cover and the lock as `main` has them, "a kept session iOS can
+  still ask about opens on the offer…" and "…behind the Face ID lock: unlocked, the offer, then Home" fail
+  (2 of 4; the two Home cases pass, as they should); restored, all four pass.
+- `cover-haptics` "ticks on a signed-in tap" says iOS has answered, as its subject is the tick; the offer's
+  own tests hold where a kept session goes.
