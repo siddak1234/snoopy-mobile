@@ -19,9 +19,11 @@ import { Text } from '@/components/text';
 import { fonts, layout, radius, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useBiometricWording } from '@/hooks/use-biometric-wording';
+import { offersPushAsk } from '@/hooks/use-push-registration';
 import { useSession } from '@/hooks/use-session';
 import { SIGN_OUT_FAILED } from '@/lib/content/screen-states';
 import { readSession } from '@/lib/platform/session-store';
+import { nextAfterColdStart } from '@/lib/view/return-to';
 
 /** CSS `ease` / `ease-in-out` used by a8xGlow / a8xScan. */
 const easeCss = Easing.bezier(0.25, 0.1, 0.25, 1);
@@ -90,8 +92,13 @@ export default function FaceIdScreen() {
         });
         if (cancelled) return;
         if (result.success) {
+          // Unlocked, as the cover enters a kept session: the notifications offer
+          // where iOS can still be asked, else Home (backend §12.1 #301). Asked
+          // first, so the unlock and the way on stay one step, as they were.
+          const notifications = await offersPushAsk().catch(() => false);
+          if (cancelled) return;
           unlock();
-          router.replace('/(tabs)/(home)');
+          router.replace(nextAfterColdStart({ notifications }));
         } else setMessage(words.current.didNotUnlock);
       } catch {
         if (!cancelled) setMessage(words.current.didNotUnlock);

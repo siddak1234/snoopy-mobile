@@ -2,7 +2,7 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import { screen } from 'expo-router/testing-library';
 
 import { offersPushAsk } from '@/hooks/use-push-registration';
-import { answerPlatform, asInProduction, kept, launch, press } from '@/test/real-router';
+import { answerPlatform, asInProduction, kept, launch, press, signedInOnThisPhone } from '@/test/real-router';
 
 /**
  * The notifications offer after a sign-in (round 24 P8; the owner's build 23
@@ -102,6 +102,52 @@ it.each([
   answerPlatform();
   const view = await launch();
   await signIn();
+  expect([view.getPathname(), view.getSegments()]).toEqual(['/', ['(tabs)', '(home)']]);
+  expect(screen.queryByText('Turn on notifications')).toBeNull();
+});
+
+/**
+ * A kept session (backend §12.1 #301, the owner's build 25 feedback: "Wht about
+ * notifications pop up?"). A reinstall keeps the session in the Keychain while iOS
+ * forgets its answer, and no sign-in follows to ask — so the cold start asks, past
+ * the cover or the Face ID lock, where iOS can still ask and no Not now is kept.
+ */
+it('a kept session iOS can still ask about opens on the offer at the cold start; Not now opens Home and is kept', async () => {
+  signedInOnThisPhone();
+  notAskedYet();
+  answerPlatform();
+  const view = await launch();
+  expect(view.getSegments()).toEqual(['(auth)', 'notifications-offer']);
+  await asInProduction(async () => {
+    await press('Not now');
+  });
+  expect([view.getPathname(), view.getSegments()]).toEqual(['/', ['(tabs)', '(home)']]);
+  expect(kept.get('autom8x.push-not-now')).toBeTruthy();
+});
+
+it('a kept session behind the Face ID lock: unlocked, the offer, then Home', async () => {
+  signedInOnThisPhone({ 'autom8x.face-id-enabled': 'true' });
+  notAskedYet();
+  Biometrics.hasHardwareAsync.mockImplementation(async () => true);
+  Biometrics.isEnrolledAsync.mockImplementation(async () => true);
+  answerPlatform();
+  const view = await launch();
+  expect(view.getSegments()).toEqual(['(auth)', 'notifications-offer']);
+  await asInProduction(async () => {
+    await press('Not now');
+  });
+  expect([view.getPathname(), view.getSegments()]).toEqual(['/', ['(tabs)', '(home)']]);
+});
+
+it.each([
+  ['a Not now kept', () => kept.set('autom8x.push-not-now', 'true')],
+  ['iOS already allows', () => Notifications.getPermissionsAsync.mockResolvedValue({ status: 'granted', granted: true, canAskAgain: true, expires: 'never' })],
+])('a kept session with %s opens on Home, offering nothing', async (_name, given) => {
+  signedInOnThisPhone();
+  notAskedYet();
+  given();
+  answerPlatform();
+  const view = await launch();
   expect([view.getPathname(), view.getSegments()]).toEqual(['/', ['(tabs)', '(home)']]);
   expect(screen.queryByText('Turn on notifications')).toBeNull();
 });

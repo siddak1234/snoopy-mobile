@@ -196,7 +196,7 @@ const GMAIL_CONNECTED = {
       id: 'c1',
       providerId: 'gmail',
       workspaceId: TEST_WORKSPACE,
-      externalAccount: { id: 'a1', displayName: 'alex@acme.co' },
+      externalAccount: { displayName: 'alex@acme.co' },
       status: 'connected',
       requiredScopes: [],
       grantedScopes: [],

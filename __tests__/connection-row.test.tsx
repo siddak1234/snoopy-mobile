@@ -52,7 +52,7 @@ const connection = (providerId: string, overrides: Partial<Connection> = {}): Co
   workspaceId: TEST_WORKSPACE,
   providerId,
   status: 'connected',
-  externalAccount: { id: 'x-1', displayName: 'person@example.com' },
+  externalAccount: { displayName: 'person@example.com' },
   requiredScopes: [],
   grantedScopes: [],
   usedByCount: 0,
@@ -109,9 +109,9 @@ describe.each<ThemeMode>(['dark', 'light'])('the connection row — %s palette (
 describe('the row says the account, else its state (spec A4)', () => {
   it.each([
     ['an email the platform holds', connection('google'), 'person@example.com', 'muted', 'Disconnect'],
-    ['connected, no email', connection('google', { externalAccount: { id: 'x', displayName: 'Acme Books' } }), 'Connected', 'muted', 'Disconnect'],
+    ['connected, no email', connection('google', { externalAccount: { displayName: 'Acme Books' } }), 'Connected', 'muted', 'Disconnect'],
     ['a sign-in asked again', connection('google', { status: 'reauthorization-required' }), 'person@example.com', 'muted', 'Reconnect'],
-    ['an error, no email', connection('google', { errorCode: 'token_revoked', externalAccount: { id: 'x', displayName: 'Acme' } }), 'Needs attention', 'warn', 'Reconnect'],
+    ['an error, no email', connection('google', { errorCode: 'token_revoked', externalAccount: { displayName: 'Acme' } }), 'Needs attention', 'warn', 'Reconnect'],
     ['none', undefined, 'Not connected', 'muted', 'Connect'],
     ['disconnected', connection('google', { status: 'disconnected' }), 'Not connected', 'muted', 'Connect'],
   ] as const)('%s', async (_case, held, line, tone, button) => {

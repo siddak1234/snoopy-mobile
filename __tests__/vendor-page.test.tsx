@@ -53,7 +53,7 @@ const qbConnection: Connection = {
   id: 'c-qb',
   providerId: 'quickbooks',
   workspaceId: TEST_WORKSPACE,
-  externalAccount: { id: 'realm-1', displayName: 'Acme Books' },
+  externalAccount: { displayName: 'Acme Books' },
   status: 'connected',
   requiredScopes: [],
   grantedScopes: [],

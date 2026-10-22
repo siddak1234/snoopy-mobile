@@ -523,7 +523,7 @@ describe('Settings › Connections › the row\'s button, then its dialog\'s: Di
     id: 'c1',
     providerId: 'gmail',
     workspaceId: TEST_WORKSPACE,
-    externalAccount: { id: 'a1', displayName: 'alex@acme.co' },
+    externalAccount: { displayName: 'alex@acme.co' },
     status: 'connected',
     requiredScopes: [],
     grantedScopes: [],
@@ -563,7 +563,7 @@ describe('Settings › Connections › the row\'s button, then its dialog\'s: Di
       },
       route: 'POST /v1/workspaces/{workspaceId}/connections/key' as const,
       answer: {
-        connection: { ...CONNECTED_GMAIL, id: 'c2', providerId: 'twilio', externalAccount: { id: 'AC123', displayName: 'AC123' }, usedByCount: 0 },
+        connection: { ...CONNECTED_GMAIL, id: 'c2', providerId: 'twilio', externalAccount: { displayName: 'AC123' }, usedByCount: 0 },
       } satisfies Answer<'POST /v1/workspaces/{workspaceId}/connections/key'>,
       values: { workspaceId: TEST_WORKSPACE },
       body: { providerId: 'twilio', credentials: { accountSid: 'AC123', authToken: 'secret-token' } },
