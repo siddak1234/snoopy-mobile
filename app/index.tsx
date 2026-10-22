@@ -20,9 +20,11 @@ import { Pressable } from '@/components/pressable';
 import { Text } from '@/components/text';
 import { em, fonts, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { offersPushAsk } from '@/hooks/use-push-registration';
 import { useSession } from '@/hooks/use-session';
 import { SESSION_ENDED_BODY, SESSION_ENDED_TITLE } from '@/lib/content/screen-states';
 import { coverPlaysEntrance } from '@/lib/view/cover-entrance';
+import { nextAfterColdStart } from '@/lib/view/return-to';
 
 /** CSS `ease-out` (a8xPulse timing). */
 const easeOut = Easing.out(Easing.ease);
@@ -47,7 +49,9 @@ const PULSE_RING2_DELAY_MS = 1400;
  * here instead, so the cover is what being signed out looks like. A session
  * that ended while it was in use says so over Get started, in the website's
  * words — and the sign-in that follows returns to the screen that was open
- * (Gate 24 parity, G4; `lib/view/return-to.ts`).
+ * (Gate 24 parity, G4; `lib/view/return-to.ts`). A kept session that iOS can
+ * still be asked about opens on the notifications offer first, the screen a
+ * sign-in shows (backend §12.1 #301, `nextAfterColdStart`).
  */
 export default function SplashScreen() {
   const { palette } = useTheme();
@@ -63,7 +67,13 @@ export default function SplashScreen() {
   const enterWorkspace = useCallback(() => {
     if (navigatedRef.current || !signedIn) return;
     navigatedRef.current = true;
-    router.replace(locked ? '/(auth)/faceid' : '/(tabs)/(home)');
+    if (locked) {
+      router.replace('/(auth)/faceid');
+      return;
+    }
+    void offersPushAsk()
+      .catch(() => false)
+      .then((notifications) => router.replace(nextAfterColdStart({ notifications })));
   }, [router, signedIn, locked]);
 
   const getStarted = useCallback(() => {

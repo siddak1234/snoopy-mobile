@@ -11,6 +11,7 @@ import { signedInSession } from '@/test/platform';
 import { mockRouter, renderWithProviders } from '@/test/render';
 
 const Haptics = jest.requireMock('expo-haptics');
+const Notifications = jest.requireMock('expo-notifications') as { getPermissionsAsync: jest.Mock };
 
 describe('The cover and its tick (build 11, D7)', () => {
   it('gives no tick to a tap that does nothing — the signed-out cover — and one to Get started', async () => {
@@ -24,6 +25,9 @@ describe('The cover and its tick (build 11, D7)', () => {
   });
 
   it('ticks on a signed-in tap, which skips the splash', async () => {
+    // iOS has answered on this phone: a kept session it can still ask about opens
+    // on the notifications offer instead (backend §12.1 #301, the offer's own tests).
+    Notifications.getPermissionsAsync.mockResolvedValueOnce({ status: 'granted', granted: true, canAskAgain: true, expires: 'never' });
     const { getByText } = await renderWithProviders(<SplashScreen />, signedInSession);
     await fireEvent.press(getByText('AUTOMATION × AI'));
     expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
