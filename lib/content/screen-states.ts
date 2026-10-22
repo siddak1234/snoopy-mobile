@@ -426,13 +426,20 @@ export const EMAIL_OWED = 'Sending email…';
 export function emailSentLine(time: string): string {
   return `Email sent · ${time}`;
 }
+/** What a flow calls one of its documents, and many (`AutomationCatalogEntry.documentWords`). */
+export type DocumentWords = { singular: string; plural: string };
+
+/** A flow that names no word for its documents (the owner, 2026-10-21). */
+export const DOCUMENT_WORD = 'Document';
+
 /**
- * "Invoice 1 of 3" (round 24 P10; the owner's build 23 F15: "It should also be
- * invoice not document"; ~~"Document 1 of 3"~~, the owner's ~04:05Z: "a json
- * out that clearly seperates accordingly").
+ * "Invoice 1 of 3", in the word its flow declares (backend BUILD-PLAN 27.2.1; the
+ * owner, 2026-10-21: "invoice is invoice processing specific"), else "Document 1 of
+ * 3". ~~"Invoice" for every flow~~ from round 24 P10 (the owner's build 23 F15: "It
+ * should also be invoice not document") until then.
  */
-export function documentOf(index: number, count: number): string {
-  return `Invoice ${index} of ${count}`;
+export function documentOf(index: number, count: number, words?: DocumentWords | null): string {
+  return `${words?.singular ?? DOCUMENT_WORD} ${index} of ${count}`;
 }
 /** The first two rows inside an invoice (round 24 P10): what it is and the file's format. */
 export const DOCUMENT_TYPE_LABEL = 'Document type';

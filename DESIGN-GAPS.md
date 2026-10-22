@@ -2256,3 +2256,20 @@ for every rule the two clients share; the main session's decisions bind each fix
 | …at most ten times | `rereadForApproval`'s bound taken off (`lib/view/runs.ts`) | `build21-views` "a held run with no approval of its job listed…", `build14-feedback` "never listed: …" |
 | A listed approval, waiting or decided, ends the reads | `rereadForApproval` reading again for any decision but pending | `build21-views` the same, `build14-feedback` "…is listed (rejected) is read once" |
 
+## Round 18 — the flow standard (backend BUILD-PLAN 27.5; 2026-10-21)
+
+The owner, 2026-10-21: "invoice is invoice processing specific", and the goal: "if i create a new
+automation, automation and backend update should show up on the app … eventually app wouldnt need
+updates." Each change as the website makes it (`snoopy/lib/run-documents.ts`, `snoopy/test/no-flow-code.test.mjs`).
+
+| What | Where | Held by |
+| --- | --- | --- |
+| A document's heading in its flow's word, else "Document i of n" (27.5.1) | `documentOf`, `lib/content/screen-states.ts`; `toDocumentCards`, `lib/view/documents.ts`; the run page passes the catalog entry's `documentWords` (`app/(tabs)/activity/run.tsx`) | `build21-views` the headings, both ways; `invoice-processing-screens` through the fixture catalog's Invoice Processing, which declares "Invoice" (`test/platform.tsx`) |
+| No code for one flow (27.5.2) | every source under `app`, `components`, `lib`, `hooks`, `constants` | `no-flow-code` |
+| The router names MASTER-PLAN §3.4 (27.5.3) | `CLAUDE.md` | — |
+
+### Guards proved to bite, Round 18 (2026-10-21)
+
+- `no-flow-code`: a line comparing `templateId` with `'invoice-processing'` planted in `lib/view/documents.ts` fails it (1 of 2); restored, both pass.
+- `build21-views`: with `documentOf` writing "Invoice" whatever the words, the "Document i of n" case fails; the "Invoice i of n" case holds Invoice Processing's.
+

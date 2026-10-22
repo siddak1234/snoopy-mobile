@@ -1,5 +1,10 @@
 import type { RunDetail, RunDocument } from '@/lib/platform/runs';
-import { DOCUMENT_FORMAT_LABEL, DOCUMENT_TYPE_LABEL, documentOf } from '@/lib/content/screen-states';
+import {
+  DOCUMENT_FORMAT_LABEL,
+  DOCUMENT_TYPE_LABEL,
+  documentOf,
+  type DocumentWords,
+} from '@/lib/content/screen-states';
 
 /** A file uploaded for the job, as the run's detail lists it (round 24; backend ADR-0045). */
 export type RunFile = NonNullable<RunDetail['files']>[number];
@@ -176,6 +181,7 @@ export function toDocumentCard(
   count: number,
   approval?: 'rejected' | 'expired' | null,
   files?: readonly RunFile[],
+  words?: DocumentWords | null,
 ): DocumentCardView {
   const money = (value: string | null) => documentMoney(value, document.currency);
   const notApproved = document.status === 'waiting' && (approval === 'rejected' || approval === 'expired');
@@ -217,7 +223,7 @@ export function toDocumentCard(
   const total = money(document.total);
   return {
     index: document.index,
-    heading: documentOf(document.index, count),
+    heading: documentOf(document.index, count, words),
     summary: [document.vendor.name, total].filter(Boolean).join(' · ') || null,
     chip: notApproved ? 'Not approved' : STATUS_CHIPS[document.status],
     tone: notApproved ? 'muted' : STATUS_TONES[document.status],
@@ -240,13 +246,17 @@ export function toDocumentCard(
   };
 }
 
-/** Every document's card, in the file's order; `files`, the job's uploads, give each its Format. */
+/**
+ * Every document's card, in the file's order; `files`, the job's uploads, give each its Format;
+ * `words`, its flow's for its documents (the catalog entry), head each.
+ */
 export function toDocumentCards(
   documents: readonly RunDocument[] | undefined,
   approval?: 'rejected' | 'expired' | null,
   files?: readonly RunFile[],
+  words?: DocumentWords | null,
 ): DocumentCardView[] {
   const list = [...(documents ?? [])].sort((a, b) => a.index - b.index);
-  return list.map((document) => toDocumentCard(document, list.length, approval, files));
+  return list.map((document) => toDocumentCard(document, list.length, approval, files, words));
 }
 
