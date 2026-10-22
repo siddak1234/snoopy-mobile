@@ -2308,3 +2308,11 @@ and confirm first." Each read in the code before it was built.
   (2 of 4; the two Home cases pass, as they should); restored, all four pass.
 - `cover-haptics` "ticks on a signed-in tap" says iOS has answered, as its subject is the tick; the offer's
   own tests hold where a kept session goes.
+
+**TestFlight 27** (2026-10-22): 1.0.0 (27) from `main` `c7002cb` (#73), built on this Mac
+(`npm run release:ios -- --local`; ipa `.autom8x/release-ios/ipa/app.ipa`) after the platform's
+THIRTY-NINTH served #233's contract (the release's deployed-contract check passed, three of three),
+entitlements checked (`ENTITLEMENTS_OK`), submission `7bb695b7-9214-4acb-aab3-05a11d38775f` FINISHED
+16:23:35Z after about 37 minutes in Expo's submit queue (15:46:25Z), VALID in App Store Connect
+16:24:07Z. It carries backend §12.1 #301's fix: the owner's test — the app deleted and installed again,
+the notifications offer before Home — closes it.
