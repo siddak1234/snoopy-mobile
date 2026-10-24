@@ -2410,3 +2410,11 @@ bites; the website changed to the same words.
   restating half of it; README's "only asks" and the push hook's header now name the cold-start
   offer. Docs and comments: the offer's own tests (`real-router/notifications-offer`,
   `faceid-screen`) hold the behaviour.
+
+**TestFlight 28** (2026-10-24): 1.0.0 (28) from `main` `eda96e4` (#75), built on this Mac
+(`npm run release:ios -- --local`; ipa `.autom8x/release-ios/ipa/app.ipa`) after the platform's
+FORTY-FIRST served #239's contract (the release's deployed-contract check passed, three of three),
+entitlements checked (`ENTITLEMENTS_OK`), submission `be9f2cbf-199c-4e31-9ad8-02328aff396c` FINISHED
+14:47:02Z (queued 14:46:02Z). App Store Connect's processing (VALID) was not read by the session: the
+owner sees it in TestFlight. It carries a flow's items (Candidate Reviewer): the owner's test — a job
+uploaded, candidates added and ranked — is backend BUILD-PLAN 28.6.1's last part.
