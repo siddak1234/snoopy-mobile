@@ -597,12 +597,14 @@ mobile-only shape.
 - A flow's items (Round 19; backend ADR-0046), `itemRefusal` and `runRefusal`: a
   `createItem` 422 `artifact_unavailable` is the run's "That file can no longer be
   used. Choose it again." and empties the file; any other 422 is "Nothing was
-  uploaded. Check each value and try again." under the form — the contract names
-  each field's problem in `details.problems` but publishes no shape for it, so no
-  field is singled out (DESIGN-GAPS "Round 19"); 409 `subscription_not_live` is
+  uploaded. Check each value and try again." under the form and "Check this
+  value." under each field its `details.problems` names (at most 16 `{ path,
+  message }`, a `path` read as `fields.<key>` against the item's fields:
+  `refusedFields`), the website's words; 409 `subscription_not_live` is
   the upload's "Turn it on first; a paused flow takes no files.", and
   `items_not_declared` "This flow has changed. Go back and open it again."; 403
-  over the plan the run's sentence. A run naming an item refused 409
+  over the plan the run's sentence; 429 `max_concurrent_runs` the run's
+  full-queue sentence (`FLOW_QUEUE_FULL`), any other 429 the platform's busy words. A run naming an item refused 409
   `item_not_ready` says "It is still being read. Try again once it is ready.",
   and `item_archived` "It was archived, so it takes no new runs." A refused
   archive keeps the dialog and says why, else "It was not archived."

@@ -10,11 +10,19 @@ import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import ItemScreen from '@/app/(tabs)/flows/item';
 import { RunFileField } from '@/components/automations/run-file-field';
 import type { SessionContextValue } from '@/hooks/use-session';
-import { ITEM_ARCHIVED, ITEM_NOT_READY, RUN_REFUSALS, UPLOAD_REFUSALS, itemRefusal, runRefusal } from '@/lib/content/refusals';
+import {
+  FLOW_QUEUE_FULL,
+  ITEM_ARCHIVED,
+  ITEM_NOT_READY,
+  RUN_REFUSALS,
+  UPLOAD_REFUSALS,
+  itemRefusal,
+  runRefusal,
+} from '@/lib/content/refusals';
 import { acceptedLine, countOf, inSentence } from '@/lib/content/screen-states';
 import type { AutomationItems, AutomationRunInputField, Item, Run, Subscription } from '@/lib/platform/automations';
 import type { CatalogEntry } from '@/lib/platform/catalog';
-import { PlatformError } from '@/lib/platform/problem';
+import { PlatformError, PlatformRateLimitedError } from '@/lib/platform/problem';
 import { RUN_FILE_TYPES } from '@/lib/platform/run-image';
 import { resetSnapshot } from '@/lib/platform/snapshot';
 import {
@@ -219,6 +227,8 @@ describe("the items' rules (lib/view/items.ts)", () => {
   it('a select offers its options, then the names typed before, then Other — typed names saved, Other sends what was typed', () => {
     const field = DECLARED.fields[0]!;
     expect(selectChoices(field, ['East', 'North', 'East']).map((choice) => choice.label)).toEqual(['North', 'South', 'East', 'Other']);
+    // Each choice is sent as its own words; only Other stands for what is typed.
+    expect(selectChoices(field, ['East']).map((choice) => choice.value)).toEqual(['North', 'South', 'East', OTHER_CHOICE]);
     expect(selectChoices({ ...field, allowOther: false }, ['East']).map((choice) => choice.label)).toEqual(['North', 'South', 'East']);
     expect(itemFieldValues(DECLARED.fields, { region: OTHER_CHOICE, name: '  Data  ' }, { region: ' West ' })).toEqual({
       region: 'West',
@@ -253,11 +263,31 @@ describe("the items' rules (lib/view/items.ts)", () => {
 
   it("a refused item, and a run refused for its item, in the upload's and the run's words", () => {
     const refused = (status: number, reason: string) => new PlatformError('refused', status, undefined, { reason });
-    expect(itemRefusal(refused(422, 'artifact_unavailable'))).toEqual({ message: RUN_REFUSALS.artifact_unavailable, fileGone: true });
-    expect(itemRefusal(refused(409, 'subscription_not_live'))).toEqual({ message: UPLOAD_REFUSALS.subscription_not_live, fileGone: false });
-    expect(itemRefusal(new PlatformError('refused', 422, undefined, { problems: [] })).message).toBe(
-      'Nothing was uploaded. Check each value and try again.',
-    );
+    expect(itemRefusal(refused(422, 'artifact_unavailable'))).toEqual({
+      message: RUN_REFUSALS.artifact_unavailable,
+      fileGone: true,
+      fields: [],
+    });
+    expect(itemRefusal(refused(409, 'subscription_not_live'))).toEqual({
+      message: UPLOAD_REFUSALS.subscription_not_live,
+      fileGone: false,
+      fields: [],
+    });
+    // The fields its problems name, read as `fields.<key>` against the item's own; nothing else.
+    const problems = [
+      { path: 'fields.name', message: 'must be at most 60 characters' },
+      { path: 'fields.colour', message: 'was never declared in the manifest items' },
+      { path: 'file', message: 'is required' },
+    ];
+    expect(itemRefusal(new PlatformError('refused', 422, undefined, { problems }), ['region', 'name'])).toEqual({
+      message: 'Nothing was uploaded. Check each value and try again.',
+      fileGone: false,
+      fields: ['name'],
+    });
+    // A full queue (backend ADR-0046: the item's reading run is admitted as a run is) in the run's words.
+    expect(
+      itemRefusal(new PlatformRateLimitedError('busy', undefined, { reason: 'max_concurrent_runs', limit: '2' })).message,
+    ).toBe(FLOW_QUEUE_FULL);
     expect(runRefusal(refused(409, 'item_not_ready')).message).toBe(ITEM_NOT_READY);
     expect(runRefusal(refused(409, 'item_archived')).message).toBe(ITEM_ARCHIVED);
     expect(runRefusal(refused(409, 'subscription_not_live')).message).toBe('This flow is not live, so it cannot run.');
@@ -400,8 +430,8 @@ describe('the flow page of a flow with items (plan §5.1)', () => {
     expect(within(screen.getByTestId('flow-item-i-9')).getByText('Reading…')).toBeTruthy();
   });
 
-  it('a file the platform will not take is said in the run\'s words and chosen again; Cancel closes the card', async () => {
-    const fake = await openFlow(listed);
+  /** The upload of a PDF the card's file field sends: opened, put, completed. */
+  function answerUpload(fake: ReturnType<typeof fakePlatform>) {
     fake.always('POST /v1/workspaces/{workspaceId}/uploads', {
       uploadSessionId: 'upload-1',
       uploadUrl: 'https://store.example.test/put',
@@ -411,24 +441,55 @@ describe('the flow page of a flow with items (plan §5.1)', () => {
     fake.always('POST /v1/workspaces/{workspaceId}/uploads/{uploadSessionId}/complete', {
       artifact: { artifactId: 'artifact-1', filename: 'p.pdf', contentType: 'application/pdf', sizeBytes: 12 },
     });
-    fake.always(`POST ${LISTED}`, () => {
-      throw new PlatformError('gone', 422, undefined, { reason: 'artifact_unavailable' });
-    });
     (DocumentPicker.getDocumentAsync as jest.Mock).mockResolvedValue({
       canceled: false,
       assets: [{ uri: 'file:///picked/p.pdf', name: 'p.pdf', mimeType: 'application/pdf', size: 12 }],
     });
+  }
+
+  it('a saved name is sent as itself; a file the platform will not take is said in the run\'s words and chosen again; Cancel closes the card', async () => {
+    const fake = await openFlow(listed);
+    answerUpload(fake);
+    fake.always(`POST ${LISTED}`, () => {
+      throw new PlatformError('gone', 422, undefined, { reason: 'artifact_unavailable' });
+    });
     await fireEvent.press(await screen.findByTestId('flow-items-upload'));
-    // The select starts at its default (North).
+    // The name typed for an earlier item, offered again, chosen.
+    await fireEvent.press(within(screen.getByTestId('item-field-region')).getByText('East'));
     await fireEvent.changeText(screen.getByLabelText('Name'), 'Data');
     await fireEvent.press(screen.getByTestId('run-file-policyFile-upload'));
     await screen.findByText('Ready: p.pdf (12 bytes)');
     await fireEvent.press(screen.getByTestId('item-upload-send'));
     expect(await screen.findByText(RUN_REFUSALS.artifact_unavailable!)).toBeTruthy();
-    expect(fake.to(`POST ${LISTED}`)[0]!.body).toEqual({ fields: { region: 'North', name: 'Data' }, file: 'artifact-1' });
+    expect(fake.to(`POST ${LISTED}`)[0]!.body).toEqual({ fields: { region: 'East', name: 'Data' }, file: 'artifact-1' });
     expect(screen.queryByText('Ready: p.pdf (12 bytes)')).toBeNull();
     await fireEvent.press(screen.getByTestId('item-upload-cancel'));
     expect(screen.queryByTestId('item-upload-dialog')).toBeNull();
+  });
+
+  it('a refused value is said under the form and "Check this value." under its field; a full queue in the run\'s words', async () => {
+    const fake = await openFlow(listed);
+    answerUpload(fake);
+    fake.once(`POST ${LISTED}`, () => {
+      throw new PlatformError('refused', 422, undefined, {
+        problems: [{ path: 'fields.name', message: 'must be at most 60 characters' }],
+      });
+    });
+    fake.once(`POST ${LISTED}`, () => {
+      throw new PlatformRateLimitedError('busy', undefined, { reason: 'max_concurrent_runs', limit: '2' });
+    });
+    await fireEvent.press(await screen.findByTestId('flow-items-upload'));
+    await fireEvent.changeText(screen.getByLabelText('Name'), 'Data');
+    await fireEvent.press(screen.getByTestId('run-file-policyFile-upload'));
+    await screen.findByText('Ready: p.pdf (12 bytes)');
+    await fireEvent.press(screen.getByTestId('item-upload-send'));
+    expect(await screen.findByText('Nothing was uploaded. Check each value and try again.')).toBeTruthy();
+    expect(within(screen.getByTestId('item-field-name')).getByText('Check this value.')).toBeTruthy();
+    expect(within(screen.getByTestId('item-field-region')).queryByText('Check this value.')).toBeNull();
+    // The file stays: the value is what to fix. Sent again, a full queue says so, and no field.
+    await fireEvent.press(screen.getByTestId('item-upload-send'));
+    expect(await screen.findByText(FLOW_QUEUE_FULL)).toBeTruthy();
+    expect(screen.queryByText('Check this value.')).toBeNull();
   });
 });
 

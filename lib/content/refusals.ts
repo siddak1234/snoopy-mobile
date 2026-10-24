@@ -299,31 +299,59 @@ export const ITEM_ARCHIVED = 'It was archived, so it takes no new runs.';
  * Making an item (backend ADR-0046), refused: in the words the upload path and
  * the run's start already use — a file gone is "choose it again" and empties
  * the file, a flow not on is "Turn it on first", over the plan is the run's
- * sentence. A refused value is said once, under the form: the contract names
- * each field's problem in `details.problems` but publishes no shape for it, so
- * no field is singled out (a finding, DESIGN-GAPS "Round 19").
+ * sentence, and a full queue (429 `max_concurrent_runs`) the run's
+ * `FLOW_QUEUE_FULL`. A refused value is said under the form, and each field it
+ * names under that field (`fields`): `details.problems` is at most 16 `{ path,
+ * message }` pairs, each `path` naming a field as `fields.<key>` (`refusedFields`).
+ * The words are the website's.
  */
-export function itemRefusal(error: unknown): { message: string; fileGone: boolean } {
+export function itemRefusal(
+  error: unknown,
+  fieldKeys: readonly string[] = [],
+): { message: string; fileGone: boolean; fields: string[] } {
   if (error instanceof PlatformError) {
     const reason = error.details?.reason;
     if (error.status === 422) {
       return reason === 'artifact_unavailable'
-        ? { message: RUN_REFUSALS.artifact_unavailable!, fileGone: true }
-        : { message: CHECK_EACH_VALUE, fileGone: false };
+        ? { message: RUN_REFUSALS.artifact_unavailable!, fileGone: true, fields: [] }
+        : { message: CHECK_EACH_VALUE, fileGone: false, fields: refusedFields(error.details?.problems, fieldKeys) };
     }
     if (error.status === 409) {
       return {
         message: reason === 'subscription_not_live' ? UPLOAD_REFUSALS.subscription_not_live! : FLOW_CHANGED,
         fileGone: false,
+        fields: [],
       };
     }
     if (error.status === 403 && (reason === 'over_plan_limit' || reason === 'entitlements_not_configured')) {
-      return runRefusal(error);
+      return { ...runRefusal(error), fields: [] };
     }
   }
-  return { message: refusalMessage(error, {}, ITEM_NOT_UPLOADED), fileGone: false };
+  if (error instanceof PlatformRateLimitedError && error.details?.reason === 'max_concurrent_runs') {
+    return { message: FLOW_QUEUE_FULL, fileGone: false, fields: [] };
+  }
+  return { message: refusalMessage(error, {}, ITEM_NOT_UPLOADED), fileGone: false, fields: [] };
 }
-const CHECK_EACH_VALUE = 'Nothing was uploaded. Check each value and try again.';
+
+/**
+ * The fields a refusal's `details.problems` names, among the item's own: each
+ * `path` read as `fields.<key>` (or the key alone), kept only when it is one of
+ * `fieldKeys` — anything else names no field. As the website reads them.
+ */
+export function refusedFields(problems: unknown, fieldKeys: readonly string[]): string[] {
+  if (!Array.isArray(problems)) return [];
+  const named = new Set<string>();
+  for (const problem of problems) {
+    const path = problem && typeof problem === 'object' && 'path' in problem ? (problem as { path: unknown }).path : undefined;
+    if (typeof path !== 'string') continue;
+    const key = path.replace(/^\$?\.?(?:fields\.)?/u, '').split('.')[0]!;
+    if (fieldKeys.includes(key)) named.add(key);
+  }
+  return [...named];
+}
+/** Under the upload card when a value was refused, and under the field it names (the website's words). */
+export const CHECK_EACH_VALUE = 'Nothing was uploaded. Check each value and try again.';
+export const CHECK_THIS_VALUE = 'Check this value.';
 /** A flow whose version no longer declares items: the page was read before it changed. */
 const FLOW_CHANGED = 'This flow has changed. Go back and open it again.';
 

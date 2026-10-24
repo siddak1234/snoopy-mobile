@@ -2342,13 +2342,11 @@ the tests' flow is made up. The contract is the round's, backend `7a4baa6`, gene
   the app's chips (`ChoiceChips`, as a phone has no select); a run started on an item's page stays
   there, joining the list as "Reading…"; a flow's word is lower-case inside a sentence unless written
   as an abbreviation; Take photo only where a JPEG is taken; the archive's words.
-- **Finding for `snoopy-backend`: `createItem`'s 422 `details.problems` has no published shape.** The
-  operation says it "names each field", but `Problem.details` is any object, so placing a refusal
-  under its field would be a guess; the app says it once, under the form, and the card holds each
-  value to its field's length and asks for every required one first.
-- **Finding for `snoopy-backend`: `openUpload`'s `no_file_input`** says the pinned version "must
-  declare a file field" and does not say whether `items.file` is one, so by its words a flow whose
-  `runInput` holds no file could not upload an item's file.
+- ~~**Finding for `snoopy-backend`: `createItem`'s 422 `details.problems` has no published shape.**~~
+  **Resolved** by the backend's review (`ce9b274`): `problems` is at most 16 `{ path, message }`; the
+  card says "Check this value." under each field it names (the review's finding 7, below).
+- ~~**Finding for `snoopy-backend`: `openUpload`'s `no_file_input`** did not say whether `items.file`
+  counts.~~ **Resolved** (`ce9b274`): a version that declares items may upload its file.
 - **CI's `Deployed contract` job is red by design** until the platform releases this contract;
   `platform-requirement.json` stays `{"aheadOfDeployed": false}`.
 - **NOT OBSERVED** (no simulator or device in this lane): the upload card at the largest text size,
@@ -2378,3 +2376,12 @@ bites; the website changed to the same words.
 - **4. No flow's own words in the code's comments.** The examples were one flow's ("JOBS", "4
   candidates", "Accounting · Ready", "Contact, Experience"); they are placeholders now ("{MANY}", "4
   {runs} · Top 86", "{group} · Ready") or the tests' made-up flow. Comments only: no test.
+- **7. The contract from backend `ce9b274`** (PR #239's head; `automations.d.ts` sha256 `44126709…`):
+  `createItem`'s `problems` published, its 429, `no_file_input` for an item's file. A refused value is
+  "Check this value." under its field as well as the sentence under the form (`refusedFields`), and a
+  full queue the run's `FLOW_QUEUE_FULL`. Bites: the card drawing no field's refusal fails "a refused
+  value is said under the form…"; `refusedFields` keeping every path fails "a refused item…"; the
+  429 not mapped fails both.
+- **3. A saved name is sent as itself.** The card test chooses the saved "East" and expects
+  `fields.region: 'East'`; `selectChoices`' values are checked. Bite: a saved choice's value as
+  `saved:{i}` fails "a saved name is sent as itself…" and "a select offers…".

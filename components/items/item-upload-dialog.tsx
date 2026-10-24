@@ -5,9 +5,11 @@ import { RunFileField } from '@/components/automations/run-file-field';
 import { ChoiceChips } from '@/components/choice-chips';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { TextField } from '@/components/nocturne/text-field';
+import { Text } from '@/components/text';
+import { fonts, status, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
-import { WORKSPACE_CHANGED, itemRefusal } from '@/lib/content/refusals';
+import { CHECK_THIS_VALUE, WORKSPACE_CHANGED, itemRefusal } from '@/lib/content/refusals';
 import { OTHER_LABEL, UPLOAD_LABEL, uploadItemLabel } from '@/lib/content/screen-states';
 import { createItem, type AutomationItems, type Item } from '@/lib/platform/automations';
 import {
@@ -28,7 +30,9 @@ import {
  * the file (`items.file`, the run's file field on the same upload), then
  * Upload. Upload is offered once every required field holds a value and the
  * file has arrived; it sends `createItem` under one key per set of values, so
- * a retry after a lost answer makes the item once. Made, the card closes and
+ * a retry after a lost answer makes the item once. A refusal is said under
+ * the form, and "Check this value." under each field it names (`itemRefusal`).
+ * Made, the card closes and
  * the page shows the new row, "Reading…". Mounted only while open.
  */
 export function ItemUploadDialog({
@@ -56,6 +60,8 @@ export function ItemUploadDialog({
   const [fileRound, setFileRound] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The fields the last refusal named, each said under its field.
+  const [refused, setRefused] = useState<readonly string[]>([]);
 
   const change = (key: string, value: string) => {
     setValues((was) => ({ ...was, [key]: value }));
@@ -85,6 +91,7 @@ export function ItemUploadDialog({
     }
     setBusy(true);
     setError(null);
+    setRefused([]);
     try {
       const { item } = await createItem(
         workspaceId,
@@ -95,9 +102,13 @@ export function ItemUploadDialog({
       keys.settle();
       onMade(item);
     } catch (caught) {
-      const refused = itemRefusal(caught);
-      setError(refused.message);
-      if (refused.fileGone) {
+      const refusal = itemRefusal(
+        caught,
+        items.fields.map((field) => field.key),
+      );
+      setError(refusal.message);
+      setRefused(refusal.fields);
+      if (refusal.fileGone) {
         setFile(undefined);
         setFileRound((round) => round + 1);
         keys.settle();
@@ -143,14 +154,17 @@ export function ItemUploadDialog({
                   onChangeText={(text) => changeOther(field.key, text.slice(0, itemFieldLimit(field)))}
                 />
               ) : null}
+              {refused.includes(field.key) ? <Refused fieldKey={field.key} /> : null}
             </View>
           ) : (
-            <TextField
-              key={field.key}
-              label={field.title}
-              value={values[field.key] ?? ''}
-              onChangeText={(text) => change(field.key, text.slice(0, itemFieldLimit(field)))}
-            />
+            <View key={field.key} testID={`item-field-${field.key}`} style={styles.fields}>
+              <TextField
+                label={field.title}
+                value={values[field.key] ?? ''}
+                onChangeText={(text) => change(field.key, text.slice(0, itemFieldLimit(field)))}
+              />
+              {refused.includes(field.key) ? <Refused fieldKey={field.key} /> : null}
+            </View>
           ),
         )}
         {/* The run's file field, flush with the boxes above it. */}
@@ -175,7 +189,17 @@ export function ItemUploadDialog({
   );
 }
 
+/** Under a field the platform refused. */
+function Refused({ fieldKey }: { fieldKey: string }) {
+  return (
+    <Text testID={`item-field-${fieldKey}-refused`} style={[styles.refused, { color: status.err }]}>
+      {CHECK_THIS_VALUE}
+    </Text>
+  );
+}
+
 const styles = StyleSheet.create({
+  refused: { fontFamily: fonts.regular, ...typeScale.small },
   form: { maxHeight: 460 },
   fields: { gap: 12 },
   file: { marginHorizontal: -14 },
