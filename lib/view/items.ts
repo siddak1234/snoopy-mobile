@@ -48,7 +48,7 @@ export function groupItems(items: readonly Item[], declared: Pick<AutomationItem
 }
 
 /**
- * A row's line (plan §5.1): "4 candidates · Top 86" once the file is read —
+ * A row's line (plan §5.1): "4 {runs} · Top 86" once the file is read —
  * the count in the flow's run words, the top score when one has a score —
  * "Reading…" while it is read, "Couldn't read" when it was not.
  */
@@ -61,7 +61,7 @@ export function itemRowLine(item: Pick<Item, 'status' | 'runCount' | 'topScore'>
 
 /**
  * The item page's line under its title (plan §5.3): its group's value, then
- * where it is — "Accounting · Ready", "Reading…", "Couldn't read: {reason}".
+ * where it is — "{group} · Ready", "Reading…", "Couldn't read: {reason}".
  */
 export function itemStatusLine(item: Pick<Item, 'status' | 'failureReason' | 'fields'>, groupField?: string): string {
   const state =

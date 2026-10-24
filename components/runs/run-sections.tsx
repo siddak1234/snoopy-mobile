@@ -16,7 +16,7 @@ export function opensOutside(url: string | undefined): url is string {
 
 /**
  * What a run read, as its automation wrote it for people (backend ADR-0046;
- * Round 19, plan §5.4): titled sections — Contact, Experience — each a row that
+ * Round 19, plan §5.4): titled sections, each a row that
  * opens and closes in place, as a document card does. An entry is its title in
  * bold, its subtitle muted, its text, and its address as a link that opens
  * outside the app (http and https only). `firstOpen`: the run page opens the

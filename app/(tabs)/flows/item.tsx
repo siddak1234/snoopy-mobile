@@ -45,7 +45,7 @@ import { RUN_REREAD_MS } from '@/lib/view/runs';
  * One of a flow's items (backend ADR-0046; Round 19, plan §5.3) — the website's
  * `/account/flows/[subscriptionId]/items/[itemId]`, opened from a row on its
  * flow's page. Top to bottom: its title; its group's value and where it is
- * ("Accounting · Ready", "Reading…", "Couldn't read: …"); for an owner or admin,
+ * ("{group} · Ready", "Reading…", "Couldn't read: …"); for an owner or admin,
  * "Add {one of its runs}" — the flow's run fields and Start, the run naming
  * this item (`createRun`'s `itemId`), offered once it is read, while it is not
  * archived and its flow can run; its runs as the platform ranks them, numbered,

@@ -620,14 +620,14 @@ export const STEP_DENIED = 'Denied';
 type Words = { singular: string; plural: string };
 
 /**
- * A flow's word inside a sentence: lower-case ("Upload job"), unless it is
+ * A flow's word inside a sentence: lower-case ("Upload policy"), unless it is
  * written as an abbreviation ("PDF"), which keeps its capitals.
  */
 export function inSentence(word: string): string {
   return /^\p{Lu}\p{Ll}/u.test(word) || /^\p{Lu}$/u.test(word) ? word.charAt(0).toLowerCase() + word.slice(1) : word;
 }
 
-/** "4 candidates", "1 candidate". */
+/** "4 contracts", "1 contract" — for a flow whose `runWords` are "Contract" and "Contracts". */
 export function countOf(count: number, words: Words): string {
   return `${count} ${inSentence(count === 1 ? words.singular : words.plural)}`;
 }

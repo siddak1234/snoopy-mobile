@@ -2369,3 +2369,12 @@ Each line broken, its tests red, restored, green (`round19-items` unless named):
 - `faceid-screen`'s mock without `readPushNotNow` again: "unlocked where iOS can still ask…" fails.
 - `real-router/flow-items` with a row opening another item: fails.
 - `no-flow-code` stays green.
+
+### Round 19 — the review's ten findings (2026-10-24)
+
+The single-pass review of `0fc916f` (FAIL, ten findings), each fixed on this branch with the test that
+bites; the website changed to the same words.
+
+- **4. No flow's own words in the code's comments.** The examples were one flow's ("JOBS", "4
+  candidates", "Accounting · Ready", "Contact, Experience"); they are placeholders now ("{MANY}", "4
+  {runs} · Top 86", "{group} · Ready") or the tests' made-up flow. Comments only: no test.

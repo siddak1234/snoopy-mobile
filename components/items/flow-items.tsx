@@ -22,7 +22,7 @@ import { RUN_REREAD_MS } from '@/lib/view/runs';
  * A flow's items on its page (backend ADR-0046; Round 19, plan §5.1, as the
  * website draws them), under its steps and in place of the run's start form —
  * a run of such a flow names an item, so it starts on the item's page: the
- * flow's word for many over the list ("JOBS"), "Upload {one}" beside it for an
+ * flow's word for many over the list ("{MANY}"), "Upload {one}" beside it for an
  * owner or admin, then the items grouped by `groupField` (its options' order,
  * then typed names A–Z), each row its title and "{n} {runs} · Top {score}",
  * "Reading…" or "Couldn't read", opening the item's page. None yet: "No {many}
