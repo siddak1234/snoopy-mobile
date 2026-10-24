@@ -2389,3 +2389,6 @@ bites; the website changed to the same words.
   answer after a read listed the item, so an item made, then archived, came back as "Reading…" and
   the list was read again every `RUN_REREAD_MS`; each is dropped from what was made as soon as a read
   lists it. Bite: keeping it fails "an item made here is listed as the reads list it…".
+- **2. The platform's order held.** Both ranking fixtures were already in score order; they give
+  the 64 before the 91 and a failure before a run still going, and expect them drawn as given,
+  numbered 1…n. Bite: `rankedRuns` sorting by score fails both.

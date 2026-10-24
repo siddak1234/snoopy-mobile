@@ -240,18 +240,19 @@ describe("the items' rules (lib/view/items.ts)", () => {
     expect(itemFieldsComplete(DECLARED.fields, { region: 'North', name: ' ' }, {})).toBe(false);
   });
 
-  it("an item's runs as the platform ranks them, numbered: Reading…, the score and line, a failure dimmed", () => {
+  it("an item's runs in the platform's order, never sorted again, numbered: Reading…, the score and line, a failure dimmed", () => {
+    // An order a sort by score would change: the 64 before the 91, a failure before a run still going.
     const ranked = rankedRuns([
-      run('r1', { title: 'Northwind lease', score: 91, resultSummary: 'Meets 3 of 3' }),
       run('r2', { title: 'Contoso supply', score: 64 }),
-      run('r3', { status: 'running' }),
+      run('r1', { title: 'Northwind lease', score: 91, resultSummary: 'Meets 3 of 3' }),
       run('r4', { status: 'failed', failureReason: 'The file had no text.' }),
+      run('r3', { status: 'running' }),
     ]);
-    expect(ranked.map(({ rank, title, score, line, dim }) => [rank, title, score, line, dim])).toEqual([
-      [1, 'Northwind lease', '91', 'Meets 3 of 3', false],
-      [2, 'Contoso supply', '64', null, false],
-      [3, 'Reading…', null, null, false],
-      [4, 'Failed', null, 'The file had no text.', true],
+    expect(ranked.map(({ id, rank, title, score, line, dim }) => [id, rank, title, score, line, dim])).toEqual([
+      ['r2', 1, 'Contoso supply', '64', null, false],
+      ['r1', 2, 'Northwind lease', '91', 'Meets 3 of 3', false],
+      ['r4', 3, 'Failed', null, 'The file had no text.', true],
+      ['r3', 4, 'Reading…', null, null, false],
     ]);
   });
 
@@ -549,25 +550,32 @@ const READ_ITEM = (): Answer<`GET ${typeof ONE}`> => ({
       { title: 'Nice to have', entries: [{ title: 'Fixed rent' }] },
     ],
   }),
+  // Not in score order, so a page that sorted them again would draw them otherwise.
   runs: [
-    run('r1', { title: 'Northwind lease', score: 91, resultSummary: 'Meets 3 of 3' }),
     run('r2', { title: 'Contoso lease', score: 64 }),
-    run('r3', { status: 'running' }),
+    run('r1', { title: 'Northwind lease', score: 91, resultSummary: 'Meets 3 of 3' }),
     run('r4', { status: 'failed', failureReason: 'The file had no text.' }),
+    run('r3', { status: 'running' }),
   ],
 });
 
 describe("an item's page (plan §5.3)", () => {
-  it('its title, its group and state; its runs ranked as answered, numbered, scored, a failure dimmed', async () => {
+  it('its title, its group and state; its runs drawn as answered, numbered, scored, a failure dimmed', async () => {
     await openItem(READ_ITEM());
     expect(screen.getByTestId('item-title').props.children).toBe('Leases');
     expect(screen.getByTestId('item-status').props.children).toBe('South · Ready');
     expect(screen.getByText('CONTRACTS')).toBeTruthy();
     const row = (id: string) => within(screen.getByTestId(`item-run-${id}`)).getAllByText(/./u).map((node) => node.props.children);
-    expect(row('r1')).toEqual([1, 'Northwind lease', 'Meets 3 of 3', '91']);
-    expect(row('r2')).toEqual([2, 'Contoso lease', '64']);
-    expect(row('r3')).toEqual([3, 'Reading…']);
-    expect(row('r4')).toEqual([4, 'Failed', 'The file had no text.']);
+    expect(screen.getAllByTestId(/^item-run-r\d$/u).map((node) => node.props.testID)).toEqual([
+      'item-run-r2',
+      'item-run-r1',
+      'item-run-r4',
+      'item-run-r3',
+    ]);
+    expect(row('r2')).toEqual([1, 'Contoso lease', '64']);
+    expect(row('r1')).toEqual([2, 'Northwind lease', 'Meets 3 of 3', '91']);
+    expect(row('r4')).toEqual([3, 'Failed', 'The file had no text.']);
+    expect(row('r3')).toEqual([4, 'Reading…']);
     expect(screen.getByTestId('item-run-r4-row').props.style).toEqual({ opacity: 0.55 });
     expect(screen.getByTestId('item-run-r1-row').props.style).toBe(false);
     await fireEvent.press(screen.getByTestId('item-run-r1'));
