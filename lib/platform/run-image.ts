@@ -1,12 +1,23 @@
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
 /**
- * What a run's file field lets a person pick (BUILD-PLAN 25.8.3; the owner's
- * decision 1 of 2026-10-10): a PDF, a JPEG or a PNG. A run-input field carries
- * no list of types — the platform checks a file against the flow's manifest
- * only once its upload opens — so the pickers are limited here, in code.
+ * What a run's file field lets a person pick when it names no types (BUILD-PLAN
+ * 25.8.3; the owner's decision 1 of 2026-10-10): a PDF, a JPEG or a PNG. Until
+ * backend ADR-0046 a run-input field carried no list of types, so the pickers
+ * were limited here, in code; a field that names them (`acceptedContentTypes`)
+ * offers those instead (`RunFileField`).
  */
 export const RUN_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
+
+/**
+ * Whether a field takes a photo — Take photo, and an image re-encoded as a
+ * JPEG: every field that names no types (`RUN_FILE_TYPES`), and one whose
+ * `acceptedContentTypes` (backend ADR-0046) include a JPEG. Any other image is
+ * sent as it is.
+ */
+export function takesPhotos(accepted: readonly string[] | undefined): boolean {
+  return !accepted || accepted.includes('image/jpeg');
+}
 
 /** The most an image's long side is sent at, in pixels (the owner's decision 1 of 2026-10-10). */
 export const LONG_SIDE_MAX = 2576;

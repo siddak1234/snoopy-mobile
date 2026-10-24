@@ -10,7 +10,8 @@ import { em, fonts, layout, status, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
- * The one-time question after a sign-in, as one layout (round 24 P8: the owner's
+ * The one-time question after a sign-in — and, for notifications, at a kept
+ * session's cold start (backend §12.1 #301) — as one layout (round 24 P8: the owner's
  * build 23 F6, "Just like that it should be notifications allow"): a card with
  * the question's glyph in its tile, the question, one line, what went wrong if
  * anything did, and the answer then Not now. The Face ID offer and the

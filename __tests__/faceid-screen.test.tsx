@@ -7,9 +7,14 @@ import { SIGN_OUT_FAILED } from '@/lib/content/screen-states';
 import { signedInSession } from '@/test/platform';
 import { mockRouter, renderWithProviders } from '@/test/render';
 
-jest.mock('@/lib/platform/session-store', () => ({ readSession: jest.fn() }));
+// Complete for what the lock reads: the session, and the kept "Not now" the
+// notifications offer asks after (`offersPushAsk`, backend §12.1 #301). Without
+// it the offer's check threw and answered no, so Home was all this could see
+// (backend §12.2 #94).
+jest.mock('@/lib/platform/session-store', () => ({ readSession: jest.fn(), readPushNotNow: jest.fn(async () => false) }));
 
 const LocalAuthentication = jest.requireMock('expo-local-authentication');
+const Notifications = jest.requireMock('expo-notifications') as { getPermissionsAsync: jest.Mock };
 const { readSession } = jest.requireMock('@/lib/platform/session-store');
 
 beforeEach(() => {
@@ -29,6 +34,8 @@ beforeEach(() => {
 
 describe('Face ID unlock', () => {
   it('enters the app only after a real biometric success on a signed-in session', async () => {
+    // iOS has answered on this phone, so there is no offer to make: Home.
+    Notifications.getPermissionsAsync.mockResolvedValueOnce({ status: 'granted', granted: true, canAskAgain: true, expires: 'never' });
     await renderWithProviders(<FaceIdScreen />, signedInSession);
     expect(screen.getByText('Face ID')).toBeTruthy();
     expect(screen.getByText('Unlocking your workspace…')).toBeTruthy();
@@ -38,6 +45,12 @@ describe('Face ID unlock', () => {
       promptMessage: 'Unlock your workspace',
       disableDeviceFallback: true,
     });
+  });
+
+  it('unlocked where iOS can still ask, the notifications offer comes before Home (backend §12.1 #301)', async () => {
+    await renderWithProviders(<FaceIdScreen />, signedInSession);
+    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith('/(auth)/notifications-offer'));
+    expect(mockRouter.replace).not.toHaveBeenCalledWith('/(tabs)/(home)');
   });
 
   it('does not use biometrics or enter the app without an authenticated session', async () => {

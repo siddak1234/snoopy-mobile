@@ -87,6 +87,7 @@
 - `/flows/detail`: [app/(tabs)/flows/detail.tsx](../app/(tabs)/flows/detail.tsx)
 - `/flows/email`: [app/(tabs)/flows/email.tsx](../app/(tabs)/flows/email.tsx)
 - `/flows`: [app/(tabs)/flows/index.tsx](../app/(tabs)/flows/index.tsx)
+- `/flows/item`: [app/(tabs)/flows/item.tsx](../app/(tabs)/flows/item.tsx)
 - `/flows/setup`: [app/(tabs)/flows/setup.tsx](../app/(tabs)/flows/setup.tsx)
 - `/flows/vendor`: [app/(tabs)/flows/vendor.tsx](../app/(tabs)/flows/vendor.tsx)
 - `/settings/account`: [app/(tabs)/settings/account.tsx](../app/(tabs)/settings/account.tsx)
@@ -129,9 +130,9 @@
 
 ### Tests
 
-- `__tests__/`: accessibility, account, android, app, audit, auth, automation, billing, brand, build13, build14, build21, build22, components, connection, connections, cover, data, deep, deletion, dialog, doc, dropdown, faceid, flows, gate24, identity, invoice, kit, native, no, nocturne, notifications, organization, override, package, paging, parity, pipeline, platform, pressable, presses, published, push, removed, repo, return, round23, run, scope, screen, session, settings, setup, shared, sign, signed, snapshot, splash, start, tab, teams, text, theme, timed, upload, use, vendor, verify, view, workspace
+- `__tests__/`: accessibility, account, android, app, audit, auth, automation, billing, brand, build13, build14, build21, build22, components, connection, connections, cover, data, deep, deletion, dialog, doc, dropdown, faceid, flows, gate24, identity, invoice, kit, native, no, nocturne, notifications, organization, override, package, paging, parity, pipeline, platform, pressable, presses, published, push, removed, repo, return, round19, round23, run, scope, screen, session, settings, setup, shared, sign, signed, snapshot, splash, start, tab, teams, text, theme, timed, upload, use, vendor, verify, view, workspace
 - `__tests__/__snapshots__/`: connection, nocturne, screen
-- `__tests__/real-router/`: activity, app, appearance, connect, face, held, home, notifications, run, session, sign
+- `__tests__/real-router/`: activity, app, appearance, connect, face, flow, held, home, notifications, run, session, sign
 
 ## Skills, agents and hooks
 

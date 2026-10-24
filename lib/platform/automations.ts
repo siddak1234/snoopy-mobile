@@ -13,6 +13,10 @@ export type IssuedWebhookEndpoint = components['schemas']['IssuedWebhookEndpoint
 export type UploadTicket = components['schemas']['UploadTicket'];
 export type UploadedFile = components['schemas']['UploadedFile'];
 export type FlowEmailRecipients = components['schemas']['FlowEmailRecipients'];
+export type AutomationItems = components['schemas']['AutomationItems'];
+export type AutomationItemField = components['schemas']['AutomationItemField'];
+export type Item = components['schemas']['Item'];
+export type RunSection = components['schemas']['RunSection'];
 
 /**
  * What an action changed is read again next time, and only that (24.9.1): a
@@ -80,11 +84,17 @@ export function updateSubscription(
   ).then(changed(workspaceId, ['subscriptions', 'catalog']));
 }
 
+/**
+ * Starts a run. A run of a flow with items names one (`itemId`, backend
+ * ADR-0046): owners and admins only, the item this flow's, read and not
+ * archived; a flow without items is never sent one.
+ */
 export function createRun(
   workspaceId: string,
   subscriptionId: string,
   idempotencyKey: string,
   input?: Record<string, unknown>,
+  itemId?: string,
 ): Promise<{ run: Run }> {
   return platformOperation(`/v1/workspaces/${workspaceId}/runs`, ({ automations }, signal) =>
     automations.POST('/v1/workspaces/{workspaceId}/runs', {
@@ -92,10 +102,82 @@ export function createRun(
         path: { workspaceId },
         header: { 'Idempotency-Key': idempotencyKey },
       },
-      body: { subscriptionId, ...(input ? { input } : {}) },
+      body: { subscriptionId, ...(input ? { input } : {}), ...(itemId ? { itemId } : {}) },
       signal,
     }),
   ).then(changed(workspaceId, ['runs', 'run-stats']));
+}
+
+/**
+ * A flow's items (backend ADR-0046), newest first, archived ones left out, and
+ * every value typed for each of its `allowOther` fields (`choices`). Any member
+ * may read them, as runs are read. Never from the snapshot: a page that shows
+ * an item being read asks again until it is not.
+ */
+export function readItems(
+  workspaceId: string,
+  subscriptionId: string,
+): Promise<{ items: Item[]; choices: Record<string, string[]> }> {
+  return platformOperation(
+    `/v1/workspaces/${workspaceId}/subscriptions/${subscriptionId}/items`,
+    ({ automations }, signal) =>
+      automations.GET('/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items', {
+        params: { path: { workspaceId, subscriptionId } },
+        signal,
+      }),
+  );
+}
+
+/**
+ * Makes an item from an uploaded file and starts the run that reads it (backend
+ * ADR-0046): owners and admins only. `fields` by the flow's `items.fields` keys;
+ * `file` the id the upload completed with. Idempotent by key: a retry answers
+ * the same item and reads the file once.
+ */
+export function createItem(
+  workspaceId: string,
+  subscriptionId: string,
+  body: { fields: Record<string, string>; file: string },
+  idempotencyKey: string,
+): Promise<{ item: Item }> {
+  return platformOperation(
+    `/v1/workspaces/${workspaceId}/subscriptions/${subscriptionId}/items`,
+    ({ automations }, signal) =>
+      automations.POST('/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items', {
+        params: {
+          path: { workspaceId, subscriptionId },
+          header: { 'Idempotency-Key': idempotencyKey },
+        },
+        body,
+        signal,
+      }),
+  );
+}
+
+/** One item and its runs, highest score first, then newest (backend ADR-0046). */
+export function readItem(workspaceId: string, itemId: string): Promise<{ item: Item; runs: Run[] }> {
+  return platformOperation(`/v1/workspaces/${workspaceId}/items/${itemId}`, ({ automations }, signal) =>
+    automations.GET('/v1/workspaces/{workspaceId}/items/{itemId}', {
+      params: { path: { workspaceId, itemId } },
+      signal,
+    }),
+  );
+}
+
+/**
+ * Archives an item (backend ADR-0046): owners and admins only, one-way. It
+ * leaves its flow's list and takes no new run; its runs stay. Idempotent.
+ */
+export function archiveItem(workspaceId: string, itemId: string, idempotencyKey: string): Promise<{ item: Item }> {
+  return platformOperation(`/v1/workspaces/${workspaceId}/items/${itemId}/archive`, ({ automations }, signal) =>
+    automations.POST('/v1/workspaces/{workspaceId}/items/{itemId}/archive', {
+      params: {
+        path: { workspaceId, itemId },
+        header: { 'Idempotency-Key': idempotencyKey },
+      },
+      signal,
+    }),
+  );
 }
 
 export function decideApproval(

@@ -496,8 +496,9 @@ export const NOTIFICATIONS_EMPTY_BODY =
  * this in-app inbox. Device push delivery is not configured.", the sentence the
  * owner's build 10 item 13 asked about ("What do we need to do here?").
  *
- * The card is the only ask, and never a prompt at launch: iOS asks at the "Turn
- * on" tap, the Face ID rule, and "Not now" holds for the session. A platform
+ * The card asks, as the offer does after a sign-in and at a kept session's cold
+ * start (backend §12.1 #301), never iOS's own prompt unasked: iOS asks at the
+ * "Turn on" tap, the Face ID rule, and "Not now" holds for the session. A platform
  * from before the devices route says so in words, never a problem title — the
  * Unlink precedent (24.12).
  */
@@ -506,7 +507,7 @@ export const PUSH_CARD_BODY = 'Get a notification on this phone when a run is he
 export const PUSH_TURN_ON_LABEL = 'Turn on';
 /** The inbox's header action (round 24 P8; ~~Mark all read~~): empties it. */
 export const CLEAR_ALL_LABEL = 'Clear all';
-/** The notifications offer after a sign-in (round 24 P8; the owner's build 23 F6), as the Face ID offer asks. */
+/** The notifications offer after a sign-in (round 24 P8; the owner's build 23 F6) and at a kept session's cold start (backend §12.1 #301), as the Face ID offer asks. */
 export const NOTIFICATIONS_OFFER_TITLE = 'Turn on notifications';
 export const NOTIFICATIONS_OFFER_BODY = 'Know when a run needs your approval or something goes wrong.';
 export const PUSH_NOT_NOW_LABEL = 'Not now';
@@ -608,3 +609,84 @@ export const DENYING_LABEL = 'Denying…';
 export const DECISION_NOT_SAVED = 'The decision was not saved.';
 /** A held step whose approval was denied (round 24 P6, S6). */
 export const STEP_DENIED = 'Denied';
+
+/**
+ * A flow's items (backend ADR-0046; Round 19, plan §5): the things a person
+ * makes once, from a file, that the flow's runs then belong to. Every word that
+ * names them is the flow's own — `items.words` for one and many, `items.runWords`
+ * for its runs, each field's `title` and `options` — so these say only the
+ * clients' own words around them, as the website says them.
+ */
+type Words = { singular: string; plural: string };
+
+/**
+ * A flow's word inside a sentence: lower-case ("Upload policy"), unless it is
+ * written as an abbreviation ("PDF"), which keeps its capitals.
+ */
+export function inSentence(word: string): string {
+  return /^\p{Lu}\p{Ll}/u.test(word) || /^\p{Lu}$/u.test(word) ? word.charAt(0).toLowerCase() + word.slice(1) : word;
+}
+
+/** "4 contracts", "1 contract" — for a flow whose `runWords` are "Contract" and "Contracts". */
+export function countOf(count: number, words: Words): string {
+  return `${count} ${inSentence(count === 1 ? words.singular : words.plural)}`;
+}
+
+export const ITEM_READING = 'Reading…';
+export const ITEM_NOT_READ = "Couldn't read";
+export const ITEM_READY = 'Ready';
+/** An item's highest score among its runs. */
+export function topScoreOf(score: number): string {
+  return `Top ${score}`;
+}
+/** The select's last choice, for a value typed in (`allowOther`). */
+export const OTHER_LABEL = 'Other';
+export const WHAT_AI_READ_LABEL = 'WHAT AI READ';
+export const START_LABEL = 'Start';
+export const ARCHIVING_LABEL = 'Archiving…';
+export const ARCHIVE_LABEL = 'Archive';
+export function uploadItemLabel(words: Words): string {
+  return `Upload ${inSentence(words.singular)}`;
+}
+export function noItemsYet(words: Words): string {
+  return `No ${inSentence(words.plural)} yet.`;
+}
+export function addRunLabel(runWords: Words): string {
+  return `Add ${inSentence(runWords.singular)}`;
+}
+export function noRunsYet(runWords: Words): string {
+  return `No ${inSentence(runWords.plural)} yet.`;
+}
+export function archiveItemLabel(words: Words): string {
+  return `Archive ${inSentence(words.singular)}`;
+}
+/** The archive's question and what it does — the flow's archive confirmation, for an item, in the website's words. */
+export function archiveItemTitle(title: string): string {
+  return `Archive ${title}?`;
+}
+export function archiveItemBody(runWords: Words): string {
+  return `It leaves the list and takes no new ${inSentence(runWords.plural)}. Its ${inSentence(runWords.plural)} stay.`;
+}
+export const ITEM_NOT_ARCHIVED = 'It was not archived.';
+export const ITEM_NOT_UPLOADED = 'Nothing was uploaded.';
+
+/**
+ * What a file field accepts, in words, from its `acceptedContentTypes` (backend
+ * ADR-0046): "PDF, Word file or photo". A type with no word here is left out; a
+ * list with none of them has no line.
+ */
+const TYPE_WORDS: readonly [test: (type: string) => boolean, word: string][] = [
+  [(type) => type === 'application/pdf', 'PDF'],
+  [(type) => type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'Word file'],
+  [(type) => type.startsWith('image/'), 'photo'],
+];
+export function acceptedLine(types: readonly string[] | undefined): string | null {
+  if (!types) return null;
+  const words = TYPE_WORDS.filter(([test]) => types.some(test)).map(([, word]) => word);
+  if (words.length === 0) return null;
+  return words.length === 1 ? words[0]! : `${words.slice(0, -1).join(', ')} or ${words[words.length - 1]}`;
+}
+/** A file of a type the field does not take, refused before it is sent: "Choose a PDF, Word file or photo." */
+export function chooseAccepted(line: string): string {
+  return `Choose a ${line}.`;
+}

@@ -8,6 +8,7 @@ import { AutomationActions } from '@/components/automations/automation-actions';
 import { StartRun, canStartRun } from '@/components/automations/start-run';
 import { ConnectionMark, ConnectionRow, GlyphMark, NoneMark } from '@/components/connection-row';
 import type { ArchivedFlowPath } from '@/components/flows/archived-flows';
+import { FlowItems } from '@/components/items/flow-items';
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel } from '@/components/nocturne/section-label';
@@ -89,6 +90,11 @@ const ACTION_ICON = { pause: Pause, play: Play, rocket: RocketLaunch } as const;
  *    opens who gets the email (`flowStepPlan`'s kinds, backend ADR-0041);
  * 4. at the bottom its actions: Pause while it is on (Turn on is Step 1's while
  *    it is off), **Edit setup** (Set up again), the webhook address, Archive.
+ *
+ * **A flow with items** (backend ADR-0046; Round 19, plan §5.1) — the version it
+ * runs declares `items` — draws them under its steps (`FlowItems`), and Step 1
+ * holds no run form: a run of it names an item, so it starts on the item's page
+ * (`/(tabs)/flows/item`). Turn on stays Step 1's while it is off.
  *
  * ~~CONNECTIONS~~ ("Remove the connections in the bottom as well") and ~~the
  * move to a newer version~~ ("I also dont want a move to vx number in the
@@ -356,6 +362,8 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
   // since Build 21); Turn on in Start run's place while the flow is off; and
   // what it is owed, each a tap from where it is fixed.
   const startable = canStartRun(subscription, entry, current === 'Live');
+  // The items the version it runs declares, when it declares them (ADR-0046).
+  const declaredItems = subscription.items;
   const turnOn = (
     <PillButton
       testID="flow-step-turn-on"
@@ -373,7 +381,11 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
   // given first stays given — as the website's form does (the Build 21 review).
   const stepOne = def.removed ? null : (
     <View>
-      {startable ? (
+      {declaredItems ? (
+        current !== 'Live' ? (
+          <View style={styles.stepAction}>{turnOn}</View>
+        ) : null
+      ) : startable ? (
         <StartRun
           key={`${subscription.id}:${subscription.templateVersion}`}
           subscriptionId={subscription.id}
@@ -514,6 +526,16 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
           </SurfaceCard>
         </View>
       )}
+
+      {!def.removed && declaredItems ? (
+        <FlowItems
+          subscriptionId={subscription.id}
+          items={declaredItems}
+          shownWorkspaceId={flows.loadedFor}
+          canManage={canManage}
+          onOpen={(itemId) => router.push({ pathname: '/(tabs)/flows/item', params: { item: itemId } })}
+        />
+      ) : null}
 
       {def.removed ? (
         // Read-only (24.11.8): no status, no actions. The one thing to do with an

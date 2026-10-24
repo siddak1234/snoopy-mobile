@@ -23,8 +23,10 @@ import { selectActiveWorkspace } from '@/lib/platform/workspaces';
  * Two halves share one state. `usePushRegistration`, mounted in the signed-in
  * tree, keeps a phone iOS already lets the app notify registered with the
  * platform, shows a push's banner while the app is open, and opens what a tap
- * names. `usePushAsk` is the inbox card's: the only place the app asks, and only
- * when the person taps "Turn on" — never at launch, the Face ID offer's rule.
+ * names. `usePushAsk` is the inbox card's and the notifications offer's — the
+ * offer after a sign-in and at a kept session's cold start (`offersPushAsk`,
+ * backend §12.1 #301), the only places the app asks — and iOS is asked only
+ * when the person taps "Turn on", the Face ID offer's rule.
  *
  * iOS phones only. Android has no FCM credential in build 11 and a simulator
  * gets no token, so neither registers anything and the card says so (backend
@@ -458,7 +460,8 @@ export function usePushRegistration(signedIn: boolean): void {
 }
 
 /**
- * Whether a sign-in offers notifications on its own screen (round 24 P8): an
+ * Whether a sign-in (round 24 P8), or a kept session's cold start past the cover
+ * or the Face ID lock (backend §12.1 #301), offers notifications on its own screen: an
  * iPhone iOS has not asked yet, where the person has not said Not now — this
  * session's or the kept one. Anything unread is no offer: the inbox's card
  * still asks.

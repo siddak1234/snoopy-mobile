@@ -21,6 +21,7 @@ import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { DecisionButtons } from '@/components/runs/decision-buttons';
 import { DocumentCard } from '@/components/runs/document-card';
+import { RunSections } from '@/components/runs/run-sections';
 import { Text } from '@/components/text';
 import { em, fonts, iconSize, layout, status, typeScale } from '@/constants/theme';
 import { useApprovalDecision } from '@/hooks/use-approval-decision';
@@ -341,6 +342,14 @@ export default function RunDetailScreen() {
     ? {
         // The run by its FULL id (the owner's D4 and AM2); never the request id.
         title: runLabel(liveRun.detail.run),
+        // What its automation named it and scored it (backend ADR-0046; Round 19,
+        // plan §5.4): together they head the page, the id staying in its facts.
+        headline:
+          liveRun.detail.run.title !== undefined && liveRun.detail.run.score !== undefined
+            ? { title: liveRun.detail.run.title, score: String(liveRun.detail.run.score) }
+            : null,
+        // What it read, in titled sections, the first open (ADR-0046), before its steps and documents.
+        sections: liveRun.detail.sections ?? [],
         // Its flow — the website's subheader.
         sub: liveRun.entry?.name ?? liveRun.detail.run.templateId,
         // How it went, on a line of its own (spec §3.E).
@@ -473,13 +482,25 @@ export default function RunDetailScreen() {
         { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) },
       ]}
       showsVerticalScrollIndicator={false}>
-      {/* The run by its full id, which wraps at its hyphens; its flow and status under it. */}
+      {/* The run by its full id, which wraps at its hyphens — or, where its automation named and
+          scored it, that name with the score beside it; its flow and status under it. */}
       <View style={styles.header}>
         <BackCircle onPress={() => router.back()} />
         <View style={styles.headerText}>
-          <Text testID="run-title" selectable style={[styles.title, { color: palette.text }]}>
-            {run.title}
-          </Text>
+          {run.headline ? (
+            <View style={styles.headlineRow}>
+              <Text testID="run-title" selectable style={[styles.title, styles.headlineTitle, { color: palette.text }]}>
+                {run.headline.title}
+              </Text>
+              <Text testID="run-score" style={[styles.score, { color: palette.text }]}>
+                {run.headline.score}
+              </Text>
+            </View>
+          ) : (
+            <Text testID="run-title" selectable style={[styles.title, { color: palette.text }]}>
+              {run.title}
+            </Text>
+          )}
           <View style={styles.subRow}>
             <Text style={[styles.subtitle, { color: palette.neutral[400] }]}>{run.sub}</Text>
             <StatusPill label={run.status} />
@@ -492,6 +513,8 @@ export default function RunDetailScreen() {
           {run.result}
         </Text>
       ) : null}
+
+      {run.sections.length > 0 ? <RunSections testID="run-sections" sections={run.sections} firstOpen /> : null}
 
       <View style={styles.statsRow}>
         {run.stats.map((s) => (
@@ -679,6 +702,20 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
     ...typeScale.title,
     letterSpacing: em(-0.01, typeScale.title.fontSize),
+  },
+  headlineRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  headlineTitle: {
+    flex: 1,
+    minWidth: 0,
+  },
+  // The score, large, beside the name; the text colour, no judgement in it (plan §5.4).
+  score: {
+    fontFamily: fonts.medium,
+    ...typeScale.heading,
   },
   subRow: {
     flexDirection: 'row',
