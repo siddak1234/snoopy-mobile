@@ -291,8 +291,8 @@ export function runRefusal(error: unknown): { message: string; fileGone: boolean
   return { message: refusalMessage(error, {}, 'The run was not started.'), fileGone: false };
 }
 
-/** A run refused for its item (backend ADR-0046): still being read, or archived since the page was read. */
-export const ITEM_NOT_READY = 'It is still being read. Try again once it is ready.';
+/** A run refused for its item (backend ADR-0046): still being read, or archived since the page was read — the website's words. */
+export const ITEM_NOT_READY = 'Try again in a moment.';
 export const ITEM_ARCHIVED = 'It was archived, so it takes no new runs.';
 
 /**

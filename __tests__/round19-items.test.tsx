@@ -13,7 +13,6 @@ import type { SessionContextValue } from '@/hooks/use-session';
 import {
   FLOW_QUEUE_FULL,
   ITEM_ARCHIVED,
-  ITEM_NOT_READY,
   RUN_REFUSALS,
   UPLOAD_REFUSALS,
   itemRefusal,
@@ -290,7 +289,7 @@ describe("the items' rules (lib/view/items.ts)", () => {
     expect(
       itemRefusal(new PlatformRateLimitedError('busy', undefined, { reason: 'max_concurrent_runs', limit: '2' })).message,
     ).toBe(FLOW_QUEUE_FULL);
-    expect(runRefusal(refused(409, 'item_not_ready')).message).toBe(ITEM_NOT_READY);
+    expect(runRefusal(refused(409, 'item_not_ready')).message).toBe('Try again in a moment.');
     expect(runRefusal(refused(409, 'item_archived')).message).toBe(ITEM_ARCHIVED);
     expect(runRefusal(refused(409, 'subscription_not_live')).message).toBe('This flow is not live, so it cannot run.');
   });
@@ -647,7 +646,7 @@ describe("an item's page (plan §5.3)", () => {
     fake.always('POST /v1/workspaces/{workspaceId}/items/{itemId}/archive', { item: item('i-1', { archivedAt: '2026-10-24T00:00:00Z' }) });
     await fireEvent.press(screen.getByText('Archive policy'));
     expect(screen.getByText('Archive Leases?')).toBeTruthy();
-    expect(screen.getByText('It leaves policies and takes no new contracts. Its contracts stay.')).toBeTruthy();
+    expect(screen.getByText('It leaves the list and takes no new contracts. Its contracts stay.')).toBeTruthy();
     await fireEvent.press(screen.getByText('Cancel'));
     expect(fake.to('POST /v1/workspaces/{workspaceId}/items/{itemId}/archive')).toHaveLength(0);
     await fireEvent.press(screen.getByTestId('item-archive'));

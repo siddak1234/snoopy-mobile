@@ -2392,3 +2392,6 @@ bites; the website changed to the same words.
 - **2. The platform's order held.** Both ranking fixtures were already in score order; they give
   the 64 before the 91 and a failure before a run still going, and expect them drawn as given,
   numbered 1…n. Bite: `rankedRuns` sorting by score fails both.
+- **5 and 6. One set of words with the website.** A run refused 409 `item_not_ready` says "Try again
+  in a moment."; the archive asks "It leaves the list and takes no new {runs}. Its {runs} stay." Bites:
+  the old sentence fails "a refused item…"; another archive body fails "Archive asks first…".

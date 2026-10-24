@@ -263,7 +263,7 @@ export default function ItemScreen() {
         testID="item-archive-dialog"
         onRequestClose={archiving ? () => undefined : () => setArchiveOpen(false)}
         title={archiveItemTitle(item.title)}
-        body={archiveItemBody(declared.words, declared.runWords)}
+        body={archiveItemBody(declared.runWords)}
         actions={
           <>
             <DialogButton label="Cancel" disabled={archiving} onPress={() => setArchiveOpen(false)} />

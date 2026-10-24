@@ -660,12 +660,12 @@ export function noRunsYet(runWords: Words): string {
 export function archiveItemLabel(words: Words): string {
   return `Archive ${inSentence(words.singular)}`;
 }
-/** The archive's question and what it does — the flow's archive confirmation, for an item. */
+/** The archive's question and what it does — the flow's archive confirmation, for an item, in the website's words. */
 export function archiveItemTitle(title: string): string {
   return `Archive ${title}?`;
 }
-export function archiveItemBody(words: Words, runWords: Words): string {
-  return `It leaves ${inSentence(words.plural)} and takes no new ${inSentence(runWords.plural)}. Its ${inSentence(runWords.plural)} stay.`;
+export function archiveItemBody(runWords: Words): string {
+  return `It leaves the list and takes no new ${inSentence(runWords.plural)}. Its ${inSentence(runWords.plural)} stay.`;
 }
 export const ITEM_NOT_ARCHIVED = 'It was not archived.';
 export const ITEM_NOT_UPLOADED = 'Nothing was uploaded.';
