@@ -321,8 +321,11 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   (`linkTargetOf`; `app/+native-intent.tsx` sends both paths to the splash when
   they start the app, and leaves the open screen when it is already open;
   `app.config.js` adds the two Android path prefixes, iOS's `applinks` claim
-  covers them); the inbox's card and, once after a sign-in, the notifications
-  offer (`app/(auth)/notifications-offer.tsx`, round 24 P8) are the only asks.
+  covers them); the inbox's card and the notifications offer
+  (`app/(auth)/notifications-offer.tsx`) — once after a sign-in (round 24 P8), and
+  at a kept session's cold start past the cover or the Face ID lock
+  (`nextAfterColdStart`, backend §12.1 #301) — are the only asks, each only where
+  iOS can still ask and no Not now is kept (`offersPushAsk`).
   `lib/platform/notifications.ts` reads the inbox, marks rows read, dismisses
   one and — since round 24 — empties it (`clearInbox`,
   `POST …/notifications/clear`, Clear all). Android and a simulator register
@@ -360,9 +363,14 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
 - A run's file (BUILD-PLAN 25.8.3): `expo-image-picker` and
   `expo-image-manipulator` at the SDK 54 pins. Take photo is the camera, asked
   for at the press; Upload is `expo-document-picker`, held to a PDF, a JPEG or
-  a PNG. Every image is re-encoded once on the phone — upright, its long side
-  at most 2,576 px, a JPEG at 0.9 (`lib/platform/run-image.ts`) — and sent by
-  the same signed upload as any file; neither library makes a request. The
+  a PNG — or, for a field that names its types (`acceptedContentTypes`, backend
+  ADR-0046), to those, a Word file sent as it is, and Take photo only where a
+  JPEG is taken (`takesPhotos`). Every image is re-encoded once on the phone —
+  upright, its long side at most 2,576 px, a JPEG at 0.9
+  (`lib/platform/run-image.ts`) — and sent by the same signed upload as any
+  file; neither library makes a request. An item's file (Round 19) is sent the
+  same way, then named in `createItem` (`lib/platform/automations.ts`: `readItems`,
+  `createItem`, `readItem`, `archiveItem`, and `createRun`'s `itemId`). The
   `expo-image-picker` plugin in `app.json` gives the camera the app's own
   sentence and turns the microphone and the photo library off, which
   `__tests__/app-config.test.js` holds through Expo's own mod compiler.

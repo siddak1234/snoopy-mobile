@@ -2316,3 +2316,97 @@ entitlements checked (`ENTITLEMENTS_OK`), submission `7bb695b7-9214-4acb-aab3-05
 16:23:35Z after about 37 minutes in Expo's submit queue (15:46:25Z), VALID in App Store Connect
 16:24:07Z. It carries backend §12.1 #301's fix: the owner's test — the app deleted and installed again,
 the notifications offer before Home — closes it.
+
+## Round 19 — a flow's items (backend ADR-0046; 2026-10-24)
+
+The owner's decisions of 2026-10-24 (backend MASTER-PLAN §0.1, Round 19): Candidate Reviewer, a job
+card's department a preset list then free text, "a typed name kept for later jobs"; PDF, JPEG, PNG
+and Word files; a candidate's page its score, its name, then collapsible sections; jobs and
+candidates added by owners and admins only. Built for any flow that declares `items`, as the website
+builds it (the round's plan §5 and its screens): no word or id of that flow is written here — the
+words are the manifest's (`items.words`, `items.runWords`, each field's `title` and `options`) — and
+the tests' flow is made up. The contract is the round's, backend `7a4baa6`, generated here.
+
+| What | Where | Held by (`round19-items` unless named) |
+| --- | --- | --- |
+| The flow page lists its items, grouped by `groupField` (options' order, then typed A–Z), each row its count and top score, "Reading…" or "Couldn't read"; a row opens its item | `components/items/flow-items.tsx`; `groupItems`, `itemRowLine` (`lib/view/items.ts`); `app/(tabs)/flows/detail.tsx` | "groups by groupField…", "lists its items grouped…", "a row opens its item", "none yet" |
+| No run form on such a flow: a run names an item | Step 1, `app/(tabs)/flows/detail.tsx` | "…draws no run start form" |
+| The upload card: the options, the names typed before, "Other" and its box; `createItem` | `components/items/item-upload-dialog.tsx`; `selectChoices`, `itemFieldValues` | "a select offers…", "the upload card…", "a file the platform will not take…" |
+| An item's page: its runs ranked and numbered, Add and Archive for owners and admins, "What AI read" closed | `app/(tabs)/flows/item.tsx` (the Flows stack); `rankedRuns`; `components/runs/run-sections.tsx` | "an item's page" (seven); `real-router/flow-items`; `presses-patterns-failure-states` (three) |
+| A run headed by its title and score; its sections, the first open | `app/(tabs)/activity/run.tsx` | "a run's page headed…" (two) |
+| A file field takes the types it names (`acceptedContentTypes`) | `components/automations/run-file-field.tsx`; `takesPhotos`, `acceptedLine` | "a file field offers the types…" (three) |
+| Backend §12.2 #94: the cold-start offer said where it was untrue | `DESIGN-CONTRACT.md` (three places); the comments in `app/(auth)/notifications-offer.tsx`, `hooks/use-push-registration.tsx`, `components/offer-screen.tsx`, `lib/content/screen-states.ts`; `__tests__/faceid-screen.test.tsx` | `faceid-screen` "unlocked where iOS can still ask…" |
+
+- **Parity.** The website's `/account/flows/[subscriptionId]/items/[itemId]` is `(tabs)/flows/item`
+  here; its flow page's list is `FlowItems`. **The session's choices, not the owner's:** a select is
+  the app's chips (`ChoiceChips`, as a phone has no select); a run started on an item's page stays
+  there, joining the list as "Reading…"; a flow's word is lower-case inside a sentence unless written
+  as an abbreviation; Take photo only where a JPEG is taken; the archive's words.
+- ~~**Finding for `snoopy-backend`: `createItem`'s 422 `details.problems` has no published shape.**~~
+  **Resolved** by the backend's review (`ce9b274`): `problems` is at most 16 `{ path, message }`; the
+  card says "Check this value." under each field it names (the review's finding 7, below).
+- ~~**Finding for `snoopy-backend`: `openUpload`'s `no_file_input`** did not say whether `items.file`
+  counts.~~ **Resolved** (`ce9b274`): a version that declares items may upload its file.
+- **CI's `Deployed contract` job is red by design** until the platform releases this contract;
+  `platform-requirement.json` stays `{"aheadOfDeployed": false}`.
+- **NOT OBSERVED** (no simulator or device in this lane): the upload card at the largest text size,
+  the document picker's Word filter on iOS, the muted rows.
+
+### Guards proved to bite, Round 19 (2026-10-24)
+
+Each line broken, its tests red, restored, green (`round19-items` unless named):
+- `groupItems` with typed names before the options: "groups by groupField…" and "lists its items grouped…" fail.
+- `selectChoices` without the names typed before, and `itemFieldValues` ignoring "Other": "a select offers…" and "the upload card…" fail (each).
+- `rankedRuns` numbering from the end: both ranking tests fail.
+- The run page's sections with none open: "…the first open" fails; `RunSections` always opening the first: "What AI read…" fails.
+- The picker given `RUN_FILE_TYPES` whatever the field names: "named: the picker offers those…" and "the upload card…" fail.
+- Upload drawn for everyone: "…a member sees the list without it" fails; Add and Archive for everyone: "…a member reads the same page without them" fails.
+- Step 1 drawing the run form for a flow with items: "…draws no run start form" fails.
+- The run page ignoring its title and score: "the title and the score head it…" fails.
+- `itemRefusal` keeping a gone file, and `runRefusal` without `item_not_ready`: "a refused item…" (and "…chosen again") fail.
+- `faceid-screen`'s mock without `readPushNotNow` again: "unlocked where iOS can still ask…" fails.
+- `real-router/flow-items` with a row opening another item: fails.
+- `no-flow-code` stays green.
+
+### Round 19 — the review's ten findings (2026-10-24)
+
+The single-pass review of `0fc916f` (FAIL, ten findings), each fixed on this branch with the test that
+bites; the website changed to the same words.
+
+- **4. No flow's own words in the code's comments.** The examples were one flow's ("JOBS", "4
+  candidates", "Accounting · Ready", "Contact, Experience"); they are placeholders now ("{MANY}", "4
+  {runs} · Top 86", "{group} · Ready") or the tests' made-up flow. Comments only: no test.
+- **7. The contract from backend `ce9b274`** (PR #239's head; `automations.d.ts` sha256 `44126709…`):
+  `createItem`'s `problems` published, its 429, `no_file_input` for an item's file. A refused value is
+  "Check this value." under its field as well as the sentence under the form (`refusedFields`), and a
+  full queue the run's `FLOW_QUEUE_FULL`. Bites: the card drawing no field's refusal fails "a refused
+  value is said under the form…"; `refusedFields` keeping every path fails "a refused item…"; the
+  429 not mapped fails both.
+- **3. A saved name is sent as itself.** The card test chooses the saved "East" and expects
+  `fields.region: 'East'`; `selectChoices`' values are checked. Bite: a saved choice's value as
+  `saved:{i}` fails "a saved name is sent as itself…" and "a select offers…".
+- **1. An item made here leaves once the reads leave it out.** `FlowItems` kept the `createItem`
+  answer after a read listed the item, so an item made, then archived, came back as "Reading…" and
+  the list was read again every `RUN_REREAD_MS`; each is dropped from what was made as soon as a read
+  lists it. Bite: keeping it fails "an item made here is listed as the reads list it…".
+- **2. The platform's order held.** Both ranking fixtures were already in score order; they give
+  the 64 before the 91 and a failure before a run still going, and expect them drawn as given,
+  numbered 1…n. Bite: `rankedRuns` sorting by score fails both.
+- **5 and 6. One set of words with the website.** A run refused 409 `item_not_ready` says "Try again
+  in a moment."; the archive asks "It leaves the list and takes no new {runs}. Its {runs} stay." Bites:
+  the old sentence fails "a refused item…"; another archive body fails "Archive asks first…".
+- **8. The types line only where the website draws it.** The platform now names the types of every
+  file field of a manifest with an `artifacts` block, so Step 1 of a flow without items would have
+  gained "PDF or photo" under its title; the line is the upload card's and the item page's alone
+  (`showTypes`), the picker and the type refusal every field's. Bites: the line drawn by default
+  fails "Step 1 of a flow without items stays titles only…"; the item page not asking fails "an
+  owner adds one…".
+- **9. A failed run muted, never faded.** Its row was at opacity 0.55 over a line already muted, below
+  AA; its title and score are in the muted tone now (`ConnectionRow`'s `nameTone`), as the website's.
+  Bites: the title in the text colour, and the fade put back, each fail "its title, its group and
+  state…".
+- **10. §12.2 #94, made true everywhere.** The contract's two cold-start places link to the Device
+  push paragraph, which holds the whole rule (iOS can still ask, no Not now kept), instead of
+  restating half of it; README's "only asks" and the push hook's header now name the cold-start
+  offer. Docs and comments: the offer's own tests (`real-router/notifications-offer`,
+  `faceid-screen`) hold the behaviour.

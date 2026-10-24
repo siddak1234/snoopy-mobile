@@ -92,6 +92,7 @@ export type ConnectionLineTone = 'muted' | 'ok' | 'warn' | 'err';
 export function ConnectionRow({
   mark,
   name,
+  nameTone = 'text',
   line,
   lineTone = 'muted',
   right,
@@ -105,6 +106,8 @@ export function ConnectionRow({
 }: {
   mark: React.ReactNode;
   name: string;
+  /** `muted` for a row that is past, not pending — an item's failed run (Round 19): no opacity, which would take a muted line below AA. */
+  nameTone?: 'text' | 'muted';
   line?: string | null;
   lineTone?: ConnectionLineTone;
   right?: React.ReactNode;
@@ -129,7 +132,7 @@ export function ConnectionRow({
     <>
       {mark}
       <View style={styles.body}>
-        <Text style={[styles.name, { color: palette.text }]}>{name}</Text>
+        <Text style={[styles.name, { color: nameTone === 'muted' ? palette.neutral[400] : palette.text }]}>{name}</Text>
         {line ? <Text style={[styles.line, { color: lineColor }]}>{line}</Text> : null}
       </View>
       {right ?? null}
