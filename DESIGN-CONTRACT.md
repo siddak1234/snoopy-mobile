@@ -108,8 +108,9 @@ the tabs are not in the root stack, so a link that arrives then — snoopymobile
 from Safari — opens nothing (until the review such a link opened the tab without Face ID,
 since before build 12); a push tap's screen waits for the lock as it waits for a
 sign-in; and the Face ID question, guarded the same way in the auth stack, cannot be
-reached to answer "Not now". A check that passes opens Home — through the notifications
-offer where iOS can still ask (`nextAfterColdStart`; backend §12.1 #301, Round 18); a link dropped while locked
+reached to answer "Not now". A check that passes opens Home, or first the notifications
+offer where it is owed (`nextAfterColdStart`; when, the Device push paragraph of the
+[refusal map](#refusal-map-what-is-rendered-instead)); a link dropped while locked
 is not replayed. Biometrics never create a
 session and no timer counts as success. **The choice is the session's** (2026-10-02):
 it is asked once after a remembered sign-in, on the screen where "Use Face ID" runs
@@ -205,8 +206,8 @@ was open, its params with it, once and for the same person only
 (`lib/view/return-to.ts`; Gate 24 parity, G4), drawn as it was opened: its tab's first
 screen beneath it (`RETURN_OPTIONS`, `withAnchor`), so its Back and its tab come home. A
 sign-out — a 401 landing during it included — and a cold start say nothing of it and open
-Home (a kept session's cold start through the notifications offer where iOS can still ask,
-§12.1 #301); a sign-in that fails keeps the return for the next one that completes, as the
+Home (a kept session's cold start through the notifications offer where it is owed: the
+Device push paragraph of the [refusal map](#refusal-map-what-is-rendered-instead)); a sign-in that fails keeps the return for the next one that completes, as the
 website's link keeps the page across a failed attempt (`loginHref`'s `callbackUrl`).
 
 ### Two documented variances

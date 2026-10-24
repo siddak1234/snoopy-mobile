@@ -321,8 +321,11 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   (`linkTargetOf`; `app/+native-intent.tsx` sends both paths to the splash when
   they start the app, and leaves the open screen when it is already open;
   `app.config.js` adds the two Android path prefixes, iOS's `applinks` claim
-  covers them); the inbox's card and, once after a sign-in, the notifications
-  offer (`app/(auth)/notifications-offer.tsx`, round 24 P8) are the only asks.
+  covers them); the inbox's card and the notifications offer
+  (`app/(auth)/notifications-offer.tsx`) — once after a sign-in (round 24 P8), and
+  at a kept session's cold start past the cover or the Face ID lock
+  (`nextAfterColdStart`, backend §12.1 #301) — are the only asks, each only where
+  iOS can still ask and no Not now is kept (`offersPushAsk`).
   `lib/platform/notifications.ts` reads the inbox, marks rows read, dismisses
   one and — since round 24 — empties it (`clearInbox`,
   `POST …/notifications/clear`, Clear all). Android and a simulator register

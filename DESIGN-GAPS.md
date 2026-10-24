@@ -2405,3 +2405,8 @@ bites; the website changed to the same words.
   AA; its title and score are in the muted tone now (`ConnectionRow`'s `nameTone`), as the website's.
   Bites: the title in the text colour, and the fade put back, each fail "its title, its group and
   state…".
+- **10. §12.2 #94, made true everywhere.** The contract's two cold-start places link to the Device
+  push paragraph, which holds the whole rule (iOS can still ask, no Not now kept), instead of
+  restating half of it; README's "only asks" and the push hook's header now name the cold-start
+  offer. Docs and comments: the offer's own tests (`real-router/notifications-offer`,
+  `faceid-screen`) hold the behaviour.
