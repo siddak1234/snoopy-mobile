@@ -12,6 +12,7 @@ import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import FlowsScreen from '@/app/(tabs)/flows/index';
 import SetupScreen from '@/app/(tabs)/flows/setup';
 import FlowEmailScreen from '@/app/(tabs)/flows/email';
+import ItemScreen from '@/app/(tabs)/flows/item';
 import ConnectVendorScreen from '@/app/(tabs)/flows/vendor';
 import AccountScreen from '@/app/(tabs)/settings/account';
 import BillingScreen from '@/app/(tabs)/settings/billing';
@@ -80,6 +81,8 @@ const SCREENS = {
   Setup: { Screen: SetupScreen, params: { template: 'tpl.0' }, read: /\/automations$/u },
   'Connect integration': { Screen: ConnectVendorScreen, params: { flow: 'invoice', field: 'vendor' }, read: /\/automations$/u },
   'Who gets the email': { Screen: FlowEmailScreen, params: { flow: 'invoice' }, read: /\/email-recipients$/u },
+  // One of a flow's items (Round 19, backend ADR-0046).
+  Item: { Screen: ItemScreen, params: { item: 'item-1' }, read: /\/items\/item-1$/u },
   Account: { Screen: AccountScreen, read: /^\/v1\/auth\/identities$/u },
   Billing: { Screen: BillingScreen, read: /^\/v1\/workspaces$/u },
   Connections: { Screen: ConnectionsScreen, read: /\/connections$/u },
@@ -135,6 +138,10 @@ const CASES: Case[] = [
   ['Who gets the email', 'offline', 'app/(tabs)/flows/email.tsx', true],
   ['Who gets the email', 'unavailable', 'app/(tabs)/flows/email.tsx', true],
   ['Who gets the email', 'error', 'app/(tabs)/flows/email.tsx', true],
+  // An item's page (Round 19, plan §5.3), as every fetching screen.
+  ['Item', 'offline', 'app/(tabs)/flows/item.tsx', true],
+  ['Item', 'unavailable', 'app/(tabs)/flows/item.tsx', true],
+  ['Item', 'error', 'app/(tabs)/flows/item.tsx', true],
   ['Account', 'offline', 'app/(tabs)/settings/account.tsx:92', true],
   ['Account', 'unavailable', 'app/(tabs)/settings/account.tsx:95', true],
   ['Account', 'error', 'app/(tabs)/settings/account.tsx:101-103', true],

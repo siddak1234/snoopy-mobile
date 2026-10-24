@@ -458,7 +458,8 @@ export function usePushRegistration(signedIn: boolean): void {
 }
 
 /**
- * Whether a sign-in offers notifications on its own screen (round 24 P8): an
+ * Whether a sign-in (round 24 P8), or a kept session's cold start past the cover
+ * or the Face ID lock (backend §12.1 #301), offers notifications on its own screen: an
  * iPhone iOS has not asked yet, where the person has not said Not now — this
  * session's or the kept one. Anything unread is no offer: the inbox's card
  * still asks.

@@ -10,11 +10,18 @@ import { Text } from '@/components/text';
 import { fonts, iconSize, status, typeScale, withAlpha } from '@/constants/theme';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
-import { WORKSPACE_CHANGED, uploadRefusalMessage } from '@/lib/content/refusals';
-import { CAMERA_NOT_OPENED, CAMERA_OFF, TAKE_PHOTO_LABEL, UPLOAD_LABEL } from '@/lib/content/screen-states';
+import { UPLOAD_REFUSALS, WORKSPACE_CHANGED, uploadRefusalMessage } from '@/lib/content/refusals';
+import {
+  CAMERA_NOT_OPENED,
+  CAMERA_OFF,
+  TAKE_PHOTO_LABEL,
+  UPLOAD_LABEL,
+  acceptedLine,
+  chooseAccepted,
+} from '@/lib/content/screen-states';
 import type { AutomationRunInputField } from '@/lib/platform/automations';
 import { sendRunFile, type ChosenFile } from '@/lib/platform/run-file';
-import { PHOTO_NAME, RUN_FILE_TYPES, isImage, jpegName, reencodeImage } from '@/lib/platform/run-image';
+import { PHOTO_NAME, RUN_FILE_TYPES, isImage, jpegName, reencodeImage, takesPhotos } from '@/lib/platform/run-image';
 
 type FileState =
   | { kind: 'empty' }
@@ -32,8 +39,7 @@ type Picked = { uri: string; name: string; image: boolean; mimeType?: string };
  * decision 1 of 2026-10-10): **Take photo**, the camera through
  * expo-image-picker, its permission asked first and a refusal said in a
  * sentence here; and **Upload**, the document picker, limited to a PDF, a JPEG
- * or a PNG (`RUN_FILE_TYPES`) because a run-input field carries no list of
- * types. Every image — a photo, or a JPEG or PNG uploaded — is re-encoded once
+ * or a PNG (`RUN_FILE_TYPES`) where the field names no types (below). Every image — a photo, or a JPEG or PNG uploaded — is re-encoded once
  * (`reencodeImage`: upright, its long side at most 2,576 px, a JPEG at 0.9) and
  * sent as `image/jpeg` under a `.jpg` name; a PDF is sent as it is.
  *
@@ -42,6 +48,13 @@ type Picked = { uri: string; name: string; image: boolean; mimeType?: string };
  * to the field that started it: its busy state is reported under the field's
  * key, it stops when the field goes (the form started a run, or was emptied to
  * choose again), and an answer for an upload no longer in flight changes nothing.
+ *
+ * **A field that names its types** (`acceptedContentTypes`, backend ADR-0046):
+ * Upload offers those, a line under the title says them in words ("PDF, Word
+ * file or photo"), and a file of another type is refused in those words before
+ * it is sent. A Word file is sent as it is; Take photo, and the re-encode, only
+ * where a JPEG is taken (`takesPhotos`). A field that names none is as above.
+ * An item's file (`items.file`) is drawn by this field too, on the same upload.
  */
 export function RunFileField({
   field,
@@ -51,7 +64,7 @@ export function RunFileField({
   onBusyChange,
   divider,
 }: {
-  field: AutomationRunInputField;
+  field: Pick<AutomationRunInputField, 'key' | 'title' | 'acceptedContentTypes'>;
   /** The workspace the screen loaded; the upload is refused once it is not active. */
   shownWorkspaceId: string | null;
   subscriptionId: string;
@@ -63,6 +76,9 @@ export function RunFileField({
   const session = useSession();
   const [state, setState] = useState<FileState>({ kind: 'empty' });
   const [error, setError] = useState<string | null>(null);
+  const accepted = field.acceptedContentTypes;
+  const photos = takesPhotos(accepted);
+  const typesLine = acceptedLine(accepted);
   const inFlight = useRef<AbortController | null>(null);
   const report = useRef(onBusyChange);
   useEffect(() => {
@@ -115,7 +131,7 @@ export function RunFileField({
     if (!workspaceId) return;
     let picked: DocumentPicker.DocumentPickerResult;
     try {
-      picked = await DocumentPicker.getDocumentAsync({ type: RUN_FILE_TYPES, copyToCacheDirectory: true, multiple: false });
+      picked = await DocumentPicker.getDocumentAsync({ type: accepted ?? RUN_FILE_TYPES, copyToCacheDirectory: true, multiple: false });
     } catch {
       setError('The file could not be opened. Try again.');
       return;
@@ -123,9 +139,14 @@ export function RunFileField({
     // Closing the picker keeps whatever the field already held.
     const asset = picked.canceled ? undefined : picked.assets[0];
     if (!asset) return;
+    // A picker that let another type through: refused in words, nothing sent.
+    if (accepted && asset.mimeType && !accepted.includes(asset.mimeType)) {
+      setError(typesLine ? chooseAccepted(typesLine) : UPLOAD_REFUSALS.content_type_not_accepted!);
+      return;
+    }
     await send(
       workspaceId,
-      isImage(asset)
+      photos && isImage(asset)
         ? { uri: asset.uri, name: jpegName(asset.name), image: true }
         : { uri: asset.uri, name: asset.name, image: false, ...(asset.mimeType ? { mimeType: asset.mimeType } : {}) },
     );
@@ -176,15 +197,18 @@ export function RunFileField({
       </View>
       {progress ? <Text style={[styles.sub, { color: palette.neutral[400] }]}>{progress}</Text> : null}
       {error ? <Text style={[styles.sub, { color: status.err }]}>{error}</Text> : null}
+      {typesLine ? <Text style={[styles.sub, { color: palette.neutral[400] }]}>{typesLine}</Text> : null}
       <View style={styles.actions}>
-        <FileAction
-          testID={`run-file-${field.key}-photo`}
-          label={TAKE_PHOTO_LABEL}
-          accessibilityLabel={`Take a photo for ${field.title}`}
-          icon={Camera}
-          busy={busy}
-          onPress={() => void takePhoto()}
-        />
+        {photos ? (
+          <FileAction
+            testID={`run-file-${field.key}-photo`}
+            label={TAKE_PHOTO_LABEL}
+            accessibilityLabel={`Take a photo for ${field.title}`}
+            icon={Camera}
+            busy={busy}
+            onPress={() => void takePhoto()}
+          />
+        ) : null}
         <FileAction
           testID={`run-file-${field.key}-upload`}
           label={UPLOAD_LABEL}

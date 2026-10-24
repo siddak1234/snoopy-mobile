@@ -360,9 +360,14 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
 - A run's file (BUILD-PLAN 25.8.3): `expo-image-picker` and
   `expo-image-manipulator` at the SDK 54 pins. Take photo is the camera, asked
   for at the press; Upload is `expo-document-picker`, held to a PDF, a JPEG or
-  a PNG. Every image is re-encoded once on the phone — upright, its long side
-  at most 2,576 px, a JPEG at 0.9 (`lib/platform/run-image.ts`) — and sent by
-  the same signed upload as any file; neither library makes a request. The
+  a PNG — or, for a field that names its types (`acceptedContentTypes`, backend
+  ADR-0046), to those, a Word file sent as it is, and Take photo only where a
+  JPEG is taken (`takesPhotos`). Every image is re-encoded once on the phone —
+  upright, its long side at most 2,576 px, a JPEG at 0.9
+  (`lib/platform/run-image.ts`) — and sent by the same signed upload as any
+  file; neither library makes a request. An item's file (Round 19) is sent the
+  same way, then named in `createItem` (`lib/platform/automations.ts`: `readItems`,
+  `createItem`, `readItem`, `archiveItem`, and `createRun`'s `itemId`). The
   `expo-image-picker` plugin in `app.json` gives the camera the app's own
   sentence and turns the microphone and the photo library off, which
   `__tests__/app-config.test.js` holds through Expo's own mod compiler.

@@ -1,4 +1,4 @@
-import { SETUP_ADD_FAILED, SETUP_TURN_ON_FAILED } from '@/lib/content/screen-states';
+import { ITEM_NOT_UPLOADED, SETUP_ADD_FAILED, SETUP_TURN_ON_FAILED } from '@/lib/content/screen-states';
 import { PlatformError, PlatformRateLimitedError } from '@/lib/platform/problem';
 
 /**
@@ -266,6 +266,10 @@ export function runRefusal(error: unknown): { message: string; fileGone: boolean
     };
   }
   if (error instanceof PlatformError && error.status === 409) {
+    // A run naming an item (backend ADR-0046): one still being read, or archived.
+    const reason = error.details?.reason;
+    if (reason === 'item_not_ready') return { message: ITEM_NOT_READY, fileGone: false };
+    if (reason === 'item_archived') return { message: ITEM_ARCHIVED, fileGone: false };
     return { message: 'This flow is not live, so it cannot run.', fileGone: false };
   }
   // Over the plan (decision 7a3): its numbers when the platform gave them; every
@@ -286,6 +290,42 @@ export function runRefusal(error: unknown): { message: string; fileGone: boolean
   }
   return { message: refusalMessage(error, {}, 'The run was not started.'), fileGone: false };
 }
+
+/** A run refused for its item (backend ADR-0046): still being read, or archived since the page was read. */
+export const ITEM_NOT_READY = 'It is still being read. Try again once it is ready.';
+export const ITEM_ARCHIVED = 'It was archived, so it takes no new runs.';
+
+/**
+ * Making an item (backend ADR-0046), refused: in the words the upload path and
+ * the run's start already use — a file gone is "choose it again" and empties
+ * the file, a flow not on is "Turn it on first", over the plan is the run's
+ * sentence. A refused value is said once, under the form: the contract names
+ * each field's problem in `details.problems` but publishes no shape for it, so
+ * no field is singled out (a finding, DESIGN-GAPS "Round 19").
+ */
+export function itemRefusal(error: unknown): { message: string; fileGone: boolean } {
+  if (error instanceof PlatformError) {
+    const reason = error.details?.reason;
+    if (error.status === 422) {
+      return reason === 'artifact_unavailable'
+        ? { message: RUN_REFUSALS.artifact_unavailable!, fileGone: true }
+        : { message: CHECK_EACH_VALUE, fileGone: false };
+    }
+    if (error.status === 409) {
+      return {
+        message: reason === 'subscription_not_live' ? UPLOAD_REFUSALS.subscription_not_live! : FLOW_CHANGED,
+        fileGone: false,
+      };
+    }
+    if (error.status === 403 && (reason === 'over_plan_limit' || reason === 'entitlements_not_configured')) {
+      return runRefusal(error);
+    }
+  }
+  return { message: refusalMessage(error, {}, ITEM_NOT_UPLOADED), fileGone: false };
+}
+const CHECK_EACH_VALUE = 'Nothing was uploaded. Check each value and try again.';
+/** A flow whose version no longer declares items: the page was read before it changed. */
+const FLOW_CHANGED = 'This flow has changed. Go back and open it again.';
 
 /**
  * The organization's domain-only setting (the owner's build 13 decision 8B): its
