@@ -2350,7 +2350,7 @@ the tests' flow is made up. The contract is the round's, backend `7a4baa6`, gene
 - **CI's `Deployed contract` job is red by design** until the platform releases this contract;
   `platform-requirement.json` stays `{"aheadOfDeployed": false}`.
 - **NOT OBSERVED** (no simulator or device in this lane): the upload card at the largest text size,
-  the document picker's Word filter on iOS, the dimmed rows.
+  the document picker's Word filter on iOS, the muted rows.
 
 ### Guards proved to bite, Round 19 (2026-10-24)
 
@@ -2401,3 +2401,7 @@ bites; the website changed to the same words.
   (`showTypes`), the picker and the type refusal every field's. Bites: the line drawn by default
   fails "Step 1 of a flow without items stays titles only…"; the item page not asking fails "an
   owner adds one…".
+- **9. A failed run muted, never faded.** Its row was at opacity 0.55 over a line already muted, below
+  AA; its title and score are in the muted tone now (`ConnectionRow`'s `nameTone`), as the website's.
+  Bites: the title in the text colour, and the fade put back, each fail "its title, its group and
+  state…".

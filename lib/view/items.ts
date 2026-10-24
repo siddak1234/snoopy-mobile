@@ -144,7 +144,7 @@ export type RankedRunView = {
   title: string;
   score: string | null;
   line: string | null;
-  /** A failed or cancelled run, dimmed after the scored ones. */
+  /** A failed or cancelled run: drawn in the muted tone (never faded), after the scored ones. */
   dim: boolean;
 };
 
@@ -152,7 +152,7 @@ export type RankedRunView = {
  * An item's runs as the platform ranks them — highest score first, the
  * unscored after, then newest (`readItem`) — numbered 1…n. A run still going
  * reads "Reading…" (it has no title yet); a succeeded one its title, its score
- * and its result line; a failed one its status and its failure line, dimmed.
+ * and its result line; a failed one its status and its failure line, muted.
  */
 export function rankedRuns(runs: readonly Run[]): RankedRunView[] {
   return runs.map((run, index) => {

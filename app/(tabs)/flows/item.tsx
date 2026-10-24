@@ -50,7 +50,7 @@ import { RUN_REREAD_MS } from '@/lib/view/runs';
  * this item (`createRun`'s `itemId`), offered once it is read, while it is not
  * archived and its flow can run; its runs as the platform ranks them, numbered,
  * each its title (or "Reading…"), its score and its result line, a failed one
- * dimmed, each opening its run; "What AI read", the item's sections, each
+ * in the muted tone, each opening its run; "What AI read", the item's sections, each
  * closed; and, for an owner or admin, Archive, behind the confirmation the
  * flow's own archive asks. Every word for the flow's things is its manifest's
  * (`items.words`, `items.runWords`). Read again every `RUN_REREAD_MS` while the
@@ -204,16 +204,20 @@ export default function ItemScreen() {
             </Text>
           ) : null}
           {ranked.map((row, i) => (
-            <View key={row.id} testID={`item-run-${row.id}-row`} style={row.dim && styles.dim}>
+            // A failed run is drawn in the muted tone, never faded: its line is muted already (WCAG AA).
+            <View key={row.id} testID={`item-run-${row.id}-row`}>
               <ConnectionRow
                 testID={`item-run-${row.id}`}
                 mark={<Text style={[styles.rank, { color: palette.neutral[400] }]}>{row.rank}</Text>}
                 name={row.title}
+                nameTone={row.dim ? 'muted' : 'text'}
                 line={row.line}
                 right={
                   <View style={styles.right}>
                     {row.score !== null ? (
-                      <Text testID={`item-run-${row.id}-score`} style={[styles.score, { color: palette.text }]}>
+                      <Text
+                        testID={`item-run-${row.id}-score`}
+                        style={[styles.score, { color: row.dim ? palette.neutral[400] : palette.text }]}>
                         {row.score}
                       </Text>
                     ) : null}
@@ -295,7 +299,6 @@ const styles = StyleSheet.create({
   sub: { marginTop: 1, fontFamily: fonts.regular, fontSize: typeScale.body.fontSize },
   underLabel: { marginTop: 9 },
   empty: { paddingVertical: 13, paddingHorizontal: 14, fontFamily: fonts.regular, ...typeScale.body },
-  dim: { opacity: 0.55 },
   rank: { minWidth: 20, fontFamily: fonts.medium, fontSize: typeScale.label.fontSize },
   right: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   score: { fontFamily: fonts.medium, fontSize: typeScale.title.fontSize },

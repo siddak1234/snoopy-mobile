@@ -3,12 +3,13 @@ import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import { ImageManipulator } from 'expo-image-manipulator';
 import React from 'react';
-import { Linking } from 'react-native';
+import { Linking, StyleSheet } from 'react-native';
 
 import RunDetailScreen from '@/app/(tabs)/activity/run';
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import ItemScreen from '@/app/(tabs)/flows/item';
 import { RunFileField } from '@/components/automations/run-file-field';
+import { nocturneDark } from '@/constants/theme';
 import type { SessionContextValue } from '@/hooks/use-session';
 import {
   FLOW_QUEUE_FULL,
@@ -239,7 +240,7 @@ describe("the items' rules (lib/view/items.ts)", () => {
     expect(itemFieldsComplete(DECLARED.fields, { region: 'North', name: ' ' }, {})).toBe(false);
   });
 
-  it("an item's runs in the platform's order, never sorted again, numbered: Reading…, the score and line, a failure dimmed", () => {
+  it("an item's runs in the platform's order, never sorted again, numbered: Reading…, the score and line, a failure muted", () => {
     // An order a sort by score would change: the 64 before the 91, a failure before a run still going.
     const ranked = rankedRuns([
       run('r2', { title: 'Contoso supply', score: 64 }),
@@ -559,7 +560,7 @@ const READ_ITEM = (): Answer<`GET ${typeof ONE}`> => ({
 });
 
 describe("an item's page (plan §5.3)", () => {
-  it('its title, its group and state; its runs drawn as answered, numbered, scored, a failure dimmed', async () => {
+  it('its title, its group and state; its runs drawn as answered, numbered, scored, a failure muted', async () => {
     await openItem(READ_ITEM());
     expect(screen.getByTestId('item-title').props.children).toBe('Leases');
     expect(screen.getByTestId('item-status').props.children).toBe('South · Ready');
@@ -575,8 +576,15 @@ describe("an item's page (plan §5.3)", () => {
     expect(row('r1')).toEqual([2, 'Northwind lease', 'Meets 3 of 3', '91']);
     expect(row('r4')).toEqual([3, 'Failed', 'The file had no text.']);
     expect(row('r3')).toEqual([4, 'Reading…']);
-    expect(screen.getByTestId('item-run-r4-row').props.style).toEqual({ opacity: 0.55 });
-    expect(screen.getByTestId('item-run-r1-row').props.style).toBe(false);
+    // A failure in the muted tone, never faded (its line is muted already: AA); the others in the text colour.
+    const color = (node: { props: Record<string, unknown> }) => (StyleSheet.flatten(node.props.style as never) as { color?: string }).color;
+    const failed = within(screen.getByTestId('item-run-r4'));
+    expect(color(failed.getByText('Failed'))).toBe(nocturneDark.neutral[400]);
+    expect(color(within(screen.getByTestId('item-run-r1')).getByText('Northwind lease'))).toBe(nocturneDark.text);
+    expect(color(screen.getByTestId('item-run-r1-score'))).toBe(nocturneDark.text);
+    for (const id of ['r1', 'r2', 'r3', 'r4']) {
+      expect(StyleSheet.flatten(screen.getByTestId(`item-run-${id}-row`).props.style ?? {})).not.toHaveProperty('opacity');
+    }
     await fireEvent.press(screen.getByTestId('item-run-r1'));
     expect(mockRouter.push).toHaveBeenCalledWith(
       { pathname: '/(tabs)/activity/run', params: { runId: 'r1', returnTo: 'flows' } },
