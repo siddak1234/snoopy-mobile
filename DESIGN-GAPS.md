@@ -2395,3 +2395,9 @@ bites; the website changed to the same words.
 - **5 and 6. One set of words with the website.** A run refused 409 `item_not_ready` says "Try again
   in a moment."; the archive asks "It leaves the list and takes no new {runs}. Its {runs} stay." Bites:
   the old sentence fails "a refused item…"; another archive body fails "Archive asks first…".
+- **8. The types line only where the website draws it.** The platform now names the types of every
+  file field of a manifest with an `artifacts` block, so Step 1 of a flow without items would have
+  gained "PDF or photo" under its title; the line is the upload card's and the item page's alone
+  (`showTypes`), the picker and the type refusal every field's. Bites: the line drawn by default
+  fails "Step 1 of a flow without items stays titles only…"; the item page not asking fails "an
+  owner adds one…".

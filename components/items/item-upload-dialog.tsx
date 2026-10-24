@@ -177,6 +177,7 @@ export function ItemUploadDialog({
             onValue={onFile}
             onBusyChange={onBusyChange}
             divider={false}
+            showTypes
           />
         </View>
         {error ? (

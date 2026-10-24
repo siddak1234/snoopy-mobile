@@ -32,6 +32,8 @@ type StartRunProps = {
    */
   itemId?: string;
   startLabel?: string;
+  /** Its file fields say their types under their titles (the item page, as the website's). */
+  showTypes?: boolean;
 };
 
 /**
@@ -64,7 +66,16 @@ export function canStartRun(subscription: Subscription, entry: CatalogEntry | un
  * this at all … the terms and privacy policy includes that information". A run
  * starts at the press.
  */
-export function StartRun({ subscriptionId, shownWorkspaceId, runInput, onStarted, action, itemId, startLabel }: StartRunProps) {
+export function StartRun({
+  subscriptionId,
+  shownWorkspaceId,
+  runInput,
+  onStarted,
+  action,
+  itemId,
+  startLabel,
+  showTypes,
+}: StartRunProps) {
   const [started, setStarted] = useState(0);
   return (
     <View testID="start-run">
@@ -77,6 +88,7 @@ export function StartRun({ subscriptionId, shownWorkspaceId, runInput, onStarted
           action={action}
           itemId={itemId}
           startLabel={startLabel}
+          showTypes={showTypes}
           onStarted={(runId) => {
             setStarted((count) => count + 1);
             onStarted(runId);
@@ -93,7 +105,16 @@ export function StartRun({ subscriptionId, shownWorkspaceId, runInput, onStarted
  * the platform returns the run it already started instead of starting a second
  * — and Start run held while a file is uploading.
  */
-function StartRunForm({ subscriptionId, shownWorkspaceId, runInput, onStarted, action, itemId, startLabel }: StartRunProps) {
+function StartRunForm({
+  subscriptionId,
+  shownWorkspaceId,
+  runInput,
+  onStarted,
+  action,
+  itemId,
+  startLabel,
+  showTypes,
+}: StartRunProps) {
   const session = useSession();
   const keys = useIntentKeys('run');
   const [values, setValues] = useState<Record<string, unknown>>(() => declaredDefaults(runInput));
@@ -162,6 +183,7 @@ function StartRunForm({ subscriptionId, shownWorkspaceId, runInput, onStarted, a
             onValue={change}
             onBusyChange={onBusyChange}
             divider={divider}
+            showTypes={showTypes}
           />
         ) : (
           <SetupFieldRow

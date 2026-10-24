@@ -187,6 +187,7 @@ export default function ItemScreen() {
               runInput={subscription.runInput ?? []}
               itemId={item.id}
               startLabel={START_LABEL}
+              showTypes
               // The new run joins the list below, "Reading…", and is read with it.
               onStarted={() => refresh()}
             />

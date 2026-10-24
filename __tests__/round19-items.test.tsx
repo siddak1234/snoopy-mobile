@@ -588,6 +588,8 @@ describe("an item's page (plan §5.3)", () => {
     const fake = await openItem({ ...READ_ITEM(), runs: [] });
     expect(screen.getByText('No contracts yet.')).toBeTruthy();
     expect(screen.getByText('ADD CONTRACT')).toBeTruthy();
+    // The item page's run field says its types, as the website's does.
+    expect(screen.getByTestId('run-file-contractFile-types').props.children).toBe('PDF or Word file');
     fake.always('POST /v1/workspaces/{workspaceId}/uploads', {
       uploadSessionId: 'upload-1',
       uploadUrl: 'https://store.example.test/put',
@@ -739,7 +741,7 @@ describe("a run's page headed by its title and score, its sections the first ope
 describe('a file field offers the types its field names (plan §5.5)', () => {
   const field = (acceptedContentTypes?: string[]) => ({ key: 'doc', title: 'Document', ...(acceptedContentTypes ? { acceptedContentTypes } : {}) });
 
-  function renderField(accepted?: string[]) {
+  function renderField(accepted?: string[], showTypes = true) {
     return renderWithProviders(
       <RunFileField
         field={field(accepted)}
@@ -748,6 +750,7 @@ describe('a file field offers the types its field names (plan §5.5)', () => {
         onValue={jest.fn()}
         onBusyChange={jest.fn()}
         divider={false}
+        showTypes={showTypes}
       />,
       sessionAs('owner'),
     );
@@ -772,6 +775,45 @@ describe('a file field offers the types its field names (plan §5.5)', () => {
     await renderField(['application/pdf', 'image/jpeg']);
     expect(screen.getByTestId('run-file-doc-photo')).toBeTruthy();
     expect(screen.getByText('PDF or photo')).toBeTruthy();
+  });
+
+  it('the line only where the page asks: a field left to itself names no types, though its picker and refusal keep them', async () => {
+    (DocumentPicker.getDocumentAsync as jest.Mock).mockResolvedValue({
+      canceled: false,
+      assets: [{ uri: 'file:///picked/a.csv', name: 'a.csv', mimeType: 'text/csv', size: 12 }],
+    });
+    await renderField(['application/pdf', DOCX], false);
+    expect(screen.queryByTestId('run-file-doc-types')).toBeNull();
+    await fireEvent.press(screen.getByTestId('run-file-doc-upload'));
+    expect(await screen.findByText('Choose a PDF or Word file.')).toBeTruthy();
+    expect(DocumentPicker.getDocumentAsync).toHaveBeenCalledWith(expect.objectContaining({ type: ['application/pdf', DOCX] }));
+  });
+
+  it("Step 1 of a flow without items stays titles only, with the types the platform names on every file field (Build 21, A6)", async () => {
+    const fake = fakePlatform(platformOperation);
+    // A flow without items whose manifest declares `artifacts`: its file field names the types.
+    const plain = flowWithItems({
+      items: undefined,
+      runInput: [{ ...CONTRACT_FILE, acceptedContentTypes: ['application/pdf', 'image/jpeg', 'image/png'] }],
+    });
+    fake.always('GET /v1/workspaces/{workspaceId}/automations', { automations: [{ ...entry(), items: undefined }], categories: ['All'] });
+    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', (sent) => ({
+      subscriptions: sent.query?.status === 'archived' ? [] : [plain],
+    }));
+    fake.always('GET /v1/workspaces/{workspaceId}/run-stats', {
+      workspace: { total: 0, pending: 0, running: 0, held: 0, succeeded: 0, failed: 0, cancelled: 0 },
+      subscriptions: [],
+    });
+    fake.always('GET /v1/connections/providers', providersWithQuickBooks());
+    fake.always('GET /v1/workspaces/{workspaceId}/projects', { projects: [] });
+    fake.always('GET /v1/workspaces/{workspaceId}/connections', { connections: [] });
+    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/email-recipients', recipientsPayload());
+    setMockParams({ flow: FLOW });
+    await renderWithProviders(<WorkflowDetailScreen />, sessionAs('owner'));
+    expect(await screen.findByTestId('run-file-contractFile-upload')).toBeTruthy();
+    expect(screen.getByTestId('run-file-contractFile-photo')).toBeTruthy();
+    expect(screen.queryByTestId('run-file-contractFile-types')).toBeNull();
+    expect(screen.queryByText('PDF or photo')).toBeNull();
   });
 
   it('none named: a PDF, a JPEG or a PNG, Take photo, and no line — as before', async () => {

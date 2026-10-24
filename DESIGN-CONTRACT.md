@@ -558,8 +558,10 @@ review" — the held queue — also list running, queued and cancelled runs.
   - Add {one run}: `createRun` with `itemId` and the flow's `runInput`, its key as every run's.
   - Archive {one}: `archiveItem` under its own key, behind the confirmation; one-way.
   - A file field that names its types (`acceptedContentTypes`, on a run-input field and on
-    `items.file`): the document picker offers those; a line under its title says them in
-    words ("PDF, Word file or photo"); a file of another type the picker let through is
+    `items.file`): the document picker offers those; on the upload card and the item page a
+    line under its title says them in words ("PDF, Word file or photo") — never in Step 1 of a
+    flow page, titles only (Build 21, A6), though the platform names the types of every file
+    field of a manifest with an `artifacts` block; a file of another type the picker let through is
     refused in those words ("Choose a PDF or Word file.") before anything is sent; a Word
     file goes as it is; Take photo, and the re-encode, only where a JPEG is taken.
 - After a change, a screen re-reads from `loading`: what it showed is out of

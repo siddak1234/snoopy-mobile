@@ -39,7 +39,8 @@ type Picked = { uri: string; name: string; image: boolean; mimeType?: string };
  * decision 1 of 2026-10-10): **Take photo**, the camera through
  * expo-image-picker, its permission asked first and a refusal said in a
  * sentence here; and **Upload**, the document picker, limited to a PDF, a JPEG
- * or a PNG (`RUN_FILE_TYPES`) where the field names no types (below). Every image — a photo, or a JPEG or PNG uploaded — is re-encoded once
+ * or a PNG (`RUN_FILE_TYPES`) where the field names no types (below). Every
+ * image — a photo, or a JPEG or PNG uploaded — is re-encoded once
  * (`reencodeImage`: upright, its long side at most 2,576 px, a JPEG at 0.9) and
  * sent as `image/jpeg` under a `.jpg` name; a PDF is sent as it is.
  *
@@ -50,11 +51,15 @@ type Picked = { uri: string; name: string; image: boolean; mimeType?: string };
  * choose again), and an answer for an upload no longer in flight changes nothing.
  *
  * **A field that names its types** (`acceptedContentTypes`, backend ADR-0046):
- * Upload offers those, a line under the title says them in words ("PDF, Word
- * file or photo"), and a file of another type is refused in those words before
- * it is sent. A Word file is sent as it is; Take photo, and the re-encode, only
- * where a JPEG is taken (`takesPhotos`). A field that names none is as above.
- * An item's file (`items.file`) is drawn by this field too, on the same upload.
+ * Upload offers those, and a file of another type is refused in their words
+ * ("Choose a PDF or Word file.") before it is sent. A Word file is sent as it
+ * is; Take photo, and the re-encode, only where a JPEG is taken (`takesPhotos`).
+ * A field that names none is as above. A line under the title says the types
+ * only where the page asks (`showTypes`): the item's file (`items.file`, drawn
+ * by this field on the same upload) and the item page's run field — as the
+ * website draws it — never Step 1 of a flow page, whose fields are titles only
+ * (Build 21, A6), though the platform names the types of every file field of a
+ * manifest with an `artifacts` block.
  */
 export function RunFileField({
   field,
@@ -63,6 +68,7 @@ export function RunFileField({
   onValue,
   onBusyChange,
   divider,
+  showTypes = false,
 }: {
   field: Pick<AutomationRunInputField, 'key' | 'title' | 'acceptedContentTypes'>;
   /** The workspace the screen loaded; the upload is refused once it is not active. */
@@ -71,6 +77,8 @@ export function RunFileField({
   onValue: (key: string, artifactId: string | undefined) => void;
   onBusyChange: (key: string, busy: boolean) => void;
   divider: boolean;
+  /** Say the types under the title (the item's file, the item page's run field). */
+  showTypes?: boolean;
 }) {
   const { palette } = useTheme();
   const session = useSession();
@@ -197,7 +205,11 @@ export function RunFileField({
       </View>
       {progress ? <Text style={[styles.sub, { color: palette.neutral[400] }]}>{progress}</Text> : null}
       {error ? <Text style={[styles.sub, { color: status.err }]}>{error}</Text> : null}
-      {typesLine ? <Text style={[styles.sub, { color: palette.neutral[400] }]}>{typesLine}</Text> : null}
+      {showTypes && typesLine ? (
+        <Text testID={`run-file-${field.key}-types`} style={[styles.sub, { color: palette.neutral[400] }]}>
+          {typesLine}
+        </Text>
+      ) : null}
       <View style={styles.actions}>
         {photos ? (
           <FileAction
