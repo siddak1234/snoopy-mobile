@@ -50,7 +50,8 @@ export function FlowItems({
     (workspaceId) => readItems(workspaceId, subscriptionId).finally(() => setReads((n) => n + 1)),
     [subscriptionId],
   );
-  // An item just made shows at once, "Reading…", until a read lists it.
+  // An item just made shows at once, "Reading…", until a read lists it — and
+  // from then on only as the reads list it: archived later, it is gone.
   const [made, setMade] = useState<Item[]>([]);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [focused, setFocused] = useState(true);
@@ -62,6 +63,13 @@ export function FlowItems({
   );
 
   const read = listed.status === 'ready' ? listed.data : null;
+  useEffect(() => {
+    if (!read) return;
+    setMade((was) => {
+      const left = was.filter((item) => !read.items.some((row) => row.id === item.id));
+      return left.length === was.length ? was : left;
+    });
+  }, [read]);
   const shown = read ? [...made.filter((item) => !read.items.some((row) => row.id === item.id)), ...read.items] : made;
   const going = itemsStillGoing(shown);
   const { refresh } = listed;

@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import { ImageManipulator } from 'expo-image-manipulator';
@@ -24,6 +24,7 @@ import type { AutomationItems, AutomationRunInputField, Item, Run, Subscription 
 import type { CatalogEntry } from '@/lib/platform/catalog';
 import { PlatformError, PlatformRateLimitedError } from '@/lib/platform/problem';
 import { RUN_FILE_TYPES } from '@/lib/platform/run-image';
+import { RUN_REREAD_MS } from '@/lib/view/runs';
 import { resetSnapshot } from '@/lib/platform/snapshot';
 import {
   OTHER_CHOICE,
@@ -466,6 +467,35 @@ describe('the flow page of a flow with items (plan §5.1)', () => {
     await fireEvent.press(screen.getByTestId('item-upload-cancel'));
     expect(screen.queryByTestId('item-upload-dialog')).toBeNull();
   });
+
+  it('an item made here is listed as the reads list it: once listed and then left out (archived), it is gone and the reads stop', async () => {
+    const made = item('i-9', { title: 'Data', fields: { region: 'North', name: 'Data' }, status: 'reading' });
+    // Before the upload: none. The read after it lists the new item; every read after that leaves it out.
+    let phase: 'before' | 'made' | 'archived' = 'before';
+    const fake = await openFlow(() => {
+      if (phase === 'made') {
+        phase = 'archived';
+        return { items: [made], choices: {} };
+      }
+      return { items: [], choices: {} };
+    });
+    answerUpload(fake);
+    fake.always(`POST ${LISTED}`, () => {
+      phase = 'made';
+      return { item: made };
+    });
+    await fireEvent.press(await screen.findByText('Upload policy'));
+    await fireEvent.changeText(screen.getByLabelText('Name'), 'Data');
+    await fireEvent.press(screen.getByTestId('run-file-policyFile-upload'));
+    await screen.findByText('Ready: p.pdf (12 bytes)');
+    await fireEvent.press(screen.getByTestId('item-upload-send'));
+    expect(await screen.findByTestId('flow-item-i-9')).toBeTruthy();
+    await waitFor(() => expect(screen.queryByTestId('flow-item-i-9')).toBeNull(), { timeout: RUN_REREAD_MS * 3 });
+    expect(screen.getByText('No policies yet.')).toBeTruthy();
+    const reads = fake.to(`GET ${LISTED}`).length;
+    await act(() => new Promise((resolve) => setTimeout(resolve, RUN_REREAD_MS + 500)));
+    expect(fake.to(`GET ${LISTED}`)).toHaveLength(reads);
+  }, 20_000);
 
   it('a refused value is said under the form and "Check this value." under its field; a full queue in the run\'s words', async () => {
     const fake = await openFlow(listed);

@@ -2385,3 +2385,7 @@ bites; the website changed to the same words.
 - **3. A saved name is sent as itself.** The card test chooses the saved "East" and expects
   `fields.region: 'East'`; `selectChoices`' values are checked. Bite: a saved choice's value as
   `saved:{i}` fails "a saved name is sent as itself…" and "a select offers…".
+- **1. An item made here leaves once the reads leave it out.** `FlowItems` kept the `createItem`
+  answer after a read listed the item, so an item made, then archived, came back as "Reading…" and
+  the list was read again every `RUN_REREAD_MS`; each is dropped from what was made as soon as a read
+  lists it. Bite: keeping it fails "an item made here is listed as the reads list it…".

@@ -554,7 +554,7 @@ review" — the held queue — also list running, queued and cancelled runs.
     value (or has a default) and the file has arrived. `createItem` with `{ fields, file }`,
     each value trimmed and an empty one left out, under one key per set of values (a retry
     after a lost answer makes the item once); made, the card closes and the list shows the
-    new item, "Reading…", until a read lists it.
+    new item, "Reading…", until a read lists it — then only as the reads list it.
   - Add {one run}: `createRun` with `itemId` and the flow's `runInput`, its key as every run's.
   - Archive {one}: `archiveItem` under its own key, behind the confirmation; one-way.
   - A file field that names its types (`acceptedContentTypes`, on a run-input field and on
