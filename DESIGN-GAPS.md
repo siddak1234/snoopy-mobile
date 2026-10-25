@@ -2570,3 +2570,13 @@ branch with a test that bites; the website gets the same rules for 1 and 2.
   drawn goes into a folder…".
 - **6. Within a department, flows in their catalog entries' order** (the website's); "Whole
   workspace" stays. Bite: the order read fails both `build28-flows` group tests.
+
+**TestFlight 29** (2026-10-25): 1.0.0 (29) from `main` `8fa2844` (#77), built on this Mac
+(`npm run release:ios -- --local`; ipa `.autom8x/release-ios/ipa/app.ipa`) after the platform's
+FORTY-SECOND served #242's contract (the release's deployed-contract check passed, three of three),
+entitlements checked (`ENTITLEMENTS_OK`), submission `45b9fa0b-395b-4497-90c2-4d3c3e3e2200` FINISHED
+07:27:01Z (queued 07:26:00Z). App Store Connect, read by Round 19's close: uploaded 07:26:55Z,
+VALID, internal testing `IN_BETA_TESTING`. It carries build 28's nine items (Resume Screening, the
+item and run pages, Run details, the file pages): the owner's test of it is backend BUILD-PLAN
+28.8.6's last part, carried past Round 19's close — at 2026-10-25 14:47:39Z App Store Connect read
+0 installs, 0 sessions and 0 feedback on build 29.
