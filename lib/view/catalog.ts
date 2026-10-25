@@ -162,9 +162,52 @@ export function scopeLabels(
   return new Map(projects.map((project) => [project.id, project.type]));
 }
 
+/** What a flow of no department says it belongs to (D4). */
+export const WHOLE_WORKSPACE = 'Whole workspace';
+
 /** One flow's label from `scopeLabels`: "Department: {kind}", or "Whole workspace" (D4; "Department" since round 23). */
 export function scopeLabel(projectId: string | null | undefined, labels: ReadonlyMap<string, string>): string {
-  return projectId ? `Department: ${labels.get(projectId) ?? 'a department'}` : 'Whole workspace';
+  return projectId ? `Department: ${labels.get(projectId) ?? 'a department'}` : WHOLE_WORKSPACE;
+}
+
+/** One group of the Flows list: its department's kind, "Whole workspace", or no name for a department not read. */
+export type FlowGroup = { name: string | null; flows: FlowView[] };
+
+/**
+ * The Flows list by department (the owner's build 28 item F1: "sections in the
+ * flow page … A-Z by department type"): the departments by their kind, A–Z,
+ * then the flows of the whole workspace under "Whole workspace", then any whose
+ * department was not read, under no name; each group's flows in their catalog
+ * entries' order (`catalogOrder`, the templates as the catalog lists them — the
+ * website's order), any the catalog does not list after them, as read. Two
+ * departments of one kind are one group, as their cards say the same.
+ */
+export function groupFlows(
+  flows: readonly FlowView[],
+  labels: ReadonlyMap<string, string>,
+  catalogOrder: readonly string[],
+): FlowGroup[] {
+  const position = (flow: FlowView) => {
+    const at = catalogOrder.indexOf(flow.templateId);
+    return at === -1 ? catalogOrder.length : at;
+  };
+  const inCatalogOrder = (group: FlowView[]) => [...group].sort((a, b) => position(a) - position(b));
+  const byKind = new Map<string, FlowView[]>();
+  const workspace: FlowView[] = [];
+  const unread: FlowView[] = [];
+  for (const flow of flows) {
+    const kind = flow.projectId ? labels.get(flow.projectId) : undefined;
+    if (!flow.projectId) workspace.push(flow);
+    else if (kind === undefined) unread.push(flow);
+    else byKind.set(kind, [...(byKind.get(kind) ?? []), flow]);
+  }
+  return [
+    ...[...byKind.keys()]
+      .sort((a, b) => a.localeCompare(b))
+      .map((name) => ({ name, flows: inCatalogOrder(byKind.get(name)!) })),
+    ...(workspace.length > 0 ? [{ name: WHOLE_WORKSPACE, flows: inCatalogOrder(workspace) }] : []),
+    ...(unread.length > 0 ? [{ name: null, flows: inCatalogOrder(unread) }] : []),
+  ];
 }
 
 /**

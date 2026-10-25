@@ -2,6 +2,7 @@ import { fireEvent, screen } from '@testing-library/react-native';
 import React from 'react';
 
 import RunDetailScreen from '@/app/(tabs)/activity/run';
+import RunDetailsScreen from '@/app/(tabs)/activity/run-details';
 import ApprovalsScreen from '@/app/(tabs)/activity/approvals';
 import AddFlowScreen from '@/app/(tabs)/flows/add';
 import ArchivedFlowsScreen from '@/app/(tabs)/flows/archived';
@@ -87,8 +88,16 @@ const PAGES: {
 }[] = [
   {
     page: 'Run detail',
-    site: 'app/(tabs)/activity/run.tsx:223',
+    site: 'app/(tabs)/activity/run.tsx:189',
     Screen: RunDetailScreen,
+    params: { runId: 'run-0' },
+    loaded: () => screen.findByTestId('run-open-details'),
+  },
+  {
+    // Its steps, tiles and facts (build 28, F9).
+    page: 'Run details',
+    site: 'app/(tabs)/activity/run-details.tsx',
+    Screen: RunDetailsScreen,
     params: { runId: 'run-0' },
     loaded: () => screen.findByText('Duration'),
   },

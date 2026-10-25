@@ -35,9 +35,17 @@ jest.mock('expo-file-system', () => ({
     }),
     { downloadFileAsync: jest.fn() },
   ),
+  // A folder made for one view (build 28's review, finding 5): made, then removed with what it holds.
+  Directory: jest.fn(function (this: { parent: unknown; name: string; exists: boolean; create: jest.Mock; delete: jest.Mock }, parent: unknown, name: string) {
+    this.parent = parent;
+    this.name = name;
+    this.exists = false;
+    this.create = jest.fn(() => (this.exists = true));
+    this.delete = jest.fn(() => (this.exists = false));
+  }),
   Paths: { cache: { uri: 'file:///cache/' } },
 }));
-const { File: MockFile } = jest.requireMock('expo-file-system');
+const { File: MockFile, Directory: MockDirectory } = jest.requireMock('expo-file-system');
 
 const { readAccessToken } = jest.requireMock('@/lib/platform/session-store');
 const fetchMock = jest.fn();
@@ -343,6 +351,41 @@ describe('generated platform transport', () => {
       await downloadSignedFile('https://store.example.test/x', given!);
       expect(MockFile.downloadFileAsync.mock.calls.at(-1)[1].name).toBe(kept);
     }
+  });
+
+  it('a file to be drawn goes into a folder made for that one view, a new one each time; removed, the folder goes; a failed download leaves none', async () => {
+    MockFile.downloadFileAsync.mockReset().mockImplementation(async (_url: string, destination: { name: string }) => ({
+      uri: `file:///cache/folder/${destination.name}`,
+      exists: true,
+      delete: jest.fn(),
+    }));
+    MockDirectory.mockClear();
+    const first = await downloadSignedFile('https://store.example.test/x', 'view.pdf', { freshFolder: true });
+    const second = await downloadSignedFile('https://store.example.test/x', 'view.pdf', { freshFolder: true });
+    const [made, again] = MockDirectory.mock.instances as { parent: unknown; name: string; exists: boolean; create: jest.Mock; delete: jest.Mock }[];
+    expect(made!.parent).toEqual({ uri: 'file:///cache/' });
+    expect(made!.name).toMatch(/^view-[0-9a-f-]{36}$/u);
+    expect(again!.name).toMatch(/^view-[0-9a-f-]{36}$/u);
+    expect(again!.name).not.toBe(made!.name);
+    expect(made!.create).toHaveBeenCalledTimes(1);
+    // The file is made inside the folder, under the name it was given.
+    const destination = MockFile.downloadFileAsync.mock.calls[0][1];
+    expect(destination.directory).toBe(made);
+    expect(destination.name).toBe('view.pdf');
+    expect(first.uri).toBe('file:///cache/folder/view.pdf');
+    expect(first.exists).toBe(true);
+    first.delete();
+    expect(made!.delete).toHaveBeenCalledTimes(1);
+    expect(first.exists).toBe(false);
+    expect(second.exists).toBe(true);
+
+    MockFile.downloadFileAsync.mockReset().mockRejectedValue(new Error('UnableToDownload: status 403'));
+    await expect(downloadSignedFile('https://store.example.test/x', 'view.pdf', { freshFolder: true })).rejects.toThrow(
+      'The file could not be saved.',
+    );
+    const failed = MockDirectory.mock.instances.at(-1) as { exists: boolean; delete: jest.Mock };
+    expect(failed.delete).toHaveBeenCalledTimes(1);
+    expect(failed.exists).toBe(false);
   });
 
   it('says a refused or lost download in words, never the store\'s own', async () => {

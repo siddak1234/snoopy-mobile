@@ -4,6 +4,9 @@ import React from 'react';
 import HomeScreen from '@/app/(tabs)/(home)/index';
 import NotificationsScreen from '@/app/(tabs)/(home)/notifications';
 import RunDetailScreen from '@/app/(tabs)/activity/run';
+import RunDetailsScreen from '@/app/(tabs)/activity/run-details';
+import RunFileScreen from '@/app/(tabs)/activity/run-file';
+import ItemFileScreen from '@/app/(tabs)/flows/item-file';
 import ApprovalsScreen from '@/app/(tabs)/activity/approvals';
 import ActivityScreen from '@/app/(tabs)/activity/index';
 import AddFlowScreen from '@/app/(tabs)/flows/add';
@@ -73,6 +76,10 @@ const SCREENS = {
     refused: /^\/v1\/workspaces\/[^/]+\/(run-stats|runs|automations|approvals|subscriptions)(\?|$)/u,
   },
   Run: { Screen: RunDetailScreen, params: { runId: 'run-0' }, read: /\/runs\/run-0$/u },
+  // A run's steps, tiles and facts on a page of their own (build 28, F9), the same read.
+  'Run details': { Screen: RunDetailsScreen, params: { runId: 'run-0' }, read: /\/runs\/run-0$/u },
+  // A file its job uploaded, on a page of its own (build 28, F7), read with its run.
+  'Run file': { Screen: RunFileScreen, params: { runId: 'run-0', fileId: 'file-1' }, read: /\/runs\/run-0$/u },
   Approvals: { Screen: ApprovalsScreen, read: /\/approvals\?status=pending$/u },
   Activity: { Screen: ActivityScreen, read: /\/runs$/u },
   'Add a flow': { Screen: AddFlowScreen, read: /\/automations$/u },
@@ -83,6 +90,8 @@ const SCREENS = {
   'Who gets the email': { Screen: FlowEmailScreen, params: { flow: 'invoice' }, read: /\/email-recipients$/u },
   // One of a flow's items (Round 19, backend ADR-0046).
   Item: { Screen: ItemScreen, params: { item: 'item-1' }, read: /\/items\/item-1$/u },
+  // The file an item was made from, and its sections (build 28, F4).
+  'Item file': { Screen: ItemFileScreen, params: { item: 'item-1' }, read: /\/items\/item-1$/u },
   Account: { Screen: AccountScreen, read: /^\/v1\/auth\/identities$/u },
   Billing: { Screen: BillingScreen, read: /^\/v1\/workspaces$/u },
   Connections: { Screen: ConnectionsScreen, read: /\/connections$/u },
@@ -109,9 +118,15 @@ const CASES: Case[] = [
   ['Home', 'offline', 'app/(tabs)/(home)/index.tsx:361', false],
   ['Home', 'unavailable', 'app/(tabs)/(home)/index.tsx:361', false],
   ['Home', 'error', 'app/(tabs)/(home)/index.tsx:361', false],
-  ['Run', 'offline', 'app/(tabs)/activity/run.tsx:189', true],
-  ['Run', 'unavailable', 'app/(tabs)/activity/run.tsx:198', true],
-  ['Run', 'error', 'app/(tabs)/activity/run.tsx:207-208', true],
+  ['Run', 'offline', 'app/(tabs)/activity/run.tsx:153', true],
+  ['Run', 'unavailable', 'app/(tabs)/activity/run.tsx:160', true],
+  ['Run', 'error', 'app/(tabs)/activity/run.tsx:169-172', true],
+  ['Run details', 'offline', 'app/(tabs)/activity/run-details.tsx', true],
+  ['Run details', 'unavailable', 'app/(tabs)/activity/run-details.tsx', true],
+  ['Run details', 'error', 'app/(tabs)/activity/run-details.tsx', true],
+  ['Run file', 'offline', 'app/(tabs)/activity/run-file.tsx', true],
+  ['Run file', 'unavailable', 'app/(tabs)/activity/run-file.tsx', true],
+  ['Run file', 'error', 'app/(tabs)/activity/run-file.tsx', true],
   ['Approvals', 'offline', 'app/(tabs)/activity/approvals.tsx:174', true],
   ['Approvals', 'unavailable', 'app/(tabs)/activity/approvals.tsx:180', true],
   ['Approvals', 'error', 'app/(tabs)/activity/approvals.tsx:189-190', true],
@@ -142,6 +157,9 @@ const CASES: Case[] = [
   ['Item', 'offline', 'app/(tabs)/flows/item.tsx', true],
   ['Item', 'unavailable', 'app/(tabs)/flows/item.tsx', true],
   ['Item', 'error', 'app/(tabs)/flows/item.tsx', true],
+  ['Item file', 'offline', 'app/(tabs)/flows/item-file.tsx', true],
+  ['Item file', 'unavailable', 'app/(tabs)/flows/item-file.tsx', true],
+  ['Item file', 'error', 'app/(tabs)/flows/item-file.tsx', true],
   ['Account', 'offline', 'app/(tabs)/settings/account.tsx:92', true],
   ['Account', 'unavailable', 'app/(tabs)/settings/account.tsx:95', true],
   ['Account', 'error', 'app/(tabs)/settings/account.tsx:101-103', true],

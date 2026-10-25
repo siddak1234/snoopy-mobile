@@ -19,7 +19,7 @@ import {
   itemRefusal,
   runRefusal,
 } from '@/lib/content/refusals';
-import { acceptedLine, countOf, inSentence } from '@/lib/content/screen-states';
+import { acceptedLine, allOf, countOf, inSentence } from '@/lib/content/screen-states';
 import type { AutomationItems, AutomationRunInputField, Item, Run, Subscription } from '@/lib/platform/automations';
 import type { CatalogEntry } from '@/lib/platform/catalog';
 import { PlatformError, PlatformRateLimitedError } from '@/lib/platform/problem';
@@ -27,14 +27,17 @@ import { RUN_FILE_TYPES } from '@/lib/platform/run-image';
 import { RUN_REREAD_MS } from '@/lib/view/runs';
 import { resetSnapshot } from '@/lib/platform/snapshot';
 import {
+  ALL_GROUPS,
   OTHER_CHOICE,
   groupItems,
+  itemGroupChoices,
   itemFieldValues,
   itemFieldsComplete,
   itemRowLine,
   itemStatusLine,
   rankedRuns,
   selectChoices,
+  shownGroup,
 } from '@/lib/view/items';
 import { fakePlatform, type Answer } from '@/test/fake-platform';
 import {
@@ -54,6 +57,8 @@ jest.mock('@/lib/platform/client', () => ({
   putFileToSignedUrl: jest.fn(),
 }));
 jest.mock('expo-document-picker', () => ({ getDocumentAsync: jest.fn() }));
+// The flow page's tiles read again at 20 ms here, so a read that should not be made shows at once.
+jest.mock('@/lib/view/runs', () => ({ ...jest.requireActual('@/lib/view/runs'), FLOW_STATS_REREAD_MS: 20 }));
 jest.mock('expo-file-system', () => ({ File: jest.fn() }));
 jest.mock('expo-image-picker', () => ({ requestCameraPermissionsAsync: jest.fn(), launchCameraAsync: jest.fn() }));
 jest.mock('expo-image-manipulator', () => ({
@@ -146,6 +151,8 @@ function item(id: string, overrides: Partial<Item> = {}): Item {
     fields: { region: 'North', name: `Policy ${id}` },
     status: 'ready',
     runCount: 0,
+    positiveCount: 0,
+    negativeCount: 0,
     topScore: null,
     createdAt: '2026-10-20T10:00:00Z',
     createdByUserId: null,
@@ -185,27 +192,61 @@ beforeEach(() => {
 /* ───────────────────────────── the rules, on their own ───────────────────────────── */
 
 describe("the items' rules (lib/view/items.ts)", () => {
-  it('groups by groupField: its options in order, then typed names A–Z, then none; rows newest first', () => {
-    const groups = groupItems(
-      [
-        item('a', { fields: { region: 'South' }, createdAt: '2026-10-20T10:00:00Z' }),
-        item('b', { fields: { region: 'West' }, createdAt: '2026-10-20T11:00:00Z' }),
-        item('c', { fields: { region: 'North' }, createdAt: '2026-10-20T09:00:00Z' }),
-        item('d', { fields: { region: 'East' }, createdAt: '2026-10-20T12:00:00Z' }),
-        item('e', { fields: { region: 'South' }, createdAt: '2026-10-21T10:00:00Z' }),
-        item('f', { fields: {}, createdAt: '2026-10-20T08:00:00Z' }),
-      ],
-      DECLARED,
-    );
-    expect(groups.map((group) => [group.name, group.items.map((row) => row.id)])).toEqual([
-      ['North', ['c']],
-      ['South', ['e', 'a']],
-      ['East', ['d']],
-      ['West', ['b']],
-      [null, ['f']],
+  it('groups by groupField: the values A–Z, then none; each group A–Z by title — whatever the options\' order or the newest (build 28, F2–F3)', () => {
+    // An order the options' (North, South) and the newest-first rule would each change.
+    const items = [
+      item('a', { title: 'Zoning', fields: { region: 'South' }, createdAt: '2026-10-20T10:00:00Z' }),
+      item('b', { title: 'Wharf', fields: { region: 'West' }, createdAt: '2026-10-20T11:00:00Z' }),
+      item('c', { title: 'Harbour', fields: { region: 'North' }, createdAt: '2026-10-20T09:00:00Z' }),
+      item('d', { title: 'Docks', fields: { region: 'East' }, createdAt: '2026-10-20T12:00:00Z' }),
+      item('e', { title: 'Allotments', fields: { region: 'South' }, createdAt: '2026-10-19T10:00:00Z' }),
+      item('f', { title: 'Bridges', fields: {}, createdAt: '2026-10-20T08:00:00Z' }),
+    ];
+    const groups = groupItems(items, DECLARED);
+    expect(groups.map((group) => [group.name, group.items.map((row) => row.title)])).toEqual([
+      ['East', ['Docks']],
+      ['North', ['Harbour']],
+      ['South', ['Allotments', 'Zoning']],
+      ['West', ['Wharf']],
+      [null, ['Bridges']],
     ]);
-    // A flow that groups nothing: one group, no name.
-    expect(groupItems([item('a'), item('b')], { fields: DECLARED.fields })).toEqual([{ name: null, items: [item('a'), item('b')] }]);
+    // A value chosen: that group alone; all of them, every group.
+    expect(groupItems(items, DECLARED, 'South').map((group) => [group.name, group.items.map((row) => row.title)])).toEqual([
+      ['South', ['Allotments', 'Zoning']],
+    ]);
+    expect(groupItems(items, DECLARED, ALL_GROUPS)).toEqual(groups);
+    // A flow that groups nothing: one group, no name, A–Z.
+    expect(groupItems([item('a', { title: 'Zoning' }), item('b', { title: 'Docks' })], {})).toEqual([
+      { name: null, items: [item('b', { title: 'Docks' }), item('a', { title: 'Zoning' })] },
+    ]);
+  });
+
+  it('the filter: "All {values}" in the field\'s own word, then the values the items hold, A–Z; a value gone reads as all', () => {
+    const items = [
+      item('a', { fields: { region: 'South' } }),
+      item('b', { fields: { region: 'East' } }),
+      item('c', { fields: { region: 'South' } }),
+      item('d', { fields: {} }),
+    ];
+    const choices = itemGroupChoices(items, DECLARED);
+    expect(choices).toEqual([
+      { value: ALL_GROUPS, label: 'All regions' },
+      { value: 'East', label: 'East' },
+      { value: 'South', label: 'South' },
+    ]);
+    // Nothing to filter: a flow that groups nothing, or no items yet.
+    expect(itemGroupChoices(items, { fields: DECLARED.fields })).toEqual([]);
+    expect(itemGroupChoices([], DECLARED)).toEqual([]);
+    expect(shownGroup(choices, 'East')).toBe('East');
+    expect(shownGroup(choices, 'North')).toBe(ALL_GROUPS);
+    // The field's word, made many.
+    expect([allOf('Department'), allOf('Category'), allOf('Branch'), allOf('PO'), allOf('Address')]).toEqual([
+      'All departments',
+      'All categories',
+      'All branches',
+      'All POs',
+      'All addresses',
+    ]);
   });
 
   it("a row's line: the count in the flow's run words and the top score; Reading…; Couldn't read", () => {
@@ -240,7 +281,7 @@ describe("the items' rules (lib/view/items.ts)", () => {
     expect(itemFieldsComplete(DECLARED.fields, { region: 'North', name: ' ' }, {})).toBe(false);
   });
 
-  it("an item's runs in the platform's order, never sorted again, numbered: Reading…, the score and line, a failure muted", () => {
+  it("an item's runs in the platform's order, never sorted again, numbered: Reading…, the score, a failure muted", () => {
     // An order a sort by score would change: the 64 before the 91, a failure before a run still going.
     const ranked = rankedRuns([
       run('r2', { title: 'Contoso supply', score: 64 }),
@@ -248,12 +289,14 @@ describe("the items' rules (lib/view/items.ts)", () => {
       run('r4', { status: 'failed', failureReason: 'The file had no text.' }),
       run('r3', { status: 'running' }),
     ]);
-    expect(ranked.map(({ id, rank, title, score, line, dim }) => [id, rank, title, score, line, dim])).toEqual([
-      ['r2', 1, 'Contoso supply', '64', null, false],
-      ['r1', 2, 'Northwind lease', '91', 'Meets 3 of 3', false],
-      ['r4', 3, 'Failed', null, 'The file had no text.', true],
-      ['r3', 4, 'Reading…', null, null, false],
+    expect(ranked.map(({ id, rank, title, score, dim }) => [id, rank, title, score, dim])).toEqual([
+      ['r2', 1, 'Contoso supply', '64', false],
+      ['r1', 2, 'Northwind lease', '91', false],
+      ['r4', 3, 'Failed', null, true],
+      ['r3', 4, 'Reading…', null, false],
     ]);
+    // No line under a row since build 28 (F5): its result is on its run's page.
+    expect(ranked.some((row) => 'line' in row)).toBe(false);
   });
 
   it('a file field says its types in words', () => {
@@ -299,17 +342,24 @@ describe("the items' rules (lib/view/items.ts)", () => {
 /* ───────────────────────────── the flow page ───────────────────────────── */
 
 type Listed = Answer<`GET ${typeof LISTED}`>;
+type Stats = Answer<'GET /v1/workspaces/{workspaceId}/run-stats'>;
+const NO_RUNS: Stats = {
+  workspace: { total: 0, pending: 0, running: 0, held: 0, succeeded: 0, failed: 0, cancelled: 0 },
+  subscriptions: [],
+};
 
-async function openFlow(listed: () => Listed, session: SessionContextValue = sessionAs('owner'), subscription = flowWithItems()) {
+async function openFlow(
+  listed: () => Listed,
+  session: SessionContextValue = sessionAs('owner'),
+  subscription = flowWithItems(),
+  runStats: Stats = NO_RUNS,
+) {
   const fake = fakePlatform(platformOperation);
   fake.always('GET /v1/workspaces/{workspaceId}/automations', { automations: [entry()], categories: ['All'] });
   fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', (sent) => ({
     subscriptions: sent.query?.status === 'archived' ? [] : [subscription],
   }));
-  fake.always('GET /v1/workspaces/{workspaceId}/run-stats', {
-    workspace: { total: 0, pending: 0, running: 0, held: 0, succeeded: 0, failed: 0, cancelled: 0 },
-    subscriptions: [],
-  });
+  fake.always('GET /v1/workspaces/{workspaceId}/run-stats', runStats);
   fake.always('GET /v1/connections/providers', providersWithQuickBooks());
   fake.always('GET /v1/workspaces/{workspaceId}/projects', { projects: [] });
   fake.always('GET /v1/workspaces/{workspaceId}/connections', { connections: [] });
@@ -331,20 +381,79 @@ describe('the flow page of a flow with items (plan §5.1)', () => {
     choices: { region: ['East'] },
   });
 
-  it('lists its items grouped, in the flow\'s words — and draws no run start form', async () => {
+  it('lists its items grouped A–Z, in the flow\'s words — no dashboard, no steps and no run start form (build 28, F2–F3)', async () => {
     await openFlow(listed);
     await screen.findByText('Leases');
     expect(screen.getByText('POLICIES')).toBeTruthy();
     const groups = [0, 1, 2].map((g) => within(screen.getByTestId(`flow-items-group-${g}`)).getAllByText(/./u).map((node) => node.props.children));
     expect(groups).toEqual([
+      ['EAST', 'Supply', 'Reading…'],
       ['NORTH', 'Hiring', "Couldn't read"],
       ['SOUTH', 'Leases', '4 contracts · Top 86'],
-      ['EAST', 'Supply', 'Reading…'],
     ]);
-    // The steps stay; a run of this flow names an item, so it starts on the item's page.
-    expect(screen.getByText('1 · Contract received')).toBeTruthy();
+    // "Just the jobs and upload job": no tiles, no steps; a run of this flow names an item, so it starts on the item's page.
+    expect(screen.queryByTestId('flow-dashboard')).toBeNull();
+    expect(screen.queryByText('Runs')).toBeNull();
+    expect(screen.queryByTestId('flow-steps')).toBeNull();
+    expect(screen.queryByText('1 · Contract received')).toBeNull();
     expect(screen.queryByTestId('start-run')).toBeNull();
     expect(screen.queryByText('Start run')).toBeNull();
+    // Live, so nothing stands where Turn on would.
+    expect(screen.queryByTestId('flow-turn-on')).toBeNull();
+    // Its actions stay at the bottom.
+    expect(screen.getByTestId('archive-flow')).toBeTruthy();
+  });
+
+  it('no tiles, so a run of it going on reads no counts again', async () => {
+    const running = { subscriptionId: FLOW, total: 1, pending: 0, running: 1, held: 0, succeeded: 0, failed: 0, cancelled: 0 };
+    const fake = await openFlow(listed, sessionAs('owner'), flowWithItems(), { workspace: running, subscriptions: [running] });
+    await screen.findByText('Leases');
+    await act(() => new Promise((resolve) => setTimeout(resolve, 200)));
+    expect(fake.to('GET /v1/workspaces/{workspaceId}/run-stats')).toHaveLength(1);
+  });
+
+  it('off: Turn on stands alone, where the steps were, and turns the flow on', async () => {
+    const fake = await openFlow(listed, sessionAs('owner'), flowWithItems({ status: 'paused' }));
+    fake.always('PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}', { subscription: flowWithItems({ status: 'live' }) });
+    expect(screen.queryByTestId('flow-steps')).toBeNull();
+    await fireEvent.press(within(screen.getByTestId('flow-turn-on')).getByTestId('flow-step-turn-on'));
+    await waitFor(() => expect(fake.to('PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}')).toHaveLength(1));
+    expect(fake.to('PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}')[0]!.body).toEqual({ status: 'live' });
+  });
+
+  it('the filter: a drop-down of "All regions", then the values A–Z; a value chosen lists its items alone, A–Z, under no heading', async () => {
+    const more = (): Listed => ({
+      items: [...listed().items, item('i-4', { title: 'Allotments', fields: { region: 'South', name: 'Allotments' } })],
+      choices: {},
+    });
+    await openFlow(more);
+    await screen.findByText('Leases');
+    expect(screen.getByTestId('flow-items-filter').props.accessibilityLabel).toBe('Region: All regions');
+    await fireEvent.press(screen.getByTestId('flow-items-filter'));
+    const menu = within(screen.getByTestId('flow-items-filter-menu'));
+    expect(menu.getAllByText(/./u).map((node) => node.props.children)).toEqual(['REGION', 'All regions', 'East', 'North', 'South']);
+    await fireEvent.press(menu.getByText('South'));
+    expect(screen.queryByTestId('flow-items-filter-menu')).toBeNull();
+    expect(screen.getByTestId('flow-items-filter').props.accessibilityLabel).toBe('Region: South');
+    expect(within(screen.getByTestId('flow-items')).queryByText('SOUTH')).toBeNull();
+    expect(screen.getAllByTestId(/^flow-item-i-\d$/u).map((node) => node.props.testID)).toEqual(['flow-item-i-4', 'flow-item-i-1']);
+    expect(screen.queryByTestId('flow-item-i-2')).toBeNull();
+    // All of them again.
+    await fireEvent.press(screen.getByTestId('flow-items-filter'));
+    await fireEvent.press(within(screen.getByTestId('flow-items-filter-menu')).getByText('All regions'));
+    expect(screen.getAllByTestId(/^flow-item-i-\d$/u)).toHaveLength(4);
+    // The outside closes it, nothing chosen.
+    await fireEvent.press(screen.getByTestId('flow-items-filter'));
+    await fireEvent.press(screen.getByTestId('flow-items-filter-backdrop'));
+    expect(screen.queryByTestId('flow-items-filter-menu')).toBeNull();
+  });
+
+  it('a flow that groups nothing has no filter', async () => {
+    await openFlow(listed, sessionAs('owner'), flowWithItems({ items: { ...DECLARED, groupField: undefined } }));
+    await screen.findByText('Leases');
+    expect(screen.queryByTestId('flow-items-filter')).toBeNull();
+    // One list, A–Z by title.
+    expect(screen.getAllByTestId(/^flow-item-i-\d$/u).map((node) => node.props.testID)).toEqual(['flow-item-i-3', 'flow-item-i-1', 'flow-item-i-2']);
   });
 
   it('a row opens its item', async () => {
@@ -390,19 +499,24 @@ describe('the flow page of a flow with items (plan §5.1)', () => {
 
     await fireEvent.press(await screen.findByText('Upload policy'));
     const card = within(screen.getByTestId('item-upload-dialog'));
-    // Its options, then the name typed before, then Other.
+    // The select is a drop-down, never chips (build 28, decision 7): its title over a pill saying its default.
     expect(within(screen.getByTestId('item-field-region')).getAllByText(/./u).map((node) => node.props.children)).toEqual([
       'Region',
       'North',
-      'South',
-      'East',
-      'Other',
     ]);
+    expect(screen.getByTestId('item-field-region-choice').props.accessibilityLabel).toBe('Region: North');
+    // Opened: its options, then the name typed before, then Other.
+    await fireEvent.press(screen.getByTestId('item-field-region-choice'));
+    const menu = within(screen.getByTestId('item-field-region-choice-menu'));
+    expect(menu.getAllByText(/./u).map((node) => node.props.children)).toEqual(['REGION', 'North', 'South', 'East', 'Other']);
     // Nothing to send yet: Upload waits for the name and the file.
+    await fireEvent.press(screen.getByTestId('item-field-region-choice-backdrop'));
     await fireEvent.press(screen.getByTestId('item-upload-send'));
     expect(fake.to(`POST ${LISTED}`)).toHaveLength(0);
 
-    await fireEvent.press(card.getByText('Other'));
+    await fireEvent.press(screen.getByTestId('item-field-region-choice'));
+    await fireEvent.press(within(screen.getByTestId('item-field-region-choice-menu')).getByText('Other'));
+    expect(screen.queryByTestId('item-field-region-choice-menu')).toBeNull();
     await fireEvent.changeText(screen.getByLabelText('Other'), 'West');
     await fireEvent.changeText(screen.getByLabelText('Name'), 'Data');
     expect(card.getByText('PDF or Word file')).toBeTruthy();
@@ -457,7 +571,9 @@ describe('the flow page of a flow with items (plan §5.1)', () => {
     });
     await fireEvent.press(await screen.findByTestId('flow-items-upload'));
     // The name typed for an earlier item, offered again, chosen.
-    await fireEvent.press(within(screen.getByTestId('item-field-region')).getByText('East'));
+    await fireEvent.press(screen.getByTestId('item-field-region-choice'));
+    await fireEvent.press(within(screen.getByTestId('item-field-region-choice-menu')).getByText('East'));
+    expect(screen.getByTestId('item-field-region-choice').props.accessibilityLabel).toBe('Region: East');
     await fireEvent.changeText(screen.getByLabelText('Name'), 'Data');
     await fireEvent.press(screen.getByTestId('run-file-policyFile-upload'));
     await screen.findByText('Ready: p.pdf (12 bytes)');
@@ -560,7 +676,7 @@ const READ_ITEM = (): Answer<`GET ${typeof ONE}`> => ({
 });
 
 describe("an item's page (plan §5.3)", () => {
-  it('its title, its group and state; its runs drawn as answered, numbered, scored, a failure muted', async () => {
+  it('its title, its group and state; its runs drawn as answered, numbered, scored, a failure muted — each row rank, title, score and arrow (build 28, F5)', async () => {
     await openItem(READ_ITEM());
     expect(screen.getByTestId('item-title').props.children).toBe('Leases');
     expect(screen.getByTestId('item-status').props.children).toBe('South · Ready');
@@ -573,13 +689,24 @@ describe("an item's page (plan §5.3)", () => {
       'item-run-r3',
     ]);
     expect(row('r2')).toEqual([1, 'Contoso lease', '64']);
-    expect(row('r1')).toEqual([2, 'Northwind lease', 'Meets 3 of 3', '91']);
-    expect(row('r4')).toEqual([3, 'Failed', 'The file had no text.']);
+    // No line under it: its result is on the run's page.
+    expect(row('r1')).toEqual([2, 'Northwind lease', '91']);
+    expect(row('r4')).toEqual([3, 'Failed']);
     expect(row('r3')).toEqual([4, 'Reading…']);
+    expect(within(screen.getByTestId('item-run-r1')).getByTestId(/^phosphor-react-native-caret-right-/u)).toBeTruthy();
+    // The height of a drop-down's row: `RunSections`' 44 at least, 11 above and below, 14 a side — never the 64 of a connection row.
+    expect(StyleSheet.flatten(screen.getByTestId('item-run-r1').props.style)).toMatchObject({
+      minHeight: 44,
+      paddingVertical: 11,
+      paddingHorizontal: 14,
+    });
+    // The score at the row's type, not the heading's.
+    expect(StyleSheet.flatten(screen.getByTestId('item-run-r1-score').props.style)).toMatchObject({ fontSize: 16 });
     // A failure in the muted tone, never faded (its line is muted already: AA); the others in the text colour.
     const color = (node: { props: Record<string, unknown> }) => (StyleSheet.flatten(node.props.style as never) as { color?: string }).color;
     const failed = within(screen.getByTestId('item-run-r4'));
     expect(color(failed.getByText('Failed'))).toBe(nocturneDark.neutral[400]);
+    expect(color(within(screen.getByTestId('item-run-r2')).getByText('Contoso lease'))).toBe(nocturneDark.text);
     expect(color(within(screen.getByTestId('item-run-r1')).getByText('Northwind lease'))).toBe(nocturneDark.text);
     expect(color(screen.getByTestId('item-run-r1-score'))).toBe(nocturneDark.text);
     for (const id of ['r1', 'r2', 'r3', 'r4']) {
@@ -640,15 +767,12 @@ describe("an item's page (plan §5.3)", () => {
     expect(screen.queryByTestId('item-add-run')).toBeNull();
   });
 
-  it('What AI read: the sections, each closed until pressed', async () => {
+  it('no "What AI read" here: the item\'s sections leave its page for the page of its file (build 28, F4)', async () => {
     await openItem(READ_ITEM());
-    expect(screen.getByText('WHAT AI READ')).toBeTruthy();
-    expect(screen.queryByTestId('item-sections-0-body')).toBeNull();
-    expect(screen.queryByTestId('item-sections-1-body')).toBeNull();
-    await fireEvent.press(screen.getByTestId('item-sections-0'));
-    expect(within(screen.getByTestId('item-sections-0-body')).getByText('Either side may end it on 90 days.')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('item-sections-0'));
-    expect(screen.queryByTestId('item-sections-0-body')).toBeNull();
+    expect(screen.queryByText('WHAT AI READ')).toBeNull();
+    expect(screen.queryByTestId('item-sections')).toBeNull();
+    expect(screen.queryByText('Must-haves')).toBeNull();
+    expect(screen.queryByText('Nice to have')).toBeNull();
   });
 
   it('Archive asks first, then archives it under a key and goes back; Cancel keeps it', async () => {
@@ -681,10 +805,10 @@ describe("an item's page (plan §5.3)", () => {
 
 /* ───────────────────────────── the run page ───────────────────────────── */
 
-describe("a run's page headed by its title and score, its sections the first open (plan §5.4)", () => {
+describe("a run's page headed by its title and score, its sections the first open (plan §5.4; build 28, F7–F9)", () => {
   type Detail = Answer<'GET /v1/workspaces/{workspaceId}/runs/{runId}'>;
 
-  async function openRun(overrides: Partial<Detail['run']>, sections?: Detail['sections']) {
+  async function openRun(overrides: Partial<Detail['run']>, sections?: Detail['sections'], flow: Subscription = flowWithItems()) {
     const base = runDetailPayload('run-1');
     const detail: Detail = {
       ...base,
@@ -695,7 +819,9 @@ describe("a run's page headed by its title and score, its sections the first ope
     fake.always('GET /v1/workspaces/{workspaceId}/runs/{runId}', detail);
     fake.always('GET /v1/workspaces/{workspaceId}/automations', { automations: [entry()], categories: ['All'] });
     fake.always('GET /v1/workspaces/{workspaceId}/approvals', { approvals: [] });
-    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', { subscriptions: [flowWithItems()] });
+    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', (sent) => ({
+      subscriptions: sent.query?.status === 'archived' ? [] : [flow],
+    }));
     setMockParams({ runId: 'r1' });
     await renderWithProviders(<RunDetailScreen />, sessionAs('owner'));
     await screen.findByTestId('run-title');
@@ -709,11 +835,14 @@ describe("a run's page headed by its title and score, its sections the first ope
     { title: 'Terms', entries: [{ title: 'Five years', url: 'javascript:alert(1)' }] },
   ];
 
-  it('the title and the score head it; the sections follow, the first open', async () => {
+  it('the title and the score head it; "{Run} details" over the sections, the first open — the result line gone; then Run details and View flow', async () => {
     await openRun({ title: 'Northwind lease', score: 91, resultSummary: 'Meets 3 of 3' }, SECTIONS);
     expect(screen.getByTestId('run-title').props.children).toBe('Northwind lease');
     expect(screen.getByTestId('run-score').props.children).toBe('91');
-    expect(screen.getByTestId('run-result').props.children).toBe('Meets 3 of 3');
+    // F8: "Then it should be the section candidate details. Instead of strong match 6 of 6."
+    expect(screen.queryByTestId('run-result')).toBeNull();
+    expect(screen.queryByText('Meets 3 of 3')).toBeNull();
+    expect(within(screen.getByTestId('run-sections-block')).getByText('CONTRACT DETAILS')).toBeTruthy();
     const first = within(screen.getByTestId('run-sections-0-body'));
     expect(first.getAllByText(/./u).map((node) => node.props.children)).toEqual([
       'Northwind Ltd',
@@ -722,11 +851,17 @@ describe("a run's page headed by its title and score, its sections the first ope
       'https://example.com/northwind',
     ]);
     expect(screen.queryByTestId('run-sections-1-body')).toBeNull();
-    // Before the steps.
-    expect(screen.getAllByTestId(/^run-(sections|progress)$/u).map((node) => node.props.testID)).toEqual([
+    // Then Run details — its steps, tiles and facts a page away (F9) — then View flow.
+    expect(screen.getAllByTestId(/^run-(sections|open-details)$/u).map((node) => node.props.testID)).toEqual([
       'run-sections',
-      'run-progress',
+      'run-open-details',
     ]);
+    expect(screen.queryByTestId('run-progress')).toBeNull();
+    expect(screen.queryByText('Duration')).toBeNull();
+    expect(screen.queryByTestId('run-fact-Run ID')).toBeNull();
+    expect(screen.getByText('View flow')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('run-open-details'));
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/activity/run-details', params: { runId: 'r1' } });
     const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
     await fireEvent.press(screen.getByTestId('run-sections-0-link-0'));
     expect(open).toHaveBeenCalledWith('https://example.com/northwind');
@@ -736,11 +871,19 @@ describe("a run's page headed by its title and score, its sections the first ope
     open.mockRestore();
   });
 
-  it('a run without both is headed by its id, as before, with no score', async () => {
+  it('a run without both is headed by its id, as before, with no score; Run details still there', async () => {
     await openRun({ title: 'Northwind lease' });
     expect(screen.getByTestId('run-title').props.children).toBe('Run r1');
     expect(screen.queryByTestId('run-score')).toBeNull();
     expect(screen.queryByTestId('run-sections')).toBeNull();
+    expect(screen.getByTestId('run-open-details')).toBeTruthy();
+  });
+
+  it('sections of a flow that names no runs: "DETAILS" over them', async () => {
+    const { items: _none, ...plain } = flowWithItems();
+    await openRun({}, SECTIONS, plain);
+    expect(within(screen.getByTestId('run-sections-block')).getByText('DETAILS')).toBeTruthy();
+    expect(screen.queryByText('CONTRACT DETAILS')).toBeNull();
   });
 });
 

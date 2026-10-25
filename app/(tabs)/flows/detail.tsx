@@ -91,10 +91,14 @@ const ACTION_ICON = { pause: Pause, play: Play, rocket: RocketLaunch } as const;
  * 4. at the bottom its actions: Pause while it is on (Turn on is Step 1's while
  *    it is off), **Edit setup** (Set up again), the webhook address, Archive.
  *
- * **A flow with items** (backend ADR-0046; Round 19, plan §5.1) — the version it
- * runs declares `items` — draws them under its steps (`FlowItems`), and Step 1
- * holds no run form: a run of it names an item, so it starts on the item's page
- * (`/(tabs)/flows/item`). Turn on stays Step 1's while it is off.
+ * **A flow with items** (backend ADR-0046; Round 19, plan §3) — the version it
+ * runs declares `items` — has no DASHBOARD and no STEPS (the owner's build 28
+ * items F2–F3: "Just the jobs and upload job"): under its name, Turn on and
+ * what it is owed while it is off — Step 1's controls standing alone, as for a
+ * flow the catalog no longer lists — then its items (`FlowItems`), then its
+ * actions. A run of it names an item, so it starts on the item's page
+ * (`/(tabs)/flows/item`). ~~Its items under its steps, Turn on in Step 1~~
+ * until build 28.
  *
  * ~~CONNECTIONS~~ ("Remove the connections in the bottom as well") and ~~the
  * move to a newer version~~ ("I also dont want a move to vx number in the
@@ -185,11 +189,13 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
         ? (flows.data.counts.find((c) => c.subscriptionId === flow) ?? null)
         : null;
   const running = (counts?.pending ?? 0) + (counts?.running ?? 0) > 0;
+  // A flow with items draws no tiles, so nothing to read again for them.
+  const tiled = flows.status !== 'ready' || flows.data.subscriptions.find((s) => s.id === flow)?.items === undefined;
   useEffect(() => {
-    if (!running || !focused) return;
+    if (!running || !focused || !tiled) return;
     const timer = setTimeout(() => readStats.current(), FLOW_STATS_REREAD_MS);
     return () => clearTimeout(timer);
-  }, [running, focused, statReads]);
+  }, [running, focused, tiled, statReads]);
 
   const def: FlowView | undefined =
     flows.status === 'ready' ? flows.data.flows.find((f) => f.key === flow) : undefined;
@@ -476,7 +482,8 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
         )}
       </View>
 
-      {/* DASHBOARD: the three tiles open Activity for this flow and that outcome, over all time (24.11.9). */}
+      {/* DASHBOARD: the three tiles open Activity for this flow and that outcome, over all time (24.11.9). None for a flow with items (F2–F3). */}
+      {declaredItems ? null : (
       <View testID="flow-dashboard">
         <SectionLabel>{DASHBOARD_LABEL}</SectionLabel>
         <StatTileRow style={styles.underLabel}>
@@ -502,8 +509,16 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
           ))}
         </StatTileRow>
       </View>
+      )}
 
-      {olderArchived ? null : (
+      {/* A flow with items: no steps — Step 1's controls on a card of their own while there is one (F2–F3). */}
+      {declaredItems && stepOne && (current !== 'Live' || vendorOwed.length > 0 || owed.length > 0) ? (
+        <View testID="flow-turn-on">
+          <SurfaceCard style={styles.alone}>{stepOne}</SurfaceCard>
+        </View>
+      ) : null}
+
+      {olderArchived || declaredItems ? null : (
         <View testID="flow-steps">
           <SectionLabel>{STEPS_LABEL}</SectionLabel>
           <SurfaceCard style={styles.underLabel}>
@@ -632,6 +647,7 @@ const styles = StyleSheet.create({
   stepRow: { paddingVertical: 12, paddingHorizontal: 14 },
   stepLabel: { fontFamily: fonts.medium, fontSize: typeScale.label.fontSize },
   stepAction: { paddingHorizontal: 14, paddingBottom: 14 },
+  alone: { paddingTop: 14 },
   owed: { paddingHorizontal: 14, paddingBottom: 12, fontFamily: fonts.medium, ...typeScale.small },
   actions: { flexDirection: 'row', gap: 10 },
   note: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },

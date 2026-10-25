@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react-nativ
 import React from 'react';
 import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
-import RunDetailScreen from '@/app/(tabs)/activity/run';
+import RunDetailsScreen from '@/app/(tabs)/activity/run-details';
 import ActivityScreen from '@/app/(tabs)/activity/index';
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import FlowEmailScreen from '@/app/(tabs)/flows/email';
@@ -538,7 +538,8 @@ describe("a v4 run's page: steps 2, 4 and 5 (S23–S25)", () => {
     fake.always('GET /v1/workspaces/{workspaceId}/approvals', { approvals: [] });
     fake.always(`GET ${FLOWS}`, (sent) => ({ subscriptions: sent.query?.status === 'archived' ? [] : [added(vendor)] }));
     setMockParams({ runId: RUN });
-    return renderWithProviders(<RunDetailScreen />, signedInSession);
+    // Its steps are on its Run details since build 28 (F9).
+    return renderWithProviders(<RunDetailsScreen />, signedInSession);
   }
   const step = (id: string) =>
     within(screen.getByTestId(`run-step-group:${id}`))

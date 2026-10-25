@@ -1,6 +1,6 @@
 import createClient, { type Client, type Middleware } from 'openapi-fetch';
 import * as Crypto from 'expo-crypto';
-import { File, Paths } from 'expo-file-system';
+import { Directory, File, Paths } from 'expo-file-system';
 
 import type { paths as AutomationPaths } from '@/lib/generated/platform-contracts/automations';
 import type { paths as ConnectionPaths } from '@/lib/generated/platform-contracts/connections';
@@ -247,13 +247,37 @@ export type SavedFile = Pick<File, 'uri' | 'exists' | 'delete'>;
  * straight into the file. `audit:platform` admits exactly one
  * `downloadFileAsync(`, here. The name is the platform's, without any directory
  * it might carry; a refused or lost download is said in words.
+ *
+ * `freshFolder`, for a file drawn in place (build 28's review, finding 5): the
+ * file goes into a folder of its own, made for this one view under a random
+ * name, so a page that reads it can read nothing else; removing it removes the
+ * folder, and a download that fails leaves none behind.
  */
-export async function downloadSignedFile(url: string, filename: string): Promise<SavedFile> {
+export async function downloadSignedFile(
+  url: string,
+  filename: string,
+  options: { freshFolder?: boolean } = {},
+): Promise<SavedFile> {
   const base = filename.split(/[\\/]/u).pop()?.trim() ?? '';
   const name = base && base !== '.' && base !== '..' ? base : 'workspace-export';
+  const folder = options.freshFolder ? new Directory(Paths.cache, `view-${Crypto.randomUUID()}`) : null;
   try {
-    return await File.downloadFileAsync(url, new File(Paths.cache, name), { idempotent: true });
+    folder?.create();
+    const saved = await File.downloadFileAsync(url, new File(folder ?? Paths.cache, name), { idempotent: true });
+    if (!folder) return saved;
+    return {
+      uri: saved.uri,
+      get exists() {
+        return folder.exists;
+      },
+      delete: () => folder.delete(),
+    };
   } catch {
+    try {
+      if (folder?.exists) folder.delete();
+    } catch {
+      // The cache is the system's to clear.
+    }
     throw new FileNotSavedError();
   }
 }
