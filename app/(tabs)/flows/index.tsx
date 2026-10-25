@@ -52,7 +52,8 @@ const NEW_LABEL = 'New';
  * alone at every width since round 23 (~~its word where it fit~~).
  * Under the search, the flows by department (the owner's build 28 item F1):
  * each department's name over its cards, the departments A–Z, then the whole
- * workspace's (`groupFlows`); each card still says its department.
+ * workspace's, each in the catalog's order (`groupFlows`); each card still says
+ * its department.
  * With no live flow in the workspace the screen is the empty standard,
  * whatever is archived (D6, item 9: "like this when no flows even if archive"),
  * with the way to the archived ones under it when there are any.
@@ -86,8 +87,9 @@ export default function FlowsScreen() {
     const labels = scopeLabels(projects);
     return {
       flows: toFlows(subs.subscriptions, catalog.automations, stats.subscriptions, undefined, labels),
-      // Each department's kind, for the list's groups (F1).
+      // Each department's kind, for the list's groups (F1), and the catalog's order within each.
       labels,
+      catalogOrder: catalog.automations.map((entry) => entry.templateId),
       // Archived flows are a page of their own (24.11.8); read here only to
       // know whether the empty screen has any to offer (D6).
       removed: toRemovedFlows(removed.subscriptions, catalog.automations, stats.subscriptions, labels),
@@ -112,7 +114,7 @@ export default function FlowsScreen() {
     if (!q) return true;
     return `${def.name} ${def.desc}`.toLowerCase().includes(q);
   });
-  const groups = flows.status === 'ready' ? groupFlows(visible, flows.data.labels) : [];
+  const groups = flows.status === 'ready' ? groupFlows(visible, flows.data.labels, flows.data.catalogOrder) : [];
 
   if (flows.status === 'loading') return <ScreenLoading topInset={insets.top} />;
   if (flows.status === 'offline') {

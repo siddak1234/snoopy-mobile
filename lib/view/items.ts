@@ -263,3 +263,30 @@ export function runFileRows(
     return { id: file.id, title, label: same > 1 ? `${label} ${at} of ${same}` : label };
   });
 }
+
+/**
+ * The types a file page draws in place, by `contentType` — never by the name
+ * its uploader gave it — each saved under its own extension (build 28's review,
+ * finding 5; the website's `shownInPlace`): a PDF, a JPEG, a PNG. Any other is
+ * downloaded to be opened.
+ */
+const SHOWN_IN_PLACE: Readonly<Record<string, string>> = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png' };
+
+/** The name a file is saved under to be drawn in place, from its type; none for a type not drawn. */
+export function viewName(contentType: string): string | null {
+  const extension = SHOWN_IN_PLACE[contentType.split(';')[0]!.trim().toLowerCase()];
+  return extension ? `view.${extension}` : null;
+}
+
+/** A file's size in words, as the website says it: "24 KB", "1.2 MB". */
+export function sizeInWords(bytes: number): string {
+  if (bytes < 1024) return `${bytes} bytes`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** A file's line under its name, the website's `fileLine`: its format, its pages when measured, its size. */
+export function fileLine(file: Pick<RunFile, 'format' | 'pages' | 'sizeBytes'>): string {
+  const pages = file.pages === null ? null : `${file.pages} ${file.pages === 1 ? 'page' : 'pages'}`;
+  return [file.format, pages, sizeInWords(file.sizeBytes)].filter(Boolean).join(' · ');
+}

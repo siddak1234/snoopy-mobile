@@ -400,9 +400,10 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   asked (round 25, the review's R5c 1).
 - `lib/platform/automations.ts`'s `readItemFile` and `readRunFile` answer a
   file's short-lived signed link, never its bytes (build 28): an item's own file
-  and each file a run's job uploaded. `components/files/file-view.tsx` saves the
-  file into the app's cache and draws it, and its Download hands a fresh link to
-  `shareSignedFile`.
+  and each file a run's job uploaded. `components/files/file-view.tsx` draws a
+  PDF, a JPEG or a PNG by its type, saved in a folder made for that one view
+  (`downloadSignedFile`'s `freshFolder`) for a WebView with no JavaScript, and
+  its Download hands a fresh link to `shareSignedFile`.
 - `hooks/use-resource.tsx` and `components/screen-state.tsx` provide explicit
   loading, offline, platform-error, and empty states.
 - `lib/view/` performs the published wire-to-Nocturne mapping and owns no

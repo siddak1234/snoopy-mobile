@@ -485,6 +485,8 @@ export const FILE_OPENING = 'Opening the file…';
 export const FILE_NOT_OPENED = 'Could not open the file. Try again.';
 /** A file the platform no longer keeps (404): no Try again, which could not succeed. */
 export const FILE_GONE = 'This file is no longer kept.';
+/** A file of a type not drawn in place (only a PDF, a JPEG or a PNG is), the website's words. */
+export const DOWNLOAD_TO_OPEN = 'Download it to open it.';
 /** An item's tiles (the owner's build 28 item F6): its runs, then its verdict words'. */
 export const TOTAL_LABEL = 'Total';
 export const RUN_ID_LABEL = 'Run ID';

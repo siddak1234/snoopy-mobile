@@ -14,15 +14,16 @@ import { useTheme } from '@/hooks/use-theme';
 import { FILE_WORD, errorTitleFor } from '@/lib/content/screen-states';
 import { readRunFile } from '@/lib/platform/automations';
 import { runFileRows } from '@/lib/view/items';
+import { runLabel } from '@/lib/view/runs';
 
 /**
  * One file the run's job uploaded (Round 19, build 28; the owner's item F7:
  * "When clicked it takes you to a page to review the original document that
  * you can download and share like other documents"), opened from the run's
  * "View {file}" row, in Activity's stack, `?runId=&fileId=`. Back, the file's
- * word as its flow names it ("Resume", `runFileRows`) and its name; then the
- * file, drawn in place over the page, with Download (`FileView`,
- * `readRunFile`). The run is read as its page reads it (`useRunDetail`), so
+ * word as its flow names it ("Resume", `runFileRows`) and the run's title (or
+ * "Run {id}"); then the file, drawn in place over the page, its name and its
+ * line, and Download (`FileView`, `readRunFile`). The run is read as its page reads it (`useRunDetail`), so
  * the page leaves when the workspace changes; loading, offline, error and
  * unavailable as every fetching screen.
  */
@@ -53,7 +54,6 @@ export default function RunFileScreen() {
   }
   const files = liveRun.detail.files ?? [];
   const row = runFileRows(files, liveRun.flow?.runInput).find((candidate) => candidate.id === fileId);
-  const file = files.find((candidate) => candidate.id === fileId);
   const run = liveRun.detail.run;
 
   return (
@@ -66,11 +66,9 @@ export default function RunFileScreen() {
           <Text testID="run-file-title" accessibilityRole="header" style={[styles.title, { color: palette.text }]}>
             {row?.title ?? FILE_WORD}
           </Text>
-          {file ? (
-            <Text testID="run-file-name" selectable style={[styles.sub, { color: palette.neutral[400] }]}>
-              {file.filename}
-            </Text>
-          ) : null}
+          <Text testID="run-file-run" selectable style={[styles.sub, { color: palette.neutral[400] }]}>
+            {run.title ?? runLabel(run)}
+          </Text>
         </View>
       </View>
       <View style={styles.body}>

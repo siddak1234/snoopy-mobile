@@ -12,33 +12,47 @@ import { WORKSPACE_CHANGED } from '@/lib/content/refusals';
 import {
   DOWNLOAD_FAILED,
   DOWNLOAD_LABEL,
+  DOWNLOAD_TO_OPEN,
   FILE_GONE,
   FILE_NOT_OPENED,
   FILE_OPENING,
   TRY_AGAIN_LABEL,
 } from '@/lib/content/screen-states';
-import type { RunFileLink } from '@/lib/platform/automations';
+import type { RunFile, RunFileLink } from '@/lib/platform/automations';
 import { downloadSignedFile, type SavedFile } from '@/lib/platform/client';
 import { PlatformError } from '@/lib/platform/problem';
 import { shareSignedFile, signedLink } from '@/lib/platform/signed-file';
+import { fileLine, viewName } from '@/lib/view/items';
 
-type Shown = { kind: 'opening' } | { kind: 'ready'; uri: string } | { kind: 'notOpened' } | { kind: 'gone' };
+type Shown =
+  | { kind: 'opening' }
+  | { kind: 'ready'; uri: string; file: RunFile }
+  | { kind: 'notShown'; file: RunFile }
+  | { kind: 'notOpened' }
+  | { kind: 'gone' };
 
 /**
- * A run's or an item's own file, drawn in place (Round 19, build 28; the
- * owner's items F4 and F7: "Shows the original document downloadable", "review
- * the original document that you can download and share like other
- * documents"), as the run package's page draws its PDF: the platform's
- * short-lived link (`read`: `readItemFile` or `readRunFile`, in the workspace
- * the page loaded) checked (`signedLink`, https only), the file saved into the
- * app's cache under a name of its own (`downloadSignedFile`) and drawn in a
- * WebView from there, the cached copy deleted when the page closes. Over it,
- * Download — a fresh link each press, handed to the share sheet to save or
- * share (`shareSignedFile`, as the package's Download PDF), "Could not
- * download. Try again." when it cannot, refused once the workspace changed.
- * Opening: "Opening the file…"; a link refused or a file not saved: "Could not
- * open the file. Try again." with Try again; a file the store no longer keeps
- * (404): "This file is no longer kept.", no Try again.
+ * A run's or an item's own file, on its page (Round 19, build 28; the owner's
+ * items F4 and F7: "Shows the original document downloadable", "review the
+ * original document that you can download and share like other documents"),
+ * top to bottom as the website draws it: the file, then its name and its line
+ * (`fileLine`: "PDF · 2 pages · 24 KB"), then Download; the page draws the rest.
+ *
+ * The file is drawn in place only when it is a PDF, a JPEG or a PNG by its
+ * `contentType` (`viewName`), never by the name its uploader gave it (build
+ * 28's review, finding 5): the platform's short-lived link (`read`:
+ * `readItemFile` or `readRunFile`, in the workspace the page loaded) checked
+ * (`signedLink`, https only), the file saved as "view.{pdf|jpg|png}" in a
+ * folder made for this one view (`downloadSignedFile`'s `freshFolder`) and
+ * drawn by a WebView with no JavaScript that may read that folder alone; the
+ * folder is removed when the page closes. Any other type says "Download it to
+ * open it." and is not saved. Download takes a fresh link each press and hands
+ * the file to the share sheet to save or share (`shareSignedFile`, as the run
+ * package's Download PDF), "Could not download. Try again." when it cannot,
+ * refused once the workspace changed. Opening: "Opening the file…"; a link
+ * refused or a file not saved: "Could not open the file. Try again." with Try
+ * again; a file the store no longer keeps (404): "This file is no longer
+ * kept.", no Try again and no Download.
  */
 export function FileView({
   testID,
@@ -81,14 +95,19 @@ export function FileView({
     setShown({ kind: 'opening' });
     try {
       const link = await reader.current(workspaceId);
-      const saved = await downloadSignedFile(signedLink(link.downloadUrl), `view-${link.file.filename}`);
+      const name = viewName(link.file.contentType);
+      if (!name) {
+        if (live.current) setShown({ kind: 'notShown', file: link.file });
+        return;
+      }
+      const saved = await downloadSignedFile(signedLink(link.downloadUrl), name, { freshFolder: true });
       if (!live.current) {
         if (saved.exists) saved.delete();
         return;
       }
       forget();
       cached.current = saved;
-      setShown({ kind: 'ready', uri: saved.uri });
+      setShown({ kind: 'ready', uri: saved.uri, file: link.file });
     } catch (caught) {
       if (!live.current) return;
       setShown(caught instanceof PlatformError && caught.status === 404 ? { kind: 'gone' } : { kind: 'notOpened' });
@@ -124,8 +143,53 @@ export function FileView({
   };
 
   const frame = height === undefined ? styles.fill : { height };
+  const file = shown.kind === 'ready' || shown.kind === 'notShown' ? shown.file : null;
+  const note =
+    shown.kind === 'opening'
+      ? FILE_OPENING
+      : shown.kind === 'gone'
+        ? FILE_GONE
+        : shown.kind === 'notShown'
+          ? DOWNLOAD_TO_OPEN
+          : FILE_NOT_OPENED;
   return (
     <View testID={testID} style={[styles.wrap, height === undefined && styles.fill]}>
+      {shown.kind === 'ready' ? (
+        <WebView
+          testID={`${testID}-webview`}
+          source={{ uri: shown.uri }}
+          originWhitelist={['file://*']}
+          allowFileAccess
+          javaScriptEnabled={false}
+          // iOS reads the file from the folder made for this view, and nothing else.
+          allowingReadAccessToURL={shown.uri.slice(0, shown.uri.lastIndexOf('/') + 1)}
+          style={[frame, styles.web, { backgroundColor: palette.bg }]}
+        />
+      ) : (
+        <View testID={`${testID}-${shown.kind}`} style={[frame, styles.state]}>
+          <Text style={[styles.note, { color: palette.neutral[400] }]}>{note}</Text>
+          {shown.kind === 'notOpened' ? (
+            <PillButton
+              testID={`${testID}-retry`}
+              label={TRY_AGAIN_LABEL}
+              variant="secondary"
+              height={40}
+              fontSize={typeScale.body.fontSize}
+              onPress={() => void load()}
+            />
+          ) : null}
+        </View>
+      )}
+      {file ? (
+        <View testID={`${testID}-about`}>
+          <Text testID={`${testID}-name`} selectable style={[styles.name, { color: palette.text }]}>
+            {file.filename}
+          </Text>
+          <Text testID={`${testID}-line`} style={[styles.line, { color: palette.neutral[400] }]}>
+            {fileLine(file)}
+          </Text>
+        </View>
+      ) : null}
       {shown.kind === 'gone' ? null : (
         <PillButton
           testID={`${testID}-download`}
@@ -144,33 +208,6 @@ export function FileView({
           {error}
         </Text>
       ) : null}
-      {shown.kind === 'ready' ? (
-        <WebView
-          testID={`${testID}-webview`}
-          source={{ uri: shown.uri }}
-          originWhitelist={['file://*']}
-          allowFileAccess
-          // iOS reads the file from its own folder, the app's cache, and nothing else.
-          allowingReadAccessToURL={shown.uri.slice(0, shown.uri.lastIndexOf('/') + 1)}
-          style={[frame, styles.web, { backgroundColor: palette.bg }]}
-        />
-      ) : (
-        <View testID={`${testID}-${shown.kind}`} style={[frame, styles.state]}>
-          <Text style={[styles.note, { color: palette.neutral[400] }]}>
-            {shown.kind === 'opening' ? FILE_OPENING : shown.kind === 'gone' ? FILE_GONE : FILE_NOT_OPENED}
-          </Text>
-          {shown.kind === 'notOpened' ? (
-            <PillButton
-              testID={`${testID}-retry`}
-              label={TRY_AGAIN_LABEL}
-              variant="secondary"
-              height={40}
-              fontSize={typeScale.body.fontSize}
-              onPress={() => void load()}
-            />
-          ) : null}
-        </View>
-      )}
     </View>
   );
 }
@@ -181,4 +218,6 @@ const styles = StyleSheet.create({
   web: { borderRadius: 14, overflow: 'hidden' },
   state: { alignItems: 'center', justifyContent: 'center', gap: 12 },
   note: { fontFamily: fonts.regular, ...typeScale.small, textAlign: 'center' },
+  name: { fontFamily: fonts.medium, ...typeScale.label },
+  line: { fontFamily: fonts.regular, ...typeScale.small },
 });

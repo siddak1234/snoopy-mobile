@@ -11,7 +11,7 @@ import type { AutomationItems, AutomationRunInputField, Item, Run, RunFile, Subs
 import type { CatalogEntry } from '@/lib/platform/catalog';
 import { PlatformError } from '@/lib/platform/problem';
 import { resetSnapshot } from '@/lib/platform/snapshot';
-import { itemTiles, runFileRows } from '@/lib/view/items';
+import { fileLine, itemTiles, runFileRows, viewName } from '@/lib/view/items';
 import { fakePlatform, type Answer } from '@/test/fake-platform';
 import { TEST_WORKSPACE, planSubscriptionsPayload, runDetailPayload, sessionAs } from '@/test/platform';
 import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
@@ -109,10 +109,10 @@ function item(overrides: Partial<Item> = {}): Item {
   };
 }
 
-const file = (id: string, filename: string): RunFile => ({
+const file = (id: string, filename: string, contentType = 'application/pdf'): RunFile => ({
   id,
   filename,
-  contentType: 'application/pdf',
+  contentType,
   format: 'PDF',
   sizeBytes: 2048,
   pages: 1,
@@ -130,8 +130,10 @@ beforeEach(() => {
   platformOperation.mockReset();
   resetSnapshot();
   saved.length = 0;
-  downloadSignedFile.mockReset().mockImplementation(async (_url: string, name: string) => {
-    const one = { name, delete: jest.fn(), exists: true, uri: `file:///cache/${name}` };
+  // A view's file in a folder of its own, as `downloadSignedFile`'s `freshFolder` makes one; else the cache.
+  downloadSignedFile.mockReset().mockImplementation(async (_url: string, name: string, options?: { freshFolder?: boolean }) => {
+    const folder = options?.freshFolder ? `view-${saved.length + 1}/` : '';
+    const one = { name, delete: jest.fn(), exists: true, uri: `file:///cache/${folder}${name}` };
     saved.push(one);
     return one;
   });
@@ -163,6 +165,24 @@ describe("build 28's rules (lib/view/items.ts)", () => {
     ]);
     expect(runFileRows([{ id: 'f1' }], undefined)).toEqual([{ id: 'f1', title: 'File', label: 'View file' }]);
     expect(runFileRows(undefined, [CONTRACT_FILE])).toEqual([]);
+  });
+
+  it('a file is drawn in place by its type alone — a PDF, a JPEG, a PNG, each under its own extension — and said in a line', () => {
+    expect(['application/pdf', 'image/jpeg', 'IMAGE/PNG', 'application/pdf; charset=binary'].map(viewName)).toEqual([
+      'view.pdf',
+      'view.jpg',
+      'view.png',
+      'view.pdf',
+    ]);
+    expect(['text/html', 'image/svg+xml', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', ''].map(viewName)).toEqual([
+      null,
+      null,
+      null,
+      null,
+    ]);
+    expect(fileLine({ format: 'PDF', pages: 2, sizeBytes: 24 * 1024 })).toBe('PDF · 2 pages · 24 KB');
+    expect(fileLine({ format: 'JPEG', pages: 1, sizeBytes: 1.2 * 1024 * 1024 })).toBe('JPEG · 1 page · 1.2 MB');
+    expect(fileLine({ format: 'DOCX', pages: null, sizeBytes: 900 })).toBe('DOCX · 900 bytes');
   });
 });
 
@@ -226,14 +246,17 @@ async function openItemFile(answer: () => Answer<typeof ITEM_FILE> | Promise<Ans
 describe("an item's file, on a page of its own (build 28, F4)", () => {
   const policy = file('file-1', 'policy.pdf');
 
-  it('the flow\'s word for it and the item\'s title; the original, saved into the cache under its own name and drawn; then the sections, each closed', async () => {
+  it("the flow's word for it and the item's title; the original drawn, then its name and line, then Download, then the sections, each closed", async () => {
     const { fake } = await openItemFile(() => link(policy));
     expect(screen.getByTestId('item-file-title').props.children).toBe('Policy file');
     expect(screen.getByTestId('item-file-item').props.children).toBe('Leases');
     const web = await screen.findByTestId('item-file-webview');
-    expect(web.props.source).toEqual({ uri: 'file:///cache/view-policy.pdf' });
-    expect(web.props.allowingReadAccessToURL).toBe('file:///cache/');
-    expect(downloadSignedFile).toHaveBeenCalledWith('https://files.example.com/file-1?sig=1', 'view-policy.pdf');
+    expect(web.props.source).toEqual({ uri: 'file:///cache/view-1/view.pdf' });
+    expect(screen.getByTestId('item-file-name').props.children).toBe('policy.pdf');
+    expect(screen.getByTestId('item-file-line').props.children).toBe('PDF · 1 page · 2 KB');
+    expect(
+      screen.getAllByTestId(/^item-(file-webview|file-about|file-download|sections)$/u).map((node) => node.props.testID),
+    ).toEqual(['item-file-webview', 'item-file-about', 'item-file-download', 'item-sections']);
     // The item's own file, in the workspace the page loaded.
     expect(fake.to(ITEM_FILE)[0]!.values).toEqual({ workspaceId: TEST_WORKSPACE, itemId: 'i-1' });
     // Under it, the item's sections as drop-downs, none open.
@@ -246,6 +269,8 @@ describe("an item's file, on a page of its own (build 28, F4)", () => {
   it('"Opening the file…" while it comes; the cached copy is deleted when the page closes', async () => {
     let release: () => void = () => undefined;
     const { view } = await openItemFile(() => new Promise((done) => (release = () => done(link(policy)))));
+    // Nothing named yet.
+    expect(screen.queryByTestId('item-file-name')).toBeNull();
     expect(screen.getByText('Opening the file…')).toBeTruthy();
     await act(async () => release());
     await screen.findByTestId('item-file-webview');
@@ -290,6 +315,35 @@ describe("an item's file, on a page of its own (build 28, F4)", () => {
     await fireEvent.press(screen.getByTestId('item-file-retry'));
     expect(await screen.findByTestId('item-file-webview')).toBeTruthy();
     expect(fake.to(ITEM_FILE)).toHaveLength(3);
+  });
+
+  it("security (build 28's review, finding 5): saved by its type in a folder of its own for each view, never under the uploader's name; no JavaScript, and nothing read past that folder", async () => {
+    // A PDF its uploader named as a web page: the name never decides how it is drawn.
+    const disguised = file('file-2', 'cv.html');
+    const { view } = await openItemFile(() => link(disguised));
+    const web = await screen.findByTestId('item-file-webview');
+    expect(downloadSignedFile).toHaveBeenCalledWith('https://files.example.com/file-2?sig=1', 'view.pdf', { freshFolder: true });
+    expect(web.props.javaScriptEnabled).toBe(false);
+    expect(web.props.allowingReadAccessToURL).toBe('file:///cache/view-1/');
+    expect(web.props.source.uri.startsWith(web.props.allowingReadAccessToURL)).toBe(true);
+    // Viewed again: another folder.
+    await view.unmount();
+    expect(saved[0]!.delete).toHaveBeenCalledTimes(1);
+    resetSnapshot();
+    await openItemFile(() => link(disguised));
+    expect((await screen.findByTestId('item-file-webview')).props.allowingReadAccessToURL).toBe('file:///cache/view-2/');
+  });
+
+  it('a type not drawn in place — a web page, a Word file — says "Download it to open it.", is not saved, and still offers Download', async () => {
+    const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
+    await openItemFile(() => link(file('file-3', 'policy.pdf', 'text/html')));
+    expect(await screen.findByText('Download it to open it.')).toBeTruthy();
+    expect(screen.queryByTestId('item-file-webview')).toBeNull();
+    expect(downloadSignedFile).not.toHaveBeenCalled();
+    expect(screen.getByTestId('item-file-name').props.children).toBe('policy.pdf');
+    await fireEvent.press(screen.getByTestId('item-file-download'));
+    await waitFor(() => expect(share).toHaveBeenCalledTimes(1));
+    share.mockRestore();
   });
 
   it('Back goes back', async () => {
@@ -372,6 +426,15 @@ describe("a run's files (build 28, F7)", () => {
     });
   });
 
+  it('a run of no item — an Invoice Processing run — has no View row, whatever files its job uploaded', async () => {
+    routeRun({ run: runOf({ itemId: undefined }), steps: [], events: [], files: [contract] });
+    setMockParams({ runId: 'r1' });
+    await renderWithProviders(<RunDetailScreen />, sessionAs('member'));
+    await screen.findByTestId('run-open-details');
+    expect(screen.queryByTestId(/^run-open-file-/u)).toBeNull();
+    expect(screen.queryByText('View contract file')).toBeNull();
+  });
+
   it('a run with no files has no View row', async () => {
     routeRun({ run: runOf(), steps: [], events: [] });
     setMockParams({ runId: 'r1' });
@@ -380,16 +443,19 @@ describe("a run's files (build 28, F7)", () => {
     expect(screen.queryByTestId(/^run-open-file-/u)).toBeNull();
   });
 
-  it("its page: the file's word and its name; the file drawn; Download hands it on; the job's own file, in the run's workspace", async () => {
+  it("its page: the file's word and the run's title; the file drawn, its name and line; Download hands it on; the job's own file, in the run's workspace", async () => {
     const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
     const fake = routeRun({ run: runOf(), steps: [], events: [], files: [contract] });
     fake.always(RUN_FILE, link(contract));
     setMockParams({ runId: 'r1', fileId: 'file-9' });
     await renderWithProviders(<RunFileScreen />, sessionAs('member'));
     expect((await screen.findByTestId('run-file-title')).props.children).toBe('Contract file');
-    expect(screen.getByTestId('run-file-name').props.children).toBe('northwind.pdf');
+    // Under the word, the run's title; the file's name and line under the file.
+    expect(screen.getByTestId('run-file-run').props.children).toBe('Northwind lease');
     const web = await screen.findByTestId('run-file-webview');
-    expect(web.props.source).toEqual({ uri: 'file:///cache/view-northwind.pdf' });
+    expect(web.props.source).toEqual({ uri: 'file:///cache/view-1/view.pdf' });
+    expect(screen.getByTestId('run-file-name').props.children).toBe('northwind.pdf');
+    expect(screen.getByTestId('run-file-line').props.children).toBe('PDF · 1 page · 2 KB');
     expect(fake.to(RUN_FILE)[0]!.values).toEqual({ workspaceId: TEST_WORKSPACE, runId: 'r1', fileId: 'file-9' });
     await fireEvent.press(screen.getByTestId('run-file-download'));
     await waitFor(() => expect(share).toHaveBeenCalledWith({ url: 'file:///cache/northwind.pdf' }));

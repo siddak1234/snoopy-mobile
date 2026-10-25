@@ -2438,8 +2438,8 @@ needs no new contract; phase B (the tiles Total / {positive} / {negative}, the i
 | F2: the items A–Z by value, each group A–Z by title; the filter — "All {values}", then the values A–Z; a value chosen lists its items alone | `components/items/flow-items.tsx`; `groupItems`, `itemGroupChoices`, `shownGroup` (`lib/view/items.ts`); `allOf` (`lib/content/screen-states.ts`) | `round19-items` "groups by groupField…", "the filter…" (two), "a flow that groups nothing has no filter" |
 | Decision 7: the upload card's `select` is the drop-down (`components/dropdown.tsx`), never chips | `components/items/item-upload-dialog.tsx` | `round19-items` "the upload card…", "a saved name is sent as itself…" |
 | F5: an item's runs as rows the height of a drop-down's — rank, title, score, arrow; F4: its sections off its page | `components/open-row.tsx` (`OpenRow`); `app/(tabs)/flows/item.tsx`; `rankedRuns` | `round19-items` "its title, its group and state…", "no \"What AI read\" here…" |
-| F7–F9: a run's page — the result line off its top, "{Run word} details" over its sections, the Run details row, View flow | `app/(tabs)/activity/run.tsx`; `runWordDetails` | `round19-items` "the title and the score head it…", "sections of a flow that names no runs…"; `gate24-parity-activity` |
-| F9: Run details — the result line, Duration and Steps done, STEPS (Approve and Deny in the held step), Started, Ended, Trigger, Run ID — for every run | `app/(tabs)/activity/run-details.tsx` (Activity's stack); `hooks/use-run-detail.ts` (`useRunDetail`, the one read both pages share) | `invoice-processing-screens`, `build14-feedback`, `build22-screens`, `gate24-parity-activity`, `tab-screens` (their step, tile, fact and decision tests now on it); `run-workspace` (both pages); `presses-patterns-back-circle`, `presses-patterns-failure-states`; `real-router/run-in-activity` "a run's Run details opens in Activity's stack…" |
+| F7–F9: a run's page — the result line off its top where "{Run word} details" takes its place (kept for a run that read no sections: the parity review's finding 2), "{Run word} details" over its sections, the Run details row, View flow | `app/(tabs)/activity/run.tsx`; `runWordDetails` | `round19-items` "the title and the score head it…", "sections of a flow that names no runs…"; `gate24-parity-activity` |
+| F9: Run details — ~~the result line~~, Duration and Steps done, STEPS (~~Approve and Deny in the held step~~ the held step's state alone: the parity review's findings 1 and 2), Started, Ended, Trigger, Run ID — for every run | `app/(tabs)/activity/run-details.tsx` (Activity's stack); `hooks/use-run-detail.ts` (`useRunDetail`, the one read both pages share) | `invoice-processing-screens`, `build14-feedback`, `build22-screens`, `gate24-parity-activity`, `tab-screens` (their step, tile, fact and decision tests now on it); `run-workspace` (both pages); `presses-patterns-back-circle`, `presses-patterns-failure-states`; `real-router/run-in-activity` "a run's Run details opens in Activity's stack…" |
 
 - **Parity.** The website's same pages (the round's plan §3). **The session's choices, not the
   owner's**, each by the nearest precedent here: under "All {values}" the items stay grouped under
@@ -2447,9 +2447,11 @@ needs no new contract; phase B (the tiles Total / {positive} / {negative}, the i
   heading; a flow with items keeps its actions (Pause, Edit setup, Archive) and its Turn on on a
   card where the steps were, as a flow the catalog no longer lists draws Step 1's controls; the
   Flows cards keep their "Department: {kind}" line under the headings (D4); Run details shows the
-  run's status pill and its result line (how it went, `runResultLine`) above the tiles, and the held
+  run's status pill ~~and its result line (how it went, `runResultLine`) above the tiles, and the held
   step's Approve and Deny move there with the steps — a held run's notification opens Approvals,
-  which decides in one tap; the upload card's pill says "Choose" for a select without a default.
+  which decides in one tap~~ (the parity review's findings 1 and 2, below: the result line and
+  Approve and Deny stay on the run's page, as the website keeps them); the upload card's pill says
+  "Choose" for a select without a default.
 - **Finding for the round's contract (phase B), and for the website lane:** the manifest names a
   `select` field in the singular alone (`AutomationItemField.title`), so "All departments" is the
   title made many here (`allOf`: -y to -ies; -s, -x, -z, -ch, -sh take -es; else -s). A plural in
@@ -2502,10 +2504,11 @@ The round's contract, backend `cf17dbb` (`contract.done`; additive): `items.verd
 
 - **The session's choices, not the owner's:** one Download (the share sheet, to save or to share —
   the run package's Download PDF and Download Excel the precedent) where the plan says "download,
-  share"; the item's tiles are not buttons (no page counts them); "View {file}" for every run that
-  uploaded files, Invoice Processing's included (a run's page is one standard, F9), each named by
-  its flow's `artifact` fields in order and numbered when they share a word; the file drawn 440 pt
-  tall over the item's sections, and over the whole page for a run's.
+  share"; the item's tiles are not buttons (no page counts them); "View {file}" ~~for every run that
+  uploaded files, Invoice Processing's included (a run's page is one standard, F9)~~ for a run of an
+  item (the parity review's finding 3), each named by its flow's `artifact` fields in order and
+  numbered when they share a word; the file drawn 440 pt tall over the item's sections, and over the
+  whole page for a run's.
 - **The contract's snapshot.** `contract.done` names `cf17dbb`, but `clones/backend-contract` was not
   there; this lane cloned the backend clone read-only at that commit into its own folder
   (`r19b/mobile-contract-cf17dbb`), generated from it, and removed it at the end.
@@ -2531,3 +2534,34 @@ Each line broken, its tests red, restored (the file's sha the same), green (`bui
   "its page without a file id…" and `real-router/flow-items` fail.
 - A "View {file}" row without its file id: "a \"View contract file\" row…" and `real-router/flow-items` fail.
 - `readItemFile` reading the item instead of its file: the file page's tests fail.
+
+### Build 28 — the parity review's six findings (2026-10-24)
+
+The single-pass parity review of `6ce14f8` (FAIL, six findings), each fixed in one commit on this
+branch with a test that bites; the website gets the same rules for 1 and 2.
+
+- **1. A held run is decided from its page.** Approve and Deny (`DecisionButtons`, the same guard:
+  a role the approval names; anyone else who can decide; neither unread) are under the held line of
+  `app/(tabs)/activity/run.tsx` again; Run details' held step says where it stands alone. Bites: the
+  decision not drawn on the run's page fails `invoice-processing-screens` "the newest pending
+  approval…" and `build14-feedback` "reads its approvals again…".
+- **2. The result line stays on a run's page** (`runResultLine`) for a run that read no sections —
+  "Failed: …", "Waiting for approval.", "Recorded INV-7" — and is never on Run details. Bites: the
+  line for every run fails `round19-items` "the title and the score head it…"; none for any fails
+  `gate24-parity-activity`, `tab-screens` and `real-router/session-ended` (restored as it was).
+- **3. "View {file}" only for a run of an item** (`Run.itemId`). Bite: rows for every run fails
+  `build28-files` "a run of no item…".
+- **4. Both file pages, top to bottom: the file, its name and line (`fileLine`, the website's
+  words), Download, then the sections**; the run's file page says the run's title under the file's
+  word. Bites: Download over the file, or no line, fail "the flow's word for it…"; the filename as
+  the run file page's subtitle fails "its page: the file's word and the run's title…".
+- **5. Security.** A file is drawn in place only when it is a PDF, a JPEG or a PNG by its
+  `contentType` (`viewName`), saved as "view.{pdf|jpg|png}" in a folder made for that one view
+  (`downloadSignedFile`'s `freshFolder`, removed with the page), never under its uploader's name;
+  the WebView runs no JavaScript and reads that folder alone; any other type says "Download it to
+  open it." and is not saved. Bites: the uploader's name kept, JavaScript on, the cache root
+  readable, a web page drawn, the same folder twice, a failed download's folder kept — each fails
+  `build28-files` "security…", "a type not drawn in place…" or `platform-request` "a file to be
+  drawn goes into a folder…".
+- **6. Within a department, flows in their catalog entries' order** (the website's); "Whole
+  workspace" stays. Bite: the order read fails both `build28-flows` group tests.

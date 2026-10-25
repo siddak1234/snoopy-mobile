@@ -212,16 +212,16 @@ const HELD_AT_VALIDATE: [string, Outcome][] = [
 ];
 
 describe("a run that turns held while its page is open offers Approve and Deny with no reload (round 25, the review's R5c 1)", () => {
-  it('reads its approvals again, past the 15 s snapshot, until the waiting one is listed — then both buttons in the held step', async () => {
+  it('reads its approvals again, past the 15 s snapshot, until the waiting one is listed — then both buttons under the held line of its page', async () => {
     // Running at the first read, its approvals none; held at the next, which
     // the snapshot answers with the same none; the platform lists it since.
     const fake = routeHeld([detail('running', [['receive', 'ok']]), detail('held', HELD_AT_VALIDATE)], [[], [approvalFor('pending')]]);
     setMockParams({ runId: 'run-1' });
-    await renderWithProviders(<RunDetailsScreen />, signedInSession);
+    await renderWithProviders(<RunDetailScreen />, signedInSession);
     expect(await screen.findByText('Running')).toBeTruthy();
-    const step = within(await screen.findByTestId('run-step-step:validate'));
-    expect(await step.findByTestId('run-decision-approve')).toBeTruthy();
-    expect(step.getByTestId('run-decision-deny')).toBeTruthy();
+    const decision = within(await screen.findByTestId('run-decision-block'));
+    expect(await decision.findByTestId('run-decision-approve')).toBeTruthy();
+    expect(decision.getByTestId('run-decision-deny')).toBeTruthy();
     // The approvals were read twice: at the start, then past the snapshot.
     expect(fake.to(APPROVALS)).toHaveLength(2);
     // Listed: no more reads for it, however long the page stays open.

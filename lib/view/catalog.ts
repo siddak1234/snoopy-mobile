@@ -177,10 +177,21 @@ export type FlowGroup = { name: string | null; flows: FlowView[] };
  * The Flows list by department (the owner's build 28 item F1: "sections in the
  * flow page … A-Z by department type"): the departments by their kind, A–Z,
  * then the flows of the whole workspace under "Whole workspace", then any whose
- * department was not read, under no name; each group's flows in the order
- * read. Two departments of one kind are one group, as their cards say the same.
+ * department was not read, under no name; each group's flows in their catalog
+ * entries' order (`catalogOrder`, the templates as the catalog lists them — the
+ * website's order), any the catalog does not list after them, as read. Two
+ * departments of one kind are one group, as their cards say the same.
  */
-export function groupFlows(flows: readonly FlowView[], labels: ReadonlyMap<string, string>): FlowGroup[] {
+export function groupFlows(
+  flows: readonly FlowView[],
+  labels: ReadonlyMap<string, string>,
+  catalogOrder: readonly string[],
+): FlowGroup[] {
+  const position = (flow: FlowView) => {
+    const at = catalogOrder.indexOf(flow.templateId);
+    return at === -1 ? catalogOrder.length : at;
+  };
+  const inCatalogOrder = (group: FlowView[]) => [...group].sort((a, b) => position(a) - position(b));
   const byKind = new Map<string, FlowView[]>();
   const workspace: FlowView[] = [];
   const unread: FlowView[] = [];
@@ -191,9 +202,11 @@ export function groupFlows(flows: readonly FlowView[], labels: ReadonlyMap<strin
     else byKind.set(kind, [...(byKind.get(kind) ?? []), flow]);
   }
   return [
-    ...[...byKind.keys()].sort((a, b) => a.localeCompare(b)).map((name) => ({ name, flows: byKind.get(name)! })),
-    ...(workspace.length > 0 ? [{ name: WHOLE_WORKSPACE, flows: workspace }] : []),
-    ...(unread.length > 0 ? [{ name: null, flows: unread }] : []),
+    ...[...byKind.keys()]
+      .sort((a, b) => a.localeCompare(b))
+      .map((name) => ({ name, flows: inCatalogOrder(byKind.get(name)!) })),
+    ...(workspace.length > 0 ? [{ name: WHOLE_WORKSPACE, flows: inCatalogOrder(workspace) }] : []),
+    ...(unread.length > 0 ? [{ name: null, flows: inCatalogOrder(unread) }] : []),
   ];
 }
 

@@ -190,13 +190,14 @@ describe("a run's page says what the website's says (G18)", () => {
     const page = await renderWithProviders(<RunDetailScreen />, signedInSession);
     expect(await screen.findByText('Invoice check')).toBeTruthy();
     expect(screen.queryByText('Invoice check · v4')).toBeNull();
-    // How it went is off the top of its page (build 28, F8), and its facts are a row away (F9).
-    expect(screen.queryByTestId('run-result')).toBeNull();
+    // How it went, on a line of its own (spec §3.E): a run that read no sections keeps it on its page.
+    expect(screen.getByTestId('run-result').props.children).toBe('Recorded INV-7');
+    // Its facts are a row away (build 28, F9), and its Run details draws no result line.
     expect(screen.queryByTestId('run-fact-Started')).toBeNull();
     await page.unmount();
     await renderWithProviders(<RunDetailsScreen />, signedInSession);
-    // On its Run details: how it went, on a line of its own (spec §3.E), then the facts.
-    expect((await screen.findByTestId('run-result')).props.children).toBe('Recorded INV-7');
+    await screen.findByTestId('run-fact-Started');
+    expect(screen.queryByTestId('run-result')).toBeNull();
     expect(fact('Started')).toEqual(['Started', 'Oct 7, 2026, 9:05 AM']);
     expect(fact('Ended')).toEqual(['Ended', 'Oct 7, 2026, 9:06 AM']);
     expect(fact('Trigger')).toEqual(['Trigger', 'Triggered']);

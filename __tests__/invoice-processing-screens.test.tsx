@@ -936,9 +936,10 @@ describe("a run's Run details — every step from the start, a live tracker (spe
         ['ask-approval', 'held', 'Waiting for approval', 3, 'Document 2: the total can\'t be read.'],
       ]),
     );
-    expect(await screen.findByText('Waiting for approval.')).toBeTruthy();
-    const done = within(screen.getByTestId('run-step-group:done'));
+    const done = within(await screen.findByTestId('run-step-group:done'));
     expect(done.getByText("Waiting for approval: Document 2: the total can't be read.")).toBeTruthy();
+    // How it went is the run page's line, not its Run details' (build 28's review, finding 2).
+    expect(screen.queryByTestId('run-result')).toBeNull();
     expect(done.getByTestId(/^phosphor-react-native-hand-palm-/u).props.width).toBe(24);
     expect(within(screen.getByTestId('run-step-group:checked')).getByText(/^Done · /u)).toBeTruthy();
   });
@@ -1000,20 +1001,26 @@ const HELD: Reported[] = [
  * Approve / Deny inside step 4 (round 24 P6; the owner's build 23 F7–F10: "It
  * should be step 4 approve or deny", "Deny should be red", "not many clicks").
  */
-describe("a held run's step 4, on its Run details: Approve or Deny there (round 24, P6; build 28, F9)", () => {
+describe("a held run is decided from its page: Approve or Deny under the held line (round 24, P6; build 28's review, finding 1)", () => {
   const runReads = () =>
     platformOperation.mock.calls.filter((call: unknown[]) => String(call[0]).endsWith(`/runs/${RUN_ID}`)).length;
 
-  it('the newest pending approval and a role it names: both buttons in the held step, Deny the danger pill; Approve sends the decision with a key, then reads the run again', async () => {
-    await openRunDetails(ipRun('held', HELD), {
+  it('the newest pending approval and a role it names: both buttons under "Waiting for approval.", Deny the danger pill; Approve sends the decision with a key, then reads the run again', async () => {
+    await openRun(ipRun('held', HELD), {
       // An older decision of the same job, then the one that waits: the newest decides.
       approvals: { approvals: [runApproval('ap-old', 'rejected', '2026-10-14T19:00:00Z'), runApproval('ap-new', 'pending', '2026-10-14T20:03:00Z')] as never },
       role: 'admin',
     });
-    const step = within(await screen.findByTestId('run-step-group:done'));
-    expect(step.getByText("Waiting for approval: Document 2: the total can't be read.")).toBeTruthy();
-    expect(step.getByText('Approve')).toBeTruthy();
-    expect((StyleSheet.flatten(step.getByText('Deny').props.style) as { color?: string }).color).toBe(nocturneDark.danger);
+    expect((await screen.findByTestId('run-result')).props.children).toBe('Waiting for approval.');
+    const decision = within(await screen.findByTestId('run-decision-block'));
+    expect(decision.getByText('Approve')).toBeTruthy();
+    expect((StyleSheet.flatten(decision.getByText('Deny').props.style) as { color?: string }).color).toBe(nocturneDark.danger);
+    // Under the held line, before the Run details row.
+    expect(screen.getAllByTestId(/^run-(result|decision-block|open-details)$/u).map((node) => node.props.testID)).toEqual([
+      'run-result',
+      'run-decision-block',
+      'run-open-details',
+    ]);
     expect(screen.queryByTestId('run-deciders')).toBeNull();
 
     const before = runReads();
@@ -1023,10 +1030,19 @@ describe("a held run's step 4, on its Run details: Approve or Deny there (round 
     expect(decideApproval).toHaveBeenCalledTimes(1);
   });
 
-  it('while it saves both wait and the pressed one says "Denying…"; refused, the step says why and offers both again', async () => {
+  it('its Run details: the held step says where it stands, and offers no buttons', async () => {
+    await openRunDetails(ipRun('held', HELD), { approvals: { approvals: [runApproval('ap-1', 'pending', '2026-10-14T20:03:00Z')] as never }, role: 'owner' });
+    const step = within(await screen.findByTestId('run-step-group:done'));
+    expect(step.getByText("Waiting for approval: Document 2: the total can't be read.")).toBeTruthy();
+    expect(screen.queryByText('Approve')).toBeNull();
+    expect(screen.queryByText('Deny')).toBeNull();
+    expect(screen.queryByTestId('run-deciders')).toBeNull();
+  });
+
+  it('while it saves both wait and the pressed one says "Denying…"; refused, the page says why and offers both again', async () => {
     let refuse: (error: Error) => void = () => undefined;
     (decideApproval as jest.Mock).mockImplementationOnce(() => new Promise((_resolve, reject) => (refuse = reject)));
-    await openRunDetails(ipRun('held', HELD), { approvals: { approvals: [runApproval('ap-1', 'pending', '2026-10-14T20:03:00Z')] as never }, role: 'owner' });
+    await openRun(ipRun('held', HELD), { approvals: { approvals: [runApproval('ap-1', 'pending', '2026-10-14T20:03:00Z')] as never }, role: 'owner' });
     await fireEvent.press(await screen.findByTestId('run-decision-deny'));
     expect(decideApproval).toHaveBeenCalledWith(TEST_WORKSPACE, 'ap-1', 'rejected', 'key');
     expect(screen.getByText('Denying…')).toBeTruthy();
@@ -1038,7 +1054,7 @@ describe("a held run's step 4, on its Run details: Approve or Deny there (round 
   });
 
   it('a role the approval does not name: who can decide, and no buttons', async () => {
-    await openRunDetails(ipRun('held', HELD), {
+    await openRun(ipRun('held', HELD), {
       approvals: { approvals: [runApproval('ap-1', 'pending', '2026-10-14T20:03:00Z', ['owner'])] as never },
       role: 'member',
     });
@@ -1048,7 +1064,7 @@ describe("a held run's step 4, on its Run details: Approve or Deny there (round 
     expect(screen.queryByText('Deny')).toBeNull();
   });
 
-  it('approvals that cannot be read: the page still draws, the step says why it waits, no buttons', async () => {
+  it('approvals that cannot be read: the page still draws and says it waits, no buttons', async () => {
     routePlatform(platformOperation, { '/automations': { automations: [invoiceProcessingV3Entry()], categories: ['All', 'Accounting'] } });
     const routed = platformOperation.getMockImplementation()!;
     const detail = ipRun('held', HELD);
@@ -1057,18 +1073,21 @@ describe("a held run's step 4, on its Run details: Approve or Deny there (round 
       return path.endsWith(`/runs/${RUN_ID}`) ? Promise.resolve(detail) : routed(path, ...rest);
     });
     setMockParams({ runId: RUN_ID });
-    await renderWithProviders(<RunDetailsScreen />, signedInSession);
-    const step = within(await screen.findByTestId('run-step-group:done'));
-    expect(step.getByText("Waiting for approval: Document 2: the total can't be read.")).toBeTruthy();
+    await renderWithProviders(<RunDetailScreen />, signedInSession);
+    expect(await screen.findByTestId('run-result')).toBeTruthy();
     expect(screen.queryByText('Approve')).toBeNull();
     expect(screen.queryByTestId('run-deciders')).toBeNull();
   });
 
-  it('denied: step 4 says Denied, the result line too — no buttons', async () => {
-    await openRunDetails(ipRun('held', HELD), { approvals: { approvals: [runApproval('ap-1', 'rejected', '2026-10-14T20:03:00Z')] as never }, role: 'owner' });
-    const step = within(await screen.findByTestId('run-step-group:done'));
-    expect(step.getByText('Denied')).toBeTruthy();
-    expect(screen.getByTestId('run-result').props.children).toBe('Denied');
+  it('denied: the line on its page says Denied, step 4 on its Run details too — no buttons', async () => {
+    const options = { approvals: { approvals: [runApproval('ap-1', 'rejected', '2026-10-14T20:03:00Z')] as never }, role: 'owner' as const };
+    const page = await openRun(ipRun('held', HELD), options);
+    expect((await screen.findByTestId('run-result')).props.children).toBe('Denied');
+    expect(screen.queryByText('Approve')).toBeNull();
+    await page.unmount();
+    resetSnapshot();
+    await openRunDetails(ipRun('held', HELD), options);
+    expect(within(await screen.findByTestId('run-step-group:done')).getByText('Denied')).toBeTruthy();
     expect(screen.queryByText('Approve')).toBeNull();
   });
 });

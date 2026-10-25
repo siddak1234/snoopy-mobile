@@ -16,20 +16,17 @@ import { SectionLabel } from '@/components/nocturne/section-label';
 import { StatCard } from '@/components/nocturne/stat-card';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
-import { DecisionButtons } from '@/components/runs/decision-buttons';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { Text } from '@/components/text';
 import { em, fonts, iconSize, layout, status, typeScale } from '@/constants/theme';
-import { useApprovalDecision } from '@/hooks/use-approval-decision';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { busyBody } from '@/hooks/use-resource';
 import { useRunDetail } from '@/hooks/use-run-detail';
 import { useTheme } from '@/hooks/use-theme';
 import { RUN_DETAILS_LABEL, STEPS_LABEL, errorTitleFor } from '@/lib/content/screen-states';
 import { duration } from '@/lib/view/format';
-import { decidersLine, decides } from '@/lib/view/roles';
 import { statusLabel, type StatusPillLabel } from '@/lib/view/status';
-import { jobApproval, runLabel, runResultLine, toRunFacts, toRunStats, type TrackerRow } from '@/lib/view/runs';
+import { runLabel, toRunFacts, toRunStats, type TrackerRow } from '@/lib/view/runs';
 
 /**
  * A working step's icon turns (round 23, A4 — the owner's build 22 item 7: the
@@ -64,9 +61,11 @@ function StepSpinner({ children }: { children: React.ReactNode }) {
  * shoukd show all the steps and a live tracker of which ones are done"): "2 ·
  * Read", its state's icon at 24 and its state in words — Waiting, Working…,
  * Done and when, Waiting for approval and why, the run's failure, Skipped or
- * Stopped — never a step's own summary and never a step id (B6).
+ * Stopped — never a step's own summary and never a step id (B6). A held step
+ * says where it stands; its Approve and Deny are on the run's page (round 24
+ * P6; build 28's review).
  */
-function TrackerStep({ row, divider, children }: { row: TrackerRow; divider: boolean; children?: React.ReactNode }) {
+function TrackerStep({ row, divider }: { row: TrackerRow; divider: boolean }) {
   const { palette } = useTheme();
   const tone =
     row.tone === 'ok'
@@ -97,8 +96,6 @@ function TrackerStep({ row, divider, children }: { row: TrackerRow; divider: boo
         {row.sub ? (
           <Text style={[styles.trackerSub, { color: row.tone === 'muted' ? palette.neutral[500] : tone }]}>{row.sub}</Text>
         ) : null}
-        {/* The held step's decision, in the step (round 24 P6). */}
-        {children}
       </View>
     </View>
   );
@@ -111,19 +108,18 @@ function TrackerStep({ row, divider, children }: { row: TrackerRow; divider: boo
  * 19 plan §3): its own page in Activity's stack, `?runId=`, opened from the
  * "Run details" row of the run's page, which reads the run the same way
  * (`useRunDetail`: bound to the workspace it was opened in, read again while it
- * goes). Top to bottom: Back, "Run details", the run's name and its status; how it went
- * (`runResultLine`, off the run's page since build 28); the tiles — Duration
- * and Steps done; STEPS, every step from the start, live, the held step's
- * Approve and Deny in it (round 24 P6); then its facts — Started, Ended,
- * Trigger, Run ID (the website's, G18).
+ * goes). Top to bottom: Back, "Run details", the run's name and its status;
+ * the tiles — Duration and Steps done; STEPS, every step from the start, live,
+ * a held step saying where it stands (its Approve and Deny, and how the run
+ * went, stay on the run's page); then its facts — Started, Ended, Trigger, Run
+ * ID (the website's, G18).
  */
 export default function RunDetailsScreen() {
   const { palette } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { runId } = useLocalSearchParams<{ runId?: string }>();
-  const { openedIn, detail, liveRun, tracker } = useRunDetail(runId);
-  const decisions = useApprovalDecision(openedIn);
+  const { detail, liveRun, tracker } = useRunDetail(runId);
 
   if (detail.status === 'loading') return <ScreenLoading tiles topInset={insets.top} />;
   if (detail.status === 'offline') {
@@ -145,49 +141,9 @@ export default function RunDetailsScreen() {
   }
 
   const run = liveRun.detail.run;
-  const result = runResultLine(run, liveRun.approvals);
   const stats = toRunStats(tracker, duration(run.startedAt, run.endedAt));
   const facts = toRunFacts(run);
   const name = run.title !== undefined && run.score !== undefined ? run.title : runLabel(run);
-
-  /**
-   * Approve / Deny inside the held step (round 24 P6; the owner's build 23
-   * F7–F10: "It should be easy for a user to approve or deny not many
-   * clicks"): the held step of a job whose newest approval waits shows the pair
-   * to a role the approval names; to anyone else, who can decide; with the
-   * approvals or the role unread, neither — the step says why it waits. One
-   * tap, then the page reads the run again at once: approved, it is running
-   * again under the same id; denied, the step says Denied.
-   */
-  const approval = run.status === 'held' ? jobApproval(run, liveRun.approvals) : undefined;
-  const waiting = approval?.status === 'pending' && liveRun.approvalsRead ? approval : undefined;
-  const decision = (() => {
-    if (!waiting || liveRun.role === undefined || liveRun.role === null) return null;
-    if (!decides(liveRun.role, waiting.eligibleRoles)) {
-      return (
-        <Text testID="run-deciders" style={[styles.decisionNote, { color: palette.neutral[400] }]}>
-          {decidersLine(waiting.eligibleRoles)}
-        </Text>
-      );
-    }
-    const error = decisions.errorFor(waiting.id);
-    return (
-      <View style={styles.decision}>
-        <DecisionButtons
-          testID="run-decision"
-          busy={decisions.busyFor(waiting.id)}
-          onDecide={async (choice) => {
-            if (await decisions.decide(waiting.id, choice)) detail.refresh();
-          }}
-        />
-        {error ? (
-          <Text accessibilityRole="alert" style={[styles.decisionNote, { color: status.err }]}>
-            {error}
-          </Text>
-        ) : null}
-      </View>
-    );
-  })();
 
   return (
     <ScrollView
@@ -209,12 +165,6 @@ export default function RunDetailsScreen() {
         </View>
       </View>
 
-      {result ? (
-        <Text testID="run-result" style={[styles.result, { color: palette.text }]}>
-          {result}
-        </Text>
-      ) : null}
-
       <View style={styles.statsRow}>
         {stats.map((s) => (
           <StatCard key={s.label} value={s.value} label={s.label} size="sm" />
@@ -225,9 +175,7 @@ export default function RunDetailsScreen() {
         <SectionLabel>{STEPS_LABEL}</SectionLabel>
         <SurfaceCard style={styles.sectionCard}>
           {tracker.map((row, i) => (
-            <TrackerStep key={row.id} row={row} divider={i < tracker.length - 1}>
-              {row.state === 'held' ? decision : null}
-            </TrackerStep>
+            <TrackerStep key={row.id} row={row} divider={i < tracker.length - 1} />
           ))}
         </SurfaceCard>
       </View>
@@ -280,10 +228,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     fontSize: typeScale.small.fontSize,
   },
-  result: {
-    fontFamily: fonts.regular,
-    ...typeScale.body,
-  },
   statsRow: {
     flexDirection: 'row',
     gap: 10,
@@ -312,15 +256,6 @@ const styles = StyleSheet.create({
     marginTop: 1,
     fontFamily: fonts.regular,
     fontSize: typeScale.small.fontSize,
-  },
-  decision: {
-    marginTop: 10,
-    gap: 6,
-  },
-  decisionNote: {
-    marginTop: 6,
-    fontFamily: fonts.regular,
-    ...typeScale.small,
   },
   // A label and its value on one line; a long value — the run's id — wraps under its own column.
   fieldRow: {
