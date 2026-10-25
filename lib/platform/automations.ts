@@ -168,9 +168,11 @@ export function readItem(workspaceId: string, itemId: string): Promise<{ item: I
 
 /**
  * The file an item was made from, behind a short-lived signed link (Round 19,
- * build 28): a reference and its link, never its bytes — what a page opens,
- * saves or hands to the share sheet. Any member, as the item is read; 404 for
- * another workspace's item or a file the store no longer keeps.
+ * build 28): a reference and its link, never its bytes. The link downloads the
+ * file as an attachment, so a page that shows it or hands it to the share sheet
+ * fetches the bytes from it itself (`downloadSignedFile`). Any member, as the
+ * item is read; 404 for another workspace's item or a file the store no longer
+ * keeps.
  */
 export function readItemFile(workspaceId: string, itemId: string): Promise<RunFileLink> {
   return platformOperation(`/v1/workspaces/${workspaceId}/items/${itemId}/file`, ({ automations }, signal) =>
@@ -183,8 +185,9 @@ export function readItemFile(workspaceId: string, itemId: string): Promise<RunFi
 
 /**
  * One of a job's uploaded files (`RunDetail.files`' `id`), behind a short-lived
- * signed link (Round 19, build 28), never its bytes. Anyone who may read the
- * run; 404 for another workspace's run or a file that is not this job's.
+ * signed link (Round 19, build 28), never its bytes — an attachment's link, as
+ * `readItemFile`'s is. Anyone who may read the run; 404 for another workspace's
+ * run or a file that is not this job's.
  */
 export function readRunFile(workspaceId: string, runId: string, fileId: string): Promise<RunFileLink> {
   return platformOperation(

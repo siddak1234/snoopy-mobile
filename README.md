@@ -400,7 +400,8 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   asked (round 25, the review's R5c 1).
 - `lib/platform/automations.ts`'s `readItemFile` and `readRunFile` answer a
   file's short-lived signed link, never its bytes (build 28): an item's own file
-  and each file a run's job uploaded. `components/files/file-view.tsx` draws a
+  and each file a run's job uploaded. The link downloads the file as an
+  attachment, so the app fetches the bytes from it itself to show or share it. `components/files/file-view.tsx` draws a
   PDF, a JPEG or a PNG by its type, saved in a folder made for that one view
   (`downloadSignedFile`'s `freshFolder`) for a WebView with no JavaScript, and
   its Download hands a fresh link to `shareSignedFile`.
