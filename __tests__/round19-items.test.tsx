@@ -151,6 +151,8 @@ function item(id: string, overrides: Partial<Item> = {}): Item {
     fields: { region: 'North', name: `Policy ${id}` },
     status: 'ready',
     runCount: 0,
+    positiveCount: 0,
+    negativeCount: 0,
     topScore: null,
     createdAt: '2026-10-20T10:00:00Z',
     createdByUserId: null,

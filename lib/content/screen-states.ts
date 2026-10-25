@@ -468,6 +468,25 @@ export const PACKAGE_PREPARING = 'Preparing the package…';
  */
 export const PACKAGE_NOT_OPENED = 'Could not open the package. Try again.';
 export const DOWNLOAD_FAILED = 'Could not download. Try again.';
+/**
+ * A run's or an item's own file, on a page of its own (Round 19, build 28; the
+ * owner's items F4 and F7: "Shows the original document downloadable", "review
+ * the original document that you can download and share like other
+ * documents"): "View resume" opens it, drawn in place, and Download hands it to
+ * the share sheet — save or share — as the run package's downloads do.
+ */
+export function viewFileLabel(title: string): string {
+  return `View ${inSentence(title)}`;
+}
+/** A file field's word when its flow names none. */
+export const FILE_WORD = 'File';
+export const DOWNLOAD_LABEL = 'Download';
+export const FILE_OPENING = 'Opening the file…';
+export const FILE_NOT_OPENED = 'Could not open the file. Try again.';
+/** A file the platform no longer keeps (404): no Try again, which could not succeed. */
+export const FILE_GONE = 'This file is no longer kept.';
+/** An item's tiles (the owner's build 28 item F6): its runs, then its verdict words'. */
+export const TOTAL_LABEL = 'Total';
 export const RUN_ID_LABEL = 'Run ID';
 
 /**

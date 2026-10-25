@@ -1,13 +1,23 @@
 import {
+  FILE_WORD,
   ITEM_NOT_READ,
   ITEM_READING,
   ITEM_READY,
   OTHER_LABEL,
+  TOTAL_LABEL,
   allOf,
   countOf,
   topScoreOf,
+  viewFileLabel,
 } from '@/lib/content/screen-states';
-import type { AutomationItemField, AutomationItems, Item, Run } from '@/lib/platform/automations';
+import type {
+  AutomationItemField,
+  AutomationItems,
+  AutomationRunInputField,
+  Item,
+  Run,
+  RunFile,
+} from '@/lib/platform/automations';
 import { statusLabel } from '@/lib/view/status';
 
 /**
@@ -205,4 +215,51 @@ export function rankedRuns(runs: readonly Run[]): RankedRunView[] {
 /** Whether a page showing these is read again: an item still being read, or a run still going. */
 export function itemsStillGoing(items: readonly Pick<Item, 'status'>[], runs: readonly Pick<Run, 'status'>[] = []): boolean {
   return items.some((item) => item.status === 'reading') || runs.some((run) => run.status === 'pending' || run.status === 'running');
+}
+
+/** One of an item's tiles (the owner's build 28 item F6): its count, its word, and its tone. */
+export type ItemTile = { key: 'total' | 'positive' | 'negative'; label: string; value: string; tone: 'text' | 'ok' | 'err' };
+
+/**
+ * An item's tiles (F6: "total candidates, green … the hireable ones and red …
+ * do not hire"): Total — its runs — then its `positiveCount` and
+ * `negativeCount` in the flow's own `verdictWords`, green and red. None for a
+ * flow whose items declare no verdict words: it gives no verdict to count.
+ */
+export function itemTiles(
+  item: Pick<Item, 'runCount' | 'positiveCount' | 'negativeCount'>,
+  verdictWords: AutomationItems['verdictWords'],
+): ItemTile[] {
+  if (!verdictWords) return [];
+  return [
+    { key: 'total', label: TOTAL_LABEL, value: String(item.runCount), tone: 'text' },
+    { key: 'positive', label: verdictWords.positive, value: String(item.positiveCount), tone: 'ok' },
+    { key: 'negative', label: verdictWords.negative, value: String(item.negativeCount), tone: 'err' },
+  ];
+}
+
+/** One "View {file}" row of a run's page: the file it opens and its words. */
+export type RunFileRow = { id: string; label: string; title: string };
+
+/**
+ * A run's files as its page offers them (the owner's build 28 item F7: "the
+ * first section should be the view resume button"): one row per file the job
+ * uploaded (`RunDetail.files`, in upload order), each named by its flow's file
+ * field — the run's `artifact` fields of `runInput`, in order, the first for any
+ * file past them; "File" when the flow names none — "View resume"; files that
+ * share a word say which they are, "View photo 1 of 2".
+ */
+export function runFileRows(
+  files: readonly Pick<RunFile, 'id'>[] | undefined,
+  runInput: readonly Pick<AutomationRunInputField, 'control' | 'title'>[] | undefined,
+): RunFileRow[] {
+  const fields = (runInput ?? []).filter((field) => field.control === 'artifact');
+  const titles = (files ?? []).map((_, index) => (fields[index] ?? fields[0])?.title ?? FILE_WORD);
+  return (files ?? []).map((file, index) => {
+    const title = titles[index]!;
+    const same = titles.filter((other) => other === title).length;
+    const at = titles.slice(0, index + 1).filter((other) => other === title).length;
+    const label = viewFileLabel(title);
+    return { id: file.id, title, label: same > 1 ? `${label} ${at} of ${same}` : label };
+  });
 }

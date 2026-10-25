@@ -2486,3 +2486,48 @@ Each line broken, its tests red, restored (the file's sha the same), green (`rou
 - `useRunDetail` staying on a workspace switch: `run-workspace` fails on both pages.
 - The Flows headings not drawn: `build28-flows`' screen test fails.
 - `no-flow-code` stays green.
+
+## Round 19 — build 28's feedback: the screens, phase B (2026-10-24)
+
+The round's contract, backend `cf17dbb` (`contract.done`; additive): `items.verdictWords`,
+`Run.verdict`, `Item.positiveCount`, `negativeCount` and `file`, `readItemFile` and `readRunFile`
+(each a `RunFileLink`, never bytes). Generated here from a read-only snapshot of that commit
+(`automations.d.ts` `85eb8c1d…`, `platform.d.ts` `1ae241e9…`, `connections.d.ts` unchanged).
+
+| What | Where | Held by (`build28-files` unless named) |
+| --- | --- | --- |
+| F6: an item's tiles — Total, then its verdict words' counts, green and red; none without verdict words | `app/(tabs)/flows/item.tsx`; `itemTiles` (`lib/view/items.ts`) | "an item's tiles…", "its tiles — Total…", "no tiles…" |
+| F4: the "{File title}" row, and the item's file page — the original, Download, then its sections closed | `app/(tabs)/flows/item-file.tsx` (Flows' stack); `components/files/file-view.tsx` (`FileView`); `readItemFile` | "an item's file, on a page of its own" (six); `presses-patterns-failure-states`; `real-router/flow-items` |
+| F7: "View {file}" rows under a run's name, each to its file's page | `app/(tabs)/activity/run.tsx`, `app/(tabs)/activity/run-file.tsx` (Activity's stack); `runFileRows`; `readRunFile` | "a run's files" (four), "a run's files: named…"; `presses-patterns-failure-states`; `real-router/flow-items` |
+
+- **The session's choices, not the owner's:** one Download (the share sheet, to save or to share —
+  the run package's Download PDF and Download Excel the precedent) where the plan says "download,
+  share"; the item's tiles are not buttons (no page counts them); "View {file}" for every run that
+  uploaded files, Invoice Processing's included (a run's page is one standard, F9), each named by
+  its flow's `artifact` fields in order and numbered when they share a word; the file drawn 440 pt
+  tall over the item's sections, and over the whole page for a run's.
+- **The contract's snapshot.** `contract.done` names `cf17dbb`, but `clones/backend-contract` was not
+  there; this lane cloned the backend clone read-only at that commit into its own folder
+  (`r19b/mobile-contract-cf17dbb`), generated from it, and removed it at the end.
+- **CI's `Deployed contract` job is red by design** until the platform releases `cf17dbb`'s
+  contract; `platform-requirement.json` stays `{"aheadOfDeployed": false}`.
+- **NOT OBSERVED** (no simulator or device): a Word file or a photo in the file pages' WebView on
+  iOS, Android's WebView with a PDF (the package page's limit), the share sheet.
+
+### Guards proved to bite, build 28 phase B (2026-10-24)
+
+Each line broken, its tests red, restored (the file's sha the same), green (`build28-files` unless named):
+- `itemTiles` with the positive tile not green, or tiles without verdict words; the item page's tiles
+  uncoloured: the tiles' rule and page tests fail.
+- `runFileRows` naming every file by the first field, or not numbering files that share a word:
+  "a run's files: named…" fails.
+- The "{File title}" row opening another item: its page test and `real-router/flow-items` fail.
+- The item's sections open on its file's page: "the flow's word for it…" fails.
+- `FileView` without `signedLink`, retrying a 404, handing nothing to the share sheet, keeping the
+  cached file on close: "a link that is not https…", "a file the store no longer keeps…",
+  "Download asks for a fresh link…", "\"Opening the file…\"…" fail (each).
+- The item's file page reading another item's file, the run's file page another file, its title not
+  the field's word, drawn without a file id: "the flow's word for it…", "its page: the file's word…",
+  "its page without a file id…" and `real-router/flow-items` fail.
+- A "View {file}" row without its file id: "a \"View contract file\" row…" and `real-router/flow-items` fail.
+- `readItemFile` reading the item instead of its file: the file page's tests fail.

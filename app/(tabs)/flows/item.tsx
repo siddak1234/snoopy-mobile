@@ -8,9 +8,11 @@ import { StartRun, canStartRun } from '@/components/automations/start-run';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { SectionLabel } from '@/components/nocturne/section-label';
+import { StatCard } from '@/components/nocturne/stat-card';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { OpenRow } from '@/components/open-row';
 import { Pressable } from '@/components/pressable';
+import { StatTileRow } from '@/components/stat-tile-button';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { Text } from '@/components/text';
 import { em, fonts, iconSize, layout, status, typeScale, withAlpha } from '@/constants/theme';
@@ -35,7 +37,7 @@ import { archiveItem, readItem } from '@/lib/platform/automations';
 import { readCatalog } from '@/lib/platform/catalog';
 import { PlatformNotConfiguredError } from '@/lib/platform/problem';
 import { readRemovedSubscriptionsOrNone, readSubscriptions } from '@/lib/platform/runs';
-import { itemStatusLine, itemsStillGoing, rankedRuns } from '@/lib/view/items';
+import { itemStatusLine, itemTiles, itemsStillGoing, rankedRuns } from '@/lib/view/items';
 import { administers } from '@/lib/view/roles';
 import { RUN_REREAD_MS } from '@/lib/view/runs';
 
@@ -43,7 +45,11 @@ import { RUN_REREAD_MS } from '@/lib/view/runs';
  * One of a flow's items (backend ADR-0046; Round 19, plan §5.3) — the website's
  * `/account/flows/[subscriptionId]/items/[itemId]`, opened from a row on its
  * flow's page. Top to bottom: its title; its group's value and where it is
- * ("{group} · Ready", "Reading…", "Couldn't read: …"); for an owner or admin,
+ * ("{group} · Ready", "Reading…", "Couldn't read: …"); its tiles — Total, then
+ * its `positiveCount` and `negativeCount` in the flow's `verdictWords`, green
+ * and red (`itemTiles`; the owner's build 28 item F6), for a flow that names
+ * them; the "{File title}" row (`items.file.title`, F4), which opens the file
+ * it was made from and its sections (`/(tabs)/flows/item-file`); for an owner or admin,
  * "Add {one of its runs}" — the flow's run fields and Start, the run naming
  * this item (`createRun`'s `itemId`), offered once it is read, while it is not
  * archived and its flow can run; its runs as the platform ranks them, numbered,
@@ -157,6 +163,7 @@ export default function ItemScreen() {
     subscription !== undefined &&
     canStartRun(subscription, entry, subscription.status === 'live');
   const ranked = rankedRuns(runs);
+  const tiles = itemTiles(item, declared.verdictWords);
 
   return (
     <ScrollView
@@ -176,6 +183,29 @@ export default function ItemScreen() {
           </Text>
         </View>
       </View>
+
+      {tiles.length > 0 ? (
+        <StatTileRow testID="item-tiles">
+          {tiles.map((tile) => (
+            <StatCard
+              key={tile.key}
+              value={tile.value}
+              label={tile.label}
+              size="sm"
+              valueColor={tile.tone === 'ok' ? status.ok : tile.tone === 'err' ? status.err : undefined}
+            />
+          ))}
+        </StatTileRow>
+      ) : null}
+
+      {/* The file it was made from, and what AI read in it, a tap away (F4). */}
+      <SurfaceCard>
+        <OpenRow
+          testID="item-open-file"
+          title={declared.file.title}
+          onPress={() => router.push({ pathname: '/(tabs)/flows/item-file', params: { item: item.id } })}
+        />
+      </SurfaceCard>
 
       {addable && subscription ? (
         <View testID="item-add-run">

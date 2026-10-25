@@ -11,8 +11,11 @@ import { WORKSPACE, answerPlatform, flush, launch, signedInOnThisPhone } from '@
  * README "Verification": the params a screen takes on arrival). A row on the
  * flow page opens the item's page in the Flows tab with the item it takes on
  * arrival; one of its runs opens the run's page in Activity's stack, from
- * Flows; Back from the item comes home to the same flow page. The flow is made
- * up: no flow's word or id is written in the app.
+ * Flows; Back from the item comes home to the same flow page. Since build 28
+ * the item's "{File title}" row opens its file's page in Flows with the item,
+ * and a run's "View {file}" row its file's page in Activity with the run and
+ * the file (F4, F7). The flow is made up: no flow's word or id is written in
+ * the app.
  */
 
 jest.setTimeout(60_000);
@@ -60,6 +63,8 @@ const ITEM: Item = {
   fields: { name: 'Leases' },
   status: 'ready',
   runCount: 1,
+  positiveCount: 0,
+  negativeCount: 0,
   topScore: 77,
   createdAt: '2026-10-20T10:00:00Z',
   createdByUserId: null,
@@ -83,13 +88,18 @@ const RUN: Run = {
   updatedAt: '2026-10-21T10:01:00Z',
 };
 
+const POLICY = { id: 'f-1', filename: 'policy.pdf', contentType: 'application/pdf', format: 'PDF', sizeBytes: 2048, pages: 1 };
+const CONTRACT = { ...POLICY, id: 'f-9', filename: 'northwind.pdf' };
+
 function platformWithItems() {
   answerPlatform(
     {
       [`/v1/workspaces/${WORKSPACE}/subscriptions`]: () => ({ subscriptions: [FLOW] }),
       [`/v1/workspaces/${WORKSPACE}/subscriptions/pol-1/items`]: () => ({ items: [ITEM], choices: {} }),
       [`/v1/workspaces/${WORKSPACE}/items/i-1`]: () => ({ item: ITEM, runs: [RUN] }),
-      [`/v1/workspaces/${WORKSPACE}/runs/r-1`]: () => ({ run: RUN, steps: [], events: [] }),
+      [`/v1/workspaces/${WORKSPACE}/runs/r-1`]: () => ({ run: RUN, steps: [], events: [], files: [CONTRACT] }),
+      [`/v1/workspaces/${WORKSPACE}/items/i-1/file`]: () => ({ file: POLICY, downloadUrl: 'https://files.example.com/p?sig=1', expiresAt: '2026-10-24T12:00:00Z' }),
+      [`/v1/workspaces/${WORKSPACE}/runs/r-1/files/f-9`]: () => ({ file: CONTRACT, downloadUrl: 'https://files.example.com/c?sig=1', expiresAt: '2026-10-24T12:00:00Z' }),
     },
     { '/automations': { automations: [ENTRY], categories: ['All'] } },
   );
@@ -130,4 +140,40 @@ it("a row opens its item's page in Flows with the item; a run opens in Activity 
   await flush(1000);
   expect(view.getPathname()).toBe('/flows/detail');
   expect(await screen.findByTestId('flow-item-i-1')).toBeTruthy();
+});
+
+it("the item's file opens in Flows with the item, and a run's file in Activity with the run and the file; Back returns to each (build 28)", async () => {
+  signedInOnThisPhone();
+  platformWithItems();
+  const view = await launch();
+  await act(async () => router.push({ pathname: '/(tabs)/flows/item', params: { item: 'i-1' } }));
+  await flush(100);
+  await flush(1000);
+  expect(view.getSegments()).toEqual(['(tabs)', 'flows', 'item']);
+
+  await fireEvent.press(await screen.findByTestId('item-open-file'));
+  await flush(100);
+  await flush(1000);
+  expect(view.getSegments()).toEqual(['(tabs)', 'flows', 'item-file']);
+  expect(view.getSearchParams()).toMatchObject({ item: 'i-1' });
+  expect((await screen.findByTestId('item-file-title')).props.children).toBe('Policy file');
+  await act(async () => router.back());
+  await flush(100);
+  await flush(1000);
+  expect(view.getSegments()).toEqual(['(tabs)', 'flows', 'item']);
+
+  await fireEvent.press(await screen.findByTestId('item-run-r-1'));
+  await flush(100);
+  await flush(1000);
+  expect(view.getSegments()).toEqual(['(tabs)', 'activity', 'run']);
+  await fireEvent.press(await screen.findByTestId('run-open-file-f-9'));
+  await flush(100);
+  await flush(1000);
+  expect(view.getSegments()).toEqual(['(tabs)', 'activity', 'run-file']);
+  expect(view.getSearchParams()).toMatchObject({ runId: 'r-1', fileId: 'f-9' });
+  expect((await screen.findByTestId('run-file-title')).props.children).toBe('Contract file');
+  await act(async () => router.back());
+  await flush(100);
+  await flush(1000);
+  expect(view.getSegments()).toEqual(['(tabs)', 'activity', 'run']);
 });

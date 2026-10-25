@@ -35,6 +35,7 @@ import {
 import { cancelRun } from '@/lib/platform/automations';
 import { PlatformError } from '@/lib/platform/problem';
 import { toDocumentCards } from '@/lib/view/documents';
+import { runFileRows } from '@/lib/view/items';
 import { statusLabel, type StatusPillLabel } from '@/lib/view/status';
 import { RUN_ORIGIN_TAB, runLabel, runOrigin } from '@/lib/view/runs';
 
@@ -43,7 +44,9 @@ import { RUN_ORIGIN_TAB, runLabel, runOrigin } from '@/lib/view/runs';
  * F4, F5; ~~registered in Home's stack and again in Settings'~~ until round 24).
  * Top to bottom (the owner's build 28 items F7–F9; Round 19 plan §3, the
  * standard for every run): its name — or its title and score — its flow and
- * status; "{Run word} details" ("{RUN} DETAILS", its flow's `items.runWords`;
+ * status; a "View {file}" row for each file its job uploaded ("View resume",
+ * `runFileRows`; F7), each opening it on a page of its own
+ * (`/(tabs)/activity/run-file`); "{Run word} details" ("{RUN} DETAILS", its flow's `items.runWords`;
  * "DETAILS" when its flow has none) over its sections, the first open; its
  * documents and package, or a v1/v2 run's saved details; the "Run details" row
  * (`OpenRow`), which opens its steps, tiles and facts on a page of their own
@@ -94,6 +97,8 @@ export default function RunDetailScreen() {
           liveRun.detail.run.title !== undefined && liveRun.detail.run.score !== undefined
             ? { title: liveRun.detail.run.title, score: String(liveRun.detail.run.score) }
             : null,
+        // Each file its job uploaded, a row each, named by its flow's file field (F7).
+        files: runFileRows(liveRun.detail.files, liveRun.flow?.runInput),
         // What it read, in titled sections, the first open (ADR-0046), before its documents.
         sections: liveRun.detail.sections ?? [],
         // Over them, its flow's word for one run (F8): "{RUN} DETAILS"; "DETAILS" for a flow without one.
@@ -209,6 +214,22 @@ export default function RunDetailScreen() {
           </View>
         </View>
       </View>
+
+      {run.files.length > 0 ? (
+        <SurfaceCard>
+          {run.files.map((file, i) => (
+            <OpenRow
+              key={file.id}
+              testID={`run-open-file-${file.id}`}
+              title={file.label}
+              divider={i < run.files.length - 1}
+              onPress={() =>
+                router.push({ pathname: '/(tabs)/activity/run-file', params: { runId: run.id, fileId: file.id } })
+              }
+            />
+          ))}
+        </SurfaceCard>
+      ) : null}
 
       {run.sections.length > 0 ? (
         <View testID="run-sections-block">
