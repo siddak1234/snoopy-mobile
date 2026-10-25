@@ -2512,8 +2512,13 @@ The round's contract, backend `cf17dbb` (`contract.done`; additive): `items.verd
 - **The contract's snapshot.** `contract.done` names `cf17dbb`, but `clones/backend-contract` was not
   there; this lane cloned the backend clone read-only at that commit into its own folder
   (`r19b/mobile-contract-cf17dbb`), generated from it, and removed it at the end.
-- **CI's `Deployed contract` job is red by design** until the platform releases `cf17dbb`'s
-  contract; `platform-requirement.json` stays `{"aheadOfDeployed": false}`.
+- **The backend's last head, `5307bd7`** (after the parity review): the types generated again from
+  it (`automations.d.ts` `69f4e98f…`; the others unchanged). Its one change is the link's text: it
+  downloads the file as an attachment, and a client that shows or shares it fetches the bytes itself
+  — as `FileView` does; `readItemFile`'s comment, which said a page "opens" the link, and README say
+  so now.
+- **CI's `Deployed contract` job is red by design** until the platform releases this contract;
+  `platform-requirement.json` stays `{"aheadOfDeployed": false}`.
 - **NOT OBSERVED** (no simulator or device): a Word file or a photo in the file pages' WebView on
   iOS, Android's WebView with a PDF (the package page's limit), the share sheet.
 
