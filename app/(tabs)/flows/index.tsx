@@ -6,6 +6,7 @@ import { Archive, FlowArrow, MagnifyingGlass, Plus, Warning } from 'phosphor-rea
 
 import { IconTile } from '@/components/nocturne/icon-tile';
 import { PillButton } from '@/components/nocturne/pill-button';
+import { SectionLabel } from '@/components/nocturne/section-label';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { CircleButton } from '@/components/scope-control';
@@ -31,7 +32,7 @@ import { readCatalog } from '@/lib/platform/catalog';
 import { readProjects } from '@/lib/platform/projects';
 import { readRemovedSubscriptionsOrNone, readRunStats, readSubscriptions } from '@/lib/platform/runs';
 import { flowsOverPlan } from '@/lib/view/billing';
-import { scopeLabels, toFlows, toRemovedFlows, type FlowView } from '@/lib/view/catalog';
+import { groupFlows, scopeLabels, toFlows, toRemovedFlows, type FlowView } from '@/lib/view/catalog';
 import { inScope } from '@/lib/view/scope';
 
 /** The header's Archived: its circle's name (always a circle since round 23). */
@@ -49,6 +50,10 @@ const NEW_LABEL = 'New';
  * build 10 item 8: "a button to the left of new… We dont need a component on
  * the page"), opens the archived flows, always, count or none — its circle
  * alone at every width since round 23 (~~its word where it fit~~).
+ * Under the search, the flows by department (the owner's build 28 item F1):
+ * each department's name over its cards, the departments A–Z, then the whole
+ * workspace's, each in the catalog's order (`groupFlows`); each card still says
+ * its department.
  * With no live flow in the workspace the screen is the empty standard,
  * whatever is archived (D6, item 9: "like this when no flows even if archive"),
  * with the way to the archived ones under it when there are any.
@@ -82,6 +87,9 @@ export default function FlowsScreen() {
     const labels = scopeLabels(projects);
     return {
       flows: toFlows(subs.subscriptions, catalog.automations, stats.subscriptions, undefined, labels),
+      // Each department's kind, for the list's groups (F1), and the catalog's order within each.
+      labels,
+      catalogOrder: catalog.automations.map((entry) => entry.templateId),
       // Archived flows are a page of their own (24.11.8); read here only to
       // know whether the empty screen has any to offer (D6).
       removed: toRemovedFlows(removed.subscriptions, catalog.automations, stats.subscriptions, labels),
@@ -106,6 +114,7 @@ export default function FlowsScreen() {
     if (!q) return true;
     return `${def.name} ${def.desc}`.toLowerCase().includes(q);
   });
+  const groups = flows.status === 'ready' ? groupFlows(visible, flows.data.labels, flows.data.catalogOrder) : [];
 
   if (flows.status === 'loading') return <ScreenLoading topInset={insets.top} />;
   if (flows.status === 'offline') {
@@ -220,30 +229,33 @@ export default function FlowsScreen() {
         />
       </View>
 
-      <View style={styles.cardList}>
-        {visible.map((def) => {
-          const key = def.key;
-          return (
-            <SurfaceCard
-              key={key}
-              onPress={() =>
-                router.push({ pathname: '/(tabs)/flows/detail', params: { flow: key } })
-              }
-              style={styles.flowCard}>
-              <IconTile icon={def.icon} size={42} iconSize={iconSize.row} borderRadius={12} bordered />
-              <View style={styles.flowBody}>
-                <Text style={[styles.flowName, { color: palette.text }]}>{def.name}</Text>
-                <Text style={[styles.flowDesc, { color: palette.neutral[400] }]}>{def.desc}</Text>
-                {/* Its team, or "Whole workspace", in every scope — a picked
-                    team's too (D4: every card; the build 11 review). */}
-                <Text style={[styles.flowRuns, { color: palette.neutral[500] }]}>
-                  {def.scope ? `${def.scope} · ${def.runs}` : def.runs}
-                </Text>
-              </View>
-              <StatusPill label={statusOf(key, def.status as FlowStatus)} />
-            </SurfaceCard>
-          );
-        })}
+      <View style={styles.groups}>
+        {groups.map((group, g) => (
+          <View key={group.name ?? `unread-${g}`} testID={`flows-group-${g}`} style={styles.cardList}>
+            {group.name ? <SectionLabel>{group.name.toUpperCase()}</SectionLabel> : null}
+            {group.flows.map((def) => {
+              const key = def.key;
+              return (
+                <SurfaceCard
+                  key={key}
+                  onPress={() => router.push({ pathname: '/(tabs)/flows/detail', params: { flow: key } })}
+                  style={styles.flowCard}>
+                  <IconTile icon={def.icon} size={42} iconSize={iconSize.row} borderRadius={12} bordered />
+                  <View style={styles.flowBody}>
+                    <Text style={[styles.flowName, { color: palette.text }]}>{def.name}</Text>
+                    <Text style={[styles.flowDesc, { color: palette.neutral[400] }]}>{def.desc}</Text>
+                    {/* Its team, or "Whole workspace", in every scope — a picked
+                        team's too (D4: every card; the build 11 review). */}
+                    <Text style={[styles.flowRuns, { color: palette.neutral[500] }]}>
+                      {def.scope ? `${def.scope} · ${def.runs}` : def.runs}
+                    </Text>
+                  </View>
+                  <StatusPill label={statusOf(key, def.status as FlowStatus)} />
+                </SurfaceCard>
+              );
+            })}
+          </View>
+        ))}
         {visible.length === 0 && scoped.length === 0 ? (
           <View style={styles.emptyWrap}>
             <FlowArrow size={34} color={palette.neutral[600]} />
@@ -317,6 +329,9 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     fontSize: typeScale.label.fontSize,
     paddingVertical: 0,
+  },
+  groups: {
+    gap: 18,
   },
   cardList: {
     gap: 10,

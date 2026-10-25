@@ -406,6 +406,12 @@ export const EDIT_SETUP_LABEL = 'Edit setup';
  */
 export const DETAILS_LABEL = 'DETAILS';
 export const DOCUMENTS_LABEL = 'DOCUMENTS';
+/**
+ * The row near the bottom of every run's page and the page it opens (the
+ * owner's build 28 item F9: "make a section that says Run details … a
+ * component with an arrow"): its steps, its tiles and its facts.
+ */
+export const RUN_DETAILS_LABEL = 'Run details';
 export const RUN_WORKING = 'Working…';
 export const RUN_WAITING_FOR_APPROVAL = 'Waiting for approval.';
 export const STEP_WAITING = 'Waiting';
@@ -462,6 +468,27 @@ export const PACKAGE_PREPARING = 'Preparing the package…';
  */
 export const PACKAGE_NOT_OPENED = 'Could not open the package. Try again.';
 export const DOWNLOAD_FAILED = 'Could not download. Try again.';
+/**
+ * A run's or an item's own file, on a page of its own (Round 19, build 28; the
+ * owner's items F4 and F7: "Shows the original document downloadable", "review
+ * the original document that you can download and share like other
+ * documents"): "View resume" opens it, drawn in place, and Download hands it to
+ * the share sheet — save or share — as the run package's downloads do.
+ */
+export function viewFileLabel(title: string): string {
+  return `View ${inSentence(title)}`;
+}
+/** A file field's word when its flow names none. */
+export const FILE_WORD = 'File';
+export const DOWNLOAD_LABEL = 'Download';
+export const FILE_OPENING = 'Opening the file…';
+export const FILE_NOT_OPENED = 'Could not open the file. Try again.';
+/** A file the platform no longer keeps (404): no Try again, which could not succeed. */
+export const FILE_GONE = 'This file is no longer kept.';
+/** A file of a type not drawn in place (only a PDF, a JPEG or a PNG is), the website's words. */
+export const DOWNLOAD_TO_OPEN = 'Download it to open it.';
+/** An item's tiles (the owner's build 28 item F6): its runs, then its verdict words'. */
+export const TOTAL_LABEL = 'Total';
 export const RUN_ID_LABEL = 'Run ID';
 
 /**
@@ -627,6 +654,21 @@ export function inSentence(word: string): string {
   return /^\p{Lu}\p{Ll}/u.test(word) || /^\p{Lu}$/u.test(word) ? word.charAt(0).toLowerCase() + word.slice(1) : word;
 }
 
+/**
+ * "All {many}" for a field the manifest names in the singular alone — the
+ * filter's first choice over a flow's items (the owner's build 28 item F2):
+ * "Region" says "All regions", "Category" "All categories", "PO" "All POs".
+ */
+export function allOf(title: string): string {
+  const word = inSentence(title);
+  const many = /[^aeiou]y$/iu.test(word)
+    ? `${word.slice(0, -1)}ies`
+    : /(?:s|x|z|ch|sh)$/iu.test(word)
+      ? `${word}es`
+      : `${word}s`;
+  return `All ${many}`;
+}
+
 /** "4 contracts", "1 contract" — for a flow whose `runWords` are "Contract" and "Contracts". */
 export function countOf(count: number, words: Words): string {
   return `${count} ${inSentence(count === 1 ? words.singular : words.plural)}`;
@@ -641,7 +683,8 @@ export function topScoreOf(score: number): string {
 }
 /** The select's last choice, for a value typed in (`allowOther`). */
 export const OTHER_LABEL = 'Other';
-export const WHAT_AI_READ_LABEL = 'WHAT AI READ';
+/** A select's drop-down with nothing chosen yet: a field without a default. */
+export const CHOOSE_LABEL = 'Choose';
 export const START_LABEL = 'Start';
 export const ARCHIVING_LABEL = 'Archiving…';
 export const ARCHIVE_LABEL = 'Archive';
@@ -656,6 +699,10 @@ export function addRunLabel(runWords: Words): string {
 }
 export function noRunsYet(runWords: Words): string {
   return `No ${inSentence(runWords.plural)} yet.`;
+}
+/** Over a run's sections, in its flow's word for one (the owner's build 28 item F8): "CONTRACT DETAILS". */
+export function runWordDetails(runWords: Words): string {
+  return `${runWords.singular} details`.toUpperCase();
 }
 export function archiveItemLabel(words: Words): string {
   return `Archive ${inSentence(words.singular)}`;

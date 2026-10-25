@@ -17,6 +17,8 @@ export type AutomationItems = components['schemas']['AutomationItems'];
 export type AutomationItemField = components['schemas']['AutomationItemField'];
 export type Item = components['schemas']['Item'];
 export type RunSection = components['schemas']['RunSection'];
+export type RunFile = components['schemas']['RunFile'];
+export type RunFileLink = components['schemas']['RunFileLink'];
 
 /**
  * What an action changed is read again next time, and only that (24.9.1): a
@@ -161,6 +163,40 @@ export function readItem(workspaceId: string, itemId: string): Promise<{ item: I
       params: { path: { workspaceId, itemId } },
       signal,
     }),
+  );
+}
+
+/**
+ * The file an item was made from, behind a short-lived signed link (Round 19,
+ * build 28): a reference and its link, never its bytes. The link downloads the
+ * file as an attachment, so a page that shows it or hands it to the share sheet
+ * fetches the bytes from it itself (`downloadSignedFile`). Any member, as the
+ * item is read; 404 for another workspace's item or a file the store no longer
+ * keeps.
+ */
+export function readItemFile(workspaceId: string, itemId: string): Promise<RunFileLink> {
+  return platformOperation(`/v1/workspaces/${workspaceId}/items/${itemId}/file`, ({ automations }, signal) =>
+    automations.GET('/v1/workspaces/{workspaceId}/items/{itemId}/file', {
+      params: { path: { workspaceId, itemId } },
+      signal,
+    }),
+  );
+}
+
+/**
+ * One of a job's uploaded files (`RunDetail.files`' `id`), behind a short-lived
+ * signed link (Round 19, build 28), never its bytes — an attachment's link, as
+ * `readItemFile`'s is. Anyone who may read the run; 404 for another workspace's
+ * run or a file that is not this job's.
+ */
+export function readRunFile(workspaceId: string, runId: string, fileId: string): Promise<RunFileLink> {
+  return platformOperation(
+    `/v1/workspaces/${workspaceId}/runs/${runId}/files/${fileId}`,
+    ({ automations }, signal) =>
+      automations.GET('/v1/workspaces/{workspaceId}/runs/{runId}/files/{fileId}', {
+        params: { path: { workspaceId, runId, fileId } },
+        signal,
+      }),
   );
 }
 

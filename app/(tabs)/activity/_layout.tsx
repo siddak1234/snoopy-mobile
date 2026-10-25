@@ -11,8 +11,9 @@ import { useTheme } from '@/hooks/use-theme';
 export const unstable_settings = { anchor: 'index' };
 
 /** Activity tab stack — the Approvals inbox and, since round 24 (P5; the owner's
- *  build 23 F4, F5), the one run page and its package (P12) live here so they
- *  keep the Activity tab highlighted. */
+ *  build 23 F4, F5), the one run page, its package (P12) and, since build 28,
+ *  its Run details (F9) and its files' page (F7) live here so they keep the
+ *  Activity tab highlighted. */
 export default function ActivityLayout() {
   const { palette } = useTheme();
   return (
@@ -25,6 +26,8 @@ export default function ActivityLayout() {
       <Stack.Screen name="approvals" />
       <Stack.Screen name="run" />
       <Stack.Screen name="package" />
+      <Stack.Screen name="run-details" />
+      <Stack.Screen name="run-file" />
     </Stack>
   );
 }
