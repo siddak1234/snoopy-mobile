@@ -2347,8 +2347,9 @@ the tests' flow is made up. The contract is the round's, backend `7a4baa6`, gene
   card says "Check this value." under each field it names (the review's finding 7, below).
 - ~~**Finding for `snoopy-backend`: `openUpload`'s `no_file_input`** did not say whether `items.file`
   counts.~~ **Resolved** (`ce9b274`): a version that declares items may upload its file.
-- **CI's `Deployed contract` job is red by design** until the platform releases this contract;
-  `platform-requirement.json` stays `{"aheadOfDeployed": false}`.
+- ~~**CI's `Deployed contract` job is red by design** until the platform releases this contract;~~
+  **Released 2026-10-24** by the platform's FORTY-FIRST: `Deployed contract` green on #75's head `bbc219b`
+  (14:28:58Z) and on `main` `eda96e4`. `platform-requirement.json` stays `{"aheadOfDeployed": false}`.
 - **NOT OBSERVED** (no simulator or device in this lane): the upload card at the largest text size,
   the document picker's Word filter on iOS, the muted rows.
 
@@ -2517,8 +2518,10 @@ The round's contract, backend `cf17dbb` (`contract.done`; additive): `items.verd
   downloads the file as an attachment, and a client that shows or shares it fetches the bytes itself
   — as `FileView` does; `readItemFile`'s comment, which said a page "opens" the link, and README say
   so now.
-- **CI's `Deployed contract` job is red by design** until the platform releases this contract;
-  `platform-requirement.json` stays `{"aheadOfDeployed": false}`.
+- ~~**CI's `Deployed contract` job is red by design** until the platform releases this contract;~~
+  **Released 2026-10-25** by the platform's FORTY-SECOND: `Deployed contract` green on #77's head
+  `9a6bcd3` (07:11:39Z) and on `main` `8fa2844`. `platform-requirement.json` stays
+  `{"aheadOfDeployed": false}`.
 - **NOT OBSERVED** (no simulator or device): a Word file or a photo in the file pages' WebView on
   iOS, Android's WebView with a PDF (the package page's limit), the share sheet.
 
@@ -2577,6 +2580,8 @@ FORTY-SECOND served #242's contract (the release's deployed-contract check passe
 entitlements checked (`ENTITLEMENTS_OK`), submission `45b9fa0b-395b-4497-90c2-4d3c3e3e2200` FINISHED
 07:27:01Z (queued 07:26:00Z). App Store Connect, read by Round 19's close: uploaded 07:26:55Z,
 VALID, internal testing `IN_BETA_TESTING`. It carries build 28's nine items (Resume Screening, the
-item and run pages, Run details, the file pages): the owner's test of it is backend BUILD-PLAN
-28.8.6's last part, carried past Round 19's close — at 2026-10-25 14:47:39Z App Store Connect read
-0 installs, 0 sessions and 0 feedback on build 29.
+item and run pages, Run details, the file pages). At 2026-10-25 14:47:39Z App Store Connect read 0
+installs, 0 sessions and 0 feedback on build 29; the owner then said, verbatim, "i already test build
+29. the app was updated not a fresh download. no assumptions." — an update counts no install — and,
+after Round 19's close merged, "tested on website as well" — the owner's word for backend BUILD-PLAN
+28.8.6 and Gate 28's line 4.
