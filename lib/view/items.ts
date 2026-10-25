@@ -3,6 +3,7 @@ import {
   ITEM_READING,
   ITEM_READY,
   OTHER_LABEL,
+  allOf,
   countOf,
   topScoreOf,
 } from '@/lib/content/screen-states';
@@ -11,40 +12,74 @@ import { statusLabel } from '@/lib/view/status';
 
 /**
  * A flow's items as the screens draw them (backend ADR-0046; Round 19, plan §5,
- * the same in the website): grouped, each row's line, the select's choices,
- * the values sent, and an item's runs ranked. Pure, so each rule is tested on
+ * the same in the website): grouped, the filter's choices, each row's line,
+ * the select's choices, the values sent, and an item's runs ranked. Pure, so each rule is tested on
  * its own. No word or id of one flow here: the words are the manifest's.
  */
 
-/** One group of the flow page's list: the `groupField` value it holds (none when the flow groups nothing), newest first. */
+/** One group of the flow page's list: the `groupField` value it holds (none when the flow groups nothing, or for the items without one). */
 export type ItemGroup = { name: string | null; items: Item[] };
 
-const newestFirst = (a: Item, b: Item) => b.createdAt.localeCompare(a.createdAt);
+/** The filter's first choice, every group: never one of a flow's values, which are words. */
+export const ALL_GROUPS = '\u0000all';
+
+const byTitle = (a: Item, b: Item) => a.title.localeCompare(b.title);
+
+/** Each item's `groupField` value, trimmed; none for a flow that groups nothing or an item without one. */
+function groupOf(item: Item, key: string | undefined): string | null {
+  return (key ? item.fields[key]?.trim() : undefined) || null;
+}
 
 /**
- * The flow page's list (plan §5.1): by `groupField`'s value — groups in the
- * order of that field's `options`, then the names typed for it A–Z, then the
- * items without one — rows newest first. A flow that declares no `groupField`
- * is one group with no name.
+ * The flow page's list (the owner's build 28 items F2–F3; Round 19, plan §3):
+ * by `groupField`'s value, the groups A–Z, then the items without one — each
+ * group's items A–Z by title. `shown`, a value the filter chose, keeps that
+ * group alone; `ALL_GROUPS` (or none) keeps every one. A flow that declares no
+ * `groupField` is one group with no name.
  */
-export function groupItems(items: readonly Item[], declared: Pick<AutomationItems, 'groupField' | 'fields'>): ItemGroup[] {
+export function groupItems(
+  items: readonly Item[],
+  declared: Pick<AutomationItems, 'groupField'>,
+  shown: string = ALL_GROUPS,
+): ItemGroup[] {
   const key = declared.groupField;
-  if (!key) return items.length > 0 ? [{ name: null, items: [...items].sort(newestFirst) }] : [];
-  const options = declared.fields.find((field) => field.key === key)?.options ?? [];
   const byName = new Map<string, Item[]>();
   const none: Item[] = [];
   for (const item of items) {
-    const name = item.fields[key]?.trim();
-    if (!name) none.push(item);
+    const name = groupOf(item, key);
+    if (name === null) none.push(item);
     else byName.set(name, [...(byName.get(name) ?? []), item]);
   }
-  const typed = [...byName.keys()].filter((name) => !options.includes(name)).sort((a, b) => a.localeCompare(b));
-  const groups: ItemGroup[] = [...options.filter((name) => byName.has(name)), ...typed].map((name) => ({
-    name,
-    items: byName.get(name)!.sort(newestFirst),
-  }));
-  if (none.length > 0) groups.push({ name: null, items: none.sort(newestFirst) });
-  return groups;
+  const groups: ItemGroup[] = [...byName.keys()]
+    .sort((a, b) => a.localeCompare(b))
+    .map((name) => ({ name, items: byName.get(name)!.sort(byTitle) }));
+  if (none.length > 0) groups.push({ name: null, items: none.sort(byTitle) });
+  return shown === ALL_GROUPS ? groups : groups.filter((group) => group.name === shown);
+}
+
+/**
+ * The flow page's filter (F2: "a drop down glass style like the others where
+ * you can select the department"): "All {values}" first — the plural of the
+ * group field's own title, as the manifest names it — then each value the
+ * items hold, A–Z. None when the flow groups nothing or nothing is listed.
+ */
+export function itemGroupChoices(
+  items: readonly Item[],
+  declared: Pick<AutomationItems, 'groupField' | 'fields'>,
+): { value: string; label: string }[] {
+  const key = declared.groupField;
+  const field = declared.fields.find((candidate) => candidate.key === key);
+  if (!key || !field || items.length === 0) return [];
+  const values = [...new Set(items.map((item) => groupOf(item, key)).filter((name): name is string => name !== null))];
+  return [
+    { value: ALL_GROUPS, label: allOf(field.title) },
+    ...values.sort((a, b) => a.localeCompare(b)).map((name) => ({ value: name, label: name })),
+  ];
+}
+
+/** The filter's choice as drawn: the one picked while the list still holds it, else every group. */
+export function shownGroup(choices: readonly { value: string }[], picked: string): string {
+  return choices.some((choice) => choice.value === picked) ? picked : ALL_GROUPS;
 }
 
 /**
@@ -137,22 +172,22 @@ export function itemFieldLimit(field: Pick<AutomationItemField, 'control' | 'max
   return field.control === 'text' ? (field.maxLength ?? 80) : 40;
 }
 
-/** One row of an item's ranked runs (plan §5.3). */
+/** One row of an item's ranked runs (the owner's build 28 item F5: rank, name, score, arrow). */
 export type RankedRunView = {
   id: string;
   rank: number;
   title: string;
   score: string | null;
-  line: string | null;
-  /** A failed or cancelled run: drawn in the muted tone (never faded), after the scored ones. */
+  /** A failed or cancelled run: drawn in the muted tone (never faded). */
   dim: boolean;
 };
 
 /**
  * An item's runs as the platform ranks them — highest score first, the
  * unscored after, then newest (`readItem`) — numbered 1…n. A run still going
- * reads "Reading…" (it has no title yet); a succeeded one its title, its score
- * and its result line; a failed one its status and its failure line, muted.
+ * reads "Reading…" (it has no title yet); a succeeded one its title and its
+ * score; a failed one its status, muted. ~~Its result or failure line under
+ * it~~ until build 28 (F5: "the size of the must haves drop down").
  */
 export function rankedRuns(runs: readonly Run[]): RankedRunView[] {
   return runs.map((run, index) => {
@@ -162,7 +197,6 @@ export function rankedRuns(runs: readonly Run[]): RankedRunView[] {
       rank: index + 1,
       title: going ? ITEM_READING : (run.title ?? statusLabel(run.status)),
       score: !going && run.score !== undefined ? String(run.score) : null,
-      line: run.status === 'succeeded' ? (run.resultSummary ?? null) : run.status === 'failed' ? (run.failureReason ?? null) : null,
       dim: run.status === 'failed' || run.status === 'cancelled',
     };
   });

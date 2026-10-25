@@ -406,6 +406,12 @@ export const EDIT_SETUP_LABEL = 'Edit setup';
  */
 export const DETAILS_LABEL = 'DETAILS';
 export const DOCUMENTS_LABEL = 'DOCUMENTS';
+/**
+ * The row near the bottom of every run's page and the page it opens (the
+ * owner's build 28 item F9: "make a section that says Run details … a
+ * component with an arrow"): its steps, its tiles and its facts.
+ */
+export const RUN_DETAILS_LABEL = 'Run details';
 export const RUN_WORKING = 'Working…';
 export const RUN_WAITING_FOR_APPROVAL = 'Waiting for approval.';
 export const STEP_WAITING = 'Waiting';
@@ -627,6 +633,21 @@ export function inSentence(word: string): string {
   return /^\p{Lu}\p{Ll}/u.test(word) || /^\p{Lu}$/u.test(word) ? word.charAt(0).toLowerCase() + word.slice(1) : word;
 }
 
+/**
+ * "All {many}" for a field the manifest names in the singular alone — the
+ * filter's first choice over a flow's items (the owner's build 28 item F2):
+ * "Region" says "All regions", "Category" "All categories", "PO" "All POs".
+ */
+export function allOf(title: string): string {
+  const word = inSentence(title);
+  const many = /[^aeiou]y$/iu.test(word)
+    ? `${word.slice(0, -1)}ies`
+    : /(?:s|x|z|ch|sh)$/iu.test(word)
+      ? `${word}es`
+      : `${word}s`;
+  return `All ${many}`;
+}
+
 /** "4 contracts", "1 contract" — for a flow whose `runWords` are "Contract" and "Contracts". */
 export function countOf(count: number, words: Words): string {
   return `${count} ${inSentence(count === 1 ? words.singular : words.plural)}`;
@@ -641,7 +662,8 @@ export function topScoreOf(score: number): string {
 }
 /** The select's last choice, for a value typed in (`allowOther`). */
 export const OTHER_LABEL = 'Other';
-export const WHAT_AI_READ_LABEL = 'WHAT AI READ';
+/** A select's drop-down with nothing chosen yet: a field without a default. */
+export const CHOOSE_LABEL = 'Choose';
 export const START_LABEL = 'Start';
 export const ARCHIVING_LABEL = 'Archiving…';
 export const ARCHIVE_LABEL = 'Archive';
@@ -656,6 +678,10 @@ export function addRunLabel(runWords: Words): string {
 }
 export function noRunsYet(runWords: Words): string {
   return `No ${inSentence(runWords.plural)} yet.`;
+}
+/** Over a run's sections, in its flow's word for one (the owner's build 28 item F8): "CONTRACT DETAILS". */
+export function runWordDetails(runWords: Words): string {
+  return `${runWords.singular} details`.toUpperCase();
 }
 export function archiveItemLabel(words: Words): string {
   return `Archive ${inSentence(words.singular)}`;

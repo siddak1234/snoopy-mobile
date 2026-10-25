@@ -67,6 +67,29 @@ it("Home's recent run opens in Activity, with Activity selected; Back returns to
   expect(view.getPathname()).toBe('/activity');
 });
 
+it("a run's Run details opens in Activity's stack with the run; Back returns to the run, and Back again to Home (build 28, F9)", async () => {
+  signedInOnThisPhone();
+  answerPlatform();
+  const view = await launch();
+
+  await open({ text: 'Run #4821 · posted to QuickBooks' });
+  expect(view.getSegments()).toEqual(['(tabs)', 'activity', 'run']);
+  await open({ testID: 'run-open-details' });
+  expect(view.getSegments()).toEqual(['(tabs)', 'activity', 'run-details']);
+  expect(view.getSearchParams()).toMatchObject({ runId: 'run-0' });
+  expect(selectedTab()).toBe('Activity');
+  expect((await screen.findByTestId('run-details-name')).props.children).toBe('Run run-0');
+  expect(await screen.findByTestId('run-progress')).toBeTruthy();
+
+  // Back to the run, still Home's: the tab does not switch on the way.
+  await pressBack();
+  expect(view.getSegments()).toEqual(['(tabs)', 'activity', 'run']);
+  expect(selectedTab()).toBe('Activity');
+  await pressBack();
+  expect(view.getPathname()).toBe('/');
+  expect(selectedTab()).toBe('Home');
+});
+
 it("re-tapping Activity's tab on a run from Home stays in Activity: its list, not Home", async () => {
   signedInOnThisPhone();
   answerPlatform();

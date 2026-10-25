@@ -1,16 +1,19 @@
+import { ListBullets } from 'phosphor-react-native';
 import React, { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { RunFileField } from '@/components/automations/run-file-field';
-import { ChoiceChips } from '@/components/choice-chips';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
+import { Dropdown } from '@/components/dropdown';
 import { TextField } from '@/components/nocturne/text-field';
+import { ScopePill } from '@/components/scope-control';
 import { Text } from '@/components/text';
 import { fonts, status, typeScale } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { CHECK_THIS_VALUE, WORKSPACE_CHANGED, itemRefusal } from '@/lib/content/refusals';
-import { OTHER_LABEL, UPLOAD_LABEL, uploadItemLabel } from '@/lib/content/screen-states';
+import { CHOOSE_LABEL, OTHER_LABEL, UPLOAD_LABEL, uploadItemLabel } from '@/lib/content/screen-states';
 import { createItem, type AutomationItems, type Item } from '@/lib/platform/automations';
 import {
   OTHER_CHOICE,
@@ -24,9 +27,11 @@ import {
 /**
  * The upload card (Round 19, plan §5.2; the website's dialog, the same
  * fields): each of the flow's `items.fields` in order — a select as the app's
- * chips (`ChoiceChips`, the app's select since a phone has none): its options,
- * then the names typed before (`choices`), then "Other", which shows a text
- * box of 40 characters; a text field as a text box of its `maxLength` — then
+ * drop-down (`Dropdown`, as the catalog's category and Activity's outcome; the
+ * owner's decision 7 of build 28, ~~chips~~): its title over a pill saying the
+ * choice ("Choose" while there is none), which opens its options, then the
+ * names typed before (`choices`), then "Other", which shows a text box of 40
+ * characters; a text field as a text box of its `maxLength` — then
  * the file (`items.file`, the run's file field on the same upload), then
  * Upload. Upload is offered once every required field holds a value and the
  * file has arrived; it sends `createItem` under one key per set of values, so
@@ -51,7 +56,10 @@ export function ItemUploadDialog({
   onMade: (item: Item) => void;
 }) {
   const session = useSession();
+  const { palette } = useTheme();
   const keys = useIntentKeys('item');
+  // The select whose drop-down is open, by its key.
+  const [openSelect, setOpenSelect] = useState<string | null>(null);
   const [values, setValues] = useState<Record<string, string>>(() => initialItemValues(items.fields));
   const [others, setOthers] = useState<Record<string, string>>({});
   const [file, setFile] = useState<string | undefined>(undefined);
@@ -137,15 +145,49 @@ export function ItemUploadDialog({
         </>
       }>
       <ScrollView style={styles.form} contentContainerStyle={styles.fields} keyboardShouldPersistTaps="handled">
-        {items.fields.map((field) =>
-          field.control === 'select' ? (
+        {items.fields.map((field) => {
+          if (field.control !== 'select') {
+            return (
+              <View key={field.key} testID={`item-field-${field.key}`} style={styles.fields}>
+                <TextField
+                  label={field.title}
+                  value={values[field.key] ?? ''}
+                  onChangeText={(text) => change(field.key, text.slice(0, itemFieldLimit(field)))}
+                />
+                {refused.includes(field.key) ? <Refused fieldKey={field.key} /> : null}
+              </View>
+            );
+          }
+          const options = selectChoices(field, choices[field.key]);
+          const label = options.find((option) => option.value === values[field.key])?.label ?? CHOOSE_LABEL;
+          return (
             <View key={field.key} testID={`item-field-${field.key}`} style={styles.fields}>
-              <ChoiceChips
-                label={field.title}
-                options={selectChoices(field, choices[field.key])}
-                value={values[field.key] ?? ''}
-                onChange={(next) => change(field.key, next)}
-              />
+              <View style={styles.select}>
+                <Text style={[styles.label, { color: palette.neutral[400] }]}>{field.title}</Text>
+                <View style={styles.pill}>
+                  <Dropdown
+                    testID={`item-field-${field.key}-choice`}
+                    title={field.title}
+                    options={options}
+                    value={values[field.key] ?? null}
+                    open={openSelect === field.key}
+                    onOpenChange={(open) => setOpenSelect(open ? field.key : null)}
+                    onChange={(next) => {
+                      change(field.key, next);
+                      setOpenSelect(null);
+                    }}
+                    trigger={
+                      <ScopePill
+                        testID={`item-field-${field.key}-choice`}
+                        icon={ListBullets}
+                        label={label}
+                        accessibilityLabel={`${field.title}: ${label}`}
+                        onPress={() => setOpenSelect(field.key)}
+                      />
+                    }
+                  />
+                </View>
+              </View>
               {values[field.key] === OTHER_CHOICE ? (
                 <TextField
                   label={OTHER_LABEL}
@@ -156,17 +198,8 @@ export function ItemUploadDialog({
               ) : null}
               {refused.includes(field.key) ? <Refused fieldKey={field.key} /> : null}
             </View>
-          ) : (
-            <View key={field.key} testID={`item-field-${field.key}`} style={styles.fields}>
-              <TextField
-                label={field.title}
-                value={values[field.key] ?? ''}
-                onChangeText={(text) => change(field.key, text.slice(0, itemFieldLimit(field)))}
-              />
-              {refused.includes(field.key) ? <Refused fieldKey={field.key} /> : null}
-            </View>
-          ),
-        )}
+          );
+        })}
         {/* The run's file field, flush with the boxes above it. */}
         <View style={styles.file}>
           <RunFileField
@@ -201,6 +234,10 @@ function Refused({ fieldKey }: { fieldKey: string }) {
 
 const styles = StyleSheet.create({
   refused: { fontFamily: fonts.regular, ...typeScale.small },
+  // A select's title over its pill, as a text box's label sits over it.
+  select: { gap: 6 },
+  label: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
+  pill: { flexDirection: 'row' },
   form: { maxHeight: 460 },
   fields: { gap: 12 },
   file: { marginHorizontal: -14 },

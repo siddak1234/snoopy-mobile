@@ -393,8 +393,8 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   and a join drop the shared snapshot's copy of the list, and the whole
   snapshot is emptied when a session ends or begins (24.12).
 - `lib/platform/runs.ts`'s `readAllApprovalsNow` reads the approvals past the
-  shared snapshot. A run's page whose run is held with no approval of its job
-  listed reads them that way, every 2 s and at most ten times, until the
+  shared snapshot. A run's page or its Run details (`useRunDetail()`, below)
+  whose run is held with no approval of its job listed reads them that way, every 2 s and at most ten times, until the
   approval is listed or the run leaves held. The read that saw the run turn
   held took the approvals from the 15 s snapshot, from before the approval was
   asked (round 25, the review's R5c 1).
@@ -430,6 +430,11 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
     the same template in any team or the whole workspace (`heldAs`, the
     owner's build 12 item 9) — and with one, no "Unarchive" (D3).
     `scopeLabels()` labels every flow (D4).
+  - `OpenRow` (`components/open-row.tsx`): every row that opens a page from a
+    run or an item — an item's runs, a run's "Run details" — the height of a
+    drop-down's row, its arrow on the right (build 28, F5 and F9).
+  - `useRunDetail()` (`hooks/use-run-detail.ts`): one run as its page and its
+    Run details read it, bound to the workspace it was opened in.
 - Billing (ADR-0032; the contract's rule, with Free's and Pro's drawn prices,
   is `DESIGN-CONTRACT.md`, Round 16 (24.6), Billing): the app re-reads
   billing when it returns to the foreground. The enrolled plan is one rule,

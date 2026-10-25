@@ -8,6 +8,7 @@ import FlowsScreen from '@/app/(tabs)/flows/index';
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import HomeScreen from '@/app/(tabs)/(home)/index';
 import RunDetailScreen from '@/app/(tabs)/activity/run';
+import RunDetailsScreen from '@/app/(tabs)/activity/run-details';
 import SettingsScreen from '@/app/(tabs)/settings';
 import SettingsArchivedFlowsScreen from '@/app/(tabs)/settings/archived';
 import SettingsArchivedFlowScreen from '@/app/(tabs)/settings/archived-flow';
@@ -315,7 +316,8 @@ describe('An empty catalog (24.12)', () => {
 describe('Run detail', () => {
   it('shows a run from RunDetail, without the fields card the platform refuses and without Confidence (the spec\'s U11)', async () => {
     setMockParams({ runId: 'run-1' });
-    await renderWithProviders(<RunDetailScreen />, signedInSession);
+    // Its tiles on its Run details since build 28 (F9).
+    await renderWithProviders(<RunDetailsScreen />, signedInSession);
     // §12.1 #67 refuses raw run output, so no extracted-fields card; Confidence,
     // which no published shape fills, is gone. §12.1 #69 refuses a run number.
     expect(await screen.findByText('Duration')).toBeTruthy();
@@ -1242,16 +1244,17 @@ describe('Cancelling a run (24.4.2)', () => {
     routePlatform(platformOperation);
     setMockParams({ runId: 'run-0' });
     await renderWithProviders(<RunDetailScreen />, signedInSession);
-    expect(await screen.findByText('Duration')).toBeTruthy();
+    expect(await screen.findByTestId('run-open-details')).toBeTruthy();
     expect(screen.queryByText('Cancel run')).toBeNull();
   });
 });
 
 describe('Run detail variants (design runDefs)', () => {
-  it('renders a successful run with its result line', async () => {
+  it('renders a successful run with its result line — on its Run details since build 28 (F9)', async () => {
     setMockParams({ runId: 'run-0' });
-    await renderWithProviders(<RunDetailScreen />, signedInSession);
+    await renderWithProviders(<RunDetailsScreen />, signedInSession);
     expect(await screen.findByText('Duration')).toBeTruthy();
+    expect(screen.getByTestId('run-result')).toBeTruthy();
   });
 
   it('offers no Retry, because a client cannot express one', async () => {
@@ -1259,7 +1262,7 @@ describe('Run detail variants (design runDefs)', () => {
     await renderWithProviders(<RunDetailScreen />, signedInSession);
     // DESIGN-CONTRACT finding 9: POST /runs takes {subscriptionId, input} and
     // RunOrigin is not client-settable, so a retry cannot be expressed.
-    expect(await screen.findByText('Duration')).toBeTruthy();
+    expect(await screen.findByTestId('run-open-details')).toBeTruthy();
     expect(screen.queryByText('Retry run')).toBeNull();
   });
 });

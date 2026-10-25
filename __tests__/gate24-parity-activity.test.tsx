@@ -3,6 +3,7 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 
 import RunDetailScreen from '@/app/(tabs)/activity/run';
+import RunDetailsScreen from '@/app/(tabs)/activity/run-details';
 import ActivityScreen from '@/app/(tabs)/activity/index';
 import ApprovalsScreen from '@/app/(tabs)/activity/approvals';
 import TeamsScreen from '@/app/(tabs)/settings/teams';
@@ -170,6 +171,7 @@ const fact = (label: 'Started' | 'Ended' | 'Trigger') =>
     .getAllByText(/./u)
     .map((node) => node.props.children);
 
+// Its facts, steps and result line are on its Run details since build 28 (F9).
 describe("a run's page says what the website's says (G18)", () => {
   it('names its flow — no version beside it since the Invoice Processing update, as the website says it — then when it started and ended and how it started: the website’s facts', async () => {
     routeRun(
@@ -185,11 +187,16 @@ describe("a run's page says what the website's says (G18)", () => {
       ),
     );
     setMockParams({ runId: 'run-1' });
-    await renderWithProviders(<RunDetailScreen />, signedInSession);
+    const page = await renderWithProviders(<RunDetailScreen />, signedInSession);
     expect(await screen.findByText('Invoice check')).toBeTruthy();
     expect(screen.queryByText('Invoice check · v4')).toBeNull();
-    // How it went, on a line of its own (spec §3.E).
-    expect(screen.getByTestId('run-result').props.children).toBe('Recorded INV-7');
+    // How it went is off the top of its page (build 28, F8), and its facts are a row away (F9).
+    expect(screen.queryByTestId('run-result')).toBeNull();
+    expect(screen.queryByTestId('run-fact-Started')).toBeNull();
+    await page.unmount();
+    await renderWithProviders(<RunDetailsScreen />, signedInSession);
+    // On its Run details: how it went, on a line of its own (spec §3.E), then the facts.
+    expect((await screen.findByTestId('run-result')).props.children).toBe('Recorded INV-7');
     expect(fact('Started')).toEqual(['Started', 'Oct 7, 2026, 9:05 AM']);
     expect(fact('Ended')).toEqual(['Ended', 'Oct 7, 2026, 9:06 AM']);
     expect(fact('Trigger')).toEqual(['Trigger', 'Triggered']);
@@ -199,7 +206,7 @@ describe("a run's page says what the website's says (G18)", () => {
   it('says a run that has not started or ended with the em dash, and a manual start as the website does', async () => {
     routeRun(detail({ status: 'pending', origin: 'manual', startedAt: undefined, endedAt: undefined }));
     setMockParams({ runId: 'run-1' });
-    await renderWithProviders(<RunDetailScreen />, signedInSession);
+    await renderWithProviders(<RunDetailsScreen />, signedInSession);
     await screen.findByTestId('run-fact-Started');
     expect(fact('Started')).toEqual(['Started', '—']);
     expect(fact('Ended')).toEqual(['Ended', '—']);
@@ -213,7 +220,7 @@ describe("a run's page says what the website's says (G18)", () => {
       ]),
     );
     setMockParams({ runId: 'run-1' });
-    await renderWithProviders(<RunDetailScreen />, signedInSession);
+    await renderWithProviders(<RunDetailsScreen />, signedInSession);
     await screen.findByTestId('run-fact-Trigger');
     expect(screen.queryByTestId('run-continues')).toBeNull();
     expect(screen.queryByText('the run that was held')).toBeNull();
@@ -242,7 +249,7 @@ describe("a run's page says what the website's says (G18)", () => {
       ),
     );
     setMockParams({ runId: 'run-1' });
-    await renderWithProviders(<RunDetailScreen />, signedInSession);
+    await renderWithProviders(<RunDetailsScreen />, signedInSession);
     const held = await screen.findByText('Waiting for approval: Above the $500 auto-approve threshold.');
     expect(colorOf(held)).toBe(status.warnText);
     expect(screen.queryByText('Checked $730 against $500')).toBeNull();
@@ -254,7 +261,7 @@ describe("a run's page says what the website's says (G18)", () => {
   it('draws every declared step from the start — the first Working…, the rest Waiting — never "No steps reported yet." (Build 21, spec A7)', async () => {
     routeRun(detail({ status: 'running', origin: 'trigger', endedAt: undefined }));
     setMockParams({ runId: 'run-1' });
-    await renderWithProviders(<RunDetailScreen />, signedInSession);
+    await renderWithProviders(<RunDetailsScreen />, signedInSession);
     expect(await screen.findByText('1 · Invoice received')).toBeTruthy();
     expect(within(screen.getByTestId('run-step-step:receive')).getByText('Working…')).toBeTruthy();
     expect(within(screen.getByTestId('run-step-step:validate')).getByText('2 · Check the amount')).toBeTruthy();

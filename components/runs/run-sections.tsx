@@ -20,7 +20,8 @@ export function opensOutside(url: string | undefined): url is string {
  * opens and closes in place, as a document card does. An entry is its title in
  * bold, its subtitle muted, its text, and its address as a link that opens
  * outside the app (http and https only). `firstOpen`: the run page opens the
- * first; the item page's "What AI read" opens none.
+ * first, under "{Run word} details" (build 28, F8); ~~the item page's "What AI
+ * read" opens none~~ until build 28 (F4).
  */
 export function RunSections({
   sections,

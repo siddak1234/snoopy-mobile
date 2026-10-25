@@ -1,17 +1,16 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { Archive, CaretRight } from 'phosphor-react-native';
+import { Archive } from 'phosphor-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { StartRun, canStartRun } from '@/components/automations/start-run';
-import { ConnectionRow } from '@/components/connection-row';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { OpenRow } from '@/components/open-row';
 import { Pressable } from '@/components/pressable';
-import { RunSections } from '@/components/runs/run-sections';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { Text } from '@/components/text';
 import { em, fonts, iconSize, layout, status, typeScale, withAlpha } from '@/constants/theme';
@@ -25,7 +24,6 @@ import {
   ARCHIVING_LABEL,
   ITEM_NOT_ARCHIVED,
   START_LABEL,
-  WHAT_AI_READ_LABEL,
   addRunLabel,
   archiveItemBody,
   archiveItemLabel,
@@ -49,12 +47,15 @@ import { RUN_REREAD_MS } from '@/lib/view/runs';
  * "Add {one of its runs}" — the flow's run fields and Start, the run naming
  * this item (`createRun`'s `itemId`), offered once it is read, while it is not
  * archived and its flow can run; its runs as the platform ranks them, numbered,
- * each its title (or "Reading…"), its score and its result line, a failed one
- * in the muted tone, each opening its run; "What AI read", the item's sections, each
- * closed; and, for an owner or admin, Archive, behind the confirmation the
+ * each a row the height of a drop-down's — its rank, its title (or
+ * "Reading…"), its score and the arrow (`OpenRow`; the owner's build 28 item
+ * F5) — a failed one in the muted tone, each opening its run; and, for an
+ * owner or admin, Archive, behind the confirmation the
  * flow's own archive asks. Every word for the flow's things is its manifest's
  * (`items.words`, `items.runWords`). Read again every `RUN_REREAD_MS` while the
- * item is read or a run goes on, and the page is in front.
+ * item is read or a run goes on, and the page is in front. ~~"What AI read",
+ * the item's sections~~ until build 28 (F4: they go to the page of the item's
+ * file).
  */
 export default function ItemScreen() {
   const router = useRouter();
@@ -204,26 +205,15 @@ export default function ItemScreen() {
             </Text>
           ) : null}
           {ranked.map((row, i) => (
-            // A failed run is drawn in the muted tone, never faded: its line is muted already (WCAG AA).
+            // A failed run is drawn in the muted tone, never faded (WCAG AA).
             <View key={row.id} testID={`item-run-${row.id}-row`}>
-              <ConnectionRow
+              <OpenRow
                 testID={`item-run-${row.id}`}
-                mark={<Text style={[styles.rank, { color: palette.neutral[400] }]}>{row.rank}</Text>}
-                name={row.title}
-                nameTone={row.dim ? 'muted' : 'text'}
-                line={row.line}
-                right={
-                  <View style={styles.right}>
-                    {row.score !== null ? (
-                      <Text
-                        testID={`item-run-${row.id}-score`}
-                        style={[styles.score, { color: row.dim ? palette.neutral[400] : palette.text }]}>
-                        {row.score}
-                      </Text>
-                    ) : null}
-                    <CaretRight size={15} color={palette.neutral[500]} />
-                  </View>
-                }
+                lead={row.rank}
+                title={row.title}
+                value={row.score}
+                valueTestID={`item-run-${row.id}-score`}
+                muted={row.dim}
                 divider={i < ranked.length - 1}
                 onPress={() =>
                   router.push({ pathname: '/(tabs)/activity/run', params: { runId: row.id, returnTo: 'flows' } }, { withAnchor: true })
@@ -233,15 +223,6 @@ export default function ItemScreen() {
           ))}
         </SurfaceCard>
       </View>
-
-      {item.sections ? (
-        <View testID="item-read">
-          <SectionLabel>{WHAT_AI_READ_LABEL}</SectionLabel>
-          <View style={styles.underLabel}>
-            <RunSections testID="item-sections" sections={item.sections} firstOpen={false} />
-          </View>
-        </View>
-      ) : null}
 
       {/* Last, in red, where a person scrolls to it — as the flow's own Archive (24.9.4). */}
       {canManage && !archived ? (
@@ -299,9 +280,6 @@ const styles = StyleSheet.create({
   sub: { marginTop: 1, fontFamily: fonts.regular, fontSize: typeScale.body.fontSize },
   underLabel: { marginTop: 9 },
   empty: { paddingVertical: 13, paddingHorizontal: 14, fontFamily: fonts.regular, ...typeScale.body },
-  rank: { minWidth: 20, fontFamily: fonts.medium, fontSize: typeScale.label.fontSize },
-  right: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  score: { fontFamily: fonts.medium, fontSize: typeScale.title.fontSize },
   archive: {
     flexDirection: 'row',
     alignItems: 'center',

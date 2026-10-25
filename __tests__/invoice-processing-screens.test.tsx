@@ -3,6 +3,7 @@ import React from 'react';
 import { AccessibilityInfo, Platform, Share, StyleSheet } from 'react-native';
 
 import RunDetailScreen from '@/app/(tabs)/activity/run';
+import RunDetailsScreen from '@/app/(tabs)/activity/run-details';
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import SetupScreen from '@/app/(tabs)/flows/setup';
 import ConnectionsScreen from '@/app/(tabs)/settings/connections';
@@ -733,6 +734,8 @@ function openRun(
     role?: 'owner' | 'admin' | 'member';
     /** What a package request answers, given what was sent (round 24 P12). */
     packageFile?: (sent: { body: unknown; key?: string }) => unknown;
+    /** The run's page, or its Run details — its steps, tiles and facts (build 28, F9). */
+    page?: 'run' | 'details';
   } = {},
 ) {
   routePlatform(platformOperation, {
@@ -764,7 +767,12 @@ function openRun(
     return path.endsWith(`/runs/${RUN_ID}`) ? Promise.resolve(detail) : routed(path, ...rest);
   });
   setMockParams({ runId: RUN_ID });
-  return renderWithProviders(<RunDetailScreen />, signedInSession);
+  return renderWithProviders(options.page === 'details' ? <RunDetailsScreen /> : <RunDetailScreen />, signedInSession);
+}
+
+/** The run's Run details page (build 28, F9): where its steps, tiles and facts are. */
+function openRunDetails(detail: RunDetail, options: Omit<Parameters<typeof openRun>[1] & object, 'page'> = {}) {
+  return openRun(detail, { ...options, page: 'details' });
 }
 
 /** A receipt as v3 writes it (spec §1.1, AM7): every field present, null when not printed. */
@@ -805,9 +813,9 @@ const RUN_793EEF82: Reported[] = [
   ['check-document', 'failed', 'Add one document per file.', 1],
 ];
 
-describe("a run's page — every step from the start, a live tracker (spec A7; the owner's build 20 items 10 and 11)", () => {
+describe("a run's Run details — every step from the start, a live tracker (spec A7; the owner's build 20 items 10 and 11)", () => {
   it('at the start: every group drawn, the first Working… and the rest Waiting; Steps done 0 of them', async () => {
-    await openRun(ipRun('pending', []));
+    await openRunDetails(ipRun('pending', []));
     const steps = await screen.findByTestId('run-progress');
     expect(within(steps).getByText('STEPS')).toBeTruthy();
     expect(screen.queryByText('PROGRESS')).toBeNull();
@@ -837,7 +845,7 @@ describe("a run's page — every step from the start, a live tracker (spec A7; t
     const asItWas = motion.getMockImplementation();
     motion.mockResolvedValue(reduced);
     try {
-      await openRun(ipRun('pending', []));
+      await openRunDetails(ipRun('pending', []));
       const spinner = await screen.findByTestId('run-step-spinner');
       await act(async () => {
         await new Promise((settle) => setTimeout(settle, 300));
@@ -857,7 +865,7 @@ describe("a run's page — every step from the start, a live tracker (spec A7; t
     const answers: ((reduced: boolean) => void)[] = [];
     motion.mockImplementation(() => new Promise<boolean>((answer) => answers.push(answer)));
     try {
-      await openRun(ipRun('pending', []));
+      await openRunDetails(ipRun('pending', []));
       const spinner = await screen.findByTestId('run-step-spinner');
       const rotate = () => (spinner.props.jestAnimatedStyle.value as { transform: [{ rotate: string }] }).transform[0].rotate;
       await act(async () => {
@@ -875,7 +883,7 @@ describe("a run's page — every step from the start, a live tracker (spec A7; t
   });
 
   it('while running: done groups say Done and when, the next Working…, and Steps done never runs ahead (fb10\'s "1 / 1" impossible)', async () => {
-    await openRun(ipRun('running', [['receive', 'ok', 'PDF, 2 pages', 0]]));
+    await openRunDetails(ipRun('running', [['receive', 'ok', 'PDF, 2 pages', 0]]));
     const received = await screen.findByTestId('run-step-group:received');
     expect(within(received).getByText(/^Done · \d{1,2}:\d{2} (AM|PM)$/u)).toBeTruthy();
     expect(within(screen.getByTestId('run-step-group:read')).getByText('Working…')).toBeTruthy();
@@ -903,10 +911,11 @@ describe("a run's page — every step from the start, a live tracker (spec A7; t
       step('save-details', 'done', 'Details saved'),
       step('notify', 'emailed', 'Summary emailed'),
     ];
-    await openRun(ipRun('failed', RUN_793EEF82, {}, { templateVersion: 2, failureReason: 'Add one document per file.' }), {
+    await openRunDetails(ipRun('failed', RUN_793EEF82, {}, { templateVersion: 2, failureReason: 'Add one document per file.' }), {
       entry: v2 as never,
     });
-    expect((await screen.findByTestId('run-title')).props.children).toBe(`Run ${RUN_ID}`);
+    // The run by its full id on its Run details too (build 28, F9).
+    expect((await screen.findByTestId('run-details-name')).props.children).toBe(`Run ${RUN_ID}`);
     expect(screen.queryByText(/1e3231c6/u)).toBeNull();
     expect(within(screen.getByTestId('run-fact-Run ID')).getByText(RUN_ID)).toBeTruthy();
     for (const summary of ['34 accounts read', 'QuickBooks: Autom8x Test Co', 'Preferences read', "Read: receipt from Lowe's", 'PDF, 1 page']) {
@@ -919,7 +928,7 @@ describe("a run's page — every step from the start, a live tracker (spec A7; t
   });
 
   it('held: its group says "Waiting for approval:" and why, with the hand; what comes after waits', async () => {
-    await openRun(
+    await openRunDetails(
       ipRun('held', [
         ['receive', 'ok', 'PDF, 1 page', 0],
         ['extract', 'ok', 'Read 3 documents', 1],
@@ -935,7 +944,7 @@ describe("a run's page — every step from the start, a live tracker (spec A7; t
   });
 
   it('an approved job (round 24 P9: its runs\' steps together under one id): the held step is done once it runs on, every group Done', async () => {
-    await openRun(
+    await openRunDetails(
       ipRun('succeeded', [
         ['receive', 'ok', 'PDF, 1 page', 0],
         ['extract', 'ok', 'Read 3 documents', 1],
@@ -954,7 +963,7 @@ describe("a run's page — every step from the start, a live tracker (spec A7; t
   });
 
   it("a run of an older version is drawn by the steps it reported — titled from the catalog where it names them — never another version's groups", async () => {
-    await openRun(
+    await openRunDetails(
       ipRun('succeeded', [['receive', 'ok', 'Photo', 0], ['find-payer', 'ok', 'Paid with the company card', 1]], {}, { templateVersion: 1 }),
     );
     const steps = await screen.findByTestId('run-progress');
@@ -991,12 +1000,12 @@ const HELD: Reported[] = [
  * Approve / Deny inside step 4 (round 24 P6; the owner's build 23 F7–F10: "It
  * should be step 4 approve or deny", "Deny should be red", "not many clicks").
  */
-describe("a held run's step 4: Approve or Deny there (round 24, P6)", () => {
+describe("a held run's step 4, on its Run details: Approve or Deny there (round 24, P6; build 28, F9)", () => {
   const runReads = () =>
     platformOperation.mock.calls.filter((call: unknown[]) => String(call[0]).endsWith(`/runs/${RUN_ID}`)).length;
 
   it('the newest pending approval and a role it names: both buttons in the held step, Deny the danger pill; Approve sends the decision with a key, then reads the run again', async () => {
-    await openRun(ipRun('held', HELD), {
+    await openRunDetails(ipRun('held', HELD), {
       // An older decision of the same job, then the one that waits: the newest decides.
       approvals: { approvals: [runApproval('ap-old', 'rejected', '2026-10-14T19:00:00Z'), runApproval('ap-new', 'pending', '2026-10-14T20:03:00Z')] as never },
       role: 'admin',
@@ -1017,7 +1026,7 @@ describe("a held run's step 4: Approve or Deny there (round 24, P6)", () => {
   it('while it saves both wait and the pressed one says "Denying…"; refused, the step says why and offers both again', async () => {
     let refuse: (error: Error) => void = () => undefined;
     (decideApproval as jest.Mock).mockImplementationOnce(() => new Promise((_resolve, reject) => (refuse = reject)));
-    await openRun(ipRun('held', HELD), { approvals: { approvals: [runApproval('ap-1', 'pending', '2026-10-14T20:03:00Z')] as never }, role: 'owner' });
+    await openRunDetails(ipRun('held', HELD), { approvals: { approvals: [runApproval('ap-1', 'pending', '2026-10-14T20:03:00Z')] as never }, role: 'owner' });
     await fireEvent.press(await screen.findByTestId('run-decision-deny'));
     expect(decideApproval).toHaveBeenCalledWith(TEST_WORKSPACE, 'ap-1', 'rejected', 'key');
     expect(screen.getByText('Denying…')).toBeTruthy();
@@ -1029,7 +1038,7 @@ describe("a held run's step 4: Approve or Deny there (round 24, P6)", () => {
   });
 
   it('a role the approval does not name: who can decide, and no buttons', async () => {
-    await openRun(ipRun('held', HELD), {
+    await openRunDetails(ipRun('held', HELD), {
       approvals: { approvals: [runApproval('ap-1', 'pending', '2026-10-14T20:03:00Z', ['owner'])] as never },
       role: 'member',
     });
@@ -1048,7 +1057,7 @@ describe("a held run's step 4: Approve or Deny there (round 24, P6)", () => {
       return path.endsWith(`/runs/${RUN_ID}`) ? Promise.resolve(detail) : routed(path, ...rest);
     });
     setMockParams({ runId: RUN_ID });
-    await renderWithProviders(<RunDetailScreen />, signedInSession);
+    await renderWithProviders(<RunDetailsScreen />, signedInSession);
     const step = within(await screen.findByTestId('run-step-group:done'));
     expect(step.getByText("Waiting for approval: Document 2: the total can't be read.")).toBeTruthy();
     expect(screen.queryByText('Approve')).toBeNull();
@@ -1056,7 +1065,7 @@ describe("a held run's step 4: Approve or Deny there (round 24, P6)", () => {
   });
 
   it('denied: step 4 says Denied, the result line too — no buttons', async () => {
-    await openRun(ipRun('held', HELD), { approvals: { approvals: [runApproval('ap-1', 'rejected', '2026-10-14T20:03:00Z')] as never }, role: 'owner' });
+    await openRunDetails(ipRun('held', HELD), { approvals: { approvals: [runApproval('ap-1', 'rejected', '2026-10-14T20:03:00Z')] as never }, role: 'owner' });
     const step = within(await screen.findByTestId('run-step-group:done'));
     expect(step.getByText('Denied')).toBeTruthy();
     expect(screen.getByTestId('run-result').props.children).toBe('Denied');
@@ -1237,12 +1246,12 @@ describe("a run's documents and its package (spec A7, C2; the owner's ~04:05Z an
     await view.unmount();
     resetSnapshot();
     const going = await openRun(ipRun('running', [], { documents: three }));
-    await screen.findByTestId('run-progress');
+    await screen.findByTestId('run-open-details');
     expect(screen.queryByTestId('run-view-package')).toBeNull();
     await going.unmount();
     resetSnapshot();
     await openRun(ipRun('succeeded', []));
-    await screen.findByTestId('run-progress');
+    await screen.findByTestId('run-open-details');
     expect(screen.queryByTestId('run-view-package')).toBeNull();
     expect(screen.queryByTestId('run-download-pdf')).toBeNull();
     expect(screen.queryByText('DOCUMENTS')).toBeNull();

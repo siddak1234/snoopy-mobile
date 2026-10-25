@@ -4,6 +4,7 @@ import React from 'react';
 import HomeScreen from '@/app/(tabs)/(home)/index';
 import NotificationsScreen from '@/app/(tabs)/(home)/notifications';
 import RunDetailScreen from '@/app/(tabs)/activity/run';
+import RunDetailsScreen from '@/app/(tabs)/activity/run-details';
 import ApprovalsScreen from '@/app/(tabs)/activity/approvals';
 import ActivityScreen from '@/app/(tabs)/activity/index';
 import AddFlowScreen from '@/app/(tabs)/flows/add';
@@ -73,6 +74,8 @@ const SCREENS = {
     refused: /^\/v1\/workspaces\/[^/]+\/(run-stats|runs|automations|approvals|subscriptions)(\?|$)/u,
   },
   Run: { Screen: RunDetailScreen, params: { runId: 'run-0' }, read: /\/runs\/run-0$/u },
+  // A run's steps, tiles and facts on a page of their own (build 28, F9), the same read.
+  'Run details': { Screen: RunDetailsScreen, params: { runId: 'run-0' }, read: /\/runs\/run-0$/u },
   Approvals: { Screen: ApprovalsScreen, read: /\/approvals\?status=pending$/u },
   Activity: { Screen: ActivityScreen, read: /\/runs$/u },
   'Add a flow': { Screen: AddFlowScreen, read: /\/automations$/u },
@@ -109,9 +112,12 @@ const CASES: Case[] = [
   ['Home', 'offline', 'app/(tabs)/(home)/index.tsx:361', false],
   ['Home', 'unavailable', 'app/(tabs)/(home)/index.tsx:361', false],
   ['Home', 'error', 'app/(tabs)/(home)/index.tsx:361', false],
-  ['Run', 'offline', 'app/(tabs)/activity/run.tsx:189', true],
-  ['Run', 'unavailable', 'app/(tabs)/activity/run.tsx:198', true],
-  ['Run', 'error', 'app/(tabs)/activity/run.tsx:207-208', true],
+  ['Run', 'offline', 'app/(tabs)/activity/run.tsx:153', true],
+  ['Run', 'unavailable', 'app/(tabs)/activity/run.tsx:160', true],
+  ['Run', 'error', 'app/(tabs)/activity/run.tsx:169-172', true],
+  ['Run details', 'offline', 'app/(tabs)/activity/run-details.tsx', true],
+  ['Run details', 'unavailable', 'app/(tabs)/activity/run-details.tsx', true],
+  ['Run details', 'error', 'app/(tabs)/activity/run-details.tsx', true],
   ['Approvals', 'offline', 'app/(tabs)/activity/approvals.tsx:174', true],
   ['Approvals', 'unavailable', 'app/(tabs)/activity/approvals.tsx:180', true],
   ['Approvals', 'error', 'app/(tabs)/activity/approvals.tsx:189-190', true],

@@ -2418,3 +2418,71 @@ entitlements checked (`ENTITLEMENTS_OK`), submission `be9f2cbf-199c-4e31-9ad8-02
 14:47:02Z (queued 14:46:02Z). App Store Connect's processing (VALID) was not read by the session: the
 owner sees it in TestFlight. It carries a flow's items (Candidate Reviewer): the owner's test — a job
 uploaded, candidates added and ranked — is backend BUILD-PLAN 28.6.1's last part.
+
+## Round 19 — build 28's feedback: the screens, phase A (2026-10-24)
+
+The owner's nine items on TestFlight 28 (F1–F9, read through the App Store Connect API) and his
+decisions of 2026-10-24 (backend MASTER-PLAN §0.1, Round 19; the round's plan §3, the same screens as
+the website's): the new flow page for a flow with items only; the jobs filter a glass drop-down of
+departments, the chosen department's jobs A–Z, All departments first; Run details the standard for
+every run page, Invoice Processing's included; the job card's department a glass drop-down. Phase A
+needs no new contract; phase B (the tiles Total / {positive} / {negative}, the item file page, "View
+{file}" and its page) waits for the round's contract. No word or id of one flow is written here:
+"All {values}" is the group field's own `title` made many, "{Run word} details" the flow's
+`items.runWords`, and the tests' flows are made up.
+
+| What | Where | Held by |
+| --- | --- | --- |
+| F1: Flows by department — each department's kind over its cards, A–Z, then "Whole workspace" | `app/(tabs)/flows/index.tsx`; `groupFlows` (`lib/view/catalog.ts`) | `build28-flows` (three) |
+| F2–F3: a flow with items has no DASHBOARD and no STEPS; Turn on and what it is owed on a card of their own while off; no counts read again for tiles it does not draw | `app/(tabs)/flows/detail.tsx` | `round19-items` "lists its items grouped A–Z…", "no tiles…", "off: Turn on stands alone…" |
+| F2: the items A–Z by value, each group A–Z by title; the filter — "All {values}", then the values A–Z; a value chosen lists its items alone | `components/items/flow-items.tsx`; `groupItems`, `itemGroupChoices`, `shownGroup` (`lib/view/items.ts`); `allOf` (`lib/content/screen-states.ts`) | `round19-items` "groups by groupField…", "the filter…" (two), "a flow that groups nothing has no filter" |
+| Decision 7: the upload card's `select` is the drop-down (`components/dropdown.tsx`), never chips | `components/items/item-upload-dialog.tsx` | `round19-items` "the upload card…", "a saved name is sent as itself…" |
+| F5: an item's runs as rows the height of a drop-down's — rank, title, score, arrow; F4: its sections off its page | `components/open-row.tsx` (`OpenRow`); `app/(tabs)/flows/item.tsx`; `rankedRuns` | `round19-items` "its title, its group and state…", "no \"What AI read\" here…" |
+| F7–F9: a run's page — the result line off its top, "{Run word} details" over its sections, the Run details row, View flow | `app/(tabs)/activity/run.tsx`; `runWordDetails` | `round19-items` "the title and the score head it…", "sections of a flow that names no runs…"; `gate24-parity-activity` |
+| F9: Run details — the result line, Duration and Steps done, STEPS (Approve and Deny in the held step), Started, Ended, Trigger, Run ID — for every run | `app/(tabs)/activity/run-details.tsx` (Activity's stack); `hooks/use-run-detail.ts` (`useRunDetail`, the one read both pages share) | `invoice-processing-screens`, `build14-feedback`, `build22-screens`, `gate24-parity-activity`, `tab-screens` (their step, tile, fact and decision tests now on it); `run-workspace` (both pages); `presses-patterns-back-circle`, `presses-patterns-failure-states`; `real-router/run-in-activity` "a run's Run details opens in Activity's stack…" |
+
+- **Parity.** The website's same pages (the round's plan §3). **The session's choices, not the
+  owner's**, each by the nearest precedent here: under "All {values}" the items stay grouped under
+  their values' names (F2: "listed in sections as well by department"), a value chosen draws no
+  heading; a flow with items keeps its actions (Pause, Edit setup, Archive) and its Turn on on a
+  card where the steps were, as a flow the catalog no longer lists draws Step 1's controls; the
+  Flows cards keep their "Department: {kind}" line under the headings (D4); Run details shows the
+  run's status pill and its result line (how it went, `runResultLine`) above the tiles, and the held
+  step's Approve and Deny move there with the steps — a held run's notification opens Approvals,
+  which decides in one tap; the upload card's pill says "Choose" for a select without a default.
+- **Finding for the round's contract (phase B), and for the website lane:** the manifest names a
+  `select` field in the singular alone (`AutomationItemField.title`), so "All departments" is the
+  title made many here (`allOf`: -y to -ies; -s, -x, -z, -ch, -sh take -es; else -s). A plural in
+  the manifest would make it the flow's own word; the website should make it the same way until then.
+- `ConnectionRow`'s `nameTone` is gone: an item's runs were its one user (Round 19's review, finding 9),
+  and they are `OpenRow`s now, muted the same way.
+- **NOT OBSERVED** (no simulator or device in this lane): the drop-down inside the upload card on
+  iOS (a menu over a dialog), the compact rows and Run details at the largest text size, the Flows
+  headings in the light palette.
+
+### Guards proved to bite, build 28 phase A (2026-10-24)
+
+Each line broken, its tests red, restored (the file's sha the same), green (`round19-items` unless named):
+- `groupFlows` unsorted, and the whole workspace first: `build28-flows`' two group tests fail (each).
+- `groupItems` with its values unsorted, its items newest first, a chosen value ignored: "groups by
+  groupField…", "lists its items grouped A–Z…" and the filter's screen test fail.
+- `itemGroupChoices` without "All {values}" first, `allOf` adding a plain -s, `shownGroup` keeping a
+  value gone: "the filter…" fails (each).
+- The flow page drawing its DASHBOARD or its STEPS for a flow with items, Turn on not standing alone,
+  its counts read again: "lists its items grouped A–Z…", "off: Turn on stands alone…", "no tiles…" fail.
+- The filter missing, or a heading over a chosen value: the filter's screen test fails.
+- The upload card's choice not kept, its pill not saying it: "the upload card…" and "a saved name is
+  sent as itself…" fail.
+- `OpenRow` 13 pt above and below, or a failed run not muted: "its title, its group and state…" fails.
+- The item's sections back on its page: "no \"What AI read\" here…" fails.
+- The result line back on the run's page: "the title and the score head it…" and
+  `gate24-parity-activity` fail; "{Run word} details" not the flow's word, or no "DETAILS" for a flow
+  without one: "the title and the score…", "sections of a flow that names no runs…" fail.
+- The Run details row opening another page: "the title and the score…" and `real-router/run-in-activity`
+  fail.
+- Run details without the held step's decision (`invoice-processing-screens`, `build14-feedback`), its
+  status pill (`build14-feedback`), its result line (`tab-screens`, `gate24-parity-activity`), its facts
+  (`gate24-parity-activity`): each fails.
+- `useRunDetail` staying on a workspace switch: `run-workspace` fails on both pages.
+- The Flows headings not drawn: `build28-flows`' screen test fails.
+- `no-flow-code` stays green.
