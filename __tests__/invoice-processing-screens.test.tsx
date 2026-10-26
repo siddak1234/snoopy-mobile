@@ -13,10 +13,11 @@ import type { Connection } from '@/lib/platform/catalog';
 import { connectOAuthProvider } from '@/lib/platform/connections';
 import { readProjects, type Project } from '@/lib/platform/projects';
 import { resetSnapshot } from '@/lib/platform/snapshot';
-import { nocturneDark } from '@/constants/theme';
+import { nocturneDark, status } from '@/constants/theme';
 import { flowStepPlan } from '@/lib/view/pipeline';
 import { toFlows } from '@/lib/view/catalog';
 import { resetPushForTests } from '@/hooks/use-push-registration';
+import { fixtureBlocks, visibleWords } from '@/test/blocks';
 import { fakePlatform, type Answer } from '@/test/fake-platform';
 import {
   QUICKBOOKS_PROVIDER,
@@ -685,7 +686,6 @@ describe('Set up for a flow the workspace holds on an older version', () => {
 /* ───────────────────────────── a run's page (A7, A8) ───────────────────────────── */
 
 type RunDetail = Answer<'GET /v1/workspaces/{workspaceId}/runs/{runId}'>;
-type RunDocument = NonNullable<RunDetail['documents']>[number];
 type Reported = [stepId: string, outcome: 'ok' | 'held' | 'failed', summary: string, minute: number, heldReason?: string];
 
 const RUN_ID = '793eef82-102d-81be-a2d3-9e8d4e2b2c36';
@@ -773,34 +773,6 @@ function openRun(
 /** The run's Run details page (build 28, F9): where its steps, tiles and facts are. */
 function openRunDetails(detail: RunDetail, options: Omit<Parameters<typeof openRun>[1] & object, 'page'> = {}) {
   return openRun(detail, { ...options, page: 'details' });
-}
-
-/** A receipt as v3 writes it (spec §1.1, AM7): every field present, null when not printed. */
-function receipt(index: number, overrides: Partial<RunDocument> = {}): RunDocument {
-  return {
-    index,
-    status: 'saved',
-    statusText: 'Saved',
-    type: 'receipt',
-    vendor: { name: "Lowe's", address: '2150 W Shaw Ave', city: 'Fresno, CA 93711', storeNumber: '1234' },
-    number: '48291',
-    numberLabel: 'Receipt #',
-    references: [{ label: 'Register', value: '07' }],
-    date: '2026-10-14',
-    time: '14:32',
-    currency: 'USD',
-    lineItems: [{ description: '2X4-8 STUD', quantity: '4', unitPrice: '3.98', amount: '15.92' }],
-    lineItemsComplete: true,
-    subtotal: '15.92',
-    tax: '1.27',
-    tip: null,
-    discount: null,
-    total: '17.19',
-    payment: { method: 'card', cardLast4: '4417' },
-    recordedIn: null,
-    details: [{ label: 'Category', value: 'Materials' }],
-    ...overrides,
-  };
 }
 
 /** Run 793eef82's real steps (v2, 2026-10-15), its summaries as they were. */
@@ -1001,37 +973,38 @@ const HELD: Reported[] = [
  * Approve / Deny inside step 4 (round 24 P6; the owner's build 23 F7–F10: "It
  * should be step 4 approve or deny", "Deny should be red", "not many clicks").
  */
-describe("a held run is decided from its page: Approve or Deny under the held line (round 24, P6; build 28's review, finding 1)", () => {
+/** The fixture's approval form (v7-held-waiting): its approval, and the roles that may decide it. */
+const FORM_APPROVAL = '0d0d0d0d-0d0d-4d0d-8d0d-0d0d0d0d0d0d';
+
+describe("a held run is decided from its page: Approve or Deny in its approval form (round 24, P6; build 28's review, finding 1; backend ADR-0048)", () => {
   const runReads = () =>
     platformOperation.mock.calls.filter((call: unknown[]) => String(call[0]).endsWith(`/runs/${RUN_ID}`)).length;
+  const held = (fixture = 'v7-held-waiting') => ipRun('held', HELD, { blocks: fixtureBlocks(fixture) });
 
-  it('the newest pending approval and a role it names: both buttons under "Waiting for approval.", Deny the danger pill; Approve sends the decision with a key, then reads the run again', async () => {
-    await openRun(ipRun('held', HELD), {
-      // An older decision of the same job, then the one that waits: the newest decides.
-      approvals: { approvals: [runApproval('ap-old', 'rejected', '2026-10-14T19:00:00Z'), runApproval('ap-new', 'pending', '2026-10-14T20:03:00Z')] as never },
-      role: 'admin',
-    });
-    expect((await screen.findByTestId('run-result')).props.children).toBe('Waiting for approval.');
+  it('a role the form names: both buttons under "Waiting for approval.", Deny the danger pill; Approve decides the form\'s approval with a key, then reads the run again', async () => {
+    await openRun(held(), { role: 'admin' });
+    expect((await screen.findByTestId('run-blocks-0')).props.children).toBe('Waiting for approval.');
     const decision = within(await screen.findByTestId('run-decision-block'));
     expect(decision.getByText('Approve')).toBeTruthy();
     expect((StyleSheet.flatten(decision.getByText('Deny').props.style) as { color?: string }).color).toBe(nocturneDark.danger);
-    // Under the held line, before the Run details row.
-    expect(screen.getAllByTestId(/^run-(result|decision-block|open-details)$/u).map((node) => node.props.testID)).toEqual([
-      'run-result',
+    // Under the result line, before the documents and the Run details row: the platform's order.
+    expect(screen.getAllByTestId(/^run-(blocks-0|decision-block|blocks-2|open-details)$/u).map((node) => node.props.testID)).toEqual([
+      'run-blocks-0',
       'run-decision-block',
+      'run-blocks-2',
       'run-open-details',
     ]);
     expect(screen.queryByTestId('run-deciders')).toBeNull();
 
     const before = runReads();
     await fireEvent.press(screen.getByTestId('run-decision-approve'));
-    await waitFor(() => expect(decideApproval).toHaveBeenCalledWith(TEST_WORKSPACE, 'ap-new', 'approved', 'key'));
+    await waitFor(() => expect(decideApproval).toHaveBeenCalledWith(TEST_WORKSPACE, FORM_APPROVAL, 'approved', 'key'));
     await waitFor(() => expect(runReads()).toBeGreaterThan(before));
     expect(decideApproval).toHaveBeenCalledTimes(1);
   });
 
   it('its Run details: the held step says where it stands, and offers no buttons', async () => {
-    await openRunDetails(ipRun('held', HELD), { approvals: { approvals: [runApproval('ap-1', 'pending', '2026-10-14T20:03:00Z')] as never }, role: 'owner' });
+    await openRunDetails(held(), { approvals: { approvals: [runApproval('ap-1', 'pending', '2026-10-14T20:03:00Z')] as never }, role: 'owner' });
     const step = within(await screen.findByTestId('run-step-group:done'));
     expect(step.getByText("Waiting for approval: Document 2: the total can't be read.")).toBeTruthy();
     expect(screen.queryByText('Approve')).toBeNull();
@@ -1042,9 +1015,9 @@ describe("a held run is decided from its page: Approve or Deny under the held li
   it('while it saves both wait and the pressed one says "Denying…"; refused, the page says why and offers both again', async () => {
     let refuse: (error: Error) => void = () => undefined;
     (decideApproval as jest.Mock).mockImplementationOnce(() => new Promise((_resolve, reject) => (refuse = reject)));
-    await openRun(ipRun('held', HELD), { approvals: { approvals: [runApproval('ap-1', 'pending', '2026-10-14T20:03:00Z')] as never }, role: 'owner' });
+    await openRun(held(), { role: 'owner' });
     await fireEvent.press(await screen.findByTestId('run-decision-deny'));
-    expect(decideApproval).toHaveBeenCalledWith(TEST_WORKSPACE, 'ap-1', 'rejected', 'key');
+    expect(decideApproval).toHaveBeenCalledWith(TEST_WORKSPACE, FORM_APPROVAL, 'rejected', 'key');
     expect(screen.getByText('Denying…')).toBeTruthy();
     expect(screen.getByTestId('run-decision-approve').props.accessibilityState).toMatchObject({ disabled: true });
     expect(screen.getByTestId('run-decision-deny').props.accessibilityState).toMatchObject({ disabled: true });
@@ -1053,155 +1026,78 @@ describe("a held run is decided from its page: Approve or Deny under the held li
     expect(screen.getByText('Deny')).toBeTruthy();
   });
 
-  it('a role the approval does not name: who can decide, and no buttons', async () => {
-    await openRun(ipRun('held', HELD), {
-      approvals: { approvals: [runApproval('ap-1', 'pending', '2026-10-14T20:03:00Z', ['owner'])] as never },
-      role: 'member',
-    });
+  it('a role the form does not name: who can decide, and no buttons', async () => {
+    await openRun(held(), { role: 'member' });
     expect(await screen.findByTestId('run-deciders')).toBeTruthy();
-    expect(screen.getByText('Only owner can decide this.')).toBeTruthy();
+    expect(screen.getByText('Only owner or admin can decide this.')).toBeTruthy();
     expect(screen.queryByText('Approve')).toBeNull();
     expect(screen.queryByText('Deny')).toBeNull();
   });
 
-  it('approvals that cannot be read: the page still draws and says it waits, no buttons', async () => {
+  it('a role that cannot be read: the page still draws and says it waits, no buttons', async () => {
     routePlatform(platformOperation, { '/automations': { automations: [invoiceProcessingV3Entry()], categories: ['All', 'Accounting'] } });
     const routed = platformOperation.getMockImplementation()!;
-    const detail = ipRun('held', HELD);
+    const detail = held();
     platformOperation.mockImplementation((path: string, ...rest: unknown[]) => {
-      if (path.includes('/approvals')) return Promise.reject(new PlatformError('Service Unavailable', 503));
+      if (path === '/v1/workspaces') return Promise.reject(new PlatformError('Service Unavailable', 503));
       return path.endsWith(`/runs/${RUN_ID}`) ? Promise.resolve(detail) : routed(path, ...rest);
     });
     setMockParams({ runId: RUN_ID });
     await renderWithProviders(<RunDetailScreen />, signedInSession);
-    expect(await screen.findByTestId('run-result')).toBeTruthy();
+    expect((await screen.findByTestId('run-blocks-0')).props.children).toBe('Waiting for approval.');
     expect(screen.queryByText('Approve')).toBeNull();
     expect(screen.queryByTestId('run-deciders')).toBeNull();
   });
 
-  it('denied: the line on its page says Denied, step 4 on its Run details too — no buttons', async () => {
+  it('denied: the line on its page says Denied, with no form and no buttons; step 4 on its Run details says Denied too', async () => {
     const options = { approvals: { approvals: [runApproval('ap-1', 'rejected', '2026-10-14T20:03:00Z')] as never }, role: 'owner' as const };
-    const page = await openRun(ipRun('held', HELD), options);
-    expect((await screen.findByTestId('run-result')).props.children).toBe('Denied');
+    const page = await openRun(held('v7-held-denied'), options);
+    expect((await screen.findByTestId('run-blocks-0')).props.children).toBe('Denied');
     expect(screen.queryByText('Approve')).toBeNull();
     await page.unmount();
     resetSnapshot();
-    await openRunDetails(ipRun('held', HELD), options);
+    await openRunDetails(held('v7-held-denied'), options);
     expect(within(await screen.findByTestId('run-step-group:done')).getByText('Denied')).toBeTruthy();
     expect(screen.queryByText('Approve')).toBeNull();
   });
 });
 
-describe("a run's documents and its package (spec A7, C2; the owner's ~04:05Z and AM7; round 24 P10, P12)", () => {
-  const three = [
-    receipt(1),
-    receipt(2, {
-      status: 'recorded',
-      statusText: 'Recorded in QuickBooks: expense',
-      vendor: { name: 'Blue Bottle', address: null, city: 'Oakland, CA', storeNumber: null },
-      number: 'INV-7',
-      numberLabel: 'Invoice #',
-      references: [{ label: 'PO number', value: 'PO-55' }],
-      type: 'invoice',
-      lineItems: [
-        { description: 'Latte', quantity: '2', unitPrice: '5.25', amount: '10.50' },
-        { description: 'Tip jar', quantity: null, unitPrice: null, amount: '1.00' },
-      ],
-      lineItemsComplete: false,
-      recordedIn: { providerId: 'quickbooks', recordType: 'expense', recordId: '1452' },
-      payment: { method: 'cash', cardLast4: null },
-      tip: '2.00',
-      discount: '0.50',
-      total: '13.00',
-    }),
-    receipt(3, { vendor: { name: null, address: null, city: null, storeNumber: null }, currency: 'CAD', total: '1234.5', number: null, numberLabel: null, references: [], payment: { method: 'not_shown', cardLast4: null } }),
-  ];
+describe("a run's documents and its package (spec A7, C2; the owner's ~04:05Z and AM7; round 24 P10, P12; the platform's blocks since Round 21)", () => {
+  const recorded = (status: RunDetail['run']['status'] = 'succeeded', packageAvailable = true) =>
+    ipRun(status, [['receive', 'ok', 'Photo', 0]], { blocks: fixtureBlocks('v7-recorded'), packageAvailable });
 
-  it('three receipts from one photo: "Invoice 1 of 3" … each, opened, its own vendor, place, numbers, lines with "quantity × unit price", totals and result', async () => {
-    await openRun(ipRun('succeeded', [['receive', 'ok', 'Photo', 0]], { documents: three, details: [{ label: 'Total', value: '$1' }] }));
-    const documents = await screen.findByTestId('run-documents');
-    expect(within(documents).getByText('DOCUMENTS')).toBeTruthy();
-    expect(screen.queryByTestId('run-details')).toBeNull();
-    for (const index of [1, 2, 3]) await fireEvent.press(screen.getByTestId(`document-${index}-toggle`));
-
-    const first = within(screen.getByTestId('document-1'));
-    expect(first.getByText('Invoice 1 of 3')).toBeTruthy();
-    expect(screen.getByTestId('document-1-chip').props.children).toBe('Saved');
-    expect(first.getByText("Receipt · Lowe's")).toBeTruthy();
-    expect(first.getByText('2150 W Shaw Ave, Fresno, CA 93711 · Store 1234')).toBeTruthy();
-    expect(first.getByText('Oct 14, 2026 · 2:32 PM')).toBeTruthy();
-    expect(first.getByText('Receipt #')).toBeTruthy();
-    expect(first.getByText('48291')).toBeTruthy();
-    expect(first.getByText('Register')).toBeTruthy();
-    const line = within(screen.getByTestId('document-1-line-1'));
-    expect(line.getByText('2X4-8 STUD')).toBeTruthy();
-    expect(line.getByText('$15.92')).toBeTruthy();
-    expect(line.getByText('4 × $3.98')).toBeTruthy();
-    expect(first.getByText('$17.19')).toBeTruthy();
-    expect(first.getByText('Card ending 4417')).toBeTruthy();
-    expect(first.getByText('Materials')).toBeTruthy();
-
-    const second = within(screen.getByTestId('document-2'));
-    expect(second.getByText('Invoice 2 of 3')).toBeTruthy();
-    expect(screen.getByTestId('document-2-chip').props.children).toBe('Recorded');
-    expect(second.getByText('Invoice · Blue Bottle')).toBeTruthy();
-    expect(second.getByText('Invoice #')).toBeTruthy();
-    expect(second.getByText('INV-7')).toBeTruthy();
-    expect(second.getByText('PO-55')).toBeTruthy();
-    expect(second.getByText('More lines on the document.')).toBeTruthy();
-    expect(second.getByText('−$0.50')).toBeTruthy();
-    expect(second.getByText('Cash')).toBeTruthy();
-    expect(second.getByText('Recorded in QuickBooks: expense')).toBeTruthy();
-    expect(within(screen.getByTestId('document-2-line-2')).queryByText(/×/u)).toBeNull();
-
-    const third = within(screen.getByTestId('document-3'));
-    expect(third.getByText('Invoice 3 of 3')).toBeTruthy();
-    expect(third.getAllByText('Receipt').length).toBeGreaterThan(0);
-    // The closed line (no seller: the total alone, the website's) and the Total row.
-    expect(third.getAllByText('1,234.5 CAD')).toHaveLength(2);
-    expect(third.queryByText('Paid')).toBeNull();
-  });
-
-  it('each invoice is a closed drop-down: no lines in the tree until opened; pressing #2 opens only #2, which starts with Document type and Format (round 24 P10)', async () => {
-    const pdf = { id: '33333333-3333-4333-8333-333333333333', filename: 'bills.pdf', contentType: 'application/pdf', format: 'PDF', sizeBytes: 2048, pages: 3 };
-    const photo = { id: '44444444-4444-4444-8444-444444444444', filename: 'extra.jpg', contentType: 'image/jpeg', format: 'JPEG', sizeBytes: 1024, pages: 1 };
-    const withSource = three.map((document) => ({ ...document, source: { file: document.index === 3 ? photo.id : pdf.id } }));
-    await openRun(ipRun('succeeded', [['receive', 'ok', 'Photo', 0]], { documents: withSource, files: [pdf, photo] }));
-    await screen.findByTestId('run-documents');
-    // Closed: the heading, the chip, the caret, and {vendor} · {total}; no line item, no body.
-    for (const index of [1, 2, 3]) {
-      expect(screen.getByTestId(`document-${index}-toggle`).props.accessibilityState).toMatchObject({ expanded: false });
-      expect(screen.queryByTestId(`document-${index}-body`)).toBeNull();
-      expect(screen.queryByTestId(`document-${index}-line-1`)).toBeNull();
+  it('three invoices: "DOCUMENTS", then "Invoice 1 of 3" … each a closed card of its own — its seller and total under it, its chip — that opens to its type, seller, place, time, numbers, lines with "quantity × unit price", totals and result', async () => {
+    await openRun(recorded());
+    expect(await screen.findByText('Documents')).toBeTruthy();
+    for (const at of [2, 3, 4]) {
+      expect(screen.getByTestId(`run-blocks-${at}-toggle`).props.accessibilityState).toMatchObject({ expanded: false });
+      expect(screen.queryByTestId(`run-blocks-${at}-body`)).toBeNull();
     }
-    expect(screen.getByTestId('document-1-summary').props.children).toBe("Lowe's · $17.19");
-    expect(screen.queryByText('2X4-8 STUD')).toBeNull();
+    expect(screen.getByTestId('run-blocks-2-toggle').props.accessibilityLabel).toBe('Invoice 1 of 3, Harbor Paper Co. · $102.60, Recorded');
+    expect((StyleSheet.flatten(screen.getByTestId('run-blocks-2-badge').props.style) as { color?: string }).color).toBe(status.ok);
+    expect(screen.queryByText('Copy paper, case')).toBeNull();
 
-    await fireEvent.press(screen.getByTestId('document-2-toggle'));
-    expect(screen.getByTestId('document-2-toggle').props.accessibilityState).toMatchObject({ expanded: true });
-    expect(screen.queryByTestId('document-1-body')).toBeNull();
-    expect(screen.queryByTestId('document-3-body')).toBeNull();
-    const second = within(screen.getByTestId('document-2-body'));
-    expect(within(screen.getByTestId('document-2')).getByText('Invoice 2 of 3')).toBeTruthy();
-    expect(second.getByText('Document type')).toBeTruthy();
-    expect(second.getByText('Invoice')).toBeTruthy();
-    expect(second.getByText('Format')).toBeTruthy();
-    expect(second.getByText('PDF')).toBeTruthy();
+    // #3 opens on its own, and only #3.
+    await fireEvent.press(screen.getByTestId('run-blocks-4-toggle'));
+    expect(screen.queryByTestId('run-blocks-2-body')).toBeNull();
+    const third = within(screen.getByTestId('run-blocks-4-body'));
+    expect(visibleWords(screen.getByTestId('run-blocks-4-body')).slice(0, 8)).toEqual([
+      'Document type',
+      'Bill',
+      'Format',
+      'PDF',
+      'Bill · Harbor Paper Co.',
+      '18 Dock St, Salem, OR',
+      'Oct 14, 2026 · 2:32 PM',
+      'Invoice #',
+    ]);
+    expect(third.getByText('2 × $41.50')).toBeTruthy();
+    expect(third.getByText('More lines on the document.')).toBeTruthy();
+    expect(third.getByText('Card ending 4417')).toBeTruthy();
+    expect(third.getByText('Recorded in QuickBooks: bill')).toBeTruthy();
     // Pressed again, it closes.
-    await fireEvent.press(screen.getByTestId('document-2-toggle'));
-    expect(screen.queryByTestId('document-2-body')).toBeNull();
-    // The third names the photo.
-    await fireEvent.press(screen.getByTestId('document-3-toggle'));
-    expect(within(screen.getByTestId('document-3-body')).getByText('JPEG')).toBeTruthy();
-  });
-
-  it("a closed invoice with no seller says its total alone, and with neither, no second line — the website's (the round's review)", async () => {
-    const noSeller = { name: null, address: null, city: null, storeNumber: null };
-    await openRun(ipRun('succeeded', [], { documents: [receipt(1, { vendor: noSeller }), receipt(2, { vendor: noSeller, total: null })] }));
-    expect((await screen.findByTestId('document-1-summary')).props.children).toBe('$17.19');
-    expect(screen.getByTestId('document-1-toggle').props.accessibilityLabel).toBe('Invoice 1 of 2, $17.19');
-    expect(screen.queryByTestId('document-2-summary')).toBeNull();
-    expect(screen.getByTestId('document-2-toggle').props.accessibilityLabel).toBe('Invoice 2 of 2');
+    await fireEvent.press(screen.getByTestId('run-blocks-4-toggle'));
+    expect(screen.queryByTestId('run-blocks-4-body')).toBeNull();
   });
 
   /** The package file the platform answers (round 24 P12): a signed https link. */
@@ -1215,7 +1111,7 @@ describe("a run's documents and its package (spec A7, C2; the owner's ~04:05Z an
   });
 
   it('the run package replaces Download JSON (round 24 P12): View package opens the package page; no Download JSON', async () => {
-    await openRun(ipRun('succeeded', [], { documents: three }));
+    await openRun(recorded());
     await fireEvent.press(await screen.findByTestId('run-view-package'));
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/activity/package', params: { runId: RUN_ID } });
     expect(screen.queryByTestId('run-download-json')).toBeNull();
@@ -1233,7 +1129,7 @@ describe("a run's documents and its package (spec A7, C2; the owner's ~04:05Z an
     const os = Platform.OS;
     Platform.OS = 'ios';
     try {
-      await openRun(ipRun('succeeded', [], { documents: three }), { packageFile: (request) => (sent.push(request), pdfLink(format)) });
+      await openRun(recorded(), { packageFile: (request) => (sent.push(request), pdfLink(format)) });
       await fireEvent.press(await screen.findByTestId(testID));
       await waitFor(() => expect(share).toHaveBeenCalledWith({ url: `file:///cache/run-${RUN_ID}.${format}` }));
       expect(sent).toEqual([{ body: { format, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }, key: 'key' }]);
@@ -1249,7 +1145,7 @@ describe("a run's documents and its package (spec A7, C2; the owner's ~04:05Z an
   it('Download Excel answered with a file that is not a workbook, or one over 25 MiB: "Could not download. Try again.", nothing saved', async () => {
     for (const answer of [pdfLink('pdf'), { ...pdfLink('xlsx'), sizeBytes: 26_214_401 }]) {
       (downloadSignedFile as jest.Mock).mockClear();
-      const view = await openRun(ipRun('succeeded', [], { documents: three }), { packageFile: () => answer });
+      const view = await openRun(recorded(), { packageFile: () => answer });
       await fireEvent.press(await screen.findByTestId('run-download-excel'));
       expect(await screen.findByText('Could not download. Try again.')).toBeTruthy();
       expect(downloadSignedFile).not.toHaveBeenCalled();
@@ -1258,13 +1154,13 @@ describe("a run's documents and its package (spec A7, C2; the owner's ~04:05Z an
     }
   });
 
-  it('says "Could not download. Try again." when the package cannot be made; no package while the job goes on, or without documents', async () => {
-    const view = await openRun(ipRun('succeeded', [], { documents: three }));
+  it('says "Could not download. Try again." when the package cannot be made; no package where the platform offers none (`packageAvailable`)', async () => {
+    const view = await openRun(recorded());
     await fireEvent.press(await screen.findByTestId('run-download-pdf'));
     expect(await screen.findByText('Could not download. Try again.')).toBeTruthy();
     await view.unmount();
     resetSnapshot();
-    const going = await openRun(ipRun('running', [], { documents: three }));
+    const going = await openRun(recorded('running', false));
     await screen.findByTestId('run-open-details');
     expect(screen.queryByTestId('run-view-package')).toBeNull();
     await going.unmount();
@@ -1273,46 +1169,18 @@ describe("a run's documents and its package (spec A7, C2; the owner's ~04:05Z an
     await screen.findByTestId('run-open-details');
     expect(screen.queryByTestId('run-view-package')).toBeNull();
     expect(screen.queryByTestId('run-download-pdf')).toBeNull();
-    expect(screen.queryByText('DOCUMENTS')).toBeNull();
+    expect(screen.queryByText('Documents')).toBeNull();
   });
 
-  it('a waiting document reads "Not approved" once its approval was rejected (S21)', async () => {
-    await openRun(
-      ipRun('held', [['ask-approval', 'held', 'Waiting', 0, 'Document 1: needs a look.']], {
-        documents: [receipt(1, { status: 'waiting', statusText: 'Waiting for approval: needs a look' })],
-      }),
-      {
-        approvals: {
-          approvals: [
-            {
-              id: 'ap-1',
-              workspaceId: TEST_WORKSPACE,
-              runId: RUN_ID,
-              stepId: 'ask-approval',
-              status: 'rejected',
-              reason: 'Document 1: needs a look.',
-              eligibleRoles: ['owner'],
-              createdAt: '2026-10-14T20:00:00Z',
-              expiresAt: '2026-10-15T20:00:00Z',
-            } as never,
-          ],
-        },
-      },
-    );
-    expect(within(await screen.findByTestId('document-1')).getByText('Not approved')).toBeTruthy();
+  it('a waiting document reads "Not approved" once its approval was refused (S21): the platform\'s chip, drawn as sent', async () => {
+    await openRun(ipRun('held', HELD, { blocks: fixtureBlocks('v7-held-denied') }));
+    expect(within(await screen.findByTestId('run-blocks-3-toggle')).getByText('Not approved')).toBeTruthy();
   });
 
   it("DETAILS: a v1/v2 run's saved lines, label and value, when it wrote no documents", async () => {
-    await openRun(
-      ipRun('succeeded', [], {
-        details: [
-          { label: 'Type', value: 'Receipt' },
-          { label: 'Seller', value: 'Blue Bottle' },
-        ],
-      }),
-    );
-    const details = await screen.findByTestId('run-details');
-    expect(within(details).getByText('DETAILS')).toBeTruthy();
-    expect(within(details).getByText('Blue Bottle')).toBeTruthy();
+    await openRun(ipRun('succeeded', [], { blocks: fixtureBlocks('v2-details') }));
+    expect(await screen.findByText('Details')).toBeTruthy();
+    expect(visibleWords(screen.getByTestId('run-blocks-2'))).toEqual(['Seller', 'Harbor Paper Co.', 'Total', '$102.60']);
   });
 });
+

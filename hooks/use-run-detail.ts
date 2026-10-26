@@ -30,26 +30,29 @@ import { RUN_REREAD_MS, heldDecision, rereadForApproval, toTracker, type Tracker
  * One run, plus the catalog for its name and the step titles. `RunStep`
  * carries a `stepId` the spec guarantees the pinned manifest declares, so the
  * human title comes from that manifest's `pipeline` — the intended join, not a
- * workaround. What a succeeded run saved is its DETAILS (backend ADR-0037,
- * §12.1 #67 as amended 2026-10-14): the label and value lines its automation
- * wrote for people, on this one-run read only — never the raw output.
+ * workaround. What a run read comes as blocks (backend ADR-0048), on this
+ * one-run read only — never the raw output (§12.1 #67).
  *
  * And its flow, as it is now (Build 22, the session's S23): a setting step's
  * line — the integration the flow has chosen — and a title by connection
  * ("QuickBooks updated") follow the flow's settings, since a run does not
- * record its own choice (backend §12.1 #290); its `items.runWords` name its
- * sections (build 28, F8). The live list first, an archived flow's only when
+ * record its own choice (backend §12.1 #290); its run fields name its files
+ * (build 28, F7). The live list first, an archived flow's only when
  * the run's flow is not in it; a flow that cannot be read costs those their
  * words, never the page.
  *
  * A run that has not ended is read again until it has — the owner's build 14
  * feedback #3, "It says running" — one read at a time, the next waiting for the
  * last to settle, none while another screen is in front, each keeping the page
- * on screen (`refresh`). A run held with no approval of its job listed yet is
- * read again for it (round 25, the review's R5c 1): every `RUN_REREAD_MS`, at
- * most `HELD_APPROVAL_REREADS` times, the approvals past the snapshot
- * (`readAllApprovalsNow`), until the approval is listed or the run leaves held
- * (`rereadForApproval`, the website's rule).
+ * on screen (`refresh`). A run held whose page body holds no approval form yet
+ * is read again for it (round 25, the review's R5c 1; backend ADR-0048): every
+ * `RUN_REREAD_MS`, at most `HELD_APPROVAL_REREADS` times, with the approvals
+ * past the snapshot (`readAllApprovalsNow`) for Run details' held step, until
+ * the form comes or the run leaves held (`rereadForApproval`, the website's
+ * rule).
+ *
+ * The run is read as its page body (`readRun`'s `shape=blocks`): the run's page
+ * draws its `blocks`, the file page its files, Run details its steps.
  */
 export function useRunDetail(runId: string | undefined) {
   const router = useRouter();
@@ -121,7 +124,7 @@ export function useRunDetail(runId: string | undefined) {
   }, [going, focused, reads, refresh]);
 
   const owed =
-    detail.status === 'ready' && rereadForApproval(detail.data.detail.run, detail.data.approvals, approvalReads);
+    detail.status === 'ready' && rereadForApproval(detail.data.detail.run, detail.data.detail.blocks, approvalReads);
   useEffect(() => {
     if (!owed || !focused) return;
     const timer = setTimeout(() => {
@@ -132,7 +135,7 @@ export function useRunDetail(runId: string | undefined) {
   }, [owed, focused, reads, refresh]);
 
   const liveRun = detail.status === 'ready' ? detail.data : null;
-  // A waiting document whose approval was refused or ran out says "Not approved" (S21); a denied step says so (P6).
+  // A denied step says so (P6); Run details' held step reads it.
   const decided = liveRun ? heldDecision(liveRun.detail.run, liveRun.approvals) : null;
   // Every step from the start, each where the run is (spec A7; the session's
   // S14) — by the catalog's groups, the newest version's, for any run whose

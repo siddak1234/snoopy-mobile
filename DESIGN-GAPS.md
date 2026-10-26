@@ -1459,8 +1459,8 @@ The owner's words this answers (verbatim):
 - ~04:05Z: "it was 3 receipts in one picture. that should work … we should get a json out that
   clearly seperates accordingly … cu price, location, and more should be there", and AM7: "ensure
   invoice number, bill number, or another standard practice from vendors is part of the json
-  schema output" → the run page's DOCUMENTS (`lib/view/documents.ts`,
-  `components/runs/document-card.tsx`) and Download JSON (`readRunDocuments`, the app's side of
+  schema output" → the run page's DOCUMENTS (~~`lib/view/documents.ts`~~,
+  ~~`components/runs/document-card.tsx`~~) and Download JSON (`readRunDocuments`, the app's side of
   C1/C2).
 - ~04:15Z: "we will list on apples app store not intuits. so we do not need that" → no Intuit
   button image, no "Disconnect from QuickBooks"; the two `connect-to-quickbooks*.png` files are
@@ -1990,7 +1990,7 @@ drop-down, the status-bar strip, and the A8X run package.
   `expanded`, 44 pt) with "Invoice i of n" (`documentOf`), the chip (one line, chrome limit), a caret
   and `{vendor} · {total}` (S9); the body only when open (`FadeIn`, the card `LinearTransition`, none
   under Reduce Motion), starting with Document type and Format (`kind`); `formatFor(document, files)`
-  and ~~`formatLabel(contentType)`~~ (deleted in the review below) in `lib/view/documents.ts`. Website: its lane (`<details>`).
+  and ~~`formatLabel(contentType)`~~ (deleted in the review below) in ~~`lib/view/documents.ts`~~. Website: its lane (`<details>`).
 - **P12 the A8X run package, the app half** (F16; the main session's correction 1 overrides S16): the run
   page's View package / Download PDF / Download Excel replace Download JSON (`readRunDocuments`,
   `DOWNLOAD_JSON_LABEL`, `documentsFileName`, `downloadJson` deleted; the endpoint stays). New:
@@ -2060,7 +2060,7 @@ own (its tab bar, its text sizes, its status bar).
 | P9 · approved says "Approved" | the old line put back | `flows-view` "is pending, approved…", `tab-screens` "leaves a decided held run…" |
 | P9 · a held step done once the job runs on | the held state kept | `build21-views` "an approved job…" (two), `invoice-processing-screens` "an approved job…" |
 | P10 · "Invoice i of n" | `documentOf` says Document (`lib/content/screen-states.ts`) | `build21-views` headings, `invoice-processing-screens` the document cases |
-| P10 · closed at first | `useState(true)` (`components/runs/document-card.tsx`) | `invoice-processing-screens` "each invoice is a closed drop-down…" |
+| P10 · closed at first | `useState(true)` (~~`components/runs/document-card.tsx`~~) | `invoice-processing-screens` "each invoice is a closed drop-down…" |
 | P10 · Format from the file its source names | the first file taken (`formatFor`) | `build21-views` "opens with Document type and Format…", `invoice-processing-screens` the drop-down case |
 | P10 · `{vendor} · {total}` while closed | the type alone | `build21-views` "closed, a card says…", the drop-down case |
 | P12 · View package opens the package page | pushed to the run page (`app/(tabs)/activity/run.tsx`) | `invoice-processing-screens` "the run package replaces Download JSON…" |
@@ -2137,10 +2137,10 @@ for every rule the two clients share; the main session's decisions bind each fix
 | Android opens the link | iOS's path on Android | `signed-file` "on Android…", `data-support-screens` "on Android…" |
 | Data's export takes the helper | the call replaced (`app/(tabs)/settings/data.tsx`) | `data-support-screens` the three download cases |
 | The package's downloads take the helper | the call replaced (`hooks/use-run-package.tsx`) | `package-screen`, `invoice-processing-screens` the download cases |
-| Format falls back to the only file | the fallback kept for a document with no source only (`lib/view/documents.ts`) | `build21-views` "opens with Document type and Format…" |
+| Format falls back to the only file | the fallback kept for a document with no source only (~~`lib/view/documents.ts`~~) | `build21-views` "opens with Document type and Format…" |
 | Format is the platform's word | the content type's subtype shown in its place | `build21-views` "Format is the platform's word as given…" |
 | No seller: the total alone | the type put back before the total | `build21-views` "closed, a card says…", `invoice-processing-screens` "a closed invoice with no seller…" and "three receipts…" |
-| Neither: no closed line | the summary line always drawn (`components/runs/document-card.tsx`) | `invoice-processing-screens` "a closed invoice with no seller…" |
+| Neither: no closed line | the summary line always drawn (~~`components/runs/document-card.tsx`~~) | `invoice-processing-screens` "a closed invoice with no seller…" |
 | Clear all: a new key per press | a fixed `'notifications-clear-1'` (`components/notifications/inbox.tsx`) | `presses-home-activity` "Clear all pressed again after a refusal…" |
 | The strip over the sign-in stack | `<StatusBarStrip />` removed (`app/(auth)/_layout.tsx`) | `tab-layout` "the sign-in stack's layout…" |
 
@@ -2264,13 +2264,13 @@ updates." Each change as the website makes it (`snoopy/lib/run-documents.ts`, `s
 
 | What | Where | Held by |
 | --- | --- | --- |
-| A document's heading in its flow's word, else "Document i of n" (27.5.1) | `documentOf`, `lib/content/screen-states.ts`; `toDocumentCards`, `lib/view/documents.ts`; the run page passes the catalog entry's `documentWords` (`app/(tabs)/activity/run.tsx`) | `build21-views` the headings, both ways; `invoice-processing-screens` through the fixture catalog's Invoice Processing, which declares "Invoice" (`test/platform.tsx`) |
+| A document's heading in its flow's word, else "Document i of n" (27.5.1) | `documentOf`, `lib/content/screen-states.ts`; `toDocumentCards`, ~~`lib/view/documents.ts`~~; the run page passes the catalog entry's `documentWords` (`app/(tabs)/activity/run.tsx`) | `build21-views` the headings, both ways; `invoice-processing-screens` through the fixture catalog's Invoice Processing, which declares "Invoice" (`test/platform.tsx`) |
 | No code for one flow (27.5.2) | every source under `app`, `components`, `lib`, `hooks`, `constants` | `no-flow-code` |
 | The router names MASTER-PLAN §3.4 (27.5.3) | `CLAUDE.md` | — |
 
 ### Guards proved to bite, Round 18 (2026-10-21)
 
-- `no-flow-code`: a line comparing `templateId` with `'invoice-processing'` planted in `lib/view/documents.ts` fails it (1 of 2); restored, both pass.
+- `no-flow-code`: a line comparing `templateId` with `'invoice-processing'` planted in ~~`lib/view/documents.ts`~~ fails it (1 of 2); restored, both pass.
 - `build21-views`: with `documentOf` writing "Invoice" whatever the words, the "Document i of n" case fails; the "Invoice i of n" case holds Invoice Processing's.
 
 
@@ -2332,7 +2332,7 @@ the tests' flow is made up. The contract is the round's, backend `7a4baa6`, gene
 | The flow page lists its items, grouped by `groupField` (options' order, then typed A–Z), each row its count and top score, "Reading…" or "Couldn't read"; a row opens its item | `components/items/flow-items.tsx`; `groupItems`, `itemRowLine` (`lib/view/items.ts`); `app/(tabs)/flows/detail.tsx` | "groups by groupField…", "lists its items grouped…", "a row opens its item", "none yet" |
 | No run form on such a flow: a run names an item | Step 1, `app/(tabs)/flows/detail.tsx` | "…draws no run start form" |
 | The upload card: the options, the names typed before, "Other" and its box; `createItem` | `components/items/item-upload-dialog.tsx`; `selectChoices`, `itemFieldValues` | "a select offers…", "the upload card…", "a file the platform will not take…" |
-| An item's page: its runs ranked and numbered, Add and Archive for owners and admins, "What AI read" closed | `app/(tabs)/flows/item.tsx` (the Flows stack); `rankedRuns`; `components/runs/run-sections.tsx` | "an item's page" (seven); `real-router/flow-items`; `presses-patterns-failure-states` (three) |
+| An item's page: its runs ranked and numbered, Add and Archive for owners and admins, "What AI read" closed | `app/(tabs)/flows/item.tsx` (the Flows stack); `rankedRuns`; ~~`components/runs/run-sections.tsx`~~ | "an item's page" (seven); `real-router/flow-items`; `presses-patterns-failure-states` (three) |
 | A run headed by its title and score; its sections, the first open | `app/(tabs)/activity/run.tsx` | "a run's page headed…" (two) |
 | A file field takes the types it names (`acceptedContentTypes`) | `components/automations/run-file-field.tsx`; `takesPhotos`, `acceptedLine` | "a file field offers the types…" (three) |
 | Backend §12.2 #94: the cold-start offer said where it was untrue | `DESIGN-CONTRACT.md` (three places); the comments in `app/(auth)/notifications-offer.tsx`, `hooks/use-push-registration.tsx`, `components/offer-screen.tsx`, `lib/content/screen-states.ts`; `__tests__/faceid-screen.test.tsx` | `faceid-screen` "unlocked where iOS can still ask…" |
@@ -2585,3 +2585,41 @@ installs, 0 sessions and 0 feedback on build 29; the owner then said, verbatim, 
 29. the app was updated not a fresh download. no assumptions." — an update counts no install — and,
 after Round 19's close merged, "tested on website as well" — the owner's word for backend BUILD-PLAN
 28.8.6 and Gate 28's line 4.
+
+## Round 21 — the ten blocks, drawn (backend ADR-0048; BUILD-PLAN 29.1.3; 2026-10-26)
+
+The re-entry: MASTER-PLAN §0 names `snoopy-backend` as open; BUILD-PLAN 29.1.3 names `[snoopy,
+snoopy-mobile]`, and the owner approved decision 4, "built once in both clients", on 2026-10-25.
+The contract: backend B2's branch at `ae78a8b`, read from a read-only snapshot (`automations.d.ts`
+`20823861…`, `platform.d.ts` `7373c7b1…`, `connections.d.ts` unchanged) and its fixtures
+(`block-fixtures.ts`, one sha256 over the fifteen fixtures' bytes in filename order, `887fb44b…`,
+the website's header byte for byte).
+
+| What | Where | Held by |
+| --- | --- | --- |
+| The ten renderers in one registry over the generated union, the fallback for what this build does not know | `components/blocks/` (`block-list.tsx`, one file per type, `fallback.tsx`, `look.ts`); `FALLBACK` beside `NEWER_CONTROL_NOTE` (`lib/content/screen-states.ts`) | `blocks-render`, `blocks-parity`, `no-flow-code` |
+| The run, item and item file pages draw the platform's page body; the flow page its parts in `pages.flow` order | `app/(tabs)/activity/run.tsx`, `app/(tabs)/flows/item.tsx`, `item-file.tsx`, `detail.tsx`; `readRun`/`readItem` send `shape=blocks` | `invoice-processing-screens`, `round19-items`, `build28-files`, `gate24-parity-activity`, `build14-feedback`, `real-router/flow-items`, `real-router/run-in-activity` |
+| The held re-read waits for the approval form | `rereadForApproval`, `hasApprovalForm` (`lib/view/runs.ts`); `hooks/use-run-detail.ts` | `build21-views`, `build14-feedback` |
+| TrackerStep and StepSpinner moved for the timeline block | `components/runs/tracker-step.tsx`; `trackerLook` | `invoice-processing-screens` (Run details), `blocks-render` |
+| Deleted, their strings held by the backend's tests (B2 step 3) | ~~`components/runs/document-card.tsx`~~, ~~`components/runs/run-sections.tsx`~~, ~~`lib/view/documents.ts`~~; `itemTiles`, `rankedRuns`, `runResultLine` and the words they said | — |
+
+- **Kept, as other screens use them:** `runFileRows` (the run file page's title), `itemsStillGoing`
+  (the flow page's items, and the item page when an answer has no `going`), `OpenRow` (now with an
+  optional chip, lines and a score label for a list block's row; its default draw unchanged).
+- **The parity map** (`DESIGN-GAPS.archive.md` "Gate 24's parity line"): no page added or removed;
+  the run, item, item file and flow pages match the website's `RunLive`, `ItemLive`, the item file
+  page and the flow page as the web lane drew them on `166200f`, both from the same blocks.
+- **The session's choices, not the owner's:** the `item` and `setup` forms are typed but offered by
+  no page yet, since no answer carries them: a page that offers none draws nothing, as the website
+  does; the run file page draws no blocks (the platform sends it none) and keeps its title.
+- **Findings for a `snoopy-backend` session:**
+  1. 'Not approved' comes toned neutral (`document-blocks.ts`, the v7-held-denied fixture) and
+     'Not recorded' warning, where the owner's change 2 says both draw the error tone. The app draws
+     tones as sent, so the backend's tone decides it (the web lane's findings (a) and (b), the same).
+  2. `snoopy-backend/scripts/block-text.ts`'s comment says an unknown target draws the fallback sentence; its code
+     and the `unknown-target` fixture draw the row's words with no press. The app follows the fixture.
+  3. The OpenAPI `Block` lets a section hold any block (`blocks: Block[]`), where `blocks.ts` holds
+     it to one level with no questions; the app draws what comes either way.
+- ~~**CI's `Deployed contract` job is red by design** until the platform releases this contract~~
+  (B2 not live yet); no `platform-requirement.json`.
+- **NOT OBSERVED** (no simulator or device): every visible change, for the session's screenshots.

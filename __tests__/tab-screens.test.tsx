@@ -28,6 +28,7 @@ import {
   projectsPayload,
   providersWithQuickBooks,
   routePlatform,
+  outcomeBlocks,
   runDetailPayload,
   runsPayload,
   personalSession,
@@ -1250,10 +1251,12 @@ describe('Cancelling a run (24.4.2)', () => {
 });
 
 describe('Run detail variants (design runDefs)', () => {
-  it('renders a successful run with its result line — on its page, a run that read no sections', async () => {
+  it('renders a successful run with its result line — the first of its blocks, as the platform sent it (backend ADR-0048)', async () => {
     setMockParams({ runId: 'run-0' });
     await renderWithProviders(<RunDetailScreen />, signedInSession);
-    expect(await screen.findByTestId('run-result')).toBeTruthy();
+    const [line] = outcomeBlocks(runDetailPayload('run-0').run);
+    expect(line).toBeDefined();
+    expect((await screen.findByTestId('run-blocks-0')).props.children).toBe(line!.text);
   });
 
   it('offers no Retry, because a client cannot express one', async () => {

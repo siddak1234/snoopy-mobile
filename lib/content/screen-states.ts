@@ -178,6 +178,15 @@ export const TRY_AGAIN_LABEL = 'Try again';
 export const NEWER_CONTROL_NOTE = 'This field is newer than this build of the app. Enter it as text.';
 
 /**
+ * A part this build cannot draw (backend ADR-0048 decision 10; the owner's
+ * words, 2026-10-26): an unknown block, form or page part — at the top level or
+ * inside a section — and a page whose blocks did not come. One sentence on both
+ * clients, the website's `FALLBACK`; the platform's other two ("This file isn't
+ * available.", "This is too long to show here.") come as blocks.
+ */
+export const FALLBACK = "This part can't be shown here yet.";
+
+/**
  * A run's file field (BUILD-PLAN 25.8.3, the flow page's start controls): Take
  * photo beside Upload. The camera is asked for at the press; a person who has
  * turned it off is told where it is turned on again, and that Upload still
@@ -402,10 +411,12 @@ export const EDIT_SETUP_LABEL = 'Edit setup';
 /**
  * A run's page (§3.E; Build 21's A7: every step from the start, a live tracker).
  * ~~PROGRESS~~ is STEPS; each group's line says its state, never a step's own
- * summary (B6; the owner's build 20 items 10 and 11).
+ * summary (B6; the owner's build 20 items 10 and 11). ~~DETAILS, DOCUMENTS,
+ * "{RUN} DETAILS", "Waiting for approval.", "Invoice 1 of 3", Document type,
+ * Format, "More lines on the document.", "Add {run}", "No {runs} yet."~~ here
+ * until Round 21: the platform's words now, sent in the page's blocks (backend
+ * ADR-0048; `apps/runs/src/pages/words.ts`).
  */
-export const DETAILS_LABEL = 'DETAILS';
-export const DOCUMENTS_LABEL = 'DOCUMENTS';
 /**
  * The row near the bottom of every run's page and the page it opens (the
  * owner's build 28 item F9: "make a section that says Run details … a
@@ -413,7 +424,6 @@ export const DOCUMENTS_LABEL = 'DOCUMENTS';
  */
 export const RUN_DETAILS_LABEL = 'Run details';
 export const RUN_WORKING = 'Working…';
-export const RUN_WAITING_FOR_APPROVAL = 'Waiting for approval.';
 export const STEP_WAITING = 'Waiting';
 export const STEP_DONE = 'Done';
 export const STEP_SKIPPED = 'Skipped';
@@ -432,25 +442,6 @@ export const EMAIL_OWED = 'Sending email…';
 export function emailSentLine(time: string): string {
   return `Email sent · ${time}`;
 }
-/** What a flow calls one of its documents, and many (`AutomationCatalogEntry.documentWords`). */
-export type DocumentWords = { singular: string; plural: string };
-
-/** A flow that names no word for its documents (the owner, 2026-10-21). */
-export const DOCUMENT_WORD = 'Document';
-
-/**
- * "Invoice 1 of 3", in the word its flow declares (backend BUILD-PLAN 27.2.1; the
- * owner, 2026-10-21: "invoice is invoice processing specific"), else "Document 1 of
- * 3". ~~"Invoice" for every flow~~ from round 24 P10 (the owner's build 23 F15: "It
- * should also be invoice not document") until then.
- */
-export function documentOf(index: number, count: number, words?: DocumentWords | null): string {
-  return `${words?.singular ?? DOCUMENT_WORD} ${index} of ${count}`;
-}
-/** The first two rows inside an invoice (round 24 P10): what it is and the file's format. */
-export const DOCUMENT_TYPE_LABEL = 'Document type';
-export const DOCUMENT_FORMAT_LABEL = 'Format';
-export const DOCUMENT_MORE_LINES = 'More lines on the document.';
 /**
  * The A8X run package (round 24 P12; the owner's build 23 F16: "No more
  * download json"; ~~Download JSON~~): View package opens the PDF on its own
@@ -487,8 +478,6 @@ export const FILE_NOT_OPENED = 'Could not open the file. Try again.';
 export const FILE_GONE = 'This file is no longer kept.';
 /** A file of a type not drawn in place (only a PDF, a JPEG or a PNG is), the website's words. */
 export const DOWNLOAD_TO_OPEN = 'Download it to open it.';
-/** An item's tiles (the owner's build 28 item F6): its runs, then its verdict words'. */
-export const TOTAL_LABEL = 'Total';
 export const RUN_ID_LABEL = 'Run ID';
 
 /**
@@ -693,16 +682,6 @@ export function uploadItemLabel(words: Words): string {
 }
 export function noItemsYet(words: Words): string {
   return `No ${inSentence(words.plural)} yet.`;
-}
-export function addRunLabel(runWords: Words): string {
-  return `Add ${inSentence(runWords.singular)}`;
-}
-export function noRunsYet(runWords: Words): string {
-  return `No ${inSentence(runWords.plural)} yet.`;
-}
-/** Over a run's sections, in its flow's word for one (the owner's build 28 item F8): "CONTRACT DETAILS". */
-export function runWordDetails(runWords: Words): string {
-  return `${runWords.singular} details`.toUpperCase();
 }
 export function archiveItemLabel(words: Words): string {
   return `Archive ${inSentence(words.singular)}`;

@@ -183,31 +183,8 @@ it('a run\'s View package opens the package page in Activity, with its runId; Ba
     '/runs/run-0': {
       ...run,
       run: { ...run.run, status: 'succeeded' },
-      documents: [
-        {
-          index: 1,
-          status: 'saved',
-          statusText: 'Saved',
-          type: 'invoice',
-          vendor: { name: 'Northwind Supply', address: null, city: null, storeNumber: null },
-          number: 'NW-100',
-          numberLabel: 'Invoice #',
-          references: [],
-          date: '2026-10-14',
-          time: null,
-          currency: 'USD',
-          lineItems: [],
-          lineItemsComplete: true,
-          subtotal: '90.00',
-          tax: '10.00',
-          tip: null,
-          discount: null,
-          total: '100.00',
-          payment: { method: 'not_shown', cardLast4: null },
-          recordedIn: null,
-          details: [],
-        },
-      ],
+      // The platform offers its package (backend ADR-0048).
+      packageAvailable: true,
     },
     '/runs/run-0/package': {
       format: 'pdf',

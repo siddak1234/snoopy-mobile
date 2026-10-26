@@ -35,10 +35,10 @@ import {
   itemFieldsComplete,
   itemRowLine,
   itemStatusLine,
-  rankedRuns,
   selectChoices,
   shownGroup,
 } from '@/lib/view/items';
+import { fixtureBlocks, visibleWords } from '@/test/blocks';
 import { fakePlatform, type Answer } from '@/test/fake-platform';
 import {
   TEST_WORKSPACE,
@@ -279,24 +279,6 @@ describe("the items' rules (lib/view/items.ts)", () => {
     // "Other" with nothing typed is no value; a required field without one is not complete.
     expect(itemFieldsComplete(DECLARED.fields, { region: OTHER_CHOICE, name: 'Data' }, {})).toBe(true); // the default stands in
     expect(itemFieldsComplete(DECLARED.fields, { region: 'North', name: ' ' }, {})).toBe(false);
-  });
-
-  it("an item's runs in the platform's order, never sorted again, numbered: Reading…, the score, a failure muted", () => {
-    // An order a sort by score would change: the 64 before the 91, a failure before a run still going.
-    const ranked = rankedRuns([
-      run('r2', { title: 'Contoso supply', score: 64 }),
-      run('r1', { title: 'Northwind lease', score: 91, resultSummary: 'Meets 3 of 3' }),
-      run('r4', { status: 'failed', failureReason: 'The file had no text.' }),
-      run('r3', { status: 'running' }),
-    ]);
-    expect(ranked.map(({ id, rank, title, score, dim }) => [id, rank, title, score, dim])).toEqual([
-      ['r2', 1, 'Contoso supply', '64', false],
-      ['r1', 2, 'Northwind lease', '91', false],
-      ['r4', 3, 'Failed', null, true],
-      ['r3', 4, 'Reading…', null, false],
-    ]);
-    // No line under a row since build 28 (F5): its result is on its run's page.
-    expect(ranked.some((row) => 'line' in row)).toBe(false);
   });
 
   it('a file field says its types in words', () => {
@@ -655,64 +637,55 @@ async function openItem(read: Answer<`GET ${typeof ONE}`>, session: SessionConte
   return fake;
 }
 
-const READ_ITEM = (): Answer<`GET ${typeof ONE}`> => ({
+// Its page body as the platform composes it (backend ADR-0048): the candidate-reviewer v2 item fixture.
+const READ_ITEM = (blocks = fixtureBlocks('reviewer-item')): Answer<`GET ${typeof ONE}`> => ({
   item: item('i-1', {
     title: 'Leases',
     fields: { region: 'South', name: 'Leases' },
     runCount: 4,
     topScore: 91,
-    sections: [
-      { title: 'Must-haves', entries: [{ title: 'A break clause', text: 'Either side may end it on 90 days.' }] },
-      { title: 'Nice to have', entries: [{ title: 'Fixed rent' }] },
-    ],
+    blocks: fixtureBlocks('reviewer-item-reading'),
   }),
-  // Not in score order, so a page that sorted them again would draw them otherwise.
-  runs: [
-    run('r2', { title: 'Contoso lease', score: 64 }),
-    run('r1', { title: 'Northwind lease', score: 91, resultSummary: 'Meets 3 of 3' }),
-    run('r4', { status: 'failed', failureReason: 'The file had no text.' }),
-    run('r3', { status: 'running' }),
-  ],
+  // The ranked runs are a block (`shape=blocks` sends `runs` as []).
+  runs: [],
+  blocks,
+  going: false,
 });
 
-describe("an item's page (plan §5.3)", () => {
-  it('its title, its group and state; its runs drawn as answered, numbered, scored, a failure muted — each row rank, title, score and arrow (build 28, F5)', async () => {
+/** The list block of the item fixture: its rows, by place. */
+const RUNS = 'item-blocks-5';
+
+describe("an item's page (plan §5.3; its blocks since Round 21)", () => {
+  it('its title, its group and state; its runs drawn as sent, numbered, scored — "Score" read first — a failure muted, each row rank, title, score and arrow (build 28, F5)', async () => {
     await openItem(READ_ITEM());
     expect(screen.getByTestId('item-title').props.children).toBe('Leases');
     expect(screen.getByTestId('item-status').props.children).toBe('South · Ready');
-    expect(screen.getByText('CONTRACTS')).toBeTruthy();
-    const row = (id: string) => within(screen.getByTestId(`item-run-${id}`)).getAllByText(/./u).map((node) => node.props.children);
-    expect(screen.getAllByTestId(/^item-run-r\d$/u).map((node) => node.props.testID)).toEqual([
-      'item-run-r2',
-      'item-run-r1',
-      'item-run-r4',
-      'item-run-r3',
-    ]);
-    expect(row('r2')).toEqual([1, 'Contoso lease', '64']);
-    // No line under it: its result is on the run's page.
-    expect(row('r1')).toEqual([2, 'Northwind lease', '91']);
-    expect(row('r4')).toEqual([3, 'Failed']);
-    expect(row('r3')).toEqual([4, 'Reading…']);
-    expect(within(screen.getByTestId('item-run-r1')).getByTestId(/^phosphor-react-native-caret-right-/u)).toBeTruthy();
-    // The height of a drop-down's row: `RunSections`' 44 at least, 11 above and below, 14 a side — never the 64 of a connection row.
-    expect(StyleSheet.flatten(screen.getByTestId('item-run-r1').props.style)).toMatchObject({
+    expect(screen.getByText('Candidates')).toBeTruthy();
+    const row = (at: number) => within(screen.getByTestId(`${RUNS}-row-${at}`)).getAllByText(/./u).map((node) => node.props.children);
+    expect(row(0)).toEqual(['1', 'Dana Whitfield', '88']);
+    expect(row(1)).toEqual(['2', 'Omar Reyes', '41']);
+    expect(row(2)).toEqual(['3', 'Reading…']);
+    expect(row(3)).toEqual(['4', 'Failed']);
+    // NEW on the app (the website's already): the score is read as "Score 88".
+    expect(screen.getByTestId(`${RUNS}-row-0-value`).props.accessibilityLabel).toBe('Score 88');
+    expect(within(screen.getByTestId(`${RUNS}-row-0`)).getByTestId(/^phosphor-react-native-caret-right-/u)).toBeTruthy();
+    // The height of a drop-down's row: 44 at least, 11 above and below, 14 a side — never the 64 of a connection row.
+    expect(StyleSheet.flatten(screen.getByTestId(`${RUNS}-row-0`).props.style)).toMatchObject({
       minHeight: 44,
       paddingVertical: 11,
       paddingHorizontal: 14,
     });
     // The score at the row's type, not the heading's.
-    expect(StyleSheet.flatten(screen.getByTestId('item-run-r1-score').props.style)).toMatchObject({ fontSize: 16 });
-    // A failure in the muted tone, never faded (its line is muted already: AA); the others in the text colour.
+    expect(StyleSheet.flatten(screen.getByTestId(`${RUNS}-row-0-value`).props.style)).toMatchObject({ fontSize: 16 });
+    // A failure in the muted tone, never faded (AA); the others in the text colour.
     const color = (node: { props: Record<string, unknown> }) => (StyleSheet.flatten(node.props.style as never) as { color?: string }).color;
-    const failed = within(screen.getByTestId('item-run-r4'));
-    expect(color(failed.getByText('Failed'))).toBe(nocturneDark.neutral[400]);
-    expect(color(within(screen.getByTestId('item-run-r2')).getByText('Contoso lease'))).toBe(nocturneDark.text);
-    expect(color(within(screen.getByTestId('item-run-r1')).getByText('Northwind lease'))).toBe(nocturneDark.text);
-    expect(color(screen.getByTestId('item-run-r1-score'))).toBe(nocturneDark.text);
-    for (const id of ['r1', 'r2', 'r3', 'r4']) {
-      expect(StyleSheet.flatten(screen.getByTestId(`item-run-${id}-row`).props.style ?? {})).not.toHaveProperty('opacity');
+    expect(color(within(screen.getByTestId(`${RUNS}-row-3`)).getByText('Failed'))).toBe(nocturneDark.neutral[400]);
+    expect(color(within(screen.getByTestId(`${RUNS}-row-0`)).getByText('Dana Whitfield'))).toBe(nocturneDark.text);
+    expect(color(screen.getByTestId(`${RUNS}-row-0-value`))).toBe(nocturneDark.text);
+    for (const at of [0, 1, 2, 3]) {
+      expect(StyleSheet.flatten(screen.getByTestId(`${RUNS}-row-${at}`).props.style ?? {})).not.toHaveProperty('opacity');
     }
-    await fireEvent.press(screen.getByTestId('item-run-r1'));
+    await fireEvent.press(screen.getByTestId(`${RUNS}-row-0`));
     expect(mockRouter.push).toHaveBeenCalledWith(
       { pathname: '/(tabs)/activity/run', params: { runId: 'r1', returnTo: 'flows' } },
       { withAnchor: true },
@@ -720,9 +693,11 @@ describe("an item's page (plan §5.3)", () => {
   });
 
   it('an owner adds one: the run names the item, says Start; Back goes back', async () => {
-    const fake = await openItem({ ...READ_ITEM(), runs: [] });
-    expect(screen.getByText('No contracts yet.')).toBeTruthy();
-    expect(screen.getByText('ADD CONTRACT')).toBeTruthy();
+    const fake = await openItem(READ_ITEM(fixtureBlocks('empty-item')));
+    expect(screen.getByText('No candidates yet.')).toBeTruthy();
+    // The platform's label, then its run form, drawn by `StartRun` for an owner.
+    expect(screen.getByText('Add candidate')).toBeTruthy();
+    expect(screen.getByTestId('item-add-run')).toBeTruthy();
     // The item page's run field says its types, as the website's does.
     expect(screen.getByTestId('run-file-contractFile-types').props.children).toBe('PDF or Word file');
     fake.always('POST /v1/workspaces/{workspaceId}/uploads', {
@@ -743,10 +718,11 @@ describe("an item's page (plan §5.3)", () => {
     await screen.findByText('Ready: c.pdf (12 bytes)');
     await fireEvent.press(screen.getByText('Start'));
     await waitFor(() => expect(fake.to('POST /v1/workspaces/{workspaceId}/runs')).toHaveLength(1));
+    // The run names the item the form names.
     expect(fake.to('POST /v1/workspaces/{workspaceId}/runs')[0]!.body).toEqual({
       subscriptionId: FLOW,
       input: { contractFile: 'artifact-2' },
-      itemId: 'i-1',
+      itemId: '0b0b0b0b-0b0b-4b0b-8b0b-0b0b0b0b0b0b',
     });
     // It stays here; the read that follows lists the new run.
     await waitFor(() => expect(fake.to(`GET ${ONE}`).length).toBeGreaterThan(1));
@@ -756,23 +732,22 @@ describe("an item's page (plan §5.3)", () => {
 
   it('Add and Archive are an owner\'s or an admin\'s: a member reads the same page without them', async () => {
     await openItem(READ_ITEM(), sessionAs('member'));
-    expect(screen.getByTestId('item-runs')).toBeTruthy();
+    expect(screen.getByTestId(RUNS)).toBeTruthy();
     expect(screen.queryByTestId('item-add-run')).toBeNull();
     expect(screen.queryByTestId('item-archive')).toBeNull();
   });
 
   it('an item still being read takes no run yet', async () => {
-    await openItem({ ...READ_ITEM(), item: item('i-1', { status: 'reading' }), runs: [] });
+    await openItem({ ...READ_ITEM(fixtureBlocks('empty-item')), item: item('i-1', { status: 'reading' }) });
     expect(screen.getByTestId('item-status').props.children).toBe('North · Reading…');
     expect(screen.queryByTestId('item-add-run')).toBeNull();
   });
 
-  it('no "What AI read" here: the item\'s sections leave its page for the page of its file (build 28, F4)', async () => {
+  it('no "What AI read" here: the item\'s reading is on the page of its file (build 28, F4)', async () => {
     await openItem(READ_ITEM());
     expect(screen.queryByText('WHAT AI READ')).toBeNull();
-    expect(screen.queryByTestId('item-sections')).toBeNull();
-    expect(screen.queryByText('Must-haves')).toBeNull();
-    expect(screen.queryByText('Nice to have')).toBeNull();
+    expect(screen.queryByText('Must haves')).toBeNull();
+    expect(screen.queryByText('Nice to haves')).toBeNull();
   });
 
   it('Archive asks first, then archives it under a key and goes back; Cancel keeps it', async () => {
@@ -805,85 +780,63 @@ describe("an item's page (plan §5.3)", () => {
 
 /* ───────────────────────────── the run page ───────────────────────────── */
 
-describe("a run's page headed by its title and score, its sections the first open (plan §5.4; build 28, F7–F9)", () => {
+describe("a run's page headed by its title and score, its body the platform's blocks (plan §5.4; build 28, F7–F9; backend ADR-0048)", () => {
   type Detail = Answer<'GET /v1/workspaces/{workspaceId}/runs/{runId}'>;
 
-  async function openRun(overrides: Partial<Detail['run']>, sections?: Detail['sections'], flow: Subscription = flowWithItems()) {
+  async function openRun(overrides: Partial<Detail['run']>, blocks: Detail['blocks'] = fixtureBlocks('reviewer-candidate')) {
     const base = runDetailPayload('run-1');
-    const detail: Detail = {
-      ...base,
-      run: { ...base.run, ...run('r1'), ...overrides },
-      ...(sections ? { sections } : {}),
-    };
+    const detail: Detail = { ...base, run: { ...base.run, ...run('r1'), ...overrides }, blocks };
     const fake = fakePlatform(platformOperation);
     fake.always('GET /v1/workspaces/{workspaceId}/runs/{runId}', detail);
     fake.always('GET /v1/workspaces/{workspaceId}/automations', { automations: [entry()], categories: ['All'] });
     fake.always('GET /v1/workspaces/{workspaceId}/approvals', { approvals: [] });
     fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', (sent) => ({
-      subscriptions: sent.query?.status === 'archived' ? [] : [flow],
+      subscriptions: sent.query?.status === 'archived' ? [] : [flowWithItems()],
     }));
     setMockParams({ runId: 'r1' });
     await renderWithProviders(<RunDetailScreen />, sessionAs('owner'));
     await screen.findByTestId('run-title');
+    return fake;
   }
 
-  const SECTIONS: Detail['sections'] = [
-    {
-      title: 'Parties',
-      entries: [{ title: 'Northwind Ltd', subtitle: 'Landlord', text: 'Signed 2026.', url: 'https://example.com/northwind' }],
-    },
-    { title: 'Terms', entries: [{ title: 'Five years', url: 'javascript:alert(1)' }] },
-  ];
-
-  it('the title and the score head it; "{Run} details" over the sections, the first open — the result line gone; then Run details and View flow', async () => {
-    await openRun({ title: 'Northwind lease', score: 91, resultSummary: 'Meets 3 of 3' }, SECTIONS);
+  it('the title and the score head it; then its blocks — "View resume", "CANDIDATE DETAILS" over its sections, the first open; then Run details and View flow', async () => {
+    const fake = await openRun({ title: 'Northwind lease', score: 91, resultSummary: 'Meets 3 of 3' });
+    expect(fake.to('GET /v1/workspaces/{workspaceId}/runs/{runId}')[0]!.query).toEqual({ shape: 'blocks' });
     expect(screen.getByTestId('run-title').props.children).toBe('Northwind lease');
     expect(screen.getByTestId('run-score').props.children).toBe('91');
-    // F8: "Then it should be the section candidate details. Instead of strong match 6 of 6."
-    expect(screen.queryByTestId('run-result')).toBeNull();
+    // F8: "Then it should be the section candidate details. Instead of strong match 6 of 6." — the platform leaves the line out.
     expect(screen.queryByText('Meets 3 of 3')).toBeNull();
-    expect(within(screen.getByTestId('run-sections-block')).getByText('CONTRACT DETAILS')).toBeTruthy();
-    const first = within(screen.getByTestId('run-sections-0-body'));
-    expect(first.getAllByText(/./u).map((node) => node.props.children)).toEqual([
-      'Northwind Ltd',
-      'Landlord',
-      'Signed 2026.',
-      'https://example.com/northwind',
+    const words = visibleWords(screen.toJSON());
+    expect(words.slice(words.indexOf('View resume'), words.indexOf('Run details'))).toEqual([
+      'View resume',
+      'Candidate details',
+      'Experience',
+      'Payroll Lead',
+      'Fernwood Foods · 2019–2025',
+      'Ran payroll for 400 people.',
+      'Education',
     ]);
-    expect(screen.queryByTestId('run-sections-1-body')).toBeNull();
+    expect(screen.queryByTestId('run-blocks-3-body')).toBeNull();
     // Then Run details — its steps, tiles and facts a page away (F9) — then View flow.
-    expect(screen.getAllByTestId(/^run-(sections|open-details)$/u).map((node) => node.props.testID)).toEqual([
-      'run-sections',
-      'run-open-details',
-    ]);
     expect(screen.queryByTestId('run-progress')).toBeNull();
     expect(screen.queryByText('Duration')).toBeNull();
     expect(screen.queryByTestId('run-fact-Run ID')).toBeNull();
     expect(screen.getByText('View flow')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('run-open-details'));
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/activity/run-details', params: { runId: 'r1' } });
+    // A closed section opens on its own; its https address opens in the system browser.
     const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
-    await fireEvent.press(screen.getByTestId('run-sections-0-link-0'));
-    expect(open).toHaveBeenCalledWith('https://example.com/northwind');
-    // An address that is not http or https is no link.
-    await fireEvent.press(screen.getByTestId('run-sections-1'));
-    expect(within(screen.getByTestId('run-sections-1-body')).queryByText('javascript:alert(1)')).toBeNull();
+    await fireEvent.press(screen.getByTestId('run-blocks-3-toggle'));
+    await fireEvent.press(screen.getByTestId('run-blocks-3-0-row-0-link'));
+    expect(open).toHaveBeenCalledWith('https://school.example.test/accounting');
     open.mockRestore();
   });
 
   it('a run without both is headed by its id, as before, with no score; Run details still there', async () => {
-    await openRun({ title: 'Northwind lease' });
+    await openRun({ title: 'Northwind lease' }, []);
     expect(screen.getByTestId('run-title').props.children).toBe('Run r1');
     expect(screen.queryByTestId('run-score')).toBeNull();
-    expect(screen.queryByTestId('run-sections')).toBeNull();
     expect(screen.getByTestId('run-open-details')).toBeTruthy();
-  });
-
-  it('sections of a flow that names no runs: "DETAILS" over them', async () => {
-    const { items: _none, ...plain } = flowWithItems();
-    await openRun({}, SECTIONS, plain);
-    expect(within(screen.getByTestId('run-sections-block')).getByText('DETAILS')).toBeTruthy();
-    expect(screen.queryByText('CONTRACT DETAILS')).toBeNull();
   });
 });
 

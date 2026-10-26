@@ -1,19 +1,12 @@
 import type { Approval, Run } from '@/lib/platform/automations';
-import type { RunDocument } from '@/lib/platform/runs';
-import {
-  documentDate,
-  documentMoney,
-  documentTime,
-  formatFor,
-  toDocumentCard,
-  toDocumentCards,
-} from '@/lib/view/documents';
 import {
   HELD_APPROVAL_REREADS,
   groupState,
+  hasApprovalForm,
   heldDecision,
   jobApproval,
   rereadForApproval,
+  trackerLook,
   runLabel,
   stepStates,
   toRunStats,
@@ -26,8 +19,11 @@ import { invoiceProcessingEntry, invoiceProcessingV3Entry } from '@/test/platfor
  * Build 21's view rules, each a table (spec A7, A8, A9; the session's S14):
  * the tracker's state for every step and group, from shared fixtures — run
  * 793eef82 as it ran, a v3 run of three receipts, a held run, a
- * continuation, a failed run — and the document card. ~~Home's quick runs~~
- * until Build 22 (the owner's build 21 item 1: "Remove run a flow section").
+ * continuation, a failed run. ~~Home's quick runs~~ until Build 22 (the
+ * owner's build 21 item 1: "Remove run a flow section"); ~~the document card
+ * (`lib/view/documents.ts`)~~ until Round 21 — the platform composes a run's
+ * documents as blocks (backend ADR-0048), its tests holding the card's
+ * strings, and the app draws them (`__tests__/blocks-parity.test.tsx`).
  */
 
 type Step = { stepId: string; outcome: 'ok' | 'held' | 'failed'; summary: string; occurredAt: string; heldReason?: string };
@@ -237,22 +233,30 @@ describe("step 4's words, the website's (round 24 P6; the review's first and six
     expect(heldDecision(held, [approval('pending', same), approval('rejected', at(31))])).toBe('rejected');
   });
 
-  it("a held run with no approval of its job listed is read again for it, at most 10 times; one whose approval is listed — waiting or decided — or that is not held, never (round 25, the review's R5c 1; the website's rereadForApproval)", () => {
+  it("a held run whose blocks hold no approval form yet is read again, at most 10 times; one whose form came, or that is not held, never (round 25, the review's R5c 1; backend ADR-0048; the website's rereadForApprovalForm)", () => {
     expect(HELD_APPROVAL_REREADS).toBe(10);
-    // None listed yet — it turned held while the page was open — or only another job's: read again, up to the bound.
-    for (const approvals of [[], [{ ...approval('pending'), runId: 'another-job' }]]) {
-      for (let reads = 0; reads < 10; reads += 1) expect(rereadForApproval(held, approvals, reads)).toBe(true);
-      expect(rereadForApproval(held, approvals, 10)).toBe(false);
-      expect(rereadForApproval(held, approvals, 11)).toBe(false);
+    const form = { type: 'questions', form: { kind: 'approval', approvalId: 'ap-1', eligibleRoles: ['owner'] } };
+    // No form yet — it turned held while the page was open, or its approval was not asked yet — read again, up to the bound.
+    for (const blocks of [undefined, [], [{ type: 'text', text: 'Waiting for approval.' }], [{ type: 'questions', form: { kind: 'run' } }]]) {
+      for (let reads = 0; reads < 10; reads += 1) expect(rereadForApproval(held, blocks, reads)).toBe(true);
+      expect(rereadForApproval(held, blocks, 10)).toBe(false);
+      expect(rereadForApproval(held, blocks, 11)).toBe(false);
     }
-    // Its approval listed, whatever became of it: no more reads for it.
-    for (const status of ['pending', 'approved', 'rejected', 'expired'] as const) {
-      expect(rereadForApproval(held, [approval(status)], 0)).toBe(false);
-    }
+    // The form came: no more reads for it.
+    expect(rereadForApproval(held, [{ type: 'text', text: 'Waiting for approval.' }, form], 0)).toBe(false);
+    expect(hasApprovalForm([form])).toBe(true);
+    expect(hasApprovalForm([null, 7, { type: 'questions' }])).toBe(false);
     // Not held: never.
     for (const status of ['pending', 'running', 'succeeded', 'failed', 'cancelled'] as const) {
       expect(rereadForApproval({ ...held, status }, [], 0)).toBe(false);
     }
+  });
+
+  it("a step state's look; one this build does not know has the \"unknown\" look (a timeline block's, backend ADR-0048 decision 10)", () => {
+    expect(trackerLook('done')).toMatchObject({ state: 'done', tone: 'ok' });
+    expect(trackerLook('held')).toMatchObject({ state: 'held', tone: 'warn' });
+    expect(trackerLook('teleported')).toEqual(trackerLook('unknown'));
+    expect(trackerLook(undefined)).toMatchObject({ state: 'unknown', tone: 'muted' });
   });
 });
 
@@ -260,192 +264,5 @@ describe('a run is named by its full id (spec A8; the owner\'s D4, AM2)', () => 
   it('runLabel carries the whole id (~~and the JSON file name~~: no Download JSON since round 24, P12)', () => {
     const id = '793eef82-102d-81be-a2d3-9e8d4e2b2c36';
     expect(runLabel({ id })).toBe(`Run ${id}`);
-  });
-});
-
-/** A receipt as v3 writes it (spec §1.1, AM7). */
-function doc(overrides: Partial<RunDocument> = {}): RunDocument {
-  return {
-    index: 1,
-    status: 'recorded',
-    statusText: 'Recorded in QuickBooks: expense',
-    type: 'receipt',
-    vendor: { name: "Lowe's", address: '2150 W Shaw Ave', city: 'Fresno, CA 93711', storeNumber: '1234' },
-    number: '48291',
-    numberLabel: null,
-    references: [],
-    date: '2026-10-14',
-    time: '14:32',
-    currency: 'USD',
-    lineItems: [{ description: '2X4-8 STUD', quantity: '4', unitPrice: '3.98', amount: '15.92' }],
-    lineItemsComplete: true,
-    subtotal: '15.92',
-    tax: '1.27',
-    tip: null,
-    discount: null,
-    total: '17.19',
-    payment: { method: 'card', cardLast4: '4417' },
-    recordedIn: { providerId: 'quickbooks', recordType: 'expense', recordId: '1452' },
-    details: [{ label: 'Category', value: 'Materials' }],
-    ...overrides,
-  };
-}
-
-describe("a document's card (spec A7; the owner's ~04:05Z and AM7)", () => {
-  it('money is the decimal string as printed, never rounded or a float', () => {
-    expect(
-      [
-        ['17.19', 'USD'],
-        ['3.5', null],
-        ['3.459', 'USD'],
-        ['-4.00', 'USD'],
-        ['1234567.5', 'USD'],
-        ['1234.5', 'CAD'],
-        ['0', 'EUR'],
-        ['17.19.1', 'USD'],
-        [null, 'USD'],
-      ].map(([value, currency]) => documentMoney(value, currency)),
-    ).toEqual(['$17.19', '$3.50', '$3.459', '−$4.00', '$1,234,567.50', '1,234.5 CAD', '0 EUR', null, null]);
-  });
-
-  it('the date and time as printed, with no zone: never a day off', () => {
-    expect([documentDate('2026-10-14'), documentDate('2026-13-01'), documentDate(null)]).toEqual(['Oct 14, 2026', null, null]);
-    expect([documentTime('14:32'), documentTime('00:05'), documentTime('12:00'), documentTime('25:00')]).toEqual([
-      '2:32 PM',
-      '12:05 AM',
-      '12:00 PM',
-      null,
-    ]);
-  });
-
-  it('its numbers: its own under the label printed beside it, else "No.", then every other identifier by its label', () => {
-    expect(toDocumentCard(doc(), 1).ids).toEqual([{ label: 'No.', value: '48291' }]);
-    expect(
-      toDocumentCard(
-        doc({ numberLabel: 'Invoice #', references: [{ label: 'PO number', value: 'PO-55' }, { label: 'Register', value: '07' }] }),
-        1,
-      ).ids,
-    ).toEqual([
-      { label: 'Invoice #', value: '48291' },
-      { label: 'PO number', value: 'PO-55' },
-      { label: 'Register', value: '07' },
-    ]);
-    expect(toDocumentCard(doc({ number: null, numberLabel: null }), 1).ids).toEqual([]);
-  });
-
-  it('every line: its description, its amount, and "{quantity} × {unit price}" only when both were printed', () => {
-    const card = toDocumentCard(
-      doc({
-        lineItems: [
-          { description: '2X4-8 STUD', quantity: '4', unitPrice: '3.98', amount: '15.92' },
-          { description: 'Bag', quantity: null, unitPrice: '0.10', amount: '0.10' },
-          { description: null, quantity: '1', unitPrice: null, amount: null },
-        ],
-        lineItemsComplete: false,
-      }),
-      2,
-    );
-    expect(card.lines).toEqual([
-      { description: '2X4-8 STUD', amount: '$15.92', each: '4 × $3.98' },
-      { description: 'Bag', amount: '$0.10', each: null },
-      { description: '—', amount: null, each: null },
-    ]);
-    expect(card.moreLines).toBe(true);
-    expect(card.heading).toBe('Document 1 of 2'); // a flow that names no word
-  });
-
-  it('the rows: totals, the discount as taken off, how it was paid, the result, then the automation\'s own lines', () => {
-    const card = toDocumentCard(doc({ tip: '2.00', discount: '0.50', payment: { method: 'card', cardLast4: '4417' } }), 1);
-    expect(card.rows).toEqual([
-      { label: 'Subtotal', value: '$15.92' },
-      { label: 'Tax', value: '$1.27' },
-      { label: 'Tip', value: '$2.00' },
-      { label: 'Discount', value: '−$0.50' },
-      { label: 'Total', value: '$17.19', strong: true },
-      { label: 'Paid', value: 'Card ending 4417' },
-      { label: 'Result', value: 'Recorded in QuickBooks: expense' },
-      { label: 'Category', value: 'Materials' },
-    ]);
-    expect(toDocumentCard(doc({ payment: { method: 'not_shown', cardLast4: null } }), 1).rows.some((row) => row.label === 'Paid')).toBe(false);
-    expect(toDocumentCard(doc({ payment: { method: 'bank_transfer', cardLast4: null } }), 1).rows).toContainEqual({ label: 'Paid', value: 'Bank transfer' });
-  });
-
-  it.each([
-    ['recorded', null, 'Recorded', 'ok'],
-    ['saved', null, 'Saved', 'ok'],
-    ['compared', null, 'Compared', 'ok'],
-    ['not_recorded', null, 'Not recorded', 'warn'],
-    ['unconfirmed', null, 'Not confirmed', 'warn'],
-    ['waiting', null, 'Waiting', 'warn'],
-    ['waiting', 'rejected', 'Not approved', 'muted'],
-    ['waiting', 'expired', 'Not approved', 'muted'],
-  ] as const)('a %s document (approval %s) reads %s', (status, approval, chip, tone) => {
-    expect(toDocumentCard(doc({ status }), 1, approval)).toMatchObject({ chip, tone });
-  });
-
-  it('every type in words, the seller beside it, its place by the parts printed', () => {
-    const types = ['bill', 'invoice', 'receipt', 'credit_note', 'statement', 'bank_statement', 'quote', 'purchase_order', 'other'] as const;
-    expect(types.map((type) => toDocumentCard(doc({ type, vendor: { name: null, address: null, city: null, storeNumber: null } }), 1).title)).toEqual([
-      'Bill',
-      'Invoice',
-      'Receipt',
-      'Credit note',
-      'Statement',
-      'Bank statement',
-      'Quote',
-      'Purchase order',
-      'Document',
-    ]);
-    expect(toDocumentCard(doc(), 1).location).toBe('2150 W Shaw Ave, Fresno, CA 93711 · Store 1234');
-    expect(toDocumentCard(doc({ vendor: { name: 'X', address: null, city: 'Oakland, CA', storeNumber: null } }), 1).location).toBe('Oakland, CA');
-  });
-
-  it('cards come in the file\'s order, each "{its flow\'s word} i of n", "Document i of n" for a flow that names none (backend BUILD-PLAN 27.2.1)', () => {
-    const documents = [doc({ index: 3 }), doc({ index: 1 }), doc({ index: 2 })];
-    const invoices = toDocumentCards(documents, null, undefined, { singular: 'Invoice', plural: 'Invoices' });
-    expect(invoices.map((card) => card.heading)).toEqual(['Invoice 1 of 3', 'Invoice 2 of 3', 'Invoice 3 of 3']);
-    for (const words of [undefined, null])
-      expect(toDocumentCards(documents, null, undefined, words).map((card) => card.heading)).toEqual([
-        'Document 1 of 3',
-        'Document 2 of 3',
-        'Document 3 of 3',
-      ]);
-    expect(toDocumentCards(undefined)).toEqual([]);
-  });
-
-  it("closed, a card says {vendor} · {total} (S9): without a seller the total alone, without a total the name alone, without both nothing — the website's", () => {
-    const noSeller = { name: null, address: null, city: null, storeNumber: null };
-    expect(toDocumentCard(doc(), 1).summary).toBe("Lowe's · $17.19");
-    expect(toDocumentCard(doc({ type: 'bill', vendor: noSeller }), 1).summary).toBe('$17.19');
-    expect(toDocumentCard(doc({ total: null }), 1).summary).toBe("Lowe's");
-    expect(toDocumentCard(doc({ vendor: noSeller, total: null }), 1).summary).toBeNull();
-  });
-
-  it('opens with Document type and Format: the file its source names, else the job\'s only file, else no Format row', () => {
-    const pdf = { id: '11111111-1111-4111-8111-111111111111', filename: 'scan.pdf', contentType: 'application/pdf', format: 'PDF', sizeBytes: 1000, pages: 2 };
-    const png = { id: '22222222-2222-4222-8222-222222222222', filename: 'photo.png', contentType: 'image/png', format: 'PNG', sizeBytes: 900, pages: 1 };
-    expect(toDocumentCard(doc({ source: { file: png.id } }), 1, null, [pdf, png]).kind).toEqual([
-      { label: 'Document type', value: 'Receipt' },
-      { label: 'Format', value: 'PNG' },
-    ]);
-    expect(toDocumentCard(doc(), 1, null, [pdf]).kind).toEqual([
-      { label: 'Document type', value: 'Receipt' },
-      { label: 'Format', value: 'PDF' },
-    ]);
-    // Two files and no source: which is not known, so no Format row; none listed, none either.
-    expect(toDocumentCard(doc(), 1, null, [pdf, png]).kind).toEqual([{ label: 'Document type', value: 'Receipt' }]);
-    expect(toDocumentCard(doc(), 1).kind).toEqual([{ label: 'Document type', value: 'Receipt' }]);
-    // A source not among the job's files: the job's only file, as the website's; of two, none.
-    const elsewhere = { source: { file: '99999999-9999-4999-8999-999999999999' } };
-    expect(formatFor(doc(elsewhere), [png])).toBe('PNG');
-    expect(formatFor(doc(elsewhere), [pdf, png])).toBeNull();
-  });
-
-  it("Format is the platform's word as given — never the app's own reading of the content type", () => {
-    const heif = { id: '33333333-3333-4333-8333-333333333333', filename: 'p.heif', contentType: 'image/heif', format: 'HEIF', sizeBytes: 900, pages: 1 };
-    expect(formatFor(doc(), [heif])).toBe('HEIF');
-    expect(formatFor(doc(), [{ ...heif, contentType: 'image/jpg', format: 'JPG' }])).toBe('JPG');
-    // A file listed without its word: no Format row.
-    expect(toDocumentCard(doc(), 1, null, [{ ...heif, format: '' }]).kind).toEqual([{ label: 'Document type', value: 'Receipt' }]);
   });
 });

@@ -11,7 +11,8 @@ import type { AutomationItems, AutomationRunInputField, Item, Run, RunFile, Subs
 import type { CatalogEntry } from '@/lib/platform/catalog';
 import { PlatformError } from '@/lib/platform/problem';
 import { resetSnapshot } from '@/lib/platform/snapshot';
-import { fileLine, itemTiles, runFileRows, viewName } from '@/lib/view/items';
+import { fileLine, runFileRows, viewName } from '@/lib/view/items';
+import { fixtureBlocks, visibleWords } from '@/test/blocks';
 import { fakePlatform, type Answer } from '@/test/fake-platform';
 import { TEST_WORKSPACE, planSubscriptionsPayload, runDetailPayload, sessionAs } from '@/test/platform';
 import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
@@ -27,9 +28,12 @@ const { platformOperation, downloadSignedFile } = jest.requireMock('@/lib/platfo
  * Build 28's files and tiles (the round's plan §1 and §3, the contract of
  * backend `cf17dbb`): an item's tiles — Total, then its verdict words' counts,
  * green and red (F6) — and the "{File title}" row to the file it was made from,
- * drawn with its sections on a page of its own (F4); a run's "View {file}" rows
- * to each file its job uploaded, on a page of its own (F7). Every word is the
- * made-up flow's own: "Policy", "Contract", "Keep" and "Drop".
+ * drawn with its reading on a page of its own (F4); a run's "View {file}" rows
+ * to each file its job uploaded, on a page of its own (F7). Since Round 21 the
+ * platform composes the tiles, the rows and the reading as blocks (backend
+ * ADR-0048), and these pages draw the block fixtures (`test/blocks.tsx`); the
+ * strings ~~`itemTiles`~~ said are held by the backend's tests. The flow's own
+ * words here are the made-up "Policy" and "Contract".
  */
 
 const FLOW = 'pol-1';
@@ -142,15 +146,6 @@ beforeEach(() => {
 /* ───────────────────────────── the rules ───────────────────────────── */
 
 describe("build 28's rules (lib/view/items.ts)", () => {
-  it("an item's tiles: Total, then its verdict words' counts, green and red — none for a flow that names no verdicts", () => {
-    expect(itemTiles(item(), DECLARED.verdictWords)).toEqual([
-      { key: 'total', label: 'Total', value: '5', tone: 'text' },
-      { key: 'positive', label: 'Keep', value: '3', tone: 'ok' },
-      { key: 'negative', label: 'Drop', value: '1', tone: 'err' },
-    ]);
-    expect(itemTiles(item(), undefined)).toEqual([]);
-  });
-
   it("a run's files: named by its flow's file fields, in order; files that share a word say which; \"File\" when none", () => {
     const photo = { control: 'artifact' as const, title: 'Photo' };
     const notes = { control: 'text' as const, title: 'Notes' };
@@ -201,36 +196,45 @@ async function openItem(read: Answer<`GET ${typeof ITEM_ONE}`>, subscription = f
   return fake;
 }
 
-describe("an item's page (build 28, F4–F6)", () => {
-  it('its tiles — Total, Keep in green, Drop in red — then the "Policy file" row, then its runs', async () => {
-    await openItem({ item: item(), runs: [] });
-    const tiles = within(screen.getByTestId('item-tiles')).getAllByText(/./u);
-    expect(tiles.map((node) => node.props.children)).toEqual(['5', 'Total', '3', 'Keep', '1', 'Drop']);
+describe("an item's page (build 28, F4–F6; its blocks since Round 21)", () => {
+  it('its tiles — Total, then the verdicts in green and red — then the file row, then its runs', async () => {
+    await openItem({ item: item(), runs: [], blocks: fixtureBlocks('reviewer-item'), going: false });
+    const tiles = within(screen.getByTestId('item-blocks-0')).getAllByText(/./u);
+    expect(tiles.map((node) => node.props.children)).toEqual(['3', 'Total', '1', 'Advance', '1', 'Decline']);
     const color = (node: { props: { style?: unknown } }) => (StyleSheet.flatten(node.props.style as never) as { color?: string }).color;
     expect(color(tiles[2]!)).toBe(status.ok);
     expect(color(tiles[4]!)).toBe(status.err);
-    expect(screen.getAllByTestId(/^item-(tiles|open-file|runs)$/u).map((node) => node.props.testID)).toEqual([
-      'item-tiles',
-      'item-open-file',
-      'item-runs',
+    // The file row, then "ADD CANDIDATE" and the runs, in the platform's order.
+    expect(visibleWords(screen.toJSON()).slice(2, 13)).toEqual([
+      '3',
+      'Total',
+      '1',
+      'Advance',
+      '1',
+      'Decline',
+      'Job description',
+      'Add candidate',
+      'Candidates',
+      '1',
+      'Dana Whitfield',
     ]);
-    expect(within(screen.getByTestId('item-open-file')).getByText('Policy file')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('item-open-file'));
-    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/item-file', params: { item: 'i-1' } });
+    await fireEvent.press(screen.getByTestId('item-blocks-1'));
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/item-file', params: { item: '0b0b0b0b-0b0b-4b0b-8b0b-0b0b0b0b0b0b' } }, undefined);
   });
 
   it('no tiles for a flow whose items name no verdicts; the file row stays', async () => {
-    const { verdictWords: _none, ...plain } = DECLARED;
-    await openItem({ item: item(), runs: [] }, flowWithItems({ items: plain }));
-    expect(screen.queryByTestId('item-tiles')).toBeNull();
+    await openItem({ item: item(), runs: [], blocks: fixtureBlocks('reviewer-v1-item'), going: false });
     expect(screen.queryByText('Total')).toBeNull();
-    expect(screen.getByTestId('item-open-file')).toBeTruthy();
+    expect(within(screen.getByTestId('item-blocks-0')).getByText('Job description')).toBeTruthy();
   });
 });
 
 /* ───────────────────────────── the item's file ───────────────────────────── */
 
-async function openItemFile(answer: () => Answer<typeof ITEM_FILE> | Promise<Answer<typeof ITEM_FILE>>, read = item()) {
+async function openItemFile(
+  answer: () => Answer<typeof ITEM_FILE> | Promise<Answer<typeof ITEM_FILE>>,
+  read = item({ blocks: fixtureBlocks('reviewer-item-reading') }),
+) {
   const fake = fakePlatform(platformOperation);
   fake.always(`GET ${ITEM_ONE}`, { item: read, runs: [] });
   fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', (sent) => ({
@@ -246,7 +250,7 @@ async function openItemFile(answer: () => Answer<typeof ITEM_FILE> | Promise<Ans
 describe("an item's file, on a page of its own (build 28, F4)", () => {
   const policy = file('file-1', 'policy.pdf');
 
-  it("the flow's word for it and the item's title; the original drawn, then its name and line, then Download, then the sections, each closed", async () => {
+  it("the flow's word for it and the item's title; the original drawn, then its name and line, then Download, then its reading, each section closed", async () => {
     const { fake } = await openItemFile(() => link(policy));
     expect(screen.getByTestId('item-file-title').props.children).toBe('Policy file');
     expect(screen.getByTestId('item-file-item').props.children).toBe('Leases');
@@ -255,15 +259,15 @@ describe("an item's file, on a page of its own (build 28, F4)", () => {
     expect(screen.getByTestId('item-file-name').props.children).toBe('policy.pdf');
     expect(screen.getByTestId('item-file-line').props.children).toBe('PDF · 1 page · 2 KB');
     expect(
-      screen.getAllByTestId(/^item-(file-webview|file-about|file-download|sections)$/u).map((node) => node.props.testID),
-    ).toEqual(['item-file-webview', 'item-file-about', 'item-file-download', 'item-sections']);
+      screen.getAllByTestId(/^item-(file-webview|file-about|file-download|reading)$/u).map((node) => node.props.testID),
+    ).toEqual(['item-file-webview', 'item-file-about', 'item-file-download', 'item-reading']);
     // The item's own file, in the workspace the page loaded.
     expect(fake.to(ITEM_FILE)[0]!.values).toEqual({ workspaceId: TEST_WORKSPACE, itemId: 'i-1' });
-    // Under it, the item's sections as drop-downs, none open.
-    expect(screen.queryByTestId('item-sections-0-body')).toBeNull();
-    await fireEvent.press(screen.getByTestId('item-sections-0'));
-    expect(within(screen.getByTestId('item-sections-0-body')).getByText('Either side may end it on 90 days.')).toBeTruthy();
-    expect(screen.getByTestId('item-sections-1')).toBeTruthy();
+    // Under it, the item's reading as the platform sent it: drop-downs, none open.
+    expect(screen.queryByTestId('item-reading-0-body')).toBeNull();
+    await fireEvent.press(screen.getByTestId('item-reading-0-toggle'));
+    expect(within(screen.getByTestId('item-reading-0-body')).getByText('Multi-state.')).toBeTruthy();
+    expect(screen.queryByTestId('item-reading-1-body')).toBeNull();
   });
 
   it('"Opening the file…" while it comes; the cached copy is deleted when the page closes', async () => {
@@ -352,14 +356,14 @@ describe("an item's file, on a page of its own (build 28, F4)", () => {
     expect(mockRouter.back).toHaveBeenCalledTimes(1);
   });
 
-  it('a file the store no longer keeps (404): "This file is no longer kept.", no Download and no Try again; the sections still there', async () => {
+  it('a file the store no longer keeps (404): "This file is no longer kept.", no Download and no Try again; the reading still there', async () => {
     await openItemFile(() => {
       throw new PlatformError('Not Found', 404);
     });
     expect(await screen.findByText('This file is no longer kept.')).toBeTruthy();
     expect(screen.queryByTestId('item-file-download')).toBeNull();
     expect(screen.queryByTestId('item-file-retry')).toBeNull();
-    expect(screen.getByTestId('item-sections-0')).toBeTruthy();
+    expect(screen.getByTestId('item-reading-0')).toBeTruthy();
   });
 });
 
@@ -402,45 +406,32 @@ function routeRun(detail: Detail) {
 const contract = file('file-9', 'northwind.pdf');
 
 describe("a run's files (build 28, F7)", () => {
-  it('a "View contract file" row under its name and score, before "CONTRACT DETAILS", opening the file\'s page', async () => {
-    routeRun({
-      run: runOf(),
-      steps: [],
-      events: [],
-      files: [contract],
-      sections: [{ title: 'Parties', entries: [{ title: 'Northwind Ltd' }] }],
-    });
+  it('a "View resume" row under its name and score, before "CANDIDATE DETAILS", opening the file\'s page (its blocks since Round 21)', async () => {
+    routeRun({ run: runOf(), steps: [], events: [], files: [contract], blocks: fixtureBlocks('reviewer-candidate') });
     setMockParams({ runId: 'r1' });
     await renderWithProviders(<RunDetailScreen />, sessionAs('member'));
-    const row = await screen.findByTestId('run-open-file-file-9');
-    expect(within(row).getByText('View contract file')).toBeTruthy();
-    expect(screen.getAllByTestId(/^run-(open-file-file-9|sections-block|open-details)$/u).map((node) => node.props.testID)).toEqual([
-      'run-open-file-file-9',
-      'run-sections-block',
-      'run-open-details',
-    ]);
+    const row = await screen.findByTestId('run-blocks-0');
+    expect(within(row).getByText('View resume')).toBeTruthy();
+    const words = visibleWords(screen.toJSON());
+    expect(words.indexOf('View resume')).toBeLessThan(words.indexOf('Candidate details'));
+    expect(words.indexOf('Candidate details')).toBeLessThan(words.indexOf('Run details'));
     await fireEvent.press(row);
-    expect(mockRouter.push).toHaveBeenCalledWith({
-      pathname: '/(tabs)/activity/run-file',
-      params: { runId: 'r1', fileId: 'file-9' },
-    });
+    expect(mockRouter.push).toHaveBeenCalledWith(
+      {
+        pathname: '/(tabs)/activity/run-file',
+        params: { runId: '0a0a0a0a-0a0a-4a0a-8a0a-0a0a0a0a0a0a', fileId: '0c0c0c0c-0c0c-4c0c-8c0c-0c0c0c0c0c0c' },
+      },
+      undefined,
+    );
   });
 
-  it('a run of no item — an Invoice Processing run — has no View row, whatever files its job uploaded', async () => {
-    routeRun({ run: runOf({ itemId: undefined }), steps: [], events: [], files: [contract] });
+  it('a run whose blocks name no file has no View row, whatever files its job uploaded: no client adds a block', async () => {
+    routeRun({ run: runOf({ itemId: undefined }), steps: [], events: [], files: [contract], blocks: fixtureBlocks('v2-details') });
     setMockParams({ runId: 'r1' });
     await renderWithProviders(<RunDetailScreen />, sessionAs('member'));
     await screen.findByTestId('run-open-details');
-    expect(screen.queryByTestId(/^run-open-file-/u)).toBeNull();
+    expect(within(screen.getByTestId('run-blocks')).queryByText(/^View /u)).toBeNull();
     expect(screen.queryByText('View contract file')).toBeNull();
-  });
-
-  it('a run with no files has no View row', async () => {
-    routeRun({ run: runOf(), steps: [], events: [] });
-    setMockParams({ runId: 'r1' });
-    await renderWithProviders(<RunDetailScreen />, sessionAs('member'));
-    await screen.findByTestId('run-open-details');
-    expect(screen.queryByTestId(/^run-open-file-/u)).toBeNull();
   });
 
   it("its page: the file's word and the run's title; the file drawn, its name and line; Download hands it on; the job's own file, in the run's workspace", async () => {

@@ -161,9 +161,10 @@ export function readAllApprovals(workspaceId: string): Promise<{ approvals: Appr
 
 /**
  * Every approval as the platform holds it now, never an answer the snapshot
- * kept: a run's page whose run is held with no approval of its job listed
- * reads them so, every 2 s and at most ten times, until it is listed (round
- * 25, the review's R5c 1; `rereadForApproval`). The read that saw the run turn
+ * kept: a run's page whose run is held with no approval form in its blocks
+ * yet reads them so, every 2 s and at most ten times, with the run, until the
+ * form comes (round 25, the review's R5c 1; backend ADR-0048;
+ * `rereadForApproval`). The read that saw the run turn
  * held took its approvals from the 15 s snapshot, from before the approval
  * was asked. The answer becomes the snapshot's, so Approvals and Activity then
  * read what this one saw.
@@ -236,18 +237,21 @@ export function readRemovedSubscriptionsOrNone(workspaceId: string): Promise<{ s
 export type RunDetail = components['schemas']['RunDetail'];
 
 /**
- * One run, with its timeline.
+ * One run, with its timeline, as its page body (backend ADR-0048: `shape=blocks`).
  *
- * The response is `{run, steps, events}`. `steps` is the human timeline a screen
- * renders; `events` is the platform's own record of state transitions and is not
- * what the design draws. §12.1 #67 notes that neither carries the run's output —
- * terminal event payloads are `{}` — so there is no path to a structured result
- * and `resultSummary`/`failureReason` on the run itself are the whole of it.
+ * The response is `{run, steps, events}` plus `blocks` — the "View {file}" rows,
+ * the result line and the approval to decide, then what the run read, in its
+ * flow's `pages.run` order — and `packageAvailable`; with the parameter it drops
+ * `details`, `documents` and `sections`. `steps` is the human timeline Run
+ * details renders; `events` is the platform's own record of state transitions
+ * and is not what the design draws. Raw `output` is published at no shape
+ * (§12.1 #67). A build before this one never sends the parameter and keeps the
+ * legacy answer.
  */
 export function readRun(workspaceId: string, runId: string): Promise<RunDetail> {
   return platformOperation(`/v1/workspaces/${workspaceId}/runs/${runId}`, ({ automations }, signal) =>
     automations.GET('/v1/workspaces/{workspaceId}/runs/{runId}', {
-      params: { path: { workspaceId, runId } },
+      params: { path: { workspaceId, runId }, query: { shape: 'blocks' } },
       signal,
     }),
   );

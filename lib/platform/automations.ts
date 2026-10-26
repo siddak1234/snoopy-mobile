@@ -19,6 +19,11 @@ export type Item = components['schemas']['Item'];
 export type RunSection = components['schemas']['RunSection'];
 export type RunFile = components['schemas']['RunFile'];
 export type RunFileLink = components['schemas']['RunFileLink'];
+/** One of the ten blocks a run's or an item's page body is made of (backend ADR-0048). */
+export type Block = components['schemas']['Block'];
+export type BlockOpen = components['schemas']['BlockOpen'];
+/** Each page's parts, in the order the flow's pinned manifest gives (backend ADR-0048 decision 5). */
+export type FlowPages = components['schemas']['FlowPages'];
 
 /**
  * What an action changed is read again next time, and only that (24.9.1): a
@@ -156,11 +161,20 @@ export function createItem(
   );
 }
 
-/** One item and its runs, highest score first, then newest (backend ADR-0046). */
-export function readItem(workspaceId: string, itemId: string): Promise<{ item: Item; runs: Run[] }> {
+/**
+ * One item as its page body (backend ADR-0046; ADR-0048): `shape=blocks`, so the
+ * answer carries `blocks` — tiles, the file, Add, the ranked runs, in its flow's
+ * `pages.item` order — `going` while it or a run of it goes on, and the item's
+ * reading on `item.blocks`; `runs` comes as `[]`, the ranked runs being a block.
+ * A build before this one never sends the parameter and keeps the legacy answer.
+ */
+export function readItem(
+  workspaceId: string,
+  itemId: string,
+): Promise<{ item: Item; runs: Run[]; blocks?: Block[]; going?: boolean }> {
   return platformOperation(`/v1/workspaces/${workspaceId}/items/${itemId}`, ({ automations }, signal) =>
     automations.GET('/v1/workspaces/{workspaceId}/items/{itemId}', {
-      params: { path: { workspaceId, itemId } },
+      params: { path: { workspaceId, itemId }, query: { shape: 'blocks' } },
       signal,
     }),
   );
