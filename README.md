@@ -70,7 +70,9 @@ The individual architecture gates are:
   transport boundary; the transport's one signed upload and one native
   download (`downloadFileAsync`, 24.12) are each budgeted to a single call.
 - `verify:platform-contracts`: regenerate from the sibling backend checkout,
-  when present, and reject a generated declaration diff.
+  when present, and reject a generated declaration diff — the block fixtures'
+  `block-fixtures.ts` too, its header one sha256 over the fixtures' bytes in
+  filename order, the website's rule (backend ADR-0048 decision 9).
 - `audit:presses` (`scripts/audit-presses.mjs`, coverage-based, in `verify`
   and CI): **every press has a test that presses it and asserts its outcome**
   (build 13, B9) — the screen and params it opens, the request it sends
@@ -290,7 +292,16 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
 ## Runtime architecture
 
 - `lib/generated/platform-contracts/` is generated from the Edge, automations,
-  and connections OpenAPI documents. Do not hand-edit it.
+  and connections OpenAPI documents, and `block-fixtures.ts` from the
+  backend's `packages/contracts/fixtures/blocks/*.json`. Do not hand-edit it.
+- The run, item and file pages draw the platform's page body (backend
+  ADR-0048): `readRun` and `readItem` send `shape=blocks`, and
+  `components/blocks/block-list.tsx` draws each block by its type's renderer
+  — one per type of the generated `Block` union, each made from a component
+  the app has — and `FALLBACK` (`lib/content/screen-states.ts`) for a type,
+  form or part this build does not know. Blocks are text, never markup
+  (`__tests__/no-flow-code.test.ts`). An installed build that predates this
+  never sends the parameter and keeps the legacy answer.
 - `lib/platform/client.ts` is the sole runtime transport boundary. It uses
   `openapi-fetch`, attaches the current bearer token through middleware,
   applies a timeout and `no-store`, and maps RFC problem responses. A 429 is
@@ -394,8 +405,9 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   snapshot is emptied when a session ends or begins (24.12).
 - `lib/platform/runs.ts`'s `readAllApprovalsNow` reads the approvals past the
   shared snapshot. A run's page or its Run details (`useRunDetail()`, below)
-  whose run is held with no approval of its job listed reads them that way, every 2 s and at most ten times, until the
-  approval is listed or the run leaves held. The read that saw the run turn
+  whose run is held with no approval form in its blocks yet reads the run
+  again, and its approvals that way, every 2 s and at most ten times, until the
+  form comes or the run leaves held (backend ADR-0048). The read that saw the run turn
   held took the approvals from the 15 s snapshot, from before the approval was
   asked (round 25, the review's R5c 1).
 - `lib/platform/automations.ts`'s `readItemFile` and `readRunFile` answer a
@@ -438,8 +450,9 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
     owner's build 12 item 9) — and with one, no "Unarchive" (D3).
     `scopeLabels()` labels every flow (D4).
   - `OpenRow` (`components/open-row.tsx`): every row that opens a page from a
-    run or an item — an item's runs, a run's "Run details" — the height of a
-    drop-down's row, its arrow on the right (build 28, F5 and F9).
+    run or an item — a list block's rows, a file block, a run's "Run details" —
+    the height of a drop-down's row, its arrow on the right (build 28, F5 and
+    F9).
   - `useRunDetail()` (`hooks/use-run-detail.ts`): one run as its page and its
     Run details read it, bound to the workspace it was opened in.
 - Billing (ADR-0032; the contract's rule, with Free's and Pro's drawn prices,

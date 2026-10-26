@@ -5,6 +5,8 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AutomationActions } from '@/components/automations/automation-actions';
+import { Fallback } from '@/components/blocks/fallback';
+import { pageParts } from '@/components/blocks/look';
 import { StartRun, canStartRun } from '@/components/automations/start-run';
 import { ConnectionMark, ConnectionRow, GlyphMark, NoneMark } from '@/components/connection-row';
 import type { ArchivedFlowPath } from '@/components/flows/archived-flows';
@@ -45,7 +47,7 @@ import {
   errorTitleFor,
 } from '@/lib/content/screen-states';
 import { readCatalog, readConnectionProviders, readConnections } from '@/lib/platform/catalog';
-import { readFlowEmailRecipients, updateSubscription } from '@/lib/platform/automations';
+import { readFlowEmailRecipients, updateSubscription, type FlowPages } from '@/lib/platform/automations';
 import { readProjects } from '@/lib/platform/projects';
 import {
   readRemovedSubscriptionsOrNone,
@@ -70,6 +72,20 @@ import { FLOW_STATS_REREAD_MS } from '@/lib/view/runs';
 import { statusLabel } from '@/lib/view/status';
 
 const ACTION_ICON = { pause: Pause, play: Play, rocket: RocketLaunch } as const;
+
+/**
+ * A flow page's parts in the order its flow's manifest gives them
+ * (`Subscription.pages.flow`, backend ADR-0048), else today's: a flow with items
+ * its items, any other its DASHBOARD and its STEPS. A part this build does not
+ * know is null: the page draws the fallback sentence in its place.
+ */
+function flowParts(subscription: { pages?: FlowPages; items?: unknown } | undefined) {
+  return pageParts(
+    subscription?.pages?.flow,
+    ['dashboard', 'steps', 'items'] as const,
+    subscription?.items ? ['items'] : ['dashboard', 'steps'],
+  );
+}
 
 /**
  * The flow page — the run page for a flow (Build 21, spec A6; the owner's AM4 of
@@ -99,6 +115,10 @@ const ACTION_ICON = { pause: Pause, play: Play, rocket: RocketLaunch } as const;
  * actions. A run of it names an item, so it starts on the item's page
  * (`/(tabs)/flows/item`). ~~Its items under its steps, Turn on in Step 1~~
  * until build 28.
+ *
+ * Its parts — DASHBOARD, STEPS, items — come in the order its flow's manifest
+ * gives (`Subscription.pages.flow`, backend ADR-0048; `flowParts`), else in
+ * today's; a part this build does not know draws the fallback sentence.
  *
  * ~~CONNECTIONS~~ ("Remove the connections in the bottom as well") and ~~the
  * move to a newer version~~ ("I also dont want a move to vx number in the
@@ -189,8 +209,9 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
         ? (flows.data.counts.find((c) => c.subscriptionId === flow) ?? null)
         : null;
   const running = (counts?.pending ?? 0) + (counts?.running ?? 0) > 0;
-  // A flow with items draws no tiles, so nothing to read again for them.
-  const tiled = flows.status !== 'ready' || flows.data.subscriptions.find((s) => s.id === flow)?.items === undefined;
+  // A page without its DASHBOARD (a flow with items, by default) draws no tiles, so nothing to read again for them.
+  const tiled =
+    flows.status !== 'ready' || flowParts(flows.data.subscriptions.find((s) => s.id === flow)).includes('dashboard');
   useEffect(() => {
     if (!running || !focused || !tiled) return;
     const timer = setTimeout(() => readStats.current(), FLOW_STATS_REREAD_MS);
@@ -370,6 +391,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
   const startable = canStartRun(subscription, entry, current === 'Live');
   // The items the version it runs declares, when it declares them (ADR-0046).
   const declaredItems = subscription.items;
+  const parts = flowParts(subscription);
   const turnOn = (
     <PillButton
       testID="flow-step-turn-on"
@@ -482,75 +504,85 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
         )}
       </View>
 
-      {/* DASHBOARD: the three tiles open Activity for this flow and that outcome, over all time (24.11.9). None for a flow with items (F2–F3). */}
-      {declaredItems ? null : (
-      <View testID="flow-dashboard">
-        <SectionLabel>{DASHBOARD_LABEL}</SectionLabel>
-        <StatTileRow style={styles.underLabel}>
-          {(
-            [
-              ['Runs', tile(counts?.total), 'All', undefined],
-              ['Successes', tile(counts?.succeeded), 'Success', status.ok],
-              ['Failures', tile(counts?.failed), 'Failed', status.err],
-            ] as const
-          ).map(([label, value, filter, tone]) => (
-            <StatTileButton
-              key={label}
-              testID={`flow-stat-${filter}`}
-              accessibilityLabel={`${label}: see these runs in Activity`}
-              onPress={() =>
-                router.push({ pathname: '/(tabs)/activity', params: { flow: def.key, flowName: def.name, filter } })
-              }
-              value={value}
-              label={label}
-              size="sm"
-              valueColor={dash(value) ? palette.neutral[500] : tone}
-            />
-          ))}
-        </StatTileRow>
-      </View>
-      )}
-
-      {/* A flow with items: no steps — Step 1's controls on a card of their own while there is one (F2–F3). */}
-      {declaredItems && stepOne && (current !== 'Live' || vendorOwed.length > 0 || owed.length > 0) ? (
-        <View testID="flow-turn-on">
-          <SurfaceCard style={styles.alone}>{stepOne}</SurfaceCard>
-        </View>
-      ) : null}
-
-      {olderArchived || declaredItems ? null : (
-        <View testID="flow-steps">
-          <SectionLabel>{STEPS_LABEL}</SectionLabel>
-          <SurfaceCard style={styles.underLabel}>
-            {/* A flow whose template the catalog no longer lists has no steps to hold Step 1's controls: they stand alone. */}
-            {plan.length === 0 ? stepOne : null}
-            {plan.map((row, i) => (
-              <View
-                key={row.id}
-                testID={`flow-step-${row.id}`}
-                style={i < plan.length - 1 && { borderBottomWidth: 1, borderBottomColor: palette.divider }}>
-                {/* The step's title only — no line under it (the session's S20; P2: "After step 4 i dont want to see quickbooks"). */}
-                <View style={styles.stepRow}>
-                  <Text style={[styles.stepLabel, { color: palette.text }]}>{row.label}</Text>
+      {parts.map((part, at) => {
+        // DASHBOARD: the three tiles open Activity for this flow and that outcome, over all time (24.11.9).
+        if (part === 'dashboard') {
+          return (
+            <View key={part} testID="flow-dashboard">
+              <SectionLabel>{DASHBOARD_LABEL}</SectionLabel>
+              <StatTileRow style={styles.underLabel}>
+                {(
+                  [
+                    ['Runs', tile(counts?.total), 'All', undefined],
+                    ['Successes', tile(counts?.succeeded), 'Success', status.ok],
+                    ['Failures', tile(counts?.failed), 'Failed', status.err],
+                  ] as const
+                ).map(([label, value, filter, tone]) => (
+                  <StatTileButton
+                    key={label}
+                    testID={`flow-stat-${filter}`}
+                    accessibilityLabel={`${label}: see these runs in Activity`}
+                    onPress={() =>
+                      router.push({ pathname: '/(tabs)/activity', params: { flow: def.key, flowName: def.name, filter } })
+                    }
+                    value={value}
+                    label={label}
+                    size="sm"
+                    valueColor={dash(value) ? palette.neutral[500] : tone}
+                  />
+                ))}
+              </StatTileRow>
+            </View>
+          );
+        }
+        if (part === 'steps') {
+          return olderArchived ? null : (
+            <View key={part} testID="flow-steps">
+              <SectionLabel>{STEPS_LABEL}</SectionLabel>
+              <SurfaceCard style={styles.underLabel}>
+                {/* A flow whose template the catalog no longer lists has no steps to hold Step 1's controls: they stand alone. */}
+                {plan.length === 0 ? stepOne : null}
+                {plan.map((row, i) => (
+                  <View
+                    key={row.id}
+                    testID={`flow-step-${row.id}`}
+                    style={i < plan.length - 1 && { borderBottomWidth: 1, borderBottomColor: palette.divider }}>
+                    {/* The step's title only — no line under it (the session's S20; P2: "After step 4 i dont want to see quickbooks"). */}
+                    <View style={styles.stepRow}>
+                      <Text style={[styles.stepLabel, { color: palette.text }]}>{row.label}</Text>
+                    </View>
+                    {row.input ? stepOne : null}
+                    {row.kind === 'setting' ? row.fields.map(vendorRow) : null}
+                    {row.kind === 'email' ? emailRow : null}
+                  </View>
+                ))}
+              </SurfaceCard>
+            </View>
+          );
+        }
+        if (part === 'items') {
+          return (
+            <React.Fragment key={part}>
+              {/* A flow with items: no steps — Step 1's controls on a card of their own while there is one and no STEPS hold them (F2–F3). */}
+              {!parts.includes('steps') && stepOne && (current !== 'Live' || vendorOwed.length > 0 || owed.length > 0) ? (
+                <View testID="flow-turn-on">
+                  <SurfaceCard style={styles.alone}>{stepOne}</SurfaceCard>
                 </View>
-                {row.input ? stepOne : null}
-                {row.kind === 'setting' ? row.fields.map(vendorRow) : null}
-                {row.kind === 'email' ? emailRow : null}
-              </View>
-            ))}
-          </SurfaceCard>
-        </View>
-      )}
-
-      {!def.removed && declaredItems ? (
-        <FlowItems
-          subscriptionId={subscription.id}
-          items={declaredItems}
-          shownWorkspaceId={flows.loadedFor}
-          canManage={canManage}
-          onOpen={(itemId) => router.push({ pathname: '/(tabs)/flows/item', params: { item: itemId } })}
-        />
-      ) : null}
+              ) : null}
+              {!def.removed && declaredItems ? (
+                <FlowItems
+                  subscriptionId={subscription.id}
+                  items={declaredItems}
+                  shownWorkspaceId={flows.loadedFor}
+                  canManage={canManage}
+                  onOpen={(itemId) => router.push({ pathname: '/(tabs)/flows/item', params: { item: itemId } })}
+                />
+              ) : null}
+            </React.Fragment>
+          );
+        }
+        return <Fallback key={`unknown-${at}`} testID={`flow-part-${at}`} />;
+      })}
 
       {def.removed ? (
         // Read-only (24.11.8): no status, no actions. The one thing to do with an
