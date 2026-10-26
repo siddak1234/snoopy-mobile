@@ -3,6 +3,7 @@ import { View } from 'react-native';
 
 import { Fallback } from './fallback';
 import type { BlockOf } from './look';
+import { TextBlock } from './text';
 
 type QuestionForm = BlockOf<'questions'>['form'];
 export type FormKind = QuestionForm['kind'];
@@ -30,5 +31,16 @@ export function QuestionsBlock({
   const kind: unknown = (block.form as { kind?: unknown } | undefined)?.kind;
   if (typeof kind !== 'string' || !KNOWN_FORMS.includes(kind)) return <Fallback testID={`${testID}-fallback`} />;
   const form = forms?.[kind as FormKind];
-  return form ? <View testID={`${testID}-${kind}`}>{form(block.form)}</View> : null;
+  // Its title ("Add candidate") is drawn with the form, as the page's section label: a page that
+  // offers no form, or whose form draws nothing (a member, a flow not live), draws neither.
+  const drawn = form ? form(block.form) : null;
+  if (drawn === null || drawn === undefined || drawn === false) return null;
+  return (
+    <View testID={`${testID}-${kind}`}>
+      {block.title ? (
+        <TextBlock block={{ type: 'text', text: block.title, style: 'label' }} testID={`${testID}-title`} />
+      ) : null}
+      {drawn}
+    </View>
+  );
 }

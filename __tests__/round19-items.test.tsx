@@ -652,8 +652,8 @@ const READ_ITEM = (blocks = fixtureBlocks('reviewer-item')): Answer<`GET ${typeo
   going: false,
 });
 
-/** The list block of the item fixture: its rows, by place. */
-const RUNS = 'item-blocks-5';
+/** The list block of the item fixture: its rows, by place ("Add {run}" now rides on its form). */
+const RUNS = 'item-blocks-4';
 
 describe("an item's page (plan §5.3; its blocks since Round 21)", () => {
   it('its title, its group and state; its runs drawn as sent, numbered, scored — "Score" read first — a failure muted, each row rank, title, score and arrow (build 28, F5)', async () => {
@@ -754,11 +754,9 @@ describe("an item's page (plan §5.3; its blocks since Round 21)", () => {
     expect(screen.queryByTestId('item-archive')).toBeNull();
   });
 
-  // Expected red (`it.failing`) until the backend sends "Add {run}" as the questions block's
-  // title, drawn only with its form (DESIGN-GAPS Round 21, finding 4): today the platform's label
-  // block comes with no role gate, so a member reads "Add candidate" with nothing under it. When
-  // the fixtures carry the fix this test passes, `it.failing` turns red, and it becomes an `it`.
-  it.failing('a member reads no "Add candidate": the label comes only with its run form', async () => {
+  // "Add {run}" is the questions block's title, drawn only with its form (backend 0558ad4;
+  // DESIGN-GAPS Round 21, finding 4): a member reads no "Add candidate" with nothing under it.
+  it('a member reads no "Add candidate": the label comes only with its run form', async () => {
     await openItem(READ_ITEM(), sessionAs('member'));
     // Index-free, so a page without the label still reaches the last line.
     expect(screen.getByTestId('item-title')).toBeTruthy();

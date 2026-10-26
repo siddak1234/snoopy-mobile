@@ -204,7 +204,8 @@ describe("an item's page (build 28, F4–F6; its blocks since Round 21)", () => 
     const color = (node: { props: { style?: unknown } }) => (StyleSheet.flatten(node.props.style as never) as { color?: string }).color;
     expect(color(tiles[2]!)).toBe(status.ok);
     expect(color(tiles[4]!)).toBe(status.err);
-    // The file row, then "ADD CANDIDATE" and the runs, in the platform's order.
+    // The file row, then the runs, in the platform's order. A member reads no "ADD CANDIDATE": the
+    // heading comes with its run form only (backend 0558ad4), as on main before blocks.
     expect(visibleWords(screen.toJSON()).slice(2, 13)).toEqual([
       '3',
       'Total',
@@ -213,10 +214,10 @@ describe("an item's page (build 28, F4–F6; its blocks since Round 21)", () => 
       '1',
       'Decline',
       'Job description',
-      'Add candidate',
       'Candidates',
       '1',
       'Dana Whitfield',
+      '88',
     ]);
     await fireEvent.press(screen.getByTestId('item-blocks-1'));
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/item-file', params: { item: '0b0b0b0b-0b0b-4b0b-8b0b-0b0b0b0b0b0b' } }, undefined);

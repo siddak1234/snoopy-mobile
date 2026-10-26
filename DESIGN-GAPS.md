@@ -2592,8 +2592,9 @@ The re-entry: MASTER-PLAN §0 names `snoopy-backend` as open; BUILD-PLAN 29.1.3 
 snoopy-mobile]`, and the owner approved decision 4, "built once in both clients", on 2026-10-25.
 The contract: backend B2's branch at `ae78a8b`, read from a read-only snapshot (`automations.d.ts`
 `20823861…`, `platform.d.ts` `7373c7b1…`, `connections.d.ts` unchanged) and its fixtures
-(`block-fixtures.ts`, one sha256 over the fifteen fixtures' bytes in filename order, `887fb44b…`,
-the website's header byte for byte).
+(`block-fixtures.ts`, `887fb44b…`, the website's header byte for byte; the hashing rule:
+README, `verify:platform-contracts`). Regenerated 2026-10-26 from backend `0558ad4`, which sends
+"Add {run}" as the run form's title (finding 4).
 
 | What | Where | Held by |
 | --- | --- | --- |
@@ -2616,6 +2617,9 @@ the website's header byte for byte).
   1. 'Not approved' comes toned neutral (`document-blocks.ts`, the v7-held-denied fixture) and
      'Not recorded' warning, where the owner's change 2 says both draw the error tone. The app draws
      tones as sent, so the backend's tone decides it (the web lane's findings (a) and (b), the same).
+     _Settled 2026-10-26, no change: these are main's tones (`lib/view/documents.ts:73`, `:229`;
+     the website's `lib/run-documents.ts:356`); the owner's change 2 colours the result line, not
+     a document's chip._
   2. `snoopy-backend/scripts/block-text.ts`'s comment says an unknown target draws the fallback sentence; its code
      and the `unknown-target` fixture draw the row's words with no press. The app follows the fixture.
   3. The OpenAPI `Block` lets a section hold any block (`blocks: Block[]`), where `blocks.ts` holds
@@ -2626,8 +2630,9 @@ the website's header byte for byte).
      still draws "Add candidate" with nothing under it; on `510fe82` the heading sat inside the
      form's gate. Not one of the seven approved changes; the website has the same (its review's
      finding 1). The fix, shared with the web: send the label as the questions block's `title`, and
-     draw it only with its form. Held by `round19-items`' member test, expected red
-     (`it.failing`) until the fixtures carry the fix.
+     draw it only with its form. _Fixed 2026-10-26: backend `0558ad4` sends it so; `QuestionsBlock`
+     draws the title only when its form draws something; `round19-items`' member test is an `it`,
+     and fails with the gate removed._
 - ~~**CI's `Deployed contract` job is red by design** until the platform releases this contract~~
   (B2 not live yet); no `platform-requirement.json`.
 - **NOT OBSERVED** (no simulator or device): every visible change, for the session's screenshots.
