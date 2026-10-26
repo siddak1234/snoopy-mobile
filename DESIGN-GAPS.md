@@ -2617,8 +2617,8 @@ README, `verify:platform-contracts`). Regenerated 2026-10-26 from backend `0558a
   1. 'Not approved' comes toned neutral (`document-blocks.ts`, the v7-held-denied fixture) and
      'Not recorded' warning, where the owner's change 2 says both draw the error tone. The app draws
      tones as sent, so the backend's tone decides it (the web lane's findings (a) and (b), the same).
-     _Settled 2026-10-26, no change: these are main's tones (`lib/view/documents.ts:73`, `:229`;
-     the website's `lib/run-documents.ts:356`); the owner's change 2 colours the result line, not
+     _Settled 2026-10-26, no change: these are main's tones (~~`lib/view/documents.ts:73`~~, `:229`,
+     removed by this round; the website's `snoopy/lib/run-documents.ts:356`); the owner's change 2 colours the result line, not
      a document's chip._
   2. `snoopy-backend/scripts/block-text.ts`'s comment says an unknown target draws the fallback sentence; its code
      and the `unknown-target` fixture draw the row's words with no press. The app follows the fixture.
