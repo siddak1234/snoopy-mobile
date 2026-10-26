@@ -358,11 +358,24 @@ export function inboxPayload(): Answer<'GET /v1/workspaces/{workspaceId}/notific
 }
 
 /** `RunDetail` — a different shape from the runs list, and easy to conflate. */
+/**
+ * A run's result line as the platform's page body says it (backend ADR-0048
+ * decision 6, `outcome`): a succeeded run's summary toned success, a failed
+ * one's reason toned error — the one block every read of a run here carries.
+ */
+export function outcomeBlocks(run: { status: string; resultSummary?: string; failureReason?: string }) {
+  if (run.status === 'succeeded' && run.resultSummary) return [{ type: 'text' as const, text: run.resultSummary, tone: 'success' as const }];
+  if (run.status === 'failed' && run.failureReason) return [{ type: 'text' as const, text: run.failureReason, tone: 'error' as const }];
+  return [];
+}
+
 export function runDetailPayload(runId: string): Answer<'GET /v1/workspaces/{workspaceId}/runs/{runId}'> {
   const all = runsPayload().runs;
   const run = all.find((r) => r.id === runId) ?? all[0];
   return {
     run: { ...run, startedAt: run.createdAt, endedAt: run.updatedAt },
+    // The page body (`shape=blocks`, backend ADR-0048): its result line.
+    blocks: outcomeBlocks(run),
     steps: [
       {
         id: 's1',

@@ -211,47 +211,71 @@ const HELD_AT_VALIDATE: [string, Outcome][] = [
   ['validate', 'held'],
 ];
 
-describe("a run that turns held while its page is open offers Approve and Deny with no reload (round 25, the review's R5c 1)", () => {
-  it('reads its approvals again, past the 15 s snapshot, until the waiting one is listed — then both buttons under the held line of its page', async () => {
-    // Running at the first read, its approvals none; held at the next, which
-    // the snapshot answers with the same none; the platform lists it since.
-    const fake = routeHeld([detail('running', [['receive', 'ok']]), detail('held', HELD_AT_VALIDATE)], [[], [approvalFor('pending')]]);
+/** A held read whose page body holds the approval form (`questions{approval}`, backend ADR-0048). */
+function withForm(read: Detail): Detail {
+  return {
+    ...read,
+    blocks: [
+      { type: 'text', text: 'Waiting for approval.', tone: 'warning' },
+      { type: 'questions', form: { kind: 'approval', approvalId: 'ap-1', eligibleRoles: ['owner', 'admin'] } },
+    ],
+  };
+}
+
+describe("a run that turns held while its page is open offers Approve and Deny with no reload (round 25, the review's R5c 1; backend ADR-0048)", () => {
+  it('reads it again, its approvals past the 15 s snapshot too, until the approval form comes — then both buttons on its page', async () => {
+    // Running at the first read; held at the next, before its approval was
+    // asked, so its blocks hold no form; the platform sends the form since.
+    const fake = routeHeld(
+      [detail('running', [['receive', 'ok']]), detail('held', HELD_AT_VALIDATE), withForm(detail('held', HELD_AT_VALIDATE))],
+      [[], [approvalFor('pending')]],
+    );
     setMockParams({ runId: 'run-1' });
     await renderWithProviders(<RunDetailScreen />, signedInSession);
     expect(await screen.findByText('Running')).toBeTruthy();
     const decision = within(await screen.findByTestId('run-decision-block'));
     expect(await decision.findByTestId('run-decision-approve')).toBeTruthy();
     expect(decision.getByTestId('run-decision-deny')).toBeTruthy();
-    // The approvals were read twice: at the start, then past the snapshot.
+    // Three reads of the run: running, held with no form, held with it; the
+    // approvals read at the start, then past the snapshot with the reread.
+    expect(fake.to(RUN)).toHaveLength(3);
     expect(fake.to(APPROVALS)).toHaveLength(2);
-    // Listed: no more reads for it, however long the page stays open.
-    const runs = fake.to(RUN).length;
+    // The form came: no more reads for it, however long the page stays open.
     await aWhile();
-    expect(fake.to(RUN)).toHaveLength(runs);
+    expect(fake.to(RUN)).toHaveLength(3);
     expect(fake.to(APPROVALS)).toHaveLength(2);
   });
 
-  it('never listed: read again at most HELD_APPROVAL_REREADS times, then it stops — never for ever', async () => {
+  it('never comes: read again at most HELD_APPROVAL_REREADS times, then it stops — never for ever', async () => {
     const { HELD_APPROVAL_REREADS } = jest.requireActual('@/lib/view/runs');
     const fake = routeHeld([detail('held', HELD_AT_VALIDATE)], [[]]);
     setMockParams({ runId: 'run-1' });
     await renderWithProviders(<RunDetailsScreen />, signedInSession);
     expect(await screen.findByText('2 · Check the amount')).toBeTruthy();
-    await waitFor(() => expect(fake.to(APPROVALS)).toHaveLength(1 + HELD_APPROVAL_REREADS), { timeout: 3000 });
+    await waitFor(() => expect(fake.to(RUN)).toHaveLength(1 + HELD_APPROVAL_REREADS), { timeout: 3000 });
     await aWhile();
-    expect(fake.to(APPROVALS)).toHaveLength(1 + HELD_APPROVAL_REREADS);
     expect(fake.to(RUN)).toHaveLength(1 + HELD_APPROVAL_REREADS);
+    expect(fake.to(APPROVALS)).toHaveLength(1 + HELD_APPROVAL_REREADS);
     expect(screen.queryByTestId('run-decision-approve')).toBeNull();
   });
 
-  it.each(['pending', 'rejected'] as const)('a held run whose approval is listed (%s) is read once', async (status) => {
-    const fake = routeHeld([detail('held', HELD_AT_VALIDATE)], [[approvalFor(status)]]);
+  it('a held run whose blocks hold the approval form is read once', async () => {
+    const fake = routeHeld([withForm(detail('held', HELD_AT_VALIDATE))], [[approvalFor('pending')]]);
     setMockParams({ runId: 'run-1' });
     await renderWithProviders(<RunDetailsScreen />, signedInSession);
     expect(await screen.findByText('2 · Check the amount')).toBeTruthy();
     await aWhile();
     expect(fake.to(RUN)).toHaveLength(1);
     expect(fake.to(APPROVALS)).toHaveLength(1);
+  });
+
+  it('a run that leaves held is not read again for its form', async () => {
+    const fake = routeHeld([detail('succeeded', [['receive', 'ok'], ['validate', 'ok'], ['post', 'ok'], ['notify', 'ok']])], [[]]);
+    setMockParams({ runId: 'run-1' });
+    await renderWithProviders(<RunDetailsScreen />, signedInSession);
+    expect(await screen.findByText('2 · Check the amount')).toBeTruthy();
+    await aWhile();
+    expect(fake.to(RUN)).toHaveLength(1);
   });
 });
 

@@ -7,13 +7,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
-import { SectionLabel } from '@/components/nocturne/section-label';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { OpenRow } from '@/components/open-row';
+import { BlockList } from '@/components/blocks/block-list';
 import { DecisionButtons } from '@/components/runs/decision-buttons';
-import { DocumentCard } from '@/components/runs/document-card';
-import { RunSections } from '@/components/runs/run-sections';
 import { Text } from '@/components/text';
 import { em, fonts, iconSize, layout, status, typeScale } from '@/constants/theme';
 import { useApprovalDecision } from '@/hooks/use-approval-decision';
@@ -25,40 +23,35 @@ import { busyBody } from '@/hooks/use-resource';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { refusalMessage, WORKSPACE_CHANGED } from '@/lib/content/refusals';
 import {
-  DETAILS_LABEL,
-  DOCUMENTS_LABEL,
   DOWNLOAD_EXCEL_LABEL,
   DOWNLOAD_PDF_LABEL,
   RUN_DETAILS_LABEL,
   VIEW_PACKAGE_LABEL,
   errorTitleFor,
-  runWordDetails,
 } from '@/lib/content/screen-states';
 import { cancelRun } from '@/lib/platform/automations';
 import { PlatformError } from '@/lib/platform/problem';
-import { toDocumentCards } from '@/lib/view/documents';
-import { runFileRows } from '@/lib/view/items';
-import { decidersLine, decides } from '@/lib/view/roles';
+import { decidersLine, decides, type WorkspaceRole } from '@/lib/view/roles';
 import { statusLabel, type StatusPillLabel } from '@/lib/view/status';
-import { RUN_ORIGIN_TAB, jobApproval, runLabel, runOrigin, runResultLine } from '@/lib/view/runs';
+import { RUN_ORIGIN_TAB, runLabel, runOrigin } from '@/lib/view/runs';
 
 /**
  * A run's page — the one, in Activity's stack (round 24 P5; the owner's build 23
  * F4, F5; ~~registered in Home's stack and again in Settings'~~ until round 24).
- * Top to bottom (the owner's build 28 items F7–F9; Round 19 plan §3, the
- * standard for every run): its name — or its title and score — its flow and
- * status; for a run that read no sections, how it went on a line of its own
- * (`runResultLine`, spec §3.E), and under a held line its Approve and Deny
- * (round 24 P6); for a run of an item, a "View {file}" row for each file its
- * job uploaded ("View resume", `runFileRows`; F7), each opening it on a page of
- * its own (`/(tabs)/activity/run-file`); "{Run word} details" ("{RUN} DETAILS", its flow's `items.runWords`;
- * "DETAILS" when its flow has none) over its sections, the first open; its
- * documents and package, or a v1/v2 run's saved details; the "Run details" row
- * (`OpenRow`), which opens its steps, tiles and facts on a page of their own
+ * Its header: its name — or its title and score — its flow and status. Then its
+ * page body as the platform sent it (backend ADR-0048; `readRun`'s
+ * `shape=blocks`, `BlockList`), in its flow's `pages.run` order: a "View {file}"
+ * row for each file its job uploaded, each opening it on a page of its own
+ * (`/(tabs)/activity/run-file`); the result line, toned by its status, and
+ * while the job's approval waits, the approval form — Approve and Deny
+ * (`DecisionButtons`) to a role it names, to anyone else who can decide; then
+ * what the run read. Its footer: View package, Download PDF and Download Excel
+ * while the platform offers the package (`packageAvailable`); the "Run details"
+ * row (`OpenRow`), which opens its steps, tiles and facts on a page of their own
  * (`/(tabs)/activity/run-details`); then Cancel run while it goes, and View
- * flow. ~~The result line over a run's sections; the tiles, STEPS and the
- * facts on this page~~ until build 28 (F8: "Instead of strong match 6 of 6";
- * F9: "Rather than showing 54s and all the info there").
+ * flow. ~~The result line, Approve and Deny before the file rows; its sections
+ * on one card; its documents' cards~~ until Round 21 (ADR-0048: the web's
+ * order, each section on its own card, built once by the platform).
  *
  * A push from another tab passes `returnTo` (`RUN_ORIGIN_TAB`): Back — the
  * circle or the swipe, a `GO_BACK` or `POP`, never re-tapping Activity's tab
@@ -86,7 +79,7 @@ export default function RunDetailScreen() {
     });
   }, [navigation, origin]);
   const session = useSession();
-  const { openedIn, detail, liveRun, decided } = useRunDetail(runId);
+  const { openedIn, detail, liveRun } = useRunDetail(runId);
   const decisions = useApprovalDecision(openedIn);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -103,27 +96,13 @@ export default function RunDetailScreen() {
           liveRun.detail.run.title !== undefined && liveRun.detail.run.score !== undefined
             ? { title: liveRun.detail.run.title, score: String(liveRun.detail.run.score) }
             : null,
-        // A run of an item: each file its job uploaded, a row each, named by its flow's file field (F7).
-        files: liveRun.detail.run.itemId ? runFileRows(liveRun.detail.files, liveRun.flow?.runInput) : [],
-        // What it read, in titled sections, the first open (ADR-0046), before its documents.
-        sections: liveRun.detail.sections ?? [],
-        // Over them, its flow's word for one run (F8): "{RUN} DETAILS"; "DETAILS" for a flow without one.
-        sectionsLabel: liveRun.flow?.items ? runWordDetails(liveRun.flow.items.runWords) : DETAILS_LABEL,
         // Its flow — the website's subheader.
         sub: liveRun.entry?.name ?? liveRun.detail.run.templateId,
         status: statusLabel(liveRun.detail.run.status) as StatusPillLabel,
-        // How it went, on a line of its own (spec §3.E) — where "{Run word} details" does not take its place (F8).
-        result: (liveRun.detail.sections ?? []).length === 0 ? runResultLine(liveRun.detail.run, liveRun.approvals) : null,
-        // Each document it read, on a card of its own (backend ADR-0039).
-        documents: toDocumentCards(
-          liveRun.detail.documents,
-          decided === 'rejected' ? 'rejected' : decided === 'closed' ? 'expired' : null,
-          liveRun.detail.files,
-          liveRun.entry?.documentWords,
-        ),
-        // What a v1/v2 run saved, as its automation wrote it for people (backend
-        // ADR-0037; the one-run read only) — drawn only where no documents are.
-        details: liveRun.detail.details ?? [],
+        // Its page body (backend ADR-0048): absent, the page draws the fallback.
+        blocks: liveRun.detail.blocks,
+        // The platform says whether the job has a package (backend ADR-0045, ADR-0048).
+        packageAvailable: liveRun.detail.packageAvailable === true,
         subscriptionId: liveRun.detail.run.subscriptionId,
         id: liveRun.detail.run.id,
         // The two states the platform cancels (BUILD-PLAN 24.4.2).
@@ -190,33 +169,35 @@ export default function RunDetailScreen() {
   }
 
   /**
-   * Approve / Deny under the held line (round 24 P6; the owner's build 23
-   * F7–F10: "It should be easy for a user to approve or deny not many
-   * clicks"): a held job whose newest approval waits shows the pair to a role
-   * the approval names; to anyone else, who can decide; with the approvals or
-   * the role unread, neither. One tap, then the page reads the run again at
-   * once: approved, it is running again under the same id; denied, the line
-   * says Denied. Its Run details' held step says only where it stands.
+   * The approval form (`questions{approval}`, backend ADR-0048 decision 2):
+   * the platform sends it while the job's newest approval waits, naming it and
+   * the roles that may decide it (round 24 P6; the owner's build 23 F7–F10:
+   * "It should be easy for a user to approve or deny not many clicks"). To a
+   * role it names, Approve and Deny; to anyone else, who can decide; with the
+   * role unread, neither. One tap, then the page reads the run again at once:
+   * approved, it is running again under the same id; denied, the line says
+   * Denied. The route checks the role again.
    */
-  const approval = liveRun && liveRun.detail.run.status === 'held' ? jobApproval(liveRun.detail.run, liveRun.approvals) : undefined;
-  const waiting = approval?.status === 'pending' && liveRun?.approvalsRead ? approval : undefined;
-  const decision = (() => {
-    if (!waiting || liveRun?.role === undefined || liveRun.role === null) return null;
-    if (!decides(liveRun.role, waiting.eligibleRoles)) {
+  const role = liveRun?.role;
+  const approvalForm = (form: { approvalId?: string; eligibleRoles?: readonly WorkspaceRole[] }) => {
+    const approvalId = form.approvalId;
+    const eligible = form.eligibleRoles ?? [];
+    if (!approvalId || role === undefined || role === null) return null;
+    if (!decides(role, eligible)) {
       return (
         <Text testID="run-deciders" style={[styles.decisionNote, { color: palette.neutral[400] }]}>
-          {decidersLine(waiting.eligibleRoles)}
+          {decidersLine(eligible)}
         </Text>
       );
     }
-    const error = decisions.errorFor(waiting.id);
+    const error = decisions.errorFor(approvalId);
     return (
       <View testID="run-decision-block" style={styles.decision}>
         <DecisionButtons
           testID="run-decision"
-          busy={decisions.busyFor(waiting.id)}
+          busy={decisions.busyFor(approvalId)}
           onDecide={async (choice) => {
-            if (await decisions.decide(waiting.id, choice)) detail.refresh();
+            if (await decisions.decide(approvalId, choice)) detail.refresh();
           }}
         />
         {error ? (
@@ -226,7 +207,7 @@ export default function RunDetailScreen() {
         ) : null}
       </View>
     );
-  })();
+  };
 
   return (
     <ScrollView
@@ -262,71 +243,16 @@ export default function RunDetailScreen() {
         </View>
       </View>
 
-      {run.result ? (
-        <Text testID="run-result" style={[styles.result, { color: palette.text }]}>
-          {run.result}
-        </Text>
-      ) : null}
-      {decision}
-
-      {run.files.length > 0 ? (
-        <SurfaceCard>
-          {run.files.map((file, i) => (
-            <OpenRow
-              key={file.id}
-              testID={`run-open-file-${file.id}`}
-              title={file.label}
-              divider={i < run.files.length - 1}
-              onPress={() =>
-                router.push({ pathname: '/(tabs)/activity/run-file', params: { runId: run.id, fileId: file.id } })
-              }
-            />
-          ))}
-        </SurfaceCard>
-      ) : null}
-
-      {run.sections.length > 0 ? (
-        <View testID="run-sections-block">
-          <SectionLabel>{run.sectionsLabel}</SectionLabel>
-          <View style={styles.sectionCard}>
-            <RunSections testID="run-sections" sections={run.sections} firstOpen />
-          </View>
-        </View>
-      ) : null}
-
-      {run.documents.length > 0 ? (
-        <View testID="run-documents" style={styles.documents}>
-          <SectionLabel>{DOCUMENTS_LABEL}</SectionLabel>
-          {run.documents.map((card) => (
-            <DocumentCard key={card.index} card={card} />
-          ))}
-        </View>
-      ) : run.details.length > 0 ? (
-        <View testID="run-details">
-          <SectionLabel>{DETAILS_LABEL}</SectionLabel>
-          <SurfaceCard style={styles.sectionCard}>
-            {run.details.map((line, i) => (
-              <View
-                key={`${line.label}-${i}`}
-                style={[
-                  styles.detailRow,
-                  i < run.details.length - 1 && { borderBottomWidth: 1, borderBottomColor: palette.divider },
-                ]}>
-                <Text style={[styles.fieldKey, { color: palette.neutral[400] }]}>{line.label}</Text>
-                <Text style={[styles.detailValue, { color: palette.text }]}>{line.value}</Text>
-              </View>
-            ))}
-          </SurfaceCard>
-        </View>
-      ) : null}
+      <BlockList testID="run-blocks" blocks={run.blocks} context={{ forms: { approval: approvalForm } }} />
 
       {/*
         The A8X run package (round 24 P12; the owner's build 23 F16: "No more
         download json"; ~~Download JSON~~): once the job has documents and has
-        stopped going — View package opens the PDF on its own page; Download
-        PDF and Download Excel hand the file to the share sheet.
+        stopped going (`packageAvailable`, the platform's word for it) — View
+        package opens the PDF on its own page; Download PDF and Download Excel
+        hand the file to the share sheet.
       */}
-      {run.documents.length > 0 && !run.cancellable ? (
+      {run.packageAvailable ? (
         <View style={styles.download}>
           <PillButton
             testID="run-view-package"
@@ -483,38 +409,12 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     fontSize: typeScale.small.fontSize,
   },
-  result: {
-    fontFamily: fonts.regular,
-    ...typeScale.body,
-  },
   decision: {
     gap: 6,
   },
   decisionNote: {
     fontFamily: fonts.regular,
     ...typeScale.small,
-  },
-  sectionCard: {
-    marginTop: 9,
-  },
-  documents: {
-    gap: 9,
-  },
-  fieldKey: {
-    fontFamily: fonts.regular,
-    fontSize: typeScale.body.fontSize,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    gap: 16,
-    paddingVertical: 11,
-    paddingHorizontal: 14,
-  },
-  detailValue: {
-    flex: 1,
-    textAlign: 'right',
-    fontFamily: fonts.medium,
-    ...typeScale.body,
   },
   download: {
     gap: 6,

@@ -7,6 +7,7 @@ Loads when a file here is read or edited. The root `CLAUDE.md` rules 5–7 apply
 - `lib/generated/platform-contracts/*.d.ts` come from `npm run generate:platform-contracts` (`scripts/generate-platform-contracts.mjs`, reading the backend's OpenAPI documents in `../snoopy-backend`, or `SNOOPY_BACKEND_ROOT`).
 - `npm run verify:platform-contracts` (in `verify` and CI) regenerates them and fails on any diff. A shape change starts in the backend's documents, then regenerate; never edit a generated file.
 - Each file's first line names its document and sha256.
+- `block-fixtures.ts` is the backend's block fixtures (`packages/contracts/fixtures/blocks/*.json`, ADR-0048 decision 9); its header's rule is README "`verify:platform-contracts`", and verify checks it too.
 
 ## CI's `Deployed contract` job
 

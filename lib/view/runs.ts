@@ -13,7 +13,6 @@ import {
   EMAIL_OWED,
   NONE_LABEL,
   RUN_ID_LABEL,
-  RUN_WAITING_FOR_APPROVAL,
   RUN_WORKING,
   STEP_DONE,
   STEP_FAILED,
@@ -445,20 +444,33 @@ export const RUN_REREAD_MS = 2_000;
 export const HELD_APPROVAL_REREADS = 10;
 
 /**
- * Whether a held run's page reads it again for its approval (round 25, the
- * review's R5c 1): the run is held, no approval of the job is listed yet, and
- * fewer than `HELD_APPROVAL_REREADS` such reads were made. That is a run that
- * turned held while its page was open — the read that saw it took the
- * approvals from the 15 s snapshot, from before the approval was asked — or
- * one read before its approval was. Each such read takes the approvals past
- * the snapshot (`readAllApprovalsNow`); once the approval is listed, step 4
- * offers Approve and Deny with no reload. A job whose newest approval is
- * listed, waiting or decided, is not read again for it, and neither is a run
- * that left held. The website's `rereadForApproval`
+ * Whether a held run's page reads it again for its decision (round 25, the
+ * review's R5c 1; backend ADR-0048): the run is held, its blocks hold no
+ * approval form (`questions{approval}`) yet, and fewer than
+ * `HELD_APPROVAL_REREADS` such reads were made. That is a run that turned held
+ * while its page was open, or one read before its approval was asked. The form
+ * appearing, or the run leaving held, ends it; so does the tenth read. Each
+ * such read takes the approvals past the snapshot (`readAllApprovalsNow`), for
+ * Run details' held step. The website's `rereadForApprovalForm`
  * (`snoopy/lib/run-progress.ts`), rule for rule.
  */
-export function rereadForApproval(run: Run, approvals: readonly Approval[], reads: number): boolean {
-  return heldDecision(run, approvals) === 'unknown' && reads < HELD_APPROVAL_REREADS;
+export function rereadForApproval(
+  run: Pick<Run, 'status'>,
+  blocks: readonly unknown[] | undefined,
+  reads: number,
+): boolean {
+  return run.status === 'held' && reads < HELD_APPROVAL_REREADS && !hasApprovalForm(blocks);
+}
+
+/** Whether a page body holds the approval form (`questions{approval}`). */
+export function hasApprovalForm(blocks: readonly unknown[] | undefined): boolean {
+  return (blocks ?? []).some(
+    (block) =>
+      typeof block === 'object' &&
+      block !== null &&
+      (block as { type?: unknown }).type === 'questions' &&
+      (block as { form?: { kind?: unknown } }).form?.kind === 'approval',
+  );
 }
 
 /**
@@ -561,6 +573,15 @@ const TRACKER_LOOK: Record<TrackerState, { icon: Icon; tone: TrackerRow['tone'] 
   stopped: { icon: MinusCircle, tone: 'muted' },
   unknown: { icon: CircleDashed, tone: 'muted' },
 };
+
+/**
+ * A step state's icon and tone — a timeline block's too (backend ADR-0048
+ * decision 10): a state this build does not know has the "unknown" look.
+ */
+export function trackerLook(state: unknown): { state: TrackerState; icon: Icon; tone: TrackerRow['tone'] } {
+  const known = typeof state === 'string' && Object.hasOwn(TRACKER_LOOK, state) ? (state as TrackerState) : 'unknown';
+  return { state: known, ...TRACKER_LOOK[known] };
+}
 
 /**
  * What a row says of its state — never a step's own summary and never a step
@@ -754,21 +775,6 @@ export function toRunStats(
     { value: durationText, label: 'Duration' },
     { value: counted.length > 0 ? `${done} / ${counted.length}` : EMPTY, label: 'Steps done' },
   ];
-}
-
-/**
- * The line under a run's name that says how it went (spec §3.E): a succeeded
- * run's `resultSummary`, a failed one's `failureReason`, a held one waiting
- * "Waiting for approval." — or, decided, how it was — and nothing for a run
- * still going or one that said nothing.
- */
-export function runResultLine(run: Run, approvals: readonly Approval[]): string | null {
-  if (run.status === 'succeeded') return run.resultSummary ?? null;
-  if (run.status === 'failed') return run.failureReason ?? null;
-  if (run.status === 'held') {
-    return needsReview(run, approvals) ? RUN_WAITING_FOR_APPROVAL : heldDecisionLine(run, approvals);
-  }
-  return null;
 }
 
 /**

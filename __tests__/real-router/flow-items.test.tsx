@@ -14,8 +14,9 @@ import { WORKSPACE, answerPlatform, flush, launch, signedInOnThisPhone } from '@
  * Flows; Back from the item comes home to the same flow page. Since build 28
  * the item's "{File title}" row opens its file's page in Flows with the item,
  * and a run's "View {file}" row its file's page in Activity with the run and
- * the file (F4, F7). The flow is made up: no flow's word or id is written in
- * the app.
+ * the file (F4, F7). Since Round 21 those rows are the platform's blocks
+ * (backend ADR-0048), and a block's press goes where its typed target says.
+ * The flow is made up: no flow's word or id is written in the app.
  */
 
 jest.setTimeout(60_000);
@@ -91,13 +92,23 @@ const RUN: Run = {
 const POLICY = { id: 'f-1', filename: 'policy.pdf', contentType: 'application/pdf', format: 'PDF', sizeBytes: 2048, pages: 1 };
 const CONTRACT = { ...POLICY, id: 'f-9', filename: 'northwind.pdf' };
 
+/** The item's body: its file row, then its runs, each opening its run. */
+const ITEM_BLOCKS = [
+  { type: 'file', title: 'Policy file', open: { target: 'item-file', itemId: 'i-1' } },
+  { type: 'text', text: 'Contracts', style: 'label' },
+  { type: 'list', items: [{ lead: '1', title: 'Northwind lease', value: '77', valueLabel: 'Score', open: { target: 'run', runId: 'r-1' } }] },
+];
+/** The run's body: its "View contract file" row. */
+const RUN_BLOCKS = [{ type: 'file', title: 'View contract file', open: { target: 'run-file', runId: 'r-1', fileId: 'f-9' } }];
+
 function platformWithItems() {
   answerPlatform(
     {
       [`/v1/workspaces/${WORKSPACE}/subscriptions`]: () => ({ subscriptions: [FLOW] }),
       [`/v1/workspaces/${WORKSPACE}/subscriptions/pol-1/items`]: () => ({ items: [ITEM], choices: {} }),
-      [`/v1/workspaces/${WORKSPACE}/items/i-1`]: () => ({ item: ITEM, runs: [RUN] }),
-      [`/v1/workspaces/${WORKSPACE}/runs/r-1`]: () => ({ run: RUN, steps: [], events: [], files: [CONTRACT] }),
+      // Their page bodies, as the platform composes them (`shape=blocks`).
+      [`/v1/workspaces/${WORKSPACE}/items/i-1`]: () => ({ item: ITEM, runs: [], blocks: ITEM_BLOCKS, going: false }),
+      [`/v1/workspaces/${WORKSPACE}/runs/r-1`]: () => ({ run: RUN, steps: [], events: [], files: [CONTRACT], blocks: RUN_BLOCKS }),
       [`/v1/workspaces/${WORKSPACE}/items/i-1/file`]: () => ({ file: POLICY, downloadUrl: 'https://files.example.com/p?sig=1', expiresAt: '2026-10-24T12:00:00Z' }),
       [`/v1/workspaces/${WORKSPACE}/runs/r-1/files/f-9`]: () => ({ file: CONTRACT, downloadUrl: 'https://files.example.com/c?sig=1', expiresAt: '2026-10-24T12:00:00Z' }),
     },
@@ -123,7 +134,7 @@ it("a row opens its item's page in Flows with the item; a run opens in Activity 
   expect(view.getSearchParams()).toMatchObject({ item: 'i-1' });
   expect((await screen.findByTestId('item-title')).props.children).toBe('Leases');
 
-  await fireEvent.press(await screen.findByTestId('item-run-r-1'));
+  await fireEvent.press(await screen.findByTestId('item-blocks-2-row-0'));
   await flush(100);
   await flush(1000);
   expect(view.getSegments()).toEqual(['(tabs)', 'activity', 'run']);
@@ -151,7 +162,7 @@ it("the item's file opens in Flows with the item, and a run's file in Activity w
   await flush(1000);
   expect(view.getSegments()).toEqual(['(tabs)', 'flows', 'item']);
 
-  await fireEvent.press(await screen.findByTestId('item-open-file'));
+  await fireEvent.press(await screen.findByTestId('item-blocks-0'));
   await flush(100);
   await flush(1000);
   expect(view.getSegments()).toEqual(['(tabs)', 'flows', 'item-file']);
@@ -162,11 +173,11 @@ it("the item's file opens in Flows with the item, and a run's file in Activity w
   await flush(1000);
   expect(view.getSegments()).toEqual(['(tabs)', 'flows', 'item']);
 
-  await fireEvent.press(await screen.findByTestId('item-run-r-1'));
+  await fireEvent.press(await screen.findByTestId('item-blocks-2-row-0'));
   await flush(100);
   await flush(1000);
   expect(view.getSegments()).toEqual(['(tabs)', 'activity', 'run']);
-  await fireEvent.press(await screen.findByTestId('run-open-file-f-9'));
+  await fireEvent.press(await screen.findByTestId('run-blocks-0'));
   await flush(100);
   await flush(1000);
   expect(view.getSegments()).toEqual(['(tabs)', 'activity', 'run-file']);

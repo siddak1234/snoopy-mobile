@@ -16,7 +16,7 @@
  */
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -53,6 +53,47 @@ export function sha256(path) {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
 }
 
+/**
+ * The block fixtures (backend ADR-0048 decision 9): every page body both
+ * clients must draw to exactly its `text`, committed as one file so the tests
+ * run in public CI. Headed, as the contracts are, by one sha256 — over the
+ * fixtures' bytes, each file in filename order: the rule both clients share,
+ * so the app's header equals the website's when both assert the same fixtures.
+ */
+export const blockFixtures = {
+  input: join(backendRoot, "packages/contracts/fixtures/blocks"),
+  output: join(root, "lib/generated/platform-contracts/block-fixtures.ts"),
+};
+
+/** The fixture files in filename order, and the one sha256 over their bytes. */
+export function readBlockFixtures() {
+  const names = readdirSync(blockFixtures.input)
+    .filter((name) => name.endsWith(".json"))
+    .sort();
+  const hash = createHash("sha256");
+  const fixtures = names.map((name) => {
+    const bytes = readFileSync(join(blockFixtures.input, name));
+    hash.update(bytes);
+    return JSON.parse(bytes.toString("utf8"));
+  });
+  return { fixtures, sha256: hash.digest("hex") };
+}
+
+function writeBlockFixtures() {
+  if (!existsSync(blockFixtures.input)) {
+    throw new Error(`Required block fixtures are unavailable: ${blockFixtures.input}`);
+  }
+  const { fixtures, sha256: hash } = readBlockFixtures();
+  writeFileSync(
+    blockFixtures.output,
+    `// From snoopy-backend ${relative(backendRoot, blockFixtures.input)}/*.json, sha256 ${hash}.\n` +
+      "// Regenerate with `npm run generate:platform-contracts`; never edit by hand.\n" +
+      "/** A page body and its visible words in reading order, closed sections left out. */\n" +
+      "export type BlockFixture = {\n  name: string;\n  about: string;\n  blockSetVersion: number;\n  blocks: readonly unknown[];\n  text: readonly string[];\n};\n\n" +
+      `export const BLOCK_FIXTURES: readonly BlockFixture[] = ${JSON.stringify(fixtures, null, 2)};\n`,
+  );
+}
+
 if (resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) {
   if (!existsSync(generator)) {
     throw new Error(
@@ -80,4 +121,5 @@ if (resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) {
         readFileSync(output, "utf8"),
     );
   }
+  writeBlockFixtures();
 }

@@ -5,7 +5,9 @@
  * the Edge stopped serving. The generated output is committed so the app builds
  * without the backend checkout present; this check proves the commit is current:
  * each file's header hash must equal the sha256 of its source document, and a
- * regeneration must reproduce the file byte for byte.
+ * regeneration must reproduce the file byte for byte. The block fixtures
+ * (`block-fixtures.ts`, backend ADR-0048 decision 9) are held the same way: their
+ * header's sha256 over the fixtures' bytes, then the regeneration.
  *
  * Skips, with exit 0, when the backend checkout (`SNOOPY_BACKEND_ROOT`, default
  * `../snoopy-backend`) is absent, matching `snoopy`: the private repo is not
@@ -20,7 +22,9 @@ import { relative, resolve } from "node:path";
 import {
   HEADER,
   backendRoot,
+  blockFixtures,
   contracts,
+  readBlockFixtures,
   sha256,
 } from "./generate-platform-contracts.mjs";
 import { recordContractCheck } from "./repo-facts.mjs";
@@ -34,7 +38,7 @@ if (!existsSync(backendRoot)) {
   process.exit(0);
 }
 
-for (const { output } of contracts) {
+for (const { output } of [...contracts, blockFixtures]) {
   if (!existsSync(output)) {
     throw new Error(
       "Generated platform types are missing; run npm run generate:platform-contracts and commit the output",
@@ -61,7 +65,22 @@ for (const { input, output } of contracts) {
   }
 }
 
-const outputs = contracts.map(({ output }) => output);
+// The block fixtures' header: one sha256 over the fixtures' bytes, in filename order.
+{
+  if (!existsSync(blockFixtures.input)) {
+    throw new Error(`Required block fixtures are unavailable: ${blockFixtures.input}`);
+  }
+  const header = HEADER.exec(readFileSync(blockFixtures.output, "utf8"));
+  const file = relative(root, blockFixtures.output);
+  const expected = readBlockFixtures().sha256;
+  if (!header || header[2] !== expected) {
+    throw new Error(
+      `${file} was not generated from the block fixtures at sha256 ${expected}; run npm run generate:platform-contracts and commit the output`,
+    );
+  }
+}
+
+const outputs = [...contracts.map(({ output }) => output), blockFixtures.output];
 const before = outputs.map((output) => readFileSync(output));
 execFileSync(process.execPath, ["scripts/generate-platform-contracts.mjs"], {
   cwd: root,

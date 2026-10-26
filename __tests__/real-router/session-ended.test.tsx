@@ -55,7 +55,7 @@ function expectTheRun(view: Awaited<ReturnType<typeof launch>>) {
   // The run's subheader: its flow (Gate 24 parity, G18; the version gone with the
   // Invoice Processing update, as on the website); how it ended on its own line (spec §3.E).
   expect(within(screen.getByText('Run run-0').parent!).getByText('Invoice triage')).toBeTruthy();
-  expect(screen.getByTestId('run-result').props.children).toBe('Run #4821 · posted to QuickBooks');
+  expect(screen.getByTestId('run-blocks-0').props.children).toBe('Run #4821 · posted to QuickBooks');
 }
 
 /** The run page's own Back, as a release build presses it. */

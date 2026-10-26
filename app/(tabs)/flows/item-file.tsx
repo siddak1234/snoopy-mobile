@@ -3,9 +3,11 @@ import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BlockList } from '@/components/blocks/block-list';
+import { Fallback } from '@/components/blocks/fallback';
+import { pageParts } from '@/components/blocks/look';
 import { FileView } from '@/components/files/file-view';
 import { BackCircle } from '@/components/nocturne/back-circle';
-import { RunSections } from '@/components/runs/run-sections';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { Text } from '@/components/text';
 import { em, fonts, layout, typeScale } from '@/constants/theme';
@@ -16,7 +18,7 @@ import { readItem, readItemFile } from '@/lib/platform/automations';
 import { PlatformNotConfiguredError } from '@/lib/platform/problem';
 import { readRemovedSubscriptionsOrNone, readSubscriptions } from '@/lib/platform/runs';
 
-/** The file's height on a page that scrolls on to the item's sections. */
+/** The file's height on a page that scrolls on to the item's reading. */
 const FILE_HEIGHT = 440;
 
 /**
@@ -26,8 +28,12 @@ const FILE_HEIGHT = 440;
  * "{File title}" row of the item's page, in the Flows stack, `?item=`. Top to
  * bottom: Back, the flow's own word for the file (`items.file.title`) and the
  * item's title; the original, drawn in place, with Download (`FileView`,
- * `readItemFile`); then the item's `sections`, each a closed drop-down
- * (`RunSections`) — ~~on the item's page, "What AI read"~~ until build 28.
+ * `readItemFile`); then what was read from it, as the platform sent it
+ * (`item.blocks`, backend ADR-0048: each section a closed drop-down) — in its
+ * flow's `pages.file` order, the viewer and the reading by default; a part
+ * this build does not know, the fallback (~~the item's `sections`,
+ * `RunSections`~~ until Round 21; ~~on the item's page, "What AI read"~~ until
+ * build 28).
  * Loading, offline, error and unavailable as every fetching screen; an item
  * whose flow no longer declares `items` is the error state, its words unknown.
  */
@@ -44,7 +50,7 @@ export default function ItemFileScreen() {
       const own = (rows: typeof live.subscriptions) => rows.find((row) => row.id === read.item.subscriptionId);
       const subscription =
         own(live.subscriptions) ?? own((await readRemovedSubscriptionsOrNone(workspaceId)).subscriptions);
-      return { item: read.item, declared: subscription?.items };
+      return { item: read.item, declared: subscription?.items, pages: subscription?.pages };
     },
     [itemId],
   );
@@ -67,7 +73,8 @@ export default function ItemFileScreen() {
       />
     );
   }
-  const { item, declared } = page.data;
+  const { item, declared, pages } = page.data;
+  const parts = pageParts(pages?.file, ['viewer', 'reading'] as const, ['viewer', 'reading']);
 
   return (
     <ScrollView
@@ -86,16 +93,23 @@ export default function ItemFileScreen() {
         </View>
       </View>
 
-      <FileView
-        testID="item-file"
-        workspaceId={page.loadedFor}
-        read={(workspaceId) => readItemFile(workspaceId, item.id)}
-        height={FILE_HEIGHT}
-      />
-
-      {item.sections && item.sections.length > 0 ? (
-        <RunSections testID="item-sections" sections={item.sections} firstOpen={false} />
-      ) : null}
+      {parts.map((part, at) =>
+        part === 'viewer' ? (
+          <FileView
+            key={part}
+            testID="item-file"
+            workspaceId={page.loadedFor}
+            read={(workspaceId) => readItemFile(workspaceId, item.id)}
+            height={FILE_HEIGHT}
+          />
+        ) : part === 'reading' ? (
+          item.blocks && item.blocks.length > 0 ? (
+            <BlockList key={part} testID="item-reading" blocks={item.blocks} />
+          ) : null
+        ) : (
+          <Fallback key={`unknown-${at}`} testID={`item-file-part-${at}`} />
+        ),
+      )}
     </ScrollView>
   );
 }

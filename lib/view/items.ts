@@ -4,7 +4,6 @@ import {
   ITEM_READING,
   ITEM_READY,
   OTHER_LABEL,
-  TOTAL_LABEL,
   allOf,
   countOf,
   topScoreOf,
@@ -18,13 +17,13 @@ import type {
   Run,
   RunFile,
 } from '@/lib/platform/automations';
-import { statusLabel } from '@/lib/view/status';
 
 /**
  * A flow's items as the screens draw them (backend ADR-0046; Round 19, plan §5,
  * the same in the website): grouped, the filter's choices, each row's line,
- * the select's choices, the values sent, and an item's runs ranked. Pure, so each rule is tested on
- * its own. No word or id of one flow here: the words are the manifest's.
+ * the select's choices, the values sent, and a run's files. Pure, so each rule is tested on
+ * its own. ~~An item's tiles and its runs ranked (`itemTiles`, `rankedRuns`)~~ until
+ * Round 21: the platform's blocks now (backend ADR-0048). No word or id of one flow here: the words are the manifest's.
  */
 
 /** One group of the flow page's list: the `groupField` value it holds (none when the flow groups nothing, or for the items without one). */
@@ -182,60 +181,9 @@ export function itemFieldLimit(field: Pick<AutomationItemField, 'control' | 'max
   return field.control === 'text' ? (field.maxLength ?? 80) : 40;
 }
 
-/** One row of an item's ranked runs (the owner's build 28 item F5: rank, name, score, arrow). */
-export type RankedRunView = {
-  id: string;
-  rank: number;
-  title: string;
-  score: string | null;
-  /** A failed or cancelled run: drawn in the muted tone (never faded). */
-  dim: boolean;
-};
-
-/**
- * An item's runs as the platform ranks them — highest score first, the
- * unscored after, then newest (`readItem`) — numbered 1…n. A run still going
- * reads "Reading…" (it has no title yet); a succeeded one its title and its
- * score; a failed one its status, muted. ~~Its result or failure line under
- * it~~ until build 28 (F5: "the size of the must haves drop down").
- */
-export function rankedRuns(runs: readonly Run[]): RankedRunView[] {
-  return runs.map((run, index) => {
-    const going = run.status === 'pending' || run.status === 'running';
-    return {
-      id: run.id,
-      rank: index + 1,
-      title: going ? ITEM_READING : (run.title ?? statusLabel(run.status)),
-      score: !going && run.score !== undefined ? String(run.score) : null,
-      dim: run.status === 'failed' || run.status === 'cancelled',
-    };
-  });
-}
-
 /** Whether a page showing these is read again: an item still being read, or a run still going. */
 export function itemsStillGoing(items: readonly Pick<Item, 'status'>[], runs: readonly Pick<Run, 'status'>[] = []): boolean {
   return items.some((item) => item.status === 'reading') || runs.some((run) => run.status === 'pending' || run.status === 'running');
-}
-
-/** One of an item's tiles (the owner's build 28 item F6): its count, its word, and its tone. */
-export type ItemTile = { key: 'total' | 'positive' | 'negative'; label: string; value: string; tone: 'text' | 'ok' | 'err' };
-
-/**
- * An item's tiles (F6: "total candidates, green … the hireable ones and red …
- * do not hire"): Total — its runs — then its `positiveCount` and
- * `negativeCount` in the flow's own `verdictWords`, green and red. None for a
- * flow whose items declare no verdict words: it gives no verdict to count.
- */
-export function itemTiles(
-  item: Pick<Item, 'runCount' | 'positiveCount' | 'negativeCount'>,
-  verdictWords: AutomationItems['verdictWords'],
-): ItemTile[] {
-  if (!verdictWords) return [];
-  return [
-    { key: 'total', label: TOTAL_LABEL, value: String(item.runCount), tone: 'text' },
-    { key: 'positive', label: verdictWords.positive, value: String(item.positiveCount), tone: 'ok' },
-    { key: 'negative', label: verdictWords.negative, value: String(item.negativeCount), tone: 'err' },
-  ];
 }
 
 /** One "View {file}" row of a run's page: the file it opens and its words. */
