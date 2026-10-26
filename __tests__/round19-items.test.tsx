@@ -692,6 +692,23 @@ describe("an item's page (plan §5.3; its blocks since Round 21)", () => {
     );
   });
 
+  it('read as its page body (`shape=blocks`), again while the platform says it goes (`going`), and not once it says it does not', async () => {
+    const fake = fakePlatform(platformOperation);
+    let reads = 0;
+    fake.always(`GET ${ONE}`, () => ({ ...READ_ITEM(), going: reads++ === 0 }));
+    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', (sent) => ({
+      subscriptions: sent.query?.status === 'archived' ? [] : [flowWithItems()],
+    }));
+    fake.always('GET /v1/workspaces/{workspaceId}/automations', { automations: [entry()], categories: ['All'] });
+    setMockParams({ item: 'i-1' });
+    await renderWithProviders(<ItemScreen />, sessionAs('owner'));
+    await screen.findByTestId('item-title');
+    expect(fake.to(`GET ${ONE}`)[0]!.query).toEqual({ shape: 'blocks' });
+    await waitFor(() => expect(fake.to(`GET ${ONE}`)).toHaveLength(2), { timeout: RUN_REREAD_MS * 3 });
+    await act(() => new Promise((resolve) => setTimeout(resolve, RUN_REREAD_MS + 500)));
+    expect(fake.to(`GET ${ONE}`)).toHaveLength(2);
+  });
+
   it('an owner adds one: the run names the item, says Start; Back goes back', async () => {
     const fake = await openItem(READ_ITEM(fixtureBlocks('empty-item')));
     expect(screen.getByText('No candidates yet.')).toBeTruthy();

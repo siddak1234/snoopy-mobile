@@ -2623,3 +2623,24 @@ the website's header byte for byte).
 - ~~**CI's `Deployed contract` job is red by design** until the platform releases this contract~~
   (B2 not live yet); no `platform-requirement.json`.
 - **NOT OBSERVED** (no simulator or device): every visible change, for the session's screenshots.
+
+### Guards proved to bite, Round 21's blocks (2026-10-26)
+
+Each line broken, its tests red, restored (the file's sha the same as `d495a05`), green — 39 of 39:
+- Each renderer: a label not in capitals, an error text not an alert, a tile's or a chip's tone
+  dropped, an end column not to its side, the score not read "Score", a list row, a file row or an
+  https entry pressing wrong or not at all, a section that comes open drawn closed, one that does not
+  toggle, Reduce Motion ignored, a link's host left out, an http address drawn as a link, every step
+  drawn done, the page's form not drawn: `blocks-render` fails (and `round19-items`,
+  `build28-files` or `invoice-processing-screens` where the page draws it).
+- The unknown: no fallback for a type, a form or a missing `blocks`; an unknown tone kept; an
+  unknown target given a press; an unknown state not "unknown"'s; a renderer left out of the
+  registry: `blocks-render`, `blocks-parity`, `no-flow-code` or `build21-views` fail.
+- `no-flow-code`: the run page reading `.documents`, the item page `verdictWords`, markup under
+  `components/blocks`: each fails it.
+- Parity: a word dropped, the blocks reordered, a closed section opened: `blocks-parity` fails.
+- The pages: the package from documents not `packageAvailable`, the approval offered to the wrong
+  role, the run form without its gate, the item not read again while `going`, the reading before the
+  viewer, an items flow drawn with its DASHBOARD, the held re-read ignoring the form, `readRun` or
+  `readItem` without `shape=blocks`: their page tests fail.
+- `verify:platform-contracts`: `block-fixtures.ts` edited by hand exits 1.
