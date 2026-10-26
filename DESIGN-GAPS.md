@@ -2620,6 +2620,14 @@ the website's header byte for byte).
      and the `unknown-target` fixture draw the row's words with no press. The app follows the fixture.
   3. The OpenAPI `Block` lets a section hold any block (`blocks: Block[]`), where `blocks.ts` holds
      it to one level with no questions; the app draws what comes either way.
+  4. The item page's "Add {run}" comes as its own label block with no role gate
+     (`snoopy-backend/apps/runs/src/pages/item-page.ts`, `addRunLabel`), so where the app offers no
+     run form — a member, an archived or unready item, a flow that is not live or cannot start — it
+     still draws "Add candidate" with nothing under it; on `510fe82` the heading sat inside the
+     form's gate. Not one of the seven approved changes; the website has the same (its review's
+     finding 1). The fix, shared with the web: send the label as the questions block's `title`, and
+     draw it only with its form. Held by `round19-items`' member test, expected red
+     (`it.failing`) until the fixtures carry the fix.
 - ~~**CI's `Deployed contract` job is red by design** until the platform releases this contract~~
   (B2 not live yet); no `platform-requirement.json`.
 - **NOT OBSERVED** (no simulator or device): every visible change, for the session's screenshots.
@@ -2644,3 +2652,5 @@ Each line broken, its tests red, restored (the file's sha the same as `d495a05`)
   viewer, an items flow drawn with its DASHBOARD, the held re-read ignoring the form, `readRun` or
   `readItem` without `shape=blocks`: their page tests fail.
 - `verify:platform-contracts`: `block-fixtures.ts` edited by hand exits 1.
+- The review's member test (`round19-items`, `it.failing`): the item page dropping the label
+  where it offers no run form turns it red; restored (the file's sha the same), green.

@@ -754,6 +754,18 @@ describe("an item's page (plan §5.3; its blocks since Round 21)", () => {
     expect(screen.queryByTestId('item-archive')).toBeNull();
   });
 
+  // Expected red (`it.failing`) until the backend sends "Add {run}" as the questions block's
+  // title, drawn only with its form (DESIGN-GAPS Round 21, finding 4): today the platform's label
+  // block comes with no role gate, so a member reads "Add candidate" with nothing under it. When
+  // the fixtures carry the fix this test passes, `it.failing` turns red, and it becomes an `it`.
+  it.failing('a member reads no "Add candidate": the label comes only with its run form', async () => {
+    await openItem(READ_ITEM(), sessionAs('member'));
+    // Index-free, so a page without the label still reaches the last line.
+    expect(screen.getByTestId('item-title')).toBeTruthy();
+    expect(screen.queryByTestId('item-add-run')).toBeNull();
+    expect(screen.queryByText('Add candidate')).toBeNull();
+  });
+
   it('an item still being read takes no run yet', async () => {
     await openItem({ ...READ_ITEM(fixtureBlocks('empty-item')), item: item('i-1', { status: 'reading' }) });
     expect(screen.getByTestId('item-status').props.children).toBe('North · Reading…');
