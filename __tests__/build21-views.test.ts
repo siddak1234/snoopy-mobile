@@ -20,8 +20,8 @@ import { invoiceProcessingEntry, invoiceProcessingV3Entry } from '@/test/platfor
  * the tracker's state for every step and group, from shared fixtures — run
  * 793eef82 as it ran, a v3 run of three receipts, a held run, a
  * continuation, a failed run. ~~Home's quick runs~~ until Build 22 (the
- * owner's build 21 item 1: "Remove run a flow section"); ~~the document card
- * (`lib/view/documents.ts`)~~ until Round 21 — the platform composes a run's
+ * owner's build 21 item 1: "Remove run a flow section"); the document card
+ * (~~`lib/view/documents.ts`~~) until Round 21 — the platform composes a run's
  * documents as blocks (backend ADR-0048), its tests holding the card's
  * strings, and the app draws them (`__tests__/blocks-parity.test.tsx`).
  */

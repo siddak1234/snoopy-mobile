@@ -415,7 +415,7 @@ export const EDIT_SETUP_LABEL = 'Edit setup';
  * "{RUN} DETAILS", "Waiting for approval.", "Invoice 1 of 3", Document type,
  * Format, "More lines on the document.", "Add {run}", "No {runs} yet."~~ here
  * until Round 21: the platform's words now, sent in the page's blocks (backend
- * ADR-0048; `apps/runs/src/pages/words.ts`).
+ * ADR-0048; `snoopy-backend/apps/runs/src/pages/words.ts`).
  */
 /**
  * The row near the bottom of every run's page and the page it opens (the
