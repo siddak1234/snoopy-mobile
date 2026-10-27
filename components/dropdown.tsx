@@ -7,7 +7,7 @@ import { GlassSurface } from '@/components/glass-surface';
 import { Pressable } from '@/components/pressable';
 import { Text } from '@/components/text';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
-import { elevation, em, fontScaleLimit, fonts, status as statusColor, typeScale, withAlpha } from '@/constants/theme';
+import { elevation, em, fonts, fontScaleLimit, space, status as statusColor, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type DropdownOption<T extends string> = { value: T; label: string; sub?: string; icon?: Icon; testID?: string };
@@ -296,9 +296,9 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS,
   },
   title: {
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingHorizontal: space.rowX,
+    paddingTop: space.rowY,
+    paddingBottom: space.inner,
     fontFamily: fonts.medium,
     fontSize: typeScale.micro.fontSize,
     letterSpacing: em(0.14, typeScale.micro.fontSize),
@@ -307,8 +307,8 @@ const styles = StyleSheet.create({
     minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: 14,
+    gap: space.inner,
+    padding: space.card,
   },
   rowBody: {
     flex: 1,
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
     lineHeight: typeScale.small.lineHeight,
   },
   status: {
-    padding: 14,
+    padding: space.card,
     fontFamily: fonts.regular,
     fontSize: typeScale.small.fontSize,
     lineHeight: typeScale.small.lineHeight,

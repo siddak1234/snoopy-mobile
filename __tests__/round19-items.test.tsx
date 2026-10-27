@@ -9,7 +9,7 @@ import RunDetailScreen from '@/app/(tabs)/activity/run';
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import ItemScreen from '@/app/(tabs)/flows/item';
 import { RunFileField } from '@/components/automations/run-file-field';
-import { nocturneDark } from '@/constants/theme';
+import { nocturneDark, status } from '@/constants/theme';
 import type { SessionContextValue } from '@/hooks/use-session';
 import {
   FLOW_QUEUE_FULL,
@@ -655,6 +655,8 @@ const READ_ITEM = (blocks = fixtureBlocks('reviewer-item')): Answer<`GET ${typeo
 /** The list block of the item fixture: its rows, by place ("Add {run}" now rides on its form). */
 const RUNS = 'item-blocks-4';
 
+const colourOf = (node: { props: { style?: unknown } }) => (StyleSheet.flatten(node.props.style as never) as { color?: string }).color;
+
 describe("an item's page (plan §5.3; its blocks since Round 21)", () => {
   it('its title, its group and state; its runs drawn as sent, numbered, scored — "Score" read first — a failure muted, each row rank, title, score and arrow (build 28, F5)', async () => {
     await openItem(READ_ITEM());
@@ -662,18 +664,20 @@ describe("an item's page (plan §5.3; its blocks since Round 21)", () => {
     expect(screen.getByTestId('item-status').props.children).toBe('South · Ready');
     expect(screen.getByText('Candidates')).toBeTruthy();
     const row = (at: number) => within(screen.getByTestId(`${RUNS}-row-${at}`)).getAllByText(/./u).map((node) => node.props.children);
-    expect(row(0)).toEqual(['1', 'Dana Whitfield', '88']);
-    expect(row(1)).toEqual(['2', 'Omar Reyes', '41']);
+    // Each row's verdict chip since block set 2 (the platform's `rankedRuns`; the owner's Q5).
+    expect(row(0)).toEqual(['1', 'Dana Whitfield', 'Advance', '88']);
+    expect(row(1)).toEqual(['2', 'Omar Reyes', 'Decline', '41']);
     expect(row(2)).toEqual(['3', 'Reading…']);
     expect(row(3)).toEqual(['4', 'Failed']);
     // NEW on the app (the website's already): the score is read as "Score 88".
     expect(screen.getByTestId(`${RUNS}-row-0-value`).props.accessibilityLabel).toBe('Score 88');
     expect(within(screen.getByTestId(`${RUNS}-row-0`)).getByTestId(/^phosphor-react-native-caret-right-/u)).toBeTruthy();
-    // The height of a drop-down's row: 44 at least, 11 above and below, 14 a side — never the 64 of a connection row.
+    // The height of a drop-down's row: the table's row, 44 at least, 12 above and below, 16 a side (the
+    // owner's Q8; ~~11 and 14~~ until Round 21) — never the 64 of a connection row.
     expect(StyleSheet.flatten(screen.getByTestId(`${RUNS}-row-0`).props.style)).toMatchObject({
       minHeight: 44,
-      paddingVertical: 11,
-      paddingHorizontal: 14,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
     });
     // The score at the row's type, not the heading's.
     expect(StyleSheet.flatten(screen.getByTestId(`${RUNS}-row-0-value`).props.style)).toMatchObject({ fontSize: 16 });
@@ -681,7 +685,8 @@ describe("an item's page (plan §5.3; its blocks since Round 21)", () => {
     const color = (node: { props: Record<string, unknown> }) => (StyleSheet.flatten(node.props.style as never) as { color?: string }).color;
     expect(color(within(screen.getByTestId(`${RUNS}-row-3`)).getByText('Failed'))).toBe(nocturneDark.neutral[400]);
     expect(color(within(screen.getByTestId(`${RUNS}-row-0`)).getByText('Dana Whitfield'))).toBe(nocturneDark.text);
-    expect(color(screen.getByTestId(`${RUNS}-row-0-value`))).toBe(nocturneDark.text);
+    // Its score in its verdict's tone since block set 2 (`valueTone`; the owner's Q5).
+    expect(color(screen.getByTestId(`${RUNS}-row-0-value`))).toBe(status.ok);
     for (const at of [0, 1, 2, 3]) {
       expect(StyleSheet.flatten(screen.getByTestId(`${RUNS}-row-${at}`).props.style ?? {})).not.toHaveProperty('opacity');
     }
@@ -780,6 +785,12 @@ describe("an item's page (plan §5.3; its blocks since Round 21)", () => {
   it('Archive asks first, then archives it under a key and goes back; Cancel keeps it', async () => {
     const fake = await openItem(READ_ITEM());
     fake.always('POST /v1/workspaces/{workspaceId}/items/{itemId}/archive', { item: item('i-1', { archivedAt: '2026-10-24T00:00:00Z' }) });
+    // The run page's danger pill since Round 21 (checklist C, "Buttons"; ~~drawn by hand~~): its red ring
+    // and words, the one pill height, read aloud by what it archives.
+    const pill = screen.getByTestId('item-archive');
+    expect(StyleSheet.flatten(pill.props.style)).toMatchObject({ minHeight: 44, borderColor: nocturneDark.danger, borderRadius: 999 });
+    expect(colourOf(screen.getByText('Archive policy'))).toBe(nocturneDark.danger);
+    expect(pill.props.accessibilityLabel).toBe('Archive Leases?');
     await fireEvent.press(screen.getByText('Archive policy'));
     expect(screen.getByText('Archive Leases?')).toBeTruthy();
     expect(screen.getByText('It leaves the list and takes no new contracts. Its contracts stay.')).toBeTruthy();
@@ -810,7 +821,11 @@ describe("an item's page (plan §5.3; its blocks since Round 21)", () => {
 describe("a run's page headed by its title and score, its body the platform's blocks (plan §5.4; build 28, F7–F9; backend ADR-0048)", () => {
   type Detail = Answer<'GET /v1/workspaces/{workspaceId}/runs/{runId}'>;
 
-  async function openRun(overrides: Partial<Detail['run']>, blocks: Detail['blocks'] = fixtureBlocks('reviewer-candidate')) {
+  async function openRun(
+    overrides: Partial<Detail['run']>,
+    blocks: Detail['blocks'] = fixtureBlocks('reviewer-candidate'),
+    subscription: Subscription = flowWithItems(),
+  ) {
     const base = runDetailPayload('run-1');
     const detail: Detail = { ...base, run: { ...base.run, ...run('r1'), ...overrides }, blocks };
     const fake = fakePlatform(platformOperation);
@@ -818,7 +833,7 @@ describe("a run's page headed by its title and score, its body the platform's bl
     fake.always('GET /v1/workspaces/{workspaceId}/automations', { automations: [entry()], categories: ['All'] });
     fake.always('GET /v1/workspaces/{workspaceId}/approvals', { approvals: [] });
     fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', (sent) => ({
-      subscriptions: sent.query?.status === 'archived' ? [] : [flowWithItems()],
+      subscriptions: sent.query?.status === 'archived' ? [] : [subscription],
     }));
     setMockParams({ runId: 'r1' });
     await renderWithProviders(<RunDetailScreen />, sessionAs('owner'));
@@ -857,6 +872,40 @@ describe("a run's page headed by its title and score, its body the platform's bl
     await fireEvent.press(screen.getByTestId('run-blocks-3-0-row-0-link'));
     expect(open).toHaveBeenCalledWith('https://school.example.test/accounting');
     open.mockRestore();
+  });
+
+  describe('the score toned by its verdict, its word a chip beside it (Round 21; the owner\'s Q5, F1)', () => {
+    const judged = flowWithItems({ items: { ...DECLARED, verdictWords: { positive: 'Advance', negative: 'Decline' } } });
+    const colour = (node: { props: { style?: unknown } }) => (StyleSheet.flatten(node.props.style as never) as { color?: string }).color;
+
+    it('positive: the score in the success tone, "Advance" in its chip, the same tone', async () => {
+      await openRun({ title: 'Dana Whitfield', score: 88, verdict: 'positive' }, [], judged);
+      expect(colour(screen.getByTestId('run-score'))).toBe(status.ok);
+      expect(screen.getByTestId('run-verdict').props.children).toBe('Advance');
+      expect(colour(screen.getByTestId('run-verdict'))).toBe(status.ok);
+      // The chip after the score, on the title's line.
+      const words = visibleWords(screen.toJSON());
+      expect(words.slice(0, 3)).toEqual(['Dana Whitfield', '88', 'Advance']);
+    });
+
+    it('negative: the error tone, "Decline"', async () => {
+      await openRun({ title: 'Omar Reyes', score: 41, verdict: 'negative' }, [], judged);
+      expect(colour(screen.getByTestId('run-score'))).toBe(status.err);
+      expect(screen.getByTestId('run-verdict').props.children).toBe('Decline');
+      expect(colour(screen.getByTestId('run-verdict'))).toBe(status.err);
+    });
+
+    it('no verdict: the score plain and no chip', async () => {
+      await openRun({ title: 'Akul', score: 82 }, [], judged);
+      expect(colour(screen.getByTestId('run-score'))).toBe(nocturneDark.text);
+      expect(screen.queryByTestId('run-verdict')).toBeNull();
+    });
+
+    it('a verdict its flow has no words for: plain, no chip', async () => {
+      await openRun({ title: 'Akul', score: 82, verdict: 'positive' }, []);
+      expect(colour(screen.getByTestId('run-score'))).toBe(nocturneDark.text);
+      expect(screen.queryByTestId('run-verdict')).toBeNull();
+    });
   });
 
   it('a run without both is headed by its id, as before, with no score; Run details still there', async () => {

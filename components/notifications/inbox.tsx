@@ -1,15 +1,14 @@
 import { useRouter } from 'expo-router';
 import { BellRinging, CheckCircle, CrownSimple, HandPalm, X, XCircle } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable, pressed } from '@/components/pressable';
 import { Text } from '@/components/text';
-import { em, fontScaleLimit, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
+import { fonts, fontScaleLimit, inset, space, status, typeScale, withAlpha } from '@/constants/theme';
 import { useAccessibilityTextSize } from '@/hooks/use-accessibility-text-size';
 import { usePushAsk } from '@/hooks/use-push-registration';
 import { useTheme } from '@/hooks/use-theme';
@@ -22,6 +21,8 @@ import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
+import { Page } from '@/components/page';
+import { PageHeader } from '@/components/page-header';
 import {
   NOTIFICATIONS_EMPTY_BODY,
   NOTIFICATIONS_EMPTY_TITLE,
@@ -237,22 +238,17 @@ export function Inbox({ returnTo }: { returnTo: Extract<RunOrigin, 'home' | 'set
   );
 
   return (
-    <ScrollView
-      style={{ backgroundColor: palette.bg }}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) },
-      ]}
-      showsVerticalScrollIndicator={false}>
-      {/* A title row's title stops at the chrome limit, as every title row's does (round 24's
-          simulator audit: "Notificat/ions" at the largest size). */}
-      <View style={styles.header}>
-        <BackCircle onPress={() => router.back()} />
-        <Text maxFontSizeMultiplier={fontScaleLimit.chrome} style={[styles.title, { color: palette.text }]}>
-          Notifications
-        </Text>
-        {stacked ? null : clearAllButton}
-      </View>
+    <Page>
+      {/* Every back header is a PageHeader (Round 21, brief item 8): Clear all in its right-hand
+          slot, under it at a large text size. Its title stops at the chrome limit, as every title
+          row's does (round 24's simulator audit: "Notificat/ions" at the largest size). */}
+      <PageHeader
+        testID="inbox-header"
+        title="Notifications"
+        titleMaxFontSizeMultiplier={fontScaleLimit.chrome}
+        onBack={() => router.back()}
+        right={stacked ? null : clearAllButton}
+      />
       {stacked ? <View style={styles.headerStacked}>{clearAllButton}</View> : null}
 
       <PushCard />
@@ -305,7 +301,7 @@ export function Inbox({ returnTo }: { returnTo: Extract<RunOrigin, 'home' | 'set
           );
         })}
       </SurfaceCard>
-    </ScrollView>
+    </Page>
   );
 }
 
@@ -356,7 +352,6 @@ function PushCard() {
           <PillButton
             label={PUSH_TURN_ON_LABEL}
             variant="primary"
-            height={42}
             fontSize={typeScale.body.fontSize}
             disabled={busy}
             onPress={() => void turnOn()}
@@ -367,7 +362,6 @@ function PushCard() {
           <PillButton
             label={PUSH_OPEN_SETTINGS_LABEL}
             variant="primary"
-            height={42}
             fontSize={typeScale.body.fontSize}
             onPress={() => openSettings()}
             style={styles.pushBtn}
@@ -376,7 +370,6 @@ function PushCard() {
         <PillButton
           label={PUSH_NOT_NOW_LABEL}
           variant="plain"
-          height={42}
           fontSize={typeScale.body.fontSize}
           onPress={() => void notNow()}
           style={styles.pushBtn}
@@ -387,22 +380,6 @@ function PushCard() {
 }
 
 const styles = StyleSheet.create({
-  content: {
-    paddingHorizontal: layout.screenX,
-    paddingBottom: 20,
-    gap: 14,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  title: {
-    flex: 1,
-    fontFamily: fonts.medium,
-    fontSize: typeScale.heading.fontSize,
-    letterSpacing: em(-0.01, typeScale.heading.fontSize),
-  },
   markAll: {
     fontFamily: fonts.regular,
     fontSize: typeScale.small.fontSize,
@@ -413,13 +390,13 @@ const styles = StyleSheet.create({
   pushCard: {
     borderWidth: 1,
     borderRadius: 14,
-    padding: 15,
-    gap: 10,
+    padding: space.card,
+    gap: space.inner,
   },
   pushHead: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 11,
+    gap: space.inner,
   },
   pushTitle: {
     flex: 1,
@@ -436,7 +413,7 @@ const styles = StyleSheet.create({
   },
   pushActions: {
     flexDirection: 'row',
-    gap: 10,
+    gap: space.inner,
   },
   pushBtn: {
     flex: 1,
@@ -451,19 +428,19 @@ const styles = StyleSheet.create({
     minWidth: 0,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
-    paddingVertical: 13,
-    paddingLeft: 14,
-    paddingRight: 8,
+    gap: space.inner,
+    paddingVertical: space.rowY,
+    paddingLeft: space.rowX,
+    paddingRight: space.inner,
   },
   dot: {
     width: 7,
     height: 7,
     borderRadius: 99,
-    marginTop: 6,
+    marginTop: inset.sm,
   },
   rowIcon: {
-    marginTop: 1,
+    marginTop: inset.hair,
   },
   rowBody: {
     flex: 1,
@@ -474,7 +451,7 @@ const styles = StyleSheet.create({
     fontSize: typeScale.label.fontSize,
   },
   rowDesc: {
-    marginTop: 1,
+    marginTop: inset.hair,
     fontFamily: fonts.regular,
     fontSize: typeScale.small.fontSize,
   },

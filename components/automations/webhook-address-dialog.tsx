@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { Text } from '@/components/text';
-import { fonts, typeScale } from '@/constants/theme';
+import { fonts, inset, space, typeScale } from '@/constants/theme';
 import type { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
@@ -188,11 +188,11 @@ const styles = StyleSheet.create({
   value: {
     fontFamily: fonts.medium,
     fontSize: typeScale.body.fontSize,
-    marginTop: 2,
+    marginTop: inset.xxs,
   },
   secret: {
     borderWidth: 1,
     borderRadius: 10,
-    padding: 12,
+    padding: space.card,
   },
 });

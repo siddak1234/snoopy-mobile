@@ -445,7 +445,8 @@ export function emailSentLine(time: string): string {
 /**
  * The A8X run package (round 24 P12; the owner's build 23 F16: "No more
  * download json"; ~~Download JSON~~): View package opens the PDF on its own
- * page; Download PDF and Download Excel hand the file to the share sheet.
+ * page; Download PDF and Download Excel save the file, then Share hands the
+ * PDF to the share sheet (Round 21, the owner's Q7: `FileActions`).
  */
 export const VIEW_PACKAGE_LABEL = 'View package';
 export const DOWNLOAD_PDF_LABEL = 'Download PDF';
@@ -460,11 +461,20 @@ export const PACKAGE_PREPARING = 'Preparing the package…';
 export const PACKAGE_NOT_OPENED = 'Could not open the package. Try again.';
 export const DOWNLOAD_FAILED = 'Could not download. Try again.';
 /**
+ * Share, after Download on every document (Round 21; the owner's Q7 and build
+ * 30 note F4: "There should be a download and then share for all documents"),
+ * and what it says when the file could not be shared: the website's words
+ * (`snoopy/components/dashboard/FileActions.tsx` `SHARE`, lib/run-files.ts
+ * `SHARE_FAILED`).
+ */
+export const SHARE_LABEL = 'Share';
+export const SHARE_FAILED = 'Could not share. Try again.';
+/**
  * A run's or an item's own file, on a page of its own (Round 19, build 28; the
  * owner's items F4 and F7: "Shows the original document downloadable", "review
  * the original document that you can download and share like other
- * documents"): "View resume" opens it, drawn in place, and Download hands it to
- * the share sheet — save or share — as the run package's downloads do.
+ * documents"): "View resume" opens it, drawn in place; Download saves it, and
+ * Share hands it to the share sheet (`FileActions`, Round 21).
  */
 export function viewFileLabel(title: string): string {
   return `View ${inSentence(title)}`;

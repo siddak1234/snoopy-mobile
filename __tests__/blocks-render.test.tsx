@@ -2,18 +2,28 @@ import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import React from 'react';
-import { AccessibilityInfo, Linking, StyleSheet } from 'react-native';
+import { AccessibilityInfo, Linking, StyleSheet, processColor } from 'react-native';
 
 import { RENDERERS } from '@/components/blocks/block-list';
 import { httpsLink, openRoute, pageParts, toneOf } from '@/components/blocks/look';
 import { Text } from '@/components/text';
 import { nocturneDark, status } from '@/constants/theme';
 import { FALLBACK } from '@/lib/content/screen-states';
-import { renderBlocks, visibleWords } from '@/test/blocks';
+import { resetSnapshot } from '@/lib/platform/snapshot';
+import { fileLinkFor, fixtureBlock, fixtureBlocks, renderBlocks, savedFiles, visibleWords } from '@/test/blocks';
+import { fakePlatform } from '@/test/fake-platform';
+import { TEST_WORKSPACE } from '@/test/platform';
 import { mockRouter } from '@/test/render';
 
+jest.mock('@/lib/platform/client', () => ({
+  platformOperation: jest.fn(),
+  downloadSignedFile: jest.fn(),
+}));
+const { platformOperation, downloadSignedFile } = jest.requireMock('@/lib/platform/client');
+
 /**
- * The ten blocks, each drawn by its renderer (backend ADR-0048 decisions 8–10):
+ * The thirteen blocks (backend ADR-0048 and its amendment 1, `BLOCK_SET_VERSION`
+ * 2; ~~ten~~ until Round 21), each drawn by its renderer (decisions 8–10):
  * its words, its tone a theme token, open or closed, and its press; and what
  * this build does not know — a type, a form, a target, a tone, a state —
  * drawn as the decision says, never thrown.
@@ -29,8 +39,10 @@ describe('the registry', () => {
     // The generated union's members, read from the generated contract itself.
     const generated = readFileSync(resolve(__dirname, '../lib/generated/platform-contracts/automations.d.ts'), 'utf8');
     const union = generated.slice(generated.indexOf('        Block: {'), generated.indexOf('        FlowPages: {'));
-    const types = [...union.matchAll(/\/\*\* @constant \*\/\n\s+type: "(\w+)";/gu)].map((match) => match[1]);
-    expect(types).toHaveLength(10);
+    // Each type once: a group's sections name `section` again.
+    const types = [...new Set([...union.matchAll(/\/\*\* @constant \*\/\n\s+type: "(\w+)";/gu)].map((match) => match[1]))];
+    expect(types).toHaveLength(13);
+    expect(types).toEqual(expect.arrayContaining(['image', 'chart', 'group']));
     expect(Object.keys(RENDERERS).sort()).toEqual([...types].sort());
   });
 });
@@ -317,10 +329,135 @@ describe('questions', () => {
   });
 });
 
+describe('list: the verdict\'s colour and word (ADR-0048 amendment 1, point 13; the owner\'s Q5, F2)', () => {
+  it('a positive row\'s score is green with "Advance", a negative one red with "Decline", no verdict plain and no chip', async () => {
+    await renderBlocks(fixtureBlocks('reviewer-item-verdicts'));
+    expect(visibleWords(screen.toJSON())).toEqual(['1', 'Dana Whitfield', 'Advance', '88', '2', 'Mara Quinn', '63', '3', 'Omar Reyes', 'Decline', '41']);
+    expect(color(screen.getByTestId('b-0-row-0-value'))).toBe(status.ok);
+    expect(color(screen.getByText('Advance'))).toBe(status.ok);
+    expect(color(screen.getByTestId('b-0-row-2-value'))).toBe(status.err);
+    expect(color(screen.getByText('Decline'))).toBe(status.err);
+    expect(color(screen.getByTestId('b-0-row-1-value'))).toBe(nocturneDark.text);
+    expect(within(screen.getByTestId('b-0-row-1')).queryAllByText(/Advance|Decline/u)).toHaveLength(0);
+  });
+
+  it('a failed row stays muted whatever its tone', async () => {
+    await renderBlocks([
+      { type: 'list', items: [{ title: 'Failed', value: '40', valueLabel: 'Score', valueTone: 'success', muted: true, open: { target: 'run', runId: 'r9' } }] },
+    ]);
+    expect(color(screen.getByTestId('b-0-row-0-value'))).toBe(nocturneDark.neutral[400]);
+  });
+});
+
+describe('image (ADR-0048 amendment 1, point 2)', () => {
+  beforeEach(() => {
+    platformOperation.mockReset();
+    resetSnapshot();
+  });
+
+  it('its source is the typed target\'s file, from its signed link — never an address in the block, a planted url ignored', async () => {
+    const saved = savedFiles(downloadSignedFile);
+    const fake = fakePlatform(platformOperation);
+    const block = fixtureBlock('drawn-image', 'image');
+    fake.always('GET /v1/workspaces/{workspaceId}/runs/{runId}/files/{fileId}', fileLinkFor(block.file));
+    await renderBlocks([{ ...block, url: 'https://evil.example/tracker.png', src: 'https://evil.example/x.png' }], { workspaceId: TEST_WORKSPACE });
+    const image = await screen.findByTestId('b-0-picture');
+    expect(image.props.source).toEqual({ uri: saved[0]!.uri });
+    expect(downloadSignedFile).toHaveBeenCalledTimes(1);
+    expect(downloadSignedFile.mock.calls[0]![0]).toBe(`https://files.example.com/${block.file.id}`);
+    expect(JSON.stringify(downloadSignedFile.mock.calls)).not.toContain('evil.example');
+    expect(JSON.stringify(image.props)).not.toContain('evil.example');
+  });
+});
+
+describe('chart (ADR-0048 amendment 1, point 3)', () => {
+  it('a bar chart is one image read as its alt; each bar value / max of its track, in the accent; its words text nodes', async () => {
+    const block = fixtureBlock('drawn-chart-bar', 'chart');
+    await renderBlocks([block]);
+    const box = screen.getByTestId('b-0');
+    expect(box.props.accessible).toBe(true);
+    expect(box.props.accessibilityRole).toBe('image');
+    expect(box.props.accessibilityLabel).toBe(block.alt);
+    const max = Math.max(...block.points.map((point) => point.value));
+    block.points.forEach((point, at) => {
+      const bar = screen.getByTestId(`b-0-bar-${at}-value`);
+      expect(bar.props.width).toBe(`${(point.value / max) * 100}%`);
+      expect(bar.props.fill).toEqual({ payload: processColor(nocturneDark.accent), type: 0 });
+    });
+    expect(visibleWords(screen.toJSON())).toEqual(['Spend by vendor', 'Harbor Paper Co.', '$1,204.50', 'Cedar Office Supply', '$980.00', 'Pine Street Print', '312']);
+  });
+
+  it('a line chart takes its width from its layout, a dot at each of 24 points or fewer and none past them', async () => {
+    const block = fixtureBlock('drawn-chart-line', 'chart');
+    await renderBlocks([block, { ...block, points: Array.from({ length: 30 }, (_, at) => ({ label: `W${at}`, value: at, text: String(at) })) }]);
+    expect(screen.getByTestId('b-0').props.accessibilityLabel).toBe(block.alt);
+    expect(screen.queryByTestId('b-0-line')).toBeNull();
+    for (const plot of ['b-0-plot', 'b-1-plot']) {
+      await fireEvent(screen.getByTestId(plot), 'layout', { nativeEvent: { layout: { width: 300, height: 120 } } });
+    }
+    expect(screen.getByTestId('b-0-line')).toBeTruthy();
+    expect(screen.queryAllByTestId(/^b-0-dot-/u)).toHaveLength(6);
+    expect(screen.getByTestId('b-1-line')).toBeTruthy();
+    expect(screen.queryAllByTestId(/^b-1-dot-/u)).toHaveLength(0);
+  });
+});
+
+describe('group (ADR-0048 amendment 1, point 12; the owner\'s Q6, F6)', () => {
+  it('its title, then one card of its sections as drop-downs with dividers: the first open, several open at once', async () => {
+    const blocks = fixtureBlocks('reviewer-candidate-grouped');
+    await renderBlocks(blocks);
+    expect(screen.getByTestId('b-1-title').props.accessibilityRole).toBe('header');
+    const card = screen.getByTestId('b-1-card');
+    // One card: both sections inside it, a divider above the second.
+    expect(within(card).getByTestId('b-1-0-toggle')).toBeTruthy();
+    expect(within(card).getByTestId('b-1-1-toggle')).toBeTruthy();
+    expect(screen.getByTestId('b-1-0-toggle').props.accessibilityState).toEqual({ expanded: true });
+    expect(screen.getByTestId('b-1-1-toggle').props.accessibilityState).toEqual({ expanded: false });
+    expect(screen.queryByTestId('b-1-1-body')).toBeNull();
+    await fireEvent.press(screen.getByTestId('b-1-1-toggle'));
+    expect(screen.getByTestId('b-1-0-body')).toBeTruthy();
+    expect(screen.getByTestId('b-1-1-body')).toBeTruthy();
+    const parts = card.children as unknown as { props: { style?: unknown } }[];
+    expect(parts.map((part) => (StyleSheet.flatten(part.props.style as never) as { borderTopWidth?: number } | undefined)?.borderTopWidth)).toEqual([undefined, 1]);
+  });
+});
+
+describe("the spacing table between blocks (ADR-0048 amendment 1, point 14; the owner's Q8, F3)", () => {
+  const flat = (node: { props: { style?: unknown } }) => (StyleSheet.flatten(node.props.style as never) ?? {}) as Record<string, number | undefined>;
+
+  it('"ADD CANDIDATE" (a form\'s title) and "CANDIDATES" (a label) sit the same `title` above what they head; `group` between blocks; none above the first', async () => {
+    await renderBlocks(fixtureBlocks('reviewer-item'), { forms: { run: () => <Text testID="the-form">form</Text> } });
+    // The form's title: a header, `title` (8) under it, one em tall.
+    const formTitle = screen.getByTestId('b-2-title');
+    expect(formTitle.props.accessibilityRole).toBe('header');
+    expect(flat(formTitle).marginBottom).toBe(8);
+    expect(flat(within(formTitle).getByText('Add candidate')).lineHeight).toBe(13);
+    // The label: a header with no gap of its own; the list after it sits `title` below it.
+    const label = screen.getByTestId('b-3');
+    expect(label.props.accessibilityRole).toBe('header');
+    expect(flat(label).marginBottom).toBeUndefined();
+    expect(flat(within(label).getByText('Candidates')).lineHeight).toBe(13);
+    const gapAbove = (id: string) => {
+      // The block list's own wrapper is the nearest ancestor that sets a marginTop, if any.
+      let node = screen.getByTestId(id).parent as unknown as { props: { style?: unknown }; parent?: unknown } | null;
+      for (let up = 0; node && up < 4; up += 1) {
+        const top = flat(node).marginTop;
+        if (top !== undefined) return top;
+        node = node.parent as typeof node;
+      }
+      return undefined;
+    };
+    expect(gapAbove('b-4')).toBe(8);
+    expect(gapAbove('b-1')).toBe(16);
+    expect(gapAbove('b-3')).toBe(16);
+    expect(gapAbove('b-0')).toBeUndefined();
+  });
+});
+
 describe('what this build does not know', () => {
   it('a type at the top and inside a section, a form, and no blocks at all each draw the one sentence; a target draws with no press', async () => {
     await renderBlocks([
-      { type: 'chart', points: [1, 2] },
+      { type: 'gauge', points: [1, 2] },
       { type: 'section', title: 'Inside', open: true, blocks: [{ type: 'gauge' }, { type: 'questions', form: { kind: 'poll' } }] },
       { type: 'list', items: [{ title: 'Opens nothing here', open: { target: 'invoice', invoiceId: 'x' } }] },
       { type: 'file', title: 'Somewhere', open: { target: 'vault' } },

@@ -5,12 +5,12 @@ import { StyleSheet, View } from 'react-native';
 import { ChoiceChips } from '@/components/choice-chips';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { NocToggle } from '@/components/nocturne/noc-toggle';
-import { SectionLabel } from '@/components/nocturne/section-label';
+import { SectionTitle } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { TextField } from '@/components/nocturne/text-field';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { Text } from '@/components/text';
-import { fonts, typeScale } from '@/constants/theme';
+import { fonts, inset, space, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
@@ -58,8 +58,8 @@ export function OrgDomains({
 
   return (
     <View>
-      <SectionLabel>DOMAINS</SectionLabel>
-      <SurfaceCard style={styles.card}>
+      <SectionTitle>DOMAINS</SectionTitle>
+      <SurfaceCard>
         {domains.length === 0 ? (
           <Text style={[styles.empty, { color: palette.neutral[400] }]}>No domain associated with this workspace.</Text>
         ) : null}
@@ -291,9 +291,9 @@ function AddDomainDialog({
 }
 
 const styles = StyleSheet.create({
-  card: { marginTop: 9 },
-  empty: { fontFamily: fonts.regular, fontSize: typeScale.body.fontSize, paddingHorizontal: 14, paddingTop: 13 },
-  toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  card: { marginTop: space.title },
+  empty: { fontFamily: fonts.regular, fontSize: typeScale.body.fontSize, paddingHorizontal: space.rowX, paddingTop: space.rowY },
+  toggleRow: { flexDirection: 'row', alignItems: 'center', gap: space.inner },
   toggleLabel: { flex: 1, fontFamily: fonts.regular, fontSize: typeScale.body.fontSize },
-  value: { fontFamily: fonts.medium, fontSize: typeScale.body.fontSize, marginTop: 4 },
+  value: { fontFamily: fonts.medium, fontSize: typeScale.body.fontSize, marginTop: inset.xs },
 });

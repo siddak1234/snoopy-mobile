@@ -1,17 +1,18 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BackCircle } from '@/components/nocturne/back-circle';
-import { SectionLabel } from '@/components/nocturne/section-label';
+import { SectionTitle } from '@/components/nocturne/section-label';
 import { StatCard } from '@/components/nocturne/stat-card';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { TrackerStep } from '@/components/runs/tracker-step';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { Text } from '@/components/text';
-import { em, fonts, layout, typeScale } from '@/constants/theme';
+import { Page } from '@/components/page';
+import { PageHeader } from '@/components/page-header';
+import { fonts, space, typeScale } from '@/constants/theme';
 import { busyBody } from '@/hooks/use-resource';
 import { useRunDetail } from '@/hooks/use-run-detail';
 import { useTheme } from '@/hooks/use-theme';
@@ -65,24 +66,20 @@ export default function RunDetailsScreen() {
   const name = run.title !== undefined && run.score !== undefined ? run.title : runLabel(run);
 
   return (
-    <ScrollView
-      style={{ backgroundColor: palette.bg }}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) }]}
-      showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        <BackCircle onPress={() => router.back()} />
-        <View style={styles.headerText}>
-          <Text testID="run-details-title" style={[styles.title, { color: palette.text }]}>
-            {RUN_DETAILS_LABEL}
-          </Text>
+    <Page>
+      <PageHeader
+        onBack={() => router.back()}
+        title={RUN_DETAILS_LABEL}
+        titleTestID="run-details-title"
+        below={
           <View style={styles.subRow}>
             <Text testID="run-details-name" selectable style={[styles.subtitle, { color: palette.neutral[400] }]}>
               {name}
             </Text>
             <StatusPill label={statusLabel(run.status) as StatusPillLabel} />
           </View>
-        </View>
-      </View>
+        }
+      />
 
       <View style={styles.statsRow}>
         {stats.map((s) => (
@@ -91,8 +88,8 @@ export default function RunDetailsScreen() {
       </View>
 
       <View testID="run-progress">
-        <SectionLabel>{STEPS_LABEL}</SectionLabel>
-        <SurfaceCard style={styles.sectionCard}>
+        <SectionTitle>{STEPS_LABEL}</SectionTitle>
+        <SurfaceCard>
           {tracker.map((row, i) => (
             <TrackerStep key={row.id} row={row} divider={i < tracker.length - 1} />
           ))}
@@ -112,36 +109,16 @@ export default function RunDetailsScreen() {
           </View>
         ))}
       </SurfaceCard>
-    </ScrollView>
+    </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    paddingHorizontal: layout.screenX,
-    paddingBottom: 20,
-    gap: 14,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  headerText: {
-    flex: 1,
-    minWidth: 0,
-    gap: 4,
-  },
-  title: {
-    fontFamily: fonts.medium,
-    ...typeScale.title,
-    letterSpacing: em(-0.01, typeScale.title.fontSize),
-  },
   subRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: space.inner,
   },
   subtitle: {
     fontFamily: fonts.regular,
@@ -149,17 +126,14 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: 'row',
-    gap: 10,
-  },
-  sectionCard: {
-    marginTop: 9,
+    gap: space.inner,
   },
   // A label and its value on one line; a long value — the run's id — wraps under its own column.
   fieldRow: {
     flexDirection: 'row',
-    gap: 16,
-    paddingVertical: 11,
-    paddingHorizontal: 14,
+    gap: space.group,
+    paddingVertical: space.rowY,
+    paddingHorizontal: space.rowX,
   },
   fieldKey: {
     fontFamily: fonts.regular,

@@ -1,14 +1,12 @@
 import { useRouter } from 'expo-router';
 import { Plugs } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BackCircle } from '@/components/nocturne/back-circle';
 import { ScreenEmpty, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { ConnectionsCard } from '@/components/settings/connections-card';
-import { Text } from '@/components/text';
-import { em, fonts, layout, typeScale } from '@/constants/theme';
+import { Page } from '@/components/page';
+import { PageHeader } from '@/components/page-header';
 import { busyBody, useWorkspaceResource } from '@/hooks/use-resource';
 import { roleIn, useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
@@ -74,14 +72,8 @@ export default function ConnectionsScreen() {
   }
 
   return (
-    <ScrollView
-      style={{ backgroundColor: palette.bg }}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) }]}
-      showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        <BackCircle onPress={() => router.back()} />
-        <Text style={[styles.title, { color: palette.text }]}>Connections</Text>
-      </View>
+    <Page>
+      <PageHeader onBack={() => router.back()} title="Connections" />
       <ConnectionsCard
         rows={connections.data.rows}
         loadedFor={connections.loadedFor}
@@ -90,12 +82,6 @@ export default function ConnectionsScreen() {
         onNotice={setNotice}
         onChanged={connections.reload}
       />
-    </ScrollView>
+    </Page>
   );
 }
-
-const styles = StyleSheet.create({
-  content: { paddingHorizontal: layout.screenX, paddingBottom: 32, gap: 18 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  title: { fontFamily: fonts.medium, fontSize: typeScale.heading.fontSize, letterSpacing: em(-0.01, typeScale.heading.fontSize) },
-});

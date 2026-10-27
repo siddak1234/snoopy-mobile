@@ -4,7 +4,7 @@ import type { Icon } from 'phosphor-react-native';
 
 import { Pressable } from '@/components/pressable';
 import { Text } from '@/components/text';
-import { fontScaleLimit, fonts, typeScale, withAlpha } from '@/constants/theme';
+import { fontScaleLimit, fonts, inset, space, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type PillButtonVariant =
@@ -28,33 +28,36 @@ type Props = {
   onPress?: () => void;
   disabled?: boolean;
   variant?: PillButtonVariant;
-  height?: number;
   fontSize?: number;
   icon?: Icon;
   iconSize?: number;
-  /** Row gap between icon and label (design: 5–9 depending on size). */
-  gap?: number;
   style?: StyleProp<ViewStyle>;
   testID?: string;
+  /** What a screen reader says, where it differs from the label ("Previous page"). */
+  accessibilityLabel?: string;
 };
+
+/**
+ * Every pill's height (Round 21, plan Open 11): Apple's 44-pt tap target, the
+ * table's least row height. ~~`height` 36 to 68, the default 52, and the icon's
+ * `gap` 5 to 9~~ until Round 21.
+ */
+export const PILL_HEIGHT = space.rowMinHeight;
 
 export function PillButton({
   label,
   onPress,
   disabled = false,
   variant = 'primary',
-  height = 52,
   fontSize,
   icon: IconCmp,
   iconSize,
-  gap = 7,
   style,
   testID,
+  accessibilityLabel,
 }: Props) {
   const { palette } = useTheme();
-  const size =
-    fontSize ??
-    (height >= 52 ? typeScale.lead.fontSize : height >= 44 ? typeScale.label.fontSize : typeScale.body.fontSize);
+  const size = fontSize ?? typeScale.label.fontSize;
 
   const borderColor =
     variant === 'primary' ? palette.accent :
@@ -73,21 +76,22 @@ export function PillButton({
   return (
     <Pressable
       testID={testID}
+      accessibilityLabel={accessibilityLabel}
       onPress={onPress}
       disabled={disabled || undefined}
       accessibilityState={disabled ? { disabled: true } : undefined}
       style={({ pressed }) => [
         {
           // The least height: a label at a large text size grows it (round 24 P3).
-          minHeight: height,
+          minHeight: PILL_HEIGHT,
           borderRadius: 999,
           borderWidth: variant === 'primary' || variant === 'secondary' || variant === 'danger' ? 1 : 0,
           borderColor,
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          gap,
-          paddingHorizontal: 18,
+          gap: inset.sm,
+          paddingHorizontal: space.rowX,
           backgroundColor: pressed && !disabled ? pressedBg : 'transparent',
           ...(disabled ? { opacity: 0.5 } : {}),
         },

@@ -1,7 +1,7 @@
 import { fireEvent, screen } from 'expo-router/testing-library';
 
 import type { Run } from '@/lib/platform/automations';
-import { flowCatalogPayload, runsPayload } from '@/test/platform';
+import { flowCatalogPayload, runsAsSelected, runsPayload } from '@/test/platform';
 import { answerPlatform, flush, launch, press, pressTab, signedInOnThisPhone } from '@/test/real-router';
 
 /** Choose an outcome from Activity's drop-down (round 23; ~~a chip~~). */
@@ -72,7 +72,7 @@ async function chooseRange(range: 'all' | 'today' | 'week' | 'month') {
 
 it('the same Home tile pressed again, after its selection was cleared on Activity, opens Activity with it again', async () => {
   signedInOnThisPhone();
-  answerPlatform({}, { '/runs': { runs: todayAndOlder() } });
+  answerPlatform({}, { '/runs': runsAsSelected(todayAndOlder()) });
   const view = await launch();
 
   await pressTile('stat-Failed');
@@ -99,7 +99,7 @@ it("the same flow page tile pressed again, after its flow was cleared on Activit
     {},
     {
       '/automations': flowCatalogPayload(),
-      '/runs': { runs: todayAndOlder().map((run) => ({ ...run, subscriptionId: 'invoice' })) },
+      '/runs': runsAsSelected(todayAndOlder().map((run) => ({ ...run, subscriptionId: 'invoice' }))),
     },
   );
   const view = await launch();
@@ -125,7 +125,7 @@ it("the same flow page tile pressed again, after its flow was cleared on Activit
 
 it('the tab bar changes nothing: after a tile visit and a clear, Activity opens from its tab as it was left', async () => {
   signedInOnThisPhone();
-  answerPlatform({}, { '/runs': { runs: todayAndOlder() } });
+  answerPlatform({}, { '/runs': runsAsSelected(todayAndOlder()) });
   const view = await launch();
 
   await pressTile('stat-Failed');

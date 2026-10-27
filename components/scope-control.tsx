@@ -7,7 +7,7 @@ import { GlassSurface } from '@/components/glass-surface';
 import { Pressable } from '@/components/pressable';
 import { WorkspaceSwitcher } from '@/components/settings/workspace-switcher';
 import { Text } from '@/components/text';
-import { fontScaleLimit, fonts, typeScale, withAlpha } from '@/constants/theme';
+import { fonts, fontScaleLimit, inset, space, typeScale, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useScope } from '@/hooks/use-scope';
 import { useSession } from '@/hooks/use-session';
@@ -203,12 +203,12 @@ const styles = StyleSheet.create({
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: inset.sm,
     minHeight: 34,
     // A name is cut short only where it is wider than the whole row; capped at
     // 60% it lost its last few letters at the bigger type.
     maxWidth: '100%',
-    paddingHorizontal: 12,
+    paddingHorizontal: space.rowX,
     borderRadius: 999,
     borderWidth: 1,
   },

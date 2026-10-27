@@ -21,8 +21,8 @@ exports[`screen states — dark palette ActionFailure renders unchanged 1`] = `
           "borderRadius": 14,
           "borderWidth": 1,
           "flexDirection": "row",
-          "gap": 10,
-          "paddingHorizontal": 14,
+          "gap": 8,
+          "paddingHorizontal": 16,
           "paddingVertical": 12,
         },
         {
@@ -109,7 +109,7 @@ exports[`screen states — dark palette ActionFailure renders unchanged 1`] = `
       style={
         {
           "flex": 1,
-          "gap": 6,
+          "gap": 8,
         }
       }
     >
@@ -171,7 +171,7 @@ exports[`screen states — dark palette ScreenEmpty/no-action renders unchanged 
         {
           "flex": 1,
           "gap": 16,
-          "paddingBottom": 20,
+          "paddingBottom": 24,
           "paddingHorizontal": 20,
         },
         {
@@ -187,7 +187,7 @@ exports[`screen states — dark palette ScreenEmpty/no-action renders unchanged 
         {
           "alignItems": "center",
           "flex": 1,
-          "gap": 14,
+          "gap": 16,
           "justifyContent": "center",
           "paddingHorizontal": 20,
         }
@@ -345,7 +345,7 @@ exports[`screen states — dark palette ScreenEmpty/two-actions renders unchange
         {
           "flex": 1,
           "gap": 16,
-          "paddingBottom": 20,
+          "paddingBottom": 24,
           "paddingHorizontal": 20,
         },
         {
@@ -361,7 +361,7 @@ exports[`screen states — dark palette ScreenEmpty/two-actions renders unchange
         {
           "alignItems": "center",
           "flex": 1,
-          "gap": 14,
+          "gap": 16,
           "justifyContent": "center",
           "paddingHorizontal": 20,
         }
@@ -535,10 +535,10 @@ exports[`screen states — dark palette ScreenEmpty/two-actions renders unchange
               "borderRadius": 999,
               "borderWidth": 1,
               "flexDirection": "row",
-              "gap": 7,
+              "gap": 6,
               "justifyContent": "center",
-              "minHeight": 48,
-              "paddingHorizontal": 18,
+              "minHeight": 44,
+              "paddingHorizontal": 16,
             },
             {
               "alignSelf": "stretch",
@@ -671,10 +671,10 @@ exports[`screen states — dark palette ScreenEmpty/two-actions renders unchange
               "borderRadius": 999,
               "borderWidth": 0,
               "flexDirection": "row",
-              "gap": 7,
+              "gap": 6,
               "justifyContent": "center",
               "minHeight": 44,
-              "paddingHorizontal": 18,
+              "paddingHorizontal": 16,
             },
             {
               "alignSelf": "stretch",
@@ -718,7 +718,7 @@ exports[`screen states — dark palette ScreenError renders unchanged 1`] = `
         {
           "flex": 1,
           "gap": 16,
-          "paddingBottom": 20,
+          "paddingBottom": 24,
           "paddingHorizontal": 20,
         },
         {
@@ -899,7 +899,7 @@ exports[`screen states — dark palette ScreenError renders unchanged 1`] = `
         {
           "alignItems": "center",
           "flex": 1,
-          "gap": 14,
+          "gap": 16,
           "justifyContent": "center",
           "paddingHorizontal": 20,
         }
@@ -1072,14 +1072,14 @@ exports[`screen states — dark palette ScreenError renders unchanged 1`] = `
               "borderRadius": 999,
               "borderWidth": 1,
               "flexDirection": "row",
-              "gap": 8,
+              "gap": 6,
               "justifyContent": "center",
               "minHeight": 44,
-              "paddingHorizontal": 18,
+              "paddingHorizontal": 16,
             },
             {
               "marginTop": 8,
-              "paddingHorizontal": 26,
+              "paddingHorizontal": 24,
             },
           ]
         }
@@ -1208,10 +1208,10 @@ exports[`screen states — dark palette ScreenError renders unchanged 1`] = `
               "borderRadius": 999,
               "borderWidth": 0,
               "flexDirection": "row",
-              "gap": 7,
+              "gap": 6,
               "justifyContent": "center",
-              "minHeight": 40,
-              "paddingHorizontal": 18,
+              "minHeight": 44,
+              "paddingHorizontal": 16,
             },
             undefined,
           ]
@@ -1253,7 +1253,7 @@ exports[`screen states — dark palette ScreenLoading renders unchanged 1`] = `
         {
           "flex": 1,
           "gap": 16,
-          "paddingBottom": 20,
+          "paddingBottom": 24,
           "paddingHorizontal": 20,
         },
         {
@@ -1269,7 +1269,7 @@ exports[`screen states — dark palette ScreenLoading renders unchanged 1`] = `
         {
           "alignItems": "center",
           "flexDirection": "row",
-          "gap": 12,
+          "gap": 8,
         }
       }
     >
@@ -1317,7 +1317,7 @@ exports[`screen states — dark palette ScreenLoading renders unchanged 1`] = `
       <View
         style={
           {
-            "gap": 7,
+            "gap": 6,
           }
         }
       >
@@ -1640,7 +1640,7 @@ exports[`screen states — dark palette ScreenLoading/tiles renders unchanged 1`
         {
           "flex": 1,
           "gap": 16,
-          "paddingBottom": 20,
+          "paddingBottom": 24,
           "paddingHorizontal": 20,
         },
         {
@@ -1656,7 +1656,7 @@ exports[`screen states — dark palette ScreenLoading/tiles renders unchanged 1`
         {
           "alignItems": "center",
           "flexDirection": "row",
-          "gap": 12,
+          "gap": 8,
         }
       }
     >
@@ -1704,7 +1704,7 @@ exports[`screen states — dark palette ScreenLoading/tiles renders unchanged 1`
       <View
         style={
           {
-            "gap": 7,
+            "gap": 6,
           }
         }
       >
@@ -1796,7 +1796,7 @@ exports[`screen states — dark palette ScreenLoading/tiles renders unchanged 1`
       style={
         {
           "flexDirection": "row",
-          "gap": 10,
+          "gap": 8,
         }
       }
     >
@@ -2171,7 +2171,7 @@ exports[`screen states — dark palette ScreenOffline renders unchanged 1`] = `
         {
           "flex": 1,
           "gap": 16,
-          "paddingBottom": 20,
+          "paddingBottom": 24,
           "paddingHorizontal": 20,
         },
         {
@@ -2352,7 +2352,7 @@ exports[`screen states — dark palette ScreenOffline renders unchanged 1`] = `
         {
           "alignItems": "center",
           "flex": 1,
-          "gap": 14,
+          "gap": 16,
           "justifyContent": "center",
           "paddingHorizontal": 20,
         }
@@ -2525,14 +2525,14 @@ exports[`screen states — dark palette ScreenOffline renders unchanged 1`] = `
               "borderRadius": 999,
               "borderWidth": 1,
               "flexDirection": "row",
-              "gap": 8,
+              "gap": 6,
               "justifyContent": "center",
               "minHeight": 44,
-              "paddingHorizontal": 18,
+              "paddingHorizontal": 16,
             },
             {
               "marginTop": 8,
-              "paddingHorizontal": 26,
+              "paddingHorizontal": 24,
             },
           ]
         }
@@ -2648,8 +2648,8 @@ exports[`screen states — light palette ActionFailure renders unchanged 1`] = `
           "borderRadius": 14,
           "borderWidth": 1,
           "flexDirection": "row",
-          "gap": 10,
-          "paddingHorizontal": 14,
+          "gap": 8,
+          "paddingHorizontal": 16,
           "paddingVertical": 12,
         },
         {
@@ -2736,7 +2736,7 @@ exports[`screen states — light palette ActionFailure renders unchanged 1`] = `
       style={
         {
           "flex": 1,
-          "gap": 6,
+          "gap": 8,
         }
       }
     >
@@ -2798,7 +2798,7 @@ exports[`screen states — light palette ScreenEmpty/no-action renders unchanged
         {
           "flex": 1,
           "gap": 16,
-          "paddingBottom": 20,
+          "paddingBottom": 24,
           "paddingHorizontal": 20,
         },
         {
@@ -2814,7 +2814,7 @@ exports[`screen states — light palette ScreenEmpty/no-action renders unchanged
         {
           "alignItems": "center",
           "flex": 1,
-          "gap": 14,
+          "gap": 16,
           "justifyContent": "center",
           "paddingHorizontal": 20,
         }
@@ -2972,7 +2972,7 @@ exports[`screen states — light palette ScreenEmpty/two-actions renders unchang
         {
           "flex": 1,
           "gap": 16,
-          "paddingBottom": 20,
+          "paddingBottom": 24,
           "paddingHorizontal": 20,
         },
         {
@@ -2988,7 +2988,7 @@ exports[`screen states — light palette ScreenEmpty/two-actions renders unchang
         {
           "alignItems": "center",
           "flex": 1,
-          "gap": 14,
+          "gap": 16,
           "justifyContent": "center",
           "paddingHorizontal": 20,
         }
@@ -3162,10 +3162,10 @@ exports[`screen states — light palette ScreenEmpty/two-actions renders unchang
               "borderRadius": 999,
               "borderWidth": 1,
               "flexDirection": "row",
-              "gap": 7,
+              "gap": 6,
               "justifyContent": "center",
-              "minHeight": 48,
-              "paddingHorizontal": 18,
+              "minHeight": 44,
+              "paddingHorizontal": 16,
             },
             {
               "alignSelf": "stretch",
@@ -3298,10 +3298,10 @@ exports[`screen states — light palette ScreenEmpty/two-actions renders unchang
               "borderRadius": 999,
               "borderWidth": 0,
               "flexDirection": "row",
-              "gap": 7,
+              "gap": 6,
               "justifyContent": "center",
               "minHeight": 44,
-              "paddingHorizontal": 18,
+              "paddingHorizontal": 16,
             },
             {
               "alignSelf": "stretch",
@@ -3345,7 +3345,7 @@ exports[`screen states — light palette ScreenError renders unchanged 1`] = `
         {
           "flex": 1,
           "gap": 16,
-          "paddingBottom": 20,
+          "paddingBottom": 24,
           "paddingHorizontal": 20,
         },
         {
@@ -3526,7 +3526,7 @@ exports[`screen states — light palette ScreenError renders unchanged 1`] = `
         {
           "alignItems": "center",
           "flex": 1,
-          "gap": 14,
+          "gap": 16,
           "justifyContent": "center",
           "paddingHorizontal": 20,
         }
@@ -3699,14 +3699,14 @@ exports[`screen states — light palette ScreenError renders unchanged 1`] = `
               "borderRadius": 999,
               "borderWidth": 1,
               "flexDirection": "row",
-              "gap": 8,
+              "gap": 6,
               "justifyContent": "center",
               "minHeight": 44,
-              "paddingHorizontal": 18,
+              "paddingHorizontal": 16,
             },
             {
               "marginTop": 8,
-              "paddingHorizontal": 26,
+              "paddingHorizontal": 24,
             },
           ]
         }
@@ -3835,10 +3835,10 @@ exports[`screen states — light palette ScreenError renders unchanged 1`] = `
               "borderRadius": 999,
               "borderWidth": 0,
               "flexDirection": "row",
-              "gap": 7,
+              "gap": 6,
               "justifyContent": "center",
-              "minHeight": 40,
-              "paddingHorizontal": 18,
+              "minHeight": 44,
+              "paddingHorizontal": 16,
             },
             undefined,
           ]
@@ -3880,7 +3880,7 @@ exports[`screen states — light palette ScreenLoading renders unchanged 1`] = `
         {
           "flex": 1,
           "gap": 16,
-          "paddingBottom": 20,
+          "paddingBottom": 24,
           "paddingHorizontal": 20,
         },
         {
@@ -3896,7 +3896,7 @@ exports[`screen states — light palette ScreenLoading renders unchanged 1`] = `
         {
           "alignItems": "center",
           "flexDirection": "row",
-          "gap": 12,
+          "gap": 8,
         }
       }
     >
@@ -3944,7 +3944,7 @@ exports[`screen states — light palette ScreenLoading renders unchanged 1`] = `
       <View
         style={
           {
-            "gap": 7,
+            "gap": 6,
           }
         }
       >
@@ -4267,7 +4267,7 @@ exports[`screen states — light palette ScreenLoading/tiles renders unchanged 1
         {
           "flex": 1,
           "gap": 16,
-          "paddingBottom": 20,
+          "paddingBottom": 24,
           "paddingHorizontal": 20,
         },
         {
@@ -4283,7 +4283,7 @@ exports[`screen states — light palette ScreenLoading/tiles renders unchanged 1
         {
           "alignItems": "center",
           "flexDirection": "row",
-          "gap": 12,
+          "gap": 8,
         }
       }
     >
@@ -4331,7 +4331,7 @@ exports[`screen states — light palette ScreenLoading/tiles renders unchanged 1
       <View
         style={
           {
-            "gap": 7,
+            "gap": 6,
           }
         }
       >
@@ -4423,7 +4423,7 @@ exports[`screen states — light palette ScreenLoading/tiles renders unchanged 1
       style={
         {
           "flexDirection": "row",
-          "gap": 10,
+          "gap": 8,
         }
       }
     >
@@ -4798,7 +4798,7 @@ exports[`screen states — light palette ScreenOffline renders unchanged 1`] = `
         {
           "flex": 1,
           "gap": 16,
-          "paddingBottom": 20,
+          "paddingBottom": 24,
           "paddingHorizontal": 20,
         },
         {
@@ -4979,7 +4979,7 @@ exports[`screen states — light palette ScreenOffline renders unchanged 1`] = `
         {
           "alignItems": "center",
           "flex": 1,
-          "gap": 14,
+          "gap": 16,
           "justifyContent": "center",
           "paddingHorizontal": 20,
         }
@@ -5152,14 +5152,14 @@ exports[`screen states — light palette ScreenOffline renders unchanged 1`] = `
               "borderRadius": 999,
               "borderWidth": 1,
               "flexDirection": "row",
-              "gap": 8,
+              "gap": 6,
               "justifyContent": "center",
               "minHeight": 44,
-              "paddingHorizontal": 18,
+              "paddingHorizontal": 16,
             },
             {
               "marginTop": 8,
-              "paddingHorizontal": 26,
+              "paddingHorizontal": 24,
             },
           ]
         }

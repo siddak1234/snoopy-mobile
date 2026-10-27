@@ -7,7 +7,7 @@ import { InlineBoundary } from '@/components/dialog-boundary';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SetupFieldRow, declaredValues } from '@/components/setup-field';
 import { Text } from '@/components/text';
-import { fonts, iconSize, status, typeScale } from '@/constants/theme';
+import { fonts, iconSize, space, status, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { WORKSPACE_CHANGED, runRefusal } from '@/lib/content/refusals';
@@ -207,7 +207,6 @@ function StartRunForm({
             testID="start-run-button"
             label={busy ? 'Starting…' : uploading.size > 0 ? 'Uploading…' : (startLabel ?? 'Start run')}
             variant="primary"
-            height={46}
             fontSize={typeScale.label.fontSize}
             icon={PlayCircle}
             iconSize={iconSize.button}
@@ -236,6 +235,6 @@ function withoutFiles(runInput: AutomationRunInputField[], values: Record<string
 }
 
 const styles = StyleSheet.create({
-  error: { marginTop: 4, paddingHorizontal: 14, fontFamily: fonts.regular, ...typeScale.small },
-  start: { paddingHorizontal: 14, paddingTop: 4, paddingBottom: 14 },
+  error: { marginTop: space.inner, paddingHorizontal: space.rowX, fontFamily: fonts.regular, ...typeScale.small },
+  start: { paddingHorizontal: space.rowX, paddingTop: space.inner, paddingBottom: space.card },
 });

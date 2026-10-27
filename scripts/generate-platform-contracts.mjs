@@ -94,6 +94,71 @@ function writeBlockFixtures() {
   );
 }
 
+/**
+ * The block rules (backend ADR-0048 amendment 1, points 8, 14 and 17): the
+ * words of search, sort and pages (`BLOCK_WORDS`), the spacing table
+ * (`BLOCK_SPACING`, the owner's Q8), the list rules, and the search and sort
+ * cases both clients' tests run. Copied from `fixtures/block-rules/` into
+ * `block-rules.ts`, headed by one sha256 over the files' bytes in filename
+ * order, as the block fixtures are. A file this generator does not know stops
+ * it: a new rule is drawn here first, never dropped.
+ */
+export const blockRules = {
+  input: join(backendRoot, "packages/contracts/fixtures/block-rules"),
+  output: join(root, "lib/generated/platform-contracts/block-rules.ts"),
+};
+
+const BLOCK_RULE_FILES = ["search.json", "sort.json", "spacing.json", "words.json"];
+
+/** The rule files by name, and the one sha256 over their bytes in filename order. */
+export function readBlockRules() {
+  const names = readdirSync(blockRules.input)
+    .filter((name) => name.endsWith(".json"))
+    .sort();
+  const unknown = names.filter((name) => !BLOCK_RULE_FILES.includes(name));
+  const missing = BLOCK_RULE_FILES.filter((name) => !names.includes(name));
+  if (unknown.length > 0 || missing.length > 0) {
+    throw new Error(
+      `The block rules changed shape (unknown: ${unknown.join(", ") || "none"}; missing: ${missing.join(", ") || "none"}); draw them in scripts/generate-platform-contracts.mjs first`,
+    );
+  }
+  const hash = createHash("sha256");
+  const rules = Object.fromEntries(
+    names.map((name) => {
+      const bytes = readFileSync(join(blockRules.input, name));
+      hash.update(bytes);
+      return [name, JSON.parse(bytes.toString("utf8"))];
+    }),
+  );
+  return { rules, sha256: hash.digest("hex") };
+}
+
+function writeBlockRules() {
+  if (!existsSync(blockRules.input)) {
+    throw new Error(`Required block rules are unavailable: ${blockRules.input}`);
+  }
+  const { rules, sha256: hash } = readBlockRules();
+  const search = rules["search.json"];
+  const json = (value) => JSON.stringify(value, null, 2);
+  writeFileSync(
+    blockRules.output,
+    `// From snoopy-backend ${relative(backendRoot, blockRules.input)}/*.json, sha256 ${hash}.\n` +
+      "// Regenerate with `npm run generate:platform-contracts`; never edit by hand.\n\n" +
+      "/** The words of search, sort and pages (owner-words.md rows 1-16); `{…}` is filled in. */\n" +
+      `export const BLOCK_WORDS = ${json(rules["words.json"].blockWords)} as const;\n\n` +
+      "/** The spacing table (the owner's Q8): names, read as points in the app. */\n" +
+      `export const BLOCK_SPACING = ${json(rules["spacing.json"].blockSpacing)} as const;\n\n` +
+      "/** A list or table is long above `pageSize`; a query is at most `queryLength` characters. */\n" +
+      `export const BLOCK_LIST_RULES = ${json({ pageSize: search.pageSize, queryLength: search.queryLength })} as const;\n\n` +
+      "/** The search cases: a query, the rows' fields, and the rows it matches. */\n" +
+      "export type BlockSearchCase = { name: string; query: string; rows: readonly (readonly string[])[]; matches: readonly number[] };\n\n" +
+      `export const BLOCK_SEARCH_CASES: readonly BlockSearchCase[] = ${json(search.cases)};\n\n` +
+      "/** The sort cases: a list's rows or a table's cells, its choices, one choice and the order it gives. */\n" +
+      "export type BlockSortCase = {\n  name: string;\n  kind: 'list' | 'table';\n  columns?: readonly (string | null)[];\n  rows: readonly ({ title: string; value?: string; valueLabel?: string } | readonly string[])[];\n  choices: readonly string[];\n  choice: string;\n  order: readonly number[];\n};\n\n" +
+      `export const BLOCK_SORT_CASES: readonly BlockSortCase[] = ${json(rules["sort.json"].cases)};\n`,
+  );
+}
+
 if (resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) {
   if (!existsSync(generator)) {
     throw new Error(
@@ -122,4 +187,5 @@ if (resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) {
     );
   }
   writeBlockFixtures();
+  writeBlockRules();
 }

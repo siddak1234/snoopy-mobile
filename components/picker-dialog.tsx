@@ -5,7 +5,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { Pressable } from '@/components/pressable';
 import { Text } from '@/components/text';
-import { fonts, typeScale } from '@/constants/theme';
+import { fonts, space, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -53,7 +53,7 @@ export function PickerDialog({
 
 const styles = StyleSheet.create({
   list: { maxHeight: 360 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, borderBottomWidth: 1 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space.inner, paddingVertical: space.rowY, borderBottomWidth: 1 },
   body: { flex: 1, minWidth: 0 },
   label: { fontFamily: fonts.medium, fontSize: typeScale.label.fontSize },
   sub: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },

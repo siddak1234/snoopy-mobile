@@ -1,15 +1,15 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { DownloadSimple } from 'phosphor-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 
-import { BackCircle } from '@/components/nocturne/back-circle';
-import { PillButton } from '@/components/nocturne/pill-button';
+import { FileActions } from '@/components/files/file-actions';
+import { Page } from '@/components/page';
+import { PageHeader } from '@/components/page-header';
 import { ScreenError, ScreenUnavailable } from '@/components/screen-state';
 import { Text } from '@/components/text';
-import { em, fonts, iconSize, layout, status, typeScale } from '@/constants/theme';
+import { fonts, radius, typeScale } from '@/constants/theme';
 import { deviceTimeZone, useRunPackageDownload } from '@/hooks/use-run-package';
 import { activeWorkspaceId, useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
@@ -46,8 +46,8 @@ type Shown =
  * link (https only, `signedLink`) is saved into the app's cache
  * (`downloadSignedFile`, the one native download, under a name of its own so a
  * share from the header never removes it) and drawn in a WebView from that
- * file. The header holds Back, Download PDF and Download Excel — the run page's
- * download path (`useRunPackageDownload`). States: preparing; not opened —
+ * file. Under the header, Download PDF, Download Excel and Share — the run
+ * page's (`useRunPackageDownload`, `FileActions`; Round 21, the owner's Q7). States: preparing; not opened —
  * still busy, the file refused, a link that is not https, or a file not saved
  * (`packageNotOpened`) — "Could not open the package. Try again.", the
  * website's words for each, with Retry; error (the refusal's words). The
@@ -122,46 +122,16 @@ export default function RunPackageScreen() {
   }
 
   return (
-    <View
-      testID="package-screen"
-      style={[styles.screen, { backgroundColor: palette.bg, paddingTop: insets.top + (layout.designTop.app - layout.statusArea) }]}>
-      <View style={styles.header}>
-        <BackCircle onPress={() => router.back()} />
-        <Text accessibilityRole="header" style={[styles.title, { color: palette.text }]}>
-          {RUN_PACKAGE_TITLE}
-        </Text>
-      </View>
-      <View style={styles.downloads}>
-        <PillButton
-          testID="package-download-pdf"
-          label={DOWNLOAD_PDF_LABEL}
-          variant="secondary"
-          height={44}
-          fontSize={typeScale.label.fontSize}
-          icon={DownloadSimple}
-          iconSize={iconSize.button}
-          disabled={files.busy !== null}
-          style={styles.download}
-          onPress={() => files.download('pdf')}
-        />
-        <PillButton
-          testID="package-download-excel"
-          label={DOWNLOAD_EXCEL_LABEL}
-          variant="secondary"
-          height={44}
-          fontSize={typeScale.label.fontSize}
-          icon={DownloadSimple}
-          iconSize={iconSize.button}
-          disabled={files.busy !== null}
-          style={styles.download}
-          onPress={() => files.download('xlsx')}
-        />
-      </View>
-      {files.error ? (
-        <Text accessibilityRole="alert" style={[styles.note, { color: status.err }]}>
-          {files.error}
-        </Text>
-      ) : null}
+    <Page testID="package-screen" fill>
+      <PageHeader onBack={() => router.back()} title={RUN_PACKAGE_TITLE} />
+      <FileActions
+        testID="package-actions"
+        downloads={[
+          { label: DOWNLOAD_PDF_LABEL, testID: 'package-download-pdf', run: () => files.download('pdf') },
+          { label: DOWNLOAD_EXCEL_LABEL, testID: 'package-download-excel', run: () => files.download('xlsx') },
+        ]}
+        share={{ testID: 'package-share', run: files.share }}
+      />
       {shown.kind === 'ready' ? (
         <WebView
           testID="package-webview"
@@ -177,38 +147,15 @@ export default function RunPackageScreen() {
           <Text style={[styles.note, { color: palette.neutral[400] }]}>{PACKAGE_PREPARING}</Text>
         </View>
       )}
-    </View>
+    </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: layout.screenX,
-  },
-  title: {
-    flex: 1,
-    fontFamily: fonts.medium,
-    fontSize: typeScale.heading.fontSize,
-    letterSpacing: em(-0.01, typeScale.heading.fontSize),
-  },
-  downloads: {
-    flexDirection: 'row',
-    gap: 10,
-    paddingHorizontal: layout.screenX,
-    paddingTop: 14,
-    paddingBottom: 12,
-  },
-  download: { flex: 1 },
   note: {
-    paddingHorizontal: layout.screenX,
-    paddingBottom: 8,
     fontFamily: fonts.regular,
     ...typeScale.small,
   },
-  pdf: { flex: 1 },
+  pdf: { flex: 1, borderRadius: radius.card, overflow: 'hidden' },
   preparing: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });

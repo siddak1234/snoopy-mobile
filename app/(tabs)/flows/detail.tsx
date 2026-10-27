@@ -1,7 +1,7 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { CaretRight, EnvelopeSimple, Pause, Play, RocketLaunch } from 'phosphor-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AutomationActions } from '@/components/automations/automation-actions';
@@ -10,17 +10,19 @@ import { pageParts } from '@/components/blocks/look';
 import { StartRun, canStartRun } from '@/components/automations/start-run';
 import { ConnectionMark, ConnectionRow, GlyphMark, NoneMark } from '@/components/connection-row';
 import type { ArchivedFlowPath } from '@/components/flows/archived-flows';
+import { DividedCard } from '@/components/group';
 import { FlowItems } from '@/components/items/flow-items';
-import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
-import { SectionLabel } from '@/components/nocturne/section-label';
+import { SectionTitle } from '@/components/nocturne/section-label';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { Page } from '@/components/page';
+import { PageHeader } from '@/components/page-header';
 import { pressed } from '@/components/pressable';
 import { chosenVendor, connectionFields } from '@/components/setup-field';
 import { StatTileButton, StatTileRow } from '@/components/stat-tile-button';
 import { Text } from '@/components/text';
-import { em, fonts, iconSize, layout, status, typeScale } from '@/constants/theme';
+import { fonts, iconSize, space, status, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ActionFailure, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
@@ -397,7 +399,6 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
       testID="flow-step-turn-on"
       label={busy ? SETUP_TURNING_ON : SETUP_TURN_ON}
       variant="primary"
-      height={46}
       fontSize={typeScale.label.fontSize}
       icon={RocketLaunch}
       iconSize={iconSize.button}
@@ -470,7 +471,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
       ? recipientsLine(recipients.data)
       : { first: recipients.status === 'loading' ? EMPTY : FIGURE_UNAVAILABLE, more: null };
   const emailRow = def.removed ? null : (
-    <View style={{ borderTopWidth: 1, borderTopColor: palette.divider }}>
+    <View style={[styles.divided, { borderTopColor: palette.divider }]}>
       <ConnectionRow
         testID="flow-email"
         mark={<GlyphMark icon={EnvelopeSimple} />}
@@ -483,34 +484,28 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
   );
 
   return (
-    <ScrollView
-      style={styles.root}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) }]}>
-      <View style={styles.headerRow}>
-        <BackCircle onPress={() => router.back()} />
-        <View style={styles.headerText}>
-          <Text style={[styles.title, { color: palette.text }]}>{def.name}</Text>
-          {def.scope ? (
-            <Text testID="flow-team" style={[styles.team, { color: palette.neutral[400] }]}>
-              {def.scope}
-            </Text>
-          ) : null}
-        </View>
-        {def.removed ? (
-          <Text style={[styles.removedBadge, { color: palette.neutral[400] }]}>Archived</Text>
-        ) : (
-          <StatusPill label={current} />
-        )}
-      </View>
+    <Page testID="flow-screen">
+      <PageHeader
+        onBack={() => router.back()}
+        title={def.name}
+        subtitle={def.scope}
+        subtitleTestID="flow-team"
+        right={
+          def.removed ? (
+            <Text style={[styles.removedBadge, { color: palette.neutral[400] }]}>Archived</Text>
+          ) : (
+            <StatusPill label={current} />
+          )
+        }
+      />
 
       {parts.map((part, at) => {
         // DASHBOARD: the three tiles open Activity for this flow and that outcome, over all time (24.11.9).
         if (part === 'dashboard') {
           return (
             <View key={part} testID="flow-dashboard">
-              <SectionLabel>{DASHBOARD_LABEL}</SectionLabel>
-              <StatTileRow style={styles.underLabel}>
+              <SectionTitle>{DASHBOARD_LABEL}</SectionTitle>
+              <StatTileRow>
                 {(
                   [
                     ['Runs', tile(counts?.total), 'All', undefined],
@@ -538,15 +533,13 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
         if (part === 'steps') {
           return olderArchived ? null : (
             <View key={part} testID="flow-steps">
-              <SectionLabel>{STEPS_LABEL}</SectionLabel>
-              <SurfaceCard style={styles.underLabel}>
+              <SectionTitle>{STEPS_LABEL}</SectionTitle>
+              {/* The steps on one card, a divider between each (`DividedCard`; ~~drawn by hand~~ until Round 21). */}
+              <DividedCard>
                 {/* A flow whose template the catalog no longer lists has no steps to hold Step 1's controls: they stand alone. */}
                 {plan.length === 0 ? stepOne : null}
-                {plan.map((row, i) => (
-                  <View
-                    key={row.id}
-                    testID={`flow-step-${row.id}`}
-                    style={i < plan.length - 1 && { borderBottomWidth: 1, borderBottomColor: palette.divider }}>
+                {plan.map((row) => (
+                  <View key={row.id} testID={`flow-step-${row.id}`}>
                     {/* The step's title only — no line under it (the session's S20; P2: "After step 4 i dont want to see quickbooks"). */}
                     <View style={styles.stepRow}>
                       <Text style={[styles.stepLabel, { color: palette.text }]}>{row.label}</Text>
@@ -556,7 +549,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
                     {row.kind === 'email' ? emailRow : null}
                   </View>
                 ))}
-              </SurfaceCard>
+              </DividedCard>
             </View>
           );
         }
@@ -590,14 +583,13 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
         // 12 item 4, the same action: Setup for its template, in the team it had,
         // a fresh setup — or, once the workspace holds it again in any team (D3;
         // item 9: one flow per workspace), open that copy instead.
-        <SurfaceCard style={styles.removedCard}>
+        <SurfaceCard padded>
           {twin ? (
             <>
               <Text style={[styles.note, { color: palette.neutral[400] }]}>{archivedFlowAddedAgainBody(def.removedOn)}</Text>
               <PillButton
                 label={OPEN_LIVE_FLOW_LABEL}
                 variant="secondary"
-                height={44}
                 fontSize={typeScale.label.fontSize}
                 onPress={() => router.push({ pathname: detailPath, params: { flow: twin.id } })}
               />
@@ -608,7 +600,6 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
               <PillButton
                 label={UNARCHIVE_LABEL}
                 variant="primary"
-                height={44}
                 fontSize={typeScale.label.fontSize}
                 // Setup for its flow, a fresh setup; it goes to its category's team (ADR-0036).
                 onPress={() => router.push({ pathname: '/(tabs)/flows/setup', params: { template: def.templateId } })}
@@ -640,7 +631,6 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
                 <PillButton
                   label={busy ? 'Working…' : action.label}
                   variant="secondary"
-                  height={46}
                   fontSize={typeScale.label.fontSize}
                   icon={ActionIcon}
                   iconSize={iconSize.button}
@@ -653,7 +643,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
           }
         />
       )}
-    </ScrollView>
+    </Page>
   );
 }
 
@@ -663,25 +653,14 @@ export default function WorkflowDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
   removedBadge: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
-  removedCard: { padding: 14, gap: 12 },
-  content: { paddingHorizontal: layout.screenX, paddingBottom: 20, gap: 18 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  headerText: { flex: 1 },
-  title: {
-    fontFamily: fonts.medium,
-    fontSize: typeScale.heading.fontSize,
-    letterSpacing: em(-0.01, typeScale.heading.fontSize),
-  },
-  team: { marginTop: 1, fontFamily: fonts.regular, fontSize: typeScale.body.fontSize },
-  underLabel: { marginTop: 9 },
-  stepRow: { paddingVertical: 12, paddingHorizontal: 14 },
+  divided: { borderTopWidth: 1 },
+  stepRow: { paddingVertical: space.rowY, paddingHorizontal: space.rowX },
   stepLabel: { fontFamily: fonts.medium, fontSize: typeScale.label.fontSize },
-  stepAction: { paddingHorizontal: 14, paddingBottom: 14 },
-  alone: { paddingTop: 14 },
-  owed: { paddingHorizontal: 14, paddingBottom: 12, fontFamily: fonts.medium, ...typeScale.small },
-  actions: { flexDirection: 'row', gap: 10 },
+  stepAction: { paddingHorizontal: space.rowX, paddingBottom: space.card },
+  alone: { paddingTop: space.card },
+  owed: { paddingHorizontal: space.rowX, paddingBottom: space.rowY, fontFamily: fonts.medium, ...typeScale.small },
+  actions: { flexDirection: 'row', gap: space.inner },
   note: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
   actionBtn: { flex: 1 },
 });

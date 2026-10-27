@@ -17,6 +17,8 @@ import type {
   Run,
   RunFile,
 } from '@/lib/platform/automations';
+import { BLOCK_WORDS } from '@/lib/generated/platform-contracts/block-rules';
+import { PAGE_SIZE, fill, isLong, pageCount, pageWithin, search } from '@/lib/view/block-sort';
 
 /**
  * A flow's items as the screens draw them (backend ADR-0046; Round 19, plan §5,
@@ -33,6 +35,52 @@ export type ItemGroup = { name: string | null; items: Item[] };
 export const ALL_GROUPS = '\u0000all';
 
 const byTitle = (a: Item, b: Item) => a.title.localeCompare(b.title);
+/** The platform's order of a flow's items, newest first (`createdAt`), ties by title. */
+const byNewest = (a: Item, b: Item) => b.createdAt.localeCompare(a.createdAt) || byTitle(a, b);
+
+/**
+ * How a flow's items are ordered inside each group (Round 21, ADR-0048
+ * amendment 1, point 4): "A to Z" by title (today's order), or "Newest first".
+ */
+export type ItemOrder = 'title' | 'newest';
+
+/** The sort's two choices, shown when the flow holds more than 25 items. */
+export const ITEM_ORDERS: readonly { value: ItemOrder; label: string }[] = [
+  { value: 'title', label: BLOCK_WORDS.aToZ },
+  { value: 'newest', label: BLOCK_WORDS.newestFirst },
+];
+
+/** The search box's hint over a flow's items: "Search {items}", the flow's word for many, in lower case. */
+export function searchItemsHint(words: Pick<AutomationItems['words'], 'plural'>): string {
+  return fill(BLOCK_WORDS.searchItems, { items: words.plural.toLocaleLowerCase('en-US') });
+}
+
+/** The items a search finds, by title: trimmed, case-free, accents removed (`search`). */
+export function searchItems(items: readonly Item[], query: string): Item[] {
+  return search(items, query, (item) => [item.title]);
+}
+
+/** Whether the flow page draws the sort and the pages: more than 25 items. */
+export const itemsAreLong = (count: number) => isLong(count);
+
+/**
+ * One page of the grouped list: the groups' items in their order, page `page`
+ * of 25, each kept under its group's name — a group that falls across two
+ * pages is named on both. The page number held within the pages there are.
+ */
+export function pageOfGroups(groups: readonly ItemGroup[], page: number): { groups: ItemGroup[]; page: number; pages: number } {
+  const flat = groups.flatMap((group) => group.items.map((item) => ({ name: group.name, item })));
+  const pages = pageCount(flat.length);
+  const at = pageWithin(page, flat.length);
+  const slice = flat.slice((at - 1) * PAGE_SIZE, at * PAGE_SIZE);
+  const out: ItemGroup[] = [];
+  for (const { name, item } of slice) {
+    const last = out[out.length - 1];
+    if (last && last.name === name) last.items.push(item);
+    else out.push({ name, items: [item] });
+  }
+  return { groups: out, page: at, pages };
+}
 
 /** Each item's `groupField` value, trimmed; none for a flow that groups nothing or an item without one. */
 function groupOf(item: Item, key: string | undefined): string | null {
@@ -42,15 +90,17 @@ function groupOf(item: Item, key: string | undefined): string | null {
 /**
  * The flow page's list (the owner's build 28 items F2–F3; Round 19, plan §3):
  * by `groupField`'s value, the groups A–Z, then the items without one — each
- * group's items A–Z by title. `shown`, a value the filter chose, keeps that
- * group alone; `ALL_GROUPS` (or none) keeps every one. A flow that declares no
- * `groupField` is one group with no name.
+ * group's items A–Z by title, or newest first (`order`, Round 21). `shown`, a
+ * value the filter chose, keeps that group alone; `ALL_GROUPS` (or none) keeps
+ * every one. A flow that declares no `groupField` is one group with no name.
  */
 export function groupItems(
   items: readonly Item[],
   declared: Pick<AutomationItems, 'groupField'>,
   shown: string = ALL_GROUPS,
+  order: ItemOrder = 'title',
 ): ItemGroup[] {
+  const within = order === 'newest' ? byNewest : byTitle;
   const key = declared.groupField;
   const byName = new Map<string, Item[]>();
   const none: Item[] = [];
@@ -61,8 +111,8 @@ export function groupItems(
   }
   const groups: ItemGroup[] = [...byName.keys()]
     .sort((a, b) => a.localeCompare(b))
-    .map((name) => ({ name, items: byName.get(name)!.sort(byTitle) }));
-  if (none.length > 0) groups.push({ name: null, items: none.sort(byTitle) });
+    .map((name) => ({ name, items: byName.get(name)!.sort(within) }));
+  if (none.length > 0) groups.push({ name: null, items: none.sort(within) });
   return shown === ALL_GROUPS ? groups : groups.filter((group) => group.name === shown);
 }
 

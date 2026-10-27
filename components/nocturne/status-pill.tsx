@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 
 import { Text } from '@/components/text';
-import { fontScaleLimit, fonts, status, typeScale, withAlpha } from '@/constants/theme';
+import { fonts, fontScaleLimit, inset, space, status, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { StatusPillLabel } from '@/lib/view/status';
 
@@ -61,8 +61,8 @@ export function StatusPill({ label }: { label: StatusPillLabel }) {
   return (
     <View
       style={{
-        paddingHorizontal: 10,
-        paddingVertical: 4,
+        paddingHorizontal: space.inner,
+        paddingVertical: inset.xs,
         borderRadius: 999,
         backgroundColor: t.bg,
         borderWidth: 1,

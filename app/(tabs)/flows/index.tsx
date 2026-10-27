@@ -1,20 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Archive, FlowArrow, MagnifyingGlass, Plus, Warning } from 'phosphor-react-native';
 
 import { IconTile } from '@/components/nocturne/icon-tile';
 import { PillButton } from '@/components/nocturne/pill-button';
-import { SectionLabel } from '@/components/nocturne/section-label';
+import { SectionTitle } from '@/components/nocturne/section-label';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { SearchBox } from '@/components/blocks/paged';
 import { CircleButton } from '@/components/scope-control';
-import { Text, TextInput } from '@/components/text';
+import { Text } from '@/components/text';
 import { TitleRow } from '@/components/title-row';
-import { fonts, iconSize, layout, radius, status, typeScale, withAlpha } from '@/constants/theme';
+import { fonts, iconSize, inset, layout, space, status, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
+import { Page } from '@/components/page';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { useScope } from '@/hooks/use-scope';
 import { useWorkflows, type FlowStatus } from '@/hooks/use-workflows';
@@ -152,14 +154,7 @@ export default function FlowsScreen() {
   }
 
   return (
-    <ScrollView
-      style={styles.root}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) },
-      ]}>
+    <Page keyboardShouldPersistTaps="handled">
       {/* [Archived][New]: Archived secondary, so New stays the one accent control.
           Archived always its circle; at 320 pt New is its accent circle too. */}
       <TitleRow
@@ -185,11 +180,9 @@ export default function FlowsScreen() {
               <PillButton
                 label={NEW_LABEL}
                 variant="primary"
-                height={36}
                 fontSize={typeScale.body.fontSize}
                 icon={Plus}
                 iconSize={14}
-                gap={5}
                 style={styles.headerPill}
                 testID="flows-new"
                 onPress={() => router.push('/(tabs)/flows/add')}
@@ -208,31 +201,13 @@ export default function FlowsScreen() {
         </View>
       ) : null}
 
-      <View
-        style={[
-          styles.search,
-          {
-            borderColor: palette.neutral[800],
-            backgroundColor: withAlpha(palette.surface, 0.6),
-          },
-        ]}>
-        <MagnifyingGlass size={17} color={palette.neutral[500]} />
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Search flows"
-          placeholderTextColor={palette.neutral[500]}
-          selectionColor={palette.accent}
-          autoCapitalize="none"
-          autoCorrect={false}
-          style={[styles.searchInput, { color: palette.text }]}
-        />
-      </View>
+      {/* The search box every list shares since Round 21 (`SearchBox`; ~~drawn here alone~~). */}
+      <SearchBox testID="flows-search" value={query} onChange={setQuery} placeholder="Search flows" />
 
       <View style={styles.groups}>
         {groups.map((group, g) => (
           <View key={group.name ?? `unread-${g}`} testID={`flows-group-${g}`} style={styles.cardList}>
-            {group.name ? <SectionLabel>{group.name.toUpperCase()}</SectionLabel> : null}
+            {group.name ? <SectionTitle flush>{group.name.toUpperCase()}</SectionTitle> : null}
             {group.flows.map((def) => {
               const key = def.key;
               return (
@@ -264,7 +239,6 @@ export default function FlowsScreen() {
             <PillButton
               label={ADD_FLOW_LABEL}
               variant="primary"
-              height={40}
               fontSize={typeScale.body.fontSize}
               onPress={() => router.push('/(tabs)/flows/add')}
             />
@@ -278,7 +252,7 @@ export default function FlowsScreen() {
           </View>
         ) : null}
       </View>
-    </ScrollView>
+    </Page>
   );
 }
 
@@ -286,28 +260,23 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
   },
-  content: {
-    paddingHorizontal: layout.screenX,
-    paddingBottom: 20,
-    gap: 16,
-  },
   // Both header pills 12 a side (the session's S26), so the words fit beside the circles.
   headerPill: {
-    paddingHorizontal: 12,
+    paddingHorizontal: space.rowX,
   },
   overPlan: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
+    gap: space.inner,
     backgroundColor: status.warnCalloutBg,
     borderWidth: 1,
     borderColor: status.warnCalloutBorder,
     borderRadius: 10,
-    paddingVertical: 9,
-    paddingHorizontal: 12,
+    paddingVertical: space.inner,
+    paddingHorizontal: space.rowX,
   },
   overPlanIcon: {
-    marginTop: 1,
+    marginTop: inset.hair,
   },
   overPlanText: {
     flex: 1,
@@ -315,32 +284,17 @@ const styles = StyleSheet.create({
     ...typeScale.body,
     color: status.warnText,
   },
-  search: {
-    minHeight: 44,
-    borderRadius: radius.input,
-    borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 9,
-    paddingHorizontal: 13,
-  },
-  searchInput: {
-    flex: 1,
-    fontFamily: fonts.regular,
-    fontSize: typeScale.label.fontSize,
-    paddingVertical: 0,
-  },
   groups: {
-    gap: 18,
+    gap: space.group,
   },
   cardList: {
-    gap: 10,
+    gap: space.inner,
   },
   flowCard: {
     padding: layout.cardPad,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 13,
+    gap: space.inner,
   },
   flowBody: {
     flex: 1,
@@ -353,17 +307,17 @@ const styles = StyleSheet.create({
   flowDesc: {
     fontFamily: fonts.regular,
     fontSize: typeScale.small.fontSize,
-    marginTop: 2,
+    marginTop: inset.xxs,
   },
   flowRuns: {
     fontFamily: fonts.regular,
     fontSize: typeScale.caption.fontSize,
-    marginTop: 4,
+    marginTop: inset.xs,
   },
   emptyWrap: {
-    paddingVertical: 48,
+    paddingVertical: space.bottom,
     alignItems: 'center',
-    gap: 10,
+    gap: space.inner,
   },
   emptyTitle: {
     fontFamily: fonts.medium,

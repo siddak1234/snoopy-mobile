@@ -1,18 +1,19 @@
 import { useRouter } from 'expo-router';
 import { FlowArrow, MagnifyingGlass, SquaresFour } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Dropdown } from '@/components/dropdown';
-import { BackCircle } from '@/components/nocturne/back-circle';
 import { IconTile } from '@/components/nocturne/icon-tile';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
 import { ScopePill } from '@/components/scope-control';
 import { ScreenEmpty, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { Text } from '@/components/text';
-import { em, fonts, iconSize, layout, status, typeScale, withAlpha } from '@/constants/theme';
+import { Page } from '@/components/page';
+import { PageHeader } from '@/components/page-header';
+import { em, fonts, iconSize, inset, layout, space, status, typeScale, withAlpha } from '@/constants/theme';
 import { useAccessibilityTextSize } from '@/hooks/use-accessibility-text-size';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { useTheme } from '@/hooks/use-theme';
@@ -108,20 +109,8 @@ export default function AddFlowScreen() {
   }
 
   return (
-    <ScrollView
-      style={{ backgroundColor: palette.bg }}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) },
-      ]}
-      showsVerticalScrollIndicator={false}>
-      <View style={styles.headerRow}>
-        <BackCircle onPress={() => router.back()} />
-        <View style={styles.headerText}>
-          <Text style={[styles.h1, { color: palette.text }]}>Add a flow</Text>
-          <Text style={[styles.sub, { color: palette.neutral[400] }]}>{CATALOG_SUBTITLE}</Text>
-        </View>
-      </View>
+    <Page>
+      <PageHeader onBack={() => router.back()} title="Add a flow" subtitle={CATALOG_SUBTITLE} />
 
       {/* The category, one drop-down where the chips were (round 23, the
           owner's build 22 items 3–4): All categories, then each (S5). */}
@@ -221,45 +210,32 @@ export default function AddFlowScreen() {
           </View>
         ) : null}
       </View>
-    </ScrollView>
+    </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    paddingHorizontal: layout.screenX,
-    paddingBottom: 20,
-    gap: 14,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  headerText: {
-    flex: 1,
-  },
   h1: {
     fontFamily: fonts.medium,
     fontSize: typeScale.heading.fontSize,
     letterSpacing: em(-0.015, typeScale.heading.fontSize),
   },
   sub: {
-    marginTop: 3,
+    marginTop: inset.xxs,
     fontFamily: fonts.regular,
     ...typeScale.body,
   },
   filters: {
     flexDirection: 'row',
-    gap: 8,
+    gap: space.inner,
   },
   list: {
-    gap: 10,
+    gap: space.inner,
   },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 13,
+    gap: space.inner,
     padding: layout.cardPad,
   },
   cardBody: {
@@ -279,12 +255,12 @@ const styles = StyleSheet.create({
     fontSize: typeScale.lead.fontSize,
   },
   cardDesc: {
-    marginTop: 2,
+    marginTop: inset.xxs,
     fontFamily: fonts.regular,
     fontSize: typeScale.small.fontSize,
   },
   cardMeta: {
-    marginTop: 4,
+    marginTop: inset.xs,
     fontFamily: fonts.regular,
     fontSize: typeScale.caption.fontSize,
   },
@@ -294,16 +270,16 @@ const styles = StyleSheet.create({
   },
   addBtn: {
     minHeight: 34,
-    paddingHorizontal: 14,
+    paddingHorizontal: space.rowX,
     borderRadius: 999,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   emptyWrap: {
-    paddingVertical: 48,
+    paddingVertical: space.bottom,
     alignItems: 'center',
-    gap: 10,
+    gap: space.inner,
   },
   emptyText: {
     fontFamily: fonts.regular,

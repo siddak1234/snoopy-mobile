@@ -5,7 +5,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { ConnectionMark, ConnectionRow, NoneMark } from '@/components/connection-row';
 import { Text } from '@/components/text';
-import { fonts, iconSize, status, typeScale } from '@/constants/theme';
+import { fonts, iconSize, space, status, typeScale } from '@/constants/theme';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { WORKSPACE_CHANGED, connectionIncomplete, refusalMessage } from '@/lib/content/refusals';
@@ -182,6 +182,6 @@ export function VendorChoice({
 }
 
 const styles = StyleSheet.create({
-  rowError: { paddingHorizontal: 14, paddingBottom: 12, fontFamily: fonts.regular, ...typeScale.small },
-  readOnly: { paddingHorizontal: 14, paddingVertical: 12, fontFamily: fonts.regular, ...typeScale.small },
+  rowError: { paddingHorizontal: space.rowX, paddingBottom: space.rowY, fontFamily: fonts.regular, ...typeScale.small },
+  readOnly: { paddingHorizontal: space.rowX, paddingVertical: space.rowY, fontFamily: fonts.regular, ...typeScale.small },
 });

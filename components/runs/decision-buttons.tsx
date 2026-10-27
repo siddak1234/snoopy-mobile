@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { PillButton } from '@/components/nocturne/pill-button';
-import { typeScale } from '@/constants/theme';
+import { space, typeScale } from '@/constants/theme';
 import type { Decision } from '@/hooks/use-approval-decision';
 import { APPROVE_LABEL, APPROVING_LABEL, DENYING_LABEL, DENY_LABEL } from '@/lib/content/screen-states';
 
@@ -31,7 +31,6 @@ export function DecisionButtons({
         testID={`${testID}-approve`}
         label={busy === 'approved' ? APPROVING_LABEL : APPROVE_LABEL}
         variant="primary"
-        height={44}
         fontSize={typeScale.label.fontSize}
         disabled={busy !== null}
         style={styles.button}
@@ -41,7 +40,6 @@ export function DecisionButtons({
         testID={`${testID}-deny`}
         label={busy === 'rejected' ? DENYING_LABEL : DENY_LABEL}
         variant="danger"
-        height={44}
         fontSize={typeScale.label.fontSize}
         disabled={busy !== null}
         style={styles.button}
@@ -52,6 +50,6 @@ export function DecisionButtons({
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 10 },
+  row: { flexDirection: 'row', gap: space.inner },
   button: { flex: 1 },
 });

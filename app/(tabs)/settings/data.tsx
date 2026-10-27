@@ -1,17 +1,18 @@
 import { File, Paths } from 'expo-file-system';
 import { useRouter } from 'expo-router';
-import { DownloadSimple, Export } from 'phosphor-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { Platform, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { Platform, Share, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BackCircle } from '@/components/nocturne/back-circle';
+import { FileActions } from '@/components/files/file-actions';
+import { Group } from '@/components/group';
 import { PillButton } from '@/components/nocturne/pill-button';
-import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { Page } from '@/components/page';
+import { PageHeader } from '@/components/page-header';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { Text } from '@/components/text';
-import { em, fonts, layout, status, typeScale } from '@/constants/theme';
+import { fonts, status, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { busyBody, useWorkspaceResource } from '@/hooks/use-resource';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
@@ -26,7 +27,7 @@ import {
   type ExportJob,
   type WorkspaceExport,
 } from '@/lib/platform/exports';
-import { shareSignedFile } from '@/lib/platform/signed-file';
+import { saveSignedFile, saveToFiles, shareSignedFile } from '@/lib/platform/signed-file';
 import { readWorkspaces } from '@/lib/platform/workspaces';
 import { administers } from '@/lib/view/roles';
 
@@ -43,14 +44,18 @@ const FAILURES: Record<string, string> = {
 
 /**
  * Settings → Data export (BUILD-PLAN 24.6.3) — the website's workspace export
- * section: a quick summary, bounded, shared as a JSON file; and everything as
- * one file, prepared on the platform from a link read again at the moment of
- * the download, since one read earlier may have expired (23.10.1). On iOS that
- * file is saved into the app and handed to the share sheet — Save to Files,
- * AirDrop, Mail — rather than opened in Safari (24.12, the owner's build 9); on
- * Android, whose share sheet carries text, the link opens in the browser. An
- * export holds every member's email, every project and every run, so it is an
- * owner's or an admin's; anyone else is told so.
+ * section: a quick summary, bounded, as a JSON file; and everything as one
+ * file, prepared on the platform from a link read again at the moment of the
+ * press, since one read earlier may have expired (23.10.1). Each is
+ * Download, then Share (`FileActions`, Round 21; the owner's Q7 and build 30
+ * note F4), in the website's words — "Download JSON", "Download file": on iOS
+ * Download saves the file into the folder picked in Files and Share hands it
+ * to the share sheet (24.12, the owner's build 9: "share or download to files
+ * like apple native rather than go to safari"); on Android, whose share sheet
+ * carries text, the summary's Download shares its text and the file's opens
+ * its link, and there is no Share. An export holds every member's email, every
+ * project and every run, so it is an owner's or an admin's; anyone else is
+ * told so.
  */
 export default function DataExportScreen() {
   const router = useRouter();
@@ -60,7 +65,7 @@ export default function DataExportScreen() {
   const keys = useIntentKeys('workspace-export');
   const [summary, setSummary] = useState<WorkspaceExport | null>(null);
   const [job, setJob] = useState<ExportJob | null>(null);
-  const [busy, setBusy] = useState<'summary' | 'share' | 'start' | 'download' | null>(null);
+  const [busy, setBusy] = useState<'summary' | 'start' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const gone = useRef(false);
@@ -103,30 +108,41 @@ export default function DataExportScreen() {
     void run('summary', async () => setSummary(await readBoundedExport(workspaceId)), 'The export could not be prepared.');
   };
 
-  // A file the share sheet hands on: on iOS the file itself, on Android the
-  // text, which is what its share intent carries. Removed once shared.
-  const share = () => {
-    if (!summary) return;
-    void run(
-      'share',
-      async () => {
-        const json = JSON.stringify(summary, null, 2);
-        if (Platform.OS !== 'ios') {
-          await Share.share({ message: json });
-          return;
-        }
-        const file = new File(Paths.cache, `workspace-export-${summary.workspaceId}.json`);
-        file.create({ overwrite: true });
-        file.write(json);
-        try {
-          await Share.share({ url: file.uri });
-        } finally {
-          if (file.exists) file.delete();
-        }
-      },
-      'The export could not be shared.',
-    );
+  /**
+   * The summary as a JSON file in the app's cache, handed to `hand`, then
+   * removed. On Android the summary's Download shares its text, which is what
+   * Android's share intent carries (today's, ~~"Share JSON"~~ until Round 21).
+   */
+  const summaryFile = async (hand: (file: File, filename: string) => Promise<unknown>): Promise<string | null> => {
+    if (!summary) return null;
+    const json = JSON.stringify(summary, null, 2);
+    const filename = `workspace-export-${summary.workspaceId}.json`;
+    const file = new File(Paths.cache, filename);
+    file.create({ overwrite: true });
+    file.write(json);
+    try {
+      await hand(file, filename);
+    } finally {
+      if (file.exists) file.delete();
+    }
+    return null;
   };
+  const said = (work: () => Promise<string | null>, fallback: string) => async (): Promise<string | null> => {
+    try {
+      return await work();
+    } catch (caught) {
+      return refusalMessage(caught, {}, fallback);
+    }
+  };
+  const downloadSummary = said(async () => {
+    if (!summary) return null;
+    if (Platform.OS !== 'ios') {
+      await Share.share({ message: JSON.stringify(summary, null, 2) });
+      return null;
+    }
+    return summaryFile((file, filename) => saveToFiles(file, filename));
+  }, 'The file could not be saved.');
+  const shareSummary = said(() => summaryFile((file) => Share.share({ url: file.uri })), 'The export could not be shared.');
 
   const follow = (workspaceId: string, exportId: string, failedReads = 0) => {
     timer.current = setTimeout(async () => {
@@ -161,22 +177,28 @@ export default function DataExportScreen() {
     );
   };
 
-  const download = () => {
-    const workspaceId = shown();
-    if (!workspaceId || !job) return;
-    void run(
-      'download',
-      async () => {
+  /**
+   * The complete export's file, from a link read again now, handed to `hand`;
+   * nothing when no file is offered. A refusal in its own words ("The link to
+   * the file cannot be used.", "The file could not be saved.").
+   */
+  const exportFile =
+    (hand: (file: { downloadUrl: string; filename: string }) => Promise<void>, fallback: string) =>
+    async (): Promise<string | null> => {
+      const workspaceId = workspaceIfShown(session, access.loadedFor);
+      if (!workspaceId) return WORKSPACE_CHANGED;
+      if (!job) return null;
+      try {
         const fresh = await readCompleteExport(workspaceId, job.id);
         setJob(fresh);
         const file = fresh.file;
-        if (!file?.downloadUrl) return;
-        // iOS: saved in the app's cache, handed to the share sheet, removed once shared; Android: the link opened.
-        await shareSignedFile({ downloadUrl: file.downloadUrl, filename: file.filename });
-      },
-      'The file could not be saved.',
-    );
-  };
+        if (!file?.downloadUrl) return null;
+        await hand({ downloadUrl: file.downloadUrl, filename: file.filename });
+        return null;
+      } catch (caught) {
+        return refusalMessage(caught, {}, fallback);
+      }
+    };
 
   if (access.status === 'loading') return <ScreenLoading topInset={insets.top} />;
   if (access.status === 'offline') {
@@ -196,17 +218,11 @@ export default function DataExportScreen() {
   const partial = summary ? isPartialExport(summary) : false;
 
   return (
-    <ScrollView
-      style={{ backgroundColor: palette.bg }}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) }]}
-      showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        <BackCircle onPress={() => router.back()} />
-        <Text style={[styles.title, { color: palette.text }]}>Export my data</Text>
-      </View>
+    <Page testID="data-screen">
+      <PageHeader onBack={() => router.back()} title="Export my data" />
 
       {!access.data.canExport ? (
-        <SurfaceCard style={styles.pad}>
+        <SurfaceCard padded>
           <Text style={[styles.text, muted]}>
             Exporting a workspace is for its owners and admins, because the export holds every member&apos;s email and
             every department.
@@ -214,99 +230,89 @@ export default function DataExportScreen() {
         </SurfaceCard>
       ) : (
         <>
-          <View>
-            <SectionLabel>SUMMARY</SectionLabel>
-            <SurfaceCard style={[styles.card, styles.pad]}>
-              <Text style={[styles.text, muted]}>
-                A copy of this workspace&apos;s records — its runs, approvals, flows, connections, departments and
-                members — as a JSON file you can keep. The summary takes each part&apos;s most recent entries.
-              </Text>
-              <PillButton
-                label={busy === 'summary' ? 'Preparing export…' : 'Prepare export'}
-                variant="secondary"
-                height={42}
-                disabled={busy !== null}
-                onPress={prepare}
-              />
-              {summary ? (
-                <>
-                  <Text style={[styles.text, { color: partial ? status.warnText : status.ok }]}>
-                    {partial
-                      ? 'This is a partial export. Some records or service sections are unavailable or bounded.'
-                      : 'This export is complete.'}
+          <Group title="SUMMARY" padded>
+            <Text style={[styles.text, muted]}>
+              A copy of this workspace&apos;s records — its runs, approvals, flows, connections, departments and
+              members — as a JSON file you can keep. The summary takes each part&apos;s most recent entries.
+            </Text>
+            <PillButton
+              label={busy === 'summary' ? 'Preparing export…' : 'Prepare export'}
+              variant="secondary"
+              disabled={busy !== null}
+              onPress={prepare}
+            />
+            {summary ? (
+              <>
+                <Text style={[styles.text, { color: partial ? status.warnText : status.ok }]}>
+                  {partial
+                    ? 'This is a partial export. Some records or service sections are unavailable or bounded.'
+                    : 'This export is complete.'}
+                </Text>
+                {summary.services.map((section) => (
+                  <Text key={section.service} style={[styles.small, muted]}>
+                    {section.service.charAt(0).toUpperCase() + section.service.slice(1)}:{' '}
+                    {section.ok ? 'included' : section.reason}
+                    {section.ok && section.data.truncated ? ' (bounded)' : ''}
                   </Text>
-                  {summary.services.map((section) => (
-                    <Text key={section.service} style={[styles.small, muted]}>
-                      {section.service.charAt(0).toUpperCase() + section.service.slice(1)}:{' '}
-                      {section.ok ? 'included' : section.reason}
-                      {section.ok && section.data.truncated ? ' (bounded)' : ''}
-                    </Text>
-                  ))}
-                  <PillButton
-                    label={busy === 'share' ? 'Sharing…' : 'Share JSON'}
-                    variant="primary"
-                    height={42}
-                    icon={Export}
-                    iconSize={15}
-                    disabled={busy !== null}
-                    onPress={share}
-                  />
-                </>
-              ) : null}
-            </SurfaceCard>
-          </View>
-
-          <View>
-            <SectionLabel>EVERYTHING</SectionLabel>
-            <SurfaceCard style={[styles.card, styles.pad]}>
-              <Text style={[styles.text, muted]}>
-                Or export every record as one file, however large the workspace. It takes a moment to prepare and the
-                file is kept for a day.
-              </Text>
-              <PillButton
-                label={running ? 'Preparing everything…' : 'Export everything'}
-                variant="secondary"
-                height={42}
-                disabled={busy !== null || running}
-                onPress={start}
-              />
-              {job?.status === 'ready' ? (
-                <PillButton
-                  label={busy === 'download' ? 'Saving…' : 'Download file'}
-                  variant="primary"
-                  height={42}
-                  icon={DownloadSimple}
-                  iconSize={15}
-                  disabled={busy !== null}
-                  onPress={download}
+                ))}
+                <FileActions
+                  testID="data-summary-actions"
+                  downloads={[{ label: 'Download JSON', busyLabel: 'Saving…', testID: 'data-summary-download', run: downloadSummary }]}
+                  share={{ testID: 'data-summary-share', busyLabel: 'Sharing…', run: shareSummary }}
                 />
-              ) : null}
-              <Text style={[styles.text, muted]}>
-                {job?.status === 'ready'
-                  ? job.complete
-                    ? 'Ready. The file holds the whole workspace.'
-                    : 'Ready, but partial: a part of the workspace could not be read, and the file says which.'
-                  : job?.status === 'failed'
-                    ? (FAILURES[job.failureReason ?? ''] ?? 'The export could not be made.')
-                    : job?.status === 'expired'
-                      ? 'That file has been removed. Export again for a new one.'
-                      : ''}
-              </Text>
-            </SurfaceCard>
-          </View>
+              </>
+            ) : null}
+          </Group>
+
+          <Group title="EVERYTHING" padded>
+            <Text style={[styles.text, muted]}>
+              Or export every record as one file, however large the workspace. It takes a moment to prepare and the
+              file is kept for a day.
+            </Text>
+            <PillButton
+              label={running ? 'Preparing everything…' : 'Export everything'}
+              variant="secondary"
+              disabled={busy !== null || running}
+              onPress={start}
+            />
+            {job?.status === 'ready' ? (
+              <FileActions
+                testID="data-export-actions"
+                downloads={[
+                  {
+                    label: 'Download file',
+                    busyLabel: 'Saving…',
+                    testID: 'data-export-download',
+                    run: exportFile(saveSignedFile, 'The file could not be saved.'),
+                  },
+                ]}
+                share={{
+                  testID: 'data-export-share',
+                  busyLabel: 'Sharing…',
+                  run: exportFile(shareSignedFile, 'The export could not be shared.'),
+                }}
+              />
+            ) : null}
+            <Text style={[styles.text, muted]}>
+              {job?.status === 'ready'
+                ? job.complete
+                  ? 'Ready. The file holds the whole workspace.'
+                  : 'Ready, but partial: a part of the workspace could not be read, and the file says which.'
+                : job?.status === 'failed'
+                  ? (FAILURES[job.failureReason ?? ''] ?? 'The export could not be made.')
+                  : job?.status === 'expired'
+                    ? 'That file has been removed. Export again for a new one.'
+                    : ''}
+            </Text>
+          </Group>
         </>
       )}
       {error ? <Text style={[styles.text, { color: status.err }]}>{error}</Text> : null}
-    </ScrollView>
+    </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: layout.screenX, paddingBottom: 32, gap: 18 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  title: { fontFamily: fonts.medium, fontSize: typeScale.heading.fontSize, letterSpacing: em(-0.01, typeScale.heading.fontSize) },
-  card: { marginTop: 9 },
-  pad: { padding: 14, gap: 10 },
   text: { fontFamily: fonts.regular, ...typeScale.body },
   small: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
 });

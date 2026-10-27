@@ -1,18 +1,19 @@
 import { useRouter } from 'expo-router';
 import { CheckCircle, Warning } from 'phosphor-react-native';
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, { LinearTransition, SlideOutLeft } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BackCircle } from '@/components/nocturne/back-circle';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
 import { DecisionButtons } from '@/components/runs/decision-buttons';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { Text } from '@/components/text';
-import { em, fontScaleLimit, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
+import { Page } from '@/components/page';
+import { PageHeader } from '@/components/page-header';
+import { centredOn, em, fonts, fontScaleLimit, inset, space, status, typeScale, withAlpha } from '@/constants/theme';
 import { useApprovalDecision, type Decision } from '@/hooks/use-approval-decision';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
@@ -55,7 +56,7 @@ function ApprovalCard({
   const { palette } = useTheme();
   const pill = decision === 'approved' ? 'Approved' : decision === 'rejected' ? 'Denied' : item.status;
   return (
-    <SurfaceCard style={styles.card}>
+    <SurfaceCard>
       <View style={styles.cardHead}>
         <Text style={[styles.kicker, { color: palette.accentRamp[300] }]}>{item.workflow}</Text>
         <Text style={[styles.time, { color: palette.neutral[500] }]}>{item.time}</Text>
@@ -212,25 +213,21 @@ export default function ApprovalsScreen() {
   }
 
   return (
-    <ScrollView
-      style={{ backgroundColor: palette.bg }}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) },
-      ]}
-      showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        <BackCircle onPress={() => router.back()} />
-        <Text style={[styles.h1, { color: palette.text }]}>Needs review</Text>
-        <View style={[styles.badge, { backgroundColor: withAlpha(palette.accent, 0.16) }]}>
-          <Text
-            testID="approvals-count"
-            maxFontSizeMultiplier={fontScaleLimit.chrome}
-            style={[styles.badgeLabel, { color: palette.accentRamp[200] }]}>
-            {pending}
-          </Text>
-        </View>
-      </View>
+    <Page>
+      <PageHeader
+        onBack={() => router.back()}
+        title="Needs review"
+        right={
+          <View style={[styles.badge, { backgroundColor: withAlpha(palette.accent, 0.16) }]}>
+            <Text
+              testID="approvals-count"
+              maxFontSizeMultiplier={fontScaleLimit.chrome}
+              style={[styles.badgeLabel, { color: palette.accentRamp[200] }]}>
+              {pending}
+            </Text>
+          </View>
+        }
+      />
       {shown.map((item) => (
         <Animated.View
           key={item.id}
@@ -248,21 +245,11 @@ export default function ApprovalsScreen() {
           />
         </Animated.View>
       ))}
-    </ScrollView>
+    </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    paddingBottom: 20,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: layout.screenX,
-    paddingBottom: 16,
-  },
   h1: {
     flex: 1,
     fontFamily: fonts.medium,
@@ -272,7 +259,7 @@ const styles = StyleSheet.create({
   badge: {
     minWidth: 26,
     minHeight: 26,
-    paddingHorizontal: 8,
+    paddingHorizontal: space.inner,
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
@@ -280,12 +267,6 @@ const styles = StyleSheet.create({
   badgeLabel: {
     fontFamily: fonts.semibold,
     fontSize: typeScale.small.fontSize,
-  },
-  card: {
-    marginHorizontal: layout.screenX,
-    marginBottom: 12,
-    padding: layout.cardPad,
-    gap: 10,
   },
   cardHead: {
     flexDirection: 'row',
@@ -301,7 +282,7 @@ const styles = StyleSheet.create({
   },
   time: {
     flexShrink: 0,
-    marginLeft: 8,
+    marginLeft: space.inner,
     fontFamily: fonts.regular,
     fontSize: typeScale.caption.fontSize,
   },
@@ -309,7 +290,7 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
+    gap: space.inner,
   },
   title: {
     flex: 1,
@@ -319,12 +300,12 @@ const styles = StyleSheet.create({
   note: {
     fontFamily: fonts.regular,
     fontSize: typeScale.small.fontSize,
-    paddingHorizontal: 2,
+    paddingHorizontal: inset.xxs,
   },
   viewRun: {
     alignSelf: 'flex-start',
-    paddingVertical: 4,
-    paddingHorizontal: 2,
+    paddingVertical: inset.xs,
+    paddingHorizontal: inset.xxs,
   },
   viewRunLabel: {
     fontFamily: fonts.medium,
@@ -333,23 +314,23 @@ const styles = StyleSheet.create({
   callout: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
+    gap: space.inner,
     backgroundColor: status.warnCalloutBg,
     borderWidth: 1,
     borderColor: status.warnCalloutBorder,
     borderRadius: 10,
-    paddingVertical: 9,
-    paddingHorizontal: 12,
+    paddingVertical: space.inner,
+    paddingHorizontal: space.rowX,
   },
   // Centred on the first line of its words (round 24 P7; the owner's build 23 F11: "off center").
   calloutIcon: {
-    marginTop: (typeScale.body.lineHeight - 16) / 2,
+    marginTop: centredOn(typeScale.body.lineHeight, 16),
   },
   errorNote: {
     fontFamily: fonts.medium,
     fontSize: typeScale.body.fontSize,
-    paddingVertical: 4,
-    paddingHorizontal: 2,
+    paddingVertical: inset.xs,
+    paddingHorizontal: inset.xxs,
   },
   calloutText: {
     flex: 1,

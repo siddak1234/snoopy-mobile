@@ -1,18 +1,19 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Archive } from 'phosphor-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { StartRun, canStartRun } from '@/components/automations/start-run';
 import { BlockList } from '@/components/blocks/block-list';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
-import { BackCircle } from '@/components/nocturne/back-circle';
+import { PillButton } from '@/components/nocturne/pill-button';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
-import { Pressable } from '@/components/pressable';
+import { Page } from '@/components/page';
+import { PageHeader } from '@/components/page-header';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { Text } from '@/components/text';
-import { em, fonts, iconSize, layout, status, typeScale, withAlpha } from '@/constants/theme';
+import { fonts, iconSize, status, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { busyBody, useWorkspaceResource } from '@/hooks/use-resource';
 import { roleIn, useSession, workspaceIfShown } from '@/hooks/use-session';
@@ -178,44 +179,43 @@ export default function ItemScreen() {
     ) : null;
 
   return (
-    <ScrollView
-      style={{ backgroundColor: palette.bg }}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) }]}>
-      <View style={styles.headerRow}>
-        <BackCircle onPress={() => router.back()} />
-        <View style={styles.headerText}>
-          <Text testID="item-title" selectable style={[styles.title, { color: palette.text }]}>
-            {item.title}
-          </Text>
+    <Page testID="item-screen">
+      <PageHeader
+        onBack={() => router.back()}
+        title={item.title}
+        titleTestID="item-title"
+        selectable
+        below={
           <Text
             testID="item-status"
             style={[styles.sub, { color: item.status === 'failed' ? status.err : palette.neutral[400] }]}>
             {itemStatusLine(item, declared.groupField)}
           </Text>
-        </View>
-      </View>
+        }
+      />
 
-      <BlockList testID="item-blocks" blocks={blocks} context={{ runOrigin: 'flows', forms: { run: runForm } }} />
+      <BlockList
+        testID="item-blocks"
+        blocks={blocks}
+        context={{ runOrigin: 'flows', forms: { run: runForm }, workspaceId: page.loadedFor }}
+      />
 
-      {/* Last, in red, where a person scrolls to it — as the flow's own Archive (24.9.4). */}
+      {/* Last, in red, where a person scrolls to it — as the flow's own Archive (24.9.4); the
+          run page's danger pill since Round 21 (~~drawn by hand~~; checklist C, "Buttons"). */}
       {canManage && !archived ? (
-        <Pressable
+        <PillButton
           testID="item-archive"
-          accessibilityRole="button"
+          label={archiveItemLabel(declared.words)}
           accessibilityLabel={archiveItemTitle(item.title)}
+          variant="danger"
+          fontSize={typeScale.label.fontSize}
+          icon={Archive}
+          iconSize={iconSize.button}
           onPress={() => {
             setArchiveError(null);
             setArchiveOpen(true);
           }}
-          style={({ pressed }) => [
-            styles.archive,
-            { borderColor: palette.danger },
-            pressed && { backgroundColor: withAlpha(palette.danger, 0.08) },
-          ]}>
-          <Archive size={iconSize.button} color={palette.danger} />
-          <Text style={[styles.archiveLabel, { color: palette.danger }]}>{archiveItemLabel(declared.words)}</Text>
-        </Pressable>
+        />
       ) : null}
 
       <Dialog
@@ -238,30 +238,10 @@ export default function ItemScreen() {
         }>
         {archiveError ? <DialogText tone="error">{archiveError}</DialogText> : null}
       </Dialog>
-    </ScrollView>
+    </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: layout.screenX, paddingBottom: 20, gap: 18 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  headerText: { flex: 1, minWidth: 0 },
-  title: {
-    fontFamily: fonts.medium,
-    fontSize: typeScale.heading.fontSize,
-    letterSpacing: em(-0.01, typeScale.heading.fontSize),
-  },
-  sub: { marginTop: 1, fontFamily: fonts.regular, fontSize: typeScale.body.fontSize },
-  archive: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginTop: 8,
-    paddingVertical: 13,
-    paddingHorizontal: layout.rowPadH,
-    borderWidth: 1,
-    borderRadius: 14,
-  },
-  archiveLabel: { fontFamily: fonts.medium, fontSize: typeScale.label.fontSize },
+  sub: { fontFamily: fonts.regular, fontSize: typeScale.body.fontSize },
 });

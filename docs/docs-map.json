@@ -5,6 +5,7 @@
     "docs/MAP.md",
     "lib/generated/platform-contracts/automations.d.ts",
     "lib/generated/platform-contracts/block-fixtures.ts",
+    "lib/generated/platform-contracts/block-rules.ts",
     "lib/generated/platform-contracts/connections.d.ts",
     "lib/generated/platform-contracts/platform.d.ts"
   ],

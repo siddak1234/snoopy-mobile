@@ -4,7 +4,7 @@ import React from 'react';
 import ActivityScreen from '@/app/(tabs)/activity/index';
 import type { Run } from '@/lib/platform/automations';
 import { localMidnight, rangeStart } from '@/lib/platform/runs';
-import { routePlatform, runsPayload, signedInSession } from '@/test/platform';
+import { routePlatform, runsAsSelected, runsPayload, signedInSession } from '@/test/platform';
 import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
 
 /**
@@ -113,7 +113,8 @@ describe('where each range begins (rangeStart)', () => {
 
 describe("Activity's time range (the owner's build 13 decision 4)", () => {
   beforeEach(() => {
-    routePlatform(platformOperation, { '/runs': { runs: aroundEachBoundary() } });
+    // The platform selects (Round 21): the range goes as `since`, the outcome as `status`.
+    routePlatform(platformOperation, { '/runs': runsAsSelected(aroundEachBoundary()) });
   });
 
   it('opens on All time — every run, under its day — and says so on the button beside the title', async () => {
@@ -216,7 +217,7 @@ describe("Activity's time range (the owner's build 13 decision 4)", () => {
   });
 
   it('says the range when it holds no run: No runs today. / in the last 7 days. / in the last 30 days. — not the first-run empty', async () => {
-    routePlatform(platformOperation, { '/runs': { runs: [run('older-failed', 'failed', new Date(2026, 8, 6, 14, 59, 59, 999))] } });
+    routePlatform(platformOperation, { '/runs': runsAsSelected([run('older-failed', 'failed', new Date(2026, 8, 6, 14, 59, 59, 999))]) });
     await renderWithProviders(<ActivityScreen />, signedInSession);
     await screen.findByLabelText('Time range: All time');
     expect(rows()).toEqual(['older-failed']);

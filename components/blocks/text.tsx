@@ -1,7 +1,7 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 
-import { SectionLabel } from '@/components/nocturne/section-label';
+import { SectionTitle } from '@/components/nocturne/section-label';
 import { Text } from '@/components/text';
 import { fonts, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -13,16 +13,17 @@ import { toneColor, toneOf, type BlockOf } from './look';
  * until Round 21), toned by its tone — an error one an alert; a `label` the
  * page's section label (`SectionLabel`), drawn in capitals, a heading; a
  * `strong` one in the medium weight; a `muted` one small and muted. Line breaks
- * kept; the words are a text node, never markup.
+ * kept; the words are a text node, never markup. A label is a title over what
+ * it heads since Round 21 (`SectionTitle`; the owner's build 30 note F3).
  */
 export function TextBlock({ block, testID }: { block: BlockOf<'text'>; testID: string }) {
   const { palette } = useTheme();
   if (block.style === 'label') {
+    // A heading over the block after it (`SectionTitle`), the block list giving it the `title` gap.
     return (
-      // A heading: the label in a header element, as the page's own section labels are read.
-      <View testID={testID} accessible accessibilityRole="header">
-        <SectionLabel style={styles.label}>{block.text}</SectionLabel>
-      </View>
+      <SectionTitle testID={testID} flush>
+        {block.text}
+      </SectionTitle>
     );
   }
   if (block.style === 'muted') {
@@ -44,7 +45,6 @@ export function TextBlock({ block, testID }: { block: BlockOf<'text'>; testID: s
 }
 
 const styles = StyleSheet.create({
-  label: { textTransform: 'uppercase' },
   body: { fontFamily: fonts.regular, ...typeScale.body },
   strong: { fontFamily: fonts.medium },
   muted: { fontFamily: fonts.regular, ...typeScale.small },

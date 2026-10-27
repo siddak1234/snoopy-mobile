@@ -341,13 +341,16 @@ describe('Notifications: read and dismissed on the platform (the owner\'s build 
   it.each([
     [1, true],
     [3.571, false],
-  ])('the header at text size x%s: the title stops at the chrome limit; Clear all beside it: %s (round 24\'s simulator audit: "Notificat/ions")', async (fontScale, beside) => {
+  ])('the header at text size x%s is the PageHeader: the title stops at the chrome limit; Clear all in its right-hand slot: %s (round 24\'s simulator audit: "Notificat/ions"; Round 21, brief item 8)', async (fontScale, beside) => {
     const restore = setTextSize(fontScale);
     try {
       routeInbox(inboxPayload());
       await renderWithProviders(<NotificationsScreen />, signedInSession);
       const title = await screen.findByText('Notifications');
       expect(title.props.maxFontSizeMultiplier).toBe(fontScaleLimit.chrome);
+      // The shared header's title: a header, at its one size, 24.
+      expect(within(screen.getByTestId('inbox-header')).getByRole('header')).toBe(title);
+      expect(StyleSheet.flatten(title.props.style).fontSize).toBe(typeScale.heading.fontSize);
       const header = title.parent!;
       expect(within(header).queryByTestId('inbox-clear-all') !== null).toBe(beside);
       expect(screen.getByTestId('inbox-clear-all')).toBeTruthy();

@@ -6,12 +6,12 @@ import { ChoiceChips } from '@/components/choice-chips';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { PillButton } from '@/components/nocturne/pill-button';
-import { SectionLabel } from '@/components/nocturne/section-label';
+import { SectionTitle } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { Text } from '@/components/text';
-import { fonts, status, typeScale } from '@/constants/theme';
+import { fonts, space, status, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useTheme } from '@/hooks/use-theme';
 import { refusalMessage } from '@/lib/content/refusals';
@@ -72,8 +72,8 @@ export function TeamMembers({
 
   return (
     <View>
-      <SectionLabel>{`MEMBERS · ${members.length}`}</SectionLabel>
-      <SurfaceCard style={styles.card}>
+      <SectionTitle>{`MEMBERS · ${members.length}`}</SectionTitle>
+      <SurfaceCard>
         {members.length === 0 ? <Text style={[styles.text, styles.pad, { color: palette.neutral[400] }]}>No members yet.</Text> : null}
         {members.map((member, index) => {
           const own = member.userId === viewerUserId;
@@ -101,7 +101,7 @@ export function TeamMembers({
         })}
       </SurfaceCard>
       {manager ? (
-        <PillButton label="Add members" variant="secondary" height={42} icon={UserPlus} iconSize={15} style={styles.add} onPress={() => setAdding(true)} />
+        <PillButton label="Add members" variant="secondary" icon={UserPlus} iconSize={15} style={styles.add} onPress={() => setAdding(true)} />
       ) : null}
 
       {open ? (
@@ -284,14 +284,14 @@ function AddMembersDialog({
 }
 
 const styles = StyleSheet.create({
-  card: { marginTop: 9 },
-  pad: { padding: 14 },
-  right: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  card: { marginTop: space.title },
+  pad: { padding: space.card },
+  right: { flexDirection: 'row', alignItems: 'center', gap: space.inner },
   role: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize, textTransform: 'capitalize' },
   text: { fontFamily: fonts.regular, ...typeScale.small },
-  add: { marginTop: 10 },
+  add: { marginTop: space.inner },
   list: { maxHeight: 320 },
-  addRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderBottomWidth: 1 },
+  addRow: { flexDirection: 'row', alignItems: 'center', gap: space.inner, paddingVertical: space.inner, borderBottomWidth: 1 },
   addBody: { flex: 1, minWidth: 0 },
   addName: { fontFamily: fonts.medium, fontSize: typeScale.label.fontSize },
   addLink: { fontFamily: fonts.medium, fontSize: typeScale.body.fontSize },

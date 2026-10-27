@@ -3,21 +3,38 @@ import { CaretRight, Funnel, UploadSimple } from 'phosphor-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { NoMatch, Pager, SearchBox, SortControl } from '@/components/blocks/paged';
 import { ConnectionRow } from '@/components/connection-row';
 import { Dropdown } from '@/components/dropdown';
+import { DividedCard } from '@/components/group';
 import { ItemUploadDialog } from '@/components/items/item-upload-dialog';
 import { PillButton } from '@/components/nocturne/pill-button';
-import { SectionLabel } from '@/components/nocturne/section-label';
+import { SectionTitle } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { ScopePill } from '@/components/scope-control';
 import { Text } from '@/components/text';
-import { em, fonts, iconSize, typeScale } from '@/constants/theme';
+import { em, fonts, iconSize, space, typeScale } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useTheme } from '@/hooks/use-theme';
 import { FIGURE_UNAVAILABLE, noItemsYet, uploadItemLabel } from '@/lib/content/screen-states';
 import { readItems, type AutomationItems, type Item } from '@/lib/platform/automations';
 import { EMPTY } from '@/lib/view/format';
-import { ALL_GROUPS, groupItems, itemGroupChoices, itemRowLine, itemsStillGoing, shownGroup } from '@/lib/view/items';
+import { BLOCK_WORDS } from '@/lib/generated/platform-contracts/block-rules';
+import { fill } from '@/lib/view/block-sort';
+import {
+  ALL_GROUPS,
+  ITEM_ORDERS,
+  groupItems,
+  itemGroupChoices,
+  itemRowLine,
+  itemsAreLong,
+  itemsStillGoing,
+  pageOfGroups,
+  searchItems,
+  searchItemsHint,
+  shownGroup,
+  type ItemOrder,
+} from '@/lib/view/items';
 import { RUN_REREAD_MS } from '@/lib/view/runs';
 
 /**
@@ -36,7 +53,12 @@ import { RUN_REREAD_MS } from '@/lib/view/runs';
  * is being read and the page is in front, one read at a time, as the run page
  * reads a run that goes on. A read that fails costs this list its rows
  * ("Unavailable"), never the page. ~~Grouped in the options' order, rows newest
- * first~~ until build 28.
+ * first~~ until build 28. Round 21 (backend ADR-0048 amendment 1, point 4):
+ * the search box always (`BLOCK_WORDS.searchItems`, by title; a miss says
+ * `noMatch`), and over 25 items the sort — `aToZ`, `newestFirst` — and the
+ * pages of 25 under the card; a new search or sort goes back to page
+ * 1. The groups are one card with a divider between each (`DividedCard`; ~~a
+ * hand-drawn border~~), the title `title` above it (`SectionTitle`).
  */
 export function FlowItems({
   subscriptionId,
@@ -64,6 +86,9 @@ export function FlowItems({
   const [uploadOpen, setUploadOpen] = useState(false);
   const [picked, setPicked] = useState(ALL_GROUPS);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [order, setOrder] = useState<ItemOrder>('title');
+  const [page, setPage] = useState(1);
   const [focused, setFocused] = useState(true);
   useFocusEffect(
     useCallback(() => {
@@ -94,7 +119,11 @@ export function FlowItems({
   const chosen = shownGroup(choices, picked);
   const chosenLabel = choices.find((choice) => choice.value === chosen)?.label ?? '';
   const filterTitle = declared.fields.find((field) => field.key === declared.groupField)?.title ?? '';
-  const groups = groupItems(shown, declared, chosen);
+  const found = searchItems(shown, query);
+  const long = itemsAreLong(shown.length);
+  const paged = pageOfGroups(groupItems(found, declared, chosen, long ? order : 'title'), page);
+  const groups = paged.groups;
+  const noMatch = shown.length > 0 && found.length === 0 ? fill(BLOCK_WORDS.noMatch, { query: query.trim() }) : null;
   const empty =
     listed.status === 'loading' && shown.length === 0
       ? EMPTY
@@ -107,13 +136,14 @@ export function FlowItems({
   return (
     <View testID="flow-items">
       <View style={styles.head}>
-        <SectionLabel style={styles.label}>{declared.words.plural.toUpperCase()}</SectionLabel>
+        <View style={styles.label}>
+          <SectionTitle flush>{declared.words.plural.toUpperCase()}</SectionTitle>
+        </View>
         {canManage ? (
           <PillButton
             testID="flow-items-upload"
             label={uploadItemLabel(declared.words)}
             variant="secondary"
-            height={36}
             fontSize={typeScale.body.fontSize}
             icon={UploadSimple}
             iconSize={iconSize.button}
@@ -121,62 +151,92 @@ export function FlowItems({
           />
         ) : null}
       </View>
-      {choices.length > 0 ? (
-        <View style={styles.filter}>
-          <Dropdown
-            testID="flow-items-filter"
-            title={filterTitle}
-            options={choices}
-            value={chosen}
-            open={filterOpen}
-            onOpenChange={setFilterOpen}
-            onChange={(next) => {
-              setPicked(next);
-              setFilterOpen(false);
-            }}
-            trigger={
-              <ScopePill
+      <View style={styles.body}>
+        <SearchBox
+          testID="flow-items-search"
+          value={query}
+          onChange={(next) => {
+            setQuery(next);
+            setPage(1);
+          }}
+          placeholder={searchItemsHint(declared.words)}
+        />
+        {choices.length > 0 || long ? (
+          <View style={styles.tools}>
+            {choices.length > 0 ? (
+              <Dropdown
                 testID="flow-items-filter"
-                icon={Funnel}
-                label={chosenLabel}
-                accessibilityLabel={`${filterTitle}: ${chosenLabel}`}
-                onPress={() => setFilterOpen(true)}
+                title={filterTitle}
+                options={choices}
+                value={chosen}
+                open={filterOpen}
+                onOpenChange={setFilterOpen}
+                onChange={(next) => {
+                  setPicked(next);
+                  setPage(1);
+                  setFilterOpen(false);
+                }}
+                trigger={
+                  <ScopePill
+                    testID="flow-items-filter"
+                    icon={Funnel}
+                    label={chosenLabel}
+                    accessibilityLabel={`${filterTitle}: ${chosenLabel}`}
+                    onPress={() => setFilterOpen(true)}
+                  />
+                }
               />
-            }
-          />
-        </View>
-      ) : null}
-      <SurfaceCard style={styles.card}>
-        {empty !== null ? (
-          <Text testID="flow-items-empty" style={[styles.empty, { color: palette.neutral[500] }]}>
-            {empty}
-          </Text>
-        ) : null}
-        {groups.map((group, g) => (
-          <View
-            key={group.name ?? `none-${g}`}
-            testID={`flow-items-group-${g}`}
-            style={g > 0 && { borderTopWidth: 1, borderTopColor: palette.divider }}>
-            {/* Each value's name over its items while all are shown; the filter says the one chosen. */}
-            {group.name && chosen === ALL_GROUPS ? (
-              <Text style={[styles.group, { color: palette.neutral[400] }]}>{group.name.toUpperCase()}</Text>
             ) : null}
-            {group.items.map((item, i) => (
-              <ConnectionRow
-                key={item.id}
-                testID={`flow-item-${item.id}`}
-                mark={null}
-                name={item.title}
-                line={itemRowLine(item, declared.runWords)}
-                lineTone={item.status === 'failed' ? 'err' : 'muted'}
-                right={<CaretRight size={15} color={palette.neutral[500]} />}
-                divider={i < group.items.length - 1}
-                onPress={() => onOpen(item.id)}
+            {long ? (
+              <SortControl
+                testID="flow-items-sort"
+                choices={ITEM_ORDERS}
+                value={order}
+                onChange={(next) => {
+                  setOrder(next as ItemOrder);
+                  setPage(1);
+                }}
               />
-            ))}
+            ) : null}
           </View>
-        ))}
-      </SurfaceCard>
+        ) : null}
+        {noMatch !== null ? (
+          <NoMatch testID="flow-items-no-match" text={noMatch} />
+        ) : empty !== null ? (
+          <SurfaceCard>
+            <Text testID="flow-items-empty" style={[styles.empty, { color: palette.neutral[500] }]}>
+              {empty}
+            </Text>
+          </SurfaceCard>
+        ) : (
+          <DividedCard testID="flow-items-card">
+            {groups.map((group, g) => (
+              <View key={group.name ?? `none-${g}`} testID={`flow-items-group-${g}`}>
+                {/* Each value's name over its items while all are shown; the filter says the one chosen. */}
+                {group.name && chosen === ALL_GROUPS ? (
+                  <Text style={[styles.group, { color: palette.neutral[400] }]}>{group.name.toUpperCase()}</Text>
+                ) : null}
+                {group.items.map((item, i) => (
+                  <ConnectionRow
+                    key={item.id}
+                    testID={`flow-item-${item.id}`}
+                    mark={null}
+                    name={item.title}
+                    line={itemRowLine(item, declared.runWords)}
+                    lineTone={item.status === 'failed' ? 'err' : 'muted'}
+                    right={<CaretRight size={15} color={palette.neutral[500]} />}
+                    divider={i < group.items.length - 1}
+                    onPress={() => onOpen(item.id)}
+                  />
+                ))}
+              </View>
+            ))}
+          </DividedCard>
+        )}
+        {long && noMatch === null ? (
+          <Pager testID="flow-items-pager" page={paged.page} pages={paged.pages} onPage={setPage} />
+        ) : null}
+      </View>
       {uploadOpen ? (
         <ItemUploadDialog
           items={declared}
@@ -196,14 +256,15 @@ export function FlowItems({
 }
 
 const styles = StyleSheet.create({
-  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, minHeight: 36 },
+  // The title and the upload button on one line, `title` above what they head.
+  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.inner, marginBottom: space.title },
   label: { flex: 1 },
-  card: { marginTop: 9 },
-  filter: { flexDirection: 'row', marginTop: 9 },
-  empty: { paddingVertical: 13, paddingHorizontal: 14, fontFamily: fonts.regular, ...typeScale.body },
+  body: { gap: space.inner },
+  tools: { flexDirection: 'row', flexWrap: 'wrap', gap: space.inner },
+  empty: { paddingVertical: space.rowY, paddingHorizontal: space.rowX, fontFamily: fonts.regular, ...typeScale.body },
   group: {
-    paddingTop: 12,
-    paddingHorizontal: 14,
+    paddingTop: space.rowY,
+    paddingHorizontal: space.rowX,
     fontFamily: fonts.regular,
     fontSize: typeScale.caption.fontSize,
     letterSpacing: em(0.14, typeScale.caption.fontSize),

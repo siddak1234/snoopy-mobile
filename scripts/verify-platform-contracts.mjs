@@ -7,7 +7,9 @@
  * each file's header hash must equal the sha256 of its source document, and a
  * regeneration must reproduce the file byte for byte. The block fixtures
  * (`block-fixtures.ts`, backend ADR-0048 decision 9) are held the same way: their
- * header's sha256 over the fixtures' bytes, then the regeneration.
+ * header's sha256 over the fixtures' bytes, then the regeneration; and so are
+ * the block rules (`block-rules.ts`, ADR-0048 amendment 1: the words, the
+ * spacing table and the search and sort cases).
  *
  * Skips, with exit 0, when the backend checkout (`SNOOPY_BACKEND_ROOT`, default
  * `../snoopy-backend`) is absent, matching `snoopy`: the private repo is not
@@ -23,8 +25,10 @@ import {
   HEADER,
   backendRoot,
   blockFixtures,
+  blockRules,
   contracts,
   readBlockFixtures,
+  readBlockRules,
   sha256,
 } from "./generate-platform-contracts.mjs";
 import { recordContractCheck } from "./repo-facts.mjs";
@@ -38,7 +42,7 @@ if (!existsSync(backendRoot)) {
   process.exit(0);
 }
 
-for (const { output } of [...contracts, blockFixtures]) {
+for (const { output } of [...contracts, blockFixtures, blockRules]) {
   if (!existsSync(output)) {
     throw new Error(
       "Generated platform types are missing; run npm run generate:platform-contracts and commit the output",
@@ -65,22 +69,26 @@ for (const { input, output } of contracts) {
   }
 }
 
-// The block fixtures' header: one sha256 over the fixtures' bytes, in filename order.
-{
-  if (!existsSync(blockFixtures.input)) {
-    throw new Error(`Required block fixtures are unavailable: ${blockFixtures.input}`);
+// The block fixtures' and the block rules' headers: one sha256 over each
+// folder's bytes, in filename order.
+for (const [{ input, output }, read, what] of [
+  [blockFixtures, readBlockFixtures, "block fixtures"],
+  [blockRules, readBlockRules, "block rules"],
+]) {
+  if (!existsSync(input)) {
+    throw new Error(`Required ${what} are unavailable: ${input}`);
   }
-  const header = HEADER.exec(readFileSync(blockFixtures.output, "utf8"));
-  const file = relative(root, blockFixtures.output);
-  const expected = readBlockFixtures().sha256;
+  const header = HEADER.exec(readFileSync(output, "utf8"));
+  const file = relative(root, output);
+  const expected = read().sha256;
   if (!header || header[2] !== expected) {
     throw new Error(
-      `${file} was not generated from the block fixtures at sha256 ${expected}; run npm run generate:platform-contracts and commit the output`,
+      `${file} was not generated from the ${what} at sha256 ${expected}; run npm run generate:platform-contracts and commit the output`,
     );
   }
 }
 
-const outputs = [...contracts.map(({ output }) => output), blockFixtures.output];
+const outputs = [...contracts.map(({ output }) => output), blockFixtures.output, blockRules.output];
 const before = outputs.map((output) => readFileSync(output));
 execFileSync(process.execPath, ["scripts/generate-platform-contracts.mjs"], {
   cwd: root,

@@ -15,7 +15,7 @@ import {
 } from '@/lib/platform/runs';
 import { readWorkspaces } from '@/lib/platform/workspaces';
 import { timeOfDay } from '@/lib/view/format';
-import { RUN_REREAD_MS, heldDecision, rereadForApproval, toTracker, type TrackerFlow } from '@/lib/view/runs';
+import { RUN_REREAD_MS, heldDecision, rereadForApproval, runVerdict, toTracker, type TrackerFlow } from '@/lib/view/runs';
 
 /**
  * One run as its two pages read it — the run's page and its Run details page
@@ -99,7 +99,9 @@ export function useRunDetail(runId: string | undefined) {
       const own = (rows: Subscription[] | null) => rows?.find((row) => row.id === run.run.subscriptionId);
       const flow =
         own(live) ?? (live === null ? undefined : own((await readRemovedSubscriptionsOrNone(openedIn)).subscriptions));
-      return { detail: run, entry, approvals: approvals ?? [], approvalsRead: approvals !== null, flow, role };
+      // Its verdict's colour and word, in its flow's own words (Round 21, the owner's Q5; plan Open 5).
+      const verdict = runVerdict(run.run, flow?.items?.verdictWords);
+      return { detail: run, entry, approvals: approvals ?? [], approvalsRead: approvals !== null, flow, role, verdict };
     } finally {
       setReads((n) => n + 1);
       if (fresh) setApprovalReads((n) => n + 1);

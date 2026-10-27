@@ -4,11 +4,11 @@ import { StyleSheet, View } from 'react-native';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
-import { SectionLabel } from '@/components/nocturne/section-label';
+import { SectionTitle } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { Text } from '@/components/text';
-import { fonts, typeScale } from '@/constants/theme';
+import { fonts, space, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
@@ -65,8 +65,8 @@ export function OrgPeople({
   return (
     <>
       <View>
-        <SectionLabel>MEMBERS</SectionLabel>
-        <SurfaceCard style={styles.card}>
+        <SectionTitle>MEMBERS</SectionTitle>
+        <SurfaceCard>
           {members.map((member, index) => {
             const removable = member.role !== 'owner' && member.userId !== viewerUserId;
             return (
@@ -93,8 +93,8 @@ export function OrgPeople({
       </View>
 
       <View>
-        <SectionLabel>JOIN REQUESTS</SectionLabel>
-        <SurfaceCard style={styles.card}>
+        <SectionTitle>JOIN REQUESTS</SectionTitle>
+        <SurfaceCard>
           {pending.length === 0 ? (
             <Text style={[styles.empty, { color: palette.neutral[400] }]}>No pending requests.</Text>
           ) : null}
@@ -219,8 +219,8 @@ function DecideDialog({
 }
 
 const styles = StyleSheet.create({
-  card: { marginTop: 9 },
-  right: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  card: { marginTop: space.title },
+  right: { flexDirection: 'row', alignItems: 'center', gap: space.inner },
   role: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize, textTransform: 'capitalize' },
-  empty: { fontFamily: fonts.regular, fontSize: typeScale.body.fontSize, padding: 14 },
+  empty: { fontFamily: fonts.regular, fontSize: typeScale.body.fontSize, padding: space.card },
 });

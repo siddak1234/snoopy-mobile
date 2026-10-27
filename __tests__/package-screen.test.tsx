@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import React from 'react';
 import { Platform, Share } from 'react-native';
 
@@ -15,6 +15,8 @@ jest.mock('@/lib/platform/client', () => ({
 // The WebView is a view whose props a test reads (`test/jest-setup.js`).
 
 const { platformOperation, downloadSignedFile } = jest.requireMock('@/lib/platform/client');
+jest.mock('expo-file-system', () => require('@/test/mocks/expo-file-system'));
+const { PICKED_FOLDER, fileSystemState } = jest.requireMock('expo-file-system');
 
 const RUN_ID = '793eef82-102d-81be-a2d3-9e8d4e2b2c36';
 const link = (format: 'pdf' | 'xlsx') => ({
@@ -184,15 +186,19 @@ describe('the run package page', () => {
   it.each([
     ['package-download-pdf', 'pdf'],
     ['package-download-excel', 'xlsx'],
-  ] as const)('the header\'s %s shares the %s by the run page\'s path, then removes it', async (testID, format) => {
+  ] as const)('the header\'s %s saves the %s by the run page\'s path into the folder picked in Files — no share sheet — then removes the cache copy', async (testID, format) => {
     const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
     const os = Platform.OS;
     Platform.OS = 'ios';
+    fileSystemState.reset();
     try {
       await renderWithProviders(<RunPackageScreen />, signedInSession);
       await screen.findByTestId('package-webview');
       await fireEvent.press(screen.getByTestId(testID));
-      await waitFor(() => expect(share).toHaveBeenCalledWith({ url: `file:///cache/run-${RUN_ID}.${format}` }));
+      await waitFor(() =>
+        expect(fileSystemState.copies).toEqual([`file:///cache/run-${RUN_ID}.${format} -> ${PICKED_FOLDER}run-${RUN_ID}.${format}`]),
+      );
+      expect(share).not.toHaveBeenCalled();
       expect(sent.at(-1)).toEqual({ body: { format, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }, key: `run-package-${format}-1` });
       expect(saved.at(-1)!.delete).toHaveBeenCalledTimes(1);
       // The page's own file is untouched.
@@ -200,6 +206,40 @@ describe('the run package page', () => {
     } finally {
       Platform.OS = os;
       share.mockRestore();
+    }
+  });
+
+  it('Download PDF, Download Excel, then Share: Share hands the PDF itself to the share sheet — its local address, never the signed link — then removes it', async () => {
+    const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
+    const os = Platform.OS;
+    Platform.OS = 'ios';
+    try {
+      await renderWithProviders(<RunPackageScreen />, signedInSession);
+      await screen.findByTestId('package-webview');
+      const order = within(screen.getByTestId('package-actions')).getAllByText(/^(Download PDF|Download Excel|Share)$/u);
+      expect(order.map((node) => node.props.children)).toEqual(['Download PDF', 'Download Excel', 'Share']);
+      await fireEvent.press(screen.getByTestId('package-share'));
+      await waitFor(() => expect(share).toHaveBeenCalledWith({ url: `file:///cache/run-${RUN_ID}.pdf` }));
+      expect(JSON.stringify(share.mock.calls)).not.toContain('https:');
+      expect(sent.at(-1)).toEqual({ body: { format: 'pdf', timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }, key: 'run-package-pdf-1' });
+      expect(saved.at(-1)!.delete).toHaveBeenCalledTimes(1);
+    } finally {
+      Platform.OS = os;
+      share.mockRestore();
+    }
+  });
+
+  it('on Android: Download PDF and Download Excel, and no Share', async () => {
+    const os = Platform.OS;
+    Platform.OS = 'android';
+    try {
+      await renderWithProviders(<RunPackageScreen />, signedInSession);
+      await screen.findByTestId('package-webview');
+      expect(screen.getByTestId('package-download-pdf')).toBeTruthy();
+      expect(screen.getByTestId('package-download-excel')).toBeTruthy();
+      expect(screen.queryByTestId('package-share')).toBeNull();
+    } finally {
+      Platform.OS = os;
     }
   });
 

@@ -48,19 +48,29 @@ jest.mock('@/lib/platform/connections', () => ({
 // The run form's file field reads the document picker and the file system.
 jest.mock('expo-document-picker', () => ({ getDocumentAsync: jest.fn() }));
 const mockFiles: { name: string; text?: string; deleted: boolean }[] = [];
+/** Where Download put each file: the folder picked in Files (`test/mocks/expo-file-system.ts`). */
+const mockCopies: string[] = [];
 jest.mock('expo-file-system', () => ({
   Paths: { cache: 'cache' },
-  File: jest.fn().mockImplementation((_dir: string, name: string) => {
-    const file = { name, text: undefined as string | undefined, deleted: false };
-    mockFiles.push(file);
+  Directory: Object.assign(
+    jest.fn().mockImplementation((uri: string) => ({ uri })),
+    { pickDirectoryAsync: jest.fn(async () => ({ uri: 'file:///picked/' })) },
+  ),
+  File: jest.fn().mockImplementation((dir: string | { uri: string }, name?: string) => {
+    // `new File(uri)` (a saved file) or `new File(folder, name)`.
+    const single = name === undefined;
+    const uri = single ? String(dir) : `${typeof dir === 'string' ? `file:///${dir}/` : dir.uri}${name}`;
+    const file = { name: single ? uri : name, text: undefined as string | undefined, deleted: false };
+    if (!single) mockFiles.push(file);
     return {
-      uri: `file:///cache/${name}`,
+      uri,
+      copy: (target: { uri: string }) => mockCopies.push(`${uri} -> ${target.uri}`),
       create: jest.fn(),
       write: (text: string) => {
         file.text = text;
       },
       get exists() {
-        return !file.deleted;
+        return single ? !file.deleted : !file.deleted && !uri.startsWith('file:///picked/');
       },
       delete: () => {
         file.deleted = true;
@@ -1123,19 +1133,45 @@ describe("a run's documents and its package (spec A7, C2; the owner's ~04:05Z an
   it.each([
     ['run-download-pdf', 'pdf'],
     ['run-download-excel', 'xlsx'],
-  ] as const)('%s asks the platform for the %s with a key and the phone\'s zone, saves the signed link, shares it, then removes it', async (testID, format) => {
+  ] as const)('%s asks the platform for the %s with a key and the phone\'s zone, saves the signed link into the folder picked in Files — no share sheet — then removes the cache copy', async (testID, format) => {
     const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
     const sent: { body: unknown; key?: string }[] = [];
     const os = Platform.OS;
     Platform.OS = 'ios';
+    mockCopies.length = 0;
     try {
       await openRun(recorded(), { packageFile: (request) => (sent.push(request), pdfLink(format)) });
       await fireEvent.press(await screen.findByTestId(testID));
-      await waitFor(() => expect(share).toHaveBeenCalledWith({ url: `file:///cache/run-${RUN_ID}.${format}` }));
+      await waitFor(() => expect(mockCopies).toEqual([`file:///cache/run-${RUN_ID}.${format} -> file:///picked/run-${RUN_ID}.${format}`]));
+      expect(share).not.toHaveBeenCalled();
       expect(sent).toEqual([{ body: { format, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }, key: 'key' }]);
       expect(downloadSignedFile).toHaveBeenCalledWith(`https://files.example.test/run.${format}?sig=1`, `run-${RUN_ID}.${format}`);
       const saved = await (downloadSignedFile as jest.Mock).mock.results.at(-1)!.value;
       expect(saved.delete).toHaveBeenCalledTimes(1);
+    } finally {
+      Platform.OS = os;
+      share.mockRestore();
+    }
+  });
+
+  it('Share, after Download PDF and Download Excel, hands the PDF itself to the share sheet, then removes it; no Share on Android', async () => {
+    const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
+    const os = Platform.OS;
+    Platform.OS = 'ios';
+    try {
+      const view = await openRun(recorded(), { packageFile: () => pdfLink('pdf') });
+      const order = within(await screen.findByTestId('run-package-actions')).getAllByText(/^(Download PDF|Download Excel|Share)$/u);
+      expect(order.map((node) => node.props.children)).toEqual(['Download PDF', 'Download Excel', 'Share']);
+      await fireEvent.press(screen.getByTestId('run-share-package'));
+      await waitFor(() => expect(share).toHaveBeenCalledWith({ url: `file:///cache/run-${RUN_ID}.pdf` }));
+      const saved = await (downloadSignedFile as jest.Mock).mock.results.at(-1)!.value;
+      expect(saved.delete).toHaveBeenCalledTimes(1);
+      await view.unmount();
+      resetSnapshot();
+      Platform.OS = 'android';
+      await openRun(recorded());
+      await screen.findByTestId('run-download-pdf');
+      expect(screen.queryByTestId('run-share-package')).toBeNull();
     } finally {
       Platform.OS = os;
       share.mockRestore();

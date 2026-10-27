@@ -11,6 +11,7 @@ Loads when a file here is read or edited. The root `CLAUDE.md` rules apply too.
 - The Nocturne components are snapshot-pinned in both palettes (`__tests__/nocturne-visual.test.tsx`); disabled support may not change their default render.
 - New screens mirror the website's pages and are composed from those components, the shared `components/dialog.tsx` and the theme tokens. A new primitive is added only when none fits, snapshot-pinned in both palettes (ADR-0032).
 - Every size is a step of `typeScale` (`constants/theme.ts`), every text is `components/text.tsx`'s (the text-size limit), and every press ticks through `components/pressable.tsx`; why, and the authorised re-pins: `DESIGN-CONTRACT.md` "The type is the app's own scale" and "Every press ticks".
+- Every padding, margin and gap is a name from the platform's spacing table (`space`; `inset` inside one control), never a number (`audit:spacing`); a screen is a `Page` with a `PageHeader`, a title over its card a `SectionTitle` or a `Group`: `DESIGN-CONTRACT.md` "Block set v2 and the spacing table".
 
 ## Plain words (the owner's rule)
 
@@ -23,7 +24,7 @@ Loads when a file here is read or edited. The root `CLAUDE.md` rules apply too.
 ## Audits to run after a screen change
 
 ```bash
-npm run audit:tokens && npm run audit:type && npm run audit:vocabulary && npm run audit:haptics
+npm run audit:tokens && npm run audit:type && npm run audit:spacing && npm run audit:vocabulary && npm run audit:haptics
 npm run test:coverage && npm run audit:presses   # the press audit reads the coverage
 ```
 

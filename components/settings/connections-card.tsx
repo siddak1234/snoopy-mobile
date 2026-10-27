@@ -7,7 +7,7 @@ import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { TextField } from '@/components/nocturne/text-field';
 import { Text } from '@/components/text';
-import { fonts, status, typeScale } from '@/constants/theme';
+import { fonts, space, status, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
@@ -316,18 +316,18 @@ export function ConnectionsCard({
 
 const styles = StyleSheet.create({
   rowError: {
-    paddingHorizontal: 14,
-    paddingBottom: 12,
+    paddingHorizontal: space.rowX,
+    paddingBottom: space.rowY,
     fontFamily: fonts.regular,
     ...typeScale.small,
   },
   noticeLine: {
-    marginBottom: 12,
+    marginBottom: space.inner,
     fontFamily: fonts.regular,
     ...typeScale.small,
   },
   notice: {
-    marginTop: 8,
+    marginTop: space.inner,
     fontFamily: fonts.regular,
     ...typeScale.small,
   },

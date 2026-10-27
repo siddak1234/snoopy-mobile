@@ -20,7 +20,7 @@ import { OrDivider } from '@/components/nocturne/or-divider';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { pressed } from '@/components/pressable';
 import { Text } from '@/components/text';
-import { em, fonts, layout, radius, status, typeScale } from '@/constants/theme';
+import { em, fonts, inset, layout, radius, space, status, typeScale } from '@/constants/theme';
 import { useBiometricWording } from '@/hooks/use-biometric-wording';
 import { useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
@@ -143,7 +143,7 @@ export default function LoginScreen() {
           flexGrow: 1,
           paddingTop: insets.top + (layout.designTop.auth - layout.statusArea),
           paddingHorizontal: layout.authX,
-          paddingBottom: 40,
+          paddingBottom: space.bottom,
         }}>
         {/* The mark and the title carry the screen; the subtitle went with the
             cover page, which already said what this is (owner, build 7; 24.11.6).
@@ -174,11 +174,9 @@ export default function LoginScreen() {
             <PillButton
               label={biometric.unlockLabel}
               variant="accent-ghost"
-              height={48}
               fontSize={typeScale.lead.fontSize}
               icon={UserFocus}
               iconSize={21}
-              gap={9}
               onPress={() => router.push('/(auth)/faceid')}
             />
           </View>
@@ -254,32 +252,32 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   brand: {
-    marginTop: 26,
+    marginTop: space.bottom,
   },
   title: {
-    marginTop: 22,
+    marginTop: space.bottom,
     fontFamily: fonts.medium,
     fontSize: typeScale.hero.fontSize,
     letterSpacing: em(-0.015, typeScale.hero.fontSize),
   },
   form: {
-    marginTop: 44,
-    gap: 14,
+    marginTop: space.bottom,
+    gap: space.group,
   },
   errorCallout: {
-    marginTop: 24,
+    marginTop: space.bottom,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 9,
+    gap: space.inner,
     backgroundColor: status.errCalloutBg,
     borderWidth: 1,
     borderColor: status.errCalloutBorder,
     borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingVertical: space.inner,
+    paddingHorizontal: space.rowX,
   },
   errorIcon: {
-    marginTop: 1,
+    marginTop: inset.hair,
   },
   errorText: {
     flex: 1,
@@ -288,30 +286,30 @@ const styles = StyleSheet.create({
     color: status.err,
   },
   oauthColumn: {
-    gap: 9,
+    gap: space.inner,
   },
   // With no unlock above them, the providers sit lower, under the title's air.
   oauthColumnAlone: {
-    marginTop: 44,
+    marginTop: space.bottom,
   },
   // Remember me's line's size, never smaller; its colour is given where it is drawn.
   agreement: {
-    marginTop: 14,
+    marginTop: space.group,
     fontFamily: fonts.regular,
     ...typeScale.small,
   },
   link: { textDecorationLine: 'underline' },
   rememberRow: {
-    marginTop: 18,
+    marginTop: space.group,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    gap: space.inner,
+    paddingVertical: space.rowY,
+    paddingHorizontal: space.rowX,
     borderWidth: 1,
     borderRadius: 14,
   },
-  rememberText: { flex: 1, minWidth: 0, gap: 2 },
+  rememberText: { flex: 1, minWidth: 0, gap: inset.xxs },
   rememberTitle: { fontFamily: fonts.medium, fontSize: typeScale.label.fontSize },
   rememberSub: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
 });

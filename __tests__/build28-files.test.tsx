@@ -23,6 +23,8 @@ jest.mock('@/lib/platform/client', () => ({
   downloadSignedFile: jest.fn(),
 }));
 const { platformOperation, downloadSignedFile } = jest.requireMock('@/lib/platform/client');
+jest.mock('expo-file-system', () => require('@/test/mocks/expo-file-system'));
+const { Directory, PICKED_FOLDER, fileSystemState } = jest.requireMock('expo-file-system');
 
 /**
  * Build 28's files and tiles (the round's plan §1 and §3, the contract of
@@ -217,7 +219,8 @@ describe("an item's page (build 28, F4–F6; its blocks since Round 21)", () => 
       'Candidates',
       '1',
       'Dana Whitfield',
-      '88',
+      // Its verdict's chip since block set 2 (the platform's `rankedRuns`; the owner's Q5).
+      'Advance',
     ]);
     await fireEvent.press(screen.getByTestId('item-blocks-1'));
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/item-file', params: { item: '0b0b0b0b-0b0b-4b0b-8b0b-0b0b0b0b0b0b' } }, undefined);
@@ -284,22 +287,31 @@ describe("an item's file, on a page of its own (build 28, F4)", () => {
     expect(saved[0]!.delete).toHaveBeenCalledTimes(1);
   });
 
-  it('Download asks for a fresh link and hands the file to the share sheet; refused, "Could not download. Try again."', async () => {
+  it('Download asks for a fresh link and saves the file into the folder picked in Files — no share sheet; Share then hands it to the share sheet; refused, "Could not download. Try again."', async () => {
+    fileSystemState.reset();
     const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
     let reads = 0;
     const { fake } = await openItemFile(() => {
       reads += 1;
-      if (reads === 3) throw new PlatformError('Bad Gateway', 502);
+      if (reads === 4) throw new PlatformError('Bad Gateway', 502);
       return link(policy, `https://files.example.com/file-1?sig=${reads}`);
     });
     await screen.findByTestId('item-file-webview');
+    // Download, then Share, in that order (the owner's Q7).
+    const actions = within(screen.getByTestId('item-file-actions')).getAllByText(/^(Download|Share)$/u);
+    expect(actions.map((node) => node.props.children)).toEqual(['Download', 'Share']);
     await fireEvent.press(screen.getByTestId('item-file-download'));
-    await waitFor(() => expect(share).toHaveBeenCalledWith({ url: 'file:///cache/policy.pdf' }));
+    await waitFor(() => expect(fileSystemState.copies).toEqual([`file:///cache/policy.pdf -> ${PICKED_FOLDER}policy.pdf`]));
+    expect(Directory.pickDirectoryAsync).toHaveBeenCalledTimes(1);
+    expect(share).not.toHaveBeenCalled();
     expect(downloadSignedFile).toHaveBeenLastCalledWith('https://files.example.com/file-1?sig=2', 'policy.pdf');
-    expect(fake.to(ITEM_FILE)).toHaveLength(2);
-    // The shared copy is removed once shared; the drawn one stays.
+    // The saved copy is removed from the cache once in Files; the drawn one stays.
     expect(saved[1]!.delete).toHaveBeenCalledTimes(1);
     expect(saved[0]!.delete).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByTestId('item-file-share'));
+    await waitFor(() => expect(share).toHaveBeenCalledWith({ url: 'file:///cache/policy.pdf' }));
+    expect(downloadSignedFile).toHaveBeenLastCalledWith('https://files.example.com/file-1?sig=3', 'policy.pdf');
+    expect(fake.to(ITEM_FILE)).toHaveLength(3);
     await fireEvent.press(screen.getByTestId('item-file-download'));
     expect(await screen.findByText('Could not download. Try again.')).toBeTruthy();
     share.mockRestore();
@@ -339,7 +351,8 @@ describe("an item's file, on a page of its own (build 28, F4)", () => {
     expect((await screen.findByTestId('item-file-webview')).props.allowingReadAccessToURL).toBe('file:///cache/view-2/');
   });
 
-  it('a type not drawn in place — a web page, a Word file — says "Download it to open it.", is not saved, and still offers Download', async () => {
+  it('a type not drawn in place — a web page, a Word file — says "Download it to open it.", is not saved, and still offers Download and Share', async () => {
+    fileSystemState.reset();
     const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
     await openItemFile(() => link(file('file-3', 'policy.pdf', 'text/html')));
     expect(await screen.findByText('Download it to open it.')).toBeTruthy();
@@ -347,6 +360,8 @@ describe("an item's file, on a page of its own (build 28, F4)", () => {
     expect(downloadSignedFile).not.toHaveBeenCalled();
     expect(screen.getByTestId('item-file-name').props.children).toBe('policy.pdf');
     await fireEvent.press(screen.getByTestId('item-file-download'));
+    await waitFor(() => expect(fileSystemState.copies).toHaveLength(1));
+    await fireEvent.press(screen.getByTestId('item-file-share'));
     await waitFor(() => expect(share).toHaveBeenCalledTimes(1));
     share.mockRestore();
   });
@@ -435,7 +450,8 @@ describe("a run's files (build 28, F7)", () => {
     expect(screen.queryByText('View contract file')).toBeNull();
   });
 
-  it("its page: the file's word and the run's title; the file drawn, its name and line; Download hands it on; the job's own file, in the run's workspace", async () => {
+  it("its page: the file's word and the run's title; the file drawn, its name and line; Download saves it, Share hands it on; the job's own file, in the run's workspace", async () => {
+    fileSystemState.reset();
     const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
     const fake = routeRun({ run: runOf(), steps: [], events: [], files: [contract] });
     fake.always(RUN_FILE, link(contract));
@@ -450,6 +466,9 @@ describe("a run's files (build 28, F7)", () => {
     expect(screen.getByTestId('run-file-line').props.children).toBe('PDF · 1 page · 2 KB');
     expect(fake.to(RUN_FILE)[0]!.values).toEqual({ workspaceId: TEST_WORKSPACE, runId: 'r1', fileId: 'file-9' });
     await fireEvent.press(screen.getByTestId('run-file-download'));
+    await waitFor(() => expect(fileSystemState.copies).toEqual([`file:///cache/northwind.pdf -> ${PICKED_FOLDER}northwind.pdf`]));
+    expect(share).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByTestId('run-file-share'));
     await waitFor(() => expect(share).toHaveBeenCalledWith({ url: 'file:///cache/northwind.pdf' }));
     share.mockRestore();
     await fireEvent.press(screen.getByLabelText('Back'));

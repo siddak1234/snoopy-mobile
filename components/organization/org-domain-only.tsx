@@ -1,9 +1,9 @@
 import { ShieldCheck } from 'phosphor-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 
 import { NocToggle } from '@/components/nocturne/noc-toggle';
-import { SectionLabel } from '@/components/nocturne/section-label';
+import { SectionTitle } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { ActionFailure } from '@/components/screen-state';
 import { SettingsRow } from '@/components/settings/settings-row';
@@ -66,8 +66,8 @@ export function OrgDomainOnly({
 
   return (
     <View>
-      <SectionLabel>WHO CAN JOIN</SectionLabel>
-      <SurfaceCard style={styles.card}>
+      <SectionTitle>WHO CAN JOIN</SectionTitle>
+      <SurfaceCard>
         <SettingsRow
           icon={ShieldCheck}
           title={DOMAIN_ONLY_TITLE}
@@ -81,8 +81,3 @@ export function OrgDomainOnly({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  // The 9 under a section label, as every labelled card on Settings sits.
-  card: { marginTop: 9 },
-});
