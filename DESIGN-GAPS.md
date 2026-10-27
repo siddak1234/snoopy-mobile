@@ -2659,3 +2659,82 @@ Each line broken, its tests red, restored (the file's sha the same as `d495a05`)
 - `verify:platform-contracts`: `block-fixtures.ts` edited by hand exits 1.
 - The review's member test (`round19-items`, `it.failing`): the item page dropping the label
   where it offers no run form turns it red; restored (the file's sha the same), green.
+
+## Round 21 — block set v2 on the app (backend ADR-0048 amendment 1; BUILD-PLAN 29.1.10–29.1.13; 2026-10-26)
+
+The owner's build 30 notes F1–F6 and his decisions of 2026-10-26 ("continue and complete then", over
+the defaults shown): Q5 the score green or red by its verdict with the verdict's word as a chip,
+none plain; Q6 Candidate details one card of drop-downs, the first open; Q7 Download then Share on
+every document; Q8 the spacing table; chips keep today's tones; the words exactly as owner-words.md
+lists them. The plan's Open defaults stand. Built from the backend contract snapshot `013ede3`
+(`SNOOPY_BACKEND_ROOT`), on branch `round-21/v2` from `5829442`; regenerated at PR 1's merge before
+the push (plan Open 9). The Round 21 history above (:2589) stays as it was.
+
+| What | Where | Held by |
+| --- | --- | --- |
+| The contract and the block rules: thirteen types, `BLOCK_WORDS`, `BLOCK_SPACING`, the search and sort cases, `block-rules.ts` headed by one sha256 | `scripts/generate-platform-contracts.mjs`, `verify-platform-contracts.mjs`; `lib/generated/platform-contracts/` | `blocks-parity`, `block-sort`, `verify:platform-contracts` |
+| image, chart and group drawn; a list row's `valueTone` and chip | `components/blocks/image.tsx`, `chart.tsx`, `group.tsx` (`GroupCard`), `list.tsx`; `components/files/file-frame.tsx` | `blocks-render`, `image-block`, `blocks-parity` (26 fixtures) |
+| Search, sort and pages | `components/blocks/paged.tsx`, `lib/view/block-sort.ts`; `components/items/flow-items.tsx`, `lib/view/items.ts`; Activity, `readRunsPage` | `block-sort`, `flow-items-tools`, `activity-search`, `build14-activity-range`, `tab-screens` |
+| The spacing table everywhere, and the parts that carry it | `constants/theme.ts` (`space`, `inset`, `layout`), `components/page.tsx`, `page-header.tsx`, `group.tsx` (`Group`, `DividedCard`), `SectionTitle`, `SurfaceCard padded`, `OpenRow`, `PillButton` (one height, 44); every screen under app/ | `audit:spacing` (`audit-gates`), `blocks-render` (the title and group gaps), the re-pinned snapshots |
+| The run's score toned by its verdict, its word a chip (F1) | `app/(tabs)/activity/run.tsx` (`PageHeader`'s right), `runVerdict` (`lib/view/runs.ts`), `useRunDetail` | `round19-items` |
+| Download, then Share (F4) | `components/files/file-actions.tsx`, `lib/platform/signed-file.ts` (`saveSignedFile`, `shareSignedFile`, `saveToFiles`, `sharesFiles`); the file pages, the run page, the package page, Settings › Data | `signed-file`, `build28-files`, `package-screen`, `invoice-processing-screens`, `data-support-screens`, `presses-settings` |
+| Archive on an item's page is the danger pill | `app/(tabs)/flows/item.tsx` | `round19-items` |
+
+**The iPhone's Download without the share sheet** (Q7's note, the checklist's "not verified"):
+found, with a module already in package.json. expo-file-system 19.0.24's
+`Directory.pickDirectoryAsync()` — "On iOS, the selected directory grants temporary read and write
+access for the current app session only" (`node_modules/expo-file-system/build/ExpoFileSystem.types.d.ts:126-134`;
+`ios/FileSystemModule.swift:113-124` presents `UIDocumentPickerViewController` for `UTType.folder`,
+`ios/FilePickingUtils.swift:105-108`, and starts the folder's security-scoped access, `:41-46`;
+`expo-modules-core/ios/FileSystemUtilities/FileSystemUtilities.swift:87-94` leaves an outside
+path's permission to the system) — then `File.copy` into it. Download on iOS is that; Share is the
+share sheet. **NOT OBSERVED on a device**: the folder picker, the copy into iCloud Drive or On My
+iPhone, and a name already taken there; the owner's check 3 ("Try both on the iPhone") is the proof.
+The picker's answer in the tests is shaped by the module's own source (`test/mocks/expo-file-system.ts`):
+no device recording of it exists yet.
+
+**The session's defaults, not the owner's** (each recorded, none gating):
+- **Below the table's smallest step**: the inside of one control — a chip's 2-pt padding, an icon
+  beside its word — is `inset` (1, 2, 4, 6) in `constants/theme.ts`; every spacing of 8 or more is
+  the table's. The website's check allows the table's classes and none below them.
+- **The Settings index's roomy row** (build 11, D1) is kept, as `rowY` and a control's step more
+  (18, ~~17~~); every other row is the table's 12/16.
+- **One pill height** (plan Open 11): the default pill's type follows it, 17 → 16.
+- **Activity's team scope** still narrows the page on the phone: the runs list takes no team.
+- **The run page's verdict word** is joined by `useRunDetail` from its flow's
+  `items.verdictWords` (plan Open 5), so the run page reads no flow word itself (`no-flow-code`).
+- **The file pages' and the package's Share** reads a fresh link, as Download does; the package
+  page's Share is the PDF, as the website's.
+
+**Findings for other repositories:**
+1. `snoopy-backend`: the runs list has no team (project) parameter, so Activity under a team pages
+   the workspace's runs and narrows each page on the phone (a page may hold fewer than 25 of the
+   team's). A `projectId` (or `subscriptionIds`) on `listRuns` would close it.
+2. `snoopy` (parity): the app keeps `inset` steps below 8 inside one control; the website's
+   `snoopy/lib/spacing.ts` has none — one of the two to match the other.
+3. `snoopy` (parity): the run page's chip follows the score on both; the app's Settings › Data says
+   "Download JSON" and "Download file", then "Share", as the website's.
+
+**NOT OBSERVED** (no simulator or device here): every visible change — the five checks of plan
+step 7 — for the session's screenshots on the build proven to launch.
+
+### Guards proved to bite, block set v2 on the app (2026-10-26)
+
+Each line broken in a saved copy, its tests red, the file restored from the copy and its sha256 the
+same, then green — 63 in all (two first tries did not bite and their tests were made stronger,
+then bit): the registry's thirteen types; an image's source from anything but its typed target;
+the chart not one image or not read as its `alt`; a bar not `value / max`; dots past 24 points; a
+group's first section closed or its sections without dividers; a row's score untoned; the picture's
+four states, its Try again, its `alt`, its frame's JavaScript, its folder kept, a word typed; a
+fixture's words (a line chart's, a long list's pager); the scores chart not one image; a typed
+padding in a renderer; `block-rules.ts`'s header; search's accents, the number rule's `%`, empty
+cells first; a `BLOCK_WORDS` literal; `audit:spacing` missing margins, a hoisted `const`, the
+type's geometry; `space` not the platform's; an `inset` at 8 or more; a label's `title` gap, its
+line height, a form title's gap, `group` between blocks; a flow's items unsearched, without the
+no-match line, unpaged, not newest first, a search left on page 2; Activity without `q`,
+`status`, `needsReview` (sent as `status=held`), `since`, the pager over 25, one page without
+`total`; the run's score untoned, its chip, a verdict with no words; an item row untoned or off the
+table's padding; Archive not the danger pill; Share before Download on each of the five places,
+Share on Android, Share sending the link, Download opening the share sheet, the export's Share; a
+taken name overwritten; a closed picker said as a failure; `block-rules.ts` edited by hand
+(`verify:platform-contracts` exits 1).

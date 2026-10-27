@@ -1,21 +1,23 @@
 import type { NavigationProp } from '@react-navigation/native';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { CalendarBlank, CaretRight, CheckCircle, Funnel, HandPalm } from 'phosphor-react-native';
-import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { NoMatch, Pager, SearchBox, SortControl } from '@/components/blocks/paged';
 import { Dropdown } from '@/components/dropdown';
+import { Group } from '@/components/group';
 import { FilterChip } from '@/components/nocturne/filter-chip';
-import { SectionLabel } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { Page } from '@/components/page';
 import { Pressable } from '@/components/pressable';
 import { CircleButton, ScopePill } from '@/components/scope-control';
 import { Text } from '@/components/text';
 import { TitleRow } from '@/components/title-row';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { SettingsRow } from '@/components/settings/settings-row';
-import { fonts, layout, status, typeScale } from '@/constants/theme';
+import { fonts, inset, space, status, typeScale } from '@/constants/theme';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { useScope } from '@/hooks/use-scope';
 import { useTheme } from '@/hooks/use-theme';
@@ -28,17 +30,21 @@ import {
   errorTitleFor,
 } from '@/lib/content/screen-states';
 import { ACTIVITY_FILTERS, ACTIVITY_FILTER_LABEL, type ActivityItem } from '@/lib/content/screen-states';
+import { BLOCK_WORDS } from '@/lib/generated/platform-contracts/block-rules';
 import { readCatalog } from '@/lib/platform/catalog';
 import {
   rangeStart,
   readAllApprovals,
   readApprovals,
   readRemovedSubscriptionsOrNone,
-  readRuns,
+  readRunsPage,
   readSubscriptions,
   type RunRange,
+  type RunsQuery,
 } from '@/lib/platform/runs';
+import { fill, isLong, pageCount } from '@/lib/view/block-sort';
 import { catalogIndex, needsReview, runIcon, splitByDay, toRunRow } from '@/lib/view/runs';
+import type { Run } from '@/lib/platform/automations';
 import { scopeRuns } from '@/lib/view/scope';
 
 /**
@@ -86,14 +92,11 @@ function ActivityRow({ item, last }: { item: ActivityItem; last: boolean }) {
 
 function ActivitySection({ label, items }: { label: string; items: ActivityItem[] }) {
   return (
-    <View>
-      <SectionLabel>{label}</SectionLabel>
-      <SurfaceCard style={styles.sectionCard}>
-        {items.map((item, i) => (
-          <ActivityRow key={item.id} item={item} last={i === items.length - 1} />
-        ))}
-      </SurfaceCard>
-    </View>
+    <Group title={label}>
+      {items.map((item, i) => (
+        <ActivityRow key={item.id} item={item} last={i === items.length - 1} />
+      ))}
+    </Group>
   );
 }
 
@@ -103,18 +106,20 @@ function ActivitySection({ label, items }: { label: string; items: ActivityItem[
 type ActivityFilter = 'All' | 'Success' | 'Needs review' | 'Failed';
 
 /**
- * Chip → the published run status it selects.
- *
- * Keyed on `RunStatus`, not on tone. A tone is a shared treatment: `warn` is
- * worn by `held` *and*, before this, by anything the row could not colour. The
- * design's "Needs review" is the held queue — a human decision list — so it
- * must select `held` and nothing else.
+ * Each outcome as the platform selects it (Round 21; backend ADR-0048
+ * amendment 1, point 4): Success `status=succeeded`, Failed `status=failed`,
+ * and Needs review `needsReview=true` — held jobs nobody has decided, never
+ * `status=held`, which lists a held run long after someone decided it (a run
+ * stays held after its approval, because the approval starts a new run).
+ * ~~`FILTER_STATUS` and `matchesFilter`, selected on the phone from the 100
+ * newest~~ until Round 21: a page is never emptied by a filter now.
  */
-const FILTER_STATUS: Record<Exclude<ActivityFilter, 'All'>, string> = {
-  Success: 'succeeded',
-  'Needs review': 'held',
-  Failed: 'failed',
-};
+function outcomeQuery(filter: ActivityFilter): Pick<RunsQuery, 'status' | 'needsReview'> {
+  if (filter === 'Success') return { status: 'succeeded' };
+  if (filter === 'Failed') return { status: 'failed' };
+  if (filter === 'Needs review') return { needsReview: true };
+  return {};
+}
 
 const EMPTY_LABEL: Record<Exclude<ActivityFilter, 'All'>, string> = {
   Success: 'successful',
@@ -122,8 +127,14 @@ const EMPTY_LABEL: Record<Exclude<ActivityFilter, 'All'>, string> = {
   Failed: 'failed',
 };
 
-const matchesFilter = (item: ActivityItem, filter: ActivityFilter) =>
-  filter === 'All' || (filter === 'Needs review' ? item.needsReview : item.status === FILTER_STATUS[filter]);
+/** Activity's two orders (`BLOCK_WORDS`): newest first, today's, then oldest first. */
+const RUN_ORDERS: readonly { value: RunsQuery['sort']; label: string }[] = [
+  { value: 'newest', label: BLOCK_WORDS.newestFirst },
+  { value: 'oldest', label: BLOCK_WORDS.oldestFirst },
+];
+
+/** How long typing rests before the search is sent. */
+const SEARCH_REST_MS = 350;
 
 const isActivityFilter = (value: unknown): value is ActivityFilter =>
   typeof value === 'string' && (ACTIVITY_FILTERS as readonly string[]).includes(value);
@@ -199,6 +210,18 @@ export default function ActivityScreen() {
   const [range, setRange] = useState<RunRange>(() => arrivedWith(params).range);
   const [rangeOpen, setRangeOpen] = useState(false);
   const [outcomeOpen, setOutcomeOpen] = useState(false);
+  // The search, the order and the page (Round 21): the platform's, sent with
+  // the outcome, the range and the flow; a new search, order or selection goes
+  // back to page 1. The search is sent once typing rests.
+  const [typed, setTyped] = useState('');
+  const [searched, setSearched] = useState('');
+  const [sort, setSort] = useState<RunsQuery['sort']>('newest');
+  const [page, setPage] = useState(1);
+  useEffect(() => {
+    const timer = setTimeout(() => setSearched(typed.trim()), SEARCH_REST_MS);
+    return () => clearTimeout(timer);
+  }, [typed]);
+  useEffect(() => setPage(1), [searched, filter, flow, range, sort]);
   useEffect(() => {
     if (!params.flow && !params.filter && !params.period) return;
     const arrived = arrivedWith(params);
@@ -216,20 +239,14 @@ export default function ActivityScreen() {
   }, [params.flow, params.flowName, params.filter, params.period]);
 
   /**
-   * The runs list, joined to the catalog for a display name.
-   *
-   * Two reads because `Run` publishes `templateId` and no name — the runs list's
-   * own description calls that join intended client work, so it is not a gap.
-   * The second line comes from `resultSummary` or `failureReason`, which is
-   * §12.1 #67's named substitute for the run output it refuses. Subscriptions
-   * are read for the scope: a run follows its flow's project (24.9.2).
-   *
-   * Grouping is local-day, not UTC: "Today" and "Yesterday" are the design's two
-   * sections and a person's own midnight decides them.
+   * What the rows are joined to, read once: the catalog for a display name
+   * (`Run` publishes `templateId` and no name — the runs list's own description
+   * calls that join intended client work), every approval for a held row's
+   * words, the subscriptions for the scope (a run follows its flow's project,
+   * 24.9.2), the archived flows, and the approvals waiting.
    */
   const activity = useWorkspaceResource(async (workspaceId) => {
-    const [runs, catalog, approvals, subscriptions, removed, pending] = await Promise.all([
-      readRuns(workspaceId),
+    const [catalog, approvals, subscriptions, removed, pending] = await Promise.all([
       readCatalog(workspaceId),
       readAllApprovals(workspaceId),
       readSubscriptions(workspaceId),
@@ -238,84 +255,105 @@ export default function ActivityScreen() {
       // whole workspace's, whatever team is chosen, as Home's banner counts (G1).
       readApprovals(workspaceId, 'pending'),
     ]);
-    const index = catalogIndex(catalog.automations);
-    const grouped = splitByDay(runs.runs);
-    // A run whose flow was archived says so on its row (24.11.8).
-    const removedFlows = new Set(removed.subscriptions.map((s) => s.id));
-    const toRow = (run: (typeof runs.runs)[number]): ActivityItem => {
-      const row = toRunRow(run, index, Date.now(), approvals.approvals);
-      return {
-        id: run.id,
-        subscriptionId: run.subscriptionId,
-        icon: runIcon(run.status),
-        // Carried verbatim: the chips select on this, never on the tone.
-        status: run.status,
-        needsReview: needsReview(run, approvals.approvals),
-        tone: row.tone,
-        title: row.name,
-        desc: removedFlows.has(run.subscriptionId) ? `${row.meta} · ${RUN_FLOW_ARCHIVED}` : row.meta,
-        time: row.time,
-        stamp: row.stamp,
-        createdAt: run.createdAt,
-      };
-    };
     return {
-      today: grouped.today.map(toRow),
-      yesterday: grouped.yesterday.map(toRow),
-      earlier: grouped.earlier.map(toRow),
+      index: catalogIndex(catalog.automations),
+      approvals: approvals.approvals,
       subscriptions: subscriptions.subscriptions,
+      removedFlows: new Set(removed.subscriptions.map((s) => s.id)),
       pending: pending.approvals.length,
     };
   });
 
-  const live = activity.status === 'ready' ? activity.data : null;
-  // The scope narrows what is shown, never what was read (24.9.2); a chosen flow
-  // narrows it further (24.11.9), and the two empties stay distinct.
-  const inScope = (items: ActivityItem[]) => (live ? scopeRuns(items, live.subscriptions, projectId) : []);
-  const inFlow = (items: ActivityItem[]) => (flow ? items.filter((item) => item.subscriptionId === flow.id) : items);
-  const scopedToday = inScope(live ? live.today : []);
-  const scopedYesterday = inScope(live ? live.yesterday : []);
-  const scopedEarlier = inScope(live ? live.earlier : []);
-  const sourceToday = inFlow(scopedToday);
-  const sourceYesterday = inFlow(scopedYesterday);
-  const sourceEarlier = inFlow(scopedEarlier);
+  /**
+   * The runs, one page of 25 as the platform selects them (Round 21,
+   * `readRunsPage`): the search, the outcome, the range's start (`since`), the
+   * flow a tile chose, the order and the page. Grouping is local-day, not UTC:
+   * "Today" and "Yesterday" are the design's two sections and a person's own
+   * midnight decides them. While a new page is read the last one stays on the
+   * screen, so the search box keeps its place.
+   */
+  // Where the range begins, fixed when it is chosen: read again at each render,
+  // a week back from "now" would name a new instant, and a new read, every time.
+  const since = useMemo(() => rangeStart(range), [range]);
+  const asked: RunsQuery = {
+    ...(searched ? { q: searched } : {}),
+    ...outcomeQuery(filter),
+    ...(since ? { since: since.toISOString() } : {}),
+    ...(flow ? { subscriptionId: flow.id } : {}),
+    sort,
+    page,
+  };
+  const key = JSON.stringify(asked);
+  const runsRead = useWorkspaceResource((workspaceId) => readRunsPage(workspaceId, asked), [key]);
+  const [shownRuns, setShownRuns] = useState<{ runs: Run[]; total?: number } | null>(null);
+  useEffect(() => {
+    if (runsRead.status === 'ready') setShownRuns(runsRead.data);
+  }, [runsRead]);
 
-  // The range and the outcome both select, each of the other (the owner's build
-  // 13 decision 4). Under Today, the runs a Home tile's number counted.
-  const since = rangeStart(range);
-  const selected = (item: ActivityItem) =>
-    (since === null || new Date(item.createdAt) >= since) && matchesFilter(item, filter);
-  const today = sourceToday.filter(selected);
-  const yesterday = sourceYesterday.filter(selected);
+  const base = activity.status === 'ready' ? activity.data : null;
+  const toRow = (run: Run): ActivityItem => {
+    const row = toRunRow(run, base!.index, Date.now(), base!.approvals);
+    return {
+      id: run.id,
+      subscriptionId: run.subscriptionId,
+      icon: runIcon(run.status),
+      // Carried verbatim.
+      status: run.status,
+      needsReview: needsReview(run, base!.approvals),
+      tone: row.tone,
+      title: row.name,
+      // A run whose flow was archived says so on its row (24.11.8).
+      desc: base!.removedFlows.has(run.subscriptionId) ? `${row.meta} · ${RUN_FLOW_ARCHIVED}` : row.meta,
+      time: row.time,
+      stamp: row.stamp,
+      createdAt: run.createdAt,
+    };
+  };
+  const runs = shownRuns?.runs ?? [];
+  const grouped = splitByDay(runs);
+  // The scope narrows what is shown, never what was read (24.9.2).
+  const inScope = (items: ActivityItem[]) => (base ? scopeRuns(items, base.subscriptions, projectId) : []);
+  const today = base ? inScope(grouped.today.map(toRow)) : [];
+  const yesterday = base ? inScope(grouped.yesterday.map(toRow)) : [];
   // The website's Activity is every run in the workspace; the two day sections
   // are a grouping of it. Older runs sit under EARLIER rather than vanishing —
   // the first TestFlight build showed "No activity yet" to a workspace with 13
   // runs, all older than two days (24.7.3 attempt 1, feedback #3).
-  const earlier = sourceEarlier.filter(selected);
+  const earlier = base ? inScope(grouped.earlier.map(toRow)) : [];
   const isEmpty = today.length === 0 && yesterday.length === 0 && earlier.length === 0;
-  /** Nothing at all, as opposed to nothing matching a filter. */
-  const hasNoRuns =
-    live !== null && live.today.length === 0 && live.yesterday.length === 0 && live.earlier.length === 0;
-  /** The workspace has runs, the chosen project has none. */
-  const scopeIsEmpty =
-    !hasNoRuns && scopedToday.length === 0 && scopedYesterday.length === 0 && scopedEarlier.length === 0;
+  const selecting = searched !== '' || filter !== 'All' || flow !== null || range !== 'all';
+  /** Nothing at all, as opposed to nothing matching a selection. */
+  const hasNoRuns = shownRuns !== null && !selecting && runs.length === 0 && page === 1;
+  /** The workspace has runs on this page, the chosen project none of them. */
+  const scopeIsEmpty = !hasNoRuns && runs.length > 0 && isEmpty;
+  // Over 25 that match, the order and the pages (an answer without `total`, from
+  // a platform before Round 21, is one page).
+  const total = shownRuns?.total;
+  const long = total !== undefined && isLong(total);
+  const pages = total === undefined ? 1 : pageCount(total);
+  // Oldest first, the oldest day first.
+  const sections =
+    sort === 'oldest'
+      ? ([['EARLIER', earlier], ['YESTERDAY', yesterday], ['TODAY', today]] as const)
+      : ([['TODAY', today], ['YESTERDAY', yesterday], ['EARLIER', earlier]] as const);
 
-  if (activity.status === 'loading') return <ScreenLoading topInset={insets.top} />;
-  if (activity.status === 'offline') {
-    return <ScreenOffline onRetry={() => activity.reload()} topInset={insets.top} />;
+  // The screen's states come from the join's read and the first page; a later
+  // page that fails keeps the rows on screen and says so under them.
+  const first = shownRuns === null ? runsRead : null;
+  const gate = activity.status !== 'ready' ? activity : first;
+  const retry = () => {
+    activity.reload();
+    runsRead.reload();
+  };
+  if (gate?.status === 'loading') return <ScreenLoading topInset={insets.top} />;
+  if (gate?.status === 'offline') {
+    return <ScreenOffline onRetry={retry} topInset={insets.top} />;
   }
-  if (activity.status === 'unconfigured') {
+  if (gate?.status === 'unconfigured') {
     return <ScreenUnavailable title={errorTitleFor('activity')} topInset={insets.top} />;
   }
-  if (activity.status === 'error') {
-    return (
-      <ScreenError
-        title={errorTitleFor('activity')}
-        onRetry={() => activity.reload()}
-        body={busyBody(activity)}
-        topInset={insets.top}
-      />
-    );
+  if (gate?.status === 'error') {
+    return <ScreenError title={errorTitleFor('activity')} onRetry={retry} body={busyBody(gate)} topInset={insets.top} />;
   }
   if (hasNoRuns) {
     // The first-run empty, distinct from the filtered one below: the old copy
@@ -333,13 +371,7 @@ export default function ActivityScreen() {
   }
 
   return (
-    <ScrollView
-      style={{ backgroundColor: palette.bg }}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) },
-      ]}
-      showsVerticalScrollIndicator={false}>
+    <Page>
       {/* The title, then Home's two scope circles and the time range on the
           right (round 23, A1; Build 22, F2–F3). The range says what is chosen
           and opens the four in a drop-down on it (the owner's build 22 items
@@ -391,11 +423,11 @@ export default function ActivityScreen() {
           close, G1): the website's sidebar link with its count, here a row
           above the runs, drawn at 0 too — Home's banner shows only while
           something waits, so this is the one entry that is always there. */}
-      <SurfaceCard style={styles.approvalsCard}>
+      <SurfaceCard>
         <SettingsRow
           icon={HandPalm}
           title="Approvals"
-          value={`${live?.pending ?? 0} waiting`}
+          value={`${base?.pending ?? 0} waiting`}
           right={<CaretRight size={15} color={palette.neutral[500]} />}
           testID="activity-approvals"
           onPress={() => router.push('/(tabs)/activity/approvals')}
@@ -433,49 +465,48 @@ export default function ActivityScreen() {
           }
         />
       </View>
-      {today.length > 0 ? <ActivitySection label="TODAY" items={today} /> : null}
-      {yesterday.length > 0 ? <ActivitySection label="YESTERDAY" items={yesterday} /> : null}
-      {earlier.length > 0 ? <ActivitySection label="EARLIER" items={earlier} /> : null}
+      {/* The search (Round 21, `BLOCK_WORDS.searchRuns`): the job's title, its summary and
+          its documents' sellers, searched by the platform; the order, over 25. */}
+      <SearchBox testID="activity-search" value={typed} onChange={setTyped} placeholder={BLOCK_WORDS.searchRuns} />
+      {long ? <SortControl testID="activity-sort" choices={RUN_ORDERS} value={sort} onChange={(next) => setSort(next as RunsQuery['sort'])} /> : null}
+      {sections.map(([label, items]) => (items.length > 0 ? <ActivitySection key={label} label={label} items={items} /> : null))}
       {scopeIsEmpty ? (
         <View style={styles.emptyWrap}>
           <CheckCircle size={38} color={palette.neutral[600]} />
           <Text style={[styles.emptyText, { color: palette.neutral[500] }]}>{ACTIVITY_SCOPE_EMPTY}</Text>
         </View>
-      ) : isEmpty && (filter !== 'All' || flow || range !== 'all') ? (
+      ) : isEmpty && searched !== '' ? (
+        <NoMatch testID="activity-no-match" text={fill(BLOCK_WORDS.noMatch, { query: searched })} />
+      ) : isEmpty && selecting ? (
         <View style={styles.emptyWrap}>
           <CheckCircle size={38} color={palette.neutral[600]} />
           <Text style={[styles.emptyText, { color: palette.neutral[500] }]}>{emptyLine(filter, flow, range)}</Text>
         </View>
       ) : null}
-    </ScrollView>
+      {long ? <Pager testID="activity-pager" page={Math.min(page, pages)} pages={pages} onPage={setPage} /> : null}
+      {shownRuns !== null && runsRead.status !== 'ready' && runsRead.status !== 'loading' ? (
+        <Text accessibilityRole="alert" style={[styles.emptyText, { color: status.err }]}>
+          {errorTitleFor('activity')}
+        </Text>
+      ) : null}
+    </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    paddingHorizontal: layout.screenX,
-    paddingBottom: 20,
-    gap: 14,
-  },
-  approvalsCard: {
-    marginBottom: 12,
-  },
   filters: {
     flexDirection: 'row',
-    gap: 8,
-  },
-  sectionCard: {
-    marginTop: 9,
+    gap: space.inner,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    gap: space.inner,
+    paddingVertical: space.rowY,
+    paddingHorizontal: space.rowX,
   },
   rowIcon: {
-    marginTop: 1,
+    marginTop: inset.hair,
   },
   rowBody: {
     flex: 1,
@@ -486,12 +517,12 @@ const styles = StyleSheet.create({
     fontSize: typeScale.label.fontSize,
   },
   rowDesc: {
-    marginTop: 1,
+    marginTop: inset.hair,
     fontFamily: fonts.regular,
     fontSize: typeScale.small.fontSize,
   },
   rowStamp: {
-    marginTop: 2,
+    marginTop: inset.xxs,
     fontFamily: fonts.regular,
     fontSize: typeScale.caption.fontSize,
   },
@@ -500,9 +531,9 @@ const styles = StyleSheet.create({
     fontSize: typeScale.caption.fontSize,
   },
   emptyWrap: {
-    paddingVertical: 56,
+    paddingVertical: space.bottom,
     alignItems: 'center',
-    gap: 10,
+    gap: space.inner,
   },
   emptyText: {
     fontFamily: fonts.regular,

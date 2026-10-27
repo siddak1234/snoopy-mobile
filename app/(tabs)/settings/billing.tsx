@@ -1,16 +1,17 @@
 import { useRouter } from 'expo-router';
 import { CreditCard } from 'phosphor-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { AppState, Linking, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { AppState, Linking, Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { Text } from '@/components/text';
-import { em, fonts, layout, status, typeScale } from '@/constants/theme';
+import { Page } from '@/components/page';
+import { PageHeader } from '@/components/page-header';
+import { em, fonts, inset, layout, space, status, typeScale } from '@/constants/theme';
 import { busyBody, useWorkspaceResource } from '@/hooks/use-resource';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
@@ -249,14 +250,8 @@ export default function BillingScreen() {
   };
 
   return (
-    <ScrollView
-      style={{ backgroundColor: palette.bg }}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) }]}
-      showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        <BackCircle onPress={() => router.back()} />
-        <Text style={[styles.title, { color: palette.text }]}>Billing</Text>
-      </View>
+    <Page>
+      <PageHeader onBack={() => router.back()} title="Billing" />
 
       {note ? <Text style={[styles.text, muted]}>{note}</Text> : null}
       {acts && needsCheckout ? (
@@ -308,7 +303,6 @@ export default function BillingScreen() {
                     <PillButton
                       label={opening === 'portal' ? 'Opening…' : 'Manage billing'}
                       variant="secondary"
-                      height={42}
                       icon={CreditCard}
                       iconSize={15}
                       disabled={opening !== null}
@@ -331,20 +325,17 @@ export default function BillingScreen() {
         <Text style={[styles.text, muted]}>No plans are available to purchase right now.</Text>
       ) : null}
       {error ? <Text style={[styles.text, { color: status.err }]}>{error}</Text> : null}
-    </ScrollView>
+    </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: layout.screenX, paddingBottom: 32, gap: 18 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  title: { fontFamily: fonts.medium, fontSize: typeScale.heading.fontSize, letterSpacing: em(-0.01, typeScale.heading.fontSize) },
   // Compact (build 11, D2): each card is as tall as its name, price and status line, no taller.
-  cards: { gap: 12 },
-  planCard: { gap: 6, padding: layout.cardPad },
+  cards: { gap: space.inner },
+  planCard: { gap: inset.sm, padding: layout.cardPad },
   planName: { fontFamily: fonts.medium, fontSize: typeScale.lead.fontSize },
   planPrice: { fontFamily: fonts.medium, fontSize: typeScale.title.fontSize, letterSpacing: em(-0.01, typeScale.title.fontSize) },
-  manage: { marginTop: 4 },
+  manage: { marginTop: inset.xs },
   // The pill at its own width, at the card's start, not stretched across it.
   pillRow: { flexDirection: 'row' },
   text: { fontFamily: fonts.regular, ...typeScale.body },

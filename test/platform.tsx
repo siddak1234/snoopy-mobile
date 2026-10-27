@@ -305,6 +305,50 @@ export function runsPayload(): Answer<'GET /v1/workspaces/{workspaceId}/runs'> {
   };
 }
 
+/**
+ * The runs list as the platform answers it to the parameters (backend ADR-0048
+ * amendment 1, point 4; `listRuns` in docs/openapi/automations.yaml): with none
+ * of `q`, `status`, `needsReview`, `since`, `sort` and `page`, today's newest
+ * 100; with any, the jobs that match — `q` in the title or summary, case-free;
+ * `status`; `needsReview`, a held job whose newest approval is pending or
+ * absent; `since`, made at or after it; and the flow (`subscriptionId`) — newest
+ * or oldest first, one page of 25, and `total`. `status` holds a held run its
+ * approval already decided, as the platform's would: only `needsReview` leaves
+ * it out.
+ */
+export function runsAsSelected(
+  runs: readonly Answer<'GET /v1/workspaces/{workspaceId}/runs'>['runs'][number][],
+  approvals: readonly Answer<'GET /v1/workspaces/{workspaceId}/approvals'>['approvals'][number][] = [],
+): (path: string) => Answer<'GET /v1/workspaces/{workspaceId}/runs'> {
+  type Run = Answer<'GET /v1/workspaces/{workspaceId}/runs'>['runs'][number];
+  return (path) => {
+    const query = new URLSearchParams(path.split('?')[1] ?? '');
+    const flow = query.get('subscriptionId');
+    const flowRuns = flow ? runs.filter((run) => run.subscriptionId === flow) : [...runs];
+    const paged = ['q', 'status', 'needsReview', 'since', 'sort', 'page'].some((name) => query.has(name));
+    if (!paged) return { runs: flowRuns.slice(0, 100) };
+    const q = query.get('q')?.toLowerCase();
+    const status = query.get('status');
+    const since = query.get('since');
+    const undecided = (run: Run) => {
+      const newest = approvals
+        .filter((approval) => approval.runId === run.id)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+      return run.status === 'held' && (!newest || newest.status === 'pending');
+    };
+    const matching = flowRuns
+      .filter((run) => !q || [run.title, run.resultSummary].some((field) => field?.toLowerCase().includes(q)))
+      .filter((run) => !status || run.status === status)
+      .filter((run) => query.get('needsReview') !== 'true' || undecided(run))
+      .filter((run) => !since || run.createdAt >= since);
+    const ordered = [...matching].sort((a, b) =>
+      query.get('sort') === 'oldest' ? a.createdAt.localeCompare(b.createdAt) : b.createdAt.localeCompare(a.createdAt),
+    );
+    const page = Number(query.get('page') ?? '1');
+    return { runs: ordered.slice((page - 1) * 25, page * 25), total: matching.length };
+  };
+}
+
 export function approvalsPayload(): Answer<'GET /v1/workspaces/{workspaceId}/approvals'> {
   return {
     approvals: approvals.map((a, i) => ({
@@ -604,7 +648,8 @@ export type RouteOverrides = {
   '/projects'?: Answer<'GET /v1/workspaces/{workspaceId}/projects'>;
   '/approvals'?: Answer<'GET /v1/workspaces/{workspaceId}/approvals'>;
   '/decision'?: Answer<'POST /v1/workspaces/{workspaceId}/approvals/{approvalId}/decision'>;
-  '/runs'?: Answer<'GET /v1/workspaces/{workspaceId}/runs'>;
+  /** The runs list, or how the platform answers it to the path's parameters (`runsAsSelected`). */
+  '/runs'?: Answer<'GET /v1/workspaces/{workspaceId}/runs'> | ((path: string) => Answer<'GET /v1/workspaces/{workspaceId}/runs'>);
   '/run-stats'?: Answer<'GET /v1/workspaces/{workspaceId}/run-stats'>;
   '/notifications'?: Answer<'GET /v1/workspaces/{workspaceId}/notifications'>;
   '/connections/providers'?: Answer<'GET /v1/connections/providers'>;
@@ -635,7 +680,15 @@ export function routePlatform(platformOperation: jest.Mock, overrides: RouteOver
     const bare = path.split('?')[0]!;
     for (const [fragment, body] of Object.entries(overrides)) {
       const one = fragment === '/subscriptions' && /\/subscriptions\/[^/]+$/.test(bare);
-      if (bare.endsWith(fragment) || one) return Promise.resolve(body);
+      if (bare.endsWith(fragment) || one) {
+        if (typeof body === 'function') return Promise.resolve(body(path));
+        // The runs list asked with Activity's parameters: the platform selects from the rows given.
+        if (fragment === '/runs' && path.includes('?')) {
+          const approvals = (overrides['/approvals'] ?? approvalsPayload()).approvals;
+          return Promise.resolve(runsAsSelected((body as Answer<'GET /v1/workspaces/{workspaceId}/runs'>).runs, approvals)(path));
+        }
+        return Promise.resolve(body);
+      }
     }
     if (path.includes('/automations')) return Promise.resolve(catalogPayload());
     // No projects unless a test says so: without one, scopes are not drawn.
@@ -715,7 +768,10 @@ export function routePlatform(platformOperation: jest.Mock, overrides: RouteOver
     // Order matters: /runs/{id} is a different shape from /runs.
     const detail = /\/runs\/([^/?]+)$/.exec(path);
     if (detail) return Promise.resolve(runDetailPayload(detail[1]));
-    if (path.includes('/runs')) return Promise.resolve(runsPayload());
+    if (path.includes('/runs')) {
+      const approvals = (overrides['/approvals'] ?? approvalsPayload()).approvals;
+      return Promise.resolve(path.includes('?') ? runsAsSelected(runsPayload().runs, approvals)(path) : runsPayload());
+    }
     if (path.includes('/connections/providers')) return Promise.resolve(providersPayload());
     if (path.includes('/connections')) return Promise.resolve(connectionsPayload());
     return Promise.reject(new Error(`routePlatform answers no ${path}`));

@@ -15,6 +15,8 @@
  */
 import type { TextStyle, ViewStyle } from 'react-native';
 
+import { BLOCK_SPACING } from '@/lib/generated/platform-contracts/block-rules';
+
 /** CSS color-mix(in srgb, <hex> N%, transparent) equivalent. */
 export function withAlpha(hex: string, alpha: number): string {
   const h = hex.replace('#', '');
@@ -22,6 +24,14 @@ export function withAlpha(hex: string, alpha: number): string {
   const g = parseInt(h.slice(2, 4), 16);
   const b = parseInt(h.slice(4, 6), 16);
   return `rgba(${r},${g},${b},${alpha})`;
+}
+
+/**
+ * How far down an icon of `size` sits to centre on the first line of words
+ * `lineHeight` tall (round 24 P7): the type's geometry, not a spacing.
+ */
+export function centredOn(lineHeight: number, size: number): number {
+  return (lineHeight - size) / 2;
 }
 
 /** CSS letter-spacing in em → RN points (em × font size). */
@@ -226,19 +236,47 @@ export const radius = {
   pill: 999,
 } as const;
 
+/**
+ * The spacing table (backend `BLOCK_SPACING`, ADR-0048 amendment 1 point 14;
+ * the owner's Q8, 2026-10-26), in points: the platform publishes the names and
+ * numbers, the generator copies them, and every padding, margin and gap a
+ * screen draws is one of them (`audit:spacing`). `edge` the page's sides;
+ * `group` between groups — block to block, a header to its first block, the
+ * last block to a footer button; `title` a title to what it heads; `inner`
+ * between things inside one card or one row; `rowY`/`rowX` a row's padding,
+ * at least `rowMinHeight` tall; `card` inside a card; `bottom` below the last
+ * thing on a page. `edgeWide` and `cardWide` are the website's wide screen.
+ */
+export const space = BLOCK_SPACING;
+
+/**
+ * Below the table's smallest step (`space.inner`, 8): the inside of one
+ * control only — a chip's own padding, an icon beside its word, a line that
+ * hangs under the line above it. Never between rows, cards or groups: those
+ * are the table's (`audit:spacing` passes these names; `__tests__/
+ * audit-gates.test.js` holds each under `space.inner`).
+ */
+export const inset = { hair: 1, xxs: 2, xs: 4, sm: 6 } as const;
+
 /** Recurring screen-layout metrics measured from Screen.dc.html. The design
  *  canvas is 402×874 (iPhone 16 Pro pt grid) and bakes a ~59pt status area
  *  into its fixed top paddings; live screens use safe-area insets instead:
- *  paddingTop = insets.top + (designTop − 59). */
+ *  paddingTop = insets.top + (designTop − 59). The spacing among them reads
+ *  from the table since Round 21 (the owner's Q8): ~~screenX 20, authX 24,
+ *  welcomeX 28, cardPad 15, rowPadV 13, rowPadH 14~~. */
 export const layout = {
-  screenX: 20,
-  authX: 24,
-  welcomeX: 28,
-  cardPad: 15,
-  rowPadV: 13,
-  /** A Settings-index row (build 11, the owner's "vertically more roomy"): the index only. */
-  rowPadVRoomy: 17,
-  rowPadH: 14,
+  screenX: space.edge,
+  authX: space.edge,
+  welcomeX: space.edge,
+  cardPad: space.card,
+  rowPadV: space.rowY,
+  /**
+   * A Settings-index row (build 11, the owner's "vertically more roomy"): the
+   * index only — the table's row and a control's step more, 18 (~~17~~ until
+   * Round 21).
+   */
+  rowPadVRoomy: space.rowY + inset.sm,
+  rowPadH: space.rowX,
   statusArea: 59,
   designTop: { app: 74, auth: 78, onboarding: 82, welcome: 120 },
 } as const;

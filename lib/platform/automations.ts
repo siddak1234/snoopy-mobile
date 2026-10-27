@@ -19,7 +19,7 @@ export type Item = components['schemas']['Item'];
 export type RunSection = components['schemas']['RunSection'];
 export type RunFile = components['schemas']['RunFile'];
 export type RunFileLink = components['schemas']['RunFileLink'];
-/** One of the ten blocks a run's or an item's page body is made of (backend ADR-0048). */
+/** One of the thirteen blocks a run's or an item's page body is made of (backend ADR-0048 and its amendment 1, `BLOCK_SET_VERSION` 2). */
 export type Block = components['schemas']['Block'];
 export type BlockOpen = components['schemas']['BlockOpen'];
 /** Each page's parts, in the order the flow's pinned manifest gives (backend ADR-0048 decision 5). */

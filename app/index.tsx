@@ -18,7 +18,7 @@ import { GlowBackground } from '@/components/nocturne/glow-background';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { Pressable } from '@/components/pressable';
 import { Text } from '@/components/text';
-import { em, fonts, typeScale } from '@/constants/theme';
+import { em, fonts, inset, space, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { offersPushAsk } from '@/hooks/use-push-registration';
 import { useSession } from '@/hooks/use-session';
@@ -193,7 +193,7 @@ export default function SplashScreen() {
       ) : null}
       {showGetStarted ? (
         <Animated.View testID="cover-get-started" style={[styles.getStarted, upStyle]}>
-          <PillButton label="Get started" variant="primary" height={52} onPress={getStarted} />
+          <PillButton label="Get started" variant="primary" onPress={getStarted} />
         </Animated.View>
       ) : null}
     </Pressable>
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 26,
+    gap: space.group,
   },
   markWrap: {
     width: 240,
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   },
   kickerGroup: {
     alignItems: 'center',
-    gap: 12,
+    gap: space.inner,
   },
   kicker: {
     fontFamily: fonts.regular,
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     right: 28,
     bottom: 140,
     alignItems: 'center',
-    gap: 6,
+    gap: inset.sm,
   },
   endedTitle: {
     fontFamily: fonts.medium,

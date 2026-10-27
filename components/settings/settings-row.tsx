@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { Pressable } from '@/components/pressable';
 import { Text } from '@/components/text';
-import { fonts, iconSize, layout, typeScale } from '@/constants/theme';
+import { fonts, iconSize, layout, space, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 /** A row's height: the lists' own, or the Settings index's roomier one (build 11). */
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: space.inner,
     paddingVertical: layout.rowPadV,
     paddingHorizontal: layout.rowPadH,
   },
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   brandClear: {
-    marginBottom: 12,
+    marginBottom: space.inner,
   },
   rowTitle: {
     fontFamily: fonts.medium,
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignItems: 'center',
-    columnGap: 12,
+    columnGap: space.inner,
   },
   rowValue: {
     fontFamily: fonts.regular,

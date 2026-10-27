@@ -9,6 +9,7 @@ const credentialAudit = resolve(__dirname, '../scripts/audit-credentials.mjs');
 const tokenAudit = resolve(__dirname, '../scripts/audit-tokens.mjs');
 const vocabularyAudit = resolve(__dirname, '../scripts/audit-vocabulary.mjs');
 const typeAudit = resolve(__dirname, '../scripts/audit-type.mjs');
+const spacingAudit = resolve(__dirname, '../scripts/audit-spacing.mjs');
 const hapticsAudit = resolve(__dirname, '../scripts/audit-haptics.mjs');
 let root;
 
@@ -460,6 +461,56 @@ describe('the type audit (24.12)', () => {
       ].join('\n'),
     );
     expect(run(typeAudit).status).toBe(0);
+  });
+});
+
+describe("the spacing audit (Round 21; backend ADR-0048 amendment 1, point 14; the owner's Q8)", () => {
+  it('fails a typed padding, margin or gap under app/ or components/, in each form a number becomes a spacing', () => {
+    expect(run(spacingAudit).status).toBe(0);
+
+    for (const [file, source] of [
+      // The owner's F3: the label-to-card gap typed 23 times.
+      ['app/(tabs)/settings/account.tsx', 'export const s = { card: { marginTop: 9 } };'],
+      ['components/card.tsx', 'export const s = { pad: { padding: 14, gap: 10 } };'],
+      ['components/row.tsx', 'export const R = () => <View style={{ paddingVertical: 11, paddingHorizontal: 14 }} />;'],
+      ['components/pill.tsx', 'export const P = () => <PillButton gap={7} label="Go" />;'],
+      ['app/screen.tsx', 'export const value = (md) => ({ marginBottom: md ? 20 : 18 });'],
+      ['components/hoisted.tsx', 'const PAD = 13;\nexport const s = { paddingTop: PAD };'],
+      ['components/sum.tsx', "import { space } from '@/constants/theme';\nexport const s = { marginTop: space.group + 2 };"],
+      ['components/negative.tsx', 'export const s = { marginHorizontal: -14 };'],
+      ['components/default.tsx', 'export function B({ gap = 6 }) {\n  return <View style={{ gap }} />;\n}'],
+    ]) {
+      mkdirSync(dirname(join(root, file)), { recursive: true });
+      writeFileSync(join(root, file), source);
+      const result = run(spacingAudit);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(file);
+      rmSync(join(root, file));
+    }
+  });
+
+  it("passes the table's names, a control's own steps, 0, and the type's geometry", () => {
+    writeFileSync(
+      join(root, 'components/fine.tsx'),
+      [
+        "import { centredOn, em, inset, layout, space, typeScale } from '@/constants/theme';",
+        'export const a = { paddingHorizontal: space.edge, paddingBottom: space.bottom, gap: space.group };',
+        'export const b = { marginBottom: space.title, padding: space.card, rowGap: space.inner };',
+        'export const c = { paddingVertical: space.rowY, paddingHorizontal: layout.rowPadH, minHeight: space.rowMinHeight };',
+        'export const d = { paddingVertical: inset.xxs, marginTop: -inset.xxs, paddingTop: 0, margin: 0 };',
+        'export const e = { paddingLeft: em(0.36, typeScale.small.fontSize), marginTop: centredOn(typeScale.body.lineHeight, 16) };',
+        'export const f = { height: 34, width: 120, borderRadius: 14, top: 8 };',
+      ].join('\n'),
+    );
+    expect(run(spacingAudit).status).toBe(0);
+  });
+
+  it("the app's table is the platform's, and a control's own steps are all below the table's smallest", () => {
+    const { BLOCK_SPACING } = require('../lib/generated/platform-contracts/block-rules');
+    const { inset, space } = require('../constants/theme');
+    expect(space).toBe(BLOCK_SPACING);
+    const smallest = Math.min(BLOCK_SPACING.inner, BLOCK_SPACING.title);
+    for (const step of Object.values(inset)) expect(step).toBeLessThan(smallest);
   });
 });
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Pressable } from '@/components/pressable';
-import { radius } from '@/constants/theme';
+import { radius, space } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 type Props = {
@@ -10,14 +10,21 @@ type Props = {
   /** --shadow-sm (hairline ring on dark) or --shadow-md. */
   level?: 'sm' | 'md';
   onPress?: () => void;
+  /**
+   * The table's card (Round 21, the owner's Q8): `card` inside, `inner` between
+   * what it holds. Off, the card's own rows pad themselves (a list of rows with
+   * dividers), as before.
+   */
+  padded?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
 /** Surface-filled content card: --color-surface ground, --radius-lg corners. */
-export function SurfaceCard({ children, level = 'sm', onPress, style }: Props) {
+export function SurfaceCard({ children, level = 'sm', onPress, padded = false, style }: Props) {
   const { palette, elevation } = useTheme();
   const base: StyleProp<ViewStyle> = [
     { backgroundColor: palette.surface, borderRadius: radius.card },
+    padded && { padding: space.card, gap: space.inner },
     elevation[level],
     style,
   ];

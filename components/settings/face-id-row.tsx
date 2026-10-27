@@ -1,7 +1,7 @@
 import * as LocalAuthentication from 'expo-local-authentication';
 import { UserFocus } from 'phosphor-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 
 import { NocToggle } from '@/components/nocturne/noc-toggle';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
@@ -72,7 +72,7 @@ export function FaceIdRow({ size = 'regular', testID }: { size?: SettingsRowSize
 
   return (
     <View>
-      <SurfaceCard style={styles.card}>
+      <SurfaceCard>
         <SettingsRow
           icon={UserFocus}
           title={biometric.settingsTitle}
@@ -89,8 +89,3 @@ export function FaceIdRow({ size = 'regular', testID }: { size?: SettingsRowSize
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  // The 9 under a section label, as every labelled card on Settings sits.
-  card: { marginTop: 9 },
-});

@@ -5,7 +5,7 @@ import { EnvelopeSimple, HandPalm, PlugsConnected, Sliders, Tray, type Icon } fr
 import { NocToggle } from '@/components/nocturne/noc-toggle';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { Text, TextInput } from '@/components/text';
-import { fonts, iconSize, typeScale } from '@/constants/theme';
+import { fonts, iconSize, inset, space, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { NEWER_CONTROL_NOTE } from '@/lib/content/screen-states';
 import type { components } from '@/lib/generated/platform-contracts/automations';
@@ -83,8 +83,8 @@ export function sectionLabel(position: number, section: SetupSection): string {
 export function NumberedSectionLabel({ children, testID }: { children: string; testID?: string }) {
   const { palette } = useTheme();
   return (
-    <View testID={testID}>
-      <SectionLabel fontSize={typeScale.label.fontSize} color={palette.text}>
+    <View testID={testID} style={styles.numbered}>
+      <SectionLabel fontSize={typeScale.label.fontSize} color={palette.text} style={{ lineHeight: typeScale.label.fontSize }}>
         {children}
       </SectionLabel>
     </View>
@@ -422,32 +422,34 @@ export function SetupFieldRow({
 }
 
 const styles = StyleSheet.create({
+  // A numbered title over its card: one em tall, `title` above the card.
+  numbered: { marginBottom: space.title },
   row: {
-    gap: 6,
-    paddingVertical: 13,
-    paddingHorizontal: 14,
+    gap: inset.sm,
+    paddingVertical: space.rowY,
+    paddingHorizontal: space.rowX,
   },
-  titleLine: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  titleLine: { flexDirection: 'row', alignItems: 'center', gap: space.inner },
   rowTitle: { flex: 1, minWidth: 0, fontFamily: fonts.medium, fontSize: typeScale.label.fontSize },
   optional: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
   // Under the title, past the glyph and its gap.
-  rowSub: { fontFamily: fonts.regular, ...typeScale.small, paddingLeft: iconSize.row + 10 },
+  rowSub: { fontFamily: fonts.regular, ...typeScale.small, paddingLeft: iconSize.row + space.inner },
   inputWrap: {
     alignSelf: 'stretch',
-    marginTop: 4,
+    marginTop: inset.xs,
     minHeight: 44,
     borderWidth: 1,
     borderRadius: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: space.rowX,
   },
-  currency: { fontFamily: fonts.regular, fontSize: typeScale.lead.fontSize, marginRight: 2 },
+  currency: { fontFamily: fonts.regular, fontSize: typeScale.lead.fontSize, marginRight: inset.xxs },
   input: {
     flex: 1,
     minWidth: 0,
-    paddingVertical: 9,
-    paddingHorizontal: 2,
+    paddingVertical: space.inner,
+    paddingHorizontal: inset.xxs,
     fontFamily: fonts.regular,
     fontSize: typeScale.lead.fontSize,
   },

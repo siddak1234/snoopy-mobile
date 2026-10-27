@@ -7,7 +7,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { Pressable } from '@/components/pressable';
-import { status } from '@/constants/theme';
+import { inset, status } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 /** 46×28 pill toggle from the design: white 24px knob travelling 18px,
@@ -51,7 +51,7 @@ export function NocToggle({
               width: 24,
               height: 24,
               borderRadius: 999,
-              marginLeft: 2,
+              marginLeft: inset.xxs,
               backgroundColor: status.knob,
               shadowColor: status.knobShadowColor,
               shadowOpacity: status.knobShadowOpacity,

@@ -3,7 +3,7 @@ import { KeyboardAvoidingView, Modal, Platform, StyleSheet, View } from 'react-n
 
 import { Pressable } from '@/components/pressable';
 import { Text } from '@/components/text';
-import { fonts, layout, status, typeScale } from '@/constants/theme';
+import { fonts, layout, space, status, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -121,10 +121,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.screenX,
   },
   dialog: {
-    gap: 14,
+    gap: space.group,
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 18,
-    padding: 20,
+    padding: space.card,
   },
   title: {
     fontFamily: fonts.medium,
@@ -138,20 +138,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'flex-end',
-    gap: 10,
+    gap: space.inner,
   },
   actionsStacked: {
     flexDirection: 'column',
     alignItems: 'stretch',
-    gap: 10,
+    gap: space.inner,
   },
   button: {
     minWidth: 96,
     alignItems: 'center',
     borderWidth: 1,
     borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: space.rowX,
+    paddingVertical: space.inner,
   },
   buttonLabel: {
     fontFamily: fonts.medium,

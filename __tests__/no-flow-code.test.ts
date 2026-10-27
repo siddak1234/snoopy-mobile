@@ -146,10 +146,12 @@ describe('the pages draw the platform\'s blocks (backend ADR-0048 decision 11)',
   it('the registry\'s keys are the contract\'s union, and a copy of it with the fallback taken out fails the unknown cases', async () => {
     const generated = readFileSync(join(root, 'lib/generated/platform-contracts/automations.d.ts'), 'utf8');
     const union = generated.slice(generated.indexOf('        Block: {'), generated.indexOf('        FlowPages: {'));
-    const types = [...union.matchAll(/\/\*\* @constant \*\/\n\s+type: "(\w+)";/gu)].map((match) => match[1]);
+    // Each type once: a group's sections name `section` again (ADR-0048 amendment 1).
+    const types = [...new Set([...union.matchAll(/\/\*\* @constant \*\/\n\s+type: "(\w+)";/gu)].map((match) => match[1]))];
     expect(Object.keys(RENDERERS).sort()).toEqual([...types].sort());
 
-    const UNKNOWN = [{ type: 'chart' }, { type: 'section', title: 'In', open: true, blocks: [{ type: 'gauge' }] }];
+    // Two types no build knows (~~`chart`~~, drawn since Round 21).
+    const UNKNOWN = [{ type: 'gauge' }, { type: 'section', title: 'In', open: true, blocks: [{ type: 'gauge' }] }];
 
     // The renderer as it is: each unknown type draws the one sentence.
     await renderWithProviders(React.createElement(BlockList, { blocks: UNKNOWN }));

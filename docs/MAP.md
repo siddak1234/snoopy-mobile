@@ -48,6 +48,7 @@
 - `npm run audit:haptics`: `node scripts/audit-haptics.mjs`
 - `npm run audit:platform`: `node scripts/audit-platform.mjs`
 - `npm run audit:presses`: `node scripts/audit-presses.mjs`
+- `npm run audit:spacing`: `node scripts/audit-spacing.mjs`
 - `npm run audit:tokens`: `node scripts/audit-tokens.mjs`
 - `npm run audit:type`: `node scripts/audit-type.mjs`
 - `npm run audit:vocabulary`: `node scripts/audit-vocabulary.mjs`
@@ -122,6 +123,7 @@
 - [scripts/audit-haptics.mjs](../scripts/audit-haptics.mjs): Fails when a press can be silent (build 11, D7).
 - [scripts/audit-platform.mjs](../scripts/audit-platform.mjs): Fails when the three transport-and-token rules are broken.
 - [scripts/audit-presses.mjs](../scripts/audit-presses.mjs): Fails when a press runs nothing a test has run (build 13: the owner's
+- [scripts/audit-spacing.mjs](../scripts/audit-spacing.mjs): Fails when a padding, a margin or a gap is a typed number instead of a name
 - [scripts/audit-tokens.mjs](../scripts/audit-tokens.mjs): Fails when a colour is written outside the token sheet.
 - [scripts/audit-type.mjs](../scripts/audit-type.mjs): Fails when a font size is written outside the type scale (24.12).
 - [scripts/audit-vocabulary.mjs](../scripts/audit-vocabulary.mjs): Fails when the app's copy says "project", "automation", "solution",
@@ -133,7 +135,7 @@
 
 ### Tests
 
-- `__tests__/`: accessibility, account, android, app, audit, auth, automation, billing, blocks, brand, build13, build14, build21, build22, build28, components, connection, connections, cover, data, deep, deletion, dialog, doc, dropdown, faceid, flows, gate24, identity, invoice, kit, native, no, nocturne, notifications, organization, override, package, paging, parity, pipeline, platform, pressable, presses, published, push, removed, repo, return, round19, round23, run, scope, screen, session, settings, setup, shared, sign, signed, snapshot, splash, start, tab, teams, text, theme, timed, upload, use, vendor, verify, view, workspace
+- `__tests__/`: accessibility, account, activity, android, app, audit, auth, automation, billing, block, blocks, brand, build13, build14, build21, build22, build28, components, connection, connections, cover, data, deep, deletion, dialog, doc, dropdown, faceid, flow, flows, gate24, identity, image, invoice, kit, native, no, nocturne, notifications, organization, override, package, paging, parity, pipeline, platform, pressable, presses, published, push, removed, repo, return, round19, round23, run, scope, screen, session, settings, setup, shared, sign, signed, snapshot, splash, start, tab, teams, text, theme, timed, upload, use, vendor, verify, view, workspace
 - `__tests__/__snapshots__/`: connection, nocturne, screen
 - `__tests__/real-router/`: activity, app, appearance, connect, face, flow, held, home, notifications, run, session, sign
 

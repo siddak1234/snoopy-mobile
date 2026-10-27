@@ -7,7 +7,7 @@ import { PillButton } from '@/components/nocturne/pill-button';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { pressed } from '@/components/pressable';
 import { Text } from '@/components/text';
-import { em, fonts, layout, typeScale } from '@/constants/theme';
+import { em, fonts, layout, space, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { websiteOrigin } from '@/lib/platform/native-auth';
 
@@ -27,7 +27,7 @@ export default function AccountDeletedScreen() {
   const { palette } = useTheme();
   const site = websiteOrigin();
   return (
-    <View style={[styles.root, { backgroundColor: palette.bg, paddingTop: insets.top + 40 }]}>
+    <View style={[styles.root, { backgroundColor: palette.bg, paddingTop: insets.top + space.bottom + space.group }]}>
       <SurfaceCard style={styles.card}>
         <Text style={[styles.title, { color: palette.text }]}>Account deleted</Text>
         <Text style={[styles.text, { color: palette.neutral[400] }]}>
@@ -47,7 +47,7 @@ export default function AccountDeletedScreen() {
           says what deletion does not remove.
         </Text>
         <Text style={[styles.small, { color: palette.neutral[400] }]}>You can come back anytime with a new account.</Text>
-        <PillButton label="Continue to Autom8x" variant="primary" height={46} onPress={() => router.replace('/')} />
+        <PillButton label="Continue to Autom8x" variant="primary" onPress={() => router.replace('/')} />
       </SurfaceCard>
     </View>
   );
@@ -55,7 +55,7 @@ export default function AccountDeletedScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, paddingHorizontal: layout.screenX },
-  card: { padding: 22, gap: 12 },
+  card: { padding: space.card, gap: space.inner },
   title: { fontFamily: fonts.medium, fontSize: typeScale.display.fontSize, letterSpacing: em(-0.01, typeScale.display.fontSize), textAlign: 'center' },
   text: { fontFamily: fonts.regular, ...typeScale.label, textAlign: 'center' },
   small: { fontFamily: fonts.regular, ...typeScale.body, textAlign: 'center' },

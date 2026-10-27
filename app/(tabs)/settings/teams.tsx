@@ -1,19 +1,20 @@
 import { useRouter } from 'expo-router';
 import { CaretRight, UsersThree } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
-import { BackCircle } from '@/components/nocturne/back-circle';
-import { SectionLabel } from '@/components/nocturne/section-label';
+import { SectionTitle } from '@/components/nocturne/section-label';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
 import { ScreenEmpty, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { Text } from '@/components/text';
-import { em, fonts, layout, status, typeScale } from '@/constants/theme';
+import { Page } from '@/components/page';
+import { PageHeader } from '@/components/page-header';
+import { fonts, space, status, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { busyBody, useWorkspaceResource } from '@/hooks/use-resource';
 import { useTheme } from '@/hooks/use-theme';
@@ -140,26 +141,15 @@ export default function TeamsScreen() {
   }
 
   return (
-    <ScrollView
-      style={{ backgroundColor: palette.bg }}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) }]}
-      showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        <BackCircle onPress={() => router.back()} />
-        <View style={styles.headerText}>
-          <Text style={[styles.title, { color: palette.text }]}>Departments</Text>
-          <Text style={[styles.subtitle, muted]}>
-            {organizations > 1 ? 'Your departments across all organizations' : 'Your departments, and the ones you can ask to join'}
-          </Text>
-        </View>
-      </View>
+    <Page>
+      <PageHeader onBack={() => router.back()} title="Departments" subtitle={organizations > 1 ? 'Your departments across all organizations' : 'Your departments, and the ones you can ask to join'} />
 
       {askError ? <Text style={[styles.text, { color: status.err }]}>{askError}</Text> : null}
 
       {shown.map(({ workspace, mine, askable }) => (
-        <View key={workspace.id} style={styles.group}>
-          <SectionLabel>{(workspace.type === 'personal' ? 'Personal' : workspace.name).toUpperCase()}</SectionLabel>
-          <SurfaceCard style={styles.card}>
+        <View key={workspace.id}>
+          <SectionTitle>{(workspace.type === 'personal' ? 'Personal' : workspace.name).toUpperCase()}</SectionTitle>
+          <SurfaceCard>
             {mine.length === 0 ? (
               <Text style={[styles.text, styles.pad, muted]}>You are not in a department here yet.</Text>
             ) : null}
@@ -187,9 +177,9 @@ export default function TeamsScreen() {
             ))}
           </SurfaceCard>
           {askable.length > 0 ? (
-            <View>
-              <SectionLabel>ASK TO JOIN</SectionLabel>
-              <SurfaceCard style={styles.card}>
+            <View style={styles.next}>
+              <SectionTitle>ASK TO JOIN</SectionTitle>
+              <SurfaceCard>
                 {askable.map((entry, index) => (
                   <SettingsRow
                     key={entry.id}
@@ -247,20 +237,15 @@ export default function TeamsScreen() {
           }}
         />
       ) : null}
-    </ScrollView>
+    </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: layout.screenX, paddingBottom: 32, gap: 18 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  headerText: { flex: 1 },
-  title: { fontFamily: fonts.medium, fontSize: typeScale.heading.fontSize, letterSpacing: em(-0.01, typeScale.heading.fontSize) },
-  subtitle: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize, marginTop: 1 },
-  group: { gap: 12 },
-  card: { marginTop: 9 },
-  pad: { padding: 14 },
-  right: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  // A title above its card at `title`; the next title `group` below the card above it.
+  next: { marginTop: space.group },
+  pad: { padding: space.card },
+  right: { flexDirection: 'row', alignItems: 'center', gap: space.inner },
   role: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
   link: { fontFamily: fonts.medium, fontSize: typeScale.body.fontSize },
   text: { fontFamily: fonts.regular, ...typeScale.body },

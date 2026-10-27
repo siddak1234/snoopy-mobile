@@ -18,9 +18,9 @@ exports[`the connection row — dark palette (snapshot-pinned) Google and QuickB
         {
           "alignItems": "center",
           "flexDirection": "row",
-          "gap": 12,
+          "gap": 8,
           "minHeight": 64,
-          "paddingHorizontal": 14,
+          "paddingHorizontal": 16,
           "paddingVertical": 12,
         },
         false,
@@ -174,8 +174,8 @@ exports[`the connection row — dark palette (snapshot-pinned) Google and QuickB
           {
             "borderRadius": 999,
             "borderWidth": 1,
-            "paddingHorizontal": 14,
-            "paddingVertical": 7,
+            "paddingHorizontal": 16,
+            "paddingVertical": 6,
           },
           {
             "borderColor": "#f87171",
@@ -208,9 +208,9 @@ exports[`the connection row — dark palette (snapshot-pinned) Google and QuickB
         {
           "alignItems": "center",
           "flexDirection": "row",
-          "gap": 12,
+          "gap": 8,
           "minHeight": 64,
-          "paddingHorizontal": 14,
+          "paddingHorizontal": 16,
           "paddingVertical": 12,
         },
         false,
@@ -317,8 +317,8 @@ exports[`the connection row — dark palette (snapshot-pinned) Google and QuickB
           {
             "borderRadius": 999,
             "borderWidth": 1,
-            "paddingHorizontal": 14,
-            "paddingVertical": 7,
+            "paddingHorizontal": 16,
+            "paddingVertical": 6,
           },
           {
             "borderColor": "#9184d9",
@@ -366,9 +366,9 @@ exports[`the connection row — light palette (snapshot-pinned) Google and Quick
         {
           "alignItems": "center",
           "flexDirection": "row",
-          "gap": 12,
+          "gap": 8,
           "minHeight": 64,
-          "paddingHorizontal": 14,
+          "paddingHorizontal": 16,
           "paddingVertical": 12,
         },
         false,
@@ -522,8 +522,8 @@ exports[`the connection row — light palette (snapshot-pinned) Google and Quick
           {
             "borderRadius": 999,
             "borderWidth": 1,
-            "paddingHorizontal": 14,
-            "paddingVertical": 7,
+            "paddingHorizontal": 16,
+            "paddingVertical": 6,
           },
           {
             "borderColor": "#dc2626",
@@ -556,9 +556,9 @@ exports[`the connection row — light palette (snapshot-pinned) Google and Quick
         {
           "alignItems": "center",
           "flexDirection": "row",
-          "gap": 12,
+          "gap": 8,
           "minHeight": 64,
-          "paddingHorizontal": 14,
+          "paddingHorizontal": 16,
           "paddingVertical": 12,
         },
         false,
@@ -665,8 +665,8 @@ exports[`the connection row — light palette (snapshot-pinned) Google and Quick
           {
             "borderRadius": 999,
             "borderWidth": 1,
-            "paddingHorizontal": 14,
-            "paddingVertical": 7,
+            "paddingHorizontal": 16,
+            "paddingVertical": 6,
           },
           {
             "borderColor": "#6a5cc4",

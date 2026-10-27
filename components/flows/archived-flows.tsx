@@ -1,15 +1,16 @@
 import { useRouter } from 'expo-router';
 import { Archive } from 'phosphor-react-native';
 import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BackCircle } from '@/components/nocturne/back-circle';
 import { IconTile } from '@/components/nocturne/icon-tile';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { ScreenEmpty, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { Text } from '@/components/text';
-import { em, fonts, iconSize, layout, typeScale } from '@/constants/theme';
+import { Page } from '@/components/page';
+import { PageHeader } from '@/components/page-header';
+import { fonts, iconSize, inset, space, typeScale } from '@/constants/theme';
 import { busyBody, useWorkspaceResource } from '@/hooks/use-resource';
 import { useScope } from '@/hooks/use-scope';
 import { useTheme } from '@/hooks/use-theme';
@@ -96,19 +97,9 @@ export function ArchivedFlows({ detailPath }: { detailPath: ArchivedFlowPath }) 
     );
   }
 
-  const muted = { color: palette.neutral[400] };
   return (
-    <ScrollView
-      style={{ backgroundColor: palette.bg }}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) }]}
-      showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        <BackCircle onPress={() => router.back()} />
-        <View style={styles.headerText}>
-          <Text style={[styles.title, { color: palette.text }]}>{ARCHIVED_FLOWS_TITLE}</Text>
-          <Text style={[styles.subtitle, muted]}>{ARCHIVED_FLOWS_NOTE}</Text>
-        </View>
-      </View>
+    <Page>
+      <PageHeader onBack={() => router.back()} title={ARCHIVED_FLOWS_TITLE} subtitle={ARCHIVED_FLOWS_NOTE} />
 
       <View style={styles.cardList}>
         {rows.map((def) => (
@@ -131,20 +122,15 @@ export function ArchivedFlows({ detailPath }: { detailPath: ArchivedFlowPath }) 
           </SurfaceCard>
         ))}
       </View>
-    </ScrollView>
+    </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: layout.screenX, paddingBottom: 32, gap: 18 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  headerText: { flex: 1 },
-  title: { fontFamily: fonts.medium, fontSize: typeScale.heading.fontSize, letterSpacing: em(-0.01, typeScale.heading.fontSize) },
-  subtitle: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize, marginTop: 1 },
-  cardList: { gap: 10 },
-  flowCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12 },
+  cardList: { gap: space.inner },
+  flowCard: { flexDirection: 'row', alignItems: 'center', gap: space.inner, padding: space.card },
   flowBody: { flex: 1, minWidth: 0 },
   flowName: { fontFamily: fonts.medium, fontSize: typeScale.label.fontSize },
-  flowRuns: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize, marginTop: 3 },
+  flowRuns: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize, marginTop: inset.xxs },
   archived: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
 });

@@ -215,6 +215,24 @@ export function splitByDay(
 }
 
 /**
+ * A run's verdict as its page shows it (Round 21, backend ADR-0048 amendment
+ * 1, point 13; the owner's Q5 and build 30 note F1): the positive verdict in
+ * the success tone, the negative in the error tone, each named by its flow's
+ * own words (`Subscription.items.verdictWords`, plan Open 5: "Advance",
+ * "Decline"). No verdict, or no words to name it: null — the score is plain
+ * and there is no chip, so the colour is never the only sign (WCAG 1.4.1).
+ */
+export function runVerdict(
+  run: Pick<Run, 'verdict'>,
+  verdictWords: { positive: string; negative: string } | undefined,
+): { tone: 'success' | 'error'; word: string } | null {
+  if (!verdictWords) return null;
+  if (run.verdict === 'positive') return { tone: 'success', word: verdictWords.positive };
+  if (run.verdict === 'negative') return { tone: 'error', word: verdictWords.negative };
+  return null;
+}
+
+/**
  * A run's name: "Run" and its FULL id — the run page's title, Activity's and
  * Home's rows, an approval's link (Build 21, spec A8). The owner's D4 of
  * 2026-10-15: "run number is the run ID. each id is unique, no duplicates

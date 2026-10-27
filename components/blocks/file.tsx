@@ -5,7 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { OpenRow } from '@/components/open-row';
 import { Text } from '@/components/text';
-import { fonts, typeScale } from '@/constants/theme';
+import { fonts, space, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 import { openRoute, type BlockOf, type BlockPlace } from './look';
@@ -45,6 +45,6 @@ export function FileBlock({
 
 const styles = StyleSheet.create({
   // `OpenRow`'s row, without the press or the arrow.
-  row: { minHeight: 44, justifyContent: 'center', paddingVertical: 11, paddingHorizontal: 14 },
+  row: { minHeight: space.rowMinHeight, justifyContent: 'center', paddingVertical: space.rowY, paddingHorizontal: space.rowX },
   title: { fontFamily: fonts.medium, ...typeScale.label },
 });

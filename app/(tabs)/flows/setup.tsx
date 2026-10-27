@@ -1,6 +1,6 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { InlineBoundary } from '@/components/dialog-boundary';
@@ -16,7 +16,6 @@ import {
   rowFields,
   sectionLabel,
 } from '@/components/setup-field';
-import { BackCircle } from '@/components/nocturne/back-circle';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import {
   ActionFailure,
@@ -28,7 +27,9 @@ import {
 import { Pressable } from '@/components/pressable';
 import { ConnectionsCard } from '@/components/settings/connections-card';
 import { Text } from '@/components/text';
-import { em, fonts, layout, typeScale, withAlpha } from '@/constants/theme';
+import { Page } from '@/components/page';
+import { PageHeader } from '@/components/page-header';
+import { fonts, inset, space, typeScale, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { roleIn, useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
@@ -381,23 +382,14 @@ export default function SetupScreen() {
   const label = busy ? (editing ? SETUP_SAVING : SETUP_TURNING_ON) : editing ? SETUP_SAVE : SETUP_TURN_ON;
 
   return (
-    <ScrollView
-      style={{ backgroundColor: palette.bg }}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) },
-      ]}
-      showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        <BackCircle onPress={() => router.back()} />
-        <View style={styles.headerText}>
-          <Text style={[styles.title, { color: palette.text }]}>Set up {entry.name}</Text>
-          {/* Its team: where it is, once added; where it goes, its category's, until then. */}
-          <Text testID="setup-team" style={[styles.subtitle, { color: palette.neutral[400] }]}>
-            {placed ? scopeLabel(placed.projectId, labels) : teamLine(entry.category)}
-          </Text>
-        </View>
-      </View>
+    <Page>
+      {/* Its team under its title: where it is, once added; where it goes, its category's, until then. */}
+      <PageHeader
+        onBack={() => router.back()}
+        title={`Set up ${entry.name}`}
+        subtitle={placed ? scopeLabel(placed.projectId, labels) : teamLine(entry.category)}
+        subtitleTestID="setup-team"
+      />
 
       {/* Inside a boundary (BUILD-PLAN 25.8.1, kept from the Set up dialog): the rows
           are drawn from a manifest the platform may publish after this build
@@ -409,7 +401,7 @@ export default function SetupScreen() {
             <View testID="setup-connect">
               <NumberedSectionLabel>{sectionLabel(1, 'connections')}</NumberedSectionLabel>
               {vendorFields.map((field) => (
-                <View key={field.key} testID={`setup-vendor-${field.key}`} style={styles.sectionCard}>
+                <View key={field.key} testID={`setup-vendor-${field.key}`}>
                   {/* A flow that chooses a vendor for more than one step names each step's choice. */}
                   {vendorFields.length > 1 ? (
                     <Text style={[styles.fieldTitle, { color: palette.neutral[400] }]}>{field.title}</Text>
@@ -431,7 +423,7 @@ export default function SetupScreen() {
                 </View>
               ))}
               {requiredRows.length > 0 ? (
-                <View style={styles.sectionCard}>
+                <View>
                   <ConnectionsCard
                     testID="setup-required"
                     rows={requiredRows}
@@ -450,7 +442,7 @@ export default function SetupScreen() {
           {sections.map(({ section, fields }, position) => (
             <View key={`${section}-${position}`}>
               <NumberedSectionLabel>{sectionLabel(position + 1 + sectionOffset, section)}</NumberedSectionLabel>
-              <SurfaceCard style={styles.sectionCard}>
+              <SurfaceCard>
                 {fields.map((field, index) => (
                   <SetupFieldRow
                     key={field.key}
@@ -482,34 +474,20 @@ export default function SetupScreen() {
           </Pressable>
         </View>
       </InlineBoundary>
-    </ScrollView>
+    </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    paddingHorizontal: layout.screenX,
-    paddingBottom: 20,
-    gap: 18,
-  },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  headerText: { flex: 1 },
-  title: {
-    fontFamily: fonts.medium,
-    fontSize: typeScale.heading.fontSize,
-    letterSpacing: em(-0.01, typeScale.heading.fontSize),
-  },
-  subtitle: { marginTop: 1, fontFamily: fonts.regular, fontSize: typeScale.body.fontSize },
-  form: { gap: 18 },
-  sectionCard: { marginTop: 9 },
-  fieldTitle: { marginBottom: 6, fontFamily: fonts.medium, ...typeScale.small },
+  form: { gap: space.group },
+  fieldTitle: { marginBottom: inset.sm, fontFamily: fonts.medium, ...typeScale.small },
   activateBtn: {
     minHeight: 52,
     borderRadius: 999,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 18,
+    paddingHorizontal: space.rowX,
   },
   activateLabel: { fontFamily: fonts.medium, fontSize: typeScale.lead.fontSize, textAlign: 'center' },
 });

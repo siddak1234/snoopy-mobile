@@ -1,9 +1,10 @@
 import React from 'react';
 import { View } from 'react-native';
 
+import { SectionTitle } from '@/components/nocturne/section-label';
+
 import { Fallback } from './fallback';
 import type { BlockOf } from './look';
-import { TextBlock } from './text';
 
 type QuestionForm = BlockOf<'questions'>['form'];
 export type FormKind = QuestionForm['kind'];
@@ -18,7 +19,27 @@ export type BlockForms = Partial<Record<FormKind, (form: QuestionForm) => React.
 
 const KNOWN_FORMS: readonly string[] = ['approval', 'run', 'item', 'setup'];
 
-/** questions: the page's own form for it — nothing where the page offers none; a form this build does not know, the fallback. */
+/**
+ * What a questions block draws: `unknown` for a form this build does not know
+ * (the fallback), else the page's own form for it — null where the page offers
+ * none, or its form draws nothing (a member, a flow not live). The block list
+ * asks first, so a block that draws nothing takes no room either.
+ */
+export function questionsForm(block: BlockOf<'questions'>, forms: BlockForms | undefined): React.ReactNode | 'unknown' {
+  const kind: unknown = (block.form as { kind?: unknown } | undefined)?.kind;
+  if (typeof kind !== 'string' || !KNOWN_FORMS.includes(kind)) return 'unknown';
+  const form = forms?.[kind as FormKind];
+  const drawn = form ? form(block.form) : null;
+  return drawn === null || drawn === undefined || drawn === false ? null : drawn;
+}
+
+/**
+ * questions: the page's own form for it (`questionsForm`), under its title
+ * ("Add candidate") as a title over what it heads (`SectionTitle`, `title`
+ * above the form, as "CANDIDATES" is above its list: the owner's build 30 note
+ * F3; ~~the label block's look, flush on the form~~ until Round 21); a form
+ * this build does not know, the fallback.
+ */
 export function QuestionsBlock({
   block,
   testID,
@@ -28,18 +49,13 @@ export function QuestionsBlock({
   testID: string;
   forms: BlockForms | undefined;
 }) {
-  const kind: unknown = (block.form as { kind?: unknown } | undefined)?.kind;
-  if (typeof kind !== 'string' || !KNOWN_FORMS.includes(kind)) return <Fallback testID={`${testID}-fallback`} />;
-  const form = forms?.[kind as FormKind];
-  // Its title ("Add candidate") is drawn with the form, as the page's section label: a page that
-  // offers no form, or whose form draws nothing (a member, a flow not live), draws neither.
-  const drawn = form ? form(block.form) : null;
-  if (drawn === null || drawn === undefined || drawn === false) return null;
+  const drawn = questionsForm(block, forms);
+  if (drawn === 'unknown') return <Fallback testID={`${testID}-fallback`} />;
+  if (drawn === null) return null;
+  const kind = (block.form as { kind: FormKind }).kind;
   return (
     <View testID={`${testID}-${kind}`}>
-      {block.title ? (
-        <TextBlock block={{ type: 'text', text: block.title, style: 'label' }} testID={`${testID}-title`} />
-      ) : null}
+      {block.title ? <SectionTitle testID={`${testID}-title`}>{block.title}</SectionTitle> : null}
       {drawn}
     </View>
   );

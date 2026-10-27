@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -19,14 +19,15 @@ import { GlassSurface } from '@/components/glass-surface';
 import { BrandMark } from '@/components/nocturne/brand-mark';
 import { IconTile } from '@/components/nocturne/icon-tile';
 import { PillButton } from '@/components/nocturne/pill-button';
-import { SectionLabel } from '@/components/nocturne/section-label';
+import { SectionLabel, SectionTitle } from '@/components/nocturne/section-label';
 import { Skeleton } from '@/components/nocturne/skeleton';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable, pressed } from '@/components/pressable';
 import { ScopeIcons } from '@/components/scope-control';
 import { StatTileButton, StatTileRow } from '@/components/stat-tile-button';
 import { Text } from '@/components/text';
-import { em, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
+import { Page } from '@/components/page';
+import { em, fonts, inset, layout, space, status, typeScale, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource, type ResourceState } from '@/hooks/use-resource';
 import { useScope } from '@/hooks/use-scope';
 import { useSession } from '@/hooks/use-session';
@@ -74,7 +75,7 @@ function HomeLoading({ paddingTop }: { paddingTop: number }) {
           <Skeleton width={38} height={38} borderRadius={999} />
         </View>
       </View>
-      <View style={{ gap: 10 }}>
+      <View style={{ gap: space.inner }}>
         <Skeleton width={96} height={10} />
         <Skeleton width={214} height={22} borderRadius={8} delay={100} />
         <Skeleton width={164} height={12} delay={200} />
@@ -85,7 +86,7 @@ function HomeLoading({ paddingTop }: { paddingTop: number }) {
         <Skeleton flex height={64} borderRadius={14} delay={240} />
       </View>
       <Skeleton height={68} borderRadius={14} delay={300} />
-      <View style={{ gap: 8 }}>
+      <View style={{ gap: space.inner }}>
         <Skeleton height={58} borderRadius={14} delay={360} />
         <Skeleton height={58} borderRadius={14} delay={480} />
         <Skeleton height={58} borderRadius={14} delay={600} />
@@ -166,7 +167,6 @@ function HomeFirstRun() {
       <PillButton
         label={ADD_FLOW_LABEL}
         variant="primary"
-        height={48}
         icon={Plus}
         iconSize={18}
         onPress={() => router.push('/(tabs)/flows/add')}
@@ -229,11 +229,9 @@ function HomeError({
           <PillButton
             label="Retry"
             variant="primary"
-            height={44}
             fontSize={typeScale.label.fontSize}
             icon={ArrowClockwise}
             iconSize={16}
-            gap={8}
             onPress={onRetry}
             style={styles.retryBtn}
           />
@@ -392,13 +390,7 @@ export default function HomeScreen() {
   const lineStyle = [styles.noRuns, { color: palette.neutral[500] }];
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: palette.bg }}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) },
-      ]}
-      showsVerticalScrollIndicator={false}>
+    <Page>
       {/* Header — the scope is its two icons now, beside the bell; the labelled
           pills under it went (the owner's build 13 decision 2). */}
       <HomeHeader initials={initials} hasAttention={hasAttention} />
@@ -410,7 +402,7 @@ export default function HomeScreen() {
         </SectionLabel>
         <Text
           style={{
-            marginTop: 8,
+            marginTop: space.inner,
             fontFamily: fonts.medium,
             fontSize: typeScale.display.fontSize,
             letterSpacing: em(-0.015, typeScale.display.fontSize),
@@ -421,7 +413,7 @@ export default function HomeScreen() {
         {counts ? (
           <Text
             style={{
-              marginTop: 5,
+              marginTop: inset.xs,
               fontFamily: fonts.regular,
               fontSize: typeScale.body.fontSize,
               color: palette.neutral[400],
@@ -441,9 +433,9 @@ export default function HomeScreen() {
       {/* Stats: today's, and said so over the row (the owner's build 12 item 1);
           "the 3 icons for today with the run types" (build 21 item 1). */}
       <View>
-        <SectionLabel>TODAY</SectionLabel>
+        <SectionTitle>TODAY</SectionTitle>
         {tiles ? (
-          <StatTileRow style={styles.statsUnderLabel} testID="home-stats">
+          <StatTileRow testID="home-stats">
             {/* A tile opens Activity for that outcome AND today — the runs it counts (24.11.9; build 12 item 1). */}
             {tiles.map((s) => (
               <StatTileButton
@@ -464,7 +456,7 @@ export default function HomeScreen() {
           </StatTileRow>
         ) : (
           // Today's counts could not be read: said in their place (G6).
-          <SurfaceCard level="sm" style={styles.runsCard}>
+          <SurfaceCard level="sm">
             <Text testID="home-stats-unavailable" style={lineStyle}>
               {FIGURE_UNAVAILABLE}
             </Text>
@@ -493,7 +485,7 @@ export default function HomeScreen() {
             </Text>
             <Text
               style={{
-                marginTop: 2,
+                marginTop: inset.xxs,
                 fontFamily: fonts.regular,
                 fontSize: typeScale.small.fontSize,
                 color: palette.neutral[400],
@@ -513,7 +505,6 @@ export default function HomeScreen() {
           <PillButton
             label={ADD_FLOW_LABEL}
             variant="primary"
-            height={46}
             fontSize={typeScale.label.fontSize}
             icon={Plus}
             iconSize={16}
@@ -523,7 +514,6 @@ export default function HomeScreen() {
           <PillButton
             label="Flows"
             variant="secondary"
-            height={46}
             fontSize={typeScale.label.fontSize}
             icon={FlowArrow}
             iconSize={16}
@@ -539,12 +529,12 @@ export default function HomeScreen() {
       ) : (
         <View>
           <View style={styles.sectionHeader}>
-            <SectionLabel>RECENT RUNS</SectionLabel>
+            <SectionTitle flush>RECENT RUNS</SectionTitle>
             <Text onPress={pressed(() => router.push('/(tabs)/activity'))} suppressHighlighting style={linkStyle}>
               See all
             </Text>
           </View>
-          <SurfaceCard level="sm" style={styles.runsCard}>
+          <SurfaceCard level="sm">
             {runRows === null ? (
               // The runs could not be read: said in their place, in the website's words (G6).
               <Text style={lineStyle}>{RECENT_RUNS_UNAVAILABLE}</Text>
@@ -581,7 +571,7 @@ export default function HomeScreen() {
                   </Text>
                   <Text
                     style={{
-                      marginTop: 1,
+                      marginTop: inset.hair,
                       fontFamily: fonts.regular,
                       fontSize: typeScale.small.fontSize,
                       color: palette.neutral[400],
@@ -592,7 +582,7 @@ export default function HomeScreen() {
                   <Text
                     testID={`home-stamp-${r.runId}`}
                     style={{
-                      marginTop: 1,
+                      marginTop: inset.hair,
                       fontFamily: fonts.regular,
                       fontSize: typeScale.caption.fontSize,
                       color: palette.neutral[500],
@@ -617,15 +607,15 @@ export default function HomeScreen() {
         </View>
       )}
 
-    </ScrollView>
+    </Page>
   );
 }
 
 const styles = StyleSheet.create({
   content: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    gap: 18,
+    paddingHorizontal: space.edge,
+    paddingBottom: space.bottom,
+    gap: space.group,
   },
   headerRow: {
     flexDirection: 'row',
@@ -635,7 +625,7 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: space.inner,
   },
   // The bell's circle: on Liquid Glass since round 23 (`GlassSurface`; the owner's build 22 items 5–6).
   bellButton: {
@@ -658,39 +648,34 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: 'row',
-    gap: 10,
-  },
-  // The tiles sit under TODAY as the runs card sits under RECENT RUNS.
-  statsUnderLabel: {
-    marginTop: 10,
+    gap: space.inner,
   },
   approvalsBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 13,
+    gap: space.inner,
     borderWidth: 1,
     borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 15,
+    paddingVertical: space.card,
+    paddingHorizontal: space.rowX,
   },
   actionsRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: space.inner,
   },
+  // RECENT RUNS and See all on one line, `title` above the card.
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'baseline',
     justifyContent: 'space-between',
-  },
-  runsCard: {
-    marginTop: 10,
+    marginBottom: space.title,
   },
   runRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    gap: space.inner,
+    paddingVertical: space.rowY,
+    paddingHorizontal: space.rowX,
   },
   runDot: {
     width: 8,
@@ -701,27 +686,27 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     fontSize: typeScale.body.fontSize,
     textAlign: 'center',
-    paddingVertical: 16,
+    paddingVertical: space.card,
   },
   stateRoot: {
     flex: 1,
     paddingHorizontal: layout.screenX,
-    paddingBottom: 20,
+    paddingBottom: space.bottom,
   },
   stateCenter: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 16,
+    gap: space.group,
     textAlign: 'center',
-    paddingHorizontal: 14,
+    paddingHorizontal: space.rowX,
   },
   // The first run's message, as the design centred it, in the runs' place on the page.
   firstRun: {
     alignItems: 'center',
-    gap: 16,
-    paddingTop: 12,
-    paddingHorizontal: 14,
+    gap: space.group,
+    paddingTop: space.rowY,
+    paddingHorizontal: space.rowX,
   },
   emptyHero: {
     width: 88,
@@ -732,7 +717,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stateTitle: {
-    marginTop: 8,
+    marginTop: space.inner,
     fontFamily: fonts.medium,
     fontSize: typeScale.heading.fontSize,
     letterSpacing: em(-0.015, typeScale.heading.fontSize),
@@ -745,7 +730,7 @@ const styles = StyleSheet.create({
     maxWidth: 224,
   },
   stateCta: {
-    marginTop: 8,
+    marginTop: space.inner,
     alignSelf: 'stretch',
   },
   errorHero: {
@@ -757,7 +742,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   errorTitle: {
-    marginTop: 8,
+    marginTop: space.inner,
     fontFamily: fonts.medium,
     fontSize: typeScale.title.fontSize,
     letterSpacing: em(-0.01, typeScale.title.fontSize),
@@ -770,7 +755,7 @@ const styles = StyleSheet.create({
     maxWidth: 224,
   },
   retryBtn: {
-    marginTop: 8,
-    paddingHorizontal: 26,
+    marginTop: space.inner,
+    paddingHorizontal: space.bottom,
   },
 });

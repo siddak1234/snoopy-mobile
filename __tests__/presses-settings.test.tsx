@@ -400,7 +400,7 @@ describe('One team › its members (team-members.tsx; DESIGN-CONTRACT 24.5: "lea
 
 /* ───────────────────────────── Export my data (24.6.3) ───────────────────────────── */
 
-describe('Export my data › Share JSON (data.tsx; DESIGN-CONTRACT 24.6: "the bounded summary shared as a JSON file (iOS) or text (Android)")', () => {
+describe('Export my data › the summary\'s Share (iOS) and Download JSON (Android) (data.tsx; DESIGN-CONTRACT 24.6: "the bounded summary shared as a JSON file (iOS) or text (Android)"; Download, then Share since Round 21)', () => {
   const SUMMARY: WorkspaceExport = {
     workspaceId: TEST_WORKSPACE,
     exportedAt: '2026-09-30T00:00:00Z',
@@ -416,14 +416,16 @@ describe('Export my data › Share JSON (data.tsx; DESIGN-CONTRACT 24.6: "the bo
       way: "as a JSON file in the app's cache, removed once shared",
       files: [{ name: `workspace-export-${TEST_WORKSPACE}.json`, text: JSON_TEXT, exists: false }],
       shared: (made: Made) => ({ url: made[0]!.uri }),
+      press: 'Share',
     },
     {
       os: 'android' as const,
       way: 'as text, which its share sheet carries',
       files: [],
       shared: () => ({ message: JSON_TEXT }),
+      press: 'Download JSON',
     },
-  ])('on $os, hands the prepared summary to the share sheet $way', async ({ os, files, shared }) => {
+  ])('on $os, $press hands the prepared summary to the share sheet $way', async ({ os, files, shared, press }) => {
     jest.replaceProperty(Platform, 'OS', os);
     const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
     const fake = fakePlatform(platformOperation);
@@ -432,12 +434,12 @@ describe('Export my data › Share JSON (data.tsx; DESIGN-CONTRACT 24.6: "the bo
     await renderWithProviders(<DataExportScreen />, sessionAs('owner'));
     await fireEvent.press(await screen.findByText('Prepare export'));
 
-    await fireEvent.press(await screen.findByText('Share JSON'));
+    await fireEvent.press(await screen.findByText(press));
 
     await waitFor(() => expect(share).toHaveBeenCalledTimes(1));
     expect(FileSystem.File.made.map(({ name, text, exists }) => ({ name, text, exists }))).toEqual(files);
     expect(share).toHaveBeenCalledWith(shared(FileSystem.File.made));
-    expect(await screen.findByText('Share JSON')).toBeTruthy();
+    expect(await screen.findByText(press)).toBeTruthy();
     expect(screen.queryByText('The export could not be shared.')).toBeNull();
   });
 });

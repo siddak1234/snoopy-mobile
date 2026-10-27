@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/text';
-import { fontScaleLimit, fonts, typeScale, withAlpha } from '@/constants/theme';
+import { fontScaleLimit, fonts, inset, space, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 import { toneColor, type BlockOf } from './look';
@@ -42,8 +42,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 2,
+    paddingHorizontal: space.inner,
+    paddingVertical: inset.xxs,
     fontFamily: fonts.medium,
     ...typeScale.caption,
   },

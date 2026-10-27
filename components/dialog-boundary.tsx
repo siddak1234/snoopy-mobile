@@ -5,7 +5,7 @@ import { Dialog, DialogButton } from '@/components/dialog';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Text } from '@/components/text';
-import { fonts, typeScale } from '@/constants/theme';
+import { fonts, inset, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ERROR_BODY, TRY_AGAIN_LABEL } from '@/lib/content/screen-states';
 
@@ -95,13 +95,12 @@ function FailedCard({ title, onRetry }: { title: string; onRetry: () => void }) 
   const { palette } = useTheme();
   return (
     <View testID="form-failed" accessibilityRole="alert">
-      <SurfaceCard style={styles.card}>
+      <SurfaceCard padded>
         <Text style={[styles.title, { color: palette.text }]}>{title}</Text>
         <Text style={[styles.body, { color: palette.neutral[400] }]}>{ERROR_BODY}</Text>
         <PillButton
           label={TRY_AGAIN_LABEL}
           variant="secondary"
-          height={40}
           fontSize={typeScale.body.fontSize}
           style={styles.retry}
           onPress={onRetry}
@@ -127,8 +126,7 @@ class Catch extends React.Component<CatchProps, { failed: boolean }> {
 }
 
 const styles = StyleSheet.create({
-  card: { marginTop: 9, padding: 14, gap: 6 },
   title: { fontFamily: fonts.medium, fontSize: typeScale.label.fontSize },
   body: { fontFamily: fonts.regular, ...typeScale.small },
-  retry: { marginTop: 6, alignSelf: 'flex-start' },
+  retry: { marginTop: inset.sm, alignSelf: 'flex-start' },
 });

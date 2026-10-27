@@ -7,7 +7,7 @@ import { PillButton } from '@/components/nocturne/pill-button';
 import { Skeleton } from '@/components/nocturne/skeleton';
 import { pressed } from '@/components/pressable';
 import { Text } from '@/components/text';
-import { em, fonts, layout, status, typeScale, withAlpha } from '@/constants/theme';
+import { em, fonts, inset, layout, space, status, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import {
   BACK_LABEL,
@@ -125,17 +125,15 @@ function FailureBody({
           <PillButton
             label={RETRY_LABEL}
             variant="primary"
-            height={44}
             fontSize={typeScale.label.fontSize}
             icon={ArrowClockwise}
             iconSize={16}
-            gap={8}
             onPress={onRetry}
             style={styles.retry}
           />
         ) : null}
         {backLabel && onBack ? (
-          <PillButton label={backLabel} variant="plain" height={40} fontSize={typeScale.body.fontSize} onPress={onBack} />
+          <PillButton label={backLabel} variant="plain" fontSize={typeScale.body.fontSize} onPress={onBack} />
         ) : null}
       </View>
     </View>
@@ -302,7 +300,6 @@ export function ScreenEmpty({
           <PillButton
             label={action.label}
             variant="primary"
-            height={48}
             {...(action.icon ? { icon: action.icon, iconSize: 18 } : {})}
             onPress={action.onPress}
             style={styles.emptyCta}
@@ -312,7 +309,6 @@ export function ScreenEmpty({
           <PillButton
             label={secondaryAction.label}
             variant="plain"
-            height={44}
             fontSize={typeScale.label.fontSize}
             onPress={secondaryAction.onPress}
             style={styles.emptySecondary}
@@ -369,19 +365,19 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     paddingHorizontal: layout.screenX,
-    paddingBottom: 20,
-    gap: 16,
+    paddingBottom: space.bottom,
+    gap: space.group,
   },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  headerText: { gap: 7 },
-  tilesRow: { flexDirection: 'row', gap: 10 },
-  rows: { gap: 8 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: space.inner },
+  headerText: { gap: inset.sm },
+  tilesRow: { flexDirection: 'row', gap: space.inner },
+  rows: { gap: space.inner },
   center: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 14,
-    paddingHorizontal: 20,
+    gap: space.group,
+    paddingHorizontal: space.edge,
   },
   hero: {
     width: 80,
@@ -392,7 +388,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    marginTop: 8,
+    marginTop: space.inner,
     fontFamily: fonts.medium,
     fontSize: typeScale.title.fontSize,
     letterSpacing: em(-0.01, typeScale.title.fontSize),
@@ -404,7 +400,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: 224,
   },
-  retry: { marginTop: 8, paddingHorizontal: 26 },
+  retry: { marginTop: space.inner, paddingHorizontal: space.bottom },
   emptyHero: {
     width: 88,
     height: 88,
@@ -414,24 +410,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyTitle: {
-    marginTop: 8,
+    marginTop: space.inner,
     fontFamily: fonts.medium,
     fontSize: typeScale.heading.fontSize,
     letterSpacing: em(-0.015, typeScale.heading.fontSize),
     textAlign: 'center',
   },
-  emptyCta: { marginTop: 8, alignSelf: 'stretch' },
+  emptyCta: { marginTop: space.inner, alignSelf: 'stretch' },
   emptySecondary: { alignSelf: 'stretch' },
   callout: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
+    gap: space.inner,
     borderWidth: 1,
     borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingVertical: space.rowY,
+    paddingHorizontal: space.rowX,
   },
-  calloutBody: { flex: 1, gap: 6 },
+  calloutBody: { flex: 1, gap: inset.sm },
   calloutText: { fontFamily: fonts.regular, ...typeScale.body },
   calloutAction: { fontFamily: fonts.medium, fontSize: typeScale.body.fontSize },
 });

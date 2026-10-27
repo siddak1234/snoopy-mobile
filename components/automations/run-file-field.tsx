@@ -7,7 +7,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { Pressable } from '@/components/pressable';
 import { Text } from '@/components/text';
-import { fonts, iconSize, status, typeScale, withAlpha } from '@/constants/theme';
+import { fonts, iconSize, inset, space, status, typeScale, withAlpha } from '@/constants/theme';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { UPLOAD_REFUSALS, WORKSPACE_CHANGED, uploadRefusalMessage } from '@/lib/content/refusals';
@@ -296,24 +296,24 @@ function formatSize(bytes: number): string {
 
 const styles = StyleSheet.create({
   row: {
-    gap: 6,
-    paddingVertical: 13,
-    paddingHorizontal: 14,
+    gap: inset.sm,
+    paddingVertical: space.rowY,
+    paddingHorizontal: space.rowX,
   },
-  titleLine: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  titleLine: { flexDirection: 'row', alignItems: 'center', gap: space.inner },
   title: { flex: 1, minWidth: 0, fontFamily: fonts.medium, fontSize: typeScale.label.fontSize },
-  sub: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize, paddingLeft: iconSize.row + 10 },
-  actions: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  sub: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize, paddingLeft: iconSize.row + space.inner },
+  actions: { flexDirection: 'row', gap: space.inner, marginTop: inset.xs },
   action: {
     flex: 1,
     minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 7,
+    gap: inset.sm,
     borderWidth: 1,
     borderRadius: 999,
-    paddingHorizontal: 12,
+    paddingHorizontal: space.rowX,
   },
   actionLabel: { fontFamily: fonts.medium, fontSize: typeScale.body.fontSize },
 });

@@ -74,6 +74,50 @@ export function readRuns(workspaceId: string, subscriptionId?: string): Promise<
 }
 
 /**
+ * What Activity asks the runs list for (backend ADR-0048 amendment 1, point 4;
+ * `listRuns`' `q`, `status`, `needsReview`, `since`, `sort` and `page`): the
+ * search, the outcome — "Needs review" as `needsReview`, never `status=held`,
+ * so a held run someone already decided is not listed — the range as its
+ * start, the order, and the page of 25; and the flow a tile chose, as today.
+ * The platform filters, so a page is never emptied by a filter on the phone.
+ */
+export type RunsQuery = {
+  q?: string;
+  status?: Run['status'];
+  needsReview?: true;
+  since?: string;
+  sort: 'newest' | 'oldest';
+  page: number;
+  subscriptionId?: string;
+};
+
+/**
+ * One page of the workspace's runs as `RunsQuery` names it, and how many match
+ * (`total`). A platform that does not take the parameters answers its newest
+ * 100 with no `total`: one page. Only what is set is sent; `needsReview` and
+ * `status` are never sent together (the platform refuses both).
+ */
+export function readRunsPage(workspaceId: string, asked: RunsQuery): Promise<{ runs: Run[]; total?: number }> {
+  const query = {
+    ...(asked.q ? { q: asked.q } : {}),
+    ...(asked.needsReview ? { needsReview: 'true' as const } : asked.status ? { status: asked.status } : {}),
+    ...(asked.since ? { since: asked.since } : {}),
+    ...(asked.subscriptionId ? { subscriptionId: asked.subscriptionId } : {}),
+    sort: asked.sort,
+    page: asked.page,
+  };
+  const search = new URLSearchParams(Object.entries(query).map(([key, value]) => [key, String(value)])).toString();
+  return shared(workspaceId, `runs:page:${search}`, 'volatile', () =>
+    platformOperation(`/v1/workspaces/${workspaceId}/runs?${search}`, ({ automations }, signal) =>
+      automations.GET('/v1/workspaces/{workspaceId}/runs', {
+        params: { path: { workspaceId }, query },
+        signal,
+      }),
+    ),
+  );
+}
+
+/**
  * Midnight this morning in the device's own zone.
  *
  * The design's tiles say "Runs today", and today is a local idea — a person in
@@ -94,9 +138,9 @@ export type RunRange = 'all' | 'today' | 'week' | 'month';
  * Today is the tiles' today — `localMidnight()`, so a Home tile's number is the
  * rows it opens. Week and Month are the last 7 and the last 30 days, back from
  * this moment on the local calendar: the same clock time that many days ago,
- * whatever a daylight-saving change between them did. The runs list takes no
- * window (`listRuns` has `subscriptionId` only), so Activity selects from the
- * runs it read with this.
+ * whatever a daylight-saving change between them did. Activity sends it as
+ * the runs list's `since` (Round 21, `readRunsPage`; ~~selected on the phone
+ * from the runs it read~~).
  */
 export function rangeStart(range: RunRange, now: Date = new Date()): Date | null {
   if (range === 'all') return null;
