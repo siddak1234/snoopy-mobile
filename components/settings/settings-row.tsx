@@ -7,7 +7,7 @@ import { Text } from '@/components/text';
 import { fonts, iconSize, layout, space, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-/** A row's height: the lists' own, or the Settings index's roomier one (build 11). */
+/** A row's type: the lists' own, or the Settings index's (build 11), its title and line at their scale heights. */
 export type SettingsRowSize = 'regular' | 'roomy';
 
 /**
@@ -15,9 +15,9 @@ export type SettingsRowSize = 'regular' | 'roomy';
  * whatever sits on the right. Pressable when it leads somewhere. Moved out of the
  * Settings screen unchanged when Settings became a stack (BUILD-PLAN 24.3.8), so
  * every Settings screen draws its rows the same way. `size="roomy"` is the
- * index's alone (build 11, the owner's "vertically more roomy"): more vertical
- * padding, and the title and line at their scale heights; every other list
- * keeps the row it had.
+ * index's alone (build 11, the owner's "vertically more roomy"): the title and
+ * line at their scale heights. Its padding is every row's, the table's 12/16
+ * (Q8; ~~more vertical padding~~ until Round 21's review).
  *
  * `value` (the owner's build 12 items 2 and 3: the plan's name "closer to the
  * arrow", the organization's name "just like how owner is written") is drawn on
@@ -106,7 +106,6 @@ export function SettingsRow({
   );
   const rowStyle = [
     styles.row,
-    roomy && styles.rowRoomy,
     divider && { borderBottomWidth: 1, borderBottomColor: palette.divider },
   ];
   if (onPress) {
@@ -133,9 +132,6 @@ const styles = StyleSheet.create({
     gap: space.inner,
     paddingVertical: layout.rowPadV,
     paddingHorizontal: layout.rowPadH,
-  },
-  rowRoomy: {
-    paddingVertical: layout.rowPadVRoomy,
   },
   rowBody: {
     flex: 1,

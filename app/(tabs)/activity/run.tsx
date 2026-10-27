@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
     fontSize: typeScale.small.fontSize,
   },
   decision: {
-    gap: inset.sm,
+    gap: space.inner,
   },
   decisionNote: {
     fontFamily: fonts.regular,

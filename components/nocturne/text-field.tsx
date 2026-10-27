@@ -4,7 +4,7 @@ import { Eye, EyeSlash } from 'phosphor-react-native';
 
 import { Pressable } from '@/components/pressable';
 import { Text, TextInput } from '@/components/text';
-import { fonts, inset, radius, space, typeScale, withAlpha } from '@/constants/theme';
+import { fonts, radius, space, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 type Props = {
@@ -35,7 +35,7 @@ export function TextField({
   const [hidden, setHidden] = useState(secure);
   const EyeIcon = hidden ? Eye : EyeSlash;
   return (
-    <View style={[{ gap: inset.sm }, style]}>
+    <View style={[{ gap: space.title }, style]}>
       <Text style={{ fontFamily: fonts.regular, fontSize: typeScale.small.fontSize, color: palette.neutral[400] }}>
         {label}
       </Text>

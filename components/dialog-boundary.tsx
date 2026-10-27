@@ -5,7 +5,7 @@ import { Dialog, DialogButton } from '@/components/dialog';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Text } from '@/components/text';
-import { fonts, inset, typeScale } from '@/constants/theme';
+import { fonts, space, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ERROR_BODY, TRY_AGAIN_LABEL } from '@/lib/content/screen-states';
 
@@ -128,5 +128,5 @@ class Catch extends React.Component<CatchProps, { failed: boolean }> {
 const styles = StyleSheet.create({
   title: { fontFamily: fonts.medium, fontSize: typeScale.label.fontSize },
   body: { fontFamily: fonts.regular, ...typeScale.small },
-  retry: { marginTop: inset.sm, alignSelf: 'flex-start' },
+  retry: { marginTop: space.inner, alignSelf: 'flex-start' },
 });

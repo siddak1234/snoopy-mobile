@@ -12,6 +12,13 @@
  * padding, an icon beside its word. Every padding, margin and gap under app/ and
  * components/ is one of those names (`space.group`, `layout.screenX`), or 0.
  *
+ * `inset` is the app's alone (the website's lib/spacing.ts has no step below
+ * 8), so where it is used is held here (`INSET`, Round 21's review): each file,
+ * how many times, and what it spaces inside one control. One more in a file,
+ * or one in a file not listed, fails — a gap between rows, cards, a title and
+ * what it heads, or things in one card is the table's (`space.title`,
+ * `space.inner`); one fewer asks for the list to be lowered.
+ *
  * Found by parsing, as `audit-type.mjs` finds a size: a `padding*`, `margin*`,
  * `gap`, `rowGap` or `columnGap` property, the same named prop (`gap={…}`), and
  * a default given to such a name. It fails when a number other than 0 can come
@@ -53,6 +60,41 @@ const COMPARISONS = new Set([
   ts.SyntaxKind.InKeyword,
 ]);
 
+/**
+ * Where `inset` (constants/theme.ts) may be used, and how many times: the
+ * inside of one control only.
+ */
+const INSET = {
+  "app/(auth)/login.tsx": [2, "the error's icon on its first line; Remember me's line under its title"],
+  "app/(tabs)/(home)/index.tsx": [4, "a line under the line above (the counts, a row's line and stamp)"],
+  "app/(tabs)/activity/approvals.tsx": [5, "a text button's own padding"],
+  "app/(tabs)/activity/index.tsx": [3, "a row's icon on its first line; its line and stamp under its title"],
+  "app/(tabs)/activity/run.tsx": [1, "the line under the title"],
+  "app/(tabs)/flows/add.tsx": [3, "the lines under a card's name"],
+  "app/(tabs)/flows/index.tsx": [3, "the callout's icon on its first line; the lines under a flow's name"],
+  "app/(tabs)/settings/index.tsx": [2, "the segmented control's own padding and gap"],
+  "components/automations/run-file-field.tsx": [1, "a button's icon beside its word"],
+  "components/automations/webhook-address-dialog.tsx": [1, "a value under its label"],
+  "components/blocks/badge.tsx": [1, "a chip's own padding"],
+  "components/blocks/link.tsx": [1, "the line under a link's title"],
+  "components/blocks/list.tsx": [1, "the line under a row's title"],
+  "components/blocks/section.tsx": [1, "the line under a section's title"],
+  "components/connection-row.tsx": [2, "the line under the name; the button's own padding"],
+  "components/flows/archived-flows.tsx": [1, "the line under a flow's name"],
+  "components/nocturne/noc-toggle.tsx": [1, "the toggle's knob"],
+  "components/nocturne/oauth-button.tsx": [1, "the Apple glyph on its word"],
+  "components/nocturne/pill-button.tsx": [1, "an icon beside its word"],
+  "components/nocturne/stat-card.tsx": [1, "the line under a tile's number"],
+  "components/nocturne/status-pill.tsx": [1, "a pill's own padding"],
+  "components/nocturne/tab-bar.tsx": [3, "the bar's own top, its capsule, a tab's icon over its word"],
+  "components/notifications/inbox.tsx": [3, "the dot and icon on a row's first line; the line under its title"],
+  "components/organization/org-domains.tsx": [1, "a value under its label"],
+  "components/runs/tracker-step.tsx": [2, "a step's icon on its first line; the line under its title"],
+  "components/scope-control.tsx": [1, "the pill's icon beside its word"],
+  "components/screen-state.tsx": [1, "the loading header's two lines"],
+  "components/setup-field.tsx": [2, "the currency beside its box; the box's own padding"],
+};
+
 const files = sourceRoots.flatMap((dir) => walk(join(root, dir)));
 
 // One program so a name resolves to its own declaration, scope by scope. No
@@ -64,13 +106,36 @@ const program = ts.createProgram({
 const checker = program.getTypeChecker();
 
 const findings = new Map();
+/** How many times each file names an `inset` step. */
+const insetUses = new Map();
 
 for (const file of files) {
   const source = program.getSourceFile(file);
   if (source) visit(source);
 }
 
+for (const [file, count] of insetUses) {
+  const held = INSET[file]?.[0] ?? 0;
+  if (count > held) {
+    findings.set(
+      `${file}: inset`,
+      `${count} inset steps, the list holds ${held}: between rows, cards, a title and what it heads, or things in one card is space.title or space.inner`,
+    );
+  } else if (count < held) {
+    findings.set(`${file}: inset`, `${count} inset steps, the list holds ${held}: lower INSET in scripts/audit-spacing.mjs`);
+  }
+}
+for (const [file, [held]] of Object.entries(INSET)) {
+  if (!insetUses.has(file) && files.includes(join(root, file))) {
+    findings.set(`${file}: inset`, `0 inset steps, the list holds ${held}: lower INSET in scripts/audit-spacing.mjs`);
+  }
+}
+
 function visit(node) {
+  if (ts.isPropertyAccessExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "inset") {
+    const file = relative(root, node.getSourceFile().fileName);
+    insetUses.set(file, (insetUses.get(file) ?? 0) + 1);
+  }
   const value = spacingValue(node);
   if (value) {
     for (const literal of numbersIn(value, new Set())) {

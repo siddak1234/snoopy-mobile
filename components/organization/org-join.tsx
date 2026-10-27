@@ -8,7 +8,7 @@ import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { TextField } from '@/components/nocturne/text-field';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { Text } from '@/components/text';
-import { fonts, inset, space, status, typeScale } from '@/constants/theme';
+import { fonts, space, status, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useTheme } from '@/hooks/use-theme';
 import { JOIN_REFUSALS, refusalMessage } from '@/lib/content/refusals';
@@ -112,7 +112,7 @@ function FoundOrganization({
   };
 
   return (
-    <View style={styles.found}>
+    <View>
       <SettingsRow
         icon={Buildings}
         title={organization.name}
@@ -211,6 +211,5 @@ function SetUpOrganization({ domain, onCreated }: { domain: string; onCreated: (
 const styles = StyleSheet.create({
   card: { marginTop: space.title },
   pad: { padding: space.card, gap: space.inner },
-  found: { paddingBottom: inset.xs },
   text: { fontFamily: fonts.regular, ...typeScale.body },
 });

@@ -11,7 +11,7 @@ import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/
 import { Text } from '@/components/text';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
-import { em, fonts, inset, layout, space, status, typeScale } from '@/constants/theme';
+import { em, fonts, layout, space, status, typeScale } from '@/constants/theme';
 import { busyBody, useWorkspaceResource } from '@/hooks/use-resource';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
@@ -307,7 +307,6 @@ export default function BillingScreen() {
                       iconSize={15}
                       disabled={opening !== null}
                       onPress={() => void leave('portal', 'portal', openPortal)}
-                      style={styles.manage}
                     />
                   ) : null}
                   {/* Not once the plan is cancelled: the move to Free is already under way. */}
@@ -332,10 +331,9 @@ export default function BillingScreen() {
 const styles = StyleSheet.create({
   // Compact (build 11, D2): each card is as tall as its name, price and status line, no taller.
   cards: { gap: space.inner },
-  planCard: { gap: inset.sm, padding: layout.cardPad },
+  planCard: { gap: space.inner, padding: layout.cardPad },
   planName: { fontFamily: fonts.medium, fontSize: typeScale.lead.fontSize },
   planPrice: { fontFamily: fonts.medium, fontSize: typeScale.title.fontSize, letterSpacing: em(-0.01, typeScale.title.fontSize) },
-  manage: { marginTop: inset.xs },
   // The pill at its own width, at the card's start, not stretched across it.
   pillRow: { flexDirection: 'row' },
   text: { fontFamily: fonts.regular, ...typeScale.body },

@@ -18,6 +18,7 @@ import { useTheme } from '@/hooks/use-theme';
 export function PageHeader({
   title,
   titleTestID,
+  titleMaxFontSizeMultiplier,
   subtitle,
   subtitleTestID,
   below,
@@ -28,6 +29,8 @@ export function PageHeader({
 }: {
   title: string;
   titleTestID?: string;
+  /** The title stops at this text size (`fontScaleLimit.chrome`): a one-word title beside a slot. */
+  titleMaxFontSizeMultiplier?: number;
   /** The muted line under the title. */
   subtitle?: string | null;
   subtitleTestID?: string;
@@ -50,6 +53,7 @@ export function PageHeader({
           <Text
             testID={titleTestID}
             accessibilityRole="header"
+            maxFontSizeMultiplier={titleMaxFontSizeMultiplier}
             selectable={selectable}
             style={[styles.title, { color: palette.text }]}>
             {title}

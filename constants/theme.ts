@@ -253,8 +253,10 @@ export const space = BLOCK_SPACING;
  * Below the table's smallest step (`space.inner`, 8): the inside of one
  * control only — a chip's own padding, an icon beside its word, a line that
  * hangs under the line above it. Never between rows, cards or groups: those
- * are the table's (`audit:spacing` passes these names; `__tests__/
- * audit-gates.test.js` holds each under `space.inner`).
+ * are the table's (`audit:spacing` passes these names only in the files and
+ * the number of times its `INSET` list holds; `__tests__/audit-gates.test.js`
+ * holds each under `space.inner`). The app's alone: the website has no step
+ * below 8.
  */
 export const inset = { hair: 1, xxs: 2, xs: 4, sm: 6 } as const;
 
@@ -269,13 +271,10 @@ export const layout = {
   authX: space.edge,
   welcomeX: space.edge,
   cardPad: space.card,
+  /** Every row, the Settings index's too (~~`rowPadVRoomy` 17, then 18~~ until
+   *  Round 21's review: Q8's row is 12/16 everywhere; a roomier Settings row is
+   *  the owner's question, not a default). */
   rowPadV: space.rowY,
-  /**
-   * A Settings-index row (build 11, the owner's "vertically more roomy"): the
-   * index only — the table's row and a control's step more, 18 (~~17~~ until
-   * Round 21).
-   */
-  rowPadVRoomy: space.rowY + inset.sm,
   rowPadH: space.rowX,
   statusArea: 59,
   designTop: { app: 74, auth: 78, onboarding: 82, welcome: 120 },

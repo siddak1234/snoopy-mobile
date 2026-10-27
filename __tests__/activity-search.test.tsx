@@ -23,6 +23,11 @@ const { platformOperation } = jest.requireMock('@/lib/platform/client');
  * `needsReview=true`, never `status=held`, so a held run someone already
  * decided is not listed. Over 25 that match (`total`), the sort and the
  * pager; an answer without `total` — a platform before Round 21 — is one page.
+ *
+ * Which jobs match `q`, a status or `needsReview` is the platform's (its route
+ * tests): these hold what the screen sends, and that it draws the page it is
+ * answered as given, filtering nothing itself (Round 21's review; the stub
+ * `runsAsSelected` pages, and selects only by status and since).
  */
 
 const base = runsPayload().runs[0]!;
@@ -36,11 +41,6 @@ const RUNS = [
   run('fail-1', 'failed', now),
   run('held-open', 'held', now),
   run('held-decided', 'held', now),
-];
-// The decided one's newest approval was approved; the open one's still waits.
-const APPROVALS = [
-  { ...approvalsPayload().approvals[0]!, id: 'apr-open', runId: 'held-open', status: 'pending' as const },
-  { ...approvalsPayload().approvals[0]!, id: 'apr-decided', runId: 'held-decided', status: 'approved' as const },
 ];
 
 /** The runs list's asks, each as its parameters. */
@@ -58,7 +58,7 @@ beforeEach(() => {
 });
 
 async function open(runs: readonly Run[] = RUNS, answer?: (path: string) => { runs: Run[]; total?: number }) {
-  routePlatform(platformOperation, { '/runs': answer ?? runsAsSelected(runs, APPROVALS), '/approvals': { approvals: APPROVALS } });
+  routePlatform(platformOperation, { '/runs': answer ?? runsAsSelected(runs), '/approvals': approvalsPayload() });
   await renderWithProviders(<ActivityScreen />, signedInSession);
   await screen.findByTestId('activity-search');
 }
@@ -76,10 +76,10 @@ describe('Activity asks the platform', () => {
   });
 
   it('the search goes as q once typing rests, and a miss says "Nothing matches "…"."', async () => {
-    await open();
+    // A miss: none match, so one empty page and a total of 0 (listRuns' "the jobs that match").
+    await open(RUNS, (path) => (path.includes('q=zzz') ? { runs: [], total: 0 } : runsAsSelected(RUNS)(path)));
     await fireEvent.changeText(screen.getByTestId('activity-search'), '  harbor ');
     await waitFor(() => expect(last()).toEqual({ q: 'harbor', sort: 'newest', page: '1' }));
-    await waitFor(() => expect(rows()).toEqual(['ok-1']));
     await fireEvent.changeText(screen.getByTestId('activity-search'), 'zzz');
     await waitFor(() => expect(screen.getByTestId('activity-no-match').props.children).toBe('Nothing matches "zzz".'));
   });
@@ -88,20 +88,17 @@ describe('Activity asks the platform', () => {
     await open();
     await outcome('Success');
     await waitFor(() => expect(last()).toEqual({ status: 'succeeded', sort: 'newest', page: '1' }));
-    await waitFor(() => expect(rows()).toEqual(['ok-1']));
     await outcome('Failed');
     await waitFor(() => expect(last()).toEqual({ status: 'failed', sort: 'newest', page: '1' }));
-    await waitFor(() => expect(rows()).toEqual(['fail-1']));
   });
 
-  it('Needs review sends needsReview=true and no status: the held run someone already decided — which status=held would list — is not shown', async () => {
-    // What the platform answers status=held: both held runs, the decided one too.
-    expect(runsAsSelected(RUNS, APPROVALS)('/runs?status=held&page=1').runs.map((one) => one.id)).toEqual(['held-open', 'held-decided']);
-    await open();
+  it('Needs review sends needsReview=true, never status=held — which lists a held run long after its approval — and draws the page as answered', async () => {
+    // Whatever the platform answers is drawn: the phone filters no outcome itself (~~FILTER_STATUS~~).
+    await open(RUNS, () => ({ runs: [...RUNS], total: RUNS.length }));
     await outcome('Needs review');
     await waitFor(() => expect(last()).toEqual({ needsReview: 'true', sort: 'newest', page: '1' }));
-    expect(asked().some((query: Record<string, string>) => 'status' in query && 'needsReview' in query)).toBe(false);
-    await waitFor(() => expect(rows()).toEqual(['held-open']));
+    expect(asked().some((query: Record<string, string>) => 'status' in query)).toBe(false);
+    expect(rows()).toEqual(RUNS.map((one) => one.id));
   });
 
   it('a time range goes as since: Today from local midnight', async () => {
@@ -123,12 +120,10 @@ describe('Activity over 25: the sort and the pager', () => {
     expect(rows()).toHaveLength(25);
     await fireEvent.press(screen.getByTestId('activity-pager-next'));
     await waitFor(() => expect(last()).toEqual({ sort: 'newest', page: '2' }));
-    await waitFor(() => expect(rows()).toEqual(['r-26', 'r-27', 'r-28', 'r-29', 'r-30']));
-    expect(screen.getByText('Page 2 of 2')).toBeTruthy();
+    expect(await screen.findByText('Page 2 of 2')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('activity-sort'));
     await fireEvent.press(await screen.findByTestId('activity-sort-option-oldest'));
     await waitFor(() => expect(last()).toEqual({ sort: 'oldest', page: '1' }));
-    await waitFor(() => expect(rows()[0]).toBe('r-30'));
   });
 
   it('an answer without total is one page: no sort, no pager, every row it holds', async () => {

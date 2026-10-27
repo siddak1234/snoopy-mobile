@@ -16,7 +16,7 @@ import { StatusPill } from '@/components/nocturne/status-pill';
 import { TextField } from '@/components/nocturne/text-field';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { DialogButton } from '@/components/dialog';
-import { layout, nocturneDark, nocturneLight, status, typeScale, withAlpha } from '@/constants/theme';
+import { layout, nocturneDark, nocturneLight, space, status, typeScale, withAlpha } from '@/constants/theme';
 import { renderWithProviders } from '@/test/render';
 import { touch } from '@/test/touch';
 
@@ -94,7 +94,7 @@ describe('DialogButton', () => {
 });
 
 describe('SettingsRow', () => {
-  it('keeps the row every list had, and is roomier only where the Settings index asks (build 11, D1)', async () => {
+  it("pads every row by the table's 12/16, the Settings index's too, whose title and line sit at their scale heights (build 11, D1; Q8)", async () => {
     const { getByTestId, getByText } = await renderWithProviders(
       <>
         <SettingsRow icon={Receipt} title="Plain" sub="A line" right={null} testID="plain" />
@@ -102,8 +102,8 @@ describe('SettingsRow', () => {
       </>,
     );
     expect(StyleSheet.flatten(getByTestId('plain').props.style).paddingVertical).toBe(layout.rowPadV);
-    expect(StyleSheet.flatten(getByTestId('roomy').props.style).paddingVertical).toBe(layout.rowPadVRoomy);
-    expect(layout.rowPadVRoomy).toBeGreaterThan(layout.rowPadV);
+    expect(StyleSheet.flatten(getByTestId('roomy').props.style).paddingVertical).toBe(space.rowY);
+    expect(layout.rowPadV).toBe(space.rowY);
     // The roomy title and line sit at their scale heights; the plain row sets no line height, as before.
     const title = (text: string) => StyleSheet.flatten(getByText(text).props.style) as { lineHeight?: number };
     expect(title('Roomy').lineHeight).toBe(typeScale.label.lineHeight);

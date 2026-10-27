@@ -4,12 +4,11 @@ import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable, pressed } from '@/components/pressable';
 import { Text } from '@/components/text';
-import { em, fonts, fontScaleLimit, inset, space, status, typeScale, withAlpha } from '@/constants/theme';
+import { fonts, fontScaleLimit, inset, space, status, typeScale, withAlpha } from '@/constants/theme';
 import { useAccessibilityTextSize } from '@/hooks/use-accessibility-text-size';
 import { usePushAsk } from '@/hooks/use-push-registration';
 import { useTheme } from '@/hooks/use-theme';
@@ -23,6 +22,7 @@ import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { Page } from '@/components/page';
+import { PageHeader } from '@/components/page-header';
 import {
   NOTIFICATIONS_EMPTY_BODY,
   NOTIFICATIONS_EMPTY_TITLE,
@@ -239,15 +239,16 @@ export function Inbox({ returnTo }: { returnTo: Extract<RunOrigin, 'home' | 'set
 
   return (
     <Page>
-      {/* A title row's title stops at the chrome limit, as every title row's does (round 24's
-          simulator audit: "Notificat/ions" at the largest size). */}
-      <View style={styles.header}>
-        <BackCircle onPress={() => router.back()} />
-        <Text maxFontSizeMultiplier={fontScaleLimit.chrome} style={[styles.title, { color: palette.text }]}>
-          Notifications
-        </Text>
-        {stacked ? null : clearAllButton}
-      </View>
+      {/* Every back header is a PageHeader (Round 21, brief item 8): Clear all in its right-hand
+          slot, under it at a large text size. Its title stops at the chrome limit, as every title
+          row's does (round 24's simulator audit: "Notificat/ions" at the largest size). */}
+      <PageHeader
+        testID="inbox-header"
+        title="Notifications"
+        titleMaxFontSizeMultiplier={fontScaleLimit.chrome}
+        onBack={() => router.back()}
+        right={stacked ? null : clearAllButton}
+      />
       {stacked ? <View style={styles.headerStacked}>{clearAllButton}</View> : null}
 
       <PushCard />
@@ -379,17 +380,6 @@ function PushCard() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.inner,
-  },
-  title: {
-    flex: 1,
-    fontFamily: fonts.medium,
-    fontSize: typeScale.heading.fontSize,
-    letterSpacing: em(-0.01, typeScale.heading.fontSize),
-  },
   markAll: {
     fontFamily: fonts.regular,
     fontSize: typeScale.small.fontSize,

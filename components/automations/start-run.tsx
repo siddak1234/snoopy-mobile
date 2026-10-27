@@ -7,7 +7,7 @@ import { InlineBoundary } from '@/components/dialog-boundary';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SetupFieldRow, declaredValues } from '@/components/setup-field';
 import { Text } from '@/components/text';
-import { fonts, iconSize, inset, space, status, typeScale } from '@/constants/theme';
+import { fonts, iconSize, space, status, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { WORKSPACE_CHANGED, runRefusal } from '@/lib/content/refusals';
@@ -235,6 +235,6 @@ function withoutFiles(runInput: AutomationRunInputField[], values: Record<string
 }
 
 const styles = StyleSheet.create({
-  error: { marginTop: inset.xs, paddingHorizontal: space.rowX, fontFamily: fonts.regular, ...typeScale.small },
-  start: { paddingHorizontal: space.rowX, paddingTop: inset.xs, paddingBottom: space.card },
+  error: { marginTop: space.inner, paddingHorizontal: space.rowX, fontFamily: fonts.regular, ...typeScale.small },
+  start: { paddingHorizontal: space.rowX, paddingTop: space.inner, paddingBottom: space.card },
 });

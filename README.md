@@ -57,7 +57,9 @@ The individual architecture gates are:
   components/ — every one is a name from the spacing table the platform
   publishes (`space` in `constants/theme.ts`, `BLOCK_SPACING`; the owner's Q8,
   Round 21), or `inset` inside one control, or 0; followed through a `const`, a
-  default or a local table, as `audit:type` follows a size.
+  default or a local table, as `audit:type` follows a size. `inset` is the
+  app's alone, so its `INSET` list holds each file that may use it and how many
+  times: one more, or one in a file not listed, fails (Round 21's review).
 - `audit:vocabulary`: no copy says "project" or "automation" — the app says
   team and flow; the code keeps the contract's names (24.11.7).
 - `audit:haptics`: every press ticks through `components/pressable.tsx` (build
@@ -134,7 +136,10 @@ build 24 item 2): the BrandMark entries, `tintColor` only: dark none → `#fffff
 Q8 and build 30 note F3; plan Open 11, one pill height): 52 of the 90 Nocturne
 entries, the 14 screen states and both connection rows, the table's paddings
 and gaps, the pill's least height 52 → 44 and its default type 17 → 16 only
-("Round 21 — block set v2").
+("Round 21 — block set v2") — and that round's review: 6 Nocturne entries
+(TextField and its secure form, the offer screen, in both palettes) and 2 screen
+states (ActionFailure), a label's gap 6 → `title` 8 and a card's 6 → `inner` 8,
+the offer glyph's extra 4 dropped, only ("The review's fixes").
 
 CI runs lint, typecheck, Jest, all architecture/dependency gates (the docs
 checks among them, on the PR's whole range: `fetch-depth: 0` and

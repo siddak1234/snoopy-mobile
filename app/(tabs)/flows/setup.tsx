@@ -29,7 +29,7 @@ import { ConnectionsCard } from '@/components/settings/connections-card';
 import { Text } from '@/components/text';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
-import { fonts, inset, space, typeScale, withAlpha } from '@/constants/theme';
+import { fonts, space, typeScale, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { roleIn, useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
@@ -480,7 +480,7 @@ export default function SetupScreen() {
 
 const styles = StyleSheet.create({
   form: { gap: space.group },
-  fieldTitle: { marginBottom: inset.sm, fontFamily: fonts.medium, ...typeScale.small },
+  fieldTitle: { marginBottom: space.title, fontFamily: fonts.medium, ...typeScale.small },
   activateBtn: {
     minHeight: 52,
     borderRadius: 999,

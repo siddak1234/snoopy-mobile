@@ -3896,7 +3896,7 @@ exports[`Nocturne set — dark palette TextField renders unchanged 1`] = `
     style={
       [
         {
-          "gap": 6,
+          "gap": 8,
         },
         undefined,
       ]
@@ -3968,7 +3968,7 @@ exports[`Nocturne set — dark palette TextField/secure renders unchanged 1`] = 
     style={
       [
         {
-          "gap": 6,
+          "gap": 8,
         },
         undefined,
       ]
@@ -6849,7 +6849,7 @@ exports[`Nocturne set — light palette TextField renders unchanged 1`] = `
     style={
       [
         {
-          "gap": 6,
+          "gap": 8,
         },
         undefined,
       ]
@@ -6921,7 +6921,7 @@ exports[`Nocturne set — light palette TextField/secure renders unchanged 1`] =
     style={
       [
         {
-          "gap": 6,
+          "gap": 8,
         },
         undefined,
       ]
@@ -7445,7 +7445,6 @@ exports[`Round 24 — dark palette OfferScreen renders unchanged 1`] = `
               "borderWidth": 1,
               "height": 56,
               "justifyContent": "center",
-              "marginBottom": 4,
               "width": 56,
             },
             {
@@ -7567,7 +7566,7 @@ exports[`Round 24 — dark palette OfferScreen renders unchanged 1`] = `
         style={
           {
             "alignSelf": "stretch",
-            "gap": 6,
+            "gap": 8,
             "marginTop": 8,
           }
         }
@@ -8069,7 +8068,6 @@ exports[`Round 24 — light palette OfferScreen renders unchanged 1`] = `
               "borderWidth": 1,
               "height": 56,
               "justifyContent": "center",
-              "marginBottom": 4,
               "width": 56,
             },
             {
@@ -8191,7 +8189,7 @@ exports[`Round 24 — light palette OfferScreen renders unchanged 1`] = `
         style={
           {
             "alignSelf": "stretch",
-            "gap": 6,
+            "gap": 8,
             "marginTop": 8,
           }
         }

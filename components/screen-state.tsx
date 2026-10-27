@@ -427,7 +427,7 @@ const styles = StyleSheet.create({
     paddingVertical: space.rowY,
     paddingHorizontal: space.rowX,
   },
-  calloutBody: { flex: 1, gap: inset.sm },
+  calloutBody: { flex: 1, gap: space.inner },
   calloutText: { fontFamily: fonts.regular, ...typeScale.body },
   calloutAction: { fontFamily: fonts.medium, fontSize: typeScale.body.fontSize },
 });

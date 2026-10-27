@@ -8,7 +8,7 @@ import { Dropdown } from '@/components/dropdown';
 import { TextField } from '@/components/nocturne/text-field';
 import { ScopePill } from '@/components/scope-control';
 import { Text } from '@/components/text';
-import { fonts, inset, space, status, typeScale } from '@/constants/theme';
+import { fonts, space, status, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
@@ -235,7 +235,7 @@ function Refused({ fieldKey }: { fieldKey: string }) {
 const styles = StyleSheet.create({
   refused: { fontFamily: fonts.regular, ...typeScale.small },
   // A select's title over its pill, as a text box's label sits over it.
-  select: { gap: inset.sm },
+  select: { gap: space.title },
   label: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
   pill: { flexDirection: 'row' },
   form: { maxHeight: 460 },

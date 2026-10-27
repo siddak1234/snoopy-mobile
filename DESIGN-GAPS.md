@@ -2695,10 +2695,19 @@ no device recording of it exists yet.
 
 **The session's defaults, not the owner's** (each recorded, none gating):
 - **Below the table's smallest step**: the inside of one control — a chip's 2-pt padding, an icon
-  beside its word — is `inset` (1, 2, 4, 6) in `constants/theme.ts`; every spacing of 8 or more is
-  the table's. The website's check allows the table's classes and none below them.
-- **The Settings index's roomy row** (build 11, D1) is kept, as `rowY` and a control's step more
-  (18, ~~17~~); every other row is the table's 12/16.
+  beside its word, a line under the line above in one row — is `inset` in `constants/theme.ts`;
+  every spacing of 8 or more is the table's. The website's check allows the table's classes and
+  none below them. The review (2026-10-26) found `inset` between things: a field's label (6, now
+  `title`: `setup.tsx` fieldTitle, `TextField`, `ChoiceChips`, the upload dialog's select, the
+  session-ended cover) and things in one card or row (now `inner`: billing's plan card, the offer
+  screen's buttons, the run's decision, the run-file and setup rows, Start run's error and button,
+  the dialog boundary's Try again, the error callout; a 4-pt extra above a box, a button or a
+  glyph, and under org-join's card, dropped). `audit:spacing` now holds where `inset` may be used
+  (`INSET`: each file, how many times, what it spaces).
+- **~~The Settings index's roomy row~~** (build 11, D1): ~~kept as `rowY` and a control's step more
+  (18)~~ — the review: Q8's row is 12/16 everywhere, so the index's rows are the table's
+  (`layout.rowPadVRoomy` gone); its title and line keep their scale heights. A roomier Settings row
+  is the owner's question.
 - **One pill height** (plan Open 11): the default pill's type follows it, 17 → 16.
 - **Activity's team scope** still narrows the page on the phone: the runs list takes no team.
 - **The run page's verdict word** is joined by `useRunDetail` from its flow's
@@ -2710,8 +2719,9 @@ no device recording of it exists yet.
 1. `snoopy-backend`: the runs list has no team (project) parameter, so Activity under a team pages
    the workspace's runs and narrows each page on the phone (a page may hold fewer than 25 of the
    team's). A `projectId` (or `subscriptionIds`) on `listRuns` would close it.
-2. `snoopy` (parity): the app keeps `inset` steps below 8 inside one control; the website's
-   `snoopy/lib/spacing.ts` has none — one of the two to match the other.
+2. `snoopy` and `snoopy-backend` (parity): the app keeps `inset` steps below 8 inside one control
+   (held file by file in `audit:spacing`'s `INSET`); the website's `snoopy/lib/spacing.ts` has none
+   — a sub-step in the platform's table would let both clients share one.
 3. `snoopy` (parity): the run page's chip follows the score on both; the app's Settings › Data says
    "Download JSON" and "Download file", then "Share", as the website's.
 
@@ -2738,3 +2748,30 @@ table's padding; Archive not the danger pill; Share before Download on each of t
 Share on Android, Share sending the link, Download opening the share sheet, the export's Share; a
 taken name overwritten; a closed picker said as a failure; `block-rules.ts` edited by hand
 (`verify:platform-contracts` exits 1).
+
+### The review's fixes, block set v2 on the app (2026-10-26)
+
+The review of `fb0c647` (FAIL, six findings), each by hand:
+1. `inset` between things: replaced from the table (above, "Below the table's smallest step");
+   `audit:spacing` holds `INSET`.
+2. The Settings index's rows: the table's `rowY` (above).
+3. **Not done here** — Download's folder picker and copy on iOS: the test's picker answer is still
+   shaped from the module's source. Before the push, the session runs Download once on its one
+   simulator (a picked folder, the picker cancelled, a name already taken), records the uri, the
+   error's code and message and the copied name, and pins `test/mocks/expo-file-system.ts` to
+   them; if it fails, Download goes back to today's.
+4. `runsAsSelected` (`test/platform.tsx`) no longer selects by `q` or `needsReview`, whose rules
+   (a document's seller, the chain's newest approval) are the platform's; `activity-search` holds
+   what is sent and that the page is drawn as answered.
+5. Notifications' header is the `PageHeader`, Clear all in its right-hand slot (`inbox-header`).
+6. DESIGN-CONTRACT's table names what each step spaces and links `block-rules.ts` for the numbers.
+
+Re-pinned: 6 Nocturne entries (TextField, its secure form, the offer screen; both palettes) and 2
+screen states (ActionFailure) — the gaps above only (README). Three older Activity tests in
+`tab-screens` now serve the platform's empty page for `needsReview=true` (none of their jobs match)
+and hold the ask.
+
+Bites (copy, break, red, restore, sha256 the same, green): `INSET` unlisted, one more, one fewer
+and none; `audit:spacing` on the tree with a label's gap planted as `inset.sm`; the inbox's old
+header and `PageHeader` without its text-size limit; Needs review sent as `status=held`; a phone
+filter on Activity's page.

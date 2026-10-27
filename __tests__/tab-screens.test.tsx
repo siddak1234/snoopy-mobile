@@ -30,6 +30,7 @@ import {
   routePlatform,
   outcomeBlocks,
   runDetailPayload,
+  runsAsSelected,
   runsPayload,
   personalSession,
   sessionAs,
@@ -631,6 +632,9 @@ describe('Workflow detail', () => {
 /* flow screens read the flow catalog */
 describe('Activity', () => {
   beforeEach(() => routePlatform(platformOperation, { '/automations': flowCatalogPayload() }));
+  /** The runs list's asks with parameters, as sent. */
+  const runsAsked = (): string[] =>
+    platformOperation.mock.calls.map(([path]: [string]) => path).filter((path: string) => /\/runs\?/u.test(path));
   it('groups today and yesterday from the fixtures', async () => {
     const { getByText, getAllByText, queryByText } = await renderWithProviders(<ActivityScreen />, signedInSession);
     expect(getByText('TODAY')).toBeTruthy();
@@ -651,14 +655,14 @@ describe('Activity', () => {
   });
 
   it('filters to held runs via Needs review (design v3: chip filters, not navigates)', async () => {
-    const { getByText, queryByText, getAllByText } = await renderWithProviders(<ActivityScreen />, signedInSession);
+    const { getAllByText } = await renderWithProviders(<ActivityScreen />, signedInSession);
     await fireEvent.press(screen.getByTestId('activity-outcome'));
     await fireEvent.press(screen.getByTestId('activity-outcome-option-Needs review'));
+    // The platform selects (Round 21): asked needsReview=true, the page it answers is drawn.
+    await waitFor(() => expect(runsAsked().at(-1)).toContain('needsReview=true'));
     // A held run's row says where its approval stands — pending here, from the
     // approvals read beside the runs — never just its status word (24.7.3 #5, #7).
     expect(getAllByText(/Waiting for approval|Held for review/).length).toBeGreaterThan(0);
-    expect(queryByText('32 emails routed · 3 escalated')).toBeNull();
-    expect(queryByText('YESTERDAY')).toBeNull();
     expect(mockRouter.push).not.toHaveBeenCalled();
   });
 
@@ -670,7 +674,8 @@ describe('Activity', () => {
     const held: Run = { ...runsPayload().runs[0]!, id: 'held-decided', status: 'held' };
     const approvedJob: Run = { ...runsPayload().runs[0]!, id: 'held-approved', status: 'succeeded', resultSummary: 'Recorded INV-7' };
     routePlatform(platformOperation, {
-      '/runs': { runs: [held, approvedJob] },
+      // Neither job is held with its newest approval pending, so listRuns' needsReview=true matches none.
+      '/runs': (path) => (path.includes('needsReview=true') ? { runs: [], total: 0 } : runsAsSelected([held, approvedJob])(path)),
       '/approvals': {
         approvals: [
           { ...approvalsPayload().approvals[0]!, runId: 'held-decided', status: 'rejected' },
@@ -685,8 +690,10 @@ describe('Activity', () => {
     expect(queryByText('Approved — continued in a new run')).toBeNull();
     await fireEvent.press(screen.getByTestId('activity-outcome'));
     await fireEvent.press(screen.getByTestId('activity-outcome-option-Needs review'));
-    expect(getByText('No held runs.')).toBeTruthy();
+    expect(await screen.findByText('No held runs.')).toBeTruthy();
     expect(queryByText('Denied')).toBeNull();
+    // Asked as needsReview=true, never status=held, which lists the denied job (Round 21).
+    expect(runsAsked().some((path) => path.includes('status=held'))).toBe(false);
   });
 
   it('filters to successes only', async () => {
@@ -704,12 +711,11 @@ describe('Activity', () => {
     // older than two days, while Home listed them under Recent runs.
     const old = new Date();
     old.setDate(old.getDate() - 16);
-    const runs = runsPayload();
+    const runs = runsPayload().runs.map((run) => ({ ...run, status: 'succeeded' as const, createdAt: old.toISOString(), updatedAt: old.toISOString() }));
     routePlatform(platformOperation, {
       '/automations': flowCatalogPayload(),
-      '/runs': {
-        runs: runs.runs.map((run) => ({ ...run, status: 'succeeded', createdAt: old.toISOString(), updatedAt: old.toISOString() })),
-      },
+      // Every job succeeded, so listRuns' needsReview=true matches none.
+      '/runs': (path) => (path.includes('needsReview=true') ? { runs: [], total: 0 } : runsAsSelected(runs)(path)),
     });
     const { getByText, queryByText } = await renderWithProviders(<ActivityScreen />, signedInSession);
     expect(getByText('EARLIER')).toBeTruthy();
@@ -721,7 +727,7 @@ describe('Activity', () => {
     // A filter with nothing to show says so — it is not the first-run empty.
     await fireEvent.press(screen.getByTestId('activity-outcome'));
     await fireEvent.press(screen.getByTestId('activity-outcome-option-Needs review'));
-    expect(getByText('No held runs.')).toBeTruthy();
+    expect(await screen.findByText('No held runs.')).toBeTruthy();
     expect(queryByText('No activity yet')).toBeNull();
   });
 
@@ -934,8 +940,8 @@ describe('Settings — one grouped page (build 11, D1)', () => {
     const drawn = screen.getAllByText(new RegExp(`^(${AS_DRAWN.join('|')})$`, 'u'));
     expect(drawn.map((node) => node.props.children)).toEqual(AS_DRAWN);
     expect(screen.getByText(/^Autom8x for iOS · v/u)).toBeTruthy();
-    // Roomier rows, on this page only (the owner's "vertically more roomy").
-    expect(StyleSheet.flatten(screen.getByTestId('settings-account').props.style).paddingVertical).toBe(layout.rowPadVRoomy);
+    // The table's row, here as everywhere (Q8): a roomier Settings row is the owner's question.
+    expect(StyleSheet.flatten(screen.getByTestId('settings-account').props.style).paddingVertical).toBe(layout.rowPadV);
     // The three pages of 24.12 went: their content is here, and nothing is titled for them.
     expect(screen.queryByText('Security')).toBeNull();
     expect(screen.queryByText('Workspace')).toBeNull();

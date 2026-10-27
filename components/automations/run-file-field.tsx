@@ -296,14 +296,14 @@ function formatSize(bytes: number): string {
 
 const styles = StyleSheet.create({
   row: {
-    gap: inset.sm,
+    gap: space.inner,
     paddingVertical: space.rowY,
     paddingHorizontal: space.rowX,
   },
   titleLine: { flexDirection: 'row', alignItems: 'center', gap: space.inner },
   title: { flex: 1, minWidth: 0, fontFamily: fonts.medium, fontSize: typeScale.label.fontSize },
   sub: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize, paddingLeft: iconSize.row + space.inner },
-  actions: { flexDirection: 'row', gap: space.inner, marginTop: inset.xs },
+  actions: { flexDirection: 'row', gap: space.inner },
   action: {
     flex: 1,
     minHeight: 44,

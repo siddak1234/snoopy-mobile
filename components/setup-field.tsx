@@ -425,7 +425,7 @@ const styles = StyleSheet.create({
   // A numbered title over its card: one em tall, `title` above the card.
   numbered: { marginBottom: space.title },
   row: {
-    gap: inset.sm,
+    gap: space.inner,
     paddingVertical: space.rowY,
     paddingHorizontal: space.rowX,
   },
@@ -436,7 +436,6 @@ const styles = StyleSheet.create({
   rowSub: { fontFamily: fonts.regular, ...typeScale.small, paddingLeft: iconSize.row + space.inner },
   inputWrap: {
     alignSelf: 'stretch',
-    marginTop: inset.xs,
     minHeight: 44,
     borderWidth: 1,
     borderRadius: 10,

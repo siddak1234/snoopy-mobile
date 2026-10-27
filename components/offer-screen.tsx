@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Text } from '@/components/text';
-import { em, fonts, inset, layout, space, status, typeScale } from '@/constants/theme';
+import { em, fonts, layout, space, status, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -85,11 +85,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: inset.xs,
   },
   title: { fontFamily: fonts.medium, fontSize: typeScale.title.fontSize, letterSpacing: em(-0.01, typeScale.title.fontSize), textAlign: 'center' },
   body: { fontFamily: fonts.regular, ...typeScale.label, textAlign: 'center' },
   message: { fontFamily: fonts.regular, fontSize: typeScale.body.fontSize, textAlign: 'center' },
-  actions: { alignSelf: 'stretch', marginTop: space.inner, gap: inset.sm },
+  actions: { alignSelf: 'stretch', marginTop: space.inner, gap: space.inner },
   action: { alignSelf: 'stretch' },
 });

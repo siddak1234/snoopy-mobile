@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.inner,
-    paddingVertical: layout.rowPadVRoomy,
+    paddingVertical: layout.rowPadV,
     paddingHorizontal: layout.rowPadH,
   },
   signOutLabel: {

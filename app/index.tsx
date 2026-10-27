@@ -18,7 +18,7 @@ import { GlowBackground } from '@/components/nocturne/glow-background';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { Pressable } from '@/components/pressable';
 import { Text } from '@/components/text';
-import { em, fonts, inset, space, typeScale } from '@/constants/theme';
+import { em, fonts, space, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { offersPushAsk } from '@/hooks/use-push-registration';
 import { useSession } from '@/hooks/use-session';
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     right: 28,
     bottom: 140,
     alignItems: 'center',
-    gap: inset.sm,
+    gap: space.title,
   },
   endedTitle: {
     fontFamily: fonts.medium,

@@ -315,29 +315,36 @@ rules into `lib/generated/platform-contracts/block-rules.ts` (`BLOCK_WORDS`,
 one sha256 as the fixtures are, and `verify:platform-contracts` holds it.
 
 **The spacing table** (`BLOCK_SPACING`, the owner's Q8; `space` in
-`constants/theme.ts`), in points:
+`constants/theme.ts`), in points. The numbers are the platform's, in
+`lib/generated/platform-contracts/block-rules.ts` (`BLOCK_SPACING`); this lists
+only the names and what each spaces:
 
-| Name | Value | What it spaces |
-| --- | --- | --- |
-| `edge` | 20 | the page's left and right edge |
-| `group` | 16 | between groups: block to block, a header to the first block, the last block to a footer button |
-| `title` | 8 | a title to what it heads |
-| `inner` | 8 | between things inside one card or one row |
-| `rowY` / `rowX` | 12 / 16 | a row's padding, at least `rowMinHeight` (44) tall |
-| `card` | 16 | inside a card |
-| `bottom` | 24 | below the page's last thing |
+| Name | What it spaces |
+| --- | --- |
+| `edge` | the page's left and right edge |
+| `group` | between groups: block to block, a header to the first block, the last block to a footer button |
+| `title` | a title to what it heads |
+| `inner` | between things inside one card or one row |
+| `rowY` / `rowX` | a row's padding, at least `rowMinHeight` tall |
+| `card` | inside a card |
+| `bottom` | below the page's last thing |
 
-(`edgeWide` 24 and `cardWide` 24 are the website's wide screen.) The rules: a
-title sits `title` above what it heads and `group` below whatever comes before
-it — a form's title ("ADD CANDIDATE") and a label before a list ("CANDIDATES")
-alike (F3); a group of related rows is one card with dividers; no gap above the
-first group, `bottom` below the last; no screen types its own spacing. Below the
-table's smallest step, the inside of one control — a chip's own padding, an icon
-beside its word — uses `inset` (1, 2, 4, 6), never between rows, cards or
-groups. `layout.cardPad`, `rowPadV` and `rowPadH` read from the table; the
-Settings index's roomy row (build 11) is `rowY` and a control's step more.
-`audit:spacing` fails a typed number in a padding, a margin or a gap under app/
-and components/ (README "Verification").
+(`edgeWide` and `cardWide` are the website's wide screen.) The rules: a title
+sits `title` above what it heads and `group` below whatever comes before it — a
+form's title ("ADD CANDIDATE"), a label before a list ("CANDIDATES") and a text
+box's label alike (F3); a group of related rows is one card with dividers, and
+things inside one card are `inner` apart; no gap above the first group, `bottom`
+below the last; no screen types its own spacing. Below the table's smallest
+step, the inside of one control — a chip's own padding, an icon beside its
+word, a line under the line above in one row — uses `inset`, the app's alone
+(the website has no step below the table's), never between rows, cards, a title
+and what it heads, or groups; `audit:spacing`'s `INSET` list holds each file
+that uses it and how many times. `layout.cardPad`, `rowPadV` and `rowPadH` read
+from the table; every row is `rowY`/`rowX`, the Settings index's too
+(~~`rowY` and a control's step more~~ until Round 21's review: a roomier
+Settings row is the owner's question). `audit:spacing` fails a typed number in
+a padding, a margin or a gap under app/ and components/ (README
+"Verification").
 
 **The shared parts** — every screen is made of them:
 - `Page` (`components/page.tsx`): the scroll, the safe area and the design's
