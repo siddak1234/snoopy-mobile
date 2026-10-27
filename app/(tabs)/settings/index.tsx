@@ -16,10 +16,9 @@ import {
   UsersThree,
 } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Platform, StyleSheet, View } from 'react-native';
 
-import { SectionLabel } from '@/components/nocturne/section-label';
+import { SectionTitle } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -27,7 +26,8 @@ import { FaceIdRow } from '@/components/settings/face-id-row';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { WorkspaceSwitcher } from '@/components/settings/workspace-switcher';
 import { Text } from '@/components/text';
-import { em, fonts, layout, typeScale } from '@/constants/theme';
+import { Page } from '@/components/page';
+import { em, fonts, inset, layout, space, typeScale } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useSession } from '@/hooks/use-session';
 import { useTheme, type ThemeMode } from '@/hooks/use-theme';
@@ -70,7 +70,6 @@ const BILLING_MANAGED_BY = 'Managed by owners and admins';
 export default function SettingsScreen() {
   const { palette, mode, setMode } = useTheme();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const session = useSession();
   const { signOut } = session;
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
@@ -136,13 +135,7 @@ export default function SettingsScreen() {
   const muted = { color: palette.neutral[500] };
 
   return (
-    <ScrollView
-      style={{ backgroundColor: palette.bg }}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) },
-      ]}
-      showsVerticalScrollIndicator={false}>
+    <Page>
       <Text style={[styles.h1, { color: palette.text }]}>Settings</Text>
 
       {/* The account itself: linked sign-in accounts, and deleting it (24.6.2); its email under it. */}
@@ -159,7 +152,7 @@ export default function SettingsScreen() {
       </SurfaceCard>
 
       <View>
-        <SectionLabel>SECURITY</SectionLabel>
+        <SectionTitle>SECURITY</SectionTitle>
         <FaceIdRow size="roomy" testID="settings-face-id" />
       </View>
 
@@ -187,8 +180,8 @@ export default function SettingsScreen() {
       </SurfaceCard>
 
       <View>
-        <SectionLabel>WORKSPACE</SectionLabel>
-        <SurfaceCard style={styles.sectionCard}>
+        <SectionTitle>WORKSPACE</SectionTitle>
+        <SurfaceCard>
           {canSwitchWorkspace ? (
             <WorkspaceSwitcher
               open={switcherOpen}
@@ -286,7 +279,7 @@ export default function SettingsScreen() {
       </SurfaceCard>
 
       <View>
-        <SectionLabel>APPEARANCE</SectionLabel>
+        <SectionTitle>APPEARANCE</SectionTitle>
         <SurfaceCard style={styles.segCard}>
           <View style={styles.segRow} testID="settings-appearance">
             {APPEARANCE.map((opt) => {
@@ -348,41 +341,31 @@ export default function SettingsScreen() {
         />
       ) : null}
 
-    </ScrollView>
+    </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    paddingHorizontal: layout.screenX,
-    paddingBottom: 20,
-    gap: 16,
-  },
   h1: {
     fontFamily: fonts.medium,
     fontSize: typeScale.display.fontSize,
     letterSpacing: em(-0.015, typeScale.display.fontSize),
   },
-  // Each labelled card sits 9 under its label.
-  sectionCard: {
-    marginTop: 9,
-  },
   right: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: space.inner,
   },
   value: {
     fontFamily: fonts.regular,
     fontSize: typeScale.small.fontSize,
   },
   segCard: {
-    marginTop: 9,
-    padding: 6,
+    padding: inset.sm,
   },
   segRow: {
     flexDirection: 'row',
-    gap: 4,
+    gap: inset.xs,
   },
   segOpt: {
     flex: 1,
@@ -394,8 +377,8 @@ const styles = StyleSheet.create({
   signOutCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: layout.rowPadVRoomy,
+    gap: space.inner,
+    paddingVertical: layout.rowPadV,
     paddingHorizontal: layout.rowPadH,
   },
   signOutLabel: {

@@ -14,7 +14,7 @@ import {
 import { GlassSurface } from '@/components/glass-surface';
 import { Pressable } from '@/components/pressable';
 import { Text } from '@/components/text';
-import { fontScaleLimit, fonts, typeScale, withAlpha } from '@/constants/theme';
+import { fonts, fontScaleLimit, inset, space, typeScale, withAlpha } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -31,7 +31,7 @@ const TABS: Record<string, { label: string; icon: Icon }> = {
 /** The capsule's least height (round 23, A3: ~62; taller only at a large text size, round 24 P3). */
 const CAPSULE_HEIGHT = 62;
 /** Inside the capsule, around the four tabs. */
-const CAPSULE_PAD = 4;
+const CAPSULE_PAD = inset.xs;
 /** The lens's slide to a newly focused tab (round 24 P2): eased out, no overshoot. */
 const LENS_SLIDE = { duration: 240, easing: Easing.out(Easing.cubic) };
 
@@ -61,7 +61,7 @@ export function lensOffset(slot: number, rowWidth: number, count: number): numbe
 export function NocturneTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { palette } = useTheme();
   const insets = useSafeAreaInsets();
-  const paddingBottom = Math.max(insets.bottom - 12, 8);
+  const paddingBottom = Math.max(insets.bottom - space.rowY, space.inner);
   const [rowWidth, setRowWidth] = useState(0);
   const shown = state.routes.filter((route) => TABS[route.name]);
   const tabWidth = shown.length > 0 ? (rowWidth - CAPSULE_PAD * 2) / shown.length : 0;
@@ -88,7 +88,7 @@ export function NocturneTabBar({ state, descriptors, navigation }: BottomTabBarP
   }));
 
   return (
-    <View testID="tab-bar" style={{ backgroundColor: palette.bg, paddingHorizontal: 16, paddingTop: 6, paddingBottom }}>
+    <View testID="tab-bar" style={{ backgroundColor: palette.bg, paddingHorizontal: space.rowX, paddingTop: inset.sm, paddingBottom }}>
       <GlassSurface radius={999} testID="tab-bar-capsule">
         <View
           testID="tab-bar-row"
@@ -135,7 +135,7 @@ export function NocturneTabBar({ state, descriptors, navigation }: BottomTabBarP
                 accessibilityState={{ selected: focused }}
                 accessibilityLabel={descriptors[route.key].options.tabBarAccessibilityLabel ?? tab.label}
                 onPress={onPress}
-                style={{ flex: 1, alignItems: 'center', gap: 3, paddingVertical: 8 }}>
+                style={{ flex: 1, alignItems: 'center', gap: inset.xxs, paddingVertical: space.inner }}>
                 <IconCmp size={22} color={color} weight="regular" />
                 <Text
                   numberOfLines={1}

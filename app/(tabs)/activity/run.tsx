@@ -1,19 +1,23 @@
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
-import { DownloadSimple, FileText, FlowArrow, StopCircle } from 'phosphor-react-native';
+import { FileText, FlowArrow, StopCircle } from 'phosphor-react-native';
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Chip } from '@/components/blocks/badge';
+import { toneColor } from '@/components/blocks/look';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
-import { BackCircle } from '@/components/nocturne/back-circle';
+import { FileActions } from '@/components/files/file-actions';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { OpenRow } from '@/components/open-row';
 import { BlockList } from '@/components/blocks/block-list';
+import { Page } from '@/components/page';
+import { PageHeader } from '@/components/page-header';
 import { DecisionButtons } from '@/components/runs/decision-buttons';
 import { Text } from '@/components/text';
-import { em, fonts, iconSize, layout, status, typeScale } from '@/constants/theme';
+import { fonts, iconSize, inset, space, status, typeScale } from '@/constants/theme';
 import { useApprovalDecision } from '@/hooks/use-approval-decision';
 import { useRunDetail } from '@/hooks/use-run-detail';
 import { useRunPackageDownload } from '@/hooks/use-run-package';
@@ -96,6 +100,8 @@ export default function RunDetailScreen() {
           liveRun.detail.run.title !== undefined && liveRun.detail.run.score !== undefined
             ? { title: liveRun.detail.run.title, score: String(liveRun.detail.run.score) }
             : null,
+        // Its verdict's colour and word (Round 21, the owner's Q5; F1), named by its flow (`useRunDetail`).
+        verdict: liveRun.verdict,
         // Its flow — the website's subheader.
         sub: liveRun.entry?.name ?? liveRun.detail.run.templateId,
         status: statusLabel(liveRun.detail.run.status) as StatusPillLabel,
@@ -210,47 +216,46 @@ export default function RunDetailScreen() {
   };
 
   return (
-    <ScrollView
-      style={{ backgroundColor: palette.bg }}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) },
-      ]}
-      showsVerticalScrollIndicator={false}>
+    <Page testID="run-screen">
       {/* The run by its full id, which wraps at its hyphens — or, where its automation named and
-          scored it, that name with the score beside it; its flow and status under it. */}
-      <View style={styles.header}>
-        <BackCircle onPress={() => router.back()} />
-        <View style={styles.headerText}>
-          {run.headline ? (
-            <View style={styles.headlineRow}>
-              <Text testID="run-title" selectable style={[styles.title, styles.headlineTitle, { color: palette.text }]}>
-                {run.headline.title}
-              </Text>
-              <Text testID="run-score" style={[styles.score, { color: palette.text }]}>
+          scored it, that name with the score on the right, green for the flow's positive verdict
+          and red for its negative, the verdict's word beside it (Round 21, the owner's Q5; F1;
+          ~~the text colour, no judgement in it~~); its flow and status under it. */}
+      <PageHeader
+        testID="run-header"
+        onBack={() => router.back()}
+        title={run.headline ? run.headline.title : run.title}
+        titleTestID="run-title"
+        selectable
+        right={
+          run.headline ? (
+            <View style={styles.scoreLine}>
+              <Text
+                testID="run-score"
+                style={[styles.score, { color: run.verdict ? toneColor(run.verdict.tone, palette) : palette.text }]}>
                 {run.headline.score}
               </Text>
+              {run.verdict ? <Chip testID="run-verdict" badge={{ text: run.verdict.word, tone: run.verdict.tone }} /> : null}
             </View>
-          ) : (
-            <Text testID="run-title" selectable style={[styles.title, { color: palette.text }]}>
-              {run.title}
-            </Text>
-          )}
+          ) : null
+        }
+        below={
           <View style={styles.subRow}>
             <Text style={[styles.subtitle, { color: palette.neutral[400] }]}>{run.sub}</Text>
             <StatusPill label={run.status} />
           </View>
-        </View>
-      </View>
+        }
+      />
 
-      <BlockList testID="run-blocks" blocks={run.blocks} context={{ forms: { approval: approvalForm } }} />
+      <BlockList testID="run-blocks" blocks={run.blocks} context={{ forms: { approval: approvalForm }, workspaceId: openedIn }} />
 
       {/*
         The A8X run package (round 24 P12; the owner's build 23 F16: "No more
         download json"; ~~Download JSON~~): once the job has documents and has
         stopped going (`packageAvailable`, the platform's word for it) — View
         package opens the PDF on its own page; Download PDF and Download Excel
-        hand the file to the share sheet.
+        save the file, and Share hands the PDF to the share sheet
+        (`FileActions`, Round 21; the owner's Q7).
       */}
       {run.packageAvailable ? (
         <View style={styles.download}>
@@ -258,43 +263,19 @@ export default function RunDetailScreen() {
             testID="run-view-package"
             label={VIEW_PACKAGE_LABEL}
             variant="secondary"
-            height={46}
             fontSize={typeScale.label.fontSize}
             icon={FileText}
             iconSize={iconSize.button}
             onPress={() => router.push({ pathname: '/(tabs)/activity/package', params: { runId: run.id } })}
           />
-          <View style={styles.actions}>
-            <PillButton
-              testID="run-download-pdf"
-              label={DOWNLOAD_PDF_LABEL}
-              variant="secondary"
-              height={46}
-              fontSize={typeScale.label.fontSize}
-              icon={DownloadSimple}
-              iconSize={iconSize.button}
-              disabled={packageFile.busy !== null}
-              style={styles.actionBtn}
-              onPress={() => packageFile.download('pdf')}
-            />
-            <PillButton
-              testID="run-download-excel"
-              label={DOWNLOAD_EXCEL_LABEL}
-              variant="secondary"
-              height={46}
-              fontSize={typeScale.label.fontSize}
-              icon={DownloadSimple}
-              iconSize={iconSize.button}
-              disabled={packageFile.busy !== null}
-              style={styles.actionBtn}
-              onPress={() => packageFile.download('xlsx')}
-            />
-          </View>
-          {packageFile.error ? (
-            <Text accessibilityRole="alert" style={[styles.downloadError, { color: status.err }]}>
-              {packageFile.error}
-            </Text>
-          ) : null}
+          <FileActions
+            testID="run-package-actions"
+            downloads={[
+              { label: DOWNLOAD_PDF_LABEL, testID: 'run-download-pdf', run: () => packageFile.download('pdf') },
+              { label: DOWNLOAD_EXCEL_LABEL, testID: 'run-download-excel', run: () => packageFile.download('xlsx') },
+            ]}
+            share={{ testID: 'run-share-package', run: packageFile.share }}
+          />
         </View>
       ) : null}
 
@@ -313,7 +294,6 @@ export default function RunDetailScreen() {
           <PillButton
             label="Cancel run"
             variant="danger"
-            height={46}
             fontSize={typeScale.label.fontSize}
             icon={StopCircle}
             iconSize={iconSize.button}
@@ -327,7 +307,6 @@ export default function RunDetailScreen() {
         <PillButton
           label="View flow"
           variant="secondary"
-          height={46}
           fontSize={typeScale.label.fontSize}
           icon={FlowArrow}
           iconSize={iconSize.button}
@@ -360,41 +339,17 @@ export default function RunDetailScreen() {
         }>
         {cancelError ? <DialogText tone="error">{cancelError}</DialogText> : null}
       </Dialog>
-    </ScrollView>
+    </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    paddingHorizontal: layout.screenX,
-    paddingBottom: 20,
-    gap: 14,
-  },
-  header: {
+  // The score, large, on the right of the name, toned by the verdict; its chip after it, as the website's.
+  scoreLine: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
+    alignItems: 'center',
+    gap: space.inner,
   },
-  headerText: {
-    flex: 1,
-    minWidth: 0,
-    gap: 4,
-  },
-  title: {
-    fontFamily: fonts.medium,
-    ...typeScale.title,
-    letterSpacing: em(-0.01, typeScale.title.fontSize),
-  },
-  headlineRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  headlineTitle: {
-    flex: 1,
-    minWidth: 0,
-  },
-  // The score, large, beside the name; the text colour, no judgement in it (plan §5.4).
   score: {
     fontFamily: fonts.medium,
     ...typeScale.heading,
@@ -403,29 +358,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: space.inner,
+    marginTop: inset.xs,
   },
   subtitle: {
     fontFamily: fonts.regular,
     fontSize: typeScale.small.fontSize,
   },
   decision: {
-    gap: 6,
+    gap: space.inner,
   },
   decisionNote: {
     fontFamily: fonts.regular,
     ...typeScale.small,
   },
   download: {
-    gap: 6,
-  },
-  downloadError: {
-    fontFamily: fonts.regular,
-    ...typeScale.small,
+    gap: space.inner,
   },
   actions: {
     flexDirection: 'row',
-    gap: 10,
+    gap: space.inner,
   },
   actionBtn: {
     flex: 1,

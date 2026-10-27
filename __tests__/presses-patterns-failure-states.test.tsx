@@ -81,7 +81,8 @@ const SCREENS = {
   // A file its job uploaded, on a page of its own (build 28, F7), read with its run.
   'Run file': { Screen: RunFileScreen, params: { runId: 'run-0', fileId: 'file-1' }, read: /\/runs\/run-0$/u },
   Approvals: { Screen: ApprovalsScreen, read: /\/approvals\?status=pending$/u },
-  Activity: { Screen: ActivityScreen, read: /\/runs$/u },
+  // Its runs read with Activity's parameters since Round 21 (`readRunsPage`).
+  Activity: { Screen: ActivityScreen, read: /\/runs\?/u },
   'Add a flow': { Screen: AddFlowScreen, read: /\/automations$/u },
   'Flow detail': { Screen: WorkflowDetailScreen, params: { flow: 'invoice' }, read: /\/subscriptions$/u },
   Flows: { Screen: FlowsScreen, read: /\/subscriptions$/u },
@@ -130,8 +131,8 @@ const CASES: Case[] = [
   ['Approvals', 'offline', 'app/(tabs)/activity/approvals.tsx:174', true],
   ['Approvals', 'unavailable', 'app/(tabs)/activity/approvals.tsx:180', true],
   ['Approvals', 'error', 'app/(tabs)/activity/approvals.tsx:189-190', true],
-  ['Activity', 'offline', 'app/(tabs)/activity/index.tsx:292', false],
-  ['Activity', 'error', 'app/(tabs)/activity/index.tsx:301', false],
+  ['Activity', 'offline', 'app/(tabs)/activity/index.tsx:349', false],
+  ['Activity', 'error', 'app/(tabs)/activity/index.tsx:355', false],
   ['Add a flow', 'offline', 'app/(tabs)/flows/add.tsx:71', true],
   ['Add a flow', 'unavailable', 'app/(tabs)/flows/add.tsx:74', true],
   ['Add a flow', 'error', 'app/(tabs)/flows/add.tsx:80-82', true],

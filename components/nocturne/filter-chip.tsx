@@ -2,7 +2,7 @@ import React from 'react';
 
 import { Pressable } from '@/components/pressable';
 import { Text } from '@/components/text';
-import { fonts, typeScale, withAlpha } from '@/constants/theme';
+import { fonts, space, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 type Props = {
@@ -20,7 +20,7 @@ export function FilterChip({ label, active = false, onPress, height = 32 }: Prop
       onPress={onPress}
       style={({ pressed }) => ({
         height,
-        paddingHorizontal: 13,
+        paddingHorizontal: space.rowX,
         borderRadius: 999,
         borderWidth: 1,
         borderColor: active ? palette.accent : palette.neutral[800],

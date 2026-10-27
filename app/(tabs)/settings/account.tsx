@@ -1,21 +1,22 @@
 import { useRouter } from 'expo-router';
 import { Trash, UserCircle } from 'phosphor-react-native';
 import React, { useRef, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
-import { BackCircle } from '@/components/nocturne/back-circle';
 import { ProviderGlyph, type OAuthProvider } from '@/components/nocturne/oauth-button';
 import { PillButton } from '@/components/nocturne/pill-button';
-import { SectionLabel } from '@/components/nocturne/section-label';
+import { SectionTitle } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { Text } from '@/components/text';
-import { em, fonts, iconSize, layout, status, typeScale } from '@/constants/theme';
+import { Page } from '@/components/page';
+import { PageHeader } from '@/components/page-header';
+import { fonts, iconSize, space, status, typeScale } from '@/constants/theme';
 import { busyBody, useResource } from '@/hooks/use-resource';
 import { useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
@@ -112,24 +113,18 @@ export default function AccountScreen() {
   const muted = { color: palette.neutral[400] };
 
   return (
-    <ScrollView
-      style={{ backgroundColor: palette.bg }}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) }]}
-      showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        <BackCircle onPress={() => router.back()} />
-        <Text style={[styles.title, { color: palette.text }]}>Account</Text>
-      </View>
+    <Page>
+      <PageHeader onBack={() => router.back()} title="Account" />
 
       <View>
-        <SectionLabel>LINKED ACCOUNTS</SectionLabel>
+        <SectionTitle>LINKED ACCOUNTS</SectionTitle>
         {/* One line (Build 21, spec A5; the owner's build 20 item 9: "Why is there a paragraph. It should be
             short not an essay"). ~~What linking does, the same-email join and the credentials sentence~~ (the
             owner's build 13 decision 9A) — linking still works as it did; the line no longer explains it. */}
         <Text testID="account-lead" style={[styles.text, styles.lead, muted]}>
           {ACCOUNT_LEAD}
         </Text>
-        <SurfaceCard style={styles.card}>
+        <SurfaceCard>
           {account.data.providers.map((provider, index) => {
             const identity = linked.get(provider.id);
             const primary = identity?.primary;
@@ -172,7 +167,7 @@ export default function AccountScreen() {
             );
           })}
         </SurfaceCard>
-        {linkError ? <Text style={[styles.text, styles.lead, { color: status.err }]}>{linkError}</Text> : null}
+        {linkError ? <Text style={[styles.text, styles.after, { color: status.err }]}>{linkError}</Text> : null}
         {unlinking ? (
           <ConfirmDialog
             testID="unlink-dialog"
@@ -189,13 +184,13 @@ export default function AccountScreen() {
       </View>
 
       <View>
-        <SectionLabel>DANGER ZONE</SectionLabel>
-        <SurfaceCard style={[styles.card, styles.pad]}>
+        <SectionTitle>DANGER ZONE</SectionTitle>
+        <SurfaceCard padded>
           <Text style={[styles.text, muted]}>
             Permanently delete your account, your personal workspace, and every organization you alone own.
           </Text>
           {/* Red, the design's red pill: it cannot be undone (the owner's build 12 item 5). */}
-          <PillButton label="Delete Account" variant="danger" height={42} icon={Trash} iconSize={15} onPress={() => setDeleting(true)} />
+          <PillButton label="Delete Account" variant="danger" icon={Trash} iconSize={15} onPress={() => setDeleting(true)} />
         </SurfaceCard>
       </View>
 
@@ -212,7 +207,7 @@ export default function AccountScreen() {
           signOut={session.signOut}
         />
       ) : null}
-    </ScrollView>
+    </Page>
   );
 }
 
@@ -334,12 +329,9 @@ function DeleteAccountDialog({
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: layout.screenX, paddingBottom: 32, gap: 18 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  title: { fontFamily: fonts.medium, fontSize: typeScale.heading.fontSize, letterSpacing: em(-0.01, typeScale.heading.fontSize) },
-  card: { marginTop: 9 },
-  pad: { padding: 14, gap: 10 },
-  lead: { marginTop: 8 },
+  // The line under the title, then its card: `inner` between them; a refusal `inner` under the card.
+  lead: { marginBottom: space.inner },
+  after: { marginTop: space.inner },
   text: { fontFamily: fonts.regular, ...typeScale.body },
   small: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
   linkLabel: { fontFamily: fonts.medium, fontSize: typeScale.body.fontSize },

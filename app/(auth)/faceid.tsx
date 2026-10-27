@@ -16,7 +16,7 @@ import { BrandMark } from '@/components/nocturne/brand-mark';
 import { GlowBackground } from '@/components/nocturne/glow-background';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { Text } from '@/components/text';
-import { fonts, layout, radius, typeScale } from '@/constants/theme';
+import { fonts, layout, radius, space, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useBiometricWording } from '@/hooks/use-biometric-wording';
 import { offersPushAsk } from '@/hooks/use-push-registration';
@@ -192,7 +192,6 @@ export default function FaceIdScreen() {
       {message !== 'Unlocking your workspace…' ? (
         <PillButton
           label="Use identity provider"
-          height={44}
           fontSize={typeScale.label.fontSize}
           onPress={onUseIdentityProvider}
           style={styles.fallback}
@@ -210,7 +209,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 26,
+    gap: space.group,
   },
   scanGlow: {
     width: 96,
@@ -239,7 +238,7 @@ const styles = StyleSheet.create({
   },
   textGroup: {
     alignItems: 'center',
-    gap: 8,
+    gap: space.inner,
     // A sign-out that could not be revoked says so in a long sentence.
     paddingHorizontal: layout.screenX,
   },

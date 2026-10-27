@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 
 import { Text } from '@/components/text';
-import { em, fonts, typeScale } from '@/constants/theme';
+import { em, fonts, inset, space, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 
@@ -34,7 +34,7 @@ export function StatCard({ value, label, size = 'md', valueColor }: Props) {
       </Text>
       <Text
         style={{
-          marginTop: md ? 3 : 2,
+          marginTop: inset.xxs,
           fontFamily: fonts.regular,
           fontSize: typeScale.caption.fontSize,
           color: palette.neutral[400],
@@ -48,12 +48,12 @@ export function StatCard({ value, label, size = 'md', valueColor }: Props) {
 const styles = StyleSheet.create({
   cardMd: {
     flex: 1,
-    paddingVertical: 13,
-    paddingHorizontal: 14,
+    paddingVertical: space.rowY,
+    paddingHorizontal: space.rowX,
   },
   cardSm: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 13,
+    paddingVertical: space.rowY,
+    paddingHorizontal: space.rowX,
   },
 });

@@ -53,6 +53,13 @@ The individual architecture gates are:
   `constants/theme.ts`, followed through a `const`, a default or a local table
   of sizes (24.12); and no `Text` or `TextInput` imported from react-native
   outside `components/text.tsx`, the text-size limit (round 24 P3).
+- `audit:spacing`: no padding, margin or gap typed as a number under app/ or
+  components/ — every one is a name from the spacing table the platform
+  publishes (`space` in `constants/theme.ts`, `BLOCK_SPACING`; the owner's Q8,
+  Round 21), or `inset` inside one control, or 0; followed through a `const`, a
+  default or a local table, as `audit:type` follows a size. `inset` is the
+  app's alone, so its `INSET` list holds each file that may use it and how many
+  times: one more, or one in a file not listed, fails (Round 21's review).
 - `audit:vocabulary`: no copy says "project" or "automation" — the app says
   team and flow; the code keeps the contract's names (24.11.7).
 - `audit:haptics`: every press ticks through `components/pressable.tsx` (build
@@ -125,7 +132,14 @@ with and without Liquid Glass, `backgroundColor` alpha 0.94 → 1 only ("Round 2
 — the second review") — and round 25's mark tinted in both palettes (the owner's
 build 24 item 2): the BrandMark entries, `tintColor` only: dark none → `#ffffff`, light `#383838` →
 `#212121`, the design's invert(.87)
-("Round 25 — build 24's feedback").
+("Round 25 — build 24's feedback") — and Round 21's spacing table (the owner's
+Q8 and build 30 note F3; plan Open 11, one pill height): 52 of the 90 Nocturne
+entries, the 14 screen states and both connection rows, the table's paddings
+and gaps, the pill's least height 52 → 44 and its default type 17 → 16 only
+("Round 21 — block set v2") — and that round's review: 6 Nocturne entries
+(TextField and its secure form, the offer screen, in both palettes) and 2 screen
+states (ActionFailure), a label's gap 6 → `title` 8 and a card's 6 → `inner` 8,
+the offer glyph's extra 4 dropped, only ("The review's fixes").
 
 CI runs lint, typecheck, Jest, all architecture/dependency gates (the docs
 checks among them, on the PR's whole range: `fetch-depth: 0` and
@@ -359,10 +373,17 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   A link that is not https (`SignedLinkUnusableError`) or a file not saved
   (`FileNotSavedError`, both `lib/platform/problem.ts`) is said in those words
   on Settings › Data and as the website's "Could not open the package. Try
-  again." on the package page (`packageNotOpened`). `lib/platform/signed-file.ts` holds the one
-  way a signed file is handed on, for the run package's downloads and Settings ›
-  Data's export alike: `signedLink` (https only) and `shareSignedFile` (iOS
-  saves, shares and removes it; Android opens the link). The package page draws
+  again." on the package page (`packageNotOpened`). `lib/platform/signed-file.ts` holds the
+  ways a signed file is handed on, for the file pages, the run package and
+  Settings › Data's export alike (Round 21, the owner's Q7: Download, then Share,
+  `components/files/file-actions.tsx`): `signedLink` (https only);
+  `saveSignedFile`, Download — on iOS saved into the cache, then into the folder
+  picked in Files (expo-file-system's `Directory.pickDirectoryAsync`, no new
+  module, no share sheet) under the file's name without any folder it carries,
+  the cache's copy removed; on Android the link
+  opened; and `shareSignedFile`, Share — on iOS only (`sharesFiles`) the file
+  itself to the share sheet, never the link, then removed (~~iOS saves, shares
+  and removes it; Android opens the link~~, Download until Round 21). The package page draws
   the saved PDF in `react-native-webview` (13.15.0, MIT, the SDK 54 pin; a new
   native module, so build 24 is a new build): the cached file only, its folder
   the only one it may read — it loads nothing over the network.
@@ -415,8 +436,14 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   and each file a run's job uploaded. The link downloads the file as an
   attachment, so the app fetches the bytes from it itself to show or share it. `components/files/file-view.tsx` draws a
   PDF, a JPEG or a PNG by its type, saved in a folder made for that one view
-  (`downloadSignedFile`'s `freshFolder`) for a WebView with no JavaScript, and
-  its Download hands a fresh link to `shareSignedFile`.
+  (`downloadSignedFile`'s `freshFolder`) for a WebView with no JavaScript
+  (`components/files/file-frame.tsx`, which a picture block's scanned page
+  shares), and its Download and Share each take a fresh link (`FileActions`;
+  ~~its Download hands a fresh link to `shareSignedFile`~~ until Round 21).
+- `lib/platform/runs.ts`'s `readRunsPage` asks the runs list as Activity
+  shows it (Round 21, backend ADR-0048 amendment 1): `q`, `status` or
+  `needsReview` (never both), `since`, the flow, `sort` and `page`, answered as
+  one page of 25 and `total`; `readRuns` keeps today's newest 100 for Home.
 - `hooks/use-resource.tsx` and `components/screen-state.tsx` provide explicit
   loading, offline, platform-error, and empty states.
 - `lib/view/` performs the published wire-to-Nocturne mapping and owns no

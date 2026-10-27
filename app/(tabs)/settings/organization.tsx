@@ -1,12 +1,11 @@
 import { useRouter } from 'expo-router';
 import { Buildings, CaretRight, ShareNetwork } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { Platform, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { Platform, Share, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
-import { BackCircle } from '@/components/nocturne/back-circle';
-import { SectionLabel } from '@/components/nocturne/section-label';
+import { SectionTitle } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { TextField } from '@/components/nocturne/text-field';
 import { OrgDomainOnly } from '@/components/organization/org-domain-only';
@@ -16,7 +15,9 @@ import { OrgPeople } from '@/components/organization/org-people';
 import { ScreenEmpty, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { Text } from '@/components/text';
-import { em, fonts, layout, typeScale } from '@/constants/theme';
+import { Page } from '@/components/page';
+import { PageHeader } from '@/components/page-header';
+import { fonts, space, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { busyBody, useWorkspaceResource } from '@/hooks/use-resource';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
@@ -128,26 +129,14 @@ export default function OrganizationScreen() {
   };
 
   return (
-    <ScrollView
-      style={{ backgroundColor: palette.bg }}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) }]}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        <BackCircle onPress={() => router.back()} />
-        <View style={styles.headerText}>
-          <Text style={[styles.title, { color: palette.text }]}>Organization</Text>
-          <Text style={[styles.subtitle, muted]}>
-            {data.kind === 'manage' ? 'Manage your organization settings and members.' : 'Your organization workspace'}
-          </Text>
-        </View>
-      </View>
+    <Page keyboardShouldPersistTaps="handled">
+      <PageHeader onBack={() => router.back()} title="Organization" subtitle={data.kind === 'manage' ? 'Manage your organization settings and members.' : 'Your organization workspace'} />
 
       {data.kind === 'manage' ? (
         <>
           <View>
-            <SectionLabel>ORGANIZATION DETAILS</SectionLabel>
-            <SurfaceCard style={styles.card}>
+            <SectionTitle>ORGANIZATION DETAILS</SectionTitle>
+            <SurfaceCard>
               <SettingsRow
                 icon={Buildings}
                 title="Name"
@@ -211,7 +200,7 @@ export default function OrganizationScreen() {
       ) : (
         <OrgJoin found={data.found} domain={domain} canSetUp={canSetUp} onJoined={afterJoin} />
       )}
-    </ScrollView>
+    </Page>
   );
 }
 
@@ -286,14 +275,8 @@ function RenameDialog({
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: layout.screenX, paddingBottom: 32, gap: 18 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  headerText: { flex: 1 },
-  title: { fontFamily: fonts.medium, fontSize: typeScale.heading.fontSize, letterSpacing: em(-0.01, typeScale.heading.fontSize) },
-  subtitle: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize, marginTop: 1 },
-  card: { marginTop: 9 },
-  right: { flexDirection: 'row', alignItems: 'center', gap: 10, maxWidth: '55%' },
+  right: { flexDirection: 'row', alignItems: 'center', gap: space.inner, maxWidth: '55%' },
   value: { fontFamily: fonts.regular, fontSize: typeScale.body.fontSize },
-  note: { padding: 14 },
+  note: { padding: space.card },
   text: { fontFamily: fonts.regular, ...typeScale.body },
 });

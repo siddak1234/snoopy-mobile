@@ -5,7 +5,7 @@ import { Linking, StyleSheet, View } from 'react-native';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
 import { Text } from '@/components/text';
-import { fonts, typeScale } from '@/constants/theme';
+import { fonts, inset, space, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 import { httpsLink, type BlockOf } from './look';
@@ -43,8 +43,15 @@ export function LinkBlock({ block, testID, nested }: { block: BlockOf<'link'>; t
 }
 
 const styles = StyleSheet.create({
-  row: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, paddingHorizontal: 14 },
-  body: { flex: 1, minWidth: 0, gap: 2 },
+  row: {
+    minHeight: space.rowMinHeight,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.inner,
+    paddingVertical: space.rowY,
+    paddingHorizontal: space.rowX,
+  },
+  body: { flex: 1, minWidth: 0, gap: inset.xxs },
   title: { fontFamily: fonts.medium, ...typeScale.label },
   host: { fontFamily: fonts.regular, ...typeScale.small },
   plain: { fontFamily: fonts.regular, ...typeScale.body },

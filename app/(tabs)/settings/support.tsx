@@ -1,17 +1,17 @@
 import { useRouter } from 'expo-router';
 import { FileText, ShieldCheck } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { Linking, ScrollView, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Linking, StyleSheet, View } from 'react-native';
 
-import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
-import { SectionLabel } from '@/components/nocturne/section-label';
+import { SectionTitle } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { TextField } from '@/components/nocturne/text-field';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { Text } from '@/components/text';
-import { em, fonts, layout, status, typeScale } from '@/constants/theme';
+import { Page } from '@/components/page';
+import { PageHeader } from '@/components/page-header';
+import { fonts, space, status, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { refusalMessage } from '@/lib/content/refusals';
 import { websiteOrigin } from '@/lib/platform/native-auth';
@@ -33,7 +33,6 @@ const FIELDS: readonly { key: keyof ContactRequest; label: string; placeholder: 
  */
 export default function SupportScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { palette } = useTheme();
   const [values, setValues] = useState<Partial<ContactRequest>>({});
   const [busy, setBusy] = useState(false);
@@ -68,19 +67,12 @@ export default function SupportScreen() {
 
   const muted = { color: palette.neutral[400] };
   return (
-    <ScrollView
-      style={{ backgroundColor: palette.bg }}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) }]}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        <BackCircle onPress={() => router.back()} />
-        <Text style={[styles.title, { color: palette.text }]}>Support</Text>
-      </View>
+    <Page keyboardShouldPersistTaps="handled">
+      <PageHeader onBack={() => router.back()} title="Support" />
 
       <View>
-        <SectionLabel>CONTACT US</SectionLabel>
-        <SurfaceCard style={[styles.card, styles.pad]}>
+        <SectionTitle>CONTACT US</SectionTitle>
+        <SurfaceCard padded>
           {sent ? (
             <Text style={[styles.text, { color: palette.text }]}>
               Thanks — we&apos;ve got it. We review every workflow and reply within two business days.
@@ -98,15 +90,15 @@ export default function SupportScreen() {
                 />
               ))}
               {error ? <Text style={[styles.text, { color: status.err }]}>{error}</Text> : null}
-              <PillButton label={busy ? 'Sending…' : 'Send'} variant="primary" height={46} disabled={busy} onPress={send} />
+              <PillButton label={busy ? 'Sending…' : 'Send'} variant="primary" disabled={busy} onPress={send} />
             </>
           )}
         </SurfaceCard>
       </View>
 
       <View>
-        <SectionLabel>LEGAL</SectionLabel>
-        <SurfaceCard style={styles.card}>
+        <SectionTitle>LEGAL</SectionTitle>
+        <SurfaceCard>
           {site ? (
             <>
               <SettingsRow icon={ShieldCheck} title="Privacy policy" divider testID="support-privacy" onPress={() => void Linking.openURL(`${site}/privacy`)} right={null} />
@@ -117,15 +109,11 @@ export default function SupportScreen() {
           )}
         </SurfaceCard>
       </View>
-    </ScrollView>
+    </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: layout.screenX, paddingBottom: 32, gap: 18 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  title: { fontFamily: fonts.medium, fontSize: typeScale.heading.fontSize, letterSpacing: em(-0.01, typeScale.heading.fontSize) },
-  card: { marginTop: 9 },
-  pad: { padding: 14, gap: 12 },
+  pad: { padding: space.card, gap: space.inner },
   text: { fontFamily: fonts.regular, ...typeScale.body },
 });

@@ -1,17 +1,18 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SignOut, Trash } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
-import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { TeamMembers } from '@/components/teams/team-members';
 import { TeamRequests } from '@/components/teams/team-requests';
 import { Text } from '@/components/text';
-import { em, fonts, layout, typeScale } from '@/constants/theme';
+import { Page } from '@/components/page';
+import { PageHeader } from '@/components/page-header';
+import { fonts, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { busyBody, useResource } from '@/hooks/use-resource';
 import { useSession } from '@/hooks/use-session';
@@ -102,22 +103,11 @@ export default function TeamScreen() {
   const muted = { color: palette.neutral[400] };
 
   return (
-    <ScrollView
-      style={{ backgroundColor: palette.bg }}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) }]}
-      showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        <BackCircle onPress={() => router.back()} />
-        <View style={styles.headerText}>
-          <Text style={[styles.title, { color: palette.text }]}>{project.type}</Text>
-          <Text style={[styles.subtitle, muted]}>
-            {[
+    <Page>
+      <PageHeader onBack={() => router.back()} title={project.type} subtitle={[
               workspace.type === 'personal' ? 'Personal' : workspace.name,
               onTeam ? `You are its ${project.viewerRole}` : 'You see every department as an organization admin',
-            ].join(' · ')}
-          </Text>
-        </View>
-      </View>
+            ].join(' · ')} />
       {project.description ? <Text style={[styles.text, muted]}>{project.description}</Text> : null}
 
       {organization ? (
@@ -148,7 +138,6 @@ export default function TeamScreen() {
         <PillButton
           label={owner ? 'Delete department' : 'Leave department'}
           variant="danger"
-          height={44}
           icon={owner ? Trash : SignOut}
           iconSize={16}
           onPress={() => setEnding(true)}
@@ -195,15 +184,10 @@ export default function TeamScreen() {
           />
         )
       ) : null}
-    </ScrollView>
+    </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: layout.screenX, paddingBottom: 32, gap: 18 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  headerText: { flex: 1 },
-  title: { fontFamily: fonts.medium, fontSize: typeScale.heading.fontSize, letterSpacing: em(-0.01, typeScale.heading.fontSize) },
-  subtitle: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize, marginTop: 1 },
   text: { fontFamily: fonts.regular, ...typeScale.body },
 });

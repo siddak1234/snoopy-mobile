@@ -5,7 +5,7 @@ import { Image, StyleSheet, View, type AccessibilityRole, type AccessibilityStat
 import { ProviderGlyph } from '@/components/nocturne/oauth-button';
 import { Pressable } from '@/components/pressable';
 import { Text } from '@/components/text';
-import { fonts, iconSize, status, typeScale, withAlpha } from '@/constants/theme';
+import { fonts, iconSize, inset, space, status, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { DISCONNECT_LABEL } from '@/lib/content/screen-states';
 import { brandMarkFor } from '@/lib/view/brand-logos';
@@ -209,15 +209,15 @@ const styles = StyleSheet.create({
     minHeight: CONNECTION_ROW_MIN_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    gap: space.inner,
+    paddingVertical: space.rowY,
+    paddingHorizontal: space.rowX,
   },
   mark: { width: iconSize.row, height: iconSize.row },
   markBox: { width: iconSize.row, height: iconSize.row, alignItems: 'center', justifyContent: 'center' },
   body: { flex: 1, minWidth: 0 },
   name: { fontFamily: fonts.medium, ...typeScale.body },
-  line: { marginTop: 1, fontFamily: fonts.regular, ...typeScale.small },
-  button: { borderWidth: 1, borderRadius: 999, paddingVertical: 7, paddingHorizontal: 14 },
+  line: { marginTop: inset.hair, fontFamily: fonts.regular, ...typeScale.small },
+  button: { borderWidth: 1, borderRadius: 999, paddingVertical: inset.sm, paddingHorizontal: space.rowX },
   buttonLabel: { fontFamily: fonts.medium, fontSize: typeScale.body.fontSize },
 });

@@ -3,11 +3,11 @@ import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
-import { SectionLabel } from '@/components/nocturne/section-label';
+import { SectionTitle } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { Text } from '@/components/text';
-import { fonts, typeScale } from '@/constants/theme';
+import { fonts, space, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useTheme } from '@/hooks/use-theme';
 import { refusalMessage } from '@/lib/content/refusals';
@@ -41,8 +41,8 @@ export function TeamRequests({
 
   return (
     <View>
-      <SectionLabel>{`ASKING TO JOIN · ${pending.length}`}</SectionLabel>
-      <SurfaceCard style={styles.card}>
+      <SectionTitle>{`ASKING TO JOIN · ${pending.length}`}</SectionTitle>
+      <SurfaceCard>
         {pending.length === 0 ? (
           <Text style={[styles.empty, { color: palette.neutral[400] }]}>No one is asking to join.</Text>
         ) : null}
@@ -144,6 +144,6 @@ function DecideDialog({
 }
 
 const styles = StyleSheet.create({
-  card: { marginTop: 9 },
-  empty: { fontFamily: fonts.regular, fontSize: typeScale.body.fontSize, padding: 14 },
+  card: { marginTop: space.title },
+  empty: { fontFamily: fonts.regular, fontSize: typeScale.body.fontSize, padding: space.card },
 });

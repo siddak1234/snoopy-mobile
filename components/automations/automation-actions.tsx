@@ -5,12 +5,12 @@ import { StyleSheet, View } from 'react-native';
 
 import { WebhookAddressDialog } from '@/components/automations/webhook-address-dialog';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
-import { SectionLabel } from '@/components/nocturne/section-label';
+import { SectionTitle } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { Text } from '@/components/text';
-import { fonts, iconSize, layout, typeScale, withAlpha } from '@/constants/theme';
+import { fonts, iconSize, layout, space, typeScale, withAlpha } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
@@ -117,8 +117,8 @@ export function AutomationActions({
       {statusRow}
       {setsUp || webhook ? (
         <View>
-          <SectionLabel>MANAGE</SectionLabel>
-          <SurfaceCard style={styles.card}>
+          <SectionTitle>MANAGE</SectionTitle>
+          <SurfaceCard>
             {setsUp ? (
               <SettingsRow
                 testID="manage-setup"
@@ -200,18 +200,18 @@ export function AutomationActions({
 
 const styles = StyleSheet.create({
   stack: {
-    gap: 16,
+    gap: space.group,
   },
   card: {
-    marginTop: 9,
+    marginTop: space.title,
   },
   archive: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    marginTop: 8,
-    paddingVertical: 13,
+    gap: space.inner,
+    marginTop: space.inner,
+    paddingVertical: space.rowY,
     paddingHorizontal: layout.rowPadH,
     borderWidth: 1,
     borderRadius: 14,

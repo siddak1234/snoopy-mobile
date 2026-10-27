@@ -4,7 +4,7 @@ import { StyleSheet, View, useWindowDimensions, type StyleProp, type ViewStyle }
 
 import { StatCard } from '@/components/nocturne/stat-card';
 import { Pressable } from '@/components/pressable';
-import { fontScaleLimit, layout, radius, withAlpha } from '@/constants/theme';
+import { fontScaleLimit, layout, radius, space, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 type Props = React.ComponentProps<typeof StatCard> & {
@@ -58,7 +58,7 @@ export function StatTileButton({ testID, accessibilityLabel, onPress, ...card }:
 export const PRESSED_TINT = 0.15;
 
 /** The gap between two tiles. */
-const TILE_GAP = 10;
+const TILE_GAP = space.inner;
 
 /**
  * The least width of a tile beside its neighbours, per unit of text size: past it, the tiles stack.

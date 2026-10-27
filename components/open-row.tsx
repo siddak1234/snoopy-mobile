@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { Pressable } from '@/components/pressable';
 import { Text } from '@/components/text';
-import { fonts, typeScale } from '@/constants/theme';
+import { fonts, space, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -19,7 +19,11 @@ import { useTheme } from '@/hooks/use-theme';
  * ADR-0048) may add its chip (`badge`) and lines under its title (`below`): the
  * chip and the score then follow the title on its line, so a screen reader
  * reads them in the block's order, and `valueAccessibilityLabel` is what it
- * says for the score ("Score 88").
+ * says for the score ("Score 88"); `valueColor` tones the score (a candidate's
+ * verdict, Round 21: the owner's Q5 — green for the positive, red for the
+ * negative, the chip beside it saying which). The table's row since Round 21
+ * (the owner's Q8): 12 above and below, 16 a side, at least 44 tall (~~11 and
+ * 14~~).
  */
 export function OpenRow({
   testID,
@@ -28,6 +32,7 @@ export function OpenRow({
   value,
   valueTestID,
   valueAccessibilityLabel,
+  valueColor,
   badge,
   below,
   muted = false,
@@ -41,6 +46,8 @@ export function OpenRow({
   value?: string | null;
   valueTestID?: string;
   valueAccessibilityLabel?: string;
+  /** The score's colour, a theme token (`toneColor`); absent, the title's. */
+  valueColor?: string;
   badge?: React.ReactNode;
   below?: React.ReactNode;
   muted?: boolean;
@@ -51,7 +58,7 @@ export function OpenRow({
   const { palette } = useTheme();
   const tone = muted ? palette.neutral[400] : palette.text;
   const score = value ? (
-    <Text testID={valueTestID} accessibilityLabel={valueAccessibilityLabel} style={[styles.value, { color: tone }]}>
+    <Text testID={valueTestID} accessibilityLabel={valueAccessibilityLabel} style={[styles.value, { color: muted ? tone : (valueColor ?? tone) }]}>
       {value}
     </Text>
   ) : null;
@@ -89,18 +96,18 @@ export function OpenRow({
 }
 
 const styles = StyleSheet.create({
-  // A section block's bar: 44 at least, 11 above and below, 14 a side.
+  // The table's row, as a section block's bar is: 44 at least, 12 above and below, 16 a side.
   row: {
-    minHeight: 44,
+    minHeight: space.rowMinHeight,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: 11,
-    paddingHorizontal: 14,
+    gap: space.inner,
+    paddingVertical: space.rowY,
+    paddingHorizontal: space.rowX,
   },
   lead: { minWidth: 20, fontFamily: fonts.medium, ...typeScale.label },
   body: { flex: 1, minWidth: 0 },
-  line: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  line: { flexDirection: 'row', alignItems: 'center', gap: space.inner },
   grow: { flex: 1, minWidth: 0 },
   title: { fontFamily: fonts.medium, ...typeScale.label },
   value: { fontFamily: fonts.medium, ...typeScale.label },

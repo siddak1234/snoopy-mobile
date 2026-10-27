@@ -105,6 +105,10 @@ jobs:
       # owner's bigger type (24.12) — so a screen cannot drift back to the
       # design's small sizes, and tuning the type stays one table.
       - run: npm run audit:type
+      # Every padding, margin and gap is a name from the platform's spacing
+      # table (backend ADR-0048 amendment 1, point 14; the owner's Q8), so the
+      # same gap cannot be 0, 9 or 14 from screen to screen again (build 30, F3).
+      - run: npm run audit:spacing
       # A person reads Teams and Flows; the contract's "project" and "automation"
       # stay in the code. A renamed screen could keep an old sentence (24.11.7).
       - run: npm run audit:vocabulary

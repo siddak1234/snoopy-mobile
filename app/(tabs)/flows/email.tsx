@@ -1,18 +1,19 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { EnvelopeSimple, Plus, UserCircle, X } from 'phosphor-react-native';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConnectionRow, GlyphMark, NoneMark } from '@/components/connection-row';
-import { BackCircle } from '@/components/nocturne/back-circle';
 import { PillButton } from '@/components/nocturne/pill-button';
-import { SectionLabel } from '@/components/nocturne/section-label';
+import { SectionTitle } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { Text, TextInput } from '@/components/text';
-import { em, fonts, iconSize, layout, radius, status, typeScale, withAlpha } from '@/constants/theme';
+import { Page } from '@/components/page';
+import { PageHeader } from '@/components/page-header';
+import { fonts, iconSize, radius, space, status, typeScale, withAlpha } from '@/constants/theme';
 import { busyBody, useWorkspaceResource } from '@/hooks/use-resource';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
@@ -172,30 +173,20 @@ export default function FlowEmailScreen() {
   const full = extra.length >= EMAIL_EXTRA_LIMIT;
   const lineStyle = [styles.line, { color: palette.neutral[400] }];
 
+  // The field sits under the lists, below where the keyboard opens on a phone
+  // once a few addresses are listed: the page makes room for the keyboard and
+  // brings the field into view, so what is typed is seen (the Build 22 review).
   return (
-    <ScrollView
-      testID="email-screen"
-      style={{ backgroundColor: palette.bg }}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) }]}
-      keyboardShouldPersistTaps="handled"
-      // The field sits under the lists, below where the keyboard opens on a phone
-      // once a few addresses are listed: the page makes room for the keyboard and
-      // brings the field into view, so what is typed is seen (the Build 22 review).
-      automaticallyAdjustKeyboardInsets
-      showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        <BackCircle onPress={() => router.back()} />
-        <View style={styles.headerText}>
-          <Text style={[styles.title, { color: palette.text }]}>{EMAIL_TITLE}</Text>
-          {resource.data.name ? (
-            <Text style={[styles.subtitle, { color: palette.neutral[400] }]}>{vendorFor(resource.data.name)}</Text>
-          ) : null}
-        </View>
-      </View>
+    <Page keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets testID="email-screen">
+      <PageHeader
+        onBack={() => router.back()}
+        title={EMAIL_TITLE}
+        subtitle={resource.data.name ? vendorFor(resource.data.name) : null}
+      />
 
       <View testID="email-always">
-        <SectionLabel>{EMAIL_ALWAYS_LABEL}</SectionLabel>
-        <SurfaceCard style={styles.underLabel}>
+        <SectionTitle>{EMAIL_ALWAYS_LABEL}</SectionTitle>
+        <SurfaceCard>
           {people.map((person) => (
             <ConnectionRow
               key={person.email}
@@ -211,8 +202,8 @@ export default function FlowEmailScreen() {
       </View>
 
       <View testID="email-also">
-        <SectionLabel>{EMAIL_ALSO_LABEL}</SectionLabel>
-        <SurfaceCard style={styles.underLabel}>
+        <SectionTitle>{EMAIL_ALSO_LABEL}</SectionTitle>
+        <SurfaceCard>
           {extra.length === 0 ? <ConnectionRow testID="email-extra-none" mark={<NoneMark />} name={NONE_LABEL} /> : null}
           {extra.map((address, index) => (
             <ConnectionRow
@@ -281,7 +272,6 @@ export default function FlowEmailScreen() {
                 testID="email-add"
                 label={adding ? EMAIL_ADDING : EMAIL_ADD}
                 variant="primary"
-                height={44}
                 fontSize={typeScale.label.fontSize}
                 icon={Plus}
                 iconSize={iconSize.button}
@@ -302,21 +292,11 @@ export default function FlowEmailScreen() {
           </Text>
         ) : null}
       </View>
-    </ScrollView>
+    </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: layout.screenX, paddingBottom: 24, gap: 18 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  headerText: { flex: 1 },
-  title: {
-    fontFamily: fonts.medium,
-    fontSize: typeScale.heading.fontSize,
-    letterSpacing: em(-0.01, typeScale.heading.fontSize),
-  },
-  subtitle: { marginTop: 1, fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
-  underLabel: { marginTop: 9 },
   remove: {
     width: 38,
     height: 38,
@@ -324,16 +304,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  addRow: { marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  addRow: { marginTop: space.inner, flexDirection: 'row', alignItems: 'center', gap: space.inner },
   input: {
     flex: 1,
     minHeight: 44,
     borderRadius: radius.input,
     borderWidth: 1,
-    paddingHorizontal: 13,
+    paddingHorizontal: space.rowX,
     fontFamily: fonts.regular,
     fontSize: typeScale.label.fontSize,
   },
-  addButton: { paddingHorizontal: 16 },
-  line: { marginTop: 10, fontFamily: fonts.regular, ...typeScale.small },
+  addButton: { paddingHorizontal: space.rowX },
+  line: { marginTop: space.inner, fontFamily: fonts.regular, ...typeScale.small },
 });

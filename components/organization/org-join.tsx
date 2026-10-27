@@ -3,12 +3,12 @@ import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { PillButton } from '@/components/nocturne/pill-button';
-import { SectionLabel } from '@/components/nocturne/section-label';
+import { SectionTitle } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { TextField } from '@/components/nocturne/text-field';
 import { SettingsRow } from '@/components/settings/settings-row';
 import { Text } from '@/components/text';
-import { fonts, status, typeScale } from '@/constants/theme';
+import { fonts, space, status, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useTheme } from '@/hooks/use-theme';
 import { JOIN_REFUSALS, refusalMessage } from '@/lib/content/refusals';
@@ -46,8 +46,8 @@ export function OrgJoin({
   return (
     <>
       <View>
-        <SectionLabel>YOUR ORGANIZATION</SectionLabel>
-        <SurfaceCard style={styles.card}>
+        <SectionTitle>YOUR ORGANIZATION</SectionTitle>
+        <SurfaceCard>
           {found.length === 0 ? (
             <Text style={[styles.text, styles.pad, { color: palette.neutral[400] }]}>
               No organization is registered to your email domain yet.
@@ -112,7 +112,7 @@ function FoundOrganization({
   };
 
   return (
-    <View style={styles.found}>
+    <View>
       <SettingsRow
         icon={Buildings}
         title={organization.name}
@@ -125,13 +125,12 @@ function FoundOrganization({
         ) : requestId ? (
           <>
             <Text style={[styles.text, { color: palette.neutral[400] }]}>Your request was sent for approval.</Text>
-            <PillButton label={busy ? 'Cancelling…' : 'Cancel request'} variant="secondary" height={42} disabled={busy} onPress={cancel} />
+            <PillButton label={busy ? 'Cancelling…' : 'Cancel request'} variant="secondary" disabled={busy} onPress={cancel} />
           </>
         ) : (
           <PillButton
             label={busy ? 'Joining…' : requested ? 'Request pending' : `Join ${organization.name}`}
             variant="primary"
-            height={42}
             disabled={busy || requested}
             onPress={join}
           />
@@ -182,8 +181,8 @@ function SetUpOrganization({ domain, onCreated }: { domain: string; onCreated: (
 
   return (
     <View>
-      <SectionLabel>SET UP AN ORGANIZATION</SectionLabel>
-      <SurfaceCard style={[styles.card, styles.pad]}>
+      <SectionTitle>SET UP AN ORGANIZATION</SectionTitle>
+      <SurfaceCard padded>
         <Text style={[styles.text, { color: palette.neutral[400] }]}>
           Your email uses the domain {domain}. Create an organization workspace for your company.
         </Text>
@@ -201,7 +200,6 @@ function SetUpOrganization({ domain, onCreated }: { domain: string; onCreated: (
         <PillButton
           label={busy ? 'Creating…' : createdId ? `Claim ${domain} again` : 'Create organization'}
           variant="primary"
-          height={46}
           disabled={busy}
           onPress={create}
         />
@@ -211,8 +209,7 @@ function SetUpOrganization({ domain, onCreated }: { domain: string; onCreated: (
 }
 
 const styles = StyleSheet.create({
-  card: { marginTop: 9 },
-  pad: { padding: 14, gap: 10 },
-  found: { paddingBottom: 4 },
+  card: { marginTop: space.title },
+  pad: { padding: space.card, gap: space.inner },
   text: { fontFamily: fonts.regular, ...typeScale.body },
 });

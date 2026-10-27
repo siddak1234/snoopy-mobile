@@ -1,16 +1,15 @@
-import { DownloadSimple } from 'phosphor-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { WebView } from 'react-native-webview';
 
+import { FileActions } from '@/components/files/file-actions';
+import { FileFrame } from '@/components/files/file-frame';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { Text } from '@/components/text';
-import { fonts, iconSize, status, typeScale } from '@/constants/theme';
+import { fonts, radius, space, typeScale } from '@/constants/theme';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { WORKSPACE_CHANGED } from '@/lib/content/refusals';
 import {
-  DOWNLOAD_FAILED,
   DOWNLOAD_LABEL,
   DOWNLOAD_TO_OPEN,
   FILE_GONE,
@@ -21,7 +20,7 @@ import {
 import type { RunFile, RunFileLink } from '@/lib/platform/automations';
 import { downloadSignedFile, type SavedFile } from '@/lib/platform/client';
 import { PlatformError } from '@/lib/platform/problem';
-import { shareSignedFile, signedLink } from '@/lib/platform/signed-file';
+import { saveSignedFile, shareSignedFile, signedLink } from '@/lib/platform/signed-file';
 import { fileLine, viewName } from '@/lib/view/items';
 
 type Shown =
@@ -36,7 +35,8 @@ type Shown =
  * items F4 and F7: "Shows the original document downloadable", "review the
  * original document that you can download and share like other documents"),
  * top to bottom as the website draws it: the file, then its name and its line
- * (`fileLine`: "PDF · 2 pages · 24 KB"), then Download; the page draws the rest.
+ * (`fileLine`: "PDF · 2 pages · 24 KB"), then Download and Share (`FileActions`,
+ * Round 21; the owner's Q7); the page draws the rest.
  *
  * The file is drawn in place only when it is a PDF, a JPEG or a PNG by its
  * `contentType` (`viewName`), never by the name its uploader gave it (build
@@ -46,10 +46,11 @@ type Shown =
  * folder made for this one view (`downloadSignedFile`'s `freshFolder`) and
  * drawn by a WebView with no JavaScript that may read that folder alone; the
  * folder is removed when the page closes. Any other type says "Download it to
- * open it." and is not saved. Download takes a fresh link each press and hands
- * the file to the share sheet to save or share (`shareSignedFile`, as the run
- * package's Download PDF), "Could not download. Try again." when it cannot,
- * refused once the workspace changed. Opening: "Opening the file…"; a link
+ * open it." and is not saved. Download and Share take a fresh link each press:
+ * Download saves the file (`saveSignedFile`: on iOS into the folder picked in
+ * Files), Share hands the file to the share sheet (`shareSignedFile`, iOS
+ * only), as the run package's do — "Could not download. Try again." or "Could
+ * not share. Try again." when they cannot, refused once the workspace changed. Opening: "Opening the file…"; a link
  * refused or a file not saved: "Could not open the file. Try again." with Try
  * again; a file the store no longer keeps (404): "This file is no longer
  * kept.", no Try again and no Download.
@@ -70,8 +71,6 @@ export function FileView({
   const { palette } = useTheme();
   const session = useSession();
   const [shown, setShown] = useState<Shown>({ kind: 'opening' });
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const cached = useRef<SavedFile | null>(null);
   const live = useRef(true);
   const reader = useRef(read);
@@ -123,24 +122,15 @@ export function FileView({
     };
   }, [load]);
 
-  const download = async () => {
-    if (busy) return;
+  /** A fresh link in the workspace the page loaded, handed to `use`; refused once the workspace changed. */
+  const withLink = (use: (link: RunFileLink) => Promise<void>) => async (): Promise<string | null> => {
     const shownIn = workspaceIfShown(session, workspaceId);
-    if (!shownIn) {
-      setError(WORKSPACE_CHANGED);
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      const link = await reader.current(shownIn);
-      await shareSignedFile({ downloadUrl: link.downloadUrl, filename: link.file.filename });
-    } catch {
-      setError(DOWNLOAD_FAILED);
-    } finally {
-      setBusy(false);
-    }
+    if (!shownIn) return WORKSPACE_CHANGED;
+    await use(await reader.current(shownIn));
+    return null;
   };
+  const download = withLink((link) => saveSignedFile({ downloadUrl: link.downloadUrl, filename: link.file.filename }));
+  const share = withLink((link) => shareSignedFile({ downloadUrl: link.downloadUrl, filename: link.file.filename }));
 
   const frame = height === undefined ? styles.fill : { height };
   const file = shown.kind === 'ready' || shown.kind === 'notShown' ? shown.file : null;
@@ -155,14 +145,9 @@ export function FileView({
   return (
     <View testID={testID} style={[styles.wrap, height === undefined && styles.fill]}>
       {shown.kind === 'ready' ? (
-        <WebView
+        <FileFrame
           testID={`${testID}-webview`}
-          source={{ uri: shown.uri }}
-          originWhitelist={['file://*']}
-          allowFileAccess
-          javaScriptEnabled={false}
-          // iOS reads the file from the folder made for this view, and nothing else.
-          allowingReadAccessToURL={shown.uri.slice(0, shown.uri.lastIndexOf('/') + 1)}
+          uri={shown.uri}
           style={[frame, styles.web, { backgroundColor: palette.bg }]}
         />
       ) : (
@@ -173,7 +158,6 @@ export function FileView({
               testID={`${testID}-retry`}
               label={TRY_AGAIN_LABEL}
               variant="secondary"
-              height={40}
               fontSize={typeScale.body.fontSize}
               onPress={() => void load()}
             />
@@ -191,32 +175,22 @@ export function FileView({
         </View>
       ) : null}
       {shown.kind === 'gone' ? null : (
-        <PillButton
-          testID={`${testID}-download`}
-          label={DOWNLOAD_LABEL}
-          variant="secondary"
-          height={44}
-          fontSize={typeScale.label.fontSize}
-          icon={DownloadSimple}
-          iconSize={iconSize.button}
-          disabled={busy}
-          onPress={download}
+        <FileActions
+          testID={`${testID}-actions`}
+          stacked
+          downloads={[{ label: DOWNLOAD_LABEL, testID: `${testID}-download`, run: download }]}
+          share={{ testID: `${testID}-share`, run: share }}
         />
       )}
-      {error ? (
-        <Text accessibilityRole="alert" style={[styles.note, { color: status.err }]}>
-          {error}
-        </Text>
-      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 10 },
+  wrap: { gap: space.inner },
   fill: { flex: 1 },
-  web: { borderRadius: 14, overflow: 'hidden' },
-  state: { alignItems: 'center', justifyContent: 'center', gap: 12 },
+  web: { borderRadius: radius.card, overflow: 'hidden' },
+  state: { alignItems: 'center', justifyContent: 'center', gap: space.inner },
   note: { fontFamily: fonts.regular, ...typeScale.small, textAlign: 'center' },
   name: { fontFamily: fonts.medium, ...typeScale.label },
   line: { fontFamily: fonts.regular, ...typeScale.small },

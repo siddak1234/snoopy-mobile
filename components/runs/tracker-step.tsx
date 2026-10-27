@@ -10,7 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { Text } from '@/components/text';
-import { fonts, iconSize, status, typeScale } from '@/constants/theme';
+import { fonts, iconSize, inset, space, status, typeScale } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useTheme } from '@/hooks/use-theme';
 import type { TrackerRow } from '@/lib/view/runs';
@@ -93,12 +93,12 @@ const styles = StyleSheet.create({
   trackerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    gap: space.inner,
+    paddingVertical: space.rowY,
+    paddingHorizontal: space.rowX,
   },
   trackerIcon: {
-    marginTop: 1,
+    marginTop: inset.hair,
   },
   trackerBody: {
     flex: 1,
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     fontSize: typeScale.label.fontSize,
   },
   trackerSub: {
-    marginTop: 1,
+    marginTop: inset.hair,
     fontFamily: fonts.regular,
     fontSize: typeScale.small.fontSize,
   },

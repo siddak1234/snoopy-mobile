@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/text';
-import { fonts, typeScale } from '@/constants/theme';
+import { fonts, space, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 /** The auth screens' "or" separator: hairline · label · hairline. */
@@ -21,8 +21,8 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginVertical: 18,
+    gap: space.inner,
+    marginVertical: space.group,
   },
   line: {
     flex: 1,

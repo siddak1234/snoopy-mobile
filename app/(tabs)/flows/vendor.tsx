@@ -1,19 +1,19 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { VendorChoice } from '@/components/flows/vendor-choice';
-import { BackCircle } from '@/components/nocturne/back-circle';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { chosenVendor, connectionFields, fieldProviders } from '@/components/setup-field';
 import { Text } from '@/components/text';
-import { em, fonts, layout, status, typeScale } from '@/constants/theme';
+import { Page } from '@/components/page';
+import { PageHeader } from '@/components/page-header';
+import { fonts, status, typeScale } from '@/constants/theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { busyBody, useWorkspaceResource } from '@/hooks/use-resource';
 import { roleIn, useSession, workspaceIfShown } from '@/hooks/use-session';
-import { useTheme } from '@/hooks/use-theme';
 import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
 import { VENDOR_SAVE_FAILED, VENDOR_TITLE, errorTitleFor, vendorFor } from '@/lib/content/screen-states';
 import { updateSubscription } from '@/lib/platform/automations';
@@ -49,7 +49,6 @@ import { administers } from '@/lib/view/roles';
  * Connections' (the session's S13).
  */
 export default function ConnectVendorScreen() {
-  const { palette } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const session = useSession();
@@ -141,19 +140,12 @@ export default function ConnectVendorScreen() {
   };
 
   return (
-    <ScrollView
-      style={{ backgroundColor: palette.bg }}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + (layout.designTop.app - layout.statusArea) }]}
-      showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        <BackCircle onPress={() => router.back()} />
-        <View style={styles.headerText}>
-          <Text style={[styles.title, { color: palette.text }]}>{VENDOR_TITLE}</Text>
-          <Text style={[styles.subtitle, { color: palette.neutral[400] }]}>
-            {vendorFor(subscription.name ?? entry?.name ?? subscription.templateId)}
-          </Text>
-        </View>
-      </View>
+    <Page>
+      <PageHeader
+        onBack={() => router.back()}
+        title={VENDOR_TITLE}
+        subtitle={vendorFor(subscription.name ?? entry?.name ?? subscription.templateId)}
+      />
 
       <SurfaceCard>
         <VendorChoice
@@ -175,19 +167,10 @@ export default function ConnectVendorScreen() {
           {error}
         </Text>
       ) : null}
-    </ScrollView>
+    </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: layout.screenX, paddingBottom: 24, gap: 16 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  headerText: { flex: 1 },
-  title: {
-    fontFamily: fonts.medium,
-    fontSize: typeScale.heading.fontSize,
-    letterSpacing: em(-0.01, typeScale.heading.fontSize),
-  },
-  subtitle: { marginTop: 1, fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
   error: { fontFamily: fonts.regular, ...typeScale.small },
 });

@@ -3,13 +3,13 @@ jest.mock('@/lib/platform/client', () => ({
   newIdempotencyKey: jest.fn(() => 'export-key'),
   downloadSignedFile: jest.fn(),
 }));
-jest.mock('expo-file-system', () => ({ File: jest.fn(), Paths: { cache: {} } }));
+jest.mock('expo-file-system', () => require('@/test/mocks/expo-file-system'));
 jest.mock('expo-constants', () => ({
   __esModule: true,
   default: { expoConfig: { extra: { nativeAuthBaseUrl: 'https://www.example.test/api/platform' } } },
 }));
 
-import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import React from 'react';
 import { Linking, Platform, Share } from 'react-native';
 
@@ -22,6 +22,7 @@ import { TEST_WORKSPACE, sessionAs, signedInSession } from '@/test/platform';
 import { renderWithProviders } from '@/test/render';
 
 const { platformOperation, downloadSignedFile } = jest.requireMock('@/lib/platform/client');
+const { PICKED_FOLDER, fileSystemState } = jest.requireMock('expo-file-system');
 
 let openURL: jest.SpyInstance;
 beforeEach(() => {
@@ -74,6 +75,52 @@ describe('Data export (24.6.3)', () => {
     expect(screen.getByText('Runs: included (bounded)')).toBeTruthy();
   });
 
+  describe('the workspace summary: Download JSON, then Share (Round 21; the owner\'s Q7)', () => {
+    async function prepared() {
+      const fake = routeData('owner');
+      fake.always('GET /v1/workspaces/{workspaceId}/export', {
+        workspaceId: TEST_WORKSPACE,
+        exportedAt: '2026-09-30T00:00:00Z',
+        complete: true,
+        services: [{ service: 'runs', ok: true, data: { runs: [], approvals: [], truncated: false } }],
+      });
+      await renderWithProviders(<DataExportScreen />, sessionAs('owner'));
+      await fireEvent.press(await screen.findByText('Prepare export'));
+      await screen.findByTestId('data-summary-actions');
+    }
+
+    it('on iOS: Download JSON saves the JSON file into the folder picked in Files; Share hands that file to the share sheet', async () => {
+      const ios = jest.replaceProperty(Platform, 'OS', 'ios');
+      fileSystemState.reset();
+      const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
+      await prepared();
+      const order = within(screen.getByTestId('data-summary-actions')).getAllByText(/^(Download JSON|Share)$/u);
+      expect(order.map((node) => node.props.children)).toEqual(['Download JSON', 'Share']);
+      await fireEvent.press(screen.getByTestId('data-summary-download'));
+      const name = `workspace-export-${TEST_WORKSPACE}.json`;
+      await waitFor(() => expect(fileSystemState.copies).toEqual([`file:///cache/${name} -> ${PICKED_FOLDER}${name}`]));
+      expect(share).not.toHaveBeenCalled();
+      await fireEvent.press(screen.getByTestId('data-summary-share'));
+      await waitFor(() => expect(share).toHaveBeenCalledWith({ url: `file:///cache/${name}` }));
+      // Written, then removed from the cache each time.
+      expect(JSON.parse(fileSystemState.written[0]!).workspaceId).toBe(TEST_WORKSPACE);
+      expect(fileSystemState.taken.has(`file:///cache/${name}`)).toBe(false);
+      share.mockRestore();
+      ios.restore();
+    });
+
+    it('on Android: no Share; Download JSON shares the text, as before', async () => {
+      const android = jest.replaceProperty(Platform, 'OS', 'android');
+      const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
+      await prepared();
+      expect(screen.queryByTestId('data-summary-share')).toBeNull();
+      await fireEvent.press(screen.getByTestId('data-summary-download'));
+      await waitFor(() => expect(share).toHaveBeenCalledWith({ message: expect.stringContaining(TEST_WORKSPACE) }));
+      share.mockRestore();
+      android.restore();
+    });
+  });
+
   /** Started, followed until ready, with an older link first and the fresh one read at the download. */
   async function readyToDownload(fresh = 'https://store.example.test/fresh') {
     jest.useFakeTimers();
@@ -97,8 +144,9 @@ describe('Data export (24.6.3)', () => {
     expect(await screen.findByText('Ready. The file holds the whole workspace.')).toBeTruthy();
   }
 
-  it('on iOS saves the complete export into the app, read afresh, and hands it to the share sheet — not Safari (24.12)', async () => {
+  it('on iOS Download saves the complete export, read afresh, into the folder picked in Files — not Safari, no share sheet (24.12; Round 21, Q7); Share then hands it to the share sheet', async () => {
     const ios = jest.replaceProperty(Platform, 'OS', 'ios');
+    fileSystemState.reset();
     const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
     const saved = { uri: 'file:///cache/acme-export.json', exists: true, delete: jest.fn() };
     let arrive: (file: typeof saved) => void = () => undefined;
@@ -107,11 +155,15 @@ describe('Data export (24.6.3)', () => {
     await fireEvent.press(screen.getByText('Download file'));
     expect(await screen.findByText('Saving…')).toBeTruthy();
     await act(async () => arrive(saved));
-    await waitFor(() => expect(share).toHaveBeenCalledWith({ url: 'file:///cache/acme-export.json' }));
+    await waitFor(() => expect(fileSystemState.copies).toEqual([`file:///cache/acme-export.json -> ${PICKED_FOLDER}acme-export.json`]));
     expect(downloadSignedFile).toHaveBeenCalledWith('https://store.example.test/fresh', 'exports/acme-export.json');
-    // Removed once shared, and never opened in the browser.
+    expect(share).not.toHaveBeenCalled();
+    // Removed from the cache once in Files, and never opened in the browser.
     expect(saved.delete).toHaveBeenCalled();
     expect(openURL).not.toHaveBeenCalled();
+    downloadSignedFile.mockResolvedValue(saved);
+    await fireEvent.press(screen.getByTestId('data-export-share'));
+    await waitFor(() => expect(share).toHaveBeenCalledWith({ url: 'file:///cache/acme-export.json' }));
     share.mockRestore();
     ios.restore();
   });
@@ -136,9 +188,10 @@ describe('Data export (24.6.3)', () => {
     os.restore();
   });
 
-  it("on Android, whose share sheet carries text, opens the fresh link as before", async () => {
+  it("on Android, whose share sheet carries text, opens the fresh link as before — and draws no Share", async () => {
     const android = jest.replaceProperty(Platform, 'OS', 'android');
     await readyToDownload();
+    expect(screen.queryByTestId('data-export-share')).toBeNull();
     await fireEvent.press(screen.getByText('Download file'));
     await waitFor(() => expect(openURL).toHaveBeenCalledWith('https://store.example.test/fresh'));
     expect(downloadSignedFile).not.toHaveBeenCalled();
