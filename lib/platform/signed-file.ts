@@ -44,9 +44,11 @@ function pickerClosed(error: unknown): boolean {
  * node_modules/expo-file-system/build/ExpoFileSystem.types.d.ts:126-134; it
  * opens UIDocumentPickerViewController for `UTType.folder`,
  * ios/FilePickingUtils.swift:105-108, and starts the folder's security-scoped
- * access, :41-46), then `File.copy` into it under the file's own name, " 2",
- * " 3" … after it when that name is taken. The person closing the picker saves
- * nothing and says nothing (`'closed'`).
+ * access, :41-46), then `File.copy` into it under the file's own name — without
+ * any folder the platform's name carries, as the cache's copy is named
+ * (`downloadSignedFile`), since the copy makes no folder — " 2", " 3" … after it
+ * when that name is taken. The person closing the picker saves nothing and
+ * says nothing (`'closed'`).
  */
 export async function saveToFiles(source: File, filename: string): Promise<'saved' | 'closed'> {
   let folder: Directory;
@@ -57,9 +59,11 @@ export async function saveToFiles(source: File, filename: string): Promise<'save
     if (pickerClosed(error)) return 'closed';
     throw error;
   }
-  const dot = filename.lastIndexOf('.');
-  const [stem, ending] = dot > 0 ? [filename.slice(0, dot), filename.slice(dot)] : [filename, ''];
-  let target = new File(folder, filename);
+  const base = filename.split(/[\\/]/u).pop()?.trim() ?? '';
+  const name = base && base !== '.' && base !== '..' ? base : 'workspace-export';
+  const dot = name.lastIndexOf('.');
+  const [stem, ending] = dot > 0 ? [name.slice(0, dot), name.slice(dot)] : [name, ''];
+  let target = new File(folder, name);
   for (let copy = 2; target.exists && copy < 100; copy += 1) target = new File(folder, `${stem} ${copy}${ending}`);
   source.copy(target);
   return 'saved';

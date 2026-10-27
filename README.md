@@ -379,7 +379,8 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   `components/files/file-actions.tsx`): `signedLink` (https only);
   `saveSignedFile`, Download — on iOS saved into the cache, then into the folder
   picked in Files (expo-file-system's `Directory.pickDirectoryAsync`, no new
-  module, no share sheet), the cache's copy removed; on Android the link
+  module, no share sheet) under the file's name without any folder it carries,
+  the cache's copy removed; on Android the link
   opened; and `shareSignedFile`, Share — on iOS only (`sharesFiles`) the file
   itself to the share sheet, never the link, then removed (~~iOS saves, shares
   and removes it; Android opens the link~~, Download until Round 21). The package page draws

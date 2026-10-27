@@ -155,7 +155,7 @@ describe('Data export (24.6.3)', () => {
     await fireEvent.press(screen.getByText('Download file'));
     expect(await screen.findByText('Saving…')).toBeTruthy();
     await act(async () => arrive(saved));
-    await waitFor(() => expect(fileSystemState.copies).toEqual([`file:///cache/acme-export.json -> ${PICKED_FOLDER}exports/acme-export.json`]));
+    await waitFor(() => expect(fileSystemState.copies).toEqual([`file:///cache/acme-export.json -> ${PICKED_FOLDER}acme-export.json`]));
     expect(downloadSignedFile).toHaveBeenCalledWith('https://store.example.test/fresh', 'exports/acme-export.json');
     expect(share).not.toHaveBeenCalled();
     // Removed from the cache once in Files, and never opened in the browser.

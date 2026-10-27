@@ -370,10 +370,11 @@ a padding, a margin or a gap under app/ and components/ (README
   target (`readRunFile` or `readItemFile`, in the page's workspace —
   `BlockContext.workspaceId`), its link checked (`signedLink`), saved in a
   folder of its own (`downloadSignedFile`'s `freshFolder`); a JPEG or PNG is
-  React Native's `Image`, contained, the page's width and at most 360 pt tall,
-  one image read as its `alt`, a press opens the file's page; a PDF is the file
-  page's frame (`components/files/file-frame.tsx`: no JavaScript, its own folder
-  only), 360 pt tall; the folder is removed when the page closes. Its words are
+  React Native's `Image`, contained, the page's width and at most
+  `PICTURE_HEIGHT` tall (the number is in `image.tsx`), one image read as its
+  `alt`, a press opens the file's page; a PDF is the file page's frame
+  (`components/files/file-frame.tsx`: no JavaScript, its own folder only),
+  `PICTURE_HEIGHT` tall; the folder is removed when the page closes. Its words are
   the file page's constants (`FILE_OPENING`, `FILE_GONE`, `FILE_NOT_OPENED`,
   `TRY_AGAIN_LABEL`); a file of another type is today's file row.
 - **chart** (`components/blocks/chart.tsx`): react-native-svg, no library; a bar
@@ -389,22 +390,24 @@ a padding, a margin or a gap under app/ and components/ (README
 
 **Search, sort and pages** (`components/blocks/paged.tsx`: `SearchBox`,
 `SortControl`, `Pager`, `ListTools`, `usePaged`; the rules
-`lib/view/block-sort.ts`). One page size and one threshold, 25. Every word is
-`BLOCK_WORDS`' (owner-words.md rows 1–16), never typed where a list is drawn.
+`lib/view/block-sort.ts`). One page size and one threshold,
+`BLOCK_LIST_RULES.pageSize`. Every word is a `BLOCK_WORDS` key (owner-words.md
+rows 1–16), never typed where a list is drawn; the words and the numbers are in
+[`block-rules.ts`](lib/generated/platform-contracts/block-rules.ts), generated.
 - A list or table block: the search box when `searchable` (an item's runs)
-  or over 25 rows; over 25, the sort ("Default order", then "A to Z" and
-  "{label}: high to low" on a list, "{column}: A to Z" or "{column}: high to
-  low" on a table) and the pager ("Previous", "Page {n} of {total}", "Next").
+  or longer than `pageSize`; then the sort (`defaultOrder`, then `aToZ` and
+  `highToLow` on a list, `columnAToZ` or `columnHighToLow` on a table) and the
+  pager (`previous`, `pageOf`, `next`).
 - A flow's items (`components/items/flow-items.tsx`): the search box always
-  ("Search {items}", by title); over 25, "A to Z" (today's) or "Newest first",
-  and the pages.
-- Activity: the search box always ("Search runs"), sent as `q` once typing
+  (`searchItems`, by title); longer than `pageSize`, `aToZ` (today's) or
+  `newestFirst`, and the pages.
+- Activity: the search box always (`searchRuns`), sent as `q` once typing
   rests; `status`, `needsReview`, `since`, the flow (`subscriptionId`), `sort`
-  and `page` sent with it (`readRunsPage`); over 25 that match (`total`), the
-  sort ("Newest first", "Oldest first", the oldest day first) and the pager; an
-  answer without `total` is one page. The team scope still narrows the page
-  shown, on the phone.
-- A miss says "Nothing matches "{query}"." in place of the list.
+  and `page` sent with it (`readRunsPage`); more than `pageSize` that match
+  (`total`), the sort (`newestFirst`, `oldestFirst`, the oldest day first) and
+  the pager; an answer without `total` is one page. The team scope still
+  narrows the page shown, on the phone.
+- A miss says `noMatch` in place of the list.
 
 **The run's score** (Q5, F1): on the right of its name, in its verdict's tone,
 the verdict's word after it as a chip — named by its flow's own words
@@ -421,8 +424,8 @@ complete export (Download file) and workspace summary (Download JSON).
   expo-file-system's `Directory.pickDirectoryAsync()` (its
   build/ExpoFileSystem.types.d.ts:126-134: "On iOS, the selected directory
   grants temporary read and write access for the current app session only";
-  ios/FilePickingUtils.swift:105-108), no share sheet — under its own name
-  (" 2", " 3" after it when the name is taken); a picker closed saves nothing
+  ios/FilePickingUtils.swift:105-108), no share sheet — under its own name,
+  without any folder it carries (" 2", " 3" after it when the name is taken); a picker closed saves nothing
   and says nothing. On Android the link opens, as before.
 - **Share** (`shareSignedFile`): iOS only (`sharesFiles`): the file itself to
   the share sheet (`Share.share({ url })`, its local address), never the

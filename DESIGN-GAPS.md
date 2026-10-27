@@ -2689,9 +2689,21 @@ access for the current app session only" (`node_modules/expo-file-system/build/E
 `expo-modules-core/ios/FileSystemUtilities/FileSystemUtilities.swift:87-94` leaves an outside
 path's permission to the system) — then `File.copy` into it. Download on iOS is that; Share is the
 share sheet. **NOT OBSERVED on a device**: the folder picker, the copy into iCloud Drive or On My
-iPhone, and a name already taken there; the owner's check 3 ("Try both on the iPhone") is the proof.
-The picker's answer in the tests is shaped by the module's own source (`test/mocks/expo-file-system.ts`):
-no device recording of it exists yet.
+iPhone, and a name already taken there. The device proof is the owner's TestFlight 31 check 3:
+Download with a folder picked, the picker closed, and a name already taken; if it misbehaves,
+Download goes back to today's share sheet (plan Open 8's default). Until then the tests' fake
+(`test/mocks/expo-file-system.ts`, also used by `signed-file`) is pinned to the module's own
+published types and iOS code, each shape cited by file and line there: the picker's `Directory`
+(its uri ending in "/"), the closed picker's `CodedError` (`ERR_FILE_PICKING_CANCELLED`, "File
+picking was cancelled by the user"), `File.exists`, and `File.copy` refusing a taken name or a
+folder that is not there (`ERR_UNEXPECTED`); a `File`'s address is the module's own `Paths.join`.
+
+**The round's words** (owner-words.md, for the owner's yes; the rest of its rows are `BLOCK_WORDS`
+and today's words):
+
+| # | Words | Where | Clients | Status |
+| --- | --- | --- | --- | --- |
+| 25c | "Could not share. Try again." (`SHARE_FAILED`, `lib/content/screen-states.ts`) | in place of the share sheet when Share fails, beside every Download | app and website (`snoopy/lib/run-files.ts` `SHARE_FAILED`) | NEW — the session's default, no blocker; named in PR 2's and PR 3's bodies |
 
 **The session's defaults, not the owner's** (each recorded, none gating):
 - **Below the table's smallest step**: the inside of one control — a chip's 2-pt padding, an icon
@@ -2755,11 +2767,9 @@ The review of `fb0c647` (FAIL, six findings), each by hand:
 1. `inset` between things: replaced from the table (above, "Below the table's smallest step");
    `audit:spacing` holds `INSET`.
 2. The Settings index's rows: the table's `rowY` (above).
-3. **Not done here** — Download's folder picker and copy on iOS: the test's picker answer is still
-   shaped from the module's source. Before the push, the session runs Download once on its one
-   simulator (a picked folder, the picker cancelled, a name already taken), records the uri, the
-   error's code and message and the copied name, and pins `test/mocks/expo-file-system.ts` to
-   them; if it fails, Download goes back to today's.
+3. Download's folder picker and copy on iOS: no simulator here, so the session's default — the
+   fake pinned to the module's published shapes, the device proof the owner's TestFlight 31
+   check 3 (above, "The iPhone's Download without the share sheet"; the second review's 2).
 4. `runsAsSelected` (`test/platform.tsx`) no longer selects by `q` or `needsReview`, whose rules
    (a document's seller, the chain's newest approval) are the platform's; `activity-search` holds
    what is sent and that the page is drawn as answered.
@@ -2775,3 +2785,21 @@ Bites (copy, break, red, restore, sha256 the same, green): `INSET` unlisted, one
 and none; `audit:spacing` on the tree with a label's gap planted as `inset.sm`; the inbox's old
 header and `PageHeader` without its text-size limit; Needs review sent as `status=held`; a phone
 filter on Activity's page.
+
+### The second review's fixes, block set v2 on the app (2026-10-26)
+
+The second review of `b475d21` (FAIL, three findings), each by hand:
+1. DESIGN-CONTRACT's "Search, sort and pages" and the image block named the `BLOCK_WORDS` keys,
+   `BLOCK_LIST_RULES.pageSize` and `PICTURE_HEIGHT`, linking `block-rules.ts` and `image.tsx`,
+   in place of second copies of their words and numbers.
+2. `test/mocks/expo-file-system.ts` pinned to the module's published shapes (above); `signed-file`
+   uses it in place of its own hand-made fake. Pinned, the fake showed a fault: a name the platform
+   sends with a folder ("exports/acme-export.json") was copied into a folder the picked one does not
+   hold, which iOS refuses; `saveToFiles` now takes the name without its folder, as the cache's copy
+   does. A taken name is URL-encoded in the address ("run-1%202.pdf"), as the module joins it.
+3. "Could not share. Try again." is a NEW row in the round's words (above).
+
+Bites (copy, break, red, restore, sha256 the same, green): the folder part kept in `saveToFiles`'s
+name (`data-support-screens` red); the fake's closed-picker code (`signed-file`, the picker closed);
+the fake's join without encoding (`signed-file`, the two taken-name tests); the fake's `copy` into a
+folder that is not there (`signed-file`, the refused copy).

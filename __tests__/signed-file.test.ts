@@ -8,39 +8,15 @@ jest.mock('@/lib/platform/client', () => ({
 const { downloadSignedFile } = jest.requireMock('@/lib/platform/client');
 
 /**
- * The folder the person picks in Files, as expo-file-system answers it: a
- * `Directory` of the picked folder's address (its src/FileSystem.ts:209-212,
- * `new Directory((await ExpoFileSystem.pickDirectoryAsync(initialUri)).uri)`),
- * and a closed picker's refusal, its iOS `FilePickingCancelledException`
- * (ios/FileSystemExceptions.swift:94-96, "File picking was cancelled by the
- * user"). The files in it are what `copy` put there.
+ * The folder the person picks in Files, its closed picker's refusal, a file's
+ * `exists` and `copy`: expo-file-system's own shapes, each cited where the
+ * mock pins it (`test/mocks/expo-file-system.ts`).
  */
-const picked = { uri: 'file:///private/var/mobile/Library/Mobile%20Documents/com~apple~CloudDocs/Downloads/' };
-const mockCopies: string[] = [];
-const mockTaken = new Set<string>();
-jest.mock('expo-file-system', () => {
-  class Directory {
-    uri: string;
-    constructor(uri: string | { uri: string }) {
-      this.uri = typeof uri === 'string' ? uri : uri.uri;
-    }
-    static pickDirectoryAsync = jest.fn();
-  }
-  class File {
-    uri: string;
-    constructor(...parts: (string | { uri: string })[]) {
-      this.uri = parts.map((part) => (typeof part === 'string' ? part : part.uri)).join('');
-    }
-    get exists() {
-      return mockTaken.has(this.uri);
-    }
-    copy(target: { uri: string }) {
-      mockCopies.push(`${this.uri} -> ${target.uri}`);
-    }
-  }
-  return { Directory, File };
-});
-const { Directory } = jest.requireMock('expo-file-system');
+jest.mock('expo-file-system', () => require('@/test/mocks/expo-file-system'));
+const { Directory, PICKED_FOLDER, fileSystemState, pickerClosedError } = jest.requireMock('expo-file-system');
+const picked = { uri: PICKED_FOLDER as string };
+const mockCopies: string[] = fileSystemState.copies;
+const mockTaken: Set<string> = fileSystemState.taken;
 
 /**
  * The one way the app hands on a file behind a signed link (the round 24
@@ -62,8 +38,7 @@ beforeEach(() => {
   saved = { uri: 'file:///cache/run-1.pdf', exists: true, delete: jest.fn() };
   downloadSignedFile.mockReset().mockResolvedValue(saved);
   Directory.pickDirectoryAsync.mockReset().mockResolvedValue(new Directory(picked.uri));
-  mockCopies.length = 0;
-  mockTaken.clear();
+  fileSystemState.reset();
   openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
   share = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
 });
@@ -88,26 +63,26 @@ describe('saveSignedFile (Download)', () => {
 
   it('on iOS a name the folder holds already is saved as "name 2", then "name 3"', async () => {
     Platform.OS = 'ios';
+    // The module's join URL-encodes the name: "run-1 2.pdf" is "run-1%202.pdf".
     mockTaken.add(`${picked.uri}run-1.pdf`);
-    mockTaken.add(`${picked.uri}run-1 2.pdf`);
+    mockTaken.add(`${picked.uri}run-1%202.pdf`);
     await saveSignedFile(FILE);
-    expect(mockCopies).toEqual([`file:///cache/run-1.pdf -> ${picked.uri}run-1 3.pdf`]);
+    expect(mockCopies).toEqual([`file:///cache/run-1.pdf -> ${picked.uri}run-1%203.pdf`]);
   });
 
   it('on iOS the picker closed saves nothing, says nothing, and still removes the cache copy', async () => {
     Platform.OS = 'ios';
-    Directory.pickDirectoryAsync.mockRejectedValue(
-      Object.assign(new Error('File picking was cancelled by the user'), { code: 'ERR_FILE_PICKING_CANCELLED' }),
-    );
+    Directory.pickDirectoryAsync.mockRejectedValue(pickerClosedError());
     await expect(saveSignedFile(FILE)).resolves.toBeUndefined();
     expect(mockCopies).toEqual([]);
     expect(saved.delete).toHaveBeenCalledTimes(1);
   });
 
-  it('on iOS a folder that cannot be written is said to the screen, and the cache copy is removed', async () => {
+  it('on iOS a copy Files refuses (the folder gone) is thrown to the screen, and the cache copy is removed', async () => {
     Platform.OS = 'ios';
-    Directory.pickDirectoryAsync.mockRejectedValue(new Error('Missing permission'));
-    await expect(saveSignedFile(FILE)).rejects.toThrow('Missing permission');
+    Directory.pickDirectoryAsync.mockResolvedValue(new Directory('file:///private/var/mobile/gone/'));
+    await expect(saveSignedFile(FILE)).rejects.toMatchObject({ code: 'ERR_UNEXPECTED' });
+    expect(mockCopies).toEqual([]);
     expect(saved.delete).toHaveBeenCalledTimes(1);
   });
 
@@ -167,7 +142,7 @@ describe('saveToFiles', () => {
     const { File } = jest.requireMock('expo-file-system');
     mockTaken.add(`${picked.uri}notes`);
     await expect(saveToFiles(new File('file:///cache/notes'), 'notes')).resolves.toBe('saved');
-    expect(mockCopies).toEqual([`file:///cache/notes -> ${picked.uri}notes 2`]);
+    expect(mockCopies).toEqual([`file:///cache/notes -> ${picked.uri}notes%202`]);
   });
 });
 
