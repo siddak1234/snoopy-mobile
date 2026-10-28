@@ -87,7 +87,7 @@ describe('a held run that offers changes: Accept or Deny each, then Save review 
   it('draws each change as "{label} · {detail}" with Accept and Deny, Deny the danger pill; no Approve', async () => {
     await openHeld('owner');
     const review = within(await screen.findByTestId('run-review-block'));
-    expect(review.getByText('N18.4 → Remove · No line in the note supports this code.')).toBeTruthy();
+    expect(review.getByLabelText('N18.4 → Remove · No line in the note supports this code.')).toBeTruthy();
     expect(review.getByText('Add Z99.2')).toBeTruthy();
     expect(review.getAllByText('Accept')).toHaveLength(2);
     expect(colorOf(review.getAllByText('Deny')[0]!)).toBe(nocturneDark.danger);
@@ -141,10 +141,15 @@ describe('a held run that offers changes: Accept or Deny each, then Save review 
     expect(screen.queryByTestId('run-review-tally')).toBeNull();
   });
 
-  it('to a member: "Only an owner or admin can review this." and no pills', async () => {
+  it('to a member: every row read-only, then "Only an owner or admin can review this."; no pills', async () => {
     await openHeld('member');
     expect((await screen.findByTestId('run-review-member')).props.children).toBe('Only an owner or admin can review this.');
+    const rows = within(screen.getByTestId('run-review-readonly'));
+    expect(rows.getByLabelText('N18.4 → Remove · No line in the note supports this code.')).toBeTruthy();
+    expect(rows.getByText('Add Z99.2')).toBeTruthy();
     expect(screen.queryByText('Accept')).toBeNull();
+    expect(screen.queryByText('Deny')).toBeNull();
+    expect(screen.queryByText('Accept or deny each change.')).toBeNull();
     expect(screen.queryByText('Save review')).toBeNull();
   });
 
@@ -152,7 +157,12 @@ describe('a held run that offers changes: Accept or Deny each, then Save review 
     await openHeld('admin', [], { eligibleRoles: ['owner'] });
     expect((await screen.findByTestId('run-review-member')).props.children).toBe('Only owner can decide this.');
     expect(screen.queryByText('Only an owner or admin can review this.')).toBeNull();
+    const rows = within(screen.getByTestId('run-review-readonly'));
+    expect(rows.getByLabelText('N18.4 → Remove · No line in the note supports this code.')).toBeTruthy();
+    expect(rows.getByText('Add Z99.2')).toBeTruthy();
     expect(screen.queryByText('Accept')).toBeNull();
+    expect(screen.queryByText('Deny')).toBeNull();
+    expect(screen.queryByText('Save review')).toBeNull();
   });
 
   it("the backend's draft form, kind 'review', draws the same rows, not the fallback", async () => {

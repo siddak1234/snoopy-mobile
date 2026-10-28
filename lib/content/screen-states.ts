@@ -642,8 +642,9 @@ export const STEP_DENIED = 'Denied';
  * held run that offers changes draws each as a row, "{label} · {detail}", with
  * Accept and Deny; Save review once every row is answered, and until then
  * "Accept or deny each change."; to a member, who may not answer, one line.
- * Saved, "{a} accepted · {d} denied" on the run and in Approvals; the
- * Approvals card for such a run says "Review {n} changes" and opens it.
+ * The rows are drawn to everyone, the pills to those who may approve. Saved,
+ * "{a} accepted · {d} denied" on the run (Approvals: OPEN, DESIGN-GAPS Round
+ * 21); the Approvals card for such a run says "Review {n} changes" and opens it.
  */
 export const ACCEPT_LABEL = 'Accept';
 export const SAVE_REVIEW_LABEL = 'Save review';

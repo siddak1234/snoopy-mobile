@@ -2823,8 +2823,11 @@ ICD-10 Code Check's `words.md` section 3, owner-approved 2026-10-28 ~21:43Z, cop
   each change." shows until then. Saving sends `{ decisions: [{ id, decision }] }`
   (`decideReview`, the same route, one key per approval and set of answers). Saved, the page shows
   "{a} accepted · {d} denied". A failure shows "The review wasn't saved. Try again." whatever the
-  platform said. A member sees "Only an owner or admin can review this."; anyone else the approval
-  does not name (an admin on an owner-only one), who may decide it. The Approvals card shows
+  platform said. The rows are drawn to everyone, the pills only to those who may approve: a member
+  sees the rows read-only and "Only an owner or admin can review this."; anyone else the approval
+  does not name (an admin on an owner-only one), the rows read-only and who may decide it (~~the
+  one line, no rows~~ until the second review). Run details' step that waited says "{a} accepted ·
+  {d} denied" once saved, as the website's tracker does. The Approvals card shows
   "Review {n} changes", which opens the run, in place of Approve / Deny. A held run with no
   changes is unchanged.
 - **OPEN, the tally in Approvals.** Spec F2 and `words.md` section 3 say "{a} accepted · {d}
@@ -2832,12 +2835,13 @@ ICD-10 Code Check's `words.md` section 3, owner-approved 2026-10-28 ~21:43Z, cop
   and a saved review reads `approved`, so it has left the list: the tally shows on the run only.
   Showing it in Approvals needs a read of decided reviews there; ~~the card's tally~~ removed by
   the review (it could never show).
-- **The pending contract.** The backend's contracts had not landed (`git log origin/main..HEAD --
-  packages/contracts schemas` empty in the backend lane at build time). The shapes live in one
-  module, `lib/platform/pending-contract.ts`, and the one body cast in `decideReview`. The
-  regeneration from the backend's merged head deletes both. The approval's answers field is not
-  final: `reviewAnswers` reads an answer on each offered row or an `answers` list, and the
-  regeneration settles which.
+- **The contract, regenerated.** A hand-written ~~`lib/platform/pending-contract.ts`~~ and one body
+  cast in `decideReview` until the second review: both are deleted, and every use reads the
+  generated types (`npm run generate:platform-contracts` from the backend's PR #255 head,
+  `3fd5cea`): `AutomationSetupField`'s `select`, `options`, `multiple`; `HeldDecision`
+  (`OfferedDecision`) and `ReviewAnswer` (`AnsweredDecision`) in `lib/platform/automations.ts`;
+  the `review` question form (block set 3); the decide body's `decisions`. A saved review's
+  answers are each offered change's `decision` (`reviewAnswers`, `lib/view/runs.ts`).
 - **NOT OBSERVED on a device:** the several-choice panel, the review rows at the largest text size.
 
 ### Guards proved to bite, the setup dropdown and the review (2026-10-28)
@@ -2853,7 +2857,7 @@ tally from kept answers, and Approvals' "Review {n} changes" (`review-decisions`
 
 1. The backend's draft sends a review as its own question form, `kind: 'review'`
    (`snoopy-backend/packages/contracts/src/blocks.ts`, uncommitted), which this build drew as the fallback. `review`
-   is a known form now (`PENDING_FORM_KINDS` in `lib/platform/pending-contract.ts`), drawn by the
+   is a known form now (`PENDING_FORM_KINDS` in ~~`lib/platform/pending-contract.ts`~~, deleted at the regeneration), drawn by the
    run page's approval form; the kind is settled at the regeneration. `BlockForms` is a Partial
    record, so a form kind is not a typecheck failure there: the pending module says so.
 2. The Approvals tally removed (above, OPEN).
@@ -2866,3 +2870,23 @@ Bites (break, red, restore with the same sha256, green; `review-decisions`): `re
 `KNOWN_FORMS`; `review` out of the run page's forms; the members' line to everyone refused; a new
 key on every retry; one key whatever the answers; the pills not waiting while it saves; Save not
 waiting; the Accept pill's label; the Accept pill's `selected`; `PillButton` dropping `selected`.
+
+### The second review's fixes and the regeneration, the setup dropdown and the review (2026-10-28)
+
+1. The rows to everyone (words.md section 3): a member, or anyone else the approval does not name,
+   sees every row read-only (`ReviewDecisions`' `readOnly`) above the one line; so does a `review`
+   form the page draws no form for (`questionsForm`), as the fixture `review-held-waiting` reads.
+   A row's " · " is a drawn dot, so the label and the detail are each a word, as the website's
+   `ReviewRows` draws its separator; the line is heard whole.
+2. Run details' step that waited says "{a} accepted · {d} denied" once saved, held or working on,
+   never once denied or failed (`toTracker`'s `review`, from `jobReviewTally` in
+   `use-run-detail`): the website's `trackerSub` rule.
+3. `screen-states.ts`' comment: the tally on the run, Approvals OPEN (above).
+4. The contracts regenerated from the backend's PR #255 head (`3fd5cea`); `pending-contract.ts`
+   and `decideReview`'s body cast deleted; the fixtures are 28, block set 3.
+
+Bites (break, red, restore byte-identical, green): the read-only rows out of the run page
+(`review-decisions`, 2 red); the tracker's `review` not passed (`invoice-processing-screens`);
+`trackerSub`'s review line (`build21-views`); the questions block's read-only rows
+(`blocks-parity`, `review-held-waiting`); `decideReview` sending the wrong answers
+(`platform-mutations`).

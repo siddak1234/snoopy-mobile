@@ -455,9 +455,17 @@ complete export (Download file) and workspace summary (Download JSON).
   offered id once (`decideReview`, the same hook and key rule: a retry with
   the same answers keeps its key, changed answers take a new one; while it
   saves the pills and Save wait); refused or unanswered, "The review wasn't
-  saved. Try again."; to a member, "Only an owner or admin can review this.",
-  to anyone else the approval does not name, who may decide it
-  (`decidersLine`). Saved, the page says "{a} accepted · {d} denied".
+  saved. Try again."; the rows are drawn to everyone, the pills only to those
+  who may approve: to a member the rows read-only (`ReviewDecisions`'
+  `readOnly`) and "Only an owner or admin can review this.", to anyone else
+  the approval does not name the rows read-only and who may decide it
+  (`decidersLine`); a `review` form the page draws no form for, the rows
+  read-only too (`questionsForm`; the block fixture `review-held-waiting`).
+  A row's dot is drawn, not a word, so its label and detail are each the
+  flow's words, and a screen reader hears "{label} · {detail}" whole. Saved,
+  the page says "{a} accepted · {d} denied", and so
+  does the step that waited in Run details (`toTracker`'s `review`, the
+  website's rule).
 - API-key connection: generated credential fields → connection mutation with an
   idempotency key, the button "Verify and connect" (Gate 24 parity, G15). A 409
   — the key reused with other values, or its first request still verifying —

@@ -1,13 +1,17 @@
 import type { components } from '@/lib/generated/platform-contracts/automations';
 import { platformOperation } from './client';
 import { PlatformError } from './problem';
-import type { ReviewBody } from './pending-contract';
 import { invalidateShared } from './snapshot';
 
 export type Subscription = components['schemas']['Subscription'];
 export type SubscriptionStatus = components['schemas']['SubscriptionStatus'];
 export type Run = components['schemas']['Run'];
 export type Approval = components['schemas']['Approval'];
+/** One change a held run offers for review (Round 21's platform round, F2; ADR-0048 amendment 2). */
+export type OfferedDecision = components['schemas']['HeldDecision'];
+/** One answer to an offered change, as the decision route takes it and the approval keeps it. */
+export type AnsweredDecision = components['schemas']['ReviewAnswer'];
+export type DecisionAnswer = AnsweredDecision['decision'];
 export type AutomationRunInputField = components['schemas']['AutomationRunInputField'];
 export type WebhookEndpoint = components['schemas']['WebhookEndpoint'];
 export type IssuedWebhookEndpoint = components['schemas']['IssuedWebhookEndpoint'];
@@ -20,7 +24,7 @@ export type Item = components['schemas']['Item'];
 export type RunSection = components['schemas']['RunSection'];
 export type RunFile = components['schemas']['RunFile'];
 export type RunFileLink = components['schemas']['RunFileLink'];
-/** One of the thirteen blocks a run's or an item's page body is made of (backend ADR-0048 and its amendment 1, `BLOCK_SET_VERSION` 2). */
+/** One of the thirteen blocks a run's or an item's page body is made of (backend ADR-0048 and its amendments 1 and 2, `BLOCK_SET_VERSION` 3). */
 export type Block = components['schemas']['Block'];
 export type BlockOpen = components['schemas']['BlockOpen'];
 /** Each page's parts, in the order the flow's pinned manifest gives (backend ADR-0048 decision 5). */
@@ -256,17 +260,14 @@ export function decideApproval(
  * F2): the same route as `decideApproval`, its body every offered change's
  * answer once — `{ decisions: [{ id, decision: 'accepted' | 'denied' }] }` —
  * never `{ decision }`. The platform continues the job whatever the answers,
- * all denied included. The body's type is the pending contract
- * (`./pending-contract`) until the regeneration publishes it; the one cast
- * below goes with that file.
+ * all denied included.
  */
 export function decideReview(
   workspaceId: string,
   approvalId: string,
-  answers: ReviewBody['decisions'],
+  answers: readonly AnsweredDecision[],
   idempotencyKey: string,
 ): Promise<{ approval: Approval; continuation?: Run }> {
-  const body: ReviewBody = { decisions: answers.map(({ id, decision }) => ({ id, decision })) };
   return platformOperation(
     `/v1/workspaces/${workspaceId}/approvals/${approvalId}/decision`,
     ({ automations }, signal) =>
@@ -275,7 +276,7 @@ export function decideReview(
           path: { workspaceId, approvalId },
           header: { 'Idempotency-Key': idempotencyKey },
         },
-        body: body as unknown as { decision: 'approved' | 'rejected' },
+        body: { decisions: answers.map(({ id, decision }) => ({ id, decision })) },
         signal,
       }),
   ).then(changed(workspaceId, ['approvals', 'runs', 'run-stats']));

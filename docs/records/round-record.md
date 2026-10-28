@@ -4,9 +4,8 @@
 
 The app's half of the setup dropdown (F1) and the review of each change (F2) in
 the round's platform spec, in the words of ICD-10 Code Check's `words.md` section 3
-(owner-approved 2026-10-28 ~21:43Z). It is built against `lib/platform/pending-contract.ts` while
-the backend's contracts are not merged; it lands with the regeneration from the backend's merged
-head. Findings and bites: `DESIGN-GAPS.md` "Round 21 — a setup dropdown and a review of each
+(owner-approved 2026-10-28 ~21:43Z). It reads the contracts regenerated from the backend's PR #255
+head (`3fd5cea`); a hand-written ~~`lib/platform/pending-contract.ts`~~ until that regeneration. Findings and bites: `DESIGN-GAPS.md` "Round 21 — a setup dropdown and a review of each
 change".
 
 ## Round 17

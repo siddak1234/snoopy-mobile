@@ -1073,6 +1073,18 @@ describe("a held run is decided from its page: Approve or Deny in its approval f
     expect(within(await screen.findByTestId('run-step-group:done')).getByText('Denied')).toBeTruthy();
     expect(screen.queryByText('Approve')).toBeNull();
   });
+
+  it('reviewed (Round 21, F2): the step that waited says "{a} accepted · {d} denied" on its Run details, as the website\'s does', async () => {
+    const reviewed = {
+      ...runApproval('ap-1', 'approved', '2026-10-14T20:03:00Z'),
+      decisions: [
+        { id: 'n18-4', label: 'N18.4 → Remove', decision: 'accepted' },
+        { id: 'z99-2', label: 'Add Z99.2', decision: 'denied' },
+      ],
+    };
+    await openRunDetails(held(), { approvals: { approvals: [reviewed] as never }, role: 'owner' });
+    expect(within(await screen.findByTestId('run-step-group:done')).getByText('1 accepted · 1 denied')).toBeTruthy();
+  });
 });
 
 describe("a run's documents and its package (spec A7, C2; the owner's ~04:05Z and AM7; round 24 P10, P12; the platform's blocks since Round 21)", () => {

@@ -3,9 +3,8 @@ import { useCallback, useRef, useState } from 'react';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
 import { DECISION_NOT_SAVED, REVIEW_NOT_SAVED } from '@/lib/content/screen-states';
-import { decideApproval, decideReview } from '@/lib/platform/automations';
+import { decideApproval, decideReview, type AnsweredDecision } from '@/lib/platform/automations';
 import { newIdempotencyKey } from '@/lib/platform/client';
-import type { AnsweredDecision } from '@/lib/platform/pending-contract';
 
 /** The API's two answers: Approve, and Deny (`rejected`; S6). */
 export type Decision = 'approved' | 'rejected';

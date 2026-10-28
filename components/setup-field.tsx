@@ -11,16 +11,9 @@ import { useTheme } from '@/hooks/use-theme';
 import { ScopePill } from '@/components/scope-control';
 import { NEWER_CONTROL_NOTE, chosenLabel } from '@/lib/content/screen-states';
 import type { components } from '@/lib/generated/platform-contracts/automations';
-import type { PendingSetupControl, PendingSetupField } from '@/lib/platform/pending-contract';
 
+/** A setup field; `select` (F1, Round 21's platform round) carries its `options` and `multiple`. */
 export type SetupField = components['schemas']['AutomationSetupField'];
-/**
- * A setup field with the `select` control the platform round adds (F1) and its
- * `options` and `multiple`, read through the pending contract module until the
- * next regeneration (`lib/platform/pending-contract.ts`), which folds it into
- * `SetupField`.
- */
-export type SelectableSetupField = PendingSetupField;
 
 /** Whether a field is the setup dropdown (F1). */
 export function isSelectField(field: { control: string }): boolean {
@@ -38,7 +31,7 @@ export function isSelectField(field: { control: string }): boolean {
  * it as the website does — a text input, with a note (BUILD-PLAN 25.8.1, the
  * owner's requirement 1) — instead of looking it up and crashing the dialog.
  */
-export type FieldRowSpec = Pick<SelectableSetupField, 'key' | 'title' | 'description' | 'required' | 'notifies' | 'options' | 'multiple'> & {
+export type FieldRowSpec = Pick<SetupField, 'key' | 'title' | 'description' | 'required' | 'notifies' | 'options' | 'multiple'> & {
   control: string;
 };
 
@@ -179,7 +172,7 @@ export function moneyCents(value: unknown): number | null {
  * input (`ManifestFields.tsx`), under the text glyph: a control this build
  * knows, never the newer-than-this-build fallback below (25.8.1).
  */
-export type KnownControl = SetupField['control'] | PendingSetupControl;
+export type KnownControl = SetupField['control'];
 
 const CONTROL_ICON: Record<KnownControl, Icon> = {
   toggle: HandPalm,
@@ -263,7 +256,7 @@ export function notifiesLine(field: Pick<FieldRowSpec, 'notifies'>): string | nu
  * (a several-choice `select`, F1) that is empty counts as missing, a default
  * or not: a required one is never saved empty.
  */
-export function missingRequiredSetupFields<F extends Pick<SelectableSetupField, 'key' | 'required' | 'defaultValue'>>(
+export function missingRequiredSetupFields<F extends Pick<SetupField, 'key' | 'required' | 'defaultValue'>>(
   fields: F[],
   values: Record<string, unknown>,
 ): F[] {

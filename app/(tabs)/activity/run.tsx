@@ -5,7 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Chip } from '@/components/blocks/badge';
-import { toneColor } from '@/components/blocks/look';
+import { toneColor, type BlockOf } from '@/components/blocks/look';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { FileActions } from '@/components/files/file-actions';
 import { PillButton } from '@/components/nocturne/pill-button';
@@ -35,12 +35,11 @@ import {
   VIEW_PACKAGE_LABEL,
   errorTitleFor,
 } from '@/lib/content/screen-states';
-import { cancelRun } from '@/lib/platform/automations';
+import { cancelRun, type AnsweredDecision } from '@/lib/platform/automations';
 import { PlatformError } from '@/lib/platform/problem';
 import { decidersLine, decides } from '@/lib/view/roles';
 import { statusLabel, type StatusPillLabel } from '@/lib/view/status';
-import { offeredDecisions, type AnsweredDecision, type PendingApprovalForm } from '@/lib/platform/pending-contract';
-import { RUN_ORIGIN_TAB, jobReviewTally, runLabel, runOrigin } from '@/lib/view/runs';
+import { RUN_ORIGIN_TAB, jobReviewTally, offeredDecisions, runLabel, runOrigin } from '@/lib/view/runs';
 
 /**
  * A run's page — the one, in Activity's stack (round 24 P5; the owner's build 23
@@ -193,15 +192,17 @@ export default function RunDetailScreen() {
    *
    * A form that carries changes (`decisions`; Round 21's platform round, F2)
    * is a review instead: each change Accept or Deny (`ReviewDecisions`), then
-   * Save review, which sends every answer; to a member, "Only an owner or
-   * admin can review this.", and to anyone else the approval does not name
-   * (an admin on an owner-only one), who may decide it. Saved, the page says
+   * Save review, which sends every answer. The rows are drawn to everyone
+   * (words.md section 3), the pills only to those who may approve: to a
+   * member the rows read-only and "Only an owner or admin can review this.",
+   * and to anyone else the approval does not name (an admin on an owner-only
+   * one) the rows read-only and who may decide it. Saved, the page says
    * "{a} accepted · {d} denied" and reads the run again: the job goes on
-   * whatever the answers. The backend's draft sends it as its own form,
-   * `review` (`PENDING_FORM_KINDS`), and the page draws either kind.
+   * whatever the answers. The platform sends it as its own form, `review`
+   * (block set 3), and the page draws `approval` and `review` alike.
    */
   const role = liveRun?.role;
-  const approvalForm = (form: PendingApprovalForm) => {
+  const approvalForm = (form: BlockOf<'questions'>['form']) => {
     const approvalId = form.approvalId;
     const eligible = form.eligibleRoles ?? [];
     if (!approvalId || role === undefined || role === null) return null;
@@ -209,9 +210,12 @@ export default function RunDetailScreen() {
     if (changes.length > 0) {
       if (!decides(role, eligible)) {
         return (
-          <Text testID="run-review-member" style={[styles.decisionNote, { color: palette.neutral[400] }]}>
-            {role === 'member' ? REVIEW_MEMBER_NOTE : decidersLine(eligible)}
-          </Text>
+          <View testID="run-review-readonly" style={styles.decision}>
+            <ReviewDecisions testID="run-review" changes={changes} readOnly />
+            <Text testID="run-review-member" style={[styles.decisionNote, { color: palette.neutral[400] }]}>
+              {role === 'member' ? REVIEW_MEMBER_NOTE : decidersLine(eligible)}
+            </Text>
+          </View>
         );
       }
       const reviewError = decisions.errorFor(approvalId);

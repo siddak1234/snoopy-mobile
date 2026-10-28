@@ -8,7 +8,6 @@ Loads when a file here is read or edited. The root `CLAUDE.md` rules 5–7 apply
 - `npm run verify:platform-contracts` (in `verify` and CI) regenerates them and fails on any diff. A shape change starts in the backend's documents, then regenerate; never edit a generated file.
 - Each file's first line names its document and sha256.
 - `block-fixtures.ts` is the backend's block fixtures (`packages/contracts/fixtures/blocks/*.json`, ADR-0048 decision 9); its header's rule is README "`verify:platform-contracts`", and verify checks it too.
-- `pending-contract.ts` (Round 21's platform round, F1 and F2) is hand-written and NOT generated: the narrowest local types for the setup dropdown (`select`, `options`, `multiple`) and the review of each change (`Approval.decisions`, the decide body's `decisions`, the draft `review` question form in `PENDING_FORM_KINDS`) while the backend's contracts are not merged. The regeneration from the backend's merged head deletes it and the one body cast in `decideReview`; it never stands in for a generated file.
 - `block-required.ts` (round 21) is each block type's required fields, read from the `Block` schema in `snoopy-backend/docs/openapi/automations.yaml`; its header names that document's sha256, and verify checks it too. `components/blocks/drawable.ts` reads it.
 
 ## CI's `Deployed contract` job

@@ -13,7 +13,6 @@ import {
   notifiesLine,
   sectionLabel,
   selectedChoices,
-  type SelectableSetupField,
   type SetupField,
 } from '@/components/setup-field';
 import { CHOOSE_AT_LEAST_ONE, NEWER_CONTROL_NOTE, chosenLabel } from '@/lib/content/screen-states';
@@ -329,7 +328,7 @@ describe('a control this build does not know (BUILD-PLAN 25.8.1, the owner\'s re
 /** The setup dropdown (Round 21's platform round, F1; words.md section 3). */
 describe('a select: the glass dropdown, one choice or several', () => {
   const SPECIALTIES = ['Nephrology', 'Internal medicine', 'Cardiology', 'Endocrinology'];
-  const select = (over: Partial<SelectableSetupField>): SelectableSetupField => ({
+  const select = (over: Partial<SetupField>): SetupField => ({
     section: 'rules',
     key: 'specialties',
     title: 'Specialties',
