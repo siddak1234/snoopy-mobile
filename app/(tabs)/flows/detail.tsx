@@ -5,7 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AutomationActions } from '@/components/automations/automation-actions';
-import { Fallback } from '@/components/blocks/fallback';
+import { NotDrawnFallback } from '@/components/blocks/fallback';
 import { pageParts } from '@/components/blocks/look';
 import { StartRun, canStartRun } from '@/components/automations/start-run';
 import { ConnectionMark, ConnectionRow, GlyphMark, NoneMark } from '@/components/connection-row';
@@ -574,7 +574,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
             </React.Fragment>
           );
         }
-        return <Fallback key={`unknown-${at}`} testID={`flow-part-${at}`} />;
+        return <NotDrawnFallback key={`unknown-${at}`} type="unknown" error="unknown part" testID={`flow-part-${at}`} />;
       })}
 
       {def.removed ? (

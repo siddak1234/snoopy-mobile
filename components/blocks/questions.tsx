@@ -3,7 +3,7 @@ import { View } from 'react-native';
 
 import { SectionTitle } from '@/components/nocturne/section-label';
 
-import { Fallback } from './fallback';
+import { NotDrawnFallback } from './fallback';
 import type { BlockOf } from './look';
 
 type QuestionForm = BlockOf<'questions'>['form'];
@@ -38,7 +38,8 @@ export function questionsForm(block: BlockOf<'questions'>, forms: BlockForms | u
  * ("Add candidate") as a title over what it heads (`SectionTitle`, `title`
  * above the form, as "CANDIDATES" is above its list: the owner's build 30 note
  * F3; ~~the label block's look, flush on the form~~ until Round 21); a form
- * this build does not know, the fallback.
+ * this build does not know, the fallback, logged as `questions`, `form.kind`
+ * (`NotDrawnFallback`), as the website logs it.
  */
 export function QuestionsBlock({
   block,
@@ -50,7 +51,7 @@ export function QuestionsBlock({
   forms: BlockForms | undefined;
 }) {
   const drawn = questionsForm(block, forms);
-  if (drawn === 'unknown') return <Fallback testID={`${testID}-fallback`} />;
+  if (drawn === 'unknown') return <NotDrawnFallback type="questions" error="form.kind" testID={`${testID}-fallback`} />;
   if (drawn === null) return null;
   const kind = (block.form as { kind: FormKind }).kind;
   return (

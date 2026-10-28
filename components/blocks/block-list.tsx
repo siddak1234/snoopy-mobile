@@ -1,12 +1,14 @@
 import React from 'react';
 import { View } from 'react-native';
 
+import { Catch } from '@/components/dialog-boundary';
 import { space } from '@/constants/theme';
 import type { Block } from '@/lib/platform/automations';
 
 import { BadgeBlock } from './badge';
 import { ChartBlock } from './chart';
-import { Fallback } from './fallback';
+import { missingField } from './drawable';
+import { Fallback, NotDrawnFallback } from './fallback';
 import { FileBlock } from './file';
 import { GroupCard } from './group';
 import { ImageBlock } from './image';
@@ -14,6 +16,7 @@ import { LinkBlock } from './link';
 import { ListBlock } from './list';
 import type { BlockOf, BlockPlace } from './look';
 import { MetricBlock } from './metric';
+import { notDrawn } from './not-drawn';
 import { QuestionsBlock, questionsForm, type BlockForms } from './questions';
 import { SectionBlock } from './section';
 import { TableBlock } from './table';
@@ -94,6 +97,26 @@ function rendererFor(block: unknown): Draw<Block['type']> | undefined {
     : undefined;
 }
 
+/** The type a block names, for the log: its `type` when that is a string, else `unknown`. */
+function typeOf(block: unknown): string {
+  const type = typeof block === 'object' && block !== null ? (block as { type?: unknown }).type : undefined;
+  return typeof type === 'string' ? type : 'unknown';
+}
+
+/**
+ * What `Catch` around a block is reset by: the block's content. A re-read that
+ * sends the same block keeps a caught block the fallback, unlogged again; one
+ * that sends a different block at that place draws it, and logs it once more
+ * if it throws too.
+ */
+function contentKey(block: unknown): string {
+  try {
+    return JSON.stringify(block) ?? typeOf(block);
+  } catch {
+    return typeOf(block);
+  }
+}
+
 function Blocks({
   blocks,
   prefix,
@@ -120,13 +143,22 @@ function Blocks({
       {drawn.map(({ block, index }, at) => {
         const testID = `${prefix}-${index}`;
         const draw = rendererFor(block);
+        const type = draw ? (block as Block).type : null;
+        const missing = type ? missingField(block as Block) : null;
         const above = at === 0 ? 0 : isLabel(drawn[at - 1]!.block) ? space.title : between;
         return (
           <View key={testID} style={above > 0 ? { marginTop: above } : undefined}>
-            {draw ? (
-              draw({ block: block as Block, testID, nested, context, inner })
+            {!draw || !type ? (
+              <NotDrawnFallback type={typeOf(block)} error="unknown type" testID={`${testID}-fallback`} />
+            ) : missing ? (
+              <NotDrawnFallback type={type} error={missing} testID={`${testID}-fallback`} />
             ) : (
-              <Fallback testID={`${testID}-fallback`} />
+              <Catch
+                fallback={<Fallback testID={`${testID}-fallback`} />}
+                onError={(error) => notDrawn(type, error)}
+                resetKey={contentKey(block)}>
+                {draw({ block: block as Block, testID, nested, context, inner })}
+              </Catch>
             )}
           </View>
         );
@@ -139,8 +171,15 @@ function Blocks({
  * A page body as the platform sent it (backend ADR-0048): every block drawn as
  * sent and in order, by its type's renderer, its words a text node, never
  * markup; a block, form or target this build does not know drawn as the
- * decision says (`Fallback`, no press). An answer with no blocks — a platform
- * rolled back, or a flow it could not read — draws the fallback alone. Each
+ * decision says (`Fallback`, no press). A known block missing a required field,
+ * or whose renderer throws, is `Fallback` too, logged with its type (round 21,
+ * design D2.6: `missingField`, then a `Catch` around each block), and the next
+ * block still draws. A type this build does not know is `Fallback`, logged as
+ * `unknown type` (design D2.6: every fallback is logged). An answer with no
+ * blocks — a platform rolled back, or a flow it could not read — draws the
+ * fallback alone, logged as `unknown`, `no blocks`; a body that is not a list,
+ * as `unknown`, `not a list`. A re-read that replaces a caught block resets
+ * its `Catch` (`contentKey`), so the new block draws. Each
  * block's testID is its place: `{testID}-{index}`, and inside a section
  * `{testID}-{index}-{index}`.
  */
@@ -156,7 +195,11 @@ export function BlockList({
   if (!Array.isArray(blocks)) {
     return (
       <View testID={testID}>
-        <Fallback testID={`${testID}-fallback`} />
+        <NotDrawnFallback
+          type="unknown"
+          error={blocks === undefined ? 'no blocks' : 'not a list'}
+          testID={`${testID}-fallback`}
+        />
       </View>
     );
   }

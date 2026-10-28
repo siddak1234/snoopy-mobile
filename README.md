@@ -75,11 +75,15 @@ The individual architecture gates are:
 - `audit:platform`: no raw network primitive, alternate network library,
   AsyncStorage, runtime console call, or `openapi-fetch` import outside the
   transport boundary; the transport's one signed upload and one native
-  download (`downloadFileAsync`, 24.12) are each budgeted to a single call.
+  download (`downloadFileAsync`, 24.12) are each budgeted to a single call,
+  and so is the one log line, `console.error` in
+  `components/blocks/not-drawn.ts` (round 21: a part not drawn, its type and
+  the error).
 - `verify:platform-contracts`: regenerate from the sibling backend checkout,
   when present, and reject a generated declaration diff — the block fixtures'
   `block-fixtures.ts` too, its header one sha256 over the fixtures' bytes in
-  filename order, the website's rule (backend ADR-0048 decision 9).
+  filename order, the website's rule (backend ADR-0048 decision 9), and
+  `block-required.ts` (round 21), headed by automations.yaml's sha256.
 - `audit:presses` (`scripts/audit-presses.mjs`, coverage-based, in `verify`
   and CI): **every press has a test that presses it and asserts its outcome**
   (build 13, B9) — the screen and params it opens, the request it sends
@@ -306,14 +310,19 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
 ## Runtime architecture
 
 - `lib/generated/platform-contracts/` is generated from the Edge, automations,
-  and connections OpenAPI documents, and `block-fixtures.ts` from the
-  backend's `packages/contracts/fixtures/blocks/*.json`. Do not hand-edit it.
+  and connections OpenAPI documents, `block-fixtures.ts` from the
+  backend's `packages/contracts/fixtures/blocks/*.json`, and
+  `block-required.ts` (each block type's required fields) from the `Block`
+  schema in automations.yaml. Do not hand-edit it.
 - The run, item and file pages draw the platform's page body (backend
   ADR-0048): `readRun` and `readItem` send `shape=blocks`, and
   `components/blocks/block-list.tsx` draws each block by its type's renderer
   — one per type of the generated `Block` union, each made from a component
   the app has — and `FALLBACK` (`lib/content/screen-states.ts`) for a type,
-  form or part this build does not know. Blocks are text, never markup
+  form or part this build does not know — and for a known block missing a
+  required field, or whose renderer throws. Every fallback is logged once,
+  through `NotDrawnFallback` or `Catch` (round 21; the reasons are listed in
+  DESIGN-CONTRACT.md, "A block that cannot be drawn"). Blocks are text, never markup
   (`__tests__/no-flow-code.test.ts`). An installed build that predates this
   never sends the parameter and keeps the legacy answer.
 - `lib/platform/client.ts` is the sole runtime transport boundary. It uses

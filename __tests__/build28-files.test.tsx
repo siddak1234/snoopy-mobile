@@ -7,6 +7,7 @@ import RunFileScreen from '@/app/(tabs)/activity/run-file';
 import ItemFileScreen from '@/app/(tabs)/flows/item-file';
 import ItemScreen from '@/app/(tabs)/flows/item';
 import { status } from '@/constants/theme';
+import { FALLBACK } from '@/lib/content/screen-states';
 import type { AutomationItems, AutomationRunInputField, Item, Run, RunFile, Subscription } from '@/lib/platform/automations';
 import type { CatalogEntry } from '@/lib/platform/catalog';
 import { PlatformError } from '@/lib/platform/problem';
@@ -238,11 +239,12 @@ describe("an item's page (build 28, F4–F6; its blocks since Round 21)", () => 
 async function openItemFile(
   answer: () => Answer<typeof ITEM_FILE> | Promise<Answer<typeof ITEM_FILE>>,
   read = item({ blocks: fixtureBlocks('reviewer-item-reading') }),
+  subscription = flowWithItems(),
 ) {
   const fake = fakePlatform(platformOperation);
   fake.always(`GET ${ITEM_ONE}`, { item: read, runs: [] });
   fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', (sent) => ({
-    subscriptions: sent.query?.status === 'archived' ? [] : [flowWithItems()],
+    subscriptions: sent.query?.status === 'archived' ? [] : [subscription],
   }));
   fake.always(ITEM_FILE, () => answer());
   setMockParams({ item: 'i-1' });
@@ -380,6 +382,21 @@ describe("an item's file, on a page of its own (build 28, F4)", () => {
     expect(screen.queryByTestId('item-file-download')).toBeNull();
     expect(screen.queryByTestId('item-file-retry')).toBeNull();
     expect(screen.getByTestId('item-reading-0')).toBeTruthy();
+  });
+
+  it('a part this build does not know is the fallback in its place, logged once as `unknown` and `unknown part` (round 21, design D2.6)', async () => {
+    const logged = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const pages = { file: ['viewer', 'map', 'reading'] } as unknown as Subscription['pages'];
+      await openItemFile(() => link(policy), undefined, flowWithItems({ pages }));
+      expect(screen.getByTestId('item-file-part-1').props.children).toBe(FALLBACK);
+      expect(screen.getByTestId('item-reading')).toBeTruthy();
+      expect(logged.mock.calls.filter(([message]) => message === 'block not drawn')).toEqual([
+        ['block not drawn', { type: 'unknown', error: 'unknown part' }],
+      ]);
+    } finally {
+      logged.mockRestore();
+    }
   });
 });
 

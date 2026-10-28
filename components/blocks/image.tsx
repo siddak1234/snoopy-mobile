@@ -18,7 +18,7 @@ import { PlatformError } from '@/lib/platform/problem';
 import { signedLink } from '@/lib/platform/signed-file';
 import { viewName } from '@/lib/view/items';
 
-import { Fallback } from './fallback';
+import { NotDrawnFallback } from './fallback';
 import { openRoute, type BlockOf, type BlockPlace } from './look';
 
 /** The tallest a picture is drawn, and a scanned page's frame (backend ADR-0048 amendment 1, point 2). */
@@ -59,8 +59,9 @@ function readerFor(open: BlockOpen | undefined): ((workspaceId: string) => Promi
  * never typed here: `FILE_OPENING` while it comes; `FILE_GONE` for a file no
  * longer kept (404); `FILE_NOT_OPENED` for anything else, with
  * `TRY_AGAIN_LABEL`, which reads it again. A file of another type is today's
- * file row. A target this build does not know is the
- * fallback sentence.
+ * file row. A target this build does not know, or a file row with no page to
+ * open, is the fallback sentence, logged as `image`, `open.target`
+ * (`NotDrawnFallback`).
  */
 export function ImageBlock({
   block,
@@ -134,7 +135,7 @@ export function ImageBlock({
     };
   }, [load]);
 
-  if (!reader) return <Fallback testID={`${testID}-fallback`} />;
+  if (!reader) return <NotDrawnFallback type="image" error="open.target" testID={`${testID}-fallback`} />;
 
   const open = route ? () => router.push(route.href, route.withAnchor ? { withAnchor: true } : undefined) : undefined;
   let body: React.ReactNode;
@@ -185,7 +186,7 @@ export function ImageBlock({
         </SurfaceCard>
       )
     ) : (
-      <Fallback testID={`${testID}-fallback`} />
+      <NotDrawnFallback type="image" error="open.target" testID={`${testID}-fallback`} />
     );
   } else {
     const note = shown.kind === 'opening' ? FILE_OPENING : shown.kind === 'gone' ? FILE_GONE : FILE_NOT_OPENED;

@@ -160,15 +160,15 @@ describe('the pages draw the platform\'s blocks (backend ADR-0048 decision 11)',
 
     // A copy with its fallback taken out: the same blocks no longer draw it.
     const source = readFileSync(join(root, 'components/blocks/block-list.tsx'), 'utf8');
-    const withFallback = `            {draw ? (
-              draw({ block: block as Block, testID, nested, context, inner })
-            ) : (
-              <Fallback testID={\`\${testID}-fallback\`} />
-            )}`;
+    // The unknown type's branch; the copy goes straight on to the field check
+    // and the renderer (round 21), so an unknown type reaches `draw` undefined.
+    const withFallback = `            {!draw || !type ? (
+              <NotDrawnFallback type={typeOf(block)} error="unknown type" testID={\`\${testID}-fallback\`} />
+            ) : missing ? (`;
     expect(source).toContain(withFallback);
     const copy = source
-      .replace(withFallback, '            {draw!({ block: block as Block, testID, nested, context, inner })}')
-      .replace(/from '\.\/(\w+)'/gu, "from '@/components/blocks/$1'");
+      .replace(withFallback, '            {missing ? (')
+      .replace(/from '\.\/([\w-]+)'/gu, "from '@/components/blocks/$1'");
     const folder = join(root, 'test/.block-list-copy');
     mkdirSync(folder, { recursive: true });
     writeFileSync(join(folder, 'block-list.tsx'), copy);

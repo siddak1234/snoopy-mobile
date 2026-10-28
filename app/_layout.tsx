@@ -26,6 +26,9 @@ import { WorkflowsProvider } from '@/hooks/use-workflows';
 import { readAppearance, writeAppearance } from '@/lib/platform/appearance-store';
 import { noteOpenScreen } from '@/lib/view/return-to';
 
+// The app's last boundary (round 21): `components/root-boundary.tsx`.
+export { RootBoundary as ErrorBoundary } from '@/components/root-boundary';
+
 export const unstable_settings = {
   anchor: 'index',
 };

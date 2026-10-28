@@ -30,6 +30,7 @@ export const KIT_FILES = [
   '.claude/agents/explorer.md',
   '.claude/agents/reviewer.md',
   '.claude/agents/builder.md',
+  '.claude/agents/researcher.md',
   'scripts/kit/check-docs.mjs',
   'scripts/kit/map.mjs',
   'scripts/kit/kit.test.mjs',
@@ -267,6 +268,53 @@ describe('check-docs (STANDARD (e))', () => {
     });
   }
 
+  // A `*` in a rule's docs is bound to what the code glob's first `*` matched (Round 21):
+  // each flow's change asks for that flow's own README.
+  const FLOWS = {
+    ...MAP,
+    rules: [
+      { id: 'src', code: ['src/**'], docs: ['README.md'] },
+      { id: 'flows', code: ['flows/*/src/**', 'flows/*/prompts/**'], docs: ['flows/*/README.md'] },
+      { id: 'manifests', code: ['manifests/*.v*.json'], docs: ['flows/*/README.md'] },
+    ],
+  };
+  const FLOW_BASE = {
+    ...BASE,
+    'docs/docs-map.json': JSON.stringify(FLOWS),
+    'flows/one/src/a.mjs': '// a\n',
+    'flows/one/prompts/p.json': '{}\n',
+    'flows/one/README.md': '# one\n',
+    'flows/two/src/b.mjs': '// b\n',
+    'flows/two/README.md': '# two\n',
+    'manifests/one.v1.json': '{}\n',
+  };
+  const STAR_CASES = [
+    { name: 'a manifest-only change without its flow’s README fails', commit: { 'manifests/one.v2.json': '{}\n' }, exit: 1, out: /rule manifests: manifests\/one\.v2\.json changed without flows\/one\/README\.md/u },
+    { name: 'a manifest-only change with its flow’s README passes', commit: { 'manifests/one.v2.json': '{}\n', 'flows/one/README.md': '# one\n\nv2.\n' }, exit: 0 },
+    { name: 'a prompts-only change without its flow’s README fails', commit: { 'flows/one/prompts/p.json': '{"a":1}\n' }, exit: 1, out: /rule flows: flows\/one\/prompts\/p\.json changed without flows\/one\/README\.md/u },
+    { name: 'a prompts-only change with its flow’s README passes', commit: { 'flows/one/prompts/p.json': '{"a":1}\n', 'flows/one/README.md': '# one\n\nnew prompt.\n' }, exit: 0 },
+    { name: 'a src change in one flow is not met by another flow’s README', commit: { 'flows/one/src/a.mjs': '// a2\n', 'flows/two/README.md': '# two\n\nchanged.\n' }, exit: 1, out: /rule flows: flows\/one\/src\/a\.mjs changed without flows\/one\/README\.md/u },
+    { name: 'a manifest for no flow folder names the README it lacks', commit: { 'manifests/ghost.v1.json': '{}\n' }, exit: 1, out: /changed without flows\/ghost\/README\.md/u },
+  ];
+  for (const c of STAR_CASES) {
+    test(`the * binding: ${c.name}`, () => {
+      const dir = repo(FLOW_BASE);
+      const base = git(dir, 'rev-parse', 'HEAD');
+      commit(dir, c.commit);
+      const r = node('scripts/kit/check-docs.mjs', ['--base', base], { cwd: dir });
+      assert.equal(r.status, c.exit, r.stdout + r.stderr);
+      if (c.out) assert.match(r.stdout, c.out);
+    });
+  }
+  test('the * binding: a docs * needs a * in every code glob, and a file to match', () => {
+    const bad = { ...FLOWS, rules: [{ id: 'flows', code: ['flows/**'], docs: ['flows/*/README.md'] }, { id: 'x', code: ['src/**'], docs: ['nowhere/*/README.md'] }] };
+    const dir = repo({ ...FLOW_BASE, 'docs/docs-map.json': JSON.stringify(bad) });
+    const r = node('scripts/kit/check-docs.mjs', ['--map-only'], { cwd: dir });
+    assert.equal(r.status, 1, r.stdout);
+    assert.match(r.stdout, /rule flows: flows\/\*\/README\.md needs a \* in every code glob to bind to/u);
+    assert.match(r.stdout, /rule x names nowhere\/\*\/README\.md, which matches no file/u);
+  });
+
   test('--json reports the same problems as data', () => {
     const dir = repo(BASE);
     const base = git(dir, 'rev-parse', 'HEAD');
@@ -309,7 +357,15 @@ describe('the kit itself', () => {
   });
 
   test('the agents carry the roles of STANDARD (g)', () => {
-    const want = { explorer: ['Read, Grep, Glob', 'sonnet'], reviewer: ['Read, Grep, Glob, Bash', 'inherit'], builder: [undefined, 'inherit'] };
+    // Least privilege: only the researcher has the WebSearch and WebFetch tools, and it writes
+    // nothing; the builder writes and has no WebSearch or WebFetch tool (its Bash still reaches
+    // the network) (BUILD-PLAN 29.3.3).
+    const want = {
+      explorer: ['Read, Grep, Glob', 'sonnet'],
+      reviewer: ['Read, Grep, Glob, Bash', 'inherit'],
+      builder: ['Bash, Read, Write, Edit, Grep, Glob, Skill', 'inherit'],
+      researcher: ['WebSearch, WebFetch, Read, Grep, Glob', 'inherit'],
+    };
     for (const [name, [tools, model]] of Object.entries(want)) {
       const text = readFileSync(at(`.claude/agents/${name}.md`), 'utf8');
       const [, fm, body] = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/u.exec(text);

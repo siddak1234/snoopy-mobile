@@ -20,6 +20,12 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+// The YAML reader openapi-typescript itself reads the contracts with, so the
+// required fields below come from the same parse as the types: declared in
+// devDependencies at the version openapi-typescript's lock entry holds
+// (1.34.20, as the website declares it), never left to its install to hoist.
+import { parseYaml } from "@redocly/openapi-core";
+
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 // SNOOPY_BACKEND_ROOT points at another checkout of the platform — a worktree
 // at the deployed commit, say — and scripts/verify-platform-contracts.mjs reads
@@ -159,6 +165,85 @@ function writeBlockRules() {
   );
 }
 
+/**
+ * The block check (round 21, design D2.6): each block type's required fields
+ * (but `type`) with their basic type and, where the schema gives a `const` (a
+ * group's `sections[].type` is "section"), that one value as `value`, as the
+ * website carries it; and each required array's items' own,
+ * read from the `Block` schema in automations.yaml — the table's
+ * `required: [type, columns, rows]` becomes `table: { columns, rows }`.
+ * `components/blocks/drawable.ts` reads it before a renderer runs, so a known
+ * type with a missing field draws `Fallback` instead of throwing. A section's
+ * own `blocks` are not followed: each is checked when it is drawn. A required
+ * field of a shape this generator does not read stops it, as the block rules
+ * do: a new shape is drawn here first, never dropped.
+ */
+export const blockRequired = {
+  input: join(backendRoot, "docs/openapi/automations.yaml"),
+  output: join(root, "lib/generated/platform-contracts/block-required.ts"),
+};
+
+const BASIC_TYPES = ["string", "number", "boolean", "object", "array"];
+
+export function readBlockRequired() {
+  const schemas = parseYaml(readFileSync(blockRequired.input, "utf8")).components.schemas;
+  const BLOCK_REF = "#/components/schemas/Block";
+  const follow = (schema, where) => {
+    let at = schema;
+    while (at && typeof at.$ref === "string") {
+      at = schemas[at.$ref.replace("#/components/schemas/", "")];
+    }
+    if (!at || typeof at !== "object") throw new Error(`${where}: no schema in automations.yaml`);
+    return at;
+  };
+  const basic = (schema, where) => {
+    if ("const" in schema) return typeof schema.const;
+    const type = schema.type === "integer" ? "number" : schema.type;
+    if (BASIC_TYPES.includes(type)) return type;
+    throw new Error(
+      `${where}: a required field of a shape this generator does not read; draw it in scripts/generate-platform-contracts.mjs first`,
+    );
+  };
+  const fields = (schema, where, top) => {
+    const rules = {};
+    for (const name of schema.required ?? []) {
+      if (top && name === "type") continue;
+      const field = follow(schema.properties?.[name], `${where}.${name}`);
+      const rule = { type: basic(field, `${where}.${name}`) };
+      if ("const" in field) rule.value = field.const;
+      if (rule.type === "array" && field.items && field.items.$ref !== BLOCK_REF) {
+        const item = follow(field.items, `${where}.${name}[]`);
+        if (item.type === "object") rule.items = fields(item, `${where}.${name}[]`, false);
+      }
+      rules[name] = rule;
+    }
+    return rules;
+  };
+  return Object.fromEntries(
+    schemas.Block.oneOf.map((variant) => {
+      const type = variant.properties?.type?.const;
+      if (typeof type !== "string") throw new Error("Block: a variant without a `type` const");
+      return [type, fields(variant, type, true)];
+    }),
+  );
+}
+
+function writeBlockRequired() {
+  if (!existsSync(blockRequired.input)) {
+    throw new Error(`Required platform contract is unavailable: ${blockRequired.input}`);
+  }
+  writeFileSync(
+    blockRequired.output,
+    `// From snoopy-backend ${relative(backendRoot, blockRequired.input)}, sha256 ${sha256(blockRequired.input)}.\n` +
+      "// Regenerate with `npm run generate:platform-contracts`; never edit by hand.\n\n" +
+      "/** A required field's basic type; its one value, where the schema gives a `const`; for an array of objects, its items' required fields. */\n" +
+      "export type BlockFieldRule = {\n  readonly type: 'string' | 'number' | 'boolean' | 'object' | 'array';\n  readonly value?: string | number | boolean;\n  readonly items?: BlockFieldRules;\n};\n" +
+      "export type BlockFieldRules = { readonly [field: string]: BlockFieldRule };\n\n" +
+      "/** Each block type's required fields but `type`, from the contract's `Block` schema (the check before drawing). */\n" +
+      `export const BLOCK_REQUIRED: { readonly [type: string]: BlockFieldRules } = ${JSON.stringify(readBlockRequired(), null, 2)};\n`,
+  );
+}
+
 if (resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) {
   if (!existsSync(generator)) {
     throw new Error(
@@ -188,4 +273,5 @@ if (resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) {
   }
   writeBlockFixtures();
   writeBlockRules();
+  writeBlockRequired();
 }
