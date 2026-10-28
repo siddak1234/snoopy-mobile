@@ -19,7 +19,7 @@ import {
   itemRefusal,
   runRefusal,
 } from '@/lib/content/refusals';
-import { acceptedLine, allOf, countOf, inSentence } from '@/lib/content/screen-states';
+import { FALLBACK, acceptedLine, allOf, countOf, inSentence } from '@/lib/content/screen-states';
 import type { AutomationItems, AutomationRunInputField, Item, Run, Subscription } from '@/lib/platform/automations';
 import type { CatalogEntry } from '@/lib/platform/catalog';
 import { PlatformError, PlatformRateLimitedError } from '@/lib/platform/problem';
@@ -384,6 +384,21 @@ describe('the flow page of a flow with items (plan §5.1)', () => {
     expect(screen.queryByTestId('flow-turn-on')).toBeNull();
     // Its actions stay at the bottom.
     expect(screen.getByTestId('archive-flow')).toBeTruthy();
+  });
+
+  it('a part this build does not know is the fallback in its place, logged once as `unknown` and `unknown part` (round 21, design D2.6)', async () => {
+    const logged = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const pages = { flow: ['items', 'map'] } as unknown as Subscription['pages'];
+      await openFlow(listed, sessionAs('owner'), flowWithItems({ pages }));
+      await screen.findByText('Leases');
+      expect(screen.getByTestId('flow-part-1').props.children).toBe(FALLBACK);
+      expect(logged.mock.calls.filter(([message]) => message === 'block not drawn')).toEqual([
+        ['block not drawn', { type: 'unknown', error: 'unknown part' }],
+      ]);
+    } finally {
+      logged.mockRestore();
+    }
   });
 
   it('no tiles, so a run of it going on reads no counts again', async () => {

@@ -3,7 +3,7 @@ import React from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BlockList } from '@/components/blocks/block-list';
-import { Fallback } from '@/components/blocks/fallback';
+import { NotDrawnFallback } from '@/components/blocks/fallback';
 import { pageParts } from '@/components/blocks/look';
 import { FileView } from '@/components/files/file-view';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
@@ -28,7 +28,7 @@ const FILE_HEIGHT = 440;
  * `readItemFile`); then what was read from it, as the platform sent it
  * (`item.blocks`, backend ADR-0048: each section a closed drop-down) — in its
  * flow's `pages.file` order, the viewer and the reading by default; a part
- * this build does not know, the fallback (~~the item's `sections`,
+ * this build does not know, the logged fallback (~~the item's `sections`,
  * `RunSections`~~ until Round 21; ~~on the item's page, "What AI read"~~ until
  * build 28).
  * Loading, offline, error and unavailable as every fetching screen; an item
@@ -96,7 +96,7 @@ export default function ItemFileScreen() {
             <BlockList key={part} testID="item-reading" blocks={item.blocks} />
           ) : null
         ) : (
-          <Fallback key={`unknown-${at}`} testID={`item-file-part-${at}`} />
+          <NotDrawnFallback key={`unknown-${at}`} type="unknown" error="unknown part" testID={`item-file-part-${at}`} />
         ),
       )}
     </Page>

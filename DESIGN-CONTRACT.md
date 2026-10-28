@@ -905,9 +905,11 @@ mobile-only shape.
   list` when it is something else); a form this build does not know, as
   `questions` and `form.kind`; an image whose target has no reader or page,
   as `image` and `open.target`; a group entry that is not a section, as
-  `group` and `sections[n].type` (`GroupCard`'s own guard, after the check)
-  — every fallback is logged (`NotDrawnFallback`,
-  `components/blocks/fallback.tsx`). Each
+  `group` and `sections[n].type` (`GroupCard`'s own guard, after the check);
+  a part of the flow page or of an item's file page that this build does not
+  know (`pages.flow`, `pages.file`), as `unknown` and `unknown part` — every
+  fallback is logged (`NotDrawnFallback`, `components/blocks/fallback.tsx`),
+  and this is the one list of the reasons. Each
   block's `Catch` is reset by its content (`resetKey`): a re-read that sends a
   different block in that place draws it, and the same block stays
   `FALLBACK` without a second line.
