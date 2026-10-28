@@ -9,7 +9,9 @@
  * (`block-fixtures.ts`, backend ADR-0048 decision 9) are held the same way: their
  * header's sha256 over the fixtures' bytes, then the regeneration; and so are
  * the block rules (`block-rules.ts`, ADR-0048 amendment 1: the words, the
- * spacing table and the search and sort cases).
+ * spacing table and the search and sort cases). The block check's required
+ * fields (`block-required.ts`, round 21) are read from automations.yaml, so its
+ * header's hash is that document's, then the regeneration.
  *
  * Skips, with exit 0, when the backend checkout (`SNOOPY_BACKEND_ROOT`, default
  * `../snoopy-backend`) is absent, matching `snoopy`: the private repo is not
@@ -25,6 +27,7 @@ import {
   HEADER,
   backendRoot,
   blockFixtures,
+  blockRequired,
   blockRules,
   contracts,
   readBlockFixtures,
@@ -42,7 +45,7 @@ if (!existsSync(backendRoot)) {
   process.exit(0);
 }
 
-for (const { output } of [...contracts, blockFixtures, blockRules]) {
+for (const { output } of [...contracts, blockFixtures, blockRules, blockRequired]) {
   if (!existsSync(output)) {
     throw new Error(
       "Generated platform types are missing; run npm run generate:platform-contracts and commit the output",
@@ -52,7 +55,7 @@ for (const { output } of [...contracts, blockFixtures, blockRules]) {
 
 // The header hashes first: a stale file is named with both hashes, which a
 // byte comparison alone cannot say.
-for (const { input, output } of contracts) {
+for (const { input, output } of [...contracts, blockRequired]) {
   if (!existsSync(input)) {
     throw new Error(`Required platform contract is unavailable: ${input}`);
   }
@@ -88,7 +91,7 @@ for (const [{ input, output }, read, what] of [
   }
 }
 
-const outputs = [...contracts.map(({ output }) => output), blockFixtures.output, blockRules.output];
+const outputs = [...contracts.map(({ output }) => output), blockFixtures.output, blockRules.output, blockRequired.output];
 const before = outputs.map((output) => readFileSync(output));
 execFileSync(process.execPath, ["scripts/generate-platform-contracts.mjs"], {
   cwd: root,

@@ -123,7 +123,8 @@ jobs:
       - run: npm run audit:fixtures
       # Three more gate lines that were manual greps: one hand-written fetch
       # would fork the transport, one AsyncStorage import would break the
-      # invariant ADR-0017 amended, and one console call could log a token.
+      # invariant ADR-0017 amended, and one console call could log a token
+      # (one is admitted: components/blocks/not-drawn.ts, a part not drawn).
       - run: npm run audit:platform
       # Fail the build on critical advisories. High-severity findings that only
       # Expo 57 resolves remain a documented SDK migration rather than a forced

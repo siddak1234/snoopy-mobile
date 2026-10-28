@@ -219,6 +219,32 @@ describe('architecture audit scripts', () => {
     expect(elsewhere.stderr).toContain('app/screen.tsx');
   });
 
+  it("allows the not-drawn log ONE console.error, and nothing more (round 21, design D2.6)", () => {
+    mkdirSync(join(root, 'components/blocks'), { recursive: true });
+    const log = join(root, 'components/blocks/not-drawn.ts');
+    const line = "export const notDrawn = (type, error) => console.error('block not drawn', { type, error });";
+    writeFileSync(log, line);
+    expect(run(platformAudit).status).toBe(0);
+
+    // A second call there, or another console method, is refused.
+    for (const extra of [
+      "export const again = () => console.error('again');",
+      "export const said = () => console.log('said');",
+    ]) {
+      writeFileSync(log, `${line}\n${extra}`);
+      const result = run(platformAudit);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('components/blocks/not-drawn.ts:2: console');
+    }
+
+    // The allowance is that file's alone: the same call in a screen fails.
+    writeFileSync(log, '');
+    writeFileSync(join(root, 'app/screen.tsx'), line);
+    const elsewhere = run(platformAudit);
+    expect(elsewhere.status).toBe(1);
+    expect(elsewhere.stderr).toContain('app/screen.tsx:1: console');
+  });
+
   it('fails a network primitive captured in a binding', () => {
     writeFileSync(
       join(root, 'app/bad.ts'),

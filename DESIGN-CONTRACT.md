@@ -881,6 +881,38 @@ mobile-only shape.
   ("Couldn't load this setup" / "Couldn't load this run's form", `ERROR_BODY`)
   with Cancel and Try again in the dialog, and Try again in the start
   controls' place on the page, never a white screen.
+- A block that cannot be drawn, and a screen that throws, are not a crash
+  (round 21, design D2.6). Before a renderer runs, `missingField`
+  (`components/blocks/drawable.ts`) checks the block's required fields, their
+  basic types and, where the contract gives a `const`, its value against
+  `block-required.ts`, generated from the contract's `Block` schema: a table
+  with no `rows`, or a group holding an entry that is not a section
+  (`sections[0].type`), is `FALLBACK` in its place, and the next block still
+  draws. Each block is also inside `Catch`
+  (`components/dialog-boundary.tsx`, exported, with `onError`), so a renderer
+  that throws is `FALLBACK` too. A screen that throws reaches the root
+  layout's `ErrorBoundary` (Expo Router's; `RootBoundary`,
+  `components/root-boundary.tsx`, exported by `app/_layout.tsx`): "Couldn't load
+  this", `ERROR_BODY` and Retry, which draws the screens again. Each of these,
+  and `DialogBoundary` and `InlineBoundary` through `Catch`, logs one line,
+  `notDrawn` (`components/blocks/not-drawn.ts`): `console.error('block not
+  drawn', { type, error })`, the block's type or `unknown`, and the missing
+  field's name or the caught error, never a block's words or values. It is
+  read in the phone's system log (Xcode › Devices, or Console.app with the
+  phone attached); no reporting service. A type this build does not know is
+  `FALLBACK` too, logged with its type and `unknown type`; a page body with
+  no blocks is `FALLBACK` alone, logged as `unknown` and `no blocks` (`not a
+  list` when it is something else); a form this build does not know, as
+  `questions` and `form.kind`; an image whose target has no reader or page,
+  as `image` and `open.target`; a group entry that is not a section, as
+  `group` and `sections[n].type` (`GroupCard`'s own guard, after the check);
+  a part of the flow page or of an item's file page that this build does not
+  know (`pages.flow`, `pages.file`), as `unknown` and `unknown part` — every
+  fallback is logged (`NotDrawnFallback`, `components/blocks/fallback.tsx`),
+  and this is the one list of the reasons. Each
+  block's `Catch` is reset by its content (`resetKey`): a re-read that sends a
+  different block in that place draws it, and the same block stays
+  `FALLBACK` without a second line.
 
 ## Remaining contract ceilings (not Round 6 substitutions)
 
