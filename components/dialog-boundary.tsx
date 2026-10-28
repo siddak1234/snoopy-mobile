@@ -7,6 +7,7 @@ import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Text } from '@/components/text';
 import { fonts, space, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { notDrawn } from '@/components/blocks/not-drawn';
 import { ERROR_BODY, TRY_AGAIN_LABEL } from '@/lib/content/screen-states';
 
 /**
@@ -22,11 +23,12 @@ import { ERROR_BODY, TRY_AGAIN_LABEL } from '@/lib/content/screen-states';
  * stops here instead. The dialog's place is taken by one in the failed-load
  * grammar — the thing that failed in its title, `ERROR_BODY` (the session kept,
  * nothing lost) — with Cancel and Try again, which draws the children again.
- * Nothing else: no log of a value (rule 6), no analytics; React reports the
- * error in development as it does any caught one.
+ * Nothing else but one log line of the caught error (`notDrawn`, type
+ * `unknown`; round 21): no value of the form's (rule 6), no analytics.
  *
  * `Catch` is the class React requires of a boundary and holds no press of its
- * own: the presses are written here, in function components, so
+ * own; the block list puts one around each block too (round 21), logging the
+ * block's type through `onError`: the presses are written here, in function components, so
  * `audit:presses` can follow them to the function each runs (a class's
  * `this.x` it cannot). Not a Nocturne primitive — it composes the shared
  * `Dialog`, `SurfaceCard` and `PillButton`, and nothing new.
@@ -110,14 +112,27 @@ function FailedCard({ title, onRetry }: { title: string; onRetry: () => void }) 
   );
 }
 
-type CatchProps = { fallback: React.ReactNode; children: React.ReactNode };
+type CatchProps = {
+  fallback: React.ReactNode;
+  children: React.ReactNode;
+  /** Told the caught error once; absent, it is logged as `notDrawn('unknown', error)`. */
+  onError?: (error: unknown) => void;
+};
 
-/** React's boundary: a class with `getDerivedStateFromError`. It draws `fallback` once a child has thrown. */
-class Catch extends React.Component<CatchProps, { failed: boolean }> {
+/**
+ * React's boundary: a class with `getDerivedStateFromError`. It draws `fallback`
+ * once a child has thrown, and `componentDidCatch` hands the error to `onError`
+ * (round 21, design D2.6: every fallback is logged).
+ */
+export class Catch extends React.Component<CatchProps, { failed: boolean }> {
   state = { failed: false };
 
   static getDerivedStateFromError(): { failed: boolean } {
     return { failed: true };
+  }
+
+  componentDidCatch(error: unknown): void {
+    (this.props.onError ?? ((caught: unknown) => notDrawn('unknown', caught)))(error);
   }
 
   render(): React.ReactNode {

@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View } from 'react-native';
 
+import { Catch } from '@/components/dialog-boundary';
 import { space } from '@/constants/theme';
 import type { Block } from '@/lib/platform/automations';
 
 import { BadgeBlock } from './badge';
 import { ChartBlock } from './chart';
+import { missingField } from './drawable';
 import { Fallback } from './fallback';
 import { FileBlock } from './file';
 import { GroupCard } from './group';
@@ -14,6 +16,7 @@ import { LinkBlock } from './link';
 import { ListBlock } from './list';
 import type { BlockOf, BlockPlace } from './look';
 import { MetricBlock } from './metric';
+import { notDrawn } from './not-drawn';
 import { QuestionsBlock, questionsForm, type BlockForms } from './questions';
 import { SectionBlock } from './section';
 import { TableBlock } from './table';
@@ -94,6 +97,15 @@ function rendererFor(block: unknown): Draw<Block['type']> | undefined {
     : undefined;
 }
 
+/**
+ * A known block missing a required field (`missingField`): `Fallback` in its
+ * place, and one log line naming its type and the field — never its values.
+ */
+function MissingField({ type, field, testID }: { type: string; field: string; testID: string }) {
+  useEffect(() => notDrawn(type, field), [type, field]);
+  return <Fallback testID={testID} />;
+}
+
 function Blocks({
   blocks,
   prefix,
@@ -120,13 +132,19 @@ function Blocks({
       {drawn.map(({ block, index }, at) => {
         const testID = `${prefix}-${index}`;
         const draw = rendererFor(block);
+        const type = draw ? (block as Block).type : null;
+        const missing = type ? missingField(block as Block) : null;
         const above = at === 0 ? 0 : isLabel(drawn[at - 1]!.block) ? space.title : between;
         return (
           <View key={testID} style={above > 0 ? { marginTop: above } : undefined}>
-            {draw ? (
-              draw({ block: block as Block, testID, nested, context, inner })
-            ) : (
+            {!draw || !type ? (
               <Fallback testID={`${testID}-fallback`} />
+            ) : missing ? (
+              <MissingField type={type} field={missing} testID={`${testID}-fallback`} />
+            ) : (
+              <Catch fallback={<Fallback testID={`${testID}-fallback`} />} onError={(error) => notDrawn(type, error)}>
+                {draw({ block: block as Block, testID, nested, context, inner })}
+              </Catch>
             )}
           </View>
         );
@@ -139,7 +157,11 @@ function Blocks({
  * A page body as the platform sent it (backend ADR-0048): every block drawn as
  * sent and in order, by its type's renderer, its words a text node, never
  * markup; a block, form or target this build does not know drawn as the
- * decision says (`Fallback`, no press). An answer with no blocks — a platform
+ * decision says (`Fallback`, no press). A known block missing a required field,
+ * or whose renderer throws, is `Fallback` too, logged with its type (round 21,
+ * design D2.6: `missingField`, then a `Catch` around each block), and the next
+ * block still draws; an unknown type is not logged, as a build older than the
+ * platform meets one by design. An answer with no blocks — a platform
  * rolled back, or a flow it could not read — draws the fallback alone. Each
  * block's testID is its place: `{testID}-{index}`, and inside a section
  * `{testID}-{index}-{index}`.

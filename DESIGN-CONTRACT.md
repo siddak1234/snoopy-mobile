@@ -881,6 +881,24 @@ mobile-only shape.
   ("Couldn't load this setup" / "Couldn't load this run's form", `ERROR_BODY`)
   with Cancel and Try again in the dialog, and Try again in the start
   controls' place on the page, never a white screen.
+- A block that cannot be drawn, and a screen that throws, are not a crash
+  (round 21, design D2.6). Before a renderer runs, `missingField`
+  (`components/blocks/drawable.ts`) checks the block's required fields and
+  their basic types against `block-required.ts`, generated from the contract's
+  `Block` schema: a table with no `rows` is `FALLBACK` in its place, and the
+  next block still draws. Each block is also inside `Catch`
+  (`components/dialog-boundary.tsx`, exported, with `onError`), so a renderer
+  that throws is `FALLBACK` too. A screen that throws reaches the root
+  layout's `ErrorBoundary` (Expo Router's; `RootBoundary`,
+  `components/root-boundary.tsx`, exported by `app/_layout.tsx`): "Couldn't load
+  this", `ERROR_BODY` and Retry, which draws the screens again. Each of these,
+  and `DialogBoundary` and `InlineBoundary` through `Catch`, logs one line,
+  `notDrawn` (`components/blocks/not-drawn.ts`): `console.error('block not
+  drawn', { type, error })`, the block's type or `unknown`, and the missing
+  field's name or the caught error, never a block's words or values. It is
+  read in the phone's system log (Xcode › Devices, or Console.app with the
+  phone attached); no reporting service. A type this build does not know is
+  `FALLBACK` unlogged, as before.
 
 ## Remaining contract ceilings (not Round 6 substitutions)
 

@@ -16,7 +16,10 @@
  *      session contract rests on.
  *   3. **Nothing logs.** The same invariant says the token is never written to
  *      logs. `console.*` in the transport or the hooks that hold session state
- *      is the one line of code that could do it by accident.
+ *      is the one line of code that could do it by accident. One call is
+ *      admitted (round 21, design D2.6): `console.error` in
+ *      `components/blocks/not-drawn.ts`, which logs a part that was not drawn —
+ *      its block type and the error — and nothing a session holds.
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { extname, join, relative } from "node:path";
@@ -24,6 +27,7 @@ import { extname, join, relative } from "node:path";
 const root = process.cwd();
 
 const TRANSPORT = "lib/platform/client.ts";
+const NOT_DRAWN_LOG = "components/blocks/not-drawn.ts";
 const RUNTIME_ROOTS = ["app", "components", "constants", "hooks", "lib"];
 
 const RULES = [
@@ -103,7 +107,10 @@ const RULES = [
     roots: RUNTIME_ROOTS,
     pattern: /\bconsole\s*\.\s*[a-z]+\s*\(/,
     allow: () => false,
-    detail: "a session token must never reach a log line",
+    // Round 21 (design D2.6): every fallback is logged, by one function in one
+    // file. One call; a second, or any other console method, is refused.
+    budget: { path: NOT_DRAWN_LOG, line: /\bconsole\.error\s*\(/, max: 1 },
+    detail: `a session token must never reach a log line; only ${NOT_DRAWN_LOG}'s one console.error is admitted`,
   },
 ];
 
@@ -164,5 +171,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  "Platform audit passed. Schema-typed transport only, tokens in the enclave, no runtime logging.",
+  "Platform audit passed. Schema-typed transport only, tokens in the enclave, no runtime logging but the one not-drawn line.",
 );
