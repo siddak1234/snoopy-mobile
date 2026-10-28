@@ -1,7 +1,8 @@
-import { screen } from '@testing-library/react-native';
-import React from 'react';
+import { act, screen } from '@testing-library/react-native';
+import React, { useState } from 'react';
 import { Text } from 'react-native';
 
+import { BlockList } from '@/components/blocks/block-list';
 import { missingField } from '@/components/blocks/drawable';
 import { InlineBoundary } from '@/components/dialog-boundary';
 import { FALLBACK } from '@/lib/content/screen-states';
@@ -18,8 +19,10 @@ jest.mock('@/lib/platform/client', () => ({
  * A part that cannot be drawn is not a crash, and it is logged (round 21,
  * design D2.6): a known block missing a required field is `Fallback` before its
  * renderer runs; a renderer that throws is `Fallback` from the `Catch` around
- * each block; either way the next block still draws, and `notDrawn` logs the
- * block's type and the field or the error — never its words.
+ * each block; a type this build does not know, or a body with no blocks, is
+ * `Fallback` too; either way the next block still draws, and `notDrawn` logs
+ * the block's type and the field, the reason or the error — never its words.
+ * A re-read that replaces a caught block resets its boundary.
  */
 
 const TABLE_COLUMNS = [{ title: 'Item' }, { title: 'Amount', align: 'end' }];
@@ -95,6 +98,61 @@ describe('a block whose renderer throws (the boundary around each block)', () =>
     expect(visibleWords(screen.toJSON())).toEqual([FALLBACK, 'After the table']);
     expect(screen.getByTestId('b-0-fallback')).toBeTruthy();
     expect(notDrawnLines()).toEqual([['block not drawn', { type: 'table', error: expect.any(Error) }]]);
+  });
+});
+
+describe('a re-read that replaces a caught block (the boundary is reset by the block)', () => {
+  /** A page whose body a re-read replaces, as use-resource's focus re-read does with the list still mounted. */
+  let reread: (blocks: readonly unknown[]) => void = () => {};
+  function Page({ first }: { first: readonly unknown[] }) {
+    const [blocks, setBlocks] = useState(first);
+    reread = setBlocks;
+    return <BlockList blocks={blocks} testID="b" />;
+  }
+  const THROWS = { type: 'table', columns: TABLE_COLUMNS, rows: [{ cells: [{ not: 'text' }, '£1'] }] };
+
+  it('the same block stays the fallback, unlogged again; a valid one in its place draws; a new broken one is logged once', async () => {
+    await renderWithProviders(<Page first={[THROWS]} />);
+    expect(visibleWords(screen.toJSON())).toEqual([FALLBACK]);
+    expect(notDrawnLines()).toHaveLength(1);
+
+    // The same content again (a focus re-read): still the fallback, no second line.
+    await act(async () => reread([{ ...THROWS }]));
+    expect(visibleWords(screen.toJSON())).toEqual([FALLBACK]);
+    expect(notDrawnLines()).toHaveLength(1);
+
+    // A valid block in that place draws.
+    await act(async () => reread([{ type: 'text', text: 'Now valid' }]));
+    expect(visibleWords(screen.toJSON())).toEqual(['Now valid']);
+
+    // A different broken block there is the fallback and is logged once more.
+    await act(async () => reread([{ ...THROWS, rows: [{ cells: [{ other: 'object' }, '£2'] }] }]));
+    expect(visibleWords(screen.toJSON())).toEqual([FALLBACK]);
+    expect(notDrawnLines()).toHaveLength(2);
+  });
+});
+
+describe('a fallback drawn before any renderer runs is logged too', () => {
+  it('a type this build does not know is the fallback, the next block draws, and one line names its type and `unknown type`', async () => {
+    await renderBlocks([{ type: 'sparkline', points: [1, 2] }, { type: 'text', text: 'After it' }]);
+    expect(visibleWords(screen.toJSON())).toEqual([FALLBACK, 'After it']);
+    expect(screen.getByTestId('b-0-fallback')).toBeTruthy();
+    expect(notDrawnLines()).toEqual([['block not drawn', { type: 'sparkline', error: 'unknown type' }]]);
+  });
+
+  it('a block with no type is logged as `unknown`', async () => {
+    await renderBlocks([{ text: 'no type' }]);
+    expect(notDrawnLines()).toEqual([['block not drawn', { type: 'unknown', error: 'unknown type' }]]);
+  });
+
+  it('a body with no blocks is the fallback alone, logged as `unknown`, `no blocks`; one that is not a list, `not a list`', async () => {
+    await renderBlocks(undefined);
+    expect(visibleWords(screen.toJSON())).toEqual([FALLBACK]);
+    expect(notDrawnLines()).toEqual([['block not drawn', { type: 'unknown', error: 'no blocks' }]]);
+    logged.mockClear();
+    await renderBlocks('three' as never);
+    expect(screen.getByTestId('b-fallback')).toBeTruthy();
+    expect(notDrawnLines()).toEqual([['block not drawn', { type: 'unknown', error: 'not a list' }]]);
   });
 });
 

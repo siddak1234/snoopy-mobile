@@ -117,12 +117,15 @@ type CatchProps = {
   children: React.ReactNode;
   /** Told the caught error once; absent, it is logged as `notDrawn('unknown', error)`. */
   onError?: (error: unknown) => void;
+  /** When it changes, a caught boundary draws its children again (a re-read that sent a different block). */
+  resetKey?: string;
 };
 
 /**
  * React's boundary: a class with `getDerivedStateFromError`. It draws `fallback`
  * once a child has thrown, and `componentDidCatch` hands the error to `onError`
- * (round 21, design D2.6: every fallback is logged).
+ * (round 21, design D2.6: every fallback is logged). A new `resetKey` draws the
+ * children again, so a block a re-read replaced is not left the fallback.
  */
 export class Catch extends React.Component<CatchProps, { failed: boolean }> {
   state = { failed: false };
@@ -133,6 +136,13 @@ export class Catch extends React.Component<CatchProps, { failed: boolean }> {
 
   componentDidCatch(error: unknown): void {
     (this.props.onError ?? ((caught: unknown) => notDrawn('unknown', caught)))(error);
+  }
+
+  componentDidUpdate(previous: CatchProps, before: { failed: boolean }): void {
+    // Only a boundary already failed before this update: the commit that
+    // caught an error (failed just now) is not reset, or it would throw and
+    // log again.
+    if (before.failed && this.state.failed && previous.resetKey !== this.props.resetKey) this.setState({ failed: false });
   }
 
   render(): React.ReactNode {

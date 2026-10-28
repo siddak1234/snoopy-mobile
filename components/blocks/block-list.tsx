@@ -97,12 +97,34 @@ function rendererFor(block: unknown): Draw<Block['type']> | undefined {
     : undefined;
 }
 
+/** The type a block names, for the log: its `type` when that is a string, else `unknown`. */
+function typeOf(block: unknown): string {
+  const type = typeof block === 'object' && block !== null ? (block as { type?: unknown }).type : undefined;
+  return typeof type === 'string' ? type : 'unknown';
+}
+
 /**
- * A known block missing a required field (`missingField`): `Fallback` in its
- * place, and one log line naming its type and the field — never its values.
+ * What `Catch` around a block is reset by: the block's content. A re-read that
+ * sends the same block keeps a caught block the fallback, unlogged again; one
+ * that sends a different block at that place draws it, and logs it once more
+ * if it throws too.
  */
-function MissingField({ type, field, testID }: { type: string; field: string; testID: string }) {
-  useEffect(() => notDrawn(type, field), [type, field]);
+function contentKey(block: unknown): string {
+  try {
+    return JSON.stringify(block) ?? typeOf(block);
+  } catch {
+    return typeOf(block);
+  }
+}
+
+/**
+ * A part not drawn before any renderer runs: `Fallback` in its place, and one
+ * log line naming its type and why (`notDrawn`) — a known block's missing
+ * field, `unknown type`, or a body that is `no blocks` or `not a list` —
+ * never its values. Logged once per change, not on every re-read.
+ */
+function NotDrawnFallback({ type, error, testID }: { type: string; error: string; testID: string }) {
+  useEffect(() => notDrawn(type, error), [type, error]);
   return <Fallback testID={testID} />;
 }
 
@@ -138,11 +160,14 @@ function Blocks({
         return (
           <View key={testID} style={above > 0 ? { marginTop: above } : undefined}>
             {!draw || !type ? (
-              <Fallback testID={`${testID}-fallback`} />
+              <NotDrawnFallback type={typeOf(block)} error="unknown type" testID={`${testID}-fallback`} />
             ) : missing ? (
-              <MissingField type={type} field={missing} testID={`${testID}-fallback`} />
+              <NotDrawnFallback type={type} error={missing} testID={`${testID}-fallback`} />
             ) : (
-              <Catch fallback={<Fallback testID={`${testID}-fallback`} />} onError={(error) => notDrawn(type, error)}>
+              <Catch
+                fallback={<Fallback testID={`${testID}-fallback`} />}
+                onError={(error) => notDrawn(type, error)}
+                resetKey={contentKey(block)}>
                 {draw({ block: block as Block, testID, nested, context, inner })}
               </Catch>
             )}
@@ -160,9 +185,12 @@ function Blocks({
  * decision says (`Fallback`, no press). A known block missing a required field,
  * or whose renderer throws, is `Fallback` too, logged with its type (round 21,
  * design D2.6: `missingField`, then a `Catch` around each block), and the next
- * block still draws; an unknown type is not logged, as a build older than the
- * platform meets one by design. An answer with no blocks — a platform
- * rolled back, or a flow it could not read — draws the fallback alone. Each
+ * block still draws. A type this build does not know is `Fallback`, logged as
+ * `unknown type` (design D2.6: every fallback is logged). An answer with no
+ * blocks — a platform rolled back, or a flow it could not read — draws the
+ * fallback alone, logged as `unknown`, `no blocks`; a body that is not a list,
+ * as `unknown`, `not a list`. A re-read that replaces a caught block resets
+ * its `Catch` (`contentKey`), so the new block draws. Each
  * block's testID is its place: `{testID}-{index}`, and inside a section
  * `{testID}-{index}-{index}`.
  */
@@ -178,7 +206,11 @@ export function BlockList({
   if (!Array.isArray(blocks)) {
     return (
       <View testID={testID}>
-        <Fallback testID={`${testID}-fallback`} />
+        <NotDrawnFallback
+          type="unknown"
+          error={blocks === undefined ? 'no blocks' : 'not a list'}
+          testID={`${testID}-fallback`}
+        />
       </View>
     );
   }

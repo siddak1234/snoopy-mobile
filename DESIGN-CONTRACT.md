@@ -898,7 +898,13 @@ mobile-only shape.
   field's name or the caught error, never a block's words or values. It is
   read in the phone's system log (Xcode › Devices, or Console.app with the
   phone attached); no reporting service. A type this build does not know is
-  `FALLBACK` unlogged, as before.
+  `FALLBACK` too, logged with its type and `unknown type`; a page body with
+  no blocks is `FALLBACK` alone, logged as `unknown` and `no blocks` (`not a
+  list` when it is something else) — every fallback is logged (~~a type this
+  build does not know is `FALLBACK` unlogged~~ until the PR 4 review). Each
+  block's `Catch` is reset by its content (`resetKey`): a re-read that sends a
+  different block in that place draws it, and the same block stays
+  `FALLBACK` without a second line.
 
 ## Remaining contract ceilings (not Round 6 substitutions)
 

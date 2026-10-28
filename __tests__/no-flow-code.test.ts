@@ -163,7 +163,7 @@ describe('the pages draw the platform\'s blocks (backend ADR-0048 decision 11)',
     // The unknown type's branch; the copy goes straight on to the field check
     // and the renderer (round 21), so an unknown type reaches `draw` undefined.
     const withFallback = `            {!draw || !type ? (
-              <Fallback testID={\`\${testID}-fallback\`} />
+              <NotDrawnFallback type={typeOf(block)} error="unknown type" testID={\`\${testID}-fallback\`} />
             ) : missing ? (`;
     expect(source).toContain(withFallback);
     const copy = source
