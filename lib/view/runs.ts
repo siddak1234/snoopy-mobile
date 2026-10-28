@@ -21,8 +21,15 @@ import {
   STEP_DENIED,
   STEP_WAITING,
   emailSentLine,
+  reviewTally,
   stepHeld,
 } from '@/lib/content/screen-states';
+import {
+  offeredDecisions,
+  reviewAnswers,
+  type AnsweredDecision,
+  type PendingApproval,
+} from '@/lib/platform/pending-contract';
 
 import type { CatalogEntry } from '@/lib/platform/catalog';
 import type { InboxNotification } from '@/lib/platform/notifications';
@@ -108,6 +115,26 @@ export function jobApproval(run: Pick<Run, 'id'>, approvals: readonly Approval[]
     if (!newest || Date.parse(approval.createdAt) > Date.parse(newest.createdAt)) newest = approval;
   }
   return newest;
+}
+
+/**
+ * A saved review's words (Round 21's platform round, F2): "{a} accepted ·
+ * {d} denied", from the answers just saved on this page, else the job's
+ * approval's kept answers; null when nothing was reviewed.
+ */
+export function answersTally(answers: readonly AnsweredDecision[]): string | null {
+  if (answers.length === 0) return null;
+  const accepted = answers.filter((answer) => answer.decision === 'accepted').length;
+  return reviewTally(accepted, answers.length - accepted);
+}
+
+export function jobReviewTally(
+  run: Pick<Run, 'id'>,
+  approvals: readonly Approval[],
+  saved: readonly AnsweredDecision[] | null = null,
+): string | null {
+  if (saved && saved.length > 0) return answersTally(saved);
+  return answersTally(reviewAnswers(jobApproval(run, approvals) as PendingApproval | undefined));
 }
 
 export function heldDecision(run: Run, approvals: readonly Approval[]): HeldDecision | null {
@@ -330,6 +357,13 @@ export type ApprovalItem = {
   canDecide: boolean;
   /** The roles it names, said to someone whose role it does not. */
   deciders: readonly WorkspaceRole[];
+  /**
+   * How many changes it offers for review (F2): the card then says "Review {n}
+   * changes" and opens the run, in place of Approve and Deny; 0 for a plain one.
+   */
+  changes: number;
+  /** Its saved review, "{a} accepted · {d} denied", or null. */
+  tally: string | null;
 };
 
 /**
@@ -369,6 +403,8 @@ export function toApprovalItem(
     status: APPROVAL_PILL[approval.status] ?? null,
     canDecide: decides(role, approval.eligibleRoles),
     deciders: approval.eligibleRoles,
+    changes: offeredDecisions(approval as PendingApproval).length,
+    tally: answersTally(reviewAnswers(approval as PendingApproval)),
   };
 }
 

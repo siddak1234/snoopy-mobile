@@ -16,6 +16,7 @@ import * as WebBrowser from 'expo-web-browser';
 import {
   createSubscription,
   decideApproval,
+  decideReview,
   updateSubscription,
 } from '@/lib/platform/automations';
 import {
@@ -133,6 +134,39 @@ describe('automation mutations', () => {
         body: { decision: 'approved' },
       }),
     );
+  });
+
+  it('saves a review as every offered change answered once, never a decision — the same route and key (F2)', async () => {
+    const answer = { approval: { id: 'approval-9', status: 'approved' } };
+    automationsPost.mockResolvedValue({ data: answer, response: { ok: true } });
+    await expect(
+      decideReview(
+        'workspace-1',
+        'approval-9',
+        [
+          { id: 'n18-4-remove', decision: 'accepted' },
+          { id: 'add-z99-2', decision: 'denied' },
+        ],
+        'review-1',
+      ),
+    ).resolves.toBe(answer);
+    expect(automationsPost).toHaveBeenCalledWith(
+      '/v1/workspaces/{workspaceId}/approvals/{approvalId}/decision',
+      expect.objectContaining({
+        params: {
+          path: { workspaceId: 'workspace-1', approvalId: 'approval-9' },
+          header: { 'Idempotency-Key': 'review-1' },
+        },
+        body: {
+          decisions: [
+            { id: 'n18-4-remove', decision: 'accepted' },
+            { id: 'add-z99-2', decision: 'denied' },
+          ],
+        },
+      }),
+    );
+    // Only the answers: no `decision` beside them.
+    expect(automationsPost.mock.calls[0][1].body).not.toHaveProperty('decision');
   });
 });
 

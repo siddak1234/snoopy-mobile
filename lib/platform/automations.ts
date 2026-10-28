@@ -1,6 +1,7 @@
 import type { components } from '@/lib/generated/platform-contracts/automations';
 import { platformOperation } from './client';
 import { PlatformError } from './problem';
+import type { ReviewBody } from './pending-contract';
 import { invalidateShared } from './snapshot';
 
 export type Subscription = components['schemas']['Subscription'];
@@ -245,6 +246,36 @@ export function decideApproval(
           header: { 'Idempotency-Key': idempotencyKey },
         },
         body: { decision },
+        signal,
+      }),
+  ).then(changed(workspaceId, ['approvals', 'runs', 'run-stats']));
+}
+
+/**
+ * Saves a review of each change a held run offers (Round 21's platform round,
+ * F2): the same route as `decideApproval`, its body every offered change's
+ * answer once — `{ decisions: [{ id, decision: 'accepted' | 'denied' }] }` —
+ * never `{ decision }`. The platform continues the job whatever the answers,
+ * all denied included. The body's type is the pending contract
+ * (`./pending-contract`) until the regeneration publishes it; the one cast
+ * below goes with that file.
+ */
+export function decideReview(
+  workspaceId: string,
+  approvalId: string,
+  answers: ReviewBody['decisions'],
+  idempotencyKey: string,
+): Promise<{ approval: Approval; continuation?: Run }> {
+  const body: ReviewBody = { decisions: answers.map(({ id, decision }) => ({ id, decision })) };
+  return platformOperation(
+    `/v1/workspaces/${workspaceId}/approvals/${approvalId}/decision`,
+    ({ automations }, signal) =>
+      automations.POST('/v1/workspaces/{workspaceId}/approvals/{approvalId}/decision', {
+        params: {
+          path: { workspaceId, approvalId },
+          header: { 'Idempotency-Key': idempotencyKey },
+        },
+        body: body as unknown as { decision: 'approved' | 'rejected' },
         signal,
       }),
   ).then(changed(workspaceId, ['approvals', 'runs', 'run-stats']));

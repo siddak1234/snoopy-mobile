@@ -1653,6 +1653,31 @@ describe('Setup (design sSetup; the Invoice Processing update, spec §3.B)', () 
     expect(writes).toEqual([]);
   });
 
+  it('a required dropdown left empty: "Choose at least one." under it, nothing sent; a choice clears it (Round 21\'s platform round, F1)', async () => {
+    const catalog = catalogPayload();
+    const sample = catalog.automations[0]!.setup[1]!;
+    const specialties = {
+      ...sample,
+      key: 'specialties',
+      title: 'Specialties',
+      control: 'select',
+      options: ['Nephrology', 'Cardiology'],
+      multiple: true,
+      required: true,
+    };
+    catalog.automations = catalog.automations.map((automation) => ({ ...automation, setup: [specialties as never] }));
+    const writes = routeSetup({ '/automations': catalog, '/subscriptions': { subscriptions: [] } });
+    setMockParams({ template: 'tpl.0' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    await fireEvent.press(await screen.findByText('Turn on'));
+    expect((await screen.findByTestId('setup-field-specialties-error')).props.children).toBe('Choose at least one.');
+    expect(screen.queryByText(/^Fill in/u)).toBeNull();
+    expect(writes).toEqual([]);
+    await fireEvent.press(screen.getByTestId('setup-field-specialties-choice'));
+    await fireEvent.press(screen.getByTestId('setup-field-specialties-choice-option-Cardiology'));
+    expect(screen.queryByTestId('setup-field-specialties-error')).toBeNull();
+  });
+
   it.each([
     ['the workspace or its team not found (404)', 404, 'POST', 'Could not add this flow. Try again.'],
     ['the team service not answering (502)', 502, 'POST', 'Could not add this flow. Try again.'],

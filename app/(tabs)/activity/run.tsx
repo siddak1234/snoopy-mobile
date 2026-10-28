@@ -16,6 +16,7 @@ import { BlockList } from '@/components/blocks/block-list';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { DecisionButtons } from '@/components/runs/decision-buttons';
+import { ReviewDecisions } from '@/components/runs/review-decisions';
 import { Text } from '@/components/text';
 import { fonts, iconSize, inset, space, status, typeScale } from '@/constants/theme';
 import { useApprovalDecision } from '@/hooks/use-approval-decision';
@@ -29,6 +30,7 @@ import { refusalMessage, WORKSPACE_CHANGED } from '@/lib/content/refusals';
 import {
   DOWNLOAD_EXCEL_LABEL,
   DOWNLOAD_PDF_LABEL,
+  REVIEW_MEMBER_NOTE,
   RUN_DETAILS_LABEL,
   VIEW_PACKAGE_LABEL,
   errorTitleFor,
@@ -37,7 +39,8 @@ import { cancelRun } from '@/lib/platform/automations';
 import { PlatformError } from '@/lib/platform/problem';
 import { decidersLine, decides, type WorkspaceRole } from '@/lib/view/roles';
 import { statusLabel, type StatusPillLabel } from '@/lib/view/status';
-import { RUN_ORIGIN_TAB, runLabel, runOrigin } from '@/lib/view/runs';
+import { offeredDecisions, type AnsweredDecision } from '@/lib/platform/pending-contract';
+import { RUN_ORIGIN_TAB, jobReviewTally, runLabel, runOrigin } from '@/lib/view/runs';
 
 /**
  * A run's page — the one, in Activity's stack (round 24 P5; the owner's build 23
@@ -85,6 +88,8 @@ export default function RunDetailScreen() {
   const session = useSession();
   const { openedIn, detail, liveRun } = useRunDetail(runId);
   const decisions = useApprovalDecision(openedIn);
+  // A review saved here, said at once (F2) until the approvals read again say it.
+  const [savedReview, setSavedReview] = useState<readonly AnsweredDecision[] | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
@@ -105,6 +110,8 @@ export default function RunDetailScreen() {
         // Its flow — the website's subheader.
         sub: liveRun.entry?.name ?? liveRun.detail.run.templateId,
         status: statusLabel(liveRun.detail.run.status) as StatusPillLabel,
+        // "{a} accepted · {d} denied" once its review is saved (F2): the job's approval's answers.
+        reviewTally: jobReviewTally(liveRun.detail.run, liveRun.approvals, savedReview),
         // Its page body (backend ADR-0048): absent, the page draws the fallback.
         blocks: liveRun.detail.blocks,
         // The platform says whether the job has a package (backend ADR-0045, ADR-0048).
@@ -183,12 +190,49 @@ export default function RunDetailScreen() {
    * role unread, neither. One tap, then the page reads the run again at once:
    * approved, it is running again under the same id; denied, the line says
    * Denied. The route checks the role again.
+   *
+   * A form that carries changes (`decisions`; Round 21's platform round, F2)
+   * is a review instead: each change Accept or Deny (`ReviewDecisions`), then
+   * Save review, which sends every answer; to anyone who may not answer, "Only
+   * an owner or admin can review this." Saved, the page says "{a} accepted ·
+   * {d} denied" and reads the run again: the job goes on whatever the answers.
    */
   const role = liveRun?.role;
   const approvalForm = (form: { approvalId?: string; eligibleRoles?: readonly WorkspaceRole[] }) => {
     const approvalId = form.approvalId;
     const eligible = form.eligibleRoles ?? [];
     if (!approvalId || role === undefined || role === null) return null;
+    const changes = offeredDecisions(form as { decisions?: unknown });
+    if (changes.length > 0) {
+      if (!decides(role, eligible)) {
+        return (
+          <Text testID="run-review-member" style={[styles.decisionNote, { color: palette.neutral[400] }]}>
+            {REVIEW_MEMBER_NOTE}
+          </Text>
+        );
+      }
+      const reviewError = decisions.errorFor(approvalId);
+      return (
+        <View testID="run-review-block" style={styles.decision}>
+          <ReviewDecisions
+            testID="run-review"
+            changes={changes}
+            saving={decisions.reviewingFor(approvalId)}
+            onSave={async (answers) => {
+              if (await decisions.review(approvalId, answers)) {
+                setSavedReview(answers);
+                detail.refresh();
+              }
+            }}
+          />
+          {reviewError ? (
+            <Text accessibilityRole="alert" style={[styles.decisionNote, { color: status.err }]}>
+              {reviewError}
+            </Text>
+          ) : null}
+        </View>
+      );
+    }
     if (!decides(role, eligible)) {
       return (
         <Text testID="run-deciders" style={[styles.decisionNote, { color: palette.neutral[400] }]}>
@@ -246,6 +290,13 @@ export default function RunDetailScreen() {
           </View>
         }
       />
+
+      {/* Its review, once saved (F2): how many changes were accepted and denied. */}
+      {run.reviewTally ? (
+        <Text testID="run-review-tally" style={[styles.decisionNote, { color: palette.neutral[400] }]}>
+          {run.reviewTally}
+        </Text>
+      ) : null}
 
       <BlockList testID="run-blocks" blocks={run.blocks} context={{ forms: { approval: approvalForm }, workspaceId: openedIn }} />
 

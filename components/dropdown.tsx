@@ -91,13 +91,19 @@ export function placeDropdown(
  * back, closes it — unless `locked` (a workspace switching). Choosing calls
  * `onChange` and closes it, unless the page holds `open` itself.
  *
+ * Several at once (`values`; Round 21's platform round, F1: a setup field that
+ * allows several): every chosen row has its check, and a press toggles its
+ * row through `onChange` and keeps the panel open — a tap outside closes it.
+ *
  * testIDs: the menu `${testID}-menu`, a row `${testID}-option-${value}` or its
- * own `testID`, the check `${testID}-chosen`, the outside `${testID}-backdrop`.
+ * own `testID`, the check `${testID}-chosen` (several: `${testID}-chosen-${value}`),
+ * the outside `${testID}-backdrop`.
  */
 export function Dropdown<T extends string>({
   testID,
   options,
   value,
+  values,
   onChange,
   trigger,
   title,
@@ -113,6 +119,8 @@ export function Dropdown<T extends string>({
   testID: string;
   options: readonly DropdownOption<T>[];
   value: T | null;
+  /** Several chosen at once: the panel stays open and a press toggles a row (`onChange` is called with it). */
+  values?: readonly T[];
   onChange: (value: T) => void;
   /**
    * What opens it: drawn by the menu with its own open (a function), or — a page
@@ -168,9 +176,10 @@ export function Dropdown<T extends string>({
     setOpen(false);
   };
 
+  const several = values !== undefined;
   const choose = (next: T) => {
     onChange(next);
-    if (!controlled) setOwnOpen(false);
+    if (!controlled && !several) setOwnOpen(false);
   };
 
   // Not measured yet (or a test's mock that never answers): under the status area, on the start side.
@@ -219,7 +228,7 @@ export function Dropdown<T extends string>({
                   </Text>
                 ) : null}
                 {options.map((option, index) => {
-                  const chosen = option.value === value;
+                  const chosen = several ? values.includes(option.value) : option.value === value;
                   const busy = busyValue != null && option.value === busyValue;
                   const IconCmp = option.icon;
                   return (
@@ -250,7 +259,11 @@ export function Dropdown<T extends string>({
                       {busy && busyLabel ? (
                         <Text style={[styles.sub, { color: palette.neutral[500] }]}>{busyLabel}</Text>
                       ) : chosen ? (
-                        <Check size={16} color={palette.accent} testID={`${testID}-chosen`} />
+                        <Check
+                          size={16}
+                          color={palette.accent}
+                          testID={several ? `${testID}-chosen-${option.value}` : `${testID}-chosen`}
+                        />
                       ) : null}
                     </Pressable>
                   );

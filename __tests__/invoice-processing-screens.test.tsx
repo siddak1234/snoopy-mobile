@@ -1005,6 +1005,9 @@ describe("a held run is decided from its page: Approve or Deny in its approval f
       'run-open-details',
     ]);
     expect(screen.queryByTestId('run-deciders')).toBeNull();
+    // A plain approval, no changes offered: never the review of each change (Round 21's platform round, F2).
+    expect(screen.queryByTestId('run-review-block')).toBeNull();
+    expect(screen.queryByText('Save review')).toBeNull();
 
     const before = runReads();
     await fireEvent.press(screen.getByTestId('run-decision-approve'));

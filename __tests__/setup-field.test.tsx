@@ -12,9 +12,11 @@ import {
   missingRequiredSetupFields,
   notifiesLine,
   sectionLabel,
+  selectedChoices,
+  type SelectableSetupField,
   type SetupField,
 } from '@/components/setup-field';
-import { NEWER_CONTROL_NOTE } from '@/lib/content/screen-states';
+import { CHOOSE_AT_LEAST_ONE, NEWER_CONTROL_NOTE, chosenLabel } from '@/lib/content/screen-states';
 import { renderWithProviders } from '@/test/render';
 
 /**
@@ -302,8 +304,9 @@ describe('a control this build does not know (BUILD-PLAN 25.8.1, the owner\'s re
     expect(controlNote({ control: 'text' })).toBeNull();
   });
 
-  it('knows the contract\'s five controls and nothing else — not a prototype name, not the run form\'s file, which RunFileField draws', () => {
-    for (const control of ['toggle', 'money', 'text', 'email', 'resource-picker']) expect(isKnownControl(control)).toBe(true);
+  it('knows the contract\'s controls, the setup dropdown (F1) among them, and nothing else — not a prototype name, not the run form\'s file, which RunFileField draws', () => {
+    for (const control of ['toggle', 'money', 'text', 'email', 'resource-picker', 'select']) expect(isKnownControl(control)).toBe(true);
+    expect(controlNote({ control: 'select' })).toBeNull();
     for (const control of ['date-range', 'artifact', 'constructor', 'hasOwnProperty', 'toString', '']) expect(isKnownControl(control)).toBe(false);
   });
 
@@ -320,5 +323,90 @@ describe('a control this build does not know (BUILD-PLAN 25.8.1, the owner\'s re
     expect(declaredValues([{ key: 'window', control: 'date-range' }], { window: 'last week' })).toEqual({ window: 'last week' });
     expect(declaredValues([{ key: 'window', control: 'date-range' }], { window: '  ' })).toEqual({});
     expect(declaredValues([{ key: 'window', control: 'date-range' }], {})).toEqual({});
+  });
+});
+
+/** The setup dropdown (Round 21's platform round, F1; words.md section 3). */
+describe('a select: the glass dropdown, one choice or several', () => {
+  const SPECIALTIES = ['Nephrology', 'Internal medicine', 'Cardiology', 'Endocrinology'];
+  const select = (over: Partial<SelectableSetupField>): SelectableSetupField => ({
+    section: 'rules',
+    key: 'specialties',
+    title: 'Specialties',
+    description: 'The specialties your clinic treats.',
+    control: 'select',
+    required: true,
+    options: SPECIALTIES,
+    ...over,
+  });
+
+  it('its closed pill reads the choices: Choose, the choice, two by name, three or more as a count', () => {
+    expect(chosenLabel([])).toBe('Choose');
+    expect(chosenLabel(['Nephrology'])).toBe('Nephrology');
+    expect(chosenLabel(['Nephrology', 'Cardiology'])).toBe('Nephrology, Cardiology');
+    expect(chosenLabel(['Nephrology', 'Cardiology', 'Endocrinology'])).toBe('3 chosen');
+  });
+
+  it('several: the panel stays open, a tick on each chosen row, and a press toggles its row', async () => {
+    const onChange = jest.fn();
+    await renderWithProviders(
+      <SetupFieldRow field={select({ multiple: true })} value={['Nephrology']} onChange={onChange} divider={false} />,
+    );
+    expect(screen.getByText('Nephrology')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('setup-field-specialties-choice'));
+    expect(screen.getByTestId('setup-field-specialties-choice-chosen-Nephrology')).toBeTruthy();
+    expect(screen.queryByTestId('setup-field-specialties-choice-chosen-Cardiology')).toBeNull();
+    await fireEvent.press(screen.getByTestId('setup-field-specialties-choice-option-Cardiology'));
+    expect(onChange).toHaveBeenLastCalledWith(['Nephrology', 'Cardiology']);
+    // Still open: another row can be chosen.
+    expect(screen.getByTestId('setup-field-specialties-choice-menu')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('setup-field-specialties-choice-option-Nephrology'));
+    expect(onChange).toHaveBeenLastCalledWith([]);
+  });
+
+  it('three or more chosen: the pill says how many', async () => {
+    await renderWithProviders(
+      <SetupFieldRow
+        field={select({ multiple: true })}
+        value={['Nephrology', 'Cardiology', 'Endocrinology']}
+        onChange={jest.fn()}
+        divider={false}
+      />,
+    );
+    expect(screen.getByLabelText('Specialties: 3 chosen')).toBeTruthy();
+  });
+
+  it('one: a press chooses it and closes the panel', async () => {
+    const onChange = jest.fn();
+    await renderWithProviders(<SetupFieldRow field={select({})} value={undefined} onChange={onChange} divider={false} />);
+    expect(screen.getByLabelText('Specialties: Choose')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('setup-field-specialties-choice'));
+    await fireEvent.press(screen.getByTestId('setup-field-specialties-choice-option-Cardiology'));
+    expect(onChange).toHaveBeenCalledWith('Cardiology');
+    expect(screen.queryByTestId('setup-field-specialties-choice-menu')).toBeNull();
+  });
+
+  it('a required one left empty is missing, a default or not; what the save says is drawn under it', async () => {
+    const fields = [select({ multiple: true, defaultValue: ['Nephrology'] }), select({ key: 'one' })];
+    expect(missingRequiredSetupFields(fields, { specialties: [], one: '' }).map((item) => item.key)).toEqual(['specialties', 'one']);
+    expect(missingRequiredSetupFields(fields, { specialties: ['Cardiology'], one: 'Cardiology' })).toEqual([]);
+    await renderWithProviders(
+      <SetupFieldRow field={select({ multiple: true })} value={[]} onChange={jest.fn()} divider={false} error={CHOOSE_AT_LEAST_ONE} />,
+    );
+    expect(screen.getByTestId('setup-field-specialties-error').props.children).toBe('Choose at least one.');
+  });
+
+  it('its value: a list for several (only the options, none twice), one string for one', () => {
+    expect(selectedChoices({ options: SPECIALTIES }, ['Cardiology', 'Cardiology', 'Dermatology', 3])).toEqual(['Cardiology']);
+    expect(
+      declaredValues(
+        [
+          { key: 'several', control: 'select', options: SPECIALTIES, multiple: true },
+          { key: 'one', control: 'select', options: SPECIALTIES },
+          { key: 'none', control: 'select', options: SPECIALTIES },
+        ],
+        { several: ['Nephrology', 'Cardiology'], one: 'Cardiology', none: '' },
+      ),
+    ).toEqual({ several: ['Nephrology', 'Cardiology'], one: 'Cardiology' });
   });
 });

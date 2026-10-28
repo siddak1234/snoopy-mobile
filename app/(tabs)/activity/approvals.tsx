@@ -5,6 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import Animated, { LinearTransition, SlideOutLeft } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PillButton } from '@/components/nocturne/pill-button';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
@@ -18,7 +19,12 @@ import { useApprovalDecision, type Decision } from '@/hooks/use-approval-decisio
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { useTheme } from '@/hooks/use-theme';
-import { APPROVALS_EMPTY_BODY, APPROVALS_EMPTY_TITLE, errorTitleFor } from '@/lib/content/screen-states';
+import {
+  APPROVALS_EMPTY_BODY,
+  APPROVALS_EMPTY_TITLE,
+  errorTitleFor,
+  reviewChangesLabel,
+} from '@/lib/content/screen-states';
 import type { ApprovalItem } from '@/lib/view/runs';
 import { readCatalog } from '@/lib/platform/catalog';
 import { readApprovals, readSubscriptions } from '@/lib/platform/runs';
@@ -36,7 +42,9 @@ const LEAVE_MS = 220;
  * Deny (`DecisionButtons`; round 24 P6, P7) only for a role the approval names
  * — anyone else is told which roles do — and the run it holds, a tap away.
  * Decided, its pill says how while it leaves (never "Pending" beside a
- * decision).
+ * decision). One that offers changes for review (Round 21's platform round,
+ * F2) says "Review {n} changes" in place of Approve and Deny, opening the run,
+ * where each change is answered; a saved review, "{a} accepted · {d} denied".
  */
 function ApprovalCard({
   item,
@@ -72,9 +80,22 @@ function ApprovalCard({
       {item.expires !== EMPTY ? (
         <Text style={[styles.note, { color: palette.neutral[400] }]}>Expires {item.expires}</Text>
       ) : null}
+      {item.tally ? (
+        <Text testID={`approval-tally-${item.id}`} style={[styles.note, { color: palette.neutral[400] }]}>
+          {item.tally}
+        </Text>
+      ) : null}
       {decision ? null : !item.canDecide ? (
         // The server would refuse it (403): no button, and who may decide.
         <Text style={[styles.note, { color: palette.neutral[400] }]}>{decidersLine(item.deciders)}</Text>
+      ) : item.changes > 0 ? (
+        <PillButton
+          testID={`review-${item.id}`}
+          label={reviewChangesLabel(item.changes)}
+          variant="primary"
+          fontSize={typeScale.label.fontSize}
+          onPress={() => onView()}
+        />
       ) : (
         <DecisionButtons testID={`decide-${item.id}`} busy={busy} onDecide={onDecide} />
       )}

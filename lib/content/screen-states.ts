@@ -637,6 +637,30 @@ export const DECISION_NOT_SAVED = 'The decision was not saved.';
 export const STEP_DENIED = 'Denied';
 
 /**
+ * A review of each change (Round 21's platform round, F2; ICD-10 Code Check's
+ * words.md section 3, owner-approved 2026-10-28 ~21:43Z, word for word): a
+ * held run that offers changes draws each as a row, "{label} · {detail}", with
+ * Accept and Deny; Save review once every row is answered, and until then
+ * "Accept or deny each change."; to a member, who may not answer, one line.
+ * Saved, "{a} accepted · {d} denied" on the run and in Approvals; the
+ * Approvals card for such a run says "Review {n} changes" and opens it.
+ */
+export const ACCEPT_LABEL = 'Accept';
+export const SAVE_REVIEW_LABEL = 'Save review';
+export const ANSWER_EVERY_CHANGE = 'Accept or deny each change.';
+export const REVIEW_MEMBER_NOTE = 'Only an owner or admin can review this.';
+export const REVIEW_NOT_SAVED = "The review wasn't saved. Try again.";
+export function reviewRowLabel(change: { label: string; detail?: string }): string {
+  return change.detail ? `${change.label} · ${change.detail}` : change.label;
+}
+export function reviewChangesLabel(count: number): string {
+  return `Review ${count} changes`;
+}
+export function reviewTally(accepted: number, denied: number): string {
+  return `${accepted} accepted · ${denied} denied`;
+}
+
+/**
  * A flow's items (backend ADR-0046; Round 19, plan §5): the things a person
  * makes once, from a file, that the flow's runs then belong to. Every word that
  * names them is the flow's own — `items.words` for one and many, `items.runWords`
@@ -684,6 +708,18 @@ export function topScoreOf(score: number): string {
 export const OTHER_LABEL = 'Other';
 /** A select's drop-down with nothing chosen yet: a field without a default. */
 export const CHOOSE_LABEL = 'Choose';
+/**
+ * A setup dropdown's closed pill (Round 21's platform round, F1; words.md
+ * section 3): "Choose" with nothing chosen, the choice, two as "{first},
+ * {second}", three or more as "{n} chosen". Left empty when it is required,
+ * on save: "Choose at least one."
+ */
+export function chosenLabel(choices: readonly string[]): string {
+  if (choices.length === 0) return CHOOSE_LABEL;
+  if (choices.length <= 2) return choices.join(', ');
+  return `${choices.length} chosen`;
+}
+export const CHOOSE_AT_LEAST_ONE = 'Choose at least one.';
 export const START_LABEL = 'Start';
 export const ARCHIVING_LABEL = 'Archiving…';
 export const ARCHIVE_LABEL = 'Archive';

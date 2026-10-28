@@ -2803,3 +2803,42 @@ Bites (copy, break, red, restore, sha256 the same, green): the folder part kept 
 name (`data-support-screens` red); the fake's closed-picker code (`signed-file`, the picker closed);
 the fake's join without encoding (`signed-file`, the two taken-name tests); the fake's `copy` into a
 folder that is not there (`signed-file`, the refused copy).
+
+## Round 21 — a setup dropdown and a review of each change (the platform round's F1, F2; 2026-10-28)
+
+The app rows of the round's platform spec (F1, F2; the session's, kept outside the repositories; the owner's words of ~21:05Z: "it should be drop
+down during the flo set up", "i should be able to accept and deny individually"), in the words of
+ICD-10 Code Check's `words.md` section 3, owner-approved 2026-10-28 ~21:43Z, copied word for word.
+
+- **F1, the setup dropdown.** `select` is a known control (`CONTROL_ICON`: `ListBullets`, the item
+  select's glyph), drawn as the glass dropdown behind the item select's pill. `components/dropdown.tsx`
+  gains a several-choice mode (`values`): the panel stays open, a tick on each chosen row, a press
+  toggles. The pill reads "Choose", the choice, "{first}, {second}", or "{n} chosen". The value is a
+  list for `multiple`, else a string (`declaredValues`, `selectedChoices`). A required one left empty
+  is missing even with a default (`missingRequiredSetupFields`), and Set up says "Choose at least
+  one." under it and sends nothing.
+- **F2, the review.** A held run whose approval form carries `decisions` draws each change as
+  "{label} · {detail}" with Accept and Deny (Deny is the danger pill; once a row is answered, the
+  other pill goes quiet). "Save review" is enabled once every row is answered, and "Accept or deny
+  each change." shows until then. Saving sends `{ decisions: [{ id, decision }] }`
+  (`decideReview`, the same route, one key per approval and set of answers). Saved, the page shows
+  "{a} accepted · {d} denied". A failure shows "The review wasn't saved. Try again." whatever the
+  platform said. A member sees "Only an owner or admin can review this." The Approvals card shows
+  "Review {n} changes", which opens the run, in place of Approve / Deny, plus the tally once
+  reviewed. A held run with no changes is unchanged.
+- **The pending contract.** The backend's contracts had not landed (`git log origin/main..HEAD --
+  packages/contracts schemas` empty in the backend lane at build time). The shapes live in one
+  module, `lib/platform/pending-contract.ts`, and the one body cast in `decideReview`. The
+  regeneration from the backend's merged head deletes both. The approval's answers field is not
+  final: `reviewAnswers` reads an answer on each offered row or an `answers` list, and the
+  regeneration settles which.
+- **NOT OBSERVED on a device:** the several-choice panel, the review rows at the largest text size.
+
+### Guards proved to bite, the setup dropdown and the review (2026-10-28)
+
+Each was broken, shown red, restored and shown green: `select` out of `CONTROL_ICON`
+(`setup-field`); the dropdown's several mode off (`setup-field`); an empty list not missing
+(`setup-field`); a list sent joined (`setup-field`); Set up's empty-dropdown check (`tab-screens`);
+the review body sent as `{ decision }` (`platform-mutations`); the run page's review branch, Save
+review enabled before every answer, the platform's words in place of the approved failure line, the
+tally from kept answers, and Approvals' "Review {n} changes" (`review-decisions`).
