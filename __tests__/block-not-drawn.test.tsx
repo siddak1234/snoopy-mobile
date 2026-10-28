@@ -4,23 +4,30 @@ import { Text } from 'react-native';
 
 import { BlockList } from '@/components/blocks/block-list';
 import { missingField } from '@/components/blocks/drawable';
+import { GroupCard } from '@/components/blocks/group';
+import * as look from '@/components/blocks/look';
 import { InlineBoundary } from '@/components/dialog-boundary';
 import { FALLBACK } from '@/lib/content/screen-states';
 import { BLOCK_FIXTURES } from '@/lib/generated/platform-contracts/block-fixtures';
-import { renderBlocks, visibleWords } from '@/test/blocks';
+import { fileLinkFor, fixtureBlock, renderBlocks, visibleWords } from '@/test/blocks';
+import { fakePlatform } from '@/test/fake-platform';
+import { TEST_WORKSPACE } from '@/test/platform';
 import { renderWithProviders } from '@/test/render';
 
 jest.mock('@/lib/platform/client', () => ({
   platformOperation: jest.fn(),
   downloadSignedFile: jest.fn(),
 }));
+const { platformOperation } = jest.requireMock('@/lib/platform/client');
 
 /**
  * A part that cannot be drawn is not a crash, and it is logged (round 21,
  * design D2.6): a known block missing a required field is `Fallback` before its
  * renderer runs; a renderer that throws is `Fallback` from the `Catch` around
  * each block; a type this build does not know, or a body with no blocks, is
- * `Fallback` too; either way the next block still draws, and `notDrawn` logs
+ * `Fallback` too, and so is a form or an image target this build does not
+ * know and a group entry that is not a section; either way the next block
+ * still draws, and `notDrawn` logs
  * the block's type and the field, the reason or the error — never its words.
  * A re-read that replaces a caught block resets its boundary.
  */
@@ -153,6 +160,61 @@ describe('a fallback drawn before any renderer runs is logged too', () => {
     await renderBlocks('three' as never);
     expect(screen.getByTestId('b-fallback')).toBeTruthy();
     expect(notDrawnLines()).toEqual([['block not drawn', { type: 'unknown', error: 'not a list' }]]);
+  });
+});
+
+describe('a fallback a renderer draws itself is logged too (every fallback is logged)', () => {
+  it('a questions form this build does not know is the fallback, logged as `questions`, `form.kind`', async () => {
+    await renderBlocks([{ type: 'questions', title: 'Add', form: { kind: 'survey' } }, { type: 'text', text: 'After it' }]);
+    expect(visibleWords(screen.toJSON())).toEqual([FALLBACK, 'After it']);
+    expect(screen.getByTestId('b-0-fallback')).toBeTruthy();
+    expect(notDrawnLines()).toEqual([['block not drawn', { type: 'questions', error: 'form.kind' }]]);
+  });
+
+  it('an image whose target has no reader is the fallback, logged as `image`, `open.target`', async () => {
+    const photo = fixtureBlock('drawn-image', 'image');
+    await renderBlocks([{ ...photo, open: { target: 'flow', flowId: 'f-1' } }], { workspaceId: TEST_WORKSPACE });
+    expect(visibleWords(screen.toJSON())).toEqual([FALLBACK]);
+    expect(notDrawnLines()).toEqual([['block not drawn', { type: 'image', error: 'open.target' }]]);
+  });
+
+  it('an image of a file drawn as a row, with no page to open, is the fallback, logged as `image`, `open.target`', async () => {
+    const photo = fixtureBlock('drawn-image', 'image');
+    const fake = fakePlatform(platformOperation);
+    fake.always('GET /v1/workspaces/{workspaceId}/runs/{runId}/files/{fileId}', fileLinkFor({ ...photo.file, contentType: 'text/csv' }));
+    const noRoute = jest.spyOn(look, 'openRoute').mockReturnValue(null);
+    try {
+      await renderBlocks([photo], { workspaceId: TEST_WORKSPACE });
+      expect(await screen.findByTestId('b-0-fallback')).toBeTruthy();
+      expect(notDrawnLines()).toEqual([['block not drawn', { type: 'image', error: 'open.target' }]]);
+    } finally {
+      noRoute.mockRestore();
+    }
+  });
+
+  it('a group holding an entry that is not a section is the fallback, logged as `group`, `sections[0].type` (the contract\'s const)', async () => {
+    await renderBlocks([
+      { type: 'group', title: 'Details', sections: [{ type: 'text', title: 'Not a section', blocks: [] }] },
+      { type: 'text', text: 'After it' },
+    ]);
+    expect(visibleWords(screen.toJSON())).toEqual([FALLBACK, 'After it']);
+    expect(screen.getByTestId('b-0-fallback')).toBeTruthy();
+    expect(notDrawnLines()).toEqual([['block not drawn', { type: 'group', error: 'sections[0].type' }]]);
+  });
+
+  it("GroupCard's own guard: an entry that is not a section is the fallback in its place, logged, never left out", async () => {
+    const block = {
+      type: 'group',
+      title: 'Details',
+      sections: [
+        { type: 'section', title: 'First', open: true, blocks: [] },
+        { type: 'text', text: 'Not a section' },
+      ],
+    } as never;
+    await renderWithProviders(<GroupCard block={block} testID="g" inner={() => null} />);
+    expect(screen.getByTestId('g-1-fallback')).toBeTruthy();
+    expect(visibleWords(screen.toJSON())).toContain(FALLBACK);
+    expect(notDrawnLines()).toEqual([['block not drawn', { type: 'group', error: 'sections[1].type' }]]);
   });
 });
 

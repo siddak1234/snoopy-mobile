@@ -320,8 +320,10 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   — one per type of the generated `Block` union, each made from a component
   the app has — and `FALLBACK` (`lib/content/screen-states.ts`) for a type,
   form or part this build does not know — and for a known block missing a
-  required field, or whose renderer throws. A block not drawn (an unknown
-  type, a missing field, a throw) and a body with no blocks are logged once
+  required field, or whose renderer throws. Every fallback is logged once:
+  a block not drawn (an unknown type, a missing field or a `const` of
+  another value, a throw), a form or image target this build does not know,
+  a group entry that is not a section, and a body with no blocks
   (round 21; DESIGN-CONTRACT.md, "A block that cannot be drawn"). Blocks are text, never markup
   (`__tests__/no-flow-code.test.ts`). An installed build that predates this
   never sends the parameter and keeps the legacy answer.

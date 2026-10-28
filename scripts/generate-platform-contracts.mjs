@@ -20,9 +20,10 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-// The YAML reader openapi-typescript itself reads the contracts with (its
-// dependency, pinned through it in package-lock.json), so the required fields
-// below come from the same parse as the types.
+// The YAML reader openapi-typescript itself reads the contracts with, so the
+// required fields below come from the same parse as the types: declared in
+// devDependencies at the version openapi-typescript's lock entry holds
+// (1.34.20, as the website declares it), never left to its install to hoist.
 import { parseYaml } from "@redocly/openapi-core";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -166,7 +167,9 @@ function writeBlockRules() {
 
 /**
  * The block check (round 21, design D2.6): each block type's required fields
- * (but `type`) with their basic type, and each required array's items' own,
+ * (but `type`) with their basic type and, where the schema gives a `const` (a
+ * group's `sections[].type` is "section"), that one value as `value`, as the
+ * website carries it; and each required array's items' own,
  * read from the `Block` schema in automations.yaml — the table's
  * `required: [type, columns, rows]` becomes `table: { columns, rows }`.
  * `components/blocks/drawable.ts` reads it before a renderer runs, so a known
@@ -207,6 +210,7 @@ export function readBlockRequired() {
       if (top && name === "type") continue;
       const field = follow(schema.properties?.[name], `${where}.${name}`);
       const rule = { type: basic(field, `${where}.${name}`) };
+      if ("const" in field) rule.value = field.const;
       if (rule.type === "array" && field.items && field.items.$ref !== BLOCK_REF) {
         const item = follow(field.items, `${where}.${name}[]`);
         if (item.type === "object") rule.items = fields(item, `${where}.${name}[]`, false);
@@ -232,8 +236,8 @@ function writeBlockRequired() {
     blockRequired.output,
     `// From snoopy-backend ${relative(backendRoot, blockRequired.input)}, sha256 ${sha256(blockRequired.input)}.\n` +
       "// Regenerate with `npm run generate:platform-contracts`; never edit by hand.\n\n" +
-      "/** A required field's basic type and, for an array of objects, its items' required fields. */\n" +
-      "export type BlockFieldRule = {\n  readonly type: 'string' | 'number' | 'boolean' | 'object' | 'array';\n  readonly items?: BlockFieldRules;\n};\n" +
+      "/** A required field's basic type; its one value, where the schema gives a `const`; for an array of objects, its items' required fields. */\n" +
+      "export type BlockFieldRule = {\n  readonly type: 'string' | 'number' | 'boolean' | 'object' | 'array';\n  readonly value?: string | number | boolean;\n  readonly items?: BlockFieldRules;\n};\n" +
       "export type BlockFieldRules = { readonly [field: string]: BlockFieldRule };\n\n" +
       "/** Each block type's required fields but `type`, from the contract's `Block` schema (the check before drawing). */\n" +
       `export const BLOCK_REQUIRED: { readonly [type: string]: BlockFieldRules } = ${JSON.stringify(readBlockRequired(), null, 2)};\n`,

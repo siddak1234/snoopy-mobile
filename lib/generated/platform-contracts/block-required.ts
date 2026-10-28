@@ -1,9 +1,10 @@
 // From snoopy-backend docs/openapi/automations.yaml, sha256 175dd22d6a8e8482872bd594f3ffdec46fbc4fcfdae35e2e889eecf008399bf8.
 // Regenerate with `npm run generate:platform-contracts`; never edit by hand.
 
-/** A required field's basic type and, for an array of objects, its items' required fields. */
+/** A required field's basic type; its one value, where the schema gives a `const`; for an array of objects, its items' required fields. */
 export type BlockFieldRule = {
   readonly type: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  readonly value?: string | number | boolean;
   readonly items?: BlockFieldRules;
 };
 export type BlockFieldRules = { readonly [field: string]: BlockFieldRule };
@@ -143,7 +144,8 @@ export const BLOCK_REQUIRED: { readonly [type: string]: BlockFieldRules } = {
       "type": "array",
       "items": {
         "type": {
-          "type": "string"
+          "type": "string",
+          "value": "section"
         },
         "title": {
           "type": "string"

@@ -17,6 +17,7 @@ function firstMissing(value: Record<string, unknown>, rules: BlockFieldRules, at
     const path = at ? `${at}.${name}` : name;
     const field = value[name];
     if (basicType(field) !== rule.type) return path;
+    if (rule.value !== undefined && field !== rule.value) return path;
     if (rule.type === 'array' && rule.items) {
       const items = field as readonly unknown[];
       for (let index = 0; index < items.length; index++) {
@@ -32,8 +33,10 @@ function firstMissing(value: Record<string, unknown>, rules: BlockFieldRules, at
 
 /**
  * The check before a renderer runs (round 21, design D2.6): the first required
- * field a block of a known type lacks, or holds in the wrong basic type — its
- * name, `rows` or `rows[0].cells` — or null when it can be drawn. The fields
+ * field a block of a known type lacks, or holds in the wrong basic type or,
+ * where the contract gives a `const`, with another value (a group entry that
+ * is not a section, `sections[0].type`) — its name, `rows` or
+ * `rows[0].cells` — or null when it can be drawn. The fields
  * are the contract's (`block-required.ts`, generated from the `Block` schema),
  * none typed here. A section's own blocks are checked as each is drawn. No
  * hooks, so it answers the same anywhere it is called.

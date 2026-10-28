@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View } from 'react-native';
 
 import { Catch } from '@/components/dialog-boundary';
@@ -8,7 +8,7 @@ import type { Block } from '@/lib/platform/automations';
 import { BadgeBlock } from './badge';
 import { ChartBlock } from './chart';
 import { missingField } from './drawable';
-import { Fallback } from './fallback';
+import { Fallback, NotDrawnFallback } from './fallback';
 import { FileBlock } from './file';
 import { GroupCard } from './group';
 import { ImageBlock } from './image';
@@ -115,17 +115,6 @@ function contentKey(block: unknown): string {
   } catch {
     return typeOf(block);
   }
-}
-
-/**
- * A part not drawn before any renderer runs: `Fallback` in its place, and one
- * log line naming its type and why (`notDrawn`) — a known block's missing
- * field, `unknown type`, or a body that is `no blocks` or `not a list` —
- * never its values. Logged once per change, not on every re-read.
- */
-function NotDrawnFallback({ type, error, testID }: { type: string; error: string; testID: string }) {
-  useEffect(() => notDrawn(type, error), [type, error]);
-  return <Fallback testID={testID} />;
 }
 
 function Blocks({

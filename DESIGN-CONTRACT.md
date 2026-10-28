@@ -883,10 +883,12 @@ mobile-only shape.
   controls' place on the page, never a white screen.
 - A block that cannot be drawn, and a screen that throws, are not a crash
   (round 21, design D2.6). Before a renderer runs, `missingField`
-  (`components/blocks/drawable.ts`) checks the block's required fields and
-  their basic types against `block-required.ts`, generated from the contract's
-  `Block` schema: a table with no `rows` is `FALLBACK` in its place, and the
-  next block still draws. Each block is also inside `Catch`
+  (`components/blocks/drawable.ts`) checks the block's required fields, their
+  basic types and, where the contract gives a `const`, its value against
+  `block-required.ts`, generated from the contract's `Block` schema: a table
+  with no `rows`, or a group holding an entry that is not a section
+  (`sections[0].type`), is `FALLBACK` in its place, and the next block still
+  draws. Each block is also inside `Catch`
   (`components/dialog-boundary.tsx`, exported, with `onError`), so a renderer
   that throws is `FALLBACK` too. A screen that throws reaches the root
   layout's `ErrorBoundary` (Expo Router's; `RootBoundary`,
@@ -900,8 +902,12 @@ mobile-only shape.
   phone attached); no reporting service. A type this build does not know is
   `FALLBACK` too, logged with its type and `unknown type`; a page body with
   no blocks is `FALLBACK` alone, logged as `unknown` and `no blocks` (`not a
-  list` when it is something else) — every fallback is logged (~~a type this
-  build does not know is `FALLBACK` unlogged~~ until the PR 4 review). Each
+  list` when it is something else); a form this build does not know, as
+  `questions` and `form.kind`; an image whose target has no reader or page,
+  as `image` and `open.target`; a group entry that is not a section, as
+  `group` and `sections[n].type` (`GroupCard`'s own guard, after the check)
+  — every fallback is logged (`NotDrawnFallback`,
+  `components/blocks/fallback.tsx`). Each
   block's `Catch` is reset by its content (`resetKey`): a re-read that sends a
   different block in that place draws it, and the same block stays
   `FALLBACK` without a second line.
