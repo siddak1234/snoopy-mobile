@@ -170,7 +170,7 @@ export function moneyCents(value: unknown): number | null {
  * row — rather than a wire token on screen.
  *
  * `AutomationSetupField` publishes no icon — unlike `AutomationCatalogEntry`,
- * which requires one — so the glyph is keyed by what the row *does*. Five
+ * which requires one — so the glyph is keyed by what the row *does*. Seven
  * controls is few enough that this reads rather than being a lookup table
  * standing in for missing data. `resource-picker` is the contract's control for
  * a string that names a resource at the connected service — an inbox label, a

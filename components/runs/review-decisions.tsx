@@ -14,12 +14,17 @@ import {
 } from '@/lib/content/screen-states';
 import type { AnsweredDecision, DecisionAnswer, OfferedDecision } from '@/lib/platform/pending-contract';
 
+/** What a screen reader says for a row's pill: its answer and which change ("Deny: Add Z99.2"). */
+const reviewPillA11y = (answer: string, change: OfferedDecision) => `${answer}: ${change.label}`;
+
 /**
  * A review of each change a held run offers (Round 21's platform round, F2;
  * ICD-10 Code Check's words.md section 3): each change a row, "{label} ·
  * {detail}", with Accept (the primary pill) and Deny (the danger pill, as an
  * approval's Deny is); once a row is answered the other pill goes quiet
- * (`secondary`), and a press of it changes the answer. "Save review" is
+ * (`secondary`), and a press of it changes the answer. A screen reader hears
+ * each pill with its change ("Accept: {label}") and the chosen one selected,
+ * not only its colour. "Save review" is
  * offered once every row has an answer — until then "Accept or deny each
  * change." — and sends every answer at once (`onSave`); while it saves the
  * pills and Save wait. A plain held run, with no changes, keeps
@@ -55,6 +60,8 @@ export function ReviewDecisions({
               <PillButton
                 testID={`${testID}-accept-${change.id}`}
                 label={ACCEPT_LABEL}
+                accessibilityLabel={reviewPillA11y(ACCEPT_LABEL, change)}
+                selected={chosen === 'accepted'}
                 variant={chosen === 'denied' ? 'secondary' : 'primary'}
                 fontSize={typeScale.label.fontSize}
                 disabled={saving}
@@ -64,6 +71,8 @@ export function ReviewDecisions({
               <PillButton
                 testID={`${testID}-deny-${change.id}`}
                 label={DENY_LABEL}
+                accessibilityLabel={reviewPillA11y(DENY_LABEL, change)}
+                selected={chosen === 'denied'}
                 variant={chosen === 'accepted' ? 'secondary' : 'danger'}
                 fontSize={typeScale.label.fontSize}
                 disabled={saving}

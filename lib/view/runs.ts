@@ -362,8 +362,6 @@ export type ApprovalItem = {
    * changes" and opens the run, in place of Approve and Deny; 0 for a plain one.
    */
   changes: number;
-  /** Its saved review, "{a} accepted · {d} denied", or null. */
-  tally: string | null;
 };
 
 /**
@@ -404,7 +402,6 @@ export function toApprovalItem(
     canDecide: decides(role, approval.eligibleRoles),
     deciders: approval.eligibleRoles,
     changes: offeredDecisions(approval as PendingApproval).length,
-    tally: answersTally(reviewAnswers(approval as PendingApproval)),
   };
 }
 

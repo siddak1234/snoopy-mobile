@@ -44,7 +44,9 @@ const LEAVE_MS = 220;
  * Decided, its pill says how while it leaves (never "Pending" beside a
  * decision). One that offers changes for review (Round 21's platform round,
  * F2) says "Review {n} changes" in place of Approve and Deny, opening the run,
- * where each change is answered; a saved review, "{a} accepted · {d} denied".
+ * where each change is answered. A saved review has left this pending list,
+ * so its "{a} accepted · {d} denied" shows on the run only (DESIGN-GAPS, Round
+ * 21's F2: Approvals reads no decided review).
  */
 function ApprovalCard({
   item,
@@ -79,11 +81,6 @@ function ApprovalCard({
       </View>
       {item.expires !== EMPTY ? (
         <Text style={[styles.note, { color: palette.neutral[400] }]}>Expires {item.expires}</Text>
-      ) : null}
-      {item.tally ? (
-        <Text testID={`approval-tally-${item.id}`} style={[styles.note, { color: palette.neutral[400] }]}>
-          {item.tally}
-        </Text>
       ) : null}
       {decision ? null : !item.canDecide ? (
         // The server would refuse it (403): no button, and who may decide.

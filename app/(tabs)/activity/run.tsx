@@ -37,9 +37,9 @@ import {
 } from '@/lib/content/screen-states';
 import { cancelRun } from '@/lib/platform/automations';
 import { PlatformError } from '@/lib/platform/problem';
-import { decidersLine, decides, type WorkspaceRole } from '@/lib/view/roles';
+import { decidersLine, decides } from '@/lib/view/roles';
 import { statusLabel, type StatusPillLabel } from '@/lib/view/status';
-import { offeredDecisions, type AnsweredDecision } from '@/lib/platform/pending-contract';
+import { offeredDecisions, type AnsweredDecision, type PendingApprovalForm } from '@/lib/platform/pending-contract';
 import { RUN_ORIGIN_TAB, jobReviewTally, runLabel, runOrigin } from '@/lib/view/runs';
 
 /**
@@ -193,21 +193,24 @@ export default function RunDetailScreen() {
    *
    * A form that carries changes (`decisions`; Round 21's platform round, F2)
    * is a review instead: each change Accept or Deny (`ReviewDecisions`), then
-   * Save review, which sends every answer; to anyone who may not answer, "Only
-   * an owner or admin can review this." Saved, the page says "{a} accepted ·
-   * {d} denied" and reads the run again: the job goes on whatever the answers.
+   * Save review, which sends every answer; to a member, "Only an owner or
+   * admin can review this.", and to anyone else the approval does not name
+   * (an admin on an owner-only one), who may decide it. Saved, the page says
+   * "{a} accepted · {d} denied" and reads the run again: the job goes on
+   * whatever the answers. The backend's draft sends it as its own form,
+   * `review` (`PENDING_FORM_KINDS`), and the page draws either kind.
    */
   const role = liveRun?.role;
-  const approvalForm = (form: { approvalId?: string; eligibleRoles?: readonly WorkspaceRole[] }) => {
+  const approvalForm = (form: PendingApprovalForm) => {
     const approvalId = form.approvalId;
     const eligible = form.eligibleRoles ?? [];
     if (!approvalId || role === undefined || role === null) return null;
-    const changes = offeredDecisions(form as { decisions?: unknown });
+    const changes = offeredDecisions(form);
     if (changes.length > 0) {
       if (!decides(role, eligible)) {
         return (
           <Text testID="run-review-member" style={[styles.decisionNote, { color: palette.neutral[400] }]}>
-            {REVIEW_MEMBER_NOTE}
+            {role === 'member' ? REVIEW_MEMBER_NOTE : decidersLine(eligible)}
           </Text>
         );
       }
@@ -298,7 +301,7 @@ export default function RunDetailScreen() {
         </Text>
       ) : null}
 
-      <BlockList testID="run-blocks" blocks={run.blocks} context={{ forms: { approval: approvalForm }, workspaceId: openedIn }} />
+      <BlockList testID="run-blocks" blocks={run.blocks} context={{ forms: { approval: approvalForm, review: approvalForm }, workspaceId: openedIn }} />
 
       {/*
         The A8X run package (round 24 P12; the owner's build 23 F16: "No more

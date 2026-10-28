@@ -9,8 +9,12 @@ import type { components } from '@/lib/generated/platform-contracts/automations'
  * screen needs, and the one place they live. At that regeneration this file is
  * deleted and its importers read the generated names (`AutomationSetupField`'s
  * `select`, `options`, `multiple`; `Approval.decisions`; the decision body's
- * `decisions`) — a name that differs is then a typecheck failure, not a guess
- * on screen. Never hand-edit a generated file to match this one.
+ * `decisions`; the `review` question form) — a field name that differs is then
+ * a typecheck failure, not a guess on screen. A form kind is not: `BlockForms`
+ * is a Partial record, so a kind the page has no entry for is no type error
+ * and draws the fallback — the regeneration checks the form kinds by hand
+ * against `PENDING_FORM_KINDS`. Never hand-edit a generated file to match this
+ * one.
  */
 
 type GeneratedSetupField = components['schemas']['AutomationSetupField'];
@@ -51,8 +55,18 @@ export type PendingApproval = GeneratedApproval & {
   answers?: AnsweredDecision[];
 };
 
-/** The approval form on a run's page (`questions{approval}`), carrying the changes it offers. */
-export type PendingApprovalForm = { approvalId?: string; eligibleRoles?: readonly ('owner' | 'admin' | 'member')[]; decisions?: OfferedDecision[] };
+/**
+ * The question forms this build draws that the generated contract does not
+ * name yet: the backend's draft sends a held run's review as its own form,
+ * `kind: 'review'` (old builds then draw the fallback), carrying `decisions`.
+ * The kind is not final; the run page draws `approval` and `review` alike, so
+ * either name works until the regeneration settles it.
+ */
+export const PENDING_FORM_KINDS = ['review'] as const;
+export type PendingFormKind = (typeof PENDING_FORM_KINDS)[number];
+
+/** The approval or review form on a run's page (`questions{approval}` / `questions{review}`), carrying the changes it offers. */
+export type PendingApprovalForm = { approvalId?: string; eligibleRoles?: readonly ('owner' | 'admin' | 'member')[]; decisions?: unknown };
 
 /** The decision route's body for an approval that offers changes: every offered id answered once. */
 export type ReviewBody = { decisions: AnsweredDecision[] };

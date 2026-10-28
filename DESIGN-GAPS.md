@@ -2823,9 +2823,15 @@ ICD-10 Code Check's `words.md` section 3, owner-approved 2026-10-28 ~21:43Z, cop
   each change." shows until then. Saving sends `{ decisions: [{ id, decision }] }`
   (`decideReview`, the same route, one key per approval and set of answers). Saved, the page shows
   "{a} accepted · {d} denied". A failure shows "The review wasn't saved. Try again." whatever the
-  platform said. A member sees "Only an owner or admin can review this." The Approvals card shows
-  "Review {n} changes", which opens the run, in place of Approve / Deny, plus the tally once
-  reviewed. A held run with no changes is unchanged.
+  platform said. A member sees "Only an owner or admin can review this."; anyone else the approval
+  does not name (an admin on an owner-only one), who may decide it. The Approvals card shows
+  "Review {n} changes", which opens the run, in place of Approve / Deny. A held run with no
+  changes is unchanged.
+- **OPEN, the tally in Approvals.** Spec F2 and `words.md` section 3 say "{a} accepted · {d}
+  denied" on the run AND in Approvals. Approvals lists only pending approvals (`status=pending`),
+  and a saved review reads `approved`, so it has left the list: the tally shows on the run only.
+  Showing it in Approvals needs a read of decided reviews there; ~~the card's tally~~ removed by
+  the review (it could never show).
 - **The pending contract.** The backend's contracts had not landed (`git log origin/main..HEAD --
   packages/contracts schemas` empty in the backend lane at build time). The shapes live in one
   module, `lib/platform/pending-contract.ts`, and the one body cast in `decideReview`. The
@@ -2842,3 +2848,21 @@ Each was broken, shown red, restored and shown green: `select` out of `CONTROL_I
 the review body sent as `{ decision }` (`platform-mutations`); the run page's review branch, Save
 review enabled before every answer, the platform's words in place of the approved failure line, the
 tally from kept answers, and Approvals' "Review {n} changes" (`review-decisions`).
+
+### The review's fixes, the setup dropdown and the review (2026-10-28)
+
+1. The backend's draft sends a review as its own question form, `kind: 'review'`
+   (`snoopy-backend/packages/contracts/src/blocks.ts`, uncommitted), which this build drew as the fallback. `review`
+   is a known form now (`PENDING_FORM_KINDS` in `lib/platform/pending-contract.ts`), drawn by the
+   run page's approval form; the kind is settled at the regeneration. `BlockForms` is a Partial
+   record, so a form kind is not a typecheck failure there: the pending module says so.
+2. The Approvals tally removed (above, OPEN).
+3. "Only an owner or admin can review this." to members only; anyone else not named, `decidersLine`.
+4. A review's pills are heard with their change ("Accept: {label}") and the chosen one `selected`
+   (`PillButton`'s new `selected`).
+5. `PendingApprovalForm` types the run page's form (no cast); CONTROL_ICON's comment says seven.
+
+Bites (break, red, restore with the same sha256, green; `review-decisions`): `review` out of
+`KNOWN_FORMS`; `review` out of the run page's forms; the members' line to everyone refused; a new
+key on every retry; one key whatever the answers; the pills not waiting while it saves; Save not
+waiting; the Accept pill's label; the Accept pill's `selected`; `PillButton` dropping `selected`.

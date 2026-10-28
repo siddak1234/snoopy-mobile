@@ -7,6 +7,7 @@ import RunDetailScreen from '@/app/(tabs)/activity/run';
 import { nocturneDark } from '@/constants/theme';
 import { decideApproval, decideReview, type Block } from '@/lib/platform/automations';
 import { PlatformError } from '@/lib/platform/problem';
+import { newIdempotencyKey } from '@/lib/platform/client';
 import type { Approval } from '@/lib/platform/runs';
 import type { Answer } from '@/test/fake-platform';
 import { TEST_WORKSPACE, approvalsPayload, routePlatform, runDetailPayload, signedInSession } from '@/test/platform';
@@ -43,9 +44,12 @@ beforeEach(() => {
   platformOperation.mockReset();
   (decideReview as jest.Mock).mockClear();
   (decideApproval as jest.Mock).mockClear();
+  (newIdempotencyKey as jest.Mock).mockImplementation(() => 'key');
 });
 
-function heldDetail(): Answer<'GET /v1/workspaces/{workspaceId}/runs/{runId}'> {
+type HeldForm = { kind?: 'approval' | 'review'; eligibleRoles?: string[] };
+
+function heldDetail({ kind = 'approval', eligibleRoles = ['owner', 'admin'] }: HeldForm = {}): Answer<'GET /v1/workspaces/{workspaceId}/runs/{runId}'> {
   const base = runDetailPayload('run-1');
   return {
     ...base,
@@ -54,13 +58,13 @@ function heldDetail(): Answer<'GET /v1/workspaces/{workspaceId}/runs/{runId}'> {
       { type: 'text', text: '2 changes need your review.', tone: 'warning' },
       {
         type: 'questions',
-        form: { kind: 'approval', approvalId: APPROVAL_ID, eligibleRoles: ['owner', 'admin'], decisions: CHANGES },
+        form: { kind, approvalId: APPROVAL_ID, eligibleRoles, decisions: CHANGES },
       } as unknown as Block,
     ],
   };
 }
 
-function openHeld(role: 'owner' | 'member', approvals: Approval[] = []) {
+function openHeld(role: 'owner' | 'admin' | 'member', approvals: Approval[] = [], form: HeldForm = {}) {
   routePlatform(platformOperation, {
     '/approvals': { approvals },
     '/v1/workspaces': {
@@ -69,7 +73,7 @@ function openHeld(role: 'owner' | 'member', approvals: Approval[] = []) {
     },
   });
   const routed = platformOperation.getMockImplementation()!;
-  const detail = heldDetail();
+  const detail = heldDetail(form);
   platformOperation.mockImplementation((path: string, ...rest: unknown[]) =>
     path.split('?')[0]!.endsWith(`/runs/${RUN_ID}`) ? Promise.resolve(detail) : routed(path, ...rest),
   );
@@ -142,6 +146,69 @@ describe('a held run that offers changes: Accept or Deny each, then Save review 
     expect((await screen.findByTestId('run-review-member')).props.children).toBe('Only an owner or admin can review this.');
     expect(screen.queryByText('Accept')).toBeNull();
     expect(screen.queryByText('Save review')).toBeNull();
+  });
+
+  it('to an admin on a review only an owner may answer: who may decide it, never the members\' line', async () => {
+    await openHeld('admin', [], { eligibleRoles: ['owner'] });
+    expect((await screen.findByTestId('run-review-member')).props.children).toBe('Only owner can decide this.');
+    expect(screen.queryByText('Only an owner or admin can review this.')).toBeNull();
+    expect(screen.queryByText('Accept')).toBeNull();
+  });
+
+  it("the backend's draft form, kind 'review', draws the same rows, not the fallback", async () => {
+    await openHeld('owner', [], { kind: 'review' });
+    const review = within(await screen.findByTestId('run-review-block'));
+    expect(review.getByText('Add Z99.2')).toBeTruthy();
+    expect(review.getAllByText('Deny')).toHaveLength(2);
+    expect(screen.queryByText("This part can't be shown here yet.")).toBeNull();
+  });
+
+  it('a screen reader hears each pill with its change, and the chosen one selected', async () => {
+    await openHeld('owner');
+    const accept = await screen.findByTestId('run-review-accept-z99-2');
+    expect(accept.props.accessibilityLabel).toBe('Accept: Add Z99.2');
+    expect(screen.getByTestId('run-review-deny-n18-4').props.accessibilityLabel).toBe('Deny: N18.4 → Remove');
+    expect(accept.props.accessibilityState).toMatchObject({ selected: false });
+    await fireEvent.press(accept);
+    expect(screen.getByTestId('run-review-accept-z99-2').props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByTestId('run-review-deny-z99-2').props.accessibilityState).toMatchObject({ selected: false });
+  });
+
+  it('while it saves, the pills and Save review wait', async () => {
+    let finish: (value: unknown) => void = () => undefined;
+    (decideReview as jest.Mock).mockImplementationOnce(() => new Promise((resolve) => (finish = resolve)));
+    await openHeld('owner');
+    await fireEvent.press(await screen.findByTestId('run-review-accept-n18-4'));
+    await fireEvent.press(screen.getByTestId('run-review-accept-z99-2'));
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('run-review-save'));
+    });
+    for (const id of ['accept-n18-4', 'deny-n18-4', 'accept-z99-2', 'deny-z99-2', 'save']) {
+      expect(screen.getByTestId(`run-review-${id}`).props.accessibilityState).toMatchObject({ disabled: true });
+    }
+    await act(async () => finish({ approval: {} }));
+  });
+
+  it('a refused save tried again with the same answers keeps its key; changed answers take a new one', async () => {
+    let n = 0;
+    (newIdempotencyKey as jest.Mock).mockImplementation(() => `key-${++n}`);
+    const refused = new PlatformError('not now', 503);
+    (decideReview as jest.Mock).mockRejectedValueOnce(refused).mockRejectedValueOnce(refused);
+    await openHeld('owner');
+    await fireEvent.press(await screen.findByTestId('run-review-accept-n18-4'));
+    await fireEvent.press(screen.getByTestId('run-review-accept-z99-2'));
+    const save = async () => {
+      await act(async () => {
+        fireEvent.press(screen.getByTestId('run-review-save'));
+      });
+      await waitFor(() => expect(screen.getByTestId('run-review-save').props.accessibilityState).not.toMatchObject({ disabled: true }));
+    };
+    await save();
+    await save();
+    await fireEvent.press(screen.getByTestId('run-review-deny-z99-2'));
+    await save();
+    const keys = (decideReview as jest.Mock).mock.calls.map((call) => call[3]);
+    expect(keys).toEqual(['key-1', 'key-1', 'key-2']);
   });
 
   it("once reviewed, the job's approval's answers say it on the run", async () => {
