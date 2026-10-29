@@ -1005,6 +1005,9 @@ describe("a held run is decided from its page: Approve or Deny in its approval f
       'run-open-details',
     ]);
     expect(screen.queryByTestId('run-deciders')).toBeNull();
+    // A plain approval, no changes offered: never the review of each change (Round 21's platform round, F2).
+    expect(screen.queryByTestId('run-review-block')).toBeNull();
+    expect(screen.queryByText('Save review')).toBeNull();
 
     const before = runReads();
     await fireEvent.press(screen.getByTestId('run-decision-approve'));
@@ -1069,6 +1072,18 @@ describe("a held run is decided from its page: Approve or Deny in its approval f
     await openRunDetails(held('v7-held-denied'), options);
     expect(within(await screen.findByTestId('run-step-group:done')).getByText('Denied')).toBeTruthy();
     expect(screen.queryByText('Approve')).toBeNull();
+  });
+
+  it('reviewed (Round 21, F2): the step that waited says "{a} accepted · {d} denied" on its Run details, as the website\'s does', async () => {
+    const reviewed = {
+      ...runApproval('ap-1', 'approved', '2026-10-14T20:03:00Z'),
+      decisions: [
+        { id: 'n18-4', label: 'N18.4 → Remove', decision: 'accepted' },
+        { id: 'z99-2', label: 'Add Z99.2', decision: 'denied' },
+      ],
+    };
+    await openRunDetails(held(), { approvals: { approvals: [reviewed] as never }, role: 'owner' });
+    expect(within(await screen.findByTestId('run-step-group:done')).getByText('1 accepted · 1 denied')).toBeTruthy();
   });
 });
 

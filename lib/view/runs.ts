@@ -21,8 +21,10 @@ import {
   STEP_DENIED,
   STEP_WAITING,
   emailSentLine,
+  reviewTally,
   stepHeld,
 } from '@/lib/content/screen-states';
+import type { AnsweredDecision, OfferedDecision } from '@/lib/platform/automations';
 
 import type { CatalogEntry } from '@/lib/platform/catalog';
 import type { InboxNotification } from '@/lib/platform/notifications';
@@ -108,6 +110,47 @@ export function jobApproval(run: Pick<Run, 'id'>, approvals: readonly Approval[]
     if (!newest || Date.parse(approval.createdAt) > Date.parse(newest.createdAt)) newest = approval;
   }
   return newest;
+}
+
+/**
+ * The changes an approval or a review form offers (`decisions`; Round 21's
+ * platform round, F2), or none (a plain approval: Approve / Deny). A row with
+ * no string `id` and `label` is left out: the page body is drawn as sent.
+ */
+export function offeredDecisions(source: { decisions?: readonly unknown[] } | undefined | null): OfferedDecision[] {
+  const list = source?.decisions;
+  if (!Array.isArray(list)) return [];
+  return list.filter(
+    (row): row is OfferedDecision =>
+      typeof row === 'object' && row !== null && typeof (row as OfferedDecision).id === 'string' && typeof (row as OfferedDecision).label === 'string',
+  );
+}
+
+/** A saved review's answers, kept on each offered change (`Approval.decisions[].decision`); empty when it has none. */
+export function reviewAnswers(approval: Pick<Approval, 'decisions'> | undefined | null): AnsweredDecision[] {
+  return (approval?.decisions ?? []).flatMap((row) =>
+    row.decision === 'accepted' || row.decision === 'denied' ? [{ id: row.id, decision: row.decision }] : [],
+  );
+}
+
+/**
+ * A saved review's words (Round 21's platform round, F2): "{a} accepted ·
+ * {d} denied", from the answers just saved on this page, else the job's
+ * approval's kept answers; null when nothing was reviewed.
+ */
+export function answersTally(answers: readonly AnsweredDecision[]): string | null {
+  if (answers.length === 0) return null;
+  const accepted = answers.filter((answer) => answer.decision === 'accepted').length;
+  return reviewTally(accepted, answers.length - accepted);
+}
+
+export function jobReviewTally(
+  run: Pick<Run, 'id'>,
+  approvals: readonly Approval[],
+  saved: readonly AnsweredDecision[] | null = null,
+): string | null {
+  if (saved && saved.length > 0) return answersTally(saved);
+  return answersTally(reviewAnswers(jobApproval(run, approvals)));
 }
 
 export function heldDecision(run: Run, approvals: readonly Approval[]): HeldDecision | null {
@@ -330,6 +373,11 @@ export type ApprovalItem = {
   canDecide: boolean;
   /** The roles it names, said to someone whose role it does not. */
   deciders: readonly WorkspaceRole[];
+  /**
+   * How many changes it offers for review (F2): the card then says "Review {n}
+   * changes" and opens the run, in place of Approve and Deny; 0 for a plain one.
+   */
+  changes: number;
 };
 
 /**
@@ -369,6 +417,7 @@ export function toApprovalItem(
     status: APPROVAL_PILL[approval.status] ?? null,
     canDecide: decides(role, approval.eligibleRoles),
     deciders: approval.eligibleRoles,
+    changes: offeredDecisions(approval).length,
   };
 }
 
@@ -605,7 +654,11 @@ export function trackerLook(state: unknown): { state: TrackerState; icon: Icon; 
  * What a row says of its state — never a step's own summary and never a step
  * id (B6; the owner's build 20 item 10: "It shoukd show all the steps and a live
  * tracker of which ones are done", and item 11's "What is the checked issue?"
- * over "34 accounts read" under Received).
+ * over "34 accounts read" under Received). Once its review is saved,
+ * "{a} accepted · {d} denied" (`review`, `jobReviewTally`; Round 21's F2) on
+ * the step that waited, whatever the job does next — so a group still working
+ * after the review says the count, not "Working…" — the website's rule
+ * (`snoopy/lib/run-progress.ts` `trackerSub`).
  */
 function trackerSub(
   state: TrackerState,
@@ -613,7 +666,10 @@ function trackerSub(
   run: RunState,
   clock: (iso: string) => string,
   decision?: HeldDecision | null,
+  review?: string | null,
 ): string {
+  const waited = steps.some((step) => step.outcome === 'held');
+  if (review && waited && decision !== 'rejected' && state !== 'failed') return review;
   if (state === 'working') return RUN_WORKING;
   if (state === 'waiting') return STEP_WAITING;
   if (state === 'skipped') return STEP_SKIPPED;
@@ -712,18 +768,21 @@ export function toTracker(
   clock: (iso: string) => string,
   /** The catalog's steps, to title a run of another version by (`declared` absent). */
   titles: readonly { id: string; title: string }[] | undefined = declared,
-  /** The flow as read now, and the run's email (Build 22); how its approval was decided (round 24 P6). */
-  context: { flow?: TrackerFlow; email?: RunDetail['email']; decision?: HeldDecision | null } = {},
+  /**
+   * The flow as read now, and the run's email (Build 22); how its approval was
+   * decided (round 24 P6); its saved review's "{a} accepted · {d} denied" (F2).
+   */
+  context: { flow?: TrackerFlow; email?: RunDetail['email']; decision?: HeldDecision | null; review?: string | null } = {},
 ): TrackerRow[] {
   const known = new Set((declared ?? []).map((step) => step.id));
   const covered = declared && declared.length > 0 && steps.every((step) => known.has(step.stepId));
-  if (!covered) return reportedRows(steps, titles, run, clock, context.decision);
+  if (!covered) return reportedRows(steps, titles, run, clock, context.decision, context.review);
   const pipeline = declared!;
   const states = stepStates(pipeline, steps, run);
   const row = (id: string, title: string, members: number[]): TrackerRow => {
     const state = groupState(members.map((index) => states[index]!.state));
     const reported = members.flatMap((index) => (states[index]!.step ? [states[index]!.step!] : []));
-    return { id, title, state, ...TRACKER_LOOK[state], sub: trackerSub(state, reported, run, clock, context.decision) };
+    return { id, title, state, ...TRACKER_LOOK[state], sub: trackerSub(state, reported, run, clock, context.decision, context.review) };
   };
   if (groups && groups.length > 0) {
     const named = new Set(pipeline.flatMap((step) => (step.group ? [step.group] : [])));
@@ -750,6 +809,7 @@ function reportedRows(
   run: RunState,
   clock: (iso: string) => string,
   decision?: HeldDecision | null,
+  review?: string | null,
 ): TrackerRow[] {
   const titles = new Map((declared ?? []).map((step) => [step.id, step.title]));
   const ordered = [...steps].sort((a, b) => Date.parse(a.occurredAt) - Date.parse(b.occurredAt));
@@ -761,7 +821,7 @@ function reportedRows(
       title: `${index + 1} · ${titles.get(step.stepId) ?? `Step ${index + 1}`}`,
       state,
       ...TRACKER_LOOK[state],
-      sub: trackerSub(state, [step], run, clock, decision),
+      sub: trackerSub(state, [step], run, clock, decision, review),
     };
   });
   if (run.status === 'pending' || run.status === 'running') {

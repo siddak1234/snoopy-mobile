@@ -15,7 +15,7 @@ import {
 } from '@/lib/platform/runs';
 import { readWorkspaces } from '@/lib/platform/workspaces';
 import { timeOfDay } from '@/lib/view/format';
-import { RUN_REREAD_MS, heldDecision, rereadForApproval, runVerdict, toTracker, type TrackerFlow } from '@/lib/view/runs';
+import { RUN_REREAD_MS, heldDecision, jobReviewTally, rereadForApproval, runVerdict, toTracker, type TrackerFlow } from '@/lib/view/runs';
 
 /**
  * One run as its two pages read it — the run's page and its Run details page
@@ -162,7 +162,13 @@ export function useRunDetail(runId: string | undefined) {
         liveRun.detail.run,
         timeOfDay,
         liveRun.entry?.pipeline,
-        { flow: trackerFlow, email: liveRun.detail.email, decision: decided },
+        // A saved review's count on the step that waited (F2), as the website's tracker says it.
+        {
+          flow: trackerFlow,
+          email: liveRun.detail.email,
+          decision: decided,
+          review: jobReviewTally(liveRun.detail.run, liveRun.approvals),
+        },
       )
     : [];
 

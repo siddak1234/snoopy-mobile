@@ -1,16 +1,24 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { EnvelopeSimple, HandPalm, PlugsConnected, Sliders, Tray, type Icon } from 'phosphor-react-native';
+import { EnvelopeSimple, HandPalm, ListBullets, PlugsConnected, Sliders, Tray, type Icon } from 'phosphor-react-native';
 
+import { Dropdown } from '@/components/dropdown';
 import { NocToggle } from '@/components/nocturne/noc-toggle';
 import { SectionLabel } from '@/components/nocturne/section-label';
 import { Text, TextInput } from '@/components/text';
-import { fonts, iconSize, inset, space, typeScale } from '@/constants/theme';
+import { fonts, iconSize, inset, space, status, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { NEWER_CONTROL_NOTE } from '@/lib/content/screen-states';
+import { ScopePill } from '@/components/scope-control';
+import { NEWER_CONTROL_NOTE, chosenLabel } from '@/lib/content/screen-states';
 import type { components } from '@/lib/generated/platform-contracts/automations';
 
+/** A setup field; `select` (F1, Round 21's platform round) carries its `options` and `multiple`. */
 export type SetupField = components['schemas']['AutomationSetupField'];
+
+/** Whether a field is the setup dropdown (F1). */
+export function isSelectField(field: { control: string }): boolean {
+  return field.control === 'select';
+}
 
 /**
  * What a row draws of a manifest field. A setup field is one; so is a manual
@@ -23,7 +31,7 @@ export type SetupField = components['schemas']['AutomationSetupField'];
  * it as the website does — a text input, with a note (BUILD-PLAN 25.8.1, the
  * owner's requirement 1) — instead of looking it up and crashing the dialog.
  */
-export type FieldRowSpec = Pick<SetupField, 'key' | 'title' | 'description' | 'required' | 'notifies'> & {
+export type FieldRowSpec = Pick<SetupField, 'key' | 'title' | 'description' | 'required' | 'notifies' | 'options' | 'multiple'> & {
   control: string;
 };
 
@@ -155,7 +163,7 @@ export function moneyCents(value: unknown): number | null {
  * row — rather than a wire token on screen.
  *
  * `AutomationSetupField` publishes no icon — unlike `AutomationCatalogEntry`,
- * which requires one — so the glyph is keyed by what the row *does*. Five
+ * which requires one — so the glyph is keyed by what the row *does*. Seven
  * controls is few enough that this reads rather than being a lookup table
  * standing in for missing data. `resource-picker` is the contract's control for
  * a string that names a resource at the connected service — an inbox label, a
@@ -176,6 +184,8 @@ const CONTROL_ICON: Record<KnownControl, Icon> = {
   // The vendor choice (backend ADR-0037): never a row of its own — its page is
   // Connect integration — but known, so no screen says it is newer than this build.
   connection: PlugsConnected,
+  // The setup dropdown (Round 21's platform round, F1): the item select's list glyph.
+  select: ListBullets,
 };
 
 /**
@@ -241,16 +251,33 @@ export function notifiesLine(field: Pick<FieldRowSpec, 'notifies'>): string | nu
   return `Controls the notification sent when ${NOTIFIES[notifies]}.`;
 }
 
-/** Mirrors the catalog service's required-config predicate exactly. */
-export function missingRequiredSetupFields(
-  fields: SetupField[],
+/**
+ * Mirrors the catalog service's required-config predicate exactly. A list
+ * (a several-choice `select`, F1) that is empty counts as missing, a default
+ * or not: a required one is never saved empty.
+ */
+export function missingRequiredSetupFields<F extends Pick<SetupField, 'key' | 'required' | 'defaultValue'>>(
+  fields: F[],
   values: Record<string, unknown>,
-): SetupField[] {
+): F[] {
   return fields.filter((field) => {
-    if (!field.required || field.defaultValue !== undefined) return false;
+    if (!field.required) return false;
     const value = values[field.key];
+    if (Array.isArray(value)) return value.length === 0;
+    if (field.defaultValue !== undefined) return false;
     return value === undefined || value === null || value === '';
   });
+}
+
+/**
+ * What a `select` holds, as its options (F1): a string is one choice, a list
+ * several, each one of the field's options, none twice, in the order chosen;
+ * anything else, none.
+ */
+export function selectedChoices(field: Pick<FieldRowSpec, 'options'>, value: unknown): string[] {
+  const options = new Set(field.options ?? []);
+  const raw = typeof value === 'string' ? [value] : Array.isArray(value) ? value : [];
+  return [...new Set(raw.filter((choice): choice is string => typeof choice === 'string' && options.has(choice)))];
 }
 
 /**
@@ -261,13 +288,19 @@ export function missingRequiredSetupFields(
  * default or refuses a required one. The platform stays the validator.
  */
 export function declaredValues(
-  fields: readonly { key: string; control: string }[],
+  fields: readonly { key: string; control: string; options?: readonly string[]; multiple?: boolean }[],
   values: Record<string, unknown>,
-): Record<string, string | number | boolean> {
-  const declared: Record<string, string | number | boolean> = {};
+): Record<string, string | string[] | number | boolean> {
+  const declared: Record<string, string | string[] | number | boolean> = {};
   for (const field of fields) {
     const value = values[field.key];
     if (field.control === 'toggle') declared[field.key] = value === true;
+    else if (field.control === 'select') {
+      // A list for a field that allows several (F1), sent even empty; one choice, or nothing, for one that does not.
+      const chosen = selectedChoices({ options: field.options ? [...field.options] : [] }, value);
+      if (field.multiple) declared[field.key] = chosen;
+      else if (chosen[0] !== undefined) declared[field.key] = chosen[0];
+    }
     else if (field.control === 'money') {
       if (typeof value === 'number' && Number.isFinite(value)) declared[field.key] = value;
     } else if (typeof value === 'string' && value.trim() !== '') declared[field.key] = value;
@@ -323,6 +356,7 @@ export function FieldInput({
   if (field.control === 'toggle') {
     return <NocToggle value={value === true} onChange={(next) => onChange(next)} />;
   }
+  if (field.control === 'select') return <SelectInput field={field} value={value} onChange={onChange} />;
 
   const changeText = (next: string) => {
     if (isMoney) {
@@ -371,6 +405,63 @@ export function FieldInput({
 }
 
 /**
+ * A `select` (Round 21's platform round, F1): the glass dropdown
+ * (`components/dropdown.tsx`) behind the item select's pill (`ScopePill`), its
+ * options in the manifest's order. One choice closes the panel; a field that
+ * allows several (`multiple`) keeps it open, a tick on each chosen row, and a
+ * press toggles its row. The closed pill reads the choices (`chosenLabel`:
+ * "Choose", "{first}, {second}", "{n} chosen").
+ *
+ * testIDs: the pill `setup-field-${key}-choice`, a row
+ * `setup-field-${key}-choice-option-${option}`.
+ */
+function SelectInput({
+  field,
+  value,
+  onChange,
+}: {
+  field: FieldRowSpec;
+  value: unknown;
+  onChange: (next: unknown) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const several = field.multiple === true;
+  const chosen = selectedChoices(field, value);
+  const label = chosenLabel(chosen);
+  const testID = `setup-field-${field.key}-choice`;
+  return (
+    <View style={styles.pill}>
+      <Dropdown
+        testID={testID}
+        title={field.title}
+        options={(field.options ?? []).map((option) => ({ value: option, label: option }))}
+        value={several ? null : (chosen[0] ?? null)}
+        values={several ? chosen : undefined}
+        open={open}
+        onOpenChange={setOpen}
+        onChange={(next) => {
+          if (several) {
+            onChange(chosen.includes(next) ? chosen.filter((choice) => choice !== next) : [...chosen, next]);
+            return;
+          }
+          onChange(next);
+          setOpen(false);
+        }}
+        trigger={
+          <ScopePill
+            testID={testID}
+            icon={ListBullets}
+            label={label}
+            accessibilityLabel={`${field.title}: ${label}`}
+            onPress={() => setOpen(true)}
+          />
+        }
+      />
+    </View>
+  );
+}
+
+/**
  * One row of Set up and of a run's form: the title line —
  * glyph, title, "Optional", a switch inline — then the input at full width.
  * **No help line under it** (Build 21, spec A6 and B5; the session's S11; the
@@ -384,11 +475,14 @@ export function SetupFieldRow({
   value,
   onChange,
   divider,
+  error,
 }: {
   field: FieldRowSpec;
   value: unknown;
   onChange: (next: unknown) => void;
   divider: boolean;
+  /** What the save said of this field ("Choose at least one."), under it. */
+  error?: string | null;
 }) {
   const { palette } = useTheme();
   // A control this build does not know draws under the text glyph, as its text input (25.8.1).
@@ -417,6 +511,11 @@ export function SetupFieldRow({
           known control drawn that way (25.8.1), and a control this build does not
           know is drawn that way too, with `controlNote`'s line under it. */}
       {field.control === 'toggle' ? null : <FieldInput field={field} value={value} onChange={onChange} />}
+      {error ? (
+        <Text accessibilityRole="alert" testID={`setup-field-${field.key}-error`} style={[styles.fieldError, { color: status.err }]}>
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -443,6 +542,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: space.rowX,
   },
+  // The pill keeps its own width, as the item select's does.
+  pill: { flexDirection: 'row' },
+  fieldError: { fontFamily: fonts.medium, ...typeScale.small },
   currency: { fontFamily: fonts.regular, fontSize: typeScale.lead.fontSize, marginRight: inset.xxs },
   input: {
     flex: 1,
