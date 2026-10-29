@@ -12,6 +12,7 @@ import {
   chosenVendor,
   connectionFields,
   fieldProviders,
+  isSelectField,
   missingRequiredSetupFields,
   rowFields,
   sectionLabel,
@@ -36,6 +37,7 @@ import { useSolutions } from '@/hooks/use-solutions';
 import { useTheme } from '@/hooks/use-theme';
 import { ALREADY_IN_WORKSPACE, WORKSPACE_CHANGED, turnOnRefusal } from '@/lib/content/refusals';
 import {
+  CHOOSE_AT_LEAST_ONE,
   SETUP_SAVE,
   SETUP_SAVE_FAILED,
   SETUP_SAVING,
@@ -106,6 +108,8 @@ export default function SetupScreen() {
     Awaited<ReturnType<typeof createSubscription>>['subscription'] | null
   >(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  // The required dropdowns left empty on the last save, each said under its field (F1).
+  const [emptyChoices, setEmptyChoices] = useState<readonly string[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const createKey = useRef(newIdempotencyKey('subscribe'));
@@ -224,6 +228,7 @@ export default function SetupScreen() {
   };
   const setField = (key: string, value: unknown) => {
     setConfig((previous) => ({ ...previous, [key]: value }));
+    setEmptyChoices((previous) => previous.filter((other) => other !== key));
     newIntent();
   };
   const choose = (key: string, value: string) => {
@@ -283,6 +288,13 @@ export default function SetupScreen() {
     // A field this person cleared stays cleared: `??` read a cleared field as
     // untouched and put the default back under their thumb (24.7.3 attempt 2).
     const configured = Object.fromEntries(setup.map((field) => [field.key, valueOf(field)]));
+    // A required dropdown left empty (F1): "Choose at least one." under it, and nothing is sent.
+    const empty = missingRequiredSetupFields(setup, configured).filter(isSelectField);
+    setEmptyChoices(empty.map((field) => field.key));
+    if (empty.length > 0) {
+      setActionError(null);
+      return;
+    }
     const refused = refusal(configured);
     if (refused) {
       setActionError(refused);
@@ -450,6 +462,7 @@ export default function SetupScreen() {
                     value={valueOf(field)}
                     onChange={(next) => setField(field.key, next)}
                     divider={index < fields.length - 1}
+                    error={emptyChoices.includes(field.key) ? CHOOSE_AT_LEAST_ONE : null}
                   />
                 ))}
               </SurfaceCard>

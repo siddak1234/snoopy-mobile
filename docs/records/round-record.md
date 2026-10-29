@@ -1,5 +1,13 @@
 # Round record — `snoopy-mobile`, each round's preamble moved verbatim out of `CLAUDE.md` (newest first; the findings are `DESIGN-GAPS.md`)
 
+## Round 21 — the platform round's app rows (2026-10-28)
+
+The app's half of the setup dropdown (F1) and the review of each change (F2) in
+the round's platform spec, in the words of ICD-10 Code Check's `words.md` section 3
+(owner-approved 2026-10-28 ~21:43Z). It reads the contracts regenerated from the backend's PR #255
+head (`3fd5cea`); a hand-written ~~`lib/platform/pending-contract.ts`~~ until that regeneration. Findings and bites: `DESIGN-GAPS.md` "Round 21 — a setup dropdown and a review of each
+change".
+
 ## Round 17
 
 **Round 17 — five changes here (2026-10-08 to 2026-10-10): 25.8.1; the app's halves of 25.2.12 and 25.2.10;

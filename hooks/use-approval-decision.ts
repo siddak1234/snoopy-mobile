@@ -2,8 +2,8 @@ import { useCallback, useRef, useState } from 'react';
 
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
-import { DECISION_NOT_SAVED } from '@/lib/content/screen-states';
-import { decideApproval } from '@/lib/platform/automations';
+import { DECISION_NOT_SAVED, REVIEW_NOT_SAVED } from '@/lib/content/screen-states';
+import { decideApproval, decideReview, type AnsweredDecision } from '@/lib/platform/automations';
 import { newIdempotencyKey } from '@/lib/platform/client';
 
 /** The API's two answers: Approve, and Deny (`rejected`; S6). */
@@ -21,16 +21,26 @@ export type Decision = 'approved' | 'rejected';
  * - `busyFor(id)` is the decision being saved (both buttons wait while it is);
  *   `errorFor(id)` the refusal's words, "The decision was not saved." by default.
  * - `decide` answers whether it saved.
+ * - `review` (Round 21's platform round, F2) saves a review of each change the
+ *   same way — one key per approval and set of answers — and while it saves
+ *   `reviewingFor(id)` is true; refused or unanswered, "The review wasn't saved.
+ *   Try again." (words.md section 3), whatever the platform said.
  */
 export function useApprovalDecision(shownWorkspaceId: string | null | undefined) {
   const session = useSession();
-  const [busy, setBusy] = useState<Record<string, Decision>>({});
+  const [busy, setBusy] = useState<Record<string, Decision | 'review'>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const intentKeys = useRef<Record<string, { decision: Decision; key: string }>>({});
+  const intentKeys = useRef<Record<string, { decision: string; key: string }>>({});
   const saving = useRef(new Set<string>());
 
-  const decide = useCallback(
-    async (approvalId: string, decision: Decision): Promise<boolean> => {
+  const send = useCallback(
+    async (
+      approvalId: string,
+      decision: Decision | 'review',
+      intentOf: string,
+      post: (workspaceId: string, key: string) => Promise<unknown>,
+      said: (error: unknown) => string,
+    ): Promise<boolean> => {
       if (saving.current.has(approvalId)) return false;
       const workspaceId = workspaceIfShown(session, shownWorkspaceId ?? null);
       if (!workspaceId) {
@@ -39,7 +49,7 @@ export function useApprovalDecision(shownWorkspaceId: string | null | undefined)
       }
       const previousIntent = intentKeys.current[approvalId];
       const intent =
-        previousIntent?.decision === decision ? previousIntent : { decision, key: newIdempotencyKey('decision') };
+        previousIntent?.decision === intentOf ? previousIntent : { decision: intentOf, key: newIdempotencyKey('decision') };
       intentKeys.current[approvalId] = intent;
       saving.current.add(approvalId);
       setBusy((previous) => ({ ...previous, [approvalId]: decision }));
@@ -49,11 +59,11 @@ export function useApprovalDecision(shownWorkspaceId: string | null | undefined)
         return next;
       });
       try {
-        await decideApproval(workspaceId, approvalId, decision, intent.key);
+        await post(workspaceId, intent.key);
         delete intentKeys.current[approvalId];
         return true;
       } catch (error) {
-        setErrors((previous) => ({ ...previous, [approvalId]: refusalMessage(error, {}, DECISION_NOT_SAVED) }));
+        setErrors((previous) => ({ ...previous, [approvalId]: said(error) }));
         return false;
       } finally {
         saving.current.delete(approvalId);
@@ -67,9 +77,39 @@ export function useApprovalDecision(shownWorkspaceId: string | null | undefined)
     [session, shownWorkspaceId],
   );
 
+  const decide = useCallback(
+    (approvalId: string, decision: Decision): Promise<boolean> =>
+      send(
+        approvalId,
+        decision,
+        decision,
+        (workspaceId, key) => decideApproval(workspaceId, approvalId, decision, key),
+        (error) => refusalMessage(error, {}, DECISION_NOT_SAVED),
+      ),
+    [send],
+  );
+
+  const review = useCallback(
+    (approvalId: string, answers: readonly AnsweredDecision[]): Promise<boolean> =>
+      send(
+        approvalId,
+        'review',
+        `review:${JSON.stringify(answers.map(({ id, decision }) => [id, decision]))}`,
+        (workspaceId, key) => decideReview(workspaceId, approvalId, [...answers], key),
+        // Refused or unanswered, the one sentence words.md approves for it.
+        () => REVIEW_NOT_SAVED,
+      ),
+    [send],
+  );
+
   return {
     decide,
-    busyFor: (approvalId: string): Decision | null => busy[approvalId] ?? null,
+    review,
+    busyFor: (approvalId: string): Decision | null => {
+      const pending = busy[approvalId];
+      return pending === 'approved' || pending === 'rejected' ? pending : null;
+    },
+    reviewingFor: (approvalId: string): boolean => busy[approvalId] === 'review',
     errorFor: (approvalId: string): string | undefined => errors[approvalId],
   };
 }
