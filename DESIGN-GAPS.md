@@ -2835,7 +2835,7 @@ ICD-10 Code Check's `words.md` section 3, owner-approved 2026-10-28 ~21:43Z, cop
   and a saved review reads `approved`, so it has left the list: the tally shows on the run only.
   Showing it in Approvals needs a read of decided reviews there; ~~the card's tally~~ removed by
   the review (it could never show).
-- **The contract, regenerated.** A hand-written ~~`lib/platform/pending-contract.ts`~~ and one body
+- **The contract, regenerated.** A hand-written an interim hand-written contract module (on the PR branch only, never on main) and one body
   cast in `decideReview` until the second review: both are deleted, and every use reads the
   generated types (`npm run generate:platform-contracts` from the backend's PR #255 head,
   `3fd5cea`): `AutomationSetupField`'s `select`, `options`, `multiple`; `HeldDecision`
@@ -2857,7 +2857,7 @@ tally from kept answers, and Approvals' "Review {n} changes" (`review-decisions`
 
 1. The backend's draft sends a review as its own question form, `kind: 'review'`
    (`snoopy-backend/packages/contracts/src/blocks.ts`, uncommitted), which this build drew as the fallback. `review`
-   is a known form now (`PENDING_FORM_KINDS` in ~~`lib/platform/pending-contract.ts`~~, deleted at the regeneration), drawn by the
+   is a known form now (`PENDING_FORM_KINDS` in an interim hand-written contract module (on the PR branch only, never on main), deleted at the regeneration), drawn by the
    run page's approval form; the kind is settled at the regeneration. `BlockForms` is a Partial
    record, so a form kind is not a typecheck failure there: the pending module says so.
 2. The Approvals tally removed (above, OPEN).
