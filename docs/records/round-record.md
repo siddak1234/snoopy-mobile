@@ -4,8 +4,9 @@
 
 The app's half of the round's platform spec B1–B5 (the owner's go 2026-11-01): a bigger drop-down,
 several files in one upload, a review grouped by visit, the Healthcare department, and an app that
-needs no key. It reads the contracts regenerated from the backend's `round-21/blocks-v2` at `1c3d8f6`
-(B1–B4); B5 against the spec's shape until the backend's B5 lands. Findings and bites: `DESIGN-GAPS.md`
+needs no key; then the batch addendum's client half (several files into one run, the field's
+`maxFiles`, the full queue's words, a batch run's page). It reads the contracts regenerated from the
+backend at `d9f7fe2` (B1–B5, P1–P3; B5 read from `publicProviders`). Findings and bites: `DESIGN-GAPS.md`
 "Round 21 — platform round 2".
 
 ## Round 21 — the platform round's app rows (2026-10-28)

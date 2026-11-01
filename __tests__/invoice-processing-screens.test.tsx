@@ -306,11 +306,10 @@ describe('the flow page (spec A6; Build 22, P1–P4)', () => {
     expect(screen.queryByTestId('flow-owed')).toBeNull();
   });
 
-  it('B5: a step\'s integration that needs no key (authType none) is Connected, with no "Connect … first" line, and nothing has to be connected', async () => {
-    // A public service: the contract's union does not name `none` yet (INTERIM_NO_KEY_AUTH_TYPE), so the fixture is cast.
-    const nppes = { ...QUICKBOOKS_PROVIDER, providerId: 'nppes', displayName: 'NPI Registry', scopes: [], authType: 'none' } as unknown as typeof QUICKBOOKS_PROVIDER;
-    const providers = providersWithQuickBooks();
-    await openFlow(added({ vendor: 'nppes' }), { providers: { providers: [...providers.providers, nppes] } });
+  it('B5: a step\'s integration the platform lists in publicProviders is Connected, with no "Connect … first" line, and nothing has to be connected', async () => {
+    // A public service as the platform sends it: in `publicProviders`, never in `providers`.
+    const nppes = { providerId: 'nppes', displayName: 'NPI Registry', description: 'Looks up a clinician.', icon: 'IdentificationCard' };
+    await openFlow(added({ vendor: 'nppes' }), { providers: { ...providersWithQuickBooks(), publicProviders: [nppes] } });
     const vendor = await screen.findByTestId('flow-vendor-vendor');
     expect(within(vendor).getByText('NPI Registry')).toBeTruthy();
     expect(within(vendor).getByText('Connected')).toBeTruthy();

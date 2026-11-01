@@ -2895,37 +2895,42 @@ Bites (break, red, restore byte-identical, green): the read-only rows out of the
 
 The app's half of the round's platform spec B1–B5 (the owner's go 2026-11-01 ~04:45Z), reusable for
 every flow (no flow named in app code). Contracts regenerated with `npm run generate:platform-contracts`
-from the backend's branch `round-21/blocks-v2` at its committed `1c3d8f6` (B1–B4; block set 4, 29 fixtures);
-the final regeneration from the merged head happens at land. The rules themselves are DESIGN-CONTRACT's,
+from the backend's branch `round-21/blocks-v2` at its committed `1c3d8f6` (B1–B4; block set 4, 29 fixtures),
+then from snoopy-backend `d9f7fe2` (B5 and the batch addendum, block fixtures unchanged); the final
+regeneration from the merged head happens at land. The rules themselves are DESIGN-CONTRACT's,
 each once: the drop-down (B1) and the departments (B4) in the paragraph on department words, the setup
 row in the screen table, the review (B3) and the several-file field (B2) under Mutations, the provider
 with no key (B5) in the Settings › Connections row. This entry keeps only what is open and the bites.
 
 - **B2, settled with the website** (the review of the app lane): a new choice replaces what the field
-  held, the 200 guard is per choice (a photo counts what is held), one file starts as one alone, and a
-  refused file empties the field. A start refused part way now tells the page of the runs it started.
+  held, the guard is per choice (a photo counts what is held), and a refused file empties the field.
+  ~~One run per file, the 200 guard, one file started as one alone~~ until the batch addendum (below).
 - **B3, OPEN for a backend session:** the fixture `review-held-grouped` reads no heading in its `text`
   while its `about` says the changes are "drawn under each heading". The app draws the headings on the
   page body's read-only rows as on the run page's review (as the website does); the word parity test
   (`blocks-parity`) expects each heading before its group's first row until the fixture's `text` holds
   them, and the fixture's `text` as it is once it does.
-- **B5, OPEN at land (a land blocker):** the backend branch held no B5 commit at `1c3d8f6`, so B5 is
-  built against the spec's shape (`authType` `none`) in one named constant, `INTERIM_NO_KEY_AUTH_TYPE`,
-  read through `needsNoConnect`. The backend branch has since committed B5 (`ce00c40`) in that shape:
-  such a provider is never in `providers[]` but in a new `publicProviders[]` (`PublicConnectionProvider`,
-  with no `authType`), and in the workspace's grants. Against it, the app
-  sees no such provider in `providers[]` and a required one is refused at Turn on ("Connect … first."):
-  the regeneration at land must read `publicProviders` (and the public grants) into `needsNoConnect`
-  and `providerConnected`, with a test against the generated shape.
+- **B5, settled** (the second review of the app lane): the contracts are regenerated from snoopy-backend
+  `d9f7fe2`, which lists a public service in `publicProviders` (`PublicConnectionProvider`, no
+  `authType`), never in `providers`. `readConnectionProviders` adds each to the one list with `authType`
+  `none` (`keylessProviders`, as the website does); the interim constant is gone. The B5 tests send
+  `publicProviders` as the platform does.
+- **The batch addendum (P1–P3), the app's half** (the owner's "A. Full pipeline now", 2026-11-01): a
+  several-file field uploads every file into ONE run (no run per file), stops at the field's `maxFiles`
+  (else 50) with "Add up to {max} files at a time.", and says "{n} files selected"; 429 `queue_full` says
+  "Your queue is full. Wait for these to finish."; a batch run's page draws the platform's `batch` part
+  as sent. **The session's default:** one file in such a field keeps its "Ready: {name} ({size})" line, as
+  the website's, rather than "1 files selected".
 
 Bites (break, red, restore, green), each in its suite: B1 labels, groups, the search box
 (`setup-field`); the search box emptied on closing — the one reset, in the dropdown's effect on
-`open` (`setup-field`); B2 the picker's `multiple`, one run per file, the 200 guard per choice, a
-photo adds, a choice replaces, a refused type empties, one file starts as one alone, the resume after
-a refusal, the key renewed for the retried file once the Note changed (the `fileScopes` settle loop)
-(`start-run`); the item page reads its list after a start refused part way (`round19-items`); B3
+`open` (`setup-field`); B2 the picker's `multiple`, every file into one run under one key, the field's
+`maxFiles` per choice and per photo, the default 50, a photo adds, a choice replaces, a refused type
+empties, one file a list of one, a full queue's words with the files kept (`start-run`); the item page's
+one run and the queue words for an item (`round19-items`); a batch run's page (`build28-files`); B3
 headings and Save needing every answer (`review-decisions`), the read-only rows' headings
 (`blocks-parity`, `review-held-grouped`); B4 the list (`build14-home-scope-icons-and-first-run`); B5
 the row and the vendor choice (`connection-row`), the Setup screen (`tab-screens`), and the flow page's
 step integration — Connected, no "Connect … first" line — each of its two lines in turn
-(`invoice-processing-screens`).
+(`invoice-processing-screens`); since the second review each against `publicProviders`, read through
+`readConnectionProviders`.

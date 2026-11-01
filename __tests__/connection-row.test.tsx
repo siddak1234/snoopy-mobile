@@ -23,7 +23,7 @@ import { VendorChoice } from '@/components/flows/vendor-choice';
 import { ConnectionsCard } from '@/components/settings/connections-card';
 import type { ThemeMode } from '@/hooks/use-theme';
 import { platformOperation } from '@/lib/platform/client';
-import type { Connection, ConnectionProvider } from '@/lib/platform/catalog';
+import { keylessProviders, type Connection, type ConnectionProvider, type PublicConnectionProvider } from '@/lib/platform/catalog';
 import { connectOAuthProvider } from '@/lib/platform/connections';
 import { needsNoConnect, providerConnected, toConnectionRow } from '@/lib/view/catalog';
 import { fakePlatform } from '@/test/fake-platform';
@@ -139,8 +139,9 @@ describe('the row says the account, else its state (spec A4)', () => {
 });
 
 describe('an app that needs no key (Round 21 platform round 2, B5)', () => {
-  // A public service: the contract's `authType` union does not name `none` yet, so the fixture is cast.
-  const NPPES = { ...GOOGLE, providerId: 'nppes', displayName: 'NPI Registry', authType: 'none' } as unknown as ConnectionProvider;
+  // A public service as the platform lists it — in `publicProviders`, never in `providers` — read through `keylessProviders`.
+  const PUBLIC: PublicConnectionProvider = { providerId: 'nppes', displayName: 'NPI Registry', description: 'Looks up a clinician.', icon: 'IdentificationCard' };
+  const NPPES = keylessProviders([PUBLIC])[0]!;
 
   it('is connected for every workspace, with no connection held, and its row offers no Connect', async () => {
     const row = toConnectionRow(NPPES, undefined);

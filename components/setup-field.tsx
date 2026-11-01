@@ -300,7 +300,8 @@ export function selectedChoices(field: { options?: readonly (string | SelectOpti
  * the one conversion the Set up form and the Run form both need (the website's
  * `declaredValues`). A toggle is always sent; an empty text or money field, and
  * a file not yet uploaded, are left out, so the platform applies the manifest's
- * default or refuses a required one. The platform stays the validator.
+ * default or refuses a required one; a file field that takes several sends the
+ * list of its upload ids. The platform stays the validator.
  */
 export function declaredValues(
   fields: readonly { key: string; control: string; options?: readonly (string | SelectOption)[]; multiple?: boolean }[],
@@ -318,6 +319,10 @@ export function declaredValues(
     }
     else if (field.control === 'money') {
       if (typeof value === 'number' && Number.isFinite(value)) declared[field.key] = value;
+    } else if (field.control === 'artifact' && field.multiple) {
+      // A file field that takes several (the batch addendum): the list of upload ids, all into one run; none held, nothing sent.
+      const ids = Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [];
+      if (ids.length > 0) declared[field.key] = ids;
     } else if (typeof value === 'string' && value.trim() !== '') declared[field.key] = value;
   }
   return declared;

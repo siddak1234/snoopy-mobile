@@ -87,21 +87,16 @@ export function connectionState(connection: Connection | undefined): ConnectionR
 }
 
 /**
- * A connected app that needs no key (Round 21 platform round 2, B5): a public
- * service, its `authType` `none`. **Interim:** the published contract's
- * `authType` does not name `none` yet, so this is the one place that says it —
- * the regeneration from the platform's merged head replaces it with the
- * generated union, and every use below reads this.
+ * Whether a provider needs no Connect step (Round 21 platform round 2, B5): a
+ * public service the platform lists in `publicProviders`, which
+ * `readConnectionProviders` gives `authType` `none` — no key, nothing to sign in to.
  */
-export const INTERIM_NO_KEY_AUTH_TYPE = 'none';
-
-/** Whether a provider needs no Connect step (B5): no key, nothing to sign in to. */
-export function needsNoConnect(provider: { authType: string } | undefined): boolean {
-  return provider?.authType === INTERIM_NO_KEY_AUTH_TYPE;
+export function needsNoConnect(provider: Pick<ConnectionProvider, 'authType'> | undefined): boolean {
+  return provider?.authType === 'none';
 }
 
 /** Whether a flow may use a provider now (B5): connected, or a provider that needs no connection. */
-export function providerConnected(provider: { authType: string } | undefined, connection: Connection | undefined): boolean {
+export function providerConnected(provider: Pick<ConnectionProvider, 'authType'> | undefined, connection: Connection | undefined): boolean {
   return needsNoConnect(provider) || connectionState(connection) === 'connected';
 }
 

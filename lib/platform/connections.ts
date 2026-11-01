@@ -3,6 +3,7 @@ import { platformOperation } from './client';
 import { invalidateShared } from './snapshot';
 import { matchesNativeCallback, nativeRedirectUri, openSystemAuthSession } from './native-auth';
 import { PlatformNotConfiguredError } from './problem';
+import type { ConnectionProvider as OfferedProvider } from './catalog';
 
 export type Connection = components['schemas']['Connection'];
 export type ConnectionState = components['schemas']['ConnectionState'];
@@ -29,7 +30,8 @@ export type ConnectionOutcome =
  */
 export async function connectOAuthProvider(
   workspaceId: string,
-  provider: ConnectionProvider,
+  // A row of the one provider list (`readConnectionProviders`) as it is; only its id and scopes are read.
+  provider: OfferedProvider,
   options: { replaceConnectionId?: string } = {},
 ): Promise<ConnectionOutcome> {
   const returnTo = nativeRedirectUri();

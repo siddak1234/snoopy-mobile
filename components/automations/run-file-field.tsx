@@ -14,13 +14,13 @@ import { UPLOAD_REFUSALS, WORKSPACE_CHANGED, uploadRefusalMessage } from '@/lib/
 import {
   CAMERA_NOT_OPENED,
   CAMERA_OFF,
-  FILES_PER_SELECTION,
+  DEFAULT_MAX_FILES,
   TAKE_PHOTO_LABEL,
-  TOO_MANY_FILES,
   UPLOAD_LABEL,
   acceptedLine,
   chooseAccepted,
   filesSelected,
+  tooManyFiles,
 } from '@/lib/content/screen-states';
 import type { AutomationRunInputField } from '@/lib/platform/automations';
 import { sendRunFile, type ChosenFile } from '@/lib/platform/run-file';
@@ -244,12 +244,13 @@ export function RunFileField({
  * what the field held; each Take photo **adds** one more. Every file is sent
  * as `RunFileField` sends one (`sendRunFile`, an image re-encoded), one after
  * another, the line under the title saying "Uploading {name}…"; the field's
- * value is then their ids in the order given, and Start run starts one run
- * per file with the same other inputs. The line says "Ready: {name} ({size})"
- * for one file — Start run starts it as one alone — and "{n} files selected"
- * for more. More than 200 (`FILES_PER_SELECTION`) is refused before anything
- * is sent, "Add up to 200 files at a time.": a choice past it empties the
- * field, a photo past it keeps the 200 held. A file of a type the field does
+ * value is then their ids in the order given, and Start run uploads every one
+ * into ONE run (the batch addendum, which supersedes B2's run per file). The
+ * line says "Ready: {name} ({size})" for one file and "{n} files selected" for
+ * more. More than the field's `maxFiles` — absent, the platform's 50
+ * (`DEFAULT_MAX_FILES`) — is refused before anything is sent, "Add up to {max}
+ * files at a time.": a choice past it empties the field, a photo past it keeps
+ * the files held. A file of a type the field does
  * not take, or one that fails, empties the field and says why, as one alone
  * does. A field without `multiple` is `RunFileField`, unchanged.
  *
@@ -264,7 +265,7 @@ export function RunFilesField({
   divider,
   showTypes = false,
 }: {
-  field: Pick<AutomationRunInputField, 'key' | 'title' | 'acceptedContentTypes'>;
+  field: Pick<AutomationRunInputField, 'key' | 'title' | 'acceptedContentTypes' | 'maxFiles'>;
   shownWorkspaceId: string | null;
   subscriptionId: string;
   onValue: (key: string, artifactIds: string[] | undefined) => void;
@@ -280,6 +281,7 @@ export function RunFilesField({
   const accepted = field.acceptedContentTypes;
   const photos = takesPhotos(accepted);
   const typesLine = acceptedLine(accepted);
+  const maxFiles = field.maxFiles ?? DEFAULT_MAX_FILES;
   const inFlight = useRef<AbortController | null>(null);
   const report = useRef(onBusyChange);
   useEffect(() => {
@@ -344,9 +346,9 @@ export function RunFilesField({
   const takePhoto = async () => {
     const workspaceId = workspaceFor();
     if (!workspaceId) return;
-    // A photo past the 200 held: said, and the 200 kept.
-    if (files.length + 1 > FILES_PER_SELECTION) {
-      setError(TOO_MANY_FILES);
+    // A photo past the most the field takes: said, and the files held kept.
+    if (files.length + 1 > maxFiles) {
+      setError(tooManyFiles(maxFiles));
       return;
     }
     let taken: ImagePicker.ImagePickerResult;
@@ -380,9 +382,9 @@ export function RunFilesField({
     // Closing the picker keeps whatever the field already held.
     const assets = picked.canceled ? [] : picked.assets;
     if (assets.length === 0) return;
-    // A choice replaces what the field held: past 200, or a file of another type, empties it, nothing sent.
-    if (assets.length > FILES_PER_SELECTION) {
-      empty(TOO_MANY_FILES);
+    // A choice replaces what the field held: past the most the field takes, or a file of another type, empties it, nothing sent.
+    if (assets.length > maxFiles) {
+      empty(tooManyFiles(maxFiles));
       return;
     }
     if (assets.some((asset) => accepted && asset.mimeType && !accepted.includes(asset.mimeType))) {

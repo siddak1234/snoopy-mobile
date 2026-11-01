@@ -173,7 +173,6 @@ export default function ItemScreen() {
             showTypes
             // The new run joins the list, "Reading…", and is read with it.
             onStarted={() => refresh()}
-            onManyStarted={() => refresh()}
           />
         </SurfaceCard>
       </View>

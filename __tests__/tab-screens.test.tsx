@@ -45,7 +45,6 @@ import { touch } from '@/test/touch';
 import type { SessionContextValue } from '@/hooks/use-session';
 import type { Run, Subscription } from '@/lib/platform/automations';
 import type { WorkspaceBilling } from '@/lib/platform/billing';
-import type { ConnectionProvider } from '@/lib/platform/catalog';
 import { PlatformUnreachableError } from '@/lib/platform/problem';
 import type { Approval } from '@/lib/platform/runs';
 import { resetSnapshot } from '@/lib/platform/snapshot';
@@ -1617,13 +1616,13 @@ describe('Setup (design sSetup; the Invoice Processing update, spec §3.B)', () 
       requiredConnections: [{ providerId: 'nppes', displayName: 'NPI Registry', purpose: 'Look up the clinician', optional: false }],
       setup: [{ ...sample, key: 'holdAboveAmount', title: 'Hold above', control: 'money', section: 'rules', required: false, defaultValue: 500 }],
     }));
-    // A public service (`authType` none): the contract's union does not name it yet, so the fixture is cast.
-    const nppes = { providerId: 'nppes', displayName: 'NPI Registry', description: 'Looks up a clinician.', icon: 'IdentificationCard', scopes: [], authType: 'none' };
+    // A public service as the platform sends it: in `publicProviders`, never in `providers`.
+    const nppes = { providerId: 'nppes', displayName: 'NPI Registry', description: 'Looks up a clinician.', icon: 'IdentificationCard' };
     const writes = routeSetup(
       {
         '/automations': catalog,
         '/subscriptions': { subscriptions: [] },
-        '/connections/providers': { providers: [...providersPayload().providers, nppes as unknown as ConnectionProvider] },
+        '/connections/providers': { ...providersPayload(), publicProviders: [nppes] },
       },
       { created: draft() },
     );
