@@ -2910,16 +2910,10 @@ with no key (B5) in the Settings › Connections row. This entry keeps only what
   page body's read-only rows as on the run page's review (as the website does); the word parity test
   (`blocks-parity`) expects each heading before its group's first row until the fixture's `text` holds
   them, and the fixture's `text` as it is once it does.
-- **B5, settled** (the second review of the app lane): the contracts are regenerated from snoopy-backend
-  `d9f7fe2`, which lists a public service in `publicProviders` (`PublicConnectionProvider`, no
-  `authType`), never in `providers`. `readConnectionProviders` adds each to the one list with `authType`
-  `none` (`keylessProviders`, as the website does); the interim constant is gone. The B5 tests send
-  `publicProviders` as the platform does.
-- **The batch addendum (P1–P3), the app's half** (the owner's "A. Full pipeline now", 2026-11-01): a
-  several-file field uploads every file into ONE run (no run per file), stops at the field's `maxFiles`
-  (else 50) with "Add up to {max} files at a time.", and says "{n} files selected"; 429 `queue_full` says
-  "Your queue is full. Wait for these to finish."; a batch run's page draws the platform's `batch` part
-  as sent. **The session's default:** one file in such a field keeps its "Ready: {name} ({size})" line, as
+- **B5, settled in `d16bc15`** (the second review of the app lane); the bites are below.
+- **The batch addendum (P1–P3), the app's half** (the owner's "A. Full pipeline now", 2026-11-01): the
+  rules are DESIGN-CONTRACT's — the several-file field under Mutations, the full queue in the Refusal
+  map, a batch run's page in the Activity/run detail row. **The session's default:** one file in such a field keeps its "Ready: {name} ({size})" line, as
   the website's, rather than "1 files selected".
 
 Bites (break, red, restore, green), each in its suite: B1 labels, groups, the search box
