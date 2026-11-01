@@ -2896,29 +2896,36 @@ Bites (break, red, restore byte-identical, green): the read-only rows out of the
 The app's half of the round's platform spec B1–B5 (the owner's go 2026-11-01 ~04:45Z), reusable for
 every flow (no flow named in app code). Contracts regenerated with `npm run generate:platform-contracts`
 from the backend's branch `round-21/blocks-v2` at its committed `1c3d8f6` (B1–B4; block set 4, 29 fixtures);
-the final regeneration from the merged head happens at land. Each behaviour has a test that fails with
-its line broken (the round's summary lists the bites).
+the final regeneration from the merged head happens at land. The rules themselves are DESIGN-CONTRACT's,
+each once: the drop-down (B1) and the departments (B4) in the paragraph on department words, the setup
+row in the screen table, the review (B3) and the several-file field (B2) under Mutations, the provider
+with no key (B5) in the Settings › Connections row. This entry keeps only what is open and the bites.
 
-- **B1** the drop-down: string or `{value, label, group}` options (`selectOptions`); labels on the rows
-  and the closed pill, values saved; group headings in first-appearance order; a search box past 10
-  ("Search"; "No matches."). The search box is the lists' own (`SearchBox`, moved to its own file so the
-  drop-down can draw it). Ten or fewer without groups: unchanged.
-- **B2** a run's file field with `multiple`: several per Upload, one more per Take photo, "{n} files
-  selected", one `createRun` per file, "{n} runs started"; past 200, "Add up to 200 files at a time.".
-  The camera takes one photo per opening (`expo-image-picker` has no multi-shot), so several photos are
-  several presses.
-- **B3** a review grouped by `group`, every group open, up to 400; Save review needs every answer.
-  **OPEN, for a backend session:** the fixture `review-held-grouped` reads no heading in its `text`
-  while its `about` says the changes are "drawn under each heading". The app draws headings on the run
-  page's review and draws the page body's read-only rows (`questionsForm`) without them, so the word
-  parity test stays exact; if the backend adds the headings to the fixture's `text`, that one prop
-  (`headings={false}`) goes.
-- **B4** Healthcare, the seventeenth department, icon `Stethoscope`.
-- **B5** a provider whose `authType` is `none`: connected for every workspace, no Connect step, no row
-  button. **Interim:** the backend branch held no B5 commit at `1c3d8f6`, so it is built against the spec's
-  shape (`providerAuthTypes` gains `none`) in one named constant, `INTERIM_NO_KEY_AUTH_TYPE`, read
-  through `needsNoConnect`. **OPEN at land:** the backend round's design (its D11) lists such a provider
-  in a new `publicProviders[]` instead of `providers[]`, with `ConnectionProvider.authType` unchanged.
-  If that ships, the app sees no such provider in `providers[]` and a required one is refused at Turn
-  on ("Connect … first."): the regeneration at land must read `publicProviders` into the same rule.
+- **B2, settled with the website** (the review of the app lane): a new choice replaces what the field
+  held, the 200 guard is per choice (a photo counts what is held), one file starts as one alone, and a
+  refused file empties the field. A start refused part way now tells the page of the runs it started.
+- **B3, OPEN for a backend session:** the fixture `review-held-grouped` reads no heading in its `text`
+  while its `about` says the changes are "drawn under each heading". The app draws the headings on the
+  page body's read-only rows as on the run page's review (as the website does); the word parity test
+  (`blocks-parity`) expects each heading before its group's first row until the fixture's `text` holds
+  them, and the fixture's `text` as it is once it does.
+- **B5, OPEN at land (a land blocker):** the backend branch held no B5 commit at `1c3d8f6`, so B5 is
+  built against the spec's shape (`authType` `none`) in one named constant, `INTERIM_NO_KEY_AUTH_TYPE`,
+  read through `needsNoConnect`. The backend branch has since committed B5 (`ce00c40`) in that shape:
+  such a provider is never in `providers[]` but in a new `publicProviders[]` (`PublicConnectionProvider`,
+  with no `authType`), and in the workspace's grants. Against it, the app
+  sees no such provider in `providers[]` and a required one is refused at Turn on ("Connect … first."):
+  the regeneration at land must read `publicProviders` (and the public grants) into `needsNoConnect`
+  and `providerConnected`, with a test against the generated shape.
 
+Bites (break, red, restore, green), each in its suite: B1 labels, groups, the search box
+(`setup-field`); the search box emptied on closing — the one reset, in the dropdown's effect on
+`open` (`setup-field`); B2 the picker's `multiple`, one run per file, the 200 guard per choice, a
+photo adds, a choice replaces, a refused type empties, one file starts as one alone, the resume after
+a refusal, the key renewed for the retried file once the Note changed (the `fileScopes` settle loop)
+(`start-run`); the item page reads its list after a start refused part way (`round19-items`); B3
+headings and Save needing every answer (`review-decisions`), the read-only rows' headings
+(`blocks-parity`, `review-held-grouped`); B4 the list (`build14-home-scope-icons-and-first-run`); B5
+the row and the vendor choice (`connection-row`), the Setup screen (`tab-screens`), and the flow page's
+step integration — Connected, no "Connect … first" line — each of its two lines in turn
+(`invoice-processing-screens`).

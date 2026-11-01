@@ -22,9 +22,10 @@ type StartRunProps = {
   runInput: AutomationRunInputField[];
   onStarted: (runId: string) => void;
   /**
-   * A file field that takes several (B2) started one run per file: their ids,
-   * every one started. The form says "{n} runs started" itself; the page may
-   * read again (the item page's list).
+   * A file field that takes several (B2) started one run per file: the ids of
+   * every run started so far — after each press, a start that stopped part way
+   * too. The form says "{n} runs started" itself; the page may read again (the
+   * item page's list).
    */
   onManyStarted?: (runIds: string[]) => void;
   /**
@@ -76,8 +77,9 @@ export function canStartRun(subscription: Subscription, entry: CatalogEntry | un
  * (`RunFilesField`) holds several, and Start run starts one run per file — the
  * same start-run call, once each, with the same other inputs, one key per file
  * — then says "{n} runs started" under the fresh form and stays on the page. A
- * start that stops part way says why and keeps the files; the next Start
- * starts only those not yet started, and the line counts every one.
+ * start that stops part way says why and keeps the files, and the page hears of
+ * the runs it did start; the next Start starts only those not yet started, and
+ * the line counts every one. One file in such a field starts as one alone.
  */
 export function StartRun({
   subscriptionId,
@@ -111,8 +113,8 @@ export function StartRun({
           }}
           onManyStarted={(runIds, every) => {
             setStartedMany(runIds.length);
-            if (!every) return;
-            setStarted((count) => count + 1);
+            // Every file started: the form is drawn fresh. Part way: the files stay for the next press.
+            if (every) setStarted((count) => count + 1);
             onManyStarted?.(runIds);
           }}
         />
@@ -189,13 +191,15 @@ function StartRunForm({
     setBusy(true);
     setError(null);
     const many = severalFiles(runInput, values);
-    if (many) {
+    if (many && many.ids.length > 1) {
       await startEach(workspaceId, many);
       setBusy(false);
       return;
     }
+    // One file, in a field that takes several too: a run started as one alone.
+    const sending = many ? { ...values, [many.key]: many.ids[0] } : values;
     try {
-      const { run } = await createRun(workspaceId, subscriptionId, keys.keyFor(), declaredValues(runInput, values), itemId);
+      const { run } = await createRun(workspaceId, subscriptionId, keys.keyFor(), declaredValues(runInput, sending), itemId);
       keys.settle();
       onStarted(run.id);
     } catch (caught) {

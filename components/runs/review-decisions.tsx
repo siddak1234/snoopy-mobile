@@ -39,10 +39,8 @@ const reviewPillA11y = (answer: string, change: OfferedDecision) => `${answer}: 
  * Grouped (Round 21 platform round 2, B3): changes that carry `group` are
  * drawn under their group's heading, the groups in the order first sent
  * (`reviewGroups`), every group open, up to the platform's 400; "Save review"
- * still needs every answer. `headings={false}` draws them as one list: the
- * page body's read-only rows, whose words are the block fixtures' (their
- * `review-held-grouped` reads no heading; DESIGN-GAPS, Round 21 platform
- * round 2).
+ * still needs every answer. The read-only rows (`questionsForm`) are grouped
+ * the same way.
  *
  * testIDs: a heading `${testID}-group-${n}`, a row `${testID}-row-${id}`, its pills `${testID}-accept-${id}` and
  * `${testID}-deny-${id}`, `${testID}-unanswered`, `${testID}-save`.
@@ -53,15 +51,12 @@ export function ReviewDecisions({
   saving = false,
   onSave,
   readOnly = false,
-  headings = true,
 }: {
   testID: string;
   changes: readonly OfferedDecision[];
   saving?: boolean;
   onSave?: (answers: AnsweredDecision[]) => void;
   readOnly?: boolean;
-  /** Draw each group's heading over its changes (B3); false, one list in the order sent. */
-  headings?: boolean;
 }) {
   const { palette } = useTheme();
   const [answers, setAnswers] = useState<Record<string, DecisionAnswer>>({});
@@ -115,7 +110,7 @@ export function ReviewDecisions({
     );
   };
 
-  const groups = headings ? reviewGroups(changes) : [{ heading: null, changes: [...changes] }];
+  const groups = reviewGroups(changes);
 
   return (
     <View style={styles.list}>

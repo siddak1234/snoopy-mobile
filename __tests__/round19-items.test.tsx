@@ -767,6 +767,45 @@ describe("an item's page (plan §5.3; its blocks since Round 21)", () => {
     expect(mockRouter.back).toHaveBeenCalledTimes(1);
   });
 
+  it('several files (B2): each run that starts joins the list — a start refused part way too, before the rest start', async () => {
+    const fake = fakePlatform(platformOperation);
+    fake.always(`GET ${ONE}`, READ_ITEM(fixtureBlocks('empty-item')));
+    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', (sent) => ({
+      subscriptions: sent.query?.status === 'archived' ? [] : [flowWithItems({ runInput: [{ ...CONTRACT_FILE, multiple: true }] })],
+    }));
+    fake.always('GET /v1/workspaces/{workspaceId}/automations', { automations: [entry()], categories: ['All'] });
+    fake.always('POST /v1/workspaces/{workspaceId}/uploads', {
+      uploadSessionId: 'upload-1',
+      uploadUrl: 'https://store.example.test/put',
+      expiresAt: '2026-10-24T12:00:00Z',
+      maximumSizeBytes: 10_000_000,
+    });
+    for (const [at, name] of ['a.pdf', 'b.pdf'].entries()) {
+      fake.once('POST /v1/workspaces/{workspaceId}/uploads/{uploadSessionId}/complete', {
+        artifact: { artifactId: `artifact-${at + 1}`, filename: name, contentType: 'application/pdf', sizeBytes: 12 },
+      });
+    }
+    fake.once('POST /v1/workspaces/{workspaceId}/runs', { run: run('r8', { status: 'running' }) });
+    fake.once('POST /v1/workspaces/{workspaceId}/runs', () => {
+      throw new PlatformError('Conflict', 409, 'CONFLICT', {});
+    });
+    (DocumentPicker.getDocumentAsync as jest.Mock).mockResolvedValue({
+      canceled: false,
+      assets: ['a.pdf', 'b.pdf'].map((name) => ({ uri: `file:///picked/${name}`, name, mimeType: 'application/pdf', size: 12 })),
+    });
+    setMockParams({ item: 'i-1' });
+    await renderWithProviders(<ItemScreen />, sessionAs('owner'));
+    await screen.findByTestId('item-title');
+    await fireEvent.press(screen.getByTestId('run-file-contractFile-upload'));
+    await screen.findByText('2 files selected');
+    const reads = fake.to(`GET ${ONE}`).length;
+    await fireEvent.press(screen.getByText('Start'));
+    expect(await screen.findByText('1 runs started')).toBeTruthy();
+    // The run that did start is read into the list now, the second file kept for the next Start.
+    await waitFor(() => expect(fake.to(`GET ${ONE}`).length).toBeGreaterThan(reads));
+    expect(screen.getByText('2 files selected')).toBeTruthy();
+  });
+
   it('Add and Archive are an owner\'s or an admin\'s: a member reads the same page without them', async () => {
     await openItem(READ_ITEM(), sessionAs('member'));
     expect(screen.getByTestId(RUNS)).toBeTruthy();

@@ -9,6 +9,7 @@ import { BLOCK_FIXTURES } from '@/lib/generated/platform-contracts/block-fixture
 import { BLOCK_SPACING } from '@/lib/generated/platform-contracts/block-rules';
 import type { Block, RunFile } from '@/lib/platform/automations';
 import { resetSnapshot } from '@/lib/platform/snapshot';
+import { offeredDecisions, reviewGroups } from '@/lib/view/runs';
 import { fileLinkFor, renderBlocks, savedFiles, visibleWords } from '@/test/blocks';
 import { fakePlatform } from '@/test/fake-platform';
 import { TEST_WORKSPACE } from '@/test/platform';
@@ -32,13 +33,32 @@ const { platformOperation, downloadSignedFile } = jest.requireMock('@/lib/platfo
  * and every renderer's spacing its names; since amendment 2 the 28 of
  * `BLOCK_SET_VERSION` 3, a review's rows read by everyone (`review-held-*`);
  * since amendment 3 the 29 of `BLOCK_SET_VERSION` 4, a review's changes with
- * their `group` (`review-held-grouped`, whose words name no heading).
+ * their `group` (`review-held-grouped`).
  */
 
 const HEADER = /^\/\/ From snoopy-backend packages\/contracts\/fixtures\/blocks\/\*\.json, sha256 ([0-9a-f]{64})\.$/u;
 const RULES_HEADER = /^\/\/ From snoopy-backend packages\/contracts\/fixtures\/block-rules\/\*\.json, sha256 ([0-9a-f]{64})\.$/u;
 const RUN_FILE = 'GET /v1/workspaces/{workspaceId}/runs/{runId}/files/{fileId}' as const;
 const ITEM_FILE = 'GET /v1/workspaces/{workspaceId}/items/{itemId}/file' as const;
+
+/**
+ * The words a fixture is drawn as: its `text` — but `review-held-grouped`'s
+ * `text` names no heading while its rows are drawn under them (B3; its `about`
+ * says "drawn under each heading"). OPEN for the backend (DESIGN-GAPS, Round 21
+ * platform round 2): until its `text` holds the headings, each is expected
+ * before its group's first row; once it does, the `text` is expected as it is.
+ */
+function expectedWords(fixture: (typeof BLOCK_FIXTURES)[number]): string[] {
+  const words = [...fixture.text];
+  if (fixture.name !== 'review-held-grouped') return words;
+  const review = (fixture.blocks as Block[]).find((block) => block.type === 'questions');
+  const groups = reviewGroups(offeredDecisions(review?.type === 'questions' ? review.form : undefined));
+  if (groups.every(({ heading }) => heading === null || words.includes(heading))) return words;
+  for (const { heading, changes } of groups) {
+    if (heading !== null) words.splice(words.indexOf(changes[0]!.label), 0, heading);
+  }
+  return words;
+}
 
 /** Every picture's file in a page body, at any depth. */
 function pictures(blocks: readonly unknown[]): RunFile[] {
@@ -80,7 +100,7 @@ describe('the block fixtures, drawn', () => {
       await renderBlocks(fixture.blocks, { workspaceId: TEST_WORKSPACE });
       // A picture's words while its file comes are not its own: drawn, it has none (only its alt).
       if (files.length > 0) await waitFor(() => expect(screen.queryByText(FILE_OPENING)).toBeNull());
-      expect(visibleWords(screen.toJSON())).toEqual([...fixture.text]);
+      expect(visibleWords(screen.toJSON())).toEqual(expectedWords(fixture));
     },
   );
 

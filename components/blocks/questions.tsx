@@ -39,9 +39,8 @@ export function questionsForm(block: BlockOf<'questions'>, forms: BlockForms | u
   // A review's rows are read by everyone (words.md section 3; the block fixture
   // `review-held-waiting`): where the page draws no form for them, read-only.
   const changes = kind === 'review' ? offeredDecisions(block.form) : [];
-  // Without headings: the fixtures' words for these rows name none (`review-held-grouped`; DESIGN-GAPS,
-  // Round 21 platform round 2). The run page's own review draws them (B3).
-  return changes.length > 0 ? <ReviewDecisions testID="review-rows" changes={changes} readOnly headings={false} /> : null;
+  // Under their group headings, as the run page's review and the website's `ReviewRows` draw them (B3).
+  return changes.length > 0 ? <ReviewDecisions testID="review-rows" changes={changes} readOnly /> : null;
 }
 
 /**

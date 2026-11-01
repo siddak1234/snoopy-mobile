@@ -1100,19 +1100,136 @@ describe('a file field that takes several (Round 21 platform round 2, B2)', () =
     answerUploads(['photo.jpg', 'photo.jpg']);
     await renderBox([RECEIPTS]);
     await fireEvent.press(screen.getByTestId('run-file-receipts-photo'));
-    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('1 files selected'));
+    // One file says what one alone says.
+    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('Ready: photo.jpg (5 bytes)'));
     await waitFor(() => expect(screen.getByText('Start run')).toBeTruthy());
     await fireEvent.press(screen.getByTestId('run-file-receipts-photo'));
     await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('2 files selected'));
   });
 
-  it('more than 200 at once is refused in words, and nothing is sent', async () => {
-    pickerGivesMany(Array.from({ length: 201 }, (_, at) => `f${at}.pdf`));
+  it('more than 200 in one choice is refused in words, nothing is sent, and the field is emptied', async () => {
+    pickerGivesMany(['a.pdf', 'b.pdf']);
+    filesOf(5);
+    answerUploads(['a.pdf', 'b.pdf']);
     await renderBox([RECEIPTS]);
     await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
+    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('2 files selected'));
+    const before = sent.length;
+    pickerGivesMany(Array.from({ length: 201 }, (_, at) => `f${at}.pdf`));
+    await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
     expect(await screen.findByText('Add up to 200 files at a time.')).toBeTruthy();
-    expect(sent).toEqual([]);
+    expect(sent).toHaveLength(before);
     expect(screen.queryByTestId('run-file-receipts-count')).toBeNull();
+  });
+
+  it('200 in one choice is taken, whatever the field held: the guard is each choice', async () => {
+    const names = Array.from({ length: 200 }, (_, at) => `f${at}.pdf`);
+    pickerGivesMany(['a.pdf', 'b.pdf']);
+    filesOf(5);
+    answerUploads(['a.pdf', 'b.pdf', ...names]);
+    await renderBox([RECEIPTS]);
+    await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
+    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('2 files selected'));
+    pickerGivesMany(names);
+    await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
+    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('200 files selected'));
+    expect(screen.queryByText('Add up to 200 files at a time.')).toBeNull();
+  });
+
+  it('a new choice replaces what the field held; a photo adds to it', async () => {
+    manipulator(1000, 1000);
+    filesOf(5);
+    pickerGivesMany(['a.pdf', 'b.pdf']);
+    answerUploads(['a.pdf', 'b.pdf', 'c.pdf', 'd.pdf', 'photo.jpg']);
+    answer(`POST ${RUNS_PATH}`, () => ({ run: { id: 'run-1' } }), () => ({ run: { id: 'run-2' } }), () => ({ run: { id: 'run-3' } }));
+    cameraTakes(1000, 1000);
+    await renderBox([RECEIPTS]);
+    await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
+    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('2 files selected'));
+    pickerGivesMany(['c.pdf', 'd.pdf']);
+    await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
+    await waitFor(() => expect(screen.getByText('Start run')).toBeTruthy());
+    expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('2 files selected');
+    await fireEvent.press(screen.getByTestId('run-file-receipts-photo'));
+    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('3 files selected'));
+    await waitFor(() => expect(screen.getByText('Start run')).toBeTruthy());
+    await fireEvent.press(screen.getByText('Start run'));
+    expect(await screen.findByText('3 runs started')).toBeTruthy();
+    const runs = sent.filter((request) => request.path === RUNS_PATH).map((request) => (request.body as { input: unknown }).input);
+    expect(runs).toEqual([{ receipts: 'artifact-3' }, { receipts: 'artifact-4' }, { receipts: 'artifact-5' }]);
+  });
+
+  it('a file of a type the field does not take empties the field, says why, and sends nothing', async () => {
+    const PDFS: AutomationRunInputField = { ...RECEIPTS, acceptedContentTypes: ['application/pdf'] };
+    pickerGivesMany(['a.pdf']);
+    filesOf(5);
+    answerUploads(['a.pdf']);
+    await renderBox([PDFS]);
+    await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
+    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('Ready: a.pdf (5 bytes)'));
+    const before = sent.length;
+    (DocumentPicker.getDocumentAsync as jest.Mock).mockResolvedValue({
+      canceled: false,
+      assets: [
+        { uri: 'file:///cache/DocumentPicker/b.pdf', name: 'b.pdf', mimeType: 'application/pdf', lastModified: 0 },
+        { uri: 'file:///cache/DocumentPicker/c.png', name: 'c.png', mimeType: 'image/png', lastModified: 0 },
+      ],
+    });
+    await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
+    expect(await screen.findByText('Choose a PDF.')).toBeTruthy();
+    expect(sent).toHaveLength(before);
+    expect(screen.queryByTestId('run-file-receipts-count')).toBeNull();
+  });
+
+  it('one file in a field that takes several starts as one alone: its run opens, no "1 runs started"', async () => {
+    const onManyStarted = jest.fn();
+    pickerGivesMany(['a.pdf']);
+    filesOf(5);
+    answerUploads(['a.pdf']);
+    answer(`POST ${RUNS_PATH}`, () => ({ run: { id: 'run-1' } }));
+    await renderWithProviders(
+      <StartRun subscriptionId="sub-1" shownWorkspaceId={TEST_WORKSPACE} runInput={[RECEIPTS]} onStarted={onStarted} onManyStarted={onManyStarted} />,
+      sessionAs('owner'),
+    );
+    await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
+    await waitFor(() => expect(screen.getByText('Start run')).toBeTruthy());
+    await fireEvent.press(screen.getByText('Start run'));
+    await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-1'));
+    expect(onManyStarted).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('start-run-started')).toBeNull();
+    const runs = sent.filter((request) => request.path === RUNS_PATH).map((request) => (request.body as { input: unknown }).input);
+    expect(runs).toEqual([{ receipts: 'artifact-1' }]);
+  });
+
+  it('one key per file, renewed on a changed value: a start refused part way, the Note changed, the retried file goes under a new key', async () => {
+    pickerGivesMany(['a.pdf', 'b.pdf']);
+    filesOf(5);
+    answerUploads(['a.pdf', 'b.pdf']);
+    answer(
+      `POST ${RUNS_PATH}`,
+      () => ({ run: { id: 'run-1' } }),
+      () => {
+        throw new PlatformError('Conflict', 409, 'CONFLICT', {});
+      },
+      () => ({ run: { id: 'run-2' } }),
+    );
+    await renderBox([NOTE, RECEIPTS]);
+    await fireEvent.changeText(screen.getByLabelText('Note'), 'Pay it');
+    await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
+    await waitFor(() => expect(screen.getByText('Start run')).toBeTruthy());
+    await fireEvent.press(screen.getByText('Start run'));
+    expect(await screen.findByText('1 runs started')).toBeTruthy();
+    await fireEvent.changeText(screen.getByLabelText('Note'), 'Pay it now');
+    await fireEvent.press(screen.getByText('Start run'));
+    expect(await screen.findByText('2 runs started')).toBeTruthy();
+    const runs = sent.filter((request) => request.path === RUNS_PATH);
+    expect(runs.map((request) => request.body)).toEqual([
+      { subscriptionId: 'sub-1', input: { note: 'Pay it', receipts: 'artifact-1' } },
+      { subscriptionId: 'sub-1', input: { note: 'Pay it', receipts: 'artifact-2' } },
+      { subscriptionId: 'sub-1', input: { note: 'Pay it now', receipts: 'artifact-2' } },
+    ]);
+    // The refused file's retry, with another Note, is a new intent: its key is new.
+    expect(runs[2]!.key).not.toBe(runs[1]!.key);
   });
 
   it('a start refused part way says why, keeps the files, and the next Start starts only the rest', async () => {

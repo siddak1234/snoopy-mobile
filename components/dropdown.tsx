@@ -198,7 +198,6 @@ export function Dropdown<T extends string>({
   const open = controlled ? openProp : ownOpen;
 
   const setOpen = (next: boolean) => {
-    if (!next) setQuery('');
     if (!controlled) setOwnOpen(next);
     onOpenChange?.(next);
   };
@@ -207,7 +206,8 @@ export function Dropdown<T extends string>({
     anchorRef.current?.measureInWindow((x, y, width, height) => setAnchor({ x, y, width, height }));
   };
 
-  // A page that opens it itself (the workspace's two triggers) has it measured on opening.
+  // A page that opens it itself (the workspace's two triggers) has it measured on opening; closed,
+  // however it closes, the search box is emptied, so it opens again on every row.
   useEffect(() => {
     if (open) measure();
     else setQuery('');

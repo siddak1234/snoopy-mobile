@@ -239,18 +239,21 @@ export function RunFileField({
 
 /**
  * A run's file field that takes several (Round 21 platform round 2, B2: the
- * manifest's `multiple`): Upload's picker lets several be chosen at once, and
- * each Take photo adds one more; every file is sent as `RunFileField` sends
- * one (`sendRunFile`, an image re-encoded), one after another, and the field's
- * value is their ids in the order given — Start run then starts one run per
- * file with the same other inputs. The line under the title says
- * "{n} files selected". More than 200 at once (`FILES_PER_SELECTION`, the
- * platform's guard) is refused before anything is sent: "Add up to 200 files
- * at a time." A file the platform will not take is left out, its refusal
- * said, and the rest are kept. A field without `multiple` is `RunFileField`,
- * unchanged.
+ * manifest's `multiple`), the website's several-file `RunFileField` in the
+ * same steps: Upload's picker lets several be chosen at once and **replaces**
+ * what the field held; each Take photo **adds** one more. Every file is sent
+ * as `RunFileField` sends one (`sendRunFile`, an image re-encoded), one after
+ * another, the line under the title saying "Uploading {name}…"; the field's
+ * value is then their ids in the order given, and Start run starts one run
+ * per file with the same other inputs. The line says "Ready: {name} ({size})"
+ * for one file — Start run starts it as one alone — and "{n} files selected"
+ * for more. More than 200 (`FILES_PER_SELECTION`) is refused before anything
+ * is sent, "Add up to 200 files at a time.": a choice past it empties the
+ * field, a photo past it keeps the 200 held. A file of a type the field does
+ * not take, or one that fails, empties the field and says why, as one alone
+ * does. A field without `multiple` is `RunFileField`, unchanged.
  *
- * testIDs: as `RunFileField`'s, and the count `run-file-${key}-count`.
+ * testIDs: as `RunFileField`'s, and its line `run-file-${key}-count`.
  */
 export function RunFilesField({
   field,
@@ -271,13 +274,12 @@ export function RunFilesField({
 }) {
   const { palette } = useTheme();
   const session = useSession();
-  const [ids, setIds] = useState<readonly string[]>([]);
-  const [waiting, setWaiting] = useState(0);
+  const [files, setFiles] = useState<readonly SentFile[]>([]);
+  const [uploading, setUploading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const accepted = field.acceptedContentTypes;
   const photos = takesPhotos(accepted);
   const typesLine = acceptedLine(accepted);
-  const sent = useRef<string[]>([]);
   const inFlight = useRef<AbortController | null>(null);
   const report = useRef(onBusyChange);
   useEffect(() => {
@@ -301,32 +303,37 @@ export function RunFilesField({
     return workspaceId;
   };
 
-  /** Sends what was given, one after another, each id added as it lands. */
-  const sendAll = async (workspaceId: string, given: Picked[]) => {
-    if (given.length === 0) return;
-    if (inFlight.current !== null) return;
+  /** Nothing held, and why. */
+  const empty = (message: string) => {
+    setFiles([]);
+    onValue(field.key, undefined);
+    setError(message);
+  };
+
+  /** Sends what was given after the files kept, one after another; any failure empties the field. */
+  const sendAll = async (workspaceId: string, kept: readonly SentFile[], given: Picked[]) => {
+    inFlight.current?.abort();
     const sending = new AbortController();
     inFlight.current = sending;
-    setWaiting(given.length);
+    onValue(field.key, undefined);
     onBusyChange(field.key, true);
+    const sent: SentFile[] = [...kept];
     try {
       for (const picked of given) {
-        try {
-          const chosen = await prepare(picked);
-          if (sending.signal.aborted) return;
-          const uploaded = await sendRunFile(workspaceId, subscriptionId, chosen, sending.signal);
-          if (sending.signal.aborted) return;
-          sent.current = [...sent.current, uploaded.artifactId];
-          setIds(sent.current);
-          onValue(field.key, sent.current);
-        } catch (failure) {
-          if (sending.signal.aborted) return;
-          setError(uploadRefusalMessage(failure, 'The file could not be sent.'));
-        } finally {
-          if (!sending.signal.aborted) setWaiting((left) => left - 1);
-        }
+        setUploading(picked.name);
+        const chosen = await prepare(picked);
+        if (sending.signal.aborted) return;
+        const uploaded = await sendRunFile(workspaceId, subscriptionId, chosen, sending.signal);
+        if (sending.signal.aborted) return;
+        sent.push({ artifactId: uploaded.artifactId, name: uploaded.filename, sizeBytes: uploaded.sizeBytes });
       }
+      setFiles(sent);
+      onValue(field.key, sent.map((file) => file.artifactId));
+    } catch (failure) {
+      if (sending.signal.aborted) return;
+      empty(uploadRefusalMessage(failure, 'The file could not be sent.'));
     } finally {
+      if (!sending.signal.aborted) setUploading(null);
       if (inFlight.current === sending) {
         inFlight.current = null;
         onBusyChange(field.key, false);
@@ -337,7 +344,8 @@ export function RunFilesField({
   const takePhoto = async () => {
     const workspaceId = workspaceFor();
     if (!workspaceId) return;
-    if (sent.current.length + 1 > FILES_PER_SELECTION) {
+    // A photo past the 200 held: said, and the 200 kept.
+    if (files.length + 1 > FILES_PER_SELECTION) {
       setError(TOO_MANY_FILES);
       return;
     }
@@ -353,9 +361,10 @@ export function RunFilesField({
       setError(CAMERA_NOT_OPENED);
       return;
     }
+    // Closing the camera keeps whatever the field already held.
     const photo = taken.canceled ? undefined : taken.assets[0];
     if (!photo) return;
-    await sendAll(workspaceId, [{ uri: photo.uri, name: PHOTO_NAME, image: true }]);
+    await sendAll(workspaceId, files, [{ uri: photo.uri, name: PHOTO_NAME, image: true }]);
   };
 
   const upload = async () => {
@@ -368,21 +377,22 @@ export function RunFilesField({
       setError('The file could not be opened. Try again.');
       return;
     }
+    // Closing the picker keeps whatever the field already held.
     const assets = picked.canceled ? [] : picked.assets;
     if (assets.length === 0) return;
-    // Past 200 at once: refused in words, nothing sent, what the field held kept.
-    if (sent.current.length + assets.length > FILES_PER_SELECTION) {
-      setError(TOO_MANY_FILES);
+    // A choice replaces what the field held: past 200, or a file of another type, empties it, nothing sent.
+    if (assets.length > FILES_PER_SELECTION) {
+      empty(TOO_MANY_FILES);
       return;
     }
-    // A file of another type is left out, said in words; the rest are sent.
-    const fits = assets.filter((asset) => !(accepted && asset.mimeType && !accepted.includes(asset.mimeType)));
-    if (fits.length < assets.length) {
-      setError(typesLine ? chooseAccepted(typesLine) : UPLOAD_REFUSALS.content_type_not_accepted!);
+    if (assets.some((asset) => accepted && asset.mimeType && !accepted.includes(asset.mimeType))) {
+      empty(typesLine ? chooseAccepted(typesLine) : UPLOAD_REFUSALS.content_type_not_accepted!);
+      return;
     }
     await sendAll(
       workspaceId,
-      fits.map((asset) =>
+      [],
+      assets.map((asset) =>
         photos && isImage(asset)
           ? { uri: asset.uri, name: jpegName(asset.name), image: true }
           : { uri: asset.uri, name: asset.name, image: false, ...(asset.mimeType ? { mimeType: asset.mimeType } : {}) },
@@ -390,8 +400,15 @@ export function RunFilesField({
     );
   };
 
-  const busy = waiting > 0;
-  const count = ids.length + waiting;
+  const busy = uploading !== null;
+  const line =
+    uploading !== null
+      ? `Uploading ${uploading}…`
+      : files.length === 1
+        ? `Ready: ${files[0]!.name} (${formatSize(files[0]!.sizeBytes)})`
+        : files.length > 1
+          ? filesSelected(files.length)
+          : null;
 
   return (
     <View style={[styles.row, divider && { borderBottomWidth: 1, borderBottomColor: palette.divider }]}>
@@ -399,9 +416,9 @@ export function RunFilesField({
         <Paperclip size={iconSize.row} color={palette.accentRamp[300]} />
         <Text style={[styles.title, { color: palette.text }]}>{field.title}</Text>
       </View>
-      {count > 0 ? (
+      {line ? (
         <Text testID={`run-file-${field.key}-count`} style={[styles.sub, { color: palette.neutral[400] }]}>
-          {filesSelected(count)}
+          {line}
         </Text>
       ) : null}
       {error ? <Text style={[styles.sub, { color: status.err }]}>{error}</Text> : null}
@@ -433,6 +450,9 @@ export function RunFilesField({
     </View>
   );
 }
+
+/** A file sent, as the several-file field holds it. */
+type SentFile = { artifactId: string; name: string; sizeBytes: number };
 
 /** One way to give the field its file: an outlined pill, held while an upload is in flight. */
 function FileAction({

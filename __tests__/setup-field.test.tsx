@@ -481,6 +481,18 @@ describe('a select with many options: labels, groups and a search box', () => {
     expect(onChange).toHaveBeenCalledWith('Option 2');
   });
 
+  it('the search box is emptied on closing: opened again, it is empty and every row is back', async () => {
+    await renderWithProviders(<SetupFieldRow field={select({ options: many(11) })} value={undefined} onChange={jest.fn()} divider={false} />);
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice'));
+    await fireEvent.changeText(screen.getByTestId('setup-field-codes-choice-search'), 'option 1');
+    expect(screen.queryByTestId('setup-field-codes-choice-option-Option 2')).toBeNull();
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice-backdrop'));
+    expect(screen.queryByTestId('setup-field-codes-choice-search')).toBeNull();
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice'));
+    expect(screen.getByTestId('setup-field-codes-choice-search').props.value).toBe('');
+    expect(within(screen.getByTestId('setup-field-codes-choice-menu')).getAllByText(/^Option /u)).toHaveLength(11);
+  });
+
   it('ten options or fewer, with no groups: no search box and no heading — the plain dropdown, unchanged', async () => {
     await renderWithProviders(<SetupFieldRow field={select({ options: many(10) })} value={undefined} onChange={jest.fn()} divider={false} />);
     await fireEvent.press(screen.getByTestId('setup-field-codes-choice'));
