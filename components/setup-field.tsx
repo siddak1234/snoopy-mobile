@@ -269,13 +269,28 @@ export function missingRequiredSetupFields<F extends Pick<SetupField, 'key' | 'r
   });
 }
 
+/** One choice of a `select` (Round 21 platform round 2, B1): what is saved, what is shown, the heading it is under. */
+export type SelectOption = { value: string; label: string; group?: string };
+
 /**
- * What a `select` holds, as its options (F1): a string is one choice, a list
- * several, each one of the field's options, none twice, in the order chosen;
- * anything else, none.
+ * A `select`'s options in one shape (B1): a string is its own value and
+ * label (as before); an object option is as sent (`value`, `label`, `group`).
  */
-export function selectedChoices(field: Pick<FieldRowSpec, 'options'>, value: unknown): string[] {
-  const options = new Set(field.options ?? []);
+export function selectOptions(field: { options?: readonly (string | SelectOption)[] }): SelectOption[] {
+  return (field.options ?? []).map((option) =>
+    typeof option === 'string'
+      ? { value: option, label: option }
+      : { value: option.value, label: option.label, ...(option.group !== undefined ? { group: option.group } : {}) },
+  );
+}
+
+/**
+ * What a `select` holds, as its option values (F1; B1): a string is one
+ * choice, a list several, each one of the field's option values, none twice,
+ * in the order chosen; anything else, none.
+ */
+export function selectedChoices(field: { options?: readonly (string | SelectOption)[] }, value: unknown): string[] {
+  const options = new Set(selectOptions(field).map((option) => option.value));
   const raw = typeof value === 'string' ? [value] : Array.isArray(value) ? value : [];
   return [...new Set(raw.filter((choice): choice is string => typeof choice === 'string' && options.has(choice)))];
 }
@@ -288,7 +303,7 @@ export function selectedChoices(field: Pick<FieldRowSpec, 'options'>, value: unk
  * default or refuses a required one. The platform stays the validator.
  */
 export function declaredValues(
-  fields: readonly { key: string; control: string; options?: readonly string[]; multiple?: boolean }[],
+  fields: readonly { key: string; control: string; options?: readonly (string | SelectOption)[]; multiple?: boolean }[],
   values: Record<string, unknown>,
 ): Record<string, string | string[] | number | boolean> {
   const declared: Record<string, string | string[] | number | boolean> = {};
@@ -297,7 +312,7 @@ export function declaredValues(
     if (field.control === 'toggle') declared[field.key] = value === true;
     else if (field.control === 'select') {
       // A list for a field that allows several (F1), sent even empty; one choice, or nothing, for one that does not.
-      const chosen = selectedChoices({ options: field.options ? [...field.options] : [] }, value);
+      const chosen = selectedChoices(field, value);
       if (field.multiple) declared[field.key] = chosen;
       else if (chosen[0] !== undefined) declared[field.key] = chosen[0];
     }
@@ -410,10 +425,12 @@ export function FieldInput({
  * options in the manifest's order. One choice closes the panel; a field that
  * allows several (`multiple`) keeps it open, a tick on each chosen row, and a
  * press toggles its row. The closed pill reads the choices (`chosenLabel`:
- * "Choose", "{first}, {second}", "{n} chosen").
+ * "Choose", "{first}, {second}", "{n} chosen") by their labels, never their
+ * values (Round 21 platform round 2, B1); options that carry `group` are drawn
+ * under their headings, and more than 10 get the dropdown's search box.
  *
  * testIDs: the pill `setup-field-${key}-choice`, a row
- * `setup-field-${key}-choice-option-${option}`.
+ * `setup-field-${key}-choice-option-${value}`.
  */
 function SelectInput({
   field,
@@ -426,15 +443,17 @@ function SelectInput({
 }) {
   const [open, setOpen] = useState(false);
   const several = field.multiple === true;
+  const options = selectOptions(field);
   const chosen = selectedChoices(field, value);
-  const label = chosenLabel(chosen);
+  const labelOf = new Map(options.map((option) => [option.value, option.label]));
+  const label = chosenLabel(chosen.map((choice) => labelOf.get(choice) ?? choice));
   const testID = `setup-field-${field.key}-choice`;
   return (
     <View style={styles.pill}>
       <Dropdown
         testID={testID}
         title={field.title}
-        options={(field.options ?? []).map((option) => ({ value: option, label: option }))}
+        options={options}
         value={several ? null : (chosen[0] ?? null)}
         values={several ? chosen : undefined}
         open={open}

@@ -1,4 +1,4 @@
-// From snoopy-backend packages/contracts/fixtures/blocks/*.json, sha256 a19d8b8ceb75566f98f2ed5d2fd3f9e30ba1ce051dde5af111f4422f9e710e14.
+// From snoopy-backend packages/contracts/fixtures/blocks/*.json, sha256 88f22cbca6222b5995a0adcd871a2c0b50c7b3939f996e9638170fd7da067e37.
 // Regenerate with `npm run generate:platform-contracts`; never edit by hand.
 /** A page body and its visible words in reading order, closed sections left out. */
 export type BlockFixture = {
@@ -13,7 +13,7 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
   {
     "name": "drawn-chart-bar",
     "about": "A bar chart of 3 bars, one text filled by the platform, and its alt",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "chart",
@@ -52,7 +52,7 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
   {
     "name": "drawn-chart-line",
     "about": "A line chart of 6 points, and its alt",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "chart",
@@ -104,7 +104,7 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
   {
     "name": "drawn-image-pdf",
     "about": "A measured PDF drawn as a picture: a scanned page",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "image",
@@ -130,7 +130,7 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
   {
     "name": "drawn-image-unavailable",
     "about": "A picture naming another job's file: the muted line that says so",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "text",
@@ -145,7 +145,7 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
   {
     "name": "drawn-image",
     "about": "A run's measured JPEG of 1 MiB, drawn as a picture that opens its file",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "image",
@@ -171,7 +171,7 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
   {
     "name": "emitted-all-nine",
     "about": "A run that sent one of each of the nine sendable types",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "text",
@@ -319,7 +319,7 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
   {
     "name": "empty-item",
     "about": "An item with no runs yet",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "metric",
@@ -391,7 +391,7 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
   {
     "name": "long-list",
     "about": "A sent list of 30 rows sharing one value label: sort and pages",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "list",
@@ -664,7 +664,7 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
   {
     "name": "long-table",
     "about": "A sent table of 30 rows, one column of numbers: sort and pages",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "table",
@@ -923,7 +923,7 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
   {
     "name": "oversize-run",
     "about": "A run still too large once its lines are dropped",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "text",
@@ -944,7 +944,7 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
   {
     "name": "ranked-runs-searchable",
     "about": "An item's runs list, with its search box",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "list",
@@ -1007,7 +1007,7 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
   {
     "name": "review-held-decided",
     "about": "A saved review: '2 accepted · 1 denied', and no form (amendment 2)",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "text",
@@ -1020,9 +1020,57 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
     ]
   },
   {
+    "name": "review-held-grouped",
+    "about": "A held review whose changes carry groups: drawn under each heading, in the order sent (amendment 3)",
+    "blockSetVersion": 4,
+    "blocks": [
+      {
+        "type": "text",
+        "text": "Waiting for approval.",
+        "tone": "warning"
+      },
+      {
+        "type": "questions",
+        "form": {
+          "kind": "review",
+          "approvalId": "0d0d0d0d-0d0d-4d0d-8d0d-0d0d0d0d0d0d",
+          "eligibleRoles": [
+            "owner",
+            "admin"
+          ],
+          "decisions": [
+            {
+              "id": "a1-add",
+              "label": "Line A1 → Add",
+              "group": "Visit 1 · Oct 1"
+            },
+            {
+              "id": "a2-remove",
+              "label": "Line A2 → Remove",
+              "detail": "Not in the note.",
+              "group": "Visit 1 · Oct 1"
+            },
+            {
+              "id": "b1-keep",
+              "label": "Line B1 → Keep",
+              "group": "Visit 2 · Oct 3"
+            }
+          ]
+        }
+      }
+    ],
+    "text": [
+      "Waiting for approval.",
+      "Line A1 → Add",
+      "Line A2 → Remove",
+      "Not in the note.",
+      "Line B1 → Keep"
+    ]
+  },
+  {
     "name": "review-held-waiting",
     "about": "A held run that offers three changes: the review form, each to accept or deny (amendment 2)",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "text",
@@ -1069,7 +1117,7 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
   {
     "name": "reviewer-candidate-grouped",
     "about": "The same candidate with the group option on: one group \"Candidate details\", its first section open",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "file",
@@ -1140,7 +1188,7 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
   {
     "name": "reviewer-candidate",
     "about": "A Resume Screening (candidate-reviewer v2) candidate, the group option off",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "file",
@@ -1210,7 +1258,7 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
   {
     "name": "reviewer-item-reading",
     "about": "A candidate-reviewer v2 item's reading, every section closed",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "section",
@@ -1250,7 +1298,7 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
   {
     "name": "reviewer-item-scores",
     "about": "An item whose page lists scores: 3 scored runs, 1 running and 1 failed, as one bar chart",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "metric",
@@ -1424,7 +1472,7 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
   {
     "name": "reviewer-item-verdicts",
     "about": "A job's rows: Advance in green, Decline in red, and no verdict plain with no chip",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "list",
@@ -1491,7 +1539,7 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
   {
     "name": "reviewer-item",
     "about": "A candidate-reviewer v2 item: tiles, its file, Add, its ranked runs",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "metric",
@@ -1622,7 +1670,7 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
   {
     "name": "reviewer-v1-item",
     "about": "A candidate-reviewer v1 item: no tiles",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "file",
@@ -1716,7 +1764,7 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
   {
     "name": "unknown-form",
     "about": "An unknown questions form",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "questions",
@@ -1732,7 +1780,7 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
   {
     "name": "unknown-target",
     "about": "A list row whose target this build does not know: drawn, no press",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "list",
@@ -1754,7 +1802,7 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
   {
     "name": "unknown-type",
     "about": "An unknown type at the top level and inside an open section",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "text",
@@ -1789,7 +1837,7 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
   {
     "name": "v2-details",
     "about": "An Invoice Processing v2 run with details only",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "text",
@@ -1837,7 +1885,7 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
   {
     "name": "v7-failed",
     "about": "v7 failed",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "text",
@@ -1852,7 +1900,7 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
   {
     "name": "v7-held-denied",
     "about": "v7 held and denied: the waiting invoice 'Not approved'",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "text",
@@ -2171,7 +2219,7 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
   {
     "name": "v7-held-waiting",
     "about": "v7 held, its approval waiting",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "text",
@@ -2501,7 +2549,7 @@ export const BLOCK_FIXTURES: readonly BlockFixture[] = [
   {
     "name": "v7-recorded",
     "about": "Invoice Processing v7: three invoices recorded",
-    "blockSetVersion": 3,
+    "blockSetVersion": 4,
     "blocks": [
       {
         "type": "text",

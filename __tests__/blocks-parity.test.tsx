@@ -30,7 +30,9 @@ const { platformOperation, downloadSignedFile } = jest.requireMock('@/lib/platfo
  * picture drawn once its file is read, the platform's answer from the
  * fixture's own `file` — and the spacing: the table both clients generate,
  * and every renderer's spacing its names; since amendment 2 the 28 of
- * `BLOCK_SET_VERSION` 3, a review's rows read by everyone (`review-held-*`).
+ * `BLOCK_SET_VERSION` 3, a review's rows read by everyone (`review-held-*`);
+ * since amendment 3 the 29 of `BLOCK_SET_VERSION` 4, a review's changes with
+ * their `group` (`review-held-grouped`, whose words name no heading).
  */
 
 const HEADER = /^\/\/ From snoopy-backend packages\/contracts\/fixtures\/blocks\/\*\.json, sha256 ([0-9a-f]{64})\.$/u;
@@ -55,14 +57,14 @@ beforeEach(() => {
 });
 
 describe('the block fixtures, drawn', () => {
-  it('are the generator\'s, headed by one sha256 over the fixtures: the 28 of block set 3', () => {
+  it('are the generator\'s, headed by one sha256 over the fixtures: the 29 of block set 4', () => {
     const first = readFileSync(
       resolve(__dirname, '../lib/generated/platform-contracts/block-fixtures.ts'),
       'utf8',
     ).split('\n')[0];
     expect(first).toMatch(HEADER);
-    expect(BLOCK_FIXTURES).toHaveLength(28);
-    expect(BLOCK_FIXTURES.every((fixture) => fixture.blockSetVersion === 3)).toBe(true);
+    expect(BLOCK_FIXTURES).toHaveLength(29);
+    expect(BLOCK_FIXTURES.every((fixture) => fixture.blockSetVersion === 4)).toBe(true);
   });
 
   it.each(BLOCK_FIXTURES.map((fixture) => [fixture.name, fixture] as const))(

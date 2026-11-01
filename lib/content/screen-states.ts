@@ -721,6 +721,22 @@ export function chosenLabel(choices: readonly string[]): string {
   return `${choices.length} chosen`;
 }
 export const CHOOSE_AT_LEAST_ONE = 'Choose at least one.';
+/** A dropdown's search that finds nothing (Round 21 platform round 2, B1). */
+export const NO_MATCHES = 'No matches.';
+/**
+ * Several files in one upload (B2): a file field that allows several
+ * (`multiple`) takes at most this many at once — the platform's
+ * `filesPerSelection`, a client guard — and says so past it.
+ */
+export const FILES_PER_SELECTION = 200;
+export const TOO_MANY_FILES = 'Add up to 200 files at a time.';
+/** What a several-file field holds, and what one Start did with it: one run per file (B2). */
+export function filesSelected(n: number): string {
+  return `${n} files selected`;
+}
+export function runsStarted(n: number): string {
+  return `${n} runs started`;
+}
 export const START_LABEL = 'Start';
 export const ARCHIVING_LABEL = 'Archiving…';
 export const ARCHIVE_LABEL = 'Archive';

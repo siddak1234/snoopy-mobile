@@ -1,5 +1,13 @@
 # Round record — `snoopy-mobile`, each round's preamble moved verbatim out of `CLAUDE.md` (newest first; the findings are `DESIGN-GAPS.md`)
 
+## Round 21 — platform round 2's app rows (2026-11-01)
+
+The app's half of the round's platform spec B1–B5 (the owner's go 2026-11-01): a bigger drop-down,
+several files in one upload, a review grouped by visit, the Healthcare department, and an app that
+needs no key. It reads the contracts regenerated from the backend's `round-21/blocks-v2` at `1c3d8f6`
+(B1–B4); B5 against the spec's shape until the backend's B5 lands. Findings and bites: `DESIGN-GAPS.md`
+"Round 21 — platform round 2".
+
 ## Round 21 — the platform round's app rows (2026-10-28)
 
 The app's half of the setup dropdown (F1) and the review of each change (F2) in

@@ -2890,3 +2890,35 @@ Bites (break, red, restore byte-identical, green): the read-only rows out of the
 `trackerSub`'s review line (`build21-views`); the questions block's read-only rows
 (`blocks-parity`, `review-held-waiting`); `decideReview` sending the wrong answers
 (`platform-mutations`).
+
+## Round 21 — platform round 2: a bigger dropdown, several files, a grouped review, Healthcare, an app with no key (B1–B5; 2026-11-01)
+
+The app's half of the round's platform spec B1–B5 (the owner's go 2026-11-01 ~04:45Z), reusable for
+every flow (no flow named in app code). Contracts regenerated with `npm run generate:platform-contracts`
+from the backend's branch `round-21/blocks-v2` at its committed `1c3d8f6` (B1–B4; block set 4, 29 fixtures);
+the final regeneration from the merged head happens at land. Each behaviour has a test that fails with
+its line broken (the round's summary lists the bites).
+
+- **B1** the drop-down: string or `{value, label, group}` options (`selectOptions`); labels on the rows
+  and the closed pill, values saved; group headings in first-appearance order; a search box past 10
+  ("Search"; "No matches."). The search box is the lists' own (`SearchBox`, moved to its own file so the
+  drop-down can draw it). Ten or fewer without groups: unchanged.
+- **B2** a run's file field with `multiple`: several per Upload, one more per Take photo, "{n} files
+  selected", one `createRun` per file, "{n} runs started"; past 200, "Add up to 200 files at a time.".
+  The camera takes one photo per opening (`expo-image-picker` has no multi-shot), so several photos are
+  several presses.
+- **B3** a review grouped by `group`, every group open, up to 400; Save review needs every answer.
+  **OPEN, for a backend session:** the fixture `review-held-grouped` reads no heading in its `text`
+  while its `about` says the changes are "drawn under each heading". The app draws headings on the run
+  page's review and draws the page body's read-only rows (`questionsForm`) without them, so the word
+  parity test stays exact; if the backend adds the headings to the fixture's `text`, that one prop
+  (`headings={false}`) goes.
+- **B4** Healthcare, the seventeenth department, icon `Stethoscope`.
+- **B5** a provider whose `authType` is `none`: connected for every workspace, no Connect step, no row
+  button. **Interim:** the backend branch held no B5 commit at `1c3d8f6`, so it is built against the spec's
+  shape (`providerAuthTypes` gains `none`) in one named constant, `INTERIM_NO_KEY_AUTH_TYPE`, read
+  through `needsNoConnect`. **OPEN at land:** the backend round's design (its D11) lists such a provider
+  in a new `publicProviders[]` instead of `providers[]`, with `ConnectionProvider.authType` unchanged.
+  If that ships, the app sees no such provider in `providers[]` and a required one is refused at Turn
+  on ("Connect … first."): the regeneration at land must read `publicProviders` into the same rule.
+

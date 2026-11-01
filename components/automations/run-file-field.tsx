@@ -14,10 +14,13 @@ import { UPLOAD_REFUSALS, WORKSPACE_CHANGED, uploadRefusalMessage } from '@/lib/
 import {
   CAMERA_NOT_OPENED,
   CAMERA_OFF,
+  FILES_PER_SELECTION,
   TAKE_PHOTO_LABEL,
+  TOO_MANY_FILES,
   UPLOAD_LABEL,
   acceptedLine,
   chooseAccepted,
+  filesSelected,
 } from '@/lib/content/screen-states';
 import type { AutomationRunInputField } from '@/lib/platform/automations';
 import { sendRunFile, type ChosenFile } from '@/lib/platform/run-file';
@@ -225,6 +228,203 @@ export function RunFileField({
           testID={`run-file-${field.key}-upload`}
           label={UPLOAD_LABEL}
           accessibilityLabel={`Upload a file for ${field.title}`}
+          icon={UploadSimple}
+          busy={busy}
+          onPress={() => void upload()}
+        />
+      </View>
+    </View>
+  );
+}
+
+/**
+ * A run's file field that takes several (Round 21 platform round 2, B2: the
+ * manifest's `multiple`): Upload's picker lets several be chosen at once, and
+ * each Take photo adds one more; every file is sent as `RunFileField` sends
+ * one (`sendRunFile`, an image re-encoded), one after another, and the field's
+ * value is their ids in the order given — Start run then starts one run per
+ * file with the same other inputs. The line under the title says
+ * "{n} files selected". More than 200 at once (`FILES_PER_SELECTION`, the
+ * platform's guard) is refused before anything is sent: "Add up to 200 files
+ * at a time." A file the platform will not take is left out, its refusal
+ * said, and the rest are kept. A field without `multiple` is `RunFileField`,
+ * unchanged.
+ *
+ * testIDs: as `RunFileField`'s, and the count `run-file-${key}-count`.
+ */
+export function RunFilesField({
+  field,
+  shownWorkspaceId,
+  subscriptionId,
+  onValue,
+  onBusyChange,
+  divider,
+  showTypes = false,
+}: {
+  field: Pick<AutomationRunInputField, 'key' | 'title' | 'acceptedContentTypes'>;
+  shownWorkspaceId: string | null;
+  subscriptionId: string;
+  onValue: (key: string, artifactIds: string[] | undefined) => void;
+  onBusyChange: (key: string, busy: boolean) => void;
+  divider: boolean;
+  showTypes?: boolean;
+}) {
+  const { palette } = useTheme();
+  const session = useSession();
+  const [ids, setIds] = useState<readonly string[]>([]);
+  const [waiting, setWaiting] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const accepted = field.acceptedContentTypes;
+  const photos = takesPhotos(accepted);
+  const typesLine = acceptedLine(accepted);
+  const sent = useRef<string[]>([]);
+  const inFlight = useRef<AbortController | null>(null);
+  const report = useRef(onBusyChange);
+  useEffect(() => {
+    report.current = onBusyChange;
+  }, [onBusyChange]);
+  useEffect(() => {
+    const key = field.key;
+    return () => {
+      const upload = inFlight.current;
+      if (!upload) return;
+      inFlight.current = null;
+      upload.abort();
+      report.current(key, false);
+    };
+  }, [field.key]);
+
+  const workspaceFor = (): string | null => {
+    setError(null);
+    const workspaceId = workspaceIfShown(session, shownWorkspaceId);
+    if (!workspaceId) setError(WORKSPACE_CHANGED);
+    return workspaceId;
+  };
+
+  /** Sends what was given, one after another, each id added as it lands. */
+  const sendAll = async (workspaceId: string, given: Picked[]) => {
+    if (given.length === 0) return;
+    if (inFlight.current !== null) return;
+    const sending = new AbortController();
+    inFlight.current = sending;
+    setWaiting(given.length);
+    onBusyChange(field.key, true);
+    try {
+      for (const picked of given) {
+        try {
+          const chosen = await prepare(picked);
+          if (sending.signal.aborted) return;
+          const uploaded = await sendRunFile(workspaceId, subscriptionId, chosen, sending.signal);
+          if (sending.signal.aborted) return;
+          sent.current = [...sent.current, uploaded.artifactId];
+          setIds(sent.current);
+          onValue(field.key, sent.current);
+        } catch (failure) {
+          if (sending.signal.aborted) return;
+          setError(uploadRefusalMessage(failure, 'The file could not be sent.'));
+        } finally {
+          if (!sending.signal.aborted) setWaiting((left) => left - 1);
+        }
+      }
+    } finally {
+      if (inFlight.current === sending) {
+        inFlight.current = null;
+        onBusyChange(field.key, false);
+      }
+    }
+  };
+
+  const takePhoto = async () => {
+    const workspaceId = workspaceFor();
+    if (!workspaceId) return;
+    if (sent.current.length + 1 > FILES_PER_SELECTION) {
+      setError(TOO_MANY_FILES);
+      return;
+    }
+    let taken: ImagePicker.ImagePickerResult;
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        setError(CAMERA_OFF);
+        return;
+      }
+      taken = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1 });
+    } catch {
+      setError(CAMERA_NOT_OPENED);
+      return;
+    }
+    const photo = taken.canceled ? undefined : taken.assets[0];
+    if (!photo) return;
+    await sendAll(workspaceId, [{ uri: photo.uri, name: PHOTO_NAME, image: true }]);
+  };
+
+  const upload = async () => {
+    const workspaceId = workspaceFor();
+    if (!workspaceId) return;
+    let picked: DocumentPicker.DocumentPickerResult;
+    try {
+      picked = await DocumentPicker.getDocumentAsync({ type: accepted ?? RUN_FILE_TYPES, copyToCacheDirectory: true, multiple: true });
+    } catch {
+      setError('The file could not be opened. Try again.');
+      return;
+    }
+    const assets = picked.canceled ? [] : picked.assets;
+    if (assets.length === 0) return;
+    // Past 200 at once: refused in words, nothing sent, what the field held kept.
+    if (sent.current.length + assets.length > FILES_PER_SELECTION) {
+      setError(TOO_MANY_FILES);
+      return;
+    }
+    // A file of another type is left out, said in words; the rest are sent.
+    const fits = assets.filter((asset) => !(accepted && asset.mimeType && !accepted.includes(asset.mimeType)));
+    if (fits.length < assets.length) {
+      setError(typesLine ? chooseAccepted(typesLine) : UPLOAD_REFUSALS.content_type_not_accepted!);
+    }
+    await sendAll(
+      workspaceId,
+      fits.map((asset) =>
+        photos && isImage(asset)
+          ? { uri: asset.uri, name: jpegName(asset.name), image: true }
+          : { uri: asset.uri, name: asset.name, image: false, ...(asset.mimeType ? { mimeType: asset.mimeType } : {}) },
+      ),
+    );
+  };
+
+  const busy = waiting > 0;
+  const count = ids.length + waiting;
+
+  return (
+    <View style={[styles.row, divider && { borderBottomWidth: 1, borderBottomColor: palette.divider }]}>
+      <View style={styles.titleLine}>
+        <Paperclip size={iconSize.row} color={palette.accentRamp[300]} />
+        <Text style={[styles.title, { color: palette.text }]}>{field.title}</Text>
+      </View>
+      {count > 0 ? (
+        <Text testID={`run-file-${field.key}-count`} style={[styles.sub, { color: palette.neutral[400] }]}>
+          {filesSelected(count)}
+        </Text>
+      ) : null}
+      {error ? <Text style={[styles.sub, { color: status.err }]}>{error}</Text> : null}
+      {showTypes && typesLine ? (
+        <Text testID={`run-file-${field.key}-types`} style={[styles.sub, { color: palette.neutral[400] }]}>
+          {typesLine}
+        </Text>
+      ) : null}
+      <View style={styles.actions}>
+        {photos ? (
+          <FileAction
+            testID={`run-file-${field.key}-photo`}
+            label={TAKE_PHOTO_LABEL}
+            accessibilityLabel={`Take a photo for ${field.title}`}
+            icon={Camera}
+            busy={busy}
+            onPress={() => void takePhoto()}
+          />
+        ) : null}
+        <FileAction
+          testID={`run-file-${field.key}-upload`}
+          label={UPLOAD_LABEL}
+          accessibilityLabel={`Upload files for ${field.title}`}
           icon={UploadSimple}
           busy={busy}
           onPress={() => void upload()}

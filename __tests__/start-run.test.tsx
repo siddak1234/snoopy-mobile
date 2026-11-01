@@ -1028,3 +1028,115 @@ describe('a run with a file starts at the press: nothing asked first (Build 21, 
     expect(screen.queryByTestId('ai-reading-card')).toBeNull();
   });
 });
+
+/* ───────────────────────────── several files (B2) ───────────────────────────── */
+
+describe('a file field that takes several (Round 21 platform round 2, B2)', () => {
+  const RECEIPTS: AutomationRunInputField = { ...RECEIPT, key: 'receipts', title: 'Receipts', multiple: true };
+
+  /** The picker hands over `names` at once, each a PDF. */
+  function pickerGivesMany(names: string[]) {
+    (DocumentPicker.getDocumentAsync as jest.Mock).mockResolvedValue({
+      canceled: false,
+      assets: names.map((name) => ({ uri: `file:///cache/DocumentPicker/${name}`, name, mimeType: 'application/pdf', lastModified: 0 })),
+    });
+  }
+
+  /** Each file's upload: a place, then its own artifact id (`artifact-{n}`). */
+  function answerUploads(names: string[]) {
+    names.forEach((name, at) => {
+      answer(`POST ${UPLOADS_PATH}`, () => ({
+        uploadSessionId: `upload-${at + 1}`,
+        uploadUrl: 'https://store.example.test/put',
+        expiresAt: '2026-10-10T12:00:00Z',
+        maximumSizeBytes: 10_000_000,
+      }));
+      answer(`POST ${COMPLETE_PATH}`, () => ({
+        artifact: { artifactId: `artifact-${at + 1}`, filename: name, contentType: 'application/pdf', sizeBytes: 5 },
+      }));
+    });
+  }
+
+  it('the picker takes several; each file starts its own run with the same other inputs, once each; the box says how many', async () => {
+    const onManyStarted = jest.fn();
+    pickerGivesMany(['a.pdf', 'b.pdf', 'c.pdf']);
+    filesOf(5);
+    answerUploads(['a.pdf', 'b.pdf', 'c.pdf']);
+    answer(`POST ${RUNS_PATH}`, () => ({ run: { id: 'run-1' } }), () => ({ run: { id: 'run-2' } }), () => ({ run: { id: 'run-3' } }));
+    await renderWithProviders(
+      <StartRun subscriptionId="sub-1" shownWorkspaceId={TEST_WORKSPACE} runInput={[NOTE, RECEIPTS]} onStarted={onStarted} onManyStarted={onManyStarted} />,
+      sessionAs('owner'),
+    );
+    await fireEvent.changeText(screen.getByLabelText('Note'), 'Pay it');
+    await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
+    expect(DocumentPicker.getDocumentAsync).toHaveBeenCalledWith({
+      type: ['application/pdf', 'image/jpeg', 'image/png'],
+      copyToCacheDirectory: true,
+      multiple: true,
+    });
+    await waitFor(() => expect(screen.getByText('Start run')).toBeTruthy());
+    expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('3 files selected');
+
+    await fireEvent.press(screen.getByText('Start run'));
+    expect(await screen.findByText('3 runs started')).toBeTruthy();
+    const runs = sent.filter((request) => request.path === RUNS_PATH);
+    expect(runs.map((request) => request.body)).toEqual([
+      { subscriptionId: 'sub-1', input: { note: 'Pay it', receipts: 'artifact-1' } },
+      { subscriptionId: 'sub-1', input: { note: 'Pay it', receipts: 'artifact-2' } },
+      { subscriptionId: 'sub-1', input: { note: 'Pay it', receipts: 'artifact-3' } },
+    ]);
+    // One key per file, so a lost answer for one never starts another's twice.
+    expect(new Set(runs.map((request) => request.key)).size).toBe(3);
+    expect(onManyStarted).toHaveBeenCalledWith(['run-1', 'run-2', 'run-3']);
+    // The page stays: no run's page opened, and the box is fresh for the next.
+    expect(onStarted).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('run-file-receipts-count')).toBeNull();
+  });
+
+  it('each Take photo adds one more file', async () => {
+    manipulator(1000, 1000);
+    filesOf(5);
+    cameraTakes(1000, 1000);
+    answerUploads(['photo.jpg', 'photo.jpg']);
+    await renderBox([RECEIPTS]);
+    await fireEvent.press(screen.getByTestId('run-file-receipts-photo'));
+    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('1 files selected'));
+    await waitFor(() => expect(screen.getByText('Start run')).toBeTruthy());
+    await fireEvent.press(screen.getByTestId('run-file-receipts-photo'));
+    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('2 files selected'));
+  });
+
+  it('more than 200 at once is refused in words, and nothing is sent', async () => {
+    pickerGivesMany(Array.from({ length: 201 }, (_, at) => `f${at}.pdf`));
+    await renderBox([RECEIPTS]);
+    await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
+    expect(await screen.findByText('Add up to 200 files at a time.')).toBeTruthy();
+    expect(sent).toEqual([]);
+    expect(screen.queryByTestId('run-file-receipts-count')).toBeNull();
+  });
+
+  it('a start refused part way says why, keeps the files, and the next Start starts only the rest', async () => {
+    pickerGivesMany(['a.pdf', 'b.pdf']);
+    filesOf(5);
+    answerUploads(['a.pdf', 'b.pdf']);
+    answer(
+      `POST ${RUNS_PATH}`,
+      () => ({ run: { id: 'run-1' } }),
+      () => {
+        throw new PlatformError('Conflict', 409, 'CONFLICT', {});
+      },
+      () => ({ run: { id: 'run-2' } }),
+    );
+    await renderBox([RECEIPTS]);
+    await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
+    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('2 files selected'));
+    await waitFor(() => expect(screen.getByText('Start run')).toBeTruthy());
+    await fireEvent.press(screen.getByText('Start run'));
+    expect(await screen.findByText('1 runs started')).toBeTruthy();
+    expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('2 files selected');
+    await fireEvent.press(screen.getByText('Start run'));
+    expect(await screen.findByText('2 runs started')).toBeTruthy();
+    const runs = sent.filter((request) => request.path === RUNS_PATH).map((request) => (request.body as { input: unknown }).input);
+    expect(runs).toEqual([{ receipts: 'artifact-1' }, { receipts: 'artifact-2' }, { receipts: 'artifact-2' }]);
+  });
+});

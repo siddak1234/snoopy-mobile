@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, screen } from '@testing-library/react-native';
+import { fireEvent, screen, within } from '@testing-library/react-native';
 
 import {
   SetupFieldRow,
@@ -407,5 +407,86 @@ describe('a select: the glass dropdown, one choice or several', () => {
         { several: ['Nephrology', 'Cardiology'], one: 'Cardiology', none: '' },
       ),
     ).toEqual({ several: ['Nephrology', 'Cardiology'], one: 'Cardiology' });
+  });
+});
+
+/** The dropdown, bigger (Round 21 platform round 2, B1): object options, a search box past 10, group headings. */
+describe('a select with many options: labels, groups and a search box', () => {
+  const CODES = [
+    { value: 'N18.4', label: 'Chronic kidney disease, stage 4', group: 'Kidney' },
+    { value: 'I10', label: 'Essential hypertension', group: 'Heart' },
+    { value: 'N18.5', label: 'Chronic kidney disease, stage 5', group: 'Kidney' },
+    { value: 'E11.9', label: 'Type 2 diabetes', group: 'Endocrine' },
+  ];
+  const many = (count: number) => Array.from({ length: count }, (_, at) => `Option ${at + 1}`);
+  const select = (over: Partial<SetupField>): SetupField => ({
+    section: 'rules',
+    key: 'codes',
+    title: 'Codes',
+    description: 'The codes to check.',
+    control: 'select',
+    required: true,
+    options: CODES,
+    ...over,
+  });
+  it('the closed pill shows labels, never values; what is sent and saved is the value', async () => {
+    const onChange = jest.fn();
+    await renderWithProviders(<SetupFieldRow field={select({ multiple: true })} value={['N18.4', 'I10']} onChange={onChange} divider={false} />);
+    expect(screen.getByLabelText('Codes: Chronic kidney disease, stage 4, Essential hypertension')).toBeTruthy();
+    expect(screen.queryByText(/N18\.4/u)).toBeNull();
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice'));
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice-option-E11.9'));
+    expect(onChange).toHaveBeenLastCalledWith(['N18.4', 'I10', 'E11.9']);
+    expect(selectedChoices({ options: CODES }, ['I10', 'Essential hypertension'])).toEqual(['I10']);
+    expect(declaredValues([{ key: 'codes', control: 'select', options: CODES }], { codes: 'E11.9' })).toEqual({ codes: 'E11.9' });
+  });
+
+  it('options with groups are drawn under their headings, the groups in the order they first appear', async () => {
+    await renderWithProviders(<SetupFieldRow field={select({})} value={undefined} onChange={jest.fn()} divider={false} />);
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice'));
+    const menu = within(screen.getByTestId('setup-field-codes-choice-menu'));
+    expect(screen.getByTestId('setup-field-codes-choice-group-0').props.children).toBe('KIDNEY');
+    expect(screen.getByTestId('setup-field-codes-choice-group-1').props.children).toBe('HEART');
+    expect(screen.getByTestId('setup-field-codes-choice-group-2').props.children).toBe('ENDOCRINE');
+    expect(menu.getAllByText(/./u).map((node) => node.props.children)).toEqual([
+      'CODES',
+      'KIDNEY',
+      'Chronic kidney disease, stage 4',
+      'Chronic kidney disease, stage 5',
+      'HEART',
+      'Essential hypertension',
+      'ENDOCRINE',
+      'Type 2 diabetes',
+    ]);
+    // Four options: no search box.
+    expect(screen.queryByTestId('setup-field-codes-choice-search')).toBeNull();
+  });
+
+  it('more than 10 options: a search box ("Search") keeps the rows whose label holds the query; none: "No matches."', async () => {
+    const onChange = jest.fn();
+    await renderWithProviders(
+      <SetupFieldRow field={select({ options: many(11) })} value={undefined} onChange={onChange} divider={false} />,
+    );
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice'));
+    const box = screen.getByTestId('setup-field-codes-choice-search');
+    expect(box.props.placeholder).toBe('Search');
+    await fireEvent.changeText(box, 'option 1');
+    // "Option 1", "Option 10" and "Option 11": every row whose label holds it, case-free.
+    expect(screen.getByTestId('setup-field-codes-choice-option-Option 10')).toBeTruthy();
+    expect(screen.queryByTestId('setup-field-codes-choice-option-Option 2')).toBeNull();
+    await fireEvent.changeText(box, 'zzz');
+    expect(screen.getByTestId('setup-field-codes-choice-no-matches').props.children).toBe('No matches.');
+    await fireEvent.changeText(box, 'option 2');
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice-option-Option 2'));
+    expect(onChange).toHaveBeenCalledWith('Option 2');
+  });
+
+  it('ten options or fewer, with no groups: no search box and no heading — the plain dropdown, unchanged', async () => {
+    await renderWithProviders(<SetupFieldRow field={select({ options: many(10) })} value={undefined} onChange={jest.fn()} divider={false} />);
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice'));
+    expect(screen.queryByTestId('setup-field-codes-choice-search')).toBeNull();
+    expect(screen.queryByTestId('setup-field-codes-choice-group-0')).toBeNull();
+    expect(screen.queryByTestId('setup-field-codes-choice-no-matches')).toBeNull();
+    expect(within(screen.getByTestId('setup-field-codes-choice-menu')).getAllByText(/^Option /u)).toHaveLength(10);
   });
 });
