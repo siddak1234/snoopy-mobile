@@ -8,6 +8,7 @@
 import type { paths as AutomationPaths } from '@/lib/generated/platform-contracts/automations';
 import type { paths as ConnectionPaths } from '@/lib/generated/platform-contracts/connections';
 import type { paths as PlatformPaths } from '@/lib/generated/platform-contracts/platform';
+import { PlatformError } from '@/lib/platform/problem';
 
 /**
  * Every published operation, from the generated contracts: the automation and
@@ -66,10 +67,33 @@ export function fakePlatform(platformOperation: jest.Mock) {
       };
       sent.push(entry);
       const route = `${method} ${path}`;
-      const reply = queued[route]?.length ? queued[route]!.shift() : standing[route];
+      const reply = queued[route]?.length ? queued[route]!.shift() : (standing[route] ?? fromList(route, entry));
       if (reply === undefined) throw new Error(`unrouted ${route}`);
       return { data: typeof reply === 'function' ? (reply as (sent: Sent) => unknown)(entry) : reply };
     };
+  /**
+   * One flow's own read (`readSubscription`, §12.1 #319) unrouted: its row from
+   * the list as routed (without consuming a queued answer), and 404 when the
+   * list does not hold it. A test whose single read differs routes it itself.
+   */
+  const fromList = (route: string, entry: Sent) => {
+    if (route !== 'GET /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}') return undefined;
+    const listRoute = 'GET /v1/workspaces/{workspaceId}/subscriptions';
+    const listed = queued[listRoute]?.[0] ?? standing[listRoute];
+    if (listed === undefined) return undefined;
+    return async () => {
+      // The live list, then the archived one, as the screens ask for them.
+      for (const query of [undefined, { status: 'archived' }]) {
+        const asked: Sent = { method: 'GET', path: listRoute, values: { workspaceId: entry.values.workspaceId ?? '' }, ...(query ? { query } : {}) };
+        const list = (await (typeof listed === 'function' ? (listed as (sent: Sent) => unknown)(asked) : listed)) as {
+          subscriptions?: { id: string }[];
+        };
+        const row = list.subscriptions?.find((each) => each.id === entry.values.subscriptionId);
+        if (row) return { subscription: row };
+      }
+      throw new PlatformError('Subscription not found', 404);
+    };
+  };
   const verbs = { GET: call('GET'), POST: call('POST'), PUT: call('PUT'), PATCH: call('PATCH'), DELETE: call('DELETE') };
   const clients = { platform: verbs, automations: verbs, connections: verbs };
   platformOperation.mockImplementation(async (_key: string, execute: Function) => (await execute(clients)).data);

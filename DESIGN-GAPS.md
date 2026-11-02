@@ -2928,3 +2928,18 @@ the row and the vendor choice (`connection-row`), the Setup screen (`tab-screens
 step integration — Connected, no "Connect … first" line — each of its two lines in turn
 (`invoice-processing-screens`); since the second review each against `publicProviders`, read through
 `readConnectionProviders`.
+
+## Round 21 hardening, wave 1: one flow's own read (§12.1 #319 step 2; 2026-11-02)
+
+The flow's page, Setup (for the flow Edit setup names) and the vendor page take the flow they show,
+and its setup, from `readSubscription` (`lib/platform/automations.ts`, `GET
+/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}`, backend #319 step 1): the version the
+flow pins, any status. On the flow's page the read stands in for its list row, so `AutomationActions`
+gets that subscription; the lists stay for what needs a list: the archived twin (`addedAgainAs`) and
+Setup's duplicate check (`heldAs`, `readSubscriptionsNow`). Nothing drawn changes. Setup treats a 404
+as no flow named (`noneWhenNotFound`); the vendor page treats an archived flow as none, as before.
+Parity: the website's flow page, setup, vendor and run page read the same route in its own PR.
+
+Bites (break, red, restore, green), `single-flow-read`: with a list row and a catalog entry that carry
+no setup, the flow page's integration row, Setup's vendor step and the vendor page's choices each come
+from the single read; each screen put back on the list row, its test alone goes red. No new press.

@@ -18,16 +18,19 @@
 # `EXConstants.bundle/app.config` identical to cloud build 16's.
 #
 # Refuses unless: HEAD is origin/main; the tree is clean; the `all-green` check
-# run from GitHub Actions on HEAD concluded success (selected by check NAME and
-# app id — a Dependabot check run on the same commit is not CI); the live
+# run of ci.yml's push run on HEAD concluded success (selected by check NAME,
+# app id and the push run's check suite — a Dependabot check run or the
+# nightly's all-green on the same commit is not the release's verdict); the live
 # AASA names this app in both applinks and webcredentials; and the deployed
 # platform's contract hashes (/health/live) equal the generated types' headers
 # (scripts/verify-deployed-contracts.mjs --release). After `eas build`:
 # the build's gitCommitHash is HEAD and the ipa carries the release's
 # entitlements. Only then does it submit. Any doubt refuses.
 #
-# Runs with the caller's PATH: node 22 (eas-cli through npx), gh, python3,
-# curl, unzip, codesign, plutil. Working files go under .autom8x/release-ios/
+# Runs with the caller's PATH: node 22, gh, python3, curl, unzip, codesign,
+# plutil. eas-cli is the lockfile's exact devDependency (`npm ci` first), run
+# with `npx --no-install`, so a release never downloads whatever eas-cli is
+# newest; its version is printed beside the tree line. Working files go under .autom8x/release-ios/
 # (gitignored). The Expo session is read from ~/.expo/state.json at the moment
 # the submission is polled and is never written anywhere.
 set -u
@@ -60,7 +63,9 @@ team = json.load(open("eas.json"))["submit"]["production"]["ios"]["appleTeamId"]
 bundle = json.load(open("app.json"))["expo"]["ios"]["bundleIdentifier"]
 print(f"{team}.{bundle}")') || refuse "cannot read the Team ID and bundle identifier"
 
-echo "tree: $(git rev-parse --short HEAD) dirty=$(git status --short | wc -l | tr -d ' ') app: $APP_ID"
+EAS_CLI=$(npx --no-install eas-cli --version 2>/dev/null | grep -oE 'eas-cli/[0-9.]+' | head -1 | tr / ' ')
+[ -n "$EAS_CLI" ] || refuse "eas-cli is not installed from the lockfile (run npm ci)"
+echo "tree: $(git rev-parse --short HEAD) dirty=$(git status --short | wc -l | tr -d ' ') app: $APP_ID $EAS_CLI"
 
 # --- gates: build only what main's CI passed ---------------------------------
 git fetch -q origin || refuse "cannot fetch origin"
@@ -69,14 +74,17 @@ HEAD_SHA=$(git rev-parse HEAD); MAIN_SHA=$(git rev-parse origin/main)
 [ -z "$(git status --porcelain)" ] || refuse "the tree is not clean"
 
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner) || refuse "cannot resolve the GitHub repository"
-# The latest check run per name; only the one named all-green from GitHub Actions.
-CHECKS=$(gh api "repos/$REPO/commits/$HEAD_SHA/check-runs?check_name=all-green&per_page=100" \
-  -q "[.check_runs[] | select(.name == \"all-green\" and .app.id == $GITHUB_ACTIONS_APP_ID)] | .[] | \"\(.status) \(.conclusion) \(.html_url)\"") \
+# Only the all-green in the check suite of ci.yml's push run for HEAD: the
+# nightly (ci.yml schedule) adds its own all-green on an unchanged main, and that
+# one is never a release's verdict (scripts/all-green-on-head.mjs).
+gh api "repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$HEAD_SHA&event=push&per_page=100" > "$WORK/push-runs.json" \
+  || refuse "cannot read ci.yml's push runs on $HEAD_SHA"
+gh api "repos/$REPO/commits/$HEAD_SHA/check-runs?check_name=all-green&per_page=100" > "$WORK/check-runs.json" \
   || refuse "cannot read the check runs on $HEAD_SHA"
-N=$(printf '%s\n' "$CHECKS" | grep -c .)
-echo "all-green on ${HEAD_SHA:0:7} (GitHub Actions): ${CHECKS:-none}"
-[ "$N" = 1 ] || refuse "expected exactly one all-green check run from GitHub Actions on HEAD, found $N"
-case "$CHECKS" in "completed success "*) ;; *) refuse "all-green on this commit is not completed/success" ;; esac
+CHECK=$(node scripts/all-green-on-head.mjs "$WORK/push-runs.json" "$WORK/check-runs.json" "$GITHUB_ACTIONS_APP_ID")
+OK=$?
+echo "all-green on ${HEAD_SHA:0:7} (ci.yml push run, GitHub Actions): $CHECK"
+[ "$OK" = 0 ] || refuse "the push run's all-green on HEAD is not one completed/success check run"
 
 # The live AASA: the platform's half of sign-in and the callback. A build
 # shipped against a file that stopped naming the app loses sign-in on install.
@@ -118,17 +126,17 @@ fi
 if [ "$LOCAL" = 0 ]; then
 # --- build -------------------------------------------------------------------
 echo "=== eas build (full client output in $WORK/build-client.log) ==="
-npx eas-cli build --platform ios --profile production --non-interactive --no-wait --json > "$WORK/build-start.json" 2> "$WORK/build-client.log"
+npx --no-install eas-cli build --platform ios --profile production --non-interactive --no-wait --json > "$WORK/build-start.json" 2> "$WORK/build-client.log"
 echo "capability sync lines:"; sed 's/\x1b\[[0-9;]*[A-Za-z]//g' "$WORK/build-client.log" | grep -i -E "capabilit|sign in with apple|associated domain|push|APPLE_ID_AUTH|ASSOCIATED_DOMAINS|PUSH_NOTIFICATIONS" | head -10
 BID=$(python3 -c 'import sys,json; d=json.load(open(sys.argv[1])); d=d[0] if isinstance(d,list) else d; print(d["id"])' "$WORK/build-start.json" 2>/dev/null)
 if [ -z "$BID" ]; then echo "NO BUILD ID — client log tail:"; tail -20 "$WORK/build-client.log"; exit 1; fi
 echo "build id: $BID"
 
-view() { npx eas-cli build:view "$BID" --json 2>/dev/null; }
+view() { npx --no-install eas-cli build:view "$BID" --json 2>/dev/null; }
 # The build must be of HEAD and nothing else; a build of another commit is never
 # waited for or submitted.
 BUILD_SHA=$(view | python3 -c 'import sys,json; print(json.load(sys.stdin).get("gitCommitHash") or "")')
-[ "$BUILD_SHA" = "$HEAD_SHA" ] || refuse "build $BID is of commit '${BUILD_SHA:-unknown}', not HEAD $HEAD_SHA — cancel it: npx eas-cli build:cancel $BID"
+[ "$BUILD_SHA" = "$HEAD_SHA" ] || refuse "build $BID is of commit '${BUILD_SHA:-unknown}', not HEAD $HEAD_SHA — cancel it: npx --no-install eas-cli build:cancel $BID"
 echo "build $BID is of HEAD ${HEAD_SHA:0:7}"
 
 st=""
@@ -145,7 +153,7 @@ fi
 if [ "$LOCAL" = 1 ]; then
 echo "=== eas build --local (full output in $WORK/local-build.log) ==="
 rm -rf "$WORK/local" && mkdir -p "$WORK/local" || exit 1
-npx eas-cli build --platform ios --profile production --local --non-interactive --output "$WORK/local/app.ipa" > "$WORK/local-build.log" 2>&1 \
+npx --no-install eas-cli build --platform ios --profile production --local --non-interactive --output "$WORK/local/app.ipa" > "$WORK/local-build.log" 2>&1 \
   || { echo "LOCAL BUILD FAILED — log tail:"; tail -30 "$WORK/local-build.log"; exit 1; }
 [ -s "$WORK/local/app.ipa" ] || refuse "the local build wrote no ipa"
 # Still HEAD, still clean: nothing moved under the build.
@@ -185,7 +193,7 @@ plutil -extract CFBundleVersion raw "$APP/Info.plist" | sed 's/^/build number: /
 # --- submit ------------------------------------------------------------------
 echo "=== submit ==="
 if [ "$LOCAL" = 1 ]; then SUBMIT_FROM=(--path "$WORK/ipa/app.ipa"); else SUBMIT_FROM=(--id "$BID"); fi
-npx eas-cli submit --platform ios --profile production "${SUBMIT_FROM[@]}" --non-interactive --no-wait 2>&1 | sed 's/\x1b\[[0-9;]*[A-Za-z]//g' | grep -v "^\s*$" | tail -6 | tee "$WORK/submit-client.log"
+npx --no-install eas-cli submit --platform ios --profile production "${SUBMIT_FROM[@]}" --non-interactive --no-wait 2>&1 | sed 's/\x1b\[[0-9;]*[A-Za-z]//g' | grep -v "^\s*$" | tail -6 | tee "$WORK/submit-client.log"
 SID=$(grep -o -E "submissions/[0-9a-f-]{36}" "$WORK/submit-client.log" | head -1 | cut -d/ -f2)
 echo "submission id: $SID"
 [ -n "$SID" ] || exit 1
@@ -193,7 +201,7 @@ echo "submission id: $SID"
 # Poll the submission with the Expo session, read now and passed only as a header.
 TOKEN=$(python3 -c 'import json,os; print(json.load(open(os.path.expanduser("~/.expo/state.json"))).get("auth",{}).get("sessionSecret",""))' 2>/dev/null)
 if [ -z "$TOKEN" ]; then
-  echo "no Expo session in ~/.expo/state.json; the submission is scheduled — follow it with: npx eas-cli submit:list --platform ios"
+  echo "no Expo session in ~/.expo/state.json; the submission is scheduled — follow it with: npx --no-install eas-cli submit:list --platform ios"
   exit 0
 fi
 st=""

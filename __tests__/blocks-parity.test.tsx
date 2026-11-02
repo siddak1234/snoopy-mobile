@@ -1,6 +1,6 @@
 import { screen, waitFor } from '@testing-library/react-native';
 import { createHash } from 'node:crypto';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 import { space } from '@/constants/theme';
@@ -119,12 +119,13 @@ describe('the block fixtures, drawn', () => {
 describe('the spacing table (ADR-0048 amendment 1, point 14; the owner\'s Q8)', () => {
   const rules = resolve(__dirname, '../lib/generated/platform-contracts/block-rules.ts');
 
-  it('block-rules.ts is the generator\'s, headed by one sha256 over the platform\'s rules — the snapshot\'s, when the backend is here', () => {
+  it("block-rules.ts is the generator's, headed by one sha256 over the platform's rules: the committed copy's", () => {
     const header = RULES_HEADER.exec(readFileSync(rules, 'utf8').split('\n')[0]!);
     expect(header).not.toBeNull();
-    const backend = resolve(__dirname, '..', process.env.SNOOPY_BACKEND_ROOT || '../snoopy-backend');
-    const folder = join(backend, 'packages/contracts/fixtures/block-rules');
-    if (!existsSync(folder)) return; // CI has no backend checkout: verify-platform-contracts skips it the same way.
+    // The hash-checked copy of the backend's rules (M3): present in every
+    // checkout, CI's included, so this never returns early.
+    const folder = resolve(__dirname, '../lib/generated/snoopy-backend/packages/contracts/fixtures/block-rules');
+    expect(readdirSync(folder).filter((each) => each.endsWith('.json')).length).toBeGreaterThan(0);
     const hash = createHash('sha256');
     for (const name of readdirSync(folder).filter((each) => each.endsWith('.json')).sort()) hash.update(readFileSync(join(folder, name)));
     expect(header![1]).toBe(hash.digest('hex'));

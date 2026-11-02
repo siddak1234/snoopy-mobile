@@ -1,0 +1,693 @@
+openapi: 3.1.1
+info:
+  title: Autom8x Connection Surface
+  version: 0.1.0
+  description: >-
+    How a workspace connects an external account, and how every automation it
+    subscribes to then uses that one connection.
+
+    Nothing in this document returns a credential, and no route here could. The
+    Connections service stores provider tokens envelope-encrypted and exposes no
+    route that reads one; the summaries below carry the account's identity, the
+    scopes granted, and the connection's health — the facts a person needs to
+    decide whether a connection is working, and nothing a caller could act with.
+
+    Workspace paths are membership-checked at the Edge and nowhere else, exactly
+    as the automation surface is: the Connections service scopes by the workspace
+    it is told and does not verify the caller belongs to it. A workspace the
+    caller is not a member of answers 404, never 403, so a non-member cannot learn
+    it exists.
+
+    **Reading a workspace's connections is open to any member; changing them is
+    not.** Connecting and disconnecting require `owner` or `admin`, because
+    reconnecting is destructive rather than additive — one live connection exists
+    per (workspace, provider), so completing an authorization supersedes whatever
+    was there. A member able to do it could replace the organization's account
+    with their own and have every automation act through it. The rule has no
+    effect on a personal workspace: those permit exactly one membership, their
+    creator's, as `owner`, enforced by a schema trigger.
+  x-status: round-1
+x-service-id: edge-api
+servers:
+  - url: https://api.autom8x.ai
+    description: The only publicly reachable service.
+security:
+  - sessionCookie: []
+
+paths:
+  /v1/connections/providers:
+    get:
+      operationId: listConnectionProviders
+      summary: The providers this deployment can actually authorize.
+      description: >-
+        An **OAuth** provider appears here only when it has BOTH a reviewed spec
+        file and client credentials in this deployment's configuration, so a
+        workspace is never shown a Connect button that cannot work.
+
+        An **api-key** provider needs no deployment credential and is always
+        offered: the customer supplies the credential, so there is nothing for an
+        operator to register and nothing that could be missing.
+
+        A **public** provider (`auth.type: 'none'` in its spec, ADR-0048
+        Amendment 3) needs no key and has no connect step: it is connected for
+        every workspace. It is never in `providers` — a client built before it
+        would draw a Connect for it — and is listed in `publicProviders`, which a
+        client draws as connected, with nothing to press.
+
+        Not workspace-scoped: the answer is a property of the deployment, not of a
+        tenant. A session is still required — the list names which vendors this
+        platform integrates with, which is not public information.
+      responses:
+        '200':
+          description: Every provider on offer, in registry order.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [providers]
+                properties:
+                  providers:
+                    type: array
+                    items: { $ref: '#/components/schemas/ConnectionProvider' }
+                  publicProviders:
+                    type: array
+                    description: >-
+                      The public providers (ADR-0048 Amendment 3): no key, no
+                      connect step, connected for every workspace.
+                    items: { $ref: '#/components/schemas/PublicConnectionProvider' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+
+  /v1/connections/callback:
+    get:
+      operationId: completeConnectionAuthorization
+      summary: The address a provider redirects the browser back to.
+      description: >-
+        Reached by a top-level browser navigation from the provider, never by a
+        client calling it directly. It always answers 302 — its caller is a person
+        mid-flow, not a program, so every outcome ends at the web app carrying a
+        short reason token rather than a JSON body nobody will see. That includes
+        an unresolvable session (`reason=session_expired`) and an unconfigured
+        connections hop (`reason=not_configured`).
+
+        A session is required despite the redirect, which is why this operation
+        does not clear `security`: the actor completing the flow is compared
+        against the one who began it, and an unauthenticated callback has no actor
+        to compare.
+
+        This route is not protected by same-origin: a cross-site GET navigation
+        carries no `Origin` header. It is protected by the authorization attempt
+        itself. The `state` is single-use and claimed by a conditional update, so a
+        replayed callback finds nothing to claim, and the service refuses a
+        callback whose actor is not the person who began the flow — without which
+        anyone able to start an attempt could complete it with their own provider
+        account and have every automation in the workspace run through it.
+      parameters:
+        - name: state
+          in: query
+          required: true
+          schema: { type: string }
+          description: The single-use value minted when the authorization began.
+        - name: code
+          in: query
+          schema: { type: string }
+          description: The authorization code, when the person consented.
+        - name: error
+          in: query
+          schema: { type: string }
+          description: The provider's refusal code, when they did not.
+        - name: iss
+          in: query
+          schema: { type: string }
+          description: >-
+            The issuer, when the provider echoes one. Checked against the provider
+            the attempt was started with — mix-up defence, RFC 9700 §4.4.
+      responses:
+        '302':
+          description: >-
+            Redirect to the web app's connections page. `status=connected` with the
+            `provider` on success; `status=error` with a `reason` token otherwise.
+            The destination is a fixed path with fixed parameters — never anything
+            the provider supplied.
+          headers:
+            location:
+              schema: { type: string, format: uri }
+        '503': { $ref: '#/components/responses/Problem' }
+
+  /v1/workspaces/{workspaceId}/connections:
+    get:
+      operationId: listConnections
+      summary: The accounts this workspace has connected.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      responses:
+        '200':
+          description: Every connection the workspace holds, live or broken.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [connections]
+                properties:
+                  connections:
+                    type: array
+                    items: { $ref: '#/components/schemas/Connection' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+
+  /v1/workspaces/{workspaceId}/connections/key:
+    post:
+      operationId: connectProviderWithKey
+      summary: Connect a provider whose customers paste a credential.
+      description: >-
+        **Requires `owner` or `admin`**, for the same reason `authorize` does: one
+        live connection per (workspace, provider), and connecting supersedes the
+        previous one, so a member could otherwise replace the organization's
+        account with their own.
+
+        For providers whose `authType` is `api-key` (BUILD-PLAN 5.14, ADR-0015).
+        An OAuth provider sent here is refused with 400 rather than quietly
+        redirected — the caller believes it holds a credential, and the honest
+        reply is that this provider does not take one.
+
+        **The credential is verified before it is stored.** The reviewed spec
+        names a cheap read operation, which is called immediately; a credential
+        the vendor rejects yields 400 and no connection. Without that, a customer
+        sees "Connected" and their automation breaks days later with a vendor
+        error nobody can read. The vendor's own rejection body is deliberately
+        NOT relayed: vendors quote the offending credential back, and that would
+        put a customer's secret into a response and then into a log.
+
+        **Idempotent per `Idempotency-Key`.** A retry with the same key and
+        credential input returns the original connection without repeating vendor
+        verification or superseding it again; reusing a key with different input,
+        or retrying while the first request is still processing, returns 409.
+
+        `credentials` keys are the `credentialFields[].name` values the provider
+        list reports for this provider. Every declared field is required; an
+        undeclared one is refused by name rather than ignored, so a caller
+        sending `apikey` for a spec declaring `apiKey` is told which it was.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [providerId, credentials]
+              additionalProperties: false
+              properties:
+                providerId:
+                  type: string
+                  pattern: '^[a-z][a-z0-9-]{0,62}$'
+                credentials:
+                  type: object
+                  description: >-
+                    Field names come from the provider's own spec, so this object
+                    is deliberately open — the Edge relays it without knowing which
+                    fields a vendor declares. Each value is a non-empty string of
+                    at most 4096 characters, trimmed before use, because a pasted
+                    value carries whatever whitespace the clipboard did. The Edge
+                    accepts up to 72 KiB so even four maximum four-byte UTF-8
+                    values plus JSON framing fit this contract.
+                  maxProperties: 4
+                  additionalProperties:
+                    type: string
+                    minLength: 1
+                    maxLength: 4096
+      responses:
+        '201':
+          description: The credential was accepted by the provider and stored.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [connection]
+                additionalProperties: false
+                properties:
+                  connection:
+                    $ref: '#/components/schemas/Connection'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          description: >-
+            The key was reused with different credentials, or its first request
+            is still verifying. Retry the same key after the in-progress request
+            resolves; do not create a new key for an uncertain request.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '502':
+          description: >-
+            The provider could not be reached to verify the credential, or its
+            spec cannot build a verification call as written.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503':
+          description: >-
+            The connections adapter is unconfigured, or the provider is rate
+            limiting or down. A vendor that is unavailable has not rejected
+            anything, so this is deliberately not a 400 — telling a customer
+            their key is wrong when the vendor is down sends them to rotate a
+            credential that was fine.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /v1/connections/native/complete:
+    post:
+      operationId: completeNativeConnectionAuthorization
+      summary: A native client trades its sealed callback for a connection.
+      description: >-
+        The second half of the split callback (BUILD-PLAN 7.7.6, §12.1 #62).
+
+        A native client's system browser holds no platform session, so
+        `/v1/connections/callback` cannot complete its flow — it has no actor to
+        compare against the person who began the attempt. Instead the callback
+        seals the provider's parameters and redirects to the app's claimed HTTPS
+        URL, and the app posts the sealed value here **with its bearer token**.
+
+        **This is where the flow finally has an actor, so this is where the
+        attempt is claimed** — for the first time, exactly once. A replayed
+        `code` therefore fails twice over: the attempt is no longer claimable,
+        and the provider's authorization code inside it is spent (RFC 6749
+        §4.1.2).
+
+        Answers JSON rather than a redirect: the caller here is the app on a
+        POST, not a browser mid-navigation. Every unusable code — forged,
+        tampered, expired, or naming a consumed attempt — is one 401 with no
+        detail that would tell them apart.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              additionalProperties: false
+              properties:
+                code:
+                  type: string
+                  description: >-
+                    The sealed value the callback redirect carried. Opaque, and
+                    bound to a key the app never holds — it carries the provider's
+                    authorization code, never a provider token.
+      responses:
+        '200':
+          description: The connection, as the list read returns it.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [connection]
+                properties:
+                  connection: { $ref: '#/components/schemas/Connection' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+
+  /v1/workspaces/{workspaceId}/connections/authorize:
+    post:
+      operationId: beginConnectionAuthorization
+      summary: Begin connecting a provider account.
+      description: >-
+        **Requires `owner` or `admin`.** Completing this flow supersedes any live
+        connection for the same provider, so it is not an additive action a plain
+        member may take. A member receives 403 with `details.requiredRole` —
+        403 rather than 404, since they already know the workspace exists.
+
+        Answers one of two outcomes (ADR-0019 §4). **`reused`**: the live connection
+        already holds every requested scope, so no consent is needed and no attempt
+        is created — the answer carries that connection. **`authorization-required`**:
+        where to send the browser, and when the attempt expires. `actorUserId` is not
+        accepted — the actor comes from the session, and the same person must
+        complete the flow.
+
+        **Replacing the account is a separate, explicit intent** (ADR-0019 §4,
+        ADR-0026): `replaceConnectionId` names the live connection being replaced,
+        and completion may then return a different external account. Without it,
+        completion must return the account the live connection already has. A
+        `replaceConnectionId` that is not the live connection — it changed since the
+        caller read it — is refused with 409 and nothing is started.
+
+        The single-use `state` is deliberately NOT returned. It is already inside
+        the authorization URL, and handing the browser a second copy of it creates
+        somewhere it can be logged or referred onward without the flow gaining
+        anything.
+
+        `scopes` may narrow the request to a subset of what the reviewed spec
+        declares. It can never widen it: a scope the spec does not declare is
+        refused, so a caller cannot have the platform ask a provider for
+        permissions nobody reviewed.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [providerId]
+              additionalProperties: false
+              properties:
+                providerId:
+                  type: string
+                  pattern: '^[a-z][a-z0-9-]{0,62}$'
+                scopes:
+                  type: array
+                  minItems: 1
+                  maxItems: 32
+                  items: { type: string, minLength: 1, maxLength: 128 }
+                  description: >-
+                    Bounded so the advertised maximum fits inside the route's
+                    8 KiB body limit — a documented maximum the server refuses is
+                    worse than a smaller one it honours. Real provider scopes are
+                    far below this: Google's longest is around 50 characters.
+                replaceConnectionId:
+                  type: string
+                  format: uuid
+                  description: >-
+                    The live connection this authorization replaces, when the
+                    intent is to connect a DIFFERENT account. It must be the id
+                    the workspace's live connection has now; a stale id is 409.
+                    Omit it to connect, extend, or reconnect the same account.
+                returnTo:
+                  type: string
+                  format: uri
+                  maxLength: 512
+                  description: >-
+                    **Native clients only** (BUILD-PLAN 7.7.6). An app-claimed
+                    HTTPS URL from `NATIVE_APP_REDIRECT_URIS`, exact-matched. Its
+                    presence is what makes this a native flow: the callback then
+                    hands the app a sealed value to complete instead of finishing
+                    at the website.
+
+                    Omit it for the browser flow, which is unchanged. A value not
+                    on the allowlist is refused with 400 and is **not echoed
+                    back** — reflecting a rejected redirect target is how a
+                    refusal becomes a reflection gadget.
+      responses:
+        '200':
+          description: >-
+            The live connection, reused; or where to send the browser, and when the
+            attempt expires. Discriminated by `outcome`.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ConnectionAuthorizationReused'
+                  - $ref: '#/components/schemas/ConnectionAuthorizationRequired'
+                discriminator:
+                  propertyName: outcome
+                  mapping:
+                    reused: '#/components/schemas/ConnectionAuthorizationReused'
+                    authorization-required: '#/components/schemas/ConnectionAuthorizationRequired'
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          description: >-
+            `replaceConnectionId` is not the workspace's live connection — it changed
+            since the caller read it. Nothing was started; read the connections again.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+
+  /v1/workspaces/{workspaceId}/connections/{connectionId}:
+    delete:
+      operationId: disconnectConnection
+      summary: Disconnect an account.
+      description: >-
+        **Requires `owner` or `admin`.** Disconnecting breaks every automation in
+        the workspace that depends on the provider, which is not a plain member's
+        decision to make.
+
+        Local token material is deleted by a schema trigger on the status change,
+        and revocation upstream is attempted afterwards. Deliberately in that
+        order: a provider that is down must never leave a customer unable to
+        disconnect. A revocation that did not land is logged, and the grant then
+        lives at the provider until its own expiry.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: connectionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The connection, now disconnected.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [connection]
+                properties:
+                  connection: { $ref: '#/components/schemas/ConnectionState' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: sb-access-token
+      description: Issued at login. The only credential a client ever holds.
+
+  parameters:
+    WorkspaceId:
+      name: workspaceId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+      description: >-
+        The workspace being authorized. Membership is checked at the Edge; a
+        workspace the caller does not belong to answers 404.
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 16
+        maxLength: 128
+        pattern: '^[A-Za-z0-9._~:-]+$'
+      description: >-
+        16-128 characters of letters, numbers, dot, underscore, tilde, colon, or
+        hyphen. The same key with different input is a conflict, not a replay.
+
+  responses:
+    Problem:
+      description: RFC 9457 problem document.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status, code]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        code: { type: string }
+        detail: { type: string }
+        requestId: { type: string }
+        details: { type: object, additionalProperties: true }
+
+    PublicConnectionProvider:
+      type: object
+      additionalProperties: false
+      required: [providerId, displayName, description, icon]
+      description: >-
+        A public service a flow may read (ADR-0048 Amendment 3), such as the NPI
+        Registry. Nothing to connect or disconnect, and no scopes.
+      properties:
+        providerId: { type: string }
+        displayName: { type: string }
+        description: { type: string }
+        icon: { type: string, maxLength: 40 }
+
+    ConnectionProvider:
+      type: object
+      required: [providerId, displayName, description, icon, scopes, authType]
+      properties:
+        providerId: { type: string }
+        displayName: { type: string }
+        description:
+          type: string
+          description: What connecting this account lets automations do, in a person's words.
+        icon:
+          type: string
+          maxLength: 40
+          description: >-
+            An icon name the clients resolve. Never an asset URL — the same rule
+            and the same vocabulary as `AutomationCatalogEntry.icon`.
+
+            Required, so a reviewed provider file stays the whole of what adding
+            a provider takes. Without it a client has to keep its own map from
+            `providerId` to an icon, and a new vendor stops being a data-file
+            change.
+
+            It may name a vendor's brand mark, such as `QuickBooksLogo`, which a
+            client draws from the vendor's own approved image, bundled with the
+            client, before it falls back to its icon set — still a name, never a
+            URL (BUILD-PLAN 25.4.18).
+        scopes:
+          type: array
+          items: { type: string }
+          description: >-
+            Every scope the reviewed spec declares. An authorization may request a
+            subset of these and never anything outside them. Empty for an
+            `api-key` provider — scopes are granted, not pasted.
+        authType:
+          type: string
+          enum: [oauth2, api-key]
+          description: >-
+            Which door this provider connects through: `oauth2` sends the browser
+            to the vendor's consent page, `api-key` collects pasted values
+            (BUILD-PLAN 5.14, ADR-0015). A client renders the right form from this
+            rather than assuming every provider redirects.
+        credentialFields:
+          type: array
+          description: >-
+            Present only when `authType` is `api-key`. **The form is generated
+            from this**, the way an automation's setup form is generated from
+            `manifest.setup[]` — so a new key-based vendor is a reviewed file and
+            no client change.
+          items:
+            type: object
+            required: [name, label, secret]
+            additionalProperties: false
+            properties:
+              name:
+                type: string
+                description: The key to send under `credentials`, and what the spec's template interpolates.
+              label: { type: string }
+              secret:
+                type: boolean
+                description: >-
+                  Whether this value is a credential rather than an identifier.
+                  Stated by the spec, never inferred: Twilio's Account SID is
+                  public and its Auth Token is not, and a field wrongly assumed
+                  public is one a client may render back to the screen.
+              help:
+                type: string
+                description: Where the customer finds this value in the vendor's console.
+
+    ConnectionStatus:
+      type: string
+      enum: [authorizing, connected, reauthorization-required, disconnected]
+      description: >-
+        The values `ConnectionStatus` in `packages/contracts` declares and the
+        schema's own CHECK constraint permits. `not-connected` is in the type but
+        never on a row — it describes a provider with no connection at all, which
+        this list simply omits.
+
+    ConnectionState:
+      type: object
+      description: >-
+        A connection as the Connections service knows it. Every field here comes
+        from that one service. Used on its own where no Catalog read is made —
+        the disconnect response, which reports the state change and nothing that
+        would require a second hop to compute.
+      required:
+        [id, providerId, workspaceId, externalAccount, status, requiredScopes, grantedScopes]
+      properties:
+        id: { type: string, format: uuid }
+        providerId: { type: string }
+        workspaceId: { type: string, format: uuid }
+        externalAccount:
+          type: object
+          required: [displayName]
+          description: >-
+            Which account at the provider this is — its label, read from the token
+            response at the path the spec names. It is how a person tells two
+            connected accounts apart. The provider's own identifier (QuickBooks'
+            realm id) is not published: the Connections service holds it sealed,
+            and nothing a person reads needs it (BUILD-PLAN 25.2.37).
+          properties:
+            displayName: { type: string }
+        status: { $ref: '#/components/schemas/ConnectionStatus' }
+        requiredScopes:
+          type: array
+          items: { type: string }
+        grantedScopes:
+          type: array
+          items: { type: string }
+          description: >-
+            As granted, which a provider may narrow from what was requested. Worth
+            rendering: an automation can fail on a scope the person declined.
+        authorizedByUserId:
+          type: string
+          format: uuid
+          description: >-
+            Who authorized the latest grant — attribution, not ownership: the
+            workspace owns the connection (ADR-0019 §5). Absent for a connection no
+            recorded person authorized.
+        lastValidatedAt: { type: string, format: date-time }
+        errorCode:
+          type: string
+          description: >-
+            Why a connection is not usable — set when the refresh loop retires one
+            it cannot renew. Never a provider's raw error text.
+
+    Connection:
+      description: >-
+        A connection plus what depends on it — the shape the list read returns.
+        `usedByCount` is the one field no single service can answer, so the Edge
+        composes it from a Catalog read alongside the Connections read.
+      allOf:
+        - $ref: '#/components/schemas/ConnectionState'
+        - type: object
+          required: [usedByCount]
+          properties:
+            usedByCount:
+              type: integer
+              minimum: 0
+              description: >-
+                How many **live** subscriptions in this workspace require this
+                provider — what breaks if the connection is removed. A draft
+                subscription is not counted: it is being set up, not running.
+
+    ConnectionAuthorizationReused:
+      type: object
+      additionalProperties: false
+      required: [outcome, connection]
+      description: >-
+        The live connection already holds every requested scope, so nothing is
+        started and no consent is asked (ADR-0019 §2, §4). Only a `connected`
+        connection is reused; one that needs reauthorization starts an attempt.
+      properties:
+        outcome: { type: string, enum: [reused] }
+        connection: { $ref: '#/components/schemas/ConnectionState' }
+
+    ConnectionAuthorizationRequired:
+      type: object
+      additionalProperties: false
+      required: [outcome, authorizationUrl, expiresAt]
+      properties:
+        outcome: { type: string, enum: [authorization-required] }
+        authorizationUrl:
+          type: string
+          format: uri
+          description: The provider's own consent page, with PKCE and state applied.
+        expiresAt:
+          type: string
+          format: date-time
+          description: After this, the attempt can no longer be completed.

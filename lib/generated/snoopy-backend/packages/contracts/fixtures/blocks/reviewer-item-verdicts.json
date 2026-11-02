@@ -1,0 +1,67 @@
+{
+  "name": "reviewer-item-verdicts",
+  "about": "A job's rows: Advance in green, Decline in red, and no verdict plain with no chip",
+  "blockSetVersion": 4,
+  "blocks": [
+    {
+      "type": "list",
+      "searchable": true,
+      "items": [
+        {
+          "lead": "1",
+          "title": "Dana Whitfield",
+          "badge": {
+            "text": "Advance",
+            "tone": "success"
+          },
+          "value": "88",
+          "valueLabel": "Score",
+          "valueTone": "success",
+          "open": {
+            "target": "run",
+            "runId": "v1"
+          }
+        },
+        {
+          "lead": "2",
+          "title": "Mara Quinn",
+          "value": "63",
+          "valueLabel": "Score",
+          "open": {
+            "target": "run",
+            "runId": "v2"
+          }
+        },
+        {
+          "lead": "3",
+          "title": "Omar Reyes",
+          "badge": {
+            "text": "Decline",
+            "tone": "error"
+          },
+          "value": "41",
+          "valueLabel": "Score",
+          "valueTone": "error",
+          "open": {
+            "target": "run",
+            "runId": "v3"
+          }
+        }
+      ],
+      "empty": "No candidates yet."
+    }
+  ],
+  "text": [
+    "1",
+    "Dana Whitfield",
+    "Advance",
+    "88",
+    "2",
+    "Mara Quinn",
+    "63",
+    "3",
+    "Omar Reyes",
+    "Decline",
+    "41"
+  ]
+}

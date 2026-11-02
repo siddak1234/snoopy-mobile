@@ -1,4 +1,4 @@
-// From snoopy-backend docs/openapi/automations.yaml, sha256 c161927f8a484eb4d3efafe47a6ae57d23eace1f2a0807664f30564b4ea76a9e.
+// From snoopy-backend docs/openapi/automations.yaml, sha256 5f2084a95c4a6a389d7ab0c156a15d858b6cca892b71365709f7ad9aa6ea9737.
 // Regenerate with `npm run generate:platform-contracts`; never edit by hand.
 
 /** A required field's basic type; its one value, where the schema gives a `const`; for an array of objects, its items' required fields. */

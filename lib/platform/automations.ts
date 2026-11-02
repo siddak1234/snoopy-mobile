@@ -97,6 +97,32 @@ export function updateSubscription(
 }
 
 /**
+ * One flow, as the platform holds it now (§12.1 #319 step 2): the list row's
+ * summary WITH its `setup` read from the version the flow pins, any status
+ * (archived included), and its `unmetConnections` against what is connected
+ * now. 404 for an id this person cannot see. The flow's page, Setup, the
+ * vendor page and the flow's actions draw the flow from this, so a list that
+ * one day stops carrying `setup` (#319 step 3) costs them nothing; never
+ * cached, so it is never a snapshot's.
+ */
+export function readSubscription(workspaceId: string, subscriptionId: string): Promise<{ subscription: Subscription }> {
+  return platformOperation(
+    `/v1/workspaces/${workspaceId}/subscriptions/${subscriptionId}`,
+    ({ automations }, signal) =>
+      automations.GET('/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}', {
+        params: { path: { workspaceId, subscriptionId } },
+        signal,
+      }),
+  );
+}
+
+/** A read's `.catch` where a 404 (gone, or not this person's to see) means none, and any other refusal stays one. */
+export function noneWhenNotFound(error: unknown): null {
+  if (error instanceof PlatformError && error.status === 404) return null;
+  throw error;
+}
+
+/**
  * Starts a run. A run of a flow with items names one (`itemId`, backend
  * ADR-0046): owners and admins only, the item this flow's, read and not
  * archived; a flow without items is never sent one.

@@ -4,16 +4,22 @@ on:
   pull_request:
   push:
     branches: [main]
+  # Nightly on main (the owner's go 2026-11-01, NIGHT-7): the same jobs on an
+  # unchanged main, so a moved runner image, registry or contract shows the
+  # morning after, not at the next PR. A release reads only the push run's
+  # all-green (scripts/all-green-on-head.mjs), so this run never counts there.
+  schedule:
+    - cron: '32 9 * * *'
 
 jobs:
   lint:
     name: Lint
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
       - run: npm run lint
@@ -22,10 +28,10 @@ jobs:
     name: Typecheck
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
       - run: npm run typecheck
@@ -34,10 +40,10 @@ jobs:
     name: Test
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
       # A trial (CI plan Wave 2 [A]), on this job only because it is the critical
       # path: the installed tree, keyed on the exact lockfile. An exact hit skips
@@ -49,7 +55,7 @@ jobs:
       # per OS and arch; they are N-API, so the Node version is not part of it.
       - name: Restore node_modules
         id: node-modules
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: node_modules
           key: ${{ runner.os }}-node_modules-${{ hashFiles('package-lock.json') }}
@@ -63,6 +69,9 @@ jobs:
       # gate. The coverage is istanbul's function counts, in coverage/, for the
       # press audit that follows.
       - run: npm run test:coverage
+      # No silent skips (M4): a skipped, todo or `.only`-shadowed test is red,
+      # read from the JSON report test:coverage writes beside the coverage.
+      - run: node scripts/no-skipped-tests.mjs
       # Every press is run by a test (build 13: "Ensure auditing of all
       # functionality that buttons and items work as we have configured"): each
       # onPress resolved to the function it runs, and that function's count read
@@ -78,12 +87,12 @@ jobs:
     env:
       DOCS_BASE: origin/${{ github.base_ref || 'main' }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
       # A code change without the doc docs/docs-map.json maps it to, a commit
@@ -130,8 +139,8 @@ jobs:
       # Expo 57 resolves remain a documented SDK migration rather than a forced
       # major upgrade inside Round 6.
       - run: npm run audit:dependencies
-      # Regenerates from the sibling backend checkout when it is available. The
-      # committed declarations still compile in this standalone public checkout.
+      # No backend checkout here: reads the committed, hash-checked copy
+      # (lib/generated/snoopy-backend/, SHA256SUMS) and never skips (M1).
       - run: npm run verify:platform-contracts
       - name: No salvaged client data
         run: |
@@ -157,10 +166,10 @@ jobs:
     name: Native bundle export
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
       - run: npm run export:ios
@@ -179,10 +188,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22
+          node-version-file: .nvmrc
       - run: node scripts/verify-deployed-contracts.mjs
 
   # The one check a merge and a release read. Green only when EVERY job above
@@ -195,6 +204,10 @@ jobs:
     needs: [lint, typecheck, test, gates, export, contract-deployed]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    # issues: write for the nightly's report below, nothing else.
+    permissions:
+      contents: read
+      issues: write
     steps:
       - name: Every job succeeded
         env:
@@ -207,3 +220,17 @@ jobs:
             exit 1
           fi
           echo "all-green: every job succeeded"
+      # A red nightly leaves an open "Nightly red" issue (one, commented on
+      # each further red night), not only GitHub's email (NIGHT-9).
+      - name: A red nightly reports itself
+        if: failure() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          n=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search 'in:title "Nightly red"' --json number --jq '.[0].number')
+          if [ -n "$n" ]; then
+            gh issue comment "$n" --repo "$GITHUB_REPOSITORY" --body "$RUN"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title 'Nightly red' --body "$RUN"
+          fi

@@ -16,7 +16,7 @@
  */
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -27,14 +27,48 @@ import { fileURLToPath } from "node:url";
 import { parseYaml } from "@redocly/openapi-core";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-// SNOOPY_BACKEND_ROOT points at another checkout of the platform — a worktree
-// at the deployed commit, say — and scripts/verify-platform-contracts.mjs reads
-// the same variable, resolved from the repository root as here, so both agree.
-// Empty means unset: the sibling checkout, as `snoopy` does.
-export const backendRoot = resolve(
-  root,
-  process.env.SNOOPY_BACKEND_ROOT || "../snoopy-backend",
-);
+
+/**
+ * The backend's six inputs, committed here as a hash-checked COPY (the owner's
+ * choice 2026-11-01, M1): `lib/generated/snoopy-backend/<the backend's own
+ * paths>` plus `SHA256SUMS`, so the public CI checks the contract with no key
+ * and no backend checkout, and nothing skips. The generator writes the copy
+ * whenever it reads a real backend; scripts/verify-platform-contracts.mjs
+ * checks it against SHA256SUMS and the generated headers.
+ */
+export const copyRoot = join(root, "lib/generated/snoopy-backend");
+export const COPY_SUMS = "SHA256SUMS";
+/** Files, and folders whose `*.json` are copied, by their backend paths. */
+export const COPY_FILES = [
+  "docs/openapi.yaml",
+  "docs/openapi/automations.yaml",
+  "docs/openapi/connections.yaml",
+  "docs/repo-facts.schema.json",
+];
+export const COPY_FOLDERS = ["packages/contracts/fixtures/blocks", "packages/contracts/fixtures/block-rules"];
+
+/**
+ * Where the contract is read from: SNOOPY_BACKEND_ROOT (another checkout, a
+ * worktree at the deployed commit, or an extracted commit), resolved from the
+ * repository root; else the sibling `../snoopy-backend` when it is there; else
+ * the committed copy. Empty means unset. A named root that is absent is an
+ * error, never a fall back to something else.
+ */
+export function resolveBackend({ env = process.env, exists = existsSync } = {}) {
+  if (env.SNOOPY_BACKEND_ROOT) {
+    const named = resolve(root, env.SNOOPY_BACKEND_ROOT);
+    if (!exists(named)) {
+      throw new Error(`SNOOPY_BACKEND_ROOT names ${named}, which does not exist`);
+    }
+    return { backendRoot: named, from: named === copyRoot ? "copy" : "SNOOPY_BACKEND_ROOT" };
+  }
+  const sibling = resolve(root, "../snoopy-backend");
+  if (exists(sibling)) return { backendRoot: sibling, from: "sibling" };
+  if (exists(copyRoot)) return { backendRoot: copyRoot, from: "copy" };
+  throw new Error(`no contract to read: no SNOOPY_BACKEND_ROOT, no ${sibling} and no committed copy at ${copyRoot}`);
+}
+
+export const { backendRoot, from: backendFrom } = resolveBackend();
 const generator = join(root, "node_modules/.bin/openapi-typescript");
 
 export const contracts = [
@@ -57,6 +91,64 @@ export const HEADER = /^\/\/ From snoopy-backend (\S+), sha256 ([0-9a-f]{64})\.$
 
 export function sha256(path) {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
+}
+
+/** The copied paths under `base`, sorted: the four files and each folder's `*.json`. */
+export function copyPaths(base) {
+  const paths = [...COPY_FILES];
+  for (const folder of COPY_FOLDERS) {
+    const at = join(base, folder);
+    if (!existsSync(at)) throw new Error(`Required backend folder is unavailable: ${at}`);
+    for (const name of readdirSync(at).filter((each) => each.endsWith(".json"))) paths.push(`${folder}/${name}`);
+  }
+  for (const path of paths) {
+    if (!existsSync(join(base, path))) throw new Error(`Required backend file is unavailable: ${join(base, path)}`);
+  }
+  return paths.sort();
+}
+
+/** `shasum -a 256` lines for the copied paths under `base`. */
+export function copySums(base) {
+  return copyPaths(base)
+    .map((path) => `${sha256(join(base, path))}  ${path}\n`)
+    .join("");
+}
+
+/**
+ * What is wrong with the copy at `dir`, empty when nothing: SHA256SUMS must name
+ * exactly the copied files, each at its hash.
+ */
+export function checkCopy(dir = copyRoot) {
+  const sumsPath = join(dir, COPY_SUMS);
+  if (!existsSync(sumsPath)) return [`${sumsPath} is missing`];
+  let actual;
+  try {
+    actual = copySums(dir);
+  } catch (error) {
+    return [error.message];
+  }
+  const want = readFileSync(sumsPath, "utf8");
+  if (actual === want) return [];
+  const listed = new Map(want.split("\n").filter(Boolean).map((line) => line.split(/ {2}/u).reverse()));
+  const found = new Map(actual.split("\n").filter(Boolean).map((line) => line.split(/ {2}/u).reverse()));
+  const problems = [];
+  for (const [path, hash] of found) {
+    if (!listed.has(path)) problems.push(`${path} is in the copy but not in ${COPY_SUMS}`);
+    else if (listed.get(path) !== hash) problems.push(`${path} is sha256 ${hash}, ${COPY_SUMS} says ${listed.get(path)}`);
+  }
+  for (const path of listed.keys()) if (!found.has(path)) problems.push(`${path} is in ${COPY_SUMS} but not in the copy`);
+  return problems.length > 0 ? problems : [`${COPY_SUMS} is not in the generator's form; regenerate`];
+}
+
+/** Replaces the copy with the six inputs from `from` and writes SHA256SUMS. */
+function writeCopy(from) {
+  const paths = copyPaths(from);
+  rmSync(copyRoot, { recursive: true, force: true });
+  for (const path of paths) {
+    mkdirSync(dirname(join(copyRoot, path)), { recursive: true });
+    copyFileSync(join(from, path), join(copyRoot, path));
+  }
+  writeFileSync(join(copyRoot, COPY_SUMS), copySums(copyRoot));
 }
 
 /**
@@ -250,6 +342,15 @@ if (resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) {
       "openapi-typescript is not installed; run npm install before generating contracts",
     );
   }
+  // From a real backend, the copy is rewritten first; from the copy, it must
+  // pass its own SHA256SUMS before anything is generated from it.
+  if (backendFrom === "copy") {
+    const problems = checkCopy();
+    if (problems.length > 0) throw new Error(`The committed contract copy is not intact: ${problems.join("; ")}`);
+  } else {
+    writeCopy(backendRoot);
+  }
+  console.log(`Contract read from ${backendFrom}: ${relative(root, backendRoot) || "."}`);
 
   for (const { input, output } of contracts) {
     if (!existsSync(input)) {
