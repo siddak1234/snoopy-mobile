@@ -1,20 +1,27 @@
 name: CI
 
+# Pull requests and pushes to main; and nightly on main through
+# .github/workflows/nightly.yml, which calls this whole workflow
+# (`workflow_call`), so a schedule GitHub disables for inactivity never stops
+# this one, the merge gate.
 on:
   pull_request:
   push:
     branches: [main]
-  # Nightly on main (the owner's go 2026-11-01, NIGHT-7): the same jobs on an
-  # unchanged main, so a moved runner image, registry or contract shows the
-  # morning after, not at the next PR. A release reads only the push run's
-  # all-green (scripts/all-green-on-head.mjs), so this run never counts there.
-  schedule:
-    - cron: '32 9 * * *'
+  workflow_call:
 
+# Every job reads the repository and nothing else.
+permissions:
+  contents: read
+
+# Each job's timeout-minutes: about twice its slowest of 15 runs (2026-10-24 to
+# 11-02, `gh run view --json jobs`: lint 98 s, typecheck 68 s, test 403 s,
+# gates 76 s, export 162 s), rounded up to a minute, 5 at least.
 jobs:
   lint:
     name: Lint
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -27,6 +34,7 @@ jobs:
   typecheck:
     name: Typecheck
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -39,6 +47,7 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-24.04
+    timeout-minutes: 14
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -81,6 +90,7 @@ jobs:
   gates:
     name: Architecture gates
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
     # The docs checks read the PR's whole range against its base, so the
     # checkout keeps every commit and the base is named (the backend's
     # engineering standard, section (e)).
@@ -165,6 +175,7 @@ jobs:
   export:
     name: Native bundle export
     runs-on: ubuntu-24.04
+    timeout-minutes: 6
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -204,10 +215,6 @@ jobs:
     needs: [lint, typecheck, test, gates, export, contract-deployed]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
-    # issues: write for the nightly's report below, nothing else.
-    permissions:
-      contents: read
-      issues: write
     steps:
       - name: Every job succeeded
         env:
@@ -220,17 +227,3 @@ jobs:
             exit 1
           fi
           echo "all-green: every job succeeded"
-      # A red nightly leaves an open "Nightly red" issue (one, commented on
-      # each further red night), not only GitHub's email (NIGHT-9).
-      - name: A red nightly reports itself
-        if: failure() && github.event_name == 'schedule'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          n=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search 'in:title "Nightly red"' --json number --jq '.[0].number')
-          if [ -n "$n" ]; then
-            gh issue comment "$n" --repo "$GITHUB_REPOSITORY" --body "$RUN"
-          else
-            gh issue create --repo "$GITHUB_REPOSITORY" --title 'Nightly red' --body "$RUN"
-          fi

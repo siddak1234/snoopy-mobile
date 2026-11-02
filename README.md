@@ -171,9 +171,14 @@ hand with each Node 22.x security release. `.github/dependabot.yml`
 opens one grouped pull request a week for the actions, and none for npm (the
 app's dependency bumps are each a round of their own, §12.1 #278) (the
 kit's `check-docs` lets a Dependabot commit that touches only those files
-through). CI also runs nightly on main (`schedule`, 09:32 UTC); a red nightly
-opens, or comments on, one open "Nightly red" issue from the `all-green` job
-(`issues: write` on that job only).
+through). Every job has a `timeout-minutes`, sized in ci.yml from measured runs;
+ci.yml's jobs hold `contents: read` only. CI also runs nightly on main:
+`.github/workflows/nightly.yml` (`schedule`, 09:32 UTC) calls ci.yml whole
+(`workflow_call`), so GitHub's disabling of a scheduled workflow after 60 days
+without activity stops only the nightly, never the merge gate (`gh workflow
+enable nightly.yml` resumes it); a red nightly opens, or comments on, one open
+"Nightly red" issue from nightly.yml's own `report` job, the one job with
+`issues: write`.
 `contract-deployed` (`scripts/verify-deployed-contracts.mjs`) compares each
 generated file's sha256 header with the hash the live
 `https://api.autom8x.ai/health/live` reports for its document and fails closed
@@ -192,8 +197,8 @@ refuses it.
 `npm run release:ios` (`scripts/release-ios.sh`; `--dry-run` rehearses the
 refusals) builds and submits only `origin/main`, clean, with the `all-green`
 of ci.yml's push run on HEAD concluded success — read in that run's check
-suite (`scripts/all-green-on-head.mjs`), so the nightly's own all-green on the
-same commit is never counted — and the live AASA naming the app, and only a
+suite (`scripts/all-green-on-head.mjs`), so the nightly's own `CI / all-green`
+on the same commit is never counted — and the live AASA naming the app, and only a
 build whose `gitCommitHash` is HEAD with the release's entitlements; `eas.json`
 `cli.requireCommit` refuses an uncommitted tree. eas-cli is no dependency of
 the app (Expo's version policy discourages one): its one exact version is

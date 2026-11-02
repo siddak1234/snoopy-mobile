@@ -41,20 +41,23 @@ describe("the release gate's all-green: the push run's only", () => {
   const PUSH_SUITE = 111;
   const NIGHT_SUITE = 222;
   const pushRuns = { workflow_runs: [{ event: 'push', check_suite_id: PUSH_SUITE }] };
-  const check = (suite, conclusion, appId = APP) => ({
-    name: 'all-green',
+  const check = (suite, conclusion, appId = APP, name = 'all-green') => ({
+    name,
     status: 'completed',
     conclusion,
     html_url: `https://github.com/x/runs/${suite}`,
     app: { id: appId },
     check_suite: { id: suite },
   });
+  // nightly.yml calls ci.yml from its job named CI, so the nightly's check is
+  // `CI / all-green`, in the nightly run's own suite.
+  const nightly = (conclusion) => check(NIGHT_SUITE, conclusion, APP, 'CI / all-green');
   const pick = (input) => evaluate('scripts/all-green-on-head.mjs', `m.pickAllGreen(${JSON.stringify(input)})`);
 
-  it('keeps the push suite\'s all-green when the nightly added a second one on the same commit', () => {
+  it('keeps the push suite\'s all-green when the nightly\'s CI / all-green is on the same commit', () => {
     const verdict = pick({
       pushRuns,
-      checkRuns: { check_runs: [check(NIGHT_SUITE, 'success'), check(PUSH_SUITE, 'success')] },
+      checkRuns: { check_runs: [nightly('success'), check(PUSH_SUITE, 'success')] },
       appId: APP,
     });
     expect(verdict.ok).toBe(true);
@@ -64,14 +67,21 @@ describe("the release gate's all-green: the push run's only", () => {
   it('refuses a red push run, however green the nightly is', () => {
     const verdict = pick({
       pushRuns,
-      checkRuns: { check_runs: [check(NIGHT_SUITE, 'success'), check(PUSH_SUITE, 'failure')] },
+      checkRuns: { check_runs: [nightly('success'), check(PUSH_SUITE, 'failure')] },
       appId: APP,
     });
     expect(verdict).toEqual({ ok: false, reason: expect.stringContaining('completed/failure') });
   });
 
-  it('refuses when the push suite has no all-green (the nightly\'s alone is not enough)', () => {
-    const verdict = pick({ pushRuns, checkRuns: { check_runs: [check(NIGHT_SUITE, 'success')] }, appId: APP });
+  it('refuses when the push suite has no all-green (the nightly\'s, or another suite\'s, is not enough)', () => {
+    for (const other of [nightly('success'), check(NIGHT_SUITE, 'success')]) {
+      const verdict = pick({ pushRuns, checkRuns: { check_runs: [other] }, appId: APP });
+      expect(verdict).toEqual({ ok: false, reason: expect.stringContaining('found 0') });
+    }
+  });
+
+  it('takes no check named otherwise, even in the push suite', () => {
+    const verdict = pick({ pushRuns, checkRuns: { check_runs: [check(PUSH_SUITE, 'success', APP, 'CI / all-green')] }, appId: APP });
     expect(verdict).toEqual({ ok: false, reason: expect.stringContaining('found 0') });
   });
 
@@ -87,6 +97,7 @@ describe("the release gate's all-green: the push run's only", () => {
   it('is what release-ios.sh runs, in place of counting every all-green on HEAD', () => {
     const script = readFileSync(join(root, 'scripts/release-ios.sh'), 'utf8');
     expect(script).toContain('actions/workflows/ci.yml/runs?head_sha=$HEAD_SHA&event=push');
+    expect(script).toContain('check-runs?check_name=all-green&');
     expect(script).toContain('node scripts/all-green-on-head.mjs "$WORK/push-runs.json" "$WORK/check-runs.json" "$GITHUB_ACTIONS_APP_ID"');
     expect(script).not.toContain('grep -c .');
   });
@@ -159,25 +170,30 @@ describe("eas-cli is eas.json's one exact cli.version, run with npx (Expo's vers
   });
 });
 
-describe('the nightly (NIGHT-7) reports a red night (NIGHT-9)', () => {
+describe('the nightly (NIGHT-7) is its own workflow calling ci.yml, and reports a red night (NIGHT-9)', () => {
   const ci = readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8');
+  const nightly = readFileSync(join(root, '.github/workflows/nightly.yml'), 'utf8');
+  const report = nightly.slice(nightly.indexOf('\n  report:\n'));
 
-  it('runs on a nightly schedule on main', () => {
-    expect(ci).toMatch(/^  schedule:\n    - cron: '\d+ \d+ \* \* \*'$/m);
+  it('schedules nightly.yml alone, which calls the whole of ci.yml from its job named CI', () => {
+    expect(nightly).toMatch(/^on:\n {2}schedule:\n {4}- cron: '\d+ \d+ \* \* \*'\n\n/mu);
+    expect(nightly).toContain('\n  ci:\n    name: CI\n    uses: ./.github/workflows/ci.yml\n');
+    expect(ci).toMatch(/^on:\n {2}pull_request:\n {2}push:\n {4}branches: \[main\]\n {2}workflow_call:\n\n/mu);
+    expect(ci).not.toMatch(/^\s+schedule:/mu);
   });
 
-  it('has all-green open or comment on a "Nightly red" issue only when a scheduled run fails', () => {
-    expect(ci).toContain(
-      "      - name: A red nightly reports itself\n        if: failure() && github.event_name == 'schedule'\n",
-    );
-    expect(ci).toContain("gh issue create --repo \"$GITHUB_REPOSITORY\" --title 'Nightly red'");
+  it('opens or comments on a "Nightly red" issue from its own job, only when the called CI failed', () => {
+    expect(report).toContain('\n    needs: [ci]\n    if: failure()\n');
+    expect(report).toContain("gh issue create --repo \"$GITHUB_REPOSITORY\" --title 'Nightly red'");
+    expect(ci).not.toContain('Nightly red');
   });
 
-  it('grants issues: write to all-green alone', () => {
-    const writes = ci.split('\n').filter((line) => /^\s+issues: write$/.test(line));
+  it("grants issues: write to that job alone, and ci.yml's jobs contents: read only", () => {
+    const writes = workflows.flatMap(([, text]) => text.split('\n').filter((line) => /^\s+issues: write$/u.test(line)));
     expect(writes).toHaveLength(1);
-    const job = ci.slice(ci.indexOf('\n  all-green:\n'));
-    expect(job.slice(0, job.indexOf('    steps:'))).toContain('      issues: write\n');
+    expect(report.slice(0, report.indexOf('    steps:'))).toContain('    permissions:\n      contents: read\n      issues: write\n');
+    expect(ci).toMatch(/^permissions:\n {2}contents: read\n\n/mu);
+    expect(ci.match(/^\s*permissions:/gmu)).toHaveLength(1);
   });
 });
 
@@ -198,6 +214,19 @@ describe("the .github configuration's own rules (the website's structure-contrac
       return /node-version: /u.test(text) || fromNvmrc.length !== setups.length;
     });
     expect(wrong.map(([file]) => file)).toEqual([]);
+  });
+
+  it('sets timeout-minutes on every job that runs on a runner (a job calling a workflow cannot)', () => {
+    const jobs = workflows.flatMap(([file, text]) =>
+      text
+        .slice(text.indexOf('\njobs:\n'))
+        .split(/\n(?= {2}[\w-]+:\n)/u)
+        .slice(1)
+        .filter((job) => !/\n {4}uses: /u.test(job))
+        .map((job) => [`${file}: ${job.trim().split(':')[0]}`, /\n {4}timeout-minutes: \d+\n/u.test(job)]),
+    );
+    expect(jobs.length).toBeGreaterThanOrEqual(8);
+    expect(jobs.filter(([, timed]) => !timed).map(([job]) => job)).toEqual([]);
   });
 
   it('has Dependabot update the actions alone, weekly: no npm version updates (§12.1 #278)', () => {

@@ -80,8 +80,9 @@ HEAD_SHA=$(git rev-parse HEAD); MAIN_SHA=$(git rev-parse origin/main)
 
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner) || refuse "cannot resolve the GitHub repository"
 # Only the all-green in the check suite of ci.yml's push run for HEAD: the
-# nightly (ci.yml schedule) adds its own all-green on an unchanged main, and that
-# one is never a release's verdict (scripts/all-green-on-head.mjs).
+# nightly (nightly.yml, calling ci.yml) adds its own, `CI / all-green`, on an
+# unchanged main, and that one is never a release's verdict
+# (scripts/all-green-on-head.mjs).
 gh api "repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$HEAD_SHA&event=push&per_page=100" > "$WORK/push-runs.json" \
   || refuse "cannot read ci.yml's push runs on $HEAD_SHA"
 gh api "repos/$REPO/commits/$HEAD_SHA/check-runs?check_name=all-green&per_page=100" > "$WORK/check-runs.json" \

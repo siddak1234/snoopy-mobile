@@ -1,12 +1,14 @@
 /**
  * The release gate's all-green: the one from ci.yml's PUSH run on HEAD.
  *
- * Since the nightly (ci.yml `schedule`, NIGHT-7) an unchanged main can carry a
- * second all-green check run, in the schedule run's own check suite, on the
- * same commit. Counting every all-green on HEAD would then refuse every
- * release from that commit, or pass on the nightly's verdict. This keeps only
- * the all-green in the check suite of ci.yml's newest push run for HEAD, as
- * snoopy-backend's scripts/release.mjs does, and refuses anything else.
+ * The nightly (nightly.yml, NIGHT-7) calls ci.yml, so an unchanged main can
+ * carry a second all-green check run on the same commit: `CI / all-green` (a
+ * called workflow's checks are named `<caller job> / <job>`), in the nightly
+ * run's own check suite. Counting every all-green on HEAD would then refuse
+ * every release from that commit, or pass on the nightly's verdict. This keeps
+ * only the check named all-green in the check suite of ci.yml's newest push
+ * run for HEAD, as snoopy-backend's scripts/release.mjs does, and refuses
+ * anything else.
  *
  * scripts/release-ios.sh saves the two `gh api` answers and runs:
  *   node scripts/all-green-on-head.mjs <push-runs.json> <check-runs.json> <app id>
