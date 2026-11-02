@@ -49,6 +49,8 @@ type Open = 'webhook' | 'archive' | null;
  *
  * Every action acts on the workspace the screen loaded (`shownWorkspaceId`).
  * `statusRow` is the screen's own Go live / Pause row, placed first.
+ * `subscription` is the flow page's own read of the flow (`readSubscription`,
+ * §12.1 #319 step 2), never a list row: its `setup` is the version it pins.
  */
 export function AutomationActions({
   name,

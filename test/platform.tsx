@@ -1,4 +1,5 @@
 import type { SessionContextValue } from '@/hooks/use-session';
+import { PlatformError } from '@/lib/platform/problem';
 import type { Answer } from '@/test/fake-platform';
 import {
   activityToday,
@@ -38,6 +39,7 @@ type Catalog = Answer<'GET /v1/workspaces/{workspaceId}/automations'>;
 type CatalogEntry = Catalog['automations'][number];
 type Subscriptions = Answer<'GET /v1/workspaces/{workspaceId}/subscriptions'>;
 type OneSubscription = Answer<'PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}'>;
+type ReadSubscription = Answer<'GET /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}'>;
 
 /** The design's step kickers as the published step declares them: a BRANCH is an AI step. */
 function publishedKicker(design: string): CatalogEntry['pipeline'][number]['kicker'] {
@@ -631,11 +633,17 @@ type Billing = Answer<'GET /v1/workspaces/{workspaceId}/billing'>;
  * below it). The one exception is `/subscriptions`, which also answers one
  * subscription's create and PATCH, so its body may carry the `subscription`
  * those answer. A workspace's billing and connections are named by their path.
+ *
+ * One flow's own read (`readSubscription`, GET on the PATCH's path, §12.1 #319)
+ * answers that flow's row from the list given (or the default list), and 404
+ * for an id the list does not hold; `'GET /subscriptions/{subscriptionId}'`
+ * answers it instead, for a test whose single read differs from its list row.
  */
 export type RouteOverrides = {
   '/v1/workspaces'?: Answer<'GET /v1/workspaces'>;
   '/automations'?: Catalog;
   '/subscriptions'?: Subscriptions & Partial<OneSubscription>;
+  'GET /subscriptions/{subscriptionId}'?: (subscriptionId: string) => ReadSubscription;
   '/projects'?: Answer<'GET /v1/workspaces/{workspaceId}/projects'>;
   '/approvals'?: Answer<'GET /v1/workspaces/{workspaceId}/approvals'>;
   '/decision'?: Answer<'POST /v1/workspaces/{workspaceId}/approvals/{approvalId}/decision'>;
@@ -658,6 +666,50 @@ export function unpublishedAnswer<T>(answer: object): T {
 }
 
 /**
+ * The method an operation sends, read by running it against clients that only
+ * record (and never answer): one flow's path is both its read (GET) and its
+ * change (PATCH), and the path alone cannot tell them apart.
+ */
+export function methodOf(execute: unknown): string | undefined {
+  if (typeof execute !== 'function') return undefined;
+  let method: string | undefined;
+  const verb = (name: string) => () => {
+    method = name;
+    return new Promise(() => undefined);
+  };
+  const client = { GET: verb('GET'), POST: verb('POST'), PUT: verb('PUT'), PATCH: verb('PATCH'), DELETE: verb('DELETE') };
+  try {
+    void execute({ platform: client, automations: client, connections: client }, new AbortController().signal);
+  } catch {
+    // An operation that throws before it sends has no method to read.
+  }
+  return method;
+}
+
+/**
+ * One flow's own read, answered from the lists as the test routes them now —
+ * through the mock's CURRENT implementation, so a test that answers the list
+ * its own way (a wrapper around this router) answers the single read the same
+ * way, and without a recorded call: the live list, then the archived one; 404
+ * when neither holds the id.
+ */
+async function rowFromLists(platformOperation: jest.Mock, listPath: string, id: string) {
+  const current = platformOperation.getMockImplementation()!;
+  const list =
+    (key: string) =>
+    ({ automations }: { automations: { GET: (...args: unknown[]) => unknown } }) =>
+      automations.GET('/v1/workspaces/{workspaceId}/subscriptions', {
+        params: { path: { workspaceId: key.split('/')[3] }, ...(key.includes('?') ? { query: { status: 'archived' } } : {}) },
+      });
+  for (const key of [listPath, `${listPath}?status=archived`]) {
+    const answer = (await Promise.resolve(current(key, list(key))).catch(() => null)) as Subscriptions | null;
+    const row = answer?.subscriptions?.find((each) => each.id === id);
+    if (row) return { subscription: row } satisfies ReadSubscription;
+  }
+  throw new PlatformError('Subscription not found', 404);
+}
+
+/**
  * Route a mocked `platformOperation` by path.
  *
  * Screens make several reads in parallel, so answering every path with one body
@@ -667,9 +719,17 @@ export function unpublishedAnswer<T>(answer: object): T {
  * with an invented `{}`.
  */
 export function routePlatform(platformOperation: jest.Mock, overrides: RouteOverrides = {}) {
-  platformOperation.mockImplementation((path: string) => {
+  platformOperation.mockImplementation((path: string, execute: unknown) => {
     const bare = path.split('?')[0]!;
+    const single = /^\/v1\/workspaces\/[^/]+\/subscriptions\/([^/]+)$/.exec(bare);
+    if (single && methodOf(execute) === 'GET') {
+      const id = single[1]!;
+      const read = overrides['GET /subscriptions/{subscriptionId}'];
+      if (read) return Promise.resolve(read(id));
+      return rowFromLists(platformOperation, bare.slice(0, bare.lastIndexOf('/')), id);
+    }
     for (const [fragment, body] of Object.entries(overrides)) {
+      if (fragment.startsWith('GET ')) continue;
       const one = fragment === '/subscriptions' && /\/subscriptions\/[^/]+$/.test(bare);
       if (bare.endsWith(fragment) || one) {
         if (typeof body === 'function') return Promise.resolve(body(path));

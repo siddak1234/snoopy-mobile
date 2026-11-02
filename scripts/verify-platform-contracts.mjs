@@ -13,19 +13,27 @@
  * fields (`block-required.ts`, round 21) are read from automations.yaml, so its
  * header's hash is that document's, then the regeneration.
  *
- * Skips, with exit 0, when the backend checkout (`SNOOPY_BACKEND_ROOT`, default
- * `../snoopy-backend`) is absent, matching `snoopy`: the private repo is not
- * available to every checkout, and an unavailable contract is not a failing one.
- * The skip is RECORDED beside the facts file, so `scripts/repo-facts.mjs` emits
- * no facts claiming gate `verify` for a run whose contract check did not run.
+ * It never skips (M1). The contract is read from SNOOPY_BACKEND_ROOT, else the
+ * sibling `../snoopy-backend` when present, else the committed copy at
+ * `lib/generated/snoopy-backend/` (scripts/generate-platform-contracts.mjs
+ * resolveBackend), and the copy is checked first, every run: SHA256SUMS names
+ * exactly its files at their hashes. From a real backend, the regeneration
+ * below rewrites the copy too, so a copy that is not that backend's bytes is
+ * stale and fails. No contract anywhere, or a named root that is absent, fails.
  */
 import { execFileSync } from "node:child_process";
+import { Buffer } from "node:buffer";
 import { existsSync, readFileSync } from "node:fs";
-import { relative, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 
 import {
+  COPY_SUMS,
   HEADER,
+  backendFrom,
   backendRoot,
+  checkCopy,
+  copyPaths,
+  copyRoot,
   blockFixtures,
   blockRequired,
   blockRules,
@@ -38,11 +46,14 @@ import { recordContractCheck } from "./repo-facts.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 
-if (!existsSync(backendRoot)) {
-  const reason = `snoopy-backend is not checked out at ${backendRoot} (SNOOPY_BACKEND_ROOT, default ../snoopy-backend); skipping contract verification.`;
-  recordContractCheck({ skipped: true, reason });
-  console.log(`${reason} The skip is recorded; no facts will be emitted for this run.`);
-  process.exit(0);
+console.log(`Contract read from ${backendFrom}: ${relative(root, backendRoot) || "."}`);
+
+// The copy, whatever the contract is read from: a hand edit fails here.
+const copyProblems = checkCopy();
+if (copyProblems.length > 0) {
+  throw new Error(
+    `The committed contract copy (${relative(root, copyRoot)}) is not intact: ${copyProblems.join("; ")}; run npm run generate:platform-contracts and commit the output`,
+  );
 }
 
 for (const { output } of [...contracts, blockFixtures, blockRules, blockRequired]) {
@@ -91,15 +102,23 @@ for (const [{ input, output }, read, what] of [
   }
 }
 
-const outputs = [...contracts.map(({ output }) => output), blockFixtures.output, blockRules.output, blockRequired.output];
+// The regeneration also rewrites the copy from a real backend, so the copy's
+// files and SHA256SUMS are compared as well, by name and by bytes.
+const copied = () => [...copyPaths(copyRoot), COPY_SUMS].map((path) => join(copyRoot, path));
+const copiedBefore = copied();
+const outputs = [...contracts.map(({ output }) => output), blockFixtures.output, blockRules.output, blockRequired.output, ...copiedBefore];
 const before = outputs.map((output) => readFileSync(output));
 execFileSync(process.execPath, ["scripts/generate-platform-contracts.mjs"], {
   cwd: root,
   stdio: "inherit",
 });
-const after = outputs.map((output) => readFileSync(output));
+const after = outputs.map((output) => (existsSync(output) ? readFileSync(output) : Buffer.alloc(0)));
+const copiedAfter = copied();
 
-if (before.some((content, index) => !content.equals(after[index]))) {
+if (
+  before.some((content, index) => !content.equals(after[index])) ||
+  copiedAfter.join("\n") !== copiedBefore.join("\n")
+) {
   throw new Error(
     "Generated platform types were stale; commit the output from npm run generate:platform-contracts",
   );

@@ -1,0 +1,63 @@
+{
+  "name": "ranked-runs-searchable",
+  "about": "An item's runs list, with its search box",
+  "blockSetVersion": 4,
+  "blocks": [
+    {
+      "type": "list",
+      "searchable": true,
+      "items": [
+        {
+          "lead": "1",
+          "title": "Dana Whitfield",
+          "value": "88",
+          "valueLabel": "Score",
+          "open": {
+            "target": "run",
+            "runId": "r1"
+          }
+        },
+        {
+          "lead": "2",
+          "title": "Omar Reyes",
+          "value": "41",
+          "valueLabel": "Score",
+          "open": {
+            "target": "run",
+            "runId": "r2"
+          }
+        },
+        {
+          "lead": "3",
+          "title": "Reading…",
+          "open": {
+            "target": "run",
+            "runId": "r3"
+          }
+        },
+        {
+          "lead": "4",
+          "title": "Failed",
+          "muted": true,
+          "open": {
+            "target": "run",
+            "runId": "r4"
+          }
+        }
+      ],
+      "empty": "No candidates yet."
+    }
+  ],
+  "text": [
+    "1",
+    "Dana Whitfield",
+    "88",
+    "2",
+    "Omar Reyes",
+    "41",
+    "3",
+    "Reading…",
+    "4",
+    "Failed"
+  ]
+}

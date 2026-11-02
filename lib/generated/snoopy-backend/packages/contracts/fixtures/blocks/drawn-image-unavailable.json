@@ -1,0 +1,15 @@
+{
+  "name": "drawn-image-unavailable",
+  "about": "A picture naming another job's file: the muted line that says so",
+  "blockSetVersion": 4,
+  "blocks": [
+    {
+      "type": "text",
+      "text": "This file isn't available.",
+      "style": "muted"
+    }
+  ],
+  "text": [
+    "This file isn't available."
+  ]
+}

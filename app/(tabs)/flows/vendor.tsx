@@ -16,10 +16,9 @@ import { busyBody, useWorkspaceResource } from '@/hooks/use-resource';
 import { roleIn, useSession, workspaceIfShown } from '@/hooks/use-session';
 import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
 import { VENDOR_SAVE_FAILED, VENDOR_TITLE, errorTitleFor, vendorFor } from '@/lib/content/screen-states';
-import { updateSubscription } from '@/lib/platform/automations';
+import { readSubscription, updateSubscription } from '@/lib/platform/automations';
 import { readCatalog, readConnectionProviders, readConnections } from '@/lib/platform/catalog';
 import { PlatformError, PlatformNotConfiguredError } from '@/lib/platform/problem';
-import { readSubscriptions } from '@/lib/platform/runs';
 import { administers } from '@/lib/view/roles';
 
 /**
@@ -60,13 +59,15 @@ export default function ConnectVendorScreen() {
   const resource = useWorkspaceResource(
     async (id) => {
       if (!flow) throw new PlatformNotConfiguredError();
-      const [subscriptions, catalog, providers, connections] = await Promise.all([
-        readSubscriptions(id),
+      // The flow by its own read (§12.1 #319 step 2): its setup is the version
+      // it pins, whatever the list carries. An archived one has no vendor to choose.
+      const [one, catalog, providers, connections] = await Promise.all([
+        readSubscription(id, flow),
         readCatalog(id),
         readConnectionProviders(),
         readConnections(id),
       ]);
-      const subscription = subscriptions.subscriptions.find((item) => item.id === flow);
+      const subscription = one.subscription.status === 'archived' ? undefined : one.subscription;
       return {
         subscription,
         entry: subscription ? catalog.automations.find((item) => item.templateId === subscription.templateId) : undefined,

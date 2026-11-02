@@ -1,0 +1,319 @@
+{
+  "name": "v7-held-denied",
+  "about": "v7 held and denied: the waiting invoice 'Not approved'",
+  "blockSetVersion": 4,
+  "blocks": [
+    {
+      "type": "text",
+      "text": "Denied",
+      "tone": "warning"
+    },
+    {
+      "type": "text",
+      "text": "Documents",
+      "style": "label"
+    },
+    {
+      "type": "section",
+      "title": "Invoice 1 of 2",
+      "subtitle": "Harbor Paper Co. · $102.60",
+      "badge": {
+        "text": "Recorded",
+        "tone": "success"
+      },
+      "blocks": [
+        {
+          "type": "table",
+          "columns": [
+            {
+              "muted": true
+            },
+            {
+              "align": "end"
+            }
+          ],
+          "rows": [
+            {
+              "cells": [
+                "Document type",
+                "Bill"
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Bill · Harbor Paper Co.",
+          "style": "strong"
+        },
+        {
+          "type": "text",
+          "text": "18 Dock St, Salem, OR",
+          "style": "muted"
+        },
+        {
+          "type": "text",
+          "text": "Oct 14, 2026 · 2:32 PM",
+          "style": "muted"
+        },
+        {
+          "type": "table",
+          "columns": [
+            {
+              "muted": true
+            },
+            {
+              "align": "end"
+            }
+          ],
+          "rows": [
+            {
+              "cells": [
+                "Invoice #",
+                "HP-101"
+              ]
+            },
+            {
+              "cells": [
+                "PO number",
+                "PO-771"
+              ]
+            }
+          ]
+        },
+        {
+          "type": "table",
+          "columns": [
+            {},
+            {
+              "align": "end"
+            }
+          ],
+          "rows": [
+            {
+              "cells": [
+                "Copy paper, case",
+                "$83.00"
+              ],
+              "note": "2 × $41.50"
+            },
+            {
+              "cells": [
+                "Delivery",
+                "$12.00"
+              ]
+            }
+          ],
+          "divided": true
+        },
+        {
+          "type": "table",
+          "columns": [
+            {
+              "muted": true
+            },
+            {
+              "align": "end"
+            }
+          ],
+          "rows": [
+            {
+              "cells": [
+                "Subtotal",
+                "$95.00"
+              ]
+            },
+            {
+              "cells": [
+                "Tax",
+                "$7.60"
+              ]
+            },
+            {
+              "cells": [
+                "Total",
+                "$102.60"
+              ],
+              "strong": true
+            },
+            {
+              "cells": [
+                "Paid",
+                "Card ending 4417"
+              ]
+            },
+            {
+              "cells": [
+                "Result",
+                "Recorded in QuickBooks: bill"
+              ]
+            },
+            {
+              "cells": [
+                "Category",
+                "Office supplies"
+              ]
+            }
+          ],
+          "divided": true
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "title": "Invoice 2 of 2",
+      "subtitle": "Harbor Paper Co. · $102.60",
+      "badge": {
+        "text": "Not approved",
+        "tone": "neutral"
+      },
+      "blocks": [
+        {
+          "type": "table",
+          "columns": [
+            {
+              "muted": true
+            },
+            {
+              "align": "end"
+            }
+          ],
+          "rows": [
+            {
+              "cells": [
+                "Document type",
+                "Bill"
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Bill · Harbor Paper Co.",
+          "style": "strong"
+        },
+        {
+          "type": "text",
+          "text": "18 Dock St, Salem, OR",
+          "style": "muted"
+        },
+        {
+          "type": "text",
+          "text": "Oct 14, 2026 · 2:32 PM",
+          "style": "muted"
+        },
+        {
+          "type": "table",
+          "columns": [
+            {
+              "muted": true
+            },
+            {
+              "align": "end"
+            }
+          ],
+          "rows": [
+            {
+              "cells": [
+                "Invoice #",
+                "HP-102"
+              ]
+            },
+            {
+              "cells": [
+                "PO number",
+                "PO-772"
+              ]
+            }
+          ]
+        },
+        {
+          "type": "table",
+          "columns": [
+            {},
+            {
+              "align": "end"
+            }
+          ],
+          "rows": [
+            {
+              "cells": [
+                "Copy paper, case",
+                "$83.00"
+              ],
+              "note": "2 × $41.50"
+            },
+            {
+              "cells": [
+                "Delivery",
+                "$12.00"
+              ]
+            }
+          ],
+          "divided": true
+        },
+        {
+          "type": "table",
+          "columns": [
+            {
+              "muted": true
+            },
+            {
+              "align": "end"
+            }
+          ],
+          "rows": [
+            {
+              "cells": [
+                "Subtotal",
+                "$95.00"
+              ]
+            },
+            {
+              "cells": [
+                "Tax",
+                "$7.60"
+              ]
+            },
+            {
+              "cells": [
+                "Total",
+                "$102.60"
+              ],
+              "strong": true
+            },
+            {
+              "cells": [
+                "Paid",
+                "Card ending 4417"
+              ]
+            },
+            {
+              "cells": [
+                "Result",
+                "Waiting for approval"
+              ]
+            },
+            {
+              "cells": [
+                "Category",
+                "Office supplies"
+              ]
+            }
+          ],
+          "divided": true
+        }
+      ]
+    }
+  ],
+  "text": [
+    "Denied",
+    "Documents",
+    "Invoice 1 of 2",
+    "Harbor Paper Co. · $102.60",
+    "Recorded",
+    "Invoice 2 of 2",
+    "Harbor Paper Co. · $102.60",
+    "Not approved"
+  ]
+}

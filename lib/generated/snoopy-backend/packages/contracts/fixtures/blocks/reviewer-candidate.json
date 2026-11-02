@@ -1,0 +1,70 @@
+{
+  "name": "reviewer-candidate",
+  "about": "A Resume Screening (candidate-reviewer v2) candidate, the group option off",
+  "blockSetVersion": 4,
+  "blocks": [
+    {
+      "type": "file",
+      "title": "View resume",
+      "open": {
+        "target": "run-file",
+        "runId": "0a0a0a0a-0a0a-4a0a-8a0a-0a0a0a0a0a0a",
+        "fileId": "0c0c0c0c-0c0c-4c0c-8c0c-0c0c0c0c0c0c"
+      },
+      "file": {
+        "id": "0c0c0c0c-0c0c-4c0c-8c0c-0c0c0c0c0c0c",
+        "filename": "dana-whitfield.pdf",
+        "contentType": "application/pdf",
+        "format": "PDF",
+        "sizeBytes": 48213,
+        "pages": 3
+      }
+    },
+    {
+      "type": "text",
+      "text": "Candidate details",
+      "style": "label"
+    },
+    {
+      "type": "section",
+      "title": "Experience",
+      "open": true,
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            {
+              "title": "Payroll Lead",
+              "subtitle": "Fernwood Foods · 2019–2025",
+              "text": "Ran payroll for 400 people."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "title": "Education",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            {
+              "title": "B.S. Accounting",
+              "url": "https://school.example.test/accounting"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "text": [
+    "View resume",
+    "Candidate details",
+    "Experience",
+    "Payroll Lead",
+    "Fernwood Foods · 2019–2025",
+    "Ran payroll for 400 people.",
+    "Education"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "name": "review-held-decided",
+  "about": "A saved review: '2 accepted · 1 denied', and no form (amendment 2)",
+  "blockSetVersion": 4,
+  "blocks": [
+    {
+      "type": "text",
+      "text": "2 accepted · 1 denied",
+      "tone": "warning"
+    }
+  ],
+  "text": [
+    "2 accepted · 1 denied"
+  ]
+}

@@ -54,7 +54,7 @@ export function signedInOnThisPhone(extra: Record<string, string> = {}) {
  * `answers` replaces any of them by operation key.
  */
 export function answerPlatform(
-  answers: Record<string, (path: string) => unknown> = {},
+  answers: Record<string, (path: string, execute: unknown) => unknown> = {},
   fixtures: RouteOverrides = {},
 ) {
   const calls: string[] = [];
@@ -64,7 +64,7 @@ export function answerPlatform(
   platformOperation.mockImplementation(async (path: string, execute: unknown) => {
     calls.push(path);
     const own = answers[path];
-    if (own) return own(path);
+    if (own) return own(path, execute);
     if (path === '/v1/session') {
       if (!kept.has('autom8x.access-token')) throw new PlatformError('Sign in is required.', 401, 'UNAUTHENTICATED');
       return SESSION;

@@ -1,0 +1,273 @@
+{
+  "name": "long-list",
+  "about": "A sent list of 30 rows sharing one value label: sort and pages",
+  "blockSetVersion": 4,
+  "blocks": [
+    {
+      "type": "list",
+      "items": [
+        {
+          "title": "Applicant 01",
+          "subtitle": "Harbor Paper Co.",
+          "value": "40",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 02",
+          "subtitle": "Cedar Office Supply",
+          "value": "77",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 03",
+          "subtitle": "Pine Street Print",
+          "value": "54",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 04",
+          "subtitle": "Lark Labels",
+          "value": "91",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 05",
+          "subtitle": "Juniper Freight",
+          "value": "68",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 06",
+          "subtitle": "Maple Desk Works",
+          "value": "45",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 07",
+          "subtitle": "Harbor Paper Co.",
+          "value": "82",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 08",
+          "subtitle": "Cedar Office Supply",
+          "value": "59",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 09",
+          "subtitle": "Pine Street Print",
+          "value": "96",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 10",
+          "subtitle": "Lark Labels",
+          "value": "73",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 11",
+          "subtitle": "Juniper Freight",
+          "value": "50",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 12",
+          "subtitle": "Maple Desk Works",
+          "value": "87",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 13",
+          "subtitle": "Harbor Paper Co.",
+          "value": "64",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 14",
+          "subtitle": "Cedar Office Supply",
+          "value": "41",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 15",
+          "subtitle": "Pine Street Print",
+          "value": "78",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 16",
+          "subtitle": "Lark Labels",
+          "value": "55",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 17",
+          "subtitle": "Juniper Freight",
+          "value": "92",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 18",
+          "subtitle": "Maple Desk Works",
+          "value": "69",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 19",
+          "subtitle": "Harbor Paper Co.",
+          "value": "46",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 20",
+          "subtitle": "Cedar Office Supply",
+          "value": "83",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 21",
+          "subtitle": "Pine Street Print",
+          "value": "60",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 22",
+          "subtitle": "Lark Labels",
+          "value": "97",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 23",
+          "subtitle": "Juniper Freight",
+          "value": "74",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 24",
+          "subtitle": "Maple Desk Works",
+          "value": "51",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 25",
+          "subtitle": "Harbor Paper Co.",
+          "value": "88",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 26",
+          "subtitle": "Cedar Office Supply",
+          "value": "65",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 27",
+          "subtitle": "Pine Street Print",
+          "value": "42",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 28",
+          "subtitle": "Lark Labels",
+          "value": "79",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 29",
+          "subtitle": "Juniper Freight",
+          "value": "56",
+          "valueLabel": "Score"
+        },
+        {
+          "title": "Applicant 30",
+          "subtitle": "Maple Desk Works",
+          "value": "93",
+          "valueLabel": "Score"
+        }
+      ]
+    }
+  ],
+  "text": [
+    "Default order",
+    "Applicant 01",
+    "40",
+    "Harbor Paper Co.",
+    "Applicant 02",
+    "77",
+    "Cedar Office Supply",
+    "Applicant 03",
+    "54",
+    "Pine Street Print",
+    "Applicant 04",
+    "91",
+    "Lark Labels",
+    "Applicant 05",
+    "68",
+    "Juniper Freight",
+    "Applicant 06",
+    "45",
+    "Maple Desk Works",
+    "Applicant 07",
+    "82",
+    "Harbor Paper Co.",
+    "Applicant 08",
+    "59",
+    "Cedar Office Supply",
+    "Applicant 09",
+    "96",
+    "Pine Street Print",
+    "Applicant 10",
+    "73",
+    "Lark Labels",
+    "Applicant 11",
+    "50",
+    "Juniper Freight",
+    "Applicant 12",
+    "87",
+    "Maple Desk Works",
+    "Applicant 13",
+    "64",
+    "Harbor Paper Co.",
+    "Applicant 14",
+    "41",
+    "Cedar Office Supply",
+    "Applicant 15",
+    "78",
+    "Pine Street Print",
+    "Applicant 16",
+    "55",
+    "Lark Labels",
+    "Applicant 17",
+    "92",
+    "Juniper Freight",
+    "Applicant 18",
+    "69",
+    "Maple Desk Works",
+    "Applicant 19",
+    "46",
+    "Harbor Paper Co.",
+    "Applicant 20",
+    "83",
+    "Cedar Office Supply",
+    "Applicant 21",
+    "60",
+    "Pine Street Print",
+    "Applicant 22",
+    "97",
+    "Lark Labels",
+    "Applicant 23",
+    "74",
+    "Juniper Freight",
+    "Applicant 24",
+    "51",
+    "Maple Desk Works",
+    "Applicant 25",
+    "88",
+    "Harbor Paper Co.",
+    "Previous",
+    "Page 1 of 2",
+    "Next"
+  ]
+}

@@ -4,8 +4,8 @@ Loads when a file here is read or edited. The root `CLAUDE.md` rules 5–7 apply
 
 ## The generated contracts: never hand-edit
 
-- `lib/generated/platform-contracts/*.d.ts` come from `npm run generate:platform-contracts` (`scripts/generate-platform-contracts.mjs`, reading the backend's OpenAPI documents in `../snoopy-backend`, or `SNOOPY_BACKEND_ROOT`).
-- `npm run verify:platform-contracts` (in `verify` and CI) regenerates them and fails on any diff. A shape change starts in the backend's documents, then regenerate; never edit a generated file.
+- `lib/generated/platform-contracts/*.d.ts` come from `npm run generate:platform-contracts` (`scripts/generate-platform-contracts.mjs`, reading the backend's documents from `SNOOPY_BACKEND_ROOT`, else `../snoopy-backend`, else the committed copy `lib/generated/snoopy-backend/`, which it rewrites with its `SHA256SUMS` whenever it reads a real backend).
+- `npm run verify:platform-contracts` (in `verify` and CI) checks the copy against `SHA256SUMS`, regenerates and fails on any diff; it never skips. A shape change starts in the backend's documents, then regenerate; never edit a generated file.
 - Each file's first line names its document and sha256.
 - `block-fixtures.ts` is the backend's block fixtures (`packages/contracts/fixtures/blocks/*.json`, ADR-0048 decision 9); its header's rule is README "`verify:platform-contracts`", and verify checks it too.
 - `block-required.ts` (round 21) is each block type's required fields, read from the `Block` schema in `snoopy-backend/docs/openapi/automations.yaml`; its header names that document's sha256, and verify checks it too. `components/blocks/drawable.ts` reads it.
@@ -21,6 +21,7 @@ Loads when a file here is read or edited. The root `CLAUDE.md` rules 5–7 apply
 - Network access only through `lib/platform/client.ts` and its generated `openapi-fetch` clients; the credential-less exceptions and their budgets are README "Runtime architecture" (`audit:platform`).
 - Credentials only in `expo-secure-store` (`lib/platform/session-store.ts`), this-device-only.
 - Screens call the typed functions here, never a network primitive.
+- One flow is read by `readSubscription` (`automations.ts`, `GET /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}`, §12.1 #319 step 2): its setup from the version it pins, any status. The flow's page, Setup, the vendor page and the flow's actions draw the flow from it; the list (`readSubscriptions`) stays for what needs the list: the archived twin (`addedAgainAs`) and the duplicate check.
 
 ## Commands
 

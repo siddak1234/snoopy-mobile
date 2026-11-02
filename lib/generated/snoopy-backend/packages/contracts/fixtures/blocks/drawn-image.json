@@ -1,0 +1,26 @@
+{
+  "name": "drawn-image",
+  "about": "A run's measured JPEG of 1 MiB, drawn as a picture that opens its file",
+  "blockSetVersion": 4,
+  "blocks": [
+    {
+      "type": "image",
+      "alt": "The receipt from Harbor Paper Co.",
+      "open": {
+        "target": "run-file",
+        "runId": "0a0a0a0a-0a0a-4a0a-8a0a-0a0a0a0a0a0a",
+        "fileId": "0e0e0e0e-0e0e-4e0e-8e0e-0e0e0e0e0e0e"
+      },
+      "file": {
+        "id": "0e0e0e0e-0e0e-4e0e-8e0e-0e0e0e0e0e0e",
+        "filename": "receipt.jpg",
+        "contentType": "image/jpeg",
+        "format": "JPEG",
+        "sizeBytes": 1048576,
+        "pages": 1,
+        "measuredKind": "jpeg"
+      }
+    }
+  ],
+  "text": []
+}

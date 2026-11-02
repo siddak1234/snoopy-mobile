@@ -1,0 +1,22 @@
+{
+  "blockWords": {
+    "search": "Search",
+    "searchItems": "Search {items}",
+    "searchRuns": "Search runs",
+    "clearSearch": "Clear search",
+    "noMatch": "Nothing matches \"{query}\".",
+    "sort": "Sort",
+    "defaultOrder": "Default order",
+    "aToZ": "A to Z",
+    "newestFirst": "Newest first",
+    "oldestFirst": "Oldest first",
+    "highToLow": "{label}: high to low",
+    "columnAToZ": "{column}: A to Z",
+    "columnHighToLow": "{column}: high to low",
+    "previous": "Previous",
+    "next": "Next",
+    "pageOf": "Page {n} of {total}",
+    "previousPage": "Previous page",
+    "nextPage": "Next page"
+  }
+}

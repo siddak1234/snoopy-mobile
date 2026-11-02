@@ -1,0 +1,49 @@
+name: Nightly
+
+# Nightly on main (the owner's go 2026-11-01, NIGHT-7): ci.yml's jobs on an
+# unchanged main, so a moved runner image, registry or contract shows the
+# morning after, not at the next PR. The schedule has a file of its own: in a
+# public repository GitHub disables a scheduled workflow after 60 days without
+# activity, and that stops only this one, never ci.yml, the merge gate
+# (`gh workflow enable nightly.yml` resumes it). A release reads only the
+# all-green of ci.yml's push run (scripts/all-green-on-head.mjs); this run's is
+# `CI / all-green`, in this workflow's run, and never counts there.
+on:
+  schedule:
+    - cron: '32 9 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+
+  # A red nightly leaves an open "Nightly red" issue (one, commented on each
+  # further red night), not only GitHub's email (NIGHT-9). The one job with
+  # issues: write; it runs no repository code.
+  report:
+    name: Nightly red
+    needs: [ci]
+    # Any night that is not green: failed, cancelled or timed out.
+    if: always() && needs.ci.result != 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - name: A red nightly reports itself
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # Only the bot's own open issue: in a public repository anyone can open one titled
+          # "Nightly red", and that one is never commented on.
+          n=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --author 'github-actions[bot]' --limit 200 \
+            --json number,title --jq 'map(select(.title == "Nightly red")) | .[0].number // empty')
+          if [ -n "$n" ]; then
+            gh issue comment "$n" --repo "$GITHUB_REPOSITORY" --body "$RUN"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title 'Nightly red' --body "$RUN"
+          fi

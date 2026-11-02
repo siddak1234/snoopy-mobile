@@ -1,0 +1,52 @@
+{
+  "name": "drawn-chart-line",
+  "about": "A line chart of 6 points, and its alt",
+  "blockSetVersion": 4,
+  "blocks": [
+    {
+      "type": "chart",
+      "kind": "line",
+      "title": "Invoices by week",
+      "alt": "Invoices by week. Line chart. Sep 8: 12; Sep 15: 18; Sep 22: 9; Sep 29: 21; Oct 6: 21; Oct 13: 15.",
+      "points": [
+        {
+          "label": "Sep 8",
+          "value": 12,
+          "text": "12"
+        },
+        {
+          "label": "Sep 15",
+          "value": 18,
+          "text": "18"
+        },
+        {
+          "label": "Sep 22",
+          "value": 9,
+          "text": "9"
+        },
+        {
+          "label": "Sep 29",
+          "value": 21,
+          "text": "21"
+        },
+        {
+          "label": "Oct 6",
+          "value": 21,
+          "text": "21"
+        },
+        {
+          "label": "Oct 13",
+          "value": 15,
+          "text": "15"
+        }
+      ]
+    }
+  ],
+  "text": [
+    "Invoices by week",
+    "21",
+    "9",
+    "Sep 8",
+    "Oct 13"
+  ]
+}

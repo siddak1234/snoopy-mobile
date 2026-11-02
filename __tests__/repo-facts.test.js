@@ -8,15 +8,14 @@ const { join, resolve } = require('node:path');
  * asserts (docs/repo-facts/snoopy-mobile.json against docs/repo-facts.schema.json;
  * BUILD-PLAN 24.3.7). The shape is asserted here so a drift is caught by the
  * repository that emits it, not by the one that quotes it. The schema is read
- * from the backend checkout beside this one when present; absent, that part
- * SKIPS VISIBLY — counted as skipped, never as passed — as `verify:platform-contracts`
- * does.
+ * from the committed, hash-checked copy of the backend's inputs
+ * (lib/generated/snoopy-backend/, checked by `verify:platform-contracts`), so
+ * it runs in every checkout and never skips (M2).
  */
 
 const root = resolve(__dirname, '..');
 const script = join(root, 'scripts/repo-facts.mjs');
-const schemaPath = resolve(root, '../snoopy-backend/docs/repo-facts.schema.json');
-const schemaHere = existsSync(schemaPath);
+const schemaPath = join(root, 'lib/generated/snoopy-backend/docs/repo-facts.schema.json');
 
 function emit() {
   const dir = mkdtempSync(join(tmpdir(), 'mobile-facts-'));
@@ -58,17 +57,12 @@ describe('repo facts', () => {
     expect(facts.counts.fixtureModules.value).toBe(0);
   });
 
-  (schemaHere ? it : it.skip)(
-    schemaHere
-      ? 'carries only the keys the backend schema allows'
-      : 'carries only the keys the backend schema allows — SKIPPED: ../snoopy-backend/docs/repo-facts.schema.json is not checked out beside this repository',
-    () => {
-      const schema = JSON.parse(readFileSync(schemaPath, 'utf8'));
-      expect(schema.properties.repository.enum).toContain('snoopy-mobile');
-      for (const key of schema.required) expect(facts).toHaveProperty(key);
-      for (const key of Object.keys(facts)) expect(Object.keys(schema.properties)).toContain(key);
-    },
-  );
+  it('carries only the keys the backend schema allows', () => {
+    const schema = JSON.parse(readFileSync(schemaPath, 'utf8'));
+    expect(schema.properties.repository.enum).toContain('snoopy-mobile');
+    for (const key of schema.required) expect(facts).toHaveProperty(key);
+    for (const key of Object.keys(facts)) expect(Object.keys(schema.properties)).toContain(key);
+  });
 
   it('emits nothing after a recorded contract-check skip, and removes stale facts beside the record', () => {
     const dir = mkdtempSync(join(tmpdir(), 'mobile-facts-'));

@@ -1,0 +1,22 @@
+{
+  "name": "unknown-target",
+  "about": "A list row whose target this build does not know: drawn, no press",
+  "blockSetVersion": 4,
+  "blocks": [
+    {
+      "type": "list",
+      "items": [
+        {
+          "title": "Opens nothing here",
+          "open": {
+            "target": "invoice",
+            "invoiceId": "x"
+          }
+        }
+      ]
+    }
+  ],
+  "text": [
+    "Opens nothing here"
+  ]
+}

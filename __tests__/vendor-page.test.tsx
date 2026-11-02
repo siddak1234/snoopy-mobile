@@ -11,6 +11,7 @@ import {
   QUICKBOOKS_PROVIDER,
   TEST_WORKSPACE,
   invoiceProcessingV3Entry,
+  methodOf,
   planSubscriptionsPayload,
   providersPayload,
   sessionAs,
@@ -161,7 +162,8 @@ describe('Connect integration — a tap saves and goes back (spec A2)', () => {
     });
     const routed = platformOperation.getMockImplementation()!;
     platformOperation.mockImplementation(async (key: string, execute: Function) => {
-      if (/\/subscriptions\/ip-1$/u.test(key)) {
+      // The save only: the page's own read of its flow (GET) is answered as routed.
+      if (/\/subscriptions\/ip-1$/u.test(key) && methodOf(execute) !== 'GET') {
         await gate;
         return { subscription: added({ vendor: 'quickbooks' }) };
       }

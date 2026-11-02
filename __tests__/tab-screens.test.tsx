@@ -28,6 +28,7 @@ import {
   projectsPayload,
   providersPayload,
   providersWithQuickBooks,
+  methodOf,
   routePlatform,
   outcomeBlocks,
   runDetailPayload,
@@ -488,7 +489,11 @@ describe('Workflow detail', () => {
     setMockParams({ flow: 'lead' });
     await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
     await fireEvent.press(await screen.findByText('Turn on'));
-    expect(platformOperation.mock.calls.some(([path]: [string]) => /\/subscriptions\/lead$/.test(path))).toBe(false);
+    // Read (the page's own GET of its flow), never changed.
+    const changes = platformOperation.mock.calls.filter(
+      ([path, execute]: [string, unknown]) => /\/subscriptions\/lead$/.test(path) && methodOf(execute) !== 'GET',
+    );
+    expect(changes).toEqual([]);
     expect(screen.getByText('Draft')).toBeTruthy();
   });
 
@@ -523,6 +528,10 @@ describe('Workflow detail', () => {
     const routed = platformOperation.getMockImplementation();
     platformOperation.mockImplementation(async (path: string, execute: Function) => {
       if (/\/subscriptions\/invoice$/.test(path)) {
+        // The page's own read of its flow (GET, §12.1 #319): what was last kept.
+        if (methodOf(execute) === 'GET') {
+          return { subscription: { ...subscriptionsPayload().subscriptions.find((row) => row.id === 'invoice')!, status } };
+        }
         let sent: { body: { status?: string }; key: string } | undefined;
         const patch = async (_p: string, init: { body: { status?: string }; params: { header: Record<string, string> } }) => {
           sent = { body: init.body, key: init.params.header['Idempotency-Key']! };
@@ -564,6 +573,10 @@ describe('Workflow detail', () => {
     const routed = platformOperation.getMockImplementation();
     platformOperation.mockImplementation(async (path: string, execute: Function) => {
       if (/\/subscriptions\/invoice$/.test(path)) {
+        // The page's own read of its flow (GET, §12.1 #319): what was last kept.
+        if (methodOf(execute) === 'GET') {
+          return { subscription: { ...subscriptionsPayload().subscriptions.find((row) => row.id === 'invoice')!, status } };
+        }
         const patch = async (_path: string, init: { body: { status: string } }) => ({ data: init.body });
         status = (await execute({ automations: { PATCH: patch } })).data.status;
         return { subscription: { ...subscriptionsPayload().subscriptions[0], status } };
@@ -597,6 +610,10 @@ describe('Workflow detail', () => {
     const routed = platformOperation.getMockImplementation();
     platformOperation.mockImplementation(async (path: string, execute: Function) => {
       if (/\/subscriptions\/invoice$/.test(path)) {
+        // The page's own read of its flow (GET, §12.1 #319): what was last kept.
+        if (methodOf(execute) === 'GET') {
+          return { subscription: { ...subscriptionsPayload().subscriptions.find((row) => row.id === 'invoice')!, status } };
+        }
         const patch = async (_path: string, init: { body: { status: string } }) => ({ data: init.body });
         status = (await execute({ automations: { PATCH: patch } })).data.status;
         return { subscription: { ...subscriptionsPayload().subscriptions[0], status } };

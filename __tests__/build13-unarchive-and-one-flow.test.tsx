@@ -11,6 +11,7 @@ import {
   TEST_WORKSPACE,
   catalogPayload,
   flowCatalogPayload,
+  methodOf,
   planSubscriptionsPayload,
   projectsPayload,
   routePlatform,
@@ -90,8 +91,11 @@ describe("Unarchive — the word for Add it again (the owner's build 12 item 4)"
       params: { template: 'tplflow.invoice' },
     });
     // The archived row itself is never written: the platform's archive is one-way.
-    const paths: string[] = platformOperation.mock.calls.map(([path]: [string]) => path);
-    expect(paths.some((path) => path.endsWith('/subscriptions/gone'))).toBe(false);
+    // It is read (GET, the page's own read of its flow, §12.1 #319), never changed.
+    const writes = platformOperation.mock.calls.filter(
+      ([path, execute]: [string, unknown]) => path.endsWith('/subscriptions/gone') && methodOf(execute) !== 'GET',
+    );
+    expect(writes).toEqual([]);
   });
 
   it('Settings › Archived flows says they are kept with their history and any can be unarchived', async () => {

@@ -1,0 +1,35 @@
+{
+  "name": "unknown-type",
+  "about": "An unknown type at the top level and inside an open section",
+  "blockSetVersion": 4,
+  "blocks": [
+    {
+      "type": "text",
+      "text": "Before"
+    },
+    {
+      "type": "map",
+      "points": [
+        1,
+        2
+      ]
+    },
+    {
+      "type": "section",
+      "title": "Inside",
+      "open": true,
+      "blocks": [
+        {
+          "type": "gauge",
+          "value": 3
+        }
+      ]
+    }
+  ],
+  "text": [
+    "Before",
+    "This part can't be shown here yet.",
+    "Inside",
+    "This part can't be shown here yet."
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "name": "review-held-grouped",
+  "about": "A held review whose changes carry groups: drawn under each heading, in the order sent (amendment 3)",
+  "blockSetVersion": 4,
+  "blocks": [
+    {
+      "type": "text",
+      "text": "Waiting for approval.",
+      "tone": "warning"
+    },
+    {
+      "type": "questions",
+      "form": {
+        "kind": "review",
+        "approvalId": "0d0d0d0d-0d0d-4d0d-8d0d-0d0d0d0d0d0d",
+        "eligibleRoles": [
+          "owner",
+          "admin"
+        ],
+        "decisions": [
+          {
+            "id": "a1-add",
+            "label": "Line A1 → Add",
+            "group": "Visit 1 · Oct 1"
+          },
+          {
+            "id": "a2-remove",
+            "label": "Line A2 → Remove",
+            "detail": "Not in the note.",
+            "group": "Visit 1 · Oct 1"
+          },
+          {
+            "id": "b1-keep",
+            "label": "Line B1 → Keep",
+            "group": "Visit 2 · Oct 3"
+          }
+        ]
+      }
+    }
+  ],
+  "text": [
+    "Waiting for approval.",
+    "Line A1 → Add",
+    "Line A2 → Remove",
+    "Not in the note.",
+    "Line B1 → Keep"
+  ]
+}

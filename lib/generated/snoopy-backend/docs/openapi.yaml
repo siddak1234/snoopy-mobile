@@ -1,0 +1,3649 @@
+openapi: 3.1.1
+info:
+  title: Snoopy Backend API
+  version: 0.2.0
+  description: >-
+    Client contract for the Snoopy website and future mobile app. Health and
+    website OAuth identity, Access-backed session, workspace, and project tenancy
+    paths are implemented in code; production readiness still requires deployed/configured dependencies. Product data and artifact
+    paths consumed by Snoopy are authenticated, explicit fail-closed contracts
+    until their owning service adapters are implemented. Other product paths
+    remain design placeholders. The maintained detailed public surfaces live in
+    `docs/openapi/access.yaml`, `automations.yaml`, and `connections.yaml`; those
+    fragments are authoritative for their named domains while this root document
+    retains the legacy cross-domain index and billing callback.
+  x-status: draft
+x-service-id: edge-api
+servers:
+  - url: https://api.example.invalid
+    description: Placeholder; deployment domain is not selected.
+tags:
+  - name: health
+  - name: session
+  - name: login-identity
+  - name: workspaces
+  - name: automations
+  - name: connections
+  - name: runs
+  - name: approvals
+  - name: billing
+security:
+  - websiteSession: []
+  - bearerAuth: []
+paths:
+  /health/live:
+    get:
+      tags: [health]
+      operationId: getLiveHealth
+      security: []
+      responses:
+        '200':
+          description: Process is alive.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LiveHealthResponse'
+  /health/ready:
+    get:
+      tags: [health]
+      operationId: getReadiness
+      security: []
+      responses:
+        '200':
+          description: Configured dependencies are ready.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+        '503':
+          description: One or more adapters are not ready.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+  /v1/session:
+    get:
+      tags: [session]
+      operationId: getSession
+      responses:
+        '200':
+          description: Authenticated session and workspaces.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '503':
+          $ref: '#/components/responses/NotConfigured'
+        '502':
+          description: The private Access dependency failed or violated its contract.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+  /v1/auth/providers:
+    get:
+      tags: [login-identity]
+      operationId: listLoginProviders
+      security: []
+      responses:
+        '200':
+          description: OAuth-only login provider policy.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginProvidersResponse'
+  /v1/auth/oauth/{provider}/start:
+    get:
+      tags: [login-identity]
+      operationId: startLoginOAuth
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/LoginProvider'
+        - name: return_to
+          in: query
+          schema: { type: string, default: /account }
+      responses:
+        '302':
+          description: Redirect to the provider through Supabase Auth; sets signed PKCE state.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          $ref: '#/components/responses/NotConfigured'
+  /v1/auth/oauth/callback:
+    get:
+      tags: [login-identity]
+      operationId: completeLoginOAuth
+      security: []
+      description: >-
+        Where Supabase returns every sign-in and link transaction. Success sets
+        first-party HttpOnly session cookies and redirects to a validated website
+        path, or — for a native transaction — to the app's redirect URI with a
+        one-time `code`. A failure redirects to the website's
+        `/login?error=auth_callback&reason=<reason>`, or to the app's redirect URI
+        with `status=error&reason=<reason>`. `reason` is one token from a fixed
+        list, never provider text: `identity_already_linked` (the account picked
+        belongs to another sign-in — Supabase's `identity_already_exists`),
+        `access_denied` (declined at the provider, RFC 6749 §4.1.2.1),
+        `linking_disabled` (`manual_linking_disabled`), `provider_disabled`
+        (`provider_disabled`, `oauth_provider_not_supported`), `signup_disabled`,
+        `account_disabled` (`user_banned`), `email_unverified`
+        (`provider_email_needs_verification`, `email_not_confirmed`),
+        `provider_refused` (any other Supabase or OAuth error), `missing_code` (no
+        code and no error), `exchange_failed` (the code could not be exchanged),
+        and `outside_org_domain` (a website link refused because the account's
+        address is outside a domain-only organization's verified domains — the
+        account was unlinked again). Every Location carries an explicit fragment,
+        empty unless the destination has its own, so the browser never carries
+        Supabase's `#error=…` fragment over (RFC 9110 §10.2.2).
+      parameters:
+        - name: code
+          in: query
+          schema: { type: string }
+        - name: error
+          in: query
+          description: An OAuth error from Supabase or the provider. Never echoed.
+          schema: { type: string }
+        - name: error_code
+          in: query
+          description: Supabase's machine-readable refusal code. Never echoed.
+          schema: { type: string }
+        - name: error_description
+          in: query
+          description: Supabase's free-text description. Ignored and never echoed.
+          schema: { type: string }
+      responses:
+        '302':
+          description: >-
+            Signed in, linked, or refused — see the operation's description for
+            the destinations and the `reason` tokens.
+  /v1/auth/identities:
+    get:
+      tags: [login-identity]
+      operationId: listLoginIdentities
+      responses:
+        '200':
+          description: Linked login identities; contains no provider tokens.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginIdentitiesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+  /v1/auth/identities/{provider}:
+    delete:
+      tags: [login-identity]
+      operationId: unlinkLoginIdentity
+      description: >-
+        Removes a linked sign-in account from the website's session (BUILD-PLAN
+        24.11.1). The account the person signed up with (`primary`) and the last one
+        left are refused, so there is always a way to sign in; a 400's `detail` is a
+        sentence a client shows as it is. A native client, whose refresh token travels
+        in a body, calls `/v1/auth/native/identities/{provider}/unlink`.
+      parameters:
+        - $ref: '#/components/parameters/LoginProvider'
+      responses:
+        '200':
+          description: What stays linked.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginIdentitiesResponse'
+        '400':
+          # BadRequest — see the shared response for the problem shape.
+          description: >-
+            The primary account, the last account, or one the provider will not
+            remove; `details.reason` is `primary`, `last` or `refused`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: That provider is not linked to this account.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '502':
+          $ref: '#/components/responses/DependencyFailure'
+        '503':
+          $ref: '#/components/responses/NotConfigured'
+  /v1/auth/identities/{provider}/start:
+    get:
+      tags: [login-identity]
+      operationId: startLoginIdentityLink
+      parameters:
+        - $ref: '#/components/parameters/LoginProvider'
+        - name: return_to
+          in: query
+          schema: { type: string, default: /account/settings }
+      responses:
+        '302':
+          description: Redirect to link an additional login identity.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+  /v1/auth/native/{provider}/start:
+    get:
+      tags: [login-identity]
+      operationId: startNativeLogin
+      security: []
+      description: >-
+        Begins a native login (ADR-0017). The same transaction and the same
+        `AUTH_CALLBACK_URL` as the website; only the ending differs. The caller opens
+        this in a system browser, which carries the OAuth transaction cookie for it —
+        the app never reads that cookie. `redirect_uri` must match an entry in
+        `NATIVE_APP_REDIRECT_URIS` exactly, and must be an app-claimed HTTPS URL:
+        ADR-0008 rejects custom schemes, which any app on a device can register.
+        `code_challenge` is the app's OWN PKCE pair, independent of the provider
+        transaction's, and is what binds the resulting one-time code to this device.
+      parameters:
+        - $ref: '#/components/parameters/LoginProvider'
+        - name: redirect_uri
+          in: query
+          required: true
+          schema: { type: string, format: uri }
+        - name: code_challenge
+          in: query
+          required: true
+          description: Base64url SHA-256 of the verifier; exactly 43 characters.
+          schema: { type: string, minLength: 43, maxLength: 43 }
+        - name: code_challenge_method
+          in: query
+          required: true
+          schema: { type: string, enum: [S256] }
+      responses:
+        '302':
+          description: >-
+            Redirect to the provider through Supabase Auth; sets signed PKCE state
+            carrying the native redirect target. The callback later redirects to
+            `redirect_uri` with a one-time `code`, or with `status=error` and a reason.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          $ref: '#/components/responses/NotConfigured'
+  /v1/auth/native/token:
+    post:
+      tags: [login-identity]
+      operationId: exchangeNativeSession
+      security: []
+      description: >-
+        Trades the one-time code for a session. The code is single-use because it
+        carries an unredeemed provider authorization code, which the provider itself
+        refuses to redeem twice. A forged, tampered, expired, replayed, or
+        wrong-verifier code are all one 401 — distinguishing them would tell a holder
+        of a captured code which it is.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [code, codeVerifier]
+              properties:
+                code: { type: string }
+                codeVerifier: { type: string, minLength: 43, maxLength: 128 }
+      responses:
+        '200':
+          description: A session for a native client. Never set as a cookie.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NativeSessionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          # Unauthenticated — see the shared response for the problem shape.
+          description: >-
+            The credential is dead — forged, tampered, expired, already spent, or
+            presented with the wrong verifier. One answer for all of them, because
+            telling them apart only helps someone probing a code they should not
+            have. A client receiving this discards its stored session.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '403':
+          description: >-
+            The code ended a link, and the account it added was refused because its
+            address is outside the verified domains of a domain-only organization
+            the person belongs to (decision 8B); `details.reason` is
+            `outside_org_domain`. The account was unlinked again and the session
+            the link minted was signed out. **Keep the stored session**: it is the
+            one the link started from, and it is still good.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '502':
+          # DependencyFailure — see the shared response for the problem shape.
+          description: >-
+            The identity provider could not be reached. **Retry; do not discard the
+            session.** Distinct from 401 on purpose: a client that treats an outage
+            as a dead credential signs out every user who happened to open the app
+            during it. A link whose domain-only check could not be made was undone
+            and also answers 502.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '503':
+          $ref: '#/components/responses/NotConfigured'
+  /v1/auth/native/refresh:
+    post:
+      tags: [login-identity]
+      operationId: refreshNativeSession
+      security: []
+      description: Renews a native session without a second consent screen.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        '200':
+          description: A replacement session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NativeSessionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          # Unauthenticated — see the shared response for the problem shape.
+          description: The refresh token is dead. Sign in again.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '502':
+          # DependencyFailure — see the shared response for the problem shape.
+          description: Provider unreachable. Retry; do not discard the session.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '503':
+          $ref: '#/components/responses/NotConfigured'
+  /v1/auth/native/identities/{provider}/ticket:
+    post:
+      tags: [login-identity]
+      operationId: startNativeIdentityLink
+      security:
+        - bearerAuth: []
+      description: >-
+        A native client links another sign-in account (ADR-0017 §6). The same link
+        transaction the website starts at `/v1/auth/identities/{provider}/start`, for
+        the person the bearer names. A browser cannot carry that bearer, so the
+        transaction comes back SEALED — a ticket the app opens once, in its own system
+        browser, at `/v1/auth/native/identities/{provider}/start`. From the provider
+        onwards it is login's native flow: the callback returns a one-time `code` to
+        `redirectUri`, traded with the app's verifier at `/v1/auth/native/token` for a
+        session that now carries the linked identity. The refresh token travels here
+        as it does to `/v1/auth/native/refresh` and never in a URL. An access token
+        at or near its expiry is refused with 401 rather than refreshed here, which
+        would rotate the refresh token the device holds.
+      parameters:
+        - $ref: '#/components/parameters/LoginProvider'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [refreshToken, redirectUri, codeChallenge]
+              properties:
+                refreshToken: { type: string }
+                redirectUri:
+                  type: string
+                  format: uri
+                  description: An exact entry of `NATIVE_APP_REDIRECT_URIS`, as for login.
+                codeChallenge:
+                  type: string
+                  minLength: 43
+                  maxLength: 43
+                  description: Base64url SHA-256 of the app's own verifier (S256).
+      responses:
+        '200':
+          description: The sealed ticket, and how long it stays usable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NativeIdentityLinkTicket'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          # Unauthenticated — see the shared response for the problem shape.
+          description: >-
+            No bearer, a refused session, or an access token too close to expiry.
+            Renew once and retry; a second 401 is a dead session.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '502':
+          # DependencyFailure — see the shared response for the problem shape.
+          description: The identity provider could not start linking. Retry; keep the session.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '503':
+          $ref: '#/components/responses/NotConfigured'
+  /v1/auth/native/identities/{provider}/unlink:
+    post:
+      tags: [login-identity]
+      operationId: unlinkNativeIdentity
+      security:
+        - bearerAuth: []
+      description: >-
+        A native client removes a linked sign-in account (BUILD-PLAN 24.11.1): the
+        website's `DELETE /v1/auth/identities/{provider}` for the person the bearer
+        names, with the refresh token in the body as at `/v1/auth/native/refresh`.
+        The same refusals, with the same sentences: the account the person signed up
+        with and the last one left stay linked. An access token at or near its expiry
+        is refused with 401 rather than refreshed here, which would rotate the refresh
+        token the device holds.
+      parameters:
+        - $ref: '#/components/parameters/LoginProvider'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        '200':
+          description: What stays linked.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginIdentitiesResponse'
+        '400':
+          # BadRequest — see the shared response for the problem shape.
+          description: >-
+            The primary account, the last account, or one the provider will not
+            remove (`details.reason` is `primary`, `last` or `refused`); or a body
+            without `refreshToken`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '401':
+          # Unauthenticated — see the shared response for the problem shape.
+          description: >-
+            No bearer, a refused session, or an access token too close to expiry.
+            Renew once and retry; a second 401 is a dead session.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '404':
+          description: That provider is not linked to this account.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '502':
+          $ref: '#/components/responses/DependencyFailure'
+        '503':
+          $ref: '#/components/responses/NotConfigured'
+  /v1/auth/native/identities/{provider}/start:
+    get:
+      tags: [login-identity]
+      operationId: openNativeIdentityLink
+      security: []
+      description: >-
+        The browser leg of a native link (ADR-0017 §6). Opened in the app's system
+        browser on the same origin as `AUTH_CALLBACK_URL`: sets the OAuth transaction
+        cookie login's start sets, then redirects to the provider. The ticket is
+        AES-256-GCM under its own derived key, lives two minutes, and names its
+        provider; a forged, tampered, expired or mismatched one is one 400.
+      parameters:
+        - $ref: '#/components/parameters/LoginProvider'
+        - name: ticket
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '302':
+          description: >-
+            Redirect to the provider through Supabase Auth, with the signed PKCE state
+            set. The callback later redirects to the ticket's `redirectUri` with a
+            one-time `code`, or with `status=error` and a reason.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          $ref: '#/components/responses/NotConfigured'
+  /v1/auth/logout:
+    post:
+      tags: [login-identity]
+      operationId: logout
+      description: >-
+        Ends a session. The website sends no body and its cookies are cleared. A
+        native client sends its `refreshToken` and a bearer access token, which is
+        what actually revokes the session upstream — without them there is nothing to
+        revoke and the token in the device keychain would stay live.
+      requestBody:
+        required: false
+        description: >-
+          Omitted entirely by the website, whose session is in cookies. **Required
+          when the request carries a bearer token**: a native caller with no
+          `refreshToken` is refused with 400 rather than answered 204, because a 204
+          would have the device delete a keychain entry for a session that is still
+          live upstream.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        '204':
+          description: >-
+            Cookies cleared, and any supplied refresh token revoked — or already
+            invalid, which is the same outcome for the caller.
+        '400':
+          # BadRequest — see the shared response for the problem shape.
+          description: A bearer token was presented without a readable `refreshToken`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '502':
+          # DependencyFailure — see the shared response for the problem shape.
+          description: >-
+            The provider could not be reached, so the session was NOT revoked. Retry
+            before discarding stored tokens.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+  /v1/contact-requests:
+    post:
+      tags: [login-identity]
+      operationId: submitContactRequest
+      description: >-
+        The marketing site's contact form (BUILD-PLAN Phase 7 item 7.5). The third
+        and last unauthenticated public route: the sender has no account, so there
+        is no session to check. Standing in for authentication are the form's spam
+        honeypot, validation bounded to the column widths Access enforces, and the
+        Edge rate limiter. No cookie is read, so there is no ambient authority to
+        forge and same-origin is deliberately not required.
+
+        The form also posts a `company` field. It is a HONEYPOT, hidden from people
+        and omitted here on purpose: a submission that fills it is discarded and
+        answered with a receipt indistinguishable from a real one, because a 400
+        would teach a bot which field to leave alone next time. Do not add it to a
+        generated client, and do not populate it.
+
+        `maxLength` counts CHARACTERS, matching the columns. The request body is
+        separately capped at 8192 BYTES, so a submission in a multi-byte script
+        reaches the byte cap first — the documented maxima are an upper bound, not
+        a reachable budget.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [email]
+              properties:
+                email: { type: string, maxLength: 320 }
+                industry: { type: string, maxLength: 200 }
+                workflow: { type: string, maxLength: 2000 }
+                tools: { type: string, maxLength: 500 }
+                volume: { type: string, maxLength: 200 }
+                success: { type: string, maxLength: 2000 }
+      responses:
+        '201':
+          description: The enquiry was recorded. Carries a receipt, never an echo of the body.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [contactRequestId, receivedAt]
+                properties:
+                  contactRequestId: { type: string, format: uuid }
+                  receivedAt: { type: string, format: date-time }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /v1/account:
+    delete:
+      tags: [session]
+      operationId: deleteAccount
+      description: >-
+        A customer leaving (FR-21). Deletion spans five schemas as one auditable
+        operation; the actor comes from the session and there is no id in the path,
+        so a caller cannot name an account that is not theirs.
+
+        **A native client should send its `refreshToken`.** The purge removes the
+        rows but does not touch the identity provider, so without it the device
+        keeps a working session and the next `GET /v1/session` mints a fresh
+        account. The body is optional because a DELETE conventionally carries none:
+        omitting it deletes the account and skips revocation rather than refusing
+        after the rows are already gone. The website needs nothing — its cookies
+        are cleared, which is itself effective.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        '200':
+          description: >-
+            Deleted. The body reports what was removed per service — `deleted: true`
+            is the only outcome that means the whole operation committed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountDeletionResult' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          # A partial deletion, relayed as 409 rather than 200 so a client doing
+          # `if (response.ok)` cannot tell a customer their data is gone while some
+          # of it remains. **The same `application/json` result as 200, not a
+          # problem document** — §12.1 #164: it is the Access result the Edge
+          # relays, and it says which workspaces a service could not remove.
+          description: >-
+            The deletion did not complete across every service. `deleted` is
+            false, `reason` says why, and each workspace reports its services.
+            Nothing after the refusing service was attempted, so a retry resumes.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountDeletionResult' }
+        '502':
+          # Two outcomes, two codes — §12.1 #167.
+          description: >-
+            **`SESSION_REVOCATION_FAILED` — bearer callers only.** The account was
+            deleted, but the identity provider could not be reached to revoke the
+            refresh token the caller sent. The device still holds a live
+            credential; retry the revocation through `POST /v1/auth/logout`. A
+            cookie caller never receives it: its cookies are cleared, which is
+            itself effective. **`DEPENDENCY_FAILURE` — any caller.** The Edge could
+            not complete its call to the service that deletes, so whether anything
+            was removed is unknown; read `GET /v1/session` before telling a person
+            either way.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ApiProblem' }
+        '503': { $ref: '#/components/responses/NotConfigured' }
+  /v1/workspaces/{workspaceId}/export:
+    get:
+      tags: [workspaces]
+      operationId: exportWorkspace
+      description: >-
+        Everything this workspace owns, as records and references (BUILD-PLAN
+        7.4). Requires owner or admin. **The response carries IDs and references,
+        never file bytes** — each artifact is named with its size and digest, and
+        fetched separately through a short-lived signed URL.
+
+        `complete: false` means this is a partial export. That is true when a
+        service cannot answer and also when any successful nested service section
+        has `data.truncated: true`; success from every service alone is not a
+        completeness guarantee. This response does not emit pagination cursors:
+        a workspace larger than one bounded section takes EVERYTHING through
+        `startWorkspaceExport`, which stages the whole workspace as one file
+        (§12.1 #39).
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      responses:
+        '200':
+          description: The workspace's records, per service; may be partial.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkspaceExportResponse' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/workspaces/{workspaceId}/exports:
+    post:
+      tags: [workspaces]
+      operationId: startWorkspaceExport
+      description: >-
+        **A complete export**, staged as one file (§12.1 #39, FR-21). Requires
+        owner or admin. Answers at once with the export `running`; read it with
+        `readWorkspaceExport` until it is `ready`, when it carries the file — an
+        artifact id and a short-lived signed URL, never the bytes (invariant 6).
+
+
+        Every section of every service is paged, so no section is cut at 250 rows
+        as the bounded `exportWorkspace` is. A run's `output` is not in it, nor in
+        the run detail (SYSTEM-MANIFEST §12.1 #67 keeps it unpublished; the
+        per-flow export of BUILD-PLAN Phase 26 is its planned first shape). A
+        service that cannot answer makes the file partial
+        (`complete: false`, and the file names the gap) rather than absent.
+
+
+        **One file has a ceiling**: the object store's maximum for any file, 25 MiB
+        unless the deployment sets less. An export past it fails `too_large`, and
+        stops as soon as it passes it rather than after reading everything.
+
+
+        One at a time per workspace: while one is running, asking again answers
+        that one. The file is collected a day after it is made, after which the
+        export reads `expired` and a new one may be asked for. Deleting the
+        workspace withdraws a running export (`workspace_deleted`) and no file is
+        made for it.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: The export, running (or the one already running).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkspaceExportJobResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/workspaces/{workspaceId}/exports/{exportId}:
+    get:
+      tags: [workspaces]
+      operationId: readWorkspaceExport
+      description: >-
+        One export's state. `running` until the job ends; then `ready` with its
+        `file`, or `failed` with a `failureReason` (`interrupted` when nothing
+        finished it within its lease); `expired` once the file is collected.
+        Requires owner or admin. Each read signs a fresh URL, valid for minutes.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: exportId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The export, and its file when ready.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkspaceExportJobResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/workspaces/{workspaceId}/members:
+    get:
+      tags: [workspaces]
+      operationId: listWorkspaceMembers
+      description: Who is in this workspace (BUILD-PLAN 4.6.2). Any member may read it.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageCursor'
+      responses:
+        '200':
+          description: Bounded keyset page of workspace members.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkspaceMemberListResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/workspaces/{workspaceId}/members/{userId}:
+    delete:
+      tags: [workspaces]
+      operationId: removeWorkspaceMember
+      description: >-
+        Removes an organization member. Owners or admins may remove a member;
+        only an owner may remove an owner, and an organization must retain an
+        owner. This is not an invite or admission mechanism.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Whether the membership was removed; false is an idempotent absence.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RemovalResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/workspaces/{workspaceId}:
+    patch:
+      tags: [workspaces]
+      operationId: updateWorkspace
+      description: >-
+        Renames an organization workspace, turns its domain-only setting on or off
+        (decision 8B), or both — at least one of `name` and `domainOnly`. Owners
+        and admins only; actor authority comes from the session. A personal
+        workspace is 404. Turning `domainOnly` on is refused unless the
+        organization has a verified domain and every current member's every
+        sign-in address is at one; nothing and nobody is removed because of it.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateWorkspaceRequest' }
+      responses:
+        '200':
+          description: Workspace after the idempotent change.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkspaceUpdateResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: >-
+            The idempotency key was reused with different input, or `domainOnly`
+            could not be turned on: `details.reason` is `no_verified_domain` (the
+            organization has no verified domain) or `members_outside_domain` with
+            `details.count`, how many current members have a sign-in address
+            outside the verified domains. A member whose sign-ins the platform has
+            not seen since this setting shipped counts as outside until their next
+            sign-in.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+  /v1/workspaces/{workspaceId}/projects/{projectId}:
+    get:
+      tags: [workspaces]
+      operationId: readProject
+      description: >-
+        One team — a project in this contract (BUILD-PLAN 4.6.1; the vocabulary is
+        24.11.5). A workspace member who is not on the team gets 404, so the
+        refusal does not reveal that it exists; an owner or admin of the
+        organization sees every team.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: The project, with the role this actor holds on it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectMutationResponse' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [workspaces]
+      operationId: updateProject
+      description: >-
+        Rename, re-describe, or archive. Archive is a status change, not a delete,
+        so the project keeps its runs, grants and audit trail. `description: null`
+        clears the field; omitting it leaves it alone. A body naming no field is
+        refused rather than burning an idempotency key on a change nobody made.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateProjectRequest' }
+      responses:
+        '200':
+          description: The project after the change.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectMutationResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          # Conflict — see the shared response for the problem shape.
+          description: >-
+            Restoring an archived team onto a kind another team now holds:
+            `details.reason` is `team_kind_taken` and `detail` is "This workspace
+            already has a department of this kind" (BUILD-PLAN 24.12.1). An idempotency
+            key reused with different input is the other conflict, and carries no
+            reason.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+  /v1/workspaces/{workspaceId}/projects/{projectId}/memberships:
+    get:
+      tags: [workspaces]
+      operationId: listProjectMemberships
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageCursor'
+      responses:
+        '200':
+          description: Bounded keyset page of project memberships.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectMembershipListResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [workspaces]
+      operationId: upsertProjectMembership
+      description: >-
+        Adds a person to a project or changes their role. They must already be a
+        member of the workspace — project membership is not a side door into it.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpsertProjectMembershipRequest' }
+      responses:
+        '200':
+          description: The membership.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectMembershipMutationResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/workspaces/{workspaceId}/projects/{projectId}/memberships/{userId}:
+    delete:
+      tags: [workspaces]
+      operationId: removeProjectMembership
+      description: >-
+        The last owner cannot be removed. Removing someone already absent answers
+        `removed: false` rather than 404, so a retry is not an error.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/ProjectId'
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Whether a membership was removed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RemovalResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/workspaces/{workspaceId}/project-directory:
+    get:
+      tags: [workspaces]
+      operationId: listProjectDirectory
+      description: >-
+        The team directory (BUILD-PLAN 24.11.4): every open team — a project in this
+        contract — in the organization, by name and kind, with where the person
+        stands: `member` (they can already see it — on it, or an owner or admin of
+        the organization), `requested` (a pending request), or `none` (they may ask,
+        at `/projects/{projectId}/access-requests`). Any member of the workspace
+        reads it; nothing about a team's flows or people travels here.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageCursor'
+      responses:
+        '200':
+          description: The open teams, newest first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectDirectoryResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/workspaces/{workspaceId}/projects/{projectId}/access-requests:
+    get:
+      tags: [workspaces]
+      operationId: listProjectAccessRequests
+      description: >-
+        Who is asking to join this team (a project in this contract; BUILD-PLAN
+        24.11.2). A manager of the team — `owner` or `admin`, which an owner or admin
+        of the organization is on every team — sees every request; anyone else in the
+        organization sees only their own, so a person who asked can see where it
+        stands.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageCursor'
+      responses:
+        '200':
+          description: Requests onto the team, newest first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectAccessRequestListResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [workspaces]
+      operationId: requestProjectAccess
+      description: >-
+        Asks to join a team the person is not on. No body: the person is the
+        session's, the team is the path's. Someone who can already see the team has
+        nothing to ask for (409); asking again returns the same pending request.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: The pending request.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectAccessRequestMutationResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/workspaces/{workspaceId}/projects/{projectId}/access-requests/{requestId}:
+    patch:
+      tags: [workspaces]
+      operationId: decideProjectAccessRequest
+      description: >-
+        Approves or denies. Approval adds the person to the team as a `member`, the
+        same row and event as adding them by hand. A manager of the team, or an owner
+        or admin of the organization, decides; the requester cannot see the team and
+        so cannot decide their own.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/ProjectId'
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DecideProjectAccessRequest' }
+      responses:
+        '200':
+          description: The decided request.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectAccessRequestMutationResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    delete:
+      tags: [workspaces]
+      operationId: cancelProjectAccessRequest
+      description: Withdraws the person's own pending request, and nobody else's.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/ProjectId'
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: The cancelled request.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectAccessRequestMutationResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/workspaces/{workspaceId}/join-requests:
+    get:
+      tags: [workspaces]
+      operationId: listJoinRequests
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageCursor'
+      responses:
+        '200':
+          description: People asking to join this organization.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrganizationJoinRequestListResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/workspaces/{workspaceId}/join-requests/{joinRequestId}:
+    patch:
+      tags: [workspaces]
+      operationId: decideJoinRequest
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: joinRequestId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DecideOrganizationJoinRequest' }
+      responses:
+        '200':
+          description: The decided request.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrganizationJoinRequestMutationResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: >-
+            Already decided, the claim no longer permits joining, the key was
+            reused — or, approving into a domain-only organization, the requester
+            has a sign-in address outside its verified domains: `details.reason`
+            is `outside_org_domain` (decision 8B).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+    delete:
+      tags: [workspaces]
+      operationId: cancelJoinRequest
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: joinRequestId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: The cancelled request.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrganizationJoinRequestMutationResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/workspaces/{workspaceId}/domains:
+    get:
+      tags: [workspaces]
+      operationId: listOrganizationDomains
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageCursor'
+      responses:
+        '200':
+          description: Domains claimed by this organization.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrganizationDomainListResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [workspaces]
+      operationId: claimOrganizationDomain
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ClaimOrganizationDomainRequest' }
+      responses:
+        '200':
+          description: The claim, with the DNS challenge shown only on its creating request.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrganizationDomainClaimResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/workspaces/{workspaceId}/domains/{domainId}:
+    patch:
+      tags: [workspaces]
+      operationId: updateOrganizationDomain
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/DomainId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateOrganizationDomainRequest' }
+      responses:
+        '200':
+          description: The domain after the change.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrganizationDomainMutationResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    delete:
+      tags: [workspaces]
+      operationId: revokeOrganizationDomain
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/DomainId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: The revoked domain.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrganizationDomainMutationResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/workspaces/{workspaceId}/domains/{domainId}/verification:
+    post:
+      tags: [workspaces]
+      operationId: verifyOrganizationDomain
+      description: Resolves the DNS challenge and records the outcome.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/DomainId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: The domain, verified or still pending.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrganizationDomainMutationResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/organization-discovery:
+    get:
+      tags: [workspaces]
+      operationId: discoverOrganizations
+      description: >-
+        Returns only organizations matching the authenticated user's verified
+        email domain. There is no domain parameter, preventing arbitrary
+        organization discovery.
+      responses:
+        '200':
+          description: Matching discoverable organizations, possibly empty.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrganizationDiscoveryResponse' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/organizations/{workspaceId}/join:
+    post:
+      tags: [workspaces]
+      operationId: requestOrganizationJoin
+      description: >-
+        Requests membership of an organization already discoverable to the
+        session user. No invite link, domain, or user id is accepted. The app's
+        join link opens this same request.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: The user joined automatically or a request was recorded.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrganizationJoinResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403':
+          description: >-
+            The organization admits by invitation only, or it is domain-only and
+            this account has a sign-in address outside its verified domains:
+            `details.reason` is `outside_org_domain` (decision 8B).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /:
+    get:
+      tags: [health]
+      operationId: getServiceBanner
+      security: []
+      description: The service's own name and API version. No tenant data.
+      responses:
+        '200': { description: Service name, API version, and status. }
+  /v1/workspaces/{workspaceId}/subscriptions:
+    get:
+      tags: [automations]
+      operationId: listSubscriptions
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      responses:
+        '200':
+          description: >-
+            This workspace's subscriptions, and `flowAllowance` — the plan's flow
+            ceiling beside the flows held (7a3). The full shape is in
+            `docs/openapi/automations.yaml`.
+    post:
+      tags: [automations]
+      operationId: createSubscription
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      description: >-
+        Adds a flow. It goes to the workspace's team of the flow's category, which
+        the platform makes when there is none (ADR-0036); no client chooses a team.
+        The request body is specified in `docs/openapi/automations.yaml`.
+      responses:
+        '200': { description: The subscription, with its unmet connections. }
+  /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}:
+    get:
+      tags: [automations]
+      operationId: getSubscription
+      description: >-
+        One flow, any status, with its setup (§12.1 #319); 404 for one the person
+        cannot see. Specified in `docs/openapi/automations.yaml`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: subscriptionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: The flow. }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [automations]
+      operationId: updateSubscription
+      description: >-
+        Rename, configure, activate or archive. No client chooses a version:
+        every flow runs its automation's newest, which the platform moves it to
+        on release (ADR-0041). In an organization only an owner or admin changes
+        the flow's integration (ADR-0043): a member's change to it is 403
+        `integration_requires_admin`. The request body and every refusal are
+        specified in `docs/openapi/automations.yaml`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: subscriptionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { description: The subscription after the change. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/webhook:
+    get:
+      tags: [automations]
+      operationId: readWebhookEndpoint
+      description: >-
+        A webhook subscription's address without its secret; owner or admin only
+        (§12.1 #91). Specified in `docs/openapi/automations.yaml`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: subscriptionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: The address, without its secret. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [automations]
+      operationId: issueWebhookEndpoint
+      description: >-
+        Issues the address or rotates its secret, which is shown once; owner or
+        admin only (§12.1 #91, #109). Specified in `docs/openapi/automations.yaml`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: subscriptionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: The address and its secret, shown this once. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/email-recipients:
+    get:
+      tags: [automations]
+      operationId: readFlowEmailRecipients
+      description: >-
+        Who a flow's run emails go to — the owners and admins, the person who
+        started the run, and the flow's extra addresses (ADR-0041); any member
+        who can see the flow. Specified in `docs/openapi/automations.yaml`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: subscriptionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: The people and addresses this flow's run emails go to. }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [automations]
+      operationId: updateFlowEmailRecipients
+      description: >-
+        Sets the flow's extra addresses, at most 10; owner or admin only
+        (ADR-0041). Specified in `docs/openapi/automations.yaml`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: subscriptionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: The people and addresses, after the change. }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items:
+    get:
+      tags: [automations]
+      operationId: listItems
+      description: >-
+        A flow's items, newest first, and the values typed for its fields — any
+        member (ADR-0046). Specified in `docs/openapi/automations.yaml`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: subscriptionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: The flow's items and the typed choices. }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [automations]
+      operationId: createItem
+      description: >-
+        Makes an item from a file and starts the run that reads it; owner or
+        admin only (ADR-0046). Specified in `docs/openapi/automations.yaml`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: subscriptionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201': { description: The item, reading its file. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/workspaces/{workspaceId}/items/{itemId}:
+    get:
+      tags: [automations]
+      operationId: readItem
+      description: >-
+        One item and its runs, highest score first — any member (ADR-0046);
+        `shape=blocks`, its page body (ADR-0048). Specified in
+        `docs/openapi/automations.yaml`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: itemId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/PageShape'
+      responses:
+        '200': { description: The item and its runs. }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/workspaces/{workspaceId}/items/{itemId}/archive:
+    post:
+      tags: [automations]
+      operationId: archiveItem
+      description: >-
+        Archives an item; owner or admin only, idempotent (ADR-0046). Specified
+        in `docs/openapi/automations.yaml`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: itemId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { description: The archived item. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/workspaces/{workspaceId}/items/{itemId}/file:
+    get:
+      tags: [automations]
+      operationId: readItemFile
+      description: >-
+        The file an item was made from, behind a short-lived link — any member
+        (Round 19, build 28). Specified in `docs/openapi/automations.yaml`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: itemId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: The item's file and a short-lived link to it. }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/workspaces/{workspaceId}/uploads:
+    post:
+      tags: [runs]
+      operationId: openUpload
+      description: >-
+        A signed URL the browser PUTs a run's file to directly (FR-14). Specified
+        in `docs/openapi/automations.yaml`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      responses:
+        '200': { description: Where to PUT the file. }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/workspaces/{workspaceId}/uploads/{uploadSessionId}/complete:
+    post:
+      tags: [runs]
+      operationId: completeUpload
+      description: >-
+        The store's measurement of what arrived, as a file a run can be given
+        (FR-14). Specified in `docs/openapi/automations.yaml`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: uploadSessionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: The file, as a reference. }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/workspaces/{workspaceId}/runs:
+    get:
+      tags: [runs]
+      operationId: listRuns
+      description: >-
+        With none of `q`, `status`, `needsReview`, `since`, `sort` and `page`, today's
+        newest 100; with any, one page of 25 and `total` (ADR-0048 amendment 1). A bad
+        `page` or `sort` is refused here; Runs checks the rest. Specified in
+        `docs/openapi/automations.yaml`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: subscriptionId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+        - name: q
+          in: query
+          required: false
+          schema: { type: string, minLength: 1, maxLength: 80 }
+        - name: status
+          in: query
+          required: false
+          schema: { type: string, enum: [pending, running, held, succeeded, failed, cancelled] }
+        - name: needsReview
+          in: query
+          required: false
+          schema: { type: string, enum: ['true'] }
+        - name: since
+          in: query
+          required: false
+          schema: { type: string, format: date-time }
+        - name: sort
+          in: query
+          required: false
+          schema: { type: string, enum: [newest, oldest], default: newest }
+        - name: page
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 200 }
+      responses:
+        '200': { description: 'Jobs in this workspace, one entry each (ADR-0044).' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+    post:
+      tags: [runs]
+      operationId: createRun
+      description: >-
+        Refused with 403 `over_plan_limit`, carrying `limit` and `live`, while the
+        workspace holds more flows than its plan allows (the owner's decision
+        7a3). Specified in `docs/openapi/automations.yaml`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { description: The created run. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /v1/workspaces/{workspaceId}/run-stats:
+    get:
+      tags: [runs]
+      operationId: readRunStats
+      description: >-
+        Run counts for this workspace, per subscription and rolled up. The full
+        shape is in `openapi/automations.yaml`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: since
+          in: query
+          required: false
+          schema: { type: string, format: date-time }
+      responses:
+        '200': { description: Counts for the workspace and each subscription with runs. }
+  /v1/workspaces/{workspaceId}/runs/{runId}:
+    get:
+      tags: [runs]
+      operationId: readRun
+      description: >-
+        One job; `shape=blocks`, its page body (ADR-0048). Specified in
+        `docs/openapi/automations.yaml`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/RunId'
+        - $ref: '#/components/parameters/PageShape'
+      responses:
+        '200': { description: One job and its whole timeline (ADR-0044). }
+  /v1/workspaces/{workspaceId}/runs/{runId}/documents:
+    get:
+      tags: [runs]
+      operationId: readRunDocuments
+      description: >-
+        One run's documents as a JSON file (ADR-0039, BUILD-PLAN 25.4.28). The
+        full shape is in `openapi/automations.yaml`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/RunId'
+      responses:
+        '200': { description: The run's documents, as an attachment. }
+  /v1/workspaces/{workspaceId}/runs/{runId}/files/{fileId}:
+    get:
+      tags: [runs]
+      operationId: readRunFile
+      description: >-
+        One of the job's uploaded files, behind a short-lived link — anyone who
+        may read the run (Round 19, build 28). Specified in
+        `docs/openapi/automations.yaml`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/RunId'
+        - name: fileId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: The file and a short-lived link to it. }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/workspaces/{workspaceId}/runs/{runId}/cancel:
+    post:
+      tags: [runs]
+      operationId: cancelRun
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/RunId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { description: The run after cancellation. }
+  /v1/workspaces/{workspaceId}/runs/{runId}/package:
+    post:
+      tags: [runs]
+      operationId: createRunPackageFile
+      description: >-
+        The job's run package as a PDF or an Excel file behind a short-lived link
+        (ADR-0045). Specified in `docs/openapi/automations.yaml`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/RunId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { description: A short-lived link to the file. }
+  /v1/workspaces/{workspaceId}/approvals/{approvalId}/decision:
+    post:
+      tags: [approvals]
+      operationId: decideApproval
+      description: >-
+        The decider's role comes from the session, never the request body — a
+        decision naming its own role is refused as an unsupported field. The body
+        is `{decision}`, or for an approval that offers changes `{decisions}`, one
+        answer per change (ADR-0048 amendment 2); the full shape is
+        `docs/openapi/automations.yaml`'s `decideApproval`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/ApprovalId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { description: The approval after the decision. }
+  /v1/workspaces/{workspaceId}/approvals:
+    get:
+      tags: [approvals]
+      operationId: listApprovals
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      responses:
+        '200': { description: Approvals waiting in this workspace. }
+  /v1/workspaces/{workspaceId}/notifications:
+    get:
+      tags: [approvals]
+      operationId: listNotifications
+      description: >-
+        The caller's inbox: pending approvals and failed runs, newest first, at
+        most 50, dismissed items left out, each with the caller's own `read`, and
+        `unreadCount`. Specified in `docs/openapi/automations.yaml`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      responses:
+        '200': { description: The caller's newest 50 items and how many are unread. }
+  /v1/workspaces/{workspaceId}/notifications/read:
+    post:
+      tags: [approvals]
+      operationId: markNotificationsRead
+      description: >-
+        Marks the named items read, or every listed item when the body names
+        none. Specified in `docs/openapi/automations.yaml`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { description: How many listed items are unread now. }
+  /v1/workspaces/{workspaceId}/notifications/clear:
+    post:
+      tags: [approvals]
+      operationId: clearNotifications
+      description: >-
+        Empties the caller's inbox ("Clear all"). Specified in
+        `docs/openapi/automations.yaml`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { description: How many listed items are unread now. }
+  /v1/workspaces/{workspaceId}/notifications/{notificationId}/dismiss:
+    post:
+      tags: [approvals]
+      operationId: dismissNotification
+      description: >-
+        Hides one item from the caller's inbox, and reads it. Specified in
+        `docs/openapi/automations.yaml`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: notificationId
+          in: path
+          required: true
+          description: '`approval:<approvalId>` or `run:<runId>`.'
+          schema: { type: string }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { description: How many listed items are unread now. }
+  /v1/workspaces/{workspaceId}/automations:
+    get:
+      tags: [automations]
+      operationId: listWorkspaceAutomations
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      responses:
+        '200': { description: The catalog this workspace may subscribe to. }
+  /v1/webhooks/{endpointId}:
+    post:
+      tags: [runs]
+      operationId: receiveWebhookDelivery
+      security: []
+      description: >-
+        A vendor's delivery (BUILD-PLAN 6.3). The second unauthenticated public
+        route: the caller is a vendor holding a per-endpoint secret, not a person
+        with a session.
+      parameters:
+        - name: endpointId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: >-
+            The delivery was taken, or declined with `accepted: false` for a
+            subscription that is not live, no longer webhook-triggered, or in a
+            workspace over its plan's flow limit (7a3). The full contract is
+            `deliverWebhook` in `docs/openapi/automations.yaml`.
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /v1/plans:
+    get:
+      tags: [billing]
+      operationId: listPlans
+      description: >-
+        The plans a workspace can move onto, with the capability values each
+        grants (ADR-0025). Any signed-in person may read it: it is the same list
+        for everyone and it is what a purchase decision is made from.
+
+        **A plan with no provider price is omitted**, which is how the free floor
+        stays off this list — nothing can check out onto a plan the provider has
+        no price for, so offering it would produce a button that 404s. **Each plan
+        carries its `price` when the provider can state it** (§12.1 #163); the
+        provider's own identifier for it is never published.
+      responses:
+        '200':
+          description: The purchasable plans.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PlanListResponse' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        # The Edge's billing relay answers 502 for anything but a relayed refusal
+        # (`billing-routes.ts`) — §12.1 #166. Retry; nothing was bought or changed.
+        '502': { $ref: '#/components/responses/DependencyFailure' }
+        '503': { $ref: '#/components/responses/NotConfigured' }
+  /v1/workspaces/{workspaceId}/billing:
+    get:
+      tags: [billing]
+      operationId: readWorkspaceBilling
+      description: >-
+        What this workspace is paying for (ADR-0025). **Requires owner or admin**,
+        which is stricter than most workspace reads and deliberate: a plan, a
+        dunning status and a renewal date are facts about the person who owns the
+        account, not about the automations a member runs.
+
+        **No provider identifier is ever returned.** `planId` is this platform's,
+        never the billing provider's. A workspace that has never paid reports the
+        free plan rather than an absence, because the free plan is the floor and
+        not a missing subscription.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      responses:
+        '200':
+          description: The workspace's current plan and subscription state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkspaceBillingResponse' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        # The Edge's billing relay answers 502 for anything but a relayed refusal
+        # (`billing-routes.ts`) — §12.1 #166. Retry; nothing was bought or changed.
+        '502': { $ref: '#/components/responses/DependencyFailure' }
+        '503': { $ref: '#/components/responses/NotConfigured' }
+  /v1/workspaces/{workspaceId}/billing/checkout:
+    post:
+      tags: [billing]
+      operationId: createBillingCheckoutSession
+      description: >-
+        Start a purchase (ADR-0025). Requires owner or admin. The platform creates
+        a **provider-hosted** Checkout session and answers its URL; the client
+        navigates there.
+
+        **The platform never renders a card field and never receives a card
+        number** — card data does not touch a platform server, which keeps the
+        estate in PCI SAQ-A. The returned URL is a capability, not a credential:
+        single-purpose, short-lived, and useless for reading or mutating anything
+        the platform owns.
+
+        The subscription becomes real when the provider's
+        `checkout.session.completed` callback arrives at
+        `POST /v1/billing/webhooks`, not when this call returns. A client should
+        re-read `GET /v1/workspaces/{workspaceId}/billing` after the redirect
+        rather than assuming the plan changed.
+
+        **A workspace that already holds a plan is refused (409)** — trialing,
+        active or past due (BUILD-PLAN 24.12.3). Changing a plan happens in the
+        portal; a second Checkout would open a second subscription, billed beside
+        the first.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BillingCheckoutRequest' }
+      responses:
+        '201':
+          description: A provider-hosted Checkout session.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HostedBillingSession' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          # Conflict — see the shared response for the problem shape.
+          description: >-
+            The workspace already has a plan that is trialing, active or past due:
+            `details.reason` is `plan_exists` and `detail` is "This workspace
+            already has a plan. Change it in Manage billing." The client opens the
+            portal (`createBillingPortalSession`) instead. No provider call was made.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        # The Edge's billing relay answers 502 for anything but a relayed refusal
+        # (`billing-routes.ts`) — §12.1 #166. Retry; nothing was bought or changed.
+        '502': { $ref: '#/components/responses/DependencyFailure' }
+        '503': { $ref: '#/components/responses/NotConfigured' }
+  /v1/workspaces/{workspaceId}/billing/portal:
+    post:
+      tags: [billing]
+      operationId: createBillingPortalSession
+      description: >-
+        Open the provider-hosted customer portal (ADR-0025). Requires owner or
+        admin. **This is where a plan is changed or cancelled**: the platform
+        publishes no cancel, upgrade or downgrade operation of its own, because
+        each would be a money-moving mutation duplicating one the provider already
+        implements correctly. The platform learns the outcome from
+        `customer.subscription.updated` on the webhook it already verifies.
+
+        Answers **409** when the workspace has no billing relationship yet — the
+        client should send the customer to checkout instead. That is not a 404:
+        the workspace exists and the caller can plainly see it.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BillingPortalRequest' }
+      responses:
+        '201':
+          description: A provider-hosted portal session.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HostedBillingSession' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        # The Edge's billing relay answers 502 for anything but a relayed refusal
+        # (`billing-routes.ts`) — §12.1 #166. Retry; nothing was bought or changed.
+        '502': { $ref: '#/components/responses/DependencyFailure' }
+        '503': { $ref: '#/components/responses/NotConfigured' }
+  /v1/billing/webhooks:
+    post:
+      tags: [billing]
+      operationId: receiveBillingWebhook
+      security: []
+      description: >-
+        The billing provider's callback (BUILD-PLAN 7.5.3, ADR-0016). The fourth
+        unauthenticated public route, and the reason is the same as the other two:
+        the caller is not a person with a session. The Edge relays and does not
+        decide -- the endpoint secret lives in the entitlements service and
+        nowhere else, so this route cannot tell a real event from a forged one and
+        does not pretend to. The body is relayed byte for byte, because the
+        signature covers the exact bytes the provider sent. The provider is not
+        named here: which header carries the signature is configuration. A
+        successful downstream acceptance returns an empty JSON object with its
+        2xx status; a downstream refusal is flattened to a 502 problem document
+        so internal validator text never becomes a public webhook response.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: The provider's event, verbatim.
+      responses:
+        '200':
+          description: The event was accepted by Entitlements.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: false }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '502':
+          description: Entitlements could not accept the event; no upstream body is exposed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ApiProblem' }
+        '503': { $ref: '#/components/responses/NotConfigured' }
+  /v1/automations/callbacks/{message}:
+    post:
+      tags: [automations]
+      operationId: receiveAutomationCallback
+      security: []
+      description: >-
+        An automation container reporting in, authenticated by its run token
+        rather than a session. The segment is the MESSAGE — step, result, model,
+        provider, artifact, mail, memory-get, memory-put — never a run id.
+        `memory-get` and `memory-put` (ADR-0048 amendment 3) are a flow's small
+        values per workspace, for a manifest that declares `memory`.
+
+
+        `mail` was served but unpublished from Round 8 until Round 11 (§12.1
+        #119a): the only definition of its shape was a route handler in a private
+        repository, which an automation author copying the published wire format
+        could not read. `AutomationMailRequest` in `@snoopy/contracts` is now that
+        definition.
+      parameters:
+        - name: message
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [step, result, model, provider, artifact, mail, memory-get, memory-put]
+      responses:
+        '200': { description: The callback was accepted. }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+  /v1/workspaces:
+    get:
+      tags: [workspaces]
+      operationId: listWorkspaces
+      responses:
+        '200':
+          description: Workspaces available to the current user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+    post:
+      tags: [workspaces]
+      operationId: createWorkspace
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkspaceRequest'
+      responses:
+        '200':
+          description: Explicit workspace creation completed or replayed idempotently.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMutationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /v1/session/active-workspace:
+    patch:
+      tags: [session, workspaces]
+      operationId: selectActiveWorkspace
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [workspaceId]
+              properties:
+                workspaceId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Explicit active workspace selection completed or replayed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActiveWorkspaceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /v1/session/ai-document-reading:
+    put:
+      tags: [session]
+      operationId: setAiDocumentReading
+      description: >-
+        Saves the account's answer to "AI reads your documents" (ADR-0038,
+        BUILD-PLAN 25.4.21): `allowed` or `declined`, for the session's own person,
+        for every workspace they are in. `GET /v1/session` reads it back as
+        `user.aiDocumentReading`, null while never asked. Cookie or bearer; a
+        cookie caller is held to the website's origin like every cookie mutation.
+
+        **Idempotent by value**, so there is no `Idempotency-Key`: the same answer
+        again changes nothing and keeps `decidedAt`. Not a server gate — a client
+        asks it before starting a run with a file on a flow that `usesAi`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiDocumentReadingChoice'
+      responses:
+        '200':
+          description: The account's answer and when it was made.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiDocumentReadingState'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '502':
+          $ref: '#/components/responses/DependencyFailure'
+        '503':
+          $ref: '#/components/responses/NotConfigured'
+  /v1/session/devices:
+    put:
+      tags: [session]
+      operationId: registerSessionDevice
+      security:
+        - bearerAuth: []
+      description: >-
+        Registers the phone this session is on for push, or refreshes it
+        (BUILD-PLAN 24.13.3, ADR-0035). **Bearer only**: the website has no device,
+        and a cookie caller is refused 400 "A native session is required" before
+        any session is resolved. The actor is the session's person — nothing in the
+        body may name one.
+
+        **Idempotent by the token**, so there is no `Idempotency-Key`: the app calls
+        this on every cold start, the same phone answers the same `deviceId`, and
+        each call refreshes the registration's `last_seen_at`. The same token
+        registered from another account moves the device to that account — a phone
+        two people use pushes to whoever signed in last. The token travels in this
+        body once and is echoed nowhere; the answer is one id, kept in the enclave
+        beside the session and sent back on sign-out.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceRegistration'
+      responses:
+        '200':
+          description: Registered, or refreshed. The only identifier the device is known by afterwards.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceRegistered'
+        '400':
+          # BadRequest — also the answer to a cookie caller ("A native session is required").
+          description: >-
+            The body is not a registration, or the caller presented no bearer
+            token. The refusal names the field, never the token's value.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/NotConfigured'
+  /v1/session/devices/{deviceId}:
+    delete:
+      tags: [session]
+      operationId: unregisterSessionDevice
+      security:
+        - bearerAuth: []
+      description: >-
+        Unregisters a device of the session's person — called on sign-out, with the
+        still-valid bearer, BEFORE the logout that revokes it (BUILD-PLAN 24.13.3).
+        Bearer only, like registration. Idempotent: a device already gone, or one
+        another account has since registered, is still 204. A device is named by
+        the id registration answered, never by its token, which is the only reason
+        an identifier appears in this URL at all.
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: The device is not registered to this person — removed now, or gone already.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/NotConfigured'
+  /v1/workspaces/{workspaceId}/projects:
+    get:
+      tags: [workspaces]
+      operationId: listWorkspaceProjects
+      description: >-
+        The teams the person can see — a team is a project in this contract
+        (24.11.5): a sub-organization with its own flows. A member sees the teams
+        they are on; an owner or admin of the organization sees every team.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageCursor'
+      responses:
+        '200':
+          description: Bounded page of the teams (projects) the actor is authorized to see.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [workspaces]
+      operationId: createWorkspaceProject
+      description: >-
+        Create a team — a project in this contract — in this workspace (BUILD-PLAN
+        24.12.1). **An owner or admin creates it**: a plain member of an
+        organization is refused, and in a personal workspace the owner is the only
+        member. A workspace holds one team of each kind (`type`) among its teams
+        that are not archived, ignoring case; archiving a team frees its kind.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+      responses:
+        '200':
+          description: Project and owner membership created atomically or replayed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectMutationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          # Forbidden — see the shared response for the problem shape.
+          description: >-
+            The person is not an owner or admin of this workspace; also a cookie
+            request from another origin, or an account that is not active. The
+            refusal names no reason.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          # Conflict — see the shared response for the problem shape.
+          description: >-
+            The workspace already has a department of this kind that is not archived:
+            `details.reason` is `team_kind_taken` and `detail` is "This workspace
+            already has a department of this kind". An idempotency key reused with
+            different input is the other conflict, and carries no reason.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+  /v1/workspaces/{workspaceId}/connections:
+    get:
+      tags: [connections]
+      operationId: listConnections
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      responses:
+        '200':
+          description: Connection metadata without provider tokens.
+components:
+  securitySchemes:
+    websiteSession:
+      type: apiKey
+      in: cookie
+      name: __Host-autom8x-access
+      description: HttpOnly first-party website session cookie; development uses a non-Host-prefixed name.
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+      description: Client session credential; provider OAuth tokens are never this credential.
+  parameters:
+    PageShape:
+      name: shape
+      in: query
+      required: false
+      schema: { type: string, enum: [blocks] }
+      description: >-
+        `blocks` answers the page body built when it is read (ADR-0048): the
+        blocks a client draws, in the order its flow's manifest gives, in place
+        of the fields it would otherwise draw itself. Without it the answer is
+        unchanged. Any other value is 400.
+    LoginProvider:
+      name: provider
+      in: path
+      required: true
+      schema: { type: string, enum: [google, microsoft, apple] }
+    WorkspaceId:
+      name: workspaceId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    AutomationId:
+      name: automationId
+      in: path
+      required: true
+      schema: { type: string }
+    RunId:
+      name: runId
+      in: path
+      required: true
+      schema: { type: string }
+    ApprovalId:
+      name: approvalId
+      in: path
+      required: true
+      schema: { type: string }
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    DomainId:
+      name: domainId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 16
+        maxLength: 128
+        pattern: '^[A-Za-z0-9._~:-]+$'
+    PageLimit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+    PageCursor:
+      name: cursor
+      in: query
+      schema: { type: string, maxLength: 512 }
+  responses:
+    BadRequest:
+      description: Request input is invalid.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiProblem'
+    Forbidden:
+      description: Request origin or actor is not allowed.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiProblem'
+    Unauthenticated:
+      description: Authentication is required.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiProblem'
+    NotFound:
+      description: Resource not found in the active workspace.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiProblem'
+    Conflict:
+      description: The idempotency key or current state conflicts with this request.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiProblem'
+    DependencyFailure:
+      description: >-
+        A dependency this route needs could not be reached. Distinct from a 4xx on
+        purpose: nothing about the caller's credential or request is known to be
+        wrong, so the correct client behaviour is to retry rather than to discard
+        state. On the session routes, treating this as a 401 would sign a person out
+        of a session that never ended.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiProblem'
+    NotConfigured:
+      description: The owning production adapter is not configured.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiProblem'
+    TooManyRequests:
+      description: >-
+        Shed by the Edge rate limiter, per source address. Carries `retry-after`.
+        Every route except `/health/live` can answer this; it is documented on the
+        unauthenticated ones because there it is the primary protection rather
+        than a backstop.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiProblem'
+  schemas:
+    LiveHealthResponse:
+      type: object
+      required: [status, service, version]
+      description: >-
+        Process is alive. `commit` and `contracts` are the deployed marker (CI wave
+        1): present when CI built the running image, absent on a local build, so a
+        client reads them as "what is running", never as "what should be".
+      properties:
+        status: { type: string, const: ok }
+        service: { type: string }
+        version: { type: string }
+        commit:
+          type: string
+          pattern: '^[0-9a-f]{40}$'
+          description: The commit the running image was built from.
+        contracts:
+          type: object
+          additionalProperties: false
+          required: [openapi.yaml, automations.yaml, connections.yaml]
+          description: >-
+            sha256, hex, of each public OpenAPI document at that commit — the hash
+            each client writes into the first line of its generated types, so equal
+            means the same bytes.
+          properties:
+            openapi.yaml: { type: string, pattern: '^[0-9a-f]{64}$' }
+            automations.yaml: { type: string, pattern: '^[0-9a-f]{64}$' }
+            connections.yaml: { type: string, pattern: '^[0-9a-f]{64}$' }
+    ReadinessCheck:
+      type: object
+      required: [name, ok, detail]
+      properties:
+        name: { type: string }
+        ok: { type: boolean }
+        detail: { type: string }
+    ReadinessResponse:
+      type: object
+      required: [status, service, checks]
+      properties:
+        status: { type: string, enum: [ready, not-ready] }
+        service: { type: string }
+        checks:
+          type: array
+          items: { $ref: '#/components/schemas/ReadinessCheck' }
+    WorkspaceSummary:
+      type: object
+      additionalProperties: false
+      required: [id, name, type, role]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, minLength: 2, maxLength: 120 }
+        type: { type: string, enum: [personal, organization] }
+        role: { type: string, enum: [owner, admin, member] }
+        domainOnly:
+          type: boolean
+          description: >-
+            Decision 8B. Present, and `true`, only on an organization that admits
+            only people whose every sign-in address is at one of its verified
+            domains; absent means the setting is off.
+    UpdateWorkspaceRequest:
+      type: object
+      additionalProperties: false
+      description: At least one of `name` and `domainOnly`; an empty body is a 400.
+      properties:
+        name: { type: string, minLength: 2, maxLength: 120 }
+        domainOnly:
+          type: boolean
+          description: >-
+            Turns the domain-only setting on or off (decision 8B). Organizations
+            only; owners and admins only.
+    WorkspaceUpdateResponse:
+      type: object
+      additionalProperties: false
+      required: [workspace]
+      properties:
+        workspace: { $ref: '#/components/schemas/WorkspaceSummary' }
+    RemovalResponse:
+      type: object
+      additionalProperties: false
+      required: [removed]
+      properties:
+        removed: { type: boolean }
+    WorkspaceMember:
+      type: object
+      additionalProperties: false
+      required: [workspaceId, userId, role, email, createdAt]
+      properties:
+        workspaceId: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        role: { type: string, enum: [owner, admin, member] }
+        displayName: { type: string }
+        email: { type: string, format: email }
+        createdAt: { type: string, format: date-time }
+    WorkspaceMemberListResponse:
+      type: object
+      additionalProperties: false
+      required: [members]
+      properties:
+        members: { type: array, items: { $ref: '#/components/schemas/WorkspaceMember' } }
+        nextCursor:
+          type: string
+          maxLength: 512
+          description: Opaque cursor; send unchanged as the next request's cursor query parameter.
+    UpdateProjectRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 2, maxLength: 60 }
+        description: { type: [string, 'null'], minLength: 1, maxLength: 4000 }
+        status: { type: string, enum: [active, paused, draft, archived] }
+    ProjectMembership:
+      type: object
+      additionalProperties: false
+      required: [projectId, workspaceId, userId, role, email, createdAt]
+      properties:
+        projectId: { type: string, format: uuid }
+        workspaceId: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        role: { type: string, enum: [owner, admin, member] }
+        displayName: { type: string }
+        email: { type: string, format: email }
+        createdAt: { type: string, format: date-time }
+    ProjectMembershipListResponse:
+      type: object
+      additionalProperties: false
+      required: [memberships]
+      properties:
+        memberships: { type: array, items: { $ref: '#/components/schemas/ProjectMembership' } }
+        nextCursor:
+          { type: string, maxLength: 512, description: Opaque; return unchanged as cursor. }
+    ProjectMembershipMutationResponse:
+      type: object
+      additionalProperties: false
+      required: [membership]
+      properties:
+        membership: { $ref: '#/components/schemas/ProjectMembership' }
+    UpsertProjectMembershipRequest:
+      type: object
+      additionalProperties: false
+      required: [userId, role]
+      properties:
+        userId: { type: string, format: uuid }
+        role: { type: string, enum: [owner, admin, member] }
+    ProjectAccessRequest:
+      type: object
+      additionalProperties: false
+      description: >-
+        One person's request onto one team (a project in this contract), with their
+        name and address so a manager's list means something (BUILD-PLAN 24.11.2).
+      required: [id, projectId, workspaceId, userId, status, email, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        projectId: { type: string, format: uuid }
+        workspaceId: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        status: { type: string, enum: [pending, approved, denied, cancelled] }
+        displayName: { type: string }
+        email: { type: string }
+        createdAt: { type: string, format: date-time }
+        decidedAt: { type: string, format: date-time }
+        decidedByUserId: { type: string, format: uuid }
+    ProjectDirectoryEntry:
+      type: object
+      additionalProperties: false
+      description: A team by name and kind, and where the person stands with it (24.11.4).
+      required: [id, workspaceId, name, type, status, access, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        workspaceId: { type: string, format: uuid }
+        name: { type: string, minLength: 2, maxLength: 60 }
+        type: { type: string, minLength: 1, maxLength: 120 }
+        status: { type: string, enum: [active, paused, draft, archived] }
+        access: { type: string, enum: [member, requested, none] }
+        createdAt: { type: string, format: date-time }
+    ProjectDirectoryResponse:
+      type: object
+      additionalProperties: false
+      required: [projects]
+      properties:
+        projects: { type: array, items: { $ref: '#/components/schemas/ProjectDirectoryEntry' } }
+        nextCursor:
+          { type: string, maxLength: 512, description: Opaque; return unchanged as cursor. }
+    ProjectAccessRequestListResponse:
+      type: object
+      additionalProperties: false
+      required: [requests]
+      properties:
+        requests: { type: array, items: { $ref: '#/components/schemas/ProjectAccessRequest' } }
+        nextCursor:
+          { type: string, maxLength: 512, description: Opaque; return unchanged as cursor. }
+    ProjectAccessRequestMutationResponse:
+      type: object
+      additionalProperties: false
+      required: [request]
+      properties:
+        request: { $ref: '#/components/schemas/ProjectAccessRequest' }
+    DecideProjectAccessRequest:
+      type: object
+      additionalProperties: false
+      required: [decision]
+      properties:
+        decision: { type: string, enum: [approve, deny] }
+    OrganizationDomain:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          workspaceId,
+          domain,
+          registrableDomain,
+          status,
+          joinPolicy,
+          discoveryEnabled,
+          verificationRecordName,
+          createdAt,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        workspaceId: { type: string, format: uuid }
+        domain: { type: string, minLength: 3, maxLength: 253 }
+        registrableDomain: { type: string, minLength: 3, maxLength: 253 }
+        status: { type: string, enum: [pending, verified, suspended, revoked] }
+        joinPolicy: { type: string, enum: [approval, automatic, invite_only] }
+        discoveryEnabled: { type: boolean }
+        verificationRecordName: { type: string }
+        verifiedAt: { type: string, format: date-time }
+        lastCheckedAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+    OrganizationDomainListResponse:
+      type: object
+      additionalProperties: false
+      required: [domains]
+      properties:
+        domains: { type: array, items: { $ref: '#/components/schemas/OrganizationDomain' } }
+        nextCursor:
+          { type: string, maxLength: 512, description: Opaque; return unchanged as cursor. }
+    ClaimOrganizationDomainRequest:
+      type: object
+      additionalProperties: false
+      required: [domain]
+      properties:
+        domain: { type: string, minLength: 3, maxLength: 253 }
+        joinPolicy: { type: string, enum: [approval, automatic, invite_only], default: approval }
+    OrganizationDomainClaimResponse:
+      type: object
+      additionalProperties: false
+      required: [domain]
+      properties:
+        domain: { $ref: '#/components/schemas/OrganizationDomain' }
+        verificationRecordValue:
+          type: string
+          description: Present only on the original successful claim; never available from a replay.
+    UpdateOrganizationDomainRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        joinPolicy: { type: string, enum: [approval, automatic, invite_only] }
+        discoveryEnabled: { type: boolean }
+    OrganizationDomainMutationResponse:
+      type: object
+      additionalProperties: false
+      required: [domain]
+      properties:
+        domain: { $ref: '#/components/schemas/OrganizationDomain' }
+    OrganizationJoinRequest:
+      type: object
+      additionalProperties: false
+      description: >-
+        One person's request to join an organization. The list, a decision and a
+        withdrawal name the requester — `displayName` when they have one, and
+        `email` — so an owner or admin approves a person, not an id (BUILD-PLAN
+        24.12.4).
+      required: [id, workspaceId, userId, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        workspaceId: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        status: { type: string, enum: [pending, approved, rejected, cancelled] }
+        displayName: { type: string }
+        email: { type: string }
+        createdAt: { type: string, format: date-time }
+        decidedAt: { type: string, format: date-time }
+        decidedByUserId: { type: string, format: uuid }
+    OrganizationJoinRequestListResponse:
+      type: object
+      additionalProperties: false
+      required: [requests]
+      properties:
+        requests: { type: array, items: { $ref: '#/components/schemas/OrganizationJoinRequest' } }
+        nextCursor:
+          { type: string, maxLength: 512, description: Opaque; return unchanged as cursor. }
+    DecideOrganizationJoinRequest:
+      type: object
+      additionalProperties: false
+      required: [decision]
+      properties:
+        decision: { type: string, enum: [approve, reject] }
+    OrganizationJoinRequestMutationResponse:
+      type: object
+      additionalProperties: false
+      required: [request]
+      properties:
+        request: { $ref: '#/components/schemas/OrganizationJoinRequest' }
+    DiscoverableOrganization:
+      type: object
+      additionalProperties: false
+      required: [workspaceId, name, domain, joinPolicy, membershipState]
+      properties:
+        workspaceId: { type: string, format: uuid }
+        name: { type: string }
+        domain: { type: string }
+        joinPolicy: { type: string, enum: [approval, automatic, invite_only] }
+        membershipState: { type: string, enum: [none, requested, member] }
+    OrganizationDiscoveryResponse:
+      type: object
+      additionalProperties: false
+      required: [organizations]
+      properties:
+        organizations:
+          {
+            type: array,
+            maxItems: 10,
+            items: { $ref: '#/components/schemas/DiscoverableOrganization' },
+          }
+    OrganizationJoinResponse:
+      type: object
+      additionalProperties: false
+      required: [outcome, workspaceId]
+      properties:
+        outcome: { type: string, enum: [joined, requested] }
+        workspaceId: { type: string, format: uuid }
+        request: { $ref: '#/components/schemas/OrganizationJoinRequest' }
+    WorkspaceListResponse:
+      type: object
+      additionalProperties: false
+      required: [workspaces]
+      properties:
+        workspaces:
+          type: array
+          items: { $ref: '#/components/schemas/WorkspaceSummary' }
+        activeWorkspaceId: { type: string, format: uuid }
+    CreateWorkspaceRequest:
+      type: object
+      additionalProperties: false
+      required: [name, type, activate]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 120 }
+        type: { type: string, enum: [personal, organization] }
+        activate:
+          type: boolean
+          description: Explicit command input; the backend never infers activation.
+    WorkspaceMutationResponse:
+      type: object
+      additionalProperties: false
+      required: [workspace]
+      properties:
+        workspace: { $ref: '#/components/schemas/WorkspaceSummary' }
+        activeWorkspaceId: { type: string, format: uuid }
+    ActiveWorkspaceResponse:
+      type: object
+      additionalProperties: false
+      required: [activeWorkspaceId]
+      properties:
+        activeWorkspaceId: { type: string, format: uuid }
+    CreateProjectRequest:
+      type: object
+      additionalProperties: false
+      description: >-
+        A new team, created by an owner or admin of the workspace (BUILD-PLAN
+        24.12.1). `type` is its kind, unique in the workspace among teams that are
+        not archived, ignoring case. `name` and `description` stay as they are
+        because older clients still send them; the apps send the kind as `name`
+        too.
+      required: [name, type]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 60 }
+        type: { type: string, minLength: 1, maxLength: 120 }
+        description: { type: string, minLength: 1, maxLength: 4000 }
+    ProjectSummary:
+      type: object
+      additionalProperties: false
+      description: >-
+        A team, as the person calls it — a project in this contract (24.11.5).
+        `type` is the kind of team (HR, Accounting, Finance, Legal, Compliance, Data,
+        Operations, Sales, Marketing, Customer Support, IT, Engineering, Product,
+        Procurement, Administration, Research, Healthcare, or the person's own words). The kind
+        is unique in the workspace among teams that are not archived, ignoring case,
+        and a team is created by an owner or admin (BUILD-PLAN 24.12.1).
+      required: [id, workspaceId, name, type, status, viewerRole, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        workspaceId: { type: string, format: uuid }
+        name: { type: string, minLength: 2, maxLength: 60 }
+        type: { type: string, minLength: 1, maxLength: 120 }
+        description: { type: string, minLength: 1, maxLength: 4000 }
+        status: { type: string, enum: [active, paused, draft, archived] }
+        viewerRole: { type: string, enum: [owner, admin, member] }
+        createdAt: { type: string, format: date-time }
+    ProjectMutationResponse:
+      type: object
+      additionalProperties: false
+      required: [project]
+      properties:
+        project: { $ref: '#/components/schemas/ProjectSummary' }
+    ProjectListResponse:
+      type: object
+      additionalProperties: false
+      required: [projects]
+      properties:
+        projects:
+          type: array
+          maxItems: 100
+          items: { $ref: '#/components/schemas/ProjectSummary' }
+        nextCursor: { type: string, maxLength: 512 }
+    LoginProviderSummary:
+      type: object
+      required: [id, label]
+      properties:
+        id: { type: string, enum: [google, microsoft, apple] }
+        label: { type: string, enum: [Google, Microsoft, Apple] }
+    LoginProvidersResponse:
+      type: object
+      required: [providers, passwordLoginEnabled, magicLinkLoginEnabled]
+      properties:
+        providers:
+          type: array
+          items: { $ref: '#/components/schemas/LoginProviderSummary' }
+        passwordLoginEnabled: { type: boolean, const: false }
+        magicLinkLoginEnabled: { type: boolean, const: false }
+    LoginIdentitySummary:
+      type: object
+      required: [provider, primary]
+      properties:
+        provider: { type: string, enum: [google, microsoft, apple] }
+        primary: { type: boolean }
+        email:
+          type: string
+          description: >-
+            The address that provider reports; absent when none (BUILD-PLAN 24.12.2).
+            Shown so a person can tell linked accounts apart.
+    LoginIdentitiesResponse:
+      type: object
+      required: [identities]
+      properties:
+        identities:
+          type: array
+          items: { $ref: '#/components/schemas/LoginIdentitySummary' }
+    NativeIdentityLinkTicket:
+      type: object
+      additionalProperties: false
+      required: [ticket, expiresIn]
+      description: >-
+        A sealed native link transaction (ADR-0017 §6). Opaque to the app, which only
+        opens it in its own system browser; it is never stored.
+      properties:
+        ticket: { type: string }
+        expiresIn:
+          type: integer
+          minimum: 1
+          description: Seconds the ticket stays usable.
+    NativeSessionResponse:
+      type: object
+      additionalProperties: false
+      required: [tokenType, accessToken, refreshToken, expiresIn]
+      description: >-
+        The only credential this platform issues to a client, and the reason ADR-0017
+        amends invariant 1. The website never receives this shape — its session lives
+        in HttpOnly cookies it cannot read. A native client stores these in the OS
+        secure enclave and presents `accessToken` as a bearer credential.
+      properties:
+        tokenType: { type: string, const: Bearer }
+        accessToken: { type: string }
+        refreshToken:
+          type: string
+          description: >-
+            Outlives the access token and is what a sign-out revokes. Appears only in
+            this response and in a refresh or logout body — never in a URL or a log.
+        expiresIn:
+          type: integer
+          minimum: 1
+          description: Seconds until `accessToken` expires. The refresh token's lifetime is not stated.
+    DeviceRegistration:
+      type: object
+      additionalProperties: false
+      required: [platform, token]
+      description: >-
+        What a phone sends once to register itself for push (BUILD-PLAN 24.13.3,
+        ADR-0035). The token travels in this body and nowhere else on the public
+        surface: never a URL, never a response, never a log.
+      properties:
+        platform:
+          type: string
+          enum: [ios, android]
+          description: >-
+            `android` is admitted so a token can be stored; no FCM credential
+            exists yet, and the app registers nothing there (§12.1 #211).
+        token:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: The push service's token for this device; no whitespace.
+        appBuild:
+          type: string
+          minLength: 1
+          maxLength: 40
+          description: The app build that registered, for the operator's eyes only.
+    DeviceRegistered:
+      type: object
+      additionalProperties: false
+      required: [deviceId]
+      description: >-
+        The only identifier a device is known by after registration. The app keeps
+        it beside the session and sends it back on sign-out.
+      properties:
+        deviceId: { type: string, format: uuid }
+    PushNotificationData:
+      type: object
+      additionalProperties: false
+      required: [event, workspaceId]
+      description: >-
+        The `data` of a push notification, as the runs service sends it to the push
+        service and a phone receives it (BUILD-PLAN 24.13.4, 24.13.9, ADR-0035): the
+        event and the ids a tap needs, never the document. No route answers this; it
+        is published so the app types what it parses from the one contract it
+        already generates from. **`event` is a closed enum, by design.** A phone on an
+        older build does not know a new event, so adding one is a compatibility
+        finding the compatibility check raises on purpose — a change to make
+        deliberately, with the app's release — and never an additive edit.
+      properties:
+        event:
+          type: string
+          enum: [approval-requested, run-failed, run-succeeded]
+          description: >-
+            The events a phone is interrupted for — `PUSH_EVENTS` in the runs
+            service; `approval-expiring` stays email-only. `run-succeeded` joined
+            with ADR-0042 (2026-10-19), a deliberate compatibility change: a tap
+            opens the completed run.
+        workspaceId:
+          type: string
+          format: uuid
+          description: >-
+            Always present, so a tap opens the run in its own workspace rather than
+            the active one (§12.1 #213).
+        runId:
+          type: string
+          description: The held, failed or completed run.
+        approvalId:
+          type: string
+          description: The approval a held run is waiting on; sent beside `runId`.
+    SessionResponse:
+      type: object
+      additionalProperties: false
+      required: [authenticated, user, workspaces]
+      properties:
+        authenticated: { type: boolean, const: true }
+        user:
+          type: object
+          additionalProperties: false
+          required: [userId, email, aiDocumentReading]
+          properties:
+            userId: { type: string, format: uuid }
+            email: { type: string, format: email }
+            displayName: { type: string, minLength: 1, maxLength: 200 }
+            activeWorkspaceId: { type: string, format: uuid }
+            aiDocumentReading:
+              type: [string, 'null']
+              enum: [allowed, declined, null]
+              description: >-
+                The account's answer to "AI reads your documents" (ADR-0038); null
+                while never asked, when a client shows the consent card once.
+                Changed with `PUT /v1/session/ai-document-reading`.
+        workspaces:
+          type: array
+          items: { $ref: '#/components/schemas/WorkspaceSummary' }
+        workspacesTruncated:
+          type: boolean
+          description: >-
+            True when the session contains only its bounded first page of
+            workspaces. Page the documented workspace collection; do not infer
+            non-membership from this abbreviated session list.
+    AiDocumentReadingChoice:
+      type: object
+      additionalProperties: false
+      required: [choice]
+      properties:
+        choice: { type: string, enum: [allowed, declined] }
+    AiDocumentReadingState:
+      type: object
+      additionalProperties: false
+      required: [aiDocumentReading, decidedAt]
+      properties:
+        aiDocumentReading: { type: string, enum: [allowed, declined] }
+        decidedAt:
+          type: string
+          format: date-time
+          description: When the answer last changed; the same answer again keeps it.
+    AutomationSummary:
+      type: object
+      required: [id, workspaceId, name, status, updatedAt]
+      properties:
+        id: { type: string }
+        workspaceId: { type: string }
+        name: { type: string }
+        status: { type: string, enum: [draft, active, paused, archived] }
+        publishedVersion: { type: integer }
+        updatedAt: { type: string, format: date-time }
+    AccountDeletionResult:
+      type: object
+      additionalProperties: false
+      required: [deleted, workspaces]
+      description: >-
+        What `DELETE /v1/account` removed (FR-21), relayed from Access. The same
+        shape on 200 and 409; only `deleted: true` means the operation committed.
+      properties:
+        deleted: { type: boolean }
+        workspaces:
+          type: array
+          description: Every workspace that leaves with the account (ADR-0028).
+          items: { $ref: '#/components/schemas/AccountDeletionWorkspace' }
+        reason:
+          type: string
+          description: Present when `deleted` is false.
+        account:
+          type: object
+          additionalProperties: true
+          description: Present when `deleted` is true — what Access removed.
+
+    AccountDeletionWorkspace:
+      type: object
+      additionalProperties: false
+      required: [workspaceId, type, complete, services]
+      properties:
+        workspaceId: { type: string, format: uuid }
+        type: { type: string, enum: [personal, organization] }
+        complete:
+          type: boolean
+          description: True only when every service removed this workspace.
+        services:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [service, ok]
+            properties:
+              service:
+                type: string
+                enum: [entitlements, connections, runs, catalog, artifacts]
+              ok: { type: boolean }
+              detail:
+                description: What the service reported removing, in its own shape.
+              reason:
+                type: string
+                description: >-
+                  Why it did not, when it did not — `not_attempted` for a service
+                  after the one that refused. Never an upstream body verbatim.
+
+    ApiProblem:
+      type: object
+      required: [type, title, status, detail, instance, code, requestId]
+      properties:
+        type: { type: string, format: uri-reference }
+        title: { type: string }
+        status: { type: integer, minimum: 400, maximum: 599 }
+        detail: { type: string }
+        instance: { type: string, format: uri-reference }
+        code: { type: string }
+        requestId: { type: string }
+        traceId: { type: string }
+        details: { type: object, additionalProperties: true }
+
+    WorkspaceExportResponse:
+      type: object
+      additionalProperties: false
+      required: [workspaceId, exportedAt, services, complete]
+      description: >-
+        A bounded, owner/admin-only export. `complete` is false if a service is
+        unavailable or any successful section reports `truncated: true`.
+      properties:
+        workspaceId: { type: string, format: uuid }
+        exportedAt: { type: string, format: date-time }
+        complete: { type: boolean }
+        services:
+          type: array
+          description: Access is first, followed by the configured owning services.
+          items: { $ref: '#/components/schemas/WorkspaceExportServiceResult' }
+
+    WorkspaceExportServiceResult:
+      description: >-
+        A public service section. A successful section has public data; a failed
+        section has only a safe reason token and never a raw upstream error body.
+      oneOf:
+        - $ref: '#/components/schemas/AccessWorkspaceExportSection'
+        - $ref: '#/components/schemas/EntitlementsWorkspaceExportSection'
+        - $ref: '#/components/schemas/ConnectionsWorkspaceExportSection'
+        - $ref: '#/components/schemas/CatalogWorkspaceExportSection'
+        - $ref: '#/components/schemas/RunsWorkspaceExportSection'
+        - $ref: '#/components/schemas/ArtifactsWorkspaceExportSection'
+        - $ref: '#/components/schemas/UnavailableWorkspaceExportSection'
+
+    UnavailableWorkspaceExportSection:
+      type: object
+      additionalProperties: false
+      required: [service, ok, reason]
+      properties:
+        service:
+          type: string
+          enum: [entitlements, connections, catalog, runs, artifacts]
+        ok: { type: boolean, const: false }
+        reason:
+          oneOf:
+            - type: string
+              enum: [not_configured, unreachable]
+            - type: string
+              pattern: '^status_[1-5][0-9]{2}$'
+          description: Safe availability token; never an upstream response body.
+
+    AccessWorkspaceExportSection:
+      type: object
+      additionalProperties: false
+      required: [service, ok, data]
+      properties:
+        service: { type: string, const: access }
+        ok: { type: boolean, const: true }
+        data: { $ref: '#/components/schemas/AccessWorkspaceExportData' }
+    AccessWorkspaceExportData:
+      type: object
+      additionalProperties: false
+      required: [workspace, members, projects, domains, truncated]
+      properties:
+        workspace:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/ExportWorkspaceRecord'
+        members:
+          type: array
+          items: { $ref: '#/components/schemas/ExportWorkspaceMemberRecord' }
+        projects:
+          type: array
+          items: { $ref: '#/components/schemas/ExportProjectRecord' }
+        domains:
+          type: array
+          items: { $ref: '#/components/schemas/ExportDomainRecord' }
+        truncated: { type: boolean }
+    ExportWorkspaceRecord:
+      type: object
+      additionalProperties: false
+      required: [id, name, type, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        type: { type: string }
+        created_at: { type: string, format: date-time }
+    ExportWorkspaceMemberRecord:
+      type: object
+      additionalProperties: false
+      required: [user_id, role, created_at, email, display_name]
+      properties:
+        user_id: { type: string, format: uuid }
+        role: { type: string, enum: [owner, admin, member] }
+        created_at: { type: string, format: date-time }
+        email: { type: string, format: email }
+        display_name: { type: [string, 'null'] }
+    ExportProjectRecord:
+      type: object
+      additionalProperties: false
+      required: [id, name, type, description, status, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        type: { type: string }
+        description: { type: [string, 'null'] }
+        status: { type: string }
+        created_at: { type: string, format: date-time }
+    ExportDomainRecord:
+      type: object
+      additionalProperties: false
+      required: [id, domain, status, join_policy, discovery_enabled, verified_at, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        domain: { type: string }
+        status: { type: string }
+        join_policy: { type: string }
+        discovery_enabled: { type: boolean }
+        verified_at: { type: [string, 'null'], format: date-time }
+        created_at: { type: string, format: date-time }
+
+    EntitlementsWorkspaceExportSection:
+      type: object
+      additionalProperties: false
+      required: [service, ok, data]
+      properties:
+        service: { type: string, const: entitlements }
+        ok: { type: boolean, const: true }
+        data: { $ref: '#/components/schemas/EntitlementsWorkspaceExportData' }
+    EntitlementsWorkspaceExportData:
+      type: object
+      additionalProperties: false
+      required: [subscriptions, truncated]
+      properties:
+        subscriptions:
+          type: array
+          items: { $ref: '#/components/schemas/ExportEntitlementSubscriptionRecord' }
+        truncated: { type: boolean }
+    WorkspaceBillingResponse:
+      type: object
+      additionalProperties: false
+      description: >-
+        A workspace's billing state. **No provider identifier appears here or in
+        any other public schema** (ADR-0025 §2): a provider id is a join key into
+        an account the customer does not control, it is what a support screenshot
+        leaks, and it would weld this contract to the vendor ADR-0005 exists to
+        keep replaceable.
+      required: [workspaceId, planId, displayName]
+      properties:
+        workspaceId: { type: string, format: uuid }
+        planId:
+          type: string
+          description: This platform's plan id, never the provider's price or product id.
+        displayName: { type: string }
+        status:
+          type: string
+          description: >-
+            Absent when the workspace sits on the free floor and has never had a
+            subscription. `past_due` still grants capabilities — dunning is a
+            period in which the provider retries, and `canceled` and `unpaid` are
+            what end access.
+          enum: [trialing, active, past_due, canceled, unpaid, incomplete]
+        currentPeriodEnd: { type: string, format: date-time }
+        cancelAtPeriodEnd: { type: boolean }
+    PlanListResponse:
+      type: object
+      additionalProperties: false
+      required: [plans]
+      properties:
+        plans:
+          type: array
+          items: { $ref: '#/components/schemas/PurchasablePlan' }
+    PurchasablePlan:
+      type: object
+      additionalProperties: false
+      required: [planId, displayName, capabilities]
+      properties:
+        planId: { type: string }
+        displayName: { type: string }
+        capabilities:
+          type: object
+          description: >-
+            Capability name to its numeric allowance, e.g.
+            `automation.subscribe`. A capability is data rather than an enum in
+            this contract (ADR-0016), so a new one is a row in a plan and not a
+            contract change.
+          additionalProperties: { type: number }
+        price:
+          $ref: '#/components/schemas/PlanPrice'
+          description: >-
+            Absent when the provider cannot state one flat amount for the plan's
+            price, or cannot be reached — never invented. A client says the
+            price is shown at checkout.
+    PlanPrice:
+      type: object
+      additionalProperties: false
+      required: [amount, currency]
+      description: >-
+        What a plan costs, read from the billing provider by the plan's price
+        (§12.1 #163). Display only: the provider's checkout states the figure a
+        customer actually agrees to.
+      properties:
+        amount:
+          type: integer
+          minimum: 0
+          description: Minor units — cents for `usd` — so no float carries money.
+        currency:
+          type: string
+          pattern: '^[a-z]{3}$'
+          description: ISO 4217, lower case, as the provider states it.
+        interval:
+          type: string
+          enum: [day, week, month, year]
+          description: How often it recurs. Absent for a one-time price.
+    BillingCheckoutRequest:
+      type: object
+      additionalProperties: false
+      required: [planId]
+      properties:
+        planId: { type: string }
+        successUrl:
+          type: string
+          format: uri
+          description: >-
+            Absolute `https:` URL the provider returns the browser to after
+            payment. Validated server-side — an unvalidated value here is an open
+            redirect with a just-paid customer on the other end of it. Defaults to
+            the deployment's configured return URL when omitted.
+        cancelUrl:
+          type: string
+          format: uri
+          description: Absolute `https:` URL for an abandoned checkout.
+    BillingPortalRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        returnUrl:
+          type: string
+          format: uri
+          description: Absolute `https:` URL the portal returns the browser to.
+    HostedBillingSession:
+      type: object
+      additionalProperties: false
+      description: >-
+        A provider-hosted page. **A URL and an expiry, and nothing else** — no
+        token, no customer id, no price. It is a capability rather than a
+        credential, which is why it may cross to a browser at all.
+      required: [url, expiresAt]
+      properties:
+        url: { type: string, format: uri }
+        expiresAt: { type: string, format: date-time }
+    ExportEntitlementSubscriptionRecord:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          plan_id,
+          display_name,
+          status,
+          current_period_end,
+          cancel_at_period_end,
+          created_at,
+          updated_at,
+        ]
+      properties:
+        plan_id: { type: string }
+        display_name: { type: string }
+        status: { type: string }
+        current_period_end: { type: [string, 'null'], format: date-time }
+        cancel_at_period_end: { type: boolean }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    ConnectionsWorkspaceExportSection:
+      type: object
+      additionalProperties: false
+      required: [service, ok, data]
+      properties:
+        service: { type: string, const: connections }
+        ok: { type: boolean, const: true }
+        data: { $ref: '#/components/schemas/ConnectionsWorkspaceExportData' }
+    ConnectionsWorkspaceExportData:
+      type: object
+      additionalProperties: false
+      required: [connections, truncated]
+      properties:
+        connections:
+          type: array
+          items: { $ref: '#/components/schemas/ExportConnectionRecord' }
+        truncated: { type: boolean }
+    ExportConnectionRecord:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          provider_id,
+          external_account_id,
+          external_account_name,
+          status,
+          granted_scopes,
+          created_at,
+          last_validated_at,
+        ]
+      properties:
+        provider_id: { type: string }
+        external_account_id: { type: [string, 'null'] }
+        external_account_name: { type: [string, 'null'] }
+        status: { type: string }
+        granted_scopes: { type: array, items: { type: string } }
+        created_at: { type: string, format: date-time }
+        last_validated_at: { type: [string, 'null'], format: date-time }
+
+    CatalogWorkspaceExportSection:
+      type: object
+      additionalProperties: false
+      required: [service, ok, data]
+      properties:
+        service: { type: string, const: catalog }
+        ok: { type: boolean, const: true }
+        data: { $ref: '#/components/schemas/CatalogWorkspaceExportData' }
+    CatalogWorkspaceExportData:
+      type: object
+      additionalProperties: false
+      required: [subscriptions, truncated]
+      properties:
+        subscriptions:
+          type: array
+          items: { $ref: '#/components/schemas/ExportCatalogSubscriptionRecord' }
+        truncated: { type: boolean }
+    ExportCatalogSubscriptionRecord:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          template_id,
+          template_version,
+          name,
+          status,
+          config,
+          unmet_connections,
+          project_id,
+          created_by_user_id,
+          created_at,
+          updated_at,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        template_id: { type: string }
+        template_version: { type: integer, minimum: 1 }
+        name: { type: [string, 'null'] }
+        status: { type: string, enum: [draft, live, paused, archived] }
+        config:
+          type: object
+          additionalProperties: true
+          description: >-
+            Validated automation setup values. Provider credentials, webhook
+            secrets, and webhook payloads are not subscription config.
+        unmet_connections: { type: array, items: { type: string } }
+        project_id: { type: [string, 'null'], format: uuid }
+        created_by_user_id: { type: [string, 'null'], format: uuid }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    RunsWorkspaceExportSection:
+      type: object
+      additionalProperties: false
+      required: [service, ok, data]
+      properties:
+        service: { type: string, const: runs }
+        ok: { type: boolean, const: true }
+        data: { $ref: '#/components/schemas/RunsWorkspaceExportData' }
+    RunsWorkspaceExportData:
+      type: object
+      additionalProperties: false
+      required: [runs, approvals, truncated]
+      properties:
+        runs:
+          type: array
+          items: { $ref: '#/components/schemas/ExportRunRecord' }
+        approvals:
+          type: array
+          items: { $ref: '#/components/schemas/ExportApprovalRecord' }
+        truncated: { type: boolean }
+    ExportRunRecord:
+      type: object
+      additionalProperties: false
+      required:
+        [id, subscription_id, status, origin, created_at, started_at, ended_at, failure_reason]
+      properties:
+        id: { type: string, format: uuid }
+        subscription_id: { type: string, format: uuid }
+        status: { type: string }
+        origin: { type: string }
+        created_at: { type: string, format: date-time }
+        started_at: { type: [string, 'null'], format: date-time }
+        ended_at: { type: [string, 'null'], format: date-time }
+        failure_reason: { type: [string, 'null'] }
+    ExportApprovalRecord:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          run_id,
+          status,
+          eligible_roles,
+          decided_by_user_id,
+          decided_at,
+          expires_at,
+          decisions,
+          decision_answers,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        run_id: { type: string, format: uuid }
+        status: { type: string }
+        eligible_roles: { type: array, items: { type: string } }
+        decided_by_user_id: { type: [string, 'null'], format: uuid }
+        decided_at: { type: [string, 'null'], format: date-time }
+        expires_at: { type: [string, 'null'], format: date-time }
+        decisions:
+          type: [array, 'null']
+          items: { type: object }
+          description: >-
+            A review's offered changes, `{id, label, detail?}` each (ADR-0048
+            amendment 2); null on an approval decided as a whole.
+        decision_answers:
+          type: [array, 'null']
+          items: { type: object }
+          description: >-
+            A saved review's answers, `{id, decision}` each; null until saved, and
+            on every other approval.
+
+    ArtifactsWorkspaceExportSection:
+      type: object
+      additionalProperties: false
+      required: [service, ok, data]
+      properties:
+        service: { type: string, const: artifacts }
+        ok: { type: boolean, const: true }
+        data: { $ref: '#/components/schemas/ArtifactsWorkspaceExportData' }
+    ArtifactsWorkspaceExportData:
+      type: object
+      additionalProperties: false
+      required: [artifacts, truncated]
+      properties:
+        artifacts:
+          type: array
+          items: { $ref: '#/components/schemas/ExportArtifactRecord' }
+        truncated: { type: boolean }
+    WorkspaceExportJobResponse:
+      type: object
+      additionalProperties: false
+      required: [export]
+      properties:
+        export: { $ref: '#/components/schemas/WorkspaceExportJob' }
+    WorkspaceExportJob:
+      type: object
+      additionalProperties: false
+      required: [id, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [running, ready, failed, expired] }
+        createdAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time }
+        complete:
+          type: boolean
+          description: False when a service could not answer; the file names which.
+        failureReason:
+          type: string
+          description: >-
+            A short code: `interrupted`, `not_configured`, `too_large`,
+            `upload_failed`, `store_refused`, `store_not_configured`,
+            `workspace_deleted` or `internal_error`. A service that cannot be read
+            is not a failure of the export: the file names it, and `complete` is
+            false.
+        file: { $ref: '#/components/schemas/WorkspaceExportFile' }
+    WorkspaceExportFile:
+      type: object
+      additionalProperties: false
+      required: [artifactId, filename, sizeBytes, downloadUrl, expiresAt]
+      properties:
+        artifactId: { type: string, format: uuid }
+        filename: { type: string }
+        sizeBytes: { type: integer, minimum: 0 }
+        downloadUrl:
+          type: string
+          format: uri
+          description: Signed and short-lived. Fetch the file from here directly.
+        expiresAt: { type: string, format: date-time }
+    ExportArtifactRecord:
+      type: object
+      additionalProperties: false
+      required:
+        [id, run_id, step_id, filename, content_type, size_bytes, sha256, created_at, retain_until]
+      properties:
+        id: { type: string, format: uuid }
+        run_id: { type: [string, 'null'], format: uuid }
+        step_id: { type: [string, 'null'] }
+        filename: { type: string }
+        content_type: { type: string }
+        size_bytes: { type: integer, minimum: 0 }
+        sha256: { type: [string, 'null'] }
+        created_at: { type: string, format: date-time }
+        retain_until: { type: [string, 'null'], format: date-time }

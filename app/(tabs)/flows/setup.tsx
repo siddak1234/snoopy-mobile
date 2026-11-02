@@ -51,7 +51,7 @@ import {
   fillIn,
   teamLine,
 } from '@/lib/content/screen-states';
-import { createSubscription, updateSubscription } from '@/lib/platform/automations';
+import { createSubscription, noneWhenNotFound, readSubscription, updateSubscription } from '@/lib/platform/automations';
 import { readCatalog, readConnectionProviders, readConnections } from '@/lib/platform/catalog';
 import { newIdempotencyKey } from '@/lib/platform/client';
 import { PlatformError, PlatformNotConfiguredError } from '@/lib/platform/problem';
@@ -125,17 +125,21 @@ export default function SetupScreen() {
   const resource = useWorkspaceResource(
     async (id) => {
       if (!template) throw new PlatformNotConfiguredError();
-      const [catalog, subscriptions, providers, projects, connections] = await Promise.all([
+      const [catalog, subscriptions, providers, projects, connections, one] = await Promise.all([
         readCatalog(id),
         readSubscriptions(id),
         readConnectionProviders(),
         readProjects(id),
         readConnections(id),
+        // The flow "Edit setup" names, by its own read (§12.1 #319 step 2): its
+        // setup is the version it pins, whatever the list carries. One this
+        // person cannot see (404) is none named.
+        flow ? readSubscription(id, flow).catch(noneWhenNotFound) : null,
       ]);
-      // The flow "Edit setup" names; else where the workspace holds it, in any
-      // team (the owner's build 12 item 9). An archived one is gone: unarchiving
-      // makes a new subscription.
-      const named = flow ? withoutArchived(subscriptions.subscriptions).find((item) => item.id === flow) : undefined;
+      // The flow named; else where the workspace holds it, in any team (the
+      // owner's build 12 item 9), from the list. An archived one is gone:
+      // unarchiving makes a new subscription.
+      const named = one ? withoutArchived([one.subscription])[0] : undefined;
       return {
         entry: catalog.automations.find((item) => item.templateId === template),
         subscriptions: named ? [named] : heldAs(template, subscriptions.subscriptions),

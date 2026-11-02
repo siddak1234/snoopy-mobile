@@ -1,0 +1,3780 @@
+openapi: 3.1.1
+info:
+  title: Autom8x Automation Surface
+  version: 0.1.0
+  description: >-
+    The public contract both clients consume: the automation catalog, a
+    workspace's subscriptions, runs and their timelines, approvals, and the
+    callback relay an automation container reports through.
+
+    Every product path is workspace-scoped. The workspace is in the path because
+    it is the thing being authorized — the Edge resolves the caller's session and
+    refuses any workspace it does not name, returning 404 rather than 403 so that
+    a non-member cannot learn the workspace exists. The Catalog and Runs services
+    behind it scope by workspace but do not check membership, which is why that
+    check has exactly one home.
+  x-status: phase-4-complete
+x-service-id: edge-api
+servers:
+  - url: https://api.autom8x.ai
+    description: The only publicly reachable service.
+security:
+  - sessionCookie: []
+
+paths:
+  /v1/workspaces/{workspaceId}/automations:
+    get:
+      operationId: listAutomations
+      summary: The catalog, as this workspace sees it.
+      description: >-
+        `subscribed` drives Add versus Added. `available` is evidence: it is false
+        until a probe has reached the automation's own service, so a registered
+        description of a service never claims the service answers. `categories`
+        is the filter vocabulary and already includes "All" — a client must render
+        what it is given rather than inventing its own.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      responses:
+        '200':
+          description: The catalog projection for this workspace.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AutomationCatalogResponse' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+
+  /v1/workspaces/{workspaceId}/subscriptions:
+    get:
+      operationId: listSubscriptions
+      summary: This workspace's subscriptions.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: status
+          in: query
+          required: false
+          description: >-
+            `archived` lists the removed flows and nothing else — the Removed flows
+            page (BUILD-PLAN 24.11.8). Without it the list is every subscription
+            that is not archived (§12.1 #92); the two are never mixed. No other
+            value is accepted.
+          schema: { type: string, enum: [archived] }
+      responses:
+        '200':
+          description: >-
+            Every subscription the workspace holds that the person may see, not
+            archived — or, with `status=archived`, only the archived ones.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [subscriptions]
+                properties:
+                  subscriptions:
+                    type: array
+                    items: { $ref: '#/components/schemas/Subscription' }
+                  nextCursor: { type: string }
+                  flowAllowance: { $ref: '#/components/schemas/FlowAllowance' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+    post:
+      operationId: createSubscription
+      summary: Subscribe this workspace to an automation.
+      description: >-
+        Idempotent per `Idempotency-Key`. A new subscription starts `draft`; it
+        cannot go `live` while `unmetConnections` is non-empty, which the database
+        enforces. `actorUserId` is not accepted — the actor comes from the session.
+
+
+        **The flow goes to the team of its category (ADR-0036).** The platform
+        finds the workspace's team whose kind is the catalog entry's `category`,
+        or makes it, and puts the person adding the flow on it; any member may
+        add a flow. No client chooses a team, and `projectId` is ignored. A
+        person who is not an active member of the workspace is answered 404.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [templateId]
+              additionalProperties: false
+              properties:
+                templateId: { type: string }
+                templateVersion:
+                  type: integer
+                  minimum: 1
+                  deprecated: true
+                  description: >-
+                    Ignored. A new flow always runs the newest version of its
+                    automation (ADR-0041); accepted so an app that still sends it
+                    keeps working.
+                name: { type: string, maxLength: 80 }
+                projectId:
+                  type: string
+                  format: uuid
+                  deprecated: true
+                  description: Ignored. The flow goes to the team of its category (ADR-0036).
+      responses:
+        '200':
+          description: The subscription, created or replayed.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [subscription]
+                properties:
+                  subscription: { $ref: '#/components/schemas/Subscription' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403':
+          description: >-
+            The workspace is not entitled to create this subscription. Only
+            `details.reason: over_plan_limit` or
+            `details.reason: entitlements_not_configured` may be exposed for this
+            response; every other authorization refusal is a generic Problem.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}:
+    get:
+      operationId: getSubscription
+      summary: One flow, with its setup.
+      description: >-
+        The summary a row of the list carries, with `setup`, read from the
+        version the flow pins (§12.1 #319), at any status, `archived` included.
+        `unmetConnections` is recomputed against what is connected now, and is
+        the stored value when Connections cannot be reached, as in the list. No
+        `flowAllowance` (the list carries it). 404 for an unknown flow, another
+        workspace's, or one on a team the person cannot see — never 403.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/SubscriptionId'
+      responses:
+        '200':
+          description: The flow.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [subscription]
+                properties:
+                  subscription: { $ref: '#/components/schemas/Subscription' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+    patch:
+      operationId: updateSubscription
+      summary: Configure, rename, activate, or archive a subscription.
+      description: >-
+        `config` is validated against the setup fields of the manifest version
+        this subscription pins.
+
+
+        **Every flow runs the newest version of its automation (ADR-0041).** No
+        client chooses a version: when a new version is released, the platform
+        moves every flow that is not archived to it, carrying its settings and
+        keeping its status, and a run already made finishes on the version it
+        started on. `templateVersion` is not accepted here (400).
+
+
+        A refusal the person can act on names `details.reason`: 409
+        `subscription_archived`; 422 `invalid_config`, `unmet_connections` or
+        `setup_incomplete`.
+
+
+        **The vendor choice is a setting (ADR-0037).** A manifest whose
+        `requiredConnections` has an `optional` entry declares one setup field
+        with `control: connection`; its value in `config` is `none` or the
+        `providerId` of an optional connection, and anything else is 422
+        `invalid_config`. `unmetConnections` and the `live` gate count every
+        required connection and the chosen one — never an optional connection
+        the flow did not choose.
+
+
+        **Only an owner or admin changes the integration (ADR-0043).** A member
+        whose `config` changes a stored `control: connection` field's value, or
+        leaves a stored choice out (which would clear it), gets 403 with
+        `details.reason: integration_requires_admin`, so a client sends the
+        stored choice back unchanged. A member's first choice on a flow with no
+        stored value goes through, so a member who added the flow can set it
+        up. Every other field stays open to a member who can see the flow. In a
+        Personal workspace the one person is its owner.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/SubscriptionId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                name: { type: string, maxLength: 80 }
+                config: { type: object, additionalProperties: true }
+                status: { $ref: '#/components/schemas/SubscriptionStatus' }
+      responses:
+        '200':
+          description: The updated subscription.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [subscription]
+                properties:
+                  subscription: { $ref: '#/components/schemas/Subscription' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/webhook:
+    get:
+      operationId: readWebhookEndpoint
+      summary: A webhook subscription's address, without its secret.
+      description: >-
+        **Owner or admin only** (§12.1 #91); a member gets 403 with
+        `details.requiredRole: admin`. 404 when no address has been issued. The
+        secret is never returned here — it is shown once, when issued.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/SubscriptionId'
+      responses:
+        '200':
+          description: The address, when it was issued, and its last delivery.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebhookEndpoint' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+    post:
+      operationId: issueWebhookEndpoint
+      summary: Issue a webhook subscription's address, or rotate its secret.
+      description: >-
+        **Owner or admin only** (§12.1 #91, #109). The first call issues the
+        address; every later call keeps the address and replaces the secret,
+        which stops the old one at once. The secret is in this answer and
+        nowhere else, ever: only its hash is stored.
+
+
+        **Replayable only by key (§12.1 #240).** Without an `Idempotency-Key` a
+        retry rotates again and the caller keeps the secret it last saw — the
+        answer cannot be stored without storing the secret. With one, the secret
+        is derived from the key, so a retry carrying the same key is answered
+        with the secret the lost answer carried and rotates nothing; the key is
+        optional so a client that never sent one is unchanged. The same key
+        presented after a LATER rotation rotates again, to its own secret. 409
+        `trigger_kind_mismatch` for an automation not triggered by a webhook,
+        `subscription_archived` for an archived one. Emits
+        `runs.webhook-endpoint-issued.v1` once per rotation, audited as
+        `webhook.endpoint.create` on every call (a replay says so).
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/SubscriptionId'
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema: { type: string, minLength: 16, maxLength: 128 }
+          description: >-
+            Optional here, and the only operation where it is (§12.1 #240). The
+            shape of `IdempotencyKey`: 16-128 characters of letters, numbers,
+            dot, underscore, tilde, colon, or hyphen. Send a fresh key per press
+            and the same key on each retry of it.
+      responses:
+        '200':
+          description: The address and its secret, shown this once.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IssuedWebhookEndpoint' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/email-recipients:
+    get:
+      operationId: readFlowEmailRecipients
+      summary: Who a flow's run emails go to.
+      description: >-
+        Every email about a run of this flow — it finished, it failed, it waits
+        for approval — goes to the workspace's owners and admins, the person who
+        started the run, and the flow's extra addresses, one message per
+        address (ADR-0041). `people` are the owners and admins as the workspace
+        lists them now; the person who starts a run differs per run and is not
+        listed. Any member who can see the flow may read it. 404 for a flow the
+        person cannot see, or an archived one.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/SubscriptionId'
+      responses:
+        '200':
+          description: The people and addresses this flow's run emails go to.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FlowEmailRecipients' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+    put:
+      operationId: updateFlowEmailRecipients
+      summary: Set a flow's extra email addresses.
+      description: >-
+        **Owner or admin only**; a member gets 403 with `details.requiredRole:
+        admin`. Replaces the whole list, so a repeat of the same body changes
+        nothing and no `Idempotency-Key` is taken. Each address is trimmed and
+        kept as typed; two that differ only in case are one, the first kept. An
+        address that is not one is 400 naming `extra[i]`; more than 10 is 400
+        naming `extra`; an archived flow is 409 `subscription_archived`. Audited
+        as `subscription.email-recipients-change` with the count, never an
+        address. The addresses get this flow's run emails from the next email
+        on (ADR-0041).
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/SubscriptionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [extra]
+              additionalProperties: false
+              properties:
+                extra:
+                  type: array
+                  maxItems: 10
+                  items: { $ref: '#/components/schemas/FlowEmailAddress' }
+      responses:
+        '200':
+          description: The people and addresses, after the change.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FlowEmailRecipients' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items:
+    get:
+      operationId: listItems
+      summary: A flow's items, newest first, and the values typed for its fields.
+      description: >-
+        **A flow's items (ADR-0046)** are what a person makes once, from a file,
+        that the flow's runs then belong to — Candidate Reviewer's jobs. The
+        words for one and many are the flow's own (`AutomationItems.words`), so
+        no client names them. Any member of the workspace may read them, as runs
+        are read: at most 200, newest first, archived ones left out. `choices` holds, for
+        each `select` field that takes typed values (`allowOther`), every value
+        typed for it on any of this flow's items — archived ones too — that is
+        not one of its `options`, sorted, so a client offers a typed name again;
+        a field with none typed is absent. A flow whose version declares no
+        items answers both empty. 404 for a flow of another workspace.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/SubscriptionId'
+      responses:
+        '200':
+          description: The flow's items, and the typed choices of its fields.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [items, choices]
+                properties:
+                  items:
+                    type: array
+                    maxItems: 200
+                    items: { $ref: '#/components/schemas/Item' }
+                  choices:
+                    type: object
+                    description: Field key to its typed values, sorted.
+                    additionalProperties:
+                      type: array
+                      items: { type: string, minLength: 1, maxLength: 40 }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+    post:
+      operationId: createItem
+      summary: Make an item from a file, and start the run that reads it.
+      description: >-
+        **Owner or admin only** (ADR-0046); a member gets 403 with
+        `details.requiredRole: admin` and no reason. Idempotent per
+        `Idempotency-Key`: the item and the run that reads it are derived from
+        the key, so a retry answers the same item with 200 and reads the file
+        once. `fields` are held to the pinned version's `items.fields`: an
+        undeclared key, a required field left out with no default, a value
+        over its field's length, or a select value outside its `options` when
+        the field takes no typed value (`allowOther`) is 422 with
+        `details.problems`, and nothing is made. `file` is the `artifactId` an
+        upload for this flow completed with; a file that is gone, another
+        workspace's, already a run's, or outside the version's `artifacts`
+        limits is 422 with `details.reason: artifact_unavailable`. A flow that
+        is not `live` is 409 `subscription_not_live`; one whose pinned version
+        declares no items is 409 `items_not_declared`. While the workspace
+        holds more flows than its plan allows, 403 `over_plan_limit` with
+        `limit` and `live` (or `entitlements_not_configured`), exactly as
+        `createRun`.
+
+
+        The answer's item is `reading`: the platform runs the flow once with
+        the file (`readsItem`), and the item becomes `ready`, with what that run
+        read, or `failed`, with the reason. That run is not activity: it is
+        never in the run list, the run counts, the inbox, an email or a push —
+        its outcome shows on the item. Audited as `item.create`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/SubscriptionId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fields, file]
+              additionalProperties: false
+              properties:
+                fields:
+                  type: object
+                  additionalProperties: { type: string }
+                  description: >-
+                    One value per key of `AutomationItems.fields`; a field may be
+                    left out when it is optional or declares a default. Values
+                    are trimmed, and an empty one is a value left out.
+                file:
+                  type: string
+                  format: uuid
+                  description: The `artifactId` the item's file upload completed with.
+      responses:
+        '201':
+          description: The item, `reading`; the run that reads its file was started.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [item]
+                properties:
+                  item: { $ref: '#/components/schemas/Item' }
+        '200':
+          description: A replay of an earlier request with the same key.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [item]
+                properties:
+                  item: { $ref: '#/components/schemas/Item' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403':
+          description: >-
+            A member: `details.requiredRole` is `admin`, and there is no reason.
+            Over the plan: `details.reason` is `over_plan_limit` with the
+            integers `limit` and `live`, or `entitlements_not_configured`, as
+            `createRun`. Nothing was made.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409':
+          description: >-
+            `details.reason` is `subscription_not_live` or `items_not_declared`.
+            Nothing was made.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422':
+          description: >-
+            `details.problems` names each field that does not satisfy
+            `items.fields`, or `details.reason` is `artifact_unavailable`.
+            Nothing was made.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '429':
+          description: >-
+            The run that reads the file is admitted as `createRun`'s run is: when
+            500 runs of the flow already wait in this workspace, `details.reason`
+            is `queue_full` with `details.limit` as a string (ADR-0048 Amendment
+            4; `max_concurrent_runs` before it), and `creation_contended` when the
+            capacity count could not be taken in time. Nothing was made; try
+            again once runs of the flow have ended (ADR-0046).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+
+  /v1/workspaces/{workspaceId}/items/{itemId}:
+    get:
+      operationId: readItem
+      summary: One item, and its runs ranked by score.
+      description: >-
+        Any member of the workspace may read it, as runs are read (ADR-0046). `runs`
+        are the item's runs, one per job by its first run's id as `listRuns`
+        lists them (ADR-0044): highest `score` first, runs without one after
+        them, then newest; at most 500. The run that read the item's file is
+        never among them — its outcome is the item's `status`. An archived item
+        is still read here. The item carries `file`, the file it was made from,
+        when the file store answers in time, and its tallies `positiveCount`
+        and `negativeCount` (Round 19, build 28). 404 for an item of another
+        workspace. With `shape=blocks` (ADR-0048) the page body: `blocks` in the
+        order of the flow's `pages.item`, `going`, the item's reading on
+        `item.blocks`, and `runs` sent as `[]` — the ranked runs are a block.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/ItemId'
+        - $ref: '#/components/parameters/PageShape'
+      responses:
+        '200':
+          description: The item and its runs.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [item, runs]
+                properties:
+                  item: { $ref: '#/components/schemas/Item' }
+                  runs:
+                    type: array
+                    maxItems: 500
+                    items: { $ref: '#/components/schemas/Run' }
+                  blocks:
+                    type: array
+                    description: >-
+                      `shape=blocks` only (ADR-0048): the page body — tiles, the
+                      file, Add, the ranked runs — in `pages.item` order. Absent
+                      when the flow's manifest could not be read.
+                    items: { $ref: '#/components/schemas/Block' }
+                  going:
+                    type: boolean
+                    description: >-
+                      `shape=blocks` only: the item, or one of its runs, is still
+                      going — read it again.
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /v1/workspaces/{workspaceId}/items/{itemId}/archive:
+    post:
+      operationId: archiveItem
+      summary: Archive an item.
+      description: >-
+        **Owner or admin only** (ADR-0046); a member gets 403 with
+        `details.requiredRole: admin` and no reason. One-way: an archived item
+        leaves its flow's list and takes no new run (`createRun` answers 409
+        `item_archived`); its runs and their results stay, it is still read by
+        `readItem`, and its typed values stay among `choices`. Idempotent:
+        archiving an archived item answers it unchanged, with its first
+        `archivedAt`. Audited as `item.archive`. The body, when sent, is empty.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/ItemId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: The archived item.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [item]
+                properties:
+                  item: { $ref: '#/components/schemas/Item' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /v1/workspaces/{workspaceId}/items/{itemId}/file:
+    get:
+      operationId: readItemFile
+      summary: The file an item was made from, behind a short-lived link.
+      description: >-
+        The file `createItem` was given (Round 19, build 28) — a job's
+        description, for Candidate Reviewer — as a reference and a short-lived
+        signed link from the file store (`RunFileLink`), never its bytes. The
+        link downloads the file as an attachment named `file.filename`; a
+        client that shows it in place, or hands it to the share sheet, fetches
+        the bytes from the link itself. Who may read it: any member of the workspace, as the item
+        is read (`readItem`); an archived item's too. 404 for an item of
+        another workspace, and for an item whose file the store no longer
+        keeps. 502 when the file store does not answer, 503 when it is not
+        configured. Nothing is changed and nothing is audited.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/ItemId'
+      responses:
+        '200':
+          description: The item's file, and a link to it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RunFileLink' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+
+  /v1/workspaces/{workspaceId}/runs:
+    get:
+      operationId: listRuns
+      summary: Jobs for this workspace, newest first — one entry per job.
+      description: >-
+        **A job is its first run (ADR-0044).** An approval continues a held run as a
+        new run row; the list shows the job once, by its first run's id, with the
+        newest status in its chain (`status`, `endedAt`, `failureReason`,
+        `resultSummary`). A continuation is never listed on its own.
+        A run carries `templateId` but no display name. A list that shows the
+        automation's name joins this against the catalog — the run row deliberately
+        does not denormalise a mutable display string.
+
+
+        **Search, filters, sort and pages (ADR-0048 amendment 1).** With none of
+        `q`, `status`, `needsReview`, `since`, `sort` and `page`, the answer is
+        today's newest 100, unchanged. With any of them, it is one page of 25 and
+        `total`, the jobs that match. `q` matches the job's newest title and
+        summary and its documents' sellers. `needsReview=true` is the held jobs
+        whose newest approval is pending, or that have none; sent with `status`
+        it is a 400.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: subscriptionId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+        - name: q
+          in: query
+          required: false
+          schema: { type: string, minLength: 1, maxLength: 80 }
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/RunStatus' }
+        - name: needsReview
+          in: query
+          required: false
+          schema: { type: string, enum: ['true'] }
+        - name: since
+          in: query
+          required: false
+          schema: { type: string, format: date-time }
+        - name: sort
+          in: query
+          required: false
+          schema: { type: string, enum: [newest, oldest], default: newest }
+        - name: page
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 200 }
+      responses:
+        '200':
+          description: Up to 100 runs; with any of the parameters above, one page of 25.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [runs]
+                properties:
+                  runs:
+                    type: array
+                    items: { $ref: '#/components/schemas/Run' }
+                  total:
+                    type: integer
+                    minimum: 0
+                    description: The jobs that match; only when a parameter above was sent.
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+    post:
+      operationId: createRun
+      summary: Trigger a run.
+      description: >-
+        Idempotent per `Idempotency-Key`: the run id is derived from it, so a
+        retried request returns the same run and dispatches once. The subscription
+        must belong to this workspace and be `live`. **When the subscription's
+        pinned version declares `runInput`, `input` must satisfy it** (ADR-0030):
+        an undeclared key, a missing required field or a value of the wrong type
+        is refused with 422 and nothing runs.
+
+
+        **A file field (`control: artifact`) carries the `artifactId` an upload
+        completed with** (FR-14). The file is checked before the run is created
+        and given to the run before it is dispatched, so the automation can read
+        it — and a continuation after an approval reads it too. A value that is
+        not such an id is 422, and a file that is gone, another workspace's,
+        already another run's, or outside the limits of the version this run
+        pins is 422 with `details.reason: artifact_unavailable`: nothing is
+        created, and the person chooses the file again.
+
+
+        **A run of a flow with items names one (ADR-0046).** When the pinned
+        version declares `items`, `itemId` is required (422 `item_required`),
+        only an owner or admin may send it (403 with `details.requiredRole:
+        admin`, no reason), the item must be this flow's (404), `ready` (409
+        `item_not_ready`) and not archived (409 `item_archived`); the run is
+        passed the item's fields and what was read from its file, and lists
+        under the item (`readItem`). A flow without items refuses `itemId`
+        (422 `items_not_declared`).
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subscriptionId]
+              additionalProperties: false
+              properties:
+                subscriptionId: { type: string, format: uuid }
+                input:
+                  type: object
+                  additionalProperties: true
+                  description: >-
+                    The trigger payload, passed to the automation verbatim — and,
+                    when the pinned version declares `runInput`, held to it first.
+                itemId:
+                  type: string
+                  format: uuid
+                  description: >-
+                    The item this run belongs to (ADR-0046): required on a flow
+                    with items, refused on one without.
+      responses:
+        '201':
+          description: >-
+            The run was created and dispatched — `status` is `running`, or
+            `failed` with the automation's refusal as `failureReason` — or, when
+            the automation is at capacity or other runs of it wait ahead of this
+            one, created and HELD BACK (BUILD-PLAN 25.2.10, 25.2.41: first in,
+            first out): `status` is `pending`, nothing has been sent, and the
+            platform dispatches it when a run of that automation ends or on its
+            next tick, in creation order. A refusal the automation answers with a
+            retry hint, or an invoke that never reached an answer, also leaves the
+            run `pending` and re-attempted — bounded in count and in interval —
+            before it is failed with the attempts named in `failureReason`. Read
+            the run again to see where it got to.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [run]
+                properties:
+                  run: { $ref: '#/components/schemas/Run' }
+        '200':
+          description: A replay of an earlier request with the same key.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [run]
+                properties:
+                  run: { $ref: '#/components/schemas/Run' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403':
+          description: >-
+            The workspace holds more flows than its plan allows, so no new run
+            starts on any of its flows (the owner's decision 7a3): `details.reason`
+            is `over_plan_limit`, with `details.limit` — the plan's ceiling — and
+            `details.live` — the flows the workspace holds, every one not removed,
+            the `live` of `FlowAllowance` — as integers. Nothing was created. Runs
+            already started still finish and nothing is paused or removed;
+            removing flows until `live` is at most `limit`, or a plan that allows
+            more, lets runs start again. `entitlements_not_configured` in place of
+            `over_plan_limit` means this deployment has no plan to read and
+            refuses every start. A member who names an item gets 403 with
+            `details.requiredRole: admin` (ADR-0046). Any other 403 carries no
+            reason.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409':
+          description: >-
+            `details.reason` is `subscription_not_live`, or — for a run naming an
+            item (ADR-0046) — `item_not_ready` or `item_archived`. Nothing was
+            created.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422':
+          description: >-
+            The input does not satisfy the pinned version's `runInput` (ADR-0030):
+            an undeclared key, a missing required field, or a value of the wrong
+            type — or a file field whose artifact is gone, another workspace's,
+            already another run's, or outside the version's limits
+            (`details.reason: artifact_unavailable`). Nothing was created
+            (§12.1 #225). `details.reason` `item_required` is a flow with items
+            started without `itemId`, and `items_not_declared` a flow without
+            items given one (ADR-0046).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '429':
+          description: >-
+            The flow's queue is full in this workspace: 500 runs of it are waiting
+            their turn, single runs and a batch's units alike (ADR-0048 Amendment
+            4) — `details.reason` is `queue_full` with `details.limit` `"500"`, and
+            both clients say "Your queue is full. Wait for these to finish.". A new
+            run waits behind every run already waiting (25.2.41). Nothing was
+            created, and the caller did nothing wrong — try again once runs have
+            ended. `creation_contended` in its place means the capacity count
+            itself could not be taken in time, the same advice.
+            `max_concurrent_runs` (the bound of one ceiling's worth of waiting
+            across every workspace, before amendment 4) is no longer sent; a
+            client keeps reading it.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '502':
+          description: >-
+            A dependency did not answer — the catalog, or the plan check behind the
+            over-limit rule (7a3), which fails closed: a start whose allowance
+            cannot be read does not run, and nothing is created for it. Retrying
+            with the same `Idempotency-Key` is safe.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+
+  /v1/workspaces/{workspaceId}/uploads:
+    post:
+      operationId: openUpload
+      summary: Somewhere to put a file a run will read.
+      description: >-
+        FR-14. Answers a signed URL the browser PUTs the file to **directly** —
+        the bytes never pass through the Edge. Any member who may start the
+        subscription's runs may upload for it. The subscription must be this
+        workspace's, `live` (409 `subscription_not_live`), and its pinned version
+        must declare a file field or items, whose file comes up this way too
+        (409 `no_file_input`; ADR-0046).
+
+
+        The limits are the pinned manifest's `artifacts` block when it declares
+        one, and the platform's own ceiling when it does not (ADR-0030, amended
+        2026-09-28). A type or size it refuses is 400 with `details.reason`
+        `content_type_not_accepted` or `file_too_large`, before any bytes move.
+        `sizeBytes` is required and is signed into the URL (§12.1 #139): send
+        exactly that many bytes, or the store refuses the PUT. When the block
+        declares `maximumPdfPages` or `maximumImageSidePixels` (BUILD-PLAN
+        25.2.28), only a PDF, a JPEG or a PNG is accepted — the types the
+        platform measures — and the file is measured when the upload is
+        completed.
+
+
+        Not replayable, so it takes no `Idempotency-Key`: a retry opens a second
+        session, and the one never used expires and is swept.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subscriptionId, filename, contentType, sizeBytes]
+              additionalProperties: false
+              properties:
+                subscriptionId: { type: string, format: uuid }
+                filename:
+                  type: string
+                  maxLength: 255
+                  description: A label, not a path. A separator is refused.
+                contentType: { type: string, maxLength: 255 }
+                sizeBytes: { type: integer, minimum: 1 }
+      responses:
+        '200':
+          description: Where to PUT the file, until when, and the most it may be.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UploadTicket' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /v1/workspaces/{workspaceId}/uploads/{uploadSessionId}/complete:
+    post:
+      operationId: completeUpload
+      summary: The file arrived; make it one a run can be given.
+      description: >-
+        The store measures what arrived — the size and digest are the store's,
+        never the request's. The answer's `artifactId` is what a run's file field
+        carries. A file no run is given within a day is collected. 400 with
+        `details.reason` `session_expired`, `no_object` (nothing was PUT) or
+        `too_large`; 404 for a session this workspace does not hold or that was
+        already completed.
+
+
+        **Measured once, here (BUILD-PLAN 25.2.28).** When the subscription's
+        pinned version limits a PDF's pages or an image's sides, the file is read
+        from the store and measured before it is kept, and one it cannot keep is
+        refused — the upload ends and the file is deleted, so no run can be given
+        it: 400 with `details.reason` `file_too_many_pages` (with
+        `details.pageCount` and `details.maximumPdfPages`), `file_image_too_large`
+        (with `details.widthPixels`, `details.heightPixels` and
+        `details.maximumImageSidePixels`), `file_content_mismatch` (its leading
+        bytes are not the type it was opened as), `file_encrypted` (a
+        password-protected PDF) or `file_unreadable` (it could not be measured).
+        Each number is a string of digits — "This PDF has 14 pages. This flow
+        reads at most 10." — and an image's sides are as stored, before any EXIF
+        rotation.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: uploadSessionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: false, properties: {} }
+      responses:
+        '200':
+          description: The file, as a reference.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [artifact]
+                additionalProperties: false
+                properties:
+                  artifact: { $ref: '#/components/schemas/UploadedFile' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '429':
+          description: >-
+            The file has no place yet to be measured (BUILD-PLAN 25.2.39): files
+            are measured in turn, only a few may wait, and a workspace's one at a
+            time. `details.reason` is `measurement_busy`; nothing was refused and
+            nothing was lost — the upload stays open, and completing it again
+            shortly measures it.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /v1/workspaces/{workspaceId}/run-stats:
+    get:
+      operationId: readRunStats
+      summary: How many runs, and how they ended.
+      description: >-
+        The counts both clients draw — a flow row's "1,284 runs · 1,272 ok · 12
+        failed", and a dashboard's stats tiles — as one read rather than one per
+        subscription.
+
+        The window is the caller's: omit `since` for every run this workspace
+        has, or pass an instant for "today". Two questions, one route, because
+        they differ only in the bound. Every status the enum names is returned
+        and the client sums what it wants; the platform does not decide which
+        outcomes count as "ok".
+
+        Only subscriptions with at least one run in the window appear. A
+        subscription absent from `subscriptions` has no runs, which is not the
+        same as a subscription that does not exist — the subscriptions list is
+        what answers that.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: since
+          in: query
+          required: false
+          schema: { type: string, format: date-time }
+          description: >-
+            Count only runs created at or after this instant. A value that is not
+            an ISO-8601 instant is refused rather than ignored: silently widening
+            "today" to "ever" would render a plausible wrong number.
+      responses:
+        '200':
+          description: Counts for the workspace and for each subscription with runs.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RunStats' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /v1/workspaces/{workspaceId}/runs/{runId}:
+    get:
+      operationId: readRun
+      summary: One job, with its whole timeline.
+      description: >-
+        Any id in a job answers the job (ADR-0044): `run.id` is always the job's
+        first run, `steps`, `events` and `documents` are the whole chain's in
+        order, each step and event carrying the job's id. An old link that names
+        a continuation opens its job.
+        `steps` is the human timeline — what the automation reported against the
+        steps its manifest declares — and is what a run screen renders. `events`
+        is the platform's own record of state transitions.
+        With `shape=blocks` (ADR-0048) the answer drops `details`, `documents`
+        and `sections` and carries `blocks` and `packageAvailable` instead.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/RunId'
+        - $ref: '#/components/parameters/PageShape'
+      responses:
+        '200':
+          description: The run, its steps, and its events.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RunDetail' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /v1/workspaces/{workspaceId}/runs/{runId}/documents:
+    get:
+      operationId: readRunDocuments
+      summary: One run's documents, as a JSON file.
+      description: >-
+        The documents a run read from its file, one entry each, in the shape the
+        run page shows (`RunDocument`, ADR-0039, BUILD-PLAN 25.4.28) — what the
+        clients offer as "Download JSON". The answer is the same JSON a client
+        could assemble from `readRun`, served whole so a person can keep it: it
+        carries `Content-Disposition: attachment; filename="run-<the full run
+        id>.json"` — a run is named by its full id everywhere. `documents` is
+        empty for a run that wrote none (a run of an automation that reads no
+        documents, or one that failed before it read any). Who may read it:
+        anyone who may read the run (SYSTEM-MANIFEST §12.1 #280). Answers for the
+        job (ADR-0044): `runId` and the filename name the job's id.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/RunId'
+      responses:
+        '200':
+          description: The run's documents.
+          headers:
+            Content-Disposition:
+              schema: { type: string }
+              description: attachment; filename="run-<the full run id>.json"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RunDocumentsFile' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /v1/workspaces/{workspaceId}/runs/{runId}/files/{fileId}:
+    get:
+      operationId: readRunFile
+      summary: One of the job's uploaded files, behind a short-lived link.
+      description: >-
+        One file uploaded for the job (Round 19, build 28) — a candidate's
+        resume, a bill — as a reference and a short-lived signed link from the
+        file store (`RunFileLink`), never its bytes. The link downloads the file
+        as an attachment named `file.filename`; a client that shows it in
+        place, or hands it to the share sheet, fetches the bytes from the link
+        itself. `fileId`
+        is a file's `id` as `RunDetail.files` lists it; any id in the job names
+        the job (ADR-0044). Who may read it: anyone who may read the run. 404
+        for a run of another workspace, and for a file that is not one of this
+        job's uploaded files — another job's, another workspace's, the job's run
+        package (`createRunPackageFile` answers its own link), or one the store
+        no longer keeps — never 403, so another file's existence is never
+        confirmed. 502 when the file store does not answer, 503 when it is not
+        configured. Nothing is changed and nothing is audited.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/RunId'
+        - $ref: '#/components/parameters/FileId'
+      responses:
+        '200':
+          description: The file, and a link to it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RunFileLink' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+
+  /v1/workspaces/{workspaceId}/runs/{runId}/cancel:
+    post:
+      operationId: cancelRun
+      summary: Cancel a run that has not ended.
+      description: >-
+        Cancels the job's newest run when it has not ended (ADR-0044); any id in
+        the job names it, and the answer is the job, by its first run's id.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/RunId'
+      responses:
+        '200':
+          description: The cancelled run.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [run]
+                properties:
+                  run: { $ref: '#/components/schemas/Run' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404':
+          $ref: '#/components/responses/Problem'
+
+  /v1/workspaces/{workspaceId}/runs/{runId}/package:
+    post:
+      operationId: createRunPackageFile
+      summary: The job's run package as a PDF or an Excel file, behind a short-lived link.
+      description: >-
+        The A8X run package (ADR-0045): a cover, a summary of every document,
+        subtotals by category, a grand total per currency, one page per document
+        and the original files — as a PDF, or the same numbers as an Excel
+        workbook. Builds the file, or reuses the one built for the same job
+        state, A8X template and time zone, keeps it with the job's files (as
+        long as the job's uploaded files, 90 days) and answers a signed download
+        link — never the bytes. Any id in the job names it (ADR-0044). Who may
+        ask: anyone who may read the run. One file per job state: a repeat for
+        the same job state, format and time zone answers the same kept file and
+        builds nothing, under any `Idempotency-Key` — required, as on every
+        mutation, and not stored for this route; one that arrives while that
+        file is being built waits for it. 409
+        `details.reason: no_documents` while the job has no documents, or
+        `job_in_progress` while it has not ended or held; 422 `package_too_large`
+        when the file would pass the 25 MiB the file store keeps; 503 `package_busy` with `Retry-After`
+        while this host is building other packages or cutting a model call's
+        pages, or this job's own, and no turn is free to wait for.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/RunId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [format]
+              properties:
+                format: { type: string, enum: [pdf, xlsx] }
+                timeZone:
+                  type: string
+                  minLength: 1
+                  maxLength: 64
+                  description: >-
+                    The IANA zone the file prints times in, such as
+                    America/Chicago; UTC when absent or not a zone this host knows.
+      responses:
+        '200':
+          description: A link to the file.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RunPackageFile' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+        '503':
+          description: >-
+            `package_busy` — this host is building other packages or cutting a
+            model call's pages, or this job's own, and no turn is free to wait for; ask again after
+            `Retry-After` seconds, and a repeat of the same job state answers
+            the same file. Without that reason, a dependency is not available.
+          headers:
+            Retry-After:
+              schema: { type: integer, minimum: 1 }
+              description: Seconds to wait; sent with `package_busy`.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /v1/workspaces/{workspaceId}/approvals:
+    get:
+      operationId: listApprovals
+      summary: Approvals awaiting a decision.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/ApprovalStatus' }
+      responses:
+        '200':
+          description: Up to 100 approvals, newest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [approvals]
+                properties:
+                  approvals:
+                    type: array
+                    items: { $ref: '#/components/schemas/Approval' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /v1/workspaces/{workspaceId}/approvals/{approvalId}/decision:
+    post:
+      operationId: decideApproval
+      summary: Approve or reject a held run.
+      description: >-
+        The body carries only the decision. The actor and their workspace role
+        come from the session — a body naming `actorRole` is refused as an
+        unsupported field, because a caller choosing its own role would make the
+        approval's `eligibleRoles` a formality. Approving continues the job under
+        the same id (ADR-0044): `approval.runId` is the job's id. An approval that
+        lists `decisions` (ADR-0048 amendment 2) is a review: it takes
+        `decisions`, one answer per offered change, never `decision`, and saving it
+        always continues the job, even when every change is denied; any other
+        approval takes `decision` only. Refused with 400 after the role (403),
+        status and expiry (409) checks: "decisions must answer every change once",
+        "this approval reviews each change: send decisions" and "decisions is only
+        for an approval that offers changes".
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/ApprovalId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              description: Exactly one of `decision` and `decisions`.
+              oneOf:
+                - required: [decision]
+                - required: [decisions]
+              properties:
+                decision: { type: string, enum: [approved, rejected] }
+                decisions:
+                  type: array
+                  minItems: 1
+                  maxItems: 400
+                  items: { $ref: '#/components/schemas/ReviewAnswer' }
+      responses:
+        '200':
+          description: The decision.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [approval]
+                properties:
+                  approval: { $ref: '#/components/schemas/Approval' }
+                  continuation:
+                    allOf: [{ $ref: '#/components/schemas/Run' }]
+                    deprecated: true
+                    x-sunset: '2027-01-31'
+                    description: No longer sent (ADR-0044); the job keeps its id.
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403':
+          description: >-
+            The caller's role is not among the approval's eligible roles.
+            Forbidden rather than not-found: the caller is already inside the
+            workspace, so the refusal is about the role.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /v1/workspaces/{workspaceId}/notifications:
+    get:
+      operationId: listNotifications
+      summary: The caller's notification inbox.
+      description: >-
+        The two facts the product notifies a person of in-app — an approval
+        waiting (`approval-requested`) and a run that failed (`run-failed`) —
+        composed from the workspace's pending approvals and failed runs, newest
+        first, **at most 50**, with every item the caller dismissed left out.
+        Which items exist is the workspace's, exactly what the approvals list
+        and the runs list show any member; `read` is the caller's own and is the
+        same on every device. An approval that has been decided, and a run that
+        did not fail, is not an item. Push and email are unaffected.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      responses:
+        '200':
+          description: The newest 50 items not dismissed, and how many of them are unread.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationInbox' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+
+  /v1/workspaces/{workspaceId}/notifications/read:
+    post:
+      operationId: markNotificationsRead
+      summary: Mark items read — the named ones, or everything listed.
+      description: >-
+        With `ids`, each named item that is still an item of this workspace is
+        marked read for the caller; an id that is not (an approval decided since
+        the list was drawn, or an id from elsewhere) is skipped, not refused.
+        With no body, or no `ids`, every item the caller's list holds right now
+        is marked read — "Mark all read". An item that arrives afterwards is
+        unread. Idempotent per `Idempotency-Key`: a retry is a replay and marks
+        nothing new.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                ids:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items: { $ref: '#/components/schemas/NotificationId' }
+      responses:
+        '200':
+          description: How many listed items are unread now.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationReadState' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409':
+          description: The idempotency key was already used with different input.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+
+  /v1/workspaces/{workspaceId}/notifications/clear:
+    post:
+      operationId: clearNotifications
+      summary: Empty the caller's inbox — "Clear all".
+      description: >-
+        Dismisses, for the caller only, every item their inbox holds right now —
+        past the 50 a list shows too — so the next list is empty. An item that
+        arrives afterwards is listed and unread. Other members' inboxes are
+        unchanged. Takes no body. Idempotent per `Idempotency-Key`; a replay
+        clears nothing new.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: How many listed items are unread now (0).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationReadState' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409':
+          description: The idempotency key was already used with different input.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+
+  /v1/workspaces/{workspaceId}/notifications/{notificationId}/dismiss:
+    post:
+      operationId: dismissNotification
+      summary: Hide one item from the caller's inbox.
+      description: >-
+        A dismissed item is also read, and is left out of every later list for
+        the caller only. Dismissing it again changes nothing and answers 200.
+        The id may be sent with its `:` as is or percent-encoded (`%3A`). An id
+        that is not a pending approval or a failed run of this workspace is 404.
+        Takes no body. Idempotent per `Idempotency-Key`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/NotificationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: How many listed items are unread now.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationReadState' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409':
+          description: The idempotency key was already used with different input.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+
+  /v1/automations/callbacks/{message}:
+    post:
+      operationId: relayAutomationCallback
+      summary: The eight messages an automation reports back.
+      security: []
+      description: >-
+        Public and unauthenticated by necessity: the caller is an automation
+        container holding a run token and no platform credential. The Edge does
+        NOT verify that token — verification is authorization over run state,
+        which the Edge does not own — it relays the request inward and returns the
+        status the Runs service decided, unchanged.
+
+        Not consumed by the web or mobile clients. Documented here because it is
+        part of the same public surface and its absence from a specification is
+        how an undocumented public route survives. The messages are the ones
+        `docs/openapi.yaml` names and `runs` serves; this enum listed five and no
+        `mail` until 2026-10-08 (§12.1 #119 (a), BUILD-PLAN 25.3.7), while the
+        root document had carried six since Round 11 — `AutomationMailRequest` in
+        `@snoopy/contracts`, emitted as `schemas/automation-mail-request.json`, is
+        the body's shape. `memory-get` and `memory-put` joined them in ADR-0048
+        amendment 3.
+
+        For `model` the body is `AutomationModelRequest`
+        (`schemas/automation-model-request.json`). Since 2026-10-09 it may name
+        `models`: one to three distinct model ids, the first the primary and the
+        rest its fallbacks in order (ADR-0033 decision 1 as amended, BUILD-PLAN
+        25.2.16), and since 2026-10-10 `artifactId`: the run's own file — this
+        run's or its chain's first run's — which the platform reads, holds to the
+        pinned manifest's `artifacts` block and to its leading bytes, and sends
+        with every attempt, a PDF as a file and a JPEG or PNG as an image
+        (25.2.18); the automation sends no bytes and no link. The owner's
+        setting for the automation, when there is one, wins over the list; with
+        neither, the platform's default models serve the call. Each id is 1–128
+        characters from OpenRouter's lowercase set (letters, digits and
+        `. _ : / ~ -`), with no `:online` segment, no `openrouter/` router and no
+        `:nitro` or `:floor` variant (the owner's cost guard, 25.2.19). Since
+        2026-10-10 a body may also name `excludeModelAuthors`: one to three
+        distinct model makers to leave out, each an author as OpenRouter writes
+        one — the part of a model id before its `/`, so `anthropic` for
+        `anthropic/claude-sonnet-4.5` and for the alias
+        `~anthropic/claude-sonnet-latest` — of 1–128 lowercase letters, digits
+        and `. _ -` (25.2.29). Every model of those makers is removed from
+        whichever list serves the call — the owner's setting, `models` or the
+        default — and the rest keep their order; an id with no `/` names no
+        maker and is never removed. The answer's `model` names the model that
+        served, so a second call can leave out the first one's maker. A body
+        naming the singular `model`, or a `models` or `excludeModelAuthors` list
+        outside those bounds, is answered 400 with `details.field` naming it,
+        before anything is spent — as is either list on a deployment whose
+        gateway is not OpenRouter, the one that bounds every model's price and
+        retention and whose ids name their maker. Each attempt asks
+        ONE model, on its own time limit, of zero-retention endpoints in the
+        United States (25.2.22, 25.2.25). An answer the platform cannot use — no
+        completion, truncated, refused, or not matching the declared
+        `outputSchema` — an attempt that got no answer in time, and the router's
+        refusal of a model are each tried on the next model in the list that
+        serves the call before any refusal is returned, within the call's one
+        budget (25.2.20); every answer is capped at about 8,000 tokens. The
+        answer's `model` is the one that served. Since Round 21 (2026-10-28) a
+        body may name `maxOutputTokens`, a whole number from 1 to that cap
+        (8,000): the longest answer this call asks for, sent on every attempt;
+        without it the cap is sent, and over it is answered 400 with
+        `details.field` `maxOutputTokens` before anything is spent. A request
+        the vendor calls malformed — 400, 413 or 422 — is not tried on another
+        model, unless the vendor's refusal is of that model: over its context
+        length, or a model id it does not serve ("… is not a valid model ID").
+        An enum value the model wrote in another case ("Bill" for `bill`) is the
+        schema's value, and the answer's `text` is then re-serialised with the
+        schema's spelling; an enum holding two values equal ignoring case keeps
+        exact matching. A later attempt to a Google model is sent with no
+        temperature and no topP, so its own defaults hold; every other attempt
+        is sent at temperature 0. Since ADR-0048 amendment 4 a body naming
+        `artifactId` may name `pages`, `{from, to}`, 1-based and inclusive, at
+        most 20 pages: the platform copies those pages of the PDF into a new PDF
+        and sends that instead. The shape, the 20 pages and `pages` without
+        `artifactId` are answered 400 with `details.field: pages`; the file not a
+        PDF is 422 `pages_not_pdf`, a range past its end 422 `pages_out_of_range`
+        ("pages must lie within the file's N pages"), a PDF that cannot be read
+        422 `file_unreadable`, and the cut over 3,750,000 bytes 422
+        `file_too_large` — each before anything is spent. With `pages` the whole
+        file is held to the manifest's bound and to 25 MiB, a larger one 422
+        `file_too_large` before it is read; the cut runs in a worker, one at a
+        time per Runs process, sharing its turn with run package builds. A call
+        waits in line for the turn, and the wait, the read and the cut share
+        one 15 s deadline: a wait past it, or a cut the wait left too little
+        of it, is 503 `DEPENDENCY_FAILURE` with no `details.reason` (retry
+        it), and a cut whose worker dies or overruns a deadline no wait
+        shortened is 503 `pages_failed` — nothing spent either way.
+
+        For `result` the body is `AutomationRunResult`
+        (`schemas/automation-run-result.json`). Since Round 19 (build 28) a
+        success may carry `verdict`, `positive` or `negative`, stored with the
+        run (`Run.verdict`) and counted on its item. It is answered 400 with
+        `details.field: verdict` when it is neither, when the run's pinned
+        version declares no `items.verdictWords` (no client could name it), and
+        on an item run, which reads its item's file and is no candidate.
+
+        Since ADR-0048 amendment 3 a held result's `held.decisions` may list 1
+        to 400 changes (40 before), each with an optional `group`, and a result
+        callback's body may be up to 1 MiB — 8 MiB since amendment 4, the other
+        messages staying at 1 MiB.
+
+        Since ADR-0048 amendment 4 a batch run's success may carry `units`: 1 to
+        500, each `{label, artifacts, data}` — a one-line label of 1 to 120, 1 to
+        50 of the batch run's own files (each `{artifactId, pages?}`, a page
+        range only on a PDF) and a JSON object of at most 8 KiB. Each is refused
+        400 naming its path, and `units` on any other run 400; a batch run cannot
+        be held (400). Runs makes one waiting child run per unit, in order, each
+        invoked with `unit` and an empty `input`, sent under the flow's
+        `maxConcurrentRuns`. When the units would pass the queue cap — 500 runs
+        of the flow waiting in the workspace — the batch run fails with "Your
+        queue is full. Wait for these to finish.", none is queued, and the answer
+        is 429 `queue_full`.
+
+        `memory-get` and `memory-put` (ADR-0048 amendment 3) keep a flow's small
+        values per workspace — `AutomationMemoryGetRequest` `{key}` answers
+        `{value}`, null when absent; `AutomationMemoryPutRequest` `{key, value}`
+        answers `{keys}`, the flow's count after it, and `value: null` removes
+        the key. Only for a run whose pinned manifest declares `memory` (403
+        `capability_not_declared` otherwise). A key is 1 to 64 of `a-z`, `0-9`
+        and `-`; a value at most 65,536 bytes as JSON (400 `details.field`
+        naming it); the 101st key is 409 `memory_full`. Scoped by the run's
+        workspace and its flow's `templateId`, so every version of the flow
+        reads the same values and no other workspace or flow does. `model`
+        refuses `capability: memory` 400: it is not a model call.
+      parameters:
+        - name: message
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [step, result, model, provider, artifact, mail, memory-get, memory-put]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: >-
+            A run result was accepted, or — for `artifact` — the run's own file is
+            described. That answer carries a reference and a short-lived signed URL
+            and never a file body: bytes go between the caller and the object store,
+            never through this service. Since BUILD-PLAN 25.2.28 each file also
+            carries what it was measured to be when its upload was completed —
+            `measuredKind` (`pdf`, `jpeg` or `png`), `pageCount` for a PDF,
+            `widthPixels` and `heightPixels` for an image — each null when its
+            upload declared no page or pixel limit, so the automation checks the
+            numbers rather than parsing the file.
+        '202':
+          description: A step report was accepted.
+        '400': { $ref: '#/components/responses/Problem' }
+        '401':
+          description: The run token is absent or does not resolve to a run.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '403':
+          description: >-
+            The run's deadline has passed, the body names a different run, the
+            automation reached for a provider or capability its pinned manifest
+            never declared, or — for `model` — the workspace's plan does not allow
+            another model call this month: `details.reason` carries the entitlement
+            decision (`over_plan_limit`, `capability_not_in_plan`,
+            `entitlements_not_configured`), `details.used` the month's count and
+            `details.limit` the plan's ceiling when the decision reached one. Nothing
+            was sent to the model provider.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '429':
+          description: >-
+            For `result`, a batch run's units would pass the queue cap (ADR-0048
+            amendment 4): `details.reason` `queue_full`, `details.limit` `"500"`.
+            The batch run has failed in the cap's words and queued nothing.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422':
+          description: >-
+            The step is not declared in the pinned manifest's pipeline, or — for
+            `model` — the completion could not be handed over and `details.reason`
+            says why: `output_schema_mismatch` (the completion did not match the
+            request's `outputSchema`; `details.path` and `details.rule` name the place
+            and the keyword that failed, never the value), `content_filtered` (the
+            provider declined to answer) or `truncated` (the output budget was
+            reached). `details.finishReason` is the provider's. The completion's text
+            is never echoed, and each of the three was still metered. Four more name
+            the run's file, refused before anything was spent or metered:
+            `content_type_not_accepted` (the pinned manifest takes no files, or not
+            this type, or a model does not read it natively), `file_too_large`,
+            `file_content_mismatch` (its leading bytes are not the type its upload
+            declared) and `file_encrypted` (a password-protected PDF); with
+            `pages` (ADR-0048 amendment 4) also `pages_not_pdf`,
+            `pages_out_of_range` and `file_unreadable`. And
+            `no_model_left`: every model of the list that would serve the call is
+            by a maker its `excludeModelAuthors` names, so none was asked — refused
+            before the file was read, and nothing was spent or metered.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+
+  /v1/webhooks/{endpointId}:
+    post:
+      operationId: deliverWebhook
+      summary: A provider's webhook delivery, which starts a run.
+      security: []
+      description: >-
+        Public and unauthenticated by necessity: the caller is a third-party vendor
+        holding a per-subscription secret and no platform session. Same-origin is
+        deliberately NOT enforced — a vendor has no origin and sends no cookie.
+
+        What protects it: the secret, checked in constant time by the Runs service
+        and never by the Edge; an endpoint id that is random and discloses nothing
+        about the workspace, the subscription, or how many customers exist; and the
+        rate limiter, which runs before this route is reached.
+
+        The delivery id makes a retry idempotent. A vendor that sends none of the
+        accepted headers is refused rather than guessed at: hashing the body would
+        collapse two genuinely distinct events that happen to carry the same
+        payload into one run.
+
+        Not consumed by the web or mobile clients. Documented here for the same
+        reason the callback route is — an undocumented public route is how one
+        survives unreviewed.
+      parameters:
+        - name: endpointId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: x-autom8x-webhook-secret
+          in: header
+          required: true
+          description: The per-subscription secret, shown once when the endpoint was created.
+          schema: { type: string }
+        - name: x-autom8x-delivery-id
+          in: header
+          required: false
+          description: >-
+            The vendor's own id for this delivery. `x-github-delivery` and
+            `x-shopify-webhook-id` are accepted in its place; one of the three is
+            required, and the first one present is the one that counts. At most 83
+            characters: the id becomes part of a 128-character idempotency key, so
+            the bound is derived from that key rather than chosen, and a test holds
+            this number to the route's.
+          schema: { type: string, maxLength: 83 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: >-
+            The delivery was accepted. `accepted` is false with a reason when the
+            subscription is not live (`subscription_not_live`), has moved to a
+            version not triggered by a webhook (`trigger_kind_mismatch`, §12.1
+            #126), or belongs to a workspace holding more flows than its plan
+            allows (`over_plan_limit`, the owner's decision 7a3;
+            `entitlements_not_configured` where the deployment has no plan to
+            read) — answered 200 so the vendor stops retrying a delivery this
+            platform will never act on, rather than showing the customer a broken
+            webhook for a state the customer chose. A declined delivery creates
+            no run.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accepted: { type: boolean }
+                  runId: { type: string, format: uuid }
+                  replayed: { type: boolean }
+                  reason: { type: string }
+        '400':
+          description: >-
+            The delivery cannot be made idempotent: no delivery id was supplied
+            (`missing_delivery_id`), or the one supplied is longer than 83
+            characters (`delivery_id_too_long`). The reason is in the problem's
+            details.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '404':
+          description: >-
+            The endpoint does not exist, or the secret is wrong or absent. One
+            answer for all three, deliberately: distinguishing them would make this
+            address an oracle for enumerating endpoints.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: >-
+            The same delivery id arrived with a different body. The idempotency
+            record hashes the payload, so a redelivery must be byte-identical to
+            be answered as a replay.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '413':
+          description: The body exceeds the relay's limit, refused before the endpoint lookup.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+        '502':
+          description: The Runs service is unreachable; the vendor should retry.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+      description: >-
+        The Edge's own session cookie, set by the OAuth login flow. The browser
+        never holds a Supabase key, a database credential, or a provider token.
+
+  parameters:
+    WorkspaceId:
+      name: workspaceId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+      description: Must be a workspace the session names, or the answer is 404.
+    SubscriptionId:
+      name: subscriptionId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    RunId:
+      name: runId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    PageShape:
+      name: shape
+      in: query
+      required: false
+      schema: { type: string, enum: [blocks] }
+      description: >-
+        `blocks` answers the page body built when it is read (ADR-0048): the
+        blocks a client draws, in the order its flow's manifest gives, in place
+        of the fields it would otherwise draw itself. Without it the answer is
+        unchanged. Any other value is 400.
+    ItemId:
+      name: itemId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    FileId:
+      name: fileId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+      description: A file's `id`, as `RunDetail.files` lists it.
+    ApprovalId:
+      name: approvalId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    NotificationId:
+      name: notificationId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/NotificationId' }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 16, maxLength: 128 }
+      description: >-
+        16-128 characters of letters, numbers, dot, underscore, tilde, colon, or
+        hyphen. The same key with different input is a conflict, not a replay.
+
+  responses:
+    Problem:
+      description: An RFC 9457 problem document.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status, code, requestId]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+        code: { type: string }
+        requestId: { type: string }
+        details:
+          type: object
+          additionalProperties: true
+          description: >-
+            Usually absent. On a 403 from subscription creation, only
+            `reason: over_plan_limit` and `reason: entitlements_not_configured`
+            may be present. On a 403 from run creation, the same two reasons, each
+            with the integers `limit` and `live`. A 403 for a missing role carries
+            `requiredRole`. A 409 or 422 from `createItem`, and one from
+            `createRun` naming an item, names only the reasons its operation
+            lists; a 422 from `createItem` may carry `problems`, at most 16
+            `{ path, message }` pairs naming a field and its rule, never a
+            value (ADR-0046).
+            A 409 or 422 from a subscription update or a webhook address names
+            only the reasons its operation lists. A 400 from completing an upload
+            names its reason and, for a measured refusal, the measured and allowed
+            numbers as strings of digits (`completeUpload`). A 409, 422 or 503
+            from `createRunPackageFile` names only the reasons it lists. All other upstream and
+            authorization details are deliberately suppressed.
+
+    FlowAllowance:
+      type: object
+      additionalProperties: false
+      required: [allowed, live]
+      description: >-
+        How many flows the workspace's plan allows, beside how many it holds (the
+        owner's decision 7a3). While `live` is greater than `allowed`, no new run
+        starts on any of the workspace's flows — manual, scheduled or webhook —
+        and a manual start answers 403 `over_plan_limit`; runs already started
+        still finish, and nothing is paused or removed. On the default list only,
+        never with `status=archived`, and absent when the plan could not be read
+        at that moment: absence says nothing either way, and a start then asks
+        for itself.
+      properties:
+        allowed:
+          type: [integer, 'null']
+          minimum: 0
+          description: >-
+            The plan's ceiling on flows. `null` is a plan that allows any number,
+            which is never over. Exactly `allowed` flows is within the plan.
+        live:
+          type: integer
+          minimum: 0
+          description: >-
+            Every flow the workspace holds that is not removed — draft, live and
+            paused alike, including those scoped to teams the reader cannot see.
+            The same count a new subscription is decided against, so pausing a
+            flow does not lower it; removing (archiving) one does.
+
+    UploadTicket:
+      type: object
+      additionalProperties: false
+      required: [uploadSessionId, uploadUrl, expiresAt, maximumSizeBytes]
+      properties:
+        uploadSessionId: { type: string, format: uuid }
+        uploadUrl:
+          type: string
+          format: uri
+          description: >-
+            PUT the file's bytes here, with no other header needed. Signed and
+            expiring; it names the store, not the Edge.
+        expiresAt: { type: string, format: date-time }
+        maximumSizeBytes: { type: integer, minimum: 1 }
+
+    UploadedFile:
+      type: object
+      additionalProperties: false
+      required: [artifactId, filename, contentType, sizeBytes]
+      properties:
+        artifactId: { type: string, format: uuid }
+        filename: { type: string }
+        contentType: { type: string }
+        sizeBytes: { type: integer, minimum: 0 }
+
+    WebhookEndpoint:
+      type: object
+      additionalProperties: false
+      required: [endpointId, createdAt]
+      properties:
+        endpointId: { type: string, format: uuid }
+        url:
+          type: string
+          format: uri
+          description: >-
+            Where the vendor sends deliveries. Absent only where the platform has
+            no public origin configured.
+        createdAt: { type: string, format: date-time }
+        lastDeliveryAt: { type: string, format: date-time }
+        lastOutcome:
+          type: string
+          description: >-
+            What the last delivery came to, such as `accepted`, `replayed`,
+            `subscription_not_live` or `trigger_kind_mismatch`.
+
+    IssuedWebhookEndpoint:
+      type: object
+      additionalProperties: false
+      required: [endpointId, createdAt, secret, rotated]
+      properties:
+        endpointId: { type: string, format: uuid }
+        url: { type: string, format: uri }
+        createdAt: { type: string, format: date-time }
+        secret:
+          type: string
+          description: >-
+            Sent by the vendor as `x-autom8x-webhook-secret`. Shown once; store it
+            in the vendor's settings now.
+        rotated:
+          type: boolean
+          description: True when an existing address was given a new secret.
+
+    AutomationCatalogResponse:
+      type: object
+      required: [automations, categories]
+      properties:
+        automations:
+          type: array
+          items: { $ref: '#/components/schemas/AutomationCatalogEntry' }
+        categories:
+          type: array
+          items: { type: string }
+          description: The filter vocabulary, including "All". Rendered, never invented.
+
+    AutomationCatalogEntry:
+      type: object
+      required:
+        [
+          templateId,
+          version,
+          name,
+          description,
+          category,
+          icon,
+          monthlyPriceUsd,
+          subscribed,
+          available,
+          requiredConnections,
+          setup,
+          pipeline,
+          usesAi,
+        ]
+      properties:
+        templateId: { type: string }
+        version: { type: integer, minimum: 1 }
+        name: { type: string }
+        description: { type: string }
+        category:
+          type: string
+          enum:
+            [
+              HR,
+              Accounting,
+              Finance,
+              Legal,
+              Compliance,
+              Data,
+              Operations,
+              Sales,
+              Marketing,
+              Customer Support,
+              IT,
+              Engineering,
+              Product,
+              Procurement,
+              Administration,
+              Research,
+              Healthcare,
+            ]
+          description: 'A team kind: a flow added from this entry goes to the team of this kind (ADR-0036).'
+        icon:
+          type: string
+          description: An icon name the clients resolve. Never an asset URL.
+        documentWords:
+          type: object
+          additionalProperties: false
+          required: [singular, plural]
+          description: >-
+            What the flow calls one of the documents its runs return, and many —
+            "Invoice" and "Invoices" for Invoice Processing — from the newest live
+            version's manifest (`display.documentWords`), present when it declares
+            them (BUILD-PLAN 27.2.1). A client heads each of a run's documents
+            "{singular} {n} of {count}"; absent, "Document {n} of {count}". The run
+            package prints the same words.
+          properties:
+            singular: { type: string, minLength: 1, maxLength: 40 }
+            plural: { type: string, minLength: 1, maxLength: 40 }
+        monthlyPriceUsd: { type: number, minimum: 0 }
+        subscribed: { type: boolean }
+        available:
+          type: boolean
+          description: Evidence from a reachability probe, never an assumption.
+        requiredConnections:
+          type: array
+          maxItems: 16
+          description: >-
+            The accounts this automation needs, from the manifest — provider, its
+            display name, and why. A client shows them as a step before anything
+            is subscribed; `Subscription.unmetConnections` still says which are
+            missing once it exists. Scopes are not published here: the provider's
+            consent page states them. An `optional` one is the flow's to choose,
+            or not, on its vendor page (ADR-0037).
+          items: { $ref: '#/components/schemas/AutomationCatalogConnection' }
+        setup:
+          type: array
+          maxItems: 32
+          description: >-
+            Customer-facing manifest setup fields, in manifest order. A field's
+            `key` is the identity written to subscription `config[key]`. On PATCH
+            the server rejects undeclared keys and values with the wrong control
+            type; a required field may be omitted only when it declares a default.
+          items: { $ref: '#/components/schemas/AutomationSetupField' }
+        pipeline:
+          type: array
+          minItems: 1
+          maxItems: 24
+          description: >-
+            What this automation promises to do, in manifest order — the pinned
+            manifest's own display contract, published for the same reason
+            `setup` is. **Display and integrity, never an execution plan**: the
+            platform does not run these steps, it refuses any reported step that
+            is not one of them. The first is always the trigger.
+
+            A client joins `RunStep.stepId` or `Approval.stepId` to `id` here for
+            a human title, which is why neither carries one of its own, and
+            counts these to get run detail's "steps done 3 / 4" denominator.
+          items: { $ref: '#/components/schemas/AutomationDeclaredStep' }
+        groups:
+          type: array
+          minItems: 2
+          maxItems: 6
+          description: >-
+            What a run shows (ADR-0037): the pinned manifest's visible groups of
+            its steps, in the order a run reaches them, present when it declares
+            them. Every step then names one in `group`, and a client draws one row
+            per group that has a reported step — never one per step, never a
+            step id, and no row for a step that did not run.
+          items: { $ref: '#/components/schemas/AutomationStepGroup' }
+        usesAi:
+          type: boolean
+          description: >-
+            Whether the pinned manifest declares any `requiredCapabilities`: a run
+            of it may send the person's document to an AI model. A client asks
+            the account's AI consent (`SessionResponse.user.aiDocumentReading`)
+            before starting a run with a file on such a flow (ADR-0038).
+        # The newest version's items, when it declares them (ADR-0046).
+        items: { $ref: '#/components/schemas/AutomationItems' }
+
+    AutomationCatalogConnection:
+      type: object
+      additionalProperties: false
+      required: [providerId, displayName, purpose, optional]
+      properties:
+        providerId: { type: string }
+        displayName: { type: string }
+        purpose: { type: string }
+        optional:
+          type: boolean
+          description: >-
+            True when the flow may run without it: the person picks it, or None,
+            on the flow's vendor page, saved as the flow's `connection` setting
+            (ADR-0037). False for a connection the flow cannot go live without.
+
+    AutomationStepGroup:
+      type: object
+      additionalProperties: false
+      required: [id, title, description]
+      description: >-
+        One visible step of a manifest, holding its pipeline steps (ADR-0037).
+        A group no pipeline step names is one of two kinds (ADR-0041): a setting
+        step, drawn with the setup fields whose `group` names it and done when a
+        run starts (Invoice Processing v4's "Connect integration"); or the
+        platform's own step, named by `platform`.
+      properties:
+        id: { type: string, maxLength: 64 }
+        title: { type: string, maxLength: 40 }
+        description: { type: string, maxLength: 120 }
+        titleByConnection:
+          type: object
+          additionalProperties: false
+          required: [field, titles]
+          description: >-
+            The step's title when the flow's choice in a connection setup field
+            names a provider (ADR-0041): `field` is that field's `key`, and each
+            entry of `titles` is the title shown while its `providerId` is
+            chosen. `title` is shown for `none` and for any provider not listed.
+            Invoice Processing v4's step 4 is "Details saved", and "QuickBooks
+            updated" while QuickBooks is chosen.
+          properties:
+            field: { type: string, maxLength: 64 }
+            titles:
+              type: array
+              minItems: 1
+              maxItems: 16
+              items:
+                type: object
+                additionalProperties: false
+                required: [providerId, title]
+                properties:
+                  providerId: { type: string, maxLength: 64 }
+                  title: { type: string, minLength: 1, maxLength: 40 }
+        platform:
+          type: string
+          maxLength: 32
+          description: >-
+            A step the platform does itself, which no pipeline step names
+            (ADR-0041). `email` is the only value today: the run's email, sent
+            when the run ends or holds to the workspace's owners and admins, the
+            person who started the run and the flow's extra addresses. A run's
+            state of it is `RunDetail.email`; a flow's addresses are
+            `readFlowEmailRecipients`. At most one, and the last group. A client
+            draws a value it does not know as a step with no state.
+
+    AutomationDeclaredStep:
+      type: object
+      additionalProperties: false
+      required: [id, kicker, title, description]
+      properties:
+        id:
+          type: string
+          maxLength: 64
+          description: >-
+            Stable within a manifest version. What a reported `RunStep.stepId` and
+            an `Approval.stepId` name; unique across the pipeline, or a reported
+            step would be ambiguous.
+        kicker:
+          type: string
+          enum: [TRIGGER, AI STEP, ACTION]
+          description: >-
+            The row's label. Exactly the first step is `TRIGGER` — enforced at
+            registration, so a client may rely on it rather than checking.
+        title: { type: string, maxLength: 80 }
+        description: { type: string, maxLength: 200 }
+        group:
+          type: string
+          maxLength: 64
+          description: >-
+            The `AutomationStepGroup.id` this step belongs to — present on every
+            step when the manifest declares `groups`, on none otherwise (ADR-0037).
+
+    AutomationSetupField:
+      type: object
+      additionalProperties: false
+      required: [section, key, title, description, control, required]
+      properties:
+        section: { type: string, enum: [connections, source, rules, notifications] }
+        key: { type: string, maxLength: 64, description: Stable `config` object key. }
+        title: { type: string }
+        description: { type: string }
+        control:
+          type: string
+          enum: [toggle, money, text, email, resource-picker, connection, select]
+          description: >-
+            `connection` (ADR-0037, ADR-0040) is the flow's choice for ONE step:
+            `none` or the `providerId` of one of the optional connections the
+            field names in `providers`, chosen on the vendor page. A manifest may
+            declare one per step that uses a connection (ADR-0040, BUILD-PLAN
+            25.4.30), each in `connections`, never required, defaulting to
+            `none`; no provider is named by two. `select` (ADR-0048 Amendment 2)
+            is one of the field's option values, or with `multiple` a list of
+            them; setup only, never run input.
+        defaultValue: {}
+        required: { type: boolean }
+        notifies:
+          type: string
+          enum: [approval-requested, approval-expiring, run-failed, run-succeeded]
+        providers:
+          type: array
+          minItems: 1
+          maxItems: 16
+          items: { type: string, maxLength: 64 }
+          description: >-
+            On a `connection` field: the optional connections this choice is
+            among, by `providerId` (ADR-0040). Absent on the one connection field
+            of a manifest that declares only one — then it names every optional
+            connection, as Invoice Processing v2 does.
+        group:
+          type: string
+          maxLength: 64
+          description: >-
+            The `AutomationStepGroup.id` this setting belongs to (ADR-0040): a
+            client draws it inside that step on the flow page — the vendor in
+            the step that records, the approval limit in the step that checks.
+            Absent: drawn with the flow's other settings.
+        options:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          uniqueItems: true
+          items:
+            oneOf:
+              - { type: string, minLength: 1, maxLength: 80 }
+              - $ref: '#/components/schemas/AutomationSelectOption'
+          description: >-
+            Only on a `select` (ADR-0048 Amendments 2 and 3): its choices, all
+            strings (the value is the string) or all `AutomationSelectOption`
+            objects (the value is `value`, shown as `label`, under `group`), no
+            value twice. A client draws a search box when there are more than 10,
+            and the group headings in the order they first appear.
+        multiple:
+          type: boolean
+          description: >-
+            Only on a `select`: true when a person may pick several. The value
+            (and `defaultValue`) is then a list of the option values, none twice,
+            never empty when the field is required; absent or false, it is one.
+
+    AutomationSelectOption:
+      type: object
+      additionalProperties: false
+      required: [value, label]
+      description: >-
+        One choice of a `select` setup field whose options are objects (ADR-0048
+        Amendment 3). `value` is what is saved and what `defaultValue` names;
+        `label` is what a person sees, the closed dropdown included; `group` is
+        the heading it is drawn under, on every option of the field or on none.
+      properties:
+        value: { type: string, minLength: 1, maxLength: 64, pattern: '^[ -~]*[!-~][ -~]*$' }
+        label: { type: string, minLength: 1, maxLength: 120 }
+        group: { type: string, minLength: 1, maxLength: 80 }
+
+    AutomationRunInputField:
+      type: object
+      additionalProperties: false
+      required: [key, title, description, control, required]
+      description: >-
+        One value a person supplies when starting a manual run (ADR-0030). The
+        setup vocabulary without `section`, `notifies` or `resource-picker`, which
+        describe a SETTING rather than one run. **`artifact` is a file the run
+        reads**: never required, never defaulted, sent as the id an upload
+        returned — a client with no upload surface does not render it, and the
+        run starts without a file.
+      properties:
+        key:
+          type: string
+          maxLength: 64
+          description: The `input` object key the value is sent under.
+        title: { type: string }
+        description: { type: string }
+        control: { type: string, enum: [toggle, money, text, email, artifact] }
+        defaultValue: {}
+        required: { type: boolean }
+        multiple:
+          type: boolean
+          description: >-
+            An `artifact` field only (ADR-0048 Amendments 3 and 4): true when a
+            person may pick several files at once, all of them uploaded into ONE
+            run — the value is then a list of upload ids, 1 to `maxFiles`, none
+            twice. Absent or false: one file, one id.
+        maxFiles:
+          type: integer
+          minimum: 1
+          maximum: 200
+          description: >-
+            On a `multiple` field (ADR-0048 Amendment 4): the most files one run
+            takes — the manifest's own, else 50. Runs refuses a longer list (422);
+            a client stops the picker at it with "Add up to {max} files at a
+            time.".
+        acceptedContentTypes:
+          type: array
+          minItems: 1
+          items: { type: string }
+          description: >-
+            An `artifact` field only: the types the file may be, from the
+            version's `artifacts` block (ADR-0046) — a picker offers these, and a
+            Word file is sent as it is. Absent: PDF, JPEG or PNG.
+
+    AutomationItems:
+      type: object
+      additionalProperties: false
+      required: [words, runWords, titleField, fields, file]
+      description: >-
+        A flow's items (ADR-0046): things a person makes once, from a file, that
+        the flow's runs then belong to. A flow with items draws them in place of
+        its run start form — a run needs an item (`createRun`'s `itemId`) — and
+        every word a client shows for them comes from here, never from code.
+      properties:
+        words:
+          type: object
+          additionalProperties: false
+          required: [singular, plural]
+          description: What one item is called, and many — "Job", "Jobs".
+          properties:
+            singular: { type: string, minLength: 1, maxLength: 40 }
+            plural: { type: string, minLength: 1, maxLength: 40 }
+        runWords:
+          type: object
+          additionalProperties: false
+          required: [singular, plural]
+          description: What one of an item's runs is called, and many — "Candidate", "Candidates".
+          properties:
+            singular: { type: string, minLength: 1, maxLength: 40 }
+            plural: { type: string, minLength: 1, maxLength: 40 }
+        titleField:
+          type: string
+          description: The key of the required field whose value names an item (`Item.title`).
+        groupField:
+          type: string
+          description: The key of a `select` field the clients group items by, when declared.
+        verdictWords:
+          type: object
+          additionalProperties: false
+          required: [positive, negative]
+          description: >-
+            What a run's `verdict` is called (Round 19, build 28) — "Advance" for
+            `positive`, "Decline" for `negative`; a client names a run's verdict
+            and an item's `positiveCount` and `negativeCount` with these, never
+            with words of its own. Absent: the flow's runs give no verdict.
+          properties:
+            positive: { type: string, minLength: 1, maxLength: 40 }
+            negative: { type: string, minLength: 1, maxLength: 40 }
+        fields:
+          type: array
+          minItems: 1
+          maxItems: 4
+          description: What a person gives an item when making it, in order.
+          items: { $ref: '#/components/schemas/AutomationItemField' }
+        file:
+          type: object
+          additionalProperties: false
+          required: [key, title, description, acceptedContentTypes]
+          description: >-
+            The file an item is made from: uploaded as a run's file is, then sent
+            as `createItem`'s `file`.
+          properties:
+            key: { type: string }
+            title: { type: string }
+            description: { type: string }
+            acceptedContentTypes:
+              type: array
+              minItems: 1
+              items: { type: string }
+              description: >-
+                The types the file may be — the manifest's `artifacts` block; a
+                picker offers these, and a Word file is sent as it is.
+
+    AutomationItemField:
+      type: object
+      additionalProperties: false
+      required: [key, title, control, required]
+      description: >-
+        One value a person gives an item (ADR-0046): a text box, or a select of
+        `options`. A select with `allowOther` also takes a typed value, which a
+        client offers as "Other"; every value typed for the field before is in
+        `listItems`' `choices`.
+      properties:
+        key:
+          type: string
+          maxLength: 64
+          description: The `fields` key the value is sent and returned under.
+        title: { type: string }
+        description: { type: string, maxLength: 200 }
+        control: { type: string, enum: [text, select] }
+        options:
+          type: array
+          minItems: 1
+          maxItems: 32
+          description: A select's values, in order; absent on a text field.
+          items: { type: string, minLength: 1, maxLength: 40 }
+        allowOther:
+          type: boolean
+          description: A select only — a typed value of at most 40 characters is taken too.
+        defaultValue:
+          type: string
+          description: A select only — one of `options`, used when the field is left out.
+        required: { type: boolean }
+        maxLength:
+          type: integer
+          minimum: 1
+          maximum: 200
+          description: A text field only — the longest value; 80 when absent.
+
+    SubscriptionStatus:
+      type: string
+      # `archived` arrived with 18.5.3 and this enum did not learn it in the same
+      # commit — a workspace can now give a plan slot back, and the value it
+      # returns was undeclared here for a day. Archiving is ONE-WAY: a client
+      # renders it and offers no transition out.
+      enum: [draft, live, paused, archived]
+
+    Subscription:
+      type: object
+      required:
+        [
+          id,
+          workspaceId,
+          templateId,
+          templateVersion,
+          status,
+          config,
+          unmetConnections,
+          projectId,
+          createdByUserId,
+          createdAt,
+          updatedAt,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        workspaceId: { type: string, format: uuid }
+        templateId: { type: string }
+        templateVersion:
+          type: integer
+          description: >-
+            The version it runs: always its automation's newest, which the
+            platform moves it to on release (ADR-0041). A run keeps the version
+            it started on.
+        name: { type: string }
+        status: { $ref: '#/components/schemas/SubscriptionStatus' }
+        config: { type: object, additionalProperties: true }
+        unmetConnections:
+          type: array
+          items: { type: string }
+          description: Provider ids still to connect. Non-empty blocks going live.
+        runInput:
+          type: array
+          maxItems: 16
+          items: { $ref: '#/components/schemas/AutomationRunInputField' }
+          description: >-
+            What a person supplies to START a run of this subscription (ADR-0030),
+            read from the manifest version it PINS — never the newest — because
+            that is the version that runs and the one `createRun` checks input
+            against. Present only when the pinned version is `manual` and declares
+            input; absent means no form a client could honestly render. A client
+            renders it in order, and `createRun` refuses an undeclared key or a
+            value of the wrong type with 422.
+        setup:
+          type: array
+          maxItems: 32
+          items: { $ref: '#/components/schemas/AutomationSetupField' }
+          description: >-
+            The setup fields of the manifest version this subscription PINS —
+            never the newest (§12.1 #185). `config` is validated against these on
+            every write, so a client editing a subscription's settings draws these
+            fields, not the catalog entry's: the two differ once a newer version
+            adds, removes or retypes a field. Absent when the pinned version
+            declares none.
+        triggerKind:
+          type: string
+          enum: [schedule, webhook, manual, provider-event]
+          description: >-
+            What starts this subscription's runs, read from the version it PINS
+            (§12.1 #91). A client offers a webhook address only when this is
+            `webhook`; a move to another version can change it.
+        # The PINNED version's items, when it declares them (ADR-0046): the flow
+        # page lists them (`listItems`) in place of the run start form.
+        items: { $ref: '#/components/schemas/AutomationItems' }
+        pages: { $ref: '#/components/schemas/FlowPages' }
+        projectId:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            The team of the flow's category; null only for a flow added before
+            ADR-0036. A VISIBILITY scope inside one workspace tenant and never a
+            second tenancy axis: a scoped subscription is listed only for someone
+            who can see that team, so owners and admins see every one and a team
+            grant is honoured. A flow never moves team.
+        createdByUserId:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            Who set this up. Attribution only (ADR-0019, 18.6.1): the workspace
+            owns the subscription and nothing authorizes on this value. `null`
+            means created before Round 11 recorded it, or by an account that no
+            longer exists.
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    FlowEmailAddress:
+      type: string
+      minLength: 3
+      maxLength: 254
+      pattern: '^[^\s@<>,;"()\[\]\\]{1,64}@([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$'
+      description: >-
+        One email address: one `@`, a name before it of at most 64 characters
+        with no space or `<>,;"()[]\`, and a domain with a dot after it
+        (ADR-0041).
+
+    FlowEmailPerson:
+      type: object
+      additionalProperties: false
+      required: [email, role]
+      properties:
+        email: { type: string }
+        displayName: { type: string }
+        role: { type: string, enum: [owner, admin] }
+
+    FlowEmailRecipients:
+      type: object
+      additionalProperties: false
+      required: [subscriptionId, people, extra, canEdit]
+      description: >-
+        Who a flow's run emails go to (ADR-0041): its workspace's owners and
+        admins, the person who started each run, and these extra addresses.
+      properties:
+        subscriptionId: { type: string, format: uuid }
+        people:
+          type: array
+          description: >-
+            The workspace's active owners and admins, owners first, each address
+            once — always sent every run email.
+          items: { $ref: '#/components/schemas/FlowEmailPerson' }
+        extra:
+          type: array
+          maxItems: 10
+          description: The flow's extra addresses, in the order they were added.
+          items: { type: string }
+        canEdit:
+          type: boolean
+          description: True for an owner or admin, who may change `extra`.
+
+    RunStatus:
+      type: string
+      description: >-
+        `pending` is created and not yet accepted by its automation — the
+        moment between creation and acknowledgement, and since BUILD-PLAN 25.2.10
+        also a run HELD BACK because its automation is at capacity or other runs
+        of it wait ahead (25.2.41), or waiting for
+        another dispatch attempt after a refusal with a retry hint or an invoke
+        that never reached an answer. The run's `run-created` event says
+        `queued: max_concurrent_runs` when it was held back, and `queued: batch`
+        on a batch's child, which is made waiting (ADR-0048 Amendment 4). `running` is
+        accepted; `held` waiting for a person — approved, the job goes on under the
+        same id (ADR-0044); decided otherwise, it stays `held`; `succeeded`,
+        `failed` and `cancelled` are final. No seventh
+        value: the words a client renders for `pending` already fit a run that
+        waits.
+      enum: [pending, running, held, succeeded, failed, cancelled]
+
+    RunOrigin:
+      type: string
+      enum: [trigger, manual, approval-continuation, retry-continuation]
+
+    Run:
+      type: object
+      required:
+        [
+          id,
+          workspaceId,
+          subscriptionId,
+          templateId,
+          templateVersion,
+          status,
+          origin,
+          rootRunId,
+          requestId,
+          createdAt,
+          updatedAt,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        workspaceId: { type: string, format: uuid }
+        subscriptionId: { type: string, format: uuid }
+        templateId:
+          type: string
+          description: >-
+            No display name here. A screen showing one joins the catalog, so a
+            finished run cannot be relabelled by a later manifest.
+        templateVersion: { type: integer }
+        status: { $ref: '#/components/schemas/RunStatus' }
+        origin: { $ref: '#/components/schemas/RunOrigin' }
+        continuesRunId:
+          type: string
+          format: uuid
+          deprecated: true
+          x-sunset: '2027-01-31'
+          description: Not sent on any client read since ADR-0044; a job is its first run.
+        rootRunId:
+          type: string
+          format: uuid
+          description: The job's id (ADR-0044) — equal to `id` on every client read.
+        requestId:
+          type: string
+          description: >-
+            The request that created the run — for tracing, never a run's name.
+            A person names a run by `id` (the owner's decision of 2026-10-15:
+            "run number is the run ID"; §12.1 #69 as amended).
+        failureReason:
+          type: string
+          maxLength: 500
+          description: >-
+            Why this run failed, in the automation's words. Present only when
+            `status` is `failed`, enforced by the row's own CHECK.
+
+            On the LIST shape deliberately: a failed run that can only say
+            "failed" forces every client to fetch the whole timeline for a
+            sentence the run row already held.
+
+            **500, where `resultSummary` is 200**, and the difference is history
+            rather than design: this column has allowed 500 since the runs
+            baseline and the callback has never bounded it, so 500 is what a
+            client can actually receive. Narrowing it is a change to what the
+            platform refuses from automations already running, which is not this
+            round's to make — filed as §12.1 #75. `resultSummary` is new, so its
+            200 is enforced at the schema, the route and the column alike.
+        resultSummary:
+          type: string
+          maxLength: 200
+          description: >-
+            One line about what this run did. Present only when `status` is
+            `succeeded`, and only when the automation supplied one — it is
+            optional, and a run without one renders as its status.
+
+            **Not the automation's output.** The structured result is validated
+            against the manifest's `outputSchema` and is not published at any
+            shape; this is the sentence the automation wrote about it, under the
+            same rule as a step summary — never the payload itself.
+        itemId:
+          type: string
+          format: uuid
+          description: The item this run belongs to, on a flow with items (ADR-0046).
+        title:
+          type: string
+          minLength: 1
+          maxLength: 80
+          description: >-
+            What the automation named a succeeded run — a candidate's name
+            (ADR-0046). A client heads the run with it, beside `score`.
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: >-
+            The automation's score for a succeeded run (ADR-0046); an item's runs
+            are ranked by it.
+        verdict:
+          type: string
+          enum: [positive, negative]
+          description: >-
+            The automation's verdict on a succeeded run (Round 19, build 28),
+            when it gave one — named by the flow's `AutomationItems.verdictWords`
+            ("Advance", "Decline"). Only on a run of a flow whose items declare
+            those words. Like `score`, a job's is its newest run's.
+        batch:
+          type: boolean
+          enum: [true]
+          description: >-
+            Present, true, on a batch run (ADR-0048 Amendment 4): a manual run of
+            a flow that declares `batch`, which reads its files and queues one
+            child run per unit. Its page lists its children in the `batch` part.
+        unit:
+          type: object
+          additionalProperties: false
+          required: [parentRunId, index, label]
+          description: >-
+            On a child run of a batch (ADR-0048 Amendment 4): its batch run, its
+            place (0-based, in the order the batch sent its units) and its label.
+          properties:
+            parentRunId: { type: string, format: uuid }
+            index: { type: integer, minimum: 0, maximum: 499 }
+            label: { type: string, minLength: 1, maxLength: 120 }
+        startedAt: { type: string, format: date-time }
+        endedAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    Item:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          subscriptionId,
+          title,
+          fields,
+          status,
+          runCount,
+          positiveCount,
+          negativeCount,
+          topScore,
+          createdAt,
+          createdByUserId,
+          archivedAt,
+        ]
+      description: >-
+        One of a flow's items (ADR-0046) — a job, for Candidate Reviewer. Made
+        from a file by an owner or admin; the run that reads the file is not
+        activity, and its outcome is `status`.
+      properties:
+        id: { type: string, format: uuid }
+        subscriptionId: { type: string, format: uuid }
+        title:
+          type: string
+          description: The value of the flow's `titleField` — what names the item.
+        fields:
+          type: object
+          additionalProperties: { type: string }
+          description: The values the item was made with, by field key.
+        status:
+          type: string
+          enum: [reading, ready, failed]
+          description: >-
+            `reading` while the run that reads the file has not ended; `ready`
+            once it succeeded, and the item takes runs; `failed` when it failed,
+            was cancelled or ran out of time — make the item again.
+        failureReason:
+          type: string
+          maxLength: 500
+          description: Why the file was not read. Present only when `status` is `failed`.
+        sections:
+          type: array
+          minItems: 1
+          maxItems: 12
+          description: >-
+            What was read from the item's file, for people — "What AI read".
+            Present only on a `ready` item whose reading run wrote them, and
+            not with `shape=blocks`, where `blocks` carries the reading.
+          items: { $ref: '#/components/schemas/RunSection' }
+        blocks:
+          type: array
+          description: >-
+            The reading as blocks, every section closed (ADR-0048) — on `readItem`
+            with `shape=blocks` only, on a `ready` item with a reading, in place
+            of `sections`. Over the answer's 224 KiB it is the one sentence
+            "This is too long to show here.".
+          items: { $ref: '#/components/schemas/Block' }
+        runCount:
+          type: integer
+          minimum: 0
+          description: The item's runs, one per job, whatever their status.
+        positiveCount:
+          type: integer
+          minimum: 0
+          description: >-
+            Of `runCount`, the runs whose `verdict` is `positive` (Round 19, build
+            28) — each job at its newest run's verdict; 0 on a flow whose items
+            declare no `verdictWords`.
+        negativeCount:
+          type: integer
+          minimum: 0
+          description: >-
+            Of `runCount`, the runs whose `verdict` is `negative`, counted as
+            `positiveCount` is. A run with no verdict is in neither.
+        topScore:
+          type: [integer, 'null']
+          minimum: 0
+          maximum: 100
+          description: The highest `score` among the item's runs; null when none has one.
+        file:
+          allOf: [{ $ref: '#/components/schemas/RunFile' }]
+          description: >-
+            The file the item was made from (Round 19, build 28), as a reference —
+            on `readItem` when the file store answered in time; never on
+            `listItems`. Its link is `readItemFile`'s.
+        createdAt: { type: string, format: date-time }
+        createdByUserId:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            The person who made it. Attribution only; null when no maker was
+            recorded.
+        archivedAt:
+          type: [string, 'null']
+          format: date-time
+          description: When it was archived (`archiveItem`); null while it takes runs.
+
+    RunStatusCounts:
+      type: object
+      additionalProperties: false
+      required: [total, pending, running, held, succeeded, failed, cancelled]
+      description: >-
+        One count per value of `RunStatus`, plus their sum. Every status is
+        present and zero rather than omitted, so a client renders a figure
+        without deciding what a missing key meant.
+      properties:
+        total: { type: integer, minimum: 0 }
+        pending: { type: integer, minimum: 0 }
+        running: { type: integer, minimum: 0 }
+        held: { type: integer, minimum: 0 }
+        succeeded: { type: integer, minimum: 0 }
+        failed: { type: integer, minimum: 0 }
+        cancelled: { type: integer, minimum: 0 }
+
+    RunStats:
+      type: object
+      required: [workspace, subscriptions]
+      properties:
+        since:
+          type: string
+          format: date-time
+          description: Echoed when the request bounded the window. Absent means all time.
+        workspace: { $ref: '#/components/schemas/RunStatusCounts' }
+        subscriptions:
+          type: array
+          description: Busiest first, then by id — a stable order across two reads.
+          items: { $ref: '#/components/schemas/RunSubscriptionCounts' }
+
+    RunSubscriptionCounts:
+      type: object
+      additionalProperties: false
+      required: [subscriptionId, total, pending, running, held, succeeded, failed, cancelled]
+      description: >-
+        One subscription's counts. Spelled out rather than composed with `allOf`
+        over `RunStatusCounts`: that base closes itself with
+        `additionalProperties: false`, and a closed schema in an `allOf` rejects
+        every sibling branch's properties — so the composition would have matched
+        no response at all and a validating client would have refused all of them.
+      properties:
+        subscriptionId: { type: string, format: uuid }
+        total: { type: integer, minimum: 0 }
+        pending: { type: integer, minimum: 0 }
+        running: { type: integer, minimum: 0 }
+        held: { type: integer, minimum: 0 }
+        succeeded: { type: integer, minimum: 0 }
+        failed: { type: integer, minimum: 0 }
+        cancelled: { type: integer, minimum: 0 }
+
+    RunStep:
+      type: object
+      required: [id, runId, workspaceId, stepId, outcome, summary, occurredAt]
+      properties:
+        id: { type: string, format: uuid }
+        runId: { type: string, format: uuid }
+        workspaceId: { type: string, format: uuid }
+        stepId:
+          type: string
+          description: Always a step the pinned manifest declares. Others are refused and not stored.
+        outcome: { type: string, enum: [ok, held, failed] }
+        summary:
+          type: string
+          maxLength: 500
+          description: One line for the timeline. Never the payload itself.
+        heldReason: { type: string, maxLength: 500 }
+        occurredAt: { type: string, format: date-time }
+
+    RunEvent:
+      type: object
+      required: [id, runId, workspaceId, type, occurredAt]
+      properties:
+        id: { type: string, format: uuid }
+        runId: { type: string, format: uuid }
+        workspaceId: { type: string, format: uuid }
+        type:
+          type: string
+          enum:
+            - run-created
+            - run-dispatched
+            - step-ok
+            - step-held
+            - step-failed
+            - approval-requested
+            - approval-decided
+            - run-continued
+            - run-succeeded
+            - run-failed
+            - run-cancelled
+        stepId: { type: string }
+        payload:
+          type: object
+          additionalProperties: true
+          description: >-
+            Open, per event type. `run-created` carries `origin` and `templateId`,
+            and `queued: max_concurrent_runs` when the run was held back because
+            its automation was at capacity or other runs of it waited ahead
+            (BUILD-PLAN 25.2.10, 25.2.41) — the reason a run
+            stayed `pending`, where a status value would have been a contract
+            change for a distinction this event already records.
+        occurredAt: { type: string, format: date-time }
+
+    RunDetail:
+      type: object
+      required: [run, steps, events]
+      properties:
+        run: { $ref: '#/components/schemas/Run' }
+        steps:
+          type: array
+          items: { $ref: '#/components/schemas/RunStep' }
+        events:
+          type: array
+          items: { $ref: '#/components/schemas/RunEvent' }
+        details:
+          type: array
+          minItems: 1
+          maxItems: 20
+          description: >-
+            What a succeeded run saved, as its automation wrote it for people —
+            label and value lines, in order (ADR-0037). Present only on a
+            succeeded run that wrote them, and only on this one-run read: lists,
+            the activity and exports never carry it. Anyone who may read the run
+            may read these; the automation's raw output stays unpublished.
+          items: { $ref: '#/components/schemas/RunDetailLine' }
+        documents:
+          type: array
+          minItems: 1
+          description: >-
+            The documents a succeeded or held run read from its file, each with
+            its own details and what became of it (ADR-0039, BUILD-PLAN 25.4.27).
+            A client heads each with its flow's word, `AutomationCatalogEntry.documentWords`
+            — "Invoice 1 of 3" for Invoice Processing — else "Document 1 of 3"
+            (BUILD-PLAN 27.2.1). Present only on a run whose automation wrote
+            them, and only on this one-run read and `readRunDocuments`: lists
+            and the activity never carry them. Anyone who may read the run may
+            read these.
+          items: { $ref: '#/components/schemas/RunDocument' }
+        sections:
+          type: array
+          minItems: 1
+          maxItems: 12
+          description: >-
+            What a succeeded run read, as its automation wrote it for people —
+            titled sections of entries (ADR-0046), drawn as collapsible rows, the
+            first open. Present only on a run that wrote them, and only on this
+            one-run read: lists and the activity never carry them.
+          items: { $ref: '#/components/schemas/RunSection' }
+        email: { $ref: '#/components/schemas/RunEmailState' }
+        files:
+          type: array
+          maxItems: 20
+          description: >-
+            The files uploaded for the job, in upload order — references, never
+            bytes (ADR-0045): what a document's Format is read from. The run
+            package's own files are not among them. Absent when Artifacts could
+            not answer.
+          items: { $ref: '#/components/schemas/RunFile' }
+        blocks:
+          type: array
+          description: >-
+            `shape=blocks` only (ADR-0048): the page body between its header and
+            footer — the "View {file}" rows, the result line and the approval to
+            decide, then what the run read — in the order of the flow's
+            `pages.run`. Present on this one-run read only, never on a list, the
+            activity, an export or an email; absent when the flow's manifest
+            could not be read.
+          items: { $ref: '#/components/schemas/Block' }
+        packageAvailable:
+          type: boolean
+          description: >-
+            `shape=blocks` only: the job has documents and has ended or is held,
+            so the run package is offered (ADR-0045).
+
+    BlockTone:
+      type: string
+      enum: [neutral, success, warning, error]
+      description: A block's tone, drawn with theme tokens only; an unknown one draws neutral.
+
+    BlockBadge:
+      type: object
+      additionalProperties: false
+      required: [text]
+      properties:
+        text: { type: string, minLength: 1, maxLength: 40 }
+        tone: { $ref: '#/components/schemas/BlockTone' }
+
+    BlockOpen:
+      type: object
+      additionalProperties: false
+      required: [target]
+      description: >-
+        What a press opens — a typed target, never a URL (ADR-0048): a run, a
+        run's file, or an item's file. Each client maps it to its own route; an
+        unknown target draws without a press.
+      properties:
+        target: { type: string, enum: [run, run-file, item-file] }
+        runId: { type: string, format: uuid }
+        fileId: { type: string, format: uuid }
+        itemId: { type: string, format: uuid }
+
+    BlockListItem:
+      type: object
+      additionalProperties: false
+      required: [title]
+      properties:
+        title: { type: string, minLength: 1 }
+        subtitle: { type: string }
+        text: { type: string, description: Line breaks kept. }
+        url: { type: string, description: https only, checked again when drawn. }
+        badge: { $ref: '#/components/schemas/BlockBadge' }
+        lead: { type: string, description: Before the title — a rank. }
+        value: { type: string, description: After the title — a score. }
+        valueLabel:
+          type: string
+          description: What a screen reader says before `value` ("Score").
+        # The colour of `value`, which only the platform sets (ADR-0048 amendment 1):
+        # `success` for the positive verdict, `error` for the negative.
+        valueTone: { $ref: '#/components/schemas/BlockTone' }
+        muted: { type: boolean }
+        open: { $ref: '#/components/schemas/BlockOpen' }
+
+    Block:
+      description: >-
+        One of the thirteen blocks a run's or an item's page body is made of
+        (ADR-0048 and its amendments 1 to 3, `BLOCK_SET_VERSION` 4), told apart by
+        `type`. Drawn as sent and in order, by one renderer per type in each
+        client; an unknown type, form or part draws "This part can't be shown here
+        yet.". A `section` holds no section, group or questions, and starts closed
+        unless `open`. An `image` is one of the job's own files drawn in the page;
+        a `chart` is a bar or line chart, read aloud as its `alt`; a `group` is a
+        title over one card of sections, of which the first may be `open`, and is
+        top level only. A `list` that is `searchable` shows a search box.
+        `questions` is the platform's form over what the manifest declares, drawn
+        by the client's own component; an automation never sends one.
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [type, text]
+          properties:
+            type: { const: text }
+            text: { type: string, minLength: 1 }
+            style: { type: string, enum: [body, strong, muted, label] }
+            tone: { $ref: '#/components/schemas/BlockTone' }
+        - type: object
+          additionalProperties: false
+          required: [type, items]
+          properties:
+            type: { const: metric }
+            items:
+              type: array
+              minItems: 1
+              maxItems: 4
+              items:
+                type: object
+                additionalProperties: false
+                required: [label, value]
+                properties:
+                  label: { type: string }
+                  value: { type: string }
+                  tone: { $ref: '#/components/schemas/BlockTone' }
+        - type: object
+          additionalProperties: false
+          required: [type, text]
+          properties:
+            type: { const: badge }
+            text: { type: string, minLength: 1 }
+            tone: { $ref: '#/components/schemas/BlockTone' }
+        - type: object
+          additionalProperties: false
+          required: [type, columns, rows]
+          properties:
+            type: { const: table }
+            columns:
+              type: array
+              minItems: 2
+              maxItems: 3
+              items:
+                type: object
+                additionalProperties: false
+                properties:
+                  title: { type: string }
+                  align: { type: string, enum: [start, end] }
+                  muted: { type: boolean }
+            rows:
+              type: array
+              minItems: 1
+              items:
+                type: object
+                additionalProperties: false
+                required: [cells]
+                properties:
+                  cells: { type: array, items: { type: string } }
+                  note: { type: string }
+                  strong: { type: boolean }
+            divided: { type: boolean }
+        - type: object
+          additionalProperties: false
+          required: [type, items]
+          properties:
+            type: { const: list }
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/BlockListItem' }
+            empty: { type: string, description: Said when `items` is empty. }
+            searchable:
+              const: true
+              description: Only the platform sets it; the list shows a search box.
+        - type: object
+          additionalProperties: false
+          required: [type, title, blocks]
+          properties:
+            type: { const: section }
+            title: { type: string, minLength: 1 }
+            subtitle: { type: string }
+            badge: { $ref: '#/components/schemas/BlockBadge' }
+            open: { type: boolean }
+            blocks:
+              type: array
+              minItems: 1
+              items: { $ref: '#/components/schemas/Block' }
+        - type: object
+          additionalProperties: false
+          required: [type, title, open]
+          properties:
+            type: { const: file }
+            title: { type: string, minLength: 1 }
+            open: { $ref: '#/components/schemas/BlockOpen' }
+            file: { $ref: '#/components/schemas/RunFile' }
+        - type: object
+          additionalProperties: false
+          required: [type, title, url]
+          properties:
+            type: { const: link }
+            title: { type: string, minLength: 1 }
+            url:
+              type: string
+              description: https only; drawn with its host under the title, opening outside.
+        - type: object
+          additionalProperties: false
+          required: [type, items]
+          properties:
+            type: { const: timeline }
+            items:
+              type: array
+              minItems: 1
+              items:
+                type: object
+                additionalProperties: false
+                required: [title, state]
+                properties:
+                  title: { type: string }
+                  sub: { type: string }
+                  state:
+                    type: string
+                    enum: [waiting, working, done, held, failed, skipped, stopped, unknown]
+        - type: object
+          additionalProperties: false
+          required: [type, form]
+          properties:
+            type: { const: questions }
+            title: { type: string }
+            form:
+              type: object
+              additionalProperties: false
+              required: [kind]
+              description: >-
+                `approval` (the job's pending approval, with the roles that may
+                decide it), `review` (the same, when the held run offers changes
+                to accept or deny one by one, with its `decisions`; ADR-0048
+                amendment 2, block set 3; each under its `group` heading since
+                amendment 3, block set 4), `run` (start a run, of an item when
+                `itemId`), `item` (make an item) or `setup` (the flow's settings).
+                The routes check every answer again.
+              properties:
+                kind: { type: string, enum: [approval, run, item, setup, review] }
+                approvalId: { type: string, format: uuid }
+                eligibleRoles:
+                  type: array
+                  items: { type: string, enum: [owner, admin, member] }
+                itemId: { type: string, format: uuid }
+                decisions:
+                  type: array
+                  minItems: 1
+                  maxItems: 400
+                  items: { $ref: '#/components/schemas/HeldDecision' }
+        - type: object
+          additionalProperties: false
+          required: [type, alt, open, file]
+          properties:
+            type: { const: image }
+            alt: { type: string, minLength: 1, description: Read aloud only. }
+            open: { $ref: '#/components/schemas/BlockOpen' }
+            file: { $ref: '#/components/schemas/RunFile' }
+        - type: object
+          additionalProperties: false
+          required: [type, kind, title, alt, points]
+          properties:
+            type: { const: chart }
+            kind: { type: string, enum: [bar, line] }
+            title: { type: string, minLength: 1 }
+            alt:
+              type: string
+              minLength: 1
+              description: The chart read aloud, its title, kind and every value.
+            points:
+              type: array
+              minItems: 1
+              items:
+                type: object
+                additionalProperties: false
+                required: [label, value, text]
+                properties:
+                  label: { type: string }
+                  value: { type: number }
+                  text: { type: string, description: What is shown for `value`. }
+        - type: object
+          additionalProperties: false
+          required: [type, title, sections]
+          properties:
+            type: { const: group }
+            title: { type: string, minLength: 1 }
+            sections:
+              type: array
+              minItems: 1
+              maxItems: 12
+              items:
+                type: object
+                additionalProperties: false
+                required: [type, title, blocks]
+                properties:
+                  type: { const: section }
+                  title: { type: string, minLength: 1 }
+                  subtitle: { type: string }
+                  badge: { $ref: '#/components/schemas/BlockBadge' }
+                  open: { type: boolean }
+                  blocks:
+                    type: array
+                    minItems: 1
+                    items: { $ref: '#/components/schemas/Block' }
+
+    FlowPages:
+      type: object
+      additionalProperties: false
+      required: [flow, item, run, file]
+      description: >-
+        Each page's parts, in the order the flow's pinned manifest gives them
+        (`display.pages`), else today's (ADR-0048): flow — dashboard, steps,
+        items; item — tiles, file, add, runs (none on a flow without items);
+        run — files, outcome, result (and `batch`, a batch run's children in
+        order, after them on a flow that declares `batch`, ADR-0048 amendment
+        4); file — viewer, reading. The item page's
+        `scores`, a bar chart of its runs by score (ADR-0048 amendment 1), is
+        opt-in: never in the default order, and accepted from the switch.
+      properties:
+        flow:
+          type: array
+          items: { type: string, enum: [dashboard, steps, items] }
+        item:
+          type: array
+          items: { type: string, enum: [tiles, file, add, runs, scores] }
+        run:
+          type: array
+          items: { type: string, enum: [files, outcome, result, batch] }
+        file:
+          type: array
+          items: { type: string, enum: [viewer, reading] }
+
+    RunEmailState:
+      type: object
+      additionalProperties: false
+      required: [status, sentAt]
+      description: >-
+        Whether this run's email went out (ADR-0041): what a run page's "Email
+        sent" step shows. The email is the platform's — a run that ends or holds
+        is emailed to the workspace's owners and admins, the person who started
+        it and its flow's extra addresses, one message each — and this is read
+        from the platform's delivery record, which names no address. Present on
+        the one-run read only.
+      properties:
+        status:
+          type: string
+          enum: [waiting, sent, not_sent]
+          description: >-
+            `waiting` — the run has not ended or held, or its email is owed and
+            not sent yet; `sent` — handed to the mail service for every address;
+            `not_sent` — none will go: the run was cancelled, its flow turned
+            that email off, or it ended more than a day ago without one.
+        sentAt:
+          type: [string, 'null']
+          format: date-time
+          description: When it was sent; null unless `status` is `sent`.
+
+    RunDetailLine:
+      type: object
+      additionalProperties: false
+      required: [label, value]
+      properties:
+        label: { type: string, minLength: 1, maxLength: 40 }
+        value: { type: string, minLength: 1, maxLength: 200 }
+
+    RunSection:
+      type: object
+      additionalProperties: false
+      required: [title, entries]
+      description: >-
+        One titled part of what a run read, as its automation wrote it for
+        people — "Experience", "Education" (ADR-0046). A client draws each as a
+        collapsible row.
+      properties:
+        title: { type: string, minLength: 1, maxLength: 40 }
+        entries:
+          type: array
+          minItems: 1
+          maxItems: 40
+          items: { $ref: '#/components/schemas/RunSectionEntry' }
+
+    RunSectionEntry:
+      type: object
+      additionalProperties: false
+      required: [title]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 120 }
+        subtitle: { type: string, minLength: 1, maxLength: 120 }
+        text: { type: string, minLength: 1, maxLength: 600 }
+        url:
+          type: string
+          maxLength: 2048
+          description: An `http:` or `https:` address — the platform stores no other.
+
+    RunDocument:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          index,
+          status,
+          statusText,
+          type,
+          vendor,
+          number,
+          numberLabel,
+          references,
+          date,
+          time,
+          currency,
+          lineItems,
+          lineItemsComplete,
+          subtotal,
+          tax,
+          tip,
+          discount,
+          total,
+          payment,
+          recordedIn,
+          details,
+        ]
+      description: >-
+        One document a run read from its file — a bill, a receipt, a credit note,
+        a statement — and what became of it (ADR-0039, BUILD-PLAN 25.4.27). The
+        ONE shape everywhere: the automation's result (`schemas/automation-run-
+        result.json`), the run row's `result_documents`, `RunDetail.documents`,
+        the JSON file (`readRunDocuments`), the results email and both clients.
+        Written by the automation for people and checked against these bounds by
+        the platform, which never interprets a value. Every field is always
+        present but `source` (Invoice Processing v6 writes it); a value not
+        printed on the document is `null`. Amounts and
+        quantities are decimal strings exactly as printed, in the document's
+        currency — never floats.
+      properties:
+        index:
+          type: integer
+          minimum: 1
+          description: Its place in the file, from 1. Unique and ascending in a list.
+        status:
+          type: string
+          enum: [recorded, saved, not_recorded, unconfirmed, compared, waiting]
+          description: >-
+            `recorded` — written to the flow's chosen connection (`recordedIn`
+            says where); `saved` — kept with the run only (the flow chose None);
+            `not_recorded` — the chosen connection did not take it, so it is
+            kept with the run (`statusText` says why); `unconfirmed` — a write
+            was sent and not confirmed, so it may exist; `compared` — a
+            statement checked against the connection, nothing written;
+            `waiting` — held for a person's review or approval, including a
+            page that is clearly not a financial document.
+        statusText:
+          type: string
+          minLength: 1
+          description: One line for people saying what happened to it, in the automation's words.
+        type:
+          type: string
+          enum:
+            [
+              bill,
+              invoice,
+              receipt,
+              credit_note,
+              statement,
+              bank_statement,
+              quote,
+              purchase_order,
+              other,
+            ]
+          description: What the document is. `statement` is a supplier's statement of account.
+        vendor: { $ref: '#/components/schemas/RunDocumentVendor' }
+        number:
+          type: [string, 'null']
+          minLength: 1
+          description: >-
+            The document's own number as printed — the invoice number, bill
+            number, receipt number or the vendor's equivalent. How a document is
+            matched to its record.
+        numberLabel:
+          type: [string, 'null']
+          minLength: 1
+          description: >-
+            The label printed beside `number`, e.g. "Invoice #", "Bill No.",
+            "Receipt", "Transaction ID".
+        references:
+          type: array
+          description: >-
+            Every other identifier printed on it, each with its printed label —
+            PO number, order number, account or customer number, transaction or
+            authorization code, register or terminal.
+          items: { $ref: '#/components/schemas/RunDocumentReference' }
+        date:
+          type: [string, 'null']
+          pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+          description: The date printed on it, YYYY-MM-DD.
+        time:
+          type: [string, 'null']
+          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+          description: The time printed on it, 24-hour HH:MM, with no zone (as printed).
+        currency:
+          type: [string, 'null']
+          pattern: '^[A-Z]{3}$'
+          description: ISO 4217, when the document names one.
+        lineItems:
+          type: array
+          items: { $ref: '#/components/schemas/RunDocumentLineItem' }
+        lineItemsComplete:
+          type: boolean
+          description: False when the document has more lines than listed, or a line could not be read.
+        subtotal: { $ref: '#/components/schemas/RunDocumentAmount' }
+        tax: { $ref: '#/components/schemas/RunDocumentAmount' }
+        tip: { $ref: '#/components/schemas/RunDocumentAmount' }
+        discount: { $ref: '#/components/schemas/RunDocumentAmount' }
+        total: { $ref: '#/components/schemas/RunDocumentAmount' }
+        payment: { $ref: '#/components/schemas/RunDocumentPayment' }
+        recordedIn:
+          description: Where it was written, when `status` is `recorded`; otherwise null.
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/RunDocumentRecord'
+        details:
+          type: array
+          description: >-
+            Any further lines the automation writes for people about this
+            document — "Category · Materials", "Paid from · Visa 4417".
+          items: { $ref: '#/components/schemas/RunDetailLine' }
+        source: { $ref: '#/components/schemas/RunDocumentSource' }
+
+    RunDocumentAmount:
+      type: [string, 'null']
+      pattern: '^-?(0|[1-9][0-9]*)(\.[0-9]+)?$'
+      description: >-
+        A decimal as printed — "17.19", "3.459", "-4.00" — in the document's
+        currency; null when not printed. A string, never a float, so no
+        client rounds it.
+
+    RunDocumentVendor:
+      type: object
+      additionalProperties: false
+      required: [name, address, city, storeNumber]
+      description: The business that issued the document, and where, each as printed.
+      properties:
+        name: { type: [string, 'null'], minLength: 1 }
+        address:
+          type: [string, 'null']
+          minLength: 1
+          description: The street line or lines.
+        city:
+          type: [string, 'null']
+          minLength: 1
+          description: City, state or region and postcode.
+        storeNumber: { type: [string, 'null'], minLength: 1 }
+
+    RunDocumentLineItem:
+      type: object
+      additionalProperties: false
+      required: [description, quantity, unitPrice, amount]
+      properties:
+        description: { type: [string, 'null'], minLength: 1 }
+        quantity: { $ref: '#/components/schemas/RunDocumentAmount' }
+        unitPrice: { $ref: '#/components/schemas/RunDocumentAmount' }
+        amount: { $ref: '#/components/schemas/RunDocumentAmount' }
+
+    RunDocumentReference:
+      type: object
+      additionalProperties: false
+      required: [label, value]
+      properties:
+        label: { type: string, minLength: 1 }
+        value: { type: string, minLength: 1 }
+
+    RunDocumentPayment:
+      type: object
+      additionalProperties: false
+      required: [method, cardLast4]
+      properties:
+        method:
+          type: string
+          enum: [card, cash, check, bank_transfer, other, not_shown]
+        cardLast4:
+          type: [string, 'null']
+          pattern: '^[0-9]{4}$'
+
+    RunDocumentRecord:
+      type: object
+      additionalProperties: false
+      required: [providerId, recordType, recordId]
+      properties:
+        providerId:
+          type: string
+          description: The connection it went to, by its provider id, such as quickbooks.
+        recordType:
+          type: string
+          minLength: 1
+          description: The record made, in the provider's terms, e.g. `expense`, `bill`.
+        recordId: { type: string, minLength: 1 }
+        accountName:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: >-
+            The account it went to, as the provider names it — a QuickBooks
+            company's name. Optional: Invoice Processing v6 writes it.
+
+    RunDocumentSource:
+      type: object
+      additionalProperties: false
+      required: [file]
+      description: >-
+        Where this document came from: the uploaded file's artifact id, and its
+        pages in that file — from 1, strictly ascending, an image being page 1 —
+        when the automation can tell them. Invoice Processing v6 writes only the
+        file. Optional; the run package attaches a file whose documents name no
+        pages once, whole, after the detail pages (ADR-0045).
+      properties:
+        file: { type: string, format: uuid }
+        pages:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items: { type: integer, minimum: 1 }
+
+    RunFile:
+      type: object
+      additionalProperties: false
+      required: [id, filename, contentType, format, sizeBytes, pages]
+      description: One file uploaded for a job, as a reference (ADR-0045) — never its bytes.
+      properties:
+        id: { type: string, format: uuid }
+        filename: { type: string }
+        contentType: { type: string }
+        format:
+          type: string
+          description: PDF, JPEG, PNG or HEIC; otherwise the content type's subtype in capitals.
+        sizeBytes: { type: integer, minimum: 0 }
+        pages:
+          type: [integer, 'null']
+          minimum: 1
+          description: Measured pages; 1 for an image; null when not measured.
+        measuredKind:
+          type: [string, 'null']
+          enum: [pdf, jpeg, png, null]
+          description: >-
+            What Artifacts measured the bytes as; null when it did not measure them
+            (ADR-0048 amendment 1). A file is drawn as a picture only when this
+            agrees with `contentType`.
+
+    RunFileLink:
+      type: object
+      additionalProperties: false
+      required: [file, downloadUrl, expiresAt]
+      description: >-
+        `readRunFile`'s and `readItemFile`'s answer (Round 19, build 28): one
+        uploaded file, as a reference, and a short-lived signed link to it —
+        never its bytes.
+      properties:
+        file: { $ref: '#/components/schemas/RunFile' }
+        downloadUrl:
+          type: string
+          format: uri
+          description: >-
+            Short-lived and signed, from the file store. It downloads the file
+            as an attachment (`Content-Disposition: attachment`) named
+            `file.filename`, so opening it saves the file; a client that shows
+            the file in place, or shares it, fetches the bytes from it itself.
+        expiresAt: { type: string, format: date-time }
+
+    RunPackageFile:
+      type: object
+      additionalProperties: false
+      required: [format, filename, contentType, sizeBytes, downloadUrl, expiresAt]
+      description: >-
+        `createRunPackageFile`'s answer (ADR-0045): a reference to the built file,
+        never its bytes.
+      properties:
+        format: { type: string, enum: [pdf, xlsx] }
+        filename:
+          type: string
+          description: run-<the job's id>.pdf or run-<the job's id>.xlsx.
+        contentType: { type: string }
+        sizeBytes: { type: integer, minimum: 1 }
+        downloadUrl:
+          type: string
+          format: uri
+          description: Short-lived and signed; the download saves as `filename`.
+        expiresAt: { type: string, format: date-time }
+
+    RunDocumentsFile:
+      type: object
+      additionalProperties: false
+      required: [runId, templateId, templateVersion, status, startedAt, endedAt, documents]
+      description: >-
+        `readRunDocuments`' answer: the run, by its own id, and its documents.
+        No display names — a run never carries a mutable label (`Run.templateId`).
+      properties:
+        runId: { type: string, format: uuid }
+        templateId: { type: string }
+        templateVersion: { type: integer }
+        status: { $ref: '#/components/schemas/RunStatus' }
+        startedAt: { type: [string, 'null'], format: date-time }
+        endedAt: { type: [string, 'null'], format: date-time }
+        documents:
+          type: array
+          items: { $ref: '#/components/schemas/RunDocument' }
+
+    ApprovalStatus:
+      type: string
+      enum: [pending, approved, rejected, expired]
+
+    Approval:
+      type: object
+      required:
+        [
+          id,
+          runId,
+          workspaceId,
+          subscriptionId,
+          stepId,
+          status,
+          reason,
+          eligibleRoles,
+          createdAt,
+          expiresAt,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        runId:
+          type: string
+          format: uuid
+          description: The job this approval holds, by its first run's id (ADR-0044).
+        workspaceId: { type: string, format: uuid }
+        subscriptionId: { type: string, format: uuid }
+        stepId: { type: string }
+        status: { $ref: '#/components/schemas/ApprovalStatus' }
+        reason:
+          type: string
+          maxLength: 500
+          description: The "why" line shown to the approver. Never the payload itself.
+        eligibleRoles:
+          type: array
+          items: { type: string, enum: [owner, admin, member] }
+          description: Which workspace roles may decide. Checked server-side.
+        createdAt: { type: string, format: date-time }
+        expiresAt:
+          type: string
+          format: date-time
+          description: An approval expires so a run cannot be held open forever.
+        decidedAt: { type: string, format: date-time }
+        decidedByUserId: { type: string, format: uuid }
+        continuationRunId:
+          type: string
+          format: uuid
+          deprecated: true
+          x-sunset: '2027-01-31'
+          description: Not sent since ADR-0044; `runId` is the job's id.
+        decisions:
+          type: array
+          minItems: 1
+          maxItems: 400
+          description: >-
+            Only on a review (ADR-0048 amendments 2 and 3): the changes the held
+            run offered, each with its `decision` once the review is saved. A
+            saved review reads `approved`, whatever its answers.
+          items:
+            # Defined here, not as HeldDecision plus `decision`: HeldDecision is
+            # closed (additionalProperties false), so an answered item would fail it.
+            type: object
+            additionalProperties: false
+            required: [id, label]
+            properties:
+              id: { type: string, maxLength: 64, pattern: '^[a-z][a-z0-9-]{0,62}[a-z0-9]$' }
+              label: { type: string, minLength: 1, maxLength: 120 }
+              detail: { type: string, minLength: 1, maxLength: 200 }
+              group: { type: string, minLength: 1, maxLength: 120 }
+              decision: { type: string, enum: [accepted, denied] }
+
+    HeldDecision:
+      type: object
+      additionalProperties: false
+      required: [id, label]
+      description: >-
+        One change a held run offers (ADR-0048 amendment 2): one line each, no
+        tags; the id shaped as a step id, none twice. `group` (amendment 3) is
+        the heading a client draws it under, in the order sent, on every change
+        or on none.
+      properties:
+        id: { type: string, maxLength: 64, pattern: '^[a-z][a-z0-9-]{0,62}[a-z0-9]$' }
+        label: { type: string, minLength: 1, maxLength: 120 }
+        detail: { type: string, minLength: 1, maxLength: 200 }
+        group: { type: string, minLength: 1, maxLength: 120 }
+
+    ReviewAnswer:
+      type: object
+      additionalProperties: false
+      required: [id, decision]
+      properties:
+        id: { type: string, maxLength: 64, pattern: '^[a-z][a-z0-9-]{0,62}[a-z0-9]$' }
+        decision: { type: string, enum: [accepted, denied] }
+
+    NotificationId:
+      type: string
+      pattern: '^(approval|run):[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+      description: >-
+        `approval:<approvalId>` or `run:<runId>`. Stable across reads and
+        devices; matched whatever its case, and always answered lowercase.
+
+    InboxNotification:
+      type: object
+      required: [id, kind, runId, subscriptionId, templateId, occurredAt, read]
+      properties:
+        id: { $ref: '#/components/schemas/NotificationId' }
+        kind: { type: string, enum: [approval-requested, run-failed] }
+        runId:
+          type: string
+          format: uuid
+          description: >-
+            The job's id (ADR-0044) — the job held for an approval, or the job
+            whose run failed.
+        approvalId:
+          type: string
+          format: uuid
+          description: Present on `approval-requested` only.
+        subscriptionId: { type: string, format: uuid }
+        templateId:
+          type: string
+          description: The run's template, so the automation is named from the catalog alone.
+        stepId:
+          type: string
+          description: Present on `approval-requested` only — the declared step that held.
+        reason:
+          type: string
+          maxLength: 500
+          description: Present on `approval-requested` only — the approval's "why" line.
+        failureReason:
+          type: string
+          maxLength: 500
+          description: On `run-failed`, when the automation said why.
+        occurredAt:
+          type: string
+          format: date-time
+          description: When it happened — the approval's creation, or the run's end.
+        read: { type: boolean, description: Whether the caller has read it. }
+
+    NotificationInbox:
+      type: object
+      required: [items, unreadCount]
+      properties:
+        items:
+          type: array
+          maxItems: 50
+          items: { $ref: '#/components/schemas/InboxNotification' }
+        unreadCount:
+          type: integer
+          minimum: 0
+          maximum: 50
+          description: >-
+            Unread items among `items` — what the bell's dot shows. Counted over
+            the listed items only, so "Mark all read" always brings it to zero.
+
+    NotificationReadState:
+      type: object
+      required: [unreadCount]
+      properties:
+        unreadCount:
+          type: integer
+          minimum: 0
+          maximum: 50
+          description: The caller's `NotificationInbox.unreadCount` after the change.

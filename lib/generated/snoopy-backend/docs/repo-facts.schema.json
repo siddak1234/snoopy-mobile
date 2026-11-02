@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autom8x.ai/schemas/repo-facts.json",
+  "title": "Repository facts",
+  "description": "What one repository reports about itself, so another repository can quote it without reading its files. BUILD-PLAN §3 requires the contract between repositories to be a versioned artifact rather than a conversation; §12.2 #12 accepted that '../../../snoopy/…' does not resolve in a standalone clone. A repository emits this from its OWN gate and commits it here; snoopy-backend asserts the artifact, never the sibling checkout. Every count carries the command that produced it, because a number without its command is the thing that drifted.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "repository", "head", "readAt", "counts"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "repository": {
+      "description": "The repository this describes, as SYSTEM-MANIFEST §1 names it.",
+      "enum": ["snoopy", "snoopy-mobile", "snoopy-automations"]
+    },
+    "head": {
+      "description": "The commit these counts were taken at. Short sha, as §1 records it.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{7,40}$"
+    },
+    "readAt": {
+      "description": "ISO date the gate produced this. SYSTEM-MANIFEST quotes it so a reader can tell a fresh figure from a carried one.",
+      "type": "string",
+      "format": "date"
+    },
+    "gate": {
+      "description": "The npm script that emitted this, so a reader can re-run it. Absent means it was produced by hand, which the manifest must then mark UNVERIFIED.",
+      "type": "string"
+    },
+    "counts": {
+      "description": "Each unit SYSTEM-MANIFEST §9, §10 or §10a states, with the command that produced it. An entry with no command is refused: it is indistinguishable from a number somebody remembered.",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["value", "command"],
+        "properties": {
+          "value": { "type": "integer", "minimum": 0 },
+          "command": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}
