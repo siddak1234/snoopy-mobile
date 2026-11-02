@@ -18,9 +18,10 @@ const root = resolve(import.meta.dirname, "..");
 /** Where `npm run verify` writes the file; gitignored. */
 export const FACTS_PATH = ".autom8x/repo-facts/snoopy-mobile.json";
 /**
- * What `verify:platform-contracts` records beside the facts: whether it ran or
- * skipped. Written by scripts/verify-platform-contracts.mjs on every run; read
- * here, because facts claiming gate `verify` after a skipped contract check
+ * What `verify:platform-contracts` records beside the facts. Since the contract
+ * copy (M1) it can no longer skip, so it records `{ skipped: false }` on every
+ * run; the skip branch below stays as a safety net for a record an older verify
+ * wrote, because facts claiming gate `verify` after a skipped contract check
  * would be indistinguishable from a full run's (`snoopy` emits none either).
  */
 export const CONTRACT_CHECK_FILE = "platform-contracts.json";

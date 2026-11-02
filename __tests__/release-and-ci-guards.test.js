@@ -110,6 +110,28 @@ describe('eas-cli is pinned (the release CLI)', () => {
   });
 });
 
+describe('the nightly (NIGHT-7) reports a red night (NIGHT-9)', () => {
+  const ci = readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8');
+
+  it('runs on a nightly schedule on main', () => {
+    expect(ci).toMatch(/^  schedule:\n    - cron: '\d+ \d+ \* \* \*'$/m);
+  });
+
+  it('has all-green open or comment on a "Nightly red" issue only when a scheduled run fails', () => {
+    expect(ci).toContain(
+      "      - name: A red nightly reports itself\n        if: failure() && github.event_name == 'schedule'\n",
+    );
+    expect(ci).toContain("gh issue create --repo \"$GITHUB_REPOSITORY\" --title 'Nightly red'");
+  });
+
+  it('grants issues: write to all-green alone', () => {
+    const writes = ci.split('\n').filter((line) => /^\s+issues: write$/.test(line));
+    expect(writes).toHaveLength(1);
+    const job = ci.slice(ci.indexOf('\n  all-green:\n'));
+    expect(job.slice(0, job.indexOf('    steps:'))).toContain('      issues: write\n');
+  });
+});
+
 describe('no skipped tests (M4)', () => {
   const problems = (report) => evaluate('scripts/no-skipped-tests.mjs', `m.skippedTestProblems(${JSON.stringify(report)})`);
 

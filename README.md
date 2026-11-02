@@ -165,7 +165,7 @@ checks among them, on the PR's whole range: `fetch-depth: 0` and
 `DOCS_BASE`), contract verification, and both platform exports; `all-green` is the one check that
 needs every one of them and is red on any failure, cancellation or skip.
 Every action is pinned by commit SHA with its `# vX.Y.Z` comment, and every
-job's Node is `.nvmrc` (`22.23.2`, `node-version-file`). `.github/dependabot.yml`
+job's Node is the exact version in `.nvmrc` (`node-version-file`). `.github/dependabot.yml`
 opens one grouped pull request a week for the actions and one for npm,
 eas-cli excepted (bumped by hand, below) (the
 kit's `check-docs` lets a Dependabot commit that touches only those files
@@ -194,7 +194,7 @@ suite (`scripts/all-green-on-head.mjs`), so the nightly's own all-green on the
 same commit is never counted — and the live AASA naming the app, and only a
 build whose `gitCommitHash` is HEAD with the release's entitlements; `eas.json`
 `cli.requireCommit` refuses an uncommitted tree. eas-cli is an exact
-devDependency (27.2.0, `eas.json` `cli.version` the same): the script runs it
+devDependency (its version in `package.json`, `eas.json` `cli.version` the same): the script runs it
 with `npx --no-install`, so a release never downloads a newer one, and prints
 its version beside the tree line. Dependabot ignores eas-cli
 (`.github/dependabot.yml`): bump it by hand, `package.json` and `eas.json`
