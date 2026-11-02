@@ -185,6 +185,9 @@ describe('the nightly (NIGHT-7) is its own workflow calling ci.yml, and reports 
   it('opens or comments on a "Nightly red" issue from its own job, only when the called CI failed', () => {
     expect(report).toContain("\n    needs: [ci]\n    # Any night that is not green: failed, cancelled or timed out.\n    if: always() && needs.ci.result != 'success'\n");
     expect(report).toContain("gh issue create --repo \"$GITHUB_REPOSITORY\" --title 'Nightly red'");
+    // Only the bot's own issue is reused: anyone can open one with that title here.
+    expect(report).toContain("--author 'github-actions[bot]'");
+    expect(report).toContain('map(select(.title == "Nightly red"))');
     expect(ci).not.toContain('Nightly red');
   });
 
