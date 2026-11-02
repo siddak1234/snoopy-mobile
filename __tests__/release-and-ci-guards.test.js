@@ -1,5 +1,5 @@
 const { spawnSync } = require('node:child_process');
-const { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } = require('node:fs');
+const { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join, resolve } = require('node:path');
 const { pathToFileURL } = require('node:url');
@@ -9,10 +9,15 @@ const { pathToFileURL } = require('node:url');
  * (scripts/all-green-on-head.mjs, beside the nightly), a skipped test is red
  * (scripts/no-skipped-tests.mjs, M4), and the contract is read from a
  * hash-checked copy that never lets verify:platform-contracts skip (M1).
- * Each script's verdict is a pure function, judged here in a real Node.
+ * Each script's verdict is a pure function, judged here in a real Node; the
+ * .github configuration's own rules are read from its files.
  */
 const root = resolve(__dirname, '..');
 const url = (path) => pathToFileURL(join(root, path)).href;
+/** Every workflow file, as [name, text]. */
+const workflows = readdirSync(join(root, '.github/workflows'))
+  .filter((file) => /\.ya?ml$/u.test(file))
+  .map((file) => [file, readFileSync(join(root, '.github/workflows', file), 'utf8')]);
 
 /** Runs `expression` with the module's exports as `m`, and returns its JSON. */
 function evaluate(module, expression, env = {}) {
@@ -130,6 +135,27 @@ describe('the nightly (NIGHT-7) reports a red night (NIGHT-9)', () => {
     const job = ci.slice(ci.indexOf('\n  all-green:\n'));
     expect(job.slice(0, job.indexOf('    steps:'))).toContain('      issues: write\n');
   });
+});
+
+describe("the .github configuration's own rules (the website's structure-contract holds the same)", () => {
+  it('pins every action by a 40-hex commit with its # vX.Y.Z comment (a ./ workflow is this commit)', () => {
+    const refs = workflows.flatMap(([file, text]) =>
+      [...text.matchAll(/^\s+(?:- )?uses: (\S+.*)$/gmu)].map(([, ref]) => [file, ref]).filter(([, ref]) => !ref.startsWith('./')),
+    );
+    expect(refs.length).toBeGreaterThan(0);
+    expect(refs.filter(([, ref]) => !/^[\w.-]+\/[\w.-]+@[0-9a-f]{40} # v\d+\.\d+\.\d+$/u.test(ref))).toEqual([]);
+  });
+
+  it("gives every setup-node .nvmrc's Node, one exact version, and names no Node of its own", () => {
+    expect(readFileSync(join(root, '.nvmrc'), 'utf8')).toMatch(/^\d+\.\d+\.\d+\n$/u);
+    const wrong = workflows.filter(([, text]) => {
+      const setups = text.match(/uses: actions\/setup-node@/gu) ?? [];
+      const fromNvmrc = text.match(/uses: actions\/setup-node@.*\n {8}with:\n(?: {10}.*\n)*? {10}node-version-file: \.nvmrc\n/gu) ?? [];
+      return /node-version: /u.test(text) || fromNvmrc.length !== setups.length;
+    });
+    expect(wrong.map(([file]) => file)).toEqual([]);
+  });
+
 });
 
 describe('no skipped tests (M4)', () => {

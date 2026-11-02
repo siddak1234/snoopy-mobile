@@ -165,7 +165,9 @@ checks among them, on the PR's whole range: `fetch-depth: 0` and
 `DOCS_BASE`), contract verification, and both platform exports; `all-green` is the one check that
 needs every one of them and is red on any failure, cancellation or skip.
 Every action is pinned by commit SHA with its `# vX.Y.Z` comment, and every
-job's Node is the exact version in `.nvmrc` (`node-version-file`). `.github/dependabot.yml`
+job's Node is the exact version in `.nvmrc` (`node-version-file`); a guard test
+(`release-and-ci-guards`) holds both. Nothing updates `.nvmrc`: Node is moved by
+hand with each Node 22.x security release. `.github/dependabot.yml`
 opens one grouped pull request a week for the actions and one for npm,
 eas-cli excepted (bumped by hand, below) (the
 kit's `check-docs` lets a Dependabot commit that touches only those files
