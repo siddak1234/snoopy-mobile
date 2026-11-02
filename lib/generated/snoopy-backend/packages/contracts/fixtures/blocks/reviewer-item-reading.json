@@ -1,0 +1,40 @@
+{
+  "name": "reviewer-item-reading",
+  "about": "A candidate-reviewer v2 item's reading, every section closed",
+  "blockSetVersion": 4,
+  "blocks": [
+    {
+      "type": "section",
+      "title": "Must haves",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            {
+              "title": "Three years of payroll",
+              "text": "Multi-state."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "title": "Nice to haves",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            {
+              "title": "Spreadsheet macros"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "text": [
+    "Must haves",
+    "Nice to haves"
+  ]
+}

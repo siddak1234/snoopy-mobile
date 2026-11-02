@@ -1,0 +1,147 @@
+{
+  "pageSize": 25,
+  "queryLength": 80,
+  "cases": [
+    {
+      "name": "trimmed",
+      "query": "  dana  ",
+      "rows": [
+        [
+          "Dana Whitfield"
+        ],
+        [
+          "Omar Reyes"
+        ]
+      ],
+      "matches": [
+        0
+      ]
+    },
+    {
+      "name": "case-free",
+      "query": "OMAR",
+      "rows": [
+        [
+          "Dana Whitfield"
+        ],
+        [
+          "Omar Reyes"
+        ]
+      ],
+      "matches": [
+        1
+      ]
+    },
+    {
+      "name": "accents removed in the row",
+      "query": "jose",
+      "rows": [
+        [
+          "José Alvarez"
+        ],
+        [
+          "Mara Quinn"
+        ]
+      ],
+      "matches": [
+        0
+      ]
+    },
+    {
+      "name": "accents removed in the query",
+      "query": "Josè",
+      "rows": [
+        [
+          "Jose Ortiz"
+        ],
+        [
+          "Mara Quinn"
+        ]
+      ],
+      "matches": [
+        0
+      ]
+    },
+    {
+      "name": "contains, anywhere in a word",
+      "query": "field",
+      "rows": [
+        [
+          "Dana Whitfield"
+        ],
+        [
+          "Omar Reyes"
+        ],
+        [
+          "Fielding Lane"
+        ]
+      ],
+      "matches": [
+        0,
+        2
+      ]
+    },
+    {
+      "name": "any of a row's fields",
+      "query": "harbor",
+      "rows": [
+        [
+          "Payroll Lead",
+          "Fernwood Foods"
+        ],
+        [
+          "Analyst",
+          "Harbor Paper Co."
+        ]
+      ],
+      "matches": [
+        1
+      ]
+    },
+    {
+      "name": "an empty query matches all",
+      "query": "",
+      "rows": [
+        [
+          "Dana"
+        ],
+        [
+          "Omar"
+        ]
+      ],
+      "matches": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "a query of spaces matches all",
+      "query": "   ",
+      "rows": [
+        [
+          "Dana"
+        ],
+        [
+          "Omar"
+        ]
+      ],
+      "matches": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "a miss matches none",
+      "query": "zzz",
+      "rows": [
+        [
+          "Dana"
+        ],
+        [
+          "Omar"
+        ]
+      ],
+      "matches": []
+    }
+  ]
+}
