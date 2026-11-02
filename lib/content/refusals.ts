@@ -146,6 +146,24 @@ export const FLOW_QUEUE_FULL =
   'This flow is busy and its queue is full, so the run was not started. Try again once one of its runs has ended.';
 
 /**
+ * A run refused 429 because the flow's queue is full in this workspace (the
+ * batch addendum's P3, `details.reason` `queue_full`): 500 runs of it already
+ * wait, single runs and a batch's units alike. Nothing was created. The
+ * owner's words, on both clients; a batch run that would pass the cap fails
+ * with the same words, which its page draws as the platform sent them.
+ */
+export const QUEUE_FULL = 'Your queue is full. Wait for these to finish.';
+
+/** A full queue's words for a 429, or null for any other refusal: `queue_full`, or `max_concurrent_runs`, which a platform before the cap sent. */
+function queueFullMessage(error: unknown): string | null {
+  if (!(error instanceof PlatformRateLimitedError)) return null;
+  const reason = error.details?.reason;
+  if (reason === 'queue_full') return QUEUE_FULL;
+  if (reason === 'max_concurrent_runs') return FLOW_QUEUE_FULL;
+  return null;
+}
+
+/**
  * A file for a run (FR-14): opening the upload, and completing it. Since the
  * platform measures a file when its upload is sealed (backend BUILD-PLAN 25.2.28),
  * a flow that declares page or pixel limits refuses one that breaks them, or one
@@ -250,8 +268,10 @@ export function turnOnRefusal(error: unknown, adding: boolean): string {
  * The words for a refused run, and whether its files must be chosen again. The
  * input is exactly what the pinned version declares, so a 422 is "check the
  * values", not a platform failure; a 409 is a subscription that is not live; a
- * 429 naming `max_concurrent_runs` is a flow whose queue is full (25.2.10), and
- * any other 429 keeps the platform's busy words and its wait.
+ * 429 naming `queue_full` is a flow whose queue is full in this workspace
+ * (`QUEUE_FULL`), one naming `max_concurrent_runs` the same from a platform
+ * before the cap (25.2.10, `FLOW_QUEUE_FULL`), and any other 429 keeps the
+ * platform's busy words and its wait.
  */
 export function runRefusal(error: unknown): { message: string; fileGone: boolean } {
   if (error instanceof PlatformError && error.status === 422) {
@@ -285,9 +305,8 @@ export function runRefusal(error: unknown): { message: string; fileGone: boolean
     }
     if (reason === 'entitlements_not_configured') return { message: RUNS_UNCONFIGURED, fileGone: false };
   }
-  if (error instanceof PlatformRateLimitedError && error.details?.reason === 'max_concurrent_runs') {
-    return { message: FLOW_QUEUE_FULL, fileGone: false };
-  }
+  const queueFull = queueFullMessage(error);
+  if (queueFull) return { message: queueFull, fileGone: false };
   return { message: refusalMessage(error, {}, 'The run was not started.'), fileGone: false };
 }
 
@@ -299,8 +318,8 @@ export const ITEM_ARCHIVED = 'It was archived, so it takes no new runs.';
  * Making an item (backend ADR-0046), refused: in the words the upload path and
  * the run's start already use — a file gone is "choose it again" and empties
  * the file, a flow not on is "Turn it on first", over the plan is the run's
- * sentence, and a full queue (429 `max_concurrent_runs`) the run's
- * `FLOW_QUEUE_FULL`. A refused value is said under the form, and each field it
+ * sentence, and a full queue (429 `queue_full`, or `max_concurrent_runs`) the
+ * run's words. A refused value is said under the form, and each field it
  * names under that field (`fields`): `details.problems` is at most 16 `{ path,
  * message }` pairs, each `path` naming a field as `fields.<key>` (`refusedFields`).
  * The words are the website's.
@@ -327,9 +346,8 @@ export function itemRefusal(
       return { ...runRefusal(error), fields: [] };
     }
   }
-  if (error instanceof PlatformRateLimitedError && error.details?.reason === 'max_concurrent_runs') {
-    return { message: FLOW_QUEUE_FULL, fileGone: false, fields: [] };
-  }
+  const queueFull = queueFullMessage(error);
+  if (queueFull) return { message: queueFull, fileGone: false, fields: [] };
   return { message: refusalMessage(error, {}, ITEM_NOT_UPLOADED), fileGone: false, fields: [] };
 }
 

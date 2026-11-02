@@ -1,6 +1,6 @@
 import { screen, waitFor } from '@testing-library/react-native';
 import { createHash } from 'node:crypto';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 import { space } from '@/constants/theme';
@@ -9,6 +9,7 @@ import { BLOCK_FIXTURES } from '@/lib/generated/platform-contracts/block-fixture
 import { BLOCK_SPACING } from '@/lib/generated/platform-contracts/block-rules';
 import type { Block, RunFile } from '@/lib/platform/automations';
 import { resetSnapshot } from '@/lib/platform/snapshot';
+import { offeredDecisions, reviewGroups } from '@/lib/view/runs';
 import { fileLinkFor, renderBlocks, savedFiles, visibleWords } from '@/test/blocks';
 import { fakePlatform } from '@/test/fake-platform';
 import { TEST_WORKSPACE } from '@/test/platform';
@@ -26,16 +27,38 @@ const { platformOperation, downloadSignedFile } = jest.requireMock('@/lib/platfo
  * visible words in reading order, closed sections left out. The website holds
  * the same test (`snoopy/test/blocks-parity.test.mjs`) over the same fixtures:
  * the two files' headers name one sha256, so both clients draw the same words.
- * Since Round 21 (amendment 1) the 26 fixtures of `BLOCK_SET_VERSION` 2 — a
+ * Since Round 21 (amendment 1) the fixtures of `BLOCK_SET_VERSION` 2 — a
  * picture drawn once its file is read, the platform's answer from the
  * fixture's own `file` — and the spacing: the table both clients generate,
- * and every renderer's spacing its names.
+ * and every renderer's spacing its names; since amendment 2 the 28 of
+ * `BLOCK_SET_VERSION` 3, a review's rows read by everyone (`review-held-*`);
+ * since amendment 3 the 29 of `BLOCK_SET_VERSION` 4, a review's changes with
+ * their `group` (`review-held-grouped`).
  */
 
 const HEADER = /^\/\/ From snoopy-backend packages\/contracts\/fixtures\/blocks\/\*\.json, sha256 ([0-9a-f]{64})\.$/u;
 const RULES_HEADER = /^\/\/ From snoopy-backend packages\/contracts\/fixtures\/block-rules\/\*\.json, sha256 ([0-9a-f]{64})\.$/u;
 const RUN_FILE = 'GET /v1/workspaces/{workspaceId}/runs/{runId}/files/{fileId}' as const;
 const ITEM_FILE = 'GET /v1/workspaces/{workspaceId}/items/{itemId}/file' as const;
+
+/**
+ * The words a fixture is drawn as: its `text` — but `review-held-grouped`'s
+ * `text` names no heading while its rows are drawn under them (B3; its `about`
+ * says "drawn under each heading"). OPEN for the backend (DESIGN-GAPS, Round 21
+ * platform round 2): until its `text` holds the headings, each is expected
+ * before its group's first row; once it does, the `text` is expected as it is.
+ */
+function expectedWords(fixture: (typeof BLOCK_FIXTURES)[number]): string[] {
+  const words = [...fixture.text];
+  if (fixture.name !== 'review-held-grouped') return words;
+  const review = (fixture.blocks as Block[]).find((block) => block.type === 'questions');
+  const groups = reviewGroups(offeredDecisions(review?.type === 'questions' ? review.form : undefined));
+  if (groups.every(({ heading }) => heading === null || words.includes(heading))) return words;
+  for (const { heading, changes } of groups) {
+    if (heading !== null) words.splice(words.indexOf(changes[0]!.label), 0, heading);
+  }
+  return words;
+}
 
 /** Every picture's file in a page body, at any depth. */
 function pictures(blocks: readonly unknown[]): RunFile[] {
@@ -54,14 +77,14 @@ beforeEach(() => {
 });
 
 describe('the block fixtures, drawn', () => {
-  it('are the generator\'s, headed by one sha256 over the fixtures: the 26 of block set 2', () => {
+  it('are the generator\'s, headed by one sha256 over the fixtures: the 29 of block set 4', () => {
     const first = readFileSync(
       resolve(__dirname, '../lib/generated/platform-contracts/block-fixtures.ts'),
       'utf8',
     ).split('\n')[0];
     expect(first).toMatch(HEADER);
-    expect(BLOCK_FIXTURES).toHaveLength(26);
-    expect(BLOCK_FIXTURES.every((fixture) => fixture.blockSetVersion === 2)).toBe(true);
+    expect(BLOCK_FIXTURES).toHaveLength(29);
+    expect(BLOCK_FIXTURES.every((fixture) => fixture.blockSetVersion === 4)).toBe(true);
   });
 
   it.each(BLOCK_FIXTURES.map((fixture) => [fixture.name, fixture] as const))(
@@ -77,7 +100,7 @@ describe('the block fixtures, drawn', () => {
       await renderBlocks(fixture.blocks, { workspaceId: TEST_WORKSPACE });
       // A picture's words while its file comes are not its own: drawn, it has none (only its alt).
       if (files.length > 0) await waitFor(() => expect(screen.queryByText(FILE_OPENING)).toBeNull());
-      expect(visibleWords(screen.toJSON())).toEqual([...fixture.text]);
+      expect(visibleWords(screen.toJSON())).toEqual(expectedWords(fixture));
     },
   );
 
@@ -96,12 +119,13 @@ describe('the block fixtures, drawn', () => {
 describe('the spacing table (ADR-0048 amendment 1, point 14; the owner\'s Q8)', () => {
   const rules = resolve(__dirname, '../lib/generated/platform-contracts/block-rules.ts');
 
-  it('block-rules.ts is the generator\'s, headed by one sha256 over the platform\'s rules — the snapshot\'s, when the backend is here', () => {
+  it("block-rules.ts is the generator's, headed by one sha256 over the platform's rules: the committed copy's", () => {
     const header = RULES_HEADER.exec(readFileSync(rules, 'utf8').split('\n')[0]!);
     expect(header).not.toBeNull();
-    const backend = resolve(__dirname, '..', process.env.SNOOPY_BACKEND_ROOT || '../snoopy-backend');
-    const folder = join(backend, 'packages/contracts/fixtures/block-rules');
-    if (!existsSync(folder)) return; // CI has no backend checkout: verify-platform-contracts skips it the same way.
+    // The hash-checked copy of the backend's rules (M3): present in every
+    // checkout, CI's included, so this never returns early.
+    const folder = resolve(__dirname, '../lib/generated/snoopy-backend/packages/contracts/fixtures/block-rules');
+    expect(readdirSync(folder).filter((each) => each.endsWith('.json')).length).toBeGreaterThan(0);
     const hash = createHash('sha256');
     for (const name of readdirSync(folder).filter((each) => each.endsWith('.json')).sort()) hash.update(readFileSync(join(folder, name)));
     expect(header![1]).toBe(hash.digest('hex'));

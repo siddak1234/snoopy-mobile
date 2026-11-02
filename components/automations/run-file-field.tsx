@@ -14,10 +14,13 @@ import { UPLOAD_REFUSALS, WORKSPACE_CHANGED, uploadRefusalMessage } from '@/lib/
 import {
   CAMERA_NOT_OPENED,
   CAMERA_OFF,
+  DEFAULT_MAX_FILES,
   TAKE_PHOTO_LABEL,
   UPLOAD_LABEL,
   acceptedLine,
   chooseAccepted,
+  filesSelected,
+  tooManyFiles,
 } from '@/lib/content/screen-states';
 import type { AutomationRunInputField } from '@/lib/platform/automations';
 import { sendRunFile, type ChosenFile } from '@/lib/platform/run-file';
@@ -233,6 +236,225 @@ export function RunFileField({
     </View>
   );
 }
+
+/**
+ * A run's file field that takes several (Round 21 platform round 2, B2: the
+ * manifest's `multiple`), the website's several-file `RunFileField` in the
+ * same steps: Upload's picker lets several be chosen at once and **replaces**
+ * what the field held; each Take photo **adds** one more. Every file is sent
+ * as `RunFileField` sends one (`sendRunFile`, an image re-encoded), one after
+ * another, the line under the title saying "Uploading {name}…"; the field's
+ * value is then their ids in the order given, and Start run uploads every one
+ * into ONE run (the batch addendum, which supersedes B2's run per file). The
+ * line says "Ready: {name} ({size})" for one file and "{n} files selected" for
+ * more. More than the field's `maxFiles` — absent, the platform's 50
+ * (`DEFAULT_MAX_FILES`) — is refused before anything is sent, "Add up to {max}
+ * files at a time.": a choice past it empties the field, a photo past it keeps
+ * the files held. A file of a type the field does
+ * not take, or one that fails, empties the field and says why, as one alone
+ * does. A field without `multiple` is `RunFileField`, unchanged.
+ *
+ * testIDs: as `RunFileField`'s, and its line `run-file-${key}-count`.
+ */
+export function RunFilesField({
+  field,
+  shownWorkspaceId,
+  subscriptionId,
+  onValue,
+  onBusyChange,
+  divider,
+  showTypes = false,
+}: {
+  field: Pick<AutomationRunInputField, 'key' | 'title' | 'acceptedContentTypes' | 'maxFiles'>;
+  shownWorkspaceId: string | null;
+  subscriptionId: string;
+  onValue: (key: string, artifactIds: string[] | undefined) => void;
+  onBusyChange: (key: string, busy: boolean) => void;
+  divider: boolean;
+  showTypes?: boolean;
+}) {
+  const { palette } = useTheme();
+  const session = useSession();
+  const [files, setFiles] = useState<readonly SentFile[]>([]);
+  const [uploading, setUploading] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const accepted = field.acceptedContentTypes;
+  const photos = takesPhotos(accepted);
+  const typesLine = acceptedLine(accepted);
+  const maxFiles = field.maxFiles ?? DEFAULT_MAX_FILES;
+  const inFlight = useRef<AbortController | null>(null);
+  const report = useRef(onBusyChange);
+  useEffect(() => {
+    report.current = onBusyChange;
+  }, [onBusyChange]);
+  useEffect(() => {
+    const key = field.key;
+    return () => {
+      const upload = inFlight.current;
+      if (!upload) return;
+      inFlight.current = null;
+      upload.abort();
+      report.current(key, false);
+    };
+  }, [field.key]);
+
+  const workspaceFor = (): string | null => {
+    setError(null);
+    const workspaceId = workspaceIfShown(session, shownWorkspaceId);
+    if (!workspaceId) setError(WORKSPACE_CHANGED);
+    return workspaceId;
+  };
+
+  /** Nothing held, and why. */
+  const empty = (message: string) => {
+    setFiles([]);
+    onValue(field.key, undefined);
+    setError(message);
+  };
+
+  /** Sends what was given after the files kept, one after another; any failure empties the field. */
+  const sendAll = async (workspaceId: string, kept: readonly SentFile[], given: Picked[]) => {
+    inFlight.current?.abort();
+    const sending = new AbortController();
+    inFlight.current = sending;
+    onValue(field.key, undefined);
+    onBusyChange(field.key, true);
+    const sent: SentFile[] = [...kept];
+    try {
+      for (const picked of given) {
+        setUploading(picked.name);
+        const chosen = await prepare(picked);
+        if (sending.signal.aborted) return;
+        const uploaded = await sendRunFile(workspaceId, subscriptionId, chosen, sending.signal);
+        if (sending.signal.aborted) return;
+        sent.push({ artifactId: uploaded.artifactId, name: uploaded.filename, sizeBytes: uploaded.sizeBytes });
+      }
+      setFiles(sent);
+      onValue(field.key, sent.map((file) => file.artifactId));
+    } catch (failure) {
+      if (sending.signal.aborted) return;
+      empty(uploadRefusalMessage(failure, 'The file could not be sent.'));
+    } finally {
+      if (!sending.signal.aborted) setUploading(null);
+      if (inFlight.current === sending) {
+        inFlight.current = null;
+        onBusyChange(field.key, false);
+      }
+    }
+  };
+
+  const takePhoto = async () => {
+    const workspaceId = workspaceFor();
+    if (!workspaceId) return;
+    // A photo past the most the field takes: said, and the files held kept.
+    if (files.length + 1 > maxFiles) {
+      setError(tooManyFiles(maxFiles));
+      return;
+    }
+    let taken: ImagePicker.ImagePickerResult;
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        setError(CAMERA_OFF);
+        return;
+      }
+      taken = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1 });
+    } catch {
+      setError(CAMERA_NOT_OPENED);
+      return;
+    }
+    // Closing the camera keeps whatever the field already held.
+    const photo = taken.canceled ? undefined : taken.assets[0];
+    if (!photo) return;
+    await sendAll(workspaceId, files, [{ uri: photo.uri, name: PHOTO_NAME, image: true }]);
+  };
+
+  const upload = async () => {
+    const workspaceId = workspaceFor();
+    if (!workspaceId) return;
+    let picked: DocumentPicker.DocumentPickerResult;
+    try {
+      picked = await DocumentPicker.getDocumentAsync({ type: accepted ?? RUN_FILE_TYPES, copyToCacheDirectory: true, multiple: true });
+    } catch {
+      setError('The file could not be opened. Try again.');
+      return;
+    }
+    // Closing the picker keeps whatever the field already held.
+    const assets = picked.canceled ? [] : picked.assets;
+    if (assets.length === 0) return;
+    // A choice replaces what the field held: past the most the field takes, or a file of another type, empties it, nothing sent.
+    if (assets.length > maxFiles) {
+      empty(tooManyFiles(maxFiles));
+      return;
+    }
+    if (assets.some((asset) => accepted && asset.mimeType && !accepted.includes(asset.mimeType))) {
+      empty(typesLine ? chooseAccepted(typesLine) : UPLOAD_REFUSALS.content_type_not_accepted!);
+      return;
+    }
+    await sendAll(
+      workspaceId,
+      [],
+      assets.map((asset) =>
+        photos && isImage(asset)
+          ? { uri: asset.uri, name: jpegName(asset.name), image: true }
+          : { uri: asset.uri, name: asset.name, image: false, ...(asset.mimeType ? { mimeType: asset.mimeType } : {}) },
+      ),
+    );
+  };
+
+  const busy = uploading !== null;
+  const line =
+    uploading !== null
+      ? `Uploading ${uploading}…`
+      : files.length === 1
+        ? `Ready: ${files[0]!.name} (${formatSize(files[0]!.sizeBytes)})`
+        : files.length > 1
+          ? filesSelected(files.length)
+          : null;
+
+  return (
+    <View style={[styles.row, divider && { borderBottomWidth: 1, borderBottomColor: palette.divider }]}>
+      <View style={styles.titleLine}>
+        <Paperclip size={iconSize.row} color={palette.accentRamp[300]} />
+        <Text style={[styles.title, { color: palette.text }]}>{field.title}</Text>
+      </View>
+      {line ? (
+        <Text testID={`run-file-${field.key}-count`} style={[styles.sub, { color: palette.neutral[400] }]}>
+          {line}
+        </Text>
+      ) : null}
+      {error ? <Text style={[styles.sub, { color: status.err }]}>{error}</Text> : null}
+      {showTypes && typesLine ? (
+        <Text testID={`run-file-${field.key}-types`} style={[styles.sub, { color: palette.neutral[400] }]}>
+          {typesLine}
+        </Text>
+      ) : null}
+      <View style={styles.actions}>
+        {photos ? (
+          <FileAction
+            testID={`run-file-${field.key}-photo`}
+            label={TAKE_PHOTO_LABEL}
+            accessibilityLabel={`Take a photo for ${field.title}`}
+            icon={Camera}
+            busy={busy}
+            onPress={() => void takePhoto()}
+          />
+        ) : null}
+        <FileAction
+          testID={`run-file-${field.key}-upload`}
+          label={UPLOAD_LABEL}
+          accessibilityLabel={`Upload files for ${field.title}`}
+          icon={UploadSimple}
+          busy={busy}
+          onPress={() => void upload()}
+        />
+      </View>
+    </View>
+  );
+}
+
+/** A file sent, as the several-file field holds it. */
+type SentFile = { artifactId: string; name: string; sizeBytes: number };
 
 /** One way to give the field its file: an outlined pill, held while an upload is in flight. */
 function FileAction({

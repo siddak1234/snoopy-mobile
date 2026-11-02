@@ -1,0 +1,48 @@
+{
+  "name": "v2-details",
+  "about": "An Invoice Processing v2 run with details only",
+  "blockSetVersion": 4,
+  "blocks": [
+    {
+      "type": "text",
+      "text": "Saved the bill.",
+      "tone": "success"
+    },
+    {
+      "type": "text",
+      "text": "Details",
+      "style": "label"
+    },
+    {
+      "type": "table",
+      "columns": [
+        {
+          "muted": true
+        },
+        {}
+      ],
+      "rows": [
+        {
+          "cells": [
+            "Seller",
+            "Harbor Paper Co."
+          ]
+        },
+        {
+          "cells": [
+            "Total",
+            "$102.60"
+          ]
+        }
+      ]
+    }
+  ],
+  "text": [
+    "Saved the bill.",
+    "Details",
+    "Seller",
+    "Harbor Paper Co.",
+    "Total",
+    "$102.60"
+  ]
+}

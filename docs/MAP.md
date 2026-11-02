@@ -117,6 +117,7 @@
 
 ### Scripts
 
+- [scripts/all-green-on-head.mjs](../scripts/all-green-on-head.mjs): The release gate's all-green: the one from ci.yml's PUSH run on HEAD.
 - [scripts/audit-credentials.mjs](../scripts/audit-credentials.mjs): Fails when a credential-shaped default appears in an app screen.
 - [scripts/audit-doc-references.mjs](../scripts/audit-doc-references.mjs): Every file path this repository's documents name, and whether it exists: no
 - [scripts/audit-fixtures.mjs](../scripts/audit-fixtures.mjs): Fails when a screen starts reading `lib/fixtures` again, or when a file that
@@ -128,6 +129,7 @@
 - [scripts/audit-type.mjs](../scripts/audit-type.mjs): Fails when a font size is written outside the type scale (24.12).
 - [scripts/audit-vocabulary.mjs](../scripts/audit-vocabulary.mjs): Fails when the app's copy says "project", "automation", "solution",
 - [scripts/generate-platform-contracts.mjs](../scripts/generate-platform-contracts.mjs): Generates TypeScript types from the backend's published OpenAPI contracts.
+- [scripts/no-skipped-tests.mjs](../scripts/no-skipped-tests.mjs): Fails when the suite skipped a test (M4: no silent skips).
 - [scripts/release-ios.sh](../scripts/release-ios.sh): Builds and submits the iOS app from main — and refuses everything else.
 - [scripts/repo-facts.mjs](../scripts/repo-facts.mjs): What this repository reports about itself, in the shape snoopy-backend's
 - [scripts/verify-deployed-contracts.mjs](../scripts/verify-deployed-contracts.mjs): Are this repository's generated platform types the contract the RUNNING
@@ -135,7 +137,7 @@
 
 ### Tests
 
-- `__tests__/`: accessibility, account, activity, android, app, audit, auth, automation, billing, block, blocks, brand, build13, build14, build21, build22, build28, components, connection, connections, cover, data, deep, deletion, dialog, doc, dropdown, faceid, flow, flows, gate24, identity, image, invoice, kit, native, no, nocturne, notifications, organization, override, package, paging, parity, pipeline, platform, pressable, presses, published, push, removed, repo, return, round19, round23, run, scope, screen, session, settings, setup, shared, sign, signed, snapshot, splash, start, tab, teams, text, theme, timed, upload, use, vendor, verify, view, workspace
+- `__tests__/`: accessibility, account, activity, android, app, audit, auth, automation, billing, block, blocks, brand, build13, build14, build21, build22, build28, components, connection, connections, cover, data, deep, deletion, dialog, doc, dropdown, faceid, flow, flows, gate24, identity, image, invoice, kit, native, no, nocturne, notifications, organization, override, package, paging, parity, pipeline, platform, pressable, presses, published, push, release, removed, repo, return, review, round19, round23, run, scope, screen, session, settings, setup, shared, sign, signed, single, snapshot, splash, start, tab, teams, text, theme, timed, upload, use, vendor, verify, view, workspace
 - `__tests__/__snapshots__/`: connection, nocturne, screen
 - `__tests__/real-router/`: activity, app, appearance, connect, face, flow, held, home, notifications, root, run, session, sign
 

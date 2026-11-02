@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, screen } from '@testing-library/react-native';
+import { fireEvent, screen, within } from '@testing-library/react-native';
 
 import {
   SetupFieldRow,
@@ -12,9 +12,10 @@ import {
   missingRequiredSetupFields,
   notifiesLine,
   sectionLabel,
+  selectedChoices,
   type SetupField,
 } from '@/components/setup-field';
-import { NEWER_CONTROL_NOTE } from '@/lib/content/screen-states';
+import { CHOOSE_AT_LEAST_ONE, NEWER_CONTROL_NOTE, chosenLabel } from '@/lib/content/screen-states';
 import { renderWithProviders } from '@/test/render';
 
 /**
@@ -302,8 +303,9 @@ describe('a control this build does not know (BUILD-PLAN 25.8.1, the owner\'s re
     expect(controlNote({ control: 'text' })).toBeNull();
   });
 
-  it('knows the contract\'s five controls and nothing else — not a prototype name, not the run form\'s file, which RunFileField draws', () => {
-    for (const control of ['toggle', 'money', 'text', 'email', 'resource-picker']) expect(isKnownControl(control)).toBe(true);
+  it('knows the contract\'s controls, the setup dropdown (F1) among them, and nothing else — not a prototype name, not the run form\'s file, which RunFileField draws', () => {
+    for (const control of ['toggle', 'money', 'text', 'email', 'resource-picker', 'select']) expect(isKnownControl(control)).toBe(true);
+    expect(controlNote({ control: 'select' })).toBeNull();
     for (const control of ['date-range', 'artifact', 'constructor', 'hasOwnProperty', 'toString', '']) expect(isKnownControl(control)).toBe(false);
   });
 
@@ -320,5 +322,183 @@ describe('a control this build does not know (BUILD-PLAN 25.8.1, the owner\'s re
     expect(declaredValues([{ key: 'window', control: 'date-range' }], { window: 'last week' })).toEqual({ window: 'last week' });
     expect(declaredValues([{ key: 'window', control: 'date-range' }], { window: '  ' })).toEqual({});
     expect(declaredValues([{ key: 'window', control: 'date-range' }], {})).toEqual({});
+  });
+});
+
+/** The setup dropdown (Round 21's platform round, F1; words.md section 3). */
+describe('a select: the glass dropdown, one choice or several', () => {
+  const SPECIALTIES = ['Nephrology', 'Internal medicine', 'Cardiology', 'Endocrinology'];
+  const select = (over: Partial<SetupField>): SetupField => ({
+    section: 'rules',
+    key: 'specialties',
+    title: 'Specialties',
+    description: 'The specialties your clinic treats.',
+    control: 'select',
+    required: true,
+    options: SPECIALTIES,
+    ...over,
+  });
+
+  it('its closed pill reads the choices: Choose, the choice, two by name, three or more as a count', () => {
+    expect(chosenLabel([])).toBe('Choose');
+    expect(chosenLabel(['Nephrology'])).toBe('Nephrology');
+    expect(chosenLabel(['Nephrology', 'Cardiology'])).toBe('Nephrology, Cardiology');
+    expect(chosenLabel(['Nephrology', 'Cardiology', 'Endocrinology'])).toBe('3 chosen');
+  });
+
+  it('several: the panel stays open, a tick on each chosen row, and a press toggles its row', async () => {
+    const onChange = jest.fn();
+    await renderWithProviders(
+      <SetupFieldRow field={select({ multiple: true })} value={['Nephrology']} onChange={onChange} divider={false} />,
+    );
+    expect(screen.getByText('Nephrology')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('setup-field-specialties-choice'));
+    expect(screen.getByTestId('setup-field-specialties-choice-chosen-Nephrology')).toBeTruthy();
+    expect(screen.queryByTestId('setup-field-specialties-choice-chosen-Cardiology')).toBeNull();
+    await fireEvent.press(screen.getByTestId('setup-field-specialties-choice-option-Cardiology'));
+    expect(onChange).toHaveBeenLastCalledWith(['Nephrology', 'Cardiology']);
+    // Still open: another row can be chosen.
+    expect(screen.getByTestId('setup-field-specialties-choice-menu')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('setup-field-specialties-choice-option-Nephrology'));
+    expect(onChange).toHaveBeenLastCalledWith([]);
+  });
+
+  it('three or more chosen: the pill says how many', async () => {
+    await renderWithProviders(
+      <SetupFieldRow
+        field={select({ multiple: true })}
+        value={['Nephrology', 'Cardiology', 'Endocrinology']}
+        onChange={jest.fn()}
+        divider={false}
+      />,
+    );
+    expect(screen.getByLabelText('Specialties: 3 chosen')).toBeTruthy();
+  });
+
+  it('one: a press chooses it and closes the panel', async () => {
+    const onChange = jest.fn();
+    await renderWithProviders(<SetupFieldRow field={select({})} value={undefined} onChange={onChange} divider={false} />);
+    expect(screen.getByLabelText('Specialties: Choose')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('setup-field-specialties-choice'));
+    await fireEvent.press(screen.getByTestId('setup-field-specialties-choice-option-Cardiology'));
+    expect(onChange).toHaveBeenCalledWith('Cardiology');
+    expect(screen.queryByTestId('setup-field-specialties-choice-menu')).toBeNull();
+  });
+
+  it('a required one left empty is missing, a default or not; what the save says is drawn under it', async () => {
+    const fields = [select({ multiple: true, defaultValue: ['Nephrology'] }), select({ key: 'one' })];
+    expect(missingRequiredSetupFields(fields, { specialties: [], one: '' }).map((item) => item.key)).toEqual(['specialties', 'one']);
+    expect(missingRequiredSetupFields(fields, { specialties: ['Cardiology'], one: 'Cardiology' })).toEqual([]);
+    await renderWithProviders(
+      <SetupFieldRow field={select({ multiple: true })} value={[]} onChange={jest.fn()} divider={false} error={CHOOSE_AT_LEAST_ONE} />,
+    );
+    expect(screen.getByTestId('setup-field-specialties-error').props.children).toBe('Choose at least one.');
+  });
+
+  it('its value: a list for several (only the options, none twice), one string for one', () => {
+    expect(selectedChoices({ options: SPECIALTIES }, ['Cardiology', 'Cardiology', 'Dermatology', 3])).toEqual(['Cardiology']);
+    expect(
+      declaredValues(
+        [
+          { key: 'several', control: 'select', options: SPECIALTIES, multiple: true },
+          { key: 'one', control: 'select', options: SPECIALTIES },
+          { key: 'none', control: 'select', options: SPECIALTIES },
+        ],
+        { several: ['Nephrology', 'Cardiology'], one: 'Cardiology', none: '' },
+      ),
+    ).toEqual({ several: ['Nephrology', 'Cardiology'], one: 'Cardiology' });
+  });
+});
+
+/** The dropdown, bigger (Round 21 platform round 2, B1): object options, a search box past 10, group headings. */
+describe('a select with many options: labels, groups and a search box', () => {
+  const CODES = [
+    { value: 'N18.4', label: 'Chronic kidney disease, stage 4', group: 'Kidney' },
+    { value: 'I10', label: 'Essential hypertension', group: 'Heart' },
+    { value: 'N18.5', label: 'Chronic kidney disease, stage 5', group: 'Kidney' },
+    { value: 'E11.9', label: 'Type 2 diabetes', group: 'Endocrine' },
+  ];
+  const many = (count: number) => Array.from({ length: count }, (_, at) => `Option ${at + 1}`);
+  const select = (over: Partial<SetupField>): SetupField => ({
+    section: 'rules',
+    key: 'codes',
+    title: 'Codes',
+    description: 'The codes to check.',
+    control: 'select',
+    required: true,
+    options: CODES,
+    ...over,
+  });
+  it('the closed pill shows labels, never values; what is sent and saved is the value', async () => {
+    const onChange = jest.fn();
+    await renderWithProviders(<SetupFieldRow field={select({ multiple: true })} value={['N18.4', 'I10']} onChange={onChange} divider={false} />);
+    expect(screen.getByLabelText('Codes: Chronic kidney disease, stage 4, Essential hypertension')).toBeTruthy();
+    expect(screen.queryByText(/N18\.4/u)).toBeNull();
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice'));
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice-option-E11.9'));
+    expect(onChange).toHaveBeenLastCalledWith(['N18.4', 'I10', 'E11.9']);
+    expect(selectedChoices({ options: CODES }, ['I10', 'Essential hypertension'])).toEqual(['I10']);
+    expect(declaredValues([{ key: 'codes', control: 'select', options: CODES }], { codes: 'E11.9' })).toEqual({ codes: 'E11.9' });
+  });
+
+  it('options with groups are drawn under their headings, the groups in the order they first appear', async () => {
+    await renderWithProviders(<SetupFieldRow field={select({})} value={undefined} onChange={jest.fn()} divider={false} />);
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice'));
+    const menu = within(screen.getByTestId('setup-field-codes-choice-menu'));
+    expect(screen.getByTestId('setup-field-codes-choice-group-0').props.children).toBe('KIDNEY');
+    expect(screen.getByTestId('setup-field-codes-choice-group-1').props.children).toBe('HEART');
+    expect(screen.getByTestId('setup-field-codes-choice-group-2').props.children).toBe('ENDOCRINE');
+    expect(menu.getAllByText(/./u).map((node) => node.props.children)).toEqual([
+      'CODES',
+      'KIDNEY',
+      'Chronic kidney disease, stage 4',
+      'Chronic kidney disease, stage 5',
+      'HEART',
+      'Essential hypertension',
+      'ENDOCRINE',
+      'Type 2 diabetes',
+    ]);
+    // Four options: no search box.
+    expect(screen.queryByTestId('setup-field-codes-choice-search')).toBeNull();
+  });
+
+  it('more than 10 options: a search box ("Search") keeps the rows whose label holds the query; none: "No matches."', async () => {
+    const onChange = jest.fn();
+    await renderWithProviders(
+      <SetupFieldRow field={select({ options: many(11) })} value={undefined} onChange={onChange} divider={false} />,
+    );
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice'));
+    const box = screen.getByTestId('setup-field-codes-choice-search');
+    expect(box.props.placeholder).toBe('Search');
+    await fireEvent.changeText(box, 'option 1');
+    // "Option 1", "Option 10" and "Option 11": every row whose label holds it, case-free.
+    expect(screen.getByTestId('setup-field-codes-choice-option-Option 10')).toBeTruthy();
+    expect(screen.queryByTestId('setup-field-codes-choice-option-Option 2')).toBeNull();
+    await fireEvent.changeText(box, 'zzz');
+    expect(screen.getByTestId('setup-field-codes-choice-no-matches').props.children).toBe('No matches.');
+    await fireEvent.changeText(box, 'option 2');
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice-option-Option 2'));
+    expect(onChange).toHaveBeenCalledWith('Option 2');
+  });
+
+  it('the search box is emptied on closing: opened again, it is empty and every row is back', async () => {
+    await renderWithProviders(<SetupFieldRow field={select({ options: many(11) })} value={undefined} onChange={jest.fn()} divider={false} />);
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice'));
+    await fireEvent.changeText(screen.getByTestId('setup-field-codes-choice-search'), 'option 1');
+    expect(screen.queryByTestId('setup-field-codes-choice-option-Option 2')).toBeNull();
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice-backdrop'));
+    expect(screen.queryByTestId('setup-field-codes-choice-search')).toBeNull();
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice'));
+    expect(screen.getByTestId('setup-field-codes-choice-search').props.value).toBe('');
+    expect(within(screen.getByTestId('setup-field-codes-choice-menu')).getAllByText(/^Option /u)).toHaveLength(11);
+  });
+
+  it('ten options or fewer, with no groups: no search box and no heading — the plain dropdown, unchanged', async () => {
+    await renderWithProviders(<SetupFieldRow field={select({ options: many(10) })} value={undefined} onChange={jest.fn()} divider={false} />);
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice'));
+    expect(screen.queryByTestId('setup-field-codes-choice-search')).toBeNull();
+    expect(screen.queryByTestId('setup-field-codes-choice-group-0')).toBeNull();
+    expect(screen.queryByTestId('setup-field-codes-choice-no-matches')).toBeNull();
+    expect(within(screen.getByTestId('setup-field-codes-choice-menu')).getAllByText(/^Option /u)).toHaveLength(10);
   });
 });

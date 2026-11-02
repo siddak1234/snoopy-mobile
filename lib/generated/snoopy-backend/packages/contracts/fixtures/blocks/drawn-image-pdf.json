@@ -1,0 +1,26 @@
+{
+  "name": "drawn-image-pdf",
+  "about": "A measured PDF drawn as a picture: a scanned page",
+  "blockSetVersion": 4,
+  "blocks": [
+    {
+      "type": "image",
+      "alt": "The scanned delivery note",
+      "open": {
+        "target": "run-file",
+        "runId": "0a0a0a0a-0a0a-4a0a-8a0a-0a0a0a0a0a0a",
+        "fileId": "0f0f0f0f-0f0f-4f0f-8f0f-0f0f0f0f0f0f"
+      },
+      "file": {
+        "id": "0f0f0f0f-0f0f-4f0f-8f0f-0f0f0f0f0f0f",
+        "filename": "scanned-page.pdf",
+        "contentType": "application/pdf",
+        "format": "PDF",
+        "sizeBytes": 212480,
+        "pages": 1,
+        "measuredKind": "pdf"
+      }
+    }
+  ],
+  "text": []
+}

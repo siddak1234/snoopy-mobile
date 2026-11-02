@@ -1,0 +1,16 @@
+{
+  "name": "unknown-form",
+  "about": "An unknown questions form",
+  "blockSetVersion": 4,
+  "blocks": [
+    {
+      "type": "questions",
+      "form": {
+        "kind": "survey"
+      }
+    }
+  ],
+  "text": [
+    "This part can't be shown here yet."
+  ]
+}
