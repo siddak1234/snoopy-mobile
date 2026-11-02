@@ -1,0 +1,47 @@
+{
+  "name": "review-held-waiting",
+  "about": "A held run that offers three changes: the review form, each to accept or deny (amendment 2)",
+  "blockSetVersion": 4,
+  "blocks": [
+    {
+      "type": "text",
+      "text": "Waiting for approval.",
+      "tone": "warning"
+    },
+    {
+      "type": "questions",
+      "form": {
+        "kind": "review",
+        "approvalId": "0d0d0d0d-0d0d-4d0d-8d0d-0d0d0d0d0d0d",
+        "eligibleRoles": [
+          "owner",
+          "admin"
+        ],
+        "decisions": [
+          {
+            "id": "n18-4-remove",
+            "label": "N18.4 → Remove",
+            "detail": "Not supported by the note."
+          },
+          {
+            "id": "e11-9-add",
+            "label": "E11.9 → Add",
+            "detail": "Diabetes is named in the plan."
+          },
+          {
+            "id": "i10-keep",
+            "label": "I10 → Keep"
+          }
+        ]
+      }
+    }
+  ],
+  "text": [
+    "Waiting for approval.",
+    "N18.4 → Remove",
+    "Not supported by the note.",
+    "E11.9 → Add",
+    "Diabetes is named in the plan.",
+    "I10 → Keep"
+  ]
+}

@@ -216,6 +216,15 @@ describe("step 4's words, the website's (round 24 P6; the review's first and six
     expect([row.title, row.state, row.sub]).toEqual(['4 · Done', 'held', words]);
   });
 
+  it('a saved review (F2) says its count on the step that waited, held or working on after it; never once denied', () => {
+    const tally = '2 accepted · 1 denied';
+    expect(toTracker(reported, V3.pipeline, V3.groups, { status: 'held' }, clock, V3.pipeline, { decision: 'approved', review: tally })[3]!.sub).toBe(tally);
+    expect(toTracker(reported, V3.pipeline, V3.groups, { status: 'running' }, clock, V3.pipeline, { review: tally })[3]!.sub).toBe(tally);
+    expect(toTracker(reported, undefined, undefined, { status: 'held' }, clock, V3.pipeline, { review: tally }).at(-1)!.sub).toBe(tally);
+    expect(stepFour('rejected').sub).toBe('Denied');
+    expect(toTracker(reported, V3.pipeline, V3.groups, { status: 'held' }, clock, V3.pipeline, { decision: 'rejected', review: tally })[3]!.sub).toBe('Denied');
+  });
+
   it('the fallback rows (a run of another version) say "Denied" too, and why it waits until then', () => {
     const fallback = (decision: ReturnType<typeof heldDecision>) =>
       toTracker(reported, undefined, undefined, { status: 'held' }, clock, V3.pipeline, { decision }).at(-1)!;

@@ -49,7 +49,7 @@ import {
   errorTitleFor,
 } from '@/lib/content/screen-states';
 import { readCatalog, readConnectionProviders, readConnections } from '@/lib/platform/catalog';
-import { readFlowEmailRecipients, updateSubscription, type FlowPages } from '@/lib/platform/automations';
+import { readFlowEmailRecipients, readSubscription, updateSubscription, type FlowPages, type Subscription } from '@/lib/platform/automations';
 import { readProjects } from '@/lib/platform/projects';
 import {
   readRemovedSubscriptionsOrNone,
@@ -60,7 +60,7 @@ import {
 } from '@/lib/platform/runs';
 import {
   addedAgainAs,
-  connectionState,
+  providerConnected,
   scopeLabels,
   toFlows,
   toRemovedFlows,
@@ -74,6 +74,17 @@ import { FLOW_STATS_REREAD_MS } from '@/lib/view/runs';
 import { statusLabel } from '@/lib/view/status';
 
 const ACTION_ICON = { pause: Pause, play: Play, rocket: RocketLaunch } as const;
+
+/**
+ * A list with this flow's own read in place of its row; added where the list
+ * did not carry it, to the list of its kind (archived or not).
+ */
+function withRead(rows: Subscription[], read: Subscription | undefined, archived: boolean): Subscription[] {
+  if (!read) return rows;
+  const replaced = rows.map((row) => (row.id === read.id ? read : row));
+  const belongs = (read.status === 'archived') === archived;
+  return rows.some((row) => row.id === read.id) || !belongs ? replaced : [...replaced, read];
+}
 
 /**
  * A flow page's parts in the order its flow's manifest gives them
@@ -153,7 +164,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
    * actions (`AutomationActions`).
    */
   const flows = useWorkspaceResource(async (workspaceId) => {
-    const [subs, catalog, stats, providers, projects, removed, held] = await Promise.all([
+    const [listed, catalog, stats, providers, projects, removedListed, held, one] = await Promise.all([
       readSubscriptions(workspaceId),
       readCatalog(workspaceId),
       readRunStats(workspaceId),
@@ -161,7 +172,13 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
       readProjects(workspaceId),
       readRemovedSubscriptionsOrNone(workspaceId),
       readConnections(workspaceId),
+      // This flow by its own read (§12.1 #319 step 2): its setup is the version
+      // it pins, whatever the list carries; it stands in for its list row. The
+      // lists stay for what needs them: the archived twin (`addedAgainAs`).
+      flow ? readSubscription(workspaceId, flow) : null,
     ]);
+    const subs = { subscriptions: withRead(listed.subscriptions, one?.subscription, false) };
+    const removed = { subscriptions: withRead(removedListed.subscriptions, one?.subscription, true) };
     const labels = scopeLabels(projects);
     const byProvider = new Map(providers.providers.map((p) => [p.providerId, p]));
     return {
@@ -178,7 +195,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
       connections: held.connections,
       counts: stats.subscriptions,
     };
-  });
+  }, [flow]);
 
   // DASHBOARD, live (S30): this flow's counts as last read past the snapshot.
   const [live, setLive] = useState<{ flow: string; counts: RunSubscriptionCounts | null } | null>(null);
@@ -342,7 +359,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
   // What it is owed: a chosen vendor not connected, then each account it cannot run without.
   const vendorOwed = vendorFields
     .map((field) => chosenVendor(field, subscription.config))
-    .filter((chosen) => chosen !== 'none' && connectionState(connectionOf(chosen)) !== 'connected');
+    .filter((chosen) => chosen !== 'none' && !providerConnected(providers.get(chosen), connectionOf(chosen)));
   const owed = def.connections.filter((c) => !optional.has(c.id) && !vendorOwed.includes(c.id));
   const openVendor = (field: string) =>
     router.push({ pathname: '/(tabs)/flows/vendor', params: { flow: def.key, field } });
@@ -370,7 +387,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
     if (!field) return null;
     const chosen = chosenVendor(field, subscription.config);
     const none = chosen === 'none';
-    const connected = !none && connectionState(connectionOf(chosen)) === 'connected';
+    const connected = !none && providerConnected(providers.get(chosen), connectionOf(chosen));
     return (
       <View key={key} style={{ borderTopWidth: 1, borderTopColor: palette.divider }}>
         <ConnectionRow

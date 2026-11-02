@@ -35,6 +35,11 @@ type Props = {
   testID?: string;
   /** What a screen reader says, where it differs from the label ("Previous page"). */
   accessibilityLabel?: string;
+  /**
+   * The chosen one of a pair, said to a screen reader (`accessibilityState.selected`;
+   * a review's Accept or Deny, Round 21's F2). Undefined, nothing is said.
+   */
+  selected?: boolean;
 };
 
 /**
@@ -55,6 +60,7 @@ export function PillButton({
   style,
   testID,
   accessibilityLabel,
+  selected,
 }: Props) {
   const { palette } = useTheme();
   const size = fontSize ?? typeScale.label.fontSize;
@@ -79,7 +85,11 @@ export function PillButton({
       accessibilityLabel={accessibilityLabel}
       onPress={onPress}
       disabled={disabled || undefined}
-      accessibilityState={disabled ? { disabled: true } : undefined}
+      accessibilityState={
+        disabled || selected !== undefined
+          ? { ...(disabled ? { disabled: true } : {}), ...(selected !== undefined ? { selected } : {}) }
+          : undefined
+      }
       style={({ pressed }) => [
         {
           // The least height: a label at a large text size grows it (round 24 P3).

@@ -9,7 +9,7 @@ import { act, fireEvent, screen, within } from 'expo-router/testing-library';
 import type { Subscription } from '@/lib/platform/automations';
 import type { Connection } from '@/lib/platform/catalog';
 import { connectOAuthProvider } from '@/lib/platform/connections';
-import { invoiceProcessingV4Entry, planSubscriptionsPayload, providersWithQuickBooks } from '@/test/platform';
+import { invoiceProcessingV4Entry, methodOf, planSubscriptionsPayload, providersWithQuickBooks } from '@/test/platform';
 import { WORKSPACE, answerPlatform, flush, launch, signedInOnThisPhone } from '@/test/real-router';
 
 /**
@@ -55,7 +55,9 @@ function platformHolding(vendor: string, connections: Connection[], saved: strin
   answerPlatform(
     {
       [`/v1/workspaces/${WORKSPACE}/subscriptions`]: () => ({ subscriptions: [state.flow] }),
-      [`/v1/workspaces/${WORKSPACE}/subscriptions/ip-1`]: () => {
+      [`/v1/workspaces/${WORKSPACE}/subscriptions/ip-1`]: (_path, execute) => {
+        // The flow's own read (GET, §12.1 #319): what the platform holds now.
+        if (methodOf(execute) === 'GET') return { subscription: state.flow };
         state.saves += 1;
         state.flow = { ...state.flow, config: { ...state.flow.config, vendor: saved } };
         return { subscription: state.flow };

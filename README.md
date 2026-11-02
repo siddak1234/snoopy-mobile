@@ -79,11 +79,26 @@ The individual architecture gates are:
   and so is the one log line, `console.error` in
   `components/blocks/not-drawn.ts` (round 21: a part not drawn, its type and
   the error).
-- `verify:platform-contracts`: regenerate from the sibling backend checkout,
-  when present, and reject a generated declaration diff — the block fixtures'
-  `block-fixtures.ts` too, its header one sha256 over the fixtures' bytes in
-  filename order, the website's rule (backend ADR-0048 decision 9), and
-  `block-required.ts` (round 21), headed by automations.yaml's sha256.
+- `verify:platform-contracts`: never skips (Round 21 hardening, M1). It reads
+  the contract from `SNOOPY_BACKEND_ROOT`, else the sibling `../snoopy-backend`
+  when present, else the committed copy `lib/generated/snoopy-backend/` — the
+  backend's six inputs (the three OpenAPI documents, `repo-facts.schema.json`,
+  the block fixtures and the block rules) at their backend paths, plus
+  `SHA256SUMS`, written by `generate:platform-contracts` whenever it reads a
+  real backend. Every run checks the copy against `SHA256SUMS` (a hand edit is
+  red), then the generated headers, then regenerates and rejects a diff of
+  the declarations or of the copy — the block fixtures' `block-fixtures.ts`
+  too, its header one sha256 over the fixtures' bytes in filename order, the
+  website's rule (backend ADR-0048 decision 9), and `block-required.ts` (round
+  21), headed by automations.yaml's sha256. No contract anywhere, or a
+  `SNOOPY_BACKEND_ROOT` that does not exist, fails. `SNOOPY_CONTRACT_COPY`
+  names another copy, so a test edits a temporary one, never the committed
+  copy. The repo-facts schema test
+  and the block-rules hash test read the copy, so public CI runs them too.
+- No skipped tests (M4): `test:coverage` writes jest's JSON report to
+  `coverage/jest-results.json`, and `scripts/no-skipped-tests.mjs` (in
+  `verify` and CI's Test job) fails on any skipped, todo or `.only`-shadowed
+  test.
 - `audit:presses` (`scripts/audit-presses.mjs`, coverage-based, in `verify`
   and CI): **every press has a test that presses it and asserts its outcome**
   (build 13, B9) — the screen and params it opens, the request it sends
@@ -149,6 +164,22 @@ CI runs lint, typecheck, Jest, all architecture/dependency gates (the docs
 checks among them, on the PR's whole range: `fetch-depth: 0` and
 `DOCS_BASE`), contract verification, and both platform exports; `all-green` is the one check that
 needs every one of them and is red on any failure, cancellation or skip.
+Every action is pinned by commit SHA with its `# vX.Y.Z` comment, and every
+job's Node is the exact version in `.nvmrc` (`node-version-file`); a guard test
+(`release-and-ci-guards`) holds both. Nothing updates `.nvmrc`: Node is moved by
+hand with each Node 22.x security release. `.github/dependabot.yml`
+opens one grouped pull request a week for the actions, and no npm version updates
+(the app's dependency bumps are each a round of their own, §12.1 #278; Dependabot's
+npm security-fix pull requests still open) (the
+kit's `check-docs` lets a Dependabot commit that touches only those files
+through). Every job has a `timeout-minutes`, sized in ci.yml from measured runs;
+ci.yml's jobs hold `contents: read` only. CI also runs nightly on main:
+`.github/workflows/nightly.yml` (`schedule`, 09:32 UTC) calls ci.yml whole
+(`workflow_call`), so GitHub's disabling of a scheduled workflow after 60 days
+without activity stops only the nightly, never the merge gate (`gh workflow
+enable nightly.yml` resumes it); a red nightly opens, or comments on, one open
+"Nightly red" issue from nightly.yml's own `report` job, the one job with
+`issues: write`.
 `contract-deployed` (`scripts/verify-deployed-contracts.mjs`) compares each
 generated file's sha256 header with the hash the live
 `https://api.autom8x.ai/health/live` reports for its document and fails closed
@@ -165,10 +196,17 @@ gate, naming it (111 s to green, 3 s to refuse a lint error, measured
 the owner's by hand: in a Claude Code session `.claude/hooks/guard.mjs`
 refuses it.
 `npm run release:ios` (`scripts/release-ios.sh`; `--dry-run` rehearses the
-refusals) builds and submits only `origin/main`, clean, with `all-green`
-concluded success on HEAD and the live AASA naming the app, and only a build
-whose `gitCommitHash` is HEAD with the release's entitlements; `eas.json`
-`cli.requireCommit` refuses an uncommitted tree.
+refusals) builds and submits only `origin/main`, clean, with the `all-green`
+of ci.yml's push run on HEAD concluded success — read in that run's check
+suite (`scripts/all-green-on-head.mjs`), so the nightly's own `CI / all-green`
+on the same commit is never counted — and the live AASA naming the app, and only a
+build whose `gitCommitHash` is HEAD with the release's entitlements; `eas.json`
+`cli.requireCommit` refuses an uncommitted tree. eas-cli is no dependency of
+the app (Expo's version policy discourages one): its one exact version is
+`eas.json` `cli.version`, which eas-cli enforces. The script reads it once, runs
+every call as `npx --yes eas-cli@<that version>`, so a release never runs a
+newer one, prints it beside the tree line and refuses when eas-cli reports
+another. Bump it by hand there; a guard test refuses a range.
 `npm run release:ios -- --local` (Round 17, 2026-10-08) builds the same release on
 this Mac instead of EAS's cloud — `eas build --local`, with Xcode, CocoaPods and
 fastlane, which it refuses without — and so uses no EAS build quota; every gate
@@ -311,7 +349,8 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
 
 - `lib/generated/platform-contracts/` is generated from the Edge, automations,
   and connections OpenAPI documents, `block-fixtures.ts` from the
-  backend's `packages/contracts/fixtures/blocks/*.json`, and
+  backend's `packages/contracts/fixtures/blocks/*.json` (all read from the
+  backend or its committed copy, `lib/generated/snoopy-backend/`), and
   `block-required.ts` (each block type's required fields) from the `Block`
   schema in automations.yaml. Do not hand-edit it.
 - The run, item and file pages draw the platform's page body (backend
@@ -329,14 +368,18 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   `openapi-fetch`, attaches the current bearer token through middleware,
   applies a timeout and `no-store`, and maps RFC problem responses. A 429 is
   said as "busy, try again in N seconds" from its `retry-after` and never as
-  signed out. Its one raw `fetch` is `putFileToSignedUrl`, the credential-less
+  signed out; its public `details` travel with it, so a run refused for a full
+  queue (`queue_full`) is said in the owner's words. Its one raw `fetch` is `putFileToSignedUrl`, the credential-less
   PUT of a file's bytes to the URL the platform signed; `audit:platform` admits
   exactly that one. Since 24.12 its one native download is
   `downloadSignedFile`, the credential-less save of a signed file's link into
   the app's cache (the complete export; the run package's PDF and Excel since
   round 24); `audit:platform` admits exactly one `downloadFileAsync(`, there.
 - `lib/platform/*.ts` exposes typed reads and mutations. Screens do not call a
-  network primitive.
+  network primitive. `readConnectionProviders` is the one provider list: the
+  platform's `providers`, then its `publicProviders` (public services, no key)
+  as rows with `authType` `none` (`keylessProviders`), so every screen reads a
+  public service as connected.
 - `lib/platform/session-store.ts` stores access/refresh credentials only in
   `expo-secure-store` with `WHEN_UNLOCKED_THIS_DEVICE_ONLY` — and beside them
   push's device id and its "Not now", cleared with them.

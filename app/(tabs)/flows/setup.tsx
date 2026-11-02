@@ -12,6 +12,7 @@ import {
   chosenVendor,
   connectionFields,
   fieldProviders,
+  isSelectField,
   missingRequiredSetupFields,
   rowFields,
   sectionLabel,
@@ -36,6 +37,7 @@ import { useSolutions } from '@/hooks/use-solutions';
 import { useTheme } from '@/hooks/use-theme';
 import { ALREADY_IN_WORKSPACE, WORKSPACE_CHANGED, turnOnRefusal } from '@/lib/content/refusals';
 import {
+  CHOOSE_AT_LEAST_ONE,
   SETUP_SAVE,
   SETUP_SAVE_FAILED,
   SETUP_SAVING,
@@ -49,7 +51,7 @@ import {
   fillIn,
   teamLine,
 } from '@/lib/content/screen-states';
-import { createSubscription, updateSubscription } from '@/lib/platform/automations';
+import { createSubscription, noneWhenNotFound, readSubscription, updateSubscription } from '@/lib/platform/automations';
 import { readCatalog, readConnectionProviders, readConnections } from '@/lib/platform/catalog';
 import { newIdempotencyKey } from '@/lib/platform/client';
 import { PlatformError, PlatformNotConfiguredError } from '@/lib/platform/problem';
@@ -58,6 +60,7 @@ import { readSubscriptions, readSubscriptionsNow } from '@/lib/platform/runs';
 import {
   connectionState,
   heldAs,
+  needsNoConnect,
   scopeLabel,
   scopeLabels,
   toConnectionRow,
@@ -106,6 +109,8 @@ export default function SetupScreen() {
     Awaited<ReturnType<typeof createSubscription>>['subscription'] | null
   >(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  // The required dropdowns left empty on the last save, each said under its field (F1).
+  const [emptyChoices, setEmptyChoices] = useState<readonly string[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const createKey = useRef(newIdempotencyKey('subscribe'));
@@ -120,17 +125,21 @@ export default function SetupScreen() {
   const resource = useWorkspaceResource(
     async (id) => {
       if (!template) throw new PlatformNotConfiguredError();
-      const [catalog, subscriptions, providers, projects, connections] = await Promise.all([
+      const [catalog, subscriptions, providers, projects, connections, one] = await Promise.all([
         readCatalog(id),
         readSubscriptions(id),
         readConnectionProviders(),
         readProjects(id),
         readConnections(id),
+        // The flow "Edit setup" names, by its own read (§12.1 #319 step 2): its
+        // setup is the version it pins, whatever the list carries. One this
+        // person cannot see (404) is none named.
+        flow ? readSubscription(id, flow).catch(noneWhenNotFound) : null,
       ]);
-      // The flow "Edit setup" names; else where the workspace holds it, in any
-      // team (the owner's build 12 item 9). An archived one is gone: unarchiving
-      // makes a new subscription.
-      const named = flow ? withoutArchived(subscriptions.subscriptions).find((item) => item.id === flow) : undefined;
+      // The flow named; else where the workspace holds it, in any team (the
+      // owner's build 12 item 9), from the list. An archived one is gone:
+      // unarchiving makes a new subscription.
+      const named = one ? withoutArchived([one.subscription])[0] : undefined;
       return {
         entry: catalog.automations.find((item) => item.templateId === template),
         subscriptions: named ? [named] : heldAs(template, subscriptions.subscriptions),
@@ -181,9 +190,11 @@ export default function SetupScreen() {
   }
 
   const { entry, providers, labels, connections: held } = resource.data;
-  const connected = new Set(
-    held.filter((connection) => connectionState(connection) === 'connected').map((connection) => connection.providerId),
-  );
+  // Connected: what the workspace holds, and every provider that needs no key (B5), connected for every workspace.
+  const connected = new Set([
+    ...held.filter((connection) => connectionState(connection) === 'connected').map((connection) => connection.providerId),
+    ...[...providers.values()].filter(needsNoConnect).map((provider) => provider.providerId),
+  ]);
   const canManage = administers(roleIn(session, resource.loadedFor));
   // The copy the workspace holds already (the owner's build 12 item 9), or the
   // one this screen added — held from that moment, a draft still owed an
@@ -212,9 +223,10 @@ export default function SetupScreen() {
     connections.find((connection) => connection.providerId === providerId)?.displayName ??
     providers.get(providerId)?.displayName ??
     providerId;
+  // A provider that needs no key (B5) has no Connect step: no row, and it counts as connected.
   const requiredRows = required.flatMap((connection) => {
     const provider = providers.get(connection.providerId);
-    return provider ? [toConnectionRow(provider, held.find((c) => c.providerId === connection.providerId))] : [];
+    return provider && !needsNoConnect(provider) ? [toConnectionRow(provider, held.find((c) => c.providerId === connection.providerId))] : [];
   });
   const hasConnect = vendorFields.length > 0 || requiredRows.length > 0;
   const sectionOffset = hasConnect ? 1 : 0;
@@ -224,6 +236,7 @@ export default function SetupScreen() {
   };
   const setField = (key: string, value: unknown) => {
     setConfig((previous) => ({ ...previous, [key]: value }));
+    setEmptyChoices((previous) => previous.filter((other) => other !== key));
     newIntent();
   };
   const choose = (key: string, value: string) => {
@@ -283,6 +296,13 @@ export default function SetupScreen() {
     // A field this person cleared stays cleared: `??` read a cleared field as
     // untouched and put the default back under their thumb (24.7.3 attempt 2).
     const configured = Object.fromEntries(setup.map((field) => [field.key, valueOf(field)]));
+    // A required dropdown left empty (F1): "Choose at least one." under it, and nothing is sent.
+    const empty = missingRequiredSetupFields(setup, configured).filter(isSelectField);
+    setEmptyChoices(empty.map((field) => field.key));
+    if (empty.length > 0) {
+      setActionError(null);
+      return;
+    }
     const refused = refusal(configured);
     if (refused) {
       setActionError(refused);
@@ -450,6 +470,7 @@ export default function SetupScreen() {
                     value={valueOf(field)}
                     onChange={(next) => setField(field.key, next)}
                     divider={index < fields.length - 1}
+                    error={emptyChoices.includes(field.key) ? CHOOSE_AT_LEAST_ONE : null}
                   />
                 ))}
               </SurfaceCard>

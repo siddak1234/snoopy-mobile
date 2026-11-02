@@ -1,0 +1,131 @@
+{
+  "name": "reviewer-item",
+  "about": "A candidate-reviewer v2 item: tiles, its file, Add, its ranked runs",
+  "blockSetVersion": 4,
+  "blocks": [
+    {
+      "type": "metric",
+      "items": [
+        {
+          "label": "Total",
+          "value": "3"
+        },
+        {
+          "label": "Advance",
+          "value": "1",
+          "tone": "success"
+        },
+        {
+          "label": "Decline",
+          "value": "1",
+          "tone": "error"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "title": "Job description",
+      "open": {
+        "target": "item-file",
+        "itemId": "0b0b0b0b-0b0b-4b0b-8b0b-0b0b0b0b0b0b"
+      },
+      "file": {
+        "id": "0c0c0c0c-0c0c-4c0c-8c0c-0c0c0c0c0c0c",
+        "filename": "payroll-analyst.pdf",
+        "contentType": "application/pdf",
+        "format": "PDF",
+        "sizeBytes": 48213,
+        "pages": 3
+      }
+    },
+    {
+      "type": "questions",
+      "title": "Add candidate",
+      "form": {
+        "kind": "run",
+        "itemId": "0b0b0b0b-0b0b-4b0b-8b0b-0b0b0b0b0b0b"
+      }
+    },
+    {
+      "type": "text",
+      "text": "Candidates",
+      "style": "label"
+    },
+    {
+      "type": "list",
+      "searchable": true,
+      "items": [
+        {
+          "lead": "1",
+          "title": "Dana Whitfield",
+          "badge": {
+            "text": "Advance",
+            "tone": "success"
+          },
+          "value": "88",
+          "valueLabel": "Score",
+          "valueTone": "success",
+          "open": {
+            "target": "run",
+            "runId": "r1"
+          }
+        },
+        {
+          "lead": "2",
+          "title": "Omar Reyes",
+          "badge": {
+            "text": "Decline",
+            "tone": "error"
+          },
+          "value": "41",
+          "valueLabel": "Score",
+          "valueTone": "error",
+          "open": {
+            "target": "run",
+            "runId": "r2"
+          }
+        },
+        {
+          "lead": "3",
+          "title": "Reading…",
+          "open": {
+            "target": "run",
+            "runId": "r3"
+          }
+        },
+        {
+          "lead": "4",
+          "title": "Failed",
+          "muted": true,
+          "open": {
+            "target": "run",
+            "runId": "r4"
+          }
+        }
+      ],
+      "empty": "No candidates yet."
+    }
+  ],
+  "text": [
+    "3",
+    "Total",
+    "1",
+    "Advance",
+    "1",
+    "Decline",
+    "Job description",
+    "Candidates",
+    "1",
+    "Dana Whitfield",
+    "Advance",
+    "88",
+    "2",
+    "Omar Reyes",
+    "Decline",
+    "41",
+    "3",
+    "Reading…",
+    "4",
+    "Failed"
+  ]
+}

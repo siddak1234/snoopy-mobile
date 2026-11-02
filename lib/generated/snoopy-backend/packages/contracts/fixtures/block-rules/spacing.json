@@ -1,0 +1,15 @@
+{
+  "blockSpacing": {
+    "edge": 20,
+    "edgeWide": 24,
+    "group": 16,
+    "title": 8,
+    "inner": 8,
+    "rowY": 12,
+    "rowX": 16,
+    "rowMinHeight": 44,
+    "card": 16,
+    "cardWide": 24,
+    "bottom": 24
+  }
+}

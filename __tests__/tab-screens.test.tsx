@@ -26,7 +26,9 @@ import {
   invoiceProcessingEntry,
   planSubscriptionsPayload,
   projectsPayload,
+  providersPayload,
   providersWithQuickBooks,
+  methodOf,
   routePlatform,
   outcomeBlocks,
   runDetailPayload,
@@ -487,7 +489,11 @@ describe('Workflow detail', () => {
     setMockParams({ flow: 'lead' });
     await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
     await fireEvent.press(await screen.findByText('Turn on'));
-    expect(platformOperation.mock.calls.some(([path]: [string]) => /\/subscriptions\/lead$/.test(path))).toBe(false);
+    // Read (the page's own GET of its flow), never changed.
+    const changes = platformOperation.mock.calls.filter(
+      ([path, execute]: [string, unknown]) => /\/subscriptions\/lead$/.test(path) && methodOf(execute) !== 'GET',
+    );
+    expect(changes).toEqual([]);
     expect(screen.getByText('Draft')).toBeTruthy();
   });
 
@@ -522,6 +528,10 @@ describe('Workflow detail', () => {
     const routed = platformOperation.getMockImplementation();
     platformOperation.mockImplementation(async (path: string, execute: Function) => {
       if (/\/subscriptions\/invoice$/.test(path)) {
+        // The page's own read of its flow (GET, §12.1 #319): what was last kept.
+        if (methodOf(execute) === 'GET') {
+          return { subscription: { ...subscriptionsPayload().subscriptions.find((row) => row.id === 'invoice')!, status } };
+        }
         let sent: { body: { status?: string }; key: string } | undefined;
         const patch = async (_p: string, init: { body: { status?: string }; params: { header: Record<string, string> } }) => {
           sent = { body: init.body, key: init.params.header['Idempotency-Key']! };
@@ -563,6 +573,10 @@ describe('Workflow detail', () => {
     const routed = platformOperation.getMockImplementation();
     platformOperation.mockImplementation(async (path: string, execute: Function) => {
       if (/\/subscriptions\/invoice$/.test(path)) {
+        // The page's own read of its flow (GET, §12.1 #319): what was last kept.
+        if (methodOf(execute) === 'GET') {
+          return { subscription: { ...subscriptionsPayload().subscriptions.find((row) => row.id === 'invoice')!, status } };
+        }
         const patch = async (_path: string, init: { body: { status: string } }) => ({ data: init.body });
         status = (await execute({ automations: { PATCH: patch } })).data.status;
         return { subscription: { ...subscriptionsPayload().subscriptions[0], status } };
@@ -596,6 +610,10 @@ describe('Workflow detail', () => {
     const routed = platformOperation.getMockImplementation();
     platformOperation.mockImplementation(async (path: string, execute: Function) => {
       if (/\/subscriptions\/invoice$/.test(path)) {
+        // The page's own read of its flow (GET, §12.1 #319): what was last kept.
+        if (methodOf(execute) === 'GET') {
+          return { subscription: { ...subscriptionsPayload().subscriptions.find((row) => row.id === 'invoice')!, status } };
+        }
         const patch = async (_path: string, init: { body: { status: string } }) => ({ data: init.body });
         status = (await execute({ automations: { PATCH: patch } })).data.status;
         return { subscription: { ...subscriptionsPayload().subscriptions[0], status } };
@@ -1607,6 +1625,34 @@ describe('Setup (design sSetup; the Invoice Processing update, spec §3.B)', () 
     expect(writes).toEqual([]);
   });
 
+  it('draws no Connect step for an account that needs no key, and counts it connected for Turn on (Round 21 platform round 2, B5)', async () => {
+    const catalog = catalogPayload();
+    const sample = catalog.automations[0]!.setup[0]!;
+    catalog.automations = catalog.automations.map((automation) => ({
+      ...automation,
+      requiredConnections: [{ providerId: 'nppes', displayName: 'NPI Registry', purpose: 'Look up the clinician', optional: false }],
+      setup: [{ ...sample, key: 'holdAboveAmount', title: 'Hold above', control: 'money', section: 'rules', required: false, defaultValue: 500 }],
+    }));
+    // A public service as the platform sends it: in `publicProviders`, never in `providers`.
+    const nppes = { providerId: 'nppes', displayName: 'NPI Registry', description: 'Looks up a clinician.', icon: 'IdentificationCard' };
+    const writes = routeSetup(
+      {
+        '/automations': catalog,
+        '/subscriptions': { subscriptions: [] },
+        '/connections/providers': { ...providersPayload(), publicProviders: [nppes] },
+      },
+      { created: draft() },
+    );
+    setMockParams({ template: 'tpl.0' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    expect(await screen.findByText('1 · SETTINGS')).toBeTruthy();
+    expect(screen.queryByText(/CONNECT/u)).toBeNull();
+    expect(screen.queryByTestId('connection-row-nppes')).toBeNull();
+    await fireEvent.press(screen.getByText('Turn on'));
+    await waitFor(() => expect(writes.length).toBeGreaterThan(0));
+    expect(screen.queryByText('Connect NPI Registry first.')).toBeNull();
+  });
+
   it('draws no CONNECT step when the platform predates `requiredConnections` (the image before the SEVENTEENTH promotion)', async () => {
     const base = catalogPayload();
     const sample = base.automations[0]!.setup[0]!;
@@ -1651,6 +1697,31 @@ describe('Setup (design sSetup; the Invoice Processing update, spec §3.B)', () 
     await fireEvent.press(await screen.findByText('Turn on'));
     expect(await screen.findByText('Fill in: Watch inbox.')).toBeTruthy();
     expect(writes).toEqual([]);
+  });
+
+  it('a required dropdown left empty: "Choose at least one." under it, nothing sent; a choice clears it (Round 21\'s platform round, F1)', async () => {
+    const catalog = catalogPayload();
+    const sample = catalog.automations[0]!.setup[1]!;
+    const specialties = {
+      ...sample,
+      key: 'specialties',
+      title: 'Specialties',
+      control: 'select',
+      options: ['Nephrology', 'Cardiology'],
+      multiple: true,
+      required: true,
+    };
+    catalog.automations = catalog.automations.map((automation) => ({ ...automation, setup: [specialties as never] }));
+    const writes = routeSetup({ '/automations': catalog, '/subscriptions': { subscriptions: [] } });
+    setMockParams({ template: 'tpl.0' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    await fireEvent.press(await screen.findByText('Turn on'));
+    expect((await screen.findByTestId('setup-field-specialties-error')).props.children).toBe('Choose at least one.');
+    expect(screen.queryByText(/^Fill in/u)).toBeNull();
+    expect(writes).toEqual([]);
+    await fireEvent.press(screen.getByTestId('setup-field-specialties-choice'));
+    await fireEvent.press(screen.getByTestId('setup-field-specialties-choice-option-Cardiology'));
+    expect(screen.queryByTestId('setup-field-specialties-error')).toBeNull();
   });
 
   it.each([

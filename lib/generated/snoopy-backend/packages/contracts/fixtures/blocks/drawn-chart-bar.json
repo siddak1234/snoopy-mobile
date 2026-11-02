@@ -1,0 +1,39 @@
+{
+  "name": "drawn-chart-bar",
+  "about": "A bar chart of 3 bars, one text filled by the platform, and its alt",
+  "blockSetVersion": 4,
+  "blocks": [
+    {
+      "type": "chart",
+      "kind": "bar",
+      "title": "Spend by vendor",
+      "alt": "Spend by vendor. Bar chart. Harbor Paper Co.: $1,204.50; Cedar Office Supply: $980.00; Pine Street Print: 312.",
+      "points": [
+        {
+          "label": "Harbor Paper Co.",
+          "value": 1204.5,
+          "text": "$1,204.50"
+        },
+        {
+          "label": "Cedar Office Supply",
+          "value": 980,
+          "text": "$980.00"
+        },
+        {
+          "label": "Pine Street Print",
+          "value": 312,
+          "text": "312"
+        }
+      ]
+    }
+  ],
+  "text": [
+    "Spend by vendor",
+    "Harbor Paper Co.",
+    "$1,204.50",
+    "Cedar Office Supply",
+    "$980.00",
+    "Pine Street Print",
+    "312"
+  ]
+}
