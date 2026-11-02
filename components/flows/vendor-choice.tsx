@@ -9,11 +9,11 @@ import { fonts, iconSize, space, status, typeScale } from '@/constants/theme';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { WORKSPACE_CHANGED, connectionIncomplete, refusalMessage } from '@/lib/content/refusals';
-import { VENDOR_ADMIN_ONLY, VENDOR_ASK_ADMIN, VENDOR_NONE_SUB, VENDOR_SAVING } from '@/lib/content/screen-states';
+import { CONNECTION_CONNECTED, VENDOR_ADMIN_ONLY, VENDOR_ASK_ADMIN, VENDOR_NONE_SUB, VENDOR_SAVING } from '@/lib/content/screen-states';
 import type { Connection, ConnectionProvider } from '@/lib/platform/catalog';
 import { connectOAuthProvider } from '@/lib/platform/connections';
 import { invalidateShared } from '@/lib/platform/snapshot';
-import { connectionLine, connectionState } from '@/lib/view/catalog';
+import { connectionLine, needsNoConnect, providerConnected } from '@/lib/view/catalog';
 
 /** The choice that saves the details only: no vendor (backend `CONNECTION_NONE`). */
 export const NONE = 'none';
@@ -83,7 +83,8 @@ export function VendorChoice({
   const tap = async (choice: string, provider?: ConnectionProvider) => {
     if (busy) return;
     setRowError(null);
-    if (choice === NONE || connectionState(connectionOf(choice)) === 'connected') {
+    // A provider that needs no key (B5) is chosen at once: there is nothing to connect.
+    if (choice === NONE || providerConnected(provider, connectionOf(choice))) {
       onChoose(choice);
       return;
     }
@@ -127,7 +128,7 @@ export function VendorChoice({
       {vendors.map((vendor) => {
         const provider = providers.get(vendor.providerId);
         const connection = connectionOf(vendor.providerId);
-        const connected = connectionState(connection) === 'connected';
+        const connected = providerConnected(provider, connection);
         const isChosen = chosen === vendor.providerId;
         // Connected, or connectable by this person: the row is the choice — never when read-only.
         const tappable = !readOnly && (connected || (Boolean(provider) && canManage));
@@ -136,7 +137,9 @@ export function VendorChoice({
             ? { text: VENDOR_SAVING, tone: 'muted' as const }
             : !connected && provider && !canManage
               ? { text: VENDOR_ASK_ADMIN, tone: 'muted' as const }
-              : connectionLine(connection);
+              : needsNoConnect(provider)
+                ? { text: CONNECTION_CONNECTED, tone: 'muted' as const }
+                : connectionLine(connection);
         return (
           <View key={vendor.providerId} style={{ borderBottomWidth: 1, borderBottomColor: palette.divider }}>
             <ConnectionRow

@@ -15,7 +15,36 @@ import { GLOBAL_SCOPE, shared } from './snapshot';
 export type CatalogResponse = automations['schemas']['AutomationCatalogResponse'];
 export type CatalogEntry = automations['schemas']['AutomationCatalogEntry'];
 export type Connection = connections['schemas']['Connection'];
-export type ConnectionProvider = connections['schemas']['ConnectionProvider'];
+/** A provider as the platform lists it in `providers`: one a workspace connects. */
+export type WireConnectionProvider = connections['schemas']['ConnectionProvider'];
+/** A public service as the platform lists it in `publicProviders` (backend ADR-0048 amendment 3, B5). */
+export type PublicConnectionProvider = connections['schemas']['PublicConnectionProvider'];
+
+/**
+ * A provider as every screen reads it: one from `providers`, or a public
+ * service from `publicProviders` with `authType` `none` and no scopes
+ * (`keylessProviders`) — no key, no Connect, connected for every workspace.
+ */
+export type ConnectionProvider = Omit<WireConnectionProvider, 'authType'> & {
+  authType: WireConnectionProvider['authType'] | 'none';
+};
+
+/**
+ * The platform's `publicProviders` as rows of the one provider list, each
+ * `authType` `none` with no scopes, so Connections, Set up, a flow's page and
+ * its vendor page read a public service as connected (`needsNoConnect`). The
+ * platform never lists one in `providers`. The website's `keylessProviders`.
+ */
+export function keylessProviders(publicProviders: readonly PublicConnectionProvider[] | undefined): ConnectionProvider[] {
+  return (publicProviders ?? []).map(({ providerId, displayName, description, icon }) => ({
+    providerId,
+    displayName,
+    description,
+    icon,
+    scopes: [],
+    authType: 'none' as const,
+  }));
+}
 
 /**
  * The automation catalog as this workspace sees it.
@@ -49,16 +78,18 @@ export function readConnections(workspaceId: string): Promise<{ connections: Con
 }
 
 /**
- * Every provider that can be connected.
+ * Every provider on offer, one list: the platform's `providers`, then its
+ * `publicProviders` as keyless rows (`keylessProviders`).
  *
  * Needed alongside the connections list rather than instead of it: the
  * connections read omits a provider with no connection at all, so the design's
  * "Slack · Not connected" row has no source without this.
  */
 export function readConnectionProviders(): Promise<{ providers: ConnectionProvider[] }> {
-  return shared(GLOBAL_SCOPE, 'providers', 'settled', () =>
-    platformOperation('/v1/connections/providers', ({ connections }, signal) =>
+  return shared(GLOBAL_SCOPE, 'providers', 'settled', async () => {
+    const body = await platformOperation('/v1/connections/providers', ({ connections }, signal) =>
       connections.GET('/v1/connections/providers', { signal }),
-    ),
-  );
+    );
+    return { providers: [...body.providers, ...keylessProviders(body.publicProviders)] };
+  });
 }

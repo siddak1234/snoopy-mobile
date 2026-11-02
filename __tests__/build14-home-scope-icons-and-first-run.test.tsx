@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   ShoppingCart,
   SquaresFour,
+  Stethoscope,
   Users,
   UsersThree,
 } from 'phosphor-react-native';
@@ -210,6 +211,8 @@ describe("the kinds' icons, beside the list (the owner's build 13 decision 2)", 
       ['Procurement', ShoppingCart],
       ['Administration', Briefcase],
       ['Research', Flask],
+      // Round 21 platform round 2, B4: the seventeenth.
+      ['Healthcare', Stethoscope],
     ] as const;
     expect(owners.map(([kind]) => kind)).toEqual([...TEAM_TYPES]);
     for (const [kind, icon] of owners) expect([kind, teamTypeIcon(kind) === icon]).toEqual([kind, true]);

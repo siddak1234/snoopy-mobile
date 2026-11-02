@@ -19,12 +19,13 @@ import {
   ConnectionRow,
 } from '@/components/connection-row';
 import { typeScale } from '@/constants/theme';
+import { VendorChoice } from '@/components/flows/vendor-choice';
 import { ConnectionsCard } from '@/components/settings/connections-card';
 import type { ThemeMode } from '@/hooks/use-theme';
 import { platformOperation } from '@/lib/platform/client';
-import type { Connection, ConnectionProvider } from '@/lib/platform/catalog';
+import { keylessProviders, type Connection, type ConnectionProvider, type PublicConnectionProvider } from '@/lib/platform/catalog';
 import { connectOAuthProvider } from '@/lib/platform/connections';
-import { toConnectionRow } from '@/lib/view/catalog';
+import { needsNoConnect, providerConnected, toConnectionRow } from '@/lib/view/catalog';
 import { fakePlatform } from '@/test/fake-platform';
 import { QUICKBOOKS_PROVIDER, TEST_WORKSPACE, sessionAs } from '@/test/platform';
 import { renderWithProviders } from '@/test/render';
@@ -134,6 +135,51 @@ describe('the row says the account, else its state (spec A4)', () => {
     expect(screen.queryByText('Reads and sends email.')).toBeNull();
     expect(screen.queryByText(/used by/u)).toBeNull();
     expect(screen.queryByTestId('connection-action-google')).toBeNull();
+  });
+});
+
+describe('an app that needs no key (Round 21 platform round 2, B5)', () => {
+  // A public service as the platform lists it — in `publicProviders`, never in `providers` — read through `keylessProviders`.
+  const PUBLIC: PublicConnectionProvider = { providerId: 'nppes', displayName: 'NPI Registry', description: 'Looks up a clinician.', icon: 'IdentificationCard' };
+  const NPPES = keylessProviders([PUBLIC])[0]!;
+
+  it('is connected for every workspace, with no connection held, and its row offers no Connect', async () => {
+    const row = toConnectionRow(NPPES, undefined);
+    expect([row.state, row.line, row.connected, row.noConnect]).toEqual(['connected', 'Connected', true, true]);
+    expect(providerConnected(NPPES, undefined)).toBe(true);
+    await renderWithProviders(
+      <ConnectionsCard rows={[row]} loadedFor={TEST_WORKSPACE} canManage notice={null} onNotice={() => {}} onChanged={() => {}} />,
+      sessionAs('owner'),
+    );
+    expect(within(screen.getByTestId('connection-row-nppes')).getByText('Connected')).toBeTruthy();
+    expect(screen.queryByTestId('connection-action-nppes')).toBeNull();
+  });
+
+  it('as a step\'s integration: drawn Connected, and a press chooses it at once — no sign-in, no Settings', async () => {
+    const onChoose = jest.fn();
+    await renderWithProviders(
+      <VendorChoice
+        vendors={[{ providerId: 'nppes', displayName: 'NPI Registry' }]}
+        providers={new Map([['nppes', NPPES]])}
+        connections={[]}
+        chosen="none"
+        canManage
+        shownWorkspaceId={TEST_WORKSPACE}
+        saving={null}
+        onChoose={onChoose}
+      />,
+      sessionAs('owner'),
+    );
+    expect(within(screen.getByTestId('vendor-nppes')).getByText('Connected')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('vendor-nppes'));
+    expect(onChoose).toHaveBeenCalledWith('nppes');
+    expect(mockConnect).not.toHaveBeenCalled();
+  });
+
+  it('an app with a key or a sign-in is unchanged: not connected until the workspace holds one', () => {
+    expect(needsNoConnect(GOOGLE)).toBe(false);
+    expect(providerConnected(GOOGLE, undefined)).toBe(false);
+    expect(toConnectionRow(GOOGLE, undefined).noConnect).toBe(false);
   });
 });
 

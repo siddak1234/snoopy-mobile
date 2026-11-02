@@ -2,7 +2,7 @@ import { PlayCircle } from 'phosphor-react-native';
 import React, { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { RunFileField } from '@/components/automations/run-file-field';
+import { RunFileField, RunFilesField } from '@/components/automations/run-file-field';
 import { InlineBoundary } from '@/components/dialog-boundary';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SetupFieldRow, declaredValues } from '@/components/setup-field';
@@ -65,6 +65,14 @@ export function canStartRun(subscription: Subscription, entry: CatalogEntry | un
  * reading~~ — gone with the owner's D1 of 2026-10-15: "we dont need to say
  * this at all … the terms and privacy policy includes that information". A run
  * starts at the press.
+ *
+ * Several files (Round 21 platform round 2, B2 as the batch addendum amends
+ * it): a file field with `multiple` (`RunFilesField`) holds several, and Start
+ * run uploads every one into ONE run — the field's value the list of their ids
+ * (`declaredValues`), one start-run call, one key — never a run per file. ~~One
+ * run per file and "{n} runs started"~~ until the batch addendum. A flow that
+ * declares `batch` splits that run into units on the platform; its page draws
+ * them (the run page's `batch` part).
  */
 export function StartRun({
   subscriptionId,
@@ -174,6 +182,20 @@ function StartRunForm({
     <>
       {runInput.map((field, index) => {
         const divider = index < runInput.length - 1;
+        if (field.control === 'artifact' && field.multiple) {
+          return (
+            <RunFilesField
+              key={`${field.key}:${fileRound}`}
+              field={field}
+              shownWorkspaceId={shownWorkspaceId}
+              subscriptionId={subscriptionId}
+              onValue={change}
+              onBusyChange={onBusyChange}
+              divider={divider}
+              showTypes={showTypes}
+            />
+          );
+        }
         return field.control === 'artifact' ? (
           <RunFileField
             key={`${field.key}:${fileRound}`}

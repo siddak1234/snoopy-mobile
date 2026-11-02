@@ -13,6 +13,7 @@ import {
   reviewRowLabel,
 } from '@/lib/content/screen-states';
 import type { AnsweredDecision, DecisionAnswer, OfferedDecision } from '@/lib/platform/automations';
+import { reviewGroups } from '@/lib/view/runs';
 
 /** What a screen reader says for a row's pill: its answer and which change ("Deny: Add Z99.2"). */
 const reviewPillA11y = (answer: string, change: OfferedDecision) => `${answer}: ${change.label}`;
@@ -35,7 +36,13 @@ const reviewPillA11y = (answer: string, change: OfferedDecision) => `${answer}: 
  * member, anyone else the approval does not name, and a `review` form the
  * page draws no form for (`questionsForm`, as the block fixtures read it).
  *
- * testIDs: a row `${testID}-row-${id}`, its pills `${testID}-accept-${id}` and
+ * Grouped (Round 21 platform round 2, B3): changes that carry `group` are
+ * drawn under their group's heading, the groups in the order first sent
+ * (`reviewGroups`), every group open, up to the platform's 400; "Save review"
+ * still needs every answer. The read-only rows (`questionsForm`) are grouped
+ * the same way.
+ *
+ * testIDs: a heading `${testID}-group-${n}`, a row `${testID}-row-${id}`, its pills `${testID}-accept-${id}` and
  * `${testID}-deny-${id}`, `${testID}-unanswered`, `${testID}-save`.
  */
 export function ReviewDecisions({
@@ -56,53 +63,69 @@ export function ReviewDecisions({
   const answer = (id: string, decision: DecisionAnswer) => setAnswers((before) => ({ ...before, [id]: decision }));
   const complete = changes.every((change) => answers[change.id] !== undefined);
 
+  /** One change: its line, and its two pills unless read-only. */
+  const drawRow = (change: OfferedDecision) => {
+    const chosen = answers[change.id];
+    return (
+      <View key={change.id} testID={`${testID}-row-${change.id}`} style={[styles.row, { borderBottomColor: palette.divider }]}>
+        {/* "{label} · {detail}": the dot is drawn, not a word, so the label and the detail are each
+            the flow's own words, as the block fixtures read them (the website's `ReviewRows`); a
+            screen reader hears the line whole. */}
+        <View accessible accessibilityLabel={reviewRowLabel(change)} style={styles.labelLine}>
+          <Text style={[styles.label, { color: palette.text }]}>{change.label}</Text>
+          {change.detail ? (
+            <>
+              <View style={[styles.dot, { backgroundColor: palette.text }]} />
+              <Text style={[styles.label, { color: palette.text }]}>{change.detail}</Text>
+            </>
+          ) : null}
+        </View>
+        {readOnly ? null : (
+          <View style={styles.pills}>
+            <PillButton
+              testID={`${testID}-accept-${change.id}`}
+              label={ACCEPT_LABEL}
+              accessibilityLabel={reviewPillA11y(ACCEPT_LABEL, change)}
+              selected={chosen === 'accepted'}
+              variant={chosen === 'denied' ? 'secondary' : 'primary'}
+              fontSize={typeScale.label.fontSize}
+              disabled={saving}
+              style={styles.pill}
+              onPress={() => answer(change.id, 'accepted')}
+            />
+            <PillButton
+              testID={`${testID}-deny-${change.id}`}
+              label={DENY_LABEL}
+              accessibilityLabel={reviewPillA11y(DENY_LABEL, change)}
+              selected={chosen === 'denied'}
+              variant={chosen === 'accepted' ? 'secondary' : 'danger'}
+              fontSize={typeScale.label.fontSize}
+              disabled={saving}
+              style={styles.pill}
+              onPress={() => answer(change.id, 'denied')}
+            />
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  const groups = reviewGroups(changes);
+
   return (
     <View style={styles.list}>
-      {changes.map((change) => {
-        const chosen = answers[change.id];
-        return (
-          <View key={change.id} testID={`${testID}-row-${change.id}`} style={[styles.row, { borderBottomColor: palette.divider }]}>
-            {/* "{label} · {detail}": the dot is drawn, not a word, so the label and the detail are each
-                the flow's own words, as the block fixtures read them (the website's `ReviewRows`); a
-                screen reader hears the line whole. */}
-            <View accessible accessibilityLabel={reviewRowLabel(change)} style={styles.labelLine}>
-              <Text style={[styles.label, { color: palette.text }]}>{change.label}</Text>
-              {change.detail ? (
-                <>
-                  <View style={[styles.dot, { backgroundColor: palette.text }]} />
-                  <Text style={[styles.label, { color: palette.text }]}>{change.detail}</Text>
-                </>
-              ) : null}
-            </View>
-            {readOnly ? null : (
-              <View style={styles.pills}>
-                <PillButton
-                  testID={`${testID}-accept-${change.id}`}
-                  label={ACCEPT_LABEL}
-                  accessibilityLabel={reviewPillA11y(ACCEPT_LABEL, change)}
-                  selected={chosen === 'accepted'}
-                  variant={chosen === 'denied' ? 'secondary' : 'primary'}
-                  fontSize={typeScale.label.fontSize}
-                  disabled={saving}
-                  style={styles.pill}
-                  onPress={() => answer(change.id, 'accepted')}
-                />
-                <PillButton
-                  testID={`${testID}-deny-${change.id}`}
-                  label={DENY_LABEL}
-                  accessibilityLabel={reviewPillA11y(DENY_LABEL, change)}
-                  selected={chosen === 'denied'}
-                  variant={chosen === 'accepted' ? 'secondary' : 'danger'}
-                  fontSize={typeScale.label.fontSize}
-                  disabled={saving}
-                  style={styles.pill}
-                  onPress={() => answer(change.id, 'denied')}
-                />
-              </View>
-            )}
-          </View>
-        );
-      })}
+      {groups.flatMap((group, at) => [
+        group.heading === null ? null : (
+          <Text
+            key={`group-${at}`}
+            testID={`${testID}-group-${at}`}
+            accessibilityRole="header"
+            style={[styles.heading, { color: palette.neutral[400] }]}>
+            {group.heading}
+          </Text>
+        ),
+        ...group.changes.map(drawRow),
+      ])}
       {readOnly || complete ? null : (
         <Text testID={`${testID}-unanswered`} style={[styles.note, { color: palette.neutral[400] }]}>
           {ANSWER_EVERY_CHANGE}
@@ -131,4 +154,5 @@ const styles = StyleSheet.create({
   pills: { flexDirection: 'row', gap: space.inner },
   pill: { flex: 1 },
   note: { fontFamily: fonts.regular, ...typeScale.small },
+  heading: { fontFamily: fonts.medium, ...typeScale.small, paddingTop: space.inner },
 });

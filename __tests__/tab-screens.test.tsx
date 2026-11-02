@@ -26,6 +26,7 @@ import {
   invoiceProcessingEntry,
   planSubscriptionsPayload,
   projectsPayload,
+  providersPayload,
   providersWithQuickBooks,
   routePlatform,
   outcomeBlocks,
@@ -1605,6 +1606,34 @@ describe('Setup (design sSetup; the Invoice Processing update, spec §3.B)', () 
     await fireEvent.press(screen.getByText('Turn on'));
     expect(await screen.findByText('Connect HubSpot first.')).toBeTruthy();
     expect(writes).toEqual([]);
+  });
+
+  it('draws no Connect step for an account that needs no key, and counts it connected for Turn on (Round 21 platform round 2, B5)', async () => {
+    const catalog = catalogPayload();
+    const sample = catalog.automations[0]!.setup[0]!;
+    catalog.automations = catalog.automations.map((automation) => ({
+      ...automation,
+      requiredConnections: [{ providerId: 'nppes', displayName: 'NPI Registry', purpose: 'Look up the clinician', optional: false }],
+      setup: [{ ...sample, key: 'holdAboveAmount', title: 'Hold above', control: 'money', section: 'rules', required: false, defaultValue: 500 }],
+    }));
+    // A public service as the platform sends it: in `publicProviders`, never in `providers`.
+    const nppes = { providerId: 'nppes', displayName: 'NPI Registry', description: 'Looks up a clinician.', icon: 'IdentificationCard' };
+    const writes = routeSetup(
+      {
+        '/automations': catalog,
+        '/subscriptions': { subscriptions: [] },
+        '/connections/providers': { ...providersPayload(), publicProviders: [nppes] },
+      },
+      { created: draft() },
+    );
+    setMockParams({ template: 'tpl.0' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    expect(await screen.findByText('1 · SETTINGS')).toBeTruthy();
+    expect(screen.queryByText(/CONNECT/u)).toBeNull();
+    expect(screen.queryByTestId('connection-row-nppes')).toBeNull();
+    await fireEvent.press(screen.getByText('Turn on'));
+    await waitFor(() => expect(writes.length).toBeGreaterThan(0));
+    expect(screen.queryByText('Connect NPI Registry first.')).toBeNull();
   });
 
   it('draws no CONNECT step when the platform predates `requiredConnections` (the image before the SEVENTEENTH promotion)', async () => {

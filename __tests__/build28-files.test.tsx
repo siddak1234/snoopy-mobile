@@ -8,7 +8,7 @@ import ItemFileScreen from '@/app/(tabs)/flows/item-file';
 import ItemScreen from '@/app/(tabs)/flows/item';
 import { status } from '@/constants/theme';
 import { FALLBACK } from '@/lib/content/screen-states';
-import type { AutomationItems, AutomationRunInputField, Item, Run, RunFile, Subscription } from '@/lib/platform/automations';
+import type { AutomationItems, AutomationRunInputField, Block, Item, Run, RunFile, Subscription } from '@/lib/platform/automations';
 import type { CatalogEntry } from '@/lib/platform/catalog';
 import { PlatformError } from '@/lib/platform/problem';
 import { resetSnapshot } from '@/lib/platform/snapshot';
@@ -497,5 +497,50 @@ describe("a run's files (build 28, F7)", () => {
     setMockParams({ runId: 'r1' });
     await renderWithProviders(<RunFileScreen />, sessionAs('member'));
     expect(await screen.findByTestId('screen-unavailable')).toBeTruthy();
+  });
+});
+
+/* ─────────────── a batch run's page (Round 21 platform round 2, the batch addendum's P2) ─────────────── */
+
+describe("a batch run's page: the platform's batch part", () => {
+  const CHILD = ['1b1b1b1b-1b1b-4b1b-8b1b-1b1b1b1b1b1b', '2b2b2b2b-2b2b-4b2b-8b2b-2b2b2b2b2b2b', '3b3b3b3b-3b3b-4b3b-8b3b-3b3b3b3b3b3b'];
+  /** The batch part as the platform composes it (backend `batchBlocks`): the heading, the line, then each child in order. */
+  const BATCH_PART: Block[] = [
+    { type: 'text', text: 'Visits', style: 'label' },
+    { type: 'text', text: '3 visits queued', style: 'muted' },
+    {
+      type: 'list',
+      searchable: true,
+      items: [
+        { title: 'Visit 1 — A. Patel', badge: { text: 'Success', tone: 'success' }, open: { target: 'run', runId: CHILD[0]! } },
+        { title: 'Visit 2 — B. Okafor', badge: { text: 'Running', tone: 'neutral' }, open: { target: 'run', runId: CHILD[1]! } },
+        { title: 'Visit 3 — C. Ruiz', badge: { text: 'Queued', tone: 'neutral' }, open: { target: 'run', runId: CHILD[2]! } },
+      ],
+    },
+  ];
+
+  it('draws the batch\'s own blocks, then "{unit plural}", "{n} {unit plural} queued" and each child in order — its label, its status, a press that opens its run', async () => {
+    const own = fixtureBlocks('v2-details');
+    routeRun({ run: runOf({ itemId: undefined, batch: true }), steps: [], events: [], files: [], blocks: [...own, ...BATCH_PART] });
+    setMockParams({ runId: 'r1' });
+    await renderWithProviders(<RunDetailScreen />, sessionAs('member'));
+    await screen.findByTestId('run-open-details');
+    const words = visibleWords(screen.toJSON());
+    const at = (word: string) => words.indexOf(word);
+    for (const word of ['Visits', '3 visits queued', 'Visit 1 — A. Patel', 'Success', 'Visit 2 — B. Okafor', 'Running', 'Visit 3 — C. Ruiz', 'Queued']) {
+      expect([word, at(word) >= 0]).toEqual([word, true]);
+    }
+    // The batch's own blocks come first (the fixture's result line and its Details); then the heading, the line and the children in the order sent.
+    expect(at('Saved the bill.')).toBeGreaterThanOrEqual(0);
+    expect(at('Saved the bill.')).toBeLessThan(at('Visits'));
+    expect(at('Visits')).toBeLessThan(at('3 visits queued'));
+    expect(at('3 visits queued')).toBeLessThan(at('Visit 1 — A. Patel'));
+    expect(at('Visit 1 — A. Patel')).toBeLessThan(at('Visit 2 — B. Okafor'));
+    expect(at('Visit 2 — B. Okafor')).toBeLessThan(at('Visit 3 — C. Ruiz'));
+    await fireEvent.press(screen.getByText('Visit 2 — B. Okafor'));
+    expect(mockRouter.push).toHaveBeenLastCalledWith(
+      expect.objectContaining({ pathname: '/(tabs)/activity/run', params: expect.objectContaining({ runId: CHILD[1] }) }),
+      undefined,
+    );
   });
 });

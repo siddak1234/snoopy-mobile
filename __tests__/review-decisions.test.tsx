@@ -4,6 +4,7 @@ import { StyleSheet } from 'react-native';
 
 import ApprovalsScreen from '@/app/(tabs)/activity/approvals';
 import RunDetailScreen from '@/app/(tabs)/activity/run';
+import { ReviewDecisions } from '@/components/runs/review-decisions';
 import { nocturneDark } from '@/constants/theme';
 import { decideApproval, decideReview, type Block } from '@/lib/platform/automations';
 import { PlatformError } from '@/lib/platform/problem';
@@ -261,5 +262,56 @@ describe('Approvals: a review\'s card says "Review {n} changes" and opens the ru
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/activity/run', params: { runId: 'run-of-review' } });
     expect(decideReview).not.toHaveBeenCalled();
     expect(decideApproval).not.toHaveBeenCalled();
+  });
+});
+
+/** A review grouped by visit (Round 21 platform round 2, B3). */
+describe('a review whose changes carry groups', () => {
+  const GROUPED = [
+    { id: 'a1', label: 'Line A1 → Add', group: 'Visit 1 · Oct 1' },
+    { id: 'b1', label: 'Line B1 → Keep', group: 'Visit 2 · Oct 3' },
+    { id: 'a2', label: 'Line A2 → Remove', detail: 'Not in the note.', group: 'Visit 1 · Oct 1' },
+  ];
+
+  it('draws each change under its group\'s heading, the groups in the order first sent, every group open', async () => {
+    await renderWithProviders(<ReviewDecisions testID="r" changes={GROUPED} onSave={jest.fn()} />, signedInSession);
+    expect(screen.getByTestId('r-group-0').props.children).toBe('Visit 1 · Oct 1');
+    expect(screen.getByTestId('r-group-1').props.children).toBe('Visit 2 · Oct 3');
+    const words = screen
+      .getAllByText(/Visit|Line/u)
+      .map((node) => node.props.children as string);
+    expect(words).toEqual(['Visit 1 · Oct 1', 'Line A1 → Add', 'Line A2 → Remove', 'Visit 2 · Oct 3', 'Line B1 → Keep']);
+  });
+
+  it('400 changes: every one drawn, every group open, and Save review waits for an answer', async () => {
+    const onSave = jest.fn();
+    const changes = Array.from({ length: 400 }, (_, at) => ({ id: `c-${at}`, label: `Change ${at}`, group: `Visit ${Math.floor(at / 100) + 1}` }));
+    await renderWithProviders(<ReviewDecisions testID="r" changes={changes} onSave={onSave} />, signedInSession);
+    expect(screen.getAllByText(/^Change /u)).toHaveLength(400);
+    expect([0, 1, 2, 3].map((at) => screen.getByTestId(`r-group-${at}`).props.children)).toEqual(['Visit 1', 'Visit 2', 'Visit 3', 'Visit 4']);
+    expect(screen.getByTestId('r-save').props.accessibilityState).toMatchObject({ disabled: true });
+  });
+
+  it('grouped, Save review still needs every answer, and sends them in the order sent', async () => {
+    const onSave = jest.fn();
+    await renderWithProviders(<ReviewDecisions testID="r" changes={GROUPED} onSave={onSave} />, signedInSession);
+    await fireEvent.press(screen.getByTestId('r-accept-a1'));
+    await fireEvent.press(screen.getByTestId('r-deny-a2'));
+    await fireEvent.press(screen.getByTestId('r-save'));
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByText('Accept or deny each change.')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('r-accept-b1'));
+    await fireEvent.press(screen.getByTestId('r-save'));
+    expect(onSave).toHaveBeenCalledWith([
+      { id: 'a1', decision: 'accepted' },
+      { id: 'b1', decision: 'accepted' },
+      { id: 'a2', decision: 'denied' },
+    ]);
+  });
+
+  it('changes with no group: no heading, one list in the order sent (the plain review, unchanged)', async () => {
+    await renderWithProviders(<ReviewDecisions testID="r" changes={CHANGES} onSave={jest.fn()} />, signedInSession);
+    expect(screen.queryByTestId('r-group-0')).toBeNull();
+    expect(screen.getAllByText(/N18\.4|Z99\.2/u).map((node) => node.props.children)).toEqual(['N18.4 → Remove', 'Add Z99.2']);
   });
 });

@@ -5,12 +5,51 @@ import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from '
 
 import { GlassSurface } from '@/components/glass-surface';
 import { Pressable } from '@/components/pressable';
+import { SearchBox } from '@/components/search-box';
 import { Text } from '@/components/text';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { elevation, em, fonts, fontScaleLimit, space, status as statusColor, typeScale, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { NO_MATCHES } from '@/lib/content/screen-states';
+import { BLOCK_WORDS } from '@/lib/generated/platform-contracts/block-rules';
+import { search } from '@/lib/view/block-sort';
 
-export type DropdownOption<T extends string> = { value: T; label: string; sub?: string; icon?: Icon; testID?: string };
+export type DropdownOption<T extends string> = {
+  value: T;
+  label: string;
+  sub?: string;
+  icon?: Icon;
+  testID?: string;
+  /** The heading it is drawn under (Round 21 platform round 2, B1): a setup dropdown's option `group`. */
+  group?: string;
+};
+
+/** Above this many options the panel opens with a search box (B1). */
+export const SEARCH_ABOVE = 10;
+
+/** One line of the panel: a group's heading, or an option. */
+export type DropdownLine<T extends string> = { heading: string } | { option: DropdownOption<T> };
+
+/**
+ * What the panel lists for a query (B1): the options whose label holds it
+ * (the lists' own search: trimmed, case-free, accents removed); then, where
+ * the options carry `group`, each group's heading in the order the groups
+ * first appear, its options under it in their own order. Pure, so the order
+ * is tested on its own.
+ */
+export function dropdownLines<T extends string>(options: readonly DropdownOption<T>[], query: string): DropdownLine<T>[] {
+  const found = search(options, query, (option) => [option.label]);
+  if (!found.some((option) => option.group !== undefined)) return found.map((option) => ({ option }));
+  const groups = new Map<string, DropdownOption<T>[]>();
+  for (const option of found) {
+    const name = option.group ?? '';
+    groups.set(name, [...(groups.get(name) ?? []), option]);
+  }
+  return [...groups].flatMap(([heading, members]) => [
+    ...(heading === '' ? [] : [{ heading }]),
+    ...members.map((option) => ({ option })),
+  ]);
+}
 
 /** Where a trigger is on the screen, as `measureInWindow` reports it. */
 export type DropdownAnchor = { x: number; y: number; width: number; height: number };
@@ -95,9 +134,17 @@ export function placeDropdown(
  * allows several): every chosen row has its check, and a press toggles its
  * row through `onChange` and keeps the panel open — a tap outside closes it.
  *
+ * Many options (Round 21 platform round 2, B1): above `SEARCH_ABOVE` (10) the
+ * panel opens with the lists' search box ("Search"), which keeps the rows whose
+ * label holds the query — none: "No matches." — and is emptied on closing;
+ * options that carry `group` are drawn under their group's heading, the groups
+ * in the order they first appear (`dropdownLines`). Ten or fewer without groups
+ * draw as before.
+ *
  * testIDs: the menu `${testID}-menu`, a row `${testID}-option-${value}` or its
  * own `testID`, the check `${testID}-chosen` (several: `${testID}-chosen-${value}`),
- * the outside `${testID}-backdrop`.
+ * the outside `${testID}-backdrop`, the search box `${testID}-search`, its
+ * nothing found `${testID}-no-matches`, a heading `${testID}-group-${n}`.
  */
 export function Dropdown<T extends string>({
   testID,
@@ -145,6 +192,8 @@ export function Dropdown<T extends string>({
   const anchorRef = useRef<View>(null);
   const [ownOpen, setOwnOpen] = useState(false);
   const [anchor, setAnchor] = useState<DropdownAnchor | null>(null);
+  const [query, setQuery] = useState('');
+  const searchable = options.length > SEARCH_ABOVE;
   const controlled = openProp !== undefined;
   const open = controlled ? openProp : ownOpen;
 
@@ -157,9 +206,11 @@ export function Dropdown<T extends string>({
     anchorRef.current?.measureInWindow((x, y, width, height) => setAnchor({ x, y, width, height }));
   };
 
-  // A page that opens it itself (the workspace's two triggers) has it measured on opening.
+  // A page that opens it itself (the workspace's two triggers) has it measured on opening; closed,
+  // however it closes, the search box is emptied, so it opens again on every row.
   useEffect(() => {
     if (open) measure();
+    else setQuery('');
   }, [open]);
 
   const shown = useSharedValue(0);
@@ -181,6 +232,9 @@ export function Dropdown<T extends string>({
     onChange(next);
     if (!controlled && !several) setOwnOpen(false);
   };
+
+  const lines = dropdownLines(options, searchable ? query : '');
+  let headings = 0;
 
   // Not measured yet (or a test's mock that never answers): under the status area, on the start side.
   const frame = placeDropdown(anchor ?? { x: GUTTER, y: 64, width: 0, height: 38 }, screen, align);
@@ -221,13 +275,43 @@ export function Dropdown<T extends string>({
           ]}>
           <GlassSurface radius={RADIUS} backing="panel" testID={`${testID}-menu`} style={{ maxHeight: frame.maxHeight }}>
             <View accessibilityViewIsModal>
-              <ScrollView bounces={false} style={{ maxHeight: frame.maxHeight }}>
+              <ScrollView
+                bounces={false}
+                style={{ maxHeight: frame.maxHeight }}
+                keyboardShouldPersistTaps={searchable ? 'handled' : undefined}>
                 {title ? (
                   <Text style={[styles.title, { color: palette.neutral[500] }]} accessibilityRole="header">
                     {title.toUpperCase()}
                   </Text>
                 ) : null}
-                {options.map((option, index) => {
+                {searchable ? (
+                  <View style={[styles.search, title ? null : { paddingTop: space.card }]}>
+                    <SearchBox testID={`${testID}-search`} value={query} onChange={setQuery} placeholder={BLOCK_WORDS.search} />
+                  </View>
+                ) : null}
+                {searchable && lines.length === 0 ? (
+                  <Text testID={`${testID}-no-matches`} style={[styles.status, { color: palette.neutral[400] }]}>
+                    {NO_MATCHES}
+                  </Text>
+                ) : null}
+                {lines.map((line, index) => {
+                  if ('heading' in line) {
+                    const at = headings++;
+                    return (
+                      <Text
+                        key={`group-${at}`}
+                        testID={`${testID}-group-${at}`}
+                        accessibilityRole="header"
+                        style={[
+                          styles.title,
+                          { color: palette.neutral[500] },
+                          (index > 0 || title) && { borderTopWidth: 1, borderTopColor: palette.divider },
+                        ]}>
+                        {line.heading.toUpperCase()}
+                      </Text>
+                    );
+                  }
+                  const option = line.option;
                   const chosen = several ? values.includes(option.value) : option.value === value;
                   const busy = busyValue != null && option.value === busyValue;
                   const IconCmp = option.icon;
@@ -241,7 +325,7 @@ export function Dropdown<T extends string>({
                       onPress={() => choose(option.value)}
                       style={({ pressed }) => [
                         styles.row,
-                        (index > 0 || title) && { borderTopWidth: 1, borderTopColor: palette.divider },
+                        (index > 0 || title || searchable) && { borderTopWidth: 1, borderTopColor: palette.divider },
                         pressed && { backgroundColor: withAlpha(palette.text, 0.07) },
                       ]}>
                       {IconCmp ? <IconCmp size={20} color={palette.neutral[300]} /> : null}
@@ -315,6 +399,10 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
     fontSize: typeScale.micro.fontSize,
     letterSpacing: em(0.14, typeScale.micro.fontSize),
+  },
+  search: {
+    paddingHorizontal: space.card,
+    paddingBottom: space.inner,
   },
   row: {
     minHeight: 44,

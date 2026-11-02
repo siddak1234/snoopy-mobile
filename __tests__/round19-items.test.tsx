@@ -315,6 +315,10 @@ describe("the items' rules (lib/view/items.ts)", () => {
     expect(
       itemRefusal(new PlatformRateLimitedError('busy', undefined, { reason: 'max_concurrent_runs', limit: '2' })).message,
     ).toBe(FLOW_QUEUE_FULL);
+    // The flow's queue full in this workspace (the batch addendum's P3): the owner's words, for an item and a run alike.
+    const queueFull = new PlatformRateLimitedError('busy', undefined, { reason: 'queue_full', limit: '500' });
+    expect(itemRefusal(queueFull).message).toBe('Your queue is full. Wait for these to finish.');
+    expect(runRefusal(queueFull).message).toBe('Your queue is full. Wait for these to finish.');
     expect(runRefusal(refused(409, 'item_not_ready')).message).toBe('Try again in a moment.');
     expect(runRefusal(refused(409, 'item_archived')).message).toBe(ITEM_ARCHIVED);
     expect(runRefusal(refused(409, 'subscription_not_live')).message).toBe('This flow is not live, so it cannot run.');
@@ -765,6 +769,45 @@ describe("an item's page (plan §5.3; its blocks since Round 21)", () => {
     await waitFor(() => expect(fake.to(`GET ${ONE}`).length).toBeGreaterThan(1));
     await fireEvent.press(screen.getByLabelText('Back'));
     expect(mockRouter.back).toHaveBeenCalledTimes(1);
+  });
+
+  it('several files (B2 as the batch addendum amends it): every file goes into ONE run, which joins the list', async () => {
+    const fake = fakePlatform(platformOperation);
+    fake.always(`GET ${ONE}`, READ_ITEM(fixtureBlocks('empty-item')));
+    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', (sent) => ({
+      subscriptions: sent.query?.status === 'archived' ? [] : [flowWithItems({ runInput: [{ ...CONTRACT_FILE, multiple: true }] })],
+    }));
+    fake.always('GET /v1/workspaces/{workspaceId}/automations', { automations: [entry()], categories: ['All'] });
+    fake.always('POST /v1/workspaces/{workspaceId}/uploads', {
+      uploadSessionId: 'upload-1',
+      uploadUrl: 'https://store.example.test/put',
+      expiresAt: '2026-10-24T12:00:00Z',
+      maximumSizeBytes: 10_000_000,
+    });
+    for (const [at, name] of ['a.pdf', 'b.pdf'].entries()) {
+      fake.once('POST /v1/workspaces/{workspaceId}/uploads/{uploadSessionId}/complete', {
+        artifact: { artifactId: `artifact-${at + 1}`, filename: name, contentType: 'application/pdf', sizeBytes: 12 },
+      });
+    }
+    fake.once('POST /v1/workspaces/{workspaceId}/runs', { run: run('r8', { status: 'running' }) });
+    (DocumentPicker.getDocumentAsync as jest.Mock).mockResolvedValue({
+      canceled: false,
+      assets: ['a.pdf', 'b.pdf'].map((name) => ({ uri: `file:///picked/${name}`, name, mimeType: 'application/pdf', size: 12 })),
+    });
+    setMockParams({ item: 'i-1' });
+    await renderWithProviders(<ItemScreen />, sessionAs('owner'));
+    await screen.findByTestId('item-title');
+    await fireEvent.press(screen.getByTestId('run-file-contractFile-upload'));
+    await screen.findByText('2 files selected');
+    const reads = fake.to(`GET ${ONE}`).length;
+    await fireEvent.press(screen.getByText('Start'));
+    // The one run is read into the list now; the form is fresh for the next.
+    await waitFor(() => expect(fake.to(`GET ${ONE}`).length).toBeGreaterThan(reads));
+    const starts = fake.to('POST /v1/workspaces/{workspaceId}/runs');
+    expect(starts).toHaveLength(1);
+    expect((starts[0]!.body as { input: Record<string, unknown> }).input.contractFile).toEqual(['artifact-1', 'artifact-2']);
+    expect(screen.queryByText(/runs started/u)).toBeNull();
+    expect(screen.queryByText('2 files selected')).toBeNull();
   });
 
   it('Add and Archive are an owner\'s or an admin\'s: a member reads the same page without them', async () => {

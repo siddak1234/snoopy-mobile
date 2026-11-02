@@ -329,14 +329,18 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   `openapi-fetch`, attaches the current bearer token through middleware,
   applies a timeout and `no-store`, and maps RFC problem responses. A 429 is
   said as "busy, try again in N seconds" from its `retry-after` and never as
-  signed out. Its one raw `fetch` is `putFileToSignedUrl`, the credential-less
+  signed out; its public `details` travel with it, so a run refused for a full
+  queue (`queue_full`) is said in the owner's words. Its one raw `fetch` is `putFileToSignedUrl`, the credential-less
   PUT of a file's bytes to the URL the platform signed; `audit:platform` admits
   exactly that one. Since 24.12 its one native download is
   `downloadSignedFile`, the credential-less save of a signed file's link into
   the app's cache (the complete export; the run package's PDF and Excel since
   round 24); `audit:platform` admits exactly one `downloadFileAsync(`, there.
 - `lib/platform/*.ts` exposes typed reads and mutations. Screens do not call a
-  network primitive.
+  network primitive. `readConnectionProviders` is the one provider list: the
+  platform's `providers`, then its `publicProviders` (public services, no key)
+  as rows with `authType` `none` (`keylessProviders`), so every screen reads a
+  public service as connected.
 - `lib/platform/session-store.ts` stores access/refresh credentials only in
   `expo-secure-store` with `WHEN_UNLOCKED_THIS_DEVICE_ONLY` — and beside them
   push's device id and its "Not now", cleared with them.

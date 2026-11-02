@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   ShoppingCart,
   SquaresFour,
+  Stethoscope,
   Users,
   UsersThree,
   type Icon,
@@ -51,6 +52,8 @@ export const TEAM_TYPES = [
   'Procurement',
   'Administration',
   'Research',
+  // Round 21 platform round 2, B4: the seventeenth, last, as the platform lists it.
+  'Healthcare',
 ] as const satisfies readonly CatalogCategory[];
 
 export type TeamType = (typeof TEAM_TYPES)[number];
@@ -80,6 +83,7 @@ export const TEAM_TYPE_ICONS: Record<TeamType, Icon> = {
   Procurement: ShoppingCart,
   Administration: Briefcase,
   Research: Flask,
+  Healthcare: Stethoscope,
 };
 
 /** "Other", and any kind in a person's own words. */

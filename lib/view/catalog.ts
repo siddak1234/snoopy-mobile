@@ -87,6 +87,20 @@ export function connectionState(connection: Connection | undefined): ConnectionR
 }
 
 /**
+ * Whether a provider needs no Connect step (Round 21 platform round 2, B5): a
+ * public service the platform lists in `publicProviders`, which
+ * `readConnectionProviders` gives `authType` `none` — no key, nothing to sign in to.
+ */
+export function needsNoConnect(provider: Pick<ConnectionProvider, 'authType'> | undefined): boolean {
+  return provider?.authType === 'none';
+}
+
+/** Whether a flow may use a provider now (B5): connected, or a provider that needs no connection. */
+export function providerConnected(provider: Pick<ConnectionProvider, 'authType'> | undefined, connection: Connection | undefined): boolean {
+  return needsNoConnect(provider) || connectionState(connection) === 'connected';
+}
+
+/**
  * Line 2 of the row (Build 21, spec A4; the owner's build 20 item 6: "Logo then
  * to the right name then below the account email"): the account's email when
  * the platform holds one — `externalAccount.displayName` carrying an `@` — else
@@ -130,6 +144,8 @@ export type ConnectionView = {
   connected: boolean;
   /** Whether that connection is active now (`connected`), so a Reconnect that does not complete leaves it working. */
   active: boolean;
+  /** A provider that needs no key (B5): connected for every workspace, and its row offers no button. */
+  noConnect: boolean;
 };
 
 /**
@@ -310,8 +326,10 @@ export function toConnectionRows(
 
 /** One provider's row, with the connection the workspace holds to it, or none. */
 export function toConnectionRow(provider: ConnectionProvider, connection: Connection | undefined): ConnectionView {
-  const state = connectionState(connection);
-  const line = connectionLine(connection);
+  // A provider that needs no key (B5) is connected for every workspace, whatever the list holds.
+  const noConnect = needsNoConnect(provider);
+  const state = noConnect ? 'connected' : connectionState(connection);
+  const line = noConnect ? { text: CONNECTION_CONNECTED, tone: 'muted' as const } : connectionLine(connection);
   return {
     provider,
     providerId: provider.providerId,
@@ -325,7 +343,8 @@ export function toConnectionRow(provider: ConnectionProvider, connection: Connec
     lineTone: line.tone,
     liveFlows: typeof connection?.usedByCount === 'number' ? connection.usedByCount : 0,
     connected: state !== 'not-connected',
-    active: connection?.status === 'connected',
+    active: noConnect || connection?.status === 'connected',
+    noConnect,
   };
 }
 

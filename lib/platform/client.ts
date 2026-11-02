@@ -152,8 +152,9 @@ async function sendOnce<T>(
       // A 429 is the platform asking to be left for a while — backend §12.1
       // #114, BUILD-PLAN 24.3.3. It is said in words with the wait it stated,
       // here, once, so no screen can read it as "signed out" or as a failure.
-      // Its public details travel with it: a run refused because its flow and
-      // the flow's queue are full names `max_concurrent_runs` (25.2.10).
+      // Its public details travel with it: a run refused because the flow's
+      // queue is full names `queue_full` (the batch addendum's P3), or
+      // `max_concurrent_runs` from a platform before the cap (25.2.10).
       if (result.response.status === 429) {
         const seconds = retryAfterSeconds(result.response.headers.get('retry-after'));
         throw new PlatformRateLimitedError(busyMessage(seconds), seconds, problem.details);

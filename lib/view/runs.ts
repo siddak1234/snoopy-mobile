@@ -126,6 +126,21 @@ export function offeredDecisions(source: { decisions?: readonly unknown[] } | un
   );
 }
 
+/**
+ * A review's changes under their headings (Round 21 platform round 2, B3):
+ * each change's `group`, the groups in the order they are first sent, each
+ * group's changes in the order sent; a change with no `group` under no
+ * heading (`null`). Every group is drawn open: nothing is folded away.
+ */
+export function reviewGroups<C extends { group?: string }>(changes: readonly C[]): { heading: string | null; changes: C[] }[] {
+  const groups = new Map<string | null, C[]>();
+  for (const change of changes) {
+    const heading = change.group ?? null;
+    groups.set(heading, [...(groups.get(heading) ?? []), change]);
+  }
+  return [...groups].map(([heading, members]) => ({ heading, changes: members }));
+}
+
 /** A saved review's answers, kept on each offered change (`Approval.decisions[].decision`); empty when it has none. */
 export function reviewAnswers(approval: Pick<Approval, 'decisions'> | undefined | null): AnsweredDecision[] {
   return (approval?.decisions ?? []).flatMap((row) =>

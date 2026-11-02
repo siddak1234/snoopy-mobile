@@ -224,7 +224,8 @@ export function ConnectionsCard({
               lineTone={row.lineTone}
               divider={index < rows.length - 1 && rowError?.providerId !== row.providerId}
               right={
-                canManage ? (
+                // A provider that needs no key (B5) has nothing to connect or disconnect: no button.
+                canManage && !row.noConnect ? (
                   <ConnectionButton
                     testID={`connection-action-${row.providerId}`}
                     label={busy === row.providerId && row.state !== 'connected' ? 'Working…' : connectionAction(row.state)}

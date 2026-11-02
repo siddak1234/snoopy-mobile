@@ -1028,3 +1028,211 @@ describe('a run with a file starts at the press: nothing asked first (Build 21, 
     expect(screen.queryByTestId('ai-reading-card')).toBeNull();
   });
 });
+
+/* ───────────────────────────── several files (B2) ───────────────────────────── */
+
+describe('a file field that takes several: every file into ONE run (Round 21 platform round 2, B2 as the batch addendum amends it)', () => {
+  const RECEIPTS: AutomationRunInputField = { ...RECEIPT, key: 'receipts', title: 'Receipts', multiple: true };
+
+  /** The picker hands over `names` at once, each a PDF. */
+  function pickerGivesMany(names: string[]) {
+    (DocumentPicker.getDocumentAsync as jest.Mock).mockResolvedValue({
+      canceled: false,
+      assets: names.map((name) => ({ uri: `file:///cache/DocumentPicker/${name}`, name, mimeType: 'application/pdf', lastModified: 0 })),
+    });
+  }
+
+  /** Each file's upload: a place, then its own artifact id (`artifact-{n}`). */
+  function answerUploads(names: string[]) {
+    names.forEach((name, at) => {
+      answer(`POST ${UPLOADS_PATH}`, () => ({
+        uploadSessionId: `upload-${at + 1}`,
+        uploadUrl: 'https://store.example.test/put',
+        expiresAt: '2026-10-10T12:00:00Z',
+        maximumSizeBytes: 10_000_000,
+      }));
+      answer(`POST ${COMPLETE_PATH}`, () => ({
+        artifact: { artifactId: `artifact-${at + 1}`, filename: name, contentType: 'application/pdf', sizeBytes: 5 },
+      }));
+    });
+  }
+
+  it('the picker takes several; Start run uploads every file into ONE run with the other inputs, under one key; the box says how many', async () => {
+    pickerGivesMany(['a.pdf', 'b.pdf', 'c.pdf']);
+    filesOf(5);
+    answerUploads(['a.pdf', 'b.pdf', 'c.pdf']);
+    answer(`POST ${RUNS_PATH}`, () => ({ run: { id: 'run-1' } }));
+    await renderBox([NOTE, RECEIPTS]);
+    await fireEvent.changeText(screen.getByLabelText('Note'), 'Pay it');
+    await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
+    expect(DocumentPicker.getDocumentAsync).toHaveBeenCalledWith({
+      type: ['application/pdf', 'image/jpeg', 'image/png'],
+      copyToCacheDirectory: true,
+      multiple: true,
+    });
+    await waitFor(() => expect(screen.getByText('Start run')).toBeTruthy());
+    expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('3 files selected');
+
+    await fireEvent.press(screen.getByText('Start run'));
+    await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-1'));
+    const runs = sent.filter((request) => request.path === RUNS_PATH);
+    expect(runs.map((request) => request.body)).toEqual([
+      { subscriptionId: 'sub-1', input: { note: 'Pay it', receipts: ['artifact-1', 'artifact-2', 'artifact-3'] } },
+    ]);
+    // No run per file, and no "{n} runs started": the run opens, as one alone does.
+    expect(screen.queryByText(/runs started/u)).toBeNull();
+    expect(screen.queryByTestId('run-file-receipts-count')).toBeNull();
+  });
+
+  it('each Take photo adds one more file', async () => {
+    manipulator(1000, 1000);
+    filesOf(5);
+    cameraTakes(1000, 1000);
+    answerUploads(['photo.jpg', 'photo.jpg']);
+    await renderBox([RECEIPTS]);
+    await fireEvent.press(screen.getByTestId('run-file-receipts-photo'));
+    // One file says what one alone says.
+    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('Ready: photo.jpg (5 bytes)'));
+    await waitFor(() => expect(screen.getByText('Start run')).toBeTruthy());
+    await fireEvent.press(screen.getByTestId('run-file-receipts-photo'));
+    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('2 files selected'));
+  });
+
+  it('past the field\'s maxFiles one choice is refused in words, nothing is sent, and the field is emptied', async () => {
+    const THREE: AutomationRunInputField = { ...RECEIPTS, maxFiles: 3 };
+    pickerGivesMany(['a.pdf', 'b.pdf']);
+    filesOf(5);
+    answerUploads(['a.pdf', 'b.pdf']);
+    await renderBox([THREE]);
+    await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
+    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('2 files selected'));
+    const before = sent.length;
+    pickerGivesMany(['a.pdf', 'b.pdf', 'c.pdf', 'd.pdf']);
+    await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
+    expect(await screen.findByText('Add up to 3 files at a time.')).toBeTruthy();
+    expect(sent).toHaveLength(before);
+    expect(screen.queryByTestId('run-file-receipts-count')).toBeNull();
+  });
+
+  it('a photo past the field\'s maxFiles is refused in words, and the files held are kept', async () => {
+    const TWO: AutomationRunInputField = { ...RECEIPTS, maxFiles: 2 };
+    pickerGivesMany(['a.pdf', 'b.pdf']);
+    filesOf(5);
+    answerUploads(['a.pdf', 'b.pdf']);
+    await renderBox([TWO]);
+    await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
+    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('2 files selected'));
+    await fireEvent.press(screen.getByTestId('run-file-receipts-photo'));
+    expect(await screen.findByText('Add up to 2 files at a time.')).toBeTruthy();
+    expect(ImagePicker.launchCameraAsync).not.toHaveBeenCalled();
+    expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('2 files selected');
+  });
+
+  it('a field that declares no maxFiles takes the platform\'s 50: 50 in one choice is taken, 51 refused', async () => {
+    const fifty = Array.from({ length: 50 }, (_, at) => `f${at}.pdf`);
+    pickerGivesMany(fifty);
+    filesOf(5);
+    answerUploads(fifty);
+    await renderBox([RECEIPTS]);
+    await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
+    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('50 files selected'));
+    expect(screen.queryByText('Add up to 50 files at a time.')).toBeNull();
+    const before = sent.length;
+    pickerGivesMany([...fifty, 'g.pdf']);
+    await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
+    expect(await screen.findByText('Add up to 50 files at a time.')).toBeTruthy();
+    expect(sent).toHaveLength(before);
+  });
+
+  it('a new choice replaces what the field held; a photo adds to it', async () => {
+    manipulator(1000, 1000);
+    filesOf(5);
+    pickerGivesMany(['a.pdf', 'b.pdf']);
+    answerUploads(['a.pdf', 'b.pdf', 'c.pdf', 'd.pdf', 'photo.jpg']);
+    answer(`POST ${RUNS_PATH}`, () => ({ run: { id: 'run-1' } }));
+    cameraTakes(1000, 1000);
+    await renderBox([RECEIPTS]);
+    await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
+    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('2 files selected'));
+    pickerGivesMany(['c.pdf', 'd.pdf']);
+    await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
+    await waitFor(() => expect(screen.getByText('Start run')).toBeTruthy());
+    expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('2 files selected');
+    await fireEvent.press(screen.getByTestId('run-file-receipts-photo'));
+    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('3 files selected'));
+    await waitFor(() => expect(screen.getByText('Start run')).toBeTruthy());
+    await fireEvent.press(screen.getByText('Start run'));
+    await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-1'));
+    const runs = sent.filter((request) => request.path === RUNS_PATH).map((request) => (request.body as { input: unknown }).input);
+    expect(runs).toEqual([{ receipts: ['artifact-3', 'artifact-4', 'artifact-5'] }]);
+  });
+
+  it('a file of a type the field does not take empties the field, says why, and sends nothing', async () => {
+    const PDFS: AutomationRunInputField = { ...RECEIPTS, acceptedContentTypes: ['application/pdf'] };
+    pickerGivesMany(['a.pdf']);
+    filesOf(5);
+    answerUploads(['a.pdf']);
+    await renderBox([PDFS]);
+    await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
+    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('Ready: a.pdf (5 bytes)'));
+    const before = sent.length;
+    (DocumentPicker.getDocumentAsync as jest.Mock).mockResolvedValue({
+      canceled: false,
+      assets: [
+        { uri: 'file:///cache/DocumentPicker/b.pdf', name: 'b.pdf', mimeType: 'application/pdf', lastModified: 0 },
+        { uri: 'file:///cache/DocumentPicker/c.png', name: 'c.png', mimeType: 'image/png', lastModified: 0 },
+      ],
+    });
+    await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
+    expect(await screen.findByText('Choose a PDF.')).toBeTruthy();
+    expect(sent).toHaveLength(before);
+    expect(screen.queryByTestId('run-file-receipts-count')).toBeNull();
+  });
+
+  it('one file in a field that takes several is a list of one: its run opens', async () => {
+    pickerGivesMany(['a.pdf']);
+    filesOf(5);
+    answerUploads(['a.pdf']);
+    answer(`POST ${RUNS_PATH}`, () => ({ run: { id: 'run-1' } }));
+    await renderBox([RECEIPTS]);
+    await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
+    await waitFor(() => expect(screen.getByText('Start run')).toBeTruthy());
+    await fireEvent.press(screen.getByText('Start run'));
+    await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-1'));
+    const runs = sent.filter((request) => request.path === RUNS_PATH).map((request) => (request.body as { input: unknown }).input);
+    expect(runs).toEqual([{ receipts: ['artifact-1'] }]);
+  });
+
+  it('a run refused because the queue is full says "Your queue is full. Wait for these to finish.", keeps the files, and the next Start sends them again under the same key', async () => {
+    pickerGivesMany(['a.pdf', 'b.pdf']);
+    filesOf(5);
+    answerUploads(['a.pdf', 'b.pdf']);
+    answer(
+      `POST ${RUNS_PATH}`,
+      () => {
+        // As the transport projects the contract's 429 (the batch addendum's P3).
+        throw new PlatformRateLimitedError('The platform is busy right now. Try again in a moment.', undefined, {
+          reason: 'queue_full',
+          limit: '500',
+        });
+      },
+      () => ({ run: { id: 'run-1' } }),
+    );
+    await renderBox([RECEIPTS]);
+    await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
+    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('2 files selected'));
+    await waitFor(() => expect(screen.getByText('Start run')).toBeTruthy());
+    await fireEvent.press(screen.getByText('Start run'));
+    expect(await screen.findByText('Your queue is full. Wait for these to finish.')).toBeTruthy();
+    expect(onStarted).not.toHaveBeenCalled();
+    expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('2 files selected');
+    await fireEvent.press(screen.getByText('Start run'));
+    await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-1'));
+    const runs = sent.filter((request) => request.path === RUNS_PATH);
+    expect(runs.map((request) => (request.body as { input: unknown }).input)).toEqual([
+      { receipts: ['artifact-1', 'artifact-2'] },
+      { receipts: ['artifact-1', 'artifact-2'] },
+    ]);
+    expect(runs[1]!.key).toBe(runs[0]!.key);
+  });
+});
