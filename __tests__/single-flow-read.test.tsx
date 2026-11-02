@@ -4,7 +4,9 @@ import React from 'react';
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import SetupScreen from '@/app/(tabs)/flows/setup';
 import ConnectVendorScreen from '@/app/(tabs)/flows/vendor';
+import { UNARCHIVE_LABEL, errorTitleFor } from '@/lib/content/screen-states';
 import type { Subscription } from '@/lib/platform/automations';
+import { PlatformError } from '@/lib/platform/problem';
 import { resetSnapshot } from '@/lib/platform/snapshot';
 import { fakePlatform } from '@/test/fake-platform';
 import {
@@ -105,5 +107,44 @@ describe("one flow's own read draws its setup when the list row carries none (§
     expect(await screen.findByTestId('vendor-quickbooks')).toBeTruthy();
     expect(screen.getByTestId('vendor-none')).toBeTruthy();
     expect(fake.to(ONE)).toHaveLength(1);
+  });
+});
+
+describe("one flow's own read, the cases the list cannot answer (§12.1 #319 step 2)", () => {
+  /** The same flow, archived, as the single read answers it. */
+  const archived: Subscription = { ...read, status: 'archived' };
+
+  it("the flow's page: an archived flow neither list carries is drawn from its own read, read-only", async () => {
+    const fake = route();
+    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', { subscriptions: [] });
+    fake.always(ONE, { subscription: archived });
+    setMockParams({ flow: 'ip-1' });
+    await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
+    expect(await screen.findByText(/^This flow was archived/u)).toBeTruthy();
+    expect(screen.getByText(UNARCHIVE_LABEL)).toBeTruthy();
+  });
+
+  it('Setup: a named flow this person cannot see (404) is none named; the template held in the workspace is shown', async () => {
+    const fake = route();
+    // The list holds the template's flow with its setup; the named one answers 404.
+    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', (sent) => ({
+      subscriptions: sent.query?.status === 'archived' ? [] : [read],
+    }));
+    fake.always(ONE, () => {
+      throw new PlatformError('Subscription not found', 404);
+    });
+    setMockParams({ template: 'invoice-processing', flow: 'ip-gone' });
+    await renderWithProviders(<SetupScreen />, signedInSession);
+    expect(await screen.findByTestId('setup-vendor-vendor')).toBeTruthy();
+    expect(fake.to(ONE)).toHaveLength(1);
+  });
+
+  it('the vendor page: an archived single read is no flow to choose for — the error page with Back', async () => {
+    const fake = route();
+    fake.always(ONE, { subscription: archived });
+    setMockParams({ flow: 'ip-1', field: 'vendor' });
+    await renderWithProviders(<ConnectVendorScreen />, signedInSession);
+    expect(await screen.findByText(errorTitleFor('vendor'))).toBeTruthy();
+    expect(screen.queryByTestId('vendor-quickbooks')).toBeNull();
   });
 });

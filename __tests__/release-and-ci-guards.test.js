@@ -96,6 +96,12 @@ describe('eas-cli is pinned (the release CLI)', () => {
     expect(JSON.parse(readFileSync(join(root, 'eas.json'), 'utf8')).cli.version).toBe(version);
   });
 
+  it('is bumped by hand: Dependabot ignores it, so a grouped npm bump never splits package.json from eas.json', () => {
+    const dependabot = readFileSync(join(root, '.github/dependabot.yml'), 'utf8');
+    const npm = dependabot.slice(dependabot.indexOf('package-ecosystem: npm'));
+    expect(npm).toMatch(/\n {4}ignore:\n {6}- dependency-name: eas-cli\n/u);
+  });
+
   it('runs from the lockfile at every call in release-ios.sh, never a download', () => {
     const script = readFileSync(join(root, 'scripts/release-ios.sh'), 'utf8');
     const calls = script.split('\n').filter((line) => /\bnpx\b/u.test(line) && !line.trimStart().startsWith('#'));
@@ -160,16 +166,19 @@ describe('the contract copy (M1): read without a backend, and never skipped', ()
   it('verify:platform-contracts reading the copy fails on an edited copy file, and never exits 0 without a contract', () => {
     const verify = (env) =>
       spawnSync(process.execPath, ['scripts/verify-platform-contracts.mjs'], { cwd: root, encoding: 'utf8', env: { ...process.env, ...env } });
-    const target = join(copy, 'docs/repo-facts.schema.json');
-    const before = readFileSync(target);
+    // A temporary copy (SNOOPY_CONTRACT_COPY): the committed one, which other
+    // suites read in parallel, is never written.
+    const dir = mkdtempSync(join(tmpdir(), 'mobile-copy-'));
     try {
-      writeFileSync(target, `${before.toString('utf8')} `);
-      const edited = verify({ SNOOPY_BACKEND_ROOT: copy });
+      cpSync(copy, dir, { recursive: true });
+      const target = join(dir, 'docs/repo-facts.schema.json');
+      writeFileSync(target, `${readFileSync(target, 'utf8')} `);
+      const edited = verify({ SNOOPY_BACKEND_ROOT: dir, SNOOPY_CONTRACT_COPY: dir });
       expect(edited.status).not.toBe(0);
       expect(edited.stdout).toContain('Contract read from copy');
       expect(edited.stderr).toContain('docs/repo-facts.schema.json is sha256 ');
     } finally {
-      writeFileSync(target, before);
+      rmSync(dir, { recursive: true, force: true });
     }
     const none = verify({ SNOOPY_BACKEND_ROOT: join(tmpdir(), 'no-such-backend-root') });
     expect(none.status).not.toBe(0);

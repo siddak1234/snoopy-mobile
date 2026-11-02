@@ -91,7 +91,9 @@ The individual architecture gates are:
   too, its header one sha256 over the fixtures' bytes in filename order, the
   website's rule (backend ADR-0048 decision 9), and `block-required.ts` (round
   21), headed by automations.yaml's sha256. No contract anywhere, or a
-  `SNOOPY_BACKEND_ROOT` that does not exist, fails. The repo-facts schema test
+  `SNOOPY_BACKEND_ROOT` that does not exist, fails. `SNOOPY_CONTRACT_COPY`
+  names another copy, so a test edits a temporary one, never the committed
+  copy. The repo-facts schema test
   and the block-rules hash test read the copy, so public CI runs them too.
 - No skipped tests (M4): `test:coverage` writes jest's JSON report to
   `coverage/jest-results.json`, and `scripts/no-skipped-tests.mjs` (in
@@ -164,7 +166,8 @@ checks among them, on the PR's whole range: `fetch-depth: 0` and
 needs every one of them and is red on any failure, cancellation or skip.
 Every action is pinned by commit SHA with its `# vX.Y.Z` comment, and every
 job's Node is `.nvmrc` (`22.23.2`, `node-version-file`). `.github/dependabot.yml`
-opens one grouped pull request a week for the actions and one for npm (the
+opens one grouped pull request a week for the actions and one for npm,
+eas-cli excepted (bumped by hand, below) (the
 kit's `check-docs` lets a Dependabot commit that touches only those files
 through). CI also runs nightly on main (`schedule`, 09:32 UTC); a red nightly
 opens, or comments on, one open "Nightly red" issue from the `all-green` job
@@ -193,7 +196,9 @@ build whose `gitCommitHash` is HEAD with the release's entitlements; `eas.json`
 `cli.requireCommit` refuses an uncommitted tree. eas-cli is an exact
 devDependency (27.2.0, `eas.json` `cli.version` the same): the script runs it
 with `npx --no-install`, so a release never downloads a newer one, and prints
-its version beside the tree line.
+its version beside the tree line. Dependabot ignores eas-cli
+(`.github/dependabot.yml`): bump it by hand, `package.json` and `eas.json`
+`cli.version` in one commit, since a guard test fails when they differ.
 `npm run release:ios -- --local` (Round 17, 2026-10-08) builds the same release on
 this Mac instead of EAS's cloud — `eas build --local`, with Xcode, CocoaPods and
 fastlane, which it refuses without — and so uses no EAS build quota; every gate

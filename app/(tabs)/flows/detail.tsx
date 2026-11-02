@@ -76,12 +76,6 @@ import { statusLabel } from '@/lib/view/status';
 const ACTION_ICON = { pause: Pause, play: Play, rocket: RocketLaunch } as const;
 
 /**
- * A flow page's parts in the order its flow's manifest gives them
- * (`Subscription.pages.flow`, backend ADR-0048), else today's: a flow with items
- * its items, any other its DASHBOARD and its STEPS. A part this build does not
- * know is null: the page draws the fallback sentence in its place.
- */
-/**
  * A list with this flow's own read in place of its row; added where the list
  * did not carry it, to the list of its kind (archived or not).
  */
@@ -92,6 +86,12 @@ function withRead(rows: Subscription[], read: Subscription | undefined, archived
   return rows.some((row) => row.id === read.id) || !belongs ? replaced : [...replaced, read];
 }
 
+/**
+ * A flow page's parts in the order its flow's manifest gives them
+ * (`Subscription.pages.flow`, backend ADR-0048), else today's: a flow with items
+ * its items, any other its DASHBOARD and its STEPS. A part this build does not
+ * know is null: the page draws the fallback sentence in its place.
+ */
 function flowParts(subscription: { pages?: FlowPages; items?: unknown } | undefined) {
   return pageParts(
     subscription?.pages?.flow,

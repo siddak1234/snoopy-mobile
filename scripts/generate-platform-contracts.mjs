@@ -34,9 +34,13 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
  * paths>` plus `SHA256SUMS`, so the public CI checks the contract with no key
  * and no backend checkout, and nothing skips. The generator writes the copy
  * whenever it reads a real backend; scripts/verify-platform-contracts.mjs
- * checks it against SHA256SUMS and the generated headers.
+ * checks it against SHA256SUMS and the generated headers. SNOOPY_CONTRACT_COPY
+ * names another copy (resolved from the repository root), so a test edits a
+ * temporary copy and never the committed one.
  */
-export const copyRoot = join(root, "lib/generated/snoopy-backend");
+export const copyRoot = process.env.SNOOPY_CONTRACT_COPY
+  ? resolve(root, process.env.SNOOPY_CONTRACT_COPY)
+  : join(root, "lib/generated/snoopy-backend");
 export const COPY_SUMS = "SHA256SUMS";
 /** Files, and folders whose `*.json` are copied, by their backend paths. */
 export const COPY_FILES = [
