@@ -60,7 +60,7 @@ import {
 } from '@/lib/platform/runs';
 import {
   addedAgainAs,
-  connectionState,
+  providerConnected,
   scopeLabels,
   toFlows,
   toRemovedFlows,
@@ -342,7 +342,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
   // What it is owed: a chosen vendor not connected, then each account it cannot run without.
   const vendorOwed = vendorFields
     .map((field) => chosenVendor(field, subscription.config))
-    .filter((chosen) => chosen !== 'none' && connectionState(connectionOf(chosen)) !== 'connected');
+    .filter((chosen) => chosen !== 'none' && !providerConnected(providers.get(chosen), connectionOf(chosen)));
   const owed = def.connections.filter((c) => !optional.has(c.id) && !vendorOwed.includes(c.id));
   const openVendor = (field: string) =>
     router.push({ pathname: '/(tabs)/flows/vendor', params: { flow: def.key, field } });
@@ -370,7 +370,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
     if (!field) return null;
     const chosen = chosenVendor(field, subscription.config);
     const none = chosen === 'none';
-    const connected = !none && connectionState(connectionOf(chosen)) === 'connected';
+    const connected = !none && providerConnected(providers.get(chosen), connectionOf(chosen));
     return (
       <View key={key} style={{ borderTopWidth: 1, borderTopColor: palette.divider }}>
         <ConnectionRow

@@ -60,6 +60,7 @@ import { readSubscriptions, readSubscriptionsNow } from '@/lib/platform/runs';
 import {
   connectionState,
   heldAs,
+  needsNoConnect,
   scopeLabel,
   scopeLabels,
   toConnectionRow,
@@ -185,9 +186,11 @@ export default function SetupScreen() {
   }
 
   const { entry, providers, labels, connections: held } = resource.data;
-  const connected = new Set(
-    held.filter((connection) => connectionState(connection) === 'connected').map((connection) => connection.providerId),
-  );
+  // Connected: what the workspace holds, and every provider that needs no key (B5), connected for every workspace.
+  const connected = new Set([
+    ...held.filter((connection) => connectionState(connection) === 'connected').map((connection) => connection.providerId),
+    ...[...providers.values()].filter(needsNoConnect).map((provider) => provider.providerId),
+  ]);
   const canManage = administers(roleIn(session, resource.loadedFor));
   // The copy the workspace holds already (the owner's build 12 item 9), or the
   // one this screen added — held from that moment, a draft still owed an
@@ -216,9 +219,10 @@ export default function SetupScreen() {
     connections.find((connection) => connection.providerId === providerId)?.displayName ??
     providers.get(providerId)?.displayName ??
     providerId;
+  // A provider that needs no key (B5) has no Connect step: no row, and it counts as connected.
   const requiredRows = required.flatMap((connection) => {
     const provider = providers.get(connection.providerId);
-    return provider ? [toConnectionRow(provider, held.find((c) => c.providerId === connection.providerId))] : [];
+    return provider && !needsNoConnect(provider) ? [toConnectionRow(provider, held.find((c) => c.providerId === connection.providerId))] : [];
   });
   const hasConnect = vendorFields.length > 0 || requiredRows.length > 0;
   const sectionOffset = hasConnect ? 1 : 0;

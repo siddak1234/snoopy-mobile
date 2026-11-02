@@ -169,13 +169,18 @@ function stats(counts: Partial<Stats['workspace']> = {}): Stats {
 
 function openFlow(
   subscription: Subscription,
-  options: { connections?: Connection[]; entry?: ReturnType<typeof invoiceProcessingV4Entry>; runStats?: () => Stats } = {},
+  options: {
+    connections?: Connection[];
+    entry?: ReturnType<typeof invoiceProcessingV4Entry>;
+    runStats?: () => Stats;
+    providers?: ReturnType<typeof providersWithQuickBooks>;
+  } = {},
 ) {
   routePlatform(platformOperation, {
     '/automations': { automations: [options.entry ?? invoiceProcessingV4Entry()], categories: ['All', 'Accounting'] },
     '/subscriptions': { subscriptions: [subscription] },
     '/projects': { projects: [ACCOUNTING_TEAM] },
-    '/connections/providers': providersWithQuickBooks(),
+    '/connections/providers': options.providers ?? providersWithQuickBooks(),
     [`/v1/workspaces/${TEST_WORKSPACE}/connections`]: { connections: options.connections ?? [] },
   });
   if (options.runStats) {
@@ -299,6 +304,18 @@ describe('the flow page (spec A6; Build 22, P1–P4)', () => {
     expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/(tabs)/flows/vendor', params: { flow: 'ip-1', field: 'vendor' } });
     // The chosen vendor is its step's row, never a second "owed" line.
     expect(screen.queryByTestId('flow-owed')).toBeNull();
+  });
+
+  it('B5: a step\'s integration the platform lists in publicProviders is Connected, with no "Connect … first" line, and nothing has to be connected', async () => {
+    // A public service as the platform sends it: in `publicProviders`, never in `providers`.
+    const nppes = { providerId: 'nppes', displayName: 'NPI Registry', description: 'Looks up a clinician.', icon: 'IdentificationCard' };
+    await openFlow(added({ vendor: 'nppes' }), { providers: { ...providersWithQuickBooks(), publicProviders: [nppes] } });
+    const vendor = await screen.findByTestId('flow-vendor-vendor');
+    expect(within(vendor).getByText('NPI Registry')).toBeTruthy();
+    expect(within(vendor).getByText('Connected')).toBeTruthy();
+    expect(within(vendor).queryByText('Not connected')).toBeNull();
+    expect(screen.queryByTestId('flow-vendor-owed')).toBeNull();
+    expect(screen.queryByText(/^Connect NPI Registry first/u)).toBeNull();
   });
 
   it('A3: None is its mark and "Save the details only."; the row opens Connect vendor', async () => {

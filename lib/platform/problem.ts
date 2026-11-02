@@ -57,9 +57,10 @@ export class PlatformRateLimitedError extends PlatformError {
     public readonly retryAfterSeconds?: number,
     /**
      * The problem's public `details`, when it carried any. A 429 is not always
-     * the platform asking to be left: a run refused because its flow and the
-     * flow's queue are full names `max_concurrent_runs` (backend BUILD-PLAN
-     * 25.2.10), which the Run dialog says in the flow's words (`runRefusal`).
+     * the platform asking to be left: a run refused because the flow's queue
+     * is full names `queue_full` (the batch addendum's P3), or
+     * `max_concurrent_runs` from a platform before the cap (backend BUILD-PLAN
+     * 25.2.10), which the Run form says in its own words (`runRefusal`).
      * As for every problem, callers whitelist what they read.
      */
     details?: Record<string, unknown>,
