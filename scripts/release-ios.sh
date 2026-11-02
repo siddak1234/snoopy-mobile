@@ -28,9 +28,11 @@
 # entitlements. Only then does it submit. Any doubt refuses.
 #
 # Runs with the caller's PATH: node 22, gh, python3, curl, unzip, codesign,
-# plutil. eas-cli is the lockfile's exact devDependency (`npm ci` first), run
-# with `npx --no-install`, so a release never downloads whatever eas-cli is
-# newest; its version is printed beside the tree line. Working files go under .autom8x/release-ios/
+# plutil. eas-cli is not a dependency of the app (Expo's version policy: run it
+# with npx, enforce it with eas.json `cli.version`): every call is `npx --yes
+# eas-cli@<cli.version>`, the one exact version read from eas.json once below,
+# so a release never runs whatever eas-cli is newest. That version is printed
+# beside the tree line and checked against what ran. Working files go under .autom8x/release-ios/
 # (gitignored). The Expo session is read from ~/.expo/state.json at the moment
 # the submission is polled and is never written anywhere.
 set -u
@@ -63,8 +65,11 @@ team = json.load(open("eas.json"))["submit"]["production"]["ios"]["appleTeamId"]
 bundle = json.load(open("app.json"))["expo"]["ios"]["bundleIdentifier"]
 print(f"{team}.{bundle}")') || refuse "cannot read the Team ID and bundle identifier"
 
-EAS_CLI=$(npx --no-install eas-cli --version 2>/dev/null | grep -oE 'eas-cli/[0-9.]+' | head -1 | tr / ' ')
-[ -n "$EAS_CLI" ] || refuse "eas-cli is not installed from the lockfile (run npm ci)"
+EAS_VERSION=$(python3 -c 'import json; print(json.load(open("eas.json"))["cli"]["version"])') \
+  || refuse "cannot read eas.json cli.version"
+[[ "$EAS_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || refuse "eas.json cli.version '$EAS_VERSION' is not one exact version"
+EAS_CLI=$(npx --yes "eas-cli@$EAS_VERSION" --version 2>/dev/null | grep -oE 'eas-cli/[0-9.]+' | head -1 | tr / ' ')
+[ "$EAS_CLI" = "eas-cli $EAS_VERSION" ] || refuse "eas-cli $EAS_VERSION (eas.json cli.version) did not run: got '${EAS_CLI:-nothing}'"
 echo "tree: $(git rev-parse --short HEAD) dirty=$(git status --short | wc -l | tr -d ' ') app: $APP_ID $EAS_CLI"
 
 # --- gates: build only what main's CI passed ---------------------------------
@@ -126,17 +131,17 @@ fi
 if [ "$LOCAL" = 0 ]; then
 # --- build -------------------------------------------------------------------
 echo "=== eas build (full client output in $WORK/build-client.log) ==="
-npx --no-install eas-cli build --platform ios --profile production --non-interactive --no-wait --json > "$WORK/build-start.json" 2> "$WORK/build-client.log"
+npx --yes "eas-cli@$EAS_VERSION" build --platform ios --profile production --non-interactive --no-wait --json > "$WORK/build-start.json" 2> "$WORK/build-client.log"
 echo "capability sync lines:"; sed 's/\x1b\[[0-9;]*[A-Za-z]//g' "$WORK/build-client.log" | grep -i -E "capabilit|sign in with apple|associated domain|push|APPLE_ID_AUTH|ASSOCIATED_DOMAINS|PUSH_NOTIFICATIONS" | head -10
 BID=$(python3 -c 'import sys,json; d=json.load(open(sys.argv[1])); d=d[0] if isinstance(d,list) else d; print(d["id"])' "$WORK/build-start.json" 2>/dev/null)
 if [ -z "$BID" ]; then echo "NO BUILD ID — client log tail:"; tail -20 "$WORK/build-client.log"; exit 1; fi
 echo "build id: $BID"
 
-view() { npx --no-install eas-cli build:view "$BID" --json 2>/dev/null; }
+view() { npx --yes "eas-cli@$EAS_VERSION" build:view "$BID" --json 2>/dev/null; }
 # The build must be of HEAD and nothing else; a build of another commit is never
 # waited for or submitted.
 BUILD_SHA=$(view | python3 -c 'import sys,json; print(json.load(sys.stdin).get("gitCommitHash") or "")')
-[ "$BUILD_SHA" = "$HEAD_SHA" ] || refuse "build $BID is of commit '${BUILD_SHA:-unknown}', not HEAD $HEAD_SHA — cancel it: npx --no-install eas-cli build:cancel $BID"
+[ "$BUILD_SHA" = "$HEAD_SHA" ] || refuse "build $BID is of commit '${BUILD_SHA:-unknown}', not HEAD $HEAD_SHA — cancel it: npx --yes eas-cli@$EAS_VERSION build:cancel $BID"
 echo "build $BID is of HEAD ${HEAD_SHA:0:7}"
 
 st=""
@@ -153,7 +158,7 @@ fi
 if [ "$LOCAL" = 1 ]; then
 echo "=== eas build --local (full output in $WORK/local-build.log) ==="
 rm -rf "$WORK/local" && mkdir -p "$WORK/local" || exit 1
-npx --no-install eas-cli build --platform ios --profile production --local --non-interactive --output "$WORK/local/app.ipa" > "$WORK/local-build.log" 2>&1 \
+npx --yes "eas-cli@$EAS_VERSION" build --platform ios --profile production --local --non-interactive --output "$WORK/local/app.ipa" > "$WORK/local-build.log" 2>&1 \
   || { echo "LOCAL BUILD FAILED — log tail:"; tail -30 "$WORK/local-build.log"; exit 1; }
 [ -s "$WORK/local/app.ipa" ] || refuse "the local build wrote no ipa"
 # Still HEAD, still clean: nothing moved under the build.
@@ -193,7 +198,7 @@ plutil -extract CFBundleVersion raw "$APP/Info.plist" | sed 's/^/build number: /
 # --- submit ------------------------------------------------------------------
 echo "=== submit ==="
 if [ "$LOCAL" = 1 ]; then SUBMIT_FROM=(--path "$WORK/ipa/app.ipa"); else SUBMIT_FROM=(--id "$BID"); fi
-npx --no-install eas-cli submit --platform ios --profile production "${SUBMIT_FROM[@]}" --non-interactive --no-wait 2>&1 | sed 's/\x1b\[[0-9;]*[A-Za-z]//g' | grep -v "^\s*$" | tail -6 | tee "$WORK/submit-client.log"
+npx --yes "eas-cli@$EAS_VERSION" submit --platform ios --profile production "${SUBMIT_FROM[@]}" --non-interactive --no-wait 2>&1 | sed 's/\x1b\[[0-9;]*[A-Za-z]//g' | grep -v "^\s*$" | tail -6 | tee "$WORK/submit-client.log"
 SID=$(grep -o -E "submissions/[0-9a-f-]{36}" "$WORK/submit-client.log" | head -1 | cut -d/ -f2)
 echo "submission id: $SID"
 [ -n "$SID" ] || exit 1
@@ -201,7 +206,7 @@ echo "submission id: $SID"
 # Poll the submission with the Expo session, read now and passed only as a header.
 TOKEN=$(python3 -c 'import json,os; print(json.load(open(os.path.expanduser("~/.expo/state.json"))).get("auth",{}).get("sessionSecret",""))' 2>/dev/null)
 if [ -z "$TOKEN" ]; then
-  echo "no Expo session in ~/.expo/state.json; the submission is scheduled — follow it with: npx --no-install eas-cli submit:list --platform ios"
+  echo "no Expo session in ~/.expo/state.json; the submission is scheduled — follow it with: npx --yes eas-cli@$EAS_VERSION submit:list --platform ios"
   exit 0
 fi
 st=""

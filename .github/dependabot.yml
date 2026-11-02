@@ -1,12 +1,11 @@
-# Version updates, weekly and grouped into one PR per ecosystem (the owner's
-# choice 2026-11-01): the SHA pins in .github/workflows (each with its
-# `# vX.Y.Z` comment, which Dependabot rewrites with the SHA) and the npm
-# lockfile. eas-cli is ignored: its exact pin is in package.json and eas.json
-# `cli.version` together, which a Dependabot bump of package.json alone would
-# split (a guard test fails then), so it is bumped by hand, both in one
-# commit (README "Verification"). Security alerts and fixes are on in
-# the repository settings already. The kit's check-docs lets a Dependabot
-# commit that touches only these files through without a doc change.
+# Version updates for the actions, weekly (the owner's choice 2026-11-01): the
+# SHA pins in .github/workflows, each with its `# vX.Y.Z` comment, which
+# Dependabot rewrites with the SHA, in one grouped pull request. No npm
+# version updates: the app's dependency bumps are each a round of their own
+# (SYSTEM-MANIFEST §12.1 #278), and Expo's SDK set moves together. Security
+# alerts and fixes for npm are on in the repository settings. The kit's
+# check-docs lets a Dependabot commit that touches only these files through
+# without a doc change.
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -14,16 +13,6 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 1
-    groups:
-      everything:
-        patterns: ['*']
-  - package-ecosystem: npm
-    directory: /
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 1
-    ignore:
-      - dependency-name: eas-cli
     groups:
       everything:
         patterns: ['*']

@@ -1,5 +1,5 @@
 const { spawnSync } = require('node:child_process');
-const { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } = require('node:fs');
+const { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join, resolve } = require('node:path');
 const { pathToFileURL } = require('node:url');
@@ -92,26 +92,70 @@ describe("the release gate's all-green: the push run's only", () => {
   });
 });
 
-describe('eas-cli is pinned (the release CLI)', () => {
-  const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-  const version = pkg.devDependencies['eas-cli'];
+describe("eas-cli is eas.json's one exact cli.version, run with npx (Expo's version policy)", () => {
+  const eas = JSON.parse(readFileSync(join(root, 'eas.json'), 'utf8'));
+  const script = readFileSync(join(root, 'scripts/release-ios.sh'), 'utf8');
 
-  it('is an exact devDependency, and eas.json names the same version', () => {
-    expect(version).toMatch(/^\d+\.\d+\.\d+$/u);
-    expect(JSON.parse(readFileSync(join(root, 'eas.json'), 'utf8')).cli.version).toBe(version);
+  it('is one exact version in eas.json, and no dependency of the app or in its lockfile', () => {
+    expect(eas.cli.version).toMatch(/^\d+\.\d+\.\d+$/u);
+    const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+    expect(Object.keys({ ...pkg.dependencies, ...pkg.devDependencies })).not.toContain('eas-cli');
+    const lock = JSON.parse(readFileSync(join(root, 'package-lock.json'), 'utf8'));
+    expect(Object.keys(lock.packages).filter((path) => /(^|\/)node_modules\/eas-cli$/u.test(path))).toEqual([]);
   });
 
-  it('is bumped by hand: Dependabot ignores it, so a grouped npm bump never splits package.json from eas.json', () => {
-    const dependabot = readFileSync(join(root, '.github/dependabot.yml'), 'utf8');
-    const npm = dependabot.slice(dependabot.indexOf('package-ecosystem: npm'));
-    expect(npm).toMatch(/\n {4}ignore:\n {6}- dependency-name: eas-cli\n/u);
-  });
-
-  it('runs from the lockfile at every call in release-ios.sh, never a download', () => {
-    const script = readFileSync(join(root, 'scripts/release-ios.sh'), 'utf8');
+  it('runs that exact version at every call in release-ios.sh, never the deprecated --no-install', () => {
     const calls = script.split('\n').filter((line) => /\bnpx\b/u.test(line) && !line.trimStart().startsWith('#'));
-    expect(calls.length).toBeGreaterThanOrEqual(5);
-    for (const line of calls) expect(line).toMatch(/npx --no-install eas-cli\b/u);
+    expect(calls.length).toBeGreaterThanOrEqual(7);
+    for (const line of calls) expect(line).toMatch(/\bnpx --yes "?eas-cli@\$EAS_VERSION"? /u);
+    expect(script).not.toContain('--no-install');
+  });
+
+  /**
+   * The script's first lines, run in a temporary copy with eas.json naming
+   * `cliVersion`: npx records its arguments and answers as eas-cli `reported`
+   * would, and git refuses the fetch, the first gate after the version's.
+   */
+  function release(cliVersion, reported) {
+    const dir = mkdtempSync(join(tmpdir(), 'mobile-release-'));
+    try {
+      mkdirSync(join(dir, 'scripts'));
+      mkdirSync(join(dir, 'bin'));
+      cpSync(join(root, 'scripts/release-ios.sh'), join(dir, 'scripts/release-ios.sh'));
+      cpSync(join(root, 'app.json'), join(dir, 'app.json'));
+      writeFileSync(join(dir, 'eas.json'), JSON.stringify({ ...eas, cli: { ...eas.cli, version: cliVersion } }));
+      const log = join(dir, 'npx.log');
+      writeFileSync(join(dir, 'bin/npx'), `#!/bin/sh\necho "$*" >> '${log}'\necho 'eas-cli/${reported} darwin-arm64 node-v22'\n`, { mode: 0o755 });
+      writeFileSync(join(dir, 'bin/git'), '#!/bin/sh\ncase "$1" in fetch) exit 1 ;; rev-parse) echo 0000000 ;; esac\n', { mode: 0o755 });
+      const run = spawnSync('bash', [join(dir, 'scripts/release-ios.sh'), '--dry-run'], {
+        encoding: 'utf8',
+        env: { ...process.env, PATH: `${join(dir, 'bin')}:${process.env.PATH}` },
+      });
+      return { status: run.status, out: run.stdout, npx: existsSync(log) ? readFileSync(log, 'utf8') : '' };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  it("release-ios.sh runs eas.json's version, prints it and goes on to the gates when eas-cli reports it", () => {
+    const run = release('9.8.7', '9.8.7');
+    expect(run.npx).toBe('--yes eas-cli@9.8.7 --version\n');
+    expect(run.out).toMatch(/^tree: 0000000 dirty=0 app: \S+ eas-cli 9\.8\.7$/mu);
+    expect(run.out).toContain('REFUSED: cannot fetch origin');
+  });
+
+  it('release-ios.sh refuses before any gate when eas-cli reports another version', () => {
+    const run = release('9.8.7', '9.8.6');
+    expect(run.status).toBe(1);
+    expect(run.out).toContain("REFUSED: eas-cli 9.8.7 (eas.json cli.version) did not run: got 'eas-cli 9.8.6'");
+    expect(run.out).not.toContain('cannot fetch origin');
+  });
+
+  it('release-ios.sh refuses a range in eas.json and never runs npx', () => {
+    const run = release('>= 22.0.0', '27.2.0');
+    expect(run.status).toBe(1);
+    expect(run.out).toContain("REFUSED: eas.json cli.version '>= 22.0.0' is not one exact version");
+    expect(run.npx).toBe('');
   });
 });
 
@@ -156,6 +200,11 @@ describe("the .github configuration's own rules (the website's structure-contrac
     expect(wrong.map(([file]) => file)).toEqual([]);
   });
 
+  it('has Dependabot update the actions alone, weekly: no npm version updates (§12.1 #278)', () => {
+    const dependabot = readFileSync(join(root, '.github/dependabot.yml'), 'utf8');
+    expect([...dependabot.matchAll(/^\s+- package-ecosystem: (\S+)$/gmu)].map((m) => m[1])).toEqual(['github-actions']);
+    expect(dependabot).toContain('\n    schedule:\n      interval: weekly\n');
+  });
 });
 
 describe('no skipped tests (M4)', () => {

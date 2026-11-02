@@ -10,7 +10,7 @@ description: Ship an iOS build of main to TestFlight with npm run release:ios, a
 **Inputs.**
 - The owner's go for this build, and the owner's choice of where it builds: `--local` (this Mac, no EAS build quota) or the cloud build. No choice recorded: `--local`.
 - A scratch clone outside ~/Desktop and iCloud, on `main`, with `npm ci` done.
-- Node 22, `gh` signed in, an Expo session (`npx --no-install eas-cli whoami`, the pinned eas-cli), and for `--local` Xcode, CocoaPods and fastlane.
+- Node 22, `gh` signed in, an Expo session (`npx --yes eas-cli@<eas.json cli.version> whoami`, the one eas-cli version the release runs), and for `--local` Xcode, CocoaPods and fastlane.
 
 ## Steps
 
@@ -32,7 +32,7 @@ description: Ship an iOS build of main to TestFlight with npm run release:ios, a
    Keep the printed build id (cloud) or ipa path (local) and the submission id. It submits only after the ipa's entitlements print `ENTITLEMENTS_OK`.
 4. After the submit, follow processing:
    ```bash
-   npx --no-install eas-cli submit:list --platform ios --limit 1
+   npx --yes "eas-cli@$(node -p "require('./eas.json').cli.version")" submit:list --platform ios --limit 1
    ```
    Wait until App Store Connect shows the build as processed (VALID). Then it goes to the TestFlight tester group (App Store Connect, TestFlight, the group, Builds); a console step there is the owner's, so give the owner the build number and the What to Test note.
 5. Write the What to Test note from `templates/what-to-test.md`: plain words, 5 lines or fewer, what changed on screen, not how.

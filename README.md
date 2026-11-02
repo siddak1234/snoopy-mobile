@@ -168,8 +168,8 @@ Every action is pinned by commit SHA with its `# vX.Y.Z` comment, and every
 job's Node is the exact version in `.nvmrc` (`node-version-file`); a guard test
 (`release-and-ci-guards`) holds both. Nothing updates `.nvmrc`: Node is moved by
 hand with each Node 22.x security release. `.github/dependabot.yml`
-opens one grouped pull request a week for the actions and one for npm,
-eas-cli excepted (bumped by hand, below) (the
+opens one grouped pull request a week for the actions, and none for npm (the
+app's dependency bumps are each a round of their own, §12.1 #278) (the
 kit's `check-docs` lets a Dependabot commit that touches only those files
 through). CI also runs nightly on main (`schedule`, 09:32 UTC); a red nightly
 opens, or comments on, one open "Nightly red" issue from the `all-green` job
@@ -195,12 +195,12 @@ of ci.yml's push run on HEAD concluded success — read in that run's check
 suite (`scripts/all-green-on-head.mjs`), so the nightly's own all-green on the
 same commit is never counted — and the live AASA naming the app, and only a
 build whose `gitCommitHash` is HEAD with the release's entitlements; `eas.json`
-`cli.requireCommit` refuses an uncommitted tree. eas-cli is an exact
-devDependency (its version in `package.json`, `eas.json` `cli.version` the same): the script runs it
-with `npx --no-install`, so a release never downloads a newer one, and prints
-its version beside the tree line. Dependabot ignores eas-cli
-(`.github/dependabot.yml`): bump it by hand, `package.json` and `eas.json`
-`cli.version` in one commit, since a guard test fails when they differ.
+`cli.requireCommit` refuses an uncommitted tree. eas-cli is no dependency of
+the app (Expo's version policy discourages one): its one exact version is
+`eas.json` `cli.version`, which eas-cli enforces. The script reads it once, runs
+every call as `npx --yes eas-cli@<that version>`, so a release never runs a
+newer one, prints it beside the tree line and refuses when eas-cli reports
+another. Bump it by hand there; a guard test refuses a range.
 `npm run release:ios -- --local` (Round 17, 2026-10-08) builds the same release on
 this Mac instead of EAS's cloud — `eas build --local`, with Xcode, CocoaPods and
 fastlane, which it refuses without — and so uses no EAS build quota; every gate
