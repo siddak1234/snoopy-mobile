@@ -183,7 +183,7 @@ describe('the nightly (NIGHT-7) is its own workflow calling ci.yml, and reports 
   });
 
   it('opens or comments on a "Nightly red" issue from its own job, only when the called CI failed', () => {
-    expect(report).toContain('\n    needs: [ci]\n    if: failure()\n');
+    expect(report).toContain("\n    needs: [ci]\n    # Any night that is not green: failed, cancelled or timed out.\n    if: always() && needs.ci.result != 'success'\n");
     expect(report).toContain("gh issue create --repo \"$GITHUB_REPOSITORY\" --title 'Nightly red'");
     expect(ci).not.toContain('Nightly red');
   });
@@ -191,7 +191,9 @@ describe('the nightly (NIGHT-7) is its own workflow calling ci.yml, and reports 
   it("grants issues: write to that job alone, and ci.yml's jobs contents: read only", () => {
     const writes = workflows.flatMap(([, text]) => text.split('\n').filter((line) => /^\s+issues: write$/u.test(line)));
     expect(writes).toHaveLength(1);
-    expect(report.slice(0, report.indexOf('    steps:'))).toContain('    permissions:\n      contents: read\n      issues: write\n');
+    const header = report.slice(0, report.indexOf('    steps:'));
+    expect(header).toContain('    permissions:\n      issues: write\n');
+    expect(header).not.toContain('contents:');
     expect(ci).toMatch(/^permissions:\n {2}contents: read\n\n/mu);
     expect(ci.match(/^\s*permissions:/gmu)).toHaveLength(1);
   });

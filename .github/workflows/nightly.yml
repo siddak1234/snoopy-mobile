@@ -26,11 +26,11 @@ jobs:
   report:
     name: Nightly red
     needs: [ci]
-    if: failure()
+    # Any night that is not green: failed, cancelled or timed out.
+    if: always() && needs.ci.result != 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
-      contents: read
       issues: write
     steps:
       - name: A red nightly reports itself

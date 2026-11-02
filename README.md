@@ -168,8 +168,9 @@ Every action is pinned by commit SHA with its `# vX.Y.Z` comment, and every
 job's Node is the exact version in `.nvmrc` (`node-version-file`); a guard test
 (`release-and-ci-guards`) holds both. Nothing updates `.nvmrc`: Node is moved by
 hand with each Node 22.x security release. `.github/dependabot.yml`
-opens one grouped pull request a week for the actions, and none for npm (the
-app's dependency bumps are each a round of their own, §12.1 #278) (the
+opens one grouped pull request a week for the actions, and no npm version updates
+(the app's dependency bumps are each a round of their own, §12.1 #278; Dependabot's
+npm security-fix pull requests still open) (the
 kit's `check-docs` lets a Dependabot commit that touches only those files
 through). Every job has a `timeout-minutes`, sized in ci.yml from measured runs;
 ci.yml's jobs hold `contents: read` only. CI also runs nightly on main:
