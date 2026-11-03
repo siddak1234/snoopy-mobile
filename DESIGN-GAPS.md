@@ -2943,3 +2943,15 @@ Parity: the website's flow page, setup, vendor and run page read the same route 
 Bites (break, red, restore, green), `single-flow-read`: with a list row and a catalog entry that carry
 no setup, the flow page's integration row, Setup's vendor step and the vendor page's choices each come
 from the single read; each screen put back on the list row, its test alone goes red. No new press.
+
+## Round 21 stage 1, C1: the owner's build 34 feedback F1, F4, F5 and build 31 G1, G3, G4 (2026-11-03)
+
+Client-only, no new data or call (the stage 1 spec, C1; the owner's go 2026-11-03). The rules are
+DESIGN-CONTRACT's, each once; this entry keeps the bites. Parity: the website builds the same items in
+its own lane, with the same words.
+
+- **G3** (build 31: "there should be lines within this block for subsections"): a section's entries
+  have a divider line between them (DESIGN-CONTRACT "Block set v2 and the spacing table").
+
+Bites (break, red, restore, green), each in its suite: G3 the line between a section's entries, none
+under a label or between a page's blocks (`blocks-render`).

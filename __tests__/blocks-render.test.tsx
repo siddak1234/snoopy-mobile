@@ -255,6 +255,37 @@ describe('section', () => {
       motion.mockImplementation(asItWas);
     }
   });
+  it("its entries apart with a divider line, `inner` either side — none above the first, none under a label, none between a page's blocks (the owner's build 31 G3)", async () => {
+    await renderBlocks([
+      {
+        type: 'section',
+        title: 'Contact',
+        open: true,
+        blocks: [
+          { type: 'link', title: 'LinkedIn', url: 'https://www.linkedin.com/in/someone' },
+          { type: 'link', title: 'GitHub', url: 'https://github.com/someone' },
+          { type: 'text', text: 'Other', style: 'label' },
+          { type: 'text', text: 'A site' },
+        ],
+      },
+      { type: 'text', text: 'After' },
+    ]);
+    // The block list's own wrapper is the nearest ancestor that sets a margin or a border.
+    const wrapper = (id: string) => {
+      let node = screen.getByTestId(id).parent as unknown as { props: { style?: unknown }; parent?: unknown } | null;
+      for (let up = 0; node && up < 4; up += 1) {
+        const style = (StyleSheet.flatten(node.props.style as never) ?? {}) as Record<string, number | string | undefined>;
+        if (style.marginTop !== undefined || style.borderTopWidth !== undefined) return style;
+        node = node.parent as typeof node;
+      }
+      return {};
+    };
+    expect(wrapper('b-0-0').borderTopWidth).toBeUndefined();
+    expect(wrapper('b-0-1')).toMatchObject({ borderTopWidth: 1, borderTopColor: nocturneDark.divider, marginTop: 8, paddingTop: 8 });
+    expect(wrapper('b-0-2')).toMatchObject({ borderTopWidth: 1, marginTop: 8 });
+    expect(wrapper('b-0-3').borderTopWidth).toBeUndefined();
+    expect(wrapper('b-1').borderTopWidth).toBeUndefined();
+  });
 });
 
 describe('file and link', () => {

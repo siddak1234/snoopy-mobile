@@ -3,6 +3,7 @@ import { View } from 'react-native';
 
 import { Catch } from '@/components/dialog-boundary';
 import { space } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import type { Block } from '@/lib/platform/automations';
 
 import { BadgeBlock } from './badge';
@@ -128,6 +129,7 @@ function Blocks({
   nested: boolean;
   context: BlockContext;
 }) {
+  const { palette } = useTheme();
   const inner = (within: readonly unknown[], at: string) => (
     <Blocks blocks={within} prefix={at} nested context={context} />
   );
@@ -136,6 +138,9 @@ function Blocks({
   // above the block it heads — as a form's title is above its form — so
   // "ADD CANDIDATE" and "CANDIDATES" sit the same distance above their cards
   // (F3; ~~14 under every block~~ until Round 21). None above the first.
+  // Inside a section, a divider line between its entries, `inner` either side
+  // of it — LinkedIn's and GitHub's links apart (the owner's build 31 G3) —
+  // never between a label and the block it heads.
   const between = nested ? space.inner : space.group;
   const drawn = blocks.map((block, index) => ({ block, index })).filter(({ block }) => !drawsNothing(block, context));
   return (
@@ -145,9 +150,19 @@ function Blocks({
         const draw = rendererFor(block);
         const type = draw ? (block as Block).type : null;
         const missing = type ? missingField(block as Block) : null;
-        const above = at === 0 ? 0 : isLabel(drawn[at - 1]!.block) ? space.title : between;
+        const underLabel = at > 0 && isLabel(drawn[at - 1]!.block);
+        const above = at === 0 ? 0 : underLabel ? space.title : between;
+        const divided = nested && at > 0 && !underLabel;
         return (
-          <View key={testID} style={above > 0 ? { marginTop: above } : undefined}>
+          <View
+            key={testID}
+            style={
+              divided
+                ? { marginTop: above, paddingTop: space.inner, borderTopWidth: 1, borderTopColor: palette.divider }
+                : above > 0
+                  ? { marginTop: above }
+                  : undefined
+            }>
             {!draw || !type ? (
               <NotDrawnFallback type={typeOf(block)} error="unknown type" testID={`${testID}-fallback`} />
             ) : missing ? (

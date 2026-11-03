@@ -338,7 +338,9 @@ only the names and what each spaces:
 sits `title` above what it heads and `group` below whatever comes before it — a
 form's title ("ADD CANDIDATE"), a label before a list ("CANDIDATES") and a text
 box's label alike (F3); a group of related rows is one card with dividers, and
-things inside one card are `inner` apart; no gap above the first group, `bottom`
+things inside one card are `inner` apart; a section's entries (a LinkedIn link,
+a GitHub link) have a divider line between them, `inner` either side, none
+under a label (the owner's build 31 G3); no gap above the first group, `bottom`
 below the last; no screen types its own spacing. Below the table's smallest
 step, the inside of one control — a chip's own padding, an icon beside its
 word, a line under the line above in one row — uses `inset`, the app's alone
