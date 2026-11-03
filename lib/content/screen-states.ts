@@ -390,6 +390,16 @@ export const EMAIL_PLACEHOLDER = 'Email address';
 export const EMAIL_ADD = 'Add';
 export const EMAIL_ADDING = 'Adding…';
 export const EMAIL_REMOVING = 'Removing…';
+/**
+ * An extra address's consent, under it (the stage 1 spec's S1-7; backend
+ * §12.1 #289): a new address waits for its one confirmation email; only a
+ * confirmed one gets the run emails; an unsubscribed one stopped them.
+ */
+export const EMAIL_STATUS: Readonly<Record<'pending' | 'confirmed' | 'stopped', string>> = {
+  pending: 'Waiting for confirmation',
+  confirmed: 'Confirmed',
+  stopped: 'Unsubscribed',
+};
 export function removeAddress(address: string): string {
   return `Remove ${address}`;
 }

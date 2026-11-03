@@ -415,6 +415,26 @@ describe('Who gets the email (P5; D1, S30)', () => {
     expect(screen.getByPlaceholderText('Email address').props.autoCapitalize).toBe('none');
   });
 
+  it('under each extra address, its consent — "Waiting for confirmation", "Confirmed" or "Unsubscribed" — matched without case; none sent, or one this build does not know, no line (the stage 1 spec\'s S1-7; backend §12.1 #289)', async () => {
+    await openEmail({
+      recipients: recipientsPayload({
+        extra: ['new@example.com', 'Old@Example.com', 'gone@example.com', 'odd@example.com', 'bare@example.com'],
+        extraStatuses: [
+          { email: 'new@example.com', status: 'pending' },
+          { email: 'old@example.com', status: 'confirmed' },
+          { email: 'gone@example.com', status: 'stopped' },
+          { email: 'odd@example.com', status: 'bounced' as 'stopped' },
+        ],
+      }),
+    });
+    expect(await screen.findByText('new@example.com')).toBeTruthy();
+    expect(lines('email-extra-new@example.com')).toEqual(['new@example.com', 'Waiting for confirmation']);
+    expect(lines('email-extra-Old@Example.com')).toEqual(['Old@Example.com', 'Confirmed']);
+    expect(lines('email-extra-gone@example.com')).toEqual(['gone@example.com', 'Unsubscribed']);
+    expect(lines('email-extra-odd@example.com')).toEqual(['odd@example.com']);
+    expect(lines('email-extra-bare@example.com')).toEqual(['bare@example.com']);
+  });
+
   it('a member sees the list and no way to change it: no X, no field — "Ask an owner or admin to change this."', async () => {
     await openEmail({ role: 'member', recipients: recipientsPayload({ canEdit: false }) });
     expect(await screen.findByText('Ask an owner or admin to change this.')).toBeTruthy();
