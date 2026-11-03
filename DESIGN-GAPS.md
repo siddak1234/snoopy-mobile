@@ -3018,10 +3018,10 @@ same items in its own lane, with the same words.
 - **S1-8** (QuickBooks disconnect; backend §12.1 #252): the expired approval over the run's body and the
   row disconnected at the provider (DESIGN-CONTRACT "Activity/run detail", "Settings › Connections"); the
   Disconnect page is the website's. **Findings:** (1) at the contract commit the Connections list leaves
-  every `disconnected` row out (snoopy-backend `apps/connections/src/postgres-connections.ts:174`, `status
+  every `disconnected` row out (`snoopy-backend/apps/connections/src/postgres-connections.ts:174`, `status
   <> 'disconnected'`), so the row is drawn only once the platform lists a connection it retired; (2) the
   words name the provider as the platform lists it — QuickBooks is "QuickBooks Online"
-  (`providers/quickbooks.json`) — so the app says "Disconnected in QuickBooks Online", where the spec's
+  (`snoopy-backend/providers/quickbooks.json`) — so the app says "Disconnected in QuickBooks Online", where the spec's
   words say "QuickBooks": a NEW WORD for the owner, as the backend's B0 summary and the website have it.
 - **S1-15** (QuickBooks company name; backend §12.1 #283): a connected row with no email names its company
   in Connected's place (DESIGN-CONTRACT "Settings › Connections").
