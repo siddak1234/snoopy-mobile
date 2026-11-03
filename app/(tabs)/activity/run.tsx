@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter, useSegments } from 'expo-router';
 import { FileText, FlowArrow, StopCircle } from 'phosphor-react-native';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -39,7 +39,7 @@ import { cancelRun, type AnsweredDecision } from '@/lib/platform/automations';
 import { PlatformError } from '@/lib/platform/problem';
 import { decidersLine, decides } from '@/lib/view/roles';
 import { statusLabel, type StatusPillLabel } from '@/lib/view/status';
-import { RUN_ORIGIN_TAB, jobReviewTally, offeredDecisions, runLabel, runOrigin } from '@/lib/view/runs';
+import { RUN_ORIGIN_TAB, jobReviewTally, offeredDecisions, runLabel, runOrigin, runStack } from '@/lib/view/runs';
 
 /**
  * A run's page — the one, in Activity's stack (round 24 P5; the owner's build 23
@@ -66,6 +66,11 @@ import { RUN_ORIGIN_TAB, jobReviewTally, offeredDecisions, runLabel, runOrigin }
  * (`withAnchor`; `unstable_settings` in its layout), so Activity's index is
  * under the run, and a run opened by a notification or a link goes back to
  * Activity.
+ *
+ * A run opened from one of a flow's items is this page in the Flows stack
+ * (`app/(tabs)/flows/run.tsx`; the owner's build 31 G1, `RunStack`): Back comes
+ * straight to the item, and its View package, Run details and files open in the
+ * stack it is in.
  */
 export default function RunDetailScreen() {
   const { palette } = useTheme();
@@ -74,6 +79,8 @@ export default function RunDetailScreen() {
   const insets = useSafeAreaInsets();
   const { runId, returnTo } = useLocalSearchParams<{ runId?: string; returnTo?: string }>();
   const origin = runOrigin(returnTo);
+  // Activity's stack, or the Flows stack for a run opened from an item (G1): where its own pages open.
+  const stack = runStack(useSegments());
   useEffect(() => {
     if (!origin) return;
     // Never prevented: the swipe has already taken the page away natively. The
@@ -305,7 +312,11 @@ export default function RunDetailScreen() {
         </Text>
       ) : null}
 
-      <BlockList testID="run-blocks" blocks={run.blocks} context={{ forms: { approval: approvalForm, review: approvalForm }, workspaceId: openedIn }} />
+      <BlockList
+        testID="run-blocks"
+        blocks={run.blocks}
+        context={{ forms: { approval: approvalForm, review: approvalForm }, workspaceId: openedIn, runStack: stack }}
+      />
 
       {/*
         The A8X run package (round 24 P12; the owner's build 23 F16: "No more
@@ -324,7 +335,7 @@ export default function RunDetailScreen() {
             fontSize={typeScale.label.fontSize}
             icon={FileText}
             iconSize={iconSize.button}
-            onPress={() => router.push({ pathname: '/(tabs)/activity/package', params: { runId: run.id } })}
+            onPress={() => router.push({ pathname: `/(tabs)/${stack}/package`, params: { runId: run.id } })}
           />
           <FileActions
             testID="run-package-actions"
@@ -342,7 +353,7 @@ export default function RunDetailScreen() {
         <OpenRow
           testID="run-open-details"
           title={RUN_DETAILS_LABEL}
-          onPress={() => router.push({ pathname: '/(tabs)/activity/run-details', params: { runId: run.id } })}
+          onPress={() => router.push({ pathname: `/(tabs)/${stack}/run-details`, params: { runId: run.id } })}
         />
       </SurfaceCard>
 

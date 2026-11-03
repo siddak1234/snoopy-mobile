@@ -131,13 +131,18 @@ describe('list', () => {
     expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/(tabs)/activity/run', params: { runId: 'r2' } }, undefined);
   });
 
-  it('from an item, a run opens in Activity over its anchor and says it came from Flows', async () => {
-    await renderBlocks([{ type: 'list', items: [{ title: 'Omar', open: { target: 'run', runId: 'r2' } }] }], { runOrigin: 'flows' });
-    await fireEvent.press(screen.getByTestId('b-0-row-0'));
-    expect(mockRouter.push).toHaveBeenCalledWith(
-      { pathname: '/(tabs)/activity/run', params: { runId: 'r2', returnTo: 'flows' } },
-      { withAnchor: true },
+  it("from an item, a run and a run's file open in the Flows stack, with nothing under them but the item (the owner's build 31 G1)", async () => {
+    await renderBlocks(
+      [
+        { type: 'list', items: [{ title: 'Omar', open: { target: 'run', runId: 'r2' } }] },
+        { type: 'file', title: 'View resume', open: { target: 'run-file', runId: RUN, fileId: FILE } },
+      ],
+      { runStack: 'flows' },
     );
+    await fireEvent.press(screen.getByTestId('b-0-row-0'));
+    expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/(tabs)/flows/run', params: { runId: 'r2' } }, undefined);
+    await fireEvent.press(screen.getByTestId('b-1'));
+    expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/(tabs)/flows/run-file', params: { runId: RUN, fileId: FILE } }, undefined);
   });
 
   it('a row that opens with more to say: its chip and score on its line, then subtitle, text and address — the address words, the row the press', async () => {

@@ -2952,6 +2952,10 @@ its own lane, with the same words.
 
 - **G3** (build 31: "there should be lines within this block for subsections"): a section's entries
   have a divider line between them (DESIGN-CONTRACT "Block set v2 and the spacing table").
+- **G1** (build 31: "Why is it going to activity from that screen?"): a run opened from one of a flow's
+  items is drawn in the Flows stack with its own pages (DESIGN-CONTRACT "Activity/run detail").
 
 Bites (break, red, restore, green), each in its suite: G3 the line between a section's entries, none
-under a label or between a page's blocks (`blocks-render`).
+under a label or between a page's blocks (`blocks-render`); G1 an item's run and a run's file open in
+the Flows stack (`blocks-render`), and under the real router the run, its Run details and its file in
+the Flows stack, Flows selected, Back straight to the item (`real-router/flow-items`).

@@ -571,6 +571,21 @@ export function runOrigin(param: unknown): RunOrigin | null {
 }
 
 /**
+ * The stack a run's pages are drawn in (the owner's build 31 G1: "Why is it going
+ * to activity from that screen?"): Activity's, or — a run opened from one of a
+ * flow's items, its row or Start — the Flows stack, the same page
+ * (`app/(tabs)/flows/run.tsx`), so Back comes straight to the item with no
+ * Activity under it; it is still listed in Activity. Its Run details, its files
+ * and its package open in the stack it is in.
+ */
+export type RunStack = 'activity' | 'flows';
+
+/** The stack the run page is drawn in, from the router's segments: the Flows stack when it is there, else Activity's. */
+export function runStack(segments: readonly string[]): RunStack {
+  return segments.includes('flows') ? 'flows' : 'activity';
+}
+
+/**
  * How long a flow page waits, while a run of the flow is pending or running,
  * before it reads its DASHBOARD again (Build 21, spec A6; the session's S30).
  */

@@ -51,7 +51,8 @@ import { RUN_REREAD_MS } from '@/lib/view/runs';
  * its flow can run (`canStartRun`); its runs as the platform ranks them, each a
  * row — its rank, its title (or "Reading…"), its score, read "Score" first by a
  * screen reader, and the arrow (`OpenRow`) — a failed one in the muted tone,
- * each opening its run. Its footer, for an owner or admin: Archive, behind the
+ * each opening its run in the Flows stack, so Back comes straight here (the
+ * owner's build 31 G1). Its footer, for an owner or admin: Archive, behind the
  * confirmation the flow's own archive asks. Read again every `RUN_REREAD_MS`
  * while the platform says it or a run of it goes on (`going`), and the page is
  * in front. ~~Its tiles, Add and ranked runs drawn here from the item and its
@@ -197,7 +198,7 @@ export default function ItemScreen() {
       <BlockList
         testID="item-blocks"
         blocks={blocks}
-        context={{ runOrigin: 'flows', forms: { run: runForm }, workspaceId: page.loadedFor }}
+        context={{ runStack: 'flows', forms: { run: runForm }, workspaceId: page.loadedFor }}
       />
 
       {/* Last, in red, where a person scrolls to it — as the flow's own Archive (24.9.4); the

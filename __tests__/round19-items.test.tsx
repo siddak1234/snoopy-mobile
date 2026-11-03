@@ -709,11 +709,9 @@ describe("an item's page (plan §5.3; its blocks since Round 21)", () => {
     for (const at of [0, 1, 2, 3]) {
       expect(StyleSheet.flatten(screen.getByTestId(`${RUNS}-row-${at}`).props.style ?? {})).not.toHaveProperty('opacity');
     }
+    // Its run opens in the Flows stack, so Back comes straight here (the owner's build 31 G1).
     await fireEvent.press(screen.getByTestId(`${RUNS}-row-0`));
-    expect(mockRouter.push).toHaveBeenCalledWith(
-      { pathname: '/(tabs)/activity/run', params: { runId: 'r1', returnTo: 'flows' } },
-      { withAnchor: true },
-    );
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/run', params: { runId: 'r1' } }, undefined);
   });
 
   it('read as its page body (`shape=blocks`), again while the platform says it goes (`going`), and not once it says it does not', async () => {
