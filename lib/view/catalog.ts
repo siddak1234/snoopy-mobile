@@ -226,6 +226,28 @@ export function groupFlows(
   ];
 }
 
+/** One department's section of a list: its name and its entries, in the order given. */
+export type DepartmentSection<T> = { department: string; entries: T[] };
+
+/**
+ * Entries in sections by department (the owner's build 34 F4: "When all
+ * categories is selected flows should be listed in sections of departments in
+ * alphabatical order"; F5): one section per department — a template's catalog
+ * `category`, the team kind a flow goes to (backend ADR-0036) — the departments
+ * A–Z, each section's entries in the order given (the catalog's). The website's
+ * `byDepartment`.
+ */
+export function byDepartment<T>(entries: readonly T[], departmentOf: (entry: T) => string): DepartmentSection<T>[] {
+  const sections = new Map<string, T[]>();
+  for (const entry of entries) {
+    const department = departmentOf(entry);
+    sections.set(department, [...(sections.get(department) ?? []), entry]);
+  }
+  return [...sections.keys()]
+    .sort((a, b) => a.localeCompare(b, 'en-US', { sensitivity: 'base' }))
+    .map((department) => ({ department, entries: sections.get(department)! }));
+}
+
 /**
  * Where the workspace holds a flow (the owner's build 12 item 9: "Teams cannot
  * have the same flows. One flow per account type. Personal or org not multiple
@@ -269,11 +291,6 @@ export function toSolution(entry: CatalogEntry, subscribed: boolean): SolutionVi
     available: entry.available,
     templateId: entry.templateId,
   };
-}
-
-/** A catalog card's price, in the website's words: "Included" for a flow that costs nothing, else "$39/mo". */
-export function catalogPrice(monthlyPriceUsd: number): string {
-  return monthlyPriceUsd === 0 ? 'Included' : `$${monthlyPriceUsd}/mo`;
 }
 
 export function toTemplate(entry: CatalogEntry): TemplateView {

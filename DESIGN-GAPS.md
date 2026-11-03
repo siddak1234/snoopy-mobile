@@ -2956,9 +2956,14 @@ its own lane, with the same words.
   items is drawn in the Flows stack with its own pages (DESIGN-CONTRACT "Activity/run detail").
 - **G4** (build 31: "Shoukd i be taken into a step by step"): Start on an item opens the new run's page in
   the Flows stack, its steps live; Back returns to the item (DESIGN-CONTRACT "Flows/item").
+- **F4** (build 34): Add a flow, with All categories, in sections by department A–Z; a card is its icon,
+  name, description and Add or Added ✓ (DESIGN-CONTRACT "Flows/add"). **The session's defaults:** the
+  description is drawn whole, not cut to one line (the largest text sizes); the unavailable line stays,
+  drawn only for a flow the platform could not reach, since it says why Add is off.
 
 Bites (break, red, restore, green), each in its suite: G3 the line between a section's entries, none
 under a label or between a page's blocks (`blocks-render`); G1 an item's run and a run's file open in
 the Flows stack (`blocks-render`), and under the real router the run, its Run details and its file in
 the Flows stack, Flows selected, Back straight to the item (`real-router/flow-items`); G4 Start on an
-item pushes the new run's page in the Flows stack (`round19-items`).
+item pushes the new run's page in the Flows stack (`round19-items`); F4 the sections and their order,
+a flat list put back, and a "{category} · Included" line put back (`tab-screens`, `parity-flows`).

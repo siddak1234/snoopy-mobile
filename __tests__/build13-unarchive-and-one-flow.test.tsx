@@ -134,7 +134,7 @@ function routeSetup(held: Subscription, projects: RouteOverrides['/projects']) {
 }
 
 describe("One flow per workspace (the owner's build 12 item 9)", () => {
-  it('Add reads a flow held for the whole workspace as Added ✓ · Whole workspace inside a picked team too — whatever the scope control shows — with no Add, and the card opens it; Add sends no team', async () => {
+  it('Add reads a flow held for the whole workspace as Added ✓ inside a picked team too — whatever the scope control shows — with no Add, and the card opens it; Add sends no team', async () => {
     mockStored.set(TEST_WORKSPACE, 'project-1');
     const whole = { ...planSubscriptionsPayload().subscriptions[0]!, projectId: null };
     routePlatform(platformOperation, {
@@ -143,7 +143,8 @@ describe("One flow per workspace (the owner's build 12 item 9)", () => {
     });
     await renderWithProviders(<SolutionsScreen />, signedInSession);
     expect(await screen.findByText('Ready-made flows for your departments.')).toBeTruthy();
-    expect(screen.getByTestId('added-where-tpl.0').props.children).toBe('Whole workspace');
+    // No line names where it is held since the owner's build 34 F4 (~~"Whole workspace"~~).
+    expect(screen.queryByText('Whole workspace')).toBeNull();
     expect(screen.getByTestId('added-tpl.0')).toBeTruthy();
     expect(screen.queryByTestId('add-tpl.0')).toBeNull();
     // A flow the workspace does not hold is still added — to its category's team, whatever the scope shows.
@@ -153,7 +154,7 @@ describe("One flow per workspace (the owner's build 12 item 9)", () => {
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'solution-0' } });
   });
 
-  it('Add names both places of a flow added to two before the rule — the duplicate stays — and offers no Add', async () => {
+  it('Add reads a flow added to two places before the rule as Added ✓ — the duplicate stays — offers no Add, and opens the first', async () => {
     const [first] = planSubscriptionsPayload().subscriptions;
     routePlatform(platformOperation, {
       '/subscriptions': {
@@ -165,7 +166,8 @@ describe("One flow per workspace (the owner's build 12 item 9)", () => {
       '/projects': projectsPayload('Finance'),
     });
     await renderWithProviders(<SolutionsScreen />, signedInSession);
-    expect((await screen.findByTestId('added-where-tpl.0')).props.children).toBe('Department: Finance, Whole workspace');
+    expect(await screen.findByTestId('added-tpl.0')).toBeTruthy();
+    expect(screen.queryByText(/^Department: /u)).toBeNull();
     expect(screen.queryByTestId('add-tpl.0')).toBeNull();
     await fireEvent.press(screen.getByTestId('added-tpl.0'));
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'copy-team' } });

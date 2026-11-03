@@ -216,14 +216,22 @@ describe('Add a flow — the catalog inside Flows (24.9.3)', () => {
     }
   });
 
-  it('lists the catalog with categories and prices — no version (the spec\'s S9) — Added ✓ for what the workspace holds and Add for the rest, no plan banner', async () => {
+  it("lists the catalog in sections by department A–Z, each in the catalog's order; a card its icon, name, description and Added ✓ or Add — no category, price or version line (the owner's build 34 F4) — no plan banner", async () => {
     const { getByText, getAllByText, queryByText } = await renderWithProviders(<SolutionsScreen />, signedInSession);
     expect(await screen.findByText('Add a flow')).toBeTruthy();
     expect(getByText('Ready-made flows for your departments.')).toBeTruthy();
     expect(queryByText(/Prebuilt flows|Adding to/u)).toBeNull();
+    // Each department's name over its cards, the departments A–Z, each in the catalog's order.
+    const section = (g: number) => within(screen.getByTestId(`add-group-${g}`));
+    expect(screen.queryByTestId('add-group-4')).toBeNull();
+    ['DATA', 'FINANCE', 'OPERATIONS', 'SALES'].forEach((name, g) => expect(within(section(g).getByRole('header')).getByText(name)).toBeTruthy());
+    expect(section(1).getAllByText(/^(Invoice triage|Receipt OCR)$/u).map((node) => node.props.children)).toEqual(['Invoice triage', 'Receipt OCR']);
+    expect(section(2).getAllByText(/^(Email triage|Slack alerts)$/u).map((node) => node.props.children)).toEqual(['Email triage', 'Slack alerts']);
     expect(getAllByText('Weekly KPI digest').length).toBeGreaterThan(0);
-    expect(getAllByText('Finance · $39/mo').length).toBeGreaterThan(0);
-    expect(getAllByText('Operations · $9/mo').length).toBeGreaterThan(0);
+    expect(getByText('Metrics to Slack every Monday morning')).toBeTruthy();
+    // ~~"Finance · $39/mo"~~, ~~"Accounting · Included"~~ and ~~"Department: …"~~ until F4.
+    expect(queryByText(/ · (Included|\$\d+\/mo)$/u)).toBeNull();
+    expect(queryByText(/^Department: /u)).toBeNull();
     expect(queryByText(/ · v1 · /u)).toBeNull();
     expect(getAllByText('Added ✓')).toHaveLength(3);
     expect(getAllByText('Add').length).toBeGreaterThan(0);
@@ -255,6 +263,8 @@ describe('Add a flow — the catalog inside Flows (24.9.3)', () => {
     await fireEvent.press(screen.getByTestId('add-category-option-Finance'));
     expect(screen.queryByTestId('add-category-menu')).toBeNull();
     expect(screen.getByLabelText('Category: Finance')).toBeTruthy();
+    // One category: its flows under no section name — the drop-down names it.
+    expect(queryByText('FINANCE')).toBeNull();
     expect(getByText('Invoice triage')).toBeTruthy();
     expect(getByText('Receipt OCR')).toBeTruthy();
     expect(queryByText('Email triage')).toBeNull();
@@ -288,7 +298,7 @@ describe('Add a flow — the catalog inside Flows (24.9.3)', () => {
     expect(getAllByText('Add').length).toBeGreaterThan(0);
   });
 
-  it('names where a flow is held — Added ✓ with its team, the card opens it — and offers no Add for another team (the owner\'s build 12 item 9: one flow per workspace; until build 13 "Added in …" and Add, 18.6.2)', async () => {
+  it('a flow held in a team reads Added ✓, the card opens it — no line names the team since F4 — and offers no Add for another team (the owner\'s build 12 item 9: one flow per workspace; until build 13 "Added in …" and Add, 18.6.2)', async () => {
     // Held in a team alone, looked at from All teams (the whole workspace): no second copy is offered.
     const inTeamOnly = { ...planSubscriptionsPayload().subscriptions[0]!, projectId: 'project-1' };
     routePlatform(platformOperation, {
@@ -296,8 +306,8 @@ describe('Add a flow — the catalog inside Flows (24.9.3)', () => {
       '/projects': projectsPayload('Finance'),
     });
     await renderWithProviders(<SolutionsScreen />, signedInSession);
-    expect((await screen.findByTestId('added-where-tpl.0')).props.children).toBe('Department: Finance');
-    expect(screen.getByTestId('added-tpl.0')).toBeTruthy();
+    expect(await screen.findByTestId('added-tpl.0')).toBeTruthy();
+    expect(screen.queryByText('Department: Finance')).toBeNull();
     expect(screen.queryByTestId('add-tpl.0')).toBeNull();
     expect(screen.queryByText(/^Added in /u)).toBeNull();
     await fireEvent.press(screen.getByTestId('added-tpl.0'));
