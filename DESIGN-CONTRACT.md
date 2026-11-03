@@ -755,6 +755,12 @@ complete export (Download file) and workspace summary (Download JSON).
     then Share on iOS (~~saved into the app and handed to the share sheet,
     24.12~~ until Round 21); on Android Download opens the link in the browser
     and there is no Share (`FileActions`, "Block set v2 and the spacing table").
+    Since Round 21 stage 1, C2 (S1-14; backend §12.1 #181) its line is "Or
+    export every record. A large workspace comes as several files, each kept
+    for a day." (`COMPLETE_EXPORT_INTRO`), and a ready export of several parts
+    (`WorkspaceExportJob.files`, `exportFiles`) offers "Download file {n} of
+    {N}" for each, in order, each from a link read afresh at the press, and no
+    Share; one file is "Download file" and Share, as before — as the website's.
   - Support: the contact form's fields and words; Privacy and Terms on the
     website's origin, the one the browser leg shares.
 - Round 19 (backend ADR-0046, plan §5), a flow's items, the website's operations and words:

@@ -3029,6 +3029,10 @@ same items in its own lane, with the same words.
   title it names read the run's own choices (DESIGN-CONTRACT "Activity/run detail").
 - **S1-10** (account deletion; backend §12.1 #248): the confirmation says "You'll be signed out on all
   devices." (DESIGN-CONTRACT "Mutations", Account). The deletion itself is the platform's.
+- **S1-14** (export in parts; backend §12.1 #181): Settings › Data's line and a button for each part
+  (DESIGN-CONTRACT "Mutations", Data export). **Finding:** the ready line "Ready. The file holds the whole
+  workspace." and the failure `too_large`'s "The workspace is larger than one export file may be." still
+  speak of one file; no word for several is listed, so they stay until the owner words them.
 
 Bites (break, red, restore, green): S1-G2 an http address made a press, LinkedIn's logo left out
 (`blocks-render`), the renderer drawing nothing (`blocks-parity`, `drawn-links`). S1-B1 the example left out, and the example taken on any control (`setup-field`). S1-B2 the
@@ -3042,4 +3046,6 @@ out (`connection-row`), the expiry drawn for any reason, the lines not drawn, th
 (`review-decisions`). S1-15 the
 company left out, and drawn on a row not connected (`connection-row`). S1-16 the
 flow's choice read, and read over the run's (`build22-screens`). S1-10 the
-line left out (`account-screen`).
+line left out (`account-screen`). S1-14 every
+button reading the first part, Share kept for several, `files` ignored, the old line kept
+(`data-support-screens`).

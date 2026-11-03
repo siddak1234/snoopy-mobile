@@ -373,8 +373,8 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   PUT of a file's bytes to the URL the platform signed; `audit:platform` admits
   exactly that one. Since 24.12 its one native download is
   `downloadSignedFile`, the credential-less save of a signed file's link into
-  the app's cache (the complete export; the run package's PDF and Excel since
-  round 24); `audit:platform` admits exactly one `downloadFileAsync(`, there.
+  the app's cache (the complete export, each of its parts since §12.1 #181;
+  the run package's PDF and Excel since round 24); `audit:platform` admits exactly one `downloadFileAsync(`, there.
 - `lib/platform/*.ts` exposes typed reads and mutations. Screens do not call a
   network primitive. `readConnectionProviders` is the one provider list: the
   platform's `providers`, then its `publicProviders` (public services, no key)

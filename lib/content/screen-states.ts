@@ -66,6 +66,16 @@ const ERROR_TITLES: Record<ScreenKey, string> = {
 /** The design's own fallback for a screen not in the map. */
 export const FALLBACK_ERROR_TITLE = "Couldn't load this";
 
+/**
+ * Settings › Data's complete export (the stage 1 spec's S1-14; backend §12.1
+ * #181): a large workspace comes in parts, each its own button — "Download
+ * file" for the one, "Download file {n} of {N}" among several.
+ */
+export const COMPLETE_EXPORT_INTRO = 'Or export every record. A large workspace comes as several files, each kept for a day.';
+export function downloadFileLabel(n: number, count: number): string {
+  return count > 1 ? `Download file ${n} of ${count}` : 'Download file';
+}
+
 export function errorTitleFor(screen: ScreenKey | string | undefined): string {
   if (!screen) return FALLBACK_ERROR_TITLE;
   return ERROR_TITLES[screen as ScreenKey] ?? FALLBACK_ERROR_TITLE;
