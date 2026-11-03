@@ -3007,8 +3007,14 @@ same items in its own lane, with the same words.
   sections, numbered, each vendor choice in the section it names (DESIGN-CONTRACT "Setup/configure").
   **The session's default:** a declared title is drawn in the numbered heading's capitals ("1 · NPI"),
   as the four fixed names are; the website draws its titles as sent.
+- **S1-B3** ("Other code" in a review, amendment 5): a change's other values under a third pill, the
+  pick "Changed to {code}" and sent as `other` (DESIGN-CONTRACT "Mutations"). **Finding (carried from
+  the backend's B0 summary, NEW WORD there):** the saved review's line has no word for a changed row, so
+  "{a} accepted · {d} denied" leaves it out, as the website does, until the owner words it.
 
 Bites (break, red, restore, green): S1-G2 an http address made a press, LinkedIn's logo left out
 (`blocks-render`), the renderer drawing nothing (`blocks-parity`, `drawn-links`). S1-B1 the example left out, and the example taken on any control (`setup-field`). S1-B2 the
 declared sections ignored, CONNECT kept for the vendor choice, the catalog's sections read for a held
-flow, an empty section drawn (`invoice-processing-screens`).
+flow, an empty section drawn (`invoice-processing-screens`). S1-B3 the body without `other`
+(`platform-mutations`), the key without it, the list past 3, a changed row counted as denied, the list
+left open after a pick, the pills drawn to a member (`review-decisions`).

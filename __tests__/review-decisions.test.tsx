@@ -48,9 +48,9 @@ beforeEach(() => {
   (newIdempotencyKey as jest.Mock).mockImplementation(() => 'key');
 });
 
-type HeldForm = { kind?: 'approval' | 'review'; eligibleRoles?: string[] };
+type HeldForm = { kind?: 'approval' | 'review'; eligibleRoles?: string[]; decisions?: readonly object[] };
 
-function heldDetail({ kind = 'approval', eligibleRoles = ['owner', 'admin'] }: HeldForm = {}): Answer<'GET /v1/workspaces/{workspaceId}/runs/{runId}'> {
+function heldDetail({ kind = 'approval', eligibleRoles = ['owner', 'admin'], decisions = CHANGES }: HeldForm = {}): Answer<'GET /v1/workspaces/{workspaceId}/runs/{runId}'> {
   const base = runDetailPayload('run-1');
   return {
     ...base,
@@ -59,7 +59,7 @@ function heldDetail({ kind = 'approval', eligibleRoles = ['owner', 'admin'] }: H
       { type: 'text', text: '2 changes need your review.', tone: 'warning' },
       {
         type: 'questions',
-        form: { kind, approvalId: APPROVAL_ID, eligibleRoles, decisions: CHANGES },
+        form: { kind, approvalId: APPROVAL_ID, eligibleRoles, decisions },
       } as unknown as Block,
     ],
   };
@@ -234,6 +234,118 @@ describe('a held run that offers changes: Accept or Deny each, then Save review 
     } as Approval;
     await openHeld('owner', [reviewed]);
     expect((await screen.findByTestId('run-review-tally')).props.children).toBe('2 accepted · 0 denied');
+  });
+});
+
+describe('"Other code": a change\'s other values (the stage 1 spec\'s S1-B3, backend ADR-0048 amendment 5)', () => {
+  const OFFERING = [
+    {
+      id: 'n18-4',
+      label: 'N18.4 → N18.30',
+      detail: 'The note says stage 3.',
+      options: [
+        { value: 'N18.31', label: 'N18.31 · Chronic kidney disease, stage 3a' },
+        { value: 'N18.32', label: 'N18.32 · Chronic kidney disease, stage 3b' },
+        { value: 'N18.31', label: 'the same value again' },
+        { value: 'N18.39', label: 'N18.39 · Chronic kidney disease, stage 3 unspecified' },
+        { value: 'N18.4', label: 'a fourth, past the three' },
+      ],
+    },
+    { id: 'z99-2', label: 'Add Z99.2' },
+  ];
+
+  it('a third pill on the change that offers them; its short list (each value once, at most 3) opens under the row; the pick is the answer, "Changed to {code}", and is sent as `other`', async () => {
+    await openHeld('owner', [], { decisions: OFFERING });
+    await screen.findByTestId('run-review-block');
+    expect(screen.getByTestId('run-review-other-n18-4')).toBeTruthy();
+    expect(screen.queryByTestId('run-review-other-z99-2')).toBeNull();
+    expect(screen.queryByTestId('run-review-others-n18-4')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('run-review-other-n18-4'));
+    const list = within(screen.getByTestId('run-review-others-n18-4'));
+    expect(list.getAllByText(/^N18\.3/u).map((node) => node.props.children)).toEqual([
+      'N18.31 · Chronic kidney disease, stage 3a',
+      'N18.32 · Chronic kidney disease, stage 3b',
+      'N18.39 · Chronic kidney disease, stage 3 unspecified',
+    ]);
+    expect(list.queryByText('a fourth, past the three')).toBeNull();
+    expect(screen.getByText('Accept or deny each change.')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('run-review-option-n18-4-1'));
+    expect(screen.queryByTestId('run-review-others-n18-4')).toBeNull();
+    expect(screen.getByTestId('run-review-changed-n18-4').props.children).toBe('Changed to N18.32');
+    // Both other pills go quiet, as an answered row's do.
+    expect(colorOf(within(screen.getByTestId('run-review-deny-n18-4')).getByText('Deny'))).not.toBe(nocturneDark.danger);
+    expect(colorOf(within(screen.getByTestId('run-review-accept-n18-4')).getByText('Accept'))).not.toBe(nocturneDark.accent);
+
+    await fireEvent.press(screen.getByTestId('run-review-deny-z99-2'));
+    await fireEvent.press(screen.getByTestId('run-review-save'));
+    await waitFor(() =>
+      expect(decideReview).toHaveBeenCalledWith(
+        TEST_WORKSPACE,
+        APPROVAL_ID,
+        [
+          { id: 'n18-4', other: 'N18.32' },
+          { id: 'z99-2', decision: 'denied' },
+        ],
+        'key',
+      ),
+    );
+    // A changed row is neither accepted nor denied.
+    expect((await screen.findByTestId('run-review-tally')).props.children).toBe('0 accepted · 1 denied');
+  });
+
+  it('Accept or Deny pressed instead replaces the pick; a second press of Other code closes its list', async () => {
+    await openHeld('owner', [], { decisions: OFFERING });
+    await fireEvent.press(await screen.findByTestId('run-review-other-n18-4'));
+    await fireEvent.press(screen.getByTestId('run-review-other-n18-4'));
+    expect(screen.queryByTestId('run-review-others-n18-4')).toBeNull();
+    await fireEvent.press(screen.getByTestId('run-review-other-n18-4'));
+    await fireEvent.press(screen.getByTestId('run-review-option-n18-4-0'));
+    expect(screen.getByTestId('run-review-changed-n18-4').props.children).toBe('Changed to N18.31');
+    await fireEvent.press(screen.getByTestId('run-review-accept-n18-4'));
+    expect(screen.queryByTestId('run-review-changed-n18-4')).toBeNull();
+    await fireEvent.press(screen.getByTestId('run-review-accept-z99-2'));
+    await fireEvent.press(screen.getByTestId('run-review-save'));
+    await waitFor(() =>
+      expect(decideReview).toHaveBeenCalledWith(
+        TEST_WORKSPACE,
+        APPROVAL_ID,
+        [
+          { id: 'n18-4', decision: 'accepted' },
+          { id: 'z99-2', decision: 'accepted' },
+        ],
+        'key',
+      ),
+    );
+  });
+
+  it('a refused save tried again with another value takes a new key', async () => {
+    let n = 0;
+    (newIdempotencyKey as jest.Mock).mockImplementation(() => `key-${++n}`);
+    (decideReview as jest.Mock).mockRejectedValueOnce(new PlatformError('not now', 503));
+    await openHeld('owner', [], { decisions: OFFERING });
+    await fireEvent.press(await screen.findByTestId('run-review-other-n18-4'));
+    await fireEvent.press(screen.getByTestId('run-review-option-n18-4-0'));
+    await fireEvent.press(screen.getByTestId('run-review-accept-z99-2'));
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('run-review-save'));
+    });
+    await waitFor(() => expect(screen.getByTestId('run-review-save').props.accessibilityState).not.toMatchObject({ disabled: true }));
+    await fireEvent.press(screen.getByTestId('run-review-other-n18-4'));
+    await fireEvent.press(screen.getByTestId('run-review-option-n18-4-1'));
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('run-review-save'));
+    });
+    await waitFor(() => expect(decideReview).toHaveBeenCalledTimes(2));
+    expect((decideReview as jest.Mock).mock.calls.map((call) => call[3])).toEqual(['key-1', 'key-2']);
+  });
+
+  it('to a member, the rows alone: no Other code', async () => {
+    await openHeld('member', [], { decisions: OFFERING });
+    expect(within(await screen.findByTestId('run-review-readonly')).getByText('Add Z99.2')).toBeTruthy();
+    expect(screen.queryByText('Other code')).toBeNull();
+    expect(screen.queryByTestId('run-review-other-n18-4')).toBeNull();
   });
 });
 

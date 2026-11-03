@@ -148,15 +148,40 @@ export function reviewAnswers(approval: Pick<Approval, 'decisions'> | undefined 
   );
 }
 
+/** The most other values one change offers (backend `HELD_DECISION_LIMITS.options`, ADR-0048 amendment 5). */
+export const OPTIONS_LIMIT = 3;
+
+/**
+ * A change's other values (backend ADR-0048 amendment 5), as the contract
+ * shapes them — a `value` and a `label`, each value once — at most
+ * `OPTIONS_LIMIT`, as the website reads them; anything else left out.
+ */
+export function otherValues(options: unknown): { value: string; label: string }[] {
+  if (!Array.isArray(options)) return [];
+  const seen = new Set<string>();
+  return options
+    .flatMap((option: unknown) => {
+      if (typeof option !== 'object' || option === null) return [];
+      const { value, label } = option as Record<string, unknown>;
+      if (typeof value !== 'string' || typeof label !== 'string' || value === '' || seen.has(value)) return [];
+      seen.add(value);
+      return [{ value, label }];
+    })
+    .slice(0, OPTIONS_LIMIT);
+}
+
 /**
  * A saved review's words (Round 21's platform round, F2): "{a} accepted ·
  * {d} denied", from the answers just saved on this page, else the job's
- * approval's kept answers; null when nothing was reviewed.
+ * approval's kept answers; null when nothing was reviewed. A change answered
+ * with another value (`other`, amendment 5) is neither, so it is not counted,
+ * as the website's and the platform's own line do not count it.
  */
 export function answersTally(answers: readonly AnsweredDecision[]): string | null {
   if (answers.length === 0) return null;
   const accepted = answers.filter((answer) => answer.decision === 'accepted').length;
-  return reviewTally(accepted, answers.length - accepted);
+  const denied = answers.filter((answer) => answer.decision === 'denied').length;
+  return reviewTally(accepted, denied);
 }
 
 export function jobReviewTally(

@@ -11,7 +11,6 @@ export type Approval = components['schemas']['Approval'];
 export type OfferedDecision = components['schemas']['HeldDecision'];
 /** One answer to an offered change, as the decision route takes it and the approval keeps it. */
 export type AnsweredDecision = components['schemas']['ReviewAnswer'];
-export type DecisionAnswer = AnsweredDecision['decision'];
 export type AutomationRunInputField = components['schemas']['AutomationRunInputField'];
 export type WebhookEndpoint = components['schemas']['WebhookEndpoint'];
 export type IssuedWebhookEndpoint = components['schemas']['IssuedWebhookEndpoint'];
@@ -284,9 +283,11 @@ export function decideApproval(
 /**
  * Saves a review of each change a held run offers (Round 21's platform round,
  * F2): the same route as `decideApproval`, its body every offered change's
- * answer once — `{ decisions: [{ id, decision: 'accepted' | 'denied' }] }` —
- * never `{ decision }`. The platform continues the job whatever the answers,
- * all denied included.
+ * answer once — `{ decisions: [{ id, decision: 'accepted' | 'denied' }] }`, or
+ * `{ id, other }` for one of the change's other values (backend ADR-0048
+ * amendment 5), never both — never `{ decision }`. The platform continues the
+ * job whatever the answers, all denied included, and refuses an `other` the
+ * change did not offer.
  */
 export function decideReview(
   workspaceId: string,
@@ -302,7 +303,9 @@ export function decideReview(
           path: { workspaceId, approvalId },
           header: { 'Idempotency-Key': idempotencyKey },
         },
-        body: { decisions: answers.map(({ id, decision }) => ({ id, decision })) },
+        body: {
+          decisions: answers.map(({ id, decision, other }) => (other !== undefined ? { id, other } : { id, decision })),
+        },
         signal,
       }),
   ).then(changed(workspaceId, ['approvals', 'runs', 'run-stats']));

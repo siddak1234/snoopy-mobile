@@ -660,6 +660,15 @@ export function reviewChangesLabel(count: number): string {
 export function reviewTally(accepted: number, denied: number): string {
   return `${accepted} accepted · ${denied} denied`;
 }
+/**
+ * A change's other values (the stage 1 spec's S1-B3, backend ADR-0048
+ * amendment 5): "Other code" opens their short list under the row; the one
+ * picked is the row's answer, which says "Changed to {code}" (its value).
+ */
+export const OTHER_CODE = 'Other code';
+export function changedTo(code: string): string {
+  return `Changed to ${code}`;
+}
 
 /**
  * A flow's items (backend ADR-0046; Round 19, plan §5): the things a person

@@ -486,7 +486,15 @@ complete export (Download file) and workspace summary (Download JSON).
   sent (`reviewGroups`), every group open, up to the platform's 400, and Save
   review still needs every answer; the page body's read-only rows
   (`questionsForm`) are grouped the same way, as the website's `ReviewRows`
-  draws them.
+  draws them. **Since Round 21 stage 1, C2 (S1-B3; backend ADR-0048
+  amendment 5):** a change that offers other values (`options`, at most 3,
+  each value once: `otherValues`) has a third pill, "Other code", which opens
+  their short list under the row, one row's at a time; the one picked is the
+  row's answer, sent as `{ id, other }` (never with a `decision`; the key rule
+  counts it), and the row says "Changed to {code}" (its value) until Accept
+  or Deny is pressed instead — as the website's. A changed row is neither
+  accepted nor denied, so "{a} accepted · {d} denied" does not count it, as
+  the website's and the platform's own line do not.
 - API-key connection: generated credential fields → connection mutation with an
   idempotency key, the button "Verify and connect" (Gate 24 parity, G15). A 409
   — the key reused with other values, or its first request still verifying —
