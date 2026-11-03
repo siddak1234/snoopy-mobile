@@ -3023,6 +3023,8 @@ same items in its own lane, with the same words.
   words name the provider as the platform lists it — QuickBooks is "QuickBooks Online"
   (`providers/quickbooks.json`) — so the app says "Disconnected in QuickBooks Online", where the spec's
   words say "QuickBooks": a NEW WORD for the owner, as the backend's B0 summary and the website have it.
+- **S1-15** (QuickBooks company name; backend §12.1 #283): a connected row with no email names its company
+  in Connected's place (DESIGN-CONTRACT "Settings › Connections").
 
 Bites (break, red, restore, green): S1-G2 an http address made a press, LinkedIn's logo left out
 (`blocks-render`), the renderer drawing nothing (`blocks-parity`, `drawn-links`). S1-B1 the example left out, and the example taken on any control (`setup-field`). S1-B2 the
@@ -3033,4 +3035,5 @@ left open after a pick, the pills drawn to a member (`review-decisions`). S1-7 n
 the address matched with case, an unknown status drawn (`build22-screens`). S1-8 any
 `disconnected` read as retired, the line and the attention state left out, the vendor row's name left
 out (`connection-row`), the expiry drawn for any reason, the lines not drawn, the provider by its id
-(`review-decisions`).
+(`review-decisions`). S1-15 the
+company left out, and drawn on a row not connected (`connection-row`).

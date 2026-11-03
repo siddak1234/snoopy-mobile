@@ -111,6 +111,10 @@ describe('the row says the account, else its state (spec A4)', () => {
   it.each([
     ['an email the platform holds', connection('google'), 'person@example.com', 'muted', 'Disconnect'],
     ['connected, no email', connection('google', { externalAccount: { displayName: 'Acme Books' } }), 'Connected', 'muted', 'Disconnect'],
+    // S1-15 (backend §12.1 #283): the company its grant belongs to, in Connected's place; an email still first.
+    ['connected, no email, its company read', connection('google', { externalAccount: { displayName: 'Sandbox' }, companyName: 'Harbor Supply Co.' }), 'Harbor Supply Co.', 'muted', 'Disconnect'],
+    ['an email and its company', connection('google', { companyName: 'Harbor Supply Co.' }), 'person@example.com', 'muted', 'Disconnect'],
+    ['its company, a sign-in asked again', connection('google', { status: 'reauthorization-required', externalAccount: { displayName: 'Sandbox' }, companyName: 'Harbor Supply Co.' }), 'Needs attention', 'warn', 'Reconnect'],
     ['a sign-in asked again', connection('google', { status: 'reauthorization-required' }), 'person@example.com', 'muted', 'Reconnect'],
     ['an error, no email', connection('google', { errorCode: 'token_revoked', externalAccount: { displayName: 'Acme' } }), 'Needs attention', 'warn', 'Reconnect'],
     ['none', undefined, 'Not connected', 'muted', 'Connect'],

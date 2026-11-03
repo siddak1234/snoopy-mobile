@@ -116,8 +116,10 @@ export function providerConnected(provider: Pick<ConnectionProvider, 'authType'>
 /**
  * Line 2 of the row (Build 21, spec A4; the owner's build 20 item 6: "Logo then
  * to the right name then below the account email"): the account's email when
- * the platform holds one — `externalAccount.displayName` carrying an `@` — else
- * the state in a word; "Needs attention" in the warning colour. One
+ * the platform holds one — `externalAccount.displayName` carrying an `@` — else,
+ * connected, the company the grant belongs to (`companyName`, read once at
+ * connect, the stage 1 spec's S1-15, backend §12.1 #283: QuickBooks names no
+ * email), else the state in a word; "Needs attention" in the warning colour. One
  * disconnected at the provider says "Disconnected in {provider}" in the warning
  * colour (S1-8), its button Reconnect, when the provider's name is given.
  */
@@ -129,6 +131,7 @@ export function connectionLine(
   const state = connectionState(connection);
   const name = connection?.externalAccount.displayName ?? '';
   if (state !== 'not-connected' && name.includes('@')) return { text: name, tone: 'muted' };
+  if (state === 'connected' && connection?.companyName) return { text: connection.companyName, tone: 'muted' };
   if (state === 'connected') return { text: CONNECTION_CONNECTED, tone: 'muted' };
   if (state === 'attention') return { text: CONNECTION_ATTENTION, tone: 'warn' };
   return { text: CONNECTION_NOT_CONNECTED, tone: 'muted' };
