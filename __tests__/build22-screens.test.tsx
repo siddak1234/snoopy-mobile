@@ -536,10 +536,18 @@ describe("a v4 run's page: steps 2, 4 and 5 (S23–S25)", () => {
   const RUN = '0b9b7c4e-1d2a-4f3b-9c8d-7e6f5a4b3c2d';
   const SENT = '2026-10-17T21:34:00.000Z';
 
-  function openRun(status: Detail['run']['status'], stepIds: string[], email: Detail['email'], vendor = 'quickbooks', version = 4) {
+  function openRun(
+    status: Detail['run']['status'],
+    stepIds: string[],
+    email: Detail['email'],
+    vendor = 'quickbooks',
+    version = 4,
+    connectionChoices?: Detail['connectionChoices'],
+  ) {
     const base = runDetailPayload('run-1');
     const detail: Detail = {
       ...base,
+      ...(connectionChoices ? { connectionChoices } : {}),
       run: { ...base.run, id: RUN, subscriptionId: 'ip-1', templateId: 'invoice-processing', templateVersion: version, status },
       steps: stepIds.map((stepId, n) => ({
         id: `s${n}`,
@@ -585,6 +593,22 @@ describe("a v4 run's page: steps 2, 4 and 5 (S23–S25)", () => {
     expect(step('record')[0]).toBe('4 · Details saved');
     expect(step('email')).toEqual(['5 · Email sent', 'Sending email…']);
     expect(stepsDone()).toBe('5 / 5');
+  });
+
+  it("its own integration, as it started (the stage 1 spec's S1-16; backend §12.1 #290): step 2 and step 4's title follow the run's saved choice, not the flow's now", async () => {
+    const all = invoiceProcessingV4Entry().pipeline.map((declared) => declared.id);
+    await openRun('succeeded', all, { status: 'sent', sentAt: SENT }, 'none', 4, { vendor: 'quickbooks' });
+    expect(await screen.findByTestId('run-step-group:email')).toBeTruthy();
+    expect(step('connect')).toEqual(['2 · Connect integration', 'QuickBooks Online']);
+    expect(step('record')[0]).toBe('4 · QuickBooks updated');
+  });
+
+  it('started with None while the flow has QuickBooks now: None and Details saved', async () => {
+    const all = invoiceProcessingV4Entry().pipeline.map((declared) => declared.id);
+    await openRun('succeeded', all, { status: 'sent', sentAt: SENT }, 'quickbooks', 4, { vendor: 'none' });
+    expect(await screen.findByTestId('run-step-group:email')).toBeTruthy();
+    expect(step('connect')).toEqual(['2 · Connect integration', 'None']);
+    expect(step('record')[0]).toBe('4 · Details saved');
   });
 
   it('running: 5 Waiting; cancelled: 5 Stopped', async () => {

@@ -3025,6 +3025,8 @@ same items in its own lane, with the same words.
   words say "QuickBooks": a NEW WORD for the owner, as the backend's B0 summary and the website have it.
 - **S1-15** (QuickBooks company name; backend §12.1 #283): a connected row with no email names its company
   in Connected's place (DESIGN-CONTRACT "Settings › Connections").
+- **S1-16** (a run keeps its integration; backend §12.1 #290): Run details' integration step and the
+  title it names read the run's own choices (DESIGN-CONTRACT "Activity/run detail").
 
 Bites (break, red, restore, green): S1-G2 an http address made a press, LinkedIn's logo left out
 (`blocks-render`), the renderer drawing nothing (`blocks-parity`, `drawn-links`). S1-B1 the example left out, and the example taken on any control (`setup-field`). S1-B2 the
@@ -3036,4 +3038,5 @@ the address matched with case, an unknown status drawn (`build22-screens`). S1-8
 `disconnected` read as retired, the line and the attention state left out, the vendor row's name left
 out (`connection-row`), the expiry drawn for any reason, the lines not drawn, the provider by its id
 (`review-decisions`). S1-15 the
-company left out, and drawn on a row not connected (`connection-row`).
+company left out, and drawn on a row not connected (`connection-row`). S1-16 the
+flow's choice read, and read over the run's (`build22-screens`).

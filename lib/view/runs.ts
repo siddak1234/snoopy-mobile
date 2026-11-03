@@ -758,9 +758,10 @@ function trackerSub(
 
 /**
  * What a run's page knows of its flow, beside the run (Build 22; the session's
- * S23): the flow's setup fields and its settings NOW — a run's own choice is not
- * recorded (backend §12.1 #290) — and a provider's name. Absent when the flow
- * could not be read.
+ * S23): the flow's setup fields, its settings with the connection choices the
+ * run started with over them (S1-16, backend §12.1 #290; the flow's NOW for a
+ * run made before they were saved), and a provider's name. Absent when the
+ * flow could not be read.
  */
 export type TrackerFlow = {
   setup: readonly StepField[];
@@ -770,8 +771,9 @@ export type TrackerFlow = {
 
 /**
  * A setting step (Build 22; backend ADR-0041): done from the start, as a run
- * starts with the flow's settings, and its line the integration the flow has
- * chosen — "QuickBooks Online", or "None" (the session's S23). A setting step
+ * starts with the flow's settings, and its line the integration chosen — the
+ * run's own (S1-16), else the flow's — "QuickBooks Online", or "None" (the
+ * session's S23). A setting step
  * with no connection field, or a flow that could not be read, says "Done".
  */
 function settingRow(id: string, title: string, groupId: string, flow: TrackerFlow | undefined): TrackerRow {
