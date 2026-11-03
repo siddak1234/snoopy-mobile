@@ -31,22 +31,32 @@ export const SEARCH_ABOVE = 10;
 export type DropdownLine<T extends string> = { heading: string } | { option: DropdownOption<T> };
 
 /**
+ * Options by their `group`, the groups in the order they first appear, each
+ * group's options in their own order; options with no group under the name
+ * `''`. What the panel's headings (`dropdownLines`) and a grouped setup
+ * select's sheet (`SelectSheet`, the owner's build 34 F1) list.
+ */
+export function optionGroups<O extends { group?: string }>(options: readonly O[]): { name: string; options: O[] }[] {
+  const groups = new Map<string, O[]>();
+  for (const option of options) {
+    const name = option.group ?? '';
+    groups.set(name, [...(groups.get(name) ?? []), option]);
+  }
+  return [...groups].map(([name, members]) => ({ name, options: members }));
+}
+
+/**
  * What the panel lists for a query (B1): the options whose label holds it
  * (the lists' own search: trimmed, case-free, accents removed); then, where
  * the options carry `group`, each group's heading in the order the groups
- * first appear, its options under it in their own order. Pure, so the order
- * is tested on its own.
+ * first appear, its options under it in their own order (`optionGroups`).
+ * Pure, so the order is tested on its own.
  */
 export function dropdownLines<T extends string>(options: readonly DropdownOption<T>[], query: string): DropdownLine<T>[] {
   const found = search(options, query, (option) => [option.label]);
   if (!found.some((option) => option.group !== undefined)) return found.map((option) => ({ option }));
-  const groups = new Map<string, DropdownOption<T>[]>();
-  for (const option of found) {
-    const name = option.group ?? '';
-    groups.set(name, [...(groups.get(name) ?? []), option]);
-  }
-  return [...groups].flatMap(([heading, members]) => [
-    ...(heading === '' ? [] : [{ heading }]),
+  return optionGroups(found).flatMap(({ name, options: members }) => [
+    ...(name === '' ? [] : [{ heading: name }]),
     ...members.map((option) => ({ option })),
   ]);
 }

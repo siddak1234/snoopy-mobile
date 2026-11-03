@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { EnvelopeSimple, HandPalm, ListBullets, PlugsConnected, Sliders, Tray, type Icon } from 'phosphor-react-native';
 
+import { Chip } from '@/components/blocks/badge';
 import { Dropdown } from '@/components/dropdown';
 import { NocToggle } from '@/components/nocturne/noc-toggle';
 import { SectionLabel } from '@/components/nocturne/section-label';
@@ -9,6 +10,7 @@ import { Text, TextInput } from '@/components/text';
 import { fonts, iconSize, inset, space, status, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ScopePill } from '@/components/scope-control';
+import { SelectSheet } from '@/components/select-sheet';
 import { NEWER_CONTROL_NOTE, chosenLabel } from '@/lib/content/screen-states';
 import type { components } from '@/lib/generated/platform-contracts/automations';
 
@@ -431,11 +433,15 @@ export function FieldInput({
  * allows several (`multiple`) keeps it open, a tick on each chosen row, and a
  * press toggles its row. The closed pill reads the choices (`chosenLabel`:
  * "Choose", "{first}, {second}", "{n} chosen") by their labels, never their
- * values (Round 21 platform round 2, B1); options that carry `group` are drawn
- * under their headings, and more than 10 get the dropdown's search box.
+ * values (Round 21 platform round 2, B1); more than 10 get the dropdown's
+ * search box. Options that carry `group` open the full-height sheet instead
+ * (`SelectSheet`: "Category", then a group's options, and "Search all"; the
+ * owner's build 34 F1; ~~drawn under their headings in the dropdown~~), and
+ * the picks show as chips under the pill.
  *
  * testIDs: the pill `setup-field-${key}-choice`, a row
- * `setup-field-${key}-choice-option-${value}`.
+ * `setup-field-${key}-choice-option-${value}`, a pick's chip
+ * `setup-field-${key}-choice-chip-${value}`.
  */
 function SelectInput({
   field,
@@ -453,6 +459,47 @@ function SelectInput({
   const labelOf = new Map(options.map((option) => [option.value, option.label]));
   const label = chosenLabel(chosen.map((choice) => labelOf.get(choice) ?? choice));
   const testID = `setup-field-${field.key}-choice`;
+  const pick = (next: string) => {
+    if (several) {
+      onChange(chosen.includes(next) ? chosen.filter((choice) => choice !== next) : [...chosen, next]);
+      return;
+    }
+    onChange(next);
+    setOpen(false);
+  };
+  const pill = (
+    <ScopePill
+      testID={testID}
+      icon={ListBullets}
+      label={label}
+      accessibilityLabel={`${field.title}: ${label}`}
+      onPress={() => setOpen(true)}
+    />
+  );
+  if (options.some((option) => option.group !== undefined)) {
+    return (
+      <View style={styles.grouped}>
+        <View style={styles.pill}>{pill}</View>
+        {chosen.length > 0 ? (
+          <View style={styles.chips}>
+            {chosen.map((choice) => (
+              <Chip key={choice} testID={`${testID}-chip-${choice}`} badge={{ text: labelOf.get(choice) ?? choice }} />
+            ))}
+          </View>
+        ) : null}
+        <SelectSheet
+          testID={testID}
+          title={field.title}
+          options={options}
+          chosen={chosen}
+          multiple={several}
+          open={open}
+          onChoose={pick}
+          onClose={() => setOpen(false)}
+        />
+      </View>
+    );
+  }
   return (
     <View style={styles.pill}>
       <Dropdown
@@ -463,23 +510,8 @@ function SelectInput({
         values={several ? chosen : undefined}
         open={open}
         onOpenChange={setOpen}
-        onChange={(next) => {
-          if (several) {
-            onChange(chosen.includes(next) ? chosen.filter((choice) => choice !== next) : [...chosen, next]);
-            return;
-          }
-          onChange(next);
-          setOpen(false);
-        }}
-        trigger={
-          <ScopePill
-            testID={testID}
-            icon={ListBullets}
-            label={label}
-            accessibilityLabel={`${field.title}: ${label}`}
-            onPress={() => setOpen(true)}
-          />
-        }
+        onChange={pick}
+        trigger={pill}
       />
     </View>
   );
@@ -568,6 +600,9 @@ const styles = StyleSheet.create({
   },
   // The pill keeps its own width, as the item select's does.
   pill: { flexDirection: 'row' },
+  // A grouped select: the pill, then its picks as chips, `inner` apart.
+  grouped: { gap: space.inner },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.inner },
   fieldError: { fontFamily: fonts.medium, ...typeScale.small },
   currency: { fontFamily: fonts.regular, fontSize: typeScale.lead.fontSize, marginRight: inset.xxs },
   input: {

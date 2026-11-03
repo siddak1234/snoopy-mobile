@@ -724,6 +724,13 @@ export const CHOOSE_AT_LEAST_ONE = 'Choose at least one.';
 /** A dropdown's search that finds nothing (Round 21 platform round 2, B1). */
 export const NO_MATCHES = 'No matches.';
 /**
+ * A setup select whose options carry groups, opened as its sheet (the owner's
+ * build 34 F1: "two? One for category and then the sub specialty … a typing
+ * feature"): the title over its groups, and the box that searches every option.
+ */
+export const SELECT_CATEGORY = 'Category';
+export const SEARCH_ALL = 'Search all';
+/**
  * Several files in one upload (Round 21 platform round 2, B2 as the batch
  * addendum's P3 amends it): a file field that allows several (`multiple`)
  * uploads every file into ONE run, at most its manifest's `maxFiles` — else

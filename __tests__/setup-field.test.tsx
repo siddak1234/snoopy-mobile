@@ -429,27 +429,68 @@ describe('a select with many options: labels, groups and a search box', () => {
     options: CODES,
     ...over,
   });
-  it('the closed pill shows labels, never values; what is sent and saved is the value', async () => {
+  it('the closed pill shows labels, never values, and the picks show as chips by label; what is sent and saved is the value', async () => {
     const onChange = jest.fn();
     await renderWithProviders(<SetupFieldRow field={select({ multiple: true })} value={['N18.4', 'I10']} onChange={onChange} divider={false} />);
     expect(screen.getByLabelText('Codes: Chronic kidney disease, stage 4, Essential hypertension')).toBeTruthy();
     expect(screen.queryByText(/N18\.4/u)).toBeNull();
+    // The picks as chips, in the order chosen (the owner's build 34 F1).
+    expect(screen.getByTestId('setup-field-codes-choice-chip-N18.4').props.children).toBe('Chronic kidney disease, stage 4');
+    expect(screen.getByTestId('setup-field-codes-choice-chip-I10').props.children).toBe('Essential hypertension');
     await fireEvent.press(screen.getByTestId('setup-field-codes-choice'));
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice-group-2'));
     await fireEvent.press(screen.getByTestId('setup-field-codes-choice-option-E11.9'));
     expect(onChange).toHaveBeenLastCalledWith(['N18.4', 'I10', 'E11.9']);
     expect(selectedChoices({ options: CODES }, ['I10', 'Essential hypertension'])).toEqual(['I10']);
     expect(declaredValues([{ key: 'codes', control: 'select', options: CODES }], { codes: 'E11.9' })).toEqual({ codes: 'E11.9' });
   });
 
-  it('options with groups are drawn under their headings, the groups in the order they first appear', async () => {
+  it('options with groups open the full-height sheet: "Category" over the groups in the order they first appear, under the field\'s title — no option yet (the owner\'s build 34 F1)', async () => {
     await renderWithProviders(<SetupFieldRow field={select({})} value={undefined} onChange={jest.fn()} divider={false} />);
+    expect(screen.queryByTestId('setup-field-codes-choice-sheet')).toBeNull();
     await fireEvent.press(screen.getByTestId('setup-field-codes-choice'));
-    const menu = within(screen.getByTestId('setup-field-codes-choice-menu'));
-    expect(screen.getByTestId('setup-field-codes-choice-group-0').props.children).toBe('KIDNEY');
-    expect(screen.getByTestId('setup-field-codes-choice-group-1').props.children).toBe('HEART');
-    expect(screen.getByTestId('setup-field-codes-choice-group-2').props.children).toBe('ENDOCRINE');
-    expect(menu.getAllByText(/./u).map((node) => node.props.children)).toEqual([
-      'CODES',
+    const sheet = within(screen.getByTestId('setup-field-codes-choice-sheet'));
+    // Not the anchored panel.
+    expect(screen.queryByTestId('setup-field-codes-choice-menu')).toBeNull();
+    expect(sheet.getByRole('header', { name: 'Codes' })).toBeTruthy();
+    expect(sheet.getByText('CATEGORY')).toBeTruthy();
+    expect(['Kidney', 'Heart', 'Endocrine'].map((name, at) => within(screen.getByTestId(`setup-field-codes-choice-group-${at}`)).getByText(name))).toHaveLength(3);
+    expect(screen.queryByTestId('setup-field-codes-choice-group-3')).toBeNull();
+    expect(screen.queryByTestId('setup-field-codes-choice-option-I10')).toBeNull();
+    expect(screen.getByTestId('setup-field-codes-choice-search-all').props.placeholder).toBe('Search all');
+  });
+
+  it("step 2: a group's options alone under its name, narrowed by typing; Back goes to the groups, and Back again closes", async () => {
+    await renderWithProviders(<SetupFieldRow field={select({ multiple: true })} value={[]} onChange={jest.fn()} divider={false} />);
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice'));
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice-group-0'));
+    const sheet = within(screen.getByTestId('setup-field-codes-choice-sheet'));
+    expect(sheet.getByRole('header', { name: 'Kidney' })).toBeTruthy();
+    expect(screen.getByTestId('setup-field-codes-choice-option-N18.4')).toBeTruthy();
+    expect(screen.getByTestId('setup-field-codes-choice-option-N18.5')).toBeTruthy();
+    expect(screen.queryByTestId('setup-field-codes-choice-option-I10')).toBeNull();
+    const box = screen.getByTestId('setup-field-codes-choice-search');
+    expect(box.props.placeholder).toBe('Search');
+    await fireEvent.changeText(box, 'stage 5');
+    expect(screen.queryByTestId('setup-field-codes-choice-option-N18.4')).toBeNull();
+    expect(screen.getByTestId('setup-field-codes-choice-option-N18.5')).toBeTruthy();
+    await fireEvent.changeText(box, 'zzz');
+    expect(screen.getByTestId('setup-field-codes-choice-no-matches').props.children).toBe('No matches.');
+    await fireEvent.press(sheet.getByLabelText('Back'));
+    expect(screen.getByTestId('setup-field-codes-choice-group-0')).toBeTruthy();
+    expect(screen.queryByTestId('setup-field-codes-choice-search')).toBeNull();
+    await fireEvent.press(within(screen.getByTestId('setup-field-codes-choice-sheet')).getByLabelText('Back'));
+    expect(screen.queryByTestId('setup-field-codes-choice-sheet')).toBeNull();
+  });
+
+  it('"Search all" lists every option whose label holds the words, under its group\'s name, across groups; none: "No matches."', async () => {
+    await renderWithProviders(<SetupFieldRow field={select({ multiple: true })} value={[]} onChange={jest.fn()} divider={false} />);
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice'));
+    await fireEvent.changeText(screen.getByTestId('setup-field-codes-choice-search-all'), 'e');
+    const sheet = within(screen.getByTestId('setup-field-codes-choice-sheet'));
+    expect(sheet.queryByText('CATEGORY')).toBeNull();
+    expect(sheet.getAllByText(/./u).map((node) => node.props.children)).toEqual([
+      'Codes',
       'KIDNEY',
       'Chronic kidney disease, stage 4',
       'Chronic kidney disease, stage 5',
@@ -458,8 +499,39 @@ describe('a select with many options: labels, groups and a search box', () => {
       'ENDOCRINE',
       'Type 2 diabetes',
     ]);
-    // Four options: no search box.
-    expect(screen.queryByTestId('setup-field-codes-choice-search')).toBeNull();
+    await fireEvent.changeText(screen.getByTestId('setup-field-codes-choice-search-all'), 'diabetes');
+    expect(screen.getByTestId('setup-field-codes-choice-option-E11.9')).toBeTruthy();
+    expect(screen.queryByTestId('setup-field-codes-choice-option-I10')).toBeNull();
+    await fireEvent.changeText(screen.getByTestId('setup-field-codes-choice-search-all'), 'zzz');
+    expect(screen.getByTestId('setup-field-codes-choice-no-matches').props.children).toBe('No matches.');
+  });
+
+  it('one: a pick chooses it and closes the sheet; closing forgets the step and the search', async () => {
+    const one = jest.fn();
+    await renderWithProviders(<SetupFieldRow field={select({})} value={undefined} onChange={one} divider={false} />);
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice'));
+    await fireEvent.changeText(screen.getByTestId('setup-field-codes-choice-search-all'), 'hyper');
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice-option-I10'));
+    expect(one).toHaveBeenLastCalledWith('I10');
+    expect(screen.queryByTestId('setup-field-codes-choice-sheet')).toBeNull();
+    // Opened again: the groups, the box empty.
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice'));
+    expect(screen.getByTestId('setup-field-codes-choice-search-all').props.value).toBe('');
+    expect(screen.getByTestId('setup-field-codes-choice-group-0')).toBeTruthy();
+  });
+
+  it('several: a pick ticks or unticks its row and the sheet stays', async () => {
+    const several = jest.fn();
+    await renderWithProviders(<SetupFieldRow field={select({ multiple: true })} value={['N18.4']} onChange={several} divider={false} />);
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice'));
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice-group-0'));
+    expect(screen.getByTestId('setup-field-codes-choice-chosen-N18.4')).toBeTruthy();
+    expect(screen.queryByTestId('setup-field-codes-choice-chosen-N18.5')).toBeNull();
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice-option-N18.5'));
+    expect(several).toHaveBeenLastCalledWith(['N18.4', 'N18.5']);
+    await fireEvent.press(screen.getByTestId('setup-field-codes-choice-option-N18.4'));
+    expect(several).toHaveBeenLastCalledWith([]);
+    expect(screen.getByTestId('setup-field-codes-choice-sheet')).toBeTruthy();
   });
 
   it('more than 10 options: a search box ("Search") keeps the rows whose label holds the query; none: "No matches."', async () => {
