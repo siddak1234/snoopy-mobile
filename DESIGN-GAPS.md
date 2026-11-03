@@ -2954,8 +2954,11 @@ its own lane, with the same words.
   have a divider line between them (DESIGN-CONTRACT "Block set v2 and the spacing table").
 - **G1** (build 31: "Why is it going to activity from that screen?"): a run opened from one of a flow's
   items is drawn in the Flows stack with its own pages (DESIGN-CONTRACT "Activity/run detail").
+- **G4** (build 31: "Shoukd i be taken into a step by step"): Start on an item opens the new run's page in
+  the Flows stack, its steps live; Back returns to the item (DESIGN-CONTRACT "Flows/item").
 
 Bites (break, red, restore, green), each in its suite: G3 the line between a section's entries, none
 under a label or between a page's blocks (`blocks-render`); G1 an item's run and a run's file open in
 the Flows stack (`blocks-render`), and under the real router the run, its Run details and its file in
-the Flows stack, Flows selected, Back straight to the item (`real-router/flow-items`).
+the Flows stack, Flows selected, Back straight to the item (`real-router/flow-items`); G4 Start on an
+item pushes the new run's page in the Flows stack (`round19-items`).

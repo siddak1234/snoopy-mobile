@@ -48,7 +48,8 @@ import { RUN_REREAD_MS } from '@/lib/view/runs';
  * was made from and its reading (`/(tabs)/flows/item-file`); "Add {one of its
  * runs}" and the run form — the flow's run fields and Start (`StartRun`), the
  * run naming this item — for an owner or admin, while it is not archived and
- * its flow can run (`canStartRun`); its runs as the platform ranks them, each a
+ * its flow can run (`canStartRun`); Start opens the new run's page, its steps live, and Back
+ * comes straight here (the owner's build 31 G4); its runs as the platform ranks them, each a
  * row — its rank, its title (or "Reading…"), its score, read "Score" first by a
  * screen reader, and the arrow (`OpenRow`) — a failed one in the muted tone,
  * each opening its run in the Flows stack, so Back comes straight here (the
@@ -172,8 +173,12 @@ export default function ItemScreen() {
             itemId={form.itemId ?? item.id}
             startLabel={START_LABEL}
             showTypes
-            // The new run joins the list, "Reading…", and is read with it.
-            onStarted={() => refresh()}
+            // The new run's page opens, its steps live, in the Flows stack: Back comes
+            // straight here (the owner's build 31 G4, G1), where it joins the list, read with it.
+            onStarted={(runId) => {
+              refresh();
+              router.push({ pathname: '/(tabs)/flows/run', params: { runId } });
+            }}
           />
         </SurfaceCard>
       </View>

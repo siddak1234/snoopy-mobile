@@ -731,7 +731,7 @@ describe("an item's page (plan §5.3; its blocks since Round 21)", () => {
     expect(fake.to(`GET ${ONE}`)).toHaveLength(2);
   });
 
-  it('an owner adds one: the run names the item, says Start; Back goes back', async () => {
+  it("an owner adds one: the run names the item, says Start, and the new run's page opens in the Flows stack (the owner's build 31 G4); Back goes back", async () => {
     const fake = await openItem(READ_ITEM(fixtureBlocks('empty-item')));
     expect(screen.getByText('No candidates yet.')).toBeTruthy();
     // The platform's label, then its run form, drawn by `StartRun` for an owner.
@@ -763,7 +763,9 @@ describe("an item's page (plan §5.3; its blocks since Round 21)", () => {
       input: { contractFile: 'artifact-2' },
       itemId: '0b0b0b0b-0b0b-4b0b-8b0b-0b0b0b0b0b0b',
     });
-    // It stays here; the read that follows lists the new run.
+    // The new run's page opens, its steps live, in the Flows stack — Back from it comes straight
+    // here (G1) — and the read that follows lists the new run.
+    await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/run', params: { runId: 'r9' } }));
     await waitFor(() => expect(fake.to(`GET ${ONE}`).length).toBeGreaterThan(1));
     await fireEvent.press(screen.getByLabelText('Back'));
     expect(mockRouter.back).toHaveBeenCalledTimes(1);
