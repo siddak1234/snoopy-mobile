@@ -5,13 +5,13 @@ import { StyleSheet } from 'react-native';
 import ApprovalsScreen from '@/app/(tabs)/activity/approvals';
 import RunDetailScreen from '@/app/(tabs)/activity/run';
 import { ReviewDecisions } from '@/components/runs/review-decisions';
-import { nocturneDark } from '@/constants/theme';
+import { nocturneDark, status } from '@/constants/theme';
 import { decideApproval, decideReview, type Block } from '@/lib/platform/automations';
 import { PlatformError } from '@/lib/platform/problem';
 import { newIdempotencyKey } from '@/lib/platform/client';
 import type { Approval } from '@/lib/platform/runs';
 import type { Answer } from '@/test/fake-platform';
-import { TEST_WORKSPACE, approvalsPayload, routePlatform, runDetailPayload, signedInSession } from '@/test/platform';
+import { TEST_WORKSPACE, approvalsPayload, catalogPayload, routePlatform, runDetailPayload, signedInSession } from '@/test/platform';
 import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
 
 jest.mock('@/lib/platform/client', () => ({
@@ -65,8 +65,9 @@ function heldDetail({ kind = 'approval', eligibleRoles = ['owner', 'admin'], dec
   };
 }
 
-function openHeld(role: 'owner' | 'admin' | 'member', approvals: Approval[] = [], form: HeldForm = {}) {
+function openHeld(role: 'owner' | 'admin' | 'member', approvals: Approval[] = [], form: HeldForm = {}, routes: Record<string, unknown> = {}) {
   routePlatform(platformOperation, {
+    ...routes,
     '/approvals': { approvals },
     '/v1/workspaces': {
       workspaces: [{ id: TEST_WORKSPACE, name: 'Acme Operations', type: 'organization', role }],
@@ -234,6 +235,46 @@ describe('a held run that offers changes: Accept or Deny each, then Save review 
     } as Approval;
     await openHeld('owner', [reviewed]);
     expect((await screen.findByTestId('run-review-tally')).props.children).toBe('2 accepted · 0 denied');
+  });
+});
+
+describe('a held job whose approval a disconnect expired (the stage 1 spec\'s S1-8; backend §12.1 #252)', () => {
+  const expired = (expiredBy?: { reason: string; providerId: string }) =>
+    ({
+      ...approvalsPayload().approvals[0]!,
+      runId: RUN_ID,
+      status: 'expired',
+      ...(expiredBy ? { expiredBy } : {}),
+    }) as Approval;
+  const withQuickBooks = () => {
+    const catalog = catalogPayload();
+    catalog.automations = catalog.automations.map((entry) => ({
+      ...entry,
+      requiredConnections: [{ providerId: 'quickbooks', displayName: 'QuickBooks Online', purpose: 'Records bills.', optional: true }],
+    }));
+    return { '/automations': catalog };
+  };
+
+  it('says so over its body, in the catalog\'s name for the provider: "Expired · {provider} was disconnected", then "Reconnect {provider}, then start the run again."', async () => {
+    await openHeld('owner', [expired({ reason: 'connection-disconnected', providerId: 'quickbooks' })], {}, withQuickBooks());
+    const lines = within(await screen.findByTestId('run-expired'));
+    expect(lines.getAllByText(/./u).map((node) => node.props.children)).toEqual([
+      'Expired · QuickBooks Online was disconnected',
+      'Reconnect QuickBooks Online, then start the run again.',
+    ]);
+    expect(colorOf(lines.getByText('Expired · QuickBooks Online was disconnected'))).toBe(status.warnText);
+  });
+
+  it('a plain expiry adds nothing', async () => {
+    await openHeld('owner', [expired()], {}, withQuickBooks());
+    await screen.findByTestId('run-blocks');
+    expect(screen.queryByTestId('run-expired')).toBeNull();
+  });
+
+  it('a reason this build does not know adds nothing', async () => {
+    await openHeld('owner', [expired({ reason: 'workspace-closed', providerId: 'quickbooks' })], {}, withQuickBooks());
+    await screen.findByTestId('run-blocks');
+    expect(screen.queryByTestId('run-expired')).toBeNull();
   });
 });
 

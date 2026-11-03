@@ -39,7 +39,17 @@ import { cancelRun, type AnsweredDecision } from '@/lib/platform/automations';
 import { PlatformError } from '@/lib/platform/problem';
 import { decidersLine, decides } from '@/lib/view/roles';
 import { statusLabel, type StatusPillLabel } from '@/lib/view/status';
-import { RUN_ORIGIN_TAB, jobReviewTally, offeredDecisions, runLabel, runOrigin, runStack } from '@/lib/view/runs';
+import {
+  RUN_ORIGIN_TAB,
+  expiredByDisconnect,
+  jobApproval,
+  jobReviewTally,
+  offeredDecisions,
+  providerNameIn,
+  runLabel,
+  runOrigin,
+  runStack,
+} from '@/lib/view/runs';
 
 /**
  * A run's page — the one, in Activity's stack (round 24 P5; the owner's build 23
@@ -51,7 +61,8 @@ import { RUN_ORIGIN_TAB, jobReviewTally, offeredDecisions, runLabel, runOrigin, 
  * (`/(tabs)/activity/run-file`); the result line, toned by its status, and
  * while the job's approval waits, the approval form — Approve and Deny
  * (`DecisionButtons`) to a role it names, to anyone else who can decide; then
- * what the run read. Its footer: View package, Download PDF and Download Excel
+ * what the run read — over it, a job whose approval a disconnect expired says
+ * so (`expiredByDisconnect`, S1-8). Its footer: View package, Download PDF and Download Excel
  * while the platform offers the package (`packageAvailable`); the "Run details"
  * row (`OpenRow`), which opens its steps, tiles and facts on a page of their own
  * (`/(tabs)/activity/run-details`); then Cancel run while it goes, and View
@@ -118,6 +129,11 @@ export default function RunDetailScreen() {
         status: statusLabel(liveRun.detail.run.status) as StatusPillLabel,
         // "{a} accepted · {d} denied" once its review is saved (F2): the job's approval's answers.
         reviewTally: jobReviewTally(liveRun.detail.run, liveRun.approvals, savedReview),
+        // The job's approval, expired because its connection was disconnected at the provider
+        // (S1-8; backend §12.1 #252): why, and what to do, in the catalog's name for it.
+        expired: expiredByDisconnect(jobApproval(liveRun.detail.run, liveRun.approvals), (providerId) =>
+          providerNameIn(liveRun.entry, providerId),
+        ),
         // Its page body (backend ADR-0048): absent, the page draws the fallback.
         blocks: liveRun.detail.blocks,
         // The platform says whether the job has a package (backend ADR-0045, ADR-0048).
@@ -312,6 +328,14 @@ export default function RunDetailScreen() {
         </Text>
       ) : null}
 
+      {/* Over its body, an approval a disconnect expired says so (S1-8), as the website's. */}
+      {run.expired ? (
+        <View testID="run-expired" accessibilityRole="summary" style={styles.decision}>
+          <Text style={[styles.expiredTitle, { color: status.warnText }]}>{run.expired.title}</Text>
+          <Text style={[styles.decisionNote, { color: palette.neutral[400] }]}>{run.expired.next}</Text>
+        </View>
+      ) : null}
+
       <BlockList
         testID="run-blocks"
         blocks={run.blocks}
@@ -439,6 +463,10 @@ const styles = StyleSheet.create({
   },
   decisionNote: {
     fontFamily: fonts.regular,
+    ...typeScale.small,
+  },
+  expiredTitle: {
+    fontFamily: fonts.medium,
     ...typeScale.small,
   },
   download: {

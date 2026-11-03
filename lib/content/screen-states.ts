@@ -343,6 +343,20 @@ export const VENDOR_SAVE_FAILED = 'Could not save. Try again.';
 export const CONNECTION_CONNECTED = 'Connected';
 export const CONNECTION_NOT_CONNECTED = 'Not connected';
 export const CONNECTION_ATTENTION = 'Needs attention';
+/**
+ * A connection the platform retired because the provider would not renew it,
+ * and a held job's approval that retirement expired (the stage 1 spec's S1-8;
+ * backend §12.1 #252), in the provider's name as the platform lists it.
+ */
+export function disconnectedIn(provider: string): string {
+  return `Disconnected in ${provider}`;
+}
+export function expiredByDisconnectTitle(provider: string): string {
+  return `Expired · ${provider} was disconnected`;
+}
+export function expiredByDisconnectNext(provider: string): string {
+  return `Reconnect ${provider}, then start the run again.`;
+}
 export const CONNECT_LABEL = 'Connect';
 export const RECONNECT_LABEL = 'Reconnect';
 export const DISCONNECT_LABEL = 'Disconnect';

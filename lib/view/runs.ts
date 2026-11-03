@@ -21,6 +21,8 @@ import {
   STEP_DENIED,
   STEP_WAITING,
   emailSentLine,
+  expiredByDisconnectNext,
+  expiredByDisconnectTitle,
   reviewTally,
   stepHeld,
 } from '@/lib/content/screen-states';
@@ -191,6 +193,27 @@ export function jobReviewTally(
 ): string | null {
   if (saved && saved.length > 0) return answersTally(saved);
   return answersTally(reviewAnswers(jobApproval(run, approvals)));
+}
+
+/** A provider's name as the catalog lists the flow's connections, else its id. */
+export function providerNameIn(entry: Pick<CatalogEntry, 'requiredConnections'> | undefined, providerId: string): string {
+  return entry?.requiredConnections?.find((connection) => connection.providerId === providerId)?.displayName ?? providerId;
+}
+
+/**
+ * A held job's approval a disconnect expired before its time (the stage 1
+ * spec's S1-8; backend §12.1 #252, `Approval.expiredBy`): the connection its
+ * held run was built on was disconnected at the provider. Its two lines, in
+ * the provider's name; null for any other approval, and for a reason this
+ * build does not know, which reads as a plain expiry — as the website's.
+ */
+export function expiredByDisconnect(
+  approval: Pick<Approval, 'status' | 'expiredBy'> | undefined,
+  providerName: (providerId: string) => string,
+): { title: string; next: string } | null {
+  if (approval?.status !== 'expired' || approval.expiredBy?.reason !== 'connection-disconnected') return null;
+  const provider = providerName(approval.expiredBy.providerId);
+  return { title: expiredByDisconnectTitle(provider), next: expiredByDisconnectNext(provider) };
 }
 
 export function heldDecision(run: Run, approvals: readonly Approval[]): HeldDecision | null {

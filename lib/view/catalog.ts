@@ -14,6 +14,7 @@ import {
   CONNECT_LABEL,
   DISCONNECT_LABEL,
   RECONNECT_LABEL,
+  disconnectedIn,
 } from '@/lib/content/screen-states';
 import { EMPTY, calendarDate, count } from './format';
 import { toPipelineSteps, type PipelineStep } from './pipeline';
@@ -74,14 +75,26 @@ export type TemplateView = {
 /**
  * A connection's state, as the one connection row says it (Build 21, spec A4):
  * connected; needing attention — the platform asks for a new sign-in
- * (`reauthorization-required`, backend §12.1 #175) or holds an `errorCode`; or
- * not connected — no connection, one disconnected, or one still authorizing.
+ * (`reauthorization-required`, backend §12.1 #175), holds an `errorCode`, or
+ * was disconnected at the provider (`disconnectedAtProvider`, the stage 1
+ * spec's S1-8); or not connected — no connection, one disconnected here, or
+ * one still authorizing.
  */
 export type ConnectionRowState = 'connected' | 'attention' | 'not-connected';
 
+/**
+ * A connection the platform retired because the provider would not renew it
+ * (the stage 1 spec's S1-8; backend §12.1 #252): `disconnected`, with the
+ * `errorCode` the refresh loop sets when it retires one. One disconnected
+ * here carries no `errorCode` — as the website reads it.
+ */
+export function disconnectedAtProvider(connection: Connection | undefined): boolean {
+  return connection?.status === 'disconnected' && Boolean(connection.errorCode);
+}
+
 export function connectionState(connection: Connection | undefined): ConnectionRowState {
   if (!connection) return 'not-connected';
-  if (connection.status === 'reauthorization-required') return 'attention';
+  if (connection.status === 'reauthorization-required' || disconnectedAtProvider(connection)) return 'attention';
   if (connection.status === 'connected') return connection.errorCode ? 'attention' : 'connected';
   return 'not-connected';
 }
@@ -104,11 +117,15 @@ export function providerConnected(provider: Pick<ConnectionProvider, 'authType'>
  * Line 2 of the row (Build 21, spec A4; the owner's build 20 item 6: "Logo then
  * to the right name then below the account email"): the account's email when
  * the platform holds one — `externalAccount.displayName` carrying an `@` — else
- * the state in a word; "Needs attention" in the warning colour.
+ * the state in a word; "Needs attention" in the warning colour. One
+ * disconnected at the provider says "Disconnected in {provider}" in the warning
+ * colour (S1-8), its button Reconnect, when the provider's name is given.
  */
 export function connectionLine(
   connection: Connection | undefined,
+  provider = '',
 ): { text: string; tone: 'muted' | 'warn' } {
+  if (disconnectedAtProvider(connection) && provider) return { text: disconnectedIn(provider), tone: 'warn' };
   const state = connectionState(connection);
   const name = connection?.externalAccount.displayName ?? '';
   if (state !== 'not-connected' && name.includes('@')) return { text: name, tone: 'muted' };
@@ -346,7 +363,7 @@ export function toConnectionRow(provider: ConnectionProvider, connection: Connec
   // A provider that needs no key (B5) is connected for every workspace, whatever the list holds.
   const noConnect = needsNoConnect(provider);
   const state = noConnect ? 'connected' : connectionState(connection);
-  const line = noConnect ? { text: CONNECTION_CONNECTED, tone: 'muted' as const } : connectionLine(connection);
+  const line = noConnect ? { text: CONNECTION_CONNECTED, tone: 'muted' as const } : connectionLine(connection, provider.displayName);
   return {
     provider,
     providerId: provider.providerId,

@@ -3015,6 +3015,14 @@ same items in its own lane, with the same words.
   (DESIGN-CONTRACT "Flows/email"). **Finding:** the spec's "footer words" ("Stop these emails") and the
   confirm and stop pages' words are the platform's email and pages (the backend's B0 summary: "No lane
   shows the confirm/stop page words"); the app draws none of them, as the website draws none.
+- **S1-8** (QuickBooks disconnect; backend §12.1 #252): the expired approval over the run's body and the
+  row disconnected at the provider (DESIGN-CONTRACT "Activity/run detail", "Settings › Connections"); the
+  Disconnect page is the website's. **Findings:** (1) at the contract commit the Connections list leaves
+  every `disconnected` row out (snoopy-backend `apps/connections/src/postgres-connections.ts:174`, `status
+  <> 'disconnected'`), so the row is drawn only once the platform lists a connection it retired; (2) the
+  words name the provider as the platform lists it — QuickBooks is "QuickBooks Online"
+  (`providers/quickbooks.json`) — so the app says "Disconnected in QuickBooks Online", where the spec's
+  words say "QuickBooks": a NEW WORD for the owner, as the backend's B0 summary and the website have it.
 
 Bites (break, red, restore, green): S1-G2 an http address made a press, LinkedIn's logo left out
 (`blocks-render`), the renderer drawing nothing (`blocks-parity`, `drawn-links`). S1-B1 the example left out, and the example taken on any control (`setup-field`). S1-B2 the
@@ -3022,4 +3030,7 @@ declared sections ignored, CONNECT kept for the vendor choice, the catalog's sec
 flow, an empty section drawn (`invoice-processing-screens`). S1-B3 the body without `other`
 (`platform-mutations`), the key without it, the list past 3, a changed row counted as denied, the list
 left open after a pick, the pills drawn to a member (`review-decisions`). S1-7 no line drawn,
-the address matched with case, an unknown status drawn (`build22-screens`).
+the address matched with case, an unknown status drawn (`build22-screens`). S1-8 any
+`disconnected` read as retired, the line and the attention state left out, the vendor row's name left
+out (`connection-row`), the expiry drawn for any reason, the lines not drawn, the provider by its id
+(`review-decisions`).
