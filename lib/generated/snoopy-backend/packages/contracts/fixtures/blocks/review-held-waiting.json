@@ -1,7 +1,7 @@
 {
   "name": "review-held-waiting",
   "about": "A held run that offers three changes: the review form, each to accept or deny (amendment 2)",
-  "blockSetVersion": 4,
+  "blockSetVersion": 5,
   "blocks": [
     {
       "type": "text",

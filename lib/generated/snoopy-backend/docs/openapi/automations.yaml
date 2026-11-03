@@ -89,9 +89,15 @@ paths:
 
         **The flow goes to the team of its category (ADR-0036).** The platform
         finds the workspace's team whose kind is the catalog entry's `category`,
-        or makes it, and puts the person adding the flow on it; any member may
-        add a flow. No client chooses a team, and `projectId` is ignored. A
-        person who is not an active member of the workspace is answered 404.
+        or makes it, and puts the person adding the flow on it. No client
+        chooses a team, and `projectId` is ignored. A person who is not an
+        active member of the workspace is answered 404.
+
+
+        **Only an owner or admin adds a flow (§12.1 #180).** A member is
+        answered 403 with `details.reason: flow_change_requires_admin`, which a
+        client shows as "Only an owner or admin can change this flow."; members
+        still see flows and start runs.
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -133,10 +139,12 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403':
           description: >-
-            The workspace is not entitled to create this subscription. Only
-            `details.reason: over_plan_limit` or
-            `details.reason: entitlements_not_configured` may be exposed for this
-            response; every other authorization refusal is a generic Problem.
+            A member may not add a flow (`details.reason:
+            flow_change_requires_admin`, §12.1 #180), or the workspace is not
+            entitled to create this subscription (`details.reason:
+            over_plan_limit` or `entitlements_not_configured`). Only these three
+            may be exposed for this response; every other authorization refusal
+            is a generic Problem.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -199,14 +207,16 @@ paths:
         the flow did not choose.
 
 
-        **Only an owner or admin changes the integration (ADR-0043).** A member
-        whose `config` changes a stored `control: connection` field's value, or
-        leaves a stored choice out (which would clear it), gets 403 with
-        `details.reason: integration_requires_admin`, so a client sends the
-        stored choice back unchanged. A member's first choice on a flow with no
-        stored value goes through, so a member who added the flow can set it
-        up. Every other field stays open to a member who can see the flow. In a
-        Personal workspace the one person is its owner.
+        **Only an owner or admin changes a flow (§12.1 #180).** A member's
+        change of any kind — its name, its settings, pausing or resuming it,
+        archiving it — is answered 403 with `details.reason:
+        flow_change_requires_admin`, checked at the Edge before anything is
+        read; a client shows "Only an owner or admin can change this flow." and
+        draws the controls read-only. Members still see flows and start runs. In
+        a Personal workspace the one person is its owner. ADR-0043's
+        `integration_requires_admin` (a member's change to a stored connection
+        choice) is kept for the same rule one level down, and a member no longer
+        reaches it.
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'
         - $ref: '#/components/parameters/SubscriptionId'
@@ -1239,7 +1249,9 @@ paths:
         approval takes `decision` only. Refused with 400 after the role (403),
         status and expiry (409) checks: "decisions must answer every change once",
         "this approval reviews each change: send decisions" and "decisions is only
-        for an approval that offers changes".
+        for an approval that offers changes". An answer may name `other`
+        (ADR-0048 amendment 5), one of its change's `options` by value, in place
+        of `decision`; a value the change did not offer is refused 400.
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'
         - $ref: '#/components/parameters/ApprovalId'
@@ -1827,8 +1839,10 @@ components:
           additionalProperties: true
           description: >-
             Usually absent. On a 403 from subscription creation, only
+            `reason: flow_change_requires_admin` (a member, §12.1 #180),
             `reason: over_plan_limit` and `reason: entitlements_not_configured`
-            may be present. On a 403 from run creation, the same two reasons, each
+            may be present; on a 403 from a subscription update,
+            `flow_change_requires_admin` or `integration_requires_admin`. On a 403 from run creation, the same two reasons, each
             with the integers `limit` and `live`. A 403 for a missing role carries
             `requiredRole`. A 409 or 422 from `createItem`, and one from
             `createRun` naming an item, names only the reasons its operation
@@ -2033,6 +2047,16 @@ components:
             the server rejects undeclared keys and values with the wrong control
             type; a required field may be omitted only when it declares a default.
           items: { $ref: '#/components/schemas/AutomationSetupField' }
+        setupSections:
+          type: array
+          minItems: 2
+          maxItems: 6
+          description: >-
+            The setup screen's sections, in order (ADR-0048 Amendment 5): each
+            field is drawn under the section its `sectionId` names, and a client
+            numbers them. Absent: the fields are drawn in today's four fixed
+            sections, by `section`.
+          items: { $ref: '#/components/schemas/AutomationSetupSectionDeclaration' }
         pipeline:
           type: array
           minItems: 1
@@ -2167,9 +2191,23 @@ components:
       required: [section, key, title, description, control, required]
       properties:
         section: { type: string, enum: [connections, source, rules, notifications] }
+        sectionId:
+          type: string
+          maxLength: 64
+          description: >-
+            The `setupSections` entry this field is drawn under (ADR-0048
+            Amendment 5): on every field when the manifest declares sections, on
+            none when it does not.
         key: { type: string, maxLength: 64, description: Stable `config` object key. }
         title: { type: string }
         description: { type: string }
+        example:
+          type: string
+          minLength: 1
+          maxLength: 40
+          description: >-
+            Only on a `text` field (ADR-0048 Amendment 5): an example a client
+            shows as the box's placeholder, in place of "Optional".
         control:
           type: string
           enum: [toggle, money, text, email, resource-picker, connection, select]
@@ -2226,6 +2264,17 @@ components:
             Only on a `select`: true when a person may pick several. The value
             (and `defaultValue`) is then a list of the option values, none twice,
             never empty when the field is required; absent or false, it is one.
+
+    AutomationSetupSectionDeclaration:
+      type: object
+      additionalProperties: false
+      required: [id, title]
+      description: >-
+        One section of a flow's setup screen (ADR-0048 Amendment 5), holding the
+        fields whose `sectionId` is its `id`.
+      properties:
+        id: { type: string, maxLength: 64, pattern: '^[a-z][a-z0-9-]{0,62}[a-z0-9]$' }
+        title: { type: string, minLength: 1, maxLength: 40 }
 
     AutomationSelectOption:
       type: object
@@ -2456,6 +2505,15 @@ components:
             fields, not the catalog entry's: the two differ once a newer version
             adds, removes or retypes a field. Absent when the pinned version
             declares none.
+        setupSections:
+          type: array
+          minItems: 2
+          maxItems: 6
+          description: >-
+            The setup sections of the version this subscription PINS (ADR-0048
+            Amendment 5), drawn as `AutomationCatalogEntry.setupSections` is.
+            Absent when it declares none.
+          items: { $ref: '#/components/schemas/AutomationSetupSectionDeclaration' }
         triggerKind:
           type: string
           enum: [schedule, webhook, manual, provider-event]
@@ -2497,6 +2555,14 @@ components:
         with no space or `<>,;"()[]\`, and a domain with a dot after it
         (ADR-0041).
 
+    FlowEmailAddressStatus:
+      type: object
+      additionalProperties: false
+      required: [email, status]
+      properties:
+        email: { type: string }
+        status: { type: string, enum: [pending, confirmed, stopped] }
+
     FlowEmailPerson:
       type: object
       additionalProperties: false
@@ -2526,6 +2592,16 @@ components:
           maxItems: 10
           description: The flow's extra addresses, in the order they were added.
           items: { type: string }
+        extraStatuses:
+          type: array
+          maxItems: 10
+          description: >-
+            Each of `extra`, in its order, with its consent (§12.1 #289): a new
+            address is `pending` and is sent one confirmation email and nothing
+            else until it confirms; only a `confirmed` one gets the flow's run
+            emails; a `stopped` one unsubscribed. Addresses added before consent
+            existed are `confirmed`.
+          items: { $ref: '#/components/schemas/FlowEmailAddressStatus' }
         canEdit:
           type: boolean
           description: True for an owner or admin, who may change `extra`.
@@ -2948,6 +3024,17 @@ components:
           description: >-
             `shape=blocks` only: the job has documents and has ended or is held,
             so the run package is offered (ADR-0045).
+        connectionChoices:
+          type: object
+          additionalProperties: { type: string, maxLength: 64 }
+          description: >-
+            The connection choices this run started with (§12.1 #290): each
+            `control: connection` setup field's `key`, with `none` or the
+            `providerId` it chose, saved on the run when it starts. A client draws
+            the run's step lines and `AutomationStepGroup.titleByConnection`
+            titles from these, not from the flow's current choice. Absent on a run
+            made before they were saved, which a client draws as before. On this
+            one-run read only: lists and the activity never carry it.
 
     BlockTone:
       type: string
@@ -2999,15 +3086,18 @@ components:
 
     Block:
       description: >-
-        One of the thirteen blocks a run's or an item's page body is made of
-        (ADR-0048 and its amendments 1 to 3, `BLOCK_SET_VERSION` 4), told apart by
+        One of the fourteen blocks a run's or an item's page body is made of
+        (ADR-0048 and its amendments 1 to 5, `BLOCK_SET_VERSION` 5), told apart by
         `type`. Drawn as sent and in order, by one renderer per type in each
         client; an unknown type, form or part draws "This part can't be shown here
         yet.". A `section` holds no section, group or questions, and starts closed
         unless `open`. An `image` is one of the job's own files drawn in the page;
         a `chart` is a bar or line chart, read aloud as its `alt`; a `group` is a
         title over one card of sections, of which the first may be `open`, and is
-        top level only. A `list` that is `searchable` shows a search box.
+        top level only. A `list` that is `searchable` shows a search box. A
+        `links` block (amendment 5) is 1 to 8 full-width pill buttons, one under
+        another, each its `brand`'s logo (bundled in the client; `site`, or none,
+        a globe) and its `label`, opening its https `url` outside.
         `questions` is the platform's form over what the manifest declares, drawn
         by the client's own component; an automation never sends one.
       oneOf:
@@ -3146,7 +3236,9 @@ components:
                 decide it), `review` (the same, when the held run offers changes
                 to accept or deny one by one, with its `decisions`; ADR-0048
                 amendment 2, block set 3; each under its `group` heading since
-                amendment 3, block set 4), `run` (start a run, of an item when
+                amendment 3, block set 4; with the `options` a person may pick
+                in a change's place since amendment 5, block set 5), `run` (start
+                a run, of an item when
                 `itemId`), `item` (make an item) or `setup` (the flow's settings).
                 The routes check every answer again.
               properties:
@@ -3215,6 +3307,28 @@ components:
                     type: array
                     minItems: 1
                     items: { $ref: '#/components/schemas/Block' }
+        - type: object
+          additionalProperties: false
+          required: [type, items]
+          properties:
+            type: { const: links }
+            items:
+              type: array
+              minItems: 1
+              maxItems: 8
+              items:
+                type: object
+                additionalProperties: false
+                required: [label, url]
+                properties:
+                  label: { type: string, minLength: 1, maxLength: 40 }
+                  url:
+                    type: string
+                    description: https only (an `http://` one sent is upgraded); checked again when drawn.
+                  brand:
+                    type: string
+                    enum: [linkedin, github, huggingface, x, site]
+                    description: Whose logo the button draws; an unknown one draws the globe.
 
     FlowPages:
       type: object
@@ -3665,6 +3779,7 @@ components:
           deprecated: true
           x-sunset: '2027-01-31'
           description: Not sent since ADR-0044; `runId` is the job's id.
+        expiredBy: { $ref: '#/components/schemas/ApprovalExpiredBy' }
         decisions:
           type: array
           minItems: 1
@@ -3684,7 +3799,34 @@ components:
               label: { type: string, minLength: 1, maxLength: 120 }
               detail: { type: string, minLength: 1, maxLength: 200 }
               group: { type: string, minLength: 1, maxLength: 120 }
+              options:
+                type: array
+                minItems: 1
+                maxItems: 3
+                items: { $ref: '#/components/schemas/HeldDecisionOption' }
               decision: { type: string, enum: [accepted, denied] }
+              other:
+                type: string
+                minLength: 1
+                maxLength: 120
+                description: >-
+                  ADR-0048 amendment 5: the option the person picked in place of
+                  the change, by its `value`; then there is no `decision`.
+
+    ApprovalExpiredBy:
+      type: object
+      additionalProperties: false
+      required: [reason, providerId]
+      description: >-
+        Only on an `expired` approval that expired before `expiresAt` (§12.1
+        #252): `connection-disconnected` when the connection its held run was
+        built on was disconnected at the provider (`providerId`) — a refused
+        refresh or a 401 that retired the grant. A client shows "Expired ·
+        {provider} was disconnected" and "Reconnect {provider}, then start the
+        run again." A reason it does not know reads as a plain expiry.
+      properties:
+        reason: { type: string }
+        providerId: { type: string, maxLength: 64 }
 
     HeldDecision:
       type: object
@@ -3694,20 +3836,43 @@ components:
         One change a held run offers (ADR-0048 amendment 2): one line each, no
         tags; the id shaped as a step id, none twice. `group` (amendment 3) is
         the heading a client draws it under, in the order sent, on every change
-        or on none.
+        or on none. `options` (amendment 5) are up to 3 values a person may pick
+        in its place, each value once: a client offers them under "Other code".
       properties:
         id: { type: string, maxLength: 64, pattern: '^[a-z][a-z0-9-]{0,62}[a-z0-9]$' }
         label: { type: string, minLength: 1, maxLength: 120 }
         detail: { type: string, minLength: 1, maxLength: 200 }
         group: { type: string, minLength: 1, maxLength: 120 }
+        options:
+          type: array
+          minItems: 1
+          maxItems: 3
+          items: { $ref: '#/components/schemas/HeldDecisionOption' }
+
+    HeldDecisionOption:
+      type: object
+      additionalProperties: false
+      required: [value, label]
+      description: >-
+        A value a person may pick in place of a held change (ADR-0048 amendment
+        5): `value` is what the answer's `other` names and the continuation
+        carries; `label` is what a person reads. One line each, no tags.
+      properties:
+        value: { type: string, minLength: 1, maxLength: 120 }
+        label: { type: string, minLength: 1, maxLength: 120 }
 
     ReviewAnswer:
       type: object
       additionalProperties: false
-      required: [id, decision]
+      required: [id]
+      description: >-
+        One answer per offered change: `decision`, or (ADR-0048 amendment 5)
+        `other`, the `value` of one of that change's `options` — exactly one of
+        the two. An `other` the change did not offer is refused.
       properties:
         id: { type: string, maxLength: 64, pattern: '^[a-z][a-z0-9-]{0,62}[a-z0-9]$' }
         decision: { type: string, enum: [accepted, denied] }
+        other: { type: string, minLength: 1, maxLength: 120 }
 
     NotificationId:
       type: string

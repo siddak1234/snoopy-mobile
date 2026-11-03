@@ -2987,3 +2987,19 @@ an empty card under step 2's "No matches." (`setup-field`); F5 the departments u
 items read before it is opened, Start run's page pushed elsewhere, one flow open at a time, the flows
 in the list's order, YOUR FLOWS drawn with nothing live (`parity-home`). Home's tests that opened a run from RECENT RUNS open it as Start run
 does (`real-router/run-in-activity`, `real-router/session-ended`).
+
+## Round 21 stage 1, C2: the client side of the platform's stage 1 contract (2026-11-03)
+
+The generated contracts and their hash-checked copy come from the backend's stage 1 contract commit
+(`round-21/stage-1-platform` at 35d0695, B0), never from main; CI's `Deployed contract` job is red by
+design until the platform releases it (`lib/platform/CLAUDE.md`). One commit per item; the rules are
+DESIGN-CONTRACT's, each once; this entry keeps the bites and the findings. Parity: the website builds the
+same items in its own lane, with the same words.
+
+- **S1-G2** (the links block, amendment 5): full-width pill buttons, each its brand's mark and its label
+  (DESIGN-CONTRACT "Block set v2 and the spacing table"). **Finding:** the icon set has no Hugging Face
+  logo and the app bundles none, so `huggingface` draws the globe, as the website's does, until the owner
+  supplies the logo's file.
+
+Bites (break, red, restore, green): S1-G2 an http address made a press, LinkedIn's logo left out
+(`blocks-render`), the renderer drawing nothing (`blocks-parity`, `drawn-links`).

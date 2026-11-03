@@ -374,7 +374,7 @@ a padding, a margin or a gap under app/ and components/ (README
   item's page is its `danger` pill, as Cancel run is. `selected` says the
   chosen one of a pair to a screen reader (a review's Accept or Deny).
 
-**The blocks** (`RENDERERS`, thirteen types):
+**The blocks** (`RENDERERS`, fourteen types since block set 5; ~~thirteen~~):
 - **image** (`components/blocks/image.tsx`): its file read only for its typed
   target (`readRunFile` or `readItemFile`, in the page's workspace —
   `BlockContext.workspaceId`), its link checked (`signedLink`), saved in a
@@ -396,6 +396,14 @@ a padding, a margin or a gap under app/ and components/ (README
 - **list**: a row's score toned by its `valueTone` — the positive verdict
   green, the negative red, the tiles' tokens — its chip the verdict's word (Q5,
   F2); a failed row stays muted.
+- **links** (`components/blocks/links.tsx`, backend ADR-0048 amendment 5,
+  `BLOCK_SET_VERSION` 5): full-width `PillButton`s (`secondary`), one under
+  another `inner` apart, each its `brand`'s mark and its label, opening in the
+  system browser as a link does — https only, checked again when drawn
+  (`httpsLink`); any other address is its label alone, no press. The marks are
+  the icon set's LinkedIn, GitHub and X logos, bundled with the app; `site`,
+  none, or a brand with no logo there (`huggingface`) the globe — as the
+  website's.
 
 **Search, sort and pages** (`components/blocks/paged.tsx`: `SearchBox`,
 `SortControl`, `Pager`, `ListTools`, `usePaged`; the rules

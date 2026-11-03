@@ -1,7 +1,7 @@
 {
   "name": "reviewer-candidate-grouped",
   "about": "The same candidate with the group option on: one group \"Candidate details\", its first section open",
-  "blockSetVersion": 4,
+  "blockSetVersion": 5,
   "blocks": [
     {
       "type": "file",

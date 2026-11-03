@@ -1,7 +1,7 @@
 {
   "name": "emitted-all-nine",
   "about": "A run that sent one of each of the nine sendable types",
-  "blockSetVersion": 4,
+  "blockSetVersion": 5,
   "blocks": [
     {
       "type": "text",

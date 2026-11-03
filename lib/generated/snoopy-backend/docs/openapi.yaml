@@ -731,10 +731,11 @@ paths:
       tags: [workspaces]
       operationId: startWorkspaceExport
       description: >-
-        **A complete export**, staged as one file (§12.1 #39, FR-21). Requires
-        owner or admin. Answers at once with the export `running`; read it with
-        `readWorkspaceExport` until it is `ready`, when it carries the file — an
-        artifact id and a short-lived signed URL, never the bytes (invariant 6).
+        **A complete export** (§12.1 #39, FR-21). Requires owner or admin.
+        Answers at once with the export `running`; read it with
+        `readWorkspaceExport` until it is `ready`, when it carries its files —
+        each an artifact id and a short-lived signed URL, never the bytes
+        (invariant 6).
 
 
         Every section of every service is paged, so no section is cut at 250 rows
@@ -745,9 +746,12 @@ paths:
         (`complete: false`, and the file names the gap) rather than absent.
 
 
-        **One file has a ceiling**: the object store's maximum for any file, 25 MiB
-        unless the deployment sets less. An export past it fails `too_large`, and
-        stops as soon as it passes it rather than after reading everything.
+        **In parts (§12.1 #181).** The export is uploaded in bounded parts, each
+        within the object store's maximum for one file (25 MiB unless the
+        deployment sets less), so no single upload grows with the workspace;
+        `ready` carries every part, in order, in `files` ("Download file {n} of
+        {N}"). `file` is sent only when the export is one file, for clients
+        built before `files`; an export of several carries `files` alone.
 
 
         One at a time per workspace: while one is running, asking again answers
@@ -775,7 +779,7 @@ paths:
       operationId: readWorkspaceExport
       description: >-
         One export's state. `running` until the job ends; then `ready` with its
-        `file`, or `failed` with a `failureReason` (`interrupted` when nothing
+        `files` (and `file` when it is one), or `failed` with a `failureReason` (`interrupted` when nothing
         finished it within its lease); `expired` once the file is collected.
         Requires owner or admin. Each read signs a fresh URL, valid for minutes.
       parameters:
@@ -1379,11 +1383,14 @@ paths:
         - $ref: '#/components/parameters/WorkspaceId'
         - $ref: '#/components/parameters/IdempotencyKey'
       description: >-
-        Adds a flow. It goes to the workspace's team of the flow's category, which
-        the platform makes when there is none (ADR-0036); no client chooses a team.
-        The request body is specified in `docs/openapi/automations.yaml`.
+        Adds a flow; owner or admin only, a member is 403
+        `flow_change_requires_admin` (§12.1 #180). It goes to the workspace's
+        team of the flow's category, which the platform makes when there is none
+        (ADR-0036); no client chooses a team. The request body is specified in
+        `docs/openapi/automations.yaml`.
       responses:
         '200': { description: The subscription, with its unmet connections. }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}:
     get:
       tags: [automations]
@@ -1406,10 +1413,10 @@ paths:
       description: >-
         Rename, configure, activate or archive. No client chooses a version:
         every flow runs its automation's newest, which the platform moves it to
-        on release (ADR-0041). In an organization only an owner or admin changes
-        the flow's integration (ADR-0043): a member's change to it is 403
-        `integration_requires_admin`. The request body and every refusal are
-        specified in `docs/openapi/automations.yaml`.
+        on release (ADR-0041). Only an owner or admin changes a flow (§12.1
+        #180): a member's change of any kind is 403 `flow_change_requires_admin`.
+        The request body and every refusal are specified in
+        `docs/openapi/automations.yaml`.
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'
         - name: subscriptionId
@@ -3144,7 +3151,34 @@ components:
         code: { type: string }
         requestId: { type: string }
         traceId: { type: string }
-        details: { type: object, additionalProperties: true }
+        details:
+          type: object
+          additionalProperties: true
+          description: >-
+            Usually absent, or a `reason` its operation lists. On a 403 whose
+            `details.reason` is `outside_org_domain` from a domain-only
+            organization's workspace (§12.1 #221, option b′), the shape is
+            `OutsideOrgDomainDetails`.
+
+    OutsideOrgDomainDetails:
+      type: object
+      additionalProperties: false
+      required: [reason, providers]
+      description: >-
+        A domain-only organization's workspace refuses, at session resolve, a
+        person who holds a sign-in outside its verified domains (§12.1 #221,
+        option b′), until that sign-in is unlinked; nothing is removed
+        automatically. `providers` names those sign-ins, each removable with
+        `unlinkLoginIdentity` (the native client's unlink). A client shows "This
+        organization admits only people who sign in with addresses at its
+        verified domains." / "Remove your other sign-in to continue." and a
+        "Remove {provider} sign-in" button for each.
+      properties:
+        reason: { type: string, enum: [outside_org_domain] }
+        providers:
+          type: array
+          minItems: 1
+          items: { type: string, enum: [google, microsoft, apple] }
 
     WorkspaceExportResponse:
       type: object
@@ -3619,6 +3653,13 @@ components:
             is not a failure of the export: the file names it, and `complete` is
             false.
         file: { $ref: '#/components/schemas/WorkspaceExportFile' }
+        files:
+          type: array
+          minItems: 1
+          description: >-
+            Every part of a `ready` export, in order (§12.1 #181): a client offers
+            "Download file {n} of {N}". Each is kept for a day, as `file` is.
+          items: { $ref: '#/components/schemas/WorkspaceExportFile' }
     WorkspaceExportFile:
       type: object
       additionalProperties: false

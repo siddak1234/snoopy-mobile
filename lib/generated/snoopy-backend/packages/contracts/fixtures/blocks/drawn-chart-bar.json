@@ -1,7 +1,7 @@
 {
   "name": "drawn-chart-bar",
   "about": "A bar chart of 3 bars, one text filled by the platform, and its alt",
-  "blockSetVersion": 4,
+  "blockSetVersion": 5,
   "blocks": [
     {
       "type": "chart",

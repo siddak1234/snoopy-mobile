@@ -14,6 +14,7 @@ import { FileBlock } from './file';
 import { GroupCard } from './group';
 import { ImageBlock } from './image';
 import { LinkBlock } from './link';
+import { LinksBlock } from './links';
 import { ListBlock } from './list';
 import type { BlockOf, BlockPlace } from './look';
 import { MetricBlock } from './metric';
@@ -42,8 +43,9 @@ type Draw<K extends Block['type']> = (args: {
 }) => React.ReactNode;
 
 /**
- * The registry: one renderer for each of the contract's thirteen types (backend
- * ADR-0048 and its amendment 1, `BLOCK_SET_VERSION` 2; ~~ten~~ until Round 21),
+ * The registry: one renderer for each of the contract's fourteen types (backend
+ * ADR-0048 and its amendments 1 to 5, `BLOCK_SET_VERSION` 5: `links` since
+ * amendment 5; ~~ten~~ until Round 21, ~~thirteen~~ until block set 5),
  * keyed by the generated union, so a type the contract adds fails the build
  * here until it is drawn (decisions 8 and 12; `__tests__/blocks-render`). Each
  * is made from a part the app already has — the chart from react-native-svg,
@@ -63,6 +65,7 @@ export const RENDERERS: { [K in Block['type']]: Draw<K> } = {
     <FileBlock block={block} testID={testID} nested={nested} place={context} />
   ),
   link: ({ block, testID, nested }) => <LinkBlock block={block} testID={testID} nested={nested} />,
+  links: ({ block, testID }) => <LinksBlock block={block} testID={testID} />,
   timeline: ({ block, testID, nested }) => <TimelineBlock block={block} testID={testID} nested={nested} />,
   questions: ({ block, testID, context }) => <QuestionsBlock block={block} testID={testID} forms={context.forms} />,
   image: ({ block, testID, nested, context }) => (

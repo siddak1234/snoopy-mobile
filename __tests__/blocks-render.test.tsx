@@ -1,10 +1,12 @@
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
+import { GithubLogo, Globe, LinkedinLogo, XLogo } from 'phosphor-react-native';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import React from 'react';
 import { AccessibilityInfo, Linking, StyleSheet, processColor } from 'react-native';
 
 import { RENDERERS } from '@/components/blocks/block-list';
+import { brandIcon } from '@/components/blocks/links';
 import { httpsLink, openRoute, pageParts, toneOf } from '@/components/blocks/look';
 import { Text } from '@/components/text';
 import { nocturneDark, status } from '@/constants/theme';
@@ -22,8 +24,9 @@ jest.mock('@/lib/platform/client', () => ({
 const { platformOperation, downloadSignedFile } = jest.requireMock('@/lib/platform/client');
 
 /**
- * The thirteen blocks (backend ADR-0048 and its amendment 1, `BLOCK_SET_VERSION`
- * 2; ~~ten~~ until Round 21), each drawn by its renderer (decisions 8–10):
+ * The fourteen blocks (backend ADR-0048 and its amendments 1 to 5,
+ * `BLOCK_SET_VERSION` 5; ~~ten~~ until Round 21, ~~thirteen~~ until block set
+ * 5), each drawn by its renderer (decisions 8–10):
  * its words, its tone a theme token, open or closed, and its press; and what
  * this build does not know — a type, a form, a target, a tone, a state —
  * drawn as the decision says, never thrown.
@@ -41,8 +44,8 @@ describe('the registry', () => {
     const union = generated.slice(generated.indexOf('        Block: {'), generated.indexOf('        FlowPages: {'));
     // Each type once: a group's sections name `section` again.
     const types = [...new Set([...union.matchAll(/\/\*\* @constant \*\/\n\s+type: "(\w+)";/gu)].map((match) => match[1]))];
-    expect(types).toHaveLength(13);
-    expect(types).toEqual(expect.arrayContaining(['image', 'chart', 'group']));
+    expect(types).toHaveLength(14);
+    expect(types).toEqual(expect.arrayContaining(['image', 'chart', 'group', 'links']));
     expect(Object.keys(RENDERERS).sort()).toEqual([...types].sort());
   });
 });
@@ -318,6 +321,39 @@ describe('file and link', () => {
       await fireEvent.press(screen.getByTestId('b-0'));
       expect(open).toHaveBeenCalledWith('https://help.example.test/rules');
       expect(screen.getByTestId('b-1').props.onPress).toBeUndefined();
+    } finally {
+      open.mockRestore();
+    }
+  });
+
+  it("links (ADR-0048 amendment 5): full-width pill buttons, each its brand's mark and its label, opening in the system browser; an http one its label alone, no press", async () => {
+    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    try {
+      await renderBlocks([
+        {
+          type: 'links',
+          items: [
+            { label: 'LinkedIn', url: 'https://www.linkedin.com/in/jane', brand: 'linkedin' },
+            { label: 'GitHub', url: 'https://github.com/jane', brand: 'github' },
+            { label: 'Hugging Face', url: 'https://huggingface.co/jane', brand: 'huggingface' },
+            { label: 'X', url: 'https://x.com/jane', brand: 'x' },
+            { label: 'Portfolio', url: 'https://jane.example', brand: 'site' },
+            { label: 'Old site', url: 'http://jane.example/old' },
+          ],
+        },
+      ]);
+      expect(visibleWords(screen.toJSON())).toEqual(['LinkedIn', 'GitHub', 'Hugging Face', 'X', 'Portfolio', 'Old site']);
+      expect(screen.getByTestId('b-0-0').props.accessibilityLabel).toBe('LinkedIn, www.linkedin.com');
+      await fireEvent.press(screen.getByTestId('b-0-0'));
+      expect(open).toHaveBeenLastCalledWith('https://www.linkedin.com/in/jane');
+      await fireEvent.press(screen.getByTestId('b-0-4'));
+      expect(open).toHaveBeenLastCalledWith('https://jane.example/');
+      expect(screen.getByTestId('b-0-5').props.onPress).toBeUndefined();
+      // Each brand's mark: the icon set's logo, else the globe.
+      expect(brandIcon('linkedin')).toBe(LinkedinLogo);
+      expect(brandIcon('github')).toBe(GithubLogo);
+      expect(brandIcon('x')).toBe(XLogo);
+      for (const other of ['site', 'huggingface', undefined, 'constructor']) expect(brandIcon(other)).toBe(Globe);
     } finally {
       open.mockRestore();
     }
