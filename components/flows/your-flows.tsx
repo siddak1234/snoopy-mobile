@@ -26,8 +26,9 @@ import { groupItems } from '@/lib/view/items';
  * Tapped, a flow that can start a run here (`canStartRun`) opens under its row
  * to its run's first step — the fields of its `runInput`, from the
  * subscriptions list Home already read, and Start run (`StartRun`: the upload
- * and start-run path the flow page uses) — and tapped again, closes; one is open
- * at a time. Start run starts the run and opens its page (`onStarted`). A flow
+ * and start-run path the flow page uses) — and tapped again, closes; each opens
+ * and closes on its own, as the website's. Start run starts the run and opens
+ * its page (`onStarted`). A flow
  * with items (backend ADR-0046) asks first for which one — its ready items, read
  * only once its row is open (`readItems`), by its group field's value A–Z in a
  * drop-down — and, as on an item's page, only to an owner or admin. A flow that
@@ -52,7 +53,14 @@ export function YourFlows({
   onOpen: (subscriptionId: string) => void;
 }) {
   const { palette } = useTheme();
-  const [open, setOpen] = useState<string | null>(null);
+  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
+  const toggle = (id: string) =>
+    setOpen((was) => {
+      const next = new Set(was);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   return (
     <DividedCard testID="home-flows">
       {sections.map((section, at) => (
@@ -65,7 +73,7 @@ export function YourFlows({
           {section.flows.map(({ subscription, entry }, row) => {
             const id = subscription.id;
             const startable = canStartRun(subscription, entry, true) && (!subscription.items || canManage);
-            const expanded = open === id;
+            const expanded = open.has(id);
             return (
               <View key={id}>
                 <ConnectionRow
@@ -85,7 +93,7 @@ export function YourFlows({
                     )
                   }
                   divider={row < section.flows.length - 1 && !expanded}
-                  onPress={() => (startable ? setOpen(expanded ? null : id) : onOpen(id))}
+                  onPress={() => (startable ? toggle(id) : onOpen(id))}
                 />
                 {expanded ? (
                   <View

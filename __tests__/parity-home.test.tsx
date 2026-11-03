@@ -570,12 +570,15 @@ describe("YOUR FLOWS (the owner's build 34 F5)", () => {
     expect(screen.queryByTestId('home-flow-invoice-form')).toBeNull();
   });
 
-  it('one open at a time: opening another closes the first', async () => {
+  it("each opens and closes on its own, as the website's: opening another leaves the first open", async () => {
     routeFlows();
     await renderWithProviders(<HomeScreen />, signedInSession);
     await fireEvent.press(await screen.findByTestId('home-flow-invoice'));
     expect(screen.getByTestId('home-flow-invoice-form')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('home-flow-email'));
+    expect(screen.getByTestId('home-flow-invoice-form')).toBeTruthy();
+    expect(screen.getByTestId('home-flow-email-form')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('home-flow-invoice'));
     expect(screen.queryByTestId('home-flow-invoice-form')).toBeNull();
     expect(screen.getByTestId('home-flow-email-form')).toBeTruthy();
   });

@@ -2967,7 +2967,8 @@ its own lane, with the same words.
   drawn only for a flow the platform could not reach, since it says why Add is off.
 - **F5** (build 34): Home's YOUR FLOWS in RECENT RUNS' place — the live flows by department, each a tap
   from its run's first step and Start run; a flow with items reads them only when opened (DESIGN-CONTRACT
-  "Home"). **The session's defaults:** one flow open at a time; a flow that cannot start a run on Home
+  "Home"). Each flow opens and closes on its own, as the website's (~~one at a time~~ until the parity
+  check). **The session's defaults:** a flow that cannot start a run on Home
   (no run fields, its automation unavailable, or a member on a flow with items, as on an item's page)
   opens its flow page; the job comes first, then the run's fields, as one form cannot put a choice
   between its fields and its button; nothing live says the Flows page's "No flows in this department
