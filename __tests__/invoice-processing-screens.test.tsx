@@ -407,6 +407,55 @@ describe('the flow page (spec A6; Build 22, P1–P4)', () => {
     expect(fake.to('PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}')[0]!.body).toEqual({ status: 'live' });
   });
 
+  describe("only an owner or admin changes a flow (the stage 1 spec's S1-9; backend §12.1 #180)", () => {
+    /** The flow page as `role` sees it; PATCH answers `patch`. */
+    async function openAs(role: 'owner' | 'member', subscription: Subscription, patch?: () => unknown) {
+      const fake = fakePlatform(platformOperation);
+      fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', { subscriptions: [subscription] });
+      fake.always('GET /v1/workspaces/{workspaceId}/automations', { automations: [invoiceProcessingV4Entry()], categories: ['All'] });
+      fake.always('GET /v1/workspaces/{workspaceId}/run-stats', stats());
+      fake.always('GET /v1/connections/providers', providersWithQuickBooks());
+      fake.always('GET /v1/workspaces/{workspaceId}/projects', { projects: [ACCOUNTING_TEAM] });
+      fake.always('GET /v1/workspaces/{workspaceId}/connections', { connections: [] });
+      fake.always('GET /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/email-recipients', recipientsPayload());
+      fake.always('PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}', (patch ?? (() => ({ subscription }))) as never);
+      setMockParams({ flow: subscription.id });
+      await renderWithProviders(<WorkflowDetailScreen />, sessionAs(role));
+      await screen.findByTestId('flow-step-upload');
+      return fake;
+    }
+    const PATCHES = 'PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}';
+
+    it('a member on a live flow: Pause and Archive flow read-only, under the line; Edit setup still opens Set up', async () => {
+      const fake = await openAs('member', added({ vendor: 'none' }));
+      await fireEvent.press(screen.getByText('Pause'));
+      await fireEvent.press(screen.getByTestId('archive-flow'));
+      expect(screen.getByTestId('flow-change-admin-only').props.children).toBe('Only an owner or admin can change this flow.');
+      expect(fake.to(PATCHES)).toEqual([]);
+      await fireEvent.press(screen.getByTestId('manage-setup'));
+      expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/setup', params: { template: 'invoice-processing', flow: 'ip-1' } });
+    });
+
+    it('a member on a paused flow: Turn on read-only, with the line under it', async () => {
+      const fake = await openAs('member', { ...added({ vendor: 'none' }), status: 'paused' });
+      const step1 = within(screen.getByTestId('flow-step-upload'));
+      expect(step1.getByTestId('flow-turn-on-admin-only').props.children).toBe('Only an owner or admin can change this flow.');
+      await fireEvent.press(step1.getByTestId('flow-step-turn-on'));
+      expect(fake.to(PATCHES)).toEqual([]);
+    });
+
+    it('an owner: no line; Pause sends the change, and a change the platform refuses as a member\'s (403 flow_change_requires_admin) says the line', async () => {
+      const fake = await openAs('owner', added({ vendor: 'none' }), () => {
+        throw new PlatformError('Forbidden', 403, undefined, { reason: 'flow_change_requires_admin' });
+      });
+      expect(screen.queryByTestId('flow-change-admin-only')).toBeNull();
+      expect(screen.queryByTestId('flow-turn-on-admin-only')).toBeNull();
+      await fireEvent.press(screen.getByText('Pause'));
+      await waitFor(() => expect(fake.to(PATCHES)).toHaveLength(1));
+      expect(await screen.findByText('Only an owner or admin can change this flow.')).toBeTruthy();
+    });
+  });
+
   it('DASHBOARD is live: read again while a run of the flow goes on, and the tiles change without leaving the page (S30)', async () => {
     let reads = 0;
     // Running until the test has seen it so; then the run ends, a success. A flag rather than a
@@ -685,17 +734,32 @@ describe('Set up — one simple page, once, everything on it (the owner\'s AM4)'
     expect(mockConnect).not.toHaveBeenCalled();
   });
 
-  it('a member adding a flow still chooses its integration (ADR-0036): no read-only line, None is a choice', async () => {
+  it("a member's Set up is read-only (the stage 1 spec's S1-9; backend §12.1 #180; ~~a member adding a flow chooses its integration, ADR-0043 §2~~): the integration and the settings shown, nothing changed, and the line in Turn on's place", async () => {
     const fake = fakePlatform(platformOperation);
     routeSetup(fake, () => [], () => [quickbooks()]);
     setMockParams({ template: 'invoice-processing' });
     await renderWithProviders(<SetupScreen />, sessionAs('member'));
     expect(await screen.findByTestId('vendor-quickbooks')).toBeTruthy();
-    expect(screen.queryByTestId('vendor-read-only')).toBeNull();
     await fireEvent.press(screen.getByTestId('vendor-quickbooks'));
-    await waitFor(() => expect(screen.getByTestId('vendor-chosen-quickbooks')).toBeTruthy());
-    await fireEvent.press(screen.getByTestId('vendor-none'));
-    await waitFor(() => expect(screen.getByTestId('vendor-chosen-none')).toBeTruthy());
+    expect(screen.queryByTestId('vendor-chosen-quickbooks')).toBeNull();
+    expect(screen.getByTestId('vendor-chosen-none')).toBeTruthy();
+    expect(screen.getByLabelText('Approval limit').props.editable).toBe(false);
+    expect(screen.queryByText('Turn on')).toBeNull();
+    expect(screen.getByTestId('setup-admin-only').props.children).toBe('Only an owner or admin can change this flow.');
+    expect(fake.to('POST /v1/workspaces/{workspaceId}/subscriptions')).toEqual([]);
+  });
+
+  it("an owner's Turn on the platform refuses as a member's (403 flow_change_requires_admin) says the line", async () => {
+    const fake = fakePlatform(platformOperation);
+    routeSetup(fake, () => []);
+    fake.always('POST /v1/workspaces/{workspaceId}/subscriptions', () => {
+      throw new PlatformError('Forbidden', 403, undefined, { reason: 'flow_change_requires_admin' });
+    });
+    setMockParams({ template: 'invoice-processing' });
+    await renderWithProviders(<SetupScreen />, sessionAs('owner'));
+    expect(screen.queryByTestId('setup-admin-only')).toBeNull();
+    await fireEvent.press(await screen.findByText('Turn on'));
+    expect(await screen.findByText('Only an owner or admin can change this flow.')).toBeTruthy();
   });
 });
 

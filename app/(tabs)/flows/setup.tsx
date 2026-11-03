@@ -35,7 +35,7 @@ import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { roleIn, useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
 import { useTheme } from '@/hooks/use-theme';
-import { ALREADY_IN_WORKSPACE, WORKSPACE_CHANGED, turnOnRefusal } from '@/lib/content/refusals';
+import { ALREADY_IN_WORKSPACE, FLOW_CHANGE_ADMIN_ONLY, WORKSPACE_CHANGED, turnOnRefusal } from '@/lib/content/refusals';
 import {
   CHOOSE_AT_LEAST_ONE,
   SETUP_SAVE,
@@ -93,6 +93,11 @@ import { administers } from '@/lib/view/roles';
  * flow and turns it on with everything on the page, in one press — or **Save**
  * for a flow already on or paused, which keeps its status. What it cannot send
  * is said in the spec's words, and nothing is sent.
+ *
+ * Only an owner or admin changes a flow (the stage 1 spec's S1-9; backend
+ * §12.1 #180): to a member every choice and setting is read-only, and "Only an
+ * owner or admin can change this flow." stands in the button's place
+ * (~~a member's first vendor choice on a flow just added, ADR-0043 §2~~).
  */
 export default function SetupScreen() {
   const { palette } = useTheme();
@@ -422,7 +427,7 @@ export default function SetupScreen() {
           saving={null}
           onChoose={(choice) => choose(field.key, choice)}
           onConnectionsChanged={refreshResource}
-          readOnly={!canManage && editing}
+          readOnly={!canManage}
         />
       </SurfaceCard>
     </View>
@@ -484,6 +489,7 @@ export default function SetupScreen() {
                           onChange={(next) => setField(field.key, next)}
                           divider={index < run.rows.length - 1}
                           error={emptyChoices.includes(field.key) ? CHOOSE_AT_LEAST_ONE : null}
+                          readOnly={!canManage}
                         />
                       ))}
                     </SurfaceCard>
@@ -495,20 +501,26 @@ export default function SetupScreen() {
 
           {actionError ? <ActionFailure message={actionError} retryLabel="Try again" onRetry={submit} /> : null}
 
-          {/* A button to a screen reader, as it is to the eye (the Build 21 review). */}
-          <Pressable
-            testID="setup-turn-on"
-            accessibilityRole="button"
-            accessibilityState={{ disabled: busy, busy }}
-            disabled={busy}
-            onPress={submit}
-            style={({ pressed }) => [
-              styles.activateBtn,
-              { borderColor: palette.accent },
-              pressed && { backgroundColor: withAlpha(palette.accent, 0.12) },
-            ]}>
-            <Text style={[styles.activateLabel, { color: palette.accent }]}>{label}</Text>
-          </Pressable>
+          {/* A button to a screen reader, as it is to the eye (the Build 21 review); to a member, the line in its place (S1-9). */}
+          {canManage ? (
+            <Pressable
+              testID="setup-turn-on"
+              accessibilityRole="button"
+              accessibilityState={{ disabled: busy, busy }}
+              disabled={busy}
+              onPress={submit}
+              style={({ pressed }) => [
+                styles.activateBtn,
+                { borderColor: palette.accent },
+                pressed && { backgroundColor: withAlpha(palette.accent, 0.12) },
+              ]}>
+              <Text style={[styles.activateLabel, { color: palette.accent }]}>{label}</Text>
+            </Pressable>
+          ) : (
+            <Text testID="setup-admin-only" style={[styles.adminOnly, { color: palette.neutral[400] }]}>
+              {FLOW_CHANGE_ADMIN_ONLY}
+            </Text>
+          )}
         </View>
       </InlineBoundary>
     </Page>
@@ -531,6 +543,7 @@ const styles = StyleSheet.create({
   form: { gap: space.group },
   cards: { gap: space.inner },
   fieldTitle: { marginBottom: space.title, fontFamily: fonts.medium, ...typeScale.small },
+  adminOnly: { fontFamily: fonts.regular, ...typeScale.small },
   activateBtn: {
     minHeight: 52,
     borderRadius: 999,

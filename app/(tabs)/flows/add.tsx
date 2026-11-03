@@ -17,7 +17,9 @@ import { PageHeader } from '@/components/page-header';
 import { em, fonts, iconSize, inset, layout, space, status, typeScale, withAlpha } from '@/constants/theme';
 import { useAccessibilityTextSize } from '@/hooks/use-accessibility-text-size';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
+import { roleIn, useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
+import { FLOW_CHANGE_ADMIN_ONLY } from '@/lib/content/refusals';
 import {
   CATALOG_EMPTY_BODY,
   CATALOG_EMPTY_TITLE,
@@ -28,6 +30,7 @@ import {
 import { readCatalog } from '@/lib/platform/catalog';
 import { readSubscriptions } from '@/lib/platform/runs';
 import { byDepartment, heldAs, toSolutions, withoutArchived, type SolutionView } from '@/lib/view/catalog';
+import { administers } from '@/lib/view/roles';
 
 /** A category as the drop-down says it: the catalog's "All" is All categories (S5). */
 const categoryLabel = (category: string) => (category === 'All' ? 'All categories' : category);
@@ -52,6 +55,10 @@ const categoryLabel = (category: string) => (category === 'All' ? 'All categorie
  * words like HR included and Department: healthcare insude the flow
  * component"; ~~"{category} · {price}" and "Department: {kind}"~~), and the
  * unavailable line only for a flow the platform could not reach.
+ *
+ * Only an owner or admin adds a flow (the stage 1 spec's S1-9; backend §12.1
+ * #180): to a member each Add is read-only, under "Only an owner or admin can
+ * change this flow." once, over the list.
  */
 export default function AddFlowScreen() {
   const { palette } = useTheme();
@@ -59,6 +66,7 @@ export default function AddFlowScreen() {
   const stacked = useAccessibilityTextSize();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const session = useSession();
   const [category, setCategory] = useState('All');
   const [categoryOpen, setCategoryOpen] = useState(false);
 
@@ -71,6 +79,7 @@ export default function AddFlowScreen() {
   });
 
   const ready = catalog.status === 'ready' ? catalog.data : null;
+  const canManage = administers(roleIn(session, catalog.loadedFor));
 
   const solutions = ready ? toSolutions(ready.catalog, ready.subscriptions) : [];
   const chips = ready ? ready.catalog.categories : [];
@@ -146,6 +155,12 @@ export default function AddFlowScreen() {
         />
       </View>
 
+      {canManage ? null : (
+        <Text testID="add-admin-only" style={[styles.adminOnly, { color: palette.neutral[400] }]}>
+          {FLOW_CHANGE_ADMIN_ONLY}
+        </Text>
+      )}
+
       <View style={styles.groups}>
         {sections.map((section, g) => (
           <View key={section.department ?? 'chosen'} testID={`add-group-${g}`} style={styles.list}>
@@ -180,21 +195,21 @@ export default function AddFlowScreen() {
                       testID={`add-${sol.templateId}`}
                       accessibilityRole="button"
                       accessibilityLabel={`Add ${sol.name}`}
-                      disabled={!sol.available}
-                      accessibilityState={{ disabled: !sol.available }}
+                      disabled={!sol.available || !canManage}
+                      accessibilityState={{ disabled: !sol.available || !canManage }}
                       onPress={() =>
                         router.push({ pathname: '/(tabs)/flows/setup', params: { template: sol.templateId } })
                       }
                       style={({ pressed }) => [
                         styles.addBtn,
-                        { borderColor: sol.available ? palette.accent : palette.neutral[700] },
+                        { borderColor: sol.available && canManage ? palette.accent : palette.neutral[700] },
                         pressed && { backgroundColor: withAlpha(palette.accent, 0.1) },
                       ]}>
                       <Text
                         style={{
                           fontFamily: fonts.medium,
                           fontSize: typeScale.body.fontSize,
-                          color: sol.available ? palette.accent : palette.neutral[400],
+                          color: sol.available && canManage ? palette.accent : palette.neutral[400],
                         }}>
                         Add
                       </Text>
@@ -267,6 +282,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     fontSize: typeScale.small.fontSize,
   },
+  adminOnly: { fontFamily: fonts.regular, ...typeScale.small },
   cardMeta: {
     marginTop: inset.xs,
     fontFamily: fonts.regular,

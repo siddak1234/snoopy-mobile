@@ -29,7 +29,7 @@ import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { roleIn, useSession, workspaceIfShown } from '@/hooks/use-session';
 import { statusAction, useWorkflows, type FlowStatus } from '@/hooks/use-workflows';
-import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
+import { FLOW_CHANGE_ADMIN_ONLY, FLOW_CHANGE_REFUSALS, WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
 import {
   DASHBOARD_LABEL,
   FIGURE_UNAVAILABLE,
@@ -308,7 +308,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
       // and a skeleton here read as the screen going blank (feedback #6).
       flows.refresh();
     } catch (error) {
-      setActionError(refusalMessage(error, {}, 'The flow status was not changed.'));
+      setActionError(refusalMessage(error, FLOW_CHANGE_REFUSALS, 'The flow status was not changed.'));
     } finally {
       setBusy(false);
     }
@@ -419,10 +419,17 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
       fontSize={typeScale.label.fontSize}
       icon={RocketLaunch}
       iconSize={iconSize.button}
-      disabled={busy || !canGoLive}
+      disabled={busy || !canGoLive || !canManage}
       onPress={changeStatus}
     />
   );
+  // Only an owner or admin turns a flow on (S1-9): to a member, read-only, with the line.
+  const memberLine = (testID: string) =>
+    canManage ? null : (
+      <Text testID={testID} style={[styles.note, { color: palette.neutral[400] }]}>
+        {FLOW_CHANGE_ADMIN_ONLY}
+      </Text>
+    );
   // One key whether the flow is on or off: Turn on keeps the form, and a file
   // given first stays given — as the website's form does (the Build 21 review).
   const stepOne = def.removed ? null : (
@@ -453,6 +460,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
           <View style={styles.stepAction}>{turnOn}</View>
         )
       ) : null}
+      {current !== 'Live' ? memberLine('flow-turn-on-admin-only') : null}
       {vendorOwed.map((chosen) => {
         const field = vendorFields.find((candidate) => chosenVendor(candidate, subscription.config) === chosen)!;
         return (
@@ -618,9 +626,12 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
                 label={UNARCHIVE_LABEL}
                 variant="primary"
                 fontSize={typeScale.label.fontSize}
+                // Only an owner or admin adds it again (S1-9).
+                disabled={!canManage}
                 // Setup for its flow, a fresh setup; it goes to its category's team (ADR-0036).
                 onPress={() => router.push({ pathname: '/(tabs)/flows/setup', params: { template: def.templateId } })}
               />
+              {memberLine('flow-unarchive-admin-only')}
             </>
           )}
         </SurfaceCard>
@@ -652,7 +663,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
                   icon={ActionIcon}
                   iconSize={iconSize.button}
                   style={styles.actionBtn}
-                  disabled={busy || (goingLive && !canGoLive)}
+                  disabled={busy || (goingLive && !canGoLive) || !canManage}
                   onPress={changeStatus}
                 />
               </View>

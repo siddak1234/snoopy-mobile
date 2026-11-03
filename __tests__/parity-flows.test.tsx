@@ -15,6 +15,7 @@ import {
   planSubscriptionsPayload,
   projectsPayload,
   routePlatform,
+  sessionAs,
   signedInSession,
   subscriptionsPayload,
 } from '@/test/platform';
@@ -58,6 +59,24 @@ describe("G8, since the owner's build 34 F4 — a catalog card says neither its 
 
   it('reads the version from the catalog entry', () => {
     expect(toSolution({ ...catalogPayload().automations[0]!, version: 4 }, false).version).toBe(4);
+  });
+});
+
+describe("Add a flow is an owner's or admin's (the stage 1 spec's S1-9; backend §12.1 #180)", () => {
+  it('to a member, each Add is read-only, under "Only an owner or admin can change this flow." once; an owner sees no line', async () => {
+    routePlatform(platformOperation, { '/automations': catalogPayload(), '/subscriptions': { subscriptions: [] } });
+    const member = await renderWithProviders(<SolutionsScreen />, sessionAs('member'));
+    expect((await screen.findByTestId('add-admin-only')).props.children).toBe('Only an owner or admin can change this flow.');
+    const add = screen.getByTestId('add-tpl.0');
+    expect(add.props.accessibilityState).toMatchObject({ disabled: true });
+    await fireEvent.press(add);
+    expect(mockRouter.push).not.toHaveBeenCalledWith(expect.objectContaining({ pathname: '/(tabs)/flows/setup' }));
+    await member.unmount();
+
+    await renderWithProviders(<SolutionsScreen />, sessionAs('owner'));
+    await fireEvent.press(await screen.findByTestId('add-tpl.0'));
+    expect(screen.queryByTestId('add-admin-only')).toBeNull();
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/setup', params: { template: 'tpl.0' } });
   });
 });
 

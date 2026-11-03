@@ -394,10 +394,13 @@ export function FieldInput({
   field,
   value,
   onChange,
+  readOnly = false,
 }: {
   field: FieldRowSpec;
   value: unknown;
   onChange: (next: unknown) => void;
+  /** Its value shown, nothing changed: a member's Set up (S1-9). */
+  readOnly?: boolean;
 }) {
   const { palette } = useTheme();
   const isMoney = field.control === 'money';
@@ -421,9 +424,9 @@ export function FieldInput({
   }, [externalValue, value]);
 
   if (field.control === 'toggle') {
-    return <NocToggle value={value === true} onChange={(next) => onChange(next)} />;
+    return <NocToggle value={value === true} disabled={readOnly} onChange={(next) => onChange(next)} />;
   }
-  if (field.control === 'select') return <SelectInput field={field} value={value} onChange={onChange} />;
+  if (field.control === 'select') return <SelectInput field={field} value={value} onChange={onChange} readOnly={readOnly} />;
 
   const changeText = (next: string) => {
     if (isMoney) {
@@ -457,6 +460,7 @@ export function FieldInput({
         accessibilityLabel={field.title}
         value={draft}
         onChangeText={changeText}
+        editable={!readOnly}
         placeholder={placeholderOf(field)}
         placeholderTextColor={palette.neutral[500]}
         keyboardType={isMoney ? 'number-pad' : isEmailField(field) ? 'email-address' : 'default'}
@@ -492,10 +496,12 @@ function SelectInput({
   field,
   value,
   onChange,
+  readOnly,
 }: {
   field: FieldRowSpec;
   value: unknown;
   onChange: (next: unknown) => void;
+  readOnly: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const several = field.multiple === true;
@@ -518,7 +524,8 @@ function SelectInput({
       icon={ListBullets}
       label={label}
       accessibilityLabel={`${field.title}: ${label}`}
-      onPress={() => setOpen(true)}
+      // Read-only, the pill says the choice and opens nothing (S1-9).
+      onPress={readOnly ? undefined : () => setOpen(true)}
     />
   );
   if (options.some((option) => option.group !== undefined)) {
@@ -577,6 +584,7 @@ export function SetupFieldRow({
   onChange,
   divider,
   error,
+  readOnly = false,
 }: {
   field: FieldRowSpec;
   value: unknown;
@@ -584,6 +592,8 @@ export function SetupFieldRow({
   divider: boolean;
   /** What the save said of this field ("Choose at least one."), under it. */
   error?: string | null;
+  /** Its value shown, nothing changed: a member's Set up (the stage 1 spec's S1-9). */
+  readOnly?: boolean;
 }) {
   const { palette } = useTheme();
   // A control this build does not know draws under the text glyph, as its text input (25.8.1).
@@ -602,7 +612,7 @@ export function SetupFieldRow({
         {!field.required ? (
           <Text style={[styles.optional, { color: palette.neutral[500] }]}>Optional</Text>
         ) : null}
-        {field.control === 'toggle' ? <FieldInput field={field} value={value} onChange={onChange} /> : null}
+        {field.control === 'toggle' ? <FieldInput field={field} value={value} onChange={onChange} readOnly={readOnly} /> : null}
       </View>
       {notifies ? <Text style={[styles.rowSub, { color: palette.neutral[400] }]}>{notifies}</Text> : null}
       {newer ? <Text style={[styles.rowSub, { color: palette.neutral[400] }]}>{newer}</Text> : null}
@@ -611,7 +621,7 @@ export function SetupFieldRow({
           instead of inventing a provider-specific picker — `resource-picker` is a
           known control drawn that way (25.8.1), and a control this build does not
           know is drawn that way too, with `controlNote`'s line under it. */}
-      {field.control === 'toggle' ? null : <FieldInput field={field} value={value} onChange={onChange} />}
+      {field.control === 'toggle' ? null : <FieldInput field={field} value={value} onChange={onChange} readOnly={readOnly} />}
       {error ? (
         <Text accessibilityRole="alert" testID={`setup-field-${field.key}-error`} style={[styles.fieldError, { color: status.err }]}>
           {error}

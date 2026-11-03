@@ -15,7 +15,7 @@ import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
 import { useTheme } from '@/hooks/use-theme';
-import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
+import { FLOW_CHANGE_ADMIN_ONLY, FLOW_CHANGE_REFUSALS, WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
 import { EDIT_SETUP_LABEL } from '@/lib/content/screen-states';
 import { updateSubscription, type Subscription } from '@/lib/platform/automations';
 import type { CatalogEntry } from '@/lib/platform/catalog';
@@ -46,6 +46,10 @@ type Open = 'webhook' | 'archive' | null;
  *
  * Run is not here since BUILD-PLAN 25.8.3: the run's fields and Start run are
  * the flow page's start controls, at its top (`StartRun`).
+ *
+ * Only an owner or admin changes a flow (the stage 1 spec's S1-9; backend
+ * §12.1 #180): to a member, Archive flow is read-only, under "Only an owner or
+ * admin can change this flow."; Edit setup still opens Set up, read-only too.
  *
  * Every action acts on the workspace the screen loaded (`shownWorkspaceId`).
  * `statusRow` is the screen's own Go live / Pause row, placed first.
@@ -108,7 +112,7 @@ export function AutomationActions({
       setOpen(null);
       onArchived();
     } catch (caught) {
-      setArchiveError(refusalMessage(caught, {}, 'The flow was not archived.'));
+      setArchiveError(refusalMessage(caught, FLOW_CHANGE_REFUSALS, 'The flow was not archived.'));
     } finally {
       setArchiving(false);
     }
@@ -156,6 +160,8 @@ export function AutomationActions({
         testID="archive-flow"
         accessibilityRole="button"
         accessibilityLabel={`Archive ${name}`}
+        disabled={!canAdminister || undefined}
+        accessibilityState={canAdminister ? undefined : { disabled: true }}
         onPress={() => {
           setArchiveError(null);
           setOpen('archive');
@@ -163,11 +169,17 @@ export function AutomationActions({
         style={({ pressed }) => [
           styles.archive,
           { borderColor: palette.danger },
-          pressed && { backgroundColor: withAlpha(palette.danger, 0.08) },
+          pressed && canAdminister && { backgroundColor: withAlpha(palette.danger, 0.08) },
+          !canAdminister && { opacity: 0.5 },
         ]}>
         <Archive size={iconSize.button} color={palette.danger} />
         <Text style={[styles.archiveLabel, { color: palette.danger }]}>Archive flow</Text>
       </Pressable>
+      {canAdminister ? null : (
+        <Text testID="flow-change-admin-only" style={[styles.adminOnly, { color: palette.neutral[400] }]}>
+          {FLOW_CHANGE_ADMIN_ONLY}
+        </Text>
+      )}
 
       {open === 'webhook' ? (
         <WebhookAddressDialog
@@ -221,5 +233,9 @@ const styles = StyleSheet.create({
   archiveLabel: {
     fontFamily: fonts.medium,
     fontSize: typeScale.label.fontSize,
+  },
+  adminOnly: {
+    fontFamily: fonts.regular,
+    ...typeScale.small,
   },
 });

@@ -3033,6 +3033,12 @@ same items in its own lane, with the same words.
   (DESIGN-CONTRACT "Mutations", Data export). **Finding:** the ready line "Ready. The file holds the whole
   workspace." and the failure `too_large`'s "The workspace is larger than one export file may be." still
   speak of one file; no word for several is listed, so they stay until the owner words them.
+- **S1-9** (only owners and admins change a flow; backend §12.1 #180): a member's Add, Set up, Turn on,
+  Pause, Archive flow and Unarchive read-only with the line, and the refusal's words (DESIGN-CONTRACT
+  "Flows/add", "Setup/configure", "Flows/detail"). **The session's default:** on Add the line is drawn
+  once over the list, not under each card as the website's. The integration's own page keeps its line,
+  "Only an owner or admin can change the integration." Three tests that had a member add or save now
+  have an owner or admin do it.
 
 Bites (break, red, restore, green): S1-G2 an http address made a press, LinkedIn's logo left out
 (`blocks-render`), the renderer drawing nothing (`blocks-parity`, `drawn-links`). S1-B1 the example left out, and the example taken on any control (`setup-field`). S1-B2 the
@@ -3048,4 +3054,8 @@ company left out, and drawn on a row not connected (`connection-row`). S1-16 the
 flow's choice read, and read over the run's (`build22-screens`). S1-10 the
 line left out (`account-screen`). S1-14 every
 button reading the first part, Share kept for several, `files` ignored, the old line kept
-(`data-support-screens`).
+(`data-support-screens`). S1-9 a
+member's Add, Pause, Turn on, Archive flow and Unarchive pressable, Set up's vendor choice, rows and
+button a member's again, the switch and the pill pressable read-only (`parity-flows`,
+`invoice-processing-screens`, `automation-actions`, `build13-unarchive-and-one-flow`, `setup-field`),
+and each refusal's words left out.

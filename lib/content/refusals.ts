@@ -102,11 +102,25 @@ export function unlinkRefusal(error: unknown): string {
 }
 
 /**
- * Adding an automation: the two reasons the subscription operation allowlists,
- * and only on a 403 — every other 403 is authorization, not a pricing signal
+ * Only an owner or admin changes a flow (the stage 1 spec's S1-9; backend
+ * §12.1 #180): a member's add, set up, pause or resume, or archive is refused
+ * at the Edge with 403 `flow_change_requires_admin`. A member sees each of
+ * those controls read-only, with this line; a refusal says it too — as the
+ * website's.
+ */
+export const FLOW_CHANGE_ADMIN_ONLY = 'Only an owner or admin can change this flow.';
+export const FLOW_CHANGE_REFUSALS: Readonly<Record<string, string>> = {
+  flow_change_requires_admin: FLOW_CHANGE_ADMIN_ONLY,
+};
+
+/**
+ * Adding an automation: the reasons the subscription operation allowlists —
+ * a member's (`flow_change_requires_admin`, S1-9) and the two of pricing — and
+ * only on a 403; every other 403 is authorization, not a pricing signal
  * (`snoopy/lib/subscription-entitlements.ts`).
  */
 const SUBSCRIPTION_REFUSALS: Readonly<Record<string, string>> = {
+  ...FLOW_CHANGE_REFUSALS,
   over_plan_limit: 'This workspace has reached its current plan limit.',
   entitlements_not_configured:
     'Subscriptions are unavailable while billing entitlements are not configured.',

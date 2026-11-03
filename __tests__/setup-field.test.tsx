@@ -120,6 +120,16 @@ describe('SetupFieldRow — every control the union permits', () => {
     expect(onChange).toHaveBeenCalledWith(true);
   });
 
+  it("read-only (a member's Set up, the stage 1 spec's S1-9): the switch is disabled and changes nothing", async () => {
+    const onChange = jest.fn();
+    await renderWithProviders(
+      <SetupFieldRow field={field({ control: 'toggle' })} value={false} onChange={onChange} divider={false} readOnly />,
+    );
+    expect(screen.getByRole('switch').props.accessibilityState).toMatchObject({ disabled: true });
+    await fireEvent.press(screen.getByRole('switch'));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it('renders money as an editable number and reports a number', async () => {
     const onChange = jest.fn();
     await renderWithProviders(
@@ -375,6 +385,17 @@ describe('a select: the glass dropdown, one choice or several', () => {
     expect(screen.getByTestId('setup-field-specialties-choice-menu')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('setup-field-specialties-choice-option-Nephrology'));
     expect(onChange).toHaveBeenLastCalledWith([]);
+  });
+
+  it("read-only (a member's Set up, the stage 1 spec's S1-9): the pill says the choice and opens nothing", async () => {
+    const onChange = jest.fn();
+    await renderWithProviders(
+      <SetupFieldRow field={select({})} value="Nephrology" onChange={onChange} divider={false} readOnly />,
+    );
+    expect(screen.getByText('Nephrology')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('setup-field-specialties-choice'));
+    expect(screen.queryByTestId('setup-field-specialties-choice-menu')).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it('three or more chosen: the pill says how many', async () => {

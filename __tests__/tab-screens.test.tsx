@@ -1753,14 +1753,14 @@ describe('Setup (design sSetup; the Invoice Processing update, spec §3.B)', () 
     expect(await screen.findByText('This workspace has reached its current plan limit.')).toBeTruthy();
   });
 
-  it('adds an archived flow afresh rather than reviving the archived subscription — a member too, with no team to pick', async () => {
+  it('adds an archived flow afresh rather than reviving the archived subscription — with no team to pick (~~a member too~~: an owner or admin since the stage 1 spec\'s S1-9)', async () => {
     const archived: Subscription = { ...draft(), id: 'archived-0', status: 'archived' };
     const writes = routeSetup(
       { ...invoiceProcessing(), '/subscriptions': { subscriptions: [archived] } },
       { created: { ...draft(), id: 'fresh-0' } },
     );
     setMockParams({ template: 'invoice-processing' });
-    await renderWithProviders(<SetupScreen />, sessionAs('member'));
+    await renderWithProviders(<SetupScreen />, sessionAs('admin'));
     await fireEvent.press(await screen.findByText('Turn on'));
     await waitFor(() =>
       expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'fresh-0' } }),

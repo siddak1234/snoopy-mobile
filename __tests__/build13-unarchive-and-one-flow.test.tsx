@@ -98,6 +98,23 @@ describe("Unarchive — the word for Add it again (the owner's build 12 item 4)"
     expect(writes).toEqual([]);
   });
 
+  it("to a member, Unarchive is read-only, with \"Only an owner or admin can change this flow.\" (the stage 1 spec's S1-9; backend §12.1 #180)", async () => {
+    setMockParams({ flow: 'gone' });
+    const base = subscriptionsPayload().subscriptions;
+    const rows = base.filter((row) => row.id !== 'invoice');
+    const gone: Subscription = { ...base[0]!, id: 'gone', name: 'Old intake', projectId: 'project-1', status: 'archived', updatedAt: '2026-09-30T12:00:00Z' };
+    routePlatform(platformOperation, {
+      '/automations': flowCatalogPayload(),
+      '/projects': projectsPayload('Finance'),
+      '/subscriptions': { subscriptions: [...rows, gone], subscription: rows[0] },
+    });
+    await renderWithProviders(<WorkflowDetailScreen />, sessionAs('member'));
+    expect(await screen.findByText('Old intake')).toBeTruthy();
+    expect(screen.getByTestId('flow-unarchive-admin-only').props.children).toBe('Only an owner or admin can change this flow.');
+    await fireEvent.press(screen.getByText('Unarchive'));
+    expect(mockRouter.push).not.toHaveBeenCalledWith(expect.objectContaining({ pathname: '/(tabs)/flows/setup' }));
+  });
+
   it('Settings › Archived flows says they are kept with their history and any can be unarchived', async () => {
     await renderWithProviders(<SettingsScreen />, signedInSession);
     expect(await screen.findByText('Kept with their history; unarchive any')).toBeTruthy();
@@ -195,11 +212,11 @@ describe("One flow per workspace (the owner's build 12 item 9)", () => {
     ]);
   });
 
-  it('Setup, for a flow held for the whole workspace, needs no team: a plain member still has Save, and it configures that subscription', async () => {
+  it('Setup, for a flow held for the whole workspace, needs no team: an admin has Save, and it configures that subscription (~~a plain member~~ until the stage 1 spec\'s S1-9)', async () => {
     const held: Subscription = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'held-whole', projectId: null, status: 'paused', setup: [] };
     const writes = routeSetup(held, { projects: [] });
     setMockParams({ template: 'tpl.0' });
-    await renderWithProviders(<SetupScreen />, sessionAs('member'));
+    await renderWithProviders(<SetupScreen />, sessionAs('admin'));
     await waitFor(() => expect(screen.getByTestId('setup-team').props.children).toBe('Whole workspace'));
     expect(screen.queryByText('An owner or admin creates the first team.')).toBeNull();
     await fireEvent.press(screen.getByText('Save'));
