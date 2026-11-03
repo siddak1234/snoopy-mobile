@@ -74,7 +74,7 @@ beforeEach(() => {
 });
 
 describe('Home dashboard', () => {
-  it('shows greeting, stats and recent runs from the fixtures', async () => {
+  it('shows greeting, stats and YOUR FLOWS from the fixtures (the owner\'s build 34 F5; ~~recent runs~~)', async () => {
     const { getByText, getAllByText, queryByText } = await renderWithProviders(<HomeScreen />, signedInSession);
     expect(getByText('Welcome back, Alex')).toBeTruthy();
     expect(getByText('Your agents ran 128 tasks today.')).toBeTruthy();
@@ -86,8 +86,11 @@ describe('Home dashboard', () => {
     expect(getByText('Successes')).toBeTruthy();
     expect(getByText('Failures')).toBeTruthy();
     expect(getByText('3 items need your review')).toBeTruthy();
-    // §12.1 #67 refuses run output; the row draws `resultSummary`.
-    expect(getByText('Run #4821 · posted to QuickBooks')).toBeTruthy();
+    // The live flows, each by its name; no recent run.
+    expect(getByText('YOUR FLOWS')).toBeTruthy();
+    expect(within(screen.getByTestId('home-flow-invoice')).getByText('Invoice triage')).toBeTruthy();
+    expect(within(screen.getByTestId('home-flow-email')).getByText('Email triage')).toBeTruthy();
+    expect(queryByText('Run #4821 · posted to QuickBooks')).toBeNull();
   });
 
   it('routes every affordance per the design flow map', async () => {
@@ -99,11 +102,12 @@ describe('Home dashboard', () => {
     // The quick action, not the overview's figure of the same name (Gate 24 parity, G6).
     await fireEvent.press(within(screen.getByTestId('home-quick-actions')).getByText('Flows'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows');
-    await fireEvent.press(getByText('See all'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity');
+    // A flow the catalog cannot start here opens its flow page (F5).
+    await fireEvent.press(screen.getByTestId('home-flow-invoice'));
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'invoice' } });
   });
 
-  it("ticks when the avatar, the bell or See all is tapped, then opens its page (the owner's build 10 item 10; D7)", async () => {
+  it("ticks when the avatar, the bell or a flow is tapped, then opens its page (the owner's build 10 item 10; D7)", async () => {
     const Haptics = jest.requireMock('expo-haptics');
     await renderWithProviders(<HomeScreen />, signedInSession);
     await screen.findByText('Welcome back, Alex');
@@ -113,21 +117,10 @@ describe('Home dashboard', () => {
     await fireEvent.press(screen.getByLabelText('Notifications'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/(home)/notifications');
     expect(Haptics.selectionAsync).toHaveBeenCalledTimes(2);
-    // A Text's own handler, through pressed().
-    await fireEvent.press(screen.getByText('See all'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity');
+    // ~~See all, a Text's own handler~~ until F5: a flow's row.
+    await fireEvent.press(screen.getByTestId('home-flow-email'));
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'email' } });
     expect(Haptics.selectionAsync).toHaveBeenCalledTimes(3);
-  });
-
-  it('opens Run detail from a recent-run row', async () => {
-    const { getByText, getAllByText, queryByText } = await renderWithProviders(<HomeScreen />, signedInSession);
-    await fireEvent.press(await screen.findByText('Run #4821 · posted to QuickBooks'));
-    // A real run id now, not a prototype variant.
-    // In Activity, Back returning to Home (round 24 P5).
-    expect(mockRouter.push).toHaveBeenCalledWith({
-      pathname: '/(tabs)/activity/run',
-      params: { runId: 'run-0', returnTo: 'home' },
-    }, { withAnchor: true });
   });
 });
 
@@ -138,10 +131,10 @@ describe('Rows draw no border under the last one (the owner, build 13 #7)', () =
     return (StyleSheet.flatten(typeof style === 'function' ? style({ pressed: false }) : style) ?? {}).borderBottomWidth;
   };
 
-  it("Home's recent runs: every row but the last has its divider", async () => {
+  it("Home's flows: every row but the last has its divider (YOUR FLOWS since F5; ~~its recent runs~~)", async () => {
     await renderWithProviders(<HomeScreen />, signedInSession);
-    await screen.findByText('Run #4821 · posted to QuickBooks');
-    const rows = screen.getAllByTestId(/^home-run-/u).map((row) => row.props.testID as string);
+    await screen.findByText('YOUR FLOWS');
+    const rows = screen.getAllByTestId(/^home-flow-[a-z]+$/u).map((row) => row.props.testID as string);
     expect(rows.length).toBeGreaterThan(1);
     rows.slice(0, -1).forEach((id) => expect(borderOf(id)).toBe(1));
     expect(borderOf(rows[rows.length - 1]!)).toBeUndefined();

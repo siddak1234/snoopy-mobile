@@ -118,12 +118,12 @@ export const HOME_OFFLINE_BODY =
 /**
  * A figure on Home the platform refused or could not answer (Gate 24 parity,
  * G6): it says so on its own and the rest still show, as the website's
- * dashboard does (`readOverview`: "Unavailable"; "Recent activity could not be
- * read just now."). ~~The teams line~~ went with Home's TEAMS (Build 21; the
- * owner's AM5).
+ * dashboard does (`readOverview`: "Unavailable"). ~~The teams line~~ went with
+ * Home's TEAMS (Build 21; the owner's AM5), ~~RECENT RUNS' "Recent activity
+ * could not be read just now."~~ with RECENT RUNS (the owner's build 34 F5):
+ * YOUR FLOWS says "Unavailable".
  */
 export const FIGURE_UNAVAILABLE = 'Unavailable';
-export const RECENT_RUNS_UNAVAILABLE = 'Recent activity could not be read just now.';
 
 /**
  * The cover after a session ended while it was in use (Gate 24 parity, G4), in

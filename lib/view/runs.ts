@@ -215,15 +215,6 @@ export function toRunRow(
   };
 }
 
-export function toRunRows(
-  runs: Run[],
-  catalog: Map<string, CatalogEntry>,
-  now: number = Date.now(),
-  approvals?: readonly Approval[],
-): RunRowView[] {
-  return runs.map((run) => toRunRow(run, catalog, now, approvals));
-}
-
 /** The glyph the activity list draws beside a run, by outcome. */
 export function runIcon(status: string | null | undefined): Icon {
   switch (statusTone(status)) {

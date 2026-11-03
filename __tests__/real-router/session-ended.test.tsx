@@ -1,4 +1,5 @@
 import * as LocalAuthentication from 'expo-local-authentication';
+import { router } from 'expo-router';
 import { act, fireEvent, screen, within } from 'expo-router/testing-library';
 
 import { PlatformError } from '@/lib/platform/problem';
@@ -33,9 +34,13 @@ async function endTheSession() {
   await flush(1000);
 }
 
-/** The run page of the newest run, opened from Home's recent runs. */
+/** The run page of the newest run, opened from Home as its Start run opens the run it started (YOUR FLOWS; ~~a recent run's row~~). */
 async function openTheRun(view: Awaited<ReturnType<typeof launch>>) {
-  await press('Run #4821 · posted to QuickBooks');
+  await act(async () =>
+    router.push({ pathname: '/(tabs)/activity/run', params: { runId: 'run-0', returnTo: 'home' } }, { withAnchor: true }),
+  );
+  await flush(100);
+  await flush(1000);
   // In Activity since round 24 (P5), Back returning to Home; `initial` is the router's own, from the push's anchor.
   expect([view.getSegments(), view.getSearchParams()]).toEqual([
     ['(tabs)', 'activity', 'run'],
@@ -67,10 +72,10 @@ async function pressBack() {
   });
 }
 
-/** Home, at the tabs' root: its address, its groups, and its recent runs drawn. */
+/** Home, at the tabs' root: its address, its groups, and its flows drawn (YOUR FLOWS; ~~its recent runs~~). */
 function expectHome(view: Awaited<ReturnType<typeof launch>>) {
   expect([view.getPathname(), view.getSegments()]).toEqual(['/', ['(tabs)', '(home)']]);
-  expect(screen.getByText('Run #4821 · posted to QuickBooks')).toBeTruthy();
+  expect(screen.getByTestId('home-flow-invoice')).toBeTruthy();
 }
 
 /** The session another person's sign-in reads: theirs, not the one before. */
