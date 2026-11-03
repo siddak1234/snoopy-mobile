@@ -2967,12 +2967,12 @@ its own lane, with the same words.
   drawn only for a flow the platform could not reach, since it says why Add is off.
 - **F5** (build 34): Home's YOUR FLOWS in RECENT RUNS' place — the live flows by department, each a tap
   from its run's first step and Start run; a flow with items reads them only when opened (DESIGN-CONTRACT
-  "Home"). Each flow opens and closes on its own, as the website's (~~one at a time~~ until the parity
-  check). **The session's defaults:** a flow that cannot start a run on Home
+  "Home"). As the website's (the parity check): each flow opens and closes on its own, each department's
+  flows A–Z by name, and no YOUR FLOWS with nothing live (~~one at a time, the catalog's order, "No flows
+  yet"~~). **The session's defaults:** a flow that cannot start a run on Home
   (no run fields, its automation unavailable, or a member on a flow with items, as on an item's page)
   opens its flow page; the job comes first, then the run's fields, as one form cannot put a choice
-  between its fields and its button; nothing live says the Flows page's "No flows in this department
-  yet", or "No flows yet" when no department is chosen (paused flows included); the reads of the runs
+  between its fields and its button; the reads of the runs
   and of every approval went with RECENT RUNS, and with them `toRunRows` and "Recent activity could not
   be read just now.".
 
@@ -2983,6 +2983,7 @@ the Flows stack, Flows selected, Back straight to the item (`real-router/flow-it
 item pushes the new run's page in the Flows stack (`round19-items`); F4 the sections and their order,
 a flat list put back, and a "{category} · Included" line put back (`tab-screens`, `parity-flows`); F1
 grouped options sent to the drop-down again, "Search all" kept to the first group, the chips left out,
-an empty card under step 2's "No matches." (`setup-field`); F5 the departments unsorted, a flow's items read before it is opened, Start run's page
-pushed elsewhere (`parity-home`). Home's tests that opened a run from RECENT RUNS open it as Start run
+an empty card under step 2's "No matches." (`setup-field`); F5 the departments unsorted, a flow's
+items read before it is opened, Start run's page pushed elsewhere, one flow open at a time, the flows
+in the list's order, YOUR FLOWS drawn with nothing live (`parity-home`). Home's tests that opened a run from RECENT RUNS open it as Start run
 does (`real-router/run-in-activity`, `real-router/session-ended`).

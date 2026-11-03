@@ -36,8 +36,6 @@ import { useTheme } from '@/hooks/use-theme';
 import {
   ADD_FLOW_LABEL,
   FIGURE_UNAVAILABLE,
-  FLOWS_EMPTY_TITLE,
-  FLOWS_SCOPE_EMPTY_TITLE,
   HOME_OFFLINE_BODY,
   HOME_OFFLINE_TITLE,
   PLATFORM_BUSY_TITLE,
@@ -505,12 +503,13 @@ export default function HomeScreen() {
       {firstRun ? (
         // No flow yet (the owner's build 13 decision 5): the first run, where the flows go.
         <HomeFirstRun />
-      ) : (
+      ) : flowSections !== null && flowSections.length === 0 ? null : (
         // YOUR FLOWS (the owner's build 34 F5): the live flows by department, each a tap from its
-        // run's first step; Start run opens the run's page, and Back comes home.
+        // run's first step; Start run opens the run's page, and Back comes home. Drawn only while a
+        // flow is live in the scope chosen, as the website's; unread, it says so in its place (G6).
         <View>
           <SectionTitle>YOUR FLOWS</SectionTitle>
-          {flowSections !== null && flowSections.length > 0 ? (
+          {flowSections !== null ? (
             <YourFlows
               sections={flowSections}
               shownWorkspaceId={dashboard.loadedFor}
@@ -524,10 +523,9 @@ export default function HomeScreen() {
               onOpen={(flow) => router.push({ pathname: '/(tabs)/flows/detail', params: { flow } })}
             />
           ) : (
-            // The subscriptions could not be read (G6), or nothing is live in the scope.
             <SurfaceCard level="sm">
               <Text testID="home-flows-line" style={lineStyle}>
-                {flowSections === null ? FIGURE_UNAVAILABLE : projectId ? FLOWS_SCOPE_EMPTY_TITLE : FLOWS_EMPTY_TITLE}
+                {FIGURE_UNAVAILABLE}
               </Text>
             </SurfaceCard>
           )}

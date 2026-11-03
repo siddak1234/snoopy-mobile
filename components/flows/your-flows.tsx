@@ -15,14 +15,15 @@ import { CHOOSE_LABEL, FIGURE_UNAVAILABLE, noItemsYet } from '@/lib/content/scre
 import { readItems, type AutomationItems } from '@/lib/platform/automations';
 import type { Subscription } from '@/lib/platform/runs';
 import { EMPTY } from '@/lib/view/format';
-import type { HomeFlow } from '@/lib/view/home';
+import { homeFlowName, type HomeFlow } from '@/lib/view/home';
 import { iconFor } from '@/lib/view/icon-registry';
 import { groupItems } from '@/lib/view/items';
 
 /**
  * YOUR FLOWS on Home (the owner's build 34 F5: "The goal of this section is
  * quick and easy access to start a run"): one card, a section per department —
- * its name over its flows (`yourFlows`) — each flow a row, its icon and name.
+ * its name over its flows (`yourFlows`) — each flow a row, its icon and name;
+ * drawn only while a flow is live in the scope chosen, as the website's.
  * Tapped, a flow that can start a run here (`canStartRun`) opens under its row
  * to its run's first step — the fields of its `runInput`, from the
  * subscriptions list Home already read, and Start run (`StartRun`: the upload
@@ -70,7 +71,8 @@ export function YourFlows({
               {section.department.toUpperCase()}
             </Text>
           ) : null}
-          {section.flows.map(({ subscription, entry }, row) => {
+          {section.flows.map((flow, row) => {
+            const { subscription, entry } = flow;
             const id = subscription.id;
             const startable = canStartRun(subscription, entry, true) && (!subscription.items || canManage);
             const expanded = open.has(id);
@@ -79,7 +81,7 @@ export function YourFlows({
                 <ConnectionRow
                   testID={`home-flow-${id}`}
                   mark={<GlyphMark icon={iconFor(entry?.icon)} />}
-                  name={subscription.name ?? entry?.name ?? subscription.templateId}
+                  name={homeFlowName(flow)}
                   accessibilityState={startable ? { expanded } : undefined}
                   right={
                     startable ? (

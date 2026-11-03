@@ -39,14 +39,19 @@ export function homeFailure(errors: readonly unknown[]): unknown {
 /** A flow in YOUR FLOWS: its subscription, as the list Home reads it, and its catalog entry when the catalog names it. */
 export type HomeFlow = { subscription: Subscription; entry: CatalogEntry | undefined };
 
+/** A flow's name on Home: its own, else its catalog entry's, else its template's id. */
+export function homeFlowName({ subscription, entry }: HomeFlow): string {
+  return subscription.name ?? entry?.name ?? subscription.templateId;
+}
+
 /**
  * YOUR FLOWS, where RECENT RUNS was (the owner's build 34 F5: "Rather than
  * recent runs from now on we will list the flows the account has … listed in
  * department alphabetical order"): the workspace's live flows in the scope
  * chosen, in sections by department A–Z — its template's catalog `category`,
- * as Add a flow's (`byDepartment`) — each in the catalog's order; a flow the
- * catalog does not name (it could not be read) last, under no name. Built from
- * the subscriptions and the catalog Home already reads: nothing more.
+ * as Add a flow's (`byDepartment`) — each A–Z by name, as the website's; a
+ * flow the catalog does not name (it could not be read) last, under no name.
+ * Built from the subscriptions and the catalog Home already reads: nothing more.
  */
 export function yourFlows(
   subscriptions: readonly Subscription[],
@@ -54,14 +59,10 @@ export function yourFlows(
   projectId: string | null,
 ): { department: string | null; flows: HomeFlow[] }[] {
   const entries = new Map(catalog.map((entry) => [entry.templateId, entry]));
-  const position = (subscription: Subscription) => {
-    const at = catalog.findIndex((entry) => entry.templateId === subscription.templateId);
-    return at === -1 ? catalog.length : at;
-  };
   const live = subscriptions
     .filter((subscription) => subscription.status === 'live' && inScope(subscription, projectId))
-    .sort((a, b) => position(a) - position(b))
-    .map((subscription) => ({ subscription, entry: entries.get(subscription.templateId) }));
+    .map((subscription) => ({ subscription, entry: entries.get(subscription.templateId) }))
+    .sort((a, b) => homeFlowName(a).localeCompare(homeFlowName(b), 'en-US', { sensitivity: 'base' }));
   const unnamed = live.filter((flow) => flow.entry === undefined);
   return [
     ...byDepartment(

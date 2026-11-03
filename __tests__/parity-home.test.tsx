@@ -487,14 +487,14 @@ describe("YOUR FLOWS (the owner's build 34 F5)", () => {
     ...over,
   });
 
-  /** Invoice triage and the KPI digest in Finance, Email triage — a flow with jobs — in Accounting, Lead enrichment a draft. */
+  /** Invoice triage and Email triage — a flow with jobs — in Finance, the KPI report in Accounting, Lead enrichment a draft. */
   function routeFlows(over: { subscriptions?: Subscriptions } = {}) {
     const catalog = flowCatalogPayload();
     type Department = Answer<'GET /v1/workspaces/{workspaceId}/automations'>['automations'][number]['category'];
     const department: Record<string, Department> = {
       'tplflow.invoice': 'Finance',
-      'tplflow.email': 'Accounting',
-      'tplflow.kpi': 'Finance',
+      'tplflow.email': 'Finance',
+      'tplflow.kpi': 'Accounting',
       'tplflow.lead': 'Sales',
     };
     catalog.automations = catalog.automations.map((entry) => ({ ...entry, category: department[entry.templateId]!, subscribed: true }));
@@ -522,16 +522,17 @@ describe("YOUR FLOWS (the owner's build 34 F5)", () => {
     return fake;
   }
 
-  it("the live flows in sections by department A–Z, each in the catalog's order — a draft left out — under YOUR FLOWS, with no RECENT RUNS", async () => {
+  it("the live flows in sections by department A–Z, each A–Z by name as the website's — a draft left out — under YOUR FLOWS, with no RECENT RUNS", async () => {
     const fake = routeFlows();
     await renderWithProviders(<HomeScreen />, signedInSession);
     expect(await screen.findByText('YOUR FLOWS')).toBeTruthy();
     expect(screen.queryByText('RECENT RUNS')).toBeNull();
     const section = (at: number) => screen.getByTestId(`home-flows-section-${at}`);
     expect(within(section(0)).getByRole('header').props.children).toBe('ACCOUNTING');
-    expect(within(section(0)).getAllByTestId(/^home-flow-[a-z]+$/u).map((row) => row.props.testID)).toEqual(['home-flow-email']);
+    expect(within(section(0)).getAllByTestId(/^home-flow-[a-z]+$/u).map((row) => row.props.testID)).toEqual(['home-flow-kpi']);
     expect(within(section(1)).getByRole('header').props.children).toBe('FINANCE');
-    expect(within(section(1)).getAllByTestId(/^home-flow-[a-z]+$/u).map((row) => row.props.testID)).toEqual(['home-flow-invoice', 'home-flow-kpi']);
+    // Email triage before Invoice triage, though the catalog lists Invoice triage first.
+    expect(within(section(1)).getAllByTestId(/^home-flow-[a-z]+$/u).map((row) => row.props.testID)).toEqual(['home-flow-email', 'home-flow-invoice']);
     expect(screen.queryByTestId('home-flows-section-2')).toBeNull();
     expect(screen.queryByTestId('home-flow-lead')).toBeNull();
     expect(within(screen.getByTestId('home-flow-invoice')).getByText('Invoice triage')).toBeTruthy();
@@ -540,7 +541,7 @@ describe("YOUR FLOWS (the owner's build 34 F5)", () => {
       const style = screen.getByTestId(id).props.style;
       return (StyleSheet.flatten(typeof style === 'function' ? style({ pressed: false }) : style) ?? {}).borderBottomWidth;
     };
-    expect([border('home-flow-invoice'), border('home-flow-kpi')]).toEqual([1, undefined]);
+    expect([border('home-flow-email'), border('home-flow-invoice')]).toEqual([1, undefined]);
     // Nothing is read for a flow until it is opened.
     expect(fake.to('GET /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items')).toEqual([]);
   });
@@ -631,7 +632,7 @@ describe("YOUR FLOWS (the owner's build 34 F5)", () => {
     expect(screen.getByTestId('home-flow-invoice-form')).toBeTruthy();
   });
 
-  it('with a department chosen, its flows alone; none live there: "No flows in this department yet"; none live at all: "No flows yet"', async () => {
+  it("with a department chosen, its flows alone; none live there, or none at all: no YOUR FLOWS, as the website's", async () => {
     mockStored.set(TEST_WORKSPACE, 'project-2');
     const placed = subscriptionsPayload();
     placed.subscriptions = placed.subscriptions.map((row) => ({ ...row, projectId: row.id === 'invoice' ? 'project-1' : 'project-2' }));
@@ -652,7 +653,9 @@ describe("YOUR FLOWS (the owner's build 34 F5)", () => {
     routeHome({ subscriptions: noneInLegal, teams });
     const again = await renderWithProviders(<HomeScreen />, signedInSession);
     expect(await screen.findByLabelText('Department: Legal')).toBeTruthy();
-    expect(screen.getByTestId('home-flows-line').props.children).toBe('No flows in this department yet');
+    expect(screen.getByTestId('home-stats')).toBeTruthy();
+    expect(screen.queryByText('YOUR FLOWS')).toBeNull();
+    expect(screen.queryByTestId('home-flows-line')).toBeNull();
     await again.unmount();
     resetSnapshot();
 
@@ -661,6 +664,8 @@ describe("YOUR FLOWS (the owner's build 34 F5)", () => {
     paused.subscriptions = paused.subscriptions.map((row) => ({ ...row, status: 'paused' as const }));
     routeHome({ subscriptions: paused });
     await renderWithProviders(<HomeScreen />, signedInSession);
-    expect((await screen.findByTestId('home-flows-line')).props.children).toBe('No flows yet');
+    expect(await screen.findByTestId('home-stats')).toBeTruthy();
+    expect(screen.queryByText('YOUR FLOWS')).toBeNull();
+    expect(screen.queryByTestId('home-first-run')).toBeNull();
   });
 });
