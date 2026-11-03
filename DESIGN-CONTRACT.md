@@ -745,7 +745,10 @@ complete export (Download file) and workspace summary (Download JSON).
     partial deletion keeps the account; a lost answer reads the session before
     saying either way; `SESSION_REVOCATION_FAILED` revokes through sign-out
     before this device lets go; an ended session offers sign-in. Deleted, the
-    device clears its session and shows the signed-out screen.
+    device clears its session and shows the signed-out screen. Since Round 21
+    stage 1, C2 (S1-10; backend §12.1 #248: the platform deletes the sign-in
+    and revokes every session) the confirmation also says "You'll be signed
+    out on all devices." (`DELETE_ACCOUNT_SIGNED_OUT`), as the website's.
   - Data export: the bounded summary as a JSON file — Download JSON, then Share
     on iOS; on Android Download JSON shares its text (~~Share JSON~~ until Round
     21); the complete export read afresh from its signed link — Download file,

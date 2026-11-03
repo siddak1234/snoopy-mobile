@@ -12,6 +12,12 @@ export const DELETE_ACCOUNT_BODY = [
   'This removes your personal workspace and every organization you are the only owner of — including organizations other people belong to, who lose them and everything in them. Organizations that have another owner are kept; you just leave them.',
   'Workspaces are removed one at a time. If one cannot be removed, your account stays and you can try again; anything already removed stays removed. This cannot be undone.',
 ] as const;
+/**
+ * Every session ends with the account (the stage 1 spec's S1-10; backend §12.1
+ * #248: the platform deletes the sign-in and revokes every session), as the
+ * website's confirmation says it.
+ */
+export const DELETE_ACCOUNT_SIGNED_OUT = "You'll be signed out on all devices.";
 
 export const DELETION_WORDS = {
   retry:

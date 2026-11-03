@@ -136,6 +136,8 @@ describe('Deleting the account (24.6.2, ADR-0028)', () => {
       'your account stays and you can try again',
       'anything already removed stays removed',
       'This cannot be undone',
+      // Every session ends with the account (the stage 1 spec's S1-10; backend §12.1 #248).
+      "You'll be signed out on all devices.",
     ]) {
       expect(prose).toContain(sentence);
     }

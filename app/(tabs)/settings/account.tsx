@@ -22,6 +22,7 @@ import { useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import {
   DELETE_ACCOUNT_BODY,
+  DELETE_ACCOUNT_SIGNED_OUT,
   DELETE_ACCOUNT_TITLE,
   DELETION_WORDS,
   deletionOutcome,
@@ -323,6 +324,7 @@ function DeleteAccountDialog({
         </>
       }>
       <DialogText>{DELETE_ACCOUNT_BODY[1]}</DialogText>
+      <DialogText>{DELETE_ACCOUNT_SIGNED_OUT}</DialogText>
       {message ? <DialogText tone="error">{message}</DialogText> : null}
     </Dialog>
   );
