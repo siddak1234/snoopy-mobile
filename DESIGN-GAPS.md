@@ -3039,6 +3039,14 @@ same items in its own lane, with the same words.
   once over the list, not under each card as the website's. The integration's own page keeps its line,
   "Only an owner or admin can change the integration." Three tests that had a member add or save now
   have an owner or admin do it.
+- **S1-11** (outside sign-in, option b′; backend §12.1 #221): the refusal from any read draws the screen
+  in the tabs' place, with "Remove {provider} sign-in" for each (DESIGN-CONTRACT "Authentication and
+  session"). **Findings:** (1) the contract leaves which reads answer it to the platform's B1, so the app
+  listens on every read; (2) the contract names the unlink `unlinkLoginIdentity` (`DELETE
+  /v1/auth/identities/{provider}`, the website's), while the app unlinks through the native
+  `unlinkNativeIdentity` it already uses on Settings › Account. **The session's default:** Sign out
+  (Settings' word) stays on the screen, since the sign-in a person signed up with is never unlinked
+  and would otherwise strand them.
 
 Bites (break, red, restore, green): S1-G2 an http address made a press, LinkedIn's logo left out
 (`blocks-render`), the renderer drawing nothing (`blocks-parity`, `drawn-links`). S1-B1 the example left out, and the example taken on any control (`setup-field`). S1-B2 the
@@ -3058,4 +3066,7 @@ button reading the first part, Share kept for several, `files` ignored, the old 
 member's Add, Pause, Turn on, Archive flow and Unarchive pressable, Set up's vendor choice, rows and
 button a member's again, the switch and the pill pressable read-only (`parity-flows`,
 `invoice-processing-screens`, `automation-actions`, `build13-unarchive-and-one-flow`, `setup-field`),
-and each refusal's words left out.
+and each refusal's words left out. S1-11 the
+transport not telling (`session-recovery`), the layout not drawing it, a refusal naming no known
+sign-in drawn, the tabs not back once cleared, a refused removal unsaid, Sign out without a press
+(`outside-sign-in`).

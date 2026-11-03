@@ -419,6 +419,32 @@ export const JOIN_REFUSALS: Readonly<Record<string, string>> = {
   outside_org_domain: 'This organization admits only people who sign in with addresses at its verified domains.',
 };
 
+/**
+ * A domain-only organization's workspace refusing, at session resolve, a
+ * person who holds a sign-in outside its verified domains (the stage 1 spec's
+ * S1-11; backend §12.1 #221, option b′: 403 `outside_org_domain`,
+ * `OutsideOrgDomainDetails`), until that sign-in is removed; nothing is
+ * removed for them. Its screen says `JOIN_REFUSALS.outside_org_domain`, then
+ * this, then "Remove {provider} sign-in" for each — as the website's.
+ */
+export const OUTSIDE_SIGN_IN_NEXT = 'Remove your other sign-in to continue.';
+const SIGN_IN_NAME: Readonly<Record<'google' | 'microsoft' | 'apple', string>> = {
+  google: 'Google',
+  microsoft: 'Microsoft',
+  apple: 'Apple',
+};
+export type OutsideSignIn = keyof typeof SIGN_IN_NAME;
+export function removeSignIn(provider: OutsideSignIn): string {
+  return `Remove ${SIGN_IN_NAME[provider]} sign-in`;
+}
+/** The sign-ins the refusal names (`details.providers`), each once, those this build knows; null when it names none. */
+export function outsideSignIns(details: Readonly<Record<string, unknown>> | undefined): OutsideSignIn[] | null {
+  if (details?.reason !== 'outside_org_domain') return null;
+  const named = Array.isArray(details.providers) ? details.providers : [];
+  const known = [...new Set(named.filter((provider): provider is OutsideSignIn => Object.hasOwn(SIGN_IN_NAME, String(provider))))];
+  return known.length > 0 ? known : null;
+}
+
 /** Approving someone who signs in from outside them while the setting is on (8B). */
 export const DECISION_REFUSALS: Readonly<Record<string, string>> = {
   outside_org_domain:

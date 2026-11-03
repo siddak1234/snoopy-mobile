@@ -369,7 +369,10 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   applies a timeout and `no-store`, and maps RFC problem responses. A 429 is
   said as "busy, try again in N seconds" from its `retry-after` and never as
   signed out; its public `details` travel with it, so a run refused for a full
-  queue (`queue_full`) is said in the owner's words. Its one raw `fetch` is `putFileToSignedUrl`, the credential-less
+  queue (`queue_full`) is said in the owner's words. A 403 naming
+  `outside_org_domain` is told to the tabs' layout once, here, through
+  `lib/platform/session-recovery.ts` (`onOutsideSignIn`; S1-11), whichever
+  read it answers. Its one raw `fetch` is `putFileToSignedUrl`, the credential-less
   PUT of a file's bytes to the URL the platform signed; `audit:platform` admits
   exactly that one. Since 24.12 its one native download is
   `downloadSignedFile`, the credential-less save of a signed file's link into

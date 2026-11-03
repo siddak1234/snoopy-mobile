@@ -218,6 +218,20 @@ Home (a kept session's cold start through the notifications offer where it is ow
 Device push paragraph of the [refusal map](#refusal-map-what-is-rendered-instead)); a sign-in that fails keeps the return for the next one that completes, as the
 website's link keeps the page across a failed attempt (`loginHref`'s `callbackUrl`).
 
+**A sign-in outside a domain-only organization's domains** (Round 21 stage 1, C2;
+S1-11, backend §12.1 #221, option b′): whichever read the platform refuses 403
+`outside_org_domain` naming the person's sign-ins outside its verified domains, the
+transport says so once (`onOutsideSignIn`, `lib/platform/session-recovery.ts`) and
+the tabs' layout draws its own screen in the tabs' place (`OutsideSignIn`):
+"This organization admits only people who sign in with addresses at its verified
+domains.", "Remove your other sign-in to continue." and "Remove {provider} sign-in"
+(the danger pill) for each sign-in it names that this build knows (`outsideSignIns`),
+each unlinking it as Settings › Account does (`unlinkIdentity`; a refusal in
+`unlinkRefusal`'s words). Once every one is gone the session is read again and the
+tabs come back and read again; Sign out stays offered, as Settings' does. A refusal
+naming no sign-in this build knows leaves the screens as they are. As the website's,
+which draws it in its account area.
+
 ### Two documented variances
 
 The playbook names `expo-auth-session`. ADR-0017 subsequently made the backend,
