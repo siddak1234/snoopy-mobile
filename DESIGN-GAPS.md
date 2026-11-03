@@ -2991,7 +2991,7 @@ does (`real-router/run-in-activity`, `real-router/session-ended`).
 ## Round 21 stage 1, C2: the client side of the platform's stage 1 contract (2026-11-03)
 
 The generated contracts and their hash-checked copy come from the backend's stage 1 contract commit
-(`round-21/stage-1-platform` at 35d0695, B0), never from main; CI's `Deployed contract` job is red by
+(`round-21/stage-1-platform` at 35d0695, B0; re-synced at e104166), never from main; CI's `Deployed contract` job is red by
 design until the platform releases it (`lib/platform/CLAUDE.md`). One commit per item; the rules are
 DESIGN-CONTRACT's, each once; this entry keeps the bites and the findings. Parity: the website builds the
 same items in its own lane, with the same words.

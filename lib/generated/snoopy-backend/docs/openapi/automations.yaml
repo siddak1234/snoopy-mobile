@@ -3823,7 +3823,8 @@ components:
         built on was disconnected at the provider (`providerId`) — a refused
         refresh or a 401 that retired the grant. A client shows "Expired ·
         {provider} was disconnected" and "Reconnect {provider}, then start the
-        run again." A reason it does not know reads as a plain expiry.
+        run again." A reason it does not know reads as a plain expiry. Not sent
+        before Stage 2 (BUILD-PLAN 29.4.6; §12.1 #252).
       properties:
         reason: { type: string }
         providerId: { type: string, maxLength: 64 }
