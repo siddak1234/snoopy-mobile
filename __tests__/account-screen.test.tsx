@@ -116,7 +116,7 @@ describe('Deleting the account (24.6.2, ADR-0028)', () => {
    * The confirmation's words, written here and not read from the constant the
    * screen draws — so a change to them fails this test, as no other here can
    * (the others compare the screen with `DELETE_ACCOUNT_BODY` itself). The
-   * website's `test/account-deletion-contract.test.mjs` "the confirmation says
+   * website's `snoopy/test/account-deletion-contract.test.mjs` "the confirmation says
    * what the route removes, and promises no more", sentence for sentence (Gate
    * 24's guard line).
    */
