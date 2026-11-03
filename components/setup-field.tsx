@@ -16,6 +16,8 @@ import type { components } from '@/lib/generated/platform-contracts/automations'
 
 /** A setup field; `select` (F1, Round 21's platform round) carries its `options` and `multiple`. */
 export type SetupField = components['schemas']['AutomationSetupField'];
+/** One section of a flow's Set up, as its manifest declares it (`setupSections`, backend ADR-0048 amendment 5). */
+export type SetupSectionDeclaration = components['schemas']['AutomationSetupSectionDeclaration'];
 
 /** Whether a field is the setup dropdown (F1). */
 export function isSelectField(field: { control: string }): boolean {
@@ -82,7 +84,12 @@ export const SECTION_NAME: Record<SetupSection, string> = {
  * two missing steps (24.7.3 attempt 4, feedback #5).
  */
 export function sectionLabel(position: number, section: SetupSection): string {
-  return `${position} · ${SECTION_NAME[section]}`;
+  return numberedName(position, SECTION_NAME[section]);
+}
+
+/** A heading's name at its place: "{n} · {name}" (a manifest's own section's too, `setupGroups`). */
+export function numberedName(position: number, name: string): string {
+  return `${position} · ${name}`;
 }
 
 /**
@@ -227,6 +234,32 @@ export function bySection(fields: SetupField[]): { section: SetupSection; fields
     else groups.push({ section: field.section, fields: [field] });
   }
   return groups;
+}
+
+/**
+ * Set up's sections, each its heading's name and its fields (the owner's
+ * build 34 F3: "we need to split this out. 1. Npi 2 specialty 3
+ * connectors/integrations"). A manifest that declares `setupSections`
+ * (backend ADR-0048 amendment 5): its sections in its order, each by its
+ * title in the numbered heading's capitals, holding its fields by `sectionId`
+ * in manifest order — a vendor choice among them, drawn in the section it
+ * names — and a section with nothing to draw left out, as the website's.
+ * Without them, the four fixed sections (`bySection`), the vendor choice
+ * left to CONNECT (`rowFields`).
+ */
+export function setupGroups(
+  setup: SetupField[],
+  sections: readonly SetupSectionDeclaration[] | undefined,
+): { name: string; fields: SetupField[] }[] {
+  if (!sections || sections.length === 0) {
+    return bySection(rowFields(setup)).map(({ section, fields }) => ({ name: SECTION_NAME[section], fields }));
+  }
+  return sections
+    .map((section) => ({
+      name: section.title.toUpperCase(),
+      fields: setup.filter((field) => field.sectionId === section.id),
+    }))
+    .filter((group) => group.fields.length > 0);
 }
 
 /**

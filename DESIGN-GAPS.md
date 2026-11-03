@@ -3003,6 +3003,12 @@ same items in its own lane, with the same words.
 - **S1-B1** (the setup example, amendment 5; the owner's build 34 F2): a `text` field's `example` is its
   box's placeholder (DESIGN-CONTRACT "Setup/configure"). **The session's default:** it takes a required
   field's "Required" too, as the website's placeholder is the example whatever the field.
+- **S1-B2** (setup sections, amendment 5; the owner's build 34 F3): Set up in the manifest's own
+  sections, numbered, each vendor choice in the section it names (DESIGN-CONTRACT "Setup/configure").
+  **The session's default:** a declared title is drawn in the numbered heading's capitals ("1 · NPI"),
+  as the four fixed names are; the website draws its titles as sent.
 
 Bites (break, red, restore, green): S1-G2 an http address made a press, LinkedIn's logo left out
-(`blocks-render`), the renderer drawing nothing (`blocks-parity`, `drawn-links`). S1-B1 the example left out, and the example taken on any control (`setup-field`).
+(`blocks-render`), the renderer drawing nothing (`blocks-parity`, `drawn-links`). S1-B1 the example left out, and the example taken on any control (`setup-field`). S1-B2 the
+declared sections ignored, CONNECT kept for the vendor choice, the catalog's sections read for a held
+flow, an empty section drawn (`invoice-processing-screens`).

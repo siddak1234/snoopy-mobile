@@ -550,6 +550,61 @@ describe('Set up — one simple page, once, everything on it (the owner\'s AM4)'
     });
   });
 
+  it("a manifest's own sections (backend ADR-0048 amendment 5; the owner's build 34 F3): numbered by its titles, each its fields, the vendor choice in the section it names and no CONNECT; one with nothing left out", async () => {
+    const fake = fakePlatform(platformOperation);
+    let held: Subscription[] = [];
+    const draft: Subscription = { ...added({}), status: 'draft' };
+    routeSetup(fake, () => held);
+    const v4 = invoiceProcessingV4Entry();
+    const sectioned = {
+      ...v4,
+      setupSections: [
+        { id: 'limits', title: 'Limits' },
+        { id: 'empty', title: 'Nothing here' },
+        { id: 'integrations', title: 'Integrations' },
+      ],
+      setup: v4.setup.map((field) => ({ ...field, sectionId: field.control === 'connection' ? 'integrations' : 'limits' })),
+    };
+    fake.always('GET /v1/workspaces/{workspaceId}/automations', { automations: [sectioned], categories: ['All', 'Accounting'] });
+    fake.always('POST /v1/workspaces/{workspaceId}/subscriptions', () => {
+      held = [draft];
+      return { subscription: draft };
+    });
+    fake.always('PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}', { subscription: { ...draft, status: 'live' } });
+    setMockParams({ template: 'invoice-processing' });
+    await renderWithProviders(<SetupScreen />, sessionAs('owner'));
+    expect(await screen.findByText('Set up Invoice Processing')).toBeTruthy();
+    expect(screen.getAllByText(/^\d+ · /u).map((label) => label.props.children)).toEqual(['1 · LIMITS', '2 · INTEGRATIONS']);
+    expect(within(screen.getByTestId('setup-section-1')).getByText('Approval limit')).toBeTruthy();
+    expect(within(screen.getByTestId('setup-section-2')).getByTestId('setup-vendor-vendor')).toBeTruthy();
+    expect(screen.queryByTestId('setup-connect')).toBeNull();
+    await fireEvent.press(screen.getByRole('button', { name: 'Turn on' }));
+    await waitFor(() => expect(fake.to('PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}')).toHaveLength(1));
+    expect(fake.to('PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}')[0]!.body).toEqual({
+      config: { vendor: 'none', holdAboveAmount: 500 },
+      status: 'live',
+    });
+  });
+
+  it("Edit setup: the sections of the version the flow runs (`Subscription.setupSections`), not the catalog's", async () => {
+    const fake = fakePlatform(platformOperation);
+    const live = added({ vendor: 'none', holdAboveAmount: 500 });
+    const pinned: Subscription = {
+      ...live,
+      setupSections: [
+        { id: 'connect', title: 'Where it goes' },
+        { id: 'limits', title: 'Limits' },
+      ],
+      setup: live.setup!.map((field) => ({ ...field, sectionId: field.control === 'connection' ? 'connect' : 'limits' })),
+    };
+    routeSetup(fake, () => [pinned]);
+    setMockParams({ template: 'invoice-processing', flow: 'ip-1' });
+    await renderWithProviders(<SetupScreen />, sessionAs('owner'));
+    expect(await screen.findByText('1 · WHERE IT GOES')).toBeTruthy();
+    expect(screen.getAllByText(/^\d+ · /u).map((label) => label.props.children)).toEqual(['1 · WHERE IT GOES', '2 · LIMITS']);
+    expect(within(screen.getByTestId('setup-section-1')).getByTestId('setup-vendor-vendor')).toBeTruthy();
+  });
+
   it('a tap on QuickBooks not connected connects it at once, then chooses it — Turn on sends it, no Done, no second page', async () => {
     const fake = fakePlatform(platformOperation);
     let connected: Connection[] = [];

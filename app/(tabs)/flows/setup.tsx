@@ -8,14 +8,14 @@ import { NONE, VendorChoice } from '@/components/flows/vendor-choice';
 import {
   NumberedSectionLabel,
   SetupFieldRow,
-  bySection,
   chosenVendor,
   connectionFields,
   fieldProviders,
   isSelectField,
   missingRequiredSetupFields,
-  rowFields,
+  numberedName,
   sectionLabel,
+  setupGroups,
 } from '@/components/setup-field';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import {
@@ -207,6 +207,11 @@ export default function SetupScreen() {
   // review of the Invoice Processing screens); a flow not added yet, the
   // catalog's, the version Turn on adds.
   const setup = placed ? (placed.setup ?? entry.setup) : entry.setup;
+  // Its manifest's own sections, from the same version as its settings
+  // (backend ADR-0048 amendment 5): each vendor choice is then drawn in the
+  // section it names, and CONNECT holds only the accounts it cannot run without.
+  const declaredSections = placed?.setup ? placed.setupSections : entry.setupSections;
+  const declared = (declaredSections?.length ?? 0) > 0;
   // Each step's vendor choice (ADR-0040), and the vendors each names. An
   // `optional` account is a step's to choose, or not (ADR-0037) — where the
   // version has the choice; the rest the flow cannot run without. A platform
@@ -228,7 +233,7 @@ export default function SetupScreen() {
     const provider = providers.get(connection.providerId);
     return provider && !needsNoConnect(provider) ? [toConnectionRow(provider, held.find((c) => c.providerId === connection.providerId))] : [];
   });
-  const hasConnect = vendorFields.length > 0 || requiredRows.length > 0;
+  const hasConnect = (!declared && vendorFields.length > 0) || requiredRows.length > 0;
   const sectionOffset = hasConnect ? 1 : 0;
 
   const newIntent = () => {
@@ -398,7 +403,30 @@ export default function SetupScreen() {
     }
   };
 
-  const sections = bySection(rowFields(setup));
+  const sections = setupGroups(setup, declaredSections);
+  /** One step's vendor choice: its vendors as rows, a tap the choice — under CONNECT, or in the section its manifest names. */
+  const vendorChoice = (field: (typeof setup)[number]) => (
+    <View key={field.key} testID={`setup-vendor-${field.key}`}>
+      {/* A flow that chooses a vendor for more than one step names each step's choice. */}
+      {vendorFields.length > 1 ? (
+        <Text style={[styles.fieldTitle, { color: palette.neutral[400] }]}>{field.title}</Text>
+      ) : null}
+      <SurfaceCard>
+        <VendorChoice
+          vendors={fieldProviders(field, connections)}
+          providers={providers}
+          connections={held}
+          chosen={choiceOf(field)}
+          canManage={canManage}
+          shownWorkspaceId={resource.loadedFor}
+          saving={null}
+          onChoose={(choice) => choose(field.key, choice)}
+          onConnectionsChanged={refreshResource}
+          readOnly={!canManage && editing}
+        />
+      </SurfaceCard>
+    </View>
+  );
   const label = busy ? (editing ? SETUP_SAVING : SETUP_TURNING_ON) : editing ? SETUP_SAVE : SETUP_TURN_ON;
 
   return (
@@ -420,28 +448,7 @@ export default function SetupScreen() {
           {hasConnect ? (
             <View testID="setup-connect">
               <NumberedSectionLabel>{sectionLabel(1, 'connections')}</NumberedSectionLabel>
-              {vendorFields.map((field) => (
-                <View key={field.key} testID={`setup-vendor-${field.key}`}>
-                  {/* A flow that chooses a vendor for more than one step names each step's choice. */}
-                  {vendorFields.length > 1 ? (
-                    <Text style={[styles.fieldTitle, { color: palette.neutral[400] }]}>{field.title}</Text>
-                  ) : null}
-                  <SurfaceCard>
-                    <VendorChoice
-                      vendors={fieldProviders(field, connections)}
-                      providers={providers}
-                      connections={held}
-                      chosen={choiceOf(field)}
-                      canManage={canManage}
-                      shownWorkspaceId={resource.loadedFor}
-                      saving={null}
-                      onChoose={(choice) => choose(field.key, choice)}
-                      onConnectionsChanged={refreshResource}
-                      readOnly={!canManage && editing}
-                    />
-                  </SurfaceCard>
-                </View>
-              ))}
+              {declared ? null : vendorFields.map(vendorChoice)}
               {requiredRows.length > 0 ? (
                 <View>
                   <ConnectionsCard
@@ -459,21 +466,30 @@ export default function SetupScreen() {
           ) : null}
 
           {/* In the manifest's order, as the website draws them; it can come back to a section, so its place keys it. */}
-          {sections.map(({ section, fields }, position) => (
-            <View key={`${section}-${position}`}>
-              <NumberedSectionLabel>{sectionLabel(position + 1 + sectionOffset, section)}</NumberedSectionLabel>
-              <SurfaceCard>
-                {fields.map((field, index) => (
-                  <SetupFieldRow
-                    key={field.key}
-                    field={field}
-                    value={valueOf(field)}
-                    onChange={(next) => setField(field.key, next)}
-                    divider={index < fields.length - 1}
-                    error={emptyChoices.includes(field.key) ? CHOOSE_AT_LEAST_ONE : null}
-                  />
-                ))}
-              </SurfaceCard>
+          {sections.map(({ name, fields }, position) => (
+            <View key={`${name}-${position}`} testID={`setup-section-${position + 1 + sectionOffset}`}>
+              <NumberedSectionLabel>{numberedName(position + 1 + sectionOffset, name)}</NumberedSectionLabel>
+              {/* A manifest's own section may hold a vendor choice: drawn where it falls, the rows around it on their cards, `inner` apart. */}
+              <View style={declared ? styles.cards : undefined}>
+                {cardRuns(fields).map((run) =>
+                  run.vendor ? (
+                    vendorChoice(run.vendor)
+                  ) : (
+                    <SurfaceCard key={run.rows[0]!.key}>
+                      {run.rows.map((field, index) => (
+                        <SetupFieldRow
+                          key={field.key}
+                          field={field}
+                          value={valueOf(field)}
+                          onChange={(next) => setField(field.key, next)}
+                          divider={index < run.rows.length - 1}
+                          error={emptyChoices.includes(field.key) ? CHOOSE_AT_LEAST_ONE : null}
+                        />
+                      ))}
+                    </SurfaceCard>
+                  ),
+                )}
+              </View>
             </View>
           ))}
 
@@ -499,8 +515,21 @@ export default function SetupScreen() {
   );
 }
 
+/** A section's fields as its cards: each vendor choice alone, the rows between them on one card each. */
+function cardRuns<F extends { key: string; control: string }>(fields: readonly F[]): ({ vendor: F; rows?: never } | { vendor?: never; rows: F[] })[] {
+  const runs: ({ vendor: F; rows?: never } | { vendor?: never; rows: F[] })[] = [];
+  for (const field of fields) {
+    const last = runs[runs.length - 1];
+    if (field.control === 'connection') runs.push({ vendor: field });
+    else if (last?.rows) last.rows.push(field);
+    else runs.push({ rows: [field] });
+  }
+  return runs;
+}
+
 const styles = StyleSheet.create({
   form: { gap: space.group },
+  cards: { gap: space.inner },
   fieldTitle: { marginBottom: space.title, fontFamily: fonts.medium, ...typeScale.small },
   activateBtn: {
     minHeight: 52,
