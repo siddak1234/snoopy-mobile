@@ -33,7 +33,7 @@ export function isSelectField(field: { control: string }): boolean {
  * it as the website does — a text input, with a note (BUILD-PLAN 25.8.1, the
  * owner's requirement 1) — instead of looking it up and crashing the dialog.
  */
-export type FieldRowSpec = Pick<SetupField, 'key' | 'title' | 'description' | 'required' | 'notifies' | 'options' | 'multiple'> & {
+export type FieldRowSpec = Pick<SetupField, 'key' | 'title' | 'description' | 'required' | 'notifies' | 'options' | 'multiple' | 'example'> & {
   control: string;
 };
 
@@ -341,6 +341,18 @@ export function isEmailField(field: Pick<FieldRowSpec, 'key' | 'title' | 'contro
 }
 
 /**
+ * The box's placeholder: an amount's "0.00"; a `text` field's `example`
+ * (backend ADR-0048 amendment 5; the owner's build 34 F2: "Maybe add an
+ * example one rather than optional in the text field"), as the website's;
+ * else "Required" or "Optional". "Optional" beside the title stays.
+ */
+export function placeholderOf(field: Pick<FieldRowSpec, 'control' | 'required' | 'example'>): string {
+  if (field.control === 'money') return '0.00';
+  if (field.control === 'text' && field.example) return field.example;
+  return field.required ? 'Required' : 'Optional';
+}
+
+/**
  * The input itself: an amount typed from the right, an address with the email
  * keyboard, any other text — or, for a switch, the switch. What a row draws
  * under its title (a switch, on its title line).
@@ -412,7 +424,7 @@ export function FieldInput({
         accessibilityLabel={field.title}
         value={draft}
         onChangeText={changeText}
-        placeholder={isMoney ? '0.00' : field.required ? 'Required' : 'Optional'}
+        placeholder={placeholderOf(field)}
         placeholderTextColor={palette.neutral[500]}
         keyboardType={isMoney ? 'number-pad' : isEmailField(field) ? 'email-address' : 'default'}
         textContentType={isEmailField(field) ? 'emailAddress' : undefined}

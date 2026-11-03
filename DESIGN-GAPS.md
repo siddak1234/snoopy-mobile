@@ -3000,6 +3000,9 @@ same items in its own lane, with the same words.
   (DESIGN-CONTRACT "Block set v2 and the spacing table"). **Finding:** the icon set has no Hugging Face
   logo and the app bundles none, so `huggingface` draws the globe, as the website's does, until the owner
   supplies the logo's file.
+- **S1-B1** (the setup example, amendment 5; the owner's build 34 F2): a `text` field's `example` is its
+  box's placeholder (DESIGN-CONTRACT "Setup/configure"). **The session's default:** it takes a required
+  field's "Required" too, as the website's placeholder is the example whatever the field.
 
 Bites (break, red, restore, green): S1-G2 an http address made a press, LinkedIn's logo left out
-(`blocks-render`), the renderer drawing nothing (`blocks-parity`, `drawn-links`).
+(`blocks-render`), the renderer drawing nothing (`blocks-parity`, `drawn-links`). S1-B1 the example left out, and the example taken on any control (`setup-field`).

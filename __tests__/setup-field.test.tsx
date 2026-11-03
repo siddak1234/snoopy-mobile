@@ -11,6 +11,7 @@ import {
   isKnownControl,
   missingRequiredSetupFields,
   notifiesLine,
+  placeholderOf,
   sectionLabel,
   selectedChoices,
   type SetupField,
@@ -260,6 +261,19 @@ describe('an amount is typed from the right, as currency (24.7.3 attempt 4, feed
     await fireEvent.changeText(screen.getByLabelText('Hold above'), '');
     expect(onChange).toHaveBeenLastCalledWith(undefined);
     expect(screen.getByLabelText('Hold above').props.value).toBe('');
+  });
+
+  it("a text field's example is its box's placeholder in place of \"Optional\" (backend ADR-0048 amendment 5; the owner's build 34 F2); Optional beside the title stays", async () => {
+    const npi = field({ key: 'npi', title: 'NPI', control: 'text', example: '1234567893' });
+    await renderWithProviders(<SetupFieldRow field={npi} value={undefined} onChange={jest.fn()} divider={false} />);
+    expect(screen.getByLabelText('NPI').props.placeholder).toBe('1234567893');
+    expect(screen.getByText('Optional')).toBeTruthy();
+    // No example, or not a text field: today's placeholder.
+    expect(placeholderOf({ control: 'text', required: false })).toBe('Optional');
+    expect(placeholderOf({ control: 'text', required: true })).toBe('Required');
+    expect(placeholderOf({ control: 'text', required: true, example: '1234567893' })).toBe('1234567893');
+    expect(placeholderOf({ control: 'email', required: false, example: 'a@b.test' })).toBe('Optional');
+    expect(placeholderOf({ control: 'money', required: false, example: '12.00' })).toBe('0.00');
   });
 
   it('shows a stored amount formatted, and marks a field that is not required as Optional', async () => {
