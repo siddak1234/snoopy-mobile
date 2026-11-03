@@ -476,6 +476,8 @@ describe('a select with many options: labels, groups and a search box', () => {
     expect(screen.getByTestId('setup-field-codes-choice-option-N18.5')).toBeTruthy();
     await fireEvent.changeText(box, 'zzz');
     expect(screen.getByTestId('setup-field-codes-choice-no-matches').props.children).toBe('No matches.');
+    // "No matches." alone: no empty card under it.
+    expect(screen.queryAllByTestId('setup-field-codes-choice-options')).toHaveLength(0);
     await fireEvent.press(sheet.getByLabelText('Back'));
     expect(screen.getByTestId('setup-field-codes-choice-group-0')).toBeTruthy();
     expect(screen.queryByTestId('setup-field-codes-choice-search')).toBeNull();

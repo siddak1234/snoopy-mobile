@@ -40,8 +40,8 @@ export type SheetOption = { value: string; label: string; group?: string };
  *
  * testIDs: the sheet `${testID}-sheet`, Search all `${testID}-search-all`, a
  * group `${testID}-group-${n}`, step 2's box `${testID}-search`, a row
- * `${testID}-option-${value}`, its tick `${testID}-chosen-${value}`, nothing
- * found `${testID}-no-matches`.
+ * `${testID}-option-${value}`, its tick `${testID}-chosen-${value}`, a card of
+ * rows `${testID}-options`, nothing found `${testID}-no-matches`.
  */
 export function SelectSheet({
   testID,
@@ -107,8 +107,9 @@ export function SelectSheet({
             {NO_MATCHES}
           </Text>
         ) : null}
-        {group && found ? (
-          <OptionCard testID={testID} options={found} chosen={chosen} onChoose={choose} />
+        {group ? (
+          // Nothing found draws no empty card under "No matches.".
+          found && found.length > 0 ? <OptionCard testID={testID} options={found} chosen={chosen} onChoose={choose} /> : null
         ) : found ? (
           optionGroups(found).map((match) => (
             <View key={match.name}>
@@ -153,7 +154,7 @@ function OptionCard({
 }) {
   const { palette } = useTheme();
   return (
-    <DividedCard>
+    <DividedCard testID={`${testID}-options`}>
       {options.map((option) => {
         const picked = chosen.includes(option.value);
         return (

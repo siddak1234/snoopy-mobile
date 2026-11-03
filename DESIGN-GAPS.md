@@ -2981,7 +2981,7 @@ the Flows stack (`blocks-render`), and under the real router the run, its Run de
 the Flows stack, Flows selected, Back straight to the item (`real-router/flow-items`); G4 Start on an
 item pushes the new run's page in the Flows stack (`round19-items`); F4 the sections and their order,
 a flat list put back, and a "{category} · Included" line put back (`tab-screens`, `parity-flows`); F1
-grouped options sent to the drop-down again, "Search all" kept to the first group, the chips left out
-(`setup-field`); F5 the departments unsorted, a flow's items read before it is opened, Start run's page
+grouped options sent to the drop-down again, "Search all" kept to the first group, the chips left out,
+an empty card under step 2's "No matches." (`setup-field`); F5 the departments unsorted, a flow's items read before it is opened, Start run's page
 pushed elsewhere (`parity-home`). Home's tests that opened a run from RECENT RUNS open it as Start run
 does (`real-router/run-in-activity`, `real-router/session-ended`).
