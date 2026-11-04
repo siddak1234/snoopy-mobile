@@ -3082,3 +3082,14 @@ and each refusal's words left out. S1-11 the
 transport not telling (`session-recovery`), the layout not drawing it, a refusal naming no known
 sign-in drawn, the tabs not back once cleared, a refused removal unsaid, Sign out without a press
 (`outside-sign-in`).
+
+## Round 21 stage 2: the client side of the platform's stage 2 contract (2026-11-04)
+
+The generated contracts and their hash-checked copy come from the backend's stage 2 contract
+(`round-21/stage-2-platform` at 50a24f7, PR #266's head, a frozen extract; never main); CI's `Deployed
+contract` job is red by design until the platform releases it (`lib/platform/CLAUDE.md`). This PR merges
+after that release. One commit per item; the rules are DESIGN-CONTRACT's, each once; this entry keeps the
+bites and the findings. Parity: the website builds the same items in its own lane, with the same words.
+
+Bites (break, red, restore, green): S2-0 a generated file left from the stage 1 contract
+(`verify:platform-contracts`).
