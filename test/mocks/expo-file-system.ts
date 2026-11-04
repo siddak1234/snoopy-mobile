@@ -36,8 +36,9 @@
  */
 import { dirname, join as joinPath } from 'node:path';
 
-// Since 55 the package exports only its entry and ./legacy (its package.json
-// "exports"), so its own path helpers are read from its folder.
+// Since 55 the package exports ".", "./legacy", "./package.json" and the plugin
+// (its package.json "exports"), not src/, so its own path helpers are read from
+// its folder.
 const { PathUtilities } = jest.requireActual(
   joinPath(dirname(require.resolve('expo-file-system/package.json')), 'src/pathUtilities'),
 );
