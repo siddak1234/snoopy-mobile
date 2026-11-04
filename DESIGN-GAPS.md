@@ -3220,3 +3220,8 @@ eslint-config-expo ~55.0.1 and @types/react ~19.2.10 (named by `expo install` it
   the config unchanged (its plugin/build/withWebBrowser.js), so it is not added.
 - **Not observed:** a native build, a simulator or a device. `release:ios --local` needs Xcode 26.2 or
   later (Expo's SDK 55 table; its changelog says 26); this Mac has 26.1.1.
+- **Jest and react-native-worklets 0.7.** Its native part is now required at import, which Jest does not
+  have: all 137 suites failed to run ("Native part of Worklets doesn't seem to be initialized").
+  `test/jest-setup.js` mocks it with the package's own mock (`react-native-worklets/lib/module/mock`), the
+  way its "Testing with Jest" guide recommends; the guide's web resolver starts at 0.8. Bite: the mock line
+  removed, `brand-mark.test.tsx` fails to run with that error; restored, it passes.
