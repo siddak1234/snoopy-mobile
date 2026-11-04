@@ -3225,3 +3225,9 @@ eslint-config-expo ~55.0.1 and @types/react ~19.2.10 (named by `expo install` it
   `test/jest-setup.js` mocks it with the package's own mock (`react-native-worklets/lib/module/mock`), the
   way its "Testing with Jest" guide recommends; the guide's web resolver starts at 0.8. Bite: the mock line
   removed, `brand-mark.test.tsx` fails to run with that error; restored, it passes.
+- **The expo-file-system mock.** expo-file-system 55's `package.json` `exports` publishes only its entry and
+  `./legacy`, so `test/mocks/expo-file-system.ts` could not `requireActual` its `src/pathUtilities` (4
+  suites failed to run); it now reads that file from the package's folder. Its header's citations are
+  re-read at 55.0.26 and expo-modules-core 55.0.27 (seven line ranges moved; what each says is unchanged).
+  Bite: the old specifier put back, `signed-file.test.ts` fails to run ("Cannot find module
+  'expo-file-system/src/pathUtilities'"); restored, 13 pass.
