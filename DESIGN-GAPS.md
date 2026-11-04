@@ -3102,8 +3102,9 @@ bites and the findings. Parity: the website builds the same items in its own lan
   the failed-load title is the shared "Couldn't load this". **Findings:** (1) `createItem` (an item's
   upload) answers the same 403 (`snoopy-backend/docs/openapi/automations.yaml`, createItem's 403); ~~the
   spec names Add and Start run only, so an item's upload says the platform's words~~ handled as a run's
-  since the review (the session's decision, 2026-11-04; below); (2) the spec's local
-  Compose check of the real 403s was not run in this lane (NOT OBSERVED): the shapes are the contract's.
+  since the review (the session's decision, 2026-11-04; below); (2) ~~the spec's local
+  Compose check of the real 403s was not run in this lane (NOT OBSERVED)~~ — the live check below stands
+  in its place; until then the shapes are the contract's.
 - **C3, the Documents list** (backend ADR-0049): DOCUMENTS on Organization, after ORGANIZATION DETAILS,
   each signed agreement a row that opens its read-only copy (DESIGN-CONTRACT "Organization", "Organization ›
   a document"). **Findings:** (1) the platform lets any member read the list (`listWorkspaceDocuments`),
@@ -3122,9 +3123,9 @@ bites and the findings. Parity: the website builds the same items in its own lan
 - **S1-11, S1-8's approval half** (carried from stage 1): the platform sends both since its stage 2
   (`OutsideOrgDomainDetails`; `ApprovalExpiredBy`, now also on an approve refused 409 `approval_expired`), so
   every "carried to Stage 2" comment and line is gone; nothing drawn changed (no new screen). **Finding:**
-  the spec's check against the real 403s in a local Compose run was not made in this lane (NOT OBSERVED); the
-  shapes were checked against the contract at 50a24f7, and stage 1's tests (`outside-sign-in`,
-  `review-decisions`) still hold them.
+  ~~the spec's check against the real 403s in a local Compose run was not made in this lane (NOT
+  OBSERVED)~~ — the live check below stands in its place; the shapes were checked against the contract at
+  50a24f7, and stage 1's tests (`outside-sign-in`, `review-decisions`) still hold them.
 
 Bites (break, red, restore, green): S2-0 a generated file left from the stage 1 contract
 (`verify:platform-contracts`).
@@ -3165,3 +3166,9 @@ out of the row (`ehr-connection`).
   device: the card hiding and showing again around the agreement's push and pop. Bites: the hook dropped
   from the upload, the item sent again with a new key, the file not kept for the card's return
   (`health-agreement-upload`).
+- **The real refusals, checked live (the review's finding 8; the session's decision, 2026-11-04): no local
+  Compose run.** After backend PR #266 deploys, and before this PR is marked ready, the session checks each
+  refusal once in the app against the live platform, on a test workspace: 403 `agreement_required` on an
+  add (Set up's Turn on), on a run (Start run) and on an item's upload; 403 `outside_org_domain` (S1-11);
+  and an approve refused 409 `approval_expired` (S1-8b). Each result is written here. Until then: NOT
+  OBSERVED against the real platform; every test of them answers with the contract's shapes.
