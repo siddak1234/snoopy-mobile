@@ -3181,3 +3181,15 @@ out of the row (`ehr-connection`).
   list (`/flows`), not on the flow page in Settings (`real-router/health-agreement`). **Finding, not
   changed:** a run Start run starts there still opens with `returnTo: 'flows'`, so Back from the run goes
   to the Flows tab, not Settings (`app/(tabs)/flows/detail.tsx`).
+- S1-8b: an Approve refused 409 `approval_expired` with `expiredBy` says Stage 1's two lines where Approve
+  and Deny were, with nothing to press, the provider named from one read of the providers made on that
+  refusal only; Approvals and the run's page are read again (`decideApproval` drops the snapshot's
+  approvals), Approvals keeps the card, "Expired", and the run's page offers no decision once a disconnect
+  expired it — the website's 9f2e1e7 (DESIGN-CONTRACT "Approvals", "Activity/run detail"). **Already
+  there:** the two lines over the run's body from a re-read approval (stage 1); only the refusal, the
+  re-reads, the kept card and the run's decision changed. Bites: the refusal not read (`approveExpiredBy`
+  null), its reason not checked, the providers' name dropped, the snapshot not dropped, the run's
+  `run.expired` check dropped, the run's pair's place left without the lines, the card not kept
+  (`review-expired-approval`). **Finding, not changed:** a review's Save refused the same
+  way says "The review wasn't saved. Try again." and reads nothing again (the website's says the same,
+  then redraws the run, its server action shared with Approve).

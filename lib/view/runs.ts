@@ -31,6 +31,7 @@ import type { AnsweredDecision, OfferedDecision } from '@/lib/platform/automatio
 
 import type { CatalogEntry } from '@/lib/platform/catalog';
 import type { InboxNotification } from '@/lib/platform/notifications';
+import { PlatformError } from '@/lib/platform/problem';
 import type { Approval, Run, RunDetail } from '@/lib/platform/runs';
 import { EMPTY, dateTime, expiresIn, relativeTime, relativeTimeAgo } from './format';
 import { chosenProvider, stepTitle, type StepField, type StepHeading } from './pipeline';
@@ -216,6 +217,21 @@ export function expiredByDisconnect(
   if (approval?.status !== 'expired' || approval.expiredBy?.reason !== 'connection-disconnected') return null;
   const provider = disconnectedName(approval.expiredBy.providerId, providerName(approval.expiredBy.providerId));
   return { title: expiredByDisconnectTitle(provider), next: expiredByDisconnectNext(provider) };
+}
+
+/**
+ * An Approve the platform refused because a disconnect expired its approval
+ * (409 `approval_expired` with `expiredBy` `connection-disconnected`, S1-8b;
+ * the platform has already saved the expiry): the provider it names. `null`
+ * for any other refusal — a plain expiry, or a reason this build does not
+ * know, included. The website's `approveExpiredBy`.
+ */
+export function approveExpiredBy(error: unknown): string | null {
+  if (!(error instanceof PlatformError) || error.status !== 409 || error.details?.reason !== 'approval_expired') {
+    return null;
+  }
+  const by = error.details.expiredBy as { reason?: unknown; providerId?: unknown } | undefined;
+  return by?.reason === 'connection-disconnected' && typeof by.providerId === 'string' ? by.providerId : null;
 }
 
 export function heldDecision(run: Run, approvals: readonly Approval[]): HeldDecision | null {

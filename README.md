@@ -495,6 +495,11 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   form comes or the run leaves held (backend ADR-0048). The read that saw the run turn
   held took the approvals from the 15 s snapshot, from before the approval was
   asked (round 25, the review's R5c 1).
+- `lib/platform/automations.ts`'s `decideApproval` drops the snapshot's
+  approvals when an Approve is refused 409 `approval_expired` with `expiredBy`
+  (S1-8b; backend §12.1 #252): the platform expired the approval before it
+  refused, so Approvals and the run's page read it again; no other refusal
+  drops anything (DESIGN-CONTRACT "Approvals").
 - `lib/platform/automations.ts`'s `readItemFile` and `readRunFile` answer a
   file's short-lived signed link, never its bytes (build 28): an item's own file
   and each file a run's job uploaded. The link downloads the file as an
