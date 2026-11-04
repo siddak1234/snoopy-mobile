@@ -3017,7 +3017,7 @@ same items in its own lane, with the same words.
   shows the confirm/stop page words"); the app draws none of them, as the website draws none.
 - **S1-8** (QuickBooks disconnect; backend §12.1 #252): the expired approval over the run's body and the
   row disconnected at the provider (DESIGN-CONTRACT "Activity/run detail", "Settings › Connections"); the
-  expired approval is carried to Stage 2 (BUILD-PLAN 29.4.6), not sent before it; the Disconnect page is
+  expired approval is ~~carried to Stage 2 (BUILD-PLAN 29.4.6), not sent before it~~ sent since stage 2; the Disconnect page is
   the website's. **Findings:** (1) ~~at the contract commit the Connections list leaves
   every `disconnected` row out (`snoopy-backend/apps/connections/src/postgres-connections.ts:174`, `status
   <> 'disconnected'`), so the row is drawn only once the platform lists a connection it retired~~ until
@@ -3051,7 +3051,7 @@ same items in its own lane, with the same words.
   have an owner or admin do it.
 - **S1-11** (outside sign-in, option b′; backend §12.1 #221): the refusal from any read draws the screen
   in the tabs' place, with "Remove {provider} sign-in" for each (DESIGN-CONTRACT "Authentication and
-  session"). **Findings:** (1) carried to Stage 2 (BUILD-PLAN 29.4.6); not sent before it. The app
+  session"). **Findings:** (1) ~~carried to Stage 2 (BUILD-PLAN 29.4.6); not sent before it~~ sent since stage 2. The app
   listens on every read; (2) the contract names the unlink `unlinkLoginIdentity` (`DELETE
   /v1/auth/identities/{provider}`, the website's), while the app unlinks through the native
   `unlinkNativeIdentity` it already uses on Settings › Account. **The session's default:** Sign out
@@ -3082,3 +3082,120 @@ and each refusal's words left out. S1-11 the
 transport not telling (`session-recovery`), the layout not drawing it, a refusal naming no known
 sign-in drawn, the tabs not back once cleared, a refused removal unsaid, Sign out without a press
 (`outside-sign-in`).
+
+## Round 21 stage 2: the client side of the platform's stage 2 contract (2026-11-04)
+
+The generated contracts and their hash-checked copy come from the backend's stage 2 contract
+(`round-21/stage-2-platform` at 50a24f7, PR #266's head, a frozen extract; never main); CI's `Deployed
+contract` job is red by design until the platform releases it (`lib/platform/CLAUDE.md`). This PR merges
+after that release. One commit per item; the rules are DESIGN-CONTRACT's, each once; this entry keeps the
+bites and the findings. Parity: the website builds the same items in its own lane, with the same words.
+
+- **C3, the acceptance screen** (backend ADR-0049; the owner's item 3 of 2026-11-03): Set up's Turn on and
+  Start run, refused 403 `agreement_required`, open the agreement for the owner and send the add or run
+  again with the same key once accepted; anyone else is told the one line (DESIGN-CONTRACT
+  "Flows/agreement"). **The session's defaults:** the checkbox is the app's switch (the app has no
+  checkbox; a yes or no is a switch everywhere); Accept is pressable only once the switch is on and both
+  fields hold words, so no new words say what is missing; ~~"Working…" (Connections' word)~~ "Adding…" or
+  "Starting…", the website's (the session's decision, 2026-11-04), while it sends; a
+  text changed since it was read is read again with the switch off and no line, since no word says it;
+  the failed-load title is the shared "Couldn't load this". **Findings:** (1) `createItem` (an item's
+  upload) answers the same 403 (`snoopy-backend/docs/openapi/automations.yaml`, createItem's 403); ~~the
+  spec names Add and Start run only, so an item's upload says the platform's words~~ handled as a run's
+  since the review (the session's decision, 2026-11-04; below); (2) ~~the spec's local
+  Compose check of the real 403s was not run in this lane (NOT OBSERVED)~~ — the live check below stands
+  in its place; until then the shapes are the contract's.
+- **C3, the Documents list** (backend ADR-0049): DOCUMENTS on Organization, after ORGANIZATION DETAILS,
+  each signed agreement a row that opens its read-only copy (DESIGN-CONTRACT "Organization", "Organization ›
+  a document"). **Findings:** (1) the platform lets any member read the list (`listWorkspaceDocuments`),
+  but Organization draws its sections only for an owner or admin of an organization, where the spec puts
+  it, so a member — and a personal workspace's owner, who can accept for a health flow too — has no place
+  that lists them.
+- **D1, Connect your EHR** (backend ADR-0050; the owner's item 1 of 2026-11-03): Connections' key form opens
+  for `smart-backend`, with a vendor picker only for two or more `vendors`; the row says the clinic's host
+  (DESIGN-CONTRACT "Settings › Connections"). **Findings:** (1) ~~two of the spec's three refusal lines
+  say "team", which `audit:vocabulary` keeps out of every screen, so they were not drawn and the refusal
+  kept the platform's "Bad Request"~~ — all three drawn since the review's finding 2 (the session's
+  decision, 2026-11-04): the audit allows the exact phrase "EHR team", the clinic's own EHR staff, not a
+  department; (2) the provider's icon `FirstAid`
+  (`snoopy-backend/providers/ehr-fhir.json`) is not in this build's icon set (`lib/view/icon-registry.ts`),
+  so the EHR's row draws the fallback mark; (3) the picker has no title: none is in the spec's words.
+- **S1-11, S1-8's approval half** (carried from stage 1): the platform sends both since its stage 2
+  (`OutsideOrgDomainDetails`; `ApprovalExpiredBy`, now also on an approve refused 409 `approval_expired`), so
+  every "carried to Stage 2" comment and line is gone; nothing drawn changed (no new screen). **Finding:**
+  ~~the spec's check against the real 403s in a local Compose run was not made in this lane (NOT
+  OBSERVED)~~ — the live check below stands in its place; the shapes were checked against the contract at
+  50a24f7, and stage 1's tests (`outside-sign-in`, `review-decisions`) still hold them.
+
+Bites (break, red, restore, green): S2-0 a generated file left from the stage 1 contract
+(`verify:platform-contracts`).
+C3 the hook dropped from Turn on (the agreement never opens) and from Start run, the
+add sent again with a new key, the owner check dropped (an admin offered the agreement), the version check
+dropped (none published opens the screen), the accept's body without the sha256 read, the screen settling
+nothing on accept or on leaving (`health-agreement`).
+C3's Documents the list not read with the rest, a row drawn for a kind with no name,
+the row opening nothing (`organization-documents`).
+D1 the key form not opened for `smart-backend`, the vendor not sent, the picker drawn
+for one vendor, the first vendor sent whatever was picked, the refusal's words left out, the host left
+out of the row (`ehr-connection`).
+
+**The review's findings, one commit each (2026-11-04).** Bites as above, each red with its line broken:
+- C3: an acceptance refused 403 (no longer the owner) or 503 `agreement_not_published` says the website's
+  line, not the platform's title (DESIGN-CONTRACT "Flows/agreement"). Bite: either mapping dropped from
+  `acceptanceRefusal` (`health-agreement`).
+- D1: both refusal lines that say "EHR team" are drawn, never "Bad Request"; `audit:vocabulary` allows that
+  exact phrase, and only it (DESIGN-CONTRACT "Settings › Connections"). Bites: a line dropped from
+  `EHR_CONNECT_REFUSALS` (`ehr-connection`); the allowance dropped (`audit-gates`).
+- C3: the agreement's button says "Adding…" while an add's acceptance is sent and "Starting…" for a run's,
+  as the website's; no "Working…". Bite: one word for both (`health-agreement`).
+- D1: a connected EHR's integration row on Set up says the clinic's host, as Connections' row and the
+  website's do: `connectionLine` reads the provider's `authType`, and no second call stands before it.
+  Bite: the `smart-backend` branch dropped from `connectionLine` (`ehr-connection`, both screens).
+- C3: "Full name" and "Title" take at most 120 characters each, the contract's bound, as the website's
+  (`TextField`'s `maxLength`). Bite: the prop not passed to the box (`health-agreement`).
+- C3: the agreement opened by a Start run in Home's YOUR FLOWS is Home's own copy of the screen, so Back
+  without accepting (or once accepted) stays on Home — under the real router (DESIGN-CONTRACT
+  "Flows/agreement"). Bite: `agreementPath` always the Flows tab's — the agreement opens in Flows, and Back
+  lands on the Flows list (`/flows`) once the Flows tab was visited, not on Home (`real-router/health-agreement`).
+- C3: an item's upload refused 403 `agreement_required` opens the agreement for the owner, as a run's
+  ("Accept and start run"), and once accepted sends `createItem` again under the same key; anyone else is
+  told the one line under the form (DESIGN-CONTRACT "Flows/agreement"). **The session's defaults:** the
+  upload card, a dialog, is taken off the screen while the agreement is open (a dialog would cover the
+  screen pushed under it) and comes back as it was, its file still shown, since a dialog's fields are
+  drawn anew when it shows again; left without accepting, nothing is sent and nothing said. Not seen on a
+  device: the card hiding and showing again around the agreement's push and pop. Bites: the hook dropped
+  from the upload, the item sent again with a new key, the file not kept for the card's return
+  (`health-agreement-upload`).
+- **The real refusals, checked live (the review's finding 8; the session's decision, 2026-11-04): no local
+  Compose run.** After backend PR #266 deploys, and before this PR is marked ready, the session checks each
+  refusal once in the app against the live platform, on a test workspace: 403 `agreement_required` on an
+  add (Set up's Turn on), on a run (Start run) and on an item's upload; 403 `outside_org_domain` (S1-11);
+  and an approve refused 409 `approval_expired` (S1-8b). Each result is written here. Until then: NOT
+  OBSERVED against the real platform; every test of them answers with the contract's shapes.
+
+**The session's land-time fixes, one commit each (2026-11-04): parity with the website.** Bites as above:
+- C3: the agreement opened by Start run or Upload on Settings' copy of a live flow page (the twin Archived
+  flows opens) is Settings' own copy of the screen, so Back stays in Settings — under the real router
+  (DESIGN-CONTRACT "Flows/agreement"; the return pass's finding 2, the class of Home's above). Bite:
+  `agreementPath` without its Settings branch — the agreement opens in Flows, and Back lands on the Flows
+  list (`/flows`), not on the flow page in Settings (`real-router/health-agreement`). **Finding, not
+  changed:** a run Start run starts there still opens with `returnTo: 'flows'`, so Back from the run goes
+  to the Flows tab, not Settings (`app/(tabs)/flows/detail.tsx`).
+- S1-8b: an Approve refused 409 `approval_expired` with `expiredBy` says Stage 1's two lines where Approve
+  and Deny were, with nothing to press, the provider named from one read of the providers made on that
+  refusal only; Approvals and the run's page are read again (`decideApproval` drops the snapshot's
+  approvals), Approvals keeps the card, "Expired", and the run's page offers no decision once a disconnect
+  expired it — the website's 9f2e1e7 (DESIGN-CONTRACT "Approvals", "Activity/run detail"). **Already
+  there:** the two lines over the run's body from a re-read approval (stage 1); only the refusal, the
+  re-reads, the kept card and the run's decision changed. Bites: the refusal not read (`approveExpiredBy`
+  null), its reason not checked, the providers' name dropped, the snapshot not dropped, the run's
+  `run.expired` check dropped, the run's pair's place left without the lines, the card not kept
+  (`review-expired-approval`). **Finding, not changed:** a review's Save refused the same
+  way says "The review wasn't saved. Try again." and reads nothing again (the website's says the same,
+  then redraws the run, its server action shared with Approve).
+- C3: an item's upload refused for the agreement, by role, as the website's a29aa81: the owner gets the
+  agreement and the admin "Ask your workspace owner to accept the health data agreement." — **already
+  there** (92eb6e7); a member, whom the platform refuses first as a member (403, `requiredRole` `admin`,
+  no reason), now "Only an owner or admin can do this.", the website's words for it, where the app said the
+  platform's title (DESIGN-CONTRACT "Refusal map", "Flows/agreement"). Bite: the 403 line dropped from
+  `itemRefusal` (`health-agreement-upload`, `round19-items`).

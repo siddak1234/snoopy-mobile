@@ -15,12 +15,15 @@ type Props = {
   secure?: boolean;
   autoComplete?: React.ComponentProps<typeof TextInput>['autoComplete'];
   keyboardType?: React.ComponentProps<typeof TextInput>['keyboardType'];
+  /** The most characters the box takes — a contract's bound, so a longer value is never sent to be refused. */
+  maxLength?: number;
   style?: StyleProp<ViewStyle>;
 };
 
 /** Labelled auth field: neutral-400 label (the design's 12.5px, the scale's
  *  `small` since 24.12) over a 50px, radius-12 box (neutral-700 ring, surface
- *  at 72%). */
+ *  at 72%). `maxLength` stops the box at a bound (the health data agreement's
+ *  name and title, Round 21 stage 2). */
 export function TextField({
   label,
   value,
@@ -29,6 +32,7 @@ export function TextField({
   secure = false,
   autoComplete,
   keyboardType,
+  maxLength,
   style,
 }: Props) {
   const { palette } = useTheme();
@@ -62,6 +66,7 @@ export function TextField({
           secureTextEntry={hidden}
           autoComplete={autoComplete}
           keyboardType={keyboardType}
+          maxLength={maxLength}
           autoCapitalize="none"
           selectionColor={palette.accent}
           style={{

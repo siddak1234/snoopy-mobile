@@ -142,9 +142,15 @@ paths:
             A member may not add a flow (`details.reason:
             flow_change_requires_admin`, §12.1 #180), or the workspace is not
             entitled to create this subscription (`details.reason:
-            over_plan_limit` or `entitlements_not_configured`). Only these three
-            may be exposed for this response; every other authorization refusal
-            is a generic Problem.
+            over_plan_limit` or `entitlements_not_configured`), or the flow
+            carries health data and the workspace's owner has not accepted the
+            current health data agreement (`details.reason:
+            agreement_required`, with `kind` and `version`:
+            `AgreementRequiredDetails` in `docs/openapi.yaml`, ADR-0049) —
+            nothing was written, and the add is repeated with the same
+            `Idempotency-Key` once the owner accepts. Only these four may be
+            exposed for this response; every other authorization refusal is a
+            generic Problem.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -495,7 +501,10 @@ paths:
             A member: `details.requiredRole` is `admin`, and there is no reason.
             Over the plan: `details.reason` is `over_plan_limit` with the
             integers `limit` and `live`, or `entitlements_not_configured`, as
-            `createRun`. Nothing was made.
+            `createRun`. A flow that carries health data, before the
+            workspace's owner accepted the current health data agreement:
+            `agreement_required` with `kind` and `version`, as `createRun`
+            (ADR-0049). Nothing was made.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -810,8 +819,12 @@ paths:
             more, lets runs start again. `entitlements_not_configured` in place of
             `over_plan_limit` means this deployment has no plan to read and
             refuses every start. A member who names an item gets 403 with
-            `details.requiredRole: admin` (ADR-0046). Any other 403 carries no
-            reason.
+            `details.requiredRole: admin` (ADR-0046). A run of a flow that
+            carries health data, before the workspace's owner accepted the
+            current health data agreement, is 403 `agreement_required` with
+            `kind` and `version` (`AgreementRequiredDetails` in
+            `docs/openapi.yaml`, ADR-0049); nothing was created. Any other 403
+            carries no reason.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -1300,7 +1313,16 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
-        '409': { $ref: '#/components/responses/Problem' }
+        '409':
+          description: >-
+            Already decided: no reason. Expired: `details.reason` is
+            `approval_expired` — past `expiresAt`, or, on an approve, because
+            the connection its held run was built on was disconnected, and then
+            with `details.expiredBy` (`ApprovalExpiredBy`). Nothing was
+            continued.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /v1/workspaces/{workspaceId}/notifications:
     get:
@@ -1843,7 +1865,10 @@ components:
             `reason: over_plan_limit` and `reason: entitlements_not_configured`
             may be present; on a 403 from a subscription update,
             `flow_change_requires_admin` or `integration_requires_admin`. On a 403 from run creation, the same two reasons, each
-            with the integers `limit` and `live`. A 403 for a missing role carries
+            with the integers `limit` and `live`. On a 403 from subscription or
+            run creation, or item creation, for a flow that carries health data, `reason:
+            agreement_required` with `kind` and `version`
+            (`AgreementRequiredDetails` in `docs/openapi.yaml`, ADR-0049). A 403 for a missing role carries
             `requiredRole`. A 409 or 422 from `createItem`, and one from
             `createRun` naming an item, names only the reasons its operation
             lists; a 422 from `createItem` may carry `problems`, at most 16
@@ -1853,7 +1878,9 @@ components:
             only the reasons its operation lists. A 400 from completing an upload
             names its reason and, for a measured refusal, the measured and allowed
             numbers as strings of digits (`completeUpload`). A 409, 422 or 503
-            from `createRunPackageFile` names only the reasons it lists. All other upstream and
+            from `createRunPackageFile` names only the reasons it lists. A 409
+            from `decideApproval` may name `approval_expired`, with `expiredBy`
+            (`ApprovalExpiredBy`) when a disconnected connection expired it. All other upstream and
             authorization details are deliberately suppressed.
 
     FlowAllowance:
@@ -3823,8 +3850,10 @@ components:
         built on was disconnected at the provider (`providerId`) — a refused
         refresh or a 401 that retired the grant. A client shows "Expired ·
         {provider} was disconnected" and "Reconnect {provider}, then start the
-        run again." A reason it does not know reads as a plain expiry. Not sent
-        before Stage 2 (BUILD-PLAN 29.4.6; §12.1 #252).
+        run again." A reason it does not know reads as a plain expiry. Set since
+        Stage 2's S1-8b, from the held run's own connection choices: when the
+        list is read (one check for the page), and when someone approves, which
+        is then refused 409 `approval_expired` (§12.1 #252).
       properties:
         reason: { type: string }
         providerId: { type: string, maxLength: 64 }

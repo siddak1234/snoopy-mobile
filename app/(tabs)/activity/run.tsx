@@ -62,7 +62,7 @@ import {
  * while the job's approval waits, the approval form — Approve and Deny
  * (`DecisionButtons`) to a role it names, to anyone else who can decide; then
  * what the run read — over it, a job whose approval a disconnect expired says
- * so (`expiredByDisconnect`, S1-8). Its footer: View package, Download PDF and Download Excel
+ * so (`expiredByDisconnect`, S1-8), and offers no decision (S1-8b). Its footer: View package, Download PDF and Download Excel
  * while the platform offers the package (`packageAvailable`); the "Run details"
  * row (`OpenRow`), which opens its steps, tiles and facts on a page of their own
  * (`/(tabs)/activity/run-details`); then Cancel run while it goes, and View
@@ -131,7 +131,6 @@ export default function RunDetailScreen() {
         reviewTally: jobReviewTally(liveRun.detail.run, liveRun.approvals, savedReview),
         // The job's approval, expired because its connection was disconnected at the provider
         // (S1-8; backend §12.1 #252): why, and what to do, in the catalog's name for it (`disconnectedName`).
-        // Stage 2 (BUILD-PLAN 29.4.6; §12.1 #252 approval half): the platform does not send this before Stage 2.
         expired: expiredByDisconnect(jobApproval(liveRun.detail.run, liveRun.approvals), (providerId) =>
           providerNameIn(liveRun.entry, providerId),
         ),
@@ -224,12 +223,26 @@ export default function RunDetailScreen() {
    * "{a} accepted · {d} denied" and reads the run again: the job goes on
    * whatever the answers. The platform sends it as its own form, `review`
    * (block set 3), and the page draws `approval` and `review` alike.
+   *
+   * None once a disconnect expired the job's approval (S1-8b): the two lines
+   * over the body say so. An Approve the platform refused for it (409
+   * `approval_expired` with `expiredBy`) says the same two lines where Approve
+   * and Deny were, with nothing to press, and the page reads the run again.
    */
   const role = liveRun?.role;
   const approvalForm = (form: BlockOf<'questions'>['form']) => {
     const approvalId = form.approvalId;
     const eligible = form.eligibleRoles ?? [];
-    if (!approvalId || role === undefined || role === null) return null;
+    if (!approvalId || role === undefined || role === null || run.expired) return null;
+    const over = decisions.expiredFor(approvalId);
+    if (over) {
+      return (
+        <View testID="run-decision-expired" accessibilityRole="alert" style={styles.decision}>
+          <Text style={[styles.expiredTitle, { color: status.warnText }]}>{over.title}</Text>
+          <Text style={[styles.decisionNote, { color: palette.neutral[400] }]}>{over.next}</Text>
+        </View>
+      );
+    }
     const changes = offeredDecisions(form);
     if (changes.length > 0) {
       if (!decides(role, eligible)) {
@@ -278,7 +291,8 @@ export default function RunDetailScreen() {
           testID="run-decision"
           busy={decisions.busyFor(approvalId)}
           onDecide={async (choice) => {
-            if (await decisions.decide(approvalId, choice)) detail.refresh();
+            // Saved, or expired by a disconnect (S1-8b): the run as the platform now holds it.
+            if ((await decisions.decide(approvalId, choice)) !== 'refused') detail.refresh();
           }}
         />
         {error ? (

@@ -260,6 +260,14 @@ export function archiveItem(workspaceId: string, itemId: string, idempotencyKey:
   );
 }
 
+/**
+ * Approve or Deny one approval. Saved, the approvals, the runs and their
+ * counts are read again. An Approve refused 409 `approval_expired` with
+ * `expiredBy` (S1-8b; backend §12.1 #252) was expired by the platform before
+ * it refused — the connection its held run was built on was disconnected — so
+ * the approvals are read again too (`expiredOnRefusal`); any other refusal, a
+ * plain expiry included, changed nothing.
+ */
 export function decideApproval(
   workspaceId: string,
   approvalId: string,
@@ -277,7 +285,22 @@ export function decideApproval(
         body: { decision },
         signal,
       }),
-  ).then(changed(workspaceId, ['approvals', 'runs', 'run-stats']));
+  ).then(changed(workspaceId, ['approvals', 'runs', 'run-stats']), expiredOnRefusal(workspaceId));
+}
+
+/** A decision refused because a disconnect expired the approval (409 `approval_expired` with `expiredBy`): the approvals are read again; the refusal goes on. */
+function expiredOnRefusal(workspaceId: string): (error: unknown) => never {
+  return (error) => {
+    if (
+      error instanceof PlatformError &&
+      error.status === 409 &&
+      error.details?.reason === 'approval_expired' &&
+      error.details.expiredBy !== undefined
+    ) {
+      invalidateShared(workspaceId, ['approvals']);
+    }
+    throw error;
+  };
 }
 
 /**

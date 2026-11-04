@@ -78,6 +78,31 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '503': { $ref: '#/components/responses/Problem' }
 
+  /v1/connections/jwks.json:
+    get:
+      operationId: getConnectionsJsonWebKeySet
+      summary: The platform's public keys for SMART Backend Services.
+      description: >-
+        ADR-0050 (D1). One RSA key per EHR vendor this deployment holds a key
+        for, public members only, which an EHR's server reads to check the
+        platform's signed token requests — or which is given to a vendor that
+        takes an uploaded key. **Public**: no session, as an EHR's server has
+        none. Answered with `Cache-Control: public, max-age=3600` (EHR-W23), and
+        kept an hour at the Edge, so reading it makes no call behind it more
+        than once an hour. Never a private member (`d`, `p`, `q`, `dp`, `dq`,
+        `qi`). An empty `keys` when no vendor's key is held.
+      security: []
+      responses:
+        '200':
+          description: The key set.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: 'public, max-age=3600' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JsonWebKeySet' }
+        '503': { $ref: '#/components/responses/Problem' }
+
   /v1/connections/callback:
     get:
       operationId: completeConnectionAuthorization
@@ -188,6 +213,20 @@ paths:
         list reports for this provider. Every declared field is required; an
         undeclared one is refused by name rather than ignored, so a caller
         sending `apikey` for a spec declaring `apiKey` is told which it was.
+
+
+        **A SMART Backend Services provider (ADR-0050, D1)** reports `vendors`
+        and is connected here too, with `credentials: {vendor, fhirBaseUrl}`: no
+        secret is pasted — the platform signs with its own key for that vendor.
+        Connections takes only an https address on the public internet, reads
+        its SMART configuration for a token address on the same origin, asks
+        one token and reads `/metadata` before the connection is stored; a
+        refusal is 400 with `details.reason` `fhir_address_refused` ("Use the
+        https address your EHR team gave you."), `fhir_not_answering` ("That
+        address didn't answer as a FHIR server.") or `ehr_not_activated` ("Your
+        EHR hasn't turned on Autom8x yet. Ask your EHR team to activate it.").
+        Only a vendor listed in `vendors` is accepted (`credential_invalid`
+        otherwise).
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -557,16 +596,20 @@ components:
             `api-key` provider — scopes are granted, not pasted.
         authType:
           type: string
-          enum: [oauth2, api-key]
+          enum: [oauth2, api-key, smart-backend]
           description: >-
             Which door this provider connects through: `oauth2` sends the browser
             to the vendor's consent page, `api-key` collects pasted values
-            (BUILD-PLAN 5.14, ADR-0015). A client renders the right form from this
-            rather than assuming every provider redirects.
+            (BUILD-PLAN 5.14, ADR-0015), and `smart-backend` collects a record
+            system's vendor and FHIR address, then the platform signs its own
+            short-lived token (SMART Backend Services, ADR-0050). Listed only
+            once a vendor key is configured. A client renders the right form from
+            this rather than assuming every provider redirects.
         credentialFields:
           type: array
           description: >-
-            Present only when `authType` is `api-key`. **The form is generated
+            Present only when `authType` is `api-key`, and on a SMART Backend
+            Services provider (`vendors`, ADR-0050). **The form is generated
             from this**, the way an automation's setup form is generated from
             `manifest.setup[]` — so a new key-based vendor is a reviewed file and
             no client change.
@@ -589,6 +632,26 @@ components:
               help:
                 type: string
                 description: Where the customer finds this value in the vendor's console.
+        vendors:
+          type: array
+          maxItems: 8
+          description: >-
+            Present only on a SMART Backend Services provider (ADR-0050, D1),
+            such as the EHR's: the vendors this deployment holds a key for, in
+            the spec's order. Its form is the pasted-key form, generated from
+            `credentialFields` (one field, the clinic's FHIR address), plus a
+            vendor picker drawn only when two or more are listed; `credentials`
+            then carries `vendor` (an `id` here) beside `fhirBaseUrl`.
+          items:
+            type: object
+            required: [id, label]
+            additionalProperties: false
+            properties:
+              id: { type: string }
+              label:
+                type: string
+                maxLength: 80
+                description: Shown in the picker, such as "Epic" or "Epic (test system)".
 
     ConnectionStatus:
       type: string
@@ -672,6 +735,34 @@ components:
                 How many **live** subscriptions in this workspace require this
                 provider — what breaks if the connection is removed. A draft
                 subscription is not counted: it is being set up, not running.
+
+    JsonWebKeySet:
+      type: object
+      additionalProperties: false
+      required: [keys]
+      description: >-
+        ADR-0050 (D1): the platform's public keys for SMART Backend Services,
+        one per vendor it holds a key for, served at `GET
+        /v1/connections/jwks.json` — public, with `Cache-Control: max-age=3600`
+        (EHR-W23) — and given to a vendor that takes an uploaded key. Never a
+        private member (`d`, `p`, `q`, `dp`, `dq`, `qi`).
+      properties:
+        keys:
+          type: array
+          items: { $ref: '#/components/schemas/JsonWebKey' }
+
+    JsonWebKey:
+      type: object
+      additionalProperties: false
+      required: [kty, n, e, kid, alg, use]
+      description: One RSA public key (RFC 7517), the members a verifier needs and no other.
+      properties:
+        kty: { type: string, enum: [RSA] }
+        n: { type: string }
+        e: { type: string }
+        kid: { type: string }
+        alg: { type: string, enum: [RS384] }
+        use: { type: string, enum: [sig] }
 
     ConnectionAuthorizationReused:
       type: object

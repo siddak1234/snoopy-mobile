@@ -10,7 +10,8 @@ import { useTheme } from '@/hooks/use-theme';
  *  an item's page since Round 19, backend ADR-0046, and its file's page since
  *  build 28, F4). Since Round 21 stage 1 an item's runs too — the run page, its
  *  Run details, its files and its package, Activity's own pages — so Back from
- *  a run comes straight to its item (the owner's build 31 G1). */
+ *  a run comes straight to its item (the owner's build 31 G1). Since Round 21
+ *  stage 2 the health data agreement too (C3), which Set up and Start run open. */
 export default function FlowsLayout() {
   const { palette } = useTheme();
   return (
@@ -23,6 +24,7 @@ export default function FlowsLayout() {
       <Stack.Screen name="detail" />
       <Stack.Screen name="add" />
       <Stack.Screen name="setup" />
+      <Stack.Screen name="agreement" />
       <Stack.Screen name="vendor" />
       <Stack.Screen name="email" />
       <Stack.Screen name="item" />

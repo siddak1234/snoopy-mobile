@@ -75,6 +75,8 @@ function routeManage(role: 'owner' | 'admin' | 'member') {
   fake.always('GET /v1/workspaces/{workspaceId}/join-requests', {
     requests: [{ id: 'jr-1', workspaceId: TEST_WORKSPACE, userId: 'u9', status: 'pending', createdAt: '2026-09-29T00:00:00Z' }],
   });
+  // Its DOCUMENTS, read with the rest (Round 21 stage 2, C3): none signed.
+  fake.always('GET /v1/workspaces/{workspaceId}/documents', { documents: [] });
   return fake;
 }
 

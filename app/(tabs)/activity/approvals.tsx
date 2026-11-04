@@ -15,7 +15,7 @@ import { Text } from '@/components/text';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { centredOn, em, fonts, fontScaleLimit, inset, space, status, typeScale, withAlpha } from '@/constants/theme';
-import { useApprovalDecision, type Decision } from '@/hooks/use-approval-decision';
+import { useApprovalDecision, type Decision, type ExpiredLines } from '@/hooks/use-approval-decision';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { useTheme } from '@/hooks/use-theme';
@@ -46,11 +46,14 @@ const LEAVE_MS = 220;
  * F2) says "Review {n} changes" in place of Approve and Deny, opening the run,
  * where each change is answered. A saved review has left this pending list,
  * so its "{a} accepted · {d} denied" shows on the run only (DESIGN-GAPS, Round
- * 21's F2: Approvals reads no decided review).
+ * 21's F2: Approvals reads no decided review). An Approve a disconnect expired
+ * (S1-8b; `expired`) says Stage 1's two lines where Approve and Deny were,
+ * with nothing to press, and its pill says Expired.
  */
 function ApprovalCard({
   item,
   decision,
+  expired,
   busy,
   error,
   onDecide,
@@ -58,13 +61,20 @@ function ApprovalCard({
 }: {
   item: ApprovalItem;
   decision: Decision | undefined;
+  expired?: ExpiredLines;
   busy: Decision | null;
   error?: string;
   onDecide: (d: Decision) => void;
   onView: () => void;
 }) {
   const { palette } = useTheme();
-  const pill = decision === 'approved' ? 'Approved' : decision === 'rejected' ? 'Denied' : item.status;
+  const pill = expired
+    ? 'Expired'
+    : decision === 'approved'
+      ? 'Approved'
+      : decision === 'rejected'
+        ? 'Denied'
+        : item.status;
   return (
     <SurfaceCard>
       <View style={styles.cardHead}>
@@ -82,7 +92,12 @@ function ApprovalCard({
       {item.expires !== EMPTY ? (
         <Text style={[styles.note, { color: palette.neutral[400] }]}>Expires {item.expires}</Text>
       ) : null}
-      {decision ? null : !item.canDecide ? (
+      {expired ? (
+        <View testID={`expired-${item.id}`} accessibilityRole="alert" style={styles.expired}>
+          <Text style={[styles.note, styles.expiredTitle, { color: status.warnText }]}>{expired.title}</Text>
+          <Text style={[styles.note, { color: palette.neutral[400] }]}>{expired.next}</Text>
+        </View>
+      ) : decision ? null : !item.canDecide ? (
         // The server would refuse it (403): no button, and who may decide.
         <Text style={[styles.note, { color: palette.neutral[400] }]}>{decidersLine(item.deciders)}</Text>
       ) : item.changes > 0 ? (
@@ -165,12 +180,21 @@ export default function ApprovalsScreen() {
    * the rest close up (at once under Reduce Motion); none left, Activity's main
    * page (`dismissTo`: back to it when it is beneath, else in its place). ~~The
    * "All caught up" banner and "Approved ✓ — agent resuming"~~ until round 24.
+   *
+   * An Approve a disconnect expired (S1-8b) is over, not decided: the list is
+   * read again — the platform saved the expiry — and its card stays where it
+   * was, though the list read again no longer holds it (`over`), its two
+   * lines in place of the buttons and its pill Expired.
    */
   const [decided, setDecided] = useState<Record<string, Decision>>({});
+  const [over, setOver] = useState<Record<string, { item: ApprovalItem; index: number }>>({});
   const [gone, setGone] = useState<ReadonlySet<string>>(new Set());
   const items = inbox.status === 'ready' ? inbox.data : [];
-  const shown = items.filter((item) => !gone.has(item.id));
-  const pending = items.filter((item) => !(item.id in decided)).length;
+  const shown = keepOver(
+    items.filter((item) => !gone.has(item.id)),
+    over,
+  );
+  const pending = items.filter((item) => !(item.id in decided) && !(item.id in over)).length;
 
   useEffect(() => {
     const leaving = Object.keys(decided).filter((id) => !gone.has(id));
@@ -189,8 +213,13 @@ export default function ApprovalsScreen() {
   }, [cleared, reduceMotion, router]);
 
   const decide = async (approvalId: string, decision: Decision) => {
-    if (await decisions.decide(approvalId, decision)) {
-      setDecided((before) => ({ ...before, [approvalId]: decision }));
+    const index = shown.findIndex((item) => item.id === approvalId);
+    const outcome = await decisions.decide(approvalId, decision);
+    if (outcome === 'saved') setDecided((before) => ({ ...before, [approvalId]: decision }));
+    if (outcome === 'expired') {
+      const item = shown[index];
+      if (item) setOver((before) => ({ ...before, [approvalId]: { item, index } }));
+      inbox.refresh();
     }
   };
 
@@ -218,7 +247,7 @@ export default function ApprovalsScreen() {
     );
   }
   // Arriving with an empty queue: nothing to decide, and nothing was.
-  if (items.length === 0 && !anyDecided) {
+  if (items.length === 0 && !anyDecided && shown.length === 0) {
     return (
       <ScreenEmpty
         icon={<CheckCircle size={40} color={status.ok} />}
@@ -255,6 +284,7 @@ export default function ApprovalsScreen() {
           <ApprovalCard
             item={item}
             decision={decided[item.id]}
+            expired={decisions.expiredFor(item.id)}
             busy={decisions.busyFor(item.id)}
             error={decisions.errorFor(item.id)}
             onDecide={(decision) => decide(item.id, decision)}
@@ -265,6 +295,18 @@ export default function ApprovalsScreen() {
       ))}
     </Page>
   );
+}
+
+/** The list as read, with each card an expiry ended here put back where it was, if the list no longer holds it. */
+function keepOver(
+  listed: readonly ApprovalItem[],
+  over: Readonly<Record<string, { item: ApprovalItem; index: number }>>,
+): ApprovalItem[] {
+  const rows = [...listed];
+  for (const { item, index } of Object.values(over).sort((a, b) => a.index - b.index)) {
+    if (!rows.some((row) => row.id === item.id)) rows.splice(Math.min(index, rows.length), 0, item);
+  }
+  return rows;
 }
 
 const styles = StyleSheet.create({
@@ -343,6 +385,14 @@ const styles = StyleSheet.create({
   // Centred on the first line of its words (round 24 P7; the owner's build 23 F11: "off center").
   calloutIcon: {
     marginTop: centredOn(typeScale.body.lineHeight, 16),
+  },
+  // An Approve a disconnect expired (S1-8b): its two lines, as the run page draws them.
+  expired: {
+    gap: space.inner,
+  },
+  // The note's size and inset, in the medium weight, as the run page's title line.
+  expiredTitle: {
+    fontFamily: fonts.medium,
   },
   errorNote: {
     fontFamily: fonts.medium,
