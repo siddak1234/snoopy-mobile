@@ -252,6 +252,16 @@ describe('the agreement screen', () => {
     await expect(answered).resolves.toBe(true);
   });
 
+  it("\"Full name\" and \"Title\" each take at most 120 characters — the contract's bound, the website's maxLength — so a longer one is never sent", async () => {
+    const fake = fakePlatform(platformOperation);
+    routeAgreement(fake);
+    setMockParams({ action: 'add', workspace: TEST_WORKSPACE });
+    await renderWithProviders(<AgreementScreen />, sessionAs('owner'));
+    await screen.findByTestId('agreement-text');
+    expect(screen.getByLabelText('Full name').props.maxLength).toBe(120);
+    expect(screen.getByLabelText('Title').props.maxLength).toBe(120);
+  });
+
   it('on Start run its button says "Accept and start run"', async () => {
     const fake = fakePlatform(platformOperation);
     routeAgreement(fake);

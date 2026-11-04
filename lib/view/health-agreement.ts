@@ -33,6 +33,9 @@ export function agreementRefusal(error: unknown, role: WorkspaceRole | undefined
   return { open: true };
 }
 
+/** The longest name or title an acceptance takes (the contract's `AgreementAcceptanceRequest`: 1–120, the website's `maxLength`). */
+export const SIGNER_FIELD_LIMIT = 120;
+
 /**
  * A refused acceptance, in the website's words (its `acceptHealthAgreement`):
  * 403 — the person is no longer the workspace's owner, by its membership — the

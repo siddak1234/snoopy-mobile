@@ -3149,3 +3149,5 @@ out of the row (`ehr-connection`).
 - D1: a connected EHR's integration row on Set up says the clinic's host, as Connections' row and the
   website's do: `connectionLine` reads the provider's `authType`, and no second call stands before it.
   Bite: the `smart-backend` branch dropped from `connectionLine` (`ehr-connection`, both screens).
+- C3: "Full name" and "Title" take at most 120 characters each, the contract's bound, as the website's
+  (`TextField`'s `maxLength`). Bite: the prop not passed to the box (`health-agreement`).

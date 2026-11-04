@@ -35,7 +35,7 @@ import { WORKSPACE_CHANGED } from '@/lib/content/refusals';
 import { errorTitleFor } from '@/lib/content/screen-states';
 import { acceptHealthDataAgreement, readHealthDataAgreement, type HealthDataAgreement } from '@/lib/platform/agreements';
 import { PlatformError } from '@/lib/platform/problem';
-import { acceptanceRefusal, settleAgreement } from '@/lib/view/health-agreement';
+import { SIGNER_FIELD_LIMIT, acceptanceRefusal, settleAgreement } from '@/lib/view/health-agreement';
 
 /**
  * The health data agreement (Round 21 stage 2, C3; backend ADR-0049) — the
@@ -48,7 +48,7 @@ import { acceptanceRefusal, settleAgreement } from '@/lib/view/health-agreement'
  * The title and the version over the text (`GET /v1/agreements/health-data`,
  * read when the screen opens) to scroll; the checkbox "I'm authorized to sign
  * for {organization}" — the app's switch, as every yes or no here is; "Full
- * name" and "Title"; then "Accept and add flow" ("Accept and start run" for a
+ * name" and "Title", each at most 120 characters (the contract's bound); then "Accept and add flow" ("Accept and start run" for a
  * run), pressable once all three are given, "Adding…" ("Starting…") while it
  * sends, the website's words. It accepts (`POST …/agreements`,
  * the version and sha256 read), then goes back, and the screen that was
@@ -181,8 +181,14 @@ export default function AgreementScreen() {
             />
           </SurfaceCard>
           <View style={styles.fields}>
-            <TextField label={SIGNER_NAME_LABEL} value={name} onChangeText={change(setName)} autoComplete="name" />
-            <TextField label={SIGNER_TITLE_LABEL} value={title} onChangeText={change(setTitle)} />
+            <TextField
+              label={SIGNER_NAME_LABEL}
+              value={name}
+              onChangeText={change(setName)}
+              autoComplete="name"
+              maxLength={SIGNER_FIELD_LIMIT}
+            />
+            <TextField label={SIGNER_TITLE_LABEL} value={title} onChangeText={change(setTitle)} maxLength={SIGNER_FIELD_LIMIT} />
           </View>
           {error ? (
             <Text accessibilityRole="alert" style={[styles.error, { color: status.err }]}>
