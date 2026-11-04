@@ -3206,7 +3206,9 @@ Sources: Expo's SDK 55 changelog and version table, and expo 55.0.32's own `bund
 `npx expo install expo@^55.0.0 --fix`, then `npx expo install --fix`, moved expo 54.0.37 → 55.0.32, react
 19.1.0 → 19.2.0, react-native 0.81.5 → 0.83.10, every `expo-*` to its `~55.0.x` pin, reanimated 4.2.1,
 worklets 0.7.4, screens ~4.23.0, gesture-handler ~2.30.0, svg 15.15.3, webview 13.16.0, jest-expo ~55.0.22,
-eslint-config-expo ~55.0.1 and @types/react ~19.2.10 (named by `expo install` itself). `app.json` loses
+eslint-config-expo ~55.0.1 and @types/react ~19.2.10 (named by `expo install` itself); and
+`npx expo install react-native-safe-area-context` moved safe-area-context ~5.6.0 → ~5.6.2, the SDK's pin,
+which `--fix` left because the lockfile's 5.6.2 already met it (the lockfile still holds 5.6.2). `app.json` loses
 `newArchEnabled` and `android.edgeToEdgeEnabled`, removed in SDK 55 (both are now the only behaviour).
 - **The lockfile.** `expo install`'s two npm passes left expo-modules-core, expo-asset, expo-keep-awake and
   @expo/metro-config under `node_modules/expo/` (each placed while the root's SDK 54 copy was still held),
