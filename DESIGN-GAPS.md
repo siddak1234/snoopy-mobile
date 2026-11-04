@@ -3146,3 +3146,6 @@ out of the row (`ehr-connection`).
   `EHR_CONNECT_REFUSALS` (`ehr-connection`); the allowance dropped (`audit-gates`).
 - C3: the agreement's button says "Adding…" while an add's acceptance is sent and "Starting…" for a run's,
   as the website's; no "Working…". Bite: one word for both (`health-agreement`).
+- D1: a connected EHR's integration row on Set up says the clinic's host, as Connections' row and the
+  website's do: `connectionLine` reads the provider's `authType`, and no second call stands before it.
+  Bite: the `smart-backend` branch dropped from `connectionLine` (`ehr-connection`, both screens).

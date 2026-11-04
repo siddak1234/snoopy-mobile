@@ -17,7 +17,6 @@ import {
   disconnectedIn,
   disconnectedName,
 } from '@/lib/content/screen-states';
-import { hostLine } from './ehr-connection';
 import { EMPTY, calendarDate, count } from './format';
 import { toPipelineSteps, type PipelineStep } from './pipeline';
 import { iconFor } from './icon-registry';
@@ -124,11 +123,15 @@ export function providerConnected(provider: Pick<ConnectionProvider, 'authType'>
  * email), else the state in a word; "Needs attention" in the warning colour. One
  * disconnected at the provider says "Disconnected in {provider}" in the warning
  * colour (S1-8, `disconnectedName`), its button Reconnect, when the provider's
- * name is given.
+ * name is given. An EHR (`authType` `smart-backend`, Round 21 stage 2, D1;
+ * backend ADR-0050), connected, says the clinic's host — the platform keeps it
+ * as the account's name — on Connections' row and on Set up's integration row
+ * alike, as the website's `connectionLine`.
  */
 export function connectionLine(
   connection: Connection | undefined,
   provider = '',
+  authType?: ConnectionProvider['authType'],
 ): { text: string; tone: 'muted' | 'warn' } {
   if (connection && disconnectedAtProvider(connection) && provider) {
     return { text: disconnectedIn(disconnectedName(connection.providerId, provider)), tone: 'warn' };
@@ -136,6 +139,7 @@ export function connectionLine(
   const state = connectionState(connection);
   const name = connection?.externalAccount.displayName ?? '';
   if (state !== 'not-connected' && name.includes('@')) return { text: name, tone: 'muted' };
+  if (state === 'connected' && authType === 'smart-backend' && name) return { text: name, tone: 'muted' };
   if (state === 'connected' && connection?.companyName) return { text: connection.companyName, tone: 'muted' };
   if (state === 'connected') return { text: CONNECTION_CONNECTED, tone: 'muted' };
   if (state === 'attention') return { text: CONNECTION_ATTENTION, tone: 'warn' };
@@ -371,7 +375,9 @@ export function toConnectionRow(provider: ConnectionProvider, connection: Connec
   // A provider that needs no key (B5) is connected for every workspace, whatever the list holds.
   const noConnect = needsNoConnect(provider);
   const state = noConnect ? 'connected' : connectionState(connection);
-  const line = noConnect ? { text: CONNECTION_CONNECTED, tone: 'muted' as const } : (hostLine(provider, connection) ?? connectionLine(connection, provider.displayName));
+  const line = noConnect
+    ? { text: CONNECTION_CONNECTED, tone: 'muted' as const }
+    : connectionLine(connection, provider.displayName, provider.authType);
   return {
     provider,
     providerId: provider.providerId,

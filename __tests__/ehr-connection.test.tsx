@@ -12,6 +12,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react-nativ
 import React from 'react';
 
 import ConnectionsScreen from '@/app/(tabs)/settings/connections';
+import { VendorChoice } from '@/components/flows/vendor-choice';
 import type { Connection, ConnectionProvider } from '@/lib/platform/connections';
 import { PlatformError } from '@/lib/platform/problem';
 import { resetSnapshot } from '@/lib/platform/snapshot';
@@ -27,7 +28,8 @@ const { connectProviderWithKey } = jest.requireMock('@/lib/platform/connections'
  * as a pasted key is: its one field the clinic's FHIR address (its
  * `credentialFields`), a vendor picker only when the platform lists two or
  * more `vendors`, and "Verify and connect". Connected, its row says the
- * clinic's host. The website's Connections panel, in the same words.
+ * clinic's host — on Connections and on Set up's integration row alike. The
+ * website's Connections panel and vendor rows, in the same words.
  */
 
 const ADDRESS = 'https://fhir.clinic.example/api/FHIR/R4';
@@ -130,6 +132,25 @@ describe("an EHR's Connect (smart-backend)", () => {
     expect(row.getByText('fhir.clinic.example')).toBeTruthy();
     expect(row.queryByText('Connected')).toBeNull();
     expect(within(screen.getByTestId('connection-action-ehr-fhir')).getByText('Disconnect')).toBeTruthy();
+  });
+
+  it("on Set up, a connected EHR's integration row says the clinic's host too, as the website's (connectionLine, by authType)", async () => {
+    await renderWithProviders(
+      <VendorChoice
+        vendors={[{ providerId: 'ehr-fhir', displayName: 'EHR' }]}
+        providers={new Map([['ehr-fhir', EHR]])}
+        connections={[CONNECTED]}
+        chosen="ehr-fhir"
+        canManage
+        shownWorkspaceId={TEST_WORKSPACE}
+        saving={null}
+        onChoose={jest.fn()}
+      />,
+      sessionAs('owner'),
+    );
+    const row = within(screen.getByTestId('vendor-ehr-fhir'));
+    expect(row.getByText('fhir.clinic.example')).toBeTruthy();
+    expect(row.queryByText('Connected')).toBeNull();
   });
 
   it('a pasted-key provider keeps its form as it was: no picker, no vendor sent', async () => {
