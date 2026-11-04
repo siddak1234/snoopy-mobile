@@ -3199,3 +3199,24 @@ out of the row (`ehr-connection`).
   no reason), now "Only an owner or admin can do this.", the website's words for it, where the app said the
   platform's title (DESIGN-CONTRACT "Refusal map", "Flows/agreement"). Bite: the 403 line dropped from
   `itemRefusal` (`health-agreement-upload`, `round19-items`).
+
+## Round E step 1: Expo SDK 54 → 55, the upgrade alone (2026-11-04)
+
+Sources: Expo's SDK 55 changelog and version table, and expo 55.0.32's own `bundledNativeModules.json`.
+`npx expo install expo@^55.0.0 --fix`, then `npx expo install --fix`, moved expo 54.0.37 → 55.0.32, react
+19.1.0 → 19.2.0, react-native 0.81.5 → 0.83.10, every `expo-*` to its `~55.0.x` pin, reanimated 4.2.1,
+worklets 0.7.4, screens ~4.23.0, gesture-handler ~2.30.0, svg 15.15.3, webview 13.16.0, jest-expo ~55.0.22,
+eslint-config-expo ~55.0.1 and @types/react ~19.2.10 (named by `expo install` itself). `app.json` loses
+`newArchEnabled` and `android.edgeToEdgeEnabled`, removed in SDK 55 (both are now the only behaviour).
+- **The lockfile.** `expo install`'s two npm passes left expo-modules-core, expo-asset, expo-keep-awake and
+  @expo/metro-config under `node_modules/expo/` (each placed while the root's SDK 54 copy was still held),
+  where the root packages that import them without declaring them cannot reach them: tsc said
+  `Cannot find module 'expo-modules-core'` and lost `granted`/`canAskAgain` from expo-notifications' types,
+  and every real-router suite said `Cannot find module 'expo-asset'` from expo-font. It also left a second
+  react-native-worklets (0.8.3) and React Native 0.88.1's metro-config, held only by it. The committed
+  lockfile is `expo install`'s with those four at the root and the 29 stray entries dropped: no version
+  differs from what `expo install` chose.
+- expo-web-browser 55: `expo install` asks to add its plugin to the dynamic config; that plugin returns
+  the config unchanged (its plugin/build/withWebBrowser.js), so it is not added.
+- **Not observed:** a native build, a simulator or a device. `release:ios --local` needs Xcode 26.2 or
+  later (Expo's SDK 55 table; its changelog says 26); this Mac has 26.1.1.
