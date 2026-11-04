@@ -1,4 +1,5 @@
 import { AGREEMENT_NOT_PUBLISHED, ASK_OWNER_TO_ACCEPT } from '@/lib/content/health-agreement';
+import { refusalMessage } from '@/lib/content/refusals';
 import { PlatformError } from '@/lib/platform/problem';
 import type { WorkspaceRole } from '@/lib/view/roles';
 
@@ -30,6 +31,20 @@ export function agreementRefusal(error: unknown, role: WorkspaceRole | undefined
     return { open: false, line: AGREEMENT_NOT_PUBLISHED };
   }
   return { open: true };
+}
+
+/**
+ * A refused acceptance, in the website's words (its `acceptHealthAgreement`):
+ * 403 — the person is no longer the workspace's owner, by its membership — the
+ * line anyone but the owner is told; 503 `agreement_not_published` — no text
+ * is current — that none is available yet; any other, the platform's words.
+ */
+export function acceptanceRefusal(error: unknown): string {
+  if (error instanceof PlatformError && error.status === 503 && error.details?.reason === 'agreement_not_published') {
+    return AGREEMENT_NOT_PUBLISHED;
+  }
+  if (error instanceof PlatformError && error.status === 403) return ASK_OWNER_TO_ACCEPT;
+  return refusalMessage(error);
 }
 
 /**

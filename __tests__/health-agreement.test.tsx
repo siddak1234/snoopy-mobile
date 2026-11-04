@@ -288,11 +288,18 @@ describe('the agreement screen', () => {
     expect(screen.queryByTestId('agreement-accept')).toBeNull();
   });
 
-  it("a refused acceptance says the platform's words, stays, and tells the refused screen nothing", async () => {
+  it.each([
+    ['403, no longer the owner', new PlatformError('Forbidden', 403, 'FORBIDDEN', { requiredRole: 'owner' }), ASK_OWNER],
+    [
+      '503 agreement_not_published',
+      new PlatformError('Service Unavailable', 503, 'NOT_CONFIGURED', { reason: 'agreement_not_published' }),
+      NOT_PUBLISHED,
+    ],
+  ])("a refused acceptance (%s) says the website's line, never the platform's title, stays, and tells the refused screen nothing", async (_case, refusal, line) => {
     const fake = fakePlatform(platformOperation);
     routeAgreement(fake);
     fake.always(ACCEPT, () => {
-      throw new PlatformError('Forbidden', 403, 'FORBIDDEN', { requiredRole: 'owner' });
+      throw refusal;
     });
     let told: boolean | null = null;
     void awaitAgreement(() => undefined).then((accepted) => (told = accepted));
@@ -301,7 +308,8 @@ describe('the agreement screen', () => {
     await screen.findByTestId('agreement-text');
     await fill();
     await fireEvent.press(screen.getByTestId('agreement-accept'));
-    expect(await screen.findByText('Forbidden')).toBeTruthy();
+    expect(await screen.findByText(line)).toBeTruthy();
+    expect(screen.queryByText(refusal.message)).toBeNull();
     expect(mockRouter.back).not.toHaveBeenCalled();
     expect(told).toBeNull();
   });

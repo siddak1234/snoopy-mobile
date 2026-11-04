@@ -3136,3 +3136,8 @@ the row opening nothing (`organization-documents`).
 D1 the key form not opened for `smart-backend`, the vendor not sent, the picker drawn
 for one vendor, the first vendor sent whatever was picked, the refusal's words left out, the host left
 out of the row (`ehr-connection`).
+
+**The review's findings, one commit each (2026-11-04).** Bites as above, each red with its line broken:
+- C3: an acceptance refused 403 (no longer the owner) or 503 `agreement_not_published` says the website's
+  line, not the platform's title (DESIGN-CONTRACT "Flows/agreement"). Bite: either mapping dropped from
+  `acceptanceRefusal` (`health-agreement`).

@@ -30,11 +30,11 @@ import {
   agreementVersion,
   authorizedFor,
 } from '@/lib/content/health-agreement';
-import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
+import { WORKSPACE_CHANGED } from '@/lib/content/refusals';
 import { errorTitleFor } from '@/lib/content/screen-states';
 import { acceptHealthDataAgreement, readHealthDataAgreement, type HealthDataAgreement } from '@/lib/platform/agreements';
 import { PlatformError } from '@/lib/platform/problem';
-import { settleAgreement } from '@/lib/view/health-agreement';
+import { acceptanceRefusal, settleAgreement } from '@/lib/view/health-agreement';
 
 /**
  * The health data agreement (Round 21 stage 2, C3; backend ADR-0049) — the
@@ -55,7 +55,9 @@ import { settleAgreement } from '@/lib/view/health-agreement';
  *
  * Not published (503 `agreement_not_published`): "The health data agreement
  * isn't available yet." Anyone but the owner: "Ask your workspace owner to
- * accept the health data agreement." A text changed since it was read (409
+ * accept the health data agreement." An acceptance refused says the same two
+ * lines — 403, no longer the owner; 503, none published — never the platform's
+ * title (`acceptanceRefusal`). A text changed since it was read (409
  * `agreement_changed`) is read again, and the checkbox asked again.
  */
 export default function AgreementScreen() {
@@ -132,7 +134,7 @@ export default function AgreementScreen() {
         resource.reload();
         return;
       }
-      setError(refusalMessage(caught));
+      setError(acceptanceRefusal(caught));
     } finally {
       setBusy(false);
     }
