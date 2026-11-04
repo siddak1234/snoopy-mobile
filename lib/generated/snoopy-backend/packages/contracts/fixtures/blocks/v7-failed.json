@@ -1,7 +1,7 @@
 {
   "name": "v7-failed",
   "about": "v7 failed",
-  "blockSetVersion": 4,
+  "blockSetVersion": 5,
   "blocks": [
     {
       "type": "text",

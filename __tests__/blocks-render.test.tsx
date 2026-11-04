@@ -1,10 +1,12 @@
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
+import { GithubLogo, Globe, LinkedinLogo, XLogo } from 'phosphor-react-native';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import React from 'react';
 import { AccessibilityInfo, Linking, StyleSheet, processColor } from 'react-native';
 
 import { RENDERERS } from '@/components/blocks/block-list';
+import { brandIcon } from '@/components/blocks/links';
 import { httpsLink, openRoute, pageParts, toneOf } from '@/components/blocks/look';
 import { Text } from '@/components/text';
 import { nocturneDark, status } from '@/constants/theme';
@@ -22,8 +24,9 @@ jest.mock('@/lib/platform/client', () => ({
 const { platformOperation, downloadSignedFile } = jest.requireMock('@/lib/platform/client');
 
 /**
- * The thirteen blocks (backend ADR-0048 and its amendment 1, `BLOCK_SET_VERSION`
- * 2; ~~ten~~ until Round 21), each drawn by its renderer (decisions 8–10):
+ * The fourteen blocks (backend ADR-0048 and its amendments 1 to 5,
+ * `BLOCK_SET_VERSION` 5; ~~ten~~ until Round 21, ~~thirteen~~ until block set
+ * 5), each drawn by its renderer (decisions 8–10):
  * its words, its tone a theme token, open or closed, and its press; and what
  * this build does not know — a type, a form, a target, a tone, a state —
  * drawn as the decision says, never thrown.
@@ -41,8 +44,8 @@ describe('the registry', () => {
     const union = generated.slice(generated.indexOf('        Block: {'), generated.indexOf('        FlowPages: {'));
     // Each type once: a group's sections name `section` again.
     const types = [...new Set([...union.matchAll(/\/\*\* @constant \*\/\n\s+type: "(\w+)";/gu)].map((match) => match[1]))];
-    expect(types).toHaveLength(13);
-    expect(types).toEqual(expect.arrayContaining(['image', 'chart', 'group']));
+    expect(types).toHaveLength(14);
+    expect(types).toEqual(expect.arrayContaining(['image', 'chart', 'group', 'links']));
     expect(Object.keys(RENDERERS).sort()).toEqual([...types].sort());
   });
 });
@@ -131,13 +134,18 @@ describe('list', () => {
     expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/(tabs)/activity/run', params: { runId: 'r2' } }, undefined);
   });
 
-  it('from an item, a run opens in Activity over its anchor and says it came from Flows', async () => {
-    await renderBlocks([{ type: 'list', items: [{ title: 'Omar', open: { target: 'run', runId: 'r2' } }] }], { runOrigin: 'flows' });
-    await fireEvent.press(screen.getByTestId('b-0-row-0'));
-    expect(mockRouter.push).toHaveBeenCalledWith(
-      { pathname: '/(tabs)/activity/run', params: { runId: 'r2', returnTo: 'flows' } },
-      { withAnchor: true },
+  it("from an item, a run and a run's file open in the Flows stack, with nothing under them but the item (the owner's build 31 G1)", async () => {
+    await renderBlocks(
+      [
+        { type: 'list', items: [{ title: 'Omar', open: { target: 'run', runId: 'r2' } }] },
+        { type: 'file', title: 'View resume', open: { target: 'run-file', runId: RUN, fileId: FILE } },
+      ],
+      { runStack: 'flows' },
     );
+    await fireEvent.press(screen.getByTestId('b-0-row-0'));
+    expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/(tabs)/flows/run', params: { runId: 'r2' } }, undefined);
+    await fireEvent.press(screen.getByTestId('b-1'));
+    expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/(tabs)/flows/run-file', params: { runId: RUN, fileId: FILE } }, undefined);
   });
 
   it('a row that opens with more to say: its chip and score on its line, then subtitle, text and address — the address words, the row the press', async () => {
@@ -255,6 +263,37 @@ describe('section', () => {
       motion.mockImplementation(asItWas);
     }
   });
+  it("its entries apart with a divider line, `inner` either side — none above the first, none under a label, none between a page's blocks (the owner's build 31 G3)", async () => {
+    await renderBlocks([
+      {
+        type: 'section',
+        title: 'Contact',
+        open: true,
+        blocks: [
+          { type: 'link', title: 'LinkedIn', url: 'https://www.linkedin.com/in/someone' },
+          { type: 'link', title: 'GitHub', url: 'https://github.com/someone' },
+          { type: 'text', text: 'Other', style: 'label' },
+          { type: 'text', text: 'A site' },
+        ],
+      },
+      { type: 'text', text: 'After' },
+    ]);
+    // The block list's own wrapper is the nearest ancestor that sets a margin or a border.
+    const wrapper = (id: string) => {
+      let node = screen.getByTestId(id).parent as unknown as { props: { style?: unknown }; parent?: unknown } | null;
+      for (let up = 0; node && up < 4; up += 1) {
+        const style = (StyleSheet.flatten(node.props.style as never) ?? {}) as Record<string, number | string | undefined>;
+        if (style.marginTop !== undefined || style.borderTopWidth !== undefined) return style;
+        node = node.parent as typeof node;
+      }
+      return {};
+    };
+    expect(wrapper('b-0-0').borderTopWidth).toBeUndefined();
+    expect(wrapper('b-0-1')).toMatchObject({ borderTopWidth: 1, borderTopColor: nocturneDark.divider, marginTop: 8, paddingTop: 8 });
+    expect(wrapper('b-0-2')).toMatchObject({ borderTopWidth: 1, marginTop: 8 });
+    expect(wrapper('b-0-3').borderTopWidth).toBeUndefined();
+    expect(wrapper('b-1').borderTopWidth).toBeUndefined();
+  });
 });
 
 describe('file and link', () => {
@@ -282,6 +321,39 @@ describe('file and link', () => {
       await fireEvent.press(screen.getByTestId('b-0'));
       expect(open).toHaveBeenCalledWith('https://help.example.test/rules');
       expect(screen.getByTestId('b-1').props.onPress).toBeUndefined();
+    } finally {
+      open.mockRestore();
+    }
+  });
+
+  it("links (ADR-0048 amendment 5): full-width pill buttons, each its brand's mark and its label, opening in the system browser; an http one its label alone, no press", async () => {
+    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    try {
+      await renderBlocks([
+        {
+          type: 'links',
+          items: [
+            { label: 'LinkedIn', url: 'https://www.linkedin.com/in/jane', brand: 'linkedin' },
+            { label: 'GitHub', url: 'https://github.com/jane', brand: 'github' },
+            { label: 'Hugging Face', url: 'https://huggingface.co/jane', brand: 'huggingface' },
+            { label: 'X', url: 'https://x.com/jane', brand: 'x' },
+            { label: 'Portfolio', url: 'https://jane.example', brand: 'site' },
+            { label: 'Old site', url: 'http://jane.example/old' },
+          ],
+        },
+      ]);
+      expect(visibleWords(screen.toJSON())).toEqual(['LinkedIn', 'GitHub', 'Hugging Face', 'X', 'Portfolio', 'Old site']);
+      expect(screen.getByTestId('b-0-0').props.accessibilityLabel).toBe('LinkedIn, www.linkedin.com');
+      await fireEvent.press(screen.getByTestId('b-0-0'));
+      expect(open).toHaveBeenLastCalledWith('https://www.linkedin.com/in/jane');
+      await fireEvent.press(screen.getByTestId('b-0-4'));
+      expect(open).toHaveBeenLastCalledWith('https://jane.example/');
+      expect(screen.getByTestId('b-0-5').props.onPress).toBeUndefined();
+      // Each brand's mark: the icon set's logo, else the globe.
+      expect(brandIcon('linkedin')).toBe(LinkedinLogo);
+      expect(brandIcon('github')).toBe(GithubLogo);
+      expect(brandIcon('x')).toBe(XLogo);
+      for (const other of ['site', 'huggingface', undefined, 'constructor']) expect(brandIcon(other)).toBe(Globe);
     } finally {
       open.mockRestore();
     }

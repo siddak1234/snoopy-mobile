@@ -98,6 +98,23 @@ describe("Unarchive — the word for Add it again (the owner's build 12 item 4)"
     expect(writes).toEqual([]);
   });
 
+  it("to a member, Unarchive is read-only, with \"Only an owner or admin can change this flow.\" (the stage 1 spec's S1-9; backend §12.1 #180)", async () => {
+    setMockParams({ flow: 'gone' });
+    const base = subscriptionsPayload().subscriptions;
+    const rows = base.filter((row) => row.id !== 'invoice');
+    const gone: Subscription = { ...base[0]!, id: 'gone', name: 'Old intake', projectId: 'project-1', status: 'archived', updatedAt: '2026-09-30T12:00:00Z' };
+    routePlatform(platformOperation, {
+      '/automations': flowCatalogPayload(),
+      '/projects': projectsPayload('Finance'),
+      '/subscriptions': { subscriptions: [...rows, gone], subscription: rows[0] },
+    });
+    await renderWithProviders(<WorkflowDetailScreen />, sessionAs('member'));
+    expect(await screen.findByText('Old intake')).toBeTruthy();
+    expect(screen.getByTestId('flow-unarchive-admin-only').props.children).toBe('Only an owner or admin can change this flow.');
+    await fireEvent.press(screen.getByText('Unarchive'));
+    expect(mockRouter.push).not.toHaveBeenCalledWith(expect.objectContaining({ pathname: '/(tabs)/flows/setup' }));
+  });
+
   it('Settings › Archived flows says they are kept with their history and any can be unarchived', async () => {
     await renderWithProviders(<SettingsScreen />, signedInSession);
     expect(await screen.findByText('Kept with their history; unarchive any')).toBeTruthy();
@@ -134,7 +151,7 @@ function routeSetup(held: Subscription, projects: RouteOverrides['/projects']) {
 }
 
 describe("One flow per workspace (the owner's build 12 item 9)", () => {
-  it('Add reads a flow held for the whole workspace as Added ✓ · Whole workspace inside a picked team too — whatever the scope control shows — with no Add, and the card opens it; Add sends no team', async () => {
+  it('Add reads a flow held for the whole workspace as Added ✓ inside a picked team too — whatever the scope control shows — with no Add, and the card opens it; Add sends no team', async () => {
     mockStored.set(TEST_WORKSPACE, 'project-1');
     const whole = { ...planSubscriptionsPayload().subscriptions[0]!, projectId: null };
     routePlatform(platformOperation, {
@@ -143,7 +160,8 @@ describe("One flow per workspace (the owner's build 12 item 9)", () => {
     });
     await renderWithProviders(<SolutionsScreen />, signedInSession);
     expect(await screen.findByText('Ready-made flows for your departments.')).toBeTruthy();
-    expect(screen.getByTestId('added-where-tpl.0').props.children).toBe('Whole workspace');
+    // No line names where it is held since the owner's build 34 F4 (~~"Whole workspace"~~).
+    expect(screen.queryByText('Whole workspace')).toBeNull();
     expect(screen.getByTestId('added-tpl.0')).toBeTruthy();
     expect(screen.queryByTestId('add-tpl.0')).toBeNull();
     // A flow the workspace does not hold is still added — to its category's team, whatever the scope shows.
@@ -153,7 +171,7 @@ describe("One flow per workspace (the owner's build 12 item 9)", () => {
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'solution-0' } });
   });
 
-  it('Add names both places of a flow added to two before the rule — the duplicate stays — and offers no Add', async () => {
+  it('Add reads a flow added to two places before the rule as Added ✓ — the duplicate stays — offers no Add, and opens the first', async () => {
     const [first] = planSubscriptionsPayload().subscriptions;
     routePlatform(platformOperation, {
       '/subscriptions': {
@@ -165,7 +183,8 @@ describe("One flow per workspace (the owner's build 12 item 9)", () => {
       '/projects': projectsPayload('Finance'),
     });
     await renderWithProviders(<SolutionsScreen />, signedInSession);
-    expect((await screen.findByTestId('added-where-tpl.0')).props.children).toBe('Department: Finance, Whole workspace');
+    expect(await screen.findByTestId('added-tpl.0')).toBeTruthy();
+    expect(screen.queryByText(/^Department: /u)).toBeNull();
     expect(screen.queryByTestId('add-tpl.0')).toBeNull();
     await fireEvent.press(screen.getByTestId('added-tpl.0'));
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'copy-team' } });
@@ -193,11 +212,11 @@ describe("One flow per workspace (the owner's build 12 item 9)", () => {
     ]);
   });
 
-  it('Setup, for a flow held for the whole workspace, needs no team: a plain member still has Save, and it configures that subscription', async () => {
+  it('Setup, for a flow held for the whole workspace, needs no team: an admin has Save, and it configures that subscription (~~a plain member~~ until the stage 1 spec\'s S1-9)', async () => {
     const held: Subscription = { ...planSubscriptionsPayload().subscriptions[0]!, id: 'held-whole', projectId: null, status: 'paused', setup: [] };
     const writes = routeSetup(held, { projects: [] });
     setMockParams({ template: 'tpl.0' });
-    await renderWithProviders(<SetupScreen />, sessionAs('member'));
+    await renderWithProviders(<SetupScreen />, sessionAs('admin'));
     await waitFor(() => expect(screen.getByTestId('setup-team').props.children).toBe('Whole workspace'));
     expect(screen.queryByText('An owner or admin creates the first team.')).toBeNull();
     await fireEvent.press(screen.getByText('Save'));

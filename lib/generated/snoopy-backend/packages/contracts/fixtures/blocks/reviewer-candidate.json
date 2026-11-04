@@ -1,7 +1,7 @@
 {
   "name": "reviewer-candidate",
   "about": "A Resume Screening (candidate-reviewer v2) candidate, the group option off",
-  "blockSetVersion": 4,
+  "blockSetVersion": 5,
   "blocks": [
     {
       "type": "file",

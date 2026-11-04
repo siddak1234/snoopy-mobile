@@ -47,7 +47,7 @@ import {
 import { readCatalog } from '@/lib/platform/catalog';
 import { PlatformNotConfiguredError } from '@/lib/platform/problem';
 import { readSubscriptions } from '@/lib/platform/runs';
-import { addProblem } from '@/lib/view/flow-email';
+import { addProblem, addressStatus } from '@/lib/view/flow-email';
 
 /**
  * Who gets the email — one flow's run emails (Build 22, P5; spec §4; the owner's
@@ -63,7 +63,9 @@ import { addProblem } from '@/lib/view/flow-email';
  * 3. **ALSO SEND TO** — the flow's extra addresses, or None; for an owner or
  *    admin each with its X, then the address field and Add — "You can add up
  *    to 10." once there are ten — and for a member "Ask an owner or admin to
- *    change this." (the session's S12).
+ *    change this." (the session's S12). Under each, its consent
+ *    (`addressStatus`, backend §12.1 #289): "Waiting for confirmation",
+ *    "Confirmed" or "Unsubscribed".
  *
  * **Each add and each remove is saved at once** (the session's S30, fewest
  * taps): Add checks the address first — not one, "Enter an email address.";
@@ -211,7 +213,7 @@ export default function FlowEmailScreen() {
               testID={`email-extra-${address}`}
               mark={<GlyphMark icon={EnvelopeSimple} />}
               name={address}
-              line={removing === address ? EMAIL_REMOVING : null}
+              line={removing === address ? EMAIL_REMOVING : addressStatus(recipients, address)}
               divider={index < extra.length - 1}
               right={
                 canEdit ? (

@@ -15,7 +15,8 @@ import { Linking, Platform, Share } from 'react-native';
 
 import DataExportScreen from '@/app/(tabs)/settings/data';
 import SupportScreen from '@/app/(tabs)/settings/support';
-import type { ExportJob } from '@/lib/platform/exports';
+import { downloadFileLabel } from '@/lib/content/screen-states';
+import { exportFiles, type ExportJob } from '@/lib/platform/exports';
 import { FileNotSavedError } from '@/lib/platform/problem';
 import { fakePlatform } from '@/test/fake-platform';
 import { TEST_WORKSPACE, sessionAs, signedInSession } from '@/test/platform';
@@ -196,6 +197,58 @@ describe('Data export (24.6.3)', () => {
     await waitFor(() => expect(openURL).toHaveBeenCalledWith('https://store.example.test/fresh'));
     expect(downloadSignedFile).not.toHaveBeenCalled();
     android.restore();
+  });
+});
+
+describe('the complete export in parts (the stage 1 spec\'s S1-14; backend §12.1 #181)', () => {
+  const part = (n: number, downloadUrl = `https://store.example.test/part-${n}`) => ({
+    downloadUrl,
+    artifactId: `a${n}`,
+    filename: `exports/acme-export-${n}.json`,
+    sizeBytes: 1,
+    expiresAt: 'x',
+  });
+
+  it('says "Or export every record. A large workspace comes as several files, each kept for a day."; ready in three parts, "Download file {n} of {N}" for each, in order, each from a link read afresh at the press — and no Share', async () => {
+    const ios = jest.replaceProperty(Platform, 'OS', 'ios');
+    fileSystemState.reset();
+    jest.useFakeTimers();
+    const fake = routeData('owner');
+    fake.always('POST /v1/workspaces/{workspaceId}/exports', { export: job('running') });
+    fake.once('GET /v1/workspaces/{workspaceId}/exports/{exportId}', {
+      export: job('ready', { complete: true, files: [part(1, 'https://store.example.test/old'), part(2), part(3)] }),
+    });
+    fake.always('GET /v1/workspaces/{workspaceId}/exports/{exportId}', {
+      export: job('ready', { complete: true, files: [part(1), part(2, 'https://store.example.test/part-2-fresh'), part(3)] }),
+    });
+    downloadSignedFile.mockResolvedValue({ uri: 'file:///cache/acme-export-2.json', exists: true, delete: jest.fn() });
+    await renderWithProviders(<DataExportScreen />, sessionAs('owner'));
+    expect(await screen.findByText('Or export every record. A large workspace comes as several files, each kept for a day.')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Export everything'));
+    await act(async () => {
+      jest.advanceTimersByTime(2_000);
+    });
+    expect(await screen.findByText('Download file 1 of 3')).toBeTruthy();
+    const actions = within(screen.getByTestId('data-export-actions'));
+    expect(actions.getAllByText(/^Download file/u).map((node) => node.props.children)).toEqual([
+      'Download file 1 of 3',
+      'Download file 2 of 3',
+      'Download file 3 of 3',
+    ]);
+    expect(screen.queryByTestId('data-export-share')).toBeNull();
+    await fireEvent.press(screen.getByTestId('data-export-download-2'));
+    await waitFor(() =>
+      expect(downloadSignedFile).toHaveBeenCalledWith('https://store.example.test/part-2-fresh', 'exports/acme-export-2.json'),
+    );
+    ios.restore();
+  });
+
+  it('a platform from before parts sends one `file`: "Download file", as before', () => {
+    expect(exportFiles({ file: part(1) })).toEqual([part(1)]);
+    expect(exportFiles({ files: [part(1), part(2)], file: part(1) })).toEqual([part(1), part(2)]);
+    expect(exportFiles({})).toEqual([]);
+    expect(downloadFileLabel(1, 1)).toBe('Download file');
+    expect(downloadFileLabel(2, 3)).toBe('Download file 2 of 3');
   });
 });
 

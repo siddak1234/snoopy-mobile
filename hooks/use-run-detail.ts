@@ -15,7 +15,16 @@ import {
 } from '@/lib/platform/runs';
 import { readWorkspaces } from '@/lib/platform/workspaces';
 import { timeOfDay } from '@/lib/view/format';
-import { RUN_REREAD_MS, heldDecision, jobReviewTally, rereadForApproval, runVerdict, toTracker, type TrackerFlow } from '@/lib/view/runs';
+import {
+  RUN_REREAD_MS,
+  heldDecision,
+  jobReviewTally,
+  providerNameIn,
+  rereadForApproval,
+  runVerdict,
+  toTracker,
+  type TrackerFlow,
+} from '@/lib/view/runs';
 
 /**
  * One run as its two pages read it — the run's page and its Run details page
@@ -34,9 +43,11 @@ import { RUN_REREAD_MS, heldDecision, jobReviewTally, rereadForApproval, runVerd
  * one-run read only — never the raw output (§12.1 #67).
  *
  * And its flow, as it is now (Build 22, the session's S23): a setting step's
- * line — the integration the flow has chosen — and a title by connection
- * ("QuickBooks updated") follow the flow's settings, since a run does not
- * record its own choice (backend §12.1 #290); its run fields name its files
+ * line — the integration chosen — and a title by connection ("QuickBooks
+ * updated") follow the connection choices the run started with
+ * (`RunDetail.connectionChoices`, the stage 1 spec's S1-16, backend §12.1
+ * #290) over the flow's settings; a run made before they were saved follows
+ * the flow's settings, as before; its run fields name its files
  * (build 28, F7). The live list first, an archived flow's only when
  * the run's flow is not in it; a flow that cannot be read costs those their
  * words, never the page.
@@ -144,14 +155,14 @@ export function useRunDetail(runId: string | undefined) {
   // every reported step they still declare (Build 22, the session's S25: a v3
   // run is drawn by v4's five steps); a run that reported a step they no longer
   // declare is drawn by the steps it reported. Step 2 says the flow's
-  // integration, step 4's title follows it, step 5 is the run's email.
+  // integration, step 4's title follows it, step 5 is the run's email — the
+  // run's own choices over the flow's now (S1-16), as the website's.
   const trackerFlow: TrackerFlow | undefined =
     liveRun?.flow !== undefined
       ? {
           setup: liveRun.flow.setup ?? liveRun.entry?.setup ?? [],
-          config: liveRun.flow.config,
-          providerName: (providerId) =>
-            liveRun.entry?.requiredConnections.find((c) => c.providerId === providerId)?.displayName ?? providerId,
+          config: { ...liveRun.flow.config, ...liveRun.detail.connectionChoices },
+          providerName: (providerId) => providerNameIn(liveRun.entry, providerId),
         }
       : undefined;
   const tracker = liveRun

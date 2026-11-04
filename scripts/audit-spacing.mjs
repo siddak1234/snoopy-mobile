@@ -66,7 +66,7 @@ const COMPARISONS = new Set([
  */
 const INSET = {
   "app/(auth)/login.tsx": [2, "the error's icon on its first line; Remember me's line under its title"],
-  "app/(tabs)/(home)/index.tsx": [4, "a line under the line above (the counts, a row's line and stamp)"],
+  "app/(tabs)/(home)/index.tsx": [2, "a line under the line above (the counts, the review banner's line)"],
   "app/(tabs)/activity/approvals.tsx": [5, "a text button's own padding"],
   "app/(tabs)/activity/index.tsx": [3, "a row's icon on its first line; its line and stamp under its title"],
   "app/(tabs)/activity/run.tsx": [1, "the line under the title"],

@@ -94,7 +94,7 @@ export function useApprovalDecision(shownWorkspaceId: string | null | undefined)
       send(
         approvalId,
         'review',
-        `review:${JSON.stringify(answers.map(({ id, decision }) => [id, decision]))}`,
+        `review:${JSON.stringify(answers.map(({ id, decision, other }) => [id, decision ?? null, other ?? null]))}`,
         (workspaceId, key) => decideReview(workspaceId, approvalId, [...answers], key),
         // Refused or unanswered, the one sentence words.md approves for it.
         () => REVIEW_NOT_SAVED,

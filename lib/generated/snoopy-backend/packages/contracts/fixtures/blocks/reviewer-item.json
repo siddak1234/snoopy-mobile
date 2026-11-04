@@ -1,7 +1,7 @@
 {
   "name": "reviewer-item",
   "about": "A candidate-reviewer v2 item: tiles, its file, Add, its ranked runs",
-  "blockSetVersion": 4,
+  "blockSetVersion": 5,
   "blocks": [
     {
       "type": "metric",

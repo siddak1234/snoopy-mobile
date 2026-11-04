@@ -1,8 +1,8 @@
-import { fireEvent, screen } from '@testing-library/react-native';
+import { fireEvent, screen, within } from '@testing-library/react-native';
 import React from 'react';
 import { Platform, StyleSheet, Text } from 'react-native';
 
-import { Dropdown } from '@/components/dropdown';
+import { Dropdown, dropdownLines, optionGroups } from '@/components/dropdown';
 import { GlassSurface } from '@/components/glass-surface';
 import { Pressable } from '@/components/pressable';
 import { GLASS_BACKING_ALPHA, nocturneDark, nocturneLight, withAlpha } from '@/constants/theme';
@@ -87,5 +87,57 @@ describe('Dropdown rows', () => {
     await renderWithProviders(<Menu />);
     await fireEvent.press(screen.getByTestId('pick-trigger'));
     expect(screen.getByText('Alpha').props.numberOfLines).toBeUndefined();
+  });
+});
+
+/**
+ * Options that carry `group` (Round 21 platform round 2, B1): under their headings, the groups in the
+ * order they first appear. A setup select with groups opens its sheet since the owner's build 34 F1
+ * (`SelectSheet`, which lists `optionGroups` too); the panel keeps the headings for any other list.
+ */
+describe('Dropdown groups', () => {
+  const CODES = [
+    { value: 'N18.4', label: 'Chronic kidney disease, stage 4', group: 'Kidney' },
+    { value: 'I10', label: 'Essential hypertension', group: 'Heart' },
+    { value: 'N18.5', label: 'Chronic kidney disease, stage 5', group: 'Kidney' },
+    { value: 'E11.9', label: 'Type 2 diabetes', group: 'Endocrine' },
+  ];
+
+  it('the groups in the order they first appear, each its options in their own order; no group, the name ""', () => {
+    expect(optionGroups(CODES).map((group) => [group.name, group.options.map((option) => option.value)])).toEqual([
+      ['Kidney', ['N18.4', 'N18.5']],
+      ['Heart', ['I10']],
+      ['Endocrine', ['E11.9']],
+    ]);
+    expect(optionGroups([{ value: 'a' }, { value: 'b', group: 'B' }]).map((group) => group.name)).toEqual(['', 'B']);
+    expect(dropdownLines(CODES, 'stage').map((line) => ('heading' in line ? line.heading : line.option.value))).toEqual(['Kidney', 'N18.4', 'N18.5']);
+  });
+
+  it('draws each heading over its options', async () => {
+    await renderWithProviders(
+      <Dropdown
+        testID="codes"
+        title="Codes"
+        options={CODES}
+        value={null}
+        onChange={() => {}}
+        trigger={({ onPress }) => (
+          <Pressable testID="codes-trigger" onPress={onPress}>
+            <Text>Codes</Text>
+          </Pressable>
+        )}
+      />,
+    );
+    await fireEvent.press(screen.getByTestId('codes-trigger'));
+    expect(within(screen.getByTestId('codes-menu')).getAllByText(/./u).map((node) => node.props.children)).toEqual([
+      'CODES',
+      'KIDNEY',
+      'Chronic kidney disease, stage 4',
+      'Chronic kidney disease, stage 5',
+      'HEART',
+      'Essential hypertension',
+      'ENDOCRINE',
+      'Type 2 diabetes',
+    ]);
   });
 });

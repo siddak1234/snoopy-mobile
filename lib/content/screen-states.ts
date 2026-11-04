@@ -66,6 +66,16 @@ const ERROR_TITLES: Record<ScreenKey, string> = {
 /** The design's own fallback for a screen not in the map. */
 export const FALLBACK_ERROR_TITLE = "Couldn't load this";
 
+/**
+ * Settings › Data's complete export (the stage 1 spec's S1-14; backend §12.1
+ * #181): a large workspace comes in parts, each its own button — "Download
+ * file" for the one, "Download file {n} of {N}" among several.
+ */
+export const COMPLETE_EXPORT_INTRO = 'Or export every record. A large workspace comes as several files, each kept for a day.';
+export function downloadFileLabel(n: number, count: number): string {
+  return count > 1 ? `Download file ${n} of ${count}` : 'Download file';
+}
+
 export function errorTitleFor(screen: ScreenKey | string | undefined): string {
   if (!screen) return FALLBACK_ERROR_TITLE;
   return ERROR_TITLES[screen as ScreenKey] ?? FALLBACK_ERROR_TITLE;
@@ -118,12 +128,12 @@ export const HOME_OFFLINE_BODY =
 /**
  * A figure on Home the platform refused or could not answer (Gate 24 parity,
  * G6): it says so on its own and the rest still show, as the website's
- * dashboard does (`readOverview`: "Unavailable"; "Recent activity could not be
- * read just now."). ~~The teams line~~ went with Home's TEAMS (Build 21; the
- * owner's AM5).
+ * dashboard does (`readOverview`: "Unavailable"). ~~The teams line~~ went with
+ * Home's TEAMS (Build 21; the owner's AM5), ~~RECENT RUNS' "Recent activity
+ * could not be read just now."~~ with RECENT RUNS (the owner's build 34 F5):
+ * YOUR FLOWS says "Unavailable".
  */
 export const FIGURE_UNAVAILABLE = 'Unavailable';
-export const RECENT_RUNS_UNAVAILABLE = 'Recent activity could not be read just now.';
 
 /**
  * The cover after a session ended while it was in use (Gate 24 parity, G4), in
@@ -343,6 +353,29 @@ export const VENDOR_SAVE_FAILED = 'Could not save. Try again.';
 export const CONNECTION_CONNECTED = 'Connected';
 export const CONNECTION_NOT_CONNECTED = 'Not connected';
 export const CONNECTION_ATTENTION = 'Needs attention';
+/**
+ * The provider's name in the three lines below: QuickBooks is "QuickBooks",
+ * the spec's word, where the platform lists "QuickBooks Online"; any other
+ * provider is named as the platform lists it, a NEW WORD for the owner
+ * (DESIGN-GAPS, S1-8).
+ */
+export function disconnectedName(providerId: string, listedName: string): string {
+  return providerId === 'quickbooks' ? 'QuickBooks' : listedName;
+}
+/**
+ * A connection the platform retired because the provider would not renew it,
+ * and a held job's approval that retirement expired (the stage 1 spec's S1-8;
+ * backend §12.1 #252), in the provider's name (`disconnectedName`).
+ */
+export function disconnectedIn(provider: string): string {
+  return `Disconnected in ${provider}`;
+}
+export function expiredByDisconnectTitle(provider: string): string {
+  return `Expired · ${provider} was disconnected`;
+}
+export function expiredByDisconnectNext(provider: string): string {
+  return `Reconnect ${provider}, then start the run again.`;
+}
 export const CONNECT_LABEL = 'Connect';
 export const RECONNECT_LABEL = 'Reconnect';
 export const DISCONNECT_LABEL = 'Disconnect';
@@ -390,6 +423,16 @@ export const EMAIL_PLACEHOLDER = 'Email address';
 export const EMAIL_ADD = 'Add';
 export const EMAIL_ADDING = 'Adding…';
 export const EMAIL_REMOVING = 'Removing…';
+/**
+ * An extra address's consent, under it (the stage 1 spec's S1-7; backend
+ * §12.1 #289): a new address waits for its one confirmation email; only a
+ * confirmed one gets the run emails; an unsubscribed one stopped them.
+ */
+export const EMAIL_STATUS: Readonly<Record<'pending' | 'confirmed' | 'stopped', string>> = {
+  pending: 'Waiting for confirmation',
+  confirmed: 'Confirmed',
+  stopped: 'Unsubscribed',
+};
 export function removeAddress(address: string): string {
   return `Remove ${address}`;
 }
@@ -660,6 +703,15 @@ export function reviewChangesLabel(count: number): string {
 export function reviewTally(accepted: number, denied: number): string {
   return `${accepted} accepted · ${denied} denied`;
 }
+/**
+ * A change's other values (the stage 1 spec's S1-B3, backend ADR-0048
+ * amendment 5): "Other code" opens their short list under the row; the one
+ * picked is the row's answer, which says "Changed to {code}" (its value).
+ */
+export const OTHER_CODE = 'Other code';
+export function changedTo(code: string): string {
+  return `Changed to ${code}`;
+}
 
 /**
  * A flow's items (backend ADR-0046; Round 19, plan §5): the things a person
@@ -723,6 +775,13 @@ export function chosenLabel(choices: readonly string[]): string {
 export const CHOOSE_AT_LEAST_ONE = 'Choose at least one.';
 /** A dropdown's search that finds nothing (Round 21 platform round 2, B1). */
 export const NO_MATCHES = 'No matches.';
+/**
+ * A setup select whose options carry groups, opened as its sheet (the owner's
+ * build 34 F1: "two? One for category and then the sub specialty … a typing
+ * feature"): the title over its groups, and the box that searches every option.
+ */
+export const SELECT_CATEGORY = 'Category';
+export const SEARCH_ALL = 'Search all';
 /**
  * Several files in one upload (Round 21 platform round 2, B2 as the batch
  * addendum's P3 amends it): a file field that allows several (`multiple`)

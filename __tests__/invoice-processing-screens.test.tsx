@@ -407,6 +407,55 @@ describe('the flow page (spec A6; Build 22, P1–P4)', () => {
     expect(fake.to('PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}')[0]!.body).toEqual({ status: 'live' });
   });
 
+  describe("only an owner or admin changes a flow (the stage 1 spec's S1-9; backend §12.1 #180)", () => {
+    /** The flow page as `role` sees it; PATCH answers `patch`. */
+    async function openAs(role: 'owner' | 'member', subscription: Subscription, patch?: () => unknown) {
+      const fake = fakePlatform(platformOperation);
+      fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', { subscriptions: [subscription] });
+      fake.always('GET /v1/workspaces/{workspaceId}/automations', { automations: [invoiceProcessingV4Entry()], categories: ['All'] });
+      fake.always('GET /v1/workspaces/{workspaceId}/run-stats', stats());
+      fake.always('GET /v1/connections/providers', providersWithQuickBooks());
+      fake.always('GET /v1/workspaces/{workspaceId}/projects', { projects: [ACCOUNTING_TEAM] });
+      fake.always('GET /v1/workspaces/{workspaceId}/connections', { connections: [] });
+      fake.always('GET /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/email-recipients', recipientsPayload());
+      fake.always('PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}', (patch ?? (() => ({ subscription }))) as never);
+      setMockParams({ flow: subscription.id });
+      await renderWithProviders(<WorkflowDetailScreen />, sessionAs(role));
+      await screen.findByTestId('flow-step-upload');
+      return fake;
+    }
+    const PATCHES = 'PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}';
+
+    it('a member on a live flow: Pause and Archive flow read-only, under the line; Edit setup still opens Set up', async () => {
+      const fake = await openAs('member', added({ vendor: 'none' }));
+      await fireEvent.press(screen.getByText('Pause'));
+      await fireEvent.press(screen.getByTestId('archive-flow'));
+      expect(screen.getByTestId('flow-change-admin-only').props.children).toBe('Only an owner or admin can change this flow.');
+      expect(fake.to(PATCHES)).toEqual([]);
+      await fireEvent.press(screen.getByTestId('manage-setup'));
+      expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/setup', params: { template: 'invoice-processing', flow: 'ip-1' } });
+    });
+
+    it('a member on a paused flow: Turn on read-only, with the line under it', async () => {
+      const fake = await openAs('member', { ...added({ vendor: 'none' }), status: 'paused' });
+      const step1 = within(screen.getByTestId('flow-step-upload'));
+      expect(step1.getByTestId('flow-turn-on-admin-only').props.children).toBe('Only an owner or admin can change this flow.');
+      await fireEvent.press(step1.getByTestId('flow-step-turn-on'));
+      expect(fake.to(PATCHES)).toEqual([]);
+    });
+
+    it('an owner: no line; Pause sends the change, and a change the platform refuses as a member\'s (403 flow_change_requires_admin) says the line', async () => {
+      const fake = await openAs('owner', added({ vendor: 'none' }), () => {
+        throw new PlatformError('Forbidden', 403, undefined, { reason: 'flow_change_requires_admin' });
+      });
+      expect(screen.queryByTestId('flow-change-admin-only')).toBeNull();
+      expect(screen.queryByTestId('flow-turn-on-admin-only')).toBeNull();
+      await fireEvent.press(screen.getByText('Pause'));
+      await waitFor(() => expect(fake.to(PATCHES)).toHaveLength(1));
+      expect(await screen.findByText('Only an owner or admin can change this flow.')).toBeTruthy();
+    });
+  });
+
   it('DASHBOARD is live: read again while a run of the flow goes on, and the tiles change without leaving the page (S30)', async () => {
     let reads = 0;
     // Running until the test has seen it so; then the run ends, a success. A flag rather than a
@@ -550,6 +599,61 @@ describe('Set up — one simple page, once, everything on it (the owner\'s AM4)'
     });
   });
 
+  it("a manifest's own sections (backend ADR-0048 amendment 5; the owner's build 34 F3): numbered by its titles, each its fields, the vendor choice in the section it names and no CONNECT; one with nothing left out", async () => {
+    const fake = fakePlatform(platformOperation);
+    let held: Subscription[] = [];
+    const draft: Subscription = { ...added({}), status: 'draft' };
+    routeSetup(fake, () => held);
+    const v4 = invoiceProcessingV4Entry();
+    const sectioned = {
+      ...v4,
+      setupSections: [
+        { id: 'limits', title: 'Limits' },
+        { id: 'empty', title: 'Nothing here' },
+        { id: 'integrations', title: 'Integrations' },
+      ],
+      setup: v4.setup.map((field) => ({ ...field, sectionId: field.control === 'connection' ? 'integrations' : 'limits' })),
+    };
+    fake.always('GET /v1/workspaces/{workspaceId}/automations', { automations: [sectioned], categories: ['All', 'Accounting'] });
+    fake.always('POST /v1/workspaces/{workspaceId}/subscriptions', () => {
+      held = [draft];
+      return { subscription: draft };
+    });
+    fake.always('PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}', { subscription: { ...draft, status: 'live' } });
+    setMockParams({ template: 'invoice-processing' });
+    await renderWithProviders(<SetupScreen />, sessionAs('owner'));
+    expect(await screen.findByText('Set up Invoice Processing')).toBeTruthy();
+    expect(screen.getAllByText(/^\d+ · /u).map((label) => label.props.children)).toEqual(['1 · LIMITS', '2 · INTEGRATIONS']);
+    expect(within(screen.getByTestId('setup-section-1')).getByText('Approval limit')).toBeTruthy();
+    expect(within(screen.getByTestId('setup-section-2')).getByTestId('setup-vendor-vendor')).toBeTruthy();
+    expect(screen.queryByTestId('setup-connect')).toBeNull();
+    await fireEvent.press(screen.getByRole('button', { name: 'Turn on' }));
+    await waitFor(() => expect(fake.to('PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}')).toHaveLength(1));
+    expect(fake.to('PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}')[0]!.body).toEqual({
+      config: { vendor: 'none', holdAboveAmount: 500 },
+      status: 'live',
+    });
+  });
+
+  it("Edit setup: the sections of the version the flow runs (`Subscription.setupSections`), not the catalog's", async () => {
+    const fake = fakePlatform(platformOperation);
+    const live = added({ vendor: 'none', holdAboveAmount: 500 });
+    const pinned: Subscription = {
+      ...live,
+      setupSections: [
+        { id: 'connect', title: 'Where it goes' },
+        { id: 'limits', title: 'Limits' },
+      ],
+      setup: live.setup!.map((field) => ({ ...field, sectionId: field.control === 'connection' ? 'connect' : 'limits' })),
+    };
+    routeSetup(fake, () => [pinned]);
+    setMockParams({ template: 'invoice-processing', flow: 'ip-1' });
+    await renderWithProviders(<SetupScreen />, sessionAs('owner'));
+    expect(await screen.findByText('1 · WHERE IT GOES')).toBeTruthy();
+    expect(screen.getAllByText(/^\d+ · /u).map((label) => label.props.children)).toEqual(['1 · WHERE IT GOES', '2 · LIMITS']);
+    expect(within(screen.getByTestId('setup-section-1')).getByTestId('setup-vendor-vendor')).toBeTruthy();
+  });
+
   it('a tap on QuickBooks not connected connects it at once, then chooses it — Turn on sends it, no Done, no second page', async () => {
     const fake = fakePlatform(platformOperation);
     let connected: Connection[] = [];
@@ -630,17 +734,32 @@ describe('Set up — one simple page, once, everything on it (the owner\'s AM4)'
     expect(mockConnect).not.toHaveBeenCalled();
   });
 
-  it('a member adding a flow still chooses its integration (ADR-0036): no read-only line, None is a choice', async () => {
+  it("a member's Set up is read-only (the stage 1 spec's S1-9; backend §12.1 #180; ~~a member adding a flow chooses its integration, ADR-0043 §2~~): the integration and the settings shown, nothing changed, and the line in Turn on's place", async () => {
     const fake = fakePlatform(platformOperation);
     routeSetup(fake, () => [], () => [quickbooks()]);
     setMockParams({ template: 'invoice-processing' });
     await renderWithProviders(<SetupScreen />, sessionAs('member'));
     expect(await screen.findByTestId('vendor-quickbooks')).toBeTruthy();
-    expect(screen.queryByTestId('vendor-read-only')).toBeNull();
     await fireEvent.press(screen.getByTestId('vendor-quickbooks'));
-    await waitFor(() => expect(screen.getByTestId('vendor-chosen-quickbooks')).toBeTruthy());
-    await fireEvent.press(screen.getByTestId('vendor-none'));
-    await waitFor(() => expect(screen.getByTestId('vendor-chosen-none')).toBeTruthy());
+    expect(screen.queryByTestId('vendor-chosen-quickbooks')).toBeNull();
+    expect(screen.getByTestId('vendor-chosen-none')).toBeTruthy();
+    expect(screen.getByLabelText('Approval limit').props.editable).toBe(false);
+    expect(screen.queryByText('Turn on')).toBeNull();
+    expect(screen.getByTestId('setup-admin-only').props.children).toBe('Only an owner or admin can change this flow.');
+    expect(fake.to('POST /v1/workspaces/{workspaceId}/subscriptions')).toEqual([]);
+  });
+
+  it("an owner's Turn on the platform refuses as a member's (403 flow_change_requires_admin) says the line", async () => {
+    const fake = fakePlatform(platformOperation);
+    routeSetup(fake, () => []);
+    fake.always('POST /v1/workspaces/{workspaceId}/subscriptions', () => {
+      throw new PlatformError('Forbidden', 403, undefined, { reason: 'flow_change_requires_admin' });
+    });
+    setMockParams({ template: 'invoice-processing' });
+    await renderWithProviders(<SetupScreen />, sessionAs('owner'));
+    expect(screen.queryByTestId('setup-admin-only')).toBeNull();
+    await fireEvent.press(await screen.findByText('Turn on'));
+    expect(await screen.findByText('Only an owner or admin can change this flow.')).toBeTruthy();
   });
 });
 

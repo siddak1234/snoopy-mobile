@@ -1,0 +1,50 @@
+{
+  "name": "review-held-options",
+  "about": "A held review whose first change offers two other values: each to accept, deny or change (amendment 5)",
+  "blockSetVersion": 5,
+  "blocks": [
+    {
+      "type": "text",
+      "text": "Waiting for approval.",
+      "tone": "warning"
+    },
+    {
+      "type": "questions",
+      "form": {
+        "kind": "review",
+        "approvalId": "0d0d0d0d-0d0d-4d0d-8d0d-0d0d0d0d0d0d",
+        "eligibleRoles": [
+          "owner",
+          "admin"
+        ],
+        "decisions": [
+          {
+            "id": "n18-4-change",
+            "label": "N18.4 → N18.30",
+            "detail": "The note says stage 3.",
+            "options": [
+              {
+                "value": "N18.31",
+                "label": "N18.31 · Chronic kidney disease, stage 3a"
+              },
+              {
+                "value": "N18.32",
+                "label": "N18.32 · Chronic kidney disease, stage 3b"
+              }
+            ]
+          },
+          {
+            "id": "i10-keep",
+            "label": "I10 → Keep"
+          }
+        ]
+      }
+    }
+  ],
+  "text": [
+    "Waiting for approval.",
+    "N18.4 → N18.30",
+    "The note says stage 3.",
+    "I10 → Keep"
+  ]
+}

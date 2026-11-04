@@ -1,7 +1,7 @@
 {
   "name": "v2-details",
   "about": "An Invoice Processing v2 run with details only",
-  "blockSetVersion": 4,
+  "blockSetVersion": 5,
   "blocks": [
     {
       "type": "text",

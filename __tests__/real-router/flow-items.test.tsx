@@ -10,16 +10,25 @@ import { WORKSPACE, answerPlatform, flush, launch, signedInOnThisPhone } from '@
  * A flow's items under the real router (Round 19, plan §5; CLAUDE.md rule 11,
  * README "Verification": the params a screen takes on arrival). A row on the
  * flow page opens the item's page in the Flows tab with the item it takes on
- * arrival; one of its runs opens the run's page in Activity's stack, from
- * Flows; Back from the item comes home to the same flow page. Since build 28
- * the item's "{File title}" row opens its file's page in Flows with the item,
- * and a run's "View {file}" row its file's page in Activity with the run and
- * the file (F4, F7). Since Round 21 those rows are the platform's blocks
+ * arrival; one of its runs opens the run's page in the Flows stack, so Back
+ * comes straight to the item with no Activity under it (the owner's build 31
+ * G1; ~~in Activity's stack, from Flows~~); Back from the item comes home to
+ * the same flow page. Since build 28 the item's "{File title}" row opens its
+ * file's page in Flows with the item, and a run's "View {file}" row its file's
+ * page with the run and the file (F4, F7) — in the stack the run is in. Since Round 21 those rows are the platform's blocks
  * (backend ADR-0048), and a block's press goes where its typed target says.
  * The flow is made up: no flow's word or id is written in the app.
  */
 
 jest.setTimeout(60_000);
+
+/** Which tab the tab bar shows selected. */
+function selectedTab(): string | undefined {
+  const bar = screen.getByTestId('tab-bar');
+  return within(bar)
+    .getAllByRole('tab')
+    .find((tab) => tab.props.accessibilityState?.selected)?.props.accessibilityLabel;
+}
 
 const DECLARED: AutomationItems = {
   words: { singular: 'Policy', plural: 'Policies' },
@@ -116,7 +125,7 @@ function platformWithItems() {
   );
 }
 
-it("a row opens its item's page in Flows with the item; a run opens in Activity from Flows; Back comes home to the flow", async () => {
+it("a row opens its item's page in Flows with the item; a run opens in Flows too, and Back comes straight to the item, then to the flow (G1)", async () => {
   signedInOnThisPhone();
   platformWithItems();
   const view = await launch();
@@ -137,9 +146,23 @@ it("a row opens its item's page in Flows with the item; a run opens in Activity 
   await fireEvent.press(await screen.findByTestId('item-blocks-2-row-0'));
   await flush(100);
   await flush(1000);
-  expect(view.getSegments()).toEqual(['(tabs)', 'activity', 'run']);
-  expect(view.getSearchParams()).toMatchObject({ runId: 'r-1', returnTo: 'flows' });
+  expect(view.getSegments()).toEqual(['(tabs)', 'flows', 'run']);
+  expect(view.getSearchParams()).toMatchObject({ runId: 'r-1' });
+  // Nothing to return to: Back is the Flows stack's own.
+  expect(view.getSearchParams().returnTo).toBeUndefined();
+  expect(selectedTab()).toBe('Flows');
   expect((await screen.findByTestId('run-title')).props.children).toBe('Northwind lease');
+
+  // Its Run details open in the same stack, and Back returns to the run.
+  await fireEvent.press(await screen.findByTestId('run-open-details'));
+  await flush(100);
+  await flush(1000);
+  expect(view.getSegments()).toEqual(['(tabs)', 'flows', 'run-details']);
+  expect(view.getSearchParams()).toMatchObject({ runId: 'r-1' });
+  await act(async () => router.back());
+  await flush(100);
+  await flush(1000);
+  expect(view.getSegments()).toEqual(['(tabs)', 'flows', 'run']);
 
   await act(async () => router.back());
   await flush(100);
@@ -153,7 +176,7 @@ it("a row opens its item's page in Flows with the item; a run opens in Activity 
   expect(await screen.findByTestId('flow-item-i-1')).toBeTruthy();
 });
 
-it("the item's file opens in Flows with the item, and a run's file in Activity with the run and the file; Back returns to each (build 28)", async () => {
+it("the item's file opens in Flows with the item, and a run's file in Flows with the run and the file; Back returns to each (build 28; G1)", async () => {
   signedInOnThisPhone();
   platformWithItems();
   const view = await launch();
@@ -176,15 +199,19 @@ it("the item's file opens in Flows with the item, and a run's file in Activity w
   await fireEvent.press(await screen.findByTestId('item-blocks-2-row-0'));
   await flush(100);
   await flush(1000);
-  expect(view.getSegments()).toEqual(['(tabs)', 'activity', 'run']);
+  expect(view.getSegments()).toEqual(['(tabs)', 'flows', 'run']);
   await fireEvent.press(await screen.findByTestId('run-blocks-0'));
   await flush(100);
   await flush(1000);
-  expect(view.getSegments()).toEqual(['(tabs)', 'activity', 'run-file']);
+  expect(view.getSegments()).toEqual(['(tabs)', 'flows', 'run-file']);
   expect(view.getSearchParams()).toMatchObject({ runId: 'r-1', fileId: 'f-9' });
   expect((await screen.findByTestId('run-file-title')).props.children).toBe('Contract file');
   await act(async () => router.back());
   await flush(100);
   await flush(1000);
-  expect(view.getSegments()).toEqual(['(tabs)', 'activity', 'run']);
+  expect(view.getSegments()).toEqual(['(tabs)', 'flows', 'run']);
+  await act(async () => router.back());
+  await flush(100);
+  await flush(1000);
+  expect(view.getSegments()).toEqual(['(tabs)', 'flows', 'item']);
 });

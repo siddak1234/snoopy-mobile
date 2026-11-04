@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { act, fireEvent, screen, within } from 'expo-router/testing-library';
 
 import { runDetailPayload, type RouteOverrides } from '@/test/platform';
@@ -8,7 +9,9 @@ import { answerPlatform, flush, launch, pressTab, signedInOnThisPhone } from '@/
  * running item why does the slider take me to home. Shouldnt it be in activity",
  * F5: "This should be in activity right?"). Under the REAL router: a run opened
  * from Home, from Home's or Settings' inbox, or from a push is Activity's page,
- * with the Activity tab selected, and Back returns where it came from.
+ * with the Activity tab selected, and Back returns where it came from. Home
+ * opens a run as its Start run does since the owner's build 34 F5 (YOUR FLOWS;
+ * ~~a recent run's row~~): `fromHome`, the push it makes with the run it started.
  */
 
 jest.setTimeout(90_000);
@@ -37,6 +40,15 @@ async function pressBack() {
   await flush(1000);
 }
 
+/** What Home's Start run does with the run it started (YOUR FLOWS, `app/(tabs)/(home)/index.tsx`): its page in Activity, from Home. */
+async function fromHome(runId = 'run-0') {
+  await act(async () =>
+    router.push({ pathname: '/(tabs)/activity/run', params: { runId, returnTo: 'home' } }, { withAnchor: true }),
+  );
+  await flush(100);
+  await flush(1000);
+}
+
 async function open(testIDOrText: { testID?: string; text?: string }) {
   const target = testIDOrText.testID
     ? await screen.findByTestId(testIDOrText.testID)
@@ -46,13 +58,13 @@ async function open(testIDOrText: { testID?: string; text?: string }) {
   await flush(1000);
 }
 
-it("Home's recent run opens in Activity, with Activity selected; Back returns to Home, Home selected", async () => {
+it("a run started from Home opens in Activity, with Activity selected; Back returns to Home, Home selected", async () => {
   signedInOnThisPhone();
   answerPlatform();
   const view = await launch();
   expect(view.getPathname()).toBe('/');
 
-  await open({ text: 'Run #4821 · posted to QuickBooks' });
+  await fromHome();
   expect(view.getSegments()).toEqual(['(tabs)', 'activity', 'run']);
   expect(view.getSearchParams()).toMatchObject({ runId: 'run-0', returnTo: 'home' });
   expect(selectedTab()).toBe('Activity');
@@ -72,7 +84,7 @@ it("a run's Run details opens in Activity's stack with the run; Back returns to 
   answerPlatform();
   const view = await launch();
 
-  await open({ text: 'Run #4821 · posted to QuickBooks' });
+  await fromHome();
   expect(view.getSegments()).toEqual(['(tabs)', 'activity', 'run']);
   await open({ testID: 'run-open-details' });
   expect(view.getSegments()).toEqual(['(tabs)', 'activity', 'run-details']);
@@ -95,7 +107,7 @@ it("re-tapping Activity's tab on a run from Home stays in Activity: its list, no
   answerPlatform();
   const view = await launch();
 
-  await open({ text: 'Run #4821 · posted to QuickBooks' });
+  await fromHome();
   expect(view.getSegments()).toEqual(['(tabs)', 'activity', 'run']);
   await pressTab('Activity');
   expect(view.getPathname()).toBe('/activity');
@@ -197,7 +209,7 @@ it('a run\'s View package opens the package page in Activity, with its runId; Ba
     // One run and its package by path, which the typed fragments do not name.
   } as RouteOverrides);
   const view = await launch();
-  await open({ text: 'Run #4821 · posted to QuickBooks' });
+  await fromHome();
   await open({ testID: 'run-view-package' });
   expect(view.getSegments()).toEqual(['(tabs)', 'activity', 'package']);
   expect(view.getSearchParams()).toMatchObject({ runId: 'run-0' });

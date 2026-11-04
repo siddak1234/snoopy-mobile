@@ -18,8 +18,9 @@ import { busyBody, useWorkspaceResource } from '@/hooks/use-resource';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
-import { errorTitleFor } from '@/lib/content/screen-states';
+import { COMPLETE_EXPORT_INTRO, downloadFileLabel, errorTitleFor } from '@/lib/content/screen-states';
 import {
+  exportFiles,
   isPartialExport,
   readBoundedExport,
   readCompleteExport,
@@ -45,8 +46,10 @@ const FAILURES: Record<string, string> = {
 /**
  * Settings → Data export (BUILD-PLAN 24.6.3) — the website's workspace export
  * section: a quick summary, bounded, as a JSON file; and everything as one
- * file, prepared on the platform from a link read again at the moment of the
- * press, since one read earlier may have expired (23.10.1). Each is
+ * file — a large workspace as several, "Download file {n} of {N}" each, with
+ * no Share (S1-14, §12.1 #181) — prepared on the platform from a link read
+ * again at the moment of the press, since one read earlier may have expired
+ * (23.10.1). Each is
  * Download, then Share (`FileActions`, Round 21; the owner's Q7 and build 30
  * note F4), in the website's words — "Download JSON", "Download file": on iOS
  * Download saves the file into the folder picked in Files and Share hands it
@@ -178,12 +181,13 @@ export default function DataExportScreen() {
   };
 
   /**
-   * The complete export's file, from a link read again now, handed to `hand`;
-   * nothing when no file is offered. A refusal in its own words ("The link to
-   * the file cannot be used.", "The file could not be saved.").
+   * The complete export's file at `index` (one of its parts since §12.1 #181,
+   * S1-14), from a link read again now, handed to `hand`; nothing when no file
+   * is offered there. A refusal in its own words ("The link to the file cannot
+   * be used.", "The file could not be saved.").
    */
   const exportFile =
-    (hand: (file: { downloadUrl: string; filename: string }) => Promise<void>, fallback: string) =>
+    (index: number, hand: (file: { downloadUrl: string; filename: string }) => Promise<void>, fallback: string) =>
     async (): Promise<string | null> => {
       const workspaceId = workspaceIfShown(session, access.loadedFor);
       if (!workspaceId) return WORKSPACE_CHANGED;
@@ -191,7 +195,7 @@ export default function DataExportScreen() {
       try {
         const fresh = await readCompleteExport(workspaceId, job.id);
         setJob(fresh);
-        const file = fresh.file;
+        const file = exportFiles(fresh)[index];
         if (!file?.downloadUrl) return null;
         await hand({ downloadUrl: file.downloadUrl, filename: file.filename });
         return null;
@@ -216,6 +220,8 @@ export default function DataExportScreen() {
   const muted = { color: palette.neutral[400] };
   const running = job?.status === 'running';
   const partial = summary ? isPartialExport(summary) : false;
+  // A large workspace's export comes in parts (S1-14): a button for each, in order.
+  const files = job?.status === 'ready' ? exportFiles(job) : [];
 
   return (
     <Page testID="data-screen">
@@ -265,32 +271,32 @@ export default function DataExportScreen() {
           </Group>
 
           <Group title="EVERYTHING" padded>
-            <Text style={[styles.text, muted]}>
-              Or export every record as one file, however large the workspace. It takes a moment to prepare and the
-              file is kept for a day.
-            </Text>
+            <Text style={[styles.text, muted]}>{COMPLETE_EXPORT_INTRO}</Text>
             <PillButton
               label={running ? 'Preparing everything…' : 'Export everything'}
               variant="secondary"
               disabled={busy !== null || running}
               onPress={start}
             />
-            {job?.status === 'ready' ? (
+            {/* Share only for an export of one file, as the website's. */}
+            {files.length > 0 ? (
               <FileActions
                 testID="data-export-actions"
-                downloads={[
-                  {
-                    label: 'Download file',
-                    busyLabel: 'Saving…',
-                    testID: 'data-export-download',
-                    run: exportFile(saveSignedFile, 'The file could not be saved.'),
-                  },
-                ]}
-                share={{
-                  testID: 'data-export-share',
-                  busyLabel: 'Sharing…',
-                  run: exportFile(shareSignedFile, 'The export could not be shared.'),
-                }}
+                downloads={files.map((_, index) => ({
+                  label: downloadFileLabel(index + 1, files.length),
+                  busyLabel: 'Saving…',
+                  testID: files.length > 1 ? `data-export-download-${index + 1}` : 'data-export-download',
+                  run: exportFile(index, saveSignedFile, 'The file could not be saved.'),
+                }))}
+                share={
+                  files.length === 1
+                    ? {
+                        testID: 'data-export-share',
+                        busyLabel: 'Sharing…',
+                        run: exportFile(0, shareSignedFile, 'The export could not be shared.'),
+                      }
+                    : null
+                }
               />
             ) : null}
             <Text style={[styles.text, muted]}>

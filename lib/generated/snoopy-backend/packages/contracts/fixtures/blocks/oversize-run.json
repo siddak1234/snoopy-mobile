@@ -1,7 +1,7 @@
 {
   "name": "oversize-run",
   "about": "A run still too large once its lines are dropped",
-  "blockSetVersion": 4,
+  "blockSetVersion": 5,
   "blocks": [
     {
       "type": "text",

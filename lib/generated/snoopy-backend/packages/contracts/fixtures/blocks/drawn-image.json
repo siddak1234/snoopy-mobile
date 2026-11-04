@@ -1,7 +1,7 @@
 {
   "name": "drawn-image",
   "about": "A run's measured JPEG of 1 MiB, drawn as a picture that opens its file",
-  "blockSetVersion": 4,
+  "blockSetVersion": 5,
   "blocks": [
     {
       "type": "image",

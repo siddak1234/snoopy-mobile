@@ -53,7 +53,7 @@ import { mockRouter, renderWithProviders } from '@/test/render';
  * a building; the team, its kind's icon or four squares for All teams — each a
  * button that opens the card the pills open and is read aloud as what it is and
  * what is chosen; and Home with no flow is the dashboard as it is with flows,
- * the first run where RECENT RUNS goes.
+ * the first run where YOUR FLOWS goes (~~RECENT RUNS~~ until the owner's build 34 F5).
  */
 
 jest.mock('@/lib/platform/client', () => ({
@@ -273,13 +273,13 @@ describe("Home's scope: two icons beside the bell (the owner's build 13 decision
 
   it('the team icon ticks and opens Show — the team list, in words — and a team chosen there is the scope: kept, the icon and its label follow, and Home narrows to it', async () => {
     const subscriptions = subscriptionsPayload();
-    // Every run in the fixtures is of `invoice`: in Finance; Legal has no flow.
+    // `invoice` in Finance; Legal has no flow.
     subscriptions.subscriptions = subscriptions.subscriptions.map((row) =>
       row.id === 'invoice' ? { ...row, projectId: 'project-1' } : row,
     );
     routeHome({ projects: projectsPayload('Finance', 'Legal'), subscriptions });
     await renderWithProviders(<HomeScreen />, signedInSession);
-    expect(await screen.findByText('Run #4821 · posted to QuickBooks')).toBeTruthy();
+    expect(await screen.findByTestId('home-flow-invoice')).toBeTruthy();
 
     await fireEvent.press(screen.getByLabelText('Department: All departments'));
     expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
@@ -294,14 +294,15 @@ describe("Home's scope: two icons beside the bell (the owner's build 13 decision
     expect(writeScope.mock.calls).toEqual([[TEST_WORKSPACE, 'project-2']]);
     const legal = await screen.findByLabelText('Department: Legal');
     expect(within(legal).getByTestId('icon-Gavel')).toBeTruthy();
-    expect(screen.getByText('No runs in this department yet.')).toBeTruthy();
-    expect(screen.queryByText('Run #4821 · posted to QuickBooks')).toBeNull();
+    // YOUR FLOWS narrows to it (the owner's build 34 F5; ~~its runs~~): the email flow is the whole workspace's.
+    expect(screen.queryByTestId('home-flow-invoice')).toBeNull();
+    expect(screen.queryByTestId('home-flow-email')).toBeNull();
 
     // And back to every team, from the same card.
     await fireEvent.press(legal);
     await fireEvent.press(within(screen.getByTestId('scope-team-menu')).getByTestId('scope-option-all'));
     expect(within(await screen.findByLabelText('Department: All departments')).getByTestId('icon-SquaresFour')).toBeTruthy();
-    expect(screen.getByText('Run #4821 · posted to QuickBooks')).toBeTruthy();
+    expect(screen.getByTestId('home-flow-invoice')).toBeTruthy();
   });
 
   it('the workspace icon ticks and opens Switch workspace — the workspaces, in words — and choosing another switches: the active workspace PATCHed with a key, then the session read again', async () => {
@@ -353,7 +354,7 @@ describe("Home's scope: two icons beside the bell (the owner's build 13 decision
 });
 
 describe("Home with no flow is the dashboard (the owner's build 13 decision 5)", () => {
-  it('draws the header, the greeting and TODAY at 0, and Nothing automated. Yet. with Add a flow where RECENT RUNS goes — no review banner, and no Add a flow or Flows pills over it', async () => {
+  it('draws the header, the greeting and TODAY at 0, and Nothing automated. Yet. with Add a flow where YOUR FLOWS goes — no review banner, and no Add a flow or Flows pills over it', async () => {
     routeNothingYet();
     await renderWithProviders(<HomeScreen />, signedInSession);
 
@@ -379,8 +380,8 @@ describe("Home with no flow is the dashboard (the owner's build 13 decision 5)",
     expect(
       within(firstRun).getByText('Add a prebuilt flow and your first agent is running in minutes — no building required.'),
     ).toBeTruthy();
+    expect(screen.queryByText('YOUR FLOWS')).toBeNull();
     expect(screen.queryByText('RECENT RUNS')).toBeNull();
-    expect(screen.queryByText('See all')).toBeNull();
     // The Add a flow and Flows pills are not drawn over it; ~~the website's other
     // two quick actions, as rows (Gate 24 parity, G5)~~ until Build 22 (the
     // owner's build 21 item 1: "I dont want … connect integrations, view teams").

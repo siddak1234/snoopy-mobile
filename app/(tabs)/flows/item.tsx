@@ -48,10 +48,12 @@ import { RUN_REREAD_MS } from '@/lib/view/runs';
  * was made from and its reading (`/(tabs)/flows/item-file`); "Add {one of its
  * runs}" and the run form — the flow's run fields and Start (`StartRun`), the
  * run naming this item — for an owner or admin, while it is not archived and
- * its flow can run (`canStartRun`); its runs as the platform ranks them, each a
+ * its flow can run (`canStartRun`); Start opens the new run's page, its steps live, and Back
+ * comes straight here (the owner's build 31 G4); its runs as the platform ranks them, each a
  * row — its rank, its title (or "Reading…"), its score, read "Score" first by a
  * screen reader, and the arrow (`OpenRow`) — a failed one in the muted tone,
- * each opening its run. Its footer, for an owner or admin: Archive, behind the
+ * each opening its run in the Flows stack, so Back comes straight here (the
+ * owner's build 31 G1). Its footer, for an owner or admin: Archive, behind the
  * confirmation the flow's own archive asks. Read again every `RUN_REREAD_MS`
  * while the platform says it or a run of it goes on (`going`), and the page is
  * in front. ~~Its tiles, Add and ranked runs drawn here from the item and its
@@ -171,8 +173,12 @@ export default function ItemScreen() {
             itemId={form.itemId ?? item.id}
             startLabel={START_LABEL}
             showTypes
-            // The new run joins the list, "Reading…", and is read with it.
-            onStarted={() => refresh()}
+            // The new run's page opens, its steps live, in the Flows stack: Back comes
+            // straight here (the owner's build 31 G4, G1), where it joins the list, read with it.
+            onStarted={(runId) => {
+              refresh();
+              router.push({ pathname: '/(tabs)/flows/run', params: { runId } });
+            }}
           />
         </SurfaceCard>
       </View>
@@ -197,7 +203,7 @@ export default function ItemScreen() {
       <BlockList
         testID="item-blocks"
         blocks={blocks}
-        context={{ runOrigin: 'flows', forms: { run: runForm }, workspaceId: page.loadedFor }}
+        context={{ runStack: 'flows', forms: { run: runForm }, workspaceId: page.loadedFor }}
       />
 
       {/* Last, in red, where a person scrolls to it — as the flow's own Archive (24.9.4); the

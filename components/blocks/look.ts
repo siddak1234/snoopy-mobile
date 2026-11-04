@@ -3,7 +3,7 @@ import type { Href } from 'expo-router';
 import { status } from '@/constants/theme';
 import type { useTheme } from '@/hooks/use-theme';
 import type { Block, BlockOpen } from '@/lib/platform/automations';
-import type { RunOrigin } from '@/lib/view/runs';
+import type { RunStack } from '@/lib/view/runs';
 
 /**
  * How the blocks look and where they go (backend ADR-0048 decisions 8–10): a
@@ -54,8 +54,12 @@ export function httpsLink(url: unknown): { href: string; host: string } | null {
   }
 }
 
-/** Where the blocks are drawn: a run opened from another tab says where it came from (`returnTo`). */
-export type BlockPlace = { runOrigin?: RunOrigin };
+/**
+ * Where the blocks are drawn: the stack a run and a run's file open in — the
+ * Flows stack for an item's runs and on a run drawn there (the owner's build 31
+ * G1; `RunStack`), else Activity's.
+ */
+export type BlockPlace = { runStack?: RunStack };
 
 const id = (value: unknown): value is string => typeof value === 'string' && value.length > 0;
 
@@ -73,13 +77,14 @@ export function openRoute(
   switch (open.target) {
     case 'run':
       if (!id(runId)) return null;
-      return place.runOrigin
-        ? { href: { pathname: '/(tabs)/activity/run', params: { runId, returnTo: place.runOrigin } }, withAnchor: true }
+      return place.runStack === 'flows'
+        ? { href: { pathname: '/(tabs)/flows/run', params: { runId } }, withAnchor: false }
         : { href: { pathname: '/(tabs)/activity/run', params: { runId } }, withAnchor: false };
     case 'run-file':
-      return id(runId) && id(fileId)
-        ? { href: { pathname: '/(tabs)/activity/run-file', params: { runId, fileId } }, withAnchor: false }
-        : null;
+      if (!id(runId) || !id(fileId)) return null;
+      return place.runStack === 'flows'
+        ? { href: { pathname: '/(tabs)/flows/run-file', params: { runId, fileId } }, withAnchor: false }
+        : { href: { pathname: '/(tabs)/activity/run-file', params: { runId, fileId } }, withAnchor: false };
     case 'item-file':
       return id(itemId) ? { href: { pathname: '/(tabs)/flows/item-file', params: { item: itemId } }, withAnchor: false } : null;
     default:

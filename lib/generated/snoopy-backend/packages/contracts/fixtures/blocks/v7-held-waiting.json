@@ -1,7 +1,7 @@
 {
   "name": "v7-held-waiting",
   "about": "v7 held, its approval waiting",
-  "blockSetVersion": 4,
+  "blockSetVersion": 5,
   "blocks": [
     {
       "type": "text",

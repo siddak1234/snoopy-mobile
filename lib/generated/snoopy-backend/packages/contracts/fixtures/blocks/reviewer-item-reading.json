@@ -1,7 +1,7 @@
 {
   "name": "reviewer-item-reading",
   "about": "A candidate-reviewer v2 item's reading, every section closed",
-  "blockSetVersion": 4,
+  "blockSetVersion": 5,
   "blocks": [
     {
       "type": "section",

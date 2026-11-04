@@ -42,8 +42,18 @@ export function setMockParams(params: Record<string, string>) {
 
 export const useLocalSearchParams = () => ({ ...mockParams });
 
+/** The route's segments for useSegments — none unless a test sets them (`setMockSegments`); reset between tests. */
+let mockSegments: string[] = [];
+
+export function setMockSegments(segments: string[]) {
+  mockSegments = [...segments];
+}
+
+export const useSegments = () => mockSegments;
+
 beforeEach(() => {
   setMockParams({});
+  setMockSegments([]);
 });
 
 /** Records where a route guard sent the user, without a navigator to run it. */

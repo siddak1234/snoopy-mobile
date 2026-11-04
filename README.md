@@ -369,12 +369,16 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   applies a timeout and `no-store`, and maps RFC problem responses. A 429 is
   said as "busy, try again in N seconds" from its `retry-after` and never as
   signed out; its public `details` travel with it, so a run refused for a full
-  queue (`queue_full`) is said in the owner's words. Its one raw `fetch` is `putFileToSignedUrl`, the credential-less
+  queue (`queue_full`) is said in the owner's words. A 403 naming
+  `outside_org_domain` is told to the tabs' layout once, here, through
+  `lib/platform/session-recovery.ts` (`onOutsideSignIn`; S1-11), whichever
+  read it answers. Carried to Stage 2 (BUILD-PLAN 29.4.6): the platform
+  does not send it before then (DESIGN-GAPS, S1-11). Its one raw `fetch` is `putFileToSignedUrl`, the credential-less
   PUT of a file's bytes to the URL the platform signed; `audit:platform` admits
   exactly that one. Since 24.12 its one native download is
   `downloadSignedFile`, the credential-less save of a signed file's link into
-  the app's cache (the complete export; the run package's PDF and Excel since
-  round 24); `audit:platform` admits exactly one `downloadFileAsync(`, there.
+  the app's cache (the complete export, each of its parts since §12.1 #181;
+  the run package's PDF and Excel since round 24); `audit:platform` admits exactly one `downloadFileAsync(`, there.
 - `lib/platform/*.ts` exposes typed reads and mutations. Screens do not call a
   network primitive. `readConnectionProviders` is the one provider list: the
   platform's `providers`, then its `publicProviders` (public services, no key)
@@ -513,7 +517,8 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
     one, so it never answers Added.
   - `deletionOutcome()` (`lib/content/deletion.ts`): every answer
     `DELETE /v1/account` gives a bearer caller, in ADR-0028's words. Never
-    say "deleted" for a lost answer: read the session first.
+    say "deleted" for a lost answer, and never read the session after a
+    failed delete (DESIGN-CONTRACT "Mutations", Account).
   - `hostedAddress()` (`lib/platform/billing.ts`) and `websiteOrigin()`: the
     only addresses the app opens outside itself, https only.
   - `Pressable` and `pressed()` (`components/pressable.tsx`): every press

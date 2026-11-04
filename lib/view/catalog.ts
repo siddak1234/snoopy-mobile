@@ -14,6 +14,8 @@ import {
   CONNECT_LABEL,
   DISCONNECT_LABEL,
   RECONNECT_LABEL,
+  disconnectedIn,
+  disconnectedName,
 } from '@/lib/content/screen-states';
 import { EMPTY, calendarDate, count } from './format';
 import { toPipelineSteps, type PipelineStep } from './pipeline';
@@ -74,14 +76,26 @@ export type TemplateView = {
 /**
  * A connection's state, as the one connection row says it (Build 21, spec A4):
  * connected; needing attention — the platform asks for a new sign-in
- * (`reauthorization-required`, backend §12.1 #175) or holds an `errorCode`; or
- * not connected — no connection, one disconnected, or one still authorizing.
+ * (`reauthorization-required`, backend §12.1 #175), holds an `errorCode`, or
+ * was disconnected at the provider (`disconnectedAtProvider`, the stage 1
+ * spec's S1-8); or not connected — no connection, one disconnected here, or
+ * one still authorizing.
  */
 export type ConnectionRowState = 'connected' | 'attention' | 'not-connected';
 
+/**
+ * A connection the platform retired because the provider would not renew it
+ * (the stage 1 spec's S1-8; backend §12.1 #252): `disconnected`, with the
+ * `errorCode` the refresh loop sets when it retires one. One disconnected
+ * here carries no `errorCode` — as the website reads it.
+ */
+export function disconnectedAtProvider(connection: Connection | undefined): boolean {
+  return connection?.status === 'disconnected' && Boolean(connection.errorCode);
+}
+
 export function connectionState(connection: Connection | undefined): ConnectionRowState {
   if (!connection) return 'not-connected';
-  if (connection.status === 'reauthorization-required') return 'attention';
+  if (connection.status === 'reauthorization-required' || disconnectedAtProvider(connection)) return 'attention';
   if (connection.status === 'connected') return connection.errorCode ? 'attention' : 'connected';
   return 'not-connected';
 }
@@ -103,15 +117,25 @@ export function providerConnected(provider: Pick<ConnectionProvider, 'authType'>
 /**
  * Line 2 of the row (Build 21, spec A4; the owner's build 20 item 6: "Logo then
  * to the right name then below the account email"): the account's email when
- * the platform holds one — `externalAccount.displayName` carrying an `@` — else
- * the state in a word; "Needs attention" in the warning colour.
+ * the platform holds one — `externalAccount.displayName` carrying an `@` — else,
+ * connected, the company the grant belongs to (`companyName`, read once at
+ * connect, the stage 1 spec's S1-15, backend §12.1 #283: QuickBooks names no
+ * email), else the state in a word; "Needs attention" in the warning colour. One
+ * disconnected at the provider says "Disconnected in {provider}" in the warning
+ * colour (S1-8, `disconnectedName`), its button Reconnect, when the provider's
+ * name is given.
  */
 export function connectionLine(
   connection: Connection | undefined,
+  provider = '',
 ): { text: string; tone: 'muted' | 'warn' } {
+  if (connection && disconnectedAtProvider(connection) && provider) {
+    return { text: disconnectedIn(disconnectedName(connection.providerId, provider)), tone: 'warn' };
+  }
   const state = connectionState(connection);
   const name = connection?.externalAccount.displayName ?? '';
   if (state !== 'not-connected' && name.includes('@')) return { text: name, tone: 'muted' };
+  if (state === 'connected' && connection?.companyName) return { text: connection.companyName, tone: 'muted' };
   if (state === 'connected') return { text: CONNECTION_CONNECTED, tone: 'muted' };
   if (state === 'attention') return { text: CONNECTION_ATTENTION, tone: 'warn' };
   return { text: CONNECTION_NOT_CONNECTED, tone: 'muted' };
@@ -226,6 +250,28 @@ export function groupFlows(
   ];
 }
 
+/** One department's section of a list: its name and its entries, in the order given. */
+export type DepartmentSection<T> = { department: string; entries: T[] };
+
+/**
+ * Entries in sections by department (the owner's build 34 F4: "When all
+ * categories is selected flows should be listed in sections of departments in
+ * alphabatical order"; F5): one section per department — a template's catalog
+ * `category`, the team kind a flow goes to (backend ADR-0036) — the departments
+ * A–Z, each section's entries in the order given (the catalog's). The website's
+ * `byDepartment`.
+ */
+export function byDepartment<T>(entries: readonly T[], departmentOf: (entry: T) => string): DepartmentSection<T>[] {
+  const sections = new Map<string, T[]>();
+  for (const entry of entries) {
+    const department = departmentOf(entry);
+    sections.set(department, [...(sections.get(department) ?? []), entry]);
+  }
+  return [...sections.keys()]
+    .sort((a, b) => a.localeCompare(b, 'en-US', { sensitivity: 'base' }))
+    .map((department) => ({ department, entries: sections.get(department)! }));
+}
+
 /**
  * Where the workspace holds a flow (the owner's build 12 item 9: "Teams cannot
  * have the same flows. One flow per account type. Personal or org not multiple
@@ -269,11 +315,6 @@ export function toSolution(entry: CatalogEntry, subscribed: boolean): SolutionVi
     available: entry.available,
     templateId: entry.templateId,
   };
-}
-
-/** A catalog card's price, in the website's words: "Included" for a flow that costs nothing, else "$39/mo". */
-export function catalogPrice(monthlyPriceUsd: number): string {
-  return monthlyPriceUsd === 0 ? 'Included' : `$${monthlyPriceUsd}/mo`;
 }
 
 export function toTemplate(entry: CatalogEntry): TemplateView {
@@ -329,7 +370,7 @@ export function toConnectionRow(provider: ConnectionProvider, connection: Connec
   // A provider that needs no key (B5) is connected for every workspace, whatever the list holds.
   const noConnect = needsNoConnect(provider);
   const state = noConnect ? 'connected' : connectionState(connection);
-  const line = noConnect ? { text: CONNECTION_CONNECTED, tone: 'muted' as const } : connectionLine(connection);
+  const line = noConnect ? { text: CONNECTION_CONNECTED, tone: 'muted' as const } : connectionLine(connection, provider.displayName);
   return {
     provider,
     providerId: provider.providerId,

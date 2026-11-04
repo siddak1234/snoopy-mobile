@@ -1,5 +1,6 @@
-import { fireEvent, render, screen, within } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import React from 'react';
+import { StyleSheet } from 'react-native';
 
 import HomeScreen from '@/app/(tabs)/(home)/index';
 import { ScreenError } from '@/components/screen-state';
@@ -19,6 +20,7 @@ import {
   TEST_WORKSPACE,
   approvalsPayload,
   catalogPayload,
+  flowCatalogPayload,
   inboxPayload,
   runStatsPayload,
   runsPayload,
@@ -49,7 +51,8 @@ import { mockRouter, renderWithProviders } from '@/test/render';
  *   until the owner's AM5.
  *
  * The website's dashboard matches the app since Build 22 (the session's D5,
- * approved by the owner): TODAY, the banner, Add a flow and Flows, Recent runs.
+ * approved by the owner): TODAY, the banner, Add a flow and Flows, and since the
+ * owner's build 34 F5 YOUR FLOWS (~~Recent runs~~).
  */
 
 jest.mock('@/lib/platform/client', () => ({
@@ -86,8 +89,9 @@ function team(id: string, workspaceId: string, kind: string, status: Project['st
 
 /**
  * Home's reads, each answered as the platform answers it: the approvals read
- * twice — every status, for the run rows, and `?status=pending`, the banner's —
- * and the teams read from every workspace. A refused route throws its refusal.
+ * `?status=pending`, the banner's (~~and every status, for the run rows~~ until
+ * F5), and the teams read from every workspace. A refused route throws its
+ * refusal. The runs are answered, so a read of them would be seen.
  */
 function routeHome(
   answers: {
@@ -129,7 +133,6 @@ function refuse(fake: ReturnType<typeof fakePlatform>, route: Route, refusal: ()
 /** Every one of the workspace's reads Home makes, refused the same way. */
 const WORKSPACE_READS: Route[] = [
   'GET /v1/workspaces/{workspaceId}/run-stats',
-  'GET /v1/workspaces/{workspaceId}/runs',
   'GET /v1/workspaces/{workspaceId}/automations',
   'GET /v1/workspaces/{workspaceId}/approvals',
   'GET /v1/workspaces/{workspaceId}/subscriptions',
@@ -170,9 +173,8 @@ describe('G1 — the review banner counts what Approvals lists', () => {
     expect(await screen.findByText('3 items need your review')).toBeTruthy();
     // Home narrows to Finance — the scope is chosen — while the banner does not.
     expect(await screen.findByLabelText('Department: Finance')).toBeTruthy();
-    expect(fake.to('GET /v1/workspaces/{workspaceId}/approvals').map((sent) => sent.query ?? null)).toEqual(
-      expect.arrayContaining([{ status: 'pending' }, null]),
-    );
+    // The pending read alone (~~and every status, for RECENT RUNS' rows~~ until F5).
+    expect(fake.to('GET /v1/workspaces/{workspaceId}/approvals').map((sent) => sent.query ?? null)).toEqual([{ status: 'pending' }]);
     await fireEvent.press(screen.getByText('3 items need your review'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity/approvals');
   });
@@ -187,9 +189,8 @@ describe('G1 — the review banner counts what Approvals lists', () => {
     // A fresh launch: nothing the first read answered serves the second.
     resetSnapshot();
 
-    // The pending read refused, every approval read: whether anything waits is
-    // not known, so no banner says it does — not a count from another read —
-    // while the run rows still say how a held run was decided.
+    // The pending read refused: whether anything waits is not known, so no
+    // banner says it does — not a count from another read.
     const refused = routeHome();
     refused.always('GET /v1/workspaces/{workspaceId}/approvals', (sent) => {
       if (sent.query?.status === 'pending') throw new PlatformError('Service Unavailable', 503);
@@ -198,7 +199,6 @@ describe('G1 — the review banner counts what Approvals lists', () => {
     await renderWithProviders(<HomeScreen />, signedInSession);
     expect(await screen.findByText('Welcome back, Alex')).toBeTruthy();
     expect(screen.queryByText(/need(s)? your review/u)).toBeNull();
-    expect(screen.getByText('Waiting for approval')).toBeTruthy();
     expect(screen.getByTestId('home-stats')).toBeTruthy();
   });
 });
@@ -316,47 +316,37 @@ describe('G6 — every figure on its own', () => {
         expect(screen.getByTestId('home-stats-unavailable').props.children).toBe('Unavailable');
         expect(screen.queryByTestId('home-stats')).toBeNull();
         expect(screen.queryByText(/Your agents ran/u)).toBeNull();
-        expect(screen.getByText('Run #4821 · posted to QuickBooks')).toBeTruthy();
-      },
-    ],
-    [
-      'the runs',
-      'GET /v1/workspaces/{workspaceId}/runs',
-      () => {
-        expect(screen.getByText('Recent activity could not be read just now.')).toBeTruthy();
-        expect(screen.queryByText('No runs in this department yet.')).toBeNull();
-        expect(screen.getByTestId('home-stats')).toBeTruthy();
-        expect(screen.getByText('Your agents ran 128 tasks today.')).toBeTruthy();
+        expect(screen.getByTestId('home-flow-invoice')).toBeTruthy();
       },
     ],
     [
       'the flows',
       'GET /v1/workspaces/{workspaceId}/subscriptions',
       () => {
-        // All teams: nothing else narrows through them.
+        // YOUR FLOWS says so (F5); all teams: nothing else narrows through them.
+        expect(screen.getByText('YOUR FLOWS')).toBeTruthy();
+        expect(screen.getByTestId('home-flows-line').props.children).toBe('Unavailable');
         expect(screen.getByTestId('home-stats')).toBeTruthy();
-        expect(screen.getByText('Run #4821 · posted to QuickBooks')).toBeTruthy();
       },
     ],
     [
       'the approvals',
       'GET /v1/workspaces/{workspaceId}/approvals',
       () => {
-        // No banner without the pending read, and a held run says only that it is held.
+        // No banner without the pending read.
         expect(screen.queryByText(/need(s)? your review/u)).toBeNull();
-        expect(screen.getByText('Held')).toBeTruthy();
-        expect(screen.queryByText('Waiting for approval')).toBeNull();
         expect(screen.getByTestId('home-stats')).toBeTruthy();
+        expect(screen.getByTestId('home-flow-invoice')).toBeTruthy();
       },
     ],
     [
       'the catalog',
       'GET /v1/workspaces/{workspaceId}/automations',
       () => {
-        // Runs are named by their template id, and nothing claims no flow is set up.
+        // The flows by their own names, under no department, and nothing claims no flow is set up.
         expect(screen.queryByTestId('home-first-run')).toBeNull();
-        expect(screen.getAllByText('tpl.0').length).toBeGreaterThan(0);
-        expect(screen.getByText('RECENT RUNS')).toBeTruthy();
+        expect(screen.getByText('YOUR FLOWS')).toBeTruthy();
+        expect(within(screen.getByTestId('home-flow-invoice')).getByText('Invoice triage')).toBeTruthy();
       },
     ],
   ])('%s refused: says so in its place, and the rest of Home still shows', async (_figure, route, expectations) => {
@@ -368,7 +358,7 @@ describe('G6 — every figure on its own', () => {
     expectations();
   });
 
-  it("with a team chosen and the flows refused, the team's figures cannot be told: today's counts and its runs say so too", async () => {
+  it("with a team chosen and the flows refused, the team's figures cannot be told: today's counts and its flows say so too", async () => {
     mockStored.set(TEST_WORKSPACE, 'project-1');
     const fake = routeHome({ teams: { [TEST_WORKSPACE]: [team('project-1', TEST_WORKSPACE, 'Finance', 'active')] } });
     refuse(fake, 'GET /v1/workspaces/{workspaceId}/subscriptions', () => new PlatformError('Service Unavailable', 503));
@@ -376,7 +366,7 @@ describe('G6 — every figure on its own', () => {
     expect(await screen.findByLabelText('Department: Finance')).toBeTruthy();
 
     expect(screen.getByTestId('home-stats-unavailable')).toBeTruthy();
-    expect(screen.getByText('Recent activity could not be read just now.')).toBeTruthy();
+    expect(screen.getByTestId('home-flows-line').props.children).toBe('Unavailable');
   });
 });
 
@@ -403,22 +393,25 @@ function readingOrder(tree: unknown): string[] {
  * or run a flow. / Recent runs is fine"; "overflow" is OVERVIEW and the banner
  * stays right after TODAY — the session's D4 and D6, approved by the owner):
  * the header, the greeting, TODAY, the banner while something waits, Add a flow
- * and Flows, RECENT RUNS. ~~RUN A FLOW (Build 21, spec A9)~~, ~~OVERVIEW (G6)~~,
- * ~~Connect integration and View teams (G5)~~ and ~~TEAMS (the owner's AM5)~~.
+ * and Flows, YOUR FLOWS (~~RECENT RUNS~~ until the owner's build 34 F5). ~~RUN A
+ * FLOW (Build 21, spec A9)~~, ~~OVERVIEW (G6)~~, ~~Connect integration and View
+ * teams (G5)~~ and ~~TEAMS (the owner's AM5)~~.
  */
 describe('Home, top to bottom (Build 22, H1–H4)', () => {
-  it('the header, the greeting, TODAY, the banner, Add a flow and Flows, then RECENT RUNS — and nothing else', async () => {
+  it('the header, the greeting, TODAY, the banner, Add a flow and Flows, then YOUR FLOWS — and nothing else', async () => {
     const pending = [pendingOn('invoice', 0)];
     routeHome({ subscriptions: placedSubscriptions(), pending: { approvals: pending } });
     const view = await renderWithProviders(<HomeScreen />, signedInSession);
     expect(await screen.findByTestId('home-approvals')).toBeTruthy();
     const order = readingOrder(view.toJSON());
-    const sequence = ['home-header', 'text:AUTOMATION × AI', 'text:TODAY', 'home-stats', 'home-approvals', 'home-quick-actions', 'text:RECENT RUNS'];
+    const sequence = ['home-header', 'text:AUTOMATION × AI', 'text:TODAY', 'home-stats', 'home-approvals', 'home-quick-actions', 'text:YOUR FLOWS'];
     const at = sequence.map((entry) => [entry, order.indexOf(entry)] as const);
     expect(at.filter(([, index]) => index < 0)).toEqual([]);
     expect([...at].sort((a, b) => a[1] - b[1]).map(([entry]) => entry)).toEqual(sequence);
-    // RECENT RUNS is the last section: nothing after its card but its rows.
-    expect(order.slice(order.indexOf('text:RECENT RUNS')).filter((entry) => /^text:[A-Z ]{4,}$/u.test(entry))).toEqual(['text:RECENT RUNS']);
+    // YOUR FLOWS is the last section: nothing after it but its departments and flows.
+    expect(order.slice(order.indexOf('text:YOUR FLOWS')).filter((entry) => /^text:[A-Z ]{4,}$/u.test(entry))).toEqual(['text:YOUR FLOWS']);
+    expect(screen.queryByText('RECENT RUNS')).toBeNull();
+    expect(screen.queryByText('See all')).toBeNull();
   });
 
   it('draws no RUN A FLOW — though flows are live — no OVERVIEW, no Integrations, no Connect integration, no View teams, no Teams list', async () => {
@@ -432,16 +425,18 @@ describe('Home, top to bottom (Build 22, H1–H4)', () => {
     for (const gone of ['RUN A FLOW', 'OVERVIEW', 'Integrations', 'Connect integration', 'View teams', 'TEAMS', 'View all teams']) {
       expect([gone, screen.queryByText(gone) !== null]).toEqual([gone, false]);
     }
-    for (const id of [/^home-quick-run/u, /^home-flows$/u, /^home-integrations$/u, /^home-connect-integration$/u, /^home-view-teams$/u, /^home-team-/u]) {
+    for (const id of [/^home-quick-run/u, /^home-integrations$/u, /^home-connect-integration$/u, /^home-view-teams$/u, /^home-team-/u]) {
       expect(screen.queryAllByTestId(id)).toEqual([]);
     }
   });
 
-  it('reads only what it draws: no connections (the session\'s S31)', async () => {
+  it('reads only what it draws: no connections (the session\'s S31), and since F5 no runs and no approvals but the pending ones', async () => {
     const fake = routeHome();
     await renderWithProviders(<HomeScreen />, signedInSession);
     expect(await screen.findByTestId('home-stats')).toBeTruthy();
     expect(fake.to('GET /v1/workspaces/{workspaceId}/connections')).toEqual([]);
+    expect(fake.to('GET /v1/workspaces/{workspaceId}/runs')).toEqual([]);
+    expect(fake.to('GET /v1/workspaces/{workspaceId}/approvals').map((sent) => sent.query?.status)).toEqual(['pending']);
   });
 
   it('no banner while nothing waits: TODAY is followed by Add a flow and Flows', async () => {
@@ -453,13 +448,224 @@ describe('Home, top to bottom (Build 22, H1–H4)', () => {
     expect(order.indexOf('home-stats')).toBeLessThan(order.indexOf('home-quick-actions'));
   });
 
-  it('names each recent run by its full id, under its line (spec A8; the owner\'s AM2)', async () => {
-    const runs = runsPayload();
-    runs.runs = [{ ...runs.runs[0]!, id: '793eef82-102d-81be-a2d3-9e8d4e2b2c36', requestId: '1e3231c6-0000-4000-8000-000000000000' }];
-    routeHome({ runs });
+});
+
+/**
+ * YOUR FLOWS, where RECENT RUNS was (the owner's build 34 F5: "Rather than recent runs from now on we
+ * will list the flows the account has … in department alphabetical order … upload the resume, select the
+ * department and job that is already existing and start run button. When start run is clicked it starts
+ * the run and takes you to the run page"). The flows are made up: no flow's word or id is the app's.
+ */
+describe("YOUR FLOWS (the owner's build 34 F5)", () => {
+  type Subscriptions = Answer<'GET /v1/workspaces/{workspaceId}/subscriptions'>;
+  type Items = Answer<'GET /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items'>;
+  const NOTE = { key: 'note', title: 'Note', description: 'A line.', control: 'text' as const, required: false };
+  const DECLARED = {
+    words: { singular: 'Job', plural: 'Jobs' },
+    runWords: { singular: 'Candidate', plural: 'Candidates' },
+    titleField: 'title',
+    groupField: 'department',
+    fields: [
+      { key: 'title', title: 'Title', control: 'text' as const, required: true },
+      { key: 'department', title: 'Department', control: 'text' as const, required: true },
+    ],
+    file: { key: 'jobFile', title: 'Job description', description: 'A PDF.', acceptedContentTypes: ['application/pdf'] },
+  };
+  const job = (id: string, title: string, department: string, over: Partial<Items['items'][number]> = {}): Items['items'][number] => ({
+    id,
+    subscriptionId: 'email',
+    title,
+    fields: { title, department },
+    status: 'ready',
+    runCount: 0,
+    positiveCount: 0,
+    negativeCount: 0,
+    topScore: null,
+    createdAt: '2026-10-20T10:00:00Z',
+    createdByUserId: null,
+    archivedAt: null,
+    ...over,
+  });
+
+  /** Invoice triage and Email triage — a flow with jobs — in Finance, the KPI report in Accounting, Lead enrichment a draft. */
+  function routeFlows(over: { subscriptions?: Subscriptions } = {}) {
+    const catalog = flowCatalogPayload();
+    type Department = Answer<'GET /v1/workspaces/{workspaceId}/automations'>['automations'][number]['category'];
+    const department: Record<string, Department> = {
+      'tplflow.invoice': 'Finance',
+      'tplflow.email': 'Finance',
+      'tplflow.kpi': 'Accounting',
+      'tplflow.lead': 'Sales',
+    };
+    catalog.automations = catalog.automations.map((entry) => ({ ...entry, category: department[entry.templateId]!, subscribed: true }));
+    const subscriptions = subscriptionsPayload();
+    subscriptions.subscriptions = subscriptions.subscriptions.map((row) =>
+      row.id === 'invoice'
+        ? { ...row, runInput: [NOTE] }
+        : row.id === 'email'
+          ? { ...row, runInput: [NOTE], items: DECLARED }
+          : row.id === 'kpi'
+            ? { ...row, status: 'live' as const, runInput: [] }
+            : row,
+    );
+    const fake = routeHome({ catalog, subscriptions: over.subscriptions ?? subscriptions });
+    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items', {
+      items: [
+        job('j-designer', 'Designer', 'Product'),
+        job('j-accountant', 'Accountant', 'Finance'),
+        job('j-intern', 'Intern', 'Product', { status: 'reading' }),
+        job('j-old', 'Old role', 'Finance', { archivedAt: '2026-10-21T10:00:00Z' }),
+      ],
+      choices: {},
+    });
+    fake.always('POST /v1/workspaces/{workspaceId}/runs', { run: { ...runsPayload().runs[0]!, id: 'run-new', status: 'pending' } });
+    return fake;
+  }
+
+  it("the live flows in sections by department A–Z, each A–Z by name as the website's — a draft left out — under YOUR FLOWS, with no RECENT RUNS", async () => {
+    const fake = routeFlows();
     await renderWithProviders(<HomeScreen />, signedInSession);
-    const stamp = await screen.findByTestId('home-stamp-793eef82-102d-81be-a2d3-9e8d4e2b2c36');
-    expect(stamp.props.children).toMatch(/ · Run 793eef82-102d-81be-a2d3-9e8d4e2b2c36$/u);
-    expect(screen.queryByText(/1e3231c6/u)).toBeNull();
+    expect(await screen.findByText('YOUR FLOWS')).toBeTruthy();
+    expect(screen.queryByText('RECENT RUNS')).toBeNull();
+    const section = (at: number) => screen.getByTestId(`home-flows-section-${at}`);
+    expect(within(section(0)).getByRole('header').props.children).toBe('ACCOUNTING');
+    expect(within(section(0)).getAllByTestId(/^home-flow-[a-z]+$/u).map((row) => row.props.testID)).toEqual(['home-flow-kpi']);
+    expect(within(section(1)).getByRole('header').props.children).toBe('FINANCE');
+    // Email triage before Invoice triage, though the catalog lists Invoice triage first.
+    expect(within(section(1)).getAllByTestId(/^home-flow-[a-z]+$/u).map((row) => row.props.testID)).toEqual(['home-flow-email', 'home-flow-invoice']);
+    expect(screen.queryByTestId('home-flows-section-2')).toBeNull();
+    expect(screen.queryByTestId('home-flow-lead')).toBeNull();
+    expect(within(screen.getByTestId('home-flow-invoice')).getByText('Invoice triage')).toBeTruthy();
+    // Each row has its divider but the last of its section (G3).
+    const border = (id: string) => {
+      const style = screen.getByTestId(id).props.style;
+      return (StyleSheet.flatten(typeof style === 'function' ? style({ pressed: false }) : style) ?? {}).borderBottomWidth;
+    };
+    expect([border('home-flow-email'), border('home-flow-invoice')]).toEqual([1, undefined]);
+    // Nothing is read for a flow until it is opened.
+    expect(fake.to('GET /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items')).toEqual([]);
+  });
+
+  it("a tapped flow opens to its run's first step — the fields of its runInput — and Start run starts the run and opens its page from Home; tapped again, it closes", async () => {
+    const fake = routeFlows();
+    await renderWithProviders(<HomeScreen />, signedInSession);
+    const row = await screen.findByTestId('home-flow-invoice');
+    expect(row.props.accessibilityState).toEqual({ expanded: false });
+    await fireEvent.press(row);
+    const form = within(screen.getByTestId('home-flow-invoice-form'));
+    expect(screen.getByTestId('home-flow-invoice').props.accessibilityState).toEqual({ expanded: true });
+    expect(form.getByText('Note')).toBeTruthy();
+    await fireEvent.changeText(form.getByLabelText('Note'), 'From Home');
+    expect(form.getByTestId('start-run-button')).toBeTruthy();
+    expect(form.getByText('Start run')).toBeTruthy();
+    await fireEvent.press(form.getByTestId('start-run-button'));
+    await waitFor(() => expect(fake.to('POST /v1/workspaces/{workspaceId}/runs')).toHaveLength(1));
+    expect(fake.to('POST /v1/workspaces/{workspaceId}/runs')[0]!.body).toEqual({ subscriptionId: 'invoice', input: { note: 'From Home' } });
+    await waitFor(() =>
+      expect(mockRouter.push).toHaveBeenCalledWith(
+        { pathname: '/(tabs)/activity/run', params: { runId: 'run-new', returnTo: 'home' } },
+        { withAnchor: true },
+      ),
+    );
+    await fireEvent.press(screen.getByTestId('home-flow-invoice'));
+    expect(screen.queryByTestId('home-flow-invoice-form')).toBeNull();
+  });
+
+  it("each opens and closes on its own, as the website's: opening another leaves the first open", async () => {
+    routeFlows();
+    await renderWithProviders(<HomeScreen />, signedInSession);
+    await fireEvent.press(await screen.findByTestId('home-flow-invoice'));
+    expect(screen.getByTestId('home-flow-invoice-form')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('home-flow-email'));
+    expect(screen.getByTestId('home-flow-invoice-form')).toBeTruthy();
+    expect(screen.getByTestId('home-flow-email-form')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('home-flow-invoice'));
+    expect(screen.queryByTestId('home-flow-invoice-form')).toBeNull();
+    expect(screen.getByTestId('home-flow-email-form')).toBeTruthy();
+  });
+
+  it('a flow with items reads them only when opened — its ready ones, by department A–Z — and Start run names the one chosen', async () => {
+    const fake = routeFlows();
+    await renderWithProviders(<HomeScreen />, signedInSession);
+    await fireEvent.press(await screen.findByTestId('home-flow-email'));
+    await waitFor(() => expect(fake.to('GET /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items')).toHaveLength(1));
+    expect(fake.to('GET /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items')[0]!.values).toMatchObject({ subscriptionId: 'email' });
+    // No run form until a job is chosen.
+    const pill = await screen.findByTestId('home-flow-email-item');
+    expect(pill.props.accessibilityLabel).toBe('Job: Choose');
+    expect(screen.queryByTestId('start-run-button')).toBeNull();
+    await fireEvent.press(pill);
+    const menu = within(screen.getByTestId('home-flow-email-item-menu'));
+    expect(menu.getAllByText(/./u).map((node) => node.props.children)).toEqual(['JOB', 'FINANCE', 'Accountant', 'PRODUCT', 'Designer']);
+    await fireEvent.press(screen.getByTestId('home-flow-email-item-option-j-designer'));
+    expect(screen.getByTestId('home-flow-email-item').props.accessibilityLabel).toBe('Job: Designer');
+    await fireEvent.press(screen.getByTestId('start-run-button'));
+    await waitFor(() => expect(fake.to('POST /v1/workspaces/{workspaceId}/runs')).toHaveLength(1));
+    expect(fake.to('POST /v1/workspaces/{workspaceId}/runs')[0]!.body).toEqual({ subscriptionId: 'email', input: {}, itemId: 'j-designer' });
+    await waitFor(() =>
+      expect(mockRouter.push).toHaveBeenCalledWith(
+        { pathname: '/(tabs)/activity/run', params: { runId: 'run-new', returnTo: 'home' } },
+        { withAnchor: true },
+      ),
+    );
+  });
+
+  it("a flow that cannot start a run here opens its flow page: one with no run fields, and — as on an item's page — a flow with items to a member", async () => {
+    routeFlows();
+    await renderWithProviders(<HomeScreen />, signedInSession);
+    const kpi = await screen.findByTestId('home-flow-kpi');
+    expect(kpi.props.accessibilityState?.expanded).toBeUndefined();
+    await fireEvent.press(kpi);
+    expect(screen.queryByTestId('home-flow-kpi-form')).toBeNull();
+    expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'kpi' } });
+    await screen.unmount();
+    resetSnapshot();
+
+    const fake = routeFlows();
+    await renderWithProviders(<HomeScreen />, sessionAs('member'));
+    await fireEvent.press(await screen.findByTestId('home-flow-email'));
+    expect(screen.queryByTestId('home-flow-email-form')).toBeNull();
+    expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'email' } });
+    expect(fake.to('GET /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items')).toEqual([]);
+    // A member still starts a flow without items here.
+    await fireEvent.press(screen.getByTestId('home-flow-invoice'));
+    expect(screen.getByTestId('home-flow-invoice-form')).toBeTruthy();
+  });
+
+  it("with a department chosen, its flows alone; none live there, or none at all: no YOUR FLOWS, as the website's", async () => {
+    mockStored.set(TEST_WORKSPACE, 'project-2');
+    const placed = subscriptionsPayload();
+    placed.subscriptions = placed.subscriptions.map((row) => ({ ...row, projectId: row.id === 'invoice' ? 'project-1' : 'project-2' }));
+    routeFlows({ subscriptions: placed });
+    const teams = { [TEST_WORKSPACE]: [team('project-1', TEST_WORKSPACE, 'Finance', 'active'), team('project-2', TEST_WORKSPACE, 'Legal', 'active')] };
+    const fake = routeHome({ subscriptions: placed, teams });
+    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items', { items: [], choices: {} });
+    const view = await renderWithProviders(<HomeScreen />, signedInSession);
+    expect(await screen.findByLabelText('Department: Legal')).toBeTruthy();
+    expect(screen.getByTestId('home-flow-email')).toBeTruthy();
+    expect(screen.queryByTestId('home-flow-invoice')).toBeNull();
+    await view.unmount();
+    resetSnapshot();
+
+    mockStored.set(TEST_WORKSPACE, 'project-2');
+    const noneInLegal = subscriptionsPayload();
+    noneInLegal.subscriptions = noneInLegal.subscriptions.map((row) => ({ ...row, projectId: 'project-1' }));
+    routeHome({ subscriptions: noneInLegal, teams });
+    const again = await renderWithProviders(<HomeScreen />, signedInSession);
+    expect(await screen.findByLabelText('Department: Legal')).toBeTruthy();
+    expect(screen.getByTestId('home-stats')).toBeTruthy();
+    expect(screen.queryByText('YOUR FLOWS')).toBeNull();
+    expect(screen.queryByTestId('home-flows-line')).toBeNull();
+    await again.unmount();
+    resetSnapshot();
+
+    mockStored.clear();
+    const paused = subscriptionsPayload();
+    paused.subscriptions = paused.subscriptions.map((row) => ({ ...row, status: 'paused' as const }));
+    routeHome({ subscriptions: paused });
+    await renderWithProviders(<HomeScreen />, signedInSession);
+    expect(await screen.findByTestId('home-stats')).toBeTruthy();
+    expect(screen.queryByText('YOUR FLOWS')).toBeNull();
+    expect(screen.queryByTestId('home-first-run')).toBeNull();
   });
 });

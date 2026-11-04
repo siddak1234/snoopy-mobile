@@ -33,7 +33,9 @@ const { platformOperation, downloadSignedFile } = jest.requireMock('@/lib/platfo
  * and every renderer's spacing its names; since amendment 2 the 28 of
  * `BLOCK_SET_VERSION` 3, a review's rows read by everyone (`review-held-*`);
  * since amendment 3 the 29 of `BLOCK_SET_VERSION` 4, a review's changes with
- * their `group` (`review-held-grouped`).
+ * their `group` (`review-held-grouped`); since amendment 5 the 31 of
+ * `BLOCK_SET_VERSION` 5, a links block (`drawn-links`) and a review's other
+ * values (`review-held-options`).
  */
 
 const HEADER = /^\/\/ From snoopy-backend packages\/contracts\/fixtures\/blocks\/\*\.json, sha256 ([0-9a-f]{64})\.$/u;
@@ -77,14 +79,14 @@ beforeEach(() => {
 });
 
 describe('the block fixtures, drawn', () => {
-  it('are the generator\'s, headed by one sha256 over the fixtures: the 29 of block set 4', () => {
+  it('are the generator\'s, headed by one sha256 over the fixtures: the 31 of block set 5', () => {
     const first = readFileSync(
       resolve(__dirname, '../lib/generated/platform-contracts/block-fixtures.ts'),
       'utf8',
     ).split('\n')[0];
     expect(first).toMatch(HEADER);
-    expect(BLOCK_FIXTURES).toHaveLength(29);
-    expect(BLOCK_FIXTURES.every((fixture) => fixture.blockSetVersion === 4)).toBe(true);
+    expect(BLOCK_FIXTURES).toHaveLength(31);
+    expect(BLOCK_FIXTURES.every((fixture) => fixture.blockSetVersion === 5)).toBe(true);
   });
 
   it.each(BLOCK_FIXTURES.map((fixture) => [fixture.name, fixture] as const))(
@@ -162,7 +164,7 @@ describe('the spacing table (ADR-0048 amendment 1, point 14; the owner\'s Q8)', 
       );
     expect(found).toEqual([]);
     // Each renderer that spaces anything names the table (`space`) or a control's own step (`inset`).
-    for (const name of ['block-list.tsx', 'list.tsx', 'table.tsx', 'section.tsx', 'chart.tsx', 'paged.tsx', 'image.tsx', 'link.tsx', 'file.tsx']) {
+    for (const name of ['block-list.tsx', 'list.tsx', 'table.tsx', 'section.tsx', 'chart.tsx', 'paged.tsx', 'image.tsx', 'link.tsx', 'links.tsx', 'file.tsx']) {
       expect(readFileSync(join(folder, name), 'utf8')).toMatch(/\bspace\.(?:group|title|inner|rowY|rowX|rowMinHeight|card)\b/u);
     }
     expect(typed.test('  pad: { paddingVertical: 13 }')).toBe(true);

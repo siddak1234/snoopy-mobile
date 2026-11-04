@@ -1,7 +1,7 @@
 {
   "name": "drawn-chart-line",
   "about": "A line chart of 6 points, and its alt",
-  "blockSetVersion": 4,
+  "blockSetVersion": 5,
   "blocks": [
     {
       "type": "chart",
