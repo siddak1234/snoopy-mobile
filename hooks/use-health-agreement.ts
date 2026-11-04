@@ -1,8 +1,8 @@
-import { useRouter } from 'expo-router';
+import { useRouter, useSegments } from 'expo-router';
 import { useCallback } from 'react';
 
 import { roleIn, useSession } from '@/hooks/use-session';
-import { agreementRefusal, awaitAgreement, type AgreementAction } from '@/lib/view/health-agreement';
+import { agreementPath, agreementRefusal, awaitAgreement, type AgreementAction } from '@/lib/view/health-agreement';
 
 /**
  * What a screen does with a refusal for the health data agreement (Round 21
@@ -16,11 +16,16 @@ import { agreementRefusal, awaitAgreement, type AgreementAction } from '@/lib/vi
  * refused add or run recorded none). Else `{ accepted: false, line }`: the line
  * to say — to anyone but the owner, or while none is published — or null when
  * the owner left the agreement screen without accepting.
+ *
+ * The agreement opens in the tab the refused screen is in (`agreementPath`):
+ * Home's own copy from Home's YOUR FLOWS, so Back returns to Home; else the
+ * Flows tab's.
  */
 export type AgreementAnswer = { accepted: true } | { accepted: false; line: string | null };
 
 export function useHealthAgreement(action: AgreementAction) {
   const router = useRouter();
+  const segments = useSegments();
   const session = useSession();
   return useCallback(
     async (error: unknown, workspaceId: string): Promise<AgreementAnswer | null> => {
@@ -28,10 +33,10 @@ export function useHealthAgreement(action: AgreementAction) {
       if (!refusal) return null;
       if (!refusal.open) return { accepted: false, line: refusal.line };
       const accepted = await awaitAgreement(() =>
-        router.push({ pathname: '/(tabs)/flows/agreement', params: { action, workspace: workspaceId } }),
+        router.push({ pathname: agreementPath(segments), params: { action, workspace: workspaceId } }),
       );
       return accepted ? { accepted: true } : { accepted: false, line: null };
     },
-    [action, router, session],
+    [action, router, segments, session],
   );
 }

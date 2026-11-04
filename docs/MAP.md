@@ -77,6 +77,7 @@
 - `/faceid`: [app/(auth)/faceid.tsx](../app/(auth)/faceid.tsx)
 - `/login`: [app/(auth)/login.tsx](../app/(auth)/login.tsx)
 - `/notifications-offer`: [app/(auth)/notifications-offer.tsx](../app/(auth)/notifications-offer.tsx)
+- `/agreement`: [app/(tabs)/(home)/agreement.tsx](../app/(tabs)/(home)/agreement.tsx)
 - `/`: [app/(tabs)/(home)/index.tsx](../app/(tabs)/(home)/index.tsx)
 - `/notifications`: [app/(tabs)/(home)/notifications.tsx](../app/(tabs)/(home)/notifications.tsx)
 - `/activity/approvals`: [app/(tabs)/activity/approvals.tsx](../app/(tabs)/activity/approvals.tsx)

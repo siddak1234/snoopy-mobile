@@ -10,13 +10,23 @@ import type { WorkspaceRole } from '@/lib/view/roles';
  * `agreement_required` and nothing was made.
  *
  * - The workspace's owner, who alone accepts it, is shown the agreement on its
- *   own screen (`/(tabs)/flows/agreement`); once accepted, what was refused is
- *   sent again with the same idempotency key.
+ *   own screen (`agreementPath`); once accepted, what was refused is sent again
+ *   with the same idempotency key.
  * - Anyone else is told the one line, and nothing more is sent.
  * - No version published (`version` absent): the owner is told it is not
  *   available yet, and no screen opens.
  */
 export type AgreementAction = 'add' | 'run';
+
+/**
+ * Where the agreement opens: in the tab of the screen that was refused, so
+ * Back — without accepting, or once accepted — stays in it. Home's own copy
+ * for Home's YOUR FLOWS (`/(tabs)/(home)/agreement`), else the Flows tab's
+ * (`/(tabs)/flows/agreement`), as `runStack` keeps a run in its stack.
+ */
+export function agreementPath(segments: readonly string[]): '/(tabs)/(home)/agreement' | '/(tabs)/flows/agreement' {
+  return segments.includes('(home)') ? '/(tabs)/(home)/agreement' : '/(tabs)/flows/agreement';
+}
 
 export type AgreementRefusal = { open: true } | { open: false; line: string };
 

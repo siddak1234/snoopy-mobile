@@ -3151,3 +3151,7 @@ out of the row (`ehr-connection`).
   Bite: the `smart-backend` branch dropped from `connectionLine` (`ehr-connection`, both screens).
 - C3: "Full name" and "Title" take at most 120 characters each, the contract's bound, as the website's
   (`TextField`'s `maxLength`). Bite: the prop not passed to the box (`health-agreement`).
+- C3: the agreement opened by a Start run in Home's YOUR FLOWS is Home's own copy of the screen, so Back
+  without accepting (or once accepted) stays on Home — under the real router (DESIGN-CONTRACT
+  "Flows/agreement"). Bite: `agreementPath` always the Flows tab's — the agreement opens in Flows, and Back
+  lands on the Flows list (`/flows`) once the Flows tab was visited, not on Home (`real-router/health-agreement`).

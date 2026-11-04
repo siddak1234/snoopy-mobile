@@ -39,7 +39,8 @@ import { SIGNER_FIELD_LIMIT, acceptanceRefusal, settleAgreement } from '@/lib/vi
 
 /**
  * The health data agreement (Round 21 stage 2, C3; backend ADR-0049) — the
- * website's dialog beside Add, as a screen of the Flows tab. Opened only for
+ * website's dialog beside Add, as a screen of the Flows tab, and of Home's
+ * (`app/(tabs)/(home)/agreement.tsx`) for Home's YOUR FLOWS. Opened only for
  * the workspace's owner, when a flow that carries health data was refused 403
  * `agreement_required` at its add (`action: add`, from Set up's Turn on) or a
  * run's start (`action: run`, from Start run), for the workspace that refused
