@@ -14,7 +14,8 @@ import { useTheme } from '@/hooks/use-theme';
  * their own copies here — with the flow page they open — so Back stays in
  * Settings; a run opens in Activity and Back returns here (round 24 P5).
  * A signed document's copy, opened from Organization's DOCUMENTS, since
- * Round 21 stage 2 (C3).
+ * Round 21 stage 2 (C3); and its own copy of the health data agreement, which
+ * Start run and Upload open on the flow page here, so Back stays in Settings.
  */
 export default function SettingsLayout() {
   const { palette } = useTheme();
@@ -37,6 +38,7 @@ export default function SettingsLayout() {
       <Stack.Screen name="notifications" />
       <Stack.Screen name="archived" />
       <Stack.Screen name="archived-flow" />
+      <Stack.Screen name="agreement" />
     </Stack>
   );
 }

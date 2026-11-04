@@ -19,7 +19,8 @@ import { agreementPath, agreementRefusal, awaitAgreement, type AgreementAction }
  * the owner left the agreement screen without accepting.
  *
  * The agreement opens in the tab the refused screen is in (`agreementPath`):
- * Home's own copy from Home's YOUR FLOWS, so Back returns to Home; else the
+ * Home's own copy from Home's YOUR FLOWS, so Back returns to Home; Settings'
+ * own copy from the flow page Settings opens, so Back returns there; else the
  * Flows tab's. `opening` is called just before it opens — the upload card,
  * a dialog over the page, steps aside for it.
  */

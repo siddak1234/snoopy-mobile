@@ -11,7 +11,9 @@ import { WORKSPACE, answerPlatform, asInProduction, flush, launch, pressTab, sig
  * arrival). Opened over the screen whose add or run was refused, it is a
  * screen of the Flows tab with what was refused and for which workspace;
  * accepted, it goes back to that screen. Opened from Home's YOUR FLOWS, it is
- * Home's own copy, so Back stays on Home (the review's finding 7).
+ * Home's own copy, so Back stays on Home (the review's finding 7); opened from
+ * the live flow page Settings opens, Settings' own copy, so Back stays in
+ * Settings (the return pass's finding 2).
  */
 
 jest.setTimeout(60_000);
@@ -114,4 +116,58 @@ it("opened by a Start run on Home's YOUR FLOWS, it is Home's own screen: Back wi
   });
   expect(starts).toEqual(['POST']);
   expect(screen.getByTestId('home-flow-invoice-form')).toBeTruthy();
+});
+
+it("opened by a Start run on the live flow page Settings opens, it is Settings' own screen: Back without accepting stays on that page in Settings, nothing more sent", async () => {
+  signedInOnThisPhone();
+  const NOTE = { key: 'note', title: 'Note', description: 'A line.', control: 'text' as const, required: false };
+  // Invoice triage live, with one field of its run's: its page offers Start run.
+  const subscriptions = subscriptionsPayload();
+  subscriptions.subscriptions = subscriptions.subscriptions.map((row) => (row.id === 'invoice' ? { ...row, runInput: [NOTE] } : row));
+  const catalog = flowCatalogPayload();
+  catalog.automations = catalog.automations.map((entry) => ({ ...entry, subscribed: true }));
+  const starts: string[] = [];
+  answerPlatform(
+    {
+      '/v1/agreements/health-data': () => AGREEMENT,
+      [`/v1/workspaces/${WORKSPACE}/runs`]: (_path, execute) => {
+        if (methodOf(execute) !== 'POST') return runsPayload();
+        starts.push('POST');
+        throw new PlatformError('Forbidden', 403, 'FORBIDDEN', { reason: 'agreement_required', kind: 'health-data', version: 1 });
+      },
+    },
+    { '/automations': catalog, '/subscriptions': subscriptions },
+  );
+  const view = await launch();
+  // The Flows tab visited first, as a person does: its stack holds its list, where a Back in it would land.
+  await pressTab('Flows');
+  await pressTab('Settings');
+  // Settings' copy of the flow page, where Archived flows' row for a flow added again opens its live twin.
+  await act(async () => router.push({ pathname: '/(tabs)/settings/archived-flow', params: { flow: 'invoice' } }));
+  await flush(100);
+  await flush(1000);
+  const form = within(await screen.findByTestId('start-run'));
+  await fireEvent.changeText(form.getByLabelText('Note'), 'From Settings');
+  await fireEvent.press(form.getByTestId('start-run-button'));
+  await flush(100);
+  await flush(1000);
+  expect(await screen.findByText('Accept and start run')).toBeTruthy();
+  const opened = { segments: view.getSegments(), params: view.getSearchParams(), tab: selectedTab() };
+
+  await asInProduction(async () => {
+    await fireEvent.press(screen.getAllByLabelText('Back')[0]!);
+    await flush(100);
+    await flush(1000);
+  });
+  const back = { pathname: view.getPathname(), segments: view.getSegments(), tab: selectedTab() };
+  expect({ opened, back }).toEqual({
+    opened: {
+      segments: ['(tabs)', 'settings', 'agreement'],
+      params: expect.objectContaining({ action: 'run', workspace: WORKSPACE }),
+      tab: 'Settings',
+    },
+    back: { pathname: '/settings/archived-flow', segments: ['(tabs)', 'settings', 'archived-flow'], tab: 'Settings' },
+  });
+  expect(starts).toEqual(['POST']);
+  expect(screen.getByTestId('start-run')).toBeTruthy();
 });

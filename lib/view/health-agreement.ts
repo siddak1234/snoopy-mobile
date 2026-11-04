@@ -22,11 +22,17 @@ export type AgreementAction = 'add' | 'run';
 /**
  * Where the agreement opens: in the tab of the screen that was refused, so
  * Back — without accepting, or once accepted — stays in it. Home's own copy
- * for Home's YOUR FLOWS (`/(tabs)/(home)/agreement`), else the Flows tab's
- * (`/(tabs)/flows/agreement`), as `runStack` keeps a run in its stack.
+ * for Home's YOUR FLOWS (`/(tabs)/(home)/agreement`); Settings' own copy for
+ * the live flow page Settings' Archived flows opens (`/(tabs)/settings/agreement`);
+ * else the Flows tab's (`/(tabs)/flows/agreement`), as `runStack` keeps a run
+ * in its stack.
  */
-export function agreementPath(segments: readonly string[]): '/(tabs)/(home)/agreement' | '/(tabs)/flows/agreement' {
-  return segments.includes('(home)') ? '/(tabs)/(home)/agreement' : '/(tabs)/flows/agreement';
+export type AgreementPath = '/(tabs)/(home)/agreement' | '/(tabs)/settings/agreement' | '/(tabs)/flows/agreement';
+
+export function agreementPath(segments: readonly string[]): AgreementPath {
+  if (segments.includes('(home)')) return '/(tabs)/(home)/agreement';
+  if (segments.includes('settings')) return '/(tabs)/settings/agreement';
+  return '/(tabs)/flows/agreement';
 }
 
 export type AgreementRefusal = { open: true } | { open: false; line: string };

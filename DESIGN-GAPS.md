@@ -3172,3 +3172,12 @@ out of the row (`ehr-connection`).
   add (Set up's Turn on), on a run (Start run) and on an item's upload; 403 `outside_org_domain` (S1-11);
   and an approve refused 409 `approval_expired` (S1-8b). Each result is written here. Until then: NOT
   OBSERVED against the real platform; every test of them answers with the contract's shapes.
+
+**The session's land-time fixes, one commit each (2026-11-04): parity with the website.** Bites as above:
+- C3: the agreement opened by Start run or Upload on Settings' copy of a live flow page (the twin Archived
+  flows opens) is Settings' own copy of the screen, so Back stays in Settings — under the real router
+  (DESIGN-CONTRACT "Flows/agreement"; the return pass's finding 2, the class of Home's above). Bite:
+  `agreementPath` without its Settings branch — the agreement opens in Flows, and Back lands on the Flows
+  list (`/flows`), not on the flow page in Settings (`real-router/health-agreement`). **Finding, not
+  changed:** a run Start run starts there still opens with `returnTo: 'flows'`, so Back from the run goes
+  to the Flows tab, not Settings (`app/(tabs)/flows/detail.tsx`).

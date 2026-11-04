@@ -101,6 +101,7 @@
 - `/flows/setup`: [app/(tabs)/flows/setup.tsx](../app/(tabs)/flows/setup.tsx)
 - `/flows/vendor`: [app/(tabs)/flows/vendor.tsx](../app/(tabs)/flows/vendor.tsx)
 - `/settings/account`: [app/(tabs)/settings/account.tsx](../app/(tabs)/settings/account.tsx)
+- `/settings/agreement`: [app/(tabs)/settings/agreement.tsx](../app/(tabs)/settings/agreement.tsx)
 - `/settings/archived-flow`: [app/(tabs)/settings/archived-flow.tsx](../app/(tabs)/settings/archived-flow.tsx)
 - `/settings/archived`: [app/(tabs)/settings/archived.tsx](../app/(tabs)/settings/archived.tsx)
 - `/settings/billing`: [app/(tabs)/settings/billing.tsx](../app/(tabs)/settings/billing.tsx)
