@@ -34,12 +34,14 @@ const { platformOperation, newIdempotencyKey, putFileToSignedUrl } = jest.requir
  * flow that carries health data refuses it 403 `agreement_required` until the
  * workspace's owner accepted the health data agreement. The owner gets the
  * agreement, as for a run, and the item is sent again under the same key; the
- * upload card steps aside while it is open and comes back as it was. Anyone
- * else gets the one line. The flow here is made up, as no flow's word may be
- * written in the app.
+ * upload card steps aside while it is open and comes back as it was. An admin
+ * gets the one line; a member is refused first as a member, in the website's
+ * words (its a29aa81, by role). The flow here is made up, as no flow's word
+ * may be written in the app.
  */
 
 const ASK_OWNER = 'Ask your workspace owner to accept the health data agreement.';
+const MEMBER_LINE = 'Only an owner or admin can do this.';
 const FLOW = 'pol-1';
 const ITEM = 'POST /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items';
 const AGREEMENT_FOR_A_RUN = { pathname: '/(tabs)/flows/agreement', params: { action: 'run', workspace: TEST_WORKSPACE } };
@@ -90,7 +92,7 @@ beforeEach(() => {
 });
 
 /** The card open, its name typed and its file sent, Upload not yet pressed. */
-async function readyToUpload(role: 'owner' | 'admin', fake: ReturnType<typeof fakePlatform>) {
+async function readyToUpload(role: 'owner' | 'admin' | 'member', fake: ReturnType<typeof fakePlatform>) {
   fake.always('POST /v1/workspaces/{workspaceId}/uploads', {
     uploadSessionId: 'upload-1',
     uploadUrl: 'https://store.example.test/put',
@@ -167,6 +169,20 @@ describe("an item's upload, refused for the health data agreement", () => {
     expect((await screen.findByTestId('item-upload-error')).props.children).toBe(ASK_OWNER);
     expect(mockRouter.push).not.toHaveBeenCalled();
     expect(fake.to(ITEM)).toHaveLength(1);
+    expect(screen.queryByText('Forbidden')).toBeNull();
+  });
+
+  it("a member (the platform refuses a member first, as a member's, before the agreement): the website's line for it, no agreement, never the owner's line, nothing more sent", async () => {
+    const fake = fakePlatform(platformOperation);
+    fake.always(ITEM, () => {
+      throw new PlatformError('Forbidden', 403, 'FORBIDDEN', { requiredRole: 'admin' });
+    });
+    await readyToUpload('member', fake);
+    await fireEvent.press(screen.getByTestId('item-upload-send'));
+    expect((await screen.findByTestId('item-upload-error')).props.children).toBe(MEMBER_LINE);
+    expect(mockRouter.push).not.toHaveBeenCalled();
+    expect(fake.to(ITEM)).toHaveLength(1);
+    expect(screen.queryByText(ASK_OWNER)).toBeNull();
     expect(screen.queryByText('Forbidden')).toBeNull();
   });
 });

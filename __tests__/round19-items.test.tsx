@@ -300,6 +300,12 @@ describe("the items' rules (lib/view/items.ts)", () => {
       fileGone: false,
       fields: [],
     });
+    // A member's, refused for the role (`requiredRole`, no reason): the website's words, never the platform's title.
+    expect(itemRefusal(new PlatformError('Forbidden', 403, 'FORBIDDEN', { requiredRole: 'admin' }))).toEqual({
+      message: 'Only an owner or admin can do this.',
+      fileGone: false,
+      fields: [],
+    });
     // The fields its problems name, read as `fields.<key>` against the item's own; nothing else.
     const problems = [
       { path: 'fields.name', message: 'must be at most 60 characters' },

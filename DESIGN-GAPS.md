@@ -3193,3 +3193,9 @@ out of the row (`ehr-connection`).
   (`review-expired-approval`). **Finding, not changed:** a review's Save refused the same
   way says "The review wasn't saved. Try again." and reads nothing again (the website's says the same,
   then redraws the run, its server action shared with Approve).
+- C3: an item's upload refused for the agreement, by role, as the website's a29aa81: the owner gets the
+  agreement and the admin "Ask your workspace owner to accept the health data agreement." — **already
+  there** (92eb6e7); a member, whom the platform refuses first as a member (403, `requiredRole` `admin`,
+  no reason), now "Only an owner or admin can do this.", the website's words for it, where the app said the
+  platform's title (DESIGN-CONTRACT "Refusal map", "Flows/agreement"). Bite: the 403 line dropped from
+  `itemRefusal` (`health-agreement-upload`, `round19-items`).

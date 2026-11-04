@@ -46,8 +46,10 @@ import {
  * owner the card steps aside and the agreement opens, as for a run
  * ("Accept and start run"); accepted, the card comes back as it was, its file
  * still held, and sends `createItem` again under the same key; left, it comes
- * back as it was, nothing sent and nothing said. Anyone else is told the one
- * line under the form (`useHealthAgreement`).
+ * back as it was, nothing sent and nothing said. An admin is told the one
+ * line under the form (`useHealthAgreement`); a member is refused first as a
+ * member, "Only an owner or admin can do this." (`itemRefusal`), as the
+ * website's.
  */
 export function ItemUploadDialog({
   items,
