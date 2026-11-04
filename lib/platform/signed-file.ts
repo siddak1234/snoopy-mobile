@@ -41,7 +41,7 @@ function pickerClosed(error: unknown): boolean {
  * no share sheet (the owner's Q7 note): expo-file-system's
  * `Directory.pickDirectoryAsync()` ("On iOS, the selected directory grants
  * temporary read and write access for the current app session only",
- * node_modules/expo-file-system/build/ExpoFileSystem.types.d.ts:126-134; it
+ * node_modules/expo-file-system/build/ExpoFileSystem.types.d.ts:131-139; it
  * opens UIDocumentPickerViewController for `UTType.folder`,
  * ios/FilePickingUtils.swift:105-108, and starts the folder's security-scoped
  * access, :41-46), then `File.copy` into it under the file's own name — without
