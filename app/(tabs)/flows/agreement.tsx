@@ -19,7 +19,8 @@ import { busyBody, useWorkspaceResource } from '@/hooks/use-resource';
 import { roleIn, useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import {
-  ACCEPTING,
+  ACCEPTING_ADD,
+  ACCEPTING_RUN,
   ACCEPT_AND_ADD,
   ACCEPT_AND_RUN,
   AGREEMENT_NOT_PUBLISHED,
@@ -48,7 +49,8 @@ import { acceptanceRefusal, settleAgreement } from '@/lib/view/health-agreement'
  * read when the screen opens) to scroll; the checkbox "I'm authorized to sign
  * for {organization}" — the app's switch, as every yes or no here is; "Full
  * name" and "Title"; then "Accept and add flow" ("Accept and start run" for a
- * run), pressable once all three are given. It accepts (`POST …/agreements`,
+ * run), pressable once all three are given, "Adding…" ("Starting…") while it
+ * sends, the website's words. It accepts (`POST …/agreements`,
  * the version and sha256 read), then goes back, and the screen that was
  * refused sends its add or run again with the same key
  * (`lib/view/health-agreement.ts`). Back without accepting sends nothing.
@@ -189,7 +191,7 @@ export default function AgreementScreen() {
           ) : null}
           <PillButton
             testID="agreement-accept"
-            label={busy ? ACCEPTING : action === 'run' ? ACCEPT_AND_RUN : ACCEPT_AND_ADD}
+            label={action === 'run' ? (busy ? ACCEPTING_RUN : ACCEPT_AND_RUN) : busy ? ACCEPTING_ADD : ACCEPT_AND_ADD}
             variant="primary"
             disabled={busy || !ready}
             onPress={() => void accept(agreement)}

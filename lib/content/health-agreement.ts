@@ -26,8 +26,13 @@ export const SIGNER_TITLE_LABEL = 'Title';
 export const ACCEPT_AND_ADD = 'Accept and add flow';
 export const ACCEPT_AND_RUN = 'Accept and start run';
 
-/** Said in the button's place while the acceptance is sent (Connections' word). */
-export const ACCEPTING = 'Working…';
+/**
+ * Said in the button's place while the acceptance is sent, and then the add or
+ * the run: the website's words, and the app's own for Turn on's add and Start
+ * run (~~"Working…", Connections' word~~ until the review's finding 3).
+ */
+export const ACCEPTING_ADD = 'Adding…';
+export const ACCEPTING_RUN = 'Starting…';
 
 /** Said to anyone but the workspace's owner, who alone accepts it; nothing more is sent. */
 export const ASK_OWNER_TO_ACCEPT = 'Ask your workspace owner to accept the health data agreement.';

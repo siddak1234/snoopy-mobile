@@ -191,18 +191,21 @@ describe('Start run, refused for the agreement', () => {
 });
 
 describe('the agreement screen', () => {
+  /** What an acceptance answers: the signed document's row. */
+  const ACCEPTED = {
+    document: {
+      id: '00000000-0000-4000-8000-0000000000d1',
+      kind: 'health-data' as const,
+      version: 1,
+      signerName: 'Dana Reyes',
+      signerTitle: 'Practice manager',
+      acceptedAt: '2026-11-04T10:00:00Z',
+    },
+  };
+
   function routeAgreement(fake: ReturnType<typeof fakePlatform>) {
     fake.always(TEXT, AGREEMENT);
-    fake.always(ACCEPT, {
-      document: {
-        id: '00000000-0000-4000-8000-0000000000d1',
-        kind: 'health-data',
-        version: 1,
-        signerName: 'Dana Reyes',
-        signerTitle: 'Practice manager',
-        acceptedAt: '2026-11-04T10:00:00Z',
-      },
-    });
+    fake.always(ACCEPT, ACCEPTED);
   }
 
   async function fill() {
@@ -255,6 +258,25 @@ describe('the agreement screen', () => {
     setMockParams({ action: 'run', workspace: TEST_WORKSPACE });
     await renderWithProviders(<AgreementScreen />, sessionAs('owner'));
     expect(within(await screen.findByTestId('agreement-accept')).getByText('Accept and start run')).toBeTruthy();
+  });
+
+  it.each([
+    ['add', 'Adding…'],
+    ['run', 'Starting…'],
+  ] as const)("while an acceptance for %s is sent, its button says %s — the website's words, never \"Working…\"", async (action, busy) => {
+    const fake = fakePlatform(platformOperation);
+    routeAgreement(fake);
+    let answer: () => void = () => undefined;
+    fake.always(ACCEPT, () => new Promise<typeof ACCEPTED>((resolve) => (answer = () => resolve(ACCEPTED))));
+    setMockParams({ action, workspace: TEST_WORKSPACE });
+    await renderWithProviders(<AgreementScreen />, sessionAs('owner'));
+    await screen.findByTestId('agreement-text');
+    await fill();
+    await fireEvent.press(screen.getByTestId('agreement-accept'));
+    expect(await within(screen.getByTestId('agreement-accept')).findByText(busy)).toBeTruthy();
+    expect(screen.queryByText('Working…')).toBeNull();
+    await act(async () => answer());
+    await waitFor(() => expect(mockRouter.back).toHaveBeenCalledTimes(1));
   });
 
   it('left without accepting: the screen that was refused is told, and nothing was sent', async () => {

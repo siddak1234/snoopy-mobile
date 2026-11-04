@@ -3096,7 +3096,8 @@ bites and the findings. Parity: the website builds the same items in its own lan
   again with the same key once accepted; anyone else is told the one line (DESIGN-CONTRACT
   "Flows/agreement"). **The session's defaults:** the checkbox is the app's switch (the app has no
   checkbox; a yes or no is a switch everywhere); Accept is pressable only once the switch is on and both
-  fields hold words, so no new words say what is missing; "Working…" (Connections' word) while it sends; a
+  fields hold words, so no new words say what is missing; ~~"Working…" (Connections' word)~~ "Adding…" or
+  "Starting…", the website's (the session's decision, 2026-11-04), while it sends; a
   text changed since it was read is read again with the switch off and no line, since no word says it;
   the failed-load title is the shared "Couldn't load this". **Findings:** (1) `createItem` (an item's
   upload) answers the same 403 (`snoopy-backend/docs/openapi/automations.yaml`, createItem's 403); the
@@ -3143,3 +3144,5 @@ out of the row (`ehr-connection`).
 - D1: both refusal lines that say "EHR team" are drawn, never "Bad Request"; `audit:vocabulary` allows that
   exact phrase, and only it (DESIGN-CONTRACT "Settings › Connections"). Bites: a line dropped from
   `EHR_CONNECT_REFUSALS` (`ehr-connection`); the allowance dropped (`audit-gates`).
+- C3: the agreement's button says "Adding…" while an add's acceptance is sent and "Starting…" for a run's,
+  as the website's; no "Working…". Bite: one word for both (`health-agreement`).
