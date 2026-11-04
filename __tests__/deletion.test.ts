@@ -16,11 +16,11 @@ describe('deletionOutcome', () => {
     expect(deletionOutcome(error, false)).toEqual({ kind: 'deleted-not-revoked' });
   });
 
-  it('never says "deleted" or "not deleted" for a lost answer: it checks the session first', () => {
-    expect(deletionOutcome(new PlatformError('Dependency failure', 502, 'DEPENDENCY_FAILURE'), false)).toEqual({ kind: 'check' });
-    expect(deletionOutcome(new PlatformUnreachableError(), false)).toEqual({ kind: 'check' });
-    expect(deletionOutcome(new PlatformError('Unavailable', 503), false)).toEqual({ kind: 'check' });
-    expect(deletionOutcome(new TypeError('boom'), false)).toEqual({ kind: 'check' });
+  it('never says "deleted" or "not deleted" for a lost answer: unknown, a 5xx sent again once (the stage 1 spec\'s addendum 4)', () => {
+    expect(deletionOutcome(new PlatformError('Dependency failure', 502, 'DEPENDENCY_FAILURE'), false)).toEqual({ kind: 'unknown', retry: true });
+    expect(deletionOutcome(new PlatformError('Unavailable', 503), false)).toEqual({ kind: 'unknown', retry: true });
+    expect(deletionOutcome(new PlatformUnreachableError(), false)).toEqual({ kind: 'unknown', retry: false });
+    expect(deletionOutcome(new TypeError('boom'), false)).toEqual({ kind: 'unknown', retry: false });
   });
 
   it('keeps the account on a partial deletion, and says anything removed is gone', () => {

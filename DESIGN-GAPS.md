@@ -3030,7 +3030,11 @@ same items in its own lane, with the same words.
 - **S1-16** (a run keeps its integration; backend §12.1 #290): Run details' integration step and the
   title it names read the run's own choices (DESIGN-CONTRACT "Activity/run detail").
 - **S1-10** (account deletion; backend §12.1 #248): the confirmation says "You'll be signed out on all
-  devices." (DESIGN-CONTRACT "Mutations", Account). The deletion itself is the platform's.
+  devices." (DESIGN-CONTRACT "Mutations", Account). The deletion itself is the platform's. Since the
+  review (finding 5; the spec's addendum 4) a failed delete is sent again, never read: a 5xx is sent
+  again once, at once, then the line says it is not known (`DELETION_WORDS.unknown`) and Try again
+  sends it again; ~~a lost answer reads the session, "Your account is still here"~~ until Round 21
+  stage 1. Parity: the website's lane makes the same change.
 - **S1-14** (export in parts; backend §12.1 #181): Settings › Data's line and a button for each part
   (DESIGN-CONTRACT "Mutations", Data export). **Finding:** the ready line "Ready. The file holds the whole
   workspace." and the failure `too_large`'s "The workspace is larger than one export file may be." still
@@ -3062,7 +3066,8 @@ out (`connection-row`), the expiry drawn for any reason, the lines not drawn, th
 (`review-decisions`). S1-15 the
 company left out, and drawn on a row not connected (`connection-row`). S1-16 the
 flow's choice read, and read over the run's (`build22-screens`). S1-10 the
-line left out (`account-screen`). S1-14 every
+line left out (`account-screen`); the automatic retry left out, and the session read again after a
+failed delete (`account-screen`, `deletion`). S1-14 every
 button reading the first part, Share kept for several, `files` ignored, the old line kept
 (`data-support-screens`). S1-9 a
 member's Add, Pause, Turn on, Archive flow and Unarchive pressable, Set up's vendor choice, rows and

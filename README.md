@@ -516,7 +516,8 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
     one, so it never answers Added.
   - `deletionOutcome()` (`lib/content/deletion.ts`): every answer
     `DELETE /v1/account` gives a bearer caller, in ADR-0028's words. Never
-    say "deleted" for a lost answer: read the session first.
+    say "deleted" for a lost answer, and never read the session after a
+    failed delete (DESIGN-CONTRACT "Mutations", Account).
   - `hostedAddress()` (`lib/platform/billing.ts`) and `websiteOrigin()`: the
     only addresses the app opens outside itself, https only.
   - `Pressable` and `pressed()` (`components/pressable.tsx`): every press

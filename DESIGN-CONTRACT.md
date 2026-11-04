@@ -756,9 +756,13 @@ complete export (Download file) and workspace summary (Download JSON).
     exchange against the claimed callback. Unlink's refusals are sentences by
     reason, never the problem's title (24.12). Deleting the account is ADR-0028's,
     in its words, and reads every answer the contract gives a bearer caller: a
-    partial deletion keeps the account; a lost answer reads the session before
-    saying either way; `SESSION_REVOCATION_FAILED` revokes through sign-out
-    before this device lets go; an ended session offers sign-in. Deleted, the
+    partial deletion keeps the account; ~~a lost answer reads the session
+    before saying either way~~ until Round 21 stage 1 — a lost answer says it
+    is not known, any 5xx is sent again once at once, and the session is never
+    read after a failed delete, since once the rows are purged that read makes
+    a new, empty account (S1-10, the stage 1 spec's addendum 4);
+    `SESSION_REVOCATION_FAILED` revokes through sign-out before this device
+    lets go; an ended session offers sign-in. Deleted, the
     device clears its session and shows the signed-out screen. Since Round 21
     stage 1, C2 (S1-10; backend §12.1 #248: the platform deletes the sign-in
     and revokes every session) the confirmation also says "You'll be signed

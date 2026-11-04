@@ -18,7 +18,7 @@ import { nocturneDark, nocturneLight } from '@/constants/theme';
 import type { SessionContextValue } from '@/hooks/use-session';
 import { DELETE_ACCOUNT_BODY, DELETION_WORDS } from '@/lib/content/deletion';
 import { SIGN_OUT_FAILED } from '@/lib/content/screen-states';
-import { PlatformError } from '@/lib/platform/problem';
+import { PlatformError, PlatformUnreachableError } from '@/lib/platform/problem';
 import { fakePlatform } from '@/test/fake-platform';
 import { signedInSession } from '@/test/platform';
 import { mockRouter, renderWithProviders } from '@/test/render';
@@ -187,29 +187,49 @@ describe('Deleting the account (24.6.2, ADR-0028)', () => {
     expect(fake.to('DELETE /v1/account')).toHaveLength(1);
   });
 
-  it('a lost answer reads the session before saying either way', async () => {
+  // A failed delete is sent again, never read (the stage 1 spec's addendum 4; backend §12.1 #248):
+  // once the rows are purged, GET /v1/session would make a new, empty account.
+  it('a 502 then a 204: the delete is sent again at once, deletes the account and signs out, and the session is never read', async () => {
     const fake = route();
-    fake.always('DELETE /v1/account', () => {
+    fake.once('DELETE /v1/account', () => {
       throw new PlatformError('Dependency failure', 502, 'DEPENDENCY_FAILURE');
     });
-    fake.once('GET /v1/session', () => {
-      throw new PlatformError('Unauthenticated', 401);
-    });
+    fake.always('DELETE /v1/account', { deleted: true, workspaces: [] });
     await renderWithProviders(<AccountScreen />, session());
     await openDelete();
     await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith('/(auth)/account-deleted'));
+    expect(clearSession).toHaveBeenCalled();
+    expect(fake.to('DELETE /v1/account')).toHaveLength(2);
+    expect(fake.to('GET /v1/session')).toHaveLength(0);
   });
 
-  it('a lost answer with the session still there says the account is still here', async () => {
+  it('a 502 twice says it is not known, reads no session, and Try again sends the delete again', async () => {
     const fake = route();
     fake.always('DELETE /v1/account', () => {
       throw new PlatformError('Dependency failure', 502, 'DEPENDENCY_FAILURE');
     });
-    fake.always('GET /v1/session', { authenticated: true, user: { userId: 'u1', email: 'alex@acme.co', aiDocumentReading: 'allowed' }, workspaces: [] });
     await renderWithProviders(<AccountScreen />, session());
     await openDelete();
-    expect(await screen.findByText(DELETION_WORDS.stillHere)).toBeTruthy();
+    expect(await screen.findByText(DELETION_WORDS.unknown)).toBeTruthy();
+    expect(fake.to('DELETE /v1/account')).toHaveLength(2);
+    expect(fake.to('GET /v1/session')).toHaveLength(0);
     expect(clearSession).not.toHaveBeenCalled();
+
+    await fireEvent.press(screen.getByText('Try again'));
+    await waitFor(() => expect(fake.to('DELETE /v1/account')).toHaveLength(4));
+    expect(fake.to('GET /v1/session')).toHaveLength(0);
+  });
+
+  it('no answer says it is not known and reads no session; only a 5xx is sent again at once', async () => {
+    const fake = route();
+    fake.always('DELETE /v1/account', () => {
+      throw new PlatformUnreachableError();
+    });
+    await renderWithProviders(<AccountScreen />, session());
+    await openDelete();
+    expect(await screen.findByText(DELETION_WORDS.unknown)).toBeTruthy();
+    expect(fake.to('DELETE /v1/account')).toHaveLength(1);
+    expect(fake.to('GET /v1/session')).toHaveLength(0);
   });
 
   it('an ended session offers sign-in, never the destructive button again', async () => {
