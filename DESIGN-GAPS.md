@@ -8,7 +8,7 @@ Round 16 — findings and observations (ADR-0032), closed 2026-10-07: moved verb
 
 Found on 2026-10-18 by grepping the moved sections for open, NOT OBSERVED, still open and deferred, and reading each hit; one line each, as the archive records it, not re-checked on a device. Closed items stay in the archive only.
 
-- **The Expo SDK major.** The high advisories that only an Expo SDK major clears (`image-size`, `uuid`, and query-string 7 under expo-router) stay a documented migration; `braces`, `node-forge` and `sprintf-js` are the owner's to decide — [Dependency boundary](DESIGN-GAPS.archive.md#dependency-boundary), [the backlog](DESIGN-GAPS.archive.md#the-backlog-manifest-122-20-and-21-and-the-part-of-121-195-that-needs-no-owner-decision-2026-10-07).
+- **The Expo SDK major.** SDK 55 landed in Round E step 1 (its entry below has the audit): `npm audit --omit=dev` reads 44 issues, 6 high and 0 critical, and `image-size`, `uuid`, `braces`, `node-forge` and `sprintf-js` are in neither audit. Two high advisories stay a documented migration: `decode-uri-component` through query-string 7, which expo-router 55.0.18 and @react-navigation/core 7.17.2 still ask for (npm's fix is expo-router 58, a later SDK), and `zod` <4.6.6, new with SDK 55's @expo/cli 55.0.37 — [Dependency boundary](DESIGN-GAPS.archive.md#dependency-boundary), [the backlog](DESIGN-GAPS.archive.md#the-backlog-manifest-122-20-and-21-and-the-part-of-121-195-that-needs-no-owner-decision-2026-10-07).
 - **An iCloud-synced checkout** makes conflict copies, evicts files and fails `npm ci` with `ENOTEMPTY`; it recurs, so work only in a scratch clone (`CLAUDE.md`, Gates and push) — [Still open, recorded rather than fixed](DESIGN-GAPS.archive.md#still-open-recorded-rather-than-fixed).
 - **Round 6's out-of-scope list** (Builder authoring, a run retry that keeps its continuation identity, profile editing, reduced-motion alternatives, small-phone and tablet approval, and the rest): Round 7.5M and Round 16 built some; the others were not re-checked when this moved — [Deliberate non-Round-6 gaps](DESIGN-GAPS.archive.md#deliberate-non-round-6-gaps).
 - **The join link in production** works only once an organization has a verified, discoverable domain, and production had none (2026-10-02) — [the sixth signed-in session](DESIGN-GAPS.archive.md#the-sixth-signed-in-session-build-9-2026-10-02-2220z2235z).
@@ -3199,3 +3199,60 @@ out of the row (`ehr-connection`).
   no reason), now "Only an owner or admin can do this.", the website's words for it, where the app said the
   platform's title (DESIGN-CONTRACT "Refusal map", "Flows/agreement"). Bite: the 403 line dropped from
   `itemRefusal` (`health-agreement-upload`, `round19-items`).
+
+## Round E step 1: Expo SDK 54 → 55, the upgrade alone (2026-11-04)
+
+Sources: Expo's SDK 55 changelog and version table, and expo 55.0.32's own `bundledNativeModules.json`.
+`npx expo install expo@^55.0.0 --fix`, then `npx expo install --fix`, moved expo 54.0.37 → 55.0.32, react
+19.1.0 → 19.2.0, react-native 0.81.5 → 0.83.10, every `expo-*` to its `~55.0.x` pin, reanimated 4.2.1,
+worklets 0.7.4, screens ~4.23.0, gesture-handler ~2.30.0, svg 15.15.3, webview 13.16.0, jest-expo ~55.0.22,
+eslint-config-expo ~55.0.1 and @types/react ~19.2.10 (named by `expo install` itself); and
+`npx expo install react-native-safe-area-context` moved safe-area-context ~5.6.0 → ~5.6.2, the SDK's pin,
+which `--fix` left because the lockfile's 5.6.2 already met it (the lockfile still holds 5.6.2). `app.json` loses
+`newArchEnabled` and `android.edgeToEdgeEnabled`, removed in SDK 55 (both are now the only behaviour).
+- **The lockfile.** `expo install`'s two npm passes left expo-modules-core, expo-asset, expo-keep-awake and
+  @expo/metro-config under `node_modules/expo/` (each placed while the root's SDK 54 copy was still held),
+  where the root packages that import them without declaring them cannot reach them: tsc said
+  `Cannot find module 'expo-modules-core'` and lost `granted`/`canAskAgain` from expo-notifications' types,
+  and every real-router suite said `Cannot find module 'expo-asset'` from expo-font. It also left a second
+  react-native-worklets (0.8.3) and React Native 0.88.1's metro-config, held only by it. The committed
+  lockfile is `expo install`'s with those four at the root and the 29 stray entries dropped: no version
+  differs from what `expo install` chose.
+- **The dependency audit, under this lockfile.** `npm audit --omit=dev`: 44 issues (5 low, 33 moderate, 6
+  high, 0 critical), so `audit:dependencies` (`--audit-level=critical`) passes; `npm audit`: 61 (6 low, 49
+  moderate, 6 high, 0 critical). The 6 high are two advisories and the packages above them:
+  `decode-uri-component` 0.2.2 (<=0.5.0, two denial-of-service advisories) through query-string 7.1.3,
+  which expo-router 55.0.18 and @react-navigation/core 7.17.2 ask for (npm's fix: expo-router 58.0.30, a
+  major); and `zod` 3.25.76 (<4.6.6, memory exhaustion) through @expo/cli 55.0.37, which asks for
+  ^3.25.76 (main's lockfile has no zod). `image-size` (1.2.1 on main) left the lockfile.
+- expo-web-browser 55: `expo install` asks to add its plugin to the dynamic config; that plugin returns
+  the config unchanged (its plugin/build/withWebBrowser.js), so it is not added.
+- **Not observed:** a native build, a simulator or a device. `release:ios --local` needs Xcode 26.2 or
+  later (Expo's SDK 55 table; its changelog says 26); this Mac has 26.1.1.
+- **`--local` refuses an Xcode below 26.2.** `scripts/release-ios.sh` read only that `xcodebuild` ran, so
+  `--local --dry-run` passed on this Mac's 26.1.1 and the build would fail late; it now reads
+  `xcodebuild -version` and refuses "--local needs Xcode 26.2 or later for SDK 55" (README "Verification").
+  Bite: the check removed, `release-and-ci-guards.test.js`'s 26.1.1 case reaches `DRY RUN` (1 failed of
+  25); restored, 25 pass.
+- **Jest and react-native-worklets 0.7.** Its native part is now required at import, which Jest does not
+  have: all 137 suites failed to run ("Native part of Worklets doesn't seem to be initialized").
+  `test/jest-setup.js` mocks it with the package's own mock (`react-native-worklets/lib/module/mock`), the
+  way its "Testing with Jest" guide recommends; the guide's web resolver starts at 0.8. Bite: the mock line
+  removed, `brand-mark.test.tsx` fails to run with that error; restored, it passes.
+- **The expo-file-system mock.** expo-file-system 55's `package.json` `exports` publishes ".", "./legacy",
+  "./package.json" and the plugin, not src/, so `test/mocks/expo-file-system.ts` could not `requireActual`
+  its `src/pathUtilities` (4 suites failed to run); it now reads that file from the package's folder,
+  found through its "./package.json". Its header's citations are re-read at 55.0.26 and expo-modules-core
+  55.0.27 (nine line ranges moved: types.d.ts :139, :226-229, :237-239; FileSystem.ts :90-92, :219-222;
+  FileSystemModule.swift :351-353; EXJSIUtils.mm :113-126; CodedError.swift :45-55;
+  AsyncFunctionDefinition.swift :164-168; what each says is unchanged).
+  Bite: the old specifier put back, `signed-file.test.ts` fails to run ("Cannot find module
+  'expo-file-system/src/pathUtilities'"); restored, 13 pass.
+- **Re-pinned: 2 Nocturne entries (GlowBackground, both palettes). This is no visual change, and the owner
+  authorised it on 2026-11-04 ("A1. approve").** react-native-svg 15.13 stopped giving an absolutely placed Svg a default 100%
+  width and height (its release notes: "prevent parent expansion by skipping width/height setting to 100%
+  on absolute SVG", #2752). So the glow's `RNSVGSvgView` loses `bbWidth`/`bbHeight="100%"` and the
+  `{flex: 0, width/height 100%}` style. Its `absoluteFill` box does not change, and at 15.15.3 the native
+  view reads `bbWidth`/`bbHeight` only for an Svg nested in a group (iOS `RNSVGGroup.mm:125-126`) or one
+  with a viewBox nested in another (Android `SvgView.java:306-313`); the glow is neither. No other Svg in
+  the app is absolutely placed without a size. NOT OBSERVED on a device. Bite: before the re-pin those 2 entries fail (2 failed of 90); after it, 90 pass.

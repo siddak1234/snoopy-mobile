@@ -1,3 +1,8 @@
+// Worklets' own mock (its "Testing with Jest" guide, the recommended way; the
+// JavaScript form): since react-native-worklets 0.7 (SDK 55) the native part
+// is required at import, which Jest does not have.
+jest.mock('react-native-worklets', () => require('react-native-worklets/lib/module/mock'));
+
 // Reanimated official test setup (noops animations, provides frame stubs).
 require('react-native-reanimated').setUpTests();
 

@@ -10,7 +10,7 @@ import { renderWithProviders } from '@/test/render';
 /**
  * The owner's build 24 item 2: "In light mode the logo should be black right or the purple matching
  * automation x AI" — the mark stayed white after Settings › Appearance moved to Light while Home was
- * open. iOS makes an image tintable only when it loads with a tint (React Native 0.81's
+ * open. iOS makes an image tintable only when it loads with a tint (React Native 0.83's
  * RCTImageComponentView: the template rendering at load, a later `tintColor` only recolours a
  * template), so the mark is tinted in both palettes — white on dark, #212121 (the design's invert(.87)) on light — and a switch
  * recolours it at once.
