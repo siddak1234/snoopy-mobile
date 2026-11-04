@@ -128,6 +128,7 @@ function routeOrganization(domains: OrganizationDomain[] = [DOMAIN]) {
   fake.always('GET /v1/workspaces', { workspaces: [{ ...ORG, role: 'owner' }], activeWorkspaceId: TEST_WORKSPACE });
   fake.always('GET /v1/workspaces/{workspaceId}/members', { members: [] });
   fake.always(DOMAINS_READ, { domains });
+  fake.always('GET /v1/workspaces/{workspaceId}/documents', { documents: [] });
   fake.always(JOIN_REQUESTS_READ, {
     requests: [
       {

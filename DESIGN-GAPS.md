@@ -3091,5 +3091,29 @@ contract` job is red by design until the platform releases it (`lib/platform/CLA
 after that release. One commit per item; the rules are DESIGN-CONTRACT's, each once; this entry keeps the
 bites and the findings. Parity: the website builds the same items in its own lane, with the same words.
 
+- **C3, the acceptance screen** (backend ADR-0049; the owner's item 3 of 2026-11-03): Set up's Turn on and
+  Start run, refused 403 `agreement_required`, open the agreement for the owner and send the add or run
+  again with the same key once accepted; anyone else is told the one line (DESIGN-CONTRACT
+  "Flows/agreement"). **The session's defaults:** the checkbox is the app's switch (the app has no
+  checkbox; a yes or no is a switch everywhere); Accept is pressable only once the switch is on and both
+  fields hold words, so no new words say what is missing; "Working…" (Connections' word) while it sends; a
+  text changed since it was read is read again with the switch off and no line, since no word says it;
+  the failed-load title is the shared "Couldn't load this". **Findings:** (1) `createItem` (an item's
+  upload) answers the same 403 (`snoopy-backend/docs/openapi/automations.yaml`, createItem's 403); the
+  spec names Add and Start run only, so an item's upload says the platform's words; (2) the spec's local
+  Compose check of the real 403s was not run in this lane (NOT OBSERVED): the shapes are the contract's.
+- **C3, the Documents list** (backend ADR-0049): DOCUMENTS on Organization, after ORGANIZATION DETAILS,
+  each signed agreement a row that opens its read-only copy (DESIGN-CONTRACT "Organization", "Organization ›
+  a document"). **Findings:** (1) the platform lets any member read the list (`listWorkspaceDocuments`),
+  but Organization draws its sections only for an owner or admin of an organization, where the spec puts
+  it, so a member — and a personal workspace's owner, who can accept for a health flow too — has no place
+  that lists them.
+
 Bites (break, red, restore, green): S2-0 a generated file left from the stage 1 contract
 (`verify:platform-contracts`).
+C3 the hook dropped from Turn on (the agreement never opens) and from Start run, the
+add sent again with a new key, the owner check dropped (an admin offered the agreement), the version check
+dropped (none published opens the screen), the accept's body without the sha256 read, the screen settling
+nothing on accept or on leaving (`health-agreement`).
+C3's Documents the list not read with the rest, a row drawn for a kind with no name,
+the row opening nothing (`organization-documents`).

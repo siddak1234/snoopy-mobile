@@ -384,6 +384,13 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   platform's `providers`, then its `publicProviders` (public services, no key)
   as rows with `authType` `none` (`keylessProviders`), so every screen reads a
   public service as connected.
+- `lib/platform/agreements.ts` (Round 21 stage 2, C3; backend ADR-0049) reads the
+  health data agreement (`GET /v1/agreements/health-data`) and accepts it
+  (`POST /v1/workspaces/{workspaceId}/agreements`), only after an add or a run's
+  start was refused `agreement_required`; and the workspace's signed documents
+  (`GET …/documents`, with Organization; one copy, `GET …/documents/{documentId}`,
+  only when its row is opened). What the screens draw is DESIGN-CONTRACT's
+  (Flows/agreement, Organization, Organization › a document).
 - `lib/platform/session-store.ts` stores access/refresh credentials only in
   `expo-secure-store` with `WHEN_UNLOCKED_THIS_DEVICE_ONLY` — and beside them
   push's device id and its "Not now", cleared with them.

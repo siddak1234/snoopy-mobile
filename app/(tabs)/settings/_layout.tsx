@@ -13,6 +13,8 @@ import { useTheme } from '@/hooks/use-theme';
  * went with their routes. Archived flows and the notifications inbox have
  * their own copies here — with the flow page they open — so Back stays in
  * Settings; a run opens in Activity and Back returns here (round 24 P5).
+ * A signed document's copy, opened from Organization's DOCUMENTS, since
+ * Round 21 stage 2 (C3).
  */
 export default function SettingsLayout() {
   const { palette } = useTheme();
@@ -24,6 +26,7 @@ export default function SettingsLayout() {
       }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="organization" />
+      <Stack.Screen name="documents" />
       <Stack.Screen name="teams" />
       <Stack.Screen name="team" />
       <Stack.Screen name="billing" />

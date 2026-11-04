@@ -86,6 +86,7 @@
 - `/activity/run-file`: [app/(tabs)/activity/run-file.tsx](../app/(tabs)/activity/run-file.tsx)
 - `/activity/run`: [app/(tabs)/activity/run.tsx](../app/(tabs)/activity/run.tsx)
 - `/flows/add`: [app/(tabs)/flows/add.tsx](../app/(tabs)/flows/add.tsx)
+- `/flows/agreement`: [app/(tabs)/flows/agreement.tsx](../app/(tabs)/flows/agreement.tsx)
 - `/flows/archived`: [app/(tabs)/flows/archived.tsx](../app/(tabs)/flows/archived.tsx)
 - `/flows/detail`: [app/(tabs)/flows/detail.tsx](../app/(tabs)/flows/detail.tsx)
 - `/flows/email`: [app/(tabs)/flows/email.tsx](../app/(tabs)/flows/email.tsx)
@@ -104,6 +105,7 @@
 - `/settings/billing`: [app/(tabs)/settings/billing.tsx](../app/(tabs)/settings/billing.tsx)
 - `/settings/connections`: [app/(tabs)/settings/connections.tsx](../app/(tabs)/settings/connections.tsx)
 - `/settings/data`: [app/(tabs)/settings/data.tsx](../app/(tabs)/settings/data.tsx)
+- `/settings/documents`: [app/(tabs)/settings/documents.tsx](../app/(tabs)/settings/documents.tsx)
 - `/settings`: [app/(tabs)/settings/index.tsx](../app/(tabs)/settings/index.tsx)
 - `/settings/notifications`: [app/(tabs)/settings/notifications.tsx](../app/(tabs)/settings/notifications.tsx)
 - `/settings/organization`: [app/(tabs)/settings/organization.tsx](../app/(tabs)/settings/organization.tsx)
@@ -141,9 +143,9 @@
 
 ### Tests
 
-- `__tests__/`: accessibility, account, activity, android, app, audit, auth, automation, billing, block, blocks, brand, build13, build14, build21, build22, build28, components, connection, connections, cover, data, deep, deletion, dialog, doc, dropdown, faceid, flow, flows, gate24, identity, image, invoice, kit, native, no, nocturne, notifications, organization, outside, override, package, paging, parity, pipeline, platform, pressable, presses, published, push, release, removed, repo, return, review, round19, round23, run, scope, screen, session, settings, setup, shared, sign, signed, single, snapshot, splash, start, tab, teams, text, theme, timed, upload, use, vendor, verify, view, workspace
+- `__tests__/`: accessibility, account, activity, android, app, audit, auth, automation, billing, block, blocks, brand, build13, build14, build21, build22, build28, components, connection, connections, cover, data, deep, deletion, dialog, doc, dropdown, faceid, flow, flows, gate24, health, identity, image, invoice, kit, native, no, nocturne, notifications, organization, outside, override, package, paging, parity, pipeline, platform, pressable, presses, published, push, release, removed, repo, return, review, round19, round23, run, scope, screen, session, settings, setup, shared, sign, signed, single, snapshot, splash, start, tab, teams, text, theme, timed, upload, use, vendor, verify, view, workspace
 - `__tests__/__snapshots__/`: connection, nocturne, screen
-- `__tests__/real-router/`: activity, app, appearance, connect, face, flow, held, home, notifications, root, run, session, sign
+- `__tests__/real-router/`: activity, app, appearance, connect, documents, face, flow, health, held, home, notifications, root, run, session, sign
 
 ## Skills, agents and hooks
 

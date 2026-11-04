@@ -8,6 +8,7 @@ import { PillButton } from '@/components/nocturne/pill-button';
 import { SetupFieldRow, declaredValues } from '@/components/setup-field';
 import { Text } from '@/components/text';
 import { fonts, iconSize, space, status, typeScale } from '@/constants/theme';
+import { useHealthAgreement } from '@/hooks/use-health-agreement';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { WORKSPACE_CHANGED, runRefusal } from '@/lib/content/refusals';
@@ -60,6 +61,10 @@ export function canStartRun(subscription: Subscription, entry: CatalogEntry | un
  *
  * Each start leaves the box fresh for the next run: the form is drawn anew —
  * the declared defaults, empty file fields and a new idempotency key.
+ *
+ * A run refused for the health data agreement (Round 21 stage 2, C3): the
+ * owner accepts it on its own screen, then the run is sent again with the same
+ * key; anyone else is told who can (`useHealthAgreement`).
  *
  * ~~A run with a file waited on the account's one-time answer about document
  * reading~~ — gone with the owner's D1 of 2026-10-15: "we dont need to say
@@ -125,6 +130,7 @@ function StartRunForm({
 }: StartRunProps) {
   const session = useSession();
   const keys = useIntentKeys('run');
+  const healthAgreement = useHealthAgreement('run');
   const [values, setValues] = useState<Record<string, unknown>>(() => declaredDefaults(runInput));
   const [uploading, setUploading] = useState<ReadonlySet<string>>(() => new Set());
   // Bumped to empty the file fields when the platform will not take a file.
@@ -164,6 +170,13 @@ function StartRunForm({
       keys.settle();
       onStarted(run.id);
     } catch (caught) {
+      // A flow that carries health data (C3): the owner accepts the agreement, then the run is sent again, its key the same.
+      const agreement = await healthAgreement(caught, workspaceId);
+      if (agreement) {
+        if (agreement.accepted) await start();
+        else setError(agreement.line);
+        return;
+      }
       const refused = runRefusal(caught);
       setError(refused.message);
       if (refused.fileGone) {
