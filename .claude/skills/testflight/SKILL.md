@@ -10,7 +10,7 @@ description: Ship an iOS build of main to TestFlight with npm run release:ios, a
 **Inputs.**
 - The owner's go for this build, and the owner's choice of where it builds: `--local` (this Mac, no EAS build quota) or the cloud build. No choice recorded: `--local`.
 - A scratch clone outside ~/Desktop and iCloud, on `main`, with `npm ci` done.
-- Node 22, `gh` signed in, an Expo session (`npx --yes eas-cli@<eas.json cli.version> whoami`, the one eas-cli version the release runs), and for `--local` Xcode, CocoaPods and fastlane.
+- Node 22, `gh` signed in, an Expo session (`npx --yes eas-cli@<eas.json cli.version> whoami`, the one eas-cli version the release runs), and for `--local` the Mac toolchain [README "Verification"](../../../README.md#verification) names for `npm run release:ios -- --local`.
 
 ## Steps
 

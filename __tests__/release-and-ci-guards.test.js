@@ -170,6 +170,69 @@ describe("eas-cli is eas.json's one exact cli.version, run with npx (Expo's vers
   });
 });
 
+describe("--local refuses an Xcode below 26.2, SDK 55's minimum, so its dry run proves the toolchain", () => {
+  const eas = JSON.parse(readFileSync(join(root, 'eas.json'), 'utf8'));
+  const app = JSON.parse(readFileSync(join(root, 'app.json'), 'utf8'));
+  const appId = `${eas.submit.production.ios.appleTeamId}.${app.expo.ios.bundleIdentifier}`;
+
+  /**
+   * `--local --dry-run` in a temporary copy whose every gate passes — git on
+   * origin/main and clean, gh and node green, curl the AASA naming the app —
+   * and whose xcodebuild prints `xcodeLine` first, as `xcodebuild -version` does.
+   */
+  function localDryRun(xcodeLine) {
+    const dir = mkdtempSync(join(tmpdir(), 'mobile-release-local-'));
+    try {
+      mkdirSync(join(dir, 'scripts'));
+      mkdirSync(join(dir, 'bin'));
+      cpSync(join(root, 'scripts/release-ios.sh'), join(dir, 'scripts/release-ios.sh'));
+      cpSync(join(root, 'app.json'), join(dir, 'app.json'));
+      cpSync(join(root, 'eas.json'), join(dir, 'eas.json'));
+      const aasa = { applinks: { details: [{ appID: appId }] }, webcredentials: { apps: [appId] } };
+      writeFileSync(join(dir, 'aasa.json'), JSON.stringify(aasa));
+      const stubs = {
+        npx: `echo 'eas-cli/${eas.cli.version} darwin-arm64 node-v22'`,
+        git: 'case "$1" in rev-parse) echo 0000000 ;; esac',
+        gh: 'case "$1" in repo) echo autom8x/snoopy-mobile ;; api) echo "{}" ;; esac',
+        node: 'echo green',
+        curl: `cat '${join(dir, 'aasa.json')}'`,
+        xcodebuild: `printf '%s\\n' '${xcodeLine}' 'Build version 17B100'`,
+        pod: 'echo 1.16.2',
+        fastlane: 'echo fastlane 2.228.0',
+      };
+      for (const [name, body] of Object.entries(stubs)) {
+        writeFileSync(join(dir, 'bin', name), `#!/bin/sh\n${body}\n`, { mode: 0o755 });
+      }
+      const run = spawnSync('bash', [join(dir, 'scripts/release-ios.sh'), '--local', '--dry-run'], {
+        encoding: 'utf8',
+        env: { ...process.env, PATH: `${join(dir, 'bin')}:${process.env.PATH}` },
+      });
+      return { status: run.status, out: run.stdout };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  it("refuses this Mac's Xcode 26.1.1, a bare 26 and an unreadable version, after every other gate passed", () => {
+    for (const line of ['Xcode 26.1.1', 'Xcode 26', 'Xcode']) {
+      const run = localDryRun(line);
+      expect(run.out).toContain(`live AASA applinks: ['${appId}']`);
+      expect(run.out).toContain('REFUSED: --local needs Xcode 26.2 or later for SDK 55');
+      expect(run.out).not.toContain('DRY RUN');
+      expect(run.status).toBe(1);
+    }
+  });
+
+  it('passes Xcode 26.2, 26.10 and 27.0, printing the toolchain before the dry run stops', () => {
+    for (const version of ['26.2', '26.10', '27.0']) {
+      const run = localDryRun(`Xcode ${version}`);
+      expect(run.out).toContain(`local toolchain: Xcode ${version}, CocoaPods 1.16.2, fastlane 2.228.0`);
+      expect(run.out).toContain('DRY RUN: every gate passed on 0000000');
+      expect(run.status).toBe(0);
+    }
+  });
+});
+
 describe('the nightly (NIGHT-7) is its own workflow calling ci.yml, and reports a red night (NIGHT-9)', () => {
   const ci = readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8');
   const nightly = readFileSync(join(root, '.github/workflows/nightly.yml'), 'utf8');

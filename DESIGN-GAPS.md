@@ -3222,6 +3222,11 @@ which `--fix` left because the lockfile's 5.6.2 already met it (the lockfile sti
   the config unchanged (its plugin/build/withWebBrowser.js), so it is not added.
 - **Not observed:** a native build, a simulator or a device. `release:ios --local` needs Xcode 26.2 or
   later (Expo's SDK 55 table; its changelog says 26); this Mac has 26.1.1.
+- **`--local` refuses an Xcode below 26.2.** `scripts/release-ios.sh` read only that `xcodebuild` ran, so
+  `--local --dry-run` passed on this Mac's 26.1.1 and the build would fail late; it now reads
+  `xcodebuild -version` and refuses "--local needs Xcode 26.2 or later for SDK 55" (README "Verification").
+  Bite: the check removed, `release-and-ci-guards.test.js`'s 26.1.1 case reaches `DRY RUN` (1 failed of
+  25); restored, 25 pass.
 - **Jest and react-native-worklets 0.7.** Its native part is now required at import, which Jest does not
   have: all 137 suites failed to run ("Native part of Worklets doesn't seem to be initialized").
   `test/jest-setup.js` mocks it with the package's own mock (`react-native-worklets/lib/module/mock`), the
