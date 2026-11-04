@@ -3017,7 +3017,8 @@ same items in its own lane, with the same words.
   shows the confirm/stop page words"); the app draws none of them, as the website draws none.
 - **S1-8** (QuickBooks disconnect; backend §12.1 #252): the expired approval over the run's body and the
   row disconnected at the provider (DESIGN-CONTRACT "Activity/run detail", "Settings › Connections"); the
-  Disconnect page is the website's. **Findings:** (1) at the contract commit the Connections list leaves
+  expired approval is carried to Stage 2 (BUILD-PLAN 29.4.6), not sent before it; the Disconnect page is
+  the website's. **Findings:** (1) at the contract commit the Connections list leaves
   every `disconnected` row out (`snoopy-backend/apps/connections/src/postgres-connections.ts:174`, `status
   <> 'disconnected'`), so the row is drawn only once the platform lists a connection it retired; (2) the
   words name the provider as the platform lists it — QuickBooks is "QuickBooks Online"
@@ -3041,7 +3042,7 @@ same items in its own lane, with the same words.
   have an owner or admin do it.
 - **S1-11** (outside sign-in, option b′; backend §12.1 #221): the refusal from any read draws the screen
   in the tabs' place, with "Remove {provider} sign-in" for each (DESIGN-CONTRACT "Authentication and
-  session"). **Findings:** (1) the contract leaves which reads answer it to the platform's B1, so the app
+  session"). **Findings:** (1) carried to Stage 2 (BUILD-PLAN 29.4.6); not sent before it. The app
   listens on every read; (2) the contract names the unlink `unlinkLoginIdentity` (`DELETE
   /v1/auth/identities/{provider}`, the website's), while the app unlinks through the native
   `unlinkNativeIdentity` it already uses on Settings › Account. **The session's default:** Sign out
