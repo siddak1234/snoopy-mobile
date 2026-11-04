@@ -3108,6 +3108,16 @@ bites and the findings. Parity: the website builds the same items in its own lan
   but Organization draws its sections only for an owner or admin of an organization, where the spec puts
   it, so a member — and a personal workspace's owner, who can accept for a health flow too — has no place
   that lists them.
+- **D1, Connect your EHR** (backend ADR-0050; the owner's item 1 of 2026-11-03): Connections' key form opens
+  for `smart-backend`, with a vendor picker only for two or more `vendors`; the row says the clinic's host
+  (DESIGN-CONTRACT "Settings › Connections"). **Findings:** (1) two of the spec's three refusal lines —
+  `fhir_address_refused` "Use the https address your EHR team gave you." and `ehr_not_activated` "Your EHR
+  hasn't turned on Autom8x yet. Ask your EHR team to activate it." — say "team", which `audit:vocabulary`
+  keeps out of every screen (round 23: a person reads Department); they are not drawn, the refusal keeps
+  the platform's words ("Bad Request", as any pasted key's 400), until the owner words them again or rules
+  that "EHR team" may stand; the website draws all three; (2) the provider's icon `FirstAid`
+  (`snoopy-backend/providers/ehr-fhir.json`) is not in this build's icon set (`lib/view/icon-registry.ts`),
+  so the EHR's row draws the fallback mark; (3) the picker has no title: none is in the spec's words.
 
 Bites (break, red, restore, green): S2-0 a generated file left from the stage 1 contract
 (`verify:platform-contracts`).
@@ -3117,3 +3127,6 @@ dropped (none published opens the screen), the accept's body without the sha256 
 nothing on accept or on leaving (`health-agreement`).
 C3's Documents the list not read with the rest, a row drawn for a kind with no name,
 the row opening nothing (`organization-documents`).
+D1 the key form not opened for `smart-backend`, the vendor not sent, the picker drawn
+for one vendor, the first vendor sent whatever was picked, the refusal's words left out, the host left
+out of the row (`ehr-connection`).

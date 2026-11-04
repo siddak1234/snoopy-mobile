@@ -17,6 +17,7 @@ import {
   disconnectedIn,
   disconnectedName,
 } from '@/lib/content/screen-states';
+import { hostLine } from './ehr-connection';
 import { EMPTY, calendarDate, count } from './format';
 import { toPipelineSteps, type PipelineStep } from './pipeline';
 import { iconFor } from './icon-registry';
@@ -370,7 +371,7 @@ export function toConnectionRow(provider: ConnectionProvider, connection: Connec
   // A provider that needs no key (B5) is connected for every workspace, whatever the list holds.
   const noConnect = needsNoConnect(provider);
   const state = noConnect ? 'connected' : connectionState(connection);
-  const line = noConnect ? { text: CONNECTION_CONNECTED, tone: 'muted' as const } : connectionLine(connection, provider.displayName);
+  const line = noConnect ? { text: CONNECTION_CONNECTED, tone: 'muted' as const } : (hostLine(provider, connection) ?? connectionLine(connection, provider.displayName));
   return {
     provider,
     providerId: provider.providerId,
