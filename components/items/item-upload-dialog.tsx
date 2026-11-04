@@ -2,13 +2,14 @@ import { ListBullets } from 'phosphor-react-native';
 import React, { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { RunFileField } from '@/components/automations/run-file-field';
+import { RunFileField, type HeldFile } from '@/components/automations/run-file-field';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { Dropdown } from '@/components/dropdown';
 import { TextField } from '@/components/nocturne/text-field';
 import { ScopePill } from '@/components/scope-control';
 import { Text } from '@/components/text';
 import { fonts, space, status, typeScale } from '@/constants/theme';
+import { useHealthAgreement } from '@/hooks/use-health-agreement';
 import { useTheme } from '@/hooks/use-theme';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
@@ -39,6 +40,14 @@ import {
  * the form, and "Check this value." under each field it names (`itemRefusal`).
  * Made, the card closes and
  * the page shows the new row, "Reading…". Mounted only while open.
+ *
+ * A flow that carries health data, refused 403 `agreement_required` (Round 21
+ * stage 2, C3; the upload starts the run that reads it): for the workspace's
+ * owner the card steps aside and the agreement opens, as for a run
+ * ("Accept and start run"); accepted, the card comes back as it was, its file
+ * still held, and sends `createItem` again under the same key; left, it comes
+ * back as it was, nothing sent and nothing said. Anyone else is told the one
+ * line under the form (`useHealthAgreement`).
  */
 export function ItemUploadDialog({
   items,
@@ -58,11 +67,16 @@ export function ItemUploadDialog({
   const session = useSession();
   const { palette } = useTheme();
   const keys = useIntentKeys('item');
+  const healthAgreement = useHealthAgreement('run');
+  // The health data agreement is open over the page: the card is off the screen until it closes.
+  const [agreeing, setAgreeing] = useState(false);
   // The select whose drop-down is open, by its key.
   const [openSelect, setOpenSelect] = useState<string | null>(null);
   const [values, setValues] = useState<Record<string, string>>(() => initialItemValues(items.fields));
   const [others, setOthers] = useState<Record<string, string>>({});
   const [file, setFile] = useState<string | undefined>(undefined);
+  // What the file field shows for that file, kept for the field drawn again when the card comes back.
+  const [held, setHeld] = useState<HeldFile | undefined>(undefined);
   const [uploading, setUploading] = useState(false);
   // Bumped to empty the file field when the platform will not take the file.
   const [fileRound, setFileRound] = useState(0);
@@ -80,8 +94,9 @@ export function ItemUploadDialog({
     keys.settle();
   };
   const onFile = useCallback(
-    (_key: string, artifactId: string | undefined) => {
+    (_key: string, artifactId: string | undefined, taken?: HeldFile) => {
       setFile(artifactId);
+      setHeld(artifactId ? taken : undefined);
       keys.settle();
     },
     [keys],
@@ -110,6 +125,14 @@ export function ItemUploadDialog({
       keys.settle();
       onMade(item);
     } catch (caught) {
+      // A flow that carries health data (C3): the owner accepts the agreement, then the item is sent again, its key the same.
+      const agreement = await healthAgreement(caught, workspaceId, () => setAgreeing(true));
+      setAgreeing(false);
+      if (agreement) {
+        if (agreement.accepted) await upload();
+        else setError(agreement.line);
+        return;
+      }
       const refusal = itemRefusal(
         caught,
         items.fields.map((field) => field.key),
@@ -118,6 +141,7 @@ export function ItemUploadDialog({
       setRefused(refusal.fields);
       if (refusal.fileGone) {
         setFile(undefined);
+        setHeld(undefined);
         setFileRound((round) => round + 1);
         keys.settle();
       }
@@ -128,7 +152,7 @@ export function ItemUploadDialog({
 
   return (
     <Dialog
-      visible
+      visible={!agreeing}
       testID="item-upload-dialog"
       onRequestClose={busy ? () => undefined : onClose}
       title={uploadItemLabel(items.words)}
@@ -211,6 +235,7 @@ export function ItemUploadDialog({
             onBusyChange={onBusyChange}
             divider={false}
             showTypes
+            held={file ? held : undefined}
           />
         </View>
         {error ? (

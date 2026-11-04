@@ -31,6 +31,9 @@ type FileState =
   | { kind: 'uploading'; name: string }
   | { kind: 'ready'; name: string; sizeBytes: number };
 
+/** A file a field took: its name and size, as its ready line says them. */
+export type HeldFile = { name: string; sizeBytes: number };
+
 /** What the field was given: an image, sent re-encoded as a JPEG, or a file sent as it is. */
 type Picked = { uri: string; name: string; image: boolean; mimeType?: string };
 
@@ -63,6 +66,11 @@ type Picked = { uri: string; name: string; image: boolean; mimeType?: string };
  * website draws it — never Step 1 of a flow page, whose fields are titles only
  * (Build 21, A6), though the platform names the types of every file field of a
  * manifest with an `artifacts` block.
+ *
+ * **A file it already holds** (`held`, Round 21 stage 2, C3): drawn ready when
+ * the field is drawn again — the upload card, a dialog, is taken off the screen
+ * while the health data agreement is open, and comes back as it was. `onValue`
+ * names the file it took, for that.
  */
 export function RunFileField({
   field,
@@ -72,20 +80,23 @@ export function RunFileField({
   onBusyChange,
   divider,
   showTypes = false,
+  held,
 }: {
   field: Pick<AutomationRunInputField, 'key' | 'title' | 'acceptedContentTypes'>;
   /** The workspace the screen loaded; the upload is refused once it is not active. */
   shownWorkspaceId: string | null;
   subscriptionId: string;
-  onValue: (key: string, artifactId: string | undefined) => void;
+  onValue: (key: string, artifactId: string | undefined, file?: HeldFile) => void;
   onBusyChange: (key: string, busy: boolean) => void;
   divider: boolean;
   /** Say the types under the title (the item's file, the item page's run field). */
   showTypes?: boolean;
+  /** The file the field took before it was drawn again: shown ready, as it was. */
+  held?: HeldFile;
 }) {
   const { palette } = useTheme();
   const session = useSession();
-  const [state, setState] = useState<FileState>({ kind: 'empty' });
+  const [state, setState] = useState<FileState>(() => (held ? { kind: 'ready', ...held } : { kind: 'empty' }));
   const [error, setError] = useState<string | null>(null);
   const accepted = field.acceptedContentTypes;
   const photos = takesPhotos(accepted);
@@ -176,7 +187,7 @@ export function RunFileField({
       const uploaded = await sendRunFile(workspaceId, subscriptionId, chosen, sending.signal);
       if (sending.signal.aborted) return;
       setState({ kind: 'ready', name: uploaded.filename, sizeBytes: uploaded.sizeBytes });
-      onValue(field.key, uploaded.artifactId);
+      onValue(field.key, uploaded.artifactId, { name: uploaded.filename, sizeBytes: uploaded.sizeBytes });
     } catch (failure) {
       if (sending.signal.aborted) return;
       setState({ kind: 'empty' });

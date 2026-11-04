@@ -3100,8 +3100,9 @@ bites and the findings. Parity: the website builds the same items in its own lan
   "Starting…", the website's (the session's decision, 2026-11-04), while it sends; a
   text changed since it was read is read again with the switch off and no line, since no word says it;
   the failed-load title is the shared "Couldn't load this". **Findings:** (1) `createItem` (an item's
-  upload) answers the same 403 (`snoopy-backend/docs/openapi/automations.yaml`, createItem's 403); the
-  spec names Add and Start run only, so an item's upload says the platform's words; (2) the spec's local
+  upload) answers the same 403 (`snoopy-backend/docs/openapi/automations.yaml`, createItem's 403); ~~the
+  spec names Add and Start run only, so an item's upload says the platform's words~~ handled as a run's
+  since the review (the session's decision, 2026-11-04; below); (2) the spec's local
   Compose check of the real 403s was not run in this lane (NOT OBSERVED): the shapes are the contract's.
 - **C3, the Documents list** (backend ADR-0049): DOCUMENTS on Organization, after ORGANIZATION DETAILS,
   each signed agreement a row that opens its read-only copy (DESIGN-CONTRACT "Organization", "Organization ›
@@ -3155,3 +3156,12 @@ out of the row (`ehr-connection`).
   without accepting (or once accepted) stays on Home — under the real router (DESIGN-CONTRACT
   "Flows/agreement"). Bite: `agreementPath` always the Flows tab's — the agreement opens in Flows, and Back
   lands on the Flows list (`/flows`) once the Flows tab was visited, not on Home (`real-router/health-agreement`).
+- C3: an item's upload refused 403 `agreement_required` opens the agreement for the owner, as a run's
+  ("Accept and start run"), and once accepted sends `createItem` again under the same key; anyone else is
+  told the one line under the form (DESIGN-CONTRACT "Flows/agreement"). **The session's defaults:** the
+  upload card, a dialog, is taken off the screen while the agreement is open (a dialog would cover the
+  screen pushed under it) and comes back as it was, its file still shown, since a dialog's fields are
+  drawn anew when it shows again; left without accepting, nothing is sent and nothing said. Not seen on a
+  device: the card hiding and showing again around the agreement's push and pop. Bites: the hook dropped
+  from the upload, the item sent again with a new key, the file not kept for the card's return
+  (`health-agreement-upload`).

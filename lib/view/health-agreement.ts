@@ -6,7 +6,8 @@ import type { WorkspaceRole } from '@/lib/view/roles';
 /**
  * A flow that carries health data, refused for the health data agreement
  * (Round 21 stage 2, C3; backend ADR-0049, `AgreementRequiredDetails`): its
- * add (`createSubscription`) or a run's start (`createRun`) answered 403
+ * add (`createSubscription`), a run's start (`createRun`) or an item's upload
+ * (`createItem`, which starts the run that reads it) answered 403
  * `agreement_required` and nothing was made.
  *
  * - The workspace's owner, who alone accepts it, is shown the agreement on its
