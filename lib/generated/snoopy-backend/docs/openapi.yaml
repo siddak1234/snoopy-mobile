@@ -782,7 +782,10 @@ paths:
             itself effective. **`DEPENDENCY_FAILURE` — any caller.** The Edge could
             not complete its call to the service that deletes, so whether anything
             was removed is unknown; read `GET /v1/session` before telling a person
-            either way.
+            either way. It also answers a sign-in identity delete that failed
+            after the purge (S1-10): the rows are gone and the identity remains,
+            so retry `DELETE /v1/account`, which reaches the delete again, rather
+            than reading `GET /v1/session`, which would make a new account.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/ApiProblem' }
@@ -3267,10 +3270,11 @@ components:
           type: object
           additionalProperties: true
           description: >-
-            Usually absent, or a `reason` its operation lists. On a 403 whose
-            `details.reason` is `outside_org_domain` from a domain-only
-            organization's workspace (§12.1 #221, option b′), the shape is
-            `OutsideOrgDomainDetails`.
+            Usually absent, or a `reason` its operation lists. On the 403 a
+            domain-only organization's workspace answers at session resolve
+            (§12.1 #221, option b′; not sent before Stage 2, BUILD-PLAN 29.4.6),
+            the shape is `OutsideOrgDomainDetails`. The join and link refusals
+            with the same reason (decision 8B) carry `reason` alone.
 
     OutsideOrgDomainDetails:
       type: object
