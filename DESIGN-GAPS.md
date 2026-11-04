@@ -3231,3 +3231,12 @@ eslint-config-expo ~55.0.1 and @types/react ~19.2.10 (named by `expo install` it
   re-read at 55.0.26 and expo-modules-core 55.0.27 (seven line ranges moved; what each says is unchanged).
   Bite: the old specifier put back, `signed-file.test.ts` fails to run ("Cannot find module
   'expo-file-system/src/pathUtilities'"); restored, 13 pass.
+- **Re-pinned: 2 Nocturne entries (GlowBackground, both palettes). This is no visual change, and the owner
+  has not authorised it.** react-native-svg 15.13 stopped giving an absolutely placed Svg a default 100%
+  width and height (its release notes: "prevent parent expansion by skipping width/height setting to 100%
+  on absolute SVG", #2752). So the glow's `RNSVGSvgView` loses `bbWidth`/`bbHeight="100%"` and the
+  `{flex: 0, width/height 100%}` style. Its `absoluteFill` box does not change, and at 15.15.3 the native
+  view reads `bbWidth`/`bbHeight` only for an Svg nested in a group (iOS `RNSVGGroup.mm:125-126`) or one
+  with a viewBox nested in another (Android `SvgView.java:306-313`); the glow is neither. No other Svg in
+  the app is absolutely placed without a size. NOT OBSERVED on a device. If the owner refuses it, this
+  one commit reverts. Bite: before the re-pin those 2 entries fail (2 failed of 90); after it, 90 pass.

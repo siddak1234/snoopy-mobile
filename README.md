@@ -160,7 +160,12 @@ and gaps, the pill's least height 52 → 44 and its default type 17 → 16 only
 ("Round 21 — block set v2") — and that round's review: 6 Nocturne entries
 (TextField and its secure form, the offer screen, in both palettes) and 2 screen
 states (ActionFailure), a label's gap 6 → `title` 8 and a card's 6 → `inner` 8,
-the offer glyph's extra 4 dropped, only ("The review's fixes").
+the offer glyph's extra 4 dropped, only ("The review's fixes") — and the Expo
+SDK 55 upgrade's, which is no visual change and which the owner has not
+authorised: the 2 GlowBackground entries (both palettes), whose `RNSVGSvgView`
+loses `bbWidth`/`bbHeight` and the 100% size react-native-svg gave an
+absolutely placed Svg until 15.13 (its #2752), host props only ("Round E step
+1: Expo SDK 54 → 55").
 
 CI runs lint, typecheck, Jest, all architecture/dependency gates (the docs
 checks among them, on the PR's whole range: `fetch-depth: 0` and
