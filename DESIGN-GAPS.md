@@ -3110,12 +3110,11 @@ bites and the findings. Parity: the website builds the same items in its own lan
   that lists them.
 - **D1, Connect your EHR** (backend ADR-0050; the owner's item 1 of 2026-11-03): Connections' key form opens
   for `smart-backend`, with a vendor picker only for two or more `vendors`; the row says the clinic's host
-  (DESIGN-CONTRACT "Settings › Connections"). **Findings:** (1) two of the spec's three refusal lines —
-  `fhir_address_refused` "Use the https address your EHR team gave you." and `ehr_not_activated` "Your EHR
-  hasn't turned on Autom8x yet. Ask your EHR team to activate it." — say "team", which `audit:vocabulary`
-  keeps out of every screen (round 23: a person reads Department); they are not drawn, the refusal keeps
-  the platform's words ("Bad Request", as any pasted key's 400), until the owner words them again or rules
-  that "EHR team" may stand; the website draws all three; (2) the provider's icon `FirstAid`
+  (DESIGN-CONTRACT "Settings › Connections"). **Findings:** (1) ~~two of the spec's three refusal lines
+  say "team", which `audit:vocabulary` keeps out of every screen, so they were not drawn and the refusal
+  kept the platform's "Bad Request"~~ — all three drawn since the review's finding 2 (the session's
+  decision, 2026-11-04): the audit allows the exact phrase "EHR team", the clinic's own EHR staff, not a
+  department; (2) the provider's icon `FirstAid`
   (`snoopy-backend/providers/ehr-fhir.json`) is not in this build's icon set (`lib/view/icon-registry.ts`),
   so the EHR's row draws the fallback mark; (3) the picker has no title: none is in the spec's words.
 - **S1-11, S1-8's approval half** (carried from stage 1): the platform sends both since its stage 2
@@ -3141,3 +3140,6 @@ out of the row (`ehr-connection`).
 - C3: an acceptance refused 403 (no longer the owner) or 503 `agreement_not_published` says the website's
   line, not the platform's title (DESIGN-CONTRACT "Flows/agreement"). Bite: either mapping dropped from
   `acceptanceRefusal` (`health-agreement`).
+- D1: both refusal lines that say "EHR team" are drawn, never "Bad Request"; `audit:vocabulary` allows that
+  exact phrase, and only it (DESIGN-CONTRACT "Settings › Connections"). Bites: a line dropped from
+  `EHR_CONNECT_REFUSALS` (`ehr-connection`); the allowance dropped (`audit-gates`).

@@ -61,7 +61,9 @@ The individual architecture gates are:
   app's alone, so its `INSET` list holds each file that may use it and how many
   times: one more, or one in a file not listed, fails (Round 21's review).
 - `audit:vocabulary`: no copy says "project" or "automation" — the app says
-  team and flow; the code keeps the contract's names (24.11.7).
+  team and flow; the code keeps the contract's names (24.11.7). "EHR team",
+  the clinic's own EHR staff, is the one "team" copy may say (Round 21 stage 2,
+  the EHR's connect refusals).
 - `audit:haptics`: every press ticks through `components/pressable.tsx` (build
   11, D7) — no Pressable, Touchable or Button imported from react-native
   outside it, no default or namespace import of react-native, no expo-haptics

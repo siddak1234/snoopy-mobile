@@ -109,12 +109,17 @@ describe("an EHR's Connect (smart-backend)", () => {
     expect(connectProviderWithKey.mock.calls[0][2]).toEqual({ fhirBaseUrl: ADDRESS, vendor: 'epic-test' });
   });
 
-  it("an address that didn't answer as a FHIR server is said in its words; the form stays", async () => {
-    connectProviderWithKey.mockRejectedValue(new PlatformError('Bad Request', 400, 'BAD_REQUEST', { reason: 'fhir_not_answering' }));
+  it.each([
+    ['fhir_address_refused', 'Use the https address your EHR team gave you.'],
+    ['fhir_not_answering', "That address didn't answer as a FHIR server."],
+    ['ehr_not_activated', "Your EHR hasn't turned on Autom8x yet. Ask your EHR team to activate it."],
+  ])("a connect refused %s is said in the spec's words, never the platform's \"Bad Request\"; the form stays", async (reason, line) => {
+    connectProviderWithKey.mockRejectedValue(new PlatformError('Bad Request', 400, 'BAD_REQUEST', { reason }));
     const dialog = await openForm();
     await fireEvent.changeText(dialog.getByLabelText('FHIR address'), ADDRESS);
     await fireEvent.press(dialog.getByText('Verify and connect'));
-    expect(await screen.findByText("That address didn't answer as a FHIR server.")).toBeTruthy();
+    expect(await screen.findByText(line)).toBeTruthy();
+    expect(screen.queryByText('Bad Request')).toBeNull();
     expect(screen.getByTestId('connection-dialog')).toBeTruthy();
   });
 
