@@ -1,7 +1,7 @@
 {
   "name": "review-held-grouped",
   "about": "A held review whose changes carry groups: drawn under each heading, in the order sent (amendment 3)",
-  "blockSetVersion": 4,
+  "blockSetVersion": 5,
   "blocks": [
     {
       "type": "text",

@@ -1,7 +1,7 @@
 {
   "name": "long-list",
   "about": "A sent list of 30 rows sharing one value label: sort and pages",
-  "blockSetVersion": 4,
+  "blockSetVersion": 5,
   "blocks": [
     {
       "type": "list",

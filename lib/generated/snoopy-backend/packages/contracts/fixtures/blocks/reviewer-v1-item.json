@@ -1,7 +1,7 @@
 {
   "name": "reviewer-v1-item",
   "about": "A candidate-reviewer v1 item: no tiles",
-  "blockSetVersion": 4,
+  "blockSetVersion": 5,
   "blocks": [
     {
       "type": "file",

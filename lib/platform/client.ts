@@ -17,7 +17,7 @@ import {
   publicProblem,
 } from './problem';
 import { busyMessage, retryAfterSeconds } from './retry-after';
-import { recoverSession } from './session-recovery';
+import { notifyOutsideSignIn, recoverSession } from './session-recovery';
 import { readAccessToken } from './session-store';
 
 /**
@@ -169,6 +169,13 @@ async function sendOnce<T>(
           problem.code,
           problem.details,
         );
+      }
+      // A domain-only organization's workspace refusing a sign-in outside its
+      // verified domains (S1-11, backend §12.1 #221): whichever read it answers,
+      // the tabs' layout is told, once here, and draws its own screen.
+      // Stage 2 (BUILD-PLAN 29.4.6; §12.1 #221): the platform does not send this before Stage 2.
+      if (result.response.status === 403 && problem.details?.reason === 'outside_org_domain') {
+        notifyOutsideSignIn(problem.details);
       }
       throw new PlatformError(
         problem.title ?? fallbackProblemTitle(result.response.status),

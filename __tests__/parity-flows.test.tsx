@@ -7,7 +7,7 @@ import SetupScreen from '@/app/(tabs)/flows/setup';
 import type { SetupField } from '@/components/setup-field';
 import type { Subscription } from '@/lib/platform/automations';
 import { PlatformError, PlatformUnreachableError } from '@/lib/platform/problem';
-import { catalogPrice, toSolution } from '@/lib/view/catalog';
+import { toSolution } from '@/lib/view/catalog';
 import { fakePlatform } from '@/test/fake-platform';
 import {
   catalogPayload,
@@ -15,6 +15,7 @@ import {
   planSubscriptionsPayload,
   projectsPayload,
   routePlatform,
+  sessionAs,
   signedInSession,
   subscriptionsPayload,
 } from '@/test/platform';
@@ -39,8 +40,8 @@ beforeEach(() => {
   routePlatform(platformOperation);
 });
 
-describe('G8 — a catalog card says its category and its price as the website does — no version (the spec\'s S9)', () => {
-  it('says its category — the team it goes to — and "Included" for a flow that costs nothing', async () => {
+describe("G8, since the owner's build 34 F4 — a catalog card says neither its category nor its price: its department's section says where it goes", () => {
+  it('a flow at no charge and one at a price: no "Included", no "$/mo", no version, its department over it', async () => {
     const catalog = catalogPayload();
     // Weekly KPI digest, a Data flow: its third version, at no charge.
     catalog.automations = catalog.automations.map((entry, index) =>
@@ -48,18 +49,34 @@ describe('G8 — a catalog card says its category and its price as the website d
     );
     routePlatform(platformOperation, { '/automations': catalog, '/subscriptions': planSubscriptionsPayload() });
     await renderWithProviders(<SolutionsScreen />, signedInSession);
-    expect(await screen.findByText('Data · Included')).toBeTruthy();
-    expect(screen.getAllByText('Finance · $39/mo').length).toBeGreaterThan(0);
-    expect(screen.getByText('Sales · $49/mo')).toBeTruthy();
-    expect(screen.queryByText(/ · v\d+ · /u)).toBeNull();
-    expect(screen.queryByText(/\$0\/mo/u)).toBeNull();
+    expect(within(await screen.findByTestId('add-group-0')).getByText('DATA')).toBeTruthy();
+    expect(within(screen.getByTestId('add-group-0')).getByText('Weekly KPI digest')).toBeTruthy();
+    // ~~"Data · Included"~~, ~~"Finance · $39/mo"~~ until F4.
+    expect(screen.queryByText(/Included/u)).toBeNull();
+    expect(screen.queryByText(/\$\d+\/mo/u)).toBeNull();
+    expect(screen.queryByText(/ · v\d+/u)).toBeNull();
   });
 
-  it('reads the version from the catalog entry, and words the price the website’s way', () => {
+  it('reads the version from the catalog entry', () => {
     expect(toSolution({ ...catalogPayload().automations[0]!, version: 4 }, false).version).toBe(4);
-    expect(catalogPrice(0)).toBe('Included');
-    expect(catalogPrice(9)).toBe('$9/mo');
-    expect(catalogPrice(39)).toBe('$39/mo');
+  });
+});
+
+describe("Add a flow is an owner's or admin's (the stage 1 spec's S1-9; backend §12.1 #180)", () => {
+  it('to a member, each Add is read-only, under "Only an owner or admin can change this flow." once; an owner sees no line', async () => {
+    routePlatform(platformOperation, { '/automations': catalogPayload(), '/subscriptions': { subscriptions: [] } });
+    const member = await renderWithProviders(<SolutionsScreen />, sessionAs('member'));
+    expect((await screen.findByTestId('add-admin-only')).props.children).toBe('Only an owner or admin can change this flow.');
+    const add = screen.getByTestId('add-tpl.0');
+    expect(add.props.accessibilityState).toMatchObject({ disabled: true });
+    await fireEvent.press(add);
+    expect(mockRouter.push).not.toHaveBeenCalledWith(expect.objectContaining({ pathname: '/(tabs)/flows/setup' }));
+    await member.unmount();
+
+    await renderWithProviders(<SolutionsScreen />, sessionAs('owner'));
+    await fireEvent.press(await screen.findByTestId('add-tpl.0'));
+    expect(screen.queryByTestId('add-admin-only')).toBeNull();
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/setup', params: { template: 'tpl.0' } });
   });
 });
 

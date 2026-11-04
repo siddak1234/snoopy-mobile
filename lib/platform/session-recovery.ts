@@ -12,7 +12,10 @@
  * So the dependency is inverted through this module. It owns no behaviour and
  * no state beyond two slots: `native-auth` fills them when it loads, the
  * transport reads them when a request comes back 401, and `use-session`
- * listens on the second. Nothing here knows how a session is obtained.
+ * listens on the second. Nothing here knows how a session is obtained. A third
+ * (the stage 1 spec's S1-11): the transport tells it when a workspace refuses
+ * the person for a sign-in outside its verified domains, and the tabs' layout
+ * listens.
  *
  * `hooks/use-session.tsx` imports `native-auth` and is mounted by the root
  * layout, so registration always happens before any screen can issue a request.
@@ -82,9 +85,32 @@ export function notifySessionEnded(): void {
   for (const listener of listeners) listener();
 }
 
+/**
+ * Told when a domain-only organization's workspace refuses the person, at
+ * session resolve, for a sign-in outside its verified domains (backend §12.1
+ * #221, option b′: 403 `outside_org_domain`, `OutsideOrgDomainDetails`), with
+ * the refusal's public `details` — which sign-ins to remove.
+ */
+type OutsideSignInListener = (details: Readonly<Record<string, unknown>>) => void;
+let outsideListeners: OutsideSignInListener[] = [];
+
+/** Subscribe to the outside sign-in refusal; returns its own unsubscribe. */
+export function onOutsideSignIn(listener: OutsideSignInListener): () => void {
+  outsideListeners = [...outsideListeners, listener];
+  return () => {
+    outsideListeners = outsideListeners.filter((entry) => entry !== listener);
+  };
+}
+
+/** Announce an outside sign-in refusal (the transport, on its 403). */
+export function notifyOutsideSignIn(details: Readonly<Record<string, unknown>>): void {
+  for (const listener of outsideListeners) listener(details);
+}
+
 /** For tests: a fresh module. */
 export function resetSessionRecoveryForTests(): void {
   recovery = null;
   listeners = [];
+  outsideListeners = [];
   inFlight = null;
 }

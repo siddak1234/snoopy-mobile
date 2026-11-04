@@ -92,6 +92,10 @@
 - `/flows`: [app/(tabs)/flows/index.tsx](../app/(tabs)/flows/index.tsx)
 - `/flows/item-file`: [app/(tabs)/flows/item-file.tsx](../app/(tabs)/flows/item-file.tsx)
 - `/flows/item`: [app/(tabs)/flows/item.tsx](../app/(tabs)/flows/item.tsx)
+- `/flows/package`: [app/(tabs)/flows/package.tsx](../app/(tabs)/flows/package.tsx)
+- `/flows/run-details`: [app/(tabs)/flows/run-details.tsx](../app/(tabs)/flows/run-details.tsx)
+- `/flows/run-file`: [app/(tabs)/flows/run-file.tsx](../app/(tabs)/flows/run-file.tsx)
+- `/flows/run`: [app/(tabs)/flows/run.tsx](../app/(tabs)/flows/run.tsx)
 - `/flows/setup`: [app/(tabs)/flows/setup.tsx](../app/(tabs)/flows/setup.tsx)
 - `/flows/vendor`: [app/(tabs)/flows/vendor.tsx](../app/(tabs)/flows/vendor.tsx)
 - `/settings/account`: [app/(tabs)/settings/account.tsx](../app/(tabs)/settings/account.tsx)
@@ -137,7 +141,7 @@
 
 ### Tests
 
-- `__tests__/`: accessibility, account, activity, android, app, audit, auth, automation, billing, block, blocks, brand, build13, build14, build21, build22, build28, components, connection, connections, cover, data, deep, deletion, dialog, doc, dropdown, faceid, flow, flows, gate24, identity, image, invoice, kit, native, no, nocturne, notifications, organization, override, package, paging, parity, pipeline, platform, pressable, presses, published, push, release, removed, repo, return, review, round19, round23, run, scope, screen, session, settings, setup, shared, sign, signed, single, snapshot, splash, start, tab, teams, text, theme, timed, upload, use, vendor, verify, view, workspace
+- `__tests__/`: accessibility, account, activity, android, app, audit, auth, automation, billing, block, blocks, brand, build13, build14, build21, build22, build28, components, connection, connections, cover, data, deep, deletion, dialog, doc, dropdown, faceid, flow, flows, gate24, identity, image, invoice, kit, native, no, nocturne, notifications, organization, outside, override, package, paging, parity, pipeline, platform, pressable, presses, published, push, release, removed, repo, return, review, round19, round23, run, scope, screen, session, settings, setup, shared, sign, signed, single, snapshot, splash, start, tab, teams, text, theme, timed, upload, use, vendor, verify, view, workspace
 - `__tests__/__snapshots__/`: connection, nocturne, screen
 - `__tests__/real-router/`: activity, app, appearance, connect, face, flow, held, home, notifications, root, run, session, sign
 

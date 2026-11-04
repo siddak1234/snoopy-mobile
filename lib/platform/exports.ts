@@ -10,6 +10,7 @@ import { platformOperation } from './client';
 type Schema = components['schemas'];
 export type WorkspaceExport = Schema['WorkspaceExportResponse'];
 export type ExportJob = Schema['WorkspaceExportJob'];
+export type ExportFile = Schema['WorkspaceExportFile'];
 
 /** A quick summary, each part bounded to its most recent entries. */
 export function readBoundedExport(workspaceId: string): Promise<WorkspaceExport> {
@@ -18,7 +19,7 @@ export function readBoundedExport(workspaceId: string): Promise<WorkspaceExport>
   );
 }
 
-/** Everything as one file, staged (backend §12.1 #39). Asking again while one runs answers that one. */
+/** Everything, staged (backend §12.1 #39) — in parts since §12.1 #181. Asking again while one runs answers that one. */
 export async function startCompleteExport(workspaceId: string, idempotencyKey: string): Promise<ExportJob> {
   const started = await platformOperation(`/v1/workspaces/${workspaceId}/exports`, ({ platform }, signal) =>
     platform.POST('/v1/workspaces/{workspaceId}/exports', {
@@ -38,6 +39,16 @@ export async function readCompleteExport(workspaceId: string, exportId: string):
     }),
   );
   return found.export;
+}
+
+/**
+ * A ready export's files, in order (the stage 1 spec's S1-14; backend §12.1
+ * #181): its `files`, else the one `file` a platform from before parts sends,
+ * else none — as the website reads them.
+ */
+export function exportFiles(job: Pick<ExportJob, 'file' | 'files'>): ExportFile[] {
+  if (job.files && job.files.length > 0) return job.files;
+  return job.file ? [job.file] : [];
 }
 
 /** The website's rule: partial when the platform says so, or when a part it included was bounded. */

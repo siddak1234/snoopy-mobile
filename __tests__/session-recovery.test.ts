@@ -3,6 +3,7 @@ import { platformOperation, resetPlatformClientsForTests } from '@/lib/platform/
 import { PlatformError, PlatformRateLimitedError, PlatformUnreachableError } from '@/lib/platform/problem';
 import {
   notifySessionEnded,
+  onOutsideSignIn,
   onSessionEnded,
   recoverSession,
   resetSessionRecoveryForTests,
@@ -188,6 +189,29 @@ describe('recoverSession is single-flight', () => {
     await recoverSession();
 
     expect(renew).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("the outside sign-in refusal (the stage 1 spec's S1-11; backend §12.1 #221, option b′)", () => {
+  it('a 403 outside_org_domain on any read tells every listener its details, once, and still refuses the read; no other 403 does', async () => {
+    const heard = jest.fn();
+    const unsubscribe = onOutsideSignIn(heard);
+    const details = { reason: 'outside_org_domain', providers: ['google'] };
+    fetchMock.mockResolvedValueOnce(jsonResponse(403, { title: 'Forbidden', details }));
+    await expect(readCurrentSession()).rejects.toMatchObject({ status: 403, details });
+    expect(heard).toHaveBeenCalledTimes(1);
+    expect(heard).toHaveBeenCalledWith(details);
+
+    fetchMock.mockResolvedValueOnce(jsonResponse(403, { title: 'Forbidden', details: { reason: 'flow_change_requires_admin' } }));
+    await expect(readCurrentSession()).rejects.toMatchObject({ status: 403 });
+    fetchMock.mockResolvedValueOnce(jsonResponse(409, { title: 'Conflict', details }));
+    await expect(readCurrentSession()).rejects.toMatchObject({ status: 409 });
+    expect(heard).toHaveBeenCalledTimes(1);
+
+    unsubscribe();
+    fetchMock.mockResolvedValueOnce(jsonResponse(403, { title: 'Forbidden', details }));
+    await expect(readCurrentSession()).rejects.toMatchObject({ status: 403 });
+    expect(heard).toHaveBeenCalledTimes(1);
   });
 });
 

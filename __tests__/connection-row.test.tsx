@@ -18,7 +18,7 @@ import {
   ConnectionMark,
   ConnectionRow,
 } from '@/components/connection-row';
-import { typeScale } from '@/constants/theme';
+import { status, typeScale } from '@/constants/theme';
 import { VendorChoice } from '@/components/flows/vendor-choice';
 import { ConnectionsCard } from '@/components/settings/connections-card';
 import type { ThemeMode } from '@/hooks/use-theme';
@@ -111,10 +111,16 @@ describe('the row says the account, else its state (spec A4)', () => {
   it.each([
     ['an email the platform holds', connection('google'), 'person@example.com', 'muted', 'Disconnect'],
     ['connected, no email', connection('google', { externalAccount: { displayName: 'Acme Books' } }), 'Connected', 'muted', 'Disconnect'],
+    // S1-15 (backend §12.1 #283): the company its grant belongs to, in Connected's place; an email still first.
+    ['connected, no email, its company read', connection('google', { externalAccount: { displayName: 'Sandbox' }, companyName: 'Harbor Supply Co.' }), 'Harbor Supply Co.', 'muted', 'Disconnect'],
+    ['an email and its company', connection('google', { companyName: 'Harbor Supply Co.' }), 'person@example.com', 'muted', 'Disconnect'],
+    ['its company, a sign-in asked again', connection('google', { status: 'reauthorization-required', externalAccount: { displayName: 'Sandbox' }, companyName: 'Harbor Supply Co.' }), 'Needs attention', 'warn', 'Reconnect'],
     ['a sign-in asked again', connection('google', { status: 'reauthorization-required' }), 'person@example.com', 'muted', 'Reconnect'],
     ['an error, no email', connection('google', { errorCode: 'token_revoked', externalAccount: { displayName: 'Acme' } }), 'Needs attention', 'warn', 'Reconnect'],
     ['none', undefined, 'Not connected', 'muted', 'Connect'],
     ['disconnected', connection('google', { status: 'disconnected' }), 'Not connected', 'muted', 'Connect'],
+    // S1-8 (backend §12.1 #252): retired by the refresh loop, its errorCode set — never its email.
+    ['disconnected at the provider', connection('google', { status: 'disconnected', errorCode: 'invalid_grant' }), 'Disconnected in Google', 'warn', 'Reconnect'],
   ] as const)('%s', async (_case, held, line, tone, button) => {
     const row = toConnectionRow(GOOGLE, held as Connection | undefined);
     expect([row.line, row.lineTone]).toEqual([line, tone]);
@@ -135,6 +141,30 @@ describe('the row says the account, else its state (spec A4)', () => {
     expect(screen.queryByText('Reads and sends email.')).toBeNull();
     expect(screen.queryByText(/used by/u)).toBeNull();
     expect(screen.queryByTestId('connection-action-google')).toBeNull();
+  });
+});
+
+describe('a connection disconnected at the provider (the stage 1 spec\'s S1-8; backend §12.1 #252)', () => {
+  it('as a step\'s integration: "Disconnected in QuickBooks", the spec\'s word for "QuickBooks Online", in the warning colour, and a press connects it again', async () => {
+    const onChoose = jest.fn();
+    mockConnect.mockResolvedValueOnce({ status: 'cancelled' });
+    await renderWithProviders(
+      <VendorChoice
+        vendors={[{ providerId: 'quickbooks', displayName: 'QuickBooks Online' }]}
+        providers={new Map([['quickbooks', QUICKBOOKS_PROVIDER]])}
+        connections={[connection('quickbooks', { status: 'disconnected', errorCode: 'invalid_grant' })]}
+        chosen="quickbooks"
+        canManage
+        shownWorkspaceId={TEST_WORKSPACE}
+        saving={null}
+        onChoose={onChoose}
+      />,
+      sessionAs('owner'),
+    );
+    const line = within(screen.getByTestId('vendor-quickbooks')).getByText('Disconnected in QuickBooks');
+    expect(StyleSheet.flatten(line.props.style).color).toBe(status.warnText);
+    await fireEvent.press(screen.getByTestId('vendor-quickbooks'));
+    await waitFor(() => expect(mockConnect).toHaveBeenCalledWith(TEST_WORKSPACE, QUICKBOOKS_PROVIDER));
   });
 });
 

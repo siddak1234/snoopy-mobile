@@ -1,7 +1,7 @@
 {
   "name": "ranked-runs-searchable",
   "about": "An item's runs list, with its search box",
-  "blockSetVersion": 4,
+  "blockSetVersion": 5,
   "blocks": [
     {
       "type": "list",

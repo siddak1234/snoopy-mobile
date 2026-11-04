@@ -195,6 +195,34 @@ describe('Archive (24.4.1, backend §12.1 #92; "Archive flow" since 24.12)', () 
   });
 });
 
+describe("only an owner or admin changes a flow (the stage 1 spec's S1-9; backend §12.1 #180)", () => {
+  it('to a member, Archive flow is read-only under "Only an owner or admin can change this flow."; an owner sees no line', async () => {
+    await renderActions({ role: 'member' });
+    expect(screen.getByTestId('flow-change-admin-only').props.children).toBe('Only an owner or admin can change this flow.');
+    expect(screen.getByTestId('archive-flow').props.accessibilityState).toMatchObject({ disabled: true });
+    await fireEvent.press(screen.getByTestId('archive-flow'));
+    expect(screen.queryByText('Archive Invoice triage?')).toBeNull();
+    expect(sent).toHaveLength(0);
+  });
+
+  it('an owner: no line, Archive as before', async () => {
+    await renderActions({ role: 'owner' });
+    expect(screen.queryByTestId('flow-change-admin-only')).toBeNull();
+    await fireEvent.press(screen.getByTestId('archive-flow'));
+    expect(await screen.findByText('Archive Invoice triage?')).toBeTruthy();
+  });
+
+  it("an archive the platform refuses as a member's (403 flow_change_requires_admin) says the line", async () => {
+    answer(`PATCH ${SUB_PATH}`, () => {
+      throw new PlatformError('Forbidden', 403, undefined, { reason: 'flow_change_requires_admin' });
+    });
+    await renderActions();
+    await fireEvent.press(screen.getByTestId('archive-flow'));
+    await pressLast('Archive');
+    expect(await screen.findByText('Only an owner or admin can change this flow.')).toBeTruthy();
+  });
+});
+
 describe("Archive flow is red in either theme (24.9.4; the owner's build 12 item 5)", () => {
   it.each(['dark', 'light'] as const)("draws Archive flow and its confirm in the theme's red (%s)", async (mode) => {
     const palette = mode === 'dark' ? nocturneDark : nocturneLight;

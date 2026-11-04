@@ -14,6 +14,7 @@ import {
   WifiSlash,
 } from 'phosphor-react-native';
 
+import { YourFlows } from '@/components/flows/your-flows';
 import { AvatarBadge } from '@/components/nocturne/avatar-badge';
 import { GlassSurface } from '@/components/glass-surface';
 import { BrandMark } from '@/components/nocturne/brand-mark';
@@ -22,7 +23,7 @@ import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionLabel, SectionTitle } from '@/components/nocturne/section-label';
 import { Skeleton } from '@/components/nocturne/skeleton';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
-import { Pressable, pressed } from '@/components/pressable';
+import { Pressable } from '@/components/pressable';
 import { ScopeIcons } from '@/components/scope-control';
 import { StatTileButton, StatTileRow } from '@/components/stat-tile-button';
 import { Text } from '@/components/text';
@@ -30,7 +31,7 @@ import { Page } from '@/components/page';
 import { em, fonts, inset, layout, space, status, typeScale, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource, type ResourceState } from '@/hooks/use-resource';
 import { useScope } from '@/hooks/use-scope';
-import { useSession } from '@/hooks/use-session';
+import { roleIn, useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import {
   ADD_FLOW_LABEL,
@@ -39,24 +40,16 @@ import {
   HOME_OFFLINE_TITLE,
   PLATFORM_BUSY_TITLE,
   PLATFORM_FAILED_TITLE,
-  RECENT_RUNS_UNAVAILABLE,
   UNAVAILABLE_BODY,
   sessionKeptBody,
 } from '@/lib/content/screen-states';
 import { readCatalog } from '@/lib/platform/catalog';
 import { readInbox } from '@/lib/platform/notifications';
-import {
-  localMidnight,
-  readAllApprovals,
-  readApprovals,
-  readRunStats,
-  readRuns,
-  readSubscriptions,
-} from '@/lib/platform/runs';
+import { localMidnight, readApprovals, readRunStats, readSubscriptions } from '@/lib/platform/runs';
 import { toStatTiles, type StatTileView } from '@/lib/view/catalog';
-import { homeFailure } from '@/lib/view/home';
-import { catalogIndex, toRunRows } from '@/lib/view/runs';
-import { scopeRuns, scopeStats } from '@/lib/view/scope';
+import { homeFailure, yourFlows } from '@/lib/view/home';
+import { administers } from '@/lib/view/roles';
+import { scopeStats } from '@/lib/view/scope';
 
 /**
  * Skeleton layout while the dashboard loads (design sHomeLoad): a circle for
@@ -135,7 +128,8 @@ function HomeHeader({ initials, hasAttention }: { initials: string; hasAttention
 }
 
 /**
- * The first run (design sHomeEmpty), where RECENT RUNS goes: since the owner's
+ * The first run (design sHomeEmpty), where YOUR FLOWS goes (~~RECENT RUNS~~ until
+ * the owner's build 34 F5): since the owner's
  * build 13 decision 5 the dashboard is drawn as it is with flows — the header's
  * buttons, the greeting, TODAY at 0 — and this says there is nothing yet, with
  * its one way in. Until then it was a screen of its own, whose bell and avatar
@@ -306,15 +300,15 @@ export default function HomeScreen() {
    * ~~the workspace's connections, for the overview's integrations figure (G6),
    * and its teams, to name each quick-run row (Build 21, A9)~~ until Build 22 (the
    * owner's build 21 item 1). ~~Every workspace's teams for a TEAMS block
-   * (G7)~~ until Build 21 (the owner's AM5).
+   * (G7)~~ until Build 21 (the owner's AM5). ~~The runs and every approval, for
+   * RECENT RUNS' rows~~ until YOUR FLOWS (the owner's build 34 F5), which is
+   * drawn from the subscriptions and the catalog read here already.
    */
   const dashboard = useWorkspaceResource(async (workspaceId) => {
     const [reads, unread] = await Promise.all([
       Promise.allSettled([
         readRunStats(workspaceId, localMidnight()),
-        readRuns(workspaceId),
         readCatalog(workspaceId),
-        readAllApprovals(workspaceId),
         readApprovals(workspaceId, 'pending'),
         readSubscriptions(workspaceId),
       ]),
@@ -325,20 +319,16 @@ export default function HomeScreen() {
     ]);
     const refusals = reads.flatMap((read) => (read.status === 'rejected' ? [read.reason] : []));
     if (refusals.length === reads.length) throw homeFailure(refusals);
-    const [stats, runs, catalog, approvals, pending, subscriptions] = reads;
+    const [stats, catalog, pending, subscriptions] = reads;
     const answer = <T,>(read: PromiseSettledResult<T>): T | null => (read.status === 'fulfilled' ? read.value : null);
     return {
       stats: answer(stats),
-      runs: answer(runs)?.runs ?? null,
-      // The catalog names each run; whether this workspace has set anything up,
-      // ever, is its flag — `subscribed` counts every subscription it holds, in
-      // any team, archived ones too. Not the subscription list, which shows
-      // only what this person can see — a member outside a team would get the
-      // first-run screen over runs and approvals they CAN see. Runs an archived
-      // flow made still belong on the dashboard.
+      // The catalog names and sorts each flow; whether this workspace has set
+      // anything up, ever, is its flag — `subscribed` counts every subscription
+      // it holds, in any team, archived ones too. Not the subscription list,
+      // which shows only what this person can see — a member outside a team
+      // would get the first-run screen over approvals they CAN see.
       catalog: answer(catalog)?.automations ?? null,
-      // Every approval is read so a held run's row can say how it was decided.
-      approvals: answer(approvals)?.approvals ?? null,
       // The banner's count: what Approvals lists (G1).
       pending: answer(pending)?.approvals ?? null,
       subscriptions: answer(subscriptions)?.subscriptions ?? null,
@@ -353,22 +343,14 @@ export default function HomeScreen() {
     );
   }
 
-  const { stats, runs, catalog, approvals, pending, subscriptions, unread } = dashboard.data;
+  const { stats, catalog, pending, subscriptions, unread } = dashboard.data;
   // A team narrows through the subscriptions (24.9.2): without them, what a
   // chosen team's figures are cannot be told, and they read as unavailable.
   const scopable = projectId === null || subscriptions !== null;
   const counts = stats !== null && scopable ? scopeStats(stats, subscriptions ?? [], projectId) : null;
   const tiles: StatTileView[] | null = counts ? toStatTiles(counts) : null;
-  // Without every approval a held run's row says it is held, never how it was decided.
-  const runRows =
-    runs !== null && scopable
-      ? toRunRows(
-          scopeRuns(runs, subscriptions ?? [], projectId).slice(0, 4),
-          catalogIndex(catalog ?? []),
-          Date.now(),
-          approvals ?? undefined,
-        )
-      : null;
+  // The live flows in the scope chosen, by department (F5); unread subscriptions say so in their place.
+  const flowSections = subscriptions !== null ? yourFlows(subscriptions, catalog ?? [], projectId) : null;
   // Every pending approval in the workspace, whatever team is chosen: what
   // Approvals lists, and what the website's Approvals counts (`listApprovals(
   // workspaceId, "pending")`) — until Gate 24 the chosen team's only (G1). A
@@ -376,18 +358,13 @@ export default function HomeScreen() {
   // build 13 #3), and that is not known.
   const approvalCount = pending?.length ?? 0;
   // With no flow set up, ever — the catalog's flag, so a catalog that could not
-  // be read claims nothing — the first run takes the place of the runs below.
+  // be read claims nothing — the first run takes the place of the flows below.
   const firstRun = catalog !== null && !catalog.some((automation) => automation.subscribed);
   // The bell says the inbox holds something unread — the platform's read state,
   // the same on every device (decision 3A), and the whole workspace's, as the
   // inbox is — not merely that something is held or failed.
   const hasAttention = unread > 0;
-  const linkStyle = {
-    fontFamily: fonts.regular,
-    fontSize: typeScale.small.fontSize,
-    color: palette.accentRamp[300],
-  };
-  const lineStyle = [styles.noRuns, { color: palette.neutral[500] }];
+  const lineStyle = [styles.line, { color: palette.neutral[500] }];
 
   return (
     <Page>
@@ -425,7 +402,7 @@ export default function HomeScreen() {
 
       {/* Top to bottom since Build 22 (the owner's build 21 item 1): the greeting,
           TODAY, the approvals banner while something waits, Add a flow and Flows,
-          RECENT RUNS. ~~The quick-run list~~ ("Remove run a flow section. We did
+          YOUR FLOWS (~~RECENT RUNS~~ until the owner's build 34 F5). ~~The quick-run list~~ ("Remove run a flow section. We did
           not add thus."), ~~the overview's figures~~ ("Remove overflow" — the
           overview, the session's D4, approved by the owner) and ~~the
           Connections and Teams rows~~ until Build 22. */}
@@ -524,86 +501,34 @@ export default function HomeScreen() {
       )}
 
       {firstRun ? (
-        // No flow yet (the owner's build 13 decision 5): the first run, where the runs go.
+        // No flow yet (the owner's build 13 decision 5): the first run, where the flows go.
         <HomeFirstRun />
-      ) : (
+      ) : flowSections !== null && flowSections.length === 0 ? null : (
+        // YOUR FLOWS (the owner's build 34 F5): the live flows by department, each a tap from its
+        // run's first step; Start run opens the run's page, and Back comes home. Drawn only while a
+        // flow is live in the scope chosen, as the website's; unread, it says so in its place (G6).
         <View>
-          <View style={styles.sectionHeader}>
-            <SectionTitle flush>RECENT RUNS</SectionTitle>
-            <Text onPress={pressed(() => router.push('/(tabs)/activity'))} suppressHighlighting style={linkStyle}>
-              See all
-            </Text>
-          </View>
-          <SurfaceCard level="sm">
-            {runRows === null ? (
-              // The runs could not be read: said in their place, in the website's words (G6).
-              <Text style={lineStyle}>{RECENT_RUNS_UNAVAILABLE}</Text>
-            ) : null}
-            {(runRows ?? []).map((r, i, rows) => (
-              <Pressable
-                key={r.runId}
-                testID={`home-run-${r.runId}`}
-                onPress={() =>
-                  router.push(
-                    { pathname: '/(tabs)/activity/run', params: { runId: r.runId, returnTo: 'home' } },
-                    { withAnchor: true },
-                  )
-                }
-                style={({ pressed }) => [
-                  styles.runRow,
-                  // The last row draws no border: the card has no clip, so it would run
-                  // square past the rounded corner (the owner, build 13 #7).
-                  i < rows.length - 1 && {
-                    borderBottomWidth: 1,
-                    borderBottomColor: palette.divider,
-                  },
-                  pressed && { backgroundColor: withAlpha(palette.text, 0.04) },
-                ]}>
-                <View
-                  style={[
-                    styles.runDot,
-                    { backgroundColor: r.tone === 'ok' ? status.ok : status.warnText },
-                  ]}
-                />
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={{ fontFamily: fonts.medium, fontSize: typeScale.label.fontSize, color: palette.text }}>
-                    {r.name}
-                  </Text>
-                  <Text
-                    style={{
-                      marginTop: inset.hair,
-                      fontFamily: fonts.regular,
-                      fontSize: typeScale.small.fontSize,
-                      color: palette.neutral[400],
-                    }}>
-                    {r.meta}
-                  </Text>
-                  {/* When, and the run by its full id (Build 21, spec A8; the owner's AM2). */}
-                  <Text
-                    testID={`home-stamp-${r.runId}`}
-                    style={{
-                      marginTop: inset.hair,
-                      fontFamily: fonts.regular,
-                      fontSize: typeScale.caption.fontSize,
-                      color: palette.neutral[500],
-                    }}>
-                    {r.stamp}
-                  </Text>
-                </View>
-                <Text
-                  style={{
-                    fontFamily: fonts.regular,
-                    fontSize: typeScale.caption.fontSize,
-                    color: palette.neutral[500],
-                  }}>
-                  {r.time}
-                </Text>
-              </Pressable>
-            ))}
-            {runRows !== null && runRows.length === 0 ? (
-              <Text style={lineStyle}>No runs in this department yet.</Text>
-            ) : null}
-          </SurfaceCard>
+          <SectionTitle>YOUR FLOWS</SectionTitle>
+          {flowSections !== null ? (
+            <YourFlows
+              sections={flowSections}
+              shownWorkspaceId={dashboard.loadedFor}
+              canManage={administers(roleIn(session, dashboard.loadedFor))}
+              onStarted={(runId) =>
+                router.push(
+                  { pathname: '/(tabs)/activity/run', params: { runId, returnTo: 'home' } },
+                  { withAnchor: true },
+                )
+              }
+              onOpen={(flow) => router.push({ pathname: '/(tabs)/flows/detail', params: { flow } })}
+            />
+          ) : (
+            <SurfaceCard level="sm">
+              <Text testID="home-flows-line" style={lineStyle}>
+                {FIGURE_UNAVAILABLE}
+              </Text>
+            </SurfaceCard>
+          )}
         </View>
       )}
 
@@ -663,26 +588,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: space.inner,
   },
-  // RECENT RUNS and See all on one line, `title` above the card.
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    marginBottom: space.title,
-  },
-  runRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.inner,
-    paddingVertical: space.rowY,
-    paddingHorizontal: space.rowX,
-  },
-  runDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 99,
-  },
-  noRuns: {
+  // A figure that could not be read, or a list with nothing in it, in its card's place.
+  line: {
     fontFamily: fonts.regular,
     fontSize: typeScale.body.fontSize,
     textAlign: 'center',

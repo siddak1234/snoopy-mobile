@@ -1,7 +1,7 @@
 {
   "name": "v7-recorded",
   "about": "Invoice Processing v7: three invoices recorded",
-  "blockSetVersion": 4,
+  "blockSetVersion": 5,
   "blocks": [
     {
       "type": "text",

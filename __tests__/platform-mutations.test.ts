@@ -168,6 +168,25 @@ describe('automation mutations', () => {
     // Only the answers: no `decision` beside them.
     expect(automationsPost.mock.calls[0][1].body).not.toHaveProperty('decision');
   });
+
+  it("sends a change answered with another value as `{ id, other }`, never with a decision beside it (backend ADR-0048 amendment 5)", async () => {
+    automationsPost.mockResolvedValue({ data: { approval: { id: 'approval-9' } }, response: { ok: true } });
+    await decideReview(
+      'workspace-1',
+      'approval-9',
+      [
+        { id: 'n18-4-change', other: 'N18.31' },
+        { id: 'i10-keep', decision: 'accepted' },
+      ],
+      'review-2',
+    );
+    expect(automationsPost.mock.calls[0][1].body).toEqual({
+      decisions: [
+        { id: 'n18-4-change', other: 'N18.31' },
+        { id: 'i10-keep', decision: 'accepted' },
+      ],
+    });
+  });
 });
 
 describe('connection mutations', () => {

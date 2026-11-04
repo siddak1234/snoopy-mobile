@@ -646,6 +646,14 @@ components:
           description: >-
             Why a connection is not usable — set when the refresh loop retires one
             it cannot renew. Never a provider's raw error text.
+        companyName:
+          type: string
+          description: >-
+            The company the grant belongs to (§12.1 #283), read once at connect and
+            at reconnect from the provider's company operation — QuickBooks'
+            `companyInfo`, its `CompanyName` — and stored beside the grant; never
+            read on a page load. A client shows it on the connection's row.
+            Absent when none was read.
 
     Connection:
       description: >-

@@ -20,7 +20,10 @@ import {
   STEP_STOPPED,
   STEP_DENIED,
   STEP_WAITING,
+  disconnectedName,
   emailSentLine,
+  expiredByDisconnectNext,
+  expiredByDisconnectTitle,
   reviewTally,
   stepHeld,
 } from '@/lib/content/screen-states';
@@ -148,15 +151,40 @@ export function reviewAnswers(approval: Pick<Approval, 'decisions'> | undefined 
   );
 }
 
+/** The most other values one change offers (backend `HELD_DECISION_LIMITS.options`, ADR-0048 amendment 5). */
+export const OPTIONS_LIMIT = 3;
+
+/**
+ * A change's other values (backend ADR-0048 amendment 5), as the contract
+ * shapes them — a `value` and a `label`, each value once — at most
+ * `OPTIONS_LIMIT`, as the website reads them; anything else left out.
+ */
+export function otherValues(options: unknown): { value: string; label: string }[] {
+  if (!Array.isArray(options)) return [];
+  const seen = new Set<string>();
+  return options
+    .flatMap((option: unknown) => {
+      if (typeof option !== 'object' || option === null) return [];
+      const { value, label } = option as Record<string, unknown>;
+      if (typeof value !== 'string' || typeof label !== 'string' || value === '' || seen.has(value)) return [];
+      seen.add(value);
+      return [{ value, label }];
+    })
+    .slice(0, OPTIONS_LIMIT);
+}
+
 /**
  * A saved review's words (Round 21's platform round, F2): "{a} accepted ·
  * {d} denied", from the answers just saved on this page, else the job's
- * approval's kept answers; null when nothing was reviewed.
+ * approval's kept answers; null when nothing was reviewed. A change answered
+ * with another value (`other`, amendment 5) is neither, so it is not counted,
+ * as the website's and the platform's own line do not count it.
  */
 export function answersTally(answers: readonly AnsweredDecision[]): string | null {
   if (answers.length === 0) return null;
   const accepted = answers.filter((answer) => answer.decision === 'accepted').length;
-  return reviewTally(accepted, answers.length - accepted);
+  const denied = answers.filter((answer) => answer.decision === 'denied').length;
+  return reviewTally(accepted, denied);
 }
 
 export function jobReviewTally(
@@ -166,6 +194,29 @@ export function jobReviewTally(
 ): string | null {
   if (saved && saved.length > 0) return answersTally(saved);
   return answersTally(reviewAnswers(jobApproval(run, approvals)));
+}
+
+/** A provider's name as the catalog lists the flow's connections, else its id. */
+export function providerNameIn(entry: Pick<CatalogEntry, 'requiredConnections'> | undefined, providerId: string): string {
+  return entry?.requiredConnections?.find((connection) => connection.providerId === providerId)?.displayName ?? providerId;
+}
+
+/**
+ * A held job's approval a disconnect expired before its time (the stage 1
+ * spec's S1-8; backend §12.1 #252, `Approval.expiredBy`): the connection its
+ * held run was built on was disconnected at the provider. Its two lines, in
+ * the provider's name (`disconnectedName`); null for any other approval, and
+ * for a reason this build does not know, which reads as a plain expiry — as
+ * the website's.
+ * Stage 2 (BUILD-PLAN 29.4.6; §12.1 #252 approval half): the platform does not send this before Stage 2.
+ */
+export function expiredByDisconnect(
+  approval: Pick<Approval, 'status' | 'expiredBy'> | undefined,
+  providerName: (providerId: string) => string,
+): { title: string; next: string } | null {
+  if (approval?.status !== 'expired' || approval.expiredBy?.reason !== 'connection-disconnected') return null;
+  const provider = disconnectedName(approval.expiredBy.providerId, providerName(approval.expiredBy.providerId));
+  return { title: expiredByDisconnectTitle(provider), next: expiredByDisconnectNext(provider) };
 }
 
 export function heldDecision(run: Run, approvals: readonly Approval[]): HeldDecision | null {
@@ -213,15 +264,6 @@ export function toRunRow(
     tone: statusTone(run.status),
     status: statusLabel(run.status) as StatusPillLabel,
   };
-}
-
-export function toRunRows(
-  runs: Run[],
-  catalog: Map<string, CatalogEntry>,
-  now: number = Date.now(),
-  approvals?: readonly Approval[],
-): RunRowView[] {
-  return runs.map((run) => toRunRow(run, catalog, now, approvals));
 }
 
 /** The glyph the activity list draws beside a run, by outcome. */
@@ -571,6 +613,21 @@ export function runOrigin(param: unknown): RunOrigin | null {
 }
 
 /**
+ * The stack a run's pages are drawn in (the owner's build 31 G1: "Why is it going
+ * to activity from that screen?"): Activity's, or — a run opened from one of a
+ * flow's items, its row or Start — the Flows stack, the same page
+ * (`app/(tabs)/flows/run.tsx`), so Back comes straight to the item with no
+ * Activity under it; it is still listed in Activity. Its Run details, its files
+ * and its package open in the stack it is in.
+ */
+export type RunStack = 'activity' | 'flows';
+
+/** The stack the run page is drawn in, from the router's segments: the Flows stack when it is there, else Activity's. */
+export function runStack(segments: readonly string[]): RunStack {
+  return segments.includes('flows') ? 'flows' : 'activity';
+}
+
+/**
  * How long a flow page waits, while a run of the flow is pending or running,
  * before it reads its DASHBOARD again (Build 21, spec A6; the session's S30).
  */
@@ -704,9 +761,10 @@ function trackerSub(
 
 /**
  * What a run's page knows of its flow, beside the run (Build 22; the session's
- * S23): the flow's setup fields and its settings NOW — a run's own choice is not
- * recorded (backend §12.1 #290) — and a provider's name. Absent when the flow
- * could not be read.
+ * S23): the flow's setup fields, its settings with the connection choices the
+ * run started with over them (S1-16, backend §12.1 #290; the flow's NOW for a
+ * run made before they were saved), and a provider's name. Absent when the
+ * flow could not be read.
  */
 export type TrackerFlow = {
   setup: readonly StepField[];
@@ -716,8 +774,9 @@ export type TrackerFlow = {
 
 /**
  * A setting step (Build 22; backend ADR-0041): done from the start, as a run
- * starts with the flow's settings, and its line the integration the flow has
- * chosen — "QuickBooks Online", or "None" (the session's S23). A setting step
+ * starts with the flow's settings, and its line the integration chosen — the
+ * run's own (S1-16), else the flow's — "QuickBooks Online", or "None" (the
+ * session's S23). A setting step
  * with no connection field, or a flow that could not be read, says "Done".
  */
 function settingRow(id: string, title: string, groupId: string, flow: TrackerFlow | undefined): TrackerRow {

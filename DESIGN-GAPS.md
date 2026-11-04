@@ -2943,3 +2943,142 @@ Parity: the website's flow page, setup, vendor and run page read the same route 
 Bites (break, red, restore, green), `single-flow-read`: with a list row and a catalog entry that carry
 no setup, the flow page's integration row, Setup's vendor step and the vendor page's choices each come
 from the single read; each screen put back on the list row, its test alone goes red. No new press.
+
+## Round 21 stage 1, C1: the owner's build 34 feedback F1, F4, F5 and build 31 G1, G3, G4 (2026-11-03)
+
+Client-only, no new data or call (the stage 1 spec, C1; the owner's go 2026-11-03). The rules are
+DESIGN-CONTRACT's, each once; this entry keeps the bites. Parity: the website builds the same items in
+its own lane, with the same words.
+
+- **G3** (build 31: "there should be lines within this block for subsections"): a section's entries
+  have a divider line between them (DESIGN-CONTRACT "Block set v2 and the spacing table").
+- **G1** (build 31: "Why is it going to activity from that screen?"): a run opened from one of a flow's
+  items is drawn in the Flows stack with its own pages (DESIGN-CONTRACT "Activity/run detail").
+- **G4** (build 31: "Shoukd i be taken into a step by step"): Start on an item opens the new run's page in
+  the Flows stack, its steps live; Back returns to the item (DESIGN-CONTRACT "Flows/item").
+- **F1** (build 34): a setup select whose options carry groups opens a full-height sheet — "Category",
+  a group's options, "Search all" — and its picks show as chips (DESIGN-CONTRACT "Setup/configure").
+  **The session's defaults:** the chips are the picks drawn, not buttons (removing one is a tick in the
+  sheet, so no new words); the sheet's Back closes step 1, as every page's Back; the drop-down keeps its
+  group headings for any other list (`optionGroups`, shared with the sheet).
+- **F4** (build 34): Add a flow, with All categories, in sections by department A–Z; a card is its icon,
+  name, description and Add or Added ✓ (DESIGN-CONTRACT "Flows/add"). **The session's defaults:** the
+  description is drawn whole, not cut to one line (the largest text sizes); the unavailable line stays,
+  drawn only for a flow the platform could not reach, since it says why Add is off.
+- **F5** (build 34): Home's YOUR FLOWS in RECENT RUNS' place — the live flows by department, each a tap
+  from its run's first step and Start run; a flow with items reads them only when opened (DESIGN-CONTRACT
+  "Home"). As the website's (the parity check): each flow opens and closes on its own, each department's
+  flows A–Z by name, and no YOUR FLOWS with nothing live (~~one at a time, the catalog's order, "No flows
+  yet"~~). **The session's defaults:** a flow that cannot start a run on Home
+  (no run fields, its automation unavailable, or a member on a flow with items, as on an item's page)
+  opens its flow page; the job comes first, then the run's fields, as one form cannot put a choice
+  between its fields and its button; the reads of the runs
+  and of every approval went with RECENT RUNS, and with them `toRunRows` and "Recent activity could not
+  be read just now.".
+
+Bites (break, red, restore, green), each in its suite: G3 the line between a section's entries, none
+under a label or between a page's blocks (`blocks-render`); G1 an item's run and a run's file open in
+the Flows stack (`blocks-render`), and under the real router the run, its Run details and its file in
+the Flows stack, Flows selected, Back straight to the item (`real-router/flow-items`); G4 Start on an
+item pushes the new run's page in the Flows stack (`round19-items`); F4 the sections and their order,
+a flat list put back, and a "{category} · Included" line put back (`tab-screens`, `parity-flows`); F1
+grouped options sent to the drop-down again, "Search all" kept to the first group, the chips left out,
+an empty card under step 2's "No matches." (`setup-field`); F5 the departments unsorted, a flow's
+items read before it is opened, Start run's page pushed elsewhere, one flow open at a time, the flows
+in the list's order, YOUR FLOWS drawn with nothing live (`parity-home`). Home's tests that opened a run from RECENT RUNS open it as Start run
+does (`real-router/run-in-activity`, `real-router/session-ended`).
+
+## Round 21 stage 1, C2: the client side of the platform's stage 1 contract (2026-11-03)
+
+The generated contracts and their hash-checked copy come from the backend's stage 1 contract commit
+(`round-21/stage-1-platform` at 35d0695, B0; re-synced at 8ddcfbc), never from main; CI's `Deployed contract` job is red by
+design until the platform releases it (`lib/platform/CLAUDE.md`). One commit per item; the rules are
+DESIGN-CONTRACT's, each once; this entry keeps the bites and the findings. Parity: the website builds the
+same items in its own lane, with the same words.
+
+- **S1-G2** (the links block, amendment 5): full-width pill buttons, each its brand's mark and its label
+  (DESIGN-CONTRACT "Block set v2 and the spacing table"). **Finding:** the icon set has no Hugging Face
+  logo and the app bundles none, so `huggingface` draws the globe, as the website's does, until the owner
+  supplies the logo's file.
+- **S1-B1** (the setup example, amendment 5; the owner's build 34 F2): a `text` field's `example` is its
+  box's placeholder (DESIGN-CONTRACT "Setup/configure"). **The session's default:** it takes a required
+  field's "Required" too, as the website's placeholder is the example whatever the field.
+- **S1-B2** (setup sections, amendment 5; the owner's build 34 F3): Set up in the manifest's own
+  sections, numbered, each vendor choice in the section it names (DESIGN-CONTRACT "Setup/configure").
+  **The session's default:** a declared title is drawn in the numbered heading's capitals ("1 · NPI"),
+  as the four fixed names are; the website draws its titles as sent.
+- **S1-B3** ("Other code" in a review, amendment 5): a change's other values under a third pill, the
+  pick "Changed to {code}" and sent as `other` (DESIGN-CONTRACT "Mutations"). **Finding (carried from
+  the backend's B0 summary, NEW WORD there):** the saved review's line has no word for a changed row, so
+  "{a} accepted · {d} denied" leaves it out, as the website does, until the owner words it.
+- **S1-7** (email consent; backend §12.1 #289): each extra address says its consent under it
+  (DESIGN-CONTRACT "Flows/email"). **Finding:** the spec's "footer words" ("Stop these emails") and the
+  confirm and stop pages' words are the platform's email and pages (the backend's B0 summary: "No lane
+  shows the confirm/stop page words"); the app draws none of them, as the website draws none.
+- **S1-8** (QuickBooks disconnect; backend §12.1 #252): the expired approval over the run's body and the
+  row disconnected at the provider (DESIGN-CONTRACT "Activity/run detail", "Settings › Connections"); the
+  expired approval is carried to Stage 2 (BUILD-PLAN 29.4.6), not sent before it; the Disconnect page is
+  the website's. **Findings:** (1) ~~at the contract commit the Connections list leaves
+  every `disconnected` row out (`snoopy-backend/apps/connections/src/postgres-connections.ts:174`, `status
+  <> 'disconnected'`), so the row is drawn only once the platform lists a connection it retired~~ until
+  8ddcfbc, which lists it; (2) the
+  words name the provider as the platform lists it — QuickBooks is "QuickBooks Online"
+  (`snoopy-backend/providers/quickbooks.json`) — ~~so the app says "Disconnected in QuickBooks Online", where the spec's
+  words say "QuickBooks"~~ until the review (finding 6): QuickBooks is now "QuickBooks", the spec's word
+  (`disconnectedName`), and any other provider is named as the platform lists it ("Disconnected in
+  {provider}", "Expired · {provider} was disconnected", "Reconnect {provider}, then start the run
+  again."): a NEW WORD for the owner, as the backend's B0 summary has it. Parity: the website's lane makes
+  the same change.
+- **S1-15** (QuickBooks company name; backend §12.1 #283): a connected row with no email names its company
+  in Connected's place (DESIGN-CONTRACT "Settings › Connections").
+- **S1-16** (a run keeps its integration; backend §12.1 #290): Run details' integration step and the
+  title it names read the run's own choices (DESIGN-CONTRACT "Activity/run detail").
+- **S1-10** (account deletion; backend §12.1 #248): the confirmation says "You'll be signed out on all
+  devices." (DESIGN-CONTRACT "Mutations", Account). The deletion itself is the platform's. Since the
+  review (finding 5; the spec's addendum 4) a failed delete is sent again, never read: a 5xx is sent
+  again once, at once, then the line says it is not known (`DELETION_WORDS.unknown`) and Try again
+  sends it again; ~~a lost answer reads the session, "Your account is still here"~~ until Round 21
+  stage 1. Parity: the website's lane makes the same change.
+- **S1-14** (export in parts; backend §12.1 #181): Settings › Data's line and a button for each part
+  (DESIGN-CONTRACT "Mutations", Data export). **Finding:** the ready line "Ready. The file holds the whole
+  workspace." and the failure `too_large`'s "The workspace is larger than one export file may be." still
+  speak of one file; no word for several is listed, so they stay until the owner words them.
+- **S1-9** (only owners and admins change a flow; backend §12.1 #180): a member's Add, Set up, Turn on,
+  Pause, Archive flow and Unarchive read-only with the line, and the refusal's words (DESIGN-CONTRACT
+  "Flows/add", "Setup/configure", "Flows/detail"). **The session's default:** on Add the line is drawn
+  once over the list, not under each card as the website's. The integration's own page keeps its line,
+  "Only an owner or admin can change the integration." Three tests that had a member add or save now
+  have an owner or admin do it.
+- **S1-11** (outside sign-in, option b′; backend §12.1 #221): the refusal from any read draws the screen
+  in the tabs' place, with "Remove {provider} sign-in" for each (DESIGN-CONTRACT "Authentication and
+  session"). **Findings:** (1) carried to Stage 2 (BUILD-PLAN 29.4.6); not sent before it. The app
+  listens on every read; (2) the contract names the unlink `unlinkLoginIdentity` (`DELETE
+  /v1/auth/identities/{provider}`, the website's), while the app unlinks through the native
+  `unlinkNativeIdentity` it already uses on Settings › Account. **The session's default:** Sign out
+  (Settings' word) stays on the screen, since the sign-in a person signed up with is never unlinked
+  and would otherwise strand them.
+
+Bites (break, red, restore, green): S1-G2 an http address made a press, LinkedIn's logo left out
+(`blocks-render`), the renderer drawing nothing (`blocks-parity`, `drawn-links`). S1-B1 the example left out, and the example taken on any control (`setup-field`). S1-B2 the
+declared sections ignored, CONNECT kept for the vendor choice, the catalog's sections read for a held
+flow, an empty section drawn (`invoice-processing-screens`). S1-B3 the body without `other`
+(`platform-mutations`), the key without it, the list past 3, a changed row counted as denied, the list
+left open after a pick, the pills drawn to a member (`review-decisions`). S1-7 no line drawn,
+the address matched with case, an unknown status drawn (`build22-screens`). S1-8 any
+`disconnected` read as retired, the line and the attention state left out, the vendor row's name left
+out (`connection-row`), the expiry drawn for any reason, the lines not drawn, the provider by its id
+(`review-decisions`); QuickBooks by the platform's "QuickBooks Online" (`connection-row`,
+`review-decisions`), and every provider called QuickBooks (`review-decisions`). S1-15 the
+company left out, and drawn on a row not connected (`connection-row`). S1-16 the
+flow's choice read, and read over the run's (`build22-screens`). S1-10 the
+line left out (`account-screen`); the automatic retry left out, and the session read again after a
+failed delete (`account-screen`, `deletion`). S1-14 every
+button reading the first part, Share kept for several, `files` ignored, the old line kept
+(`data-support-screens`). S1-9 a
+member's Add, Pause, Turn on, Archive flow and Unarchive pressable, Set up's vendor choice, rows and
+button a member's again, the switch and the pill pressable read-only (`parity-flows`,
+`invoice-processing-screens`, `automation-actions`, `build13-unarchive-and-one-flow`, `setup-field`),
+and each refusal's words left out. S1-11 the
+transport not telling (`session-recovery`), the layout not drawing it, a refusal naming no known
+sign-in drawn, the tabs not back once cleared, a refused removal unsaid, Sign out without a press
+(`outside-sign-in`).

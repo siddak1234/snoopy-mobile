@@ -1,7 +1,7 @@
 {
   "name": "unknown-type",
   "about": "An unknown type at the top level and inside an open section",
-  "blockSetVersion": 4,
+  "blockSetVersion": 5,
   "blocks": [
     {
       "type": "text",

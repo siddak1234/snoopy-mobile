@@ -102,11 +102,25 @@ export function unlinkRefusal(error: unknown): string {
 }
 
 /**
- * Adding an automation: the two reasons the subscription operation allowlists,
- * and only on a 403 — every other 403 is authorization, not a pricing signal
+ * Only an owner or admin changes a flow (the stage 1 spec's S1-9; backend
+ * §12.1 #180): a member's add, set up, pause or resume, or archive is refused
+ * at the Edge with 403 `flow_change_requires_admin`. A member sees each of
+ * those controls read-only, with this line; a refusal says it too — as the
+ * website's.
+ */
+export const FLOW_CHANGE_ADMIN_ONLY = 'Only an owner or admin can change this flow.';
+export const FLOW_CHANGE_REFUSALS: Readonly<Record<string, string>> = {
+  flow_change_requires_admin: FLOW_CHANGE_ADMIN_ONLY,
+};
+
+/**
+ * Adding an automation: the reasons the subscription operation allowlists —
+ * a member's (`flow_change_requires_admin`, S1-9) and the two of pricing — and
+ * only on a 403; every other 403 is authorization, not a pricing signal
  * (`snoopy/lib/subscription-entitlements.ts`).
  */
 const SUBSCRIPTION_REFUSALS: Readonly<Record<string, string>> = {
+  ...FLOW_CHANGE_REFUSALS,
   over_plan_limit: 'This workspace has reached its current plan limit.',
   entitlements_not_configured:
     'Subscriptions are unavailable while billing entitlements are not configured.',
@@ -404,6 +418,32 @@ export function domainOnlyRefusal(error: unknown): string {
 export const JOIN_REFUSALS: Readonly<Record<string, string>> = {
   outside_org_domain: 'This organization admits only people who sign in with addresses at its verified domains.',
 };
+
+/**
+ * A domain-only organization's workspace refusing, at session resolve, a
+ * person who holds a sign-in outside its verified domains (the stage 1 spec's
+ * S1-11; backend §12.1 #221, option b′: 403 `outside_org_domain`,
+ * `OutsideOrgDomainDetails`), until that sign-in is removed; nothing is
+ * removed for them. Its screen says `JOIN_REFUSALS.outside_org_domain`, then
+ * this, then "Remove {provider} sign-in" for each — as the website's.
+ */
+export const OUTSIDE_SIGN_IN_NEXT = 'Remove your other sign-in to continue.';
+const SIGN_IN_NAME: Readonly<Record<'google' | 'microsoft' | 'apple', string>> = {
+  google: 'Google',
+  microsoft: 'Microsoft',
+  apple: 'Apple',
+};
+export type OutsideSignIn = keyof typeof SIGN_IN_NAME;
+export function removeSignIn(provider: OutsideSignIn): string {
+  return `Remove ${SIGN_IN_NAME[provider]} sign-in`;
+}
+/** The sign-ins the refusal names (`details.providers`), each once, those this build knows; null when it names none. */
+export function outsideSignIns(details: Readonly<Record<string, unknown>> | undefined): OutsideSignIn[] | null {
+  if (details?.reason !== 'outside_org_domain') return null;
+  const named = Array.isArray(details.providers) ? details.providers : [];
+  const known = [...new Set(named.filter((provider): provider is OutsideSignIn => Object.hasOwn(SIGN_IN_NAME, String(provider))))];
+  return known.length > 0 ? known : null;
+}
 
 /** Approving someone who signs in from outside them while the setting is on (8B). */
 export const DECISION_REFUSALS: Readonly<Record<string, string>> = {

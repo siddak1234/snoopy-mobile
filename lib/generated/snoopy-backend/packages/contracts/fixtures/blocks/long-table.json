@@ -1,7 +1,7 @@
 {
   "name": "long-table",
   "about": "A sent table of 30 rows, one column of numbers: sort and pages",
-  "blockSetVersion": 4,
+  "blockSetVersion": 5,
   "blocks": [
     {
       "type": "table",

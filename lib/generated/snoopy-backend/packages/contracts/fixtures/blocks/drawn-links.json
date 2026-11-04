@@ -1,0 +1,44 @@
+{
+  "name": "drawn-links",
+  "about": "A candidate's five links as buttons, each its brand's logo and label (amendment 5)",
+  "blockSetVersion": 5,
+  "blocks": [
+    {
+      "type": "links",
+      "items": [
+        {
+          "label": "LinkedIn",
+          "url": "https://www.linkedin.com/in/jane-doe-example",
+          "brand": "linkedin"
+        },
+        {
+          "label": "GitHub",
+          "url": "https://github.com/jane-doe-example",
+          "brand": "github"
+        },
+        {
+          "label": "Hugging Face",
+          "url": "https://huggingface.co/jane-doe-example",
+          "brand": "huggingface"
+        },
+        {
+          "label": "X",
+          "url": "https://x.com/jane_doe_example",
+          "brand": "x"
+        },
+        {
+          "label": "Portfolio",
+          "url": "https://jane-doe.example",
+          "brand": "site"
+        }
+      ]
+    }
+  ],
+  "text": [
+    "LinkedIn",
+    "GitHub",
+    "Hugging Face",
+    "X",
+    "Portfolio"
+  ]
+}

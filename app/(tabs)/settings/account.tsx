@@ -22,6 +22,7 @@ import { useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import {
   DELETE_ACCOUNT_BODY,
+  DELETE_ACCOUNT_SIGNED_OUT,
   DELETE_ACCOUNT_TITLE,
   DELETION_WORDS,
   deletionOutcome,
@@ -29,11 +30,10 @@ import {
 } from '@/lib/content/deletion';
 import { ACCOUNT_LEAD, SIGN_OUT_FAILED, errorTitleFor } from '@/lib/content/screen-states';
 import { deleteAccount, readIdentities, unlinkIdentity, type LoginIdentity } from '@/lib/platform/account';
-import { readCurrentSession, readLoginProviders } from '@/lib/platform/auth';
+import { readLoginProviders } from '@/lib/platform/auth';
 import { linkIdentity } from '@/lib/platform/identity-link';
 import type { LoginProvider } from '@/lib/platform/native-auth';
 import { unlinkRefusal } from '@/lib/content/refusals';
-import { PlatformError } from '@/lib/platform/problem';
 import { clearSession } from '@/lib/platform/session-store';
 
 /**
@@ -227,7 +227,7 @@ function DeleteAccountDialog({
   signOut: () => Promise<{ revoked: boolean }>;
 }) {
   const [busy, setBusy] = useState(false);
-  const [outcome, setOutcome] = useState<Exclude<DeletionOutcome, { kind: 'deleted' | 'check' }> | null>(null);
+  const [outcome, setOutcome] = useState<Exclude<DeletionOutcome, { kind: 'deleted' | 'unknown' }> | null>(null);
   // An attempt whose fate was unknown outlives a retry: a later 401 may mean it finished.
   const anAttemptWasLost = useRef(false);
 
@@ -241,16 +241,11 @@ function DeleteAccountDialog({
       setOutcome(next);
       return;
     }
-    if (next.kind === 'check') {
-      // Whether anything was removed is unknown: the session says which.
-      try {
-        await readCurrentSession();
-        setOutcome({ kind: 'failed', message: DELETION_WORDS.stillHere });
-      } catch (caught) {
-        if (caught instanceof PlatformError && caught.status === 401) return onDeleted();
-        anAttemptWasLost.current = true;
-        setOutcome({ kind: 'failed', message: DELETION_WORDS.unknown });
-      }
+    if (next.kind === 'unknown') {
+      // Whether anything was removed is unknown, and the session is never read
+      // to say which: Try again sends the delete again.
+      anAttemptWasLost.current = true;
+      setOutcome({ kind: 'failed', message: DELETION_WORDS.unknown });
       return;
     }
     if (next.kind === 'failed' && next.message === DELETION_WORDS.retry) anAttemptWasLost.current = false;
@@ -265,13 +260,19 @@ function DeleteAccountDialog({
         await settle(outcome);
         return;
       }
-      let failure: unknown = null;
-      try {
-        await deleteAccount();
-      } catch (caught) {
-        failure = caught;
-      }
-      await settle(deletionOutcome(failure, anAttemptWasLost.current));
+      const attempt = async (): Promise<unknown> => {
+        try {
+          await deleteAccount();
+          return null;
+        } catch (caught) {
+          return caught;
+        }
+      };
+      let next = deletionOutcome(await attempt(), anAttemptWasLost.current);
+      // A 5xx is sent again once, at once: the purge is idempotent and the
+      // identity delete runs again (`deletionOutcome`).
+      if (next.kind === 'unknown' && next.retry) next = deletionOutcome(await attempt(), true);
+      await settle(next);
     } finally {
       setBusy(false);
     }
@@ -323,6 +324,7 @@ function DeleteAccountDialog({
         </>
       }>
       <DialogText>{DELETE_ACCOUNT_BODY[1]}</DialogText>
+      <DialogText>{DELETE_ACCOUNT_SIGNED_OUT}</DialogText>
       {message ? <DialogText tone="error">{message}</DialogText> : null}
     </Dialog>
   );

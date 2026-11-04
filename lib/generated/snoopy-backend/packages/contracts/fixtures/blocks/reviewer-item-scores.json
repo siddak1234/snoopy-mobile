@@ -1,7 +1,7 @@
 {
   "name": "reviewer-item-scores",
   "about": "An item whose page lists scores: 3 scored runs, 1 running and 1 failed, as one bar chart",
-  "blockSetVersion": 4,
+  "blockSetVersion": 5,
   "blocks": [
     {
       "type": "metric",

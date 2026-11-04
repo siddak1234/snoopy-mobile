@@ -1,4 +1,4 @@
-import { EMAIL_STARTER, andMore } from '@/lib/content/screen-states';
+import { EMAIL_STARTER, EMAIL_STATUS, andMore } from '@/lib/content/screen-states';
 import type { FlowEmailRecipients } from '@/lib/platform/automations';
 
 /**
@@ -40,6 +40,19 @@ export function addProblem(
   if (!isFlowEmail(address)) return 'invalid';
   const wanted = address.trim().toLowerCase();
   return listedAddresses(recipients).some((listed) => listed.toLowerCase() === wanted) ? 'duplicate' : null;
+}
+
+/**
+ * The line under an extra address: its consent's words (`EMAIL_STATUS`; backend
+ * §12.1 #289, `FlowEmailRecipients.extraStatuses`), matched without case as the
+ * platform compares addresses; none when the platform sends no status for it
+ * (a platform from before consent), or one this build does not know — as the
+ * website's.
+ */
+export function addressStatus(recipients: Pick<FlowEmailRecipients, 'extraStatuses'>, address: string): string | null {
+  const wanted = address.toLowerCase();
+  const status: string | undefined = recipients.extraStatuses?.find((entry) => entry.email.toLowerCase() === wanted)?.status;
+  return status !== undefined && Object.hasOwn(EMAIL_STATUS, status) ? EMAIL_STATUS[status as keyof typeof EMAIL_STATUS] : null;
 }
 
 /**

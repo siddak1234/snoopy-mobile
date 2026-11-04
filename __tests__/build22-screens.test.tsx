@@ -415,6 +415,26 @@ describe('Who gets the email (P5; D1, S30)', () => {
     expect(screen.getByPlaceholderText('Email address').props.autoCapitalize).toBe('none');
   });
 
+  it('under each extra address, its consent — "Waiting for confirmation", "Confirmed" or "Unsubscribed" — matched without case; none sent, or one this build does not know, no line (the stage 1 spec\'s S1-7; backend §12.1 #289)', async () => {
+    await openEmail({
+      recipients: recipientsPayload({
+        extra: ['new@example.com', 'Old@Example.com', 'gone@example.com', 'odd@example.com', 'bare@example.com'],
+        extraStatuses: [
+          { email: 'new@example.com', status: 'pending' },
+          { email: 'old@example.com', status: 'confirmed' },
+          { email: 'gone@example.com', status: 'stopped' },
+          { email: 'odd@example.com', status: 'bounced' as 'stopped' },
+        ],
+      }),
+    });
+    expect(await screen.findByText('new@example.com')).toBeTruthy();
+    expect(lines('email-extra-new@example.com')).toEqual(['new@example.com', 'Waiting for confirmation']);
+    expect(lines('email-extra-Old@Example.com')).toEqual(['Old@Example.com', 'Confirmed']);
+    expect(lines('email-extra-gone@example.com')).toEqual(['gone@example.com', 'Unsubscribed']);
+    expect(lines('email-extra-odd@example.com')).toEqual(['odd@example.com']);
+    expect(lines('email-extra-bare@example.com')).toEqual(['bare@example.com']);
+  });
+
   it('a member sees the list and no way to change it: no X, no field — "Ask an owner or admin to change this."', async () => {
     await openEmail({ role: 'member', recipients: recipientsPayload({ canEdit: false }) });
     expect(await screen.findByText('Ask an owner or admin to change this.')).toBeTruthy();
@@ -516,10 +536,18 @@ describe("a v4 run's page: steps 2, 4 and 5 (S23–S25)", () => {
   const RUN = '0b9b7c4e-1d2a-4f3b-9c8d-7e6f5a4b3c2d';
   const SENT = '2026-10-17T21:34:00.000Z';
 
-  function openRun(status: Detail['run']['status'], stepIds: string[], email: Detail['email'], vendor = 'quickbooks', version = 4) {
+  function openRun(
+    status: Detail['run']['status'],
+    stepIds: string[],
+    email: Detail['email'],
+    vendor = 'quickbooks',
+    version = 4,
+    connectionChoices?: Detail['connectionChoices'],
+  ) {
     const base = runDetailPayload('run-1');
     const detail: Detail = {
       ...base,
+      ...(connectionChoices ? { connectionChoices } : {}),
       run: { ...base.run, id: RUN, subscriptionId: 'ip-1', templateId: 'invoice-processing', templateVersion: version, status },
       steps: stepIds.map((stepId, n) => ({
         id: `s${n}`,
@@ -565,6 +593,22 @@ describe("a v4 run's page: steps 2, 4 and 5 (S23–S25)", () => {
     expect(step('record')[0]).toBe('4 · Details saved');
     expect(step('email')).toEqual(['5 · Email sent', 'Sending email…']);
     expect(stepsDone()).toBe('5 / 5');
+  });
+
+  it("its own integration, as it started (the stage 1 spec's S1-16; backend §12.1 #290): step 2 and step 4's title follow the run's saved choice, not the flow's now", async () => {
+    const all = invoiceProcessingV4Entry().pipeline.map((declared) => declared.id);
+    await openRun('succeeded', all, { status: 'sent', sentAt: SENT }, 'none', 4, { vendor: 'quickbooks' });
+    expect(await screen.findByTestId('run-step-group:email')).toBeTruthy();
+    expect(step('connect')).toEqual(['2 · Connect integration', 'QuickBooks Online']);
+    expect(step('record')[0]).toBe('4 · QuickBooks updated');
+  });
+
+  it('started with None while the flow has QuickBooks now: None and Details saved', async () => {
+    const all = invoiceProcessingV4Entry().pipeline.map((declared) => declared.id);
+    await openRun('succeeded', all, { status: 'sent', sentAt: SENT }, 'quickbooks', 4, { vendor: 'none' });
+    expect(await screen.findByTestId('run-step-group:email')).toBeTruthy();
+    expect(step('connect')).toEqual(['2 · Connect integration', 'None']);
+    expect(step('record')[0]).toBe('4 · Details saved');
   });
 
   it('running: 5 Waiting; cancelled: 5 Stopped', async () => {

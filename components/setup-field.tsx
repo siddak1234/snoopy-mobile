@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { EnvelopeSimple, HandPalm, ListBullets, PlugsConnected, Sliders, Tray, type Icon } from 'phosphor-react-native';
 
+import { Chip } from '@/components/blocks/badge';
 import { Dropdown } from '@/components/dropdown';
 import { NocToggle } from '@/components/nocturne/noc-toggle';
 import { SectionLabel } from '@/components/nocturne/section-label';
@@ -9,11 +10,14 @@ import { Text, TextInput } from '@/components/text';
 import { fonts, iconSize, inset, space, status, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ScopePill } from '@/components/scope-control';
+import { SelectSheet } from '@/components/select-sheet';
 import { NEWER_CONTROL_NOTE, chosenLabel } from '@/lib/content/screen-states';
 import type { components } from '@/lib/generated/platform-contracts/automations';
 
 /** A setup field; `select` (F1, Round 21's platform round) carries its `options` and `multiple`. */
 export type SetupField = components['schemas']['AutomationSetupField'];
+/** One section of a flow's Set up, as its manifest declares it (`setupSections`, backend ADR-0048 amendment 5). */
+export type SetupSectionDeclaration = components['schemas']['AutomationSetupSectionDeclaration'];
 
 /** Whether a field is the setup dropdown (F1). */
 export function isSelectField(field: { control: string }): boolean {
@@ -31,7 +35,7 @@ export function isSelectField(field: { control: string }): boolean {
  * it as the website does — a text input, with a note (BUILD-PLAN 25.8.1, the
  * owner's requirement 1) — instead of looking it up and crashing the dialog.
  */
-export type FieldRowSpec = Pick<SetupField, 'key' | 'title' | 'description' | 'required' | 'notifies' | 'options' | 'multiple'> & {
+export type FieldRowSpec = Pick<SetupField, 'key' | 'title' | 'description' | 'required' | 'notifies' | 'options' | 'multiple' | 'example'> & {
   control: string;
 };
 
@@ -80,7 +84,12 @@ export const SECTION_NAME: Record<SetupSection, string> = {
  * two missing steps (24.7.3 attempt 4, feedback #5).
  */
 export function sectionLabel(position: number, section: SetupSection): string {
-  return `${position} · ${SECTION_NAME[section]}`;
+  return numberedName(position, SECTION_NAME[section]);
+}
+
+/** A heading's name at its place: "{n} · {name}" (a manifest's own section's too, `setupGroups`). */
+export function numberedName(position: number, name: string): string {
+  return `${position} · ${name}`;
 }
 
 /**
@@ -228,6 +237,32 @@ export function bySection(fields: SetupField[]): { section: SetupSection; fields
 }
 
 /**
+ * Set up's sections, each its heading's name and its fields (the owner's
+ * build 34 F3: "we need to split this out. 1. Npi 2 specialty 3
+ * connectors/integrations"). A manifest that declares `setupSections`
+ * (backend ADR-0048 amendment 5): its sections in its order, each by its
+ * title in the numbered heading's capitals, holding its fields by `sectionId`
+ * in manifest order — a vendor choice among them, drawn in the section it
+ * names — and a section with nothing to draw left out, as the website's.
+ * Without them, the four fixed sections (`bySection`), the vendor choice
+ * left to CONNECT (`rowFields`).
+ */
+export function setupGroups(
+  setup: SetupField[],
+  sections: readonly SetupSectionDeclaration[] | undefined,
+): { name: string; fields: SetupField[] }[] {
+  if (!sections || sections.length === 0) {
+    return bySection(rowFields(setup)).map(({ section, fields }) => ({ name: SECTION_NAME[section], fields }));
+  }
+  return sections
+    .map((section) => ({
+      name: section.title.toUpperCase(),
+      fields: setup.filter((field) => field.sectionId === section.id),
+    }))
+    .filter((group) => group.fields.length > 0);
+}
+
+/**
  * What a notifications toggle switches, in the website's words: the manifest
  * allows `notifies` only on a toggle in the `notifications` section. Keyed by
  * the generated enum, so a value the contract adds is a typecheck failure at
@@ -339,6 +374,18 @@ export function isEmailField(field: Pick<FieldRowSpec, 'key' | 'title' | 'contro
 }
 
 /**
+ * The box's placeholder: an amount's "0.00"; a `text` field's `example`
+ * (backend ADR-0048 amendment 5; the owner's build 34 F2: "Maybe add an
+ * example one rather than optional in the text field"), as the website's;
+ * else "Required" or "Optional". "Optional" beside the title stays.
+ */
+export function placeholderOf(field: Pick<FieldRowSpec, 'control' | 'required' | 'example'>): string {
+  if (field.control === 'money') return '0.00';
+  if (field.control === 'text' && field.example) return field.example;
+  return field.required ? 'Required' : 'Optional';
+}
+
+/**
  * The input itself: an amount typed from the right, an address with the email
  * keyboard, any other text — or, for a switch, the switch. What a row draws
  * under its title (a switch, on its title line).
@@ -347,10 +394,13 @@ export function FieldInput({
   field,
   value,
   onChange,
+  readOnly = false,
 }: {
   field: FieldRowSpec;
   value: unknown;
   onChange: (next: unknown) => void;
+  /** Its value shown, nothing changed: a member's Set up (S1-9). */
+  readOnly?: boolean;
 }) {
   const { palette } = useTheme();
   const isMoney = field.control === 'money';
@@ -374,9 +424,9 @@ export function FieldInput({
   }, [externalValue, value]);
 
   if (field.control === 'toggle') {
-    return <NocToggle value={value === true} onChange={(next) => onChange(next)} />;
+    return <NocToggle value={value === true} disabled={readOnly} onChange={(next) => onChange(next)} />;
   }
-  if (field.control === 'select') return <SelectInput field={field} value={value} onChange={onChange} />;
+  if (field.control === 'select') return <SelectInput field={field} value={value} onChange={onChange} readOnly={readOnly} />;
 
   const changeText = (next: string) => {
     if (isMoney) {
@@ -410,7 +460,8 @@ export function FieldInput({
         accessibilityLabel={field.title}
         value={draft}
         onChangeText={changeText}
-        placeholder={isMoney ? '0.00' : field.required ? 'Required' : 'Optional'}
+        editable={!readOnly}
+        placeholder={placeholderOf(field)}
         placeholderTextColor={palette.neutral[500]}
         keyboardType={isMoney ? 'number-pad' : isEmailField(field) ? 'email-address' : 'default'}
         textContentType={isEmailField(field) ? 'emailAddress' : undefined}
@@ -431,20 +482,26 @@ export function FieldInput({
  * allows several (`multiple`) keeps it open, a tick on each chosen row, and a
  * press toggles its row. The closed pill reads the choices (`chosenLabel`:
  * "Choose", "{first}, {second}", "{n} chosen") by their labels, never their
- * values (Round 21 platform round 2, B1); options that carry `group` are drawn
- * under their headings, and more than 10 get the dropdown's search box.
+ * values (Round 21 platform round 2, B1); more than 10 get the dropdown's
+ * search box. Options that carry `group` open the full-height sheet instead
+ * (`SelectSheet`: "Category", then a group's options, and "Search all"; the
+ * owner's build 34 F1; ~~drawn under their headings in the dropdown~~), and
+ * the picks show as chips under the pill.
  *
  * testIDs: the pill `setup-field-${key}-choice`, a row
- * `setup-field-${key}-choice-option-${value}`.
+ * `setup-field-${key}-choice-option-${value}`, a pick's chip
+ * `setup-field-${key}-choice-chip-${value}`.
  */
 function SelectInput({
   field,
   value,
   onChange,
+  readOnly,
 }: {
   field: FieldRowSpec;
   value: unknown;
   onChange: (next: unknown) => void;
+  readOnly: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const several = field.multiple === true;
@@ -453,6 +510,48 @@ function SelectInput({
   const labelOf = new Map(options.map((option) => [option.value, option.label]));
   const label = chosenLabel(chosen.map((choice) => labelOf.get(choice) ?? choice));
   const testID = `setup-field-${field.key}-choice`;
+  const pick = (next: string) => {
+    if (several) {
+      onChange(chosen.includes(next) ? chosen.filter((choice) => choice !== next) : [...chosen, next]);
+      return;
+    }
+    onChange(next);
+    setOpen(false);
+  };
+  const pill = (
+    <ScopePill
+      testID={testID}
+      icon={ListBullets}
+      label={label}
+      accessibilityLabel={`${field.title}: ${label}`}
+      // Read-only, the pill says the choice and opens nothing (S1-9).
+      onPress={readOnly ? undefined : () => setOpen(true)}
+    />
+  );
+  if (options.some((option) => option.group !== undefined)) {
+    return (
+      <View style={styles.grouped}>
+        <View style={styles.pill}>{pill}</View>
+        {chosen.length > 0 ? (
+          <View style={styles.chips}>
+            {chosen.map((choice) => (
+              <Chip key={choice} testID={`${testID}-chip-${choice}`} badge={{ text: labelOf.get(choice) ?? choice }} />
+            ))}
+          </View>
+        ) : null}
+        <SelectSheet
+          testID={testID}
+          title={field.title}
+          options={options}
+          chosen={chosen}
+          multiple={several}
+          open={open}
+          onChoose={pick}
+          onClose={() => setOpen(false)}
+        />
+      </View>
+    );
+  }
   return (
     <View style={styles.pill}>
       <Dropdown
@@ -463,23 +562,8 @@ function SelectInput({
         values={several ? chosen : undefined}
         open={open}
         onOpenChange={setOpen}
-        onChange={(next) => {
-          if (several) {
-            onChange(chosen.includes(next) ? chosen.filter((choice) => choice !== next) : [...chosen, next]);
-            return;
-          }
-          onChange(next);
-          setOpen(false);
-        }}
-        trigger={
-          <ScopePill
-            testID={testID}
-            icon={ListBullets}
-            label={label}
-            accessibilityLabel={`${field.title}: ${label}`}
-            onPress={() => setOpen(true)}
-          />
-        }
+        onChange={pick}
+        trigger={pill}
       />
     </View>
   );
@@ -500,6 +584,7 @@ export function SetupFieldRow({
   onChange,
   divider,
   error,
+  readOnly = false,
 }: {
   field: FieldRowSpec;
   value: unknown;
@@ -507,6 +592,8 @@ export function SetupFieldRow({
   divider: boolean;
   /** What the save said of this field ("Choose at least one."), under it. */
   error?: string | null;
+  /** Its value shown, nothing changed: a member's Set up (the stage 1 spec's S1-9). */
+  readOnly?: boolean;
 }) {
   const { palette } = useTheme();
   // A control this build does not know draws under the text glyph, as its text input (25.8.1).
@@ -525,7 +612,7 @@ export function SetupFieldRow({
         {!field.required ? (
           <Text style={[styles.optional, { color: palette.neutral[500] }]}>Optional</Text>
         ) : null}
-        {field.control === 'toggle' ? <FieldInput field={field} value={value} onChange={onChange} /> : null}
+        {field.control === 'toggle' ? <FieldInput field={field} value={value} onChange={onChange} readOnly={readOnly} /> : null}
       </View>
       {notifies ? <Text style={[styles.rowSub, { color: palette.neutral[400] }]}>{notifies}</Text> : null}
       {newer ? <Text style={[styles.rowSub, { color: palette.neutral[400] }]}>{newer}</Text> : null}
@@ -534,7 +621,7 @@ export function SetupFieldRow({
           instead of inventing a provider-specific picker — `resource-picker` is a
           known control drawn that way (25.8.1), and a control this build does not
           know is drawn that way too, with `controlNote`'s line under it. */}
-      {field.control === 'toggle' ? null : <FieldInput field={field} value={value} onChange={onChange} />}
+      {field.control === 'toggle' ? null : <FieldInput field={field} value={value} onChange={onChange} readOnly={readOnly} />}
       {error ? (
         <Text accessibilityRole="alert" testID={`setup-field-${field.key}-error`} style={[styles.fieldError, { color: status.err }]}>
           {error}
@@ -568,6 +655,9 @@ const styles = StyleSheet.create({
   },
   // The pill keeps its own width, as the item select's does.
   pill: { flexDirection: 'row' },
+  // A grouped select: the pill, then its picks as chips, `inner` apart.
+  grouped: { gap: space.inner },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.inner },
   fieldError: { fontFamily: fonts.medium, ...typeScale.small },
   currency: { fontFamily: fonts.regular, fontSize: typeScale.lead.fontSize, marginRight: inset.xxs },
   input: {

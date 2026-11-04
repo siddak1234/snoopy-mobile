@@ -3,6 +3,7 @@ import { View } from 'react-native';
 
 import { Catch } from '@/components/dialog-boundary';
 import { space } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import type { Block } from '@/lib/platform/automations';
 
 import { BadgeBlock } from './badge';
@@ -13,6 +14,7 @@ import { FileBlock } from './file';
 import { GroupCard } from './group';
 import { ImageBlock } from './image';
 import { LinkBlock } from './link';
+import { LinksBlock } from './links';
 import { ListBlock } from './list';
 import type { BlockOf, BlockPlace } from './look';
 import { MetricBlock } from './metric';
@@ -41,8 +43,9 @@ type Draw<K extends Block['type']> = (args: {
 }) => React.ReactNode;
 
 /**
- * The registry: one renderer for each of the contract's thirteen types (backend
- * ADR-0048 and its amendment 1, `BLOCK_SET_VERSION` 2; ~~ten~~ until Round 21),
+ * The registry: one renderer for each of the contract's fourteen types (backend
+ * ADR-0048 and its amendments 1 to 5, `BLOCK_SET_VERSION` 5: `links` since
+ * amendment 5; ~~ten~~ until Round 21, ~~thirteen~~ until block set 5),
  * keyed by the generated union, so a type the contract adds fails the build
  * here until it is drawn (decisions 8 and 12; `__tests__/blocks-render`). Each
  * is made from a part the app already has — the chart from react-native-svg,
@@ -62,6 +65,7 @@ export const RENDERERS: { [K in Block['type']]: Draw<K> } = {
     <FileBlock block={block} testID={testID} nested={nested} place={context} />
   ),
   link: ({ block, testID, nested }) => <LinkBlock block={block} testID={testID} nested={nested} />,
+  links: ({ block, testID }) => <LinksBlock block={block} testID={testID} />,
   timeline: ({ block, testID, nested }) => <TimelineBlock block={block} testID={testID} nested={nested} />,
   questions: ({ block, testID, context }) => <QuestionsBlock block={block} testID={testID} forms={context.forms} />,
   image: ({ block, testID, nested, context }) => (
@@ -128,6 +132,7 @@ function Blocks({
   nested: boolean;
   context: BlockContext;
 }) {
+  const { palette } = useTheme();
   const inner = (within: readonly unknown[], at: string) => (
     <Blocks blocks={within} prefix={at} nested context={context} />
   );
@@ -136,6 +141,9 @@ function Blocks({
   // above the block it heads — as a form's title is above its form — so
   // "ADD CANDIDATE" and "CANDIDATES" sit the same distance above their cards
   // (F3; ~~14 under every block~~ until Round 21). None above the first.
+  // Inside a section, a divider line between its entries, `inner` either side
+  // of it — LinkedIn's and GitHub's links apart (the owner's build 31 G3) —
+  // never between a label and the block it heads.
   const between = nested ? space.inner : space.group;
   const drawn = blocks.map((block, index) => ({ block, index })).filter(({ block }) => !drawsNothing(block, context));
   return (
@@ -145,9 +153,19 @@ function Blocks({
         const draw = rendererFor(block);
         const type = draw ? (block as Block).type : null;
         const missing = type ? missingField(block as Block) : null;
-        const above = at === 0 ? 0 : isLabel(drawn[at - 1]!.block) ? space.title : between;
+        const underLabel = at > 0 && isLabel(drawn[at - 1]!.block);
+        const above = at === 0 ? 0 : underLabel ? space.title : between;
+        const divided = nested && at > 0 && !underLabel;
         return (
-          <View key={testID} style={above > 0 ? { marginTop: above } : undefined}>
+          <View
+            key={testID}
+            style={
+              divided
+                ? { marginTop: above, paddingTop: space.inner, borderTopWidth: 1, borderTopColor: palette.divider }
+                : above > 0
+                  ? { marginTop: above }
+                  : undefined
+            }>
             {!draw || !type ? (
               <NotDrawnFallback type={typeOf(block)} error="unknown type" testID={`${testID}-fallback`} />
             ) : missing ? (
