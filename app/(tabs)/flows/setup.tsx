@@ -31,6 +31,7 @@ import { Text } from '@/components/text';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { fonts, space, typeScale, withAlpha } from '@/constants/theme';
+import { useHealthAgreement } from '@/hooks/use-health-agreement';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { roleIn, useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
@@ -98,6 +99,7 @@ import { administers } from '@/lib/view/roles';
  * §12.1 #180): to a member every choice and setting is read-only, and "Only an
  * owner or admin can change this flow." stands in the button's place
  * (~~a member's first vendor choice on a flow just added, ADR-0043 §2~~).
+ * An add refused for the health data agreement: `useHealthAgreement` (C3).
  */
 export default function SetupScreen() {
   const { palette } = useTheme();
@@ -126,6 +128,7 @@ export default function SetupScreen() {
   const addUnanswered = useRef(false);
   const updateKey = useRef(newIdempotencyKey('activate'));
   const hasFocused = useRef(false);
+  const healthAgreement = useHealthAgreement('add');
 
   const resource = useWorkspaceResource(
     async (id) => {
@@ -402,7 +405,10 @@ export default function SetupScreen() {
       // No answer to the add (offline, a 5xx): Try again replays it. Any other
       // answer was the platform's word, and the next press checks afresh.
       if (adding) addUnanswered.current = !(error instanceof PlatformError) || error.status >= 500;
-      setActionError(turnOnRefusal(error, adding));
+      // A flow that carries health data (C3): the owner accepts the agreement, then the add is sent again, its key the same.
+      const agreement = adding ? await healthAgreement(error, workspaceId) : null;
+      if (agreement?.accepted) await submit();
+      else setActionError(agreement ? agreement.line : turnOnRefusal(error, adding));
     } finally {
       setBusy(false);
     }

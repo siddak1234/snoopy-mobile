@@ -329,14 +329,23 @@ export const ITEM_NOT_READY = 'Try again in a moment.';
 export const ITEM_ARCHIVED = 'It was archived, so it takes no new runs.';
 
 /**
+ * An item's upload refused 403 for the person's role: only an owner or admin
+ * makes an item, and the platform refuses a member before anything else — the
+ * health data agreement included (Round 21 stage 2, C3) — `details.requiredRole`
+ * `admin`, no reason. The website's words for it (its `createItem`).
+ */
+export const ITEM_ADMIN_ONLY = 'Only an owner or admin can do this.';
+
+/**
  * Making an item (backend ADR-0046), refused: in the words the upload path and
  * the run's start already use — a file gone is "choose it again" and empties
  * the file, a flow not on is "Turn it on first", over the plan is the run's
- * sentence, and a full queue (429 `queue_full`, or `max_concurrent_runs`) the
- * run's words. A refused value is said under the form, and each field it
- * names under that field (`fields`): `details.problems` is at most 16 `{ path,
- * message }` pairs, each `path` naming a field as `fields.<key>` (`refusedFields`).
- * The words are the website's.
+ * sentence, any other 403 a member's (`ITEM_ADMIN_ONLY`), and a full queue
+ * (429 `queue_full`, or `max_concurrent_runs`) the run's words. A refused
+ * value is said under the form, and each field it names under that field
+ * (`fields`): `details.problems` is at most 16 `{ path, message }` pairs, each
+ * `path` naming a field as `fields.<key>` (`refusedFields`). The words are the
+ * website's.
  */
 export function itemRefusal(
   error: unknown,
@@ -359,6 +368,7 @@ export function itemRefusal(
     if (error.status === 403 && (reason === 'over_plan_limit' || reason === 'entitlements_not_configured')) {
       return { ...runRefusal(error), fields: [] };
     }
+    if (error.status === 403) return { message: ITEM_ADMIN_ONLY, fileGone: false, fields: [] };
   }
   const queueFull = queueFullMessage(error);
   if (queueFull) return { message: queueFull, fileGone: false, fields: [] };

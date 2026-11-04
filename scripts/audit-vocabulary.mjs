@@ -39,6 +39,10 @@
  * Since round 23 (2026-10-19) "team" too, from the owner's build 22 feedback:
  * a person reads Department — "All departments", "in a department". The code
  * keeps its names (`teams`, `/settings/team`, `scope-team`); only copy is read.
+ *
+ * Since Round 21 stage 2 (the session's decision, 2026-11-04) the exact phrase
+ * "EHR team" stands: the clinic's own EHR staff, who give it its FHIR address
+ * and activate Autom8x — not a department (D1's refusal lines, the website's).
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { extname, join, relative } from "node:path";
@@ -58,6 +62,9 @@ const GENERATED = "lib/generated/";
  * reads flows and steps. "Team" since round 23: a person reads departments.
  */
 const RETIRED = /\b(projects?|automations?|solutions?|pipelines?|teams?)\b/iu;
+
+/** The one "team" copy may say: "EHR team" — the clinic's own EHR staff, not a department. */
+const ALLOWED_PHRASE = /\bEHR team\b/gu;
 
 /** The brand line under the mark (design source, the cover and Home). */
 const BRAND_LINE = "AUTOMATION × AI";
@@ -113,7 +120,7 @@ function visit(node, source, path) {
               ["require", "jest.mock"].includes(parent.expression.text)))));
     if (!isModuleName && readsAsCopy(node.text)) text = node.text;
   }
-  if (text !== null && text.trim() !== BRAND_LINE && RETIRED.test(text)) {
+  if (text !== null && text.trim() !== BRAND_LINE && RETIRED.test(text.replace(ALLOWED_PHRASE, ""))) {
     const { line } = source.getLineAndCharacterOfPosition(node.getStart(source));
     findings.push(`${path}:${line + 1}: ${JSON.stringify(text.trim())}`);
   }
@@ -141,7 +148,7 @@ if (findings.length > 0) {
 }
 
 console.log(
-  'Vocabulary audit passed. No copy says "project", "automation", "solution", "pipeline", "team", "Connect vendor" or "Move to v", and no screen reads a run\'s request id.',
+  'Vocabulary audit passed. No copy says "project", "automation", "solution", "pipeline", "team" (but "EHR team"), "Connect vendor" or "Move to v", and no screen reads a run\'s request id.',
 );
 
 function walk(path) {

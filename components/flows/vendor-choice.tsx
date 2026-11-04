@@ -139,7 +139,7 @@ export function VendorChoice({
               ? { text: VENDOR_ASK_ADMIN, tone: 'muted' as const }
               : needsNoConnect(provider)
                 ? { text: CONNECTION_CONNECTED, tone: 'muted' as const }
-                : connectionLine(connection, provider?.displayName ?? vendor.displayName);
+                : connectionLine(connection, provider?.displayName ?? vendor.displayName, provider?.authType);
         return (
           <View key={vendor.providerId} style={{ borderBottomWidth: 1, borderBottomColor: palette.divider }}>
             <ConnectionRow

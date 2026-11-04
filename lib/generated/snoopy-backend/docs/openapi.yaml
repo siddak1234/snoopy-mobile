@@ -601,6 +601,13 @@ paths:
         separately capped at 8192 BYTES, so a submission in a multi-byte script
         reaches the byte cap first — the documented maxima are an upper bound, not
         a reachable budget.
+
+
+        Since S1-12 (§12.1 #36) a recorded enquiry is emailed once to the
+        deployment's contact address, `Reply-To` the sender, with each stored
+        field that has a value. Best effort: the answer is 201 whether or not the
+        email went, since the stored row is the record; a trapped submission
+        sends nothing.
       security: []
       requestBody:
         required: true
@@ -896,6 +903,111 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /v1/agreements/health-data:
+    get:
+      tags: [workspaces]
+      operationId: getHealthDataAgreement
+      description: >-
+        ADR-0049 (C3): the current health data agreement (a Business Associate
+        Agreement), for any signed-in person to read before an owner accepts it.
+        503 `agreement_not_published` while a lawyer has not approved one — then
+        every health flow's add and run start is refused `agreement_required`.
+      responses:
+        '200':
+          description: The text to scroll, its version and its sha256.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HealthDataAgreement' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '502': { $ref: '#/components/responses/DependencyFailure' }
+        '503': { $ref: '#/components/responses/NotConfigured' }
+  /v1/workspaces/{workspaceId}/agreements:
+    post:
+      tags: [workspaces]
+      operationId: acceptAgreement
+      description: >-
+        ADR-0049 (C3): the workspace's owner accepts the health data agreement it
+        read (`AgreementAcceptanceRequest`). Owner only, from the membership — an
+        admin or a member is 403 with `details.requiredRole: owner`; a version or
+        sha256 that is not the current text's is 409 `agreement_changed`; 503
+        `agreement_not_published` while none is published. One append-only row
+        with the signed copy; a second acceptance is a second row. Cookie callers
+        are held to the website's origin.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AgreementAcceptanceRequest' }
+      responses:
+        '201':
+          description: The signed document, as `{document}`.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [document]
+                properties:
+                  document: { $ref: '#/components/schemas/WorkspaceDocument' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '502': { $ref: '#/components/responses/DependencyFailure' }
+        '503': { $ref: '#/components/responses/NotConfigured' }
+  /v1/workspaces/{workspaceId}/documents:
+    get:
+      tags: [workspaces]
+      operationId: listWorkspaceDocuments
+      description: >-
+        ADR-0049 (C3): the workspace's signed documents, newest first, at most 50,
+        one query. Any member.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      responses:
+        '200':
+          description: The Documents list.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkspaceDocumentListResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '502': { $ref: '#/components/responses/DependencyFailure' }
+        '503': { $ref: '#/components/responses/NotConfigured' }
+  /v1/workspaces/{workspaceId}/documents/{documentId}:
+    get:
+      tags: [workspaces]
+      operationId: readWorkspaceDocument
+      description: >-
+        ADR-0049 (C3): one signed document with its copy, as `{document}`; read
+        only when its row is opened. Any member; another workspace's is 404.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: documentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The document and its signed copy.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [document]
+                properties:
+                  document: { $ref: '#/components/schemas/WorkspaceDocumentCopy' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '502': { $ref: '#/components/responses/DependencyFailure' }
+        '503': { $ref: '#/components/responses/NotConfigured' }
   /v1/workspaces/{workspaceId}/members:
     get:
       tags: [workspaces]
@@ -1482,10 +1594,12 @@ paths:
         - $ref: '#/components/parameters/IdempotencyKey'
       description: >-
         Adds a flow; owner or admin only, a member is 403
-        `flow_change_requires_admin` (§12.1 #180). It goes to the workspace's
-        team of the flow's category, which the platform makes when there is none
-        (ADR-0036); no client chooses a team. The request body is specified in
-        `docs/openapi/automations.yaml`.
+        `flow_change_requires_admin` (§12.1 #180). A flow that carries health
+        data is 403 `agreement_required` (`AgreementRequiredDetails`, ADR-0049)
+        until the workspace's owner accepted the current health data agreement.
+        It goes to the workspace's team of the flow's category, which the
+        platform makes when there is none (ADR-0036); no client chooses a team.
+        The request body is specified in `docs/openapi/automations.yaml`.
       responses:
         '200': { description: The subscription, with its unmet connections. }
         '403': { $ref: '#/components/responses/Forbidden' }
@@ -1759,7 +1873,10 @@ paths:
       description: >-
         Refused with 403 `over_plan_limit`, carrying `limit` and `live`, while the
         workspace holds more flows than its plan allows (the owner's decision
-        7a3). Specified in `docs/openapi/automations.yaml`.
+        7a3); and, for a flow that carries health data, with 403
+        `agreement_required` (`AgreementRequiredDetails`, ADR-0049) until the
+        workspace's owner accepted the current health data agreement. Specified
+        in `docs/openapi/automations.yaml`.
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -3272,9 +3389,12 @@ components:
           description: >-
             Usually absent, or a `reason` its operation lists. On the 403 a
             domain-only organization's workspace answers at session resolve
-            (§12.1 #221, option b′; not sent before Stage 2, BUILD-PLAN 29.4.6),
+            (§12.1 #221, option b′),
             the shape is `OutsideOrgDomainDetails`. The join and link refusals
-            with the same reason (decision 8B) carry `reason` alone.
+            with the same reason (decision 8B) carry `reason` alone. On a 403
+            whose `details.reason` is `agreement_required` from adding or
+            running a flow that carries health data (ADR-0049), the shape is
+            `AgreementRequiredDetails`.
 
     OutsideOrgDomainDetails:
       type: object
@@ -3288,14 +3408,135 @@ components:
         `unlinkLoginIdentity` (the native client's unlink). A client shows "This
         organization admits only people who sign in with addresses at its
         verified domains." / "Remove your other sign-in to continue." and a
-        "Remove {provider} sign-in" button for each. Not sent before Stage 2
-        (BUILD-PLAN 29.4.6; §12.1 #221).
+        "Remove {provider} sign-in" button for each. Sent since Stage 2's
+        S1-11 on every request billed to that workspace (one that names it);
+        the session, the identities list and the unlink route still answer,
+        so the person can remove the sign-in (§12.1 #221).
       properties:
         reason: { type: string, enum: [outside_org_domain] }
         providers:
           type: array
           minItems: 1
           items: { type: string, enum: [google, microsoft, apple] }
+
+    AgreementRequiredDetails:
+      type: object
+      additionalProperties: false
+      required: [reason, kind]
+      description: >-
+        ADR-0049 (C3): adding a flow whose manifest says `dataProtection:
+        hipaa` (`createSubscription`), or starting a run of one (`createRun`),
+        before the workspace's owner accepted the current health data
+        agreement. Nothing was created. An owner is shown the agreement
+        (`HealthDataAgreement`) to accept, then the request is repeated with
+        the same `Idempotency-Key`; anyone else is shown "Ask your workspace
+        owner to accept the health data agreement." `version` is absent while
+        no version is published — the text then answers 503
+        `agreement_not_published`. The agreement's routes land with their
+        handlers (Stage 2's B1); until then nothing answers this.
+      properties:
+        reason: { type: string, enum: [agreement_required] }
+        kind:
+          type: string
+          description: Which agreement; `health-data` today. Open, so a later kind is no break.
+        version: { type: integer, minimum: 1 }
+
+    HealthDataAgreement:
+      type: object
+      additionalProperties: false
+      required: [version, text, sha256]
+      description: >-
+        ADR-0049 (C3): the current health data agreement (a Business Associate
+        Agreement), served to any signed-in person by `GET
+        /v1/agreements/health-data`, or 503 `agreement_not_published` while a
+        lawyer has not approved it. `text` is markdown with `{Covered Entity}`
+        and `{Effective date}` left to fill: the copy kept on acceptance has
+        the workspace's name and the acceptance date in their place.
+        `sha256` is the hex digest of `text`, which an acceptance names back.
+      properties:
+        version: { type: integer, minimum: 1 }
+        text: { type: string, minLength: 1 }
+        sha256: { type: string, pattern: '^[0-9a-f]{64}$' }
+
+    AgreementAcceptanceRequest:
+      type: object
+      additionalProperties: false
+      required: [kind, version, sha256, signerName, signerTitle, authorized]
+      description: >-
+        ADR-0049 (C3): `POST /v1/workspaces/{workspaceId}/agreements`, the
+        workspace's owner accepting the agreement it read — owner only, from
+        the membership and never the body; an admin or a member is 403 with
+        `details.requiredRole: owner`. In one transaction Access checks the
+        version is current and `sha256` is its text's (else 409
+        `agreement_changed`: the person read another text) and that
+        `authorized` is true, and writes an append-only row with the signed
+        copy; 503 `agreement_not_published` while no text is published. A
+        second acceptance is a second row. Answered 201 with `{document}`, a
+        `WorkspaceDocument`.
+      properties:
+        kind: { type: string, enum: [health-data] }
+        version: { type: integer, minimum: 1 }
+        sha256: { type: string, pattern: '^[0-9a-f]{64}$' }
+        signerName: { type: string, minLength: 1, maxLength: 120 }
+        signerTitle: { type: string, minLength: 1, maxLength: 120 }
+        authorized:
+          const: true
+          description: The checkbox "I'm authorized to sign for {organization}".
+
+    WorkspaceDocument:
+      type: object
+      additionalProperties: false
+      required: [id, kind, version, signerName, signerTitle, acceptedAt]
+      description: >-
+        ADR-0049 (C3): one signed document of a workspace, as its Documents
+        list shows it — "Business Associate Agreement · Version {n}",
+        "Accepted by {name} on {date}". Read by any member.
+      properties:
+        id: { type: string, format: uuid }
+        kind:
+          type: string
+          description: Which agreement; `health-data` today. Open, so a later kind is no break.
+        version: { type: integer, minimum: 1 }
+        signerName: { type: string, minLength: 1, maxLength: 120 }
+        signerTitle: { type: string, minLength: 1, maxLength: 120 }
+        acceptedAt: { type: string, format: date-time }
+
+    WorkspaceDocumentListResponse:
+      type: object
+      additionalProperties: false
+      required: [documents]
+      description: >-
+        ADR-0049 (C3): `GET /v1/workspaces/{workspaceId}/documents`, newest
+        first, at most 50, read in one query. Empty: "No documents yet."
+      properties:
+        documents:
+          type: array
+          maxItems: 50
+          items: { $ref: '#/components/schemas/WorkspaceDocument' }
+
+    WorkspaceDocumentCopy:
+      type: object
+      additionalProperties: false
+      required: [id, kind, version, signerName, signerTitle, acceptedAt, text]
+      description: >-
+        ADR-0049 (C3): `GET /v1/workspaces/{workspaceId}/documents/{documentId}`,
+        answered as `{document}`: one document with its signed copy — the
+        agreement as accepted, with `{Covered Entity}` and `{Effective date}`
+        filled and its signature section (the organization; the name and title,
+        and that they confirmed they are authorized to sign for it; the time;
+        the version and the text's SHA-256) — the text's own section when it
+        keeps one, else appended — at most 64 KiB. Read only when its row is
+        opened.
+      properties:
+        id: { type: string, format: uuid }
+        kind:
+          type: string
+          description: Which agreement; `health-data` today.
+        version: { type: integer, minimum: 1 }
+        signerName: { type: string, minLength: 1, maxLength: 120 }
+        signerTitle: { type: string, minLength: 1, maxLength: 120 }
+        acceptedAt: { type: string, format: date-time }
+        text: { type: string, minLength: 1 }
 
     WorkspaceExportResponse:
       type: object

@@ -8,6 +8,7 @@ import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { SectionTitle } from '@/components/nocturne/section-label';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { TextField } from '@/components/nocturne/text-field';
+import { OrgDocuments } from '@/components/organization/org-documents';
 import { OrgDomainOnly } from '@/components/organization/org-domain-only';
 import { OrgDomains } from '@/components/organization/org-domains';
 import { OrgJoin } from '@/components/organization/org-join';
@@ -25,6 +26,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { joinLinkLine } from '@/lib/content/join-link';
 import { WORKSPACE_CHANGED, refusalMessage } from '@/lib/content/refusals';
 import { ORGANIZATION_EMPTY_BODY, ORGANIZATION_EMPTY_TITLE, errorTitleFor } from '@/lib/content/screen-states';
+import { readWorkspaceDocuments } from '@/lib/platform/agreements';
 import {
   discoverOrganizations,
   joinLink,
@@ -56,6 +58,10 @@ import { administers } from '@/lib/view/roles';
  * from someone at a verified email domain the organization shows for matching
  * emails — the line under it follows that domain's joining policy
  * (`joinLinkLine`), or says what to do first.
+ *
+ * Its DOCUMENTS, after ORGANIZATION DETAILS (Round 21 stage 2, C3): the
+ * health data agreements the workspace signed, read with the rest
+ * (`OrgDocuments`).
  */
 export default function OrganizationScreen() {
   const router = useRouter();
@@ -69,12 +75,13 @@ export default function OrganizationScreen() {
     const { workspaces } = await readWorkspaces();
     const active = workspaces.find((workspace) => workspace.id === workspaceId);
     if (active?.type === 'organization' && administers(active.role)) {
-      const [members, domains, requests] = await Promise.all([
+      const [members, domains, requests, documents] = await Promise.all([
         readWorkspaceMembers(workspaceId),
         readDomains(workspaceId),
         readJoinRequests(workspaceId),
+        readWorkspaceDocuments(workspaceId),
       ]);
-      return { kind: 'manage' as const, workspace: active, members, domains, requests };
+      return { kind: 'manage' as const, workspace: active, members, domains, requests, documents };
     }
     const organizations = workspaces.filter((workspace) => workspace.type === 'organization');
     if (organizations.length > 0) return { kind: 'member' as const, active, organizations };
@@ -162,6 +169,7 @@ export default function OrganizationScreen() {
               ) : null}
             </SurfaceCard>
           </View>
+          <OrgDocuments documents={data.documents} />
           <OrgDomains domains={data.domains} shownWorkspaceId={org.loadedFor} onChanged={org.reload} />
           {/* Read again in place: the toggle already shows the change (decision 8B). */}
           <OrgDomainOnly

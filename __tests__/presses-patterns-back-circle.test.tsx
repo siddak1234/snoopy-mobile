@@ -5,6 +5,7 @@ import RunDetailScreen from '@/app/(tabs)/activity/run';
 import RunDetailsScreen from '@/app/(tabs)/activity/run-details';
 import ApprovalsScreen from '@/app/(tabs)/activity/approvals';
 import AddFlowScreen from '@/app/(tabs)/flows/add';
+import AgreementScreen from '@/app/(tabs)/flows/agreement';
 import ArchivedFlowsScreen from '@/app/(tabs)/flows/archived';
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import SetupScreen from '@/app/(tabs)/flows/setup';
@@ -14,6 +15,7 @@ import AccountScreen from '@/app/(tabs)/settings/account';
 import BillingScreen from '@/app/(tabs)/settings/billing';
 import ConnectionsScreen from '@/app/(tabs)/settings/connections';
 import DataExportScreen from '@/app/(tabs)/settings/data';
+import DocumentScreen from '@/app/(tabs)/settings/documents';
 import OrganizationScreen from '@/app/(tabs)/settings/organization';
 import SupportScreen from '@/app/(tabs)/settings/support';
 import TeamScreen from '@/app/(tabs)/settings/team';
@@ -165,6 +167,14 @@ const PAGES: {
     loaded: () => screen.findByText('For Invoice Processing'),
   },
   {
+    page: 'Health data agreement',
+    site: 'app/(tabs)/flows/agreement.tsx',
+    Screen: AgreementScreen,
+    params: { action: 'add', workspace: TEST_WORKSPACE },
+    routes: [[/^\/v1\/agreements\/health-data$/u, { version: 1, text: 'The agreement.', sha256: 'a'.repeat(64) }]],
+    loaded: () => screen.findByTestId('agreement-text'),
+  },
+  {
     page: 'Account',
     site: 'app/(tabs)/settings/account.tsx:118',
     Screen: AccountScreen,
@@ -200,6 +210,29 @@ const PAGES: {
     Screen: OrganizationScreen,
     routes: [[/^\/v1\/workspaces$/u, workspaces('organization', 'member')]],
     loaded: () => screen.findByText('Your organization workspace'),
+  },
+  {
+    page: 'Document',
+    site: 'app/(tabs)/settings/documents.tsx',
+    Screen: DocumentScreen,
+    params: { document: 'doc-1' },
+    routes: [
+      [
+        /\/documents\/doc-1$/u,
+        {
+          document: {
+            id: 'doc-1',
+            kind: 'health-data',
+            version: 1,
+            signerName: 'Dana Reyes',
+            signerTitle: 'Practice manager',
+            acceptedAt: '2026-11-03T15:00:00Z',
+            text: 'The signed copy.',
+          },
+        },
+      ],
+    ],
+    loaded: () => screen.findByTestId('document-text'),
   },
   {
     page: 'Support',

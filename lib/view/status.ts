@@ -68,6 +68,8 @@ export type StatusPillLabel =
   // A Needs-review card's pill once it is decided, while it leaves (round 24 P7).
   | 'Approved'
   | 'Denied'
+  // A Needs-review card whose Approve a disconnect expired (S1-8b): the website's pill.
+  | 'Expired'
   | 'Trialing'
   | 'Past due'
   | 'Incomplete';

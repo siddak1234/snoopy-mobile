@@ -410,6 +410,39 @@ describe('the vocabulary audit: Build 22', () => {
   });
 });
 
+/**
+ * Round 21 stage 2 (the session's decision, 2026-11-04): the EHR's connect
+ * refusals say "EHR team" — the clinic's own EHR staff, not a department — so
+ * that exact phrase stands, and only it: "team" anywhere else still fails.
+ */
+describe('the vocabulary audit: Round 21 stage 2', () => {
+  it('passes the exact phrase "EHR team", and still fails "team" in any other form, the same sentence included', () => {
+    writeFileSync(
+      join(root, 'lib/ehr-words.ts'),
+      [
+        "export const A = 'Use the https address your EHR team gave you.';",
+        'export const B = "Your EHR hasn\'t turned on Autom8x yet. Ask your EHR team to activate it.";',
+      ].join('\n'),
+    );
+    expect(run(vocabularyAudit).status).toBe(0);
+    rmSync(join(root, 'lib/ehr-words.ts'));
+
+    for (const [file, source] of [
+      ['lib/content/teams.ts', "export const A = 'Ask your EHR teams to activate it.';"],
+      ['lib/content/lower.ts', "export const B = 'Ask your ehr team to activate it.';"],
+      ['lib/content/both.ts', "export const C = 'Ask your EHR team or your team lead.';"],
+      ['app/team.tsx', 'export const D = () => <Text>Ask your team</Text>;'],
+    ]) {
+      mkdirSync(dirname(join(root, file)), { recursive: true });
+      writeFileSync(join(root, file), source);
+      const result = run(vocabularyAudit);
+      expect([file, result.status]).toEqual([file, 1]);
+      expect(result.stderr).toContain(file);
+      rmSync(join(root, file));
+    }
+  });
+});
+
 describe('the type audit (24.12)', () => {
   it('fails a font size written outside the type scale, in each form a number becomes a size, and passes the scale', () => {
     expect(run(typeAudit).status).toBe(0);

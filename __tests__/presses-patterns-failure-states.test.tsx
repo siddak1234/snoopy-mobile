@@ -10,6 +10,7 @@ import ItemFileScreen from '@/app/(tabs)/flows/item-file';
 import ApprovalsScreen from '@/app/(tabs)/activity/approvals';
 import ActivityScreen from '@/app/(tabs)/activity/index';
 import AddFlowScreen from '@/app/(tabs)/flows/add';
+import AgreementScreen from '@/app/(tabs)/flows/agreement';
 import ArchivedFlowsScreen from '@/app/(tabs)/flows/archived';
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import FlowsScreen from '@/app/(tabs)/flows/index';
@@ -21,6 +22,7 @@ import AccountScreen from '@/app/(tabs)/settings/account';
 import BillingScreen from '@/app/(tabs)/settings/billing';
 import ConnectionsScreen from '@/app/(tabs)/settings/connections';
 import DataExportScreen from '@/app/(tabs)/settings/data';
+import DocumentScreen from '@/app/(tabs)/settings/documents';
 import OrganizationScreen from '@/app/(tabs)/settings/organization';
 import TeamScreen from '@/app/(tabs)/settings/team';
 import TeamsScreen from '@/app/(tabs)/settings/teams';
@@ -89,6 +91,12 @@ const SCREENS = {
   Setup: { Screen: SetupScreen, params: { template: 'tpl.0' }, read: /\/automations$/u },
   'Connect integration': { Screen: ConnectVendorScreen, params: { flow: 'invoice', field: 'vendor' }, read: /\/automations$/u },
   'Who gets the email': { Screen: FlowEmailScreen, params: { flow: 'invoice' }, read: /\/email-recipients$/u },
+  // The health data agreement (Round 21 stage 2, C3), opened on a refusal.
+  'Health data agreement': {
+    Screen: AgreementScreen,
+    params: { action: 'add', workspace: TEST_WORKSPACE },
+    read: /^\/v1\/agreements\/health-data$/u,
+  },
   // One of a flow's items (Round 19, backend ADR-0046).
   Item: { Screen: ItemScreen, params: { item: 'item-1' }, read: /\/items\/item-1$/u },
   // The file an item was made from, and its sections (build 28, F4).
@@ -98,6 +106,8 @@ const SCREENS = {
   Connections: { Screen: ConnectionsScreen, read: /\/connections$/u },
   'Export my data': { Screen: DataExportScreen, read: /^\/v1\/workspaces$/u },
   Organization: { Screen: OrganizationScreen, read: /^\/v1\/workspaces$/u },
+  // One signed document's copy (Round 21 stage 2, C3), opened from Organization's DOCUMENTS.
+  Document: { Screen: DocumentScreen, params: { document: 'doc-1' }, read: /\/documents\/doc-1$/u },
   Team: { Screen: TeamScreen, params: { projectId: 'p1', workspaceId: TEST_WORKSPACE }, read: /^\/v1\/workspaces$/u },
   Teams: { Screen: TeamsScreen, read: /^\/v1\/workspaces$/u },
   'Archived flows': { Screen: ArchivedFlowsScreen, read: /\/subscriptions\?status=archived$/u },
@@ -154,6 +164,10 @@ const CASES: Case[] = [
   ['Who gets the email', 'offline', 'app/(tabs)/flows/email.tsx', true],
   ['Who gets the email', 'unavailable', 'app/(tabs)/flows/email.tsx', true],
   ['Who gets the email', 'error', 'app/(tabs)/flows/email.tsx', true],
+  // The health data agreement (Round 21 stage 2, C3), as every fetching screen.
+  ['Health data agreement', 'offline', 'app/(tabs)/flows/agreement.tsx', true],
+  ['Health data agreement', 'unavailable', 'app/(tabs)/flows/agreement.tsx', true],
+  ['Health data agreement', 'error', 'app/(tabs)/flows/agreement.tsx', true],
   // An item's page (Round 19, plan §5.3), as every fetching screen.
   ['Item', 'offline', 'app/(tabs)/flows/item.tsx', true],
   ['Item', 'unavailable', 'app/(tabs)/flows/item.tsx', true],
@@ -176,6 +190,9 @@ const CASES: Case[] = [
   ['Organization', 'offline', 'app/(tabs)/settings/organization.tsx:89', true],
   ['Organization', 'unavailable', 'app/(tabs)/settings/organization.tsx:92', true],
   ['Organization', 'error', 'app/(tabs)/settings/organization.tsx:98-100', true],
+  ['Document', 'offline', 'app/(tabs)/settings/documents.tsx', true],
+  ['Document', 'unavailable', 'app/(tabs)/settings/documents.tsx', true],
+  ['Document', 'error', 'app/(tabs)/settings/documents.tsx', true],
   ['Team', 'offline', 'app/(tabs)/settings/team.tsx:78', true],
   ['Team', 'unavailable', 'app/(tabs)/settings/team.tsx:81', true],
   ['Team', 'error', 'app/(tabs)/settings/team.tsx:87-89', true],

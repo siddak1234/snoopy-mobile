@@ -110,6 +110,7 @@ async function organization() {
       },
     ],
     [/\/join-requests$/u, { requests: [{ id: 'jr-1', workspaceId: TEST_WORKSPACE, userId: 'u9', status: 'pending', createdAt: '2026-09-29T00:00:00Z' }] }],
+    [/\/documents$/u, { documents: [] }],
   );
   await renderWithProviders(<OrganizationScreen />, signedInSession);
   await screen.findByText('ORGANIZATION DETAILS');

@@ -61,7 +61,9 @@ The individual architecture gates are:
   app's alone, so its `INSET` list holds each file that may use it and how many
   times: one more, or one in a file not listed, fails (Round 21's review).
 - `audit:vocabulary`: no copy says "project" or "automation" — the app says
-  team and flow; the code keeps the contract's names (24.11.7).
+  team and flow; the code keeps the contract's names (24.11.7). "EHR team",
+  the clinic's own EHR staff, is the one "team" copy may say (Round 21 stage 2,
+  the EHR's connect refusals).
 - `audit:haptics`: every press ticks through `components/pressable.tsx` (build
   11, D7) — no Pressable, Touchable or Button imported from react-native
   outside it, no default or namespace import of react-native, no expo-haptics
@@ -372,8 +374,7 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   queue (`queue_full`) is said in the owner's words. A 403 naming
   `outside_org_domain` is told to the tabs' layout once, here, through
   `lib/platform/session-recovery.ts` (`onOutsideSignIn`; S1-11), whichever
-  read it answers. Carried to Stage 2 (BUILD-PLAN 29.4.6): the platform
-  does not send it before then (DESIGN-GAPS, S1-11). Its one raw `fetch` is `putFileToSignedUrl`, the credential-less
+  read it answers. Its one raw `fetch` is `putFileToSignedUrl`, the credential-less
   PUT of a file's bytes to the URL the platform signed; `audit:platform` admits
   exactly that one. Since 24.12 its one native download is
   `downloadSignedFile`, the credential-less save of a signed file's link into
@@ -384,6 +385,13 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   platform's `providers`, then its `publicProviders` (public services, no key)
   as rows with `authType` `none` (`keylessProviders`), so every screen reads a
   public service as connected.
+- `lib/platform/agreements.ts` (Round 21 stage 2, C3; backend ADR-0049) reads the
+  health data agreement (`GET /v1/agreements/health-data`) and accepts it
+  (`POST /v1/workspaces/{workspaceId}/agreements`), only after an add or a run's
+  start was refused `agreement_required`; and the workspace's signed documents
+  (`GET …/documents`, with Organization; one copy, `GET …/documents/{documentId}`,
+  only when its row is opened). What the screens draw is DESIGN-CONTRACT's
+  (Flows/agreement, Organization, Organization › a document).
 - `lib/platform/session-store.ts` stores access/refresh credentials only in
   `expo-secure-store` with `WHEN_UNLOCKED_THIS_DEVICE_ONLY` — and beside them
   push's device id and its "Not now", cleared with them.
@@ -487,6 +495,11 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   form comes or the run leaves held (backend ADR-0048). The read that saw the run turn
   held took the approvals from the 15 s snapshot, from before the approval was
   asked (round 25, the review's R5c 1).
+- `lib/platform/automations.ts`'s `decideApproval` drops the snapshot's
+  approvals when an Approve is refused 409 `approval_expired` with `expiredBy`
+  (S1-8b; backend §12.1 #252): the platform expired the approval before it
+  refused, so Approvals and the run's page read it again; no other refusal
+  drops anything (DESIGN-CONTRACT "Approvals").
 - `lib/platform/automations.ts`'s `readItemFile` and `readRunFile` answer a
   file's short-lived signed link, never its bytes (build 28): an item's own file
   and each file a run's job uploaded. The link downloads the file as an

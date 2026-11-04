@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { ChoiceChips } from '@/components/choice-chips';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { ConnectionButton, ConnectionMark, ConnectionRow } from '@/components/connection-row';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
@@ -20,11 +21,13 @@ import {
   connectionIncomplete,
   refusalMessage,
 } from '@/lib/content/refusals';
+import { EHR_CONNECT_REFUSALS } from '@/lib/content/ehr-connect';
 import { DISCONNECTING_LABEL, DISCONNECT_LABEL, disconnectBody, disconnectTitle } from '@/lib/content/screen-states';
 import { connectOAuthProvider, connectProviderWithKey, disconnectConnection } from '@/lib/platform/connections';
 import { PlatformError } from '@/lib/platform/problem';
 import { invalidateShared } from '@/lib/platform/snapshot';
 import { connectionAction, type ConnectionView } from '@/lib/view/catalog';
+import { smartVendors } from '@/lib/view/ehr-connection';
 
 /**
  * The connections a screen lists, each the one row (Build 21, spec A4): Settings
@@ -52,6 +55,10 @@ import { connectionAction, type ConnectionView } from '@/lib/view/catalog';
  *   again — never a new request in its place.
  * - **Every action acts on the workspace these rows were read for**
  *   (`workspaceIfShown`); after a switch elsewhere it is refused, not sent.
+ * - **An EHR** (`smart-backend`, Round 21 stage 2, D1; backend ADR-0050) opens
+ *   the same key form, its field the clinic's FHIR address, and a vendor
+ *   picker above it only when the platform lists two or more `vendors`; the
+ *   chosen one — or the one listed — is sent as `vendor` beside it.
  */
 export function ConnectionsCard({
   rows,
@@ -82,6 +89,8 @@ export function ConnectionsCard({
   const [keyPending, setKeyPending] = useState(false);
   const [credentials, setCredentials] = useState<Record<string, string>>({});
   const [keyError, setKeyError] = useState<string | null>(null);
+  // An EHR's vendor, by id: the first listed until another is picked.
+  const [vendor, setVendor] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   // What a connect came back with, under its row.
   const [rowError, setRowError] = useState<{ providerId: string; message: string } | null>(null);
@@ -105,6 +114,7 @@ export function ConnectionsCard({
     setKeyPending(false);
     setCredentials({});
     setKeyError(null);
+    setVendor(null);
     keys.settle();
   };
 
@@ -158,7 +168,7 @@ export function ConnectionsCard({
       setDisconnecting(row);
       return;
     }
-    if (row.authType === 'api-key') {
+    if (row.authType === 'api-key' || row.authType === 'smart-backend') {
       setKeyError(null);
       setKeying(row);
       return;
@@ -182,6 +192,9 @@ export function ConnectionsCard({
       setKeyError('Complete every credential field before connecting.');
       return;
     }
+    const vendors = smartVendors(row.provider);
+    const chosen = vendor ?? vendors[0]?.id;
+    if (chosen) values.vendor = chosen;
     setBusy(row.providerId);
     setKeyError(null);
     setKeyPending(false);
@@ -194,7 +207,7 @@ export function ConnectionsCard({
       // verifying: the contract's way on is the same key again, never a new one
       // for an uncertain request — so the key is kept.
       setKeyPending(caught instanceof PlatformError && caught.status === 409);
-      setKeyError(refusalMessage(caught, {}, 'The connection was not changed.'));
+      setKeyError(refusalMessage(caught, EHR_CONNECT_REFUSALS, 'The connection was not changed.'));
     } finally {
       setBusy(null);
     }
@@ -275,6 +288,16 @@ export function ConnectionsCard({
               ) : null}
             </>
           }>
+          {smartVendors(keying.provider).length > 1 ? (
+            <ChoiceChips
+              options={smartVendors(keying.provider).map((each) => ({ value: each.id, label: each.label }))}
+              value={vendor ?? smartVendors(keying.provider)[0]!.id}
+              onChange={(next) => {
+                setVendor(next);
+                keys.settle();
+              }}
+            />
+          ) : null}
           {keying.credentialFields.map((field) => (
             <TextField
               key={field.name}
