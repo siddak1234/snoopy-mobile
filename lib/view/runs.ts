@@ -208,7 +208,6 @@ export function providerNameIn(entry: Pick<CatalogEntry, 'requiredConnections'> 
  * the provider's name (`disconnectedName`); null for any other approval, and
  * for a reason this build does not know, which reads as a plain expiry — as
  * the website's.
- * Stage 2 (BUILD-PLAN 29.4.6; §12.1 #252 approval half): the platform does not send this before Stage 2.
  */
 export function expiredByDisconnect(
   approval: Pick<Approval, 'status' | 'expiredBy'> | undefined,

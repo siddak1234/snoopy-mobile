@@ -3017,7 +3017,7 @@ same items in its own lane, with the same words.
   shows the confirm/stop page words"); the app draws none of them, as the website draws none.
 - **S1-8** (QuickBooks disconnect; backend §12.1 #252): the expired approval over the run's body and the
   row disconnected at the provider (DESIGN-CONTRACT "Activity/run detail", "Settings › Connections"); the
-  expired approval is carried to Stage 2 (BUILD-PLAN 29.4.6), not sent before it; the Disconnect page is
+  expired approval is ~~carried to Stage 2 (BUILD-PLAN 29.4.6), not sent before it~~ sent since stage 2; the Disconnect page is
   the website's. **Findings:** (1) ~~at the contract commit the Connections list leaves
   every `disconnected` row out (`snoopy-backend/apps/connections/src/postgres-connections.ts:174`, `status
   <> 'disconnected'`), so the row is drawn only once the platform lists a connection it retired~~ until
@@ -3051,7 +3051,7 @@ same items in its own lane, with the same words.
   have an owner or admin do it.
 - **S1-11** (outside sign-in, option b′; backend §12.1 #221): the refusal from any read draws the screen
   in the tabs' place, with "Remove {provider} sign-in" for each (DESIGN-CONTRACT "Authentication and
-  session"). **Findings:** (1) carried to Stage 2 (BUILD-PLAN 29.4.6); not sent before it. The app
+  session"). **Findings:** (1) ~~carried to Stage 2 (BUILD-PLAN 29.4.6); not sent before it~~ sent since stage 2. The app
   listens on every read; (2) the contract names the unlink `unlinkLoginIdentity` (`DELETE
   /v1/auth/identities/{provider}`, the website's), while the app unlinks through the native
   `unlinkNativeIdentity` it already uses on Settings › Account. **The session's default:** Sign out
@@ -3118,6 +3118,12 @@ bites and the findings. Parity: the website builds the same items in its own lan
   that "EHR team" may stand; the website draws all three; (2) the provider's icon `FirstAid`
   (`snoopy-backend/providers/ehr-fhir.json`) is not in this build's icon set (`lib/view/icon-registry.ts`),
   so the EHR's row draws the fallback mark; (3) the picker has no title: none is in the spec's words.
+- **S1-11, S1-8's approval half** (carried from stage 1): the platform sends both since its stage 2
+  (`OutsideOrgDomainDetails`; `ApprovalExpiredBy`, now also on an approve refused 409 `approval_expired`), so
+  every "carried to Stage 2" comment and line is gone; nothing drawn changed (no new screen). **Finding:**
+  the spec's check against the real 403s in a local Compose run was not made in this lane (NOT OBSERVED); the
+  shapes were checked against the contract at 50a24f7, and stage 1's tests (`outside-sign-in`,
+  `review-decisions`) still hold them.
 
 Bites (break, red, restore, green): S2-0 a generated file left from the stage 1 contract
 (`verify:platform-contracts`).

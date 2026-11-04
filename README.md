@@ -372,8 +372,7 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   queue (`queue_full`) is said in the owner's words. A 403 naming
   `outside_org_domain` is told to the tabs' layout once, here, through
   `lib/platform/session-recovery.ts` (`onOutsideSignIn`; S1-11), whichever
-  read it answers. Carried to Stage 2 (BUILD-PLAN 29.4.6): the platform
-  does not send it before then (DESIGN-GAPS, S1-11). Its one raw `fetch` is `putFileToSignedUrl`, the credential-less
+  read it answers. Its one raw `fetch` is `putFileToSignedUrl`, the credential-less
   PUT of a file's bytes to the URL the platform signed; `audit:platform` admits
   exactly that one. Since 24.12 its one native download is
   `downloadSignedFile`, the credential-less save of a signed file's link into

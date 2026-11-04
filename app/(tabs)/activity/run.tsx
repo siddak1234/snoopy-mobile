@@ -131,7 +131,6 @@ export default function RunDetailScreen() {
         reviewTally: jobReviewTally(liveRun.detail.run, liveRun.approvals, savedReview),
         // The job's approval, expired because its connection was disconnected at the provider
         // (S1-8; backend §12.1 #252): why, and what to do, in the catalog's name for it (`disconnectedName`).
-        // Stage 2 (BUILD-PLAN 29.4.6; §12.1 #252 approval half): the platform does not send this before Stage 2.
         expired: expiredByDisconnect(jobApproval(liveRun.detail.run, liveRun.approvals), (providerId) =>
           providerNameIn(liveRun.entry, providerId),
         ),
