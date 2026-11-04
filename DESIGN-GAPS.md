@@ -8,7 +8,7 @@ Round 16 — findings and observations (ADR-0032), closed 2026-10-07: moved verb
 
 Found on 2026-10-18 by grepping the moved sections for open, NOT OBSERVED, still open and deferred, and reading each hit; one line each, as the archive records it, not re-checked on a device. Closed items stay in the archive only.
 
-- **The Expo SDK major.** The high advisories that only an Expo SDK major clears (`image-size`, `uuid`, and query-string 7 under expo-router) stay a documented migration; `braces`, `node-forge` and `sprintf-js` are the owner's to decide — [Dependency boundary](DESIGN-GAPS.archive.md#dependency-boundary), [the backlog](DESIGN-GAPS.archive.md#the-backlog-manifest-122-20-and-21-and-the-part-of-121-195-that-needs-no-owner-decision-2026-10-07).
+- **The Expo SDK major.** SDK 55 landed in Round E step 1 (its entry below has the audit): `npm audit --omit=dev` reads 44 issues, 6 high and 0 critical, and `image-size`, `uuid`, `braces`, `node-forge` and `sprintf-js` are in neither audit. Two high advisories stay a documented migration: `decode-uri-component` through query-string 7, which expo-router 55.0.18 and @react-navigation/core 7.17.2 still ask for (npm's fix is expo-router 58, a later SDK), and `zod` <4.6.6, new with SDK 55's @expo/cli 55.0.37 — [Dependency boundary](DESIGN-GAPS.archive.md#dependency-boundary), [the backlog](DESIGN-GAPS.archive.md#the-backlog-manifest-122-20-and-21-and-the-part-of-121-195-that-needs-no-owner-decision-2026-10-07).
 - **An iCloud-synced checkout** makes conflict copies, evicts files and fails `npm ci` with `ENOTEMPTY`; it recurs, so work only in a scratch clone (`CLAUDE.md`, Gates and push) — [Still open, recorded rather than fixed](DESIGN-GAPS.archive.md#still-open-recorded-rather-than-fixed).
 - **Round 6's out-of-scope list** (Builder authoring, a run retry that keeps its continuation identity, profile editing, reduced-motion alternatives, small-phone and tablet approval, and the rest): Round 7.5M and Round 16 built some; the others were not re-checked when this moved — [Deliberate non-Round-6 gaps](DESIGN-GAPS.archive.md#deliberate-non-round-6-gaps).
 - **The join link in production** works only once an organization has a verified, discoverable domain, and production had none (2026-10-02) — [the sixth signed-in session](DESIGN-GAPS.archive.md#the-sixth-signed-in-session-build-9-2026-10-02-2220z2235z).
@@ -3218,6 +3218,13 @@ which `--fix` left because the lockfile's 5.6.2 already met it (the lockfile sti
   react-native-worklets (0.8.3) and React Native 0.88.1's metro-config, held only by it. The committed
   lockfile is `expo install`'s with those four at the root and the 29 stray entries dropped: no version
   differs from what `expo install` chose.
+- **The dependency audit, under this lockfile.** `npm audit --omit=dev`: 44 issues (5 low, 33 moderate, 6
+  high, 0 critical), so `audit:dependencies` (`--audit-level=critical`) passes; `npm audit`: 61 (6 low, 49
+  moderate, 6 high, 0 critical). The 6 high are two advisories and the packages above them:
+  `decode-uri-component` 0.2.2 (<=0.5.0, two denial-of-service advisories) through query-string 7.1.3,
+  which expo-router 55.0.18 and @react-navigation/core 7.17.2 ask for (npm's fix: expo-router 58.0.30, a
+  major); and `zod` 3.25.76 (<4.6.6, memory exhaustion) through @expo/cli 55.0.37, which asks for
+  ^3.25.76 (main's lockfile has no zod). `image-size` (1.2.1 on main) left the lockfile.
 - expo-web-browser 55: `expo install` asks to add its plugin to the dynamic config; that plugin returns
   the config unchanged (its plugin/build/withWebBrowser.js), so it is not added.
 - **Not observed:** a native build, a simulator or a device. `release:ios --local` needs Xcode 26.2 or
