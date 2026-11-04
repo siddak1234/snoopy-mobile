@@ -28,6 +28,7 @@ import { unlinkIdentity } from '@/lib/platform/account';
  * does (`unlinkIdentity`, its refusal in `unlinkRefusal`'s words); once every
  * one is gone the session is read again and the tabs come back. Sign out stays
  * offered, so a sign-in the platform will not unlink never strands the person.
+ * Stage 2 (BUILD-PLAN 29.4.6; §12.1 #221): the platform does not send this before Stage 2.
  */
 export function OutsideSignIn({ providers, onCleared }: { providers: readonly SignIn[]; onCleared: () => void }) {
   const { palette } = useTheme();

@@ -47,6 +47,7 @@ export default function TabLayout() {
   // past the Face ID lock — so a tap's screen waits for the lock as it waits
   // for a sign-in. It never asks.
   usePushRegistration(open);
+  // Stage 2 (BUILD-PLAN 29.4.6; §12.1 #221): the platform does not send this before Stage 2.
   const [outside, setOutside] = useState<SignIn[] | null>(null);
   useEffect(() => onOutsideSignIn((details) => setOutside((shown) => shown ?? outsideSignIns(details))), []);
 
