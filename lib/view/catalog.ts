@@ -15,6 +15,7 @@ import {
   DISCONNECT_LABEL,
   RECONNECT_LABEL,
   disconnectedIn,
+  disconnectedName,
 } from '@/lib/content/screen-states';
 import { EMPTY, calendarDate, count } from './format';
 import { toPipelineSteps, type PipelineStep } from './pipeline';
@@ -121,13 +122,16 @@ export function providerConnected(provider: Pick<ConnectionProvider, 'authType'>
  * connect, the stage 1 spec's S1-15, backend §12.1 #283: QuickBooks names no
  * email), else the state in a word; "Needs attention" in the warning colour. One
  * disconnected at the provider says "Disconnected in {provider}" in the warning
- * colour (S1-8), its button Reconnect, when the provider's name is given.
+ * colour (S1-8, `disconnectedName`), its button Reconnect, when the provider's
+ * name is given.
  */
 export function connectionLine(
   connection: Connection | undefined,
   provider = '',
 ): { text: string; tone: 'muted' | 'warn' } {
-  if (disconnectedAtProvider(connection) && provider) return { text: disconnectedIn(provider), tone: 'warn' };
+  if (connection && disconnectedAtProvider(connection) && provider) {
+    return { text: disconnectedIn(disconnectedName(connection.providerId, provider)), tone: 'warn' };
+  }
   const state = connectionState(connection);
   const name = connection?.externalAccount.displayName ?? '';
   if (state !== 'not-connected' && name.includes('@')) return { text: name, tone: 'muted' };

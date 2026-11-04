@@ -145,7 +145,7 @@ describe('the row says the account, else its state (spec A4)', () => {
 });
 
 describe('a connection disconnected at the provider (the stage 1 spec\'s S1-8; backend §12.1 #252)', () => {
-  it('as a step\'s integration: "Disconnected in {provider}" in the warning colour, and a press connects it again', async () => {
+  it('as a step\'s integration: "Disconnected in QuickBooks", the spec\'s word for "QuickBooks Online", in the warning colour, and a press connects it again', async () => {
     const onChoose = jest.fn();
     mockConnect.mockResolvedValueOnce({ status: 'cancelled' });
     await renderWithProviders(
@@ -161,7 +161,7 @@ describe('a connection disconnected at the provider (the stage 1 spec\'s S1-8; b
       />,
       sessionAs('owner'),
     );
-    const line = within(screen.getByTestId('vendor-quickbooks')).getByText('Disconnected in QuickBooks Online');
+    const line = within(screen.getByTestId('vendor-quickbooks')).getByText('Disconnected in QuickBooks');
     expect(StyleSheet.flatten(line.props.style).color).toBe(status.warnText);
     await fireEvent.press(screen.getByTestId('vendor-quickbooks'));
     await waitFor(() => expect(mockConnect).toHaveBeenCalledWith(TEST_WORKSPACE, QUICKBOOKS_PROVIDER));

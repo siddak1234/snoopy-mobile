@@ -3023,8 +3023,12 @@ same items in its own lane, with the same words.
   <> 'disconnected'`), so the row is drawn only once the platform lists a connection it retired~~ until
   8ddcfbc, which lists it; (2) the
   words name the provider as the platform lists it — QuickBooks is "QuickBooks Online"
-  (`snoopy-backend/providers/quickbooks.json`) — so the app says "Disconnected in QuickBooks Online", where the spec's
-  words say "QuickBooks": a NEW WORD for the owner, as the backend's B0 summary and the website have it.
+  (`snoopy-backend/providers/quickbooks.json`) — ~~so the app says "Disconnected in QuickBooks Online", where the spec's
+  words say "QuickBooks"~~ until the review (finding 6): QuickBooks is now "QuickBooks", the spec's word
+  (`disconnectedName`), and any other provider is named as the platform lists it ("Disconnected in
+  {provider}", "Expired · {provider} was disconnected", "Reconnect {provider}, then start the run
+  again."): a NEW WORD for the owner, as the backend's B0 summary has it. Parity: the website's lane makes
+  the same change.
 - **S1-15** (QuickBooks company name; backend §12.1 #283): a connected row with no email names its company
   in Connected's place (DESIGN-CONTRACT "Settings › Connections").
 - **S1-16** (a run keeps its integration; backend §12.1 #290): Run details' integration step and the
@@ -3063,7 +3067,8 @@ left open after a pick, the pills drawn to a member (`review-decisions`). S1-7 n
 the address matched with case, an unknown status drawn (`build22-screens`). S1-8 any
 `disconnected` read as retired, the line and the attention state left out, the vendor row's name left
 out (`connection-row`), the expiry drawn for any reason, the lines not drawn, the provider by its id
-(`review-decisions`). S1-15 the
+(`review-decisions`); QuickBooks by the platform's "QuickBooks Online" (`connection-row`,
+`review-decisions`), and every provider called QuickBooks (`review-decisions`). S1-15 the
 company left out, and drawn on a row not connected (`connection-row`). S1-16 the
 flow's choice read, and read over the run's (`build22-screens`). S1-10 the
 line left out (`account-screen`); the automatic retry left out, and the session read again after a

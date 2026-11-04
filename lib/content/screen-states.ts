@@ -354,9 +354,18 @@ export const CONNECTION_CONNECTED = 'Connected';
 export const CONNECTION_NOT_CONNECTED = 'Not connected';
 export const CONNECTION_ATTENTION = 'Needs attention';
 /**
+ * The provider's name in the three lines below: QuickBooks is "QuickBooks",
+ * the spec's word, where the platform lists "QuickBooks Online"; any other
+ * provider is named as the platform lists it, a NEW WORD for the owner
+ * (DESIGN-GAPS, S1-8).
+ */
+export function disconnectedName(providerId: string, listedName: string): string {
+  return providerId === 'quickbooks' ? 'QuickBooks' : listedName;
+}
+/**
  * A connection the platform retired because the provider would not renew it,
  * and a held job's approval that retirement expired (the stage 1 spec's S1-8;
- * backend §12.1 #252), in the provider's name as the platform lists it.
+ * backend §12.1 #252), in the provider's name (`disconnectedName`).
  */
 export function disconnectedIn(provider: string): string {
   return `Disconnected in ${provider}`;

@@ -20,6 +20,7 @@ import {
   STEP_STOPPED,
   STEP_DENIED,
   STEP_WAITING,
+  disconnectedName,
   emailSentLine,
   expiredByDisconnectNext,
   expiredByDisconnectTitle,
@@ -204,8 +205,9 @@ export function providerNameIn(entry: Pick<CatalogEntry, 'requiredConnections'> 
  * A held job's approval a disconnect expired before its time (the stage 1
  * spec's S1-8; backend §12.1 #252, `Approval.expiredBy`): the connection its
  * held run was built on was disconnected at the provider. Its two lines, in
- * the provider's name; null for any other approval, and for a reason this
- * build does not know, which reads as a plain expiry — as the website's.
+ * the provider's name (`disconnectedName`); null for any other approval, and
+ * for a reason this build does not know, which reads as a plain expiry — as
+ * the website's.
  * Stage 2 (BUILD-PLAN 29.4.6; §12.1 #252 approval half): the platform does not send this before Stage 2.
  */
 export function expiredByDisconnect(
@@ -213,7 +215,7 @@ export function expiredByDisconnect(
   providerName: (providerId: string) => string,
 ): { title: string; next: string } | null {
   if (approval?.status !== 'expired' || approval.expiredBy?.reason !== 'connection-disconnected') return null;
-  const provider = providerName(approval.expiredBy.providerId);
+  const provider = disconnectedName(approval.expiredBy.providerId, providerName(approval.expiredBy.providerId));
   return { title: expiredByDisconnectTitle(provider), next: expiredByDisconnectNext(provider) };
 }
 

@@ -246,23 +246,33 @@ describe('a held job whose approval a disconnect expired (the stage 1 spec\'s S1
       status: 'expired',
       ...(expiredBy ? { expiredBy } : {}),
     }) as Approval;
-  const withQuickBooks = () => {
+  const withProvider = (providerId: string, displayName: string) => {
     const catalog = catalogPayload();
     catalog.automations = catalog.automations.map((entry) => ({
       ...entry,
-      requiredConnections: [{ providerId: 'quickbooks', displayName: 'QuickBooks Online', purpose: 'Records bills.', optional: true }],
+      requiredConnections: [{ providerId, displayName, purpose: 'Records bills.', optional: true }],
     }));
     return { '/automations': catalog };
   };
+  const withQuickBooks = () => withProvider('quickbooks', 'QuickBooks Online');
 
-  it('says so over its body, in the catalog\'s name for the provider: "Expired · {provider} was disconnected", then "Reconnect {provider}, then start the run again."', async () => {
+  it('says so over its body, QuickBooks in the spec\'s word, not the catalog\'s "QuickBooks Online": "Expired · QuickBooks was disconnected", then "Reconnect QuickBooks, then start the run again."', async () => {
     await openHeld('owner', [expired({ reason: 'connection-disconnected', providerId: 'quickbooks' })], {}, withQuickBooks());
     const lines = within(await screen.findByTestId('run-expired'));
     expect(lines.getAllByText(/./u).map((node) => node.props.children)).toEqual([
-      'Expired · QuickBooks Online was disconnected',
-      'Reconnect QuickBooks Online, then start the run again.',
+      'Expired · QuickBooks was disconnected',
+      'Reconnect QuickBooks, then start the run again.',
     ]);
-    expect(colorOf(lines.getByText('Expired · QuickBooks Online was disconnected'))).toBe(status.warnText);
+    expect(colorOf(lines.getByText('Expired · QuickBooks was disconnected'))).toBe(status.warnText);
+  });
+
+  it('any other provider in the catalog\'s name for it (a NEW WORD for the owner)', async () => {
+    await openHeld('owner', [expired({ reason: 'connection-disconnected', providerId: 'google' })], {}, withProvider('google', 'Google'));
+    const lines = within(await screen.findByTestId('run-expired'));
+    expect(lines.getAllByText(/./u).map((node) => node.props.children)).toEqual([
+      'Expired · Google was disconnected',
+      'Reconnect Google, then start the run again.',
+    ]);
   });
 
   it('a plain expiry adds nothing', async () => {
