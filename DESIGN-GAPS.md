@@ -3538,3 +3538,11 @@ E's research for this step (its sources S1–S19 and an exposure read at 1d734a4
   module"); `round23.test.tsx` reads the same module from `@react-native/jest-preset/jest/MockNativeMethods`, the
   one the preset's own mocks spread (its jest/mocks/ScrollView.js:22-23). Bite: the old path, the suite fails to
   run (the whole run below); the new one, 34 pass.
+- **Snapshots: 10 entries fail, kept as they were; re-pinning them is the owner's call** (the decision: never
+  update a snapshot; README's rule asks the owner). The whole Jest run (137 suites; `round23` then failed to run,
+  and passes since, above): 2,042 passed, 10 failed, the 10 snapshot entries (96 of 106 match): 6 Nocturne entries (NocToggle on and off and Skeleton, both palettes) and 4 screen
+  states (ScreenLoading and ScreenLoading/tiles, both palettes). Every changed line, 48 in all, is a removed
+  `nativeID="<n>"` on an Animated view: react-native-reanimated 4.3.1 sets a `nativeID` only outside Jest
+  (src/createAnimatedComponent/AnimatedComponent.tsx:511-522), and the entries, made under 4.2.1, carry it. On a
+  device the id is still set: no visual change. `connection-row` and `vendor-logos` (react-native-svg 15.15.4)
+  match. **Open:** the owner's approval to re-pin those 10; until then `npm run verify` is red on them.
