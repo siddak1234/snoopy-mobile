@@ -3112,7 +3112,9 @@ bites and the findings. Parity: the website builds the same items in its own lan
   a document"). **Findings:** (1) the platform lets any member read the list (`listWorkspaceDocuments`),
   but Organization draws its sections only for an owner or admin of an organization, where the spec puts
   it, so a member — and a personal workspace's owner, who can accept for a health flow too — has no place
-  that lists them.
+  that lists them. Settled by the owner, 2026-11-04: "documents is owners and admins" — the list stays where
+  it is; one document's screen now checks the same (Round 21's close, below). The platform still answers any
+  member: a backend finding (below).
 - **D1, Connect your EHR** (backend ADR-0050; the owner's item 1 of 2026-11-03): Connections' key form opens
   for `smart-backend`, with a vendor picker only for two or more `vendors`; the row says the clinic's host
   (DESIGN-CONTRACT "Settings › Connections"). **Findings:** (1) ~~two of the spec's three refusal lines
@@ -3294,3 +3296,21 @@ documents is owners and admins."
   the two suites): `huggingface` out of `BRAND_ICONS`, `blocks-render`'s links test fails (1 failed); one
   character of the third path's `d` changed, `vendor-logos`' paths test (1 failed); one byte of the file
   changed, its sha256 test (1 failed); restored, 38 pass. **Not observed:** on a device or a simulator.
+- **D: one document's screen for owners and admins only (the owner's "documents is owners and admins",
+  2026-11-04).** Organization already read and drew DOCUMENTS only for an owner or admin of the active
+  organization (`app/(tabs)/settings/organization.tsx`, `administers`), as the website's Organization page and
+  document page; one document's screen (`app/(tabs)/settings/documents.tsx`) read and drew the signed copy
+  for anyone signed in who reached it — a deep link `snoopymobile://settings/documents?document=<id>` — and
+  its test drew it for a member. It now reads the workspaces first, as Organization does, and unless the
+  active workspace is an organization whose role is owner or admin it is the unavailable state it already
+  drew, the copy never read (DESIGN-CONTRACT "Organization › a document"; C3's finding (1) above). Organization's
+  DOCUMENTS list is unchanged. Tests (`organization-documents`): the two existing tests route the workspace
+  list and render as an admin and an owner; a new one, a member of the organization and a personal
+  workspace's owner: unavailable, the copy never read. Bite: the check removed, the member case reads and
+  draws the copy (1 failed of 6); restored, 6 pass. The press-pattern suites that open this screen pass
+  unchanged. **Backend finding (for a `snoopy-backend` session to file; CLAUDE.md rule 1):**
+  `GET /v1/workspaces/{id}/documents` and `…/documents/{documentId}` admit any member
+  (`snoopy-backend apps/api/src/modules/access/agreement-routes.ts:24-25`,
+  `snoopy-backend apps/access/src/agreement-routes.ts:29-30`,
+  `snoopy-backend apps/access/src/postgres-agreements.ts:308-314, :325-332`: membership only), where the
+  owner's rule is owners and admins.
