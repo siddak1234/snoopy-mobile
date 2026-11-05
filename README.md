@@ -400,8 +400,10 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   (`POST /v1/workspaces/{workspaceId}/agreements`), only after an add or a run's
   start was refused `agreement_required`; and the workspace's signed documents
   (`GET …/documents`, with Organization; one copy, `GET …/documents/{documentId}`,
-  only when its row is opened). What the screens draw is DESIGN-CONTRACT's
-  (Flows/agreement, Organization, Organization › a document).
+  only when its row is opened), both the workspace's owner's or admin's only, a
+  member answered 403 (backend ADR-0049 amendment 1, `snoopy-backend` #269).
+  What the screens draw is DESIGN-CONTRACT's (Flows/agreement, Organization,
+  Organization › a document).
 - `lib/platform/session-store.ts` stores access/refresh credentials only in
   `expo-secure-store` with `WHEN_UNLOCKED_THIS_DEVICE_ONLY` — and beside them
   push's device id and its "Not now", cleared with them.
