@@ -965,7 +965,7 @@ paths:
       operationId: listWorkspaceDocuments
       description: >-
         ADR-0049 (C3): the workspace's signed documents, newest first, at most 50,
-        one query. Any member.
+        one query. Owner or admin only, a member is 403 (ADR-0049 amendment 1).
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'
       responses:
@@ -976,6 +976,7 @@ paths:
               schema: { $ref: '#/components/schemas/WorkspaceDocumentListResponse' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '502': { $ref: '#/components/responses/DependencyFailure' }
         '503': { $ref: '#/components/responses/NotConfigured' }
@@ -985,7 +986,8 @@ paths:
       operationId: readWorkspaceDocument
       description: >-
         ADR-0049 (C3): one signed document with its copy, as `{document}`; read
-        only when its row is opened. Any member; another workspace's is 404.
+        only when its row is opened. Owner or admin only, a member is 403, for an
+        unknown id too; another workspace's is 404.
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'
         - name: documentId
@@ -1005,6 +1007,7 @@ paths:
                   document: { $ref: '#/components/schemas/WorkspaceDocumentCopy' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '502': { $ref: '#/components/responses/DependencyFailure' }
         '503': { $ref: '#/components/responses/NotConfigured' }
@@ -3490,7 +3493,8 @@ components:
       description: >-
         ADR-0049 (C3): one signed document of a workspace, as its Documents
         list shows it — "Business Associate Agreement · Version {n}",
-        "Accepted by {name} on {date}". Read by any member.
+        "Accepted by {name} on {date}". Read by the workspace's owner or admin
+        (ADR-0049 amendment 1).
       properties:
         id: { type: string, format: uuid }
         kind:
