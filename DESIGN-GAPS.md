@@ -3407,3 +3407,28 @@ E's research for this step (its sources S1–S19 and an exposure read at 1d734a4
   `/node_modules/@react-native/babel-preset/` left alone) plus `phosphor-react-native`, as they were jest-expo 55's
   plus it. Bite: `standard-navigation` taken out, the real-router project fails to run (15 of 15 suites); put
   back, 15 suites and 72 tests pass.
+- **`File.copy` is a promise since SDK 56** (S1: "`copy()` and `move()` ... on `File` and `Directory` are now
+  asynchronous and return a Promise"; expo-file-system's CHANGELOG, 56.0.0). `saveToFiles`
+  (`lib/platform/signed-file.ts`) called it without waiting: it answered `'saved'` before the copy ended,
+  `saveSignedFile`'s `finally` could remove the cache's file while it was still being copied, and a refused copy
+  was an unhandled rejection instead of reaching the screen. It now awaits it. The shared mock
+  (`test/mocks/expo-file-system.ts`) copies as a promise that settles after the call returns and rejects where it
+  threw; `invoice-processing-screens`' own mock copies as a promise too. The mock's header is re-read at
+  expo-file-system 56.0.11, expo-modules-core 56.0.27 and expo-modules-jsi 56.0.14: the picker's and the copy's
+  lines moved (`build/Directory.d.ts:16`, `src/Directory.ts:106-109`, `FilePickingHandler.swift:84-89, :91-95`,
+  `FileSystemModule.swift:343-345, :230-232`, `FileSystemExceptions.swift:100-103`, `FilePickingUtils.swift:42-54,
+  62-68`, `NativeFileSystem.types.d.ts:168-172, :182`, `FileSystemPath.swift:69-79`, `src/File.ts:150`), a refused
+  copy now rejects through `AsyncFunctionDefinition.swift:125-127`, and `ios/JSI/EXJSIUtils.mm` is gone: an iOS
+  exception reaches JS through expo-modules-jsi (`JavaScriptPromise.swift:107-108`, `JavaScriptError.swift:21-30`),
+  still with its `code`, its message now the exception's name, reason and Swift line around the reason
+  (`JavaScriptThrowable.swift:28-31`, `Exception.swift:55-58`), which still says "cancelled" for a closed picker.
+  `src/pathUtilities` is still shipped, and still outside the package's `exports`. `signed-file.ts`' own
+  citations moved the same way. Tests (`signed-file`): a new one, `'saved'` only once the copy has finished; and
+  the refused copy (the folder gone) thrown to the screen. Bite: without the `await` both fail (2 failed of 14);
+  with it, 14 pass, and the 18 suites that mock expo-file-system pass (439 tests).
+- **`File.write` is still synchronous at 56.0.11**, so Settings › Data's `file.write(json)` is unchanged. S11
+  (the root CHANGELOG on the `sdk-56` branch) says "`File.write()` is now asynchronous", but expo-file-system
+  56.0.11 declares `write(...): void` (`build/internal/NativeFileSystem.types.d.ts:155`), defines it with
+  `Function("write")` on iOS (`ios/FileSystemModule.swift:177`) and Android (`FileSystemModule.kt:141`), and its
+  own CHANGELOG names only `copy()` and `move()`; there is no `writeSync`. The mocks' `write` stays synchronous;
+  SDK 57's step re-reads it.
