@@ -3458,7 +3458,7 @@ the 55 → 57 upgrade helper).
   56.0.11 declares `write(...): void` (build/internal/NativeFileSystem.types.d.ts:155), defines it with
   `Function("write")` on iOS (`ios/FileSystemModule.swift:177`) and Android (`FileSystemModule.kt:141`), and its
   own CHANGELOG names only `copy()` and `move()`; there is no `writeSync`. The mocks' `write` stays synchronous;
-  SDK 57's step re-reads it.
+  SDK 57's step re-reads it (still `void` at 57.0.7, under "SDK 56 → 57").
 - **Jest's setup at worklets 0.8.3 and React Native 0.85.** react-native-worklets 0.8.3 still ships
   `lib/module/mock` and still needs it: with `test/jest-setup.js`'s mock line taken out, `brand-mark.test.tsx`
   fails to run with "Native part of Worklets doesn't seem to be initialized", as at 0.7.4; put back, it passes.
@@ -3502,10 +3502,10 @@ the 55 → 57 upgrade helper).
   `scripts/release-ios.sh` refuses "--local needs Xcode 26.4 or later for SDK 56" below 26.4 and "--local needs
   an Xcode before 27 for SDK 56: Xcode 27 needs the scene life cycle, SDK 57's; build in EAS's cloud" from 27 on,
   before anything is built. The cloud path is untouched: EAS's default image for SDK 56 is Xcode 26.4 (S1, S5).
-  This Mac's Xcode 27.2 is refused, so its builds are the cloud's until SDK 57. README "Verification" and the
-  testflight skill say so. Tests (`release-and-ci-guards`): 26.3, 26.2, 26.1.1, a bare 26 and an unreadable
-  version refused; 27.0 and 27.2 refused; 26.4 and 26.10 pass; the CocoaPods cases run on 26.4. Bite: the
-  script as it was (26.2, no cap), the two refusal tests fail (2 failed of 27); restored, 27 pass.
+  This Mac's Xcode 27.2 is refused, so its builds are the cloud's (at SDK 57 too, below). README
+  "Verification" and the testflight skill say so. Tests (`release-and-ci-guards`): 26.3, 26.2, 26.1.1, a bare
+  26 and an unreadable version refused; 27.0 and 27.2 refused; 26.4 and 26.10 pass; the CocoaPods cases run on
+  26.4. Bite: the script as it was (26.2, no cap), the two refusal tests fail (2 failed of 27); restored, 27 pass.
 - **Lint: four new React Compiler rules warn, in the 15 files that break them only.** eslint-config-expo 56.0.4
   asks for eslint-plugin-react-hooks ^7.0.0 (5.2.0 on `main`) and spreads its recommended rules (its
   flat/utils/react.js:27), which in 7.1.1 add the React Compiler's checks as errors: `npm run lint` failed with
