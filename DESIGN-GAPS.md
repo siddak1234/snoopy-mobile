@@ -3489,3 +3489,14 @@ E's research for this step (its sources S1–S19 and an exposure read at 1d734a4
   the factory, and the Podfile property through Expo's mod compiler; the plugin entry without it.
   Bite: the old `app.json` back (the target in the plugin), that test fails (1 failed of 16); restored, 16
   pass.
+- **`release:ios --local` takes Xcode 26.4 to 26.x for SDK 56** (the decision; S1: "Minimum Xcode bumped to
+  26.4", S4 "26.4+"; Expo's ios-scene-lifecycle note, S8: "apps built with Xcode 27 that still use the
+  application-based life cycle do not launch correctly on iOS 27", and SDK 56 has no scene support, which SDK
+  57.0.23 adds as an option, S6; the Xcode 27.2 archive failure above; the script's "Any doubt refuses").
+  `scripts/release-ios.sh` refuses "--local needs Xcode 26.4 or later for SDK 56" below 26.4 and "--local needs
+  an Xcode before 27 for SDK 56: Xcode 27 needs the scene life cycle, SDK 57's; build in EAS's cloud" from 27 on,
+  before anything is built. The cloud path is untouched: EAS's default image for SDK 56 is Xcode 26.4 (S1, S5).
+  This Mac's Xcode 27.2 is refused, so its builds are the cloud's until SDK 57. README "Verification" and the
+  testflight skill say so. Tests (`release-and-ci-guards`): 26.3, 26.2, 26.1.1, a bare 26 and an unreadable
+  version refused; 27.0 and 27.2 refused; 26.4 and 26.10 pass; the CocoaPods cases run on 26.4. Bite: the
+  script as it was (26.2, no cap), the two refusal tests fail (2 failed of 27); restored, 27 pass.

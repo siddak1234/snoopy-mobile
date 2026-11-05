@@ -116,18 +116,22 @@ node scripts/verify-deployed-contracts.mjs --release \
   || refuse "the committed platform types are not the contract the deployed platform serves"
 
 # --local: the Mac must be able to build. A missing tool, an Xcode below the
-# SDK's minimum (README "Verification"), or a CocoaPods whose `pod --version`
-# gives no version number (an Xcode licence not yet accepted makes it, 2026-11-04)
-# refuses before anything is built, so a dry run with --local proves the
-# toolchain too, but Xcode 27.2 passes the dry run and cannot archive SDK 55's
-# pods (DESIGN-GAPS "Round 21's close").
+# SDK's minimum or at or past 27 (README "Verification"), or a CocoaPods whose
+# `pod --version` gives no version number (an Xcode licence not yet accepted
+# makes it, 2026-11-04) refuses before anything is built, so a dry run with
+# --local proves the toolchain too. Xcode 27 and SDK 56: an app built with it
+# does not launch on iOS 27 without the scene life cycle, which Expo has from
+# SDK 57 (expo/fyi ios-scene-lifecycle.md), and Xcode 27.2 could not archive
+# SDK 55's pods (DESIGN-GAPS "Round 21's close"), so it refuses.
 if [ "$LOCAL" = 1 ]; then
   xcodebuild -version >/dev/null 2>&1 || refuse "--local needs Xcode (xcodebuild)"
   XCODE=$(xcodebuild -version 2>/dev/null | head -1 | sed -n 's/^Xcode \([0-9][0-9.]*\).*$/\1/p')
   IFS=. read -r XCODE_MAJOR XCODE_MINOR _ <<< "$XCODE.0"
   [[ "$XCODE_MAJOR" =~ ^[0-9]+$ && "$XCODE_MINOR" =~ ^[0-9]+$ ]] \
-    && (( 10#$XCODE_MAJOR > 26 || (10#$XCODE_MAJOR == 26 && 10#$XCODE_MINOR >= 2) )) \
-    || refuse "--local needs Xcode 26.2 or later for SDK 55"
+    && (( 10#$XCODE_MAJOR > 26 || (10#$XCODE_MAJOR == 26 && 10#$XCODE_MINOR >= 4) )) \
+    || refuse "--local needs Xcode 26.4 or later for SDK 56"
+  (( 10#$XCODE_MAJOR < 27 )) \
+    || refuse "--local needs an Xcode before 27 for SDK 56: Xcode 27 needs the scene life cycle, SDK 57's; build in EAS's cloud"
   command -v pod >/dev/null 2>&1 || refuse "--local needs CocoaPods (pod)"
   POD_VERSION=$(pod --version 2>/dev/null) || refuse "--local needs a working CocoaPods (pod --version gave no version number)"
   POD_VERSION=$(printf '%s\n' "$POD_VERSION" | tail -n 1)
