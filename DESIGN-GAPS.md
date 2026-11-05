@@ -3603,6 +3603,24 @@ the 55 → 57 upgrade helper).
   `PlainStyle`, Worklets' `workletizableModules`, or Gesture Handler's `getChildInDrawingOrderAtIndex`; and React
   Native 0.86 has "no user-facing breaking changes" (S22). The app commits no `ios` or `android` folder, so
   `expo prebuild`'s new clean default (S27) changes nothing here. Typecheck passes unchanged.
+- **The comments that cited SDK 56 sources are re-read at 57.** expo-file-system 57.0.7's cited files are
+  56.0.11's byte for byte (the picker, `Paths.join`, `exists`, `copy`, and `write`, still `void`), as are its
+  `exports`, expo-modules-core's `CodedError`, `AsyncFunctionDefinition` and `UnexpectedException`, and
+  expo-modules-jsi's `JavaScriptThrowable`; expo-modules-core 57.0.24's `Exception.swift` and expo-modules-jsi
+  57.1.3's `JavaScriptPromise.swift` and `JavaScriptError.swift` (S27: "`JavaScriptError` is now a copyable
+  class") changed, and a rejection still reaches JS as an `Error` with the exception's `code`
+  (`JavaScriptPromise.swift:208`, `JavaScriptError.swift:58-63` and 42-51; `Exception.swift:48-50` and 62-65):
+  `test/mocks/expo-file-system.ts`' header cites those lines. React Native 0.86.3's
+  `RCTImageComponentView.mm:144-145` still makes the image a template only at load (`constants/theme.ts`,
+  `brand-mark.test.tsx`); expo-image-manipulator 57.0.21 still adds `ImageFixOrientationTransformer` first
+  (`ios/ImageManipulatorModule.swift:28`) and decodes through expo-image-loader 57.0.1's Glide
+  (`lib/platform/run-image.ts`); expo-router 57.0.29 still carries `getStateFromPath`'s `queryString.parse`
+  (its build/react-navigation/core/getStateFromPath.js:499) and query-string ^7.1.3, and its own linking still
+  parses at its build/getLinkingConfig.js:90-91 (`deep-link-query.test.ts`). react-native-worklets 0.10.1 still
+  ships `lib/module/mock` and still needs it: with `test/jest-setup.js`'s mock line out, `brand-mark.test.tsx`
+  fails to run ("Cannot read properties of undefined (reading 'loadUnpackers')", from
+  `NativeWorklets.native.js:303`); put back, it passes. `@react-native/jest-preset` 0.86.3's fontScale-2 mock is
+  still at its jest/mocks/NativeModules.js:41,47.
 - **expo-doctor** (`npx expo-doctor@latest`): 21 of 21 checks pass.
 - **`release:ios --local` takes Xcode 26.4 to 26.x for SDK 57**, as for 56 (S23: Xcode "26.4+", iOS "16.4+",
   both SDK 56's). Xcode 27 is still refused: "Apps built on Xcode 27 images, including `latest`, launch on iOS 27

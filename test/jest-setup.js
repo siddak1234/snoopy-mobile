@@ -1,6 +1,6 @@
 // Worklets' own mock (its "Testing with Jest" guide, the recommended way; the
 // JavaScript form): since react-native-worklets 0.7 (SDK 55) the native part
-// is required at import, which Jest does not have; 0.8.3 (SDK 56) still ships
+// is required at import, which Jest does not have; 0.10.1 (SDK 57) still ships
 // lib/module/mock and still needs it.
 jest.mock('react-native-worklets', () => require('react-native-worklets/lib/module/mock'));
 
