@@ -8,7 +8,7 @@ Round 16 — findings and observations (ADR-0032), closed 2026-10-07: moved verb
 
 Found on 2026-10-18 by grepping the moved sections for open, NOT OBSERVED, still open and deferred, and reading each hit; one line each, as the archive records it, not re-checked on a device. Closed items stay in the archive only.
 
-- **The Expo SDK major.** SDK 55 landed in Round E step 1 (its entry below has the audit): `npm audit --omit=dev` reads 44 issues, 6 high and 0 critical, and `image-size`, `uuid`, `braces`, `node-forge` and `sprintf-js` are in neither audit. Two high advisories stay a documented migration: `decode-uri-component` through query-string 7, which expo-router 55.0.18 and @react-navigation/core 7.17.2 still ask for (npm's fix is expo-router 58, a later SDK), and `zod` <4.6.6, new with SDK 55's @expo/cli 55.0.37 — [Dependency boundary](DESIGN-GAPS.archive.md#dependency-boundary), [the backlog](DESIGN-GAPS.archive.md#the-backlog-manifest-122-20-and-21-and-the-part-of-121-195-that-needs-no-owner-decision-2026-10-07).
+- **The Expo SDK major.** SDK 56 landed in Round E step 2, after SDK 55 in step 1 (their entries below have the audits): `npm audit --omit=dev` reads 23 issues, 5 high and 0 critical (44 and 6 high after SDK 55), and `image-size`, `uuid`, `braces`, `node-forge` and `sprintf-js` are in neither audit. Two high advisories stay a documented migration: `decode-uri-component` through query-string 7, which expo-router 56.2.22 still asks for (npm's fix is expo-router 58, a later SDK; @react-navigation/core left with step 2), and `zod` <4.6.6, through SDK 56's @expo/cli 56.1.27 — [Dependency boundary](DESIGN-GAPS.archive.md#dependency-boundary), [the backlog](DESIGN-GAPS.archive.md#the-backlog-manifest-122-20-and-21-and-the-part-of-121-195-that-needs-no-owner-decision-2026-10-07).
 - **An iCloud-synced checkout** makes conflict copies, evicts files and fails `npm ci` with `ENOTEMPTY`; it recurs, so work only in a scratch clone (`CLAUDE.md`, Gates and push) — [Still open, recorded rather than fixed](DESIGN-GAPS.archive.md#still-open-recorded-rather-than-fixed).
 - **Round 6's out-of-scope list** (Builder authoring, a run retry that keeps its continuation identity, profile editing, reduced-motion alternatives, small-phone and tablet approval, and the rest): Round 7.5M and Round 16 built some; the others were not re-checked when this moved — [Deliberate non-Round-6 gaps](DESIGN-GAPS.archive.md#deliberate-non-round-6-gaps).
 - **The join link in production** works only once an organization has a verified, discoverable domain, and production had none (2026-10-02) — [the sixth signed-in session](DESIGN-GAPS.archive.md#the-sixth-signed-in-session-build-9-2026-10-02-2220z2235z).
@@ -3508,3 +3508,28 @@ E's research for this step (its sources S1–S19 and an exposure read at 1d734a4
   nothing this upgrade changed). `eslint.config.js` makes those four warn, so lint passes (0 errors, 25
   warnings) and each place stays named in every run. **Open:** changing those 25 places is a change of its own,
   not this upgrade's. Bite: without the block, `npm run lint` exits 1 with the 25 errors; with it, exit 0.
+- **`expo/fetch` is the app's `fetch` now** (S1: "`expo/fetch` is now installed as the default implementation of
+  `globalThis.fetch`"; expo 56.0.24 src/winter/runtime.native.ts:41-53, unless `EXPO_PUBLIC_USE_RN_FETCH`, which
+  the app does not set). Expo's default is kept, so the upload's PUT (`lib/platform/client.ts`) and every
+  openapi-fetch call go through it. Read in its src/winter/fetch: the upload's `Uint8Array` body is sent as its
+  bytes (RequestUtils.ts:67-68), its `credentials: 'omit'` is kept (fetch.ts:48-51, 71) and its `AbortSignal`
+  aborts it (fetch.ts:44, 77-82). A request with no `credentials`, or openapi-fetch's `Request` with
+  `same-origin`, is sent `include` (fetch.ts:48-51, 71): the shared cookie store's cookies for the API's host go
+  with it, which bearer auth does not read. jest-expo's setup loads the same runtime (its
+  src/preset/setup.js:343), but the suites that read `fetch` put in their own (`platform-request`,
+  `session-recovery`), so no test runs `expo/fetch`. `scripts/audit-platform.mjs`' ban on importing `expo/fetch`
+  still holds. **Not observed:** an upload or any call through it on a device.
+- **The dependency audit, under the committed lockfile.** `npm audit --omit=dev`: 23 issues (7 low, 11
+  moderate, 5 high, 0 critical), so `audit:dependencies` passes; `npm audit`: 32 (9 low, 18 moderate, 5 high, 0
+  critical); after SDK 55, 44 and 61. The 5 high are the two advisories "Carried open" names and the packages
+  above them: `decode-uri-component` 0.2.2 through query-string 7.1.3 through expo-router 56.2.22, and `zod`
+  3.25.76 through @expo/cli 56.1.27 (npm's fix for the first is expo-router 58, a major; for zod it names expo
+  52.0.49, an older major).
+- **expo-doctor** (`npx expo-doctor@latest`): after the install 20 of 22, the react-navigation packages and
+  Hermes V1's regression; with both changes above, 22 of 22. `export:ios` and `export:android`: exit 0, run once
+  each on the Hermes change. **No Podfile or config plugin for pods** (not approved, "Round 21's close" above):
+  none is added.
+- **Not observed:** a native build, a simulator or a device. The owner's device checks, on a cloud build
+  (`npm run release:ios`, EAS's Xcode 26.4): an upload (expo/fetch's PUT), Download into Files (the awaited
+  copy), Settings › Data's export (its write), the Glow and the charts (svg 15.15.4), memory with the animations
+  (Hermes v1 off), and that a build compiling React Native from source finishes.
