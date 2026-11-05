@@ -23,6 +23,7 @@ EXPO_PUBLIC_NATIVE_AUTH_BASE_URL=https://www.example.com/api/platform
 
 The callback must exactly match the Edge's `NATIVE_APP_REDIRECT_URIS` entry.
 `app.config.js` derives the iOS associated domains (`applinks`, and `webcredentials`, which is what `ASWebAuthenticationSession`'s HTTPS callback requires) and the Android verified app link
+(the sheet catches that callback only because `lib/platform/native-auth.ts` passes `preferUniversalLinks: true`, which expo-web-browser 55 and later require; `__tests__/native-auth-https-callback.test.ts` reads the installed module so an upgrade cannot drop it silently, DESIGN-GAPS "Hotfix: sign-in on iOS")
 from this value. The auth base must share an origin with the Edge's
 `AUTH_CALLBACK_URL`: the OAuth transaction lives in a host-only `__Host-`
 cookie, so the start leg and the callback have to land on one host. Unset, the
