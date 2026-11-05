@@ -3638,9 +3638,14 @@ the 55 → 57 upgrade helper).
     `components/organization/org-domain-only.tsx:41`, `components/settings/workspace-switcher.tsx:63`.
   - `react-hooks/purity` (2): `app/(tabs)/activity/index.tsx:295`, `app/index.tsx:61`.
   - `react-hooks/static-components` (2): `components/connection-row.tsx:50`, `components/setup-field.tsx:610`.
-  - Outside the gate, since `expo lint` does not read `hooks/` (6): `set-state-in-effect` at
-    `hooks/use-push-registration.tsx:457`, `hooks/use-scope.tsx:39`, `hooks/use-solutions.tsx:83` and
-    `hooks/use-workflows.tsx:51`; `refs` at `hooks/use-resource.tsx:210` (2).
+  - Outside the gate, since `expo lint` does not read `hooks/` (7 places: two of the four rules, and a fifth
+    rule): `set-state-in-effect` at `hooks/use-push-registration.tsx:457`, `hooks/use-scope.tsx:39`,
+    `hooks/use-solutions.tsx:83` and `hooks/use-workflows.tsx:51`; `refs` at `hooks/use-resource.tsx:210` (2);
+    and `react-hooks/use-memo`, one more of eslint-plugin-react-hooks 7.1.1's rules that this upgrade turned
+    on (5.2.0 on `main`), an error at `hooks/use-resource.tsx:91`'s `useCallback(read, deps)` ("Expected the
+    dependency list for useCallback to be an array literal"). The review found it by reading every
+    `react-hooks/` rule through the same API; no other `react-hooks/` rule fires in `app/`, `components/` or
+    `hooks/`.
   The comment over the list points here and names no count. The two lint tests (`release-and-ci-guards`) pass
   as they are (29 of 29), their name now citing eslint-config-expo 57.
 - **Snapshots: the 10 entries updated, by the owner's decision ("Approve the 10 updates").** The whole Jest run
