@@ -171,7 +171,7 @@ describe("eas-cli is eas.json's one exact cli.version, run with npx (Expo's vers
   });
 });
 
-describe("--local refuses an Xcode below 26.4, SDK 56's minimum, and Xcode 27 and later", () => {
+describe("--local refuses an Xcode below 26.4, SDK 57's minimum, and Xcode 27 and later", () => {
   const eas = JSON.parse(readFileSync(join(root, 'eas.json'), 'utf8'));
   const app = JSON.parse(readFileSync(join(root, 'app.json'), 'utf8'));
   const appId = `${eas.submit.production.ios.appleTeamId}.${app.expo.ios.bundleIdentifier}`;
@@ -219,17 +219,17 @@ describe("--local refuses an Xcode below 26.4, SDK 56's minimum, and Xcode 27 an
     for (const line of ['Xcode 26.3', 'Xcode 26.2', 'Xcode 26.1.1', 'Xcode 26', 'Xcode']) {
       const run = localDryRun(line);
       expect(run.out).toContain(`live AASA applinks: ['${appId}']`);
-      expect(run.out).toContain('REFUSED: --local needs Xcode 26.4 or later for SDK 56');
+      expect(run.out).toContain('REFUSED: --local needs Xcode 26.4 or later for SDK 57');
       expect(run.out).not.toContain('DRY RUN');
       expect(run.status).toBe(1);
     }
   });
 
-  it("refuses Xcode 27.0 and this Mac's 27.2: SDK 56 has no scene life cycle, and 27.2 could not archive SDK 55's pods", () => {
+  it("refuses Xcode 27.0 and this Mac's 27.2: the app has no scene life cycle, and 27.2 could not archive SDK 55's pods", () => {
     for (const line of ['Xcode 27.0', 'Xcode 27.2']) {
       const run = localDryRun(line);
       expect(run.out).toContain(
-        "REFUSED: --local needs an Xcode before 27 for SDK 56: Xcode 27 needs the scene life cycle, SDK 57's; build in EAS's cloud",
+        "REFUSED: --local needs an Xcode before 27 for SDK 57: Xcode 27 needs the scene life cycle, which this app does not opt into; build in EAS's cloud",
       );
       expect(run.out).not.toContain('local toolchain:');
       expect(run.out).not.toContain('DRY RUN');
@@ -237,8 +237,8 @@ describe("--local refuses an Xcode below 26.4, SDK 56's minimum, and Xcode 27 an
     }
   });
 
-  it('passes Xcode 26.4 and 26.10, printing the toolchain before the dry run stops', () => {
-    for (const version of ['26.4', '26.10']) {
+  it("passes Xcode 26.4, 26.6 (EAS's SDK 57 image) and 26.10, printing the toolchain before the dry run stops", () => {
+    for (const version of ['26.4', '26.6', '26.10']) {
       const run = localDryRun(`Xcode ${version}`);
       expect(run.out).toContain(`local toolchain: Xcode ${version}, CocoaPods 1.16.2, fastlane 2.228.0`);
       expect(run.out).toContain('DRY RUN: every gate passed on 0000000');

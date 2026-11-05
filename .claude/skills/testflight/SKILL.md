@@ -22,7 +22,7 @@ description: Ship an iOS build of main to TestFlight with npm run release:ios, a
 2. Rehearse every refusal. Nothing is built.
    ```bash
    npm run release:ios -- --dry-run            # the cloud path
-   npm run release:ios -- --local --dry-run    # the Mac path; refuses Xcode 27 and later for SDK 56 (README "Verification")
+   npm run release:ios -- --local --dry-run    # the Mac path; refuses Xcode 27 and later for SDK 57 (README "Verification")
    ```
    It must end `DRY RUN: every gate passed on <sha>`. Both paths refuse unless HEAD == `origin/main`, the tree is clean, `all-green` concluded success on HEAD, the live AASA names the app, and the deployed platform's contract hashes equal the generated types'.
 3. Build and submit, the path the owner chose:

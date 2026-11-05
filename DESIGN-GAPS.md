@@ -3604,6 +3604,20 @@ the 55 → 57 upgrade helper).
   Native 0.86 has "no user-facing breaking changes" (S22). The app commits no `ios` or `android` folder, so
   `expo prebuild`'s new clean default (S27) changes nothing here. Typecheck passes unchanged.
 - **expo-doctor** (`npx expo-doctor@latest`): 21 of 21 checks pass.
+- **`release:ios --local` takes Xcode 26.4 to 26.x for SDK 57**, as for 56 (S23: Xcode "26.4+", iOS "16.4+",
+  both SDK 56's). Xcode 27 is still refused: "Apps built on Xcode 27 images, including `latest`, launch on iOS 27
+  only if they use the UIKit scene life cycle. On SDK 57, enable `ios.enableSceneSupport` in
+  `expo-build-properties`, or use `auto` or `sdk-57`" (S24), and "SDK 57 apps keep the application-based life
+  cycle by default" (S25); this app does not opt in (it changes the app's start, the owner's call), and Xcode
+  27.2 could not archive SDK 55's pods ("Round 21's close"). `scripts/release-ios.sh` refuses "--local needs
+  Xcode 26.4 or later for SDK 57" and "--local needs an Xcode before 27 for SDK 57: Xcode 27 needs the scene life
+  cycle, which this app does not opt into; build in EAS's cloud". The cloud path: `eas.json` names no `image`,
+  so EAS takes `auto`, "selected based on the project configuration, Expo SDK version, and React Native version"
+  (S24); that this is `sdk-57`, "Xcode 26.6, Node.js 22.23.1", is inference from S24's note above, not
+  observed. So SDK 57's default build is not an Xcode 27 one and the scene life cycle is not needed for it;
+  whether one is needed for iOS 26 and earlier, S24–S26 do not say. README "Verification" and the testflight
+  skill say so. Tests (`release-and-ci-guards`): as for 56, with 26.6 passing too. Bite: the SDK 56 script, the
+  two refusal tests fail (2 failed of 29); restored, 29 pass.
 - **The dependency audit, under the committed lockfile**, is SDK 56's: `npm audit --omit=dev` 23 issues (7 low,
   11 moderate, 5 high, 0 critical), so `audit:dependencies` passes; `npm audit` 32 (9 low, 18 moderate, 5 high, 0
   critical). The 5 high are the same two advisories, now through expo-router 57.0.29 (query-string 7.1.3,

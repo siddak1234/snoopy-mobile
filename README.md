@@ -219,17 +219,20 @@ newer one, prints it beside the tree line and refuses when eas-cli reports
 another. Bump it by hand there; a guard test refuses a range.
 `npm run release:ios -- --local` (Round 17, 2026-10-08) builds the same release on
 this Mac instead of EAS's cloud — `eas build --local`, with Xcode (26.4 or later
-for SDK 56, Expo's SDK 56 table, and before 27), CocoaPods and fastlane, which it
+for SDK 57, Expo's SDK 57 table, and before 27), CocoaPods and fastlane, which it
 refuses without — and a CocoaPods whose `pod --version` gives no version number, as an
 Xcode licence not yet accepted makes it (2026-11-04) — and so uses no EAS build
 quota; every gate
 above still applies, nothing moves HEAD or the tree during the build, the ipa's
 entitlements are checked as the cloud build's are, and it is submitted with
 `eas submit --path`. `--local --dry-run` proves the Mac's toolchain as well. It
-refuses Xcode 27 and later for SDK 56: an app Xcode 27 builds launches on iOS 27
-only with the scene life cycle, which Expo has from SDK 57, and Xcode 27.2 could
-not archive SDK 55's pods (DESIGN-GAPS "Round 21's close"); the cloud path
-builds SDK 56 on Expo's Xcode 26.4. Preview and production EAS values are
+refuses Xcode 27 and later: an app Xcode 27 builds launches on iOS 27 only with
+the scene life cycle, which SDK 57 has only as an opt-in
+(`expo-build-properties`' `ios.enableSceneSupport`) this app does not set, and
+Xcode 27.2 could not archive SDK 55's pods (DESIGN-GAPS "Round 21's close").
+`eas.json` names no build image, so the cloud path takes EAS's `auto` one,
+read as the `sdk-57` image, Xcode 26.6 (DESIGN-GAPS "Round E step 2"; not yet
+observed). Preview and production EAS values are
 supplied by the build environment; they are intentionally not committed to
 `eas.json`. Since Round 7.5 that means the EAS-hosted `preview` and
 `production` environments on the linked project (`@autom8x.ai/snoopy-mobile`):
