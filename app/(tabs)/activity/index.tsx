@@ -1,4 +1,4 @@
-import type { NavigationProp } from '@react-navigation/native';
+import type { NavigationProp } from 'expo-router/react-navigation';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { CalendarBlank, CaretRight, CheckCircle, Funnel, HandPalm } from 'phosphor-react-native';
 import React, { useEffect, useMemo, useState } from 'react';

@@ -1,6 +1,6 @@
 # Autom8x Mobile (`snoopy-mobile`)
 
-The Expo SDK 55 native client for Autom8x. It implements the frozen Nocturne
+The Expo SDK 57 native client for Autom8x. It implements the frozen Nocturne
 design on iOS and Android and consumes only the Edge's published OpenAPI
 surface.
 
@@ -34,6 +34,9 @@ base to the deployment's exact strings.
 The iOS deployment target is 17.4 because that is the first version whose
 `ASWebAuthenticationSession` can match an HTTPS callback by associated host and
 path; no supported build can fall back to scheme-only matching.
+The JavaScript engine is Hermes v1, Expo's default, which nothing here turns
+off: React Native 0.86.2 and later carry the Hermes V1 that fixes its memory
+bug with Reanimated and Worklets (DESIGN-GAPS "Round E step 2").
 
 ## Verification
 
@@ -165,7 +168,13 @@ SDK 55 upgrade's, which is no visual change and which the owner authorised on
 2026-11-04 ("A1. approve"): the 2 GlowBackground entries (both palettes), whose `RNSVGSvgView`
 loses `bbWidth`/`bbHeight` and the 100% size react-native-svg gave an
 absolutely placed Svg until 15.13 (its #2752), host props only ("Round E step
-1: Expo SDK 54 → 55").
+1: Expo SDK 54 → 55") — and the Expo SDK 55 → 57 upgrade's, also no visual
+change, which the owner approved on 2026-11-05 ("Approve the 10 updates"): 6
+Nocturne entries (NocToggle on and off and Skeleton, both palettes) and 4 screen
+states (ScreenLoading and ScreenLoading/tiles, both palettes), each updated by
+its own test name, a removed `nativeID` on an Animated view only, which
+Reanimated 4.3 and later set outside Jest alone ("Round E step 2: Expo SDK 55 →
+57").
 
 CI runs lint, typecheck, Jest, all architecture/dependency gates (the docs
 checks among them, on the PR's whole range: `fetch-depth: 0` and
@@ -215,16 +224,21 @@ every call as `npx --yes eas-cli@<that version>`, so a release never runs a
 newer one, prints it beside the tree line and refuses when eas-cli reports
 another. Bump it by hand there; a guard test refuses a range.
 `npm run release:ios -- --local` (Round 17, 2026-10-08) builds the same release on
-this Mac instead of EAS's cloud — `eas build --local`, with Xcode (26.2 or later
-for SDK 55, Expo's SDK 55 table), CocoaPods and fastlane, which it refuses
-without — and a CocoaPods whose `pod --version` gives no version number, as an
+this Mac instead of EAS's cloud — `eas build --local`, with Xcode (26.4 or later
+for SDK 57, Expo's SDK 57 table, and before 27), CocoaPods and fastlane, which it
+refuses without — and a CocoaPods whose `pod --version` gives no version number, as an
 Xcode licence not yet accepted makes it (2026-11-04) — and so uses no EAS build
 quota; every gate
 above still applies, nothing moves HEAD or the tree during the build, the ipa's
 entitlements are checked as the cloud build's are, and it is submitted with
-`eas submit --path`. `--local --dry-run` proves the Mac's toolchain as well, but
-Xcode 27.2 passes the dry run and cannot archive SDK 55's pods (DESIGN-GAPS
-"Round 21's close"). Preview and production EAS values are
+`eas submit --path`. `--local --dry-run` proves the Mac's toolchain as well. It
+refuses Xcode 27 and later: an app Xcode 27 builds launches on iOS 27 only with
+the scene life cycle, which SDK 57 has only as an opt-in
+(`expo-build-properties`' `ios.enableSceneSupport`) this app does not set, and
+Xcode 27.2 could not archive SDK 55's pods (DESIGN-GAPS "Round 21's close").
+`eas.json` names no build image, so the cloud path takes EAS's `auto` one,
+read as the `sdk-57` image, Xcode 26.6 (DESIGN-GAPS "Round E step 2"; not yet
+observed). Preview and production EAS values are
 supplied by the build environment; they are intentionally not committed to
 `eas.json`. Since Round 7.5 that means the EAS-hosted `preview` and
 `production` environments on the linked project (`@autom8x.ai/snoopy-mobile`):
@@ -408,7 +422,7 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   `expo-secure-store` with `WHEN_UNLOCKED_THIS_DEVICE_ONLY` — and beside them
   push's device id and its "Not now", cleared with them.
 - Device push (build 11, D8; BUILD-PLAN 24.13.6): `expo-notifications` and
-  `expo-device` at the SDK 55 pins, and the `expo-notifications` plugin in
+  `expo-device` at the SDK 57 pins, and the `expo-notifications` plugin in
   `app.json`, whose prebuild writes the `aps-environment` entitlement — none is
   hand-written, which `__tests__/app-config.test.js` holds.
   `lib/platform/devices.ts` registers the phone with `PUT /v1/session/devices`
@@ -460,16 +474,16 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   opened; and `shareSignedFile`, Share — on iOS only (`sharesFiles`) the file
   itself to the share sheet, never the link, then removed (~~iOS saves, shares
   and removes it; Android opens the link~~, Download until Round 21). The package page draws
-  the saved PDF in `react-native-webview` (13.16.0, MIT, the SDK 55 pin; a new
+  the saved PDF in `react-native-webview` (13.16.1, MIT, the SDK 57 pin; a new
   native module, so build 24 is a new build): the cached file only, its folder
   the only one it may read — it loads nothing over the network.
-- Liquid Glass (round 23, A3): `expo-glass-effect` at the SDK 55 pin, drawn
+- Liquid Glass (round 23, A3): `expo-glass-effect` at the SDK 57 pin, drawn
   only through `components/glass-surface.tsx` — the system's glass on iOS 26,
   `expo-blur` under a tint below it, the opaque card on Android — on the tab
   bar's capsule, the header circles and the drop-down panels. It makes no
   request.
 - A run's file (BUILD-PLAN 25.8.3): `expo-image-picker` and
-  `expo-image-manipulator` at the SDK 55 pins. Take photo is the camera, asked
+  `expo-image-manipulator` at the SDK 57 pins. Take photo is the camera, asked
   for at the press; Upload is `expo-document-picker`, held to a PDF, a JPEG or
   a PNG — or, for a field that names its types (`acceptedContentTypes`, backend
   ADR-0046), to those, a Word file sent as it is, and Take photo only where a

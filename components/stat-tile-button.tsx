@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     right: 12,
   },
   tint: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: radius.card,
   },
 });

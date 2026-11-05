@@ -1298,7 +1298,6 @@ exports[`screen states — dark palette ScreenLoading renders unchanged 1`] = `
             false,
           ]
         }
-        nativeID="0"
         style={
           [
             {
@@ -1346,7 +1345,6 @@ exports[`screen states — dark palette ScreenLoading renders unchanged 1`] = `
               false,
             ]
           }
-          nativeID="1"
           style={
             [
               {
@@ -1387,7 +1385,6 @@ exports[`screen states — dark palette ScreenLoading renders unchanged 1`] = `
               false,
             ]
           }
-          nativeID="2"
           style={
             [
               {
@@ -1430,7 +1427,6 @@ exports[`screen states — dark palette ScreenLoading renders unchanged 1`] = `
           false,
         ]
       }
-      nativeID="3"
       style={
         [
           {
@@ -1478,7 +1474,6 @@ exports[`screen states — dark palette ScreenLoading renders unchanged 1`] = `
             false,
           ]
         }
-        nativeID="4"
         style={
           [
             {
@@ -1519,7 +1514,6 @@ exports[`screen states — dark palette ScreenLoading renders unchanged 1`] = `
             false,
           ]
         }
-        nativeID="5"
         style={
           [
             {
@@ -1560,7 +1554,6 @@ exports[`screen states — dark palette ScreenLoading renders unchanged 1`] = `
             false,
           ]
         }
-        nativeID="6"
         style={
           [
             {
@@ -1601,7 +1594,6 @@ exports[`screen states — dark palette ScreenLoading renders unchanged 1`] = `
             false,
           ]
         }
-        nativeID="7"
         style={
           [
             {
@@ -1685,7 +1677,6 @@ exports[`screen states — dark palette ScreenLoading/tiles renders unchanged 1`
             false,
           ]
         }
-        nativeID="8"
         style={
           [
             {
@@ -1733,7 +1724,6 @@ exports[`screen states — dark palette ScreenLoading/tiles renders unchanged 1`
               false,
             ]
           }
-          nativeID="9"
           style={
             [
               {
@@ -1774,7 +1764,6 @@ exports[`screen states — dark palette ScreenLoading/tiles renders unchanged 1`
               false,
             ]
           }
-          nativeID="10"
           style={
             [
               {
@@ -1827,7 +1816,6 @@ exports[`screen states — dark palette ScreenLoading/tiles renders unchanged 1`
             },
           ]
         }
-        nativeID="11"
         style={
           [
             {
@@ -1872,7 +1860,6 @@ exports[`screen states — dark palette ScreenLoading/tiles renders unchanged 1`
             },
           ]
         }
-        nativeID="12"
         style={
           [
             {
@@ -1917,7 +1904,6 @@ exports[`screen states — dark palette ScreenLoading/tiles renders unchanged 1`
             },
           ]
         }
-        nativeID="13"
         style={
           [
             {
@@ -1961,7 +1947,6 @@ exports[`screen states — dark palette ScreenLoading/tiles renders unchanged 1`
           false,
         ]
       }
-      nativeID="14"
       style={
         [
           {
@@ -2009,7 +1994,6 @@ exports[`screen states — dark palette ScreenLoading/tiles renders unchanged 1`
             false,
           ]
         }
-        nativeID="15"
         style={
           [
             {
@@ -2050,7 +2034,6 @@ exports[`screen states — dark palette ScreenLoading/tiles renders unchanged 1`
             false,
           ]
         }
-        nativeID="16"
         style={
           [
             {
@@ -2091,7 +2074,6 @@ exports[`screen states — dark palette ScreenLoading/tiles renders unchanged 1`
             false,
           ]
         }
-        nativeID="17"
         style={
           [
             {
@@ -2132,7 +2114,6 @@ exports[`screen states — dark palette ScreenLoading/tiles renders unchanged 1`
             false,
           ]
         }
-        nativeID="18"
         style={
           [
             {
@@ -3925,7 +3906,6 @@ exports[`screen states — light palette ScreenLoading renders unchanged 1`] = `
             false,
           ]
         }
-        nativeID="19"
         style={
           [
             {
@@ -3973,7 +3953,6 @@ exports[`screen states — light palette ScreenLoading renders unchanged 1`] = `
               false,
             ]
           }
-          nativeID="20"
           style={
             [
               {
@@ -4014,7 +3993,6 @@ exports[`screen states — light palette ScreenLoading renders unchanged 1`] = `
               false,
             ]
           }
-          nativeID="21"
           style={
             [
               {
@@ -4057,7 +4035,6 @@ exports[`screen states — light palette ScreenLoading renders unchanged 1`] = `
           false,
         ]
       }
-      nativeID="22"
       style={
         [
           {
@@ -4105,7 +4082,6 @@ exports[`screen states — light palette ScreenLoading renders unchanged 1`] = `
             false,
           ]
         }
-        nativeID="23"
         style={
           [
             {
@@ -4146,7 +4122,6 @@ exports[`screen states — light palette ScreenLoading renders unchanged 1`] = `
             false,
           ]
         }
-        nativeID="24"
         style={
           [
             {
@@ -4187,7 +4162,6 @@ exports[`screen states — light palette ScreenLoading renders unchanged 1`] = `
             false,
           ]
         }
-        nativeID="25"
         style={
           [
             {
@@ -4228,7 +4202,6 @@ exports[`screen states — light palette ScreenLoading renders unchanged 1`] = `
             false,
           ]
         }
-        nativeID="26"
         style={
           [
             {
@@ -4312,7 +4285,6 @@ exports[`screen states — light palette ScreenLoading/tiles renders unchanged 1
             false,
           ]
         }
-        nativeID="27"
         style={
           [
             {
@@ -4360,7 +4332,6 @@ exports[`screen states — light palette ScreenLoading/tiles renders unchanged 1
               false,
             ]
           }
-          nativeID="28"
           style={
             [
               {
@@ -4401,7 +4372,6 @@ exports[`screen states — light palette ScreenLoading/tiles renders unchanged 1
               false,
             ]
           }
-          nativeID="29"
           style={
             [
               {
@@ -4454,7 +4424,6 @@ exports[`screen states — light palette ScreenLoading/tiles renders unchanged 1
             },
           ]
         }
-        nativeID="30"
         style={
           [
             {
@@ -4499,7 +4468,6 @@ exports[`screen states — light palette ScreenLoading/tiles renders unchanged 1
             },
           ]
         }
-        nativeID="31"
         style={
           [
             {
@@ -4544,7 +4512,6 @@ exports[`screen states — light palette ScreenLoading/tiles renders unchanged 1
             },
           ]
         }
-        nativeID="32"
         style={
           [
             {
@@ -4588,7 +4555,6 @@ exports[`screen states — light palette ScreenLoading/tiles renders unchanged 1
           false,
         ]
       }
-      nativeID="33"
       style={
         [
           {
@@ -4636,7 +4602,6 @@ exports[`screen states — light palette ScreenLoading/tiles renders unchanged 1
             false,
           ]
         }
-        nativeID="34"
         style={
           [
             {
@@ -4677,7 +4642,6 @@ exports[`screen states — light palette ScreenLoading/tiles renders unchanged 1
             false,
           ]
         }
-        nativeID="35"
         style={
           [
             {
@@ -4718,7 +4682,6 @@ exports[`screen states — light palette ScreenLoading/tiles renders unchanged 1
             false,
           ]
         }
-        nativeID="36"
         style={
           [
             {
@@ -4759,7 +4722,6 @@ exports[`screen states — light palette ScreenLoading/tiles renders unchanged 1
             false,
           ]
         }
-        nativeID="37"
         style={
           [
             {

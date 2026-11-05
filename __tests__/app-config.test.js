@@ -48,14 +48,92 @@ afterEach(() => {
 const base = { ios: {}, android: {}, extra: {} };
 
 describe('release app configuration', () => {
-  it('requires iOS 17.4, where ASWebAuthenticationSession can match an HTTPS host and path', () => {
-    const buildProperties = appJson.expo.plugins.find(
-      (plugin) => Array.isArray(plugin) && plugin[0] === 'expo-build-properties',
+  /**
+   * Since SDK 56 the deployment target is the built-in `ios.deploymentTarget`; expo-build-properties'
+   * own is deprecated (its build/ios.d.ts:4). Expo's prebuild writes the built-in one into the app
+   * target and the Podfile properties (@expo/config-plugins build/ios/DeploymentTarget.js), read here
+   * through Expo's mod compiler, introspecting.
+   */
+  it('requires iOS 17.4, where ASWebAuthenticationSession can match an HTTPS host and path', async () => {
+    expect(appJson.expo.ios.deploymentTarget).toBe('17.4');
+    // Not in expo-build-properties, whose own deploymentTarget is deprecated: the plugin is listed bare.
+    expect(appJson.expo.plugins).toContain('expo-build-properties');
+
+    setEnv({ ...RELEASE, EAS_BUILD_PROFILE: 'production' });
+    const resolved = configFactory({ config: appJson.expo });
+    expect(resolved.ios.deploymentTarget).toBe('17.4');
+    const { IOSConfig, compileModsAsync } = require('expo/config-plugins');
+    const compiled = await compileModsAsync(IOSConfig.DeploymentTarget.withDeploymentTargetPodfileProps(resolved), {
+      // Never created: introspection reads Expo's templates and writes nothing.
+      projectRoot: `${__dirname}/no-native-project`,
+      introspect: true,
+      platforms: ['ios'],
+      assertMissingModProviders: false,
+    });
+    expect(compiled._internal.modResults.ios.podfileProperties['ios.deploymentTarget']).toBe('17.4');
+  });
+
+  /**
+   * Round E step 2: Hermes v1, Expo's default engine, stays on. Its memory bug with Reanimated and
+   * Worklets is fixed in the React Native that SDK 57 ships, and the owner took SDK 57 over turning
+   * Hermes v1 off in SDK 56 (DESIGN-GAPS "Round E step 2"). So nothing here turns it off: no
+   * expo-build-properties option, no hermes-compiler override, no Babel profile for the legacy
+   * engine. The plugin as app.json applies it is read through Expo's mod compiler, introspecting:
+   * it writes no Hermes property on either platform, nor iOS's build-from-source one.
+   */
+  it('keeps Hermes v1, the default engine, on both platforms (Round E step 2)', async () => {
+    const entry = appJson.expo.plugins.find(
+      (plugin) => plugin === 'expo-build-properties' || (Array.isArray(plugin) && plugin[0] === 'expo-build-properties'),
     );
-    expect(buildProperties).toEqual([
-      'expo-build-properties',
-      { ios: { deploymentTarget: '17.4' } },
-    ]);
+    expect(entry).toBe('expo-build-properties');
+    expect(require('../package.json').overrides).not.toHaveProperty('hermes-compiler');
+    expect(require('fs').existsSync(`${__dirname}/../babel.config.js`)).toBe(false);
+
+    const { compileModsAsync } = require('expo/config-plugins');
+    const withBuildProperties = require('expo-build-properties/app.plugin.js').default;
+    const configured = withBuildProperties(
+      { name: 'Autom8x', slug: 'snoopy-mobile', ios: {}, android: {}, _internal: { projectRoot: `${__dirname}/..` } },
+      Array.isArray(entry) ? entry[1] : undefined,
+    );
+    const compiled = await compileModsAsync(configured, {
+      // Never created: introspection reads Expo's templates and writes nothing.
+      projectRoot: `${__dirname}/no-native-project`,
+      introspect: true,
+      platforms: ['ios', 'android'],
+      assertMissingModProviders: false,
+    });
+    const podfile = compiled._internal.modResults.ios.podfileProperties;
+    expect(podfile['expo.useHermesV1']).not.toBe('false');
+    expect(podfile['ios.buildReactNativeFromSource']).not.toBe('true');
+    const gradle = Object.fromEntries(
+      compiled._internal.modResults.android.gradleProperties
+        .filter((line) => line.type === 'property')
+        .map((line) => [line.key, line.value]),
+    );
+    expect(gradle.hermesV1Enabled).not.toBe('false');
+  });
+
+  /**
+   * Round E step 2: the memory fix is React Native's own Hermes V1. React Native 0.86.2 bumped it
+   * to 250829098.0.16 "to fix excessive memory consumption" (its PR 57646), and Expo's SDK 57
+   * changelog calls expo@57.0.9 or later, which brings it, "crucial" for apps importing Reanimated
+   * or Worklets, as this one does. Read from what is installed: the engine React Native's pods and
+   * Gradle build (its sdks/.hermesv1version) and the compiler that makes the bundle (its
+   * hermes-compiler, as React Native resolves it).
+   */
+  it("ships the Hermes V1 with the memory fix: React Native 0.86.2 or later's (Round E step 2)", () => {
+    const { readFileSync } = require('fs');
+    const { dirname, join } = require('path');
+    const semver = require('semver');
+    expect(semver.gte(require('expo/package.json').version, '57.0.9')).toBe(true);
+    expect(semver.gte(semver.minVersion(require('../package.json').dependencies['react-native']), '0.86.2')).toBe(true);
+    const reactNative = dirname(require.resolve('react-native/package.json'));
+    expect(semver.gte(require(join(reactNative, 'package.json')).version, '0.86.2')).toBe(true);
+    const engine = readFileSync(join(reactNative, 'sdks/.hermesv1version'), 'utf8').trim();
+    expect(engine).toMatch(/^hermes-v\d+\.\d+\.\d+$/);
+    expect(semver.gte(engine.slice('hermes-v'.length), '250829098.0.16')).toBe(true);
+    const compiler = require(require.resolve('hermes-compiler/package.json', { paths: [reactNative] })).version;
+    expect(semver.gte(compiler, '250829098.0.16')).toBe(true);
   });
 
   it('permits an unconfigured local development build', () => {

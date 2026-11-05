@@ -1934,6 +1934,15 @@ describe("Home's tiles count today, say so, and open today's runs (the owner's b
     expect(StyleSheet.flatten(home.getByTestId('stat-Success-pressed').props.style).backgroundColor).toBe(
       `rgba(145,132,217,0.15)`,
     );
+    // Over the whole tile: React Native 0.85 removed StyleSheet.absoluteFillObject, which spread
+    // as nothing and left the tint a box of no size (Round E step 2).
+    expect(StyleSheet.flatten(home.getByTestId('stat-Success-pressed').props.style)).toMatchObject({
+      position: 'absolute',
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+    });
     await fireEvent(tile, 'responderRelease', touch('onResponderRelease'));
     await waitFor(() => expect(home.queryByTestId('stat-Success-pressed')).toBeNull());
     await home.unmount();

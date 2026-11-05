@@ -144,6 +144,25 @@ describe('saveToFiles', () => {
     await expect(saveToFiles(new File('file:///cache/notes'), 'notes')).resolves.toBe('saved');
     expect(mockCopies).toEqual([`file:///cache/notes -> ${picked.uri}notes%202`]);
   });
+
+  it("answers 'saved' only once the copy has finished: since SDK 56 File.copy is a promise (Round E step 2)", async () => {
+    const { File } = jest.requireMock('expo-file-system');
+    let finish: () => void = () => {};
+    const copy = jest
+      .spyOn(File.prototype, 'copy')
+      .mockImplementation(() => new Promise<void>((resolve) => (finish = resolve)));
+    let answer: string | undefined;
+    const saving = saveToFiles(new File('file:///cache/notes.pdf'), 'notes.pdf').then((result) => {
+      answer = result;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(copy).toHaveBeenCalledTimes(1);
+    expect(answer).toBeUndefined();
+    finish();
+    await saving;
+    expect(answer).toBe('saved');
+    copy.mockRestore();
+  });
 });
 
 describe('signedLink', () => {

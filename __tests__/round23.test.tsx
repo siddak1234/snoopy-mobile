@@ -17,7 +17,7 @@ import { renderWithProviders } from '@/test/render';
  */
 
 const glass = jest.requireMock('expo-glass-effect') as { isLiquidGlassAvailable: jest.Mock };
-const MockNativeMethods = jest.requireActual('react-native/jest/MockNativeMethods').default as {
+const MockNativeMethods = jest.requireActual('@react-native/jest-preset/jest/MockNativeMethods').default as {
   measureInWindow: jest.Mock;
 };
 

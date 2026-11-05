@@ -2,7 +2,7 @@
 
 ## Identity
 
-- `snoopy-mobile`: the Expo SDK 55 iOS and Android client for Autom8x, on the Edge's published OpenAPI surface only ([README.md](README.md)).
+- `snoopy-mobile`: the Expo SDK 57 iOS and Android client for Autom8x, on the Edge's published OpenAPI surface only ([README.md](README.md)).
 - **Public.** Nothing private lands here: no private path, key, email, host or Apple id beyond what is already committed.
 - Required check: **`all-green`** (`.github/workflows/ci.yml`), red on any failure, cancellation or skip.
 - The standard all four repositories follow is the backend's `../snoopy-backend/docs/platform/ENGINEERING-STANDARD.md`. This file routes to it and restates none of it.
