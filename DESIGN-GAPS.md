@@ -3345,11 +3345,37 @@ documents is owners and admins."
   (`.claude/skills/testflight/SKILL.md`, steps 4 and 5 and its Output) says so: a VALID build reaches the owner
   by itself, and the What to Test note is optional (CLAUDE.md "A TestFlight build").
 
-## Round E step 2: Expo SDK 55 → 56 (2026-11-05)
+## Round E step 2: Expo SDK 55 → 57 (56 skipped by the owner, 2026-11-05)
 
-Sources: Expo's SDK 56 changelog (https://expo.dev/changelog/sdk-56, "S1" below), its version table
-(https://docs.expo.dev/versions/v56.0.0/) and expo 56.0.24's own `bundledNativeModules.json`; the plan is Round
-E's research for this step (its sources S1–S19 and an exposure read at 1d734a4, whose tree is `main` 793a759's).
+The owner's three decisions (2026-11-05, ~04:50Z), verbatim as the build's brief gives them, each with its
+question:
+- "Skip to 57 in one PR" (Expo 56's Hermes v1 memory bug with the app's animations is fixed in Expo 57; turning
+  it off in 56 means building React Native from source). One pull request goes 55 → 57: SDK 56's changes, then
+  SDK 57's. Hermes v1 stays Expo's default; the Hermes-off commit is reverted ("Hermes v1 stays on" below).
+- "Warn only in those 16 files (Recommended)" (Expo's lint has 4 stricter React rules, `purity`, `refs`,
+  `set-state-in-effect` and `static-components`, flagging 25 places; the build had made them warnings
+  everywhere). They warn only in the files that break them, recounted at SDK 57; new code fails on them; the
+  places are the debt list under "SDK 56 → 57" below.
+- "Approve the 10 updates (Recommended)" (10 snapshots whose only difference is a removed `nativeID` during
+  tests). Only an entry whose sole change is a removed `nativeID="<n>"` line is updated, each by its own test
+  name ("Snapshots" under "SDK 56 → 57").
+
+Sources: S1–S19 are Round E's SDK 56 research, with an exposure read at 1d734a4, whose tree is `main` 793a759's
+(S1 Expo's SDK 56 changelog, https://expo.dev/changelog/sdk-56; S3 `bundledNativeModules.json` on `sdk-56`; S4
+the v56 version table, https://docs.expo.dev/versions/v56.0.0/; S5 EAS's build infrastructure; S6 the SDK 57
+changelog; S8 Expo's ios-scene-lifecycle note; S11–S13 the root, expo-router and jest-expo CHANGELOGs on
+`sdk-56`; S14 React Native 0.85's post; S16 the v56 build-properties page). S20–S44 are its SDK 57 research
+(S20 Expo's SDK 57 changelog, https://expo.dev/changelog/sdk-57; S21 `bundledNativeModules.json` on `sdk-57`;
+S22 React Native 0.86's post, https://reactnative.dev/blog/2026/06/11/react-native-0.86; S23 the v57 version
+table, https://docs.expo.dev/versions/v57.0.0/; S24 EAS's build infrastructure,
+https://docs.expo.dev/build-reference/infrastructure/; S25 Expo's ios-scene-lifecycle note; S26 the v57
+build-properties page; S27–S32 the root, expo, expo-build-properties, expo-image, expo-router and jest-expo
+CHANGELOGs on `sdk-57`; S34 React Native 0.86.2's release and S35 its PR 57646; S36–S41 the release notes of
+Reanimated 4.4.0 and 4.5.0, Worklets 0.10.0 and 0.10.1, Gesture Handler 2.32.0 and react-native-svg 15.16.0; S42
+the 55 → 57 upgrade helper).
+
+### SDK 55 → 56
+
 `npx expo install expo@^56.0.0 --fix`, then `npx expo install --fix`, moved expo 55.0.32 → 56.0.24, react 19.2.0
 → 19.2.3, react-native 0.83.10 → 0.85.3, every `expo-*` to its `~56.0.x` pin (expo-router ~56.2.22), reanimated
 4.3.1, worklets 0.8.3, screens ~4.26.0, gesture-handler ~2.31.1, safe-area-context ~5.7.0, svg 15.15.4, webview
@@ -3534,3 +3560,55 @@ E's research for this step (its sources S1–S19 and an exposure read at 1d734a4
   (src/createAnimatedComponent/AnimatedComponent.tsx:511-522), and the entries, made under 4.2.1, carry it. On a
   device the id is still set: no visual change. `connection-row` and `vendor-logos` (react-native-svg 15.15.4)
   match. **Open:** the owner's approval to re-pin those 10; until then `npm run verify` is red on them.
+
+### SDK 56 → 57
+
+- **The versions** (S21's pins). `npx expo install expo@^57.0.0 --fix` moved expo 56.0.24 → 57.0.31, then
+  stopped: its npm pass for the dependencies refused ("ERESOLVE could not resolve": react-native 0.86.3's
+  optional peer `@react-native/jest-preset` 0.86.3 against the 0.85.3 jest-expo 56 held), and jest-expo 57 alone
+  refuses the other way (its peer `^0.86.3` against react-native 0.85.3's). With `package.json` holding every pin
+  `expo install` chose, jest-expo ~57.0.6 and eslint-config-expo ~57.0.2 set to the versions it named, and
+  react-native, jest-expo and @react-native/jest-preset taken out of the lockfile, one `npm install` resolved
+  them together; `npx expo install --fix` then said "Dependencies are up to date". So react 19.2.3 (unchanged,
+  S20), react-native 0.85.3 → 0.86.3, every `expo-*` to its `~57.0.x` pin (expo-router ~57.0.29), reanimated
+  4.3.1 → 4.5.1, worklets 0.8.3 → 0.10.1, gesture-handler ~2.31.1 → ~2.32.0, jest-expo 57.0.6, eslint-config-expo
+  57.0.2; screens ~4.26.0, safe-area-context ~5.7.0, svg 15.15.4 and webview 13.16.1 unchanged. TypeScript stays
+  ~5.9.2 in `expo.install.exclude` (S21 names none). jest-expo 57 asks for `@react-native/jest-preset`
+  `^0.86.3` as a peer (S32), which npm installs (0.86.3); `"preset": "jest-expo"` is unchanged. Node: this
+  Mac's 22.23.4 meets S23's 22.13.x.
+- **The lockfile.** The install left six @react-native packages at the root at 0.85.3 (metro-config, held only
+  by react-native-worklets 0.10.1's peer `*`, and below it babel-preset, babel-plugin-codegen, codegen,
+  js-polyfills and metro-babel-transformer, with hermes-parser, hermes-estree and
+  babel-plugin-syntax-hermes-parser 0.33.3), React Native's own 0.86.3 copies nested under
+  `node_modules/react-native/`; and community-cli-plugin, debugger-frontend, debugger-shell and dev-middleware,
+  at the root on SDK 56, with none there (a copy under `expo/` and one under `react-native/`). The committed
+  lockfile has React Native's copies of those ten and of the hermes-parser three (0.36.0) at the root, the 0.85.3
+  and 0.33.3 copies and 7 duplicate nested copies dropped, and semver 7.8.6 under community-cli-plugin;
+  `npm install` reconciled it (flags only), and `npm ls --all` and `npm ci` pass. No version differs from what
+  `expo install` chose: the pairs gone are those nine leftovers alone. One react-native (0.86.3), one
+  react-native-worklets (0.10.1), one @react-native/metro-config (0.86.3).
+- **Hermes v1's memory fix is React Native's own Hermes** (S20: "`expo@57.0.9` updates React Native to 0.86.2,
+  which resolves this regression. Updating to `expo@57.0.9` or later is crucial for affected apps"; S35: "Bump
+  Hermes V1 to 250829098.0.16 to fix excessive memory consumption"). No setting: Hermes v1 is the default (S26),
+  and no official page names one for the fix. expo 57.0.31 brings React Native 0.86.3 (S20: 57.0.17's, which
+  also ends a slower start in development), whose Hermes V1 is 250829098.0.17 (its `sdks/.hermesv1version`, and
+  its `hermes-compiler` pin, `package.json:179`). Worklets' bundle mode, S20's unsupported workaround, is not
+  used. Test (`app-config`, a new one): expo 57.0.9 or later installed, react-native 0.86.2 or later in
+  `package.json` and installed, and the engine and the compiler React Native resolves 250829098.0.16 or later.
+  Bites (of 17): the engine read as 250829098.0.10, the compiler read as 250829098.0.10, and `package.json`'s
+  react-native as 0.86.1, 1 failed each; restored, 17 pass.
+- **What SDK 57 removed, read against the app** (S27's breaking changes; S36–S40): nothing here uses
+  `@expo/ui`, `Server.resetServerContext()`, expo-modules-jsi's Swift types, Reanimated's
+  `useInterpolateConfig`, `InterpolateConfig`, `ColorSpace`, `withInitialValues`, `withTargetValues` or
+  `PlainStyle`, Worklets' `workletizableModules`, or Gesture Handler's `getChildInDrawingOrderAtIndex`; and React
+  Native 0.86 has "no user-facing breaking changes" (S22). The app commits no `ios` or `android` folder, so
+  `expo prebuild`'s new clean default (S27) changes nothing here. Typecheck passes unchanged.
+- **expo-doctor** (`npx expo-doctor@latest`): 21 of 21 checks pass.
+- **The dependency audit, under the committed lockfile**, is SDK 56's: `npm audit --omit=dev` 23 issues (7 low,
+  11 moderate, 5 high, 0 critical), so `audit:dependencies` passes; `npm audit` 32 (9 low, 18 moderate, 5 high, 0
+  critical). The 5 high are the same two advisories, now through expo-router 57.0.29 (query-string 7.1.3,
+  `decode-uri-component` 0.2.2) and @expo/cli 57.0.32 (`zod` 3.25.76); npm's fixes are still expo-router 58 and
+  expo 52.0.49, both other majors.
+- **Not observed:** a native build, a simulator or a device. The owner's device checks, on a cloud build: memory
+  with the animations (Hermes V1 250829098.0.17), an upload (expo/fetch's PUT), Download into Files, Settings ›
+  Data's export, the Glow and the charts (svg 15.15.4).

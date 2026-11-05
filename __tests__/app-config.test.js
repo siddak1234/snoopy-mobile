@@ -113,6 +113,29 @@ describe('release app configuration', () => {
     expect(gradle.hermesV1Enabled).not.toBe('false');
   });
 
+  /**
+   * Round E step 2: the memory fix is React Native's own Hermes V1. React Native 0.86.2 bumped it
+   * to 250829098.0.16 "to fix excessive memory consumption" (its PR 57646), and Expo's SDK 57
+   * changelog calls expo@57.0.9 or later, which brings it, "crucial" for apps importing Reanimated
+   * or Worklets, as this one does. Read from what is installed: the engine React Native's pods and
+   * Gradle build (its sdks/.hermesv1version) and the compiler that makes the bundle (its
+   * hermes-compiler, as React Native resolves it).
+   */
+  it("ships the Hermes V1 with the memory fix: React Native 0.86.2 or later's (Round E step 2)", () => {
+    const { readFileSync } = require('fs');
+    const { dirname, join } = require('path');
+    const semver = require('semver');
+    expect(semver.gte(require('expo/package.json').version, '57.0.9')).toBe(true);
+    expect(semver.gte(semver.minVersion(require('../package.json').dependencies['react-native']), '0.86.2')).toBe(true);
+    const reactNative = dirname(require.resolve('react-native/package.json'));
+    expect(semver.gte(require(join(reactNative, 'package.json')).version, '0.86.2')).toBe(true);
+    const engine = readFileSync(join(reactNative, 'sdks/.hermesv1version'), 'utf8').trim();
+    expect(engine).toMatch(/^hermes-v\d+\.\d+\.\d+$/);
+    expect(semver.gte(engine.slice('hermes-v'.length), '250829098.0.16')).toBe(true);
+    const compiler = require(require.resolve('hermes-compiler/package.json', { paths: [reactNative] })).version;
+    expect(semver.gte(compiler, '250829098.0.16')).toBe(true);
+  });
+
   it('permits an unconfigured local development build', () => {
     setEnv({});
 
