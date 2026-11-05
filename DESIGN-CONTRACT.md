@@ -783,6 +783,11 @@ complete export (Download file) and workspace summary (Download JSON).
     (`WorkspaceExportJob.files`, `exportFiles`) offers "Download file {n} of
     {N}" for each, in order, each from a link read afresh at the press, and no
     Share; one file is "Download file" and Share, as before — as the website's.
+    Its ready, partial, removed and too-large lines say "the export", one file
+    or several — "Ready. The export holds the whole workspace.", "…and the
+    export says which.", "That export has been removed. Export again for a new
+    one." and "The workspace is larger than one export may be." (the owner's
+    F2, 2026-11-04) — as the website's.
   - Support: the contact form's fields and words; Privacy and Terms on the
     website's origin, the one the browser leg shares.
 - Round 19 (backend ADR-0046, plan §5), a flow's items, the website's operations and words:

@@ -3040,9 +3040,10 @@ same items in its own lane, with the same words.
   sends it again; ~~a lost answer reads the session, "Your account is still here"~~ until Round 21
   stage 1. Parity: the website's lane makes the same change.
 - **S1-14** (export in parts; backend §12.1 #181): Settings › Data's line and a button for each part
-  (DESIGN-CONTRACT "Mutations", Data export). **Finding:** the ready line "Ready. The file holds the whole
+  (DESIGN-CONTRACT "Mutations", Data export). **Finding:** ~~the ready line "Ready. The file holds the whole
   workspace." and the failure `too_large`'s "The workspace is larger than one export file may be." still
-  speak of one file; no word for several is listed, so they stay until the owner words them.
+  speak of one file; no word for several is listed, so they stay until the owner words them~~ worded by the
+  owner's "F2. approve plus yes to files" (2026-11-04): "the export" ("Round 21's close", below).
 - **S1-9** (only owners and admins change a flow; backend §12.1 #180): a member's Add, Set up, Turn on,
   Pause, Archive flow and Unarchive read-only with the line, and the refusal's words (DESIGN-CONTRACT
   "Flows/add", "Setup/configure", "Flows/detail"). **The session's default:** on Add the line is drawn
@@ -3256,3 +3257,20 @@ which `--fix` left because the lockfile's 5.6.2 already met it (the lockfile sti
   view reads `bbWidth`/`bbHeight` only for an Svg nested in a group (iOS `RNSVGGroup.mm:125-126`) or one
   with a viewBox nested in another (Android `SvgView.java:306-313`); the glow is neither. No other Svg in
   the app is absolutely placed without a size. NOT OBSERVED on a device. Bite: before the re-pin those 2 entries fail (2 failed of 90); after it, 90 pass.
+
+## Round 21's close: the app's small pull request (2026-11-05)
+
+The owner's decisions it carries (2026-11-04, verbatim): "F2. approve plus yes to files", "F3. logo, i said logo.
+documents is owners and admins."
+- **B: "the export", one file or several (the owner's "F2. approve plus yes to files").** Since §12.1 #181 (S1-14)
+  a complete export comes as one file or several, so Settings › Data's four lines that spoke of one file say
+  "the export", a noun the screen already shows: `too_large` "The workspace is larger than one export file may
+  be." → "The workspace is larger than one export may be."; ready "Ready. The file holds the whole workspace." →
+  "Ready. The export holds the whole workspace."; partial "…could not be read, and the file says which." →
+  "…could not be read, and the export says which."; expired "That file has been removed. Export again for a new
+  one." → "That export has been removed. Export again for a new one." (DESIGN-CONTRACT "Mutations", Data
+  export; S1-14 above). Unchanged: `COMPLETE_EXPORT_INTRO`, `downloadFileLabel`, "The file could not be saved.",
+  "The link to the file cannot be used." and the summary's JSON words. Parity: the website's lane makes the same
+  change. Bite: each old line put back in turn — `too_large`, partial or expired: the new test in
+  `data-support-screens` fails (1 failed of 14); ready: 6 failed of 14 (the new test and the five that wait for
+  that line); restored, 14 pass.
