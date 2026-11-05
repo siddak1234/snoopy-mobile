@@ -10,6 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "ai.autom8x.snoopy",
+      "deploymentTarget": "17.4",
       "entitlements": {
         "com.apple.developer.applesignin": ["Default"]
       },
@@ -56,10 +57,7 @@
         "expo-build-properties",
         {
           "useHermesV1": false,
-          "buildReactNativeFromSource": true,
-          "ios": {
-            "deploymentTarget": "17.4"
-          }
+          "buildReactNativeFromSource": true
         }
       ]
     ],

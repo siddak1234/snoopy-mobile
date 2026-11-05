@@ -48,14 +48,31 @@ afterEach(() => {
 const base = { ios: {}, android: {}, extra: {} };
 
 describe('release app configuration', () => {
-  it('requires iOS 17.4, where ASWebAuthenticationSession can match an HTTPS host and path', () => {
+  /**
+   * Since SDK 56 the deployment target is the built-in `ios.deploymentTarget`; expo-build-properties'
+   * own is deprecated (its build/ios.d.ts:4). Expo's prebuild writes the built-in one into the app
+   * target and the Podfile properties (@expo/config-plugins build/ios/DeploymentTarget.js), read here
+   * through Expo's mod compiler, introspecting.
+   */
+  it('requires iOS 17.4, where ASWebAuthenticationSession can match an HTTPS host and path', async () => {
+    expect(appJson.expo.ios.deploymentTarget).toBe('17.4');
     const buildProperties = appJson.expo.plugins.find(
       (plugin) => Array.isArray(plugin) && plugin[0] === 'expo-build-properties',
     );
-    expect(buildProperties).toEqual([
-      'expo-build-properties',
-      { useHermesV1: false, buildReactNativeFromSource: true, ios: { deploymentTarget: '17.4' } },
-    ]);
+    expect(buildProperties).toEqual(['expo-build-properties', { useHermesV1: false, buildReactNativeFromSource: true }]);
+
+    setEnv({ ...RELEASE, EAS_BUILD_PROFILE: 'production' });
+    const resolved = configFactory({ config: appJson.expo });
+    expect(resolved.ios.deploymentTarget).toBe('17.4');
+    const { IOSConfig, compileModsAsync } = require('expo/config-plugins');
+    const compiled = await compileModsAsync(IOSConfig.DeploymentTarget.withDeploymentTargetPodfileProps(resolved), {
+      // Never created: introspection reads Expo's templates and writes nothing.
+      projectRoot: `${__dirname}/no-native-project`,
+      introspect: true,
+      platforms: ['ios'],
+      assertMissingModProviders: false,
+    });
+    expect(compiled._internal.modResults.ios.podfileProperties['ios.deploymentTarget']).toBe('17.4');
   });
 
   /**

@@ -3471,3 +3471,21 @@ E's research for this step (its sources S1–S19 and an exposure read at 1d734a4
   **Not observed:** a native build. React Native built from source with the legacy engine is unproved on EAS's
   Xcode 26.4 image, and how long it takes there is unmeasured. The whole of it is this one commit: reverting it
   leaves SDK 56 on Hermes v1, as expo-doctor's check then says.
+- **The deployment target, 17.4, is `expo.ios.deploymentTarget`** (the decision; S16: expo-build-properties'
+  own is "Deprecated: use built-in ios.deploymentTarget property instead (SDK 56 and greater)",
+  `build/ios.d.ts:4`). The value is unchanged (README: the first iOS whose `ASWebAuthenticationSession` matches an
+  HTTPS callback). Expo's prebuild writes the built-in one into the app target's `IPHONEOS_DEPLOYMENT_TARGET`
+  and the Podfile properties' `ios.deploymentTarget` (@expo/config-plugins 56.0.17
+  `build/ios/DeploymentTarget.js`, among @expo/prebuild-config's default plugins,
+  `build/plugins/withDefaultPlugins.js:127-128`), where the deprecated one wrote the app target and the Podfile
+  (expo-build-properties `build/ios.js:48-58`). The research's open question, read in node_modules: neither
+  sets a third-party pod's own `IPHONEOS_DEPLOYMENT_TARGET`. React Native 0.85.3's post-install raises each pod's
+  main target to at least 15.1 (`scripts/cocoapods/utils.rb:358-367`, from `react_native_pods.rb:543`), but not
+  a pod's resource-bundle targets, and `RNSVG-RNSVGFilters` is one (react-native-svg 15.15.4's
+  `RNSVG.podspec:23-28`, iOS 12.4); that it is why Xcode 27.2 refused it is inference. SDWebImage still comes
+  in, through expo-image-manipulator's `SDWebImageWebPCoder` (`ios/ExpoImageManipulator.podspec:22`), though
+  expo-image left the tree (expo-router 56.2.22 no longer depends on it); its podspec is not in node_modules,
+  so its target is not read. Test (`app-config`, the 17.4 test): `expo.ios.deploymentTarget` 17.4, through
+  the factory, and the Podfile property through Expo's mod compiler; the plugin entry without it.
+  Bite: the old `app.json` back (the target in the plugin), that test fails (1 failed of 16); restored, 16
+  pass.
