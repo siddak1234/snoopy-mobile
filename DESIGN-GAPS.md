@@ -3394,3 +3394,9 @@ E's research for this step (its sources S1–S19 and an exposure read at 1d734a4
   `BottomTabBarProps` mismatch at `app/(tabs)/_layout.tsx:59` (react-navigation 7's type against expo-router's
   tabs) is gone with it. Bite: `app/_layout.tsx`'s old import put back, `tsc` fails "Cannot find module
   '@react-navigation/native'"; restored, that error is gone.
+- **React Native 0.85 removed `StyleSheet.absoluteFillObject`** ("Use `StyleSheet.absoluteFill`", its 0.85 notes):
+  the stat tile's pressed tint (`components/stat-tile-button.tsx`) spread it, and under 0.85 it spread as nothing,
+  so the tint was a box of no size (and `tsc` said so); it spreads `StyleSheet.absoluteFill`, a plain object at
+  0.85.3 (`Libraries/StyleSheet/StyleSheetExports.js:21-29`). No other use. Test (`tab-screens`, the stat tile
+  test): the pressed tint is absolute with all four edges 0. Bite: before the change that test fails (1 failed of
+  124); after it, 124 pass.
