@@ -1,6 +1,6 @@
 # Autom8x Mobile (`snoopy-mobile`)
 
-The Expo SDK 55 native client for Autom8x. It implements the frozen Nocturne
+The Expo SDK 56 native client for Autom8x. It implements the frozen Nocturne
 design on iOS and Android and consumes only the Edge's published OpenAPI
 surface.
 
@@ -406,7 +406,7 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   `expo-secure-store` with `WHEN_UNLOCKED_THIS_DEVICE_ONLY` — and beside them
   push's device id and its "Not now", cleared with them.
 - Device push (build 11, D8; BUILD-PLAN 24.13.6): `expo-notifications` and
-  `expo-device` at the SDK 55 pins, and the `expo-notifications` plugin in
+  `expo-device` at the SDK 56 pins, and the `expo-notifications` plugin in
   `app.json`, whose prebuild writes the `aps-environment` entitlement — none is
   hand-written, which `__tests__/app-config.test.js` holds.
   `lib/platform/devices.ts` registers the phone with `PUT /v1/session/devices`
@@ -458,16 +458,16 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   opened; and `shareSignedFile`, Share — on iOS only (`sharesFiles`) the file
   itself to the share sheet, never the link, then removed (~~iOS saves, shares
   and removes it; Android opens the link~~, Download until Round 21). The package page draws
-  the saved PDF in `react-native-webview` (13.16.0, MIT, the SDK 55 pin; a new
+  the saved PDF in `react-native-webview` (13.16.1, MIT, the SDK 56 pin; a new
   native module, so build 24 is a new build): the cached file only, its folder
   the only one it may read — it loads nothing over the network.
-- Liquid Glass (round 23, A3): `expo-glass-effect` at the SDK 55 pin, drawn
+- Liquid Glass (round 23, A3): `expo-glass-effect` at the SDK 56 pin, drawn
   only through `components/glass-surface.tsx` — the system's glass on iOS 26,
   `expo-blur` under a tint below it, the opaque card on Android — on the tab
   bar's capsule, the header circles and the drop-down panels. It makes no
   request.
 - A run's file (BUILD-PLAN 25.8.3): `expo-image-picker` and
-  `expo-image-manipulator` at the SDK 55 pins. Take photo is the camera, asked
+  `expo-image-manipulator` at the SDK 56 pins. Take photo is the camera, asked
   for at the press; Upload is `expo-document-picker`, held to a PDF, a JPEG or
   a PNG — or, for a field that names its types (`acceptedContentTypes`, backend
   ADR-0046), to those, a Word file sent as it is, and Take photo only where a

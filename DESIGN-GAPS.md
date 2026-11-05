@@ -3344,3 +3344,37 @@ documents is owners and admins."
   one tester, the owner; build 37 reached `IN_BETA_TESTING` with no step. The testflight skill
   (`.claude/skills/testflight/SKILL.md`, steps 4 and 5 and its Output) says so: a VALID build reaches the owner
   by itself, and the What to Test note is optional (CLAUDE.md "A TestFlight build").
+
+## Round E step 2: Expo SDK 55 → 56 (2026-11-05)
+
+Sources: Expo's SDK 56 changelog (https://expo.dev/changelog/sdk-56, "S1" below), its version table
+(https://docs.expo.dev/versions/v56.0.0/) and expo 56.0.24's own `bundledNativeModules.json`; the plan is Round
+E's research for this step (its sources S1–S19 and an exposure read at 1d734a4, whose tree is `main` 793a759's).
+`npx expo install expo@^56.0.0 --fix`, then `npx expo install --fix`, moved expo 55.0.32 → 56.0.24, react 19.2.0
+→ 19.2.3, react-native 0.83.10 → 0.85.3, every `expo-*` to its `~56.0.x` pin (expo-router ~56.2.22), reanimated
+4.3.1, worklets 0.8.3, screens ~4.26.0, gesture-handler ~2.31.1, safe-area-context ~5.7.0, svg 15.15.4, webview
+13.16.1, jest-expo ~56.0.6 and eslint-config-expo ~56.0.4; react-test-renderer follows jest-expo's own pin to
+19.2.3 in the lockfile. jest-expo 56 asks for Jest ^29.2.1, so jest stays ~29.7.0; its preset moved to
+`@react-native/jest-preset` (0.85.3) inside jest-expo, so `"preset": "jest-expo"` is unchanged.
+- **TypeScript stays ~5.9.2 (5.9.3), in `expo.install.exclude`** (S1: "To opt out, add `typescript` to the
+  `expo.install.exclude` field"). The decision was Expo's 6.0.3 unless typecheck breaks outside the upgrade, and
+  it does: under 6.0.3 `tsc --noEmit` gave 9,113 errors, all but the upgrade's own 2 in tests and test helpers
+  (`describe`, `it`, `expect`, `jest`, `require` not found: TypeScript 6 no longer loads every `@types` package
+  unasked; with `--types jest,node` the same run gives the 2 alone). npm refuses it too: `openapi-typescript`
+  7.13.0, the contracts' generator and the registry's latest, asks for `typescript ^5.x`, so `npm install` and
+  `npm dedupe` stop with "ERESOLVE could not resolve".
+- **The lockfile.** `expo install`'s two npm passes left @expo/config, @expo/config-plugins, @expo/config-types,
+  @expo/json-file 10.2.0, @expo/plist and @expo/require-utils with no root copy (each was at the root on `main`):
+  one copy under `node_modules/expo/` and 3 to 7 more under the other packages that use them. The committed
+  lockfile is `expo install`'s with those six at the root and their 30 nested copies dropped, reconciled by
+  `npm install` (`npm ls --all`: nothing missing or invalid); no version differs from what `expo install` chose,
+  TypeScript aside. One react-native-worklets (0.8.3). @expo/cli and @expo/ws-tunnel stay under `expo/` as
+  `expo install` placed them (@expo/cli was there on `main` too).
+- expo-status-bar 56 and expo-web-browser 56: `expo install` asks to add both plugins to the dynamic config; each
+  returns the config unchanged when given no options (expo-status-bar's `plugin/build/withStatusBar.js:63-67`,
+  expo-web-browser's `plugin/build/withWebBrowser.js`), so neither is added, as SDK 55 did for expo-web-browser.
+- The comments that cited SDK 55 sources are re-read at 56: expo-image-manipulator 56.0.26 still adds
+  `ImageFixOrientationTransformer` first (`ios/ImageManipulatorModule.swift:28`) and decodes through
+  expo-image-loader's Glide on Android (`lib/platform/run-image.ts`); React Native 0.85.3's
+  `RCTImageComponentView.mm:144-145` still makes the image a template only at load (`constants/theme.ts`,
+  `brand-mark.test.tsx`).
