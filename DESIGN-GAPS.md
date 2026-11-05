@@ -3330,8 +3330,9 @@ documents is owners and admins."
   22:15Z, in the app's one TestFlight group (below) with no console step.
 - **The local build on this Mac's Xcode 27.2** (2026-11-04): `npm run release:ios -- --local` failed at
   archive — Xcode 27.2 supports deployment targets 15.0 to 27.2, and two pods declare older ones:
-  RNSVG-RNSVGFilters `IPHONEOS_DEPLOYMENT_TARGET` 12.4 and SDWebImage 9.0. Nothing was submitted. So builds go
-  to EAS's cloud (Xcode 26.2, Expo's default for SDK 55), and these two pods are re-checked at each SDK step.
+  RNSVG-RNSVGFilters `IPHONEOS_DEPLOYMENT_TARGET` 12.4 and SDWebImage 9.0. Nothing was submitted. Build 37
+  was built in EAS's cloud (Xcode 26.2, Expo's default for SDK 55; TestFlight 37 above), and these two pods are
+  re-checked at each SDK step.
   No Podfile or config-plugin change is made for it: not approved.
 - Its first `--local` attempt that day stopped before building on CocoaPods' unaccepted Xcode licence, after a
   dry run that printed "CocoaPods ," and passed: item E1 above.
