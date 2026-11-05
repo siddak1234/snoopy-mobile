@@ -41,19 +41,21 @@ function pickerClosed(error: unknown): boolean {
  * no share sheet (the owner's Q7 note): expo-file-system's
  * `Directory.pickDirectoryAsync()` ("On iOS, the selected directory grants
  * temporary read and write access for the current app session only",
- * node_modules/expo-file-system/build/ExpoFileSystem.types.d.ts:131-139; it
- * opens UIDocumentPickerViewController for `UTType.folder`,
- * ios/FilePickingUtils.swift:105-108, and starts the folder's security-scoped
- * access, :41-46), then `File.copy` into it under the file's own name — without
+ * node_modules/expo-file-system/build/internal/NativeFileSystem.types.d.ts:94-101;
+ * it opens UIDocumentPickerViewController for `UTType.folder`,
+ * ios/FilePickingUtils.swift:87-91, and starts the folder's security-scoped
+ * access, :42-50), then `File.copy` into it under the file's own name — without
  * any folder the platform's name carries, as the cache's copy is named
  * (`downloadSignedFile`), since the copy makes no folder — " 2", " 3" … after it
- * when that name is taken. The person closing the picker saves nothing and
- * says nothing (`'closed'`).
+ * when that name is taken. Since SDK 56 `File.copy` is a promise (its
+ * NativeFileSystem.types.d.ts:182), awaited: `'saved'` means the copy finished,
+ * and a refused copy is thrown, before `saveSignedFile` removes the cache's copy.
+ * The person closing the picker saves nothing and says nothing (`'closed'`).
  */
 export async function saveToFiles(source: File, filename: string): Promise<'saved' | 'closed'> {
   let folder: Directory;
   try {
-    // The module answers a `Directory` (its src/FileSystem.ts:209-212); its types name the native one.
+    // The module answers a `Directory` (its src/Directory.ts:106-109).
     folder = new Directory((await Directory.pickDirectoryAsync()).uri);
   } catch (error) {
     if (pickerClosed(error)) return 'closed';
@@ -65,7 +67,7 @@ export async function saveToFiles(source: File, filename: string): Promise<'save
   const [stem, ending] = dot > 0 ? [name.slice(0, dot), name.slice(dot)] : [name, ''];
   let target = new File(folder, name);
   for (let copy = 2; target.exists && copy < 100; copy += 1) target = new File(folder, `${stem} ${copy}${ending}`);
-  source.copy(target);
+  await source.copy(target);
   return 'saved';
 }
 

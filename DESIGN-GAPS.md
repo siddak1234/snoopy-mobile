@@ -8,7 +8,7 @@ Round 16 — findings and observations (ADR-0032), closed 2026-10-07: moved verb
 
 Found on 2026-10-18 by grepping the moved sections for open, NOT OBSERVED, still open and deferred, and reading each hit; one line each, as the archive records it, not re-checked on a device. Closed items stay in the archive only.
 
-- **The Expo SDK major.** SDK 55 landed in Round E step 1 (its entry below has the audit): `npm audit --omit=dev` reads 44 issues, 6 high and 0 critical, and `image-size`, `uuid`, `braces`, `node-forge` and `sprintf-js` are in neither audit. Two high advisories stay a documented migration: `decode-uri-component` through query-string 7, which expo-router 55.0.18 and @react-navigation/core 7.17.2 still ask for (npm's fix is expo-router 58, a later SDK), and `zod` <4.6.6, new with SDK 55's @expo/cli 55.0.37 — [Dependency boundary](DESIGN-GAPS.archive.md#dependency-boundary), [the backlog](DESIGN-GAPS.archive.md#the-backlog-manifest-122-20-and-21-and-the-part-of-121-195-that-needs-no-owner-decision-2026-10-07).
+- **The Expo SDK major.** SDK 57 landed in Round E step 2 (55 → 57; the owner skipped 56), after SDK 55 in step 1 (their entries below have the audits): `npm audit --omit=dev` reads 23 issues, 5 high and 0 critical (44 and 6 high after SDK 55), and `image-size`, `uuid`, `braces`, `node-forge` and `sprintf-js` are in neither audit. Two high advisories stay a documented migration: `decode-uri-component` through query-string 7, which expo-router 57.0.29 still asks for (npm's fix is expo-router 58, a later SDK; @react-navigation/core left with step 2), and `zod` <4.6.6, through SDK 57's @expo/cli 57.0.32 — [Dependency boundary](DESIGN-GAPS.archive.md#dependency-boundary), [the backlog](DESIGN-GAPS.archive.md#the-backlog-manifest-122-20-and-21-and-the-part-of-121-195-that-needs-no-owner-decision-2026-10-07).
 - **An iCloud-synced checkout** makes conflict copies, evicts files and fails `npm ci` with `ENOTEMPTY`; it recurs, so work only in a scratch clone (`CLAUDE.md`, Gates and push) — [Still open, recorded rather than fixed](DESIGN-GAPS.archive.md#still-open-recorded-rather-than-fixed).
 - **Round 6's out-of-scope list** (Builder authoring, a run retry that keeps its continuation identity, profile editing, reduced-motion alternatives, small-phone and tablet approval, and the rest): Round 7.5M and Round 16 built some; the others were not re-checked when this moved — [Deliberate non-Round-6 gaps](DESIGN-GAPS.archive.md#deliberate-non-round-6-gaps).
 - **The join link in production** works only once an organization has a verified, discoverable domain, and production had none (2026-10-02) — [the sixth signed-in session](DESIGN-GAPS.archive.md#the-sixth-signed-in-session-build-9-2026-10-02-2220z2235z).
@@ -3364,3 +3364,340 @@ naming both hashes; restored, it passes, from the backend and from the copy. CI'
 red by design until #269 deploys (read 2026-11-05: production `7793134` reports `openapi.yaml` `a74379a8…`,
 automations and connections match; `lib/platform/CLAUDE.md`), so this merges after that deploy, and
 `release:ios` refuses a build until then.
+
+## Round E step 2: Expo SDK 55 → 57 (56 skipped by the owner, 2026-11-05)
+
+The owner's three decisions (2026-11-05, ~04:50Z), verbatim as the build's brief gives them, each with its
+question:
+- "Skip to 57 in one PR" (Expo 56's Hermes v1 memory bug with the app's animations is fixed in Expo 57; turning
+  it off in 56 means building React Native from source). One pull request goes 55 → 57: SDK 56's changes, then
+  SDK 57's. Hermes v1 stays Expo's default; the Hermes-off commit is reverted ("Hermes v1 stays on" below).
+- "Warn only in those 16 files (Recommended)" (Expo's lint has 4 stricter React rules, `purity`, `refs`,
+  `set-state-in-effect` and `static-components`, flagging 25 places; the build had made them warnings
+  everywhere). They warn only in the files that break them, recounted at SDK 57; new code fails on them; the
+  places are the debt list under "SDK 56 → 57" below.
+- "Approve the 10 updates (Recommended)" (10 snapshots whose only difference is a removed `nativeID` during
+  tests). Only an entry whose sole change is a removed `nativeID="<n>"` line is updated, each by its own test
+  name ("Snapshots" under "SDK 56 → 57").
+
+Sources: S1–S19 are Round E's SDK 56 research, with an exposure read at 1d734a4, whose tree is `main` 793a759's
+(S1 Expo's SDK 56 changelog, https://expo.dev/changelog/sdk-56; S3 `bundledNativeModules.json` on `sdk-56`; S4
+the v56 version table, https://docs.expo.dev/versions/v56.0.0/; S5 EAS's build infrastructure; S6 the SDK 57
+changelog; S8 Expo's ios-scene-lifecycle note; S11–S13 the root, expo-router and jest-expo CHANGELOGs on
+`sdk-56`; S14 React Native 0.85's post; S16 the v56 build-properties page). S20–S44 are its SDK 57 research
+(S20 Expo's SDK 57 changelog, https://expo.dev/changelog/sdk-57; S21 `bundledNativeModules.json` on `sdk-57`;
+S22 React Native 0.86's post, https://reactnative.dev/blog/2026/06/11/react-native-0.86; S23 the v57 version
+table, https://docs.expo.dev/versions/v57.0.0/; S24 EAS's build infrastructure,
+https://docs.expo.dev/build-reference/infrastructure/; S25 Expo's ios-scene-lifecycle note; S26 the v57
+build-properties page; S27–S32 the root, expo, expo-build-properties, expo-image, expo-router and jest-expo
+CHANGELOGs on `sdk-57`; S34 React Native 0.86.2's release and S35 its PR 57646; S36–S41 the release notes of
+Reanimated 4.4.0 and 4.5.0, Worklets 0.10.0 and 0.10.1, Gesture Handler 2.32.0 and react-native-svg 15.16.0; S42
+the 55 → 57 upgrade helper).
+
+### SDK 55 → 56
+
+`npx expo install expo@^56.0.0 --fix`, then `npx expo install --fix`, moved expo 55.0.32 → 56.0.24, react 19.2.0
+→ 19.2.3, react-native 0.83.10 → 0.85.3, every `expo-*` to its `~56.0.x` pin (expo-router ~56.2.22), reanimated
+4.3.1, worklets 0.8.3, screens ~4.26.0, gesture-handler ~2.31.1, safe-area-context ~5.7.0, svg 15.15.4, webview
+13.16.1, jest-expo ~56.0.6 and eslint-config-expo ~56.0.4; react-test-renderer follows jest-expo's own pin to
+19.2.3 in the lockfile. jest-expo 56 asks for Jest ^29.2.1, so jest stays ~29.7.0; its preset moved to
+`@react-native/jest-preset` (0.85.3) inside jest-expo, so `"preset": "jest-expo"` is unchanged.
+- **TypeScript stays ~5.9.2 (5.9.3), in `expo.install.exclude`** (S1: "To opt out, add `typescript` to the
+  `expo.install.exclude` field"). The decision was Expo's 6.0.3 unless typecheck breaks outside the upgrade, and
+  it does: under 6.0.3 `tsc --noEmit` gave 9,113 errors, all but the upgrade's own 2 in tests and test helpers
+  (`describe`, `it`, `expect`, `jest`, `require` not found: TypeScript 6 no longer loads every `@types` package
+  unasked; with `--types jest,node` the same run gives the 2 alone). npm refuses it too: `openapi-typescript`
+  7.13.0, the contracts' generator and the registry's latest, asks for `typescript ^5.x`, so `npm install` and
+  `npm dedupe` stop with "ERESOLVE could not resolve".
+- **The lockfile.** `expo install`'s two npm passes left @expo/config, @expo/config-plugins, @expo/config-types,
+  @expo/json-file 10.2.0, @expo/plist and @expo/require-utils with no root copy (each was at the root on `main`):
+  one copy under `node_modules/expo/` and 3 to 7 more under the other packages that use them. The committed
+  lockfile is `expo install`'s with those six at the root and their 30 nested copies dropped, reconciled by
+  `npm install` (`npm ls --all`: nothing missing or invalid); no version differs from what `expo install` chose,
+  TypeScript aside. One react-native-worklets (0.8.3). @expo/cli and @expo/ws-tunnel stay under `expo/` as
+  `expo install` placed them (@expo/cli was there on `main` too).
+- expo-status-bar 56 and expo-web-browser 56: `expo install` asks to add both plugins to the dynamic config; each
+  returns the config unchanged when given no options (expo-status-bar's plugin/build/withStatusBar.js:63-67,
+  expo-web-browser's plugin/build/withWebBrowser.js), so neither is added, as SDK 55 did for expo-web-browser.
+- The comments that cited SDK 55 sources are re-read at 56: expo-image-manipulator 56.0.26 still adds
+  `ImageFixOrientationTransformer` first (`ios/ImageManipulatorModule.swift:28`) and decodes through
+  expo-image-loader's Glide on Android (`lib/platform/run-image.ts`); React Native 0.85.3's
+  `RCTImageComponentView.mm:144-145` still makes the image a template only at load (`constants/theme.ts`,
+  `brand-mark.test.tsx`).
+- **expo-router no longer depends on react-navigation** (S1: "most code imported directly from
+  `@react-navigation/*` packages will no longer work out of the box alongside `expo-router`").
+  `npx expo-codemod sdk-56-expo-router-react-navigation-replace` (expo-codemod 58.0.1) on `app`, `components`,
+  `hooks`, `lib`, `test` and `__tests__` changed 6 imports (its double quotes made the files' single ones):
+  `ThemeProvider`, `DarkTheme`, `DefaultTheme` and `Theme` (`app/_layout.tsx`), `NavigationProp`
+  (`app/(tabs)/activity/index.tsx`), `getStateFromPath` (`deep-link-query.test.ts`) and `getActionFromState`
+  (`__tests__/real-router/app-links.test.tsx`) now come from `expo-router/react-navigation`, and `BottomTabBarProps`
+  (`components/nocturne/tab-bar.tsx`, `test/tab-bar-props.ts`) from `expo-router/js-tabs`. Nothing imports
+  `@react-navigation/*` now, so `@react-navigation/bottom-tabs` and `@react-navigation/native` leave
+  `package.json`, as expo-doctor's "@react-navigation packages are not installed alongside expo-router" check
+  asks; `npm install` dropped them, @react-navigation/core, elements and routers, and use-sync-external-store
+  from the lockfile, nothing else. The `expo-router/build/global-state/router-store` and
+  `build/fork/extractPathFromURL` that `app-links.test.tsx` reads are still there at 56.2.22. Typecheck: the
+  `BottomTabBarProps` mismatch at `app/(tabs)/_layout.tsx:59` (react-navigation 7's type against expo-router's
+  tabs) is gone with it. Bite: `app/_layout.tsx`'s old import put back, `tsc` fails "Cannot find module
+  '@react-navigation/native'"; restored, that error is gone.
+- **React Native 0.85 removed `StyleSheet.absoluteFillObject`** ("Use `StyleSheet.absoluteFill`", its 0.85 notes):
+  the stat tile's pressed tint (`components/stat-tile-button.tsx`) spread it, and under 0.85 it spread as nothing,
+  so the tint was a box of no size (and `tsc` said so); it spreads `StyleSheet.absoluteFill`, a plain object at
+  0.85.3 (Libraries/StyleSheet/StyleSheetExports.js:21-29). No other use. Test (`tab-screens`, the stat tile
+  test): the pressed tint is absolute with all four edges 0. Bite: before the change that test fails (1 failed of
+  124); after it, 124 pass.
+- **Jest and expo-router 56's `standard-navigation`.** expo-router 56.2.22 imports `standard-navigation` (0.0.5,
+  an ES module), which `package.json`'s `transformIgnorePatterns` left untransformed, so every real-router suite
+  failed to run ("Cannot use import statement outside a module"). Both Jest projects' patterns are now jest-expo
+  56's own (jest-expo/jest-preset.js:113-119: `standard-navigation` in the transformed list, and
+  `/node_modules/@react-native/babel-preset/` left alone) plus `phosphor-react-native`, as they were jest-expo 55's
+  plus it. Bite: `standard-navigation` taken out, the real-router project fails to run (15 of 15 suites); put
+  back, 15 suites and 72 tests pass.
+- **`File.copy` is a promise since SDK 56** (S1: "`copy()` and `move()` ... on `File` and `Directory` are now
+  asynchronous and return a Promise"; expo-file-system's CHANGELOG, 56.0.0). `saveToFiles`
+  (`lib/platform/signed-file.ts`) called it without waiting: it answered `'saved'` before the copy ended,
+  `saveSignedFile`'s `finally` could remove the cache's file while it was still being copied, and a refused copy
+  was an unhandled rejection instead of reaching the screen. It now awaits it. The shared mock
+  (`test/mocks/expo-file-system.ts`) copies as a promise that settles after the call returns and rejects where it
+  threw; `invoice-processing-screens`' own mock copies as a promise too. The mock's header is re-read at
+  expo-file-system 56.0.11, expo-modules-core 56.0.27 and expo-modules-jsi 56.0.14: the picker's and the copy's
+  lines moved (its build/Directory.d.ts:16, src/Directory.ts:106-109, src/File.ts:150,
+  build/internal/NativeFileSystem.types.d.ts:168-172 and :182, ios/FilePickingHandler.swift:84-89 and :91-95,
+  FileSystemModule.swift:343-345 and :230-232, FileSystemExceptions.swift:100-103, FilePickingUtils.swift:42-54 and
+  62-68, FileSystemPath.swift:69-79), a refused
+  copy now rejects through `AsyncFunctionDefinition.swift:125-127`, and `ios/JSI/EXJSIUtils.mm` is gone: an iOS
+  exception reaches JS through expo-modules-jsi (`JavaScriptPromise.swift:107-108`, `JavaScriptError.swift:21-30`),
+  still with its `code`, its message now the exception's name, reason and Swift line around the reason
+  (`JavaScriptThrowable.swift:28-31`, `Exception.swift:55-58`), which still says "cancelled" for a closed picker.
+  `src/pathUtilities` is still shipped, and still outside the package's `exports`. `signed-file.ts`' own
+  citations moved the same way. Tests (`signed-file`): a new one, `'saved'` only once the copy has finished; and
+  the refused copy (the folder gone) thrown to the screen. Bite: without the `await` both fail (2 failed of 14);
+  with it, 14 pass, and the 18 suites that mock expo-file-system pass (439 tests).
+- **`File.write` is still synchronous at 56.0.11**, so Settings › Data's `file.write(json)` is unchanged. S11
+  (the root CHANGELOG on the `sdk-56` branch) says "`File.write()` is now asynchronous", but expo-file-system
+  56.0.11 declares `write(...): void` (build/internal/NativeFileSystem.types.d.ts:155), defines it with
+  `Function("write")` on iOS (`ios/FileSystemModule.swift:177`) and Android (`FileSystemModule.kt:141`), and its
+  own CHANGELOG names only `copy()` and `move()`; there is no `writeSync`. The mocks' `write` stays synchronous;
+  SDK 57's step re-reads it (still `void` at 57.0.7, under "SDK 56 → 57").
+- **Jest's setup at worklets 0.8.3 and React Native 0.85.** react-native-worklets 0.8.3 still ships
+  `lib/module/mock` and still needs it: with `test/jest-setup.js`'s mock line taken out, `brand-mark.test.tsx`
+  fails to run with "Native part of Worklets doesn't seem to be initialized", as at 0.7.4; put back, it passes.
+  React Native 0.85 moved its Jest mocks into `@react-native/jest-preset` (its 0.85 notes), so the fontScale-2
+  mock the setup overrides is now @react-native/jest-preset/jest/mocks/NativeModules.js:41,47; the override
+  still applies (`accessibility-text-size` passes).
+- **Hermes v1 stays on: the Hermes-off commit (c9f048f) is reverted** (the owner, 2026-11-05, "Skip to 57 in
+  one PR": SDK 57 fixes Hermes v1's memory bug, and turning Hermes v1 off in SDK 56 meant building React Native
+  from source). The revert takes out all four of its changes: `useHermesV1: false` and
+  `buildReactNativeFromSource: true` (`app.json`), the `hermes-compiler` 0.15.0 override (`package.json` and its
+  lockfile lines), and `babel.config.js` with its `hermes-v0` profile (and its docs-map line). `expo-build-properties`
+  stays listed, with no options, so it writes nothing (expo-build-properties 56.0.27 writes a Podfile or Gradle
+  property only when it is set, build/ios.js:39-42, build/android.js:107-110). Test (`app-config`, in place of the
+  Hermes-off one): no option in the plugin entry, no override, no `babel.config.js`, and the plugin, applied
+  through Expo's mod compiler, sets neither `expo.useHermesV1` nor `hermesV1Enabled` to "false", nor
+  `ios.buildReactNativeFromSource` to "true". Bites (of 16): c9f048f's two options back in `app.json`, 2 failed
+  (this test and the 17.4 one, which reads the plugin listed bare); its `babel.config.js` back, 1 failed;
+  restored, 16 pass.
+- **The deployment target, 17.4, is `expo.ios.deploymentTarget`** (the decision; S16: expo-build-properties'
+  own is "Deprecated: use built-in ios.deploymentTarget property instead (SDK 56 and greater)",
+  build/ios.d.ts:4). The value is unchanged (README: the first iOS whose `ASWebAuthenticationSession` matches an
+  HTTPS callback). Expo's prebuild writes the built-in one into the app target's `IPHONEOS_DEPLOYMENT_TARGET`
+  and the Podfile properties' `ios.deploymentTarget` (@expo/config-plugins 56.0.17
+  build/ios/DeploymentTarget.js, among @expo/prebuild-config's default plugins,
+  build/plugins/withDefaultPlugins.js:127-128), where the deprecated one wrote the app target and the Podfile
+  (expo-build-properties build/ios.js:48-58). The research's open question, read in node_modules: neither
+  sets a third-party pod's own `IPHONEOS_DEPLOYMENT_TARGET`. React Native 0.85.3's post-install raises each pod's
+  main target to at least 15.1 (`scripts/cocoapods/utils.rb:358-367`, from `react_native_pods.rb:543`), but not
+  a pod's resource-bundle targets, and `RNSVG-RNSVGFilters` is one (react-native-svg 15.15.4's
+  `RNSVG.podspec:23-28`, iOS 12.4); that it is why Xcode 27.2 refused it is inference. SDWebImage still comes
+  in, through expo-image-manipulator's `SDWebImageWebPCoder` (`ios/ExpoImageManipulator.podspec:22`), though
+  expo-image left the tree (expo-router 56.2.22 no longer depends on it); its podspec is not in node_modules,
+  so its target is not read. Test (`app-config`, the 17.4 test): `expo.ios.deploymentTarget` 17.4, through
+  the factory, and the Podfile property through Expo's mod compiler; the plugin listed without it.
+  Bite: the old `app.json` back (the target in the plugin), that test fails (1 failed of 16); restored, 16
+  pass.
+- **`release:ios --local` takes Xcode 26.4 to 26.x for SDK 56** (the decision; S1: "Minimum Xcode bumped to
+  26.4", S4 "26.4+"; Expo's ios-scene-lifecycle note, S8: "apps built with Xcode 27 that still use the
+  application-based life cycle do not launch correctly on iOS 27", and SDK 56 has no scene support, which SDK
+  57.0.23 adds as an option, S6; the Xcode 27.2 archive failure above; the script's "Any doubt refuses").
+  `scripts/release-ios.sh` refuses "--local needs Xcode 26.4 or later for SDK 56" below 26.4 and "--local needs
+  an Xcode before 27 for SDK 56: Xcode 27 needs the scene life cycle, SDK 57's; build in EAS's cloud" from 27 on,
+  before anything is built. The cloud path is untouched: EAS's default image for SDK 56 is Xcode 26.4 (S1, S5).
+  This Mac's Xcode 27.2 is refused, so its builds are the cloud's (at SDK 57 too, below). README
+  "Verification" and the testflight skill say so. Tests (`release-and-ci-guards`): 26.3, 26.2, 26.1.1, a bare
+  26 and an unreadable version refused; 27.0 and 27.2 refused; 26.4 and 26.10 pass; the CocoaPods cases run on
+  26.4. Bite: the script as it was (26.2, no cap), the two refusal tests fail (2 failed of 27); restored, 27 pass.
+- **Lint: four new React Compiler rules warn, in the 15 files that break them only.** eslint-config-expo 56.0.4
+  asks for eslint-plugin-react-hooks ^7.0.0 (5.2.0 on `main`) and spreads its recommended rules (its
+  flat/utils/react.js:27), which in 7.1.1 add the React Compiler's checks as errors: `npm run lint` failed with
+  25 errors in 15 files written before them (16 was a miscount), `react-hooks/refs` 11, `set-state-in-effect`
+  10, `purity` 2 and `static-components` 2 (the app's own code; nothing this upgrade changed). `eslint.config.js`
+  makes those four warn in those 15 files alone (its `files` list, the review's fix: the first version made
+  them warn in every file), so lint passes (0 errors, 25 warnings), each place stays named in every run, and
+  any other file, a new one too, still fails on them. `expo lint` reads only `src`, `app` and `components`
+  (@expo/cli 56.1.27's build/src/lint/lintAsync.js:90-94), so the same rules' 6 places in `hooks/` are outside
+  the gate, as every rule there is. The owner's decision (above, "Warn only in those 16 files") keeps this,
+  recounted at SDK 57 (its debt list is the "Lint" entry under "SDK 56 → 57"); changing the 25 places is a
+  change of its own, not this upgrade's, and each file leaves the list with it. Tests
+  (`release-and-ci-guards`, two new, through ESLint's own API): a component breaking each rule fails all four as
+  a new file in `app/` and in `components/`, and warns on all four as each listed file; each listed file still
+  breaks one. Bites (of 29): the repository-wide block back, both fail; a file that breaks none listed
+  (`components/stat-tile-button.tsx`), the second fails; restored, 29 pass. Bite of the first version: without
+  the block, `npm run lint` exits 1 with the 25 errors; with it, exit 0.
+- **`expo/fetch` is the app's `fetch` now** (S1: "`expo/fetch` is now installed as the default implementation of
+  `globalThis.fetch`"; expo 56.0.24 src/winter/runtime.native.ts:41-53, unless `EXPO_PUBLIC_USE_RN_FETCH`, which
+  the app does not set). Expo's default is kept, so the upload's PUT (`lib/platform/client.ts`) and every
+  openapi-fetch call go through it. Read in its src/winter/fetch: the upload's `Uint8Array` body is sent as its
+  bytes (RequestUtils.ts:67-68), its `credentials: 'omit'` is kept (fetch.ts:48-51, 71) and its `AbortSignal`
+  aborts it (fetch.ts:44, 77-82). A request with no `credentials`, or openapi-fetch's `Request` with
+  `same-origin`, is sent `include` (fetch.ts:48-51, 71): the shared cookie store's cookies for the API's host go
+  with it, which bearer auth does not read. jest-expo's setup loads the same runtime (its
+  src/preset/setup.js:343), but the suites that read `fetch` put in their own (`platform-request`,
+  `session-recovery`), so no test runs `expo/fetch`. `scripts/audit-platform.mjs`' ban on importing `expo/fetch`
+  still holds. **Not observed:** an upload or any call through it on a device.
+- **The dependency audit, under the committed lockfile.** `npm audit --omit=dev`: 23 issues (7 low, 11
+  moderate, 5 high, 0 critical), so `audit:dependencies` passes; `npm audit`: 32 (9 low, 18 moderate, 5 high, 0
+  critical); after SDK 55, 44 and 61. The 5 high are the two advisories "Carried open" names and the packages
+  above them: `decode-uri-component` 0.2.2 through query-string 7.1.3 through expo-router 56.2.22, and `zod`
+  3.25.76 through @expo/cli 56.1.27 (npm's fix for the first is expo-router 58, a major; for zod it names expo
+  52.0.49, an older major).
+- **expo-doctor** (`npx expo-doctor@latest`): after the install 20 of 22, the react-navigation packages and
+  Hermes V1's regression; with the react-navigation change and the Hermes-off one (since reverted, above), 22 of
+  22. `export:ios` and `export:android`: exit 0, run once each on the Hermes-off change. **No Podfile or config plugin for pods** (not approved, "Round 21's close" above):
+  none is added.
+- **Not observed:** a native build, a simulator or a device. The owner's device checks, on a cloud build
+  (`npm run release:ios`, EAS's Xcode 26.4): an upload (expo/fetch's PUT), Download into Files (the awaited
+  copy), Settings › Data's export (its write), the Glow and the charts (svg 15.15.4), and memory with the
+  animations.
+- **`round23`'s `MockNativeMethods`.** React Native 0.85 moved its Jest mocks into `@react-native/jest-preset`, so
+  `jest.requireActual('react-native/jest/MockNativeMethods')` failed the suite before it ran ("Could not locate
+  module"); `round23.test.tsx` reads the same module from `@react-native/jest-preset/jest/MockNativeMethods`, the
+  one the preset's own mocks spread (its jest/mocks/ScrollView.js:22-23). Bite: the old path, the suite fails to
+  run (the whole run below); the new one, 34 pass.
+- **Snapshots: 10 entries fail, kept as they were; re-pinning them is the owner's call** (the decision: never
+  update a snapshot; README's rule asks the owner). The whole Jest run (137 suites; `round23` then failed to run,
+  and passes since, above): 2,042 passed, 10 failed, the 10 snapshot entries (96 of 106 match): 6 Nocturne entries (NocToggle on and off and Skeleton, both palettes) and 4 screen
+  states (ScreenLoading and ScreenLoading/tiles, both palettes). Every changed line, 48 in all, is a removed
+  `nativeID="<n>"` on an Animated view: react-native-reanimated 4.3.1 sets a `nativeID` only outside Jest
+  (src/createAnimatedComponent/AnimatedComponent.tsx:511-522), and the entries, made under 4.2.1, carry it. On a
+  device the id is still set: no visual change. `connection-row` and `vendor-logos` (react-native-svg 15.15.4)
+  match. The owner approved them ("Approve the 10 updates"): "Snapshots" under "SDK 56 → 57".
+
+### SDK 56 → 57
+
+- **The versions** (S21's pins). `npx expo install expo@^57.0.0 --fix` moved expo 56.0.24 → 57.0.31, then
+  stopped: its npm pass for the dependencies refused ("ERESOLVE could not resolve": react-native 0.86.3's
+  optional peer `@react-native/jest-preset` 0.86.3 against the 0.85.3 jest-expo 56 held), and jest-expo 57 alone
+  refuses the other way (its peer `^0.86.3` against react-native 0.85.3's). With `package.json` holding every pin
+  `expo install` chose, jest-expo ~57.0.6 and eslint-config-expo ~57.0.2 set to the versions it named, and
+  react-native, jest-expo and @react-native/jest-preset taken out of the lockfile, one `npm install` resolved
+  them together; `npx expo install --fix` then said "Dependencies are up to date". So react 19.2.3 (unchanged,
+  S20), react-native 0.85.3 → 0.86.3, every `expo-*` to its `~57.0.x` pin (expo-router ~57.0.29), reanimated
+  4.3.1 → 4.5.1, worklets 0.8.3 → 0.10.1, gesture-handler ~2.31.1 → ~2.32.0, jest-expo 57.0.6, eslint-config-expo
+  57.0.2; screens ~4.26.0, safe-area-context ~5.7.0, svg 15.15.4 and webview 13.16.1 unchanged. TypeScript stays
+  ~5.9.2 in `expo.install.exclude` (S21 names none). jest-expo 57 asks for `@react-native/jest-preset`
+  `^0.86.3` as a peer (S32), which npm installs (0.86.3); `"preset": "jest-expo"` is unchanged. Node: this
+  Mac's 22.23.4 meets S23's 22.13.x.
+- **The lockfile.** The install left six @react-native packages at the root at 0.85.3 (metro-config, held only
+  by react-native-worklets 0.10.1's peer `*`, and below it babel-preset, babel-plugin-codegen, codegen,
+  js-polyfills and metro-babel-transformer, with hermes-parser, hermes-estree and
+  babel-plugin-syntax-hermes-parser 0.33.3), React Native's own 0.86.3 copies nested under
+  `node_modules/react-native/`; and community-cli-plugin, debugger-frontend, debugger-shell and dev-middleware,
+  at the root on SDK 56, with none there (a copy under `expo/` and one under `react-native/`). The committed
+  lockfile has React Native's copies of those ten and of the hermes-parser three (0.36.0) at the root, the 0.85.3
+  and 0.33.3 copies and 7 duplicate nested copies dropped, and semver 7.8.6 under community-cli-plugin;
+  `npm install` reconciled it (flags only), and `npm ls --all` and `npm ci` pass. No version differs from what
+  `expo install` chose: the pairs gone are those nine leftovers alone. One react-native (0.86.3), one
+  react-native-worklets (0.10.1), one @react-native/metro-config (0.86.3).
+- **Hermes v1's memory fix is React Native's own Hermes** (S20: "`expo@57.0.9` updates React Native to 0.86.2,
+  which resolves this regression. Updating to `expo@57.0.9` or later is crucial for affected apps"; S35: "Bump
+  Hermes V1 to 250829098.0.16 to fix excessive memory consumption"). No setting: Hermes v1 is the default (S26),
+  and no official page names one for the fix. expo 57.0.31 brings React Native 0.86.3 (S20: 57.0.17's, which
+  also ends a slower start in development), whose Hermes V1 is 250829098.0.17 (its `sdks/.hermesv1version`, and
+  its `hermes-compiler` pin, `package.json:179`). Worklets' bundle mode, S20's unsupported workaround, is not
+  used. Test (`app-config`, a new one): expo 57.0.9 or later installed, react-native 0.86.2 or later in
+  `package.json` and installed, and the engine and the compiler React Native resolves 250829098.0.16 or later.
+  Bites (of 17): the engine read as 250829098.0.10, the compiler read as 250829098.0.10, and `package.json`'s
+  react-native as 0.86.1, 1 failed each; restored, 17 pass.
+- **What SDK 57 removed, read against the app** (S27's breaking changes; S36–S40): nothing here uses
+  `@expo/ui`, `Server.resetServerContext()`, expo-modules-jsi's Swift types, Reanimated's
+  `useInterpolateConfig`, `InterpolateConfig`, `ColorSpace`, `withInitialValues`, `withTargetValues` or
+  `PlainStyle`, Worklets' `workletizableModules`, or Gesture Handler's `getChildInDrawingOrderAtIndex`; and React
+  Native 0.86 has "no user-facing breaking changes" (S22). The app commits no `ios` or `android` folder, so
+  `expo prebuild`'s new clean default (S27) changes nothing here. Typecheck passes unchanged.
+- **The comments that cited SDK 56 sources are re-read at 57.** expo-file-system 57.0.7's cited files are
+  56.0.11's byte for byte (the picker, `Paths.join`, `exists`, `copy`, and `write`, still `void`), as are its
+  `exports`, expo-modules-core's `CodedError`, `AsyncFunctionDefinition` and `UnexpectedException`, and
+  expo-modules-jsi's `JavaScriptThrowable`; expo-modules-core 57.0.24's `Exception.swift` and expo-modules-jsi
+  57.1.3's `JavaScriptPromise.swift` and `JavaScriptError.swift` (S27: "`JavaScriptError` is now a copyable
+  class") changed, and a rejection still reaches JS as an `Error` with the exception's `code`
+  (`JavaScriptPromise.swift:208`, `JavaScriptError.swift:58-63` and 42-51; `Exception.swift:48-50` and 62-65):
+  `test/mocks/expo-file-system.ts`' header cites those lines. React Native 0.86.3's
+  `RCTImageComponentView.mm:144-145` still makes the image a template only at load (`constants/theme.ts`,
+  `brand-mark.test.tsx`); expo-image-manipulator 57.0.21 still adds `ImageFixOrientationTransformer` first
+  (`ios/ImageManipulatorModule.swift:28`) and decodes through expo-image-loader 57.0.1's Glide
+  (`lib/platform/run-image.ts`); expo-router 57.0.29 still carries `getStateFromPath`'s `queryString.parse`
+  (its build/react-navigation/core/getStateFromPath.js:499) and query-string ^7.1.3, and its own linking still
+  parses at its build/getLinkingConfig.js:90-91 (`deep-link-query.test.ts`). react-native-worklets 0.10.1 still
+  ships `lib/module/mock` and still needs it: with `test/jest-setup.js`'s mock line out, `brand-mark.test.tsx`
+  fails to run ("Cannot read properties of undefined (reading 'loadUnpackers')", from
+  `NativeWorklets.native.js:303`); put back, it passes. `@react-native/jest-preset` 0.86.3's fontScale-2 mock is
+  still at its jest/mocks/NativeModules.js:41,47.
+- **Lint, recounted at SDK 57 (the owner's decision: "Warn only in those 16 files").** eslint-config-expo 57.0.2
+  still spreads eslint-plugin-react-hooks' recommended rules (its flat/utils/react.js:27), and the plugin is
+  still 7.1.1. Read through ESLint's own API with this repository's config and the four as errors in every file,
+  over `expo lint`'s folders (`src`, `app`, `components`; @expo/cli 57.0.32's build/src/lint/lintAsync.js:90-94)
+  and `hooks/`: the same 15 files break them in the gate, 25 places, so `eslint.config.js`' list is unchanged
+  and exact (16 was a miscount). `npm run lint`: 0 errors, 25 warnings. The debt, each place to change in its
+  own pull request:
+  - `react-hooks/refs` (11): `app/(auth)/faceid.tsx:64`, `app/(tabs)/flows/detail.tsx:206`,
+    `app/(tabs)/settings/billing.tsx:157`, `app/index.tsx:141` (3), `components/blocks/image.tsx:89`,
+    `components/dropdown.tsx:257`, `components/files/file-view.tsx:77` and `:129` (2).
+  - `react-hooks/set-state-in-effect` (10): `app/(tabs)/activity/index.tsx:224`, `:228` and `:290`,
+    `app/(tabs)/activity/package.tsx:103`, `components/automations/webhook-address-dialog.tsx:73`,
+    `components/dropdown.tsx:223`, `components/files/file-view.tsx:118`, `components/items/flow-items.tsx:103`,
+    `components/organization/org-domain-only.tsx:41`, `components/settings/workspace-switcher.tsx:63`.
+  - `react-hooks/purity` (2): `app/(tabs)/activity/index.tsx:295`, `app/index.tsx:61`.
+  - `react-hooks/static-components` (2): `components/connection-row.tsx:50`, `components/setup-field.tsx:610`.
+  - Outside the gate, since `expo lint` does not read `hooks/` (7 places: two of the four rules, and a fifth
+    rule): `set-state-in-effect` at `hooks/use-push-registration.tsx:457`, `hooks/use-scope.tsx:39`,
+    `hooks/use-solutions.tsx:83` and `hooks/use-workflows.tsx:51`; `refs` at `hooks/use-resource.tsx:210` (2);
+    and `react-hooks/use-memo`, one more of eslint-plugin-react-hooks 7.1.1's rules that this upgrade turned
+    on (5.2.0 on `main`), an error at `hooks/use-resource.tsx:91`'s `useCallback(read, deps)` ("Expected the
+    dependency list for useCallback to be an array literal"). The review found it by reading every
+    `react-hooks/` rule through the same API; no other `react-hooks/` rule fires in `app/`, `components/` or
+    `hooks/`.
+  The comment over the list points here and names no count. The two lint tests (`release-and-ci-guards`) pass
+  as they are (29 of 29), their name now citing eslint-config-expo 57.
+- **Snapshots: the 10 entries updated, by the owner's decision ("Approve the 10 updates").** The whole Jest run
+  at SDK 57 (137 suites): 2,078 passed, 10 failed, the same 10 entries as at 56 (96 of 106 snapshots match),
+  each differing only by removed `nativeID="<n>"` lines (8, 11, 8 and 11 in the 4 screen states; 2, 2, 1, 2, 2 and
+  1 in the 6 Nocturne entries): react-native-reanimated 4.5.1, like 4.3.1, sets a `nativeID` outside Jest
+  alone. Every changed line of each entry was read as such before it was updated; none differs in another way,
+  so nothing goes back to the owner. Each was updated alone: `npx jest <file> -t "^<its full name>$" -u` (each
+  run: 1 passed, the rest skipped, "1 updated"; no bare `-u`). The committed diff is 48 removed lines, every one
+  `nativeID="<n>"`, nothing else (`__tests__/__snapshots__/screen-state.test.tsx.snap` 38,
+  `__tests__/__snapshots__/nocturne-visual.test.tsx.snap` 10). README's re-pin list names them. Both suites
+  then pass whole (`--ci`).
+- **expo-doctor** (`npx expo-doctor@latest`): 21 of 21 checks pass.
+- **`release:ios --local` takes Xcode 26.4 to 26.x for SDK 57**, as for 56 (S23: Xcode "26.4+", iOS "16.4+",
+  both SDK 56's). Xcode 27 is still refused: "Apps built on Xcode 27 images, including `latest`, launch on iOS 27
+  only if they use the UIKit scene life cycle. On SDK 57, enable `ios.enableSceneSupport` in
+  `expo-build-properties`, or use `auto` or `sdk-57`" (S24), and "SDK 57 apps keep the application-based life
+  cycle by default" (S25); this app does not opt in (it changes the app's start, the owner's call), and Xcode
+  27.2 could not archive SDK 55's pods ("Round 21's close"). `scripts/release-ios.sh` refuses "--local needs
+  Xcode 26.4 or later for SDK 57" and "--local needs an Xcode before 27 for SDK 57: Xcode 27 needs the scene life
+  cycle, which this app does not opt into; build in EAS's cloud". The cloud path: `eas.json` names no `image`,
+  so EAS takes `auto`, "selected based on the project configuration, Expo SDK version, and React Native version"
+  (S24); that this is `sdk-57`, "Xcode 26.6, Node.js 22.23.1", is inference from S24's note above, not
+  observed. So SDK 57's default build is not an Xcode 27 one and the scene life cycle is not needed for it;
+  whether one is needed for iOS 26 and earlier, S24–S26 do not say. README "Verification" and the testflight
+  skill say so. Tests (`release-and-ci-guards`): as for 56, with 26.6 passing too. Bite: the SDK 56 script, the
+  two refusal tests fail (2 failed of 29); restored, 29 pass.
+- **The dependency audit, under the committed lockfile**, is SDK 56's: `npm audit --omit=dev` 23 issues (7 low,
+  11 moderate, 5 high, 0 critical), so `audit:dependencies` passes; `npm audit` 32 (9 low, 18 moderate, 5 high, 0
+  critical). The 5 high are the same two advisories, now through expo-router 57.0.29 (query-string 7.1.3,
+  `decode-uri-component` 0.2.2) and @expo/cli 57.0.32 (`zod` 3.25.76); npm's fixes are still expo-router 58 and
+  expo 52.0.49, both other majors.
+- **Not observed:** a native build, a simulator or a device. The owner's device checks, on a cloud build: memory
+  with the animations (Hermes V1 250829098.0.17), an upload (expo/fetch's PUT), Download into Files, Settings ›
+  Data's export, the Glow and the charts (svg 15.15.4).

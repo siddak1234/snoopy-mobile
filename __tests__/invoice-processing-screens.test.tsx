@@ -64,7 +64,10 @@ jest.mock('expo-file-system', () => ({
     if (!single) mockFiles.push(file);
     return {
       uri,
-      copy: (target: { uri: string }) => mockCopies.push(`${uri} -> ${target.uri}`),
+      // A promise since SDK 56 (`test/mocks/expo-file-system.ts`).
+      copy: async (target: { uri: string }) => {
+        mockCopies.push(`${uri} -> ${target.uri}`);
+      },
       create: jest.fn(),
       write: (text: string) => {
         file.text = text;

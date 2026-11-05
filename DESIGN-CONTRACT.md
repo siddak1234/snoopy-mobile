@@ -456,10 +456,8 @@ page: Download PDF, Download Excel, then Share — the PDF), and Settings › Da
 complete export (Download file) and workspace summary (Download JSON).
 - **Download** (`saveSignedFile`, `lib/platform/signed-file.ts`): on iOS the
   file saved into the cache, then into the folder the person picks in Files —
-  expo-file-system's `Directory.pickDirectoryAsync()` (its
-  build/ExpoFileSystem.types.d.ts:131-139: "On iOS, the selected directory
-  grants temporary read and write access for the current app session only";
-  ios/FilePickingUtils.swift:105-108), no share sheet — under its own name,
+  expo-file-system's `Directory.pickDirectoryAsync()` (its sources are cited
+  once, over `saveToFiles` in `lib/platform/signed-file.ts`), no share sheet — under its own name,
   without any folder it carries (" 2", " 3" after it when the name is taken); a picker closed saves nothing
   and says nothing. On Android the link opens, as before.
 - **Share** (`shareSignedFile`): iOS only (`sharesFiles`): the file itself to

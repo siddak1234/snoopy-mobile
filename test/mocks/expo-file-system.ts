@@ -1,44 +1,54 @@
 /**
- * expo-file-system (55.0.26, with expo-modules-core 55.0.27) as the app's file
- * actions use it (Round 21, the owner's Q7), for
+ * expo-file-system (57.0.7, with expo-modules-core 57.0.24 and expo-modules-jsi
+ * 57.1.3) as the app's file actions use it (Round 21, the owner's Q7), for
  * `jest.mock('expo-file-system', () => require('@/test/mocks/expo-file-system'))`.
  * No device recording exists (the owner's TestFlight 31 check 3 is the device
  * proof); each shape is pinned to the module's own published types and its
  * iOS code instead, paths under node_modules/:
  *
  * - `Directory.pickDirectoryAsync()`: `Promise<Directory>`
- *   (expo-file-system/build/ExpoFileSystem.types.d.ts:139), the JS wrapping the
- *   native answer's `uri` (src/FileSystem.ts:219-222). iOS resolves a
- *   `FileSystemDirectory` of the picked URL (ios/FilePickingHandler.swift:73-77),
+ *   (expo-file-system/build/Directory.d.ts:16), the JS wrapping the native
+ *   answer's `uri` (src/Directory.ts:106-109). iOS resolves a
+ *   `FileSystemDirectory` of the picked URL (ios/FilePickingHandler.swift:84-89),
  *   stored as a directory (ios/FileSystemPath.swift:11-14), so its `uri`, the
- *   URL's `absoluteString` (ios/FileSystemModule.swift:351-353), ends in "/".
+ *   URL's `absoluteString` (ios/FileSystemModule.swift:343-345), ends in "/".
  * - The picker closed: `FilePickingCancelledException`
- *   (ios/FilePickingHandler.swift:80-83; ios/FileSystemExceptions.swift:94-96),
- *   also sent when the folder's access cannot start (ios/FilePickingUtils.swift:42-51,
- *   58-64). It reaches JS as expo-modules-core's `CodedError`
- *   (ios/JSI/EXJSIUtils.mm:113-126; src/errors/CodedError.ts:6-13) with
- *   `code` from the class name, "ERR_FILE_PICKING_CANCELLED"
- *   (ios/Core/Exceptions/CodedError.swift:45-55, Exception.swift:41-43), and
- *   `message` its reason (Exception.swift:51; ios/Core/Functions/AsyncFunctionDefinition.swift:164-168).
- * - `new File(folder, name)`: the module's own `Paths.join` (src/FileSystem.ts:90-92;
+ *   (ios/FilePickingHandler.swift:91-95; ios/FileSystemExceptions.swift:100-103),
+ *   also sent when the folder's access cannot start (ios/FilePickingUtils.swift:42-54,
+ *   62-68). Since 56 it reaches JS through expo-modules-jsi, in place of
+ *   expo-modules-core's ios/JSI/EXJSIUtils.mm: an `Error` with `code`
+ *   (apple/Sources/ExpoModulesJSI/Runtime/Values/JavaScriptPromise.swift:208,
+ *   JavaScriptError.swift:58-63 and 42-51), here expo-modules-core's `CodedError`
+ *   (src/errors/CodedError.ts:6-13), its `code` from the class name,
+ *   "ERR_FILE_PICKING_CANCELLED" (ios/Core/Exceptions/CodedError.swift:45-55,
+ *   Exception.swift:48-50). Its `message` is the exception's `String(reflecting:)`
+ *   (expo-modules-jsi Protocols/JavaScriptThrowable.swift:28-31): its name, its
+ *   reason and the Swift file and line (Exception.swift:62-65); here the reason alone.
+ * - `new File(folder, name)`: the module's own `Paths.join` (src/File.ts:150; src/Paths.ts:6;
  *   src/pathUtilities/index.ts:15-23), used here as is: the name is URL-encoded.
- * - `File.exists`: `boolean` (build/ExpoFileSystem.types.d.ts:226-229); false
- *   for a folder, and false without read access (ios/FileSystemFile.swift:35-44).
- * - `File.copy(destination)`: `void` (build/ExpoFileSystem.types.d.ts:237-239);
- *   iOS copies with `FileManager.copyItem` (ios/FileSystemPath.swift:69-73),
- *   which refuses a name already taken or a folder that is not there; that
- *   Foundation error is thrown as `UnexpectedException`, code "ERR_UNEXPECTED"
- *   (expo-modules-core ios/Core/Functions/SyncFunctionDefinition.swift:138-139;
- *   ios/Core/Exceptions/UnexpectedException.swift). Its message is Apple's,
- *   not the module's, so it is not copied here.
+ * - `File.exists`: `boolean` (build/internal/NativeFileSystem.types.d.ts:168-172);
+ *   false for a folder, and false without read access (ios/FileSystemFile.swift:35-44).
+ * - `File.copy(destination)`: since 56 `Promise<void>`
+ *   (build/internal/NativeFileSystem.types.d.ts:182; iOS `AsyncFunction("copy")`,
+ *   ios/FileSystemModule.swift:230-232; `copySync` is the old one); iOS copies
+ *   with `FileManager.copyItem` (ios/FileSystemPath.swift:69-79), which refuses a
+ *   name already taken or a folder that is not there; that Foundation error
+ *   rejects the promise as `UnexpectedException`, code "ERR_UNEXPECTED"
+ *   (expo-modules-core ios/Core/Functions/AsyncFunctionDefinition.swift:125-127;
+ *   ios/Core/Exceptions/UnexpectedException.swift). Its message is Apple's, not
+ *   the module's, so it is not copied here. The copy settles after the call
+ *   returns, as the native copy does.
+ * - `File.write(content)`: still `void` at 57.0.7
+ *   (build/internal/NativeFileSystem.types.d.ts:155; iOS `Function("write")`,
+ *   ios/FileSystemModule.swift:177).
  *
  * The picked address is the shape of an iCloud Drive folder.
  */
 import { dirname, join as joinPath } from 'node:path';
 
 // Since 55 the package exports ".", "./legacy", "./package.json" and the plugin
-// (its package.json "exports"), not src/, so its own path helpers are read from
-// its folder.
+// (its package.json "exports"; 57.0.7's too), not src/, so its own path helpers
+// are read from its folder.
 const { PathUtilities } = jest.requireActual(
   joinPath(dirname(require.resolve('expo-file-system/package.json')), 'src/pathUtilities'),
 );
@@ -83,8 +93,9 @@ export class File {
   get exists() {
     return fileSystemState.taken.has(this.uri);
   }
-  copy(target: { uri: string }) {
+  async copy(target: { uri: string }) {
     const into = target.uri.slice(0, target.uri.lastIndexOf('/') + 1);
+    await null;
     if (fileSystemState.taken.has(target.uri) || !folders().has(into)) {
       throw new CodedError('ERR_UNEXPECTED', `Could not copy to ${target.uri}`);
     }

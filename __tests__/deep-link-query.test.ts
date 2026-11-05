@@ -1,16 +1,18 @@
-import { getStateFromPath } from '@react-navigation/core';
+import { getStateFromPath } from 'expo-router/react-navigation';
 
 /**
  * A link's query, read through query-string and `decode-uri-component` (backend
  * manifest §12.1 #195). Both ship in the bundle: expo-router's
  * `getPathFromState` requires query-string, which requires the decoder as it
- * loads. The one caller of the decoder is `queryString.parse`, in
- * react-navigation's own `getStateFromPath` below; the app's links never reach
- * it, since expo-router hands react-navigation its own parser
- * (`build/getLinkingConfig.js`), which reads a query with `URL`.
+ * loads. The one caller of the decoder is `queryString.parse`, in the
+ * react-navigation code expo-router 57 carries, its `getStateFromPath` below
+ * (`node_modules/expo-router/build/react-navigation/core/getStateFromPath.js:499`);
+ * the app's links never reach it, since expo-router's linking uses its own
+ * parser (`node_modules/expo-router/build/getLinkingConfig.js:90-91`), which
+ * reads a query with `URL`.
  *
  * The decoder's advisory (GHSA-vcc3-ghjq-m6fr) is fixed only in 0.5.0, an ES
- * module, and query-string 7 — pinned by expo-router 6 — calls
+ * module, and query-string 7 — pinned by expo-router 57 — calls
  * `require('decode-uri-component')` as a function. Forced in, Node's and
  * Metro's `require` hand back `{ default }`, which throws when called, and this
  * suite does not load. This holds the reading until the dependency can move.

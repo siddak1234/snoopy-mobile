@@ -10,6 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "ai.autom8x.snoopy",
+      "deploymentTarget": "17.4",
       "entitlements": {
         "com.apple.developer.applesignin": ["Default"]
       },
@@ -52,14 +53,7 @@
           "photosPermission": false
         }
       ],
-      [
-        "expo-build-properties",
-        {
-          "ios": {
-            "deploymentTarget": "17.4"
-          }
-        }
-      ]
+      "expo-build-properties"
     ],
     "experiments": {
       "typedRoutes": true,
