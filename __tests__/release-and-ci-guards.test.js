@@ -170,7 +170,7 @@ describe("eas-cli is eas.json's one exact cli.version, run with npx (Expo's vers
   });
 });
 
-describe("--local refuses an Xcode below 26.2, SDK 55's minimum, so its dry run proves the toolchain", () => {
+describe("--local refuses an Xcode below 26.2, SDK 55's minimum", () => {
   const eas = JSON.parse(readFileSync(join(root, 'eas.json'), 'utf8'));
   const app = JSON.parse(readFileSync(join(root, 'app.json'), 'utf8'));
   const appId = `${eas.submit.production.ios.appleTeamId}.${app.expo.ios.bundleIdentifier}`;
