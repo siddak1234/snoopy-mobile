@@ -3501,13 +3501,22 @@ E's research for this step (its sources S1–S19 and an exposure read at 1d734a4
   testflight skill say so. Tests (`release-and-ci-guards`): 26.3, 26.2, 26.1.1, a bare 26 and an unreadable
   version refused; 27.0 and 27.2 refused; 26.4 and 26.10 pass; the CocoaPods cases run on 26.4. Bite: the
   script as it was (26.2, no cap), the two refusal tests fail (2 failed of 27); restored, 27 pass.
-- **Lint: four new React Compiler rules warn.** eslint-config-expo 56.0.4 asks for eslint-plugin-react-hooks
-  ^7.0.0 (5.2.0 on `main`) and spreads its recommended rules (its flat/utils/react.js:27), which in 7.1.1 add the
-  React Compiler's checks as errors: `npm run lint` failed with 25 errors in 16 files written before them,
-  `react-hooks/refs` 11, `set-state-in-effect` 10, `purity` 2 and `static-components` 2 (the app's own code;
-  nothing this upgrade changed). `eslint.config.js` makes those four warn, so lint passes (0 errors, 25
-  warnings) and each place stays named in every run. **Open:** changing those 25 places is a change of its own,
-  not this upgrade's. Bite: without the block, `npm run lint` exits 1 with the 25 errors; with it, exit 0.
+- **Lint: four new React Compiler rules warn, in the 15 files that break them only.** eslint-config-expo 56.0.4
+  asks for eslint-plugin-react-hooks ^7.0.0 (5.2.0 on `main`) and spreads its recommended rules (its
+  flat/utils/react.js:27), which in 7.1.1 add the React Compiler's checks as errors: `npm run lint` failed with
+  25 errors in 15 files written before them (16 was a miscount), `react-hooks/refs` 11, `set-state-in-effect`
+  10, `purity` 2 and `static-components` 2 (the app's own code; nothing this upgrade changed). `eslint.config.js`
+  makes those four warn in those 15 files alone (its `files` list, the review's fix: the first version made
+  them warn in every file), so lint passes (0 errors, 25 warnings), each place stays named in every run, and
+  any other file, a new one too, still fails on them. `expo lint` reads only `src`, `app` and `components`
+  (@expo/cli 56.1.27's build/src/lint/lintAsync.js:90-94), so the same rules' 6 places in `hooks/` are outside
+  the gate, as every rule there is. **Open:** the owner's decision on the four rules; changing
+  the 25 places is a change of its own, not this upgrade's, and each file leaves the list with it. Tests
+  (`release-and-ci-guards`, two new, through ESLint's own API): a component breaking each rule fails all four as
+  a new file in `app/` and in `components/`, and warns on all four as each listed file; each listed file still
+  breaks one. Bites (of 29): the repository-wide block back, both fail; a file that breaks none listed
+  (`components/stat-tile-button.tsx`), the second fails; restored, 29 pass. Bite of the first version: without
+  the block, `npm run lint` exits 1 with the 25 errors; with it, exit 0.
 - **`expo/fetch` is the app's `fetch` now** (S1: "`expo/fetch` is now installed as the default implementation of
   `globalThis.fetch`"; expo 56.0.24 src/winter/runtime.native.ts:41-53, unless `EXPO_PUBLIC_USE_RN_FETCH`, which
   the app does not set). Expo's default is kept, so the upload's PUT (`lib/platform/client.ts`) and every

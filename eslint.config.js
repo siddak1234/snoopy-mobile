@@ -12,9 +12,27 @@ module.exports = defineConfig([
   },
   {
     // Expo SDK 56's eslint-config-expo spreads eslint-plugin-react-hooks 7's recommended
-    // rules (its flat/utils/react.js:27), which add the React Compiler's checks as errors;
-    // 25 places written before them fail these four. They warn until that code is changed
-    // on its own (DESIGN-GAPS "Round E step 2").
+    // rules (its flat/utils/react.js:27), which add the React Compiler's checks as errors.
+    // The files below were written before them and break these four; they warn in those
+    // files alone, so every other file still fails on them. A file leaves the list when its
+    // code is changed on its own: `DESIGN-GAPS.md` "Round E step 2", its "Lint" entry.
+    files: [
+      'app/(auth)/faceid.tsx',
+      'app/(tabs)/activity/index.tsx',
+      'app/(tabs)/activity/package.tsx',
+      'app/(tabs)/flows/detail.tsx',
+      'app/(tabs)/settings/billing.tsx',
+      'app/index.tsx',
+      'components/automations/webhook-address-dialog.tsx',
+      'components/blocks/image.tsx',
+      'components/connection-row.tsx',
+      'components/dropdown.tsx',
+      'components/files/file-view.tsx',
+      'components/items/flow-items.tsx',
+      'components/organization/org-domain-only.tsx',
+      'components/settings/workspace-switcher.tsx',
+      'components/setup-field.tsx',
+    ],
     rules: {
       'react-hooks/purity': 'warn',
       'react-hooks/refs': 'warn',

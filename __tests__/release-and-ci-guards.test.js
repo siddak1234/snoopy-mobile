@@ -10,7 +10,8 @@ const { pathToFileURL } = require('node:url');
  * (scripts/no-skipped-tests.mjs, M4), and the contract is read from a
  * hash-checked copy that never lets verify:platform-contracts skip (M1).
  * Each script's verdict is a pure function, judged here in a real Node; the
- * .github configuration's own rules are read from its files.
+ * .github configuration's own rules are read from its files. Lint's four
+ * React Compiler rules (eslint.config.js) are read through ESLint itself.
  */
 const root = resolve(__dirname, '..');
 const url = (path) => pathToFileURL(join(root, path)).href;
@@ -329,6 +330,64 @@ describe("the .github configuration's own rules (the website's structure-contrac
     const dependabot = readFileSync(join(root, '.github/dependabot.yml'), 'utf8');
     expect([...dependabot.matchAll(/^\s+- package-ecosystem: (\S+)$/gmu)].map((m) => m[1])).toEqual(['github-actions']);
     expect(dependabot).toContain('\n    schedule:\n      interval: weekly\n');
+  });
+});
+
+describe("lint: react-hooks 7's four React Compiler rules warn only in the files written before them", () => {
+  const RULES = ['react-hooks/purity', 'react-hooks/refs', 'react-hooks/set-state-in-effect', 'react-hooks/static-components'];
+  // One component for each rule, broken as the listed files break it: a ref read in
+  // render, Date.now() in render, a component made in render, a state set in an effect.
+  const PROBE = [
+    "import { useEffect, useRef, useState } from 'react';",
+    'export function Refs() { const ref = useRef(0); return ref.current; }',
+    'export function Purity() { const at = useRef(Date.now()); return at; }',
+    'export function StaticComponents() { const Inner = () => null; return <Inner />; }',
+    'export function SetStateInEffect() { const [n, setN] = useState(0); useEffect(() => { setN(1); }, []); return n; }',
+    '',
+  ].join('\n');
+  // Read in a real Node through ESLint's own API and eslint.config.js: the list is the
+  // block that makes the four warn; PROBE is linted as a new file and as each listed one,
+  // and each listed file itself is linted as it is.
+  const script = `
+    const { join } = require('node:path');
+    const { ESLint } = require('eslint');
+    const root = ${JSON.stringify(root)};
+    const RULES = ${JSON.stringify(RULES)};
+    const PROBE = ${JSON.stringify(PROBE)};
+    const block = require(join(root, 'eslint.config.js')).find((c) => c.rules && RULES.every((r) => c.rules[r] === 'warn'));
+    const listed = block.files ?? [];
+    const severities = (messages) =>
+      Object.fromEntries(RULES.map((r) => [r, [...new Set(messages.filter((m) => m.ruleId === r).map((m) => m.severity))]]));
+    (async () => {
+      const eslint = new ESLint({ cwd: root });
+      const probe = async (path) => severities((await eslint.lintText(PROBE, { filePath: join(root, path) }))[0].messages);
+      const fresh = {};
+      for (const path of ['app/probe.tsx', 'components/probe.tsx']) fresh[path] = await probe(path);
+      const asListed = {};
+      for (const path of listed) asListed[path] = await probe(path);
+      const breaks = {};
+      for (const r of await eslint.lintFiles(listed.map((path) => join(root, path))))
+        breaks[r.filePath.slice(root.length + 1)] = r.messages.filter((m) => RULES.includes(m.ruleId)).length;
+      process.stdout.write(JSON.stringify({ listed, fresh, asListed, breaks }));
+    })();
+  `;
+  const every = (severity) => Object.fromEntries(RULES.map((r) => [r, [severity]]));
+  let read;
+  beforeAll(() => {
+    const run = spawnSync(process.execPath, ['-e', script], { cwd: root, encoding: 'utf8', timeout: 120_000 });
+    if (run.status !== 0) throw new Error(run.stderr);
+    read = JSON.parse(run.stdout);
+  }, 130_000);
+
+  it('fails a file not on the list on each of the four (an error, as eslint-config-expo 56 sets them)', () => {
+    expect(read.fresh).toEqual({ 'app/probe.tsx': every(2), 'components/probe.tsx': every(2) });
+  });
+
+  it('warns on each of the four in every listed file, and each listed file still breaks one', () => {
+    expect(read.listed.length).toBeGreaterThan(0);
+    expect(read.asListed).toEqual(Object.fromEntries(read.listed.map((path) => [path, every(1)])));
+    expect(Object.keys(read.breaks).sort()).toEqual([...read.listed].sort());
+    expect(read.listed.filter((path) => read.breaks[path] === 0)).toEqual([]);
   });
 });
 
