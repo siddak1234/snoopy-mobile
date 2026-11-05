@@ -98,13 +98,17 @@ export type AuthSessionOutcome =
  */
 const NO_BROWSER_CODES = new Set(['ERR_NO_MATCHING_ACTIVITY', 'PREFERRED_PACKAGE_NOT_FOUND']);
 
+/** expo-web-browser 55+ catches the HTTPS return only with `preferUniversalLinks` (DESIGN-GAPS "Hotfix: sign-in on iOS";
+ * guarded by `__tests__/native-auth-https-callback.test.ts`). */
+export const AUTH_SESSION_OPTIONS = { preferUniversalLinks: true } as const;
+
 export async function openSystemAuthSession(
   url: string,
   returnTo: string,
 ): Promise<AuthSessionOutcome> {
   let result: WebBrowser.WebBrowserAuthSessionResult;
   try {
-    result = await WebBrowser.openAuthSessionAsync(url, returnTo);
+    result = await WebBrowser.openAuthSessionAsync(url, returnTo, AUTH_SESSION_OPTIONS);
   } catch (error) {
     return { type: 'failed', message: describeBrowserFailure(error) };
   }

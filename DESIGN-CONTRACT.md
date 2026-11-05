@@ -86,7 +86,8 @@ app-owned OAuth authorization request and requires a client ID. Adding one
 would contradict ADR-0017. The minimum iOS deployment is 17.4, the first
 version where `ASWebAuthenticationSession.Callback.https(host:path:)` performs
 the exact associated-domain match ADR-0017 requires; the installed Expo module
-uses that API at this floor. The login and signup screens draw NO password
+uses that API at this floor only when called with `preferUniversalLinks: true` (DESIGN-GAPS "Hotfix: sign-in
+on iOS"). The login and signup screens draw NO password
 surface — no email or password field, no “Stay logged in” control, no
 “Forgot?” link, no reset screen — since 2026-09-08 on the owner's direction
 (platform manifest §12.1 #90): the Edge refuses password login and the website
