@@ -33,8 +33,6 @@
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
-    "@react-navigation/bottom-tabs": "^7.4.0",
-    "@react-navigation/native": "^7.1.8",
     "expo": "^56.0.0",
     "expo-blur": "~56.0.4",
     "expo-build-properties": "~56.0.27",

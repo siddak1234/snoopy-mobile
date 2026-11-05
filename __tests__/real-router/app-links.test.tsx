@@ -1,4 +1,4 @@
-import { getActionFromState } from '@react-navigation/native';
+import { getActionFromState } from 'expo-router/react-navigation';
 import { store } from 'expo-router/build/global-state/router-store';
 import { extractExpoPathFromURL } from 'expo-router/build/fork/extractPathFromURL';
 import { act } from 'expo-router/testing-library';

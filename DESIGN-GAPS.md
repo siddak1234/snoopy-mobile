@@ -3378,3 +3378,19 @@ E's research for this step (its sources S1–S19 and an exposure read at 1d734a4
   expo-image-loader's Glide on Android (`lib/platform/run-image.ts`); React Native 0.85.3's
   `RCTImageComponentView.mm:144-145` still makes the image a template only at load (`constants/theme.ts`,
   `brand-mark.test.tsx`).
+- **expo-router no longer depends on react-navigation** (S1: "most code imported directly from
+  `@react-navigation/*` packages will no longer work out of the box alongside `expo-router`").
+  `npx expo-codemod sdk-56-expo-router-react-navigation-replace` (expo-codemod 58.0.1) on `app`, `components`,
+  `hooks`, `lib`, `test` and `__tests__` changed 6 imports (its double quotes made the files' single ones):
+  `ThemeProvider`, `DarkTheme`, `DefaultTheme` and `Theme` (`app/_layout.tsx`), `NavigationProp`
+  (`app/(tabs)/activity/index.tsx`), `getStateFromPath` (`deep-link-query.test.ts`) and `getActionFromState`
+  (`real-router/app-links.test.tsx`) now come from `expo-router/react-navigation`, and `BottomTabBarProps`
+  (`components/nocturne/tab-bar.tsx`, `test/tab-bar-props.ts`) from `expo-router/js-tabs`. Nothing imports
+  `@react-navigation/*` now, so `@react-navigation/bottom-tabs` and `@react-navigation/native` leave
+  `package.json`, as expo-doctor's "@react-navigation packages are not installed alongside expo-router" check
+  asks; `npm install` dropped them, @react-navigation/core, elements and routers, and use-sync-external-store
+  from the lockfile, nothing else. The `expo-router/build/global-state/router-store` and
+  `build/fork/extractPathFromURL` that `app-links.test.tsx` reads are still there at 56.2.22. Typecheck: the
+  `BottomTabBarProps` mismatch at `app/(tabs)/_layout.tsx:59` (react-navigation 7's type against expo-router's
+  tabs) is gone with it. Bite: `app/_layout.tsx`'s old import put back, `tsc` fails "Cannot find module
+  '@react-navigation/native'"; restored, that error is gone.
