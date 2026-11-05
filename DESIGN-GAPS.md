@@ -3265,6 +3265,9 @@ which `--fix` left because the lockfile's 5.6.2 already met it (the lockfile sti
 
 The owner's decisions it carries (2026-11-04, verbatim): "F2. approve plus yes to files", "F3. logo, i said logo.
 documents is owners and admins."
+- **A: the kit's own test as snoopy-backend fixed it (§12.1 #342).** `scripts/kit/kit.test.mjs` byte for byte
+  from snoopy-backend `6a90c9e` (§12.1 #342; sha256
+  `a8bd91f08d45ed2a8860a12ad45414699343ecc9a13055e5dda36e4fb958f477`); `node --test` 104 of 104.
 - **B: "the export", one file or several (the owner's "F2. approve plus yes to files").** Since §12.1 #181 (S1-14)
   a complete export comes as one file or several, so Settings › Data's four lines that spoke of one file say
   "the export", a noun the screen already shows: `too_large` "The workspace is larger than one export file may
