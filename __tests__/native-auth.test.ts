@@ -133,6 +133,15 @@ describe('signInWithProvider', () => {
     expect(openAuthSessionAsync).not.toHaveBeenCalled();
   });
 
+  it('opens the sheet with the HTTPS callback option, so iOS catches the return instead of loading it', async () => {
+    // DESIGN-GAPS "Hotfix: sign-in on iOS".
+    openAuthSessionAsync.mockResolvedValue({ type: 'dismiss' });
+    await expect(signInWithProvider('google')).resolves.toEqual({ status: 'cancelled' });
+    const [, returnTo, options] = openAuthSessionAsync.mock.calls[0];
+    expect(new URL(returnTo).protocol).toBe('https:');
+    expect(options).toEqual({ preferUniversalLinks: true });
+  });
+
   it('opens the start leg on the API origin when no browser-leg base is configured', async () => {
     // A single-origin deployment — the local Compose stack — has its callback on
     // the API origin, so that is where the transaction cookie must be set.
