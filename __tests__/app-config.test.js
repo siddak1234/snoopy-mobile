@@ -56,10 +56,8 @@ describe('release app configuration', () => {
    */
   it('requires iOS 17.4, where ASWebAuthenticationSession can match an HTTPS host and path', async () => {
     expect(appJson.expo.ios.deploymentTarget).toBe('17.4');
-    const buildProperties = appJson.expo.plugins.find(
-      (plugin) => Array.isArray(plugin) && plugin[0] === 'expo-build-properties',
-    );
-    expect(buildProperties).toEqual(['expo-build-properties', { useHermesV1: false, buildReactNativeFromSource: true }]);
+    // Not in expo-build-properties, whose own deploymentTarget is deprecated: the plugin is listed bare.
+    expect(appJson.expo.plugins).toContain('expo-build-properties');
 
     setEnv({ ...RELEASE, EAS_BUILD_PROFILE: 'production' });
     const resolved = configFactory({ config: appJson.expo });
@@ -76,31 +74,26 @@ describe('release app configuration', () => {
   });
 
   /**
-   * Round E step 2 (Expo SDK 56): Hermes v1, SDK 56's default engine, has a memory bug with
-   * reanimated and worklets that Expo fixes in SDK 57 (its SDK 56 changelog), so it is off.
-   * expo-build-properties 56 refuses `useHermesV1: false` unless React Native is built from
-   * source and React Native's hermes-compiler is the legacy 0.15.0 (its
-   * build/pluginConfig.js:306-336), which `package.json` `overrides` pins. The plugin runs that
-   * check on this project as it is applied here (build/withBuildProperties.js:12-14), and its
-   * result is read through Expo's mod compiler, introspecting: no native project, nothing
-   * written, no build.
+   * Round E step 2: Hermes v1, Expo's default engine, stays on. Its memory bug with Reanimated and
+   * Worklets is fixed in the React Native that SDK 57 ships, and the owner took SDK 57 over turning
+   * Hermes v1 off in SDK 56 (DESIGN-GAPS "Round E step 2"). So nothing here turns it off: no
+   * expo-build-properties option, no hermes-compiler override, no Babel profile for the legacy
+   * engine. The plugin as app.json applies it is read through Expo's mod compiler, introspecting:
+   * it writes no Hermes property on either platform, nor iOS's build-from-source one.
    */
-  it('turns Hermes v1 off on both platforms, the way expo-build-properties 56 accepts it (Round E step 2)', async () => {
+  it('keeps Hermes v1, the default engine, on both platforms (Round E step 2)', async () => {
     const entry = appJson.expo.plugins.find(
-      (plugin) => Array.isArray(plugin) && plugin[0] === 'expo-build-properties',
+      (plugin) => plugin === 'expo-build-properties' || (Array.isArray(plugin) && plugin[0] === 'expo-build-properties'),
     );
-    expect(entry[1]).toMatchObject({ useHermesV1: false, buildReactNativeFromSource: true });
-    expect(require('../package.json').overrides['hermes-compiler']).toBe('0.15.0');
-    // The legacy compiler cannot read private class members: Expo's preset compiles for it.
-    expect(require('../babel.config.js')({ cache: () => {} }).presets).toEqual([
-      ['babel-preset-expo', { native: { unstable_transformProfile: 'hermes-v0' } }],
-    ]);
+    expect(entry).toBe('expo-build-properties');
+    expect(require('../package.json').overrides).not.toHaveProperty('hermes-compiler');
+    expect(require('fs').existsSync(`${__dirname}/../babel.config.js`)).toBe(false);
 
     const { compileModsAsync } = require('expo/config-plugins');
     const withBuildProperties = require('expo-build-properties/app.plugin.js').default;
     const configured = withBuildProperties(
       { name: 'Autom8x', slug: 'snoopy-mobile', ios: {}, android: {}, _internal: { projectRoot: `${__dirname}/..` } },
-      entry[1],
+      Array.isArray(entry) ? entry[1] : undefined,
     );
     const compiled = await compileModsAsync(configured, {
       // Never created: introspection reads Expo's templates and writes nothing.
@@ -109,16 +102,15 @@ describe('release app configuration', () => {
       platforms: ['ios', 'android'],
       assertMissingModProviders: false,
     });
-    expect(compiled._internal.modResults.ios.podfileProperties).toMatchObject({
-      'expo.useHermesV1': 'false',
-      'ios.buildReactNativeFromSource': 'true',
-    });
+    const podfile = compiled._internal.modResults.ios.podfileProperties;
+    expect(podfile['expo.useHermesV1']).not.toBe('false');
+    expect(podfile['ios.buildReactNativeFromSource']).not.toBe('true');
     const gradle = Object.fromEntries(
       compiled._internal.modResults.android.gradleProperties
         .filter((line) => line.type === 'property')
         .map((line) => [line.key, line.value]),
     );
-    expect(gradle).toMatchObject({ hermesV1Enabled: 'false' });
+    expect(gradle.hermesV1Enabled).not.toBe('false');
   });
 
   it('permits an unconfigured local development build', () => {

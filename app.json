@@ -53,13 +53,7 @@
           "photosPermission": false
         }
       ],
-      [
-        "expo-build-properties",
-        {
-          "useHermesV1": false,
-          "buildReactNativeFromSource": true
-        }
-      ]
+      "expo-build-properties"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -3439,39 +3439,18 @@ E's research for this step (its sources S1–S19 and an exposure read at 1d734a4
   React Native 0.85 moved its Jest mocks into `@react-native/jest-preset` (its 0.85 notes), so the fontScale-2
   mock the setup overrides is now @react-native/jest-preset/jest/mocks/NativeModules.js:41,47; the override
   still applies (`accessibility-text-size` passes).
-- **Hermes v1 off (the decision taken before the build, 2026-11-05).** S1: "importing `react-native-worklets` or
-  `react-native-reanimated` can increase your app's memory usage drastically, due to a known bug in Hermes v1" and
-  "SDK 57 resolves the regression"; the app imports Reanimated (`app/_layout.tsx`). S1 calls Hermes v1 "the
-  default", the v56 build-properties page said "Default: `false`", so the decision was an explicit
-  `useHermesV1: false`, right either way, for SDK 57's step to remove. Read in node_modules after the install:
-  expo-build-properties 56.0.27 documents "@default true" (build/pluginConfig.d.ts:25-36; its CHANGELOG 56.0.15
-  corrected the page), and expo-doctor said "This project uses Hermes V1 with expo@56.0.24, which is affected by
-  a known memory regression". The key is top-level, for both platforms, or per platform
-  (`resolveConfigValue`); the plugin writes `expo.useHermesV1` to iOS's Podfile properties and `hermesV1Enabled`
-  to Android's Gradle properties (build/ios.js:39-42, build/android.js:107-110). Turning it off took four
-  changes, three of which the plugin and the bundle demand, none named by the decision:
-  1. `app.json`: `useHermesV1: false`.
-  2. `app.json`: `buildReactNativeFromSource: true`, which the plugin requires for it on each platform
-     (build/pluginConfig.js:325-334, "`useHermesV1`: false requires `buildReactNativeFromSource` to be `true`");
-     its own words: "Turning this on will significantly increase the build times."
-  3. `package.json` `overrides`: `hermes-compiler` 0.15.0, the legacy compiler the plugin asks for
-     (build/pluginConfig.js:314-323: "requires setting the hermes-compiler version to 0.15.0 through
-     resolutions"); npm places it under `node_modules/react-native/`, where the plugin and the export look for it
-     (@expo/metro-config/build/serializer/exportHermes.js:18-19); the lockfile's one other change.
-  4. `babel.config.js` (new): Expo's Babel preset gives every Hermes bundle its Hermes v1 syntax set
-     (babel-preset-expo 56.0.21 `build/index.js:54-56, 81-91`), and the legacy compiler stopped `export:ios` with
-     "private properties are not supported" (exit 2); the preset's `hermes-v0` profile (its set for the legacy
-     engine, build/configs/hermes-v0.js, and Jest's set already, build/index.js:92-97) compiles both exports
-     (Hermes bytecode version 96, exit 0). `docs/docs-map.json` maps it with the tooling (README).
-  expo-doctor then passes 22 of 22. Test (`app-config`, a new one): the plugin entry, the override and the Babel
-  profile, the plugin applied to this project (its own hermes-compiler check), and its Podfile and Gradle
-  properties read through Expo's mod compiler (`expo.useHermesV1` "false", `ios.buildReactNativeFromSource`
-  "true", `hermesV1Enabled` "false"). Bites (of 16): hermes-compiler read as 250829098.0.10, the plugin throws
-  (1 failed); `useHermesV1` taken out of `app.json`, 2 failed (this test and the 17.4 one, which holds the whole
-  entry); `babel.config.js` moved away, 1 failed, and `export:ios` fails as above; restored, 16 pass.
-  **Not observed:** a native build. React Native built from source with the legacy engine is unproved on EAS's
-  Xcode 26.4 image, and how long it takes there is unmeasured. The whole of it is this one commit: reverting it
-  leaves SDK 56 on Hermes v1, as expo-doctor's check then says.
+- **Hermes v1 stays on: the Hermes-off commit (c9f048f) is reverted** (the owner, 2026-11-05, "Skip to 57 in
+  one PR": SDK 57 fixes Hermes v1's memory bug, and turning Hermes v1 off in SDK 56 meant building React Native
+  from source). The revert takes out all four of its changes: `useHermesV1: false` and
+  `buildReactNativeFromSource: true` (`app.json`), the `hermes-compiler` 0.15.0 override (`package.json` and its
+  lockfile lines), and `babel.config.js` with its `hermes-v0` profile (and its docs-map line). `expo-build-properties`
+  stays listed, with no options, so it writes nothing (expo-build-properties 56.0.27 writes a Podfile or Gradle
+  property only when it is set, build/ios.js:39-42, build/android.js:107-110). Test (`app-config`, in place of the
+  Hermes-off one): no option in the plugin entry, no override, no `babel.config.js`, and the plugin, applied
+  through Expo's mod compiler, sets neither `expo.useHermesV1` nor `hermesV1Enabled` to "false", nor
+  `ios.buildReactNativeFromSource` to "true". Bites (of 16): c9f048f's two options back in `app.json`, 2 failed
+  (this test and the 17.4 one, which reads the plugin listed bare); its `babel.config.js` back, 1 failed;
+  restored, 16 pass.
 - **The deployment target, 17.4, is `expo.ios.deploymentTarget`** (the decision; S16: expo-build-properties'
   own is "Deprecated: use built-in ios.deploymentTarget property instead (SDK 56 and greater)",
   build/ios.d.ts:4). The value is unchanged (README: the first iOS whose `ASWebAuthenticationSession` matches an
@@ -3487,7 +3466,7 @@ E's research for this step (its sources S1–S19 and an exposure read at 1d734a4
   in, through expo-image-manipulator's `SDWebImageWebPCoder` (`ios/ExpoImageManipulator.podspec:22`), though
   expo-image left the tree (expo-router 56.2.22 no longer depends on it); its podspec is not in node_modules,
   so its target is not read. Test (`app-config`, the 17.4 test): `expo.ios.deploymentTarget` 17.4, through
-  the factory, and the Podfile property through Expo's mod compiler; the plugin entry without it.
+  the factory, and the Podfile property through Expo's mod compiler; the plugin listed without it.
   Bite: the old `app.json` back (the target in the plugin), that test fails (1 failed of 16); restored, 16
   pass.
 - **`release:ios --local` takes Xcode 26.4 to 26.x for SDK 56** (the decision; S1: "Minimum Xcode bumped to
@@ -3535,13 +3514,13 @@ E's research for this step (its sources S1–S19 and an exposure read at 1d734a4
   3.25.76 through @expo/cli 56.1.27 (npm's fix for the first is expo-router 58, a major; for zod it names expo
   52.0.49, an older major).
 - **expo-doctor** (`npx expo-doctor@latest`): after the install 20 of 22, the react-navigation packages and
-  Hermes V1's regression; with both changes above, 22 of 22. `export:ios` and `export:android`: exit 0, run once
-  each on the Hermes change. **No Podfile or config plugin for pods** (not approved, "Round 21's close" above):
+  Hermes V1's regression; with the react-navigation change and the Hermes-off one (since reverted, above), 22 of
+  22. `export:ios` and `export:android`: exit 0, run once each on the Hermes-off change. **No Podfile or config plugin for pods** (not approved, "Round 21's close" above):
   none is added.
 - **Not observed:** a native build, a simulator or a device. The owner's device checks, on a cloud build
   (`npm run release:ios`, EAS's Xcode 26.4): an upload (expo/fetch's PUT), Download into Files (the awaited
-  copy), Settings › Data's export (its write), the Glow and the charts (svg 15.15.4), memory with the animations
-  (Hermes v1 off), and that a build compiling React Native from source finishes.
+  copy), Settings › Data's export (its write), the Glow and the charts (svg 15.15.4), and memory with the
+  animations.
 - **`round23`'s `MockNativeMethods`.** React Native 0.85 moved its Jest mocks into `@react-native/jest-preset`, so
   `jest.requireActual('react-native/jest/MockNativeMethods')` failed the suite before it ran ("Could not locate
   module"); `round23.test.tsx` reads the same module from `@react-native/jest-preset/jest/MockNativeMethods`, the
