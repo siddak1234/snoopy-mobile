@@ -3533,3 +3533,8 @@ E's research for this step (its sources S1–S19 and an exposure read at 1d734a4
   (`npm run release:ios`, EAS's Xcode 26.4): an upload (expo/fetch's PUT), Download into Files (the awaited
   copy), Settings › Data's export (its write), the Glow and the charts (svg 15.15.4), memory with the animations
   (Hermes v1 off), and that a build compiling React Native from source finishes.
+- **`round23`'s `MockNativeMethods`.** React Native 0.85 moved its Jest mocks into `@react-native/jest-preset`, so
+  `jest.requireActual('react-native/jest/MockNativeMethods')` failed the suite before it ran ("Could not locate
+  module"); `round23.test.tsx` reads the same module from `@react-native/jest-preset/jest/MockNativeMethods`, the
+  one the preset's own mocks spread (its jest/mocks/ScrollView.js:22-23). Bite: the old path, the suite fails to
+  run (the whole run below); the new one, 34 pass.
