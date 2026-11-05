@@ -6,6 +6,7 @@ import React from 'react';
 import { AccessibilityInfo, Linking, StyleSheet, processColor } from 'react-native';
 
 import { RENDERERS } from '@/components/blocks/block-list';
+import { HuggingFaceLogo } from '@/components/blocks/hugging-face-logo';
 import { brandIcon } from '@/components/blocks/links';
 import { httpsLink, openRoute, pageParts, toneOf } from '@/components/blocks/look';
 import { Text } from '@/components/text';
@@ -349,11 +350,12 @@ describe('file and link', () => {
       await fireEvent.press(screen.getByTestId('b-0-4'));
       expect(open).toHaveBeenLastCalledWith('https://jane.example/');
       expect(screen.getByTestId('b-0-5').props.onPress).toBeUndefined();
-      // Each brand's mark: the icon set's logo, else the globe.
+      // Each brand's mark: the icon set's logo or Hugging Face's own (the owner's F3), else the globe.
       expect(brandIcon('linkedin')).toBe(LinkedinLogo);
       expect(brandIcon('github')).toBe(GithubLogo);
       expect(brandIcon('x')).toBe(XLogo);
-      for (const other of ['site', 'huggingface', undefined, 'constructor']) expect(brandIcon(other)).toBe(Globe);
+      expect(brandIcon('huggingface')).toBe(HuggingFaceLogo);
+      for (const other of ['site', undefined, 'constructor']) expect(brandIcon(other)).toBe(Globe);
     } finally {
       open.mockRestore();
     }

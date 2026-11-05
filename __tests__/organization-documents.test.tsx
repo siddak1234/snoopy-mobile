@@ -83,11 +83,21 @@ describe("Organization's DOCUMENTS", () => {
 });
 
 describe('one document, read only', () => {
-  it('its title and who accepted it, then the signed copy — read when it opens, nothing to change', async () => {
+  /** The active workspace, as Organization reads it: an organization's owner unless told otherwise. */
+  function routeWorkspace(role: 'owner' | 'admin' | 'member' = 'owner', type: 'organization' | 'personal' = 'organization') {
     const fake = fakePlatform(platformOperation);
+    fake.always('GET /v1/workspaces', {
+      workspaces: [{ id: TEST_WORKSPACE, name: 'Acme Operations', type, role }],
+      activeWorkspaceId: TEST_WORKSPACE,
+    });
+    return fake;
+  }
+
+  it('its title and who accepted it, then the signed copy — read when it opens, nothing to change', async () => {
+    const fake = routeWorkspace('admin');
     fake.always(ONE, { document: { ...SIGNED, text: 'Covered Entity: Acme Operations\n\nSigned by: Dana Reyes, Practice manager' } });
     setMockParams({ document: SIGNED.id });
-    await renderWithProviders(<DocumentScreen />, sessionAs('member'));
+    await renderWithProviders(<DocumentScreen />, sessionAs('admin'));
     expect(await screen.findByText('Business Associate Agreement · Version 2')).toBeTruthy();
     expect(screen.getByTestId('document-accepted').props.children).toBe(`Accepted by Dana Reyes on ${calendarDate(SIGNED.acceptedAt)}`);
     expect(screen.getByTestId('document-text').props.children).toBe('Covered Entity: Acme Operations\n\nSigned by: Dana Reyes, Practice manager');
@@ -96,11 +106,30 @@ describe('one document, read only', () => {
   });
 
   it('a kind this build has no name for is not drawn', async () => {
-    const fake = fakePlatform(platformOperation);
+    const fake = routeWorkspace('owner');
     fake.always(ONE, { document: { ...SIGNED, kind: 'another-kind', text: 'Another text' } });
     setMockParams({ document: SIGNED.id });
     await renderWithProviders(<DocumentScreen />, sessionAs('owner'));
     expect(await screen.findByTestId('screen-unavailable')).toBeTruthy();
     expect(screen.queryByText('Another text')).toBeNull();
+  });
+
+  it('a member, or a personal workspace\'s owner, is shown nothing and the copy is never read (the owner, 2026-11-04: "documents is owners and admins")', async () => {
+    for (const [role, type] of [
+      ['member', 'organization'],
+      ['owner', 'personal'],
+    ] as const) {
+      resetSnapshot(); // each case reads its own workspace list
+      const fake = routeWorkspace(role, type);
+      fake.always(ONE, { document: { ...SIGNED, text: 'Covered Entity: Acme Operations' } });
+      setMockParams({ document: SIGNED.id });
+      const view = await renderWithProviders(<DocumentScreen />, sessionAs(role));
+      expect(await screen.findByTestId('screen-unavailable')).toBeTruthy();
+      expect(screen.queryByTestId('document-text')).toBeNull();
+      expect(screen.queryByText('Covered Entity: Acme Operations')).toBeNull();
+      expect(fake.to('GET /v1/workspaces')).not.toEqual([]);
+      expect(fake.to(ONE)).toEqual([]);
+      await view.unmount();
+    }
   });
 });

@@ -15,7 +15,9 @@ import { acceptedBy, documentTitle } from '@/lib/content/health-agreement';
 import { errorTitleFor } from '@/lib/content/screen-states';
 import { readWorkspaceDocument } from '@/lib/platform/agreements';
 import { PlatformNotConfiguredError } from '@/lib/platform/problem';
+import { readWorkspaces } from '@/lib/platform/workspaces';
 import { calendarDate } from '@/lib/view/format';
+import { administers } from '@/lib/view/roles';
 
 /**
  * One signed document, read only (Round 21 stage 2, C3; backend ADR-0049) —
@@ -24,7 +26,11 @@ import { calendarDate } from '@/lib/view/format';
  * Its title and "Accepted by {name} on {date}" as its row says them, then the
  * signed copy: the agreement as accepted, with the organization and the day
  * filled in and its signature section. Nothing to change. A kind this build
- * has no name for is not drawn, as the list draws none.
+ * has no name for is not drawn, as the list draws none. Shown only to an owner
+ * or admin of the active organization, as Organization's DOCUMENTS and the
+ * website's page (the owner, 2026-11-04: "documents is owners and admins"):
+ * for anyone else, a deep link included, it is unavailable and the copy is
+ * never read.
  */
 export default function DocumentScreen() {
   const router = useRouter();
@@ -35,6 +41,9 @@ export default function DocumentScreen() {
   const resource = useWorkspaceResource(
     async (workspaceId) => {
       if (!document) throw new PlatformNotConfiguredError();
+      const { workspaces } = await readWorkspaces();
+      const active = workspaces.find((workspace) => workspace.id === workspaceId);
+      if (active?.type !== 'organization' || !administers(active.role)) throw new PlatformNotConfiguredError();
       return readWorkspaceDocument(workspaceId, document);
     },
     [document],

@@ -7,18 +7,20 @@ import { Text } from '@/components/text';
 import { fonts, space, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
+import { HuggingFaceLogo } from './hugging-face-logo';
 import { httpsLink, type BlockOf } from './look';
 
 /**
  * A links button's mark, by its `brand` (backend ADR-0048 amendment 5): the
- * icon set's LinkedIn, GitHub and X logos, bundled with the app; `site`, no
- * brand, or one with no logo here (`huggingface`), the globe — as the website
- * draws them.
+ * icon set's LinkedIn, GitHub and X logos, bundled with the app, and Hugging
+ * Face's own logo (`HuggingFaceLogo`; the owner's F3, 2026-11-04); `site`, no
+ * brand, or one with no logo here, the globe — as the website draws them.
  */
 const BRAND_ICONS: Readonly<Record<string, Icon>> = {
   linkedin: LinkedinLogo,
   github: GithubLogo,
   x: XLogo,
+  huggingface: HuggingFaceLogo,
 };
 
 export function brandIcon(brand: unknown): Icon {
