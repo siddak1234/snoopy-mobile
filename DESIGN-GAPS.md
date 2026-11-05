@@ -3400,3 +3400,10 @@ E's research for this step (its sources S1–S19 and an exposure read at 1d734a4
   0.85.3 (`Libraries/StyleSheet/StyleSheetExports.js:21-29`). No other use. Test (`tab-screens`, the stat tile
   test): the pressed tint is absolute with all four edges 0. Bite: before the change that test fails (1 failed of
   124); after it, 124 pass.
+- **Jest and expo-router 56's `standard-navigation`.** expo-router 56.2.22 imports `standard-navigation` (0.0.5,
+  an ES module), which `package.json`'s `transformIgnorePatterns` left untransformed, so every real-router suite
+  failed to run ("Cannot use import statement outside a module"). Both Jest projects' patterns are now jest-expo
+  56's own (`jest-expo/jest-preset.js:113-119`: `standard-navigation` in the transformed list, and
+  `/node_modules/@react-native/babel-preset/` left alone) plus `phosphor-react-native`, as they were jest-expo 55's
+  plus it. Bite: `standard-navigation` taken out, the real-router project fails to run (15 of 15 suites); put
+  back, 15 suites and 72 tests pass.
