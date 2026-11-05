@@ -3335,3 +3335,8 @@ documents is owners and admins."
   No Podfile or config-plugin change is made for it: not approved.
 - Its first `--local` attempt that day stopped before building on CocoaPods' unaccepted Xcode licence, after a
   dry run that printed "CocoaPods ," and passed: item E1 above.
+- **E3: the app's one TestFlight group needs no console step.** Read through the App Store Connect API,
+  2026-11-04 22:15Z: the app has one TestFlight group, internal, "Team (Expo)", with access to all builds and
+  one tester, the owner; build 37 reached `IN_BETA_TESTING` with no step. The testflight skill
+  (`.claude/skills/testflight/SKILL.md`, steps 4 and 5 and its Output) says so: a VALID build reaches the owner
+  by itself, and the What to Test note is optional (CLAUDE.md "A TestFlight build").
