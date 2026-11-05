@@ -178,9 +178,10 @@ describe("--local refuses an Xcode below 26.2, SDK 55's minimum, so its dry run 
   /**
    * `--local --dry-run` in a temporary copy whose every gate passes — git on
    * origin/main and clean, gh and node green, curl the AASA naming the app —
-   * and whose xcodebuild prints `xcodeLine` first, as `xcodebuild -version` does.
+   * and whose xcodebuild prints `xcodeLine` first, as `xcodebuild -version` does,
+   * and whose pod runs `podBody`.
    */
-  function localDryRun(xcodeLine) {
+  function localDryRun(xcodeLine, podBody = 'echo 1.16.2') {
     const dir = mkdtempSync(join(tmpdir(), 'mobile-release-local-'));
     try {
       mkdirSync(join(dir, 'scripts'));
@@ -197,7 +198,7 @@ describe("--local refuses an Xcode below 26.2, SDK 55's minimum, so its dry run 
         node: 'echo green',
         curl: `cat '${join(dir, 'aasa.json')}'`,
         xcodebuild: `printf '%s\\n' '${xcodeLine}' 'Build version 17B100'`,
-        pod: 'echo 1.16.2',
+        pod: podBody,
         fastlane: 'echo fastlane 2.228.0',
       };
       for (const [name, body] of Object.entries(stubs)) {
@@ -230,6 +231,21 @@ describe("--local refuses an Xcode below 26.2, SDK 55's minimum, so its dry run 
       expect(run.out).toContain('DRY RUN: every gate passed on 0000000');
       expect(run.status).toBe(0);
     }
+  });
+
+  it('refuses a CocoaPods whose pod --version fails, prints nothing or prints no version — 2026-11-04 printed "CocoaPods ," and passed', () => {
+    for (const pod of ['echo "[!] You have not agreed to the Xcode license." >&2; exit 1', 'exit 0', 'echo', 'echo not-a-version']) {
+      const run = localDryRun('Xcode 26.2', pod);
+      expect(run.out).toContain('REFUSED: --local needs a working CocoaPods (pod --version gave no version number)');
+      expect(run.out).not.toContain('local toolchain:');
+      expect(run.out).not.toContain('DRY RUN');
+      expect(run.status).toBe(1);
+    }
+    // A warning printed before the version: the version is its last line.
+    const run = localDryRun('Xcode 26.2', 'echo "a warning"; echo 1.16.2');
+    expect(run.out).toContain('local toolchain: Xcode 26.2, CocoaPods 1.16.2, fastlane 2.228.0');
+    expect(run.out).toContain('DRY RUN');
+    expect(run.status).toBe(0);
   });
 });
 

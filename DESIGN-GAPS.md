@@ -3314,3 +3314,12 @@ documents is owners and admins."
   `snoopy-backend apps/access/src/agreement-routes.ts:29-30`,
   `snoopy-backend apps/access/src/postgres-agreements.ts:308-314, :325-332`: membership only), where the
   owner's rule is owners and admins.
+- **E1: `release:ios --local` refuses a CocoaPods that prints no version (2026-11-04).** That day
+  `npm run release:ios -- --local --dry-run` printed "CocoaPods ," and passed: only `command -v pod` was
+  checked and `pod --version` only echoed; the real build then stopped before building, CocoaPods saying
+  the Xcode licence was not agreed. `scripts/release-ios.sh` now reads `pod --version` once, keeps its last
+  line, and refuses "--local needs a working CocoaPods (pod --version gave no version number)" unless that is
+  a version number; the toolchain line prints it (README "Verification"). Test (`release-and-ci-guards`): a
+  `pod` that fails with the licence message, exits 0 with nothing, prints an empty line or "not-a-version" is
+  refused before `DRY RUN`; one that prints a warning, then 1.16.2, passes. Bite: the new lines removed, the
+  licence case reaches `DRY RUN` with "CocoaPods ," (1 failed of 26); restored, 26 pass.

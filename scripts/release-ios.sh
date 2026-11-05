@@ -115,9 +115,11 @@ sys.exit(0 if want in applinks and want in web else 1)
 node scripts/verify-deployed-contracts.mjs --release \
   || refuse "the committed platform types are not the contract the deployed platform serves"
 
-# --local: the Mac must be able to build. A missing tool, or an Xcode below the
-# SDK's minimum (README "Verification"), refuses before anything is built, so a
-# dry run with --local proves the toolchain too.
+# --local: the Mac must be able to build. A missing tool, an Xcode below the
+# SDK's minimum (README "Verification"), or a CocoaPods whose `pod --version`
+# gives no version number (an Xcode licence not yet accepted makes it, 2026-11-04)
+# refuses before anything is built, so a dry run with --local proves the
+# toolchain too.
 if [ "$LOCAL" = 1 ]; then
   xcodebuild -version >/dev/null 2>&1 || refuse "--local needs Xcode (xcodebuild)"
   XCODE=$(xcodebuild -version 2>/dev/null | head -1 | sed -n 's/^Xcode \([0-9][0-9.]*\).*$/\1/p')
@@ -126,8 +128,11 @@ if [ "$LOCAL" = 1 ]; then
     && (( 10#$XCODE_MAJOR > 26 || (10#$XCODE_MAJOR == 26 && 10#$XCODE_MINOR >= 2) )) \
     || refuse "--local needs Xcode 26.2 or later for SDK 55"
   command -v pod >/dev/null 2>&1 || refuse "--local needs CocoaPods (pod)"
+  POD_VERSION=$(pod --version 2>/dev/null) || refuse "--local needs a working CocoaPods (pod --version gave no version number)"
+  POD_VERSION=$(printf '%s\n' "$POD_VERSION" | tail -n 1)
+  [[ "$POD_VERSION" =~ ^[0-9]+(\.[0-9]+)+$ ]] || refuse "--local needs a working CocoaPods (pod --version gave no version number)"
   command -v fastlane >/dev/null 2>&1 || refuse "--local needs fastlane (brew install fastlane)"
-  echo "local toolchain: $(xcodebuild -version | head -1), CocoaPods $(pod --version), $(fastlane --version 2>/dev/null | grep -oE 'fastlane [0-9.]+' | head -1)"
+  echo "local toolchain: $(xcodebuild -version | head -1), CocoaPods $POD_VERSION, $(fastlane --version 2>/dev/null | grep -oE 'fastlane [0-9.]+' | head -1)"
 fi
 
 if [ "$DRY_RUN" = 1 ]; then
