@@ -217,10 +217,14 @@ another. Bump it by hand there; a guard test refuses a range.
 `npm run release:ios -- --local` (Round 17, 2026-10-08) builds the same release on
 this Mac instead of EAS's cloud — `eas build --local`, with Xcode (26.2 or later
 for SDK 55, Expo's SDK 55 table), CocoaPods and fastlane, which it refuses
-without — and so uses no EAS build quota; every gate
+without — and a CocoaPods whose `pod --version` gives no version number, as an
+Xcode licence not yet accepted makes it (2026-11-04) — and so uses no EAS build
+quota; every gate
 above still applies, nothing moves HEAD or the tree during the build, the ipa's
 entitlements are checked as the cloud build's are, and it is submitted with
-`eas submit --path`. `--local --dry-run` proves the Mac's toolchain as well. Preview and production EAS values are
+`eas submit --path`. `--local --dry-run` proves the Mac's toolchain as well, but
+Xcode 27.2 passes the dry run and cannot archive SDK 55's pods (DESIGN-GAPS
+"Round 21's close"). Preview and production EAS values are
 supplied by the build environment; they are intentionally not committed to
 `eas.json`. Since Round 7.5 that means the EAS-hosted `preview` and
 `production` environments on the linked project (`@autom8x.ai/snoopy-mobile`):

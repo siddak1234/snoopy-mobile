@@ -22,7 +22,7 @@ description: Ship an iOS build of main to TestFlight with npm run release:ios, a
 2. Rehearse every refusal. Nothing is built.
    ```bash
    npm run release:ios -- --dry-run            # the cloud path
-   npm run release:ios -- --local --dry-run    # the Mac path, also proves the toolchain
+   npm run release:ios -- --local --dry-run    # the Mac path; Xcode 27.2 passes it and cannot archive SDK 55's pods (DESIGN-GAPS, "Round 21's close")
    ```
    It must end `DRY RUN: every gate passed on <sha>`. Both paths refuse unless HEAD == `origin/main`, the tree is clean, `all-green` concluded success on HEAD, the live AASA names the app, and the deployed platform's contract hashes equal the generated types'.
 3. Build and submit, the path the owner chose:
@@ -34,8 +34,8 @@ description: Ship an iOS build of main to TestFlight with npm run release:ios, a
    ```bash
    npx --yes "eas-cli@$(node -p "require('./eas.json').cli.version")" submit:list --platform ios --limit 1
    ```
-   Wait until App Store Connect shows the build as processed (VALID). Then it goes to the TestFlight tester group (App Store Connect, TestFlight, the group, Builds); a console step there is the owner's, so give the owner the build number and the What to Test note.
-5. Write the What to Test note from `templates/what-to-test.md`: plain words, 5 lines or fewer, what changed on screen, not how.
+   Wait until App Store Connect shows the build as processed (VALID). The app has one TestFlight group, internal, "Team (Expo)", with access to all builds and one tester, the owner (read through the App Store Connect API, 2026-11-04 22:15Z), so a VALID build reaches the owner by itself, as build 37 did: there is no console step to add a build to a group. Give the owner the build number.
+5. The What to Test note is optional. When it helps, write it from `templates/what-to-test.md`: plain words, 5 lines or fewer, what changed on screen, not how.
 6. Record the build in `DESIGN-GAPS.md` under the round's current section: build number, commit, build or ipa path, submission id, date. Facts only.
 7. The build's feedback: when the owner's testers send it, run the backend's `feedback-intake` skill (`/add-dir ../snoopy-backend`, then `/feedback-intake`). It lists every item verbatim first; nothing is built from feedback until the owner approves the list.
 
@@ -48,5 +48,5 @@ description: Ship an iOS build of main to TestFlight with npm run release:ios, a
 
 ## Output
 
-- The build number, commit, submission id and the What to Test note, in the reply to the owner.
+- The build number, commit, submission id and, when written, the What to Test note, in the reply to the owner.
 - The `DESIGN-GAPS.md` record (step 6). Docs-map rule: `.claude/**` changes update `CLAUDE.md`; a change to `scripts/release-ios.sh` updates README.

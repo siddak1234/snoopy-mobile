@@ -142,7 +142,7 @@ describe('Data export (24.6.3)', () => {
     await act(async () => {
       jest.advanceTimersByTime(2_000);
     });
-    expect(await screen.findByText('Ready. The file holds the whole workspace.')).toBeTruthy();
+    expect(await screen.findByText('Ready. The export holds the whole workspace.')).toBeTruthy();
   }
 
   it('on iOS Download saves the complete export, read afresh, into the folder picked in Files — not Safari, no share sheet (24.12; Round 21, Q7); Share then hands it to the share sheet', async () => {
@@ -240,6 +240,55 @@ describe('the complete export in parts (the stage 1 spec\'s S1-14; backend §12.
     await waitFor(() =>
       expect(downloadSignedFile).toHaveBeenCalledWith('https://store.example.test/part-2-fresh', 'exports/acme-export-2.json'),
     );
+    ios.restore();
+  });
+
+  it('S1-14 in the owner\'s words (F2, 2026-11-04: "approve plus yes to files"): one file or several, the lines say "the export"', async () => {
+    const ios = jest.replaceProperty(Platform, 'OS', 'ios');
+    jest.useFakeTimers();
+    const cases: { state: ExportJob; line: string; downloads: string[] }[] = [
+      {
+        state: job('ready', { complete: true, files: [part(1), part(2), part(3)] }),
+        line: 'Ready. The export holds the whole workspace.',
+        downloads: ['Download file 1 of 3', 'Download file 2 of 3', 'Download file 3 of 3'],
+      },
+      {
+        state: job('ready', { complete: false, files: [part(1)] }),
+        line: 'Ready, but partial: a part of the workspace could not be read, and the export says which.',
+        downloads: ['Download file'],
+      },
+      {
+        state: job('failed', { failureReason: 'too_large' }),
+        line: 'The workspace is larger than one export may be.',
+        downloads: [],
+      },
+      {
+        state: job('expired'),
+        line: 'That export has been removed. Export again for a new one.',
+        downloads: [],
+      },
+    ];
+    for (const { state, line, downloads } of cases) {
+      const fake = routeData('owner');
+      fake.always('POST /v1/workspaces/{workspaceId}/exports', { export: job('running') });
+      fake.always('GET /v1/workspaces/{workspaceId}/exports/{exportId}', { export: state });
+      const view = await renderWithProviders(<DataExportScreen />, sessionAs('owner'));
+      await fireEvent.press(await screen.findByText('Export everything'));
+      await act(async () => {
+        jest.advanceTimersByTime(2_000);
+      });
+      // The status line itself: "the export", never "file".
+      const status = await screen.findByText(line);
+      expect(status.props.children).toBe(line);
+      expect(status.props.children).not.toMatch(/\bfile\b/u);
+      // "file" is left only on the Download buttons (and in the summary's unchanged "as a JSON file you can keep").
+      const withFile = screen
+        .queryAllByText(/\bfile\b/u)
+        .map((node) => String(node.props.children))
+        .filter((text) => !text.includes('as a JSON file you can keep'));
+      expect(withFile).toEqual(downloads);
+      await view.unmount();
+    }
     ios.restore();
   });
 

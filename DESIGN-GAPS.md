@@ -2997,9 +2997,10 @@ DESIGN-CONTRACT's, each once; this entry keeps the bites and the findings. Parit
 same items in its own lane, with the same words.
 
 - **S1-G2** (the links block, amendment 5): full-width pill buttons, each its brand's mark and its label
-  (DESIGN-CONTRACT "Block set v2 and the spacing table"). **Finding:** the icon set has no Hugging Face
+  (DESIGN-CONTRACT "Block set v2 and the spacing table"). **Finding:** ~~the icon set has no Hugging Face
   logo and the app bundles none, so `huggingface` draws the globe, as the website's does, until the owner
-  supplies the logo's file.
+  supplies the logo's file~~ Hugging Face's own logo since Round 21's close (the owner's "F3. logo, i said
+  logo.", 2026-11-04; below).
 - **S1-B1** (the setup example, amendment 5; the owner's build 34 F2): a `text` field's `example` is its
   box's placeholder (DESIGN-CONTRACT "Setup/configure"). **The session's default:** it takes a required
   field's "Required" too, as the website's placeholder is the example whatever the field.
@@ -3040,9 +3041,10 @@ same items in its own lane, with the same words.
   sends it again; ~~a lost answer reads the session, "Your account is still here"~~ until Round 21
   stage 1. Parity: the website's lane makes the same change.
 - **S1-14** (export in parts; backend §12.1 #181): Settings › Data's line and a button for each part
-  (DESIGN-CONTRACT "Mutations", Data export). **Finding:** the ready line "Ready. The file holds the whole
+  (DESIGN-CONTRACT "Mutations", Data export). **Finding:** ~~the ready line "Ready. The file holds the whole
   workspace." and the failure `too_large`'s "The workspace is larger than one export file may be." still
-  speak of one file; no word for several is listed, so they stay until the owner words them.
+  speak of one file; no word for several is listed, so they stay until the owner words them~~ worded by the
+  owner's "F2. approve plus yes to files" (2026-11-04): "the export" ("Round 21's close", below).
 - **S1-9** (only owners and admins change a flow; backend §12.1 #180): a member's Add, Set up, Turn on,
   Pause, Archive flow and Unarchive read-only with the line, and the refusal's words (DESIGN-CONTRACT
   "Flows/add", "Setup/configure", "Flows/detail"). **The session's default:** on Add the line is drawn
@@ -3110,7 +3112,9 @@ bites and the findings. Parity: the website builds the same items in its own lan
   a document"). **Findings:** (1) the platform lets any member read the list (`listWorkspaceDocuments`),
   but Organization draws its sections only for an owner or admin of an organization, where the spec puts
   it, so a member — and a personal workspace's owner, who can accept for a health flow too — has no place
-  that lists them.
+  that lists them. Settled by the owner, 2026-11-04: "documents is owners and admins" — the list stays where
+  it is; one document's screen now checks the same (Round 21's close, below). The platform still answers any
+  member: a backend finding (below).
 - **D1, Connect your EHR** (backend ADR-0050; the owner's item 1 of 2026-11-03): Connections' key form opens
   for `smart-backend`, with a vendor picker only for two or more `vendors`; the row says the clinic's host
   (DESIGN-CONTRACT "Settings › Connections"). **Findings:** (1) ~~two of the spec's three refusal lines
@@ -3256,3 +3260,87 @@ which `--fix` left because the lockfile's 5.6.2 already met it (the lockfile sti
   view reads `bbWidth`/`bbHeight` only for an Svg nested in a group (iOS `RNSVGGroup.mm:125-126`) or one
   with a viewBox nested in another (Android `SvgView.java:306-313`); the glow is neither. No other Svg in
   the app is absolutely placed without a size. NOT OBSERVED on a device. Bite: before the re-pin those 2 entries fail (2 failed of 90); after it, 90 pass.
+
+## Round 21's close: the app's small pull request (2026-11-05)
+
+The owner's decisions it carries (2026-11-04, verbatim): "F2. approve plus yes to files", "F3. logo, i said logo.
+documents is owners and admins."
+- **A: the kit's own test as snoopy-backend fixed it (§12.1 #342).** `scripts/kit/kit.test.mjs` byte for byte
+  from snoopy-backend `6a90c9e` (§12.1 #342; sha256
+  `a8bd91f08d45ed2a8860a12ad45414699343ecc9a13055e5dda36e4fb958f477`); `node --test` 104 of 104.
+- **B: "the export", one file or several (the owner's "F2. approve plus yes to files").** Since §12.1 #181 (S1-14)
+  a complete export comes as one file or several, so Settings › Data's four lines that spoke of one file say
+  "the export", a noun the screen already shows: `too_large` "The workspace is larger than one export file may
+  be." → "The workspace is larger than one export may be."; ready "Ready. The file holds the whole workspace." →
+  "Ready. The export holds the whole workspace."; partial "…could not be read, and the file says which." →
+  "…could not be read, and the export says which."; expired "That file has been removed. Export again for a new
+  one." → "That export has been removed. Export again for a new one." (DESIGN-CONTRACT "Mutations", Data
+  export; S1-14 above). Unchanged: `COMPLETE_EXPORT_INTRO`, `downloadFileLabel`, "The file could not be saved.",
+  "The link to the file cannot be used." and the summary's JSON words. Parity: the website's lane makes the same
+  change. Bite: each old line put back in turn — `too_large`, partial or expired: the new test in
+  `data-support-screens` fails (1 failed of 14); ready: 6 failed of 14 (the new test and the five that wait for
+  that line); restored, 14 pass.
+- **C: Hugging Face's own logo in place of the globe (the owner's "F3. logo, i said logo.").** A links button
+  whose `brand` is `huggingface` draws Hugging Face's official monochrome logo (`components/blocks/hugging-face-logo.tsx`,
+  in `BRAND_ICONS` beside the icon set's LinkedIn, GitHub and X; DESIGN-CONTRACT "Block set v2 and the spacing
+  table"; S1-G2 above). The file, from Hugging Face's brand assets (revision
+  `233827f481bf0f0f413795f1f3cd1b131f77e55a`, last modified 2026-03-11):
+  https://huggingface.co/datasets/huggingface/brand-assets/resolve/233827f481bf0f0f413795f1f3cd1b131f77e55a/hf-logo-monochrome.svg,
+  7,890 bytes, sha256 `87ac947dc4f0a9146fcd42aad52b657909bef9860eb284c651a6690e935e0595` (the dataset's own
+  LFS oid), kept byte for byte as `assets/vendors/hf-logo-monochrome.svg`. https://huggingface.co/brand links
+  it: "Download the official Hugging Face brand assets to use in your projects."; neither page states a
+  licence or trademark terms. Why the monochrome file: the block's other marks are the icon set's, each drawn
+  by `PillButton` in the button's text colour, and the app's own brand glyphs are one colour too
+  (`ProviderGlyph`), so the logo's five paths are the file's, unchanged and in order (read out of the file by
+  a script), each filled with the colour and drawn at the size PillButton passes, in place of the file's
+  black. The globe stays for `site`, none and any other brand. Parity: the website's lane draws the same file
+  the same way. Tests: `vendor-logos` holds the file's sha256 and the component's paths to the file's (`d`,
+  and `evenodd` where the file has it, at 20 in the colour given); `blocks-render` its mark. Bites (of 38 in
+  the two suites): `huggingface` out of `BRAND_ICONS`, `blocks-render`'s links test fails (1 failed); one
+  character of the third path's `d` changed, `vendor-logos`' paths test (1 failed); one byte of the file
+  changed, its sha256 test (1 failed); restored, 38 pass. **Not observed:** on a device or a simulator.
+- **D: one document's screen for owners and admins only (the owner's "documents is owners and admins",
+  2026-11-04).** Organization already read and drew DOCUMENTS only for an owner or admin of the active
+  organization (`app/(tabs)/settings/organization.tsx`, `administers`), as the website's Organization page and
+  document page; one document's screen (`app/(tabs)/settings/documents.tsx`) read and drew the signed copy
+  for anyone signed in who reached it — a deep link `snoopymobile://settings/documents?document=<id>` — and
+  its test drew it for a member. It now reads the workspaces first, as Organization does, and unless the
+  active workspace is an organization whose role is owner or admin it is the unavailable state it already
+  drew, the copy never read (DESIGN-CONTRACT "Organization › a document"; C3's finding (1) above). Organization's
+  DOCUMENTS list is unchanged. Tests (`organization-documents`): the two existing tests route the workspace
+  list and render as an admin and an owner; a new one, a member of the organization and a personal
+  workspace's owner: unavailable, the copy never read. Bite: the check removed, the member case reads and
+  draws the copy (1 failed of 6); restored, 6 pass. The press-pattern suites that open this screen pass
+  unchanged. **Backend finding (for a `snoopy-backend` session to file; CLAUDE.md rule 1):**
+  `GET /v1/workspaces/{id}/documents` and `…/documents/{documentId}` admit any member
+  (`snoopy-backend apps/api/src/modules/access/agreement-routes.ts:24-25`,
+  `snoopy-backend apps/access/src/agreement-routes.ts:29-30`,
+  `snoopy-backend apps/access/src/postgres-agreements.ts:308-314, :325-332`: membership only), where the
+  owner's rule is owners and admins.
+- **E1: `release:ios --local` refuses a CocoaPods that prints no version (2026-11-04).** That day
+  `npm run release:ios -- --local --dry-run` printed "CocoaPods ," and passed: only `command -v pod` was
+  checked and `pod --version` only echoed; the real build then stopped before building, CocoaPods saying
+  the Xcode licence was not agreed. `scripts/release-ios.sh` now reads `pod --version` once, keeps its last
+  line, and refuses "--local needs a working CocoaPods (pod --version gave no version number)" unless that is
+  a version number; the toolchain line prints it (README "Verification"). Test (`release-and-ci-guards`): a
+  `pod` that fails with the licence message, exits 0 with nothing, prints an empty line or "not-a-version" is
+  refused before `DRY RUN`; one that prints a warning, then 1.16.2, passes. Bite: the new lines removed, the
+  licence case reaches `DRY RUN` with "CocoaPods ," (1 failed of 26); restored, 26 pass.
+- **TestFlight 37** (2026-11-04): build 37 from `main` `96b1dd9` (#94, Expo SDK 55), built in EAS's cloud
+  (`npm run release:ios`; EAS build `5916eb64-2fab-4547-b60b-1318b535c0f0`, Xcode 26.2, Expo's default for SDK
+  55), entitlements checked (`ENTITLEMENTS_OK`), submission `9a0df543-e415-45dc-ad4b-b52326474aba` FINISHED
+  2026-11-04 21:53Z. App Store Connect, read through its API: VALID, and internal testing `IN_BETA_TESTING` by
+  22:15Z, in the app's one TestFlight group (below) with no console step.
+- **The local build on this Mac's Xcode 27.2** (2026-11-04): `npm run release:ios -- --local` failed at
+  archive — Xcode 27.2 supports deployment targets 15.0 to 27.2, and two pods declare older ones:
+  RNSVG-RNSVGFilters `IPHONEOS_DEPLOYMENT_TARGET` 12.4 and SDWebImage 9.0. Nothing was submitted. Build 37
+  was built in EAS's cloud (Xcode 26.2, Expo's default for SDK 55; TestFlight 37 above), and these two pods are
+  re-checked at each SDK step.
+  No Podfile or config-plugin change is made for it: not approved.
+- Its first `--local` attempt that day stopped before building on CocoaPods' unaccepted Xcode licence, after a
+  dry run that printed "CocoaPods ," and passed: item E1 above.
+- **E3: the app's one TestFlight group needs no console step.** Read through the App Store Connect API,
+  2026-11-04 22:15Z: the app has one TestFlight group, internal, "Team (Expo)", with access to all builds and
+  one tester, the owner; build 37 reached `IN_BETA_TESTING` with no step. The testflight skill
+  (`.claude/skills/testflight/SKILL.md`, steps 4 and 5 and its Output) says so: a VALID build reaches the owner
+  by itself, and the What to Test note is optional (CLAUDE.md "A TestFlight build").
