@@ -53,7 +53,8 @@ export type WorkspaceDocumentCopy = Schema['WorkspaceDocumentCopy'];
 
 /**
  * The workspace's signed documents (C3, the organization's Documents list):
- * newest first, at most 50, in one read when the screen opens — any member.
+ * newest first, at most 50, in one read when the screen opens. Who may read
+ * it: README "Runtime architecture".
  */
 export function readWorkspaceDocuments(workspaceId: string): Promise<WorkspaceDocument[]> {
   return platformOperation(`/v1/workspaces/${workspaceId}/documents`, ({ platform }, signal) =>
