@@ -34,6 +34,14 @@ base to the deployment's exact strings.
 The iOS deployment target is 17.4 because that is the first version whose
 `ASWebAuthenticationSession` can match an HTTPS callback by associated host and
 path; no supported build can fall back to scheme-only matching.
+The JavaScript engine is the legacy Hermes, not SDK 56's default Hermes v1,
+whose memory bug with Reanimated and Worklets Expo fixes in SDK 57: `app.json`'s
+`expo-build-properties` sets `useHermesV1: false` and, as that plugin requires
+for it, `buildReactNativeFromSource: true` (both platforms); `package.json`
+`overrides` pins `hermes-compiler` 0.15.0, the legacy compiler the plugin asks
+for; and `babel.config.js` gives Expo's Babel preset its `hermes-v0` profile,
+since that compiler cannot read private class members. SDK 57 removes all four
+(DESIGN-GAPS "Round E step 2").
 
 ## Verification
 

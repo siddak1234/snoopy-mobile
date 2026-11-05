@@ -16,7 +16,7 @@
 - **view**: `lib/view/**` → [DESIGN-GAPS.md](../DESIGN-GAPS.md)
 - **content**: `lib/content/**` → [DESIGN-CONTRACT.md](../DESIGN-CONTRACT.md), [DESIGN-GAPS.md](../DESIGN-GAPS.md)
 - **platform**: `lib/platform/**` → [README.md](../README.md), [lib/platform/CLAUDE.md](../lib/platform/CLAUDE.md)
-- **tooling**: `scripts/**`, `.github/**`, `.githooks/**`, `app.config.js`, `app.json`, `eas.json` → [README.md](../README.md)
+- **tooling**: `scripts/**`, `.github/**`, `.githooks/**`, `app.config.js`, `app.json`, `babel.config.js`, `eas.json` → [README.md](../README.md)
 - **claude**: `.claude/**` → [CLAUDE.md](../CLAUDE.md)
 
 ## Folders

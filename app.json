@@ -55,6 +55,8 @@
       [
         "expo-build-properties",
         {
+          "useHermesV1": false,
+          "buildReactNativeFromSource": true,
           "ios": {
             "deploymentTarget": "17.4"
           }

@@ -3438,3 +3438,36 @@ E's research for this step (its sources S1–S19 and an exposure read at 1d734a4
   React Native 0.85 moved its Jest mocks into `@react-native/jest-preset` (its 0.85 notes), so the fontScale-2
   mock the setup overrides is now `@react-native/jest-preset/jest/mocks/NativeModules.js:41,47`; the override
   still applies (`accessibility-text-size` passes).
+- **Hermes v1 off (the decision taken before the build, 2026-11-05).** S1: "importing `react-native-worklets` or
+  `react-native-reanimated` can increase your app's memory usage drastically, due to a known bug in Hermes v1" and
+  "SDK 57 resolves the regression"; the app imports Reanimated (`app/_layout.tsx`). S1 calls Hermes v1 "the
+  default", the v56 build-properties page said "Default: `false`", so the decision was an explicit
+  `useHermesV1: false`, right either way, for SDK 57's step to remove. Read in node_modules after the install:
+  expo-build-properties 56.0.27 documents "@default true" (`build/pluginConfig.d.ts:25-36`; its CHANGELOG 56.0.15
+  corrected the page), and expo-doctor said "This project uses Hermes V1 with expo@56.0.24, which is affected by
+  a known memory regression". The key is top-level, for both platforms, or per platform
+  (`resolveConfigValue`); the plugin writes `expo.useHermesV1` to iOS's Podfile properties and `hermesV1Enabled`
+  to Android's Gradle properties (`build/ios.js:39-42`, `build/android.js:107-110`). Turning it off took four
+  changes, three of which the plugin and the bundle demand, none named by the decision:
+  1. `app.json`: `useHermesV1: false`.
+  2. `app.json`: `buildReactNativeFromSource: true`, which the plugin requires for it on each platform
+     (`build/pluginConfig.js:325-334`, "`useHermesV1`: false requires `buildReactNativeFromSource` to be `true`");
+     its own words: "Turning this on will significantly increase the build times."
+  3. `package.json` `overrides`: `hermes-compiler` 0.15.0, the legacy compiler the plugin asks for
+     (`build/pluginConfig.js:314-323`: "requires setting the hermes-compiler version to 0.15.0 through
+     resolutions"); npm places it under `node_modules/react-native/`, where the plugin and the export look for it
+     (`@expo/metro-config/build/serializer/exportHermes.js:18-19`); the lockfile's one other change.
+  4. `babel.config.js` (new): Expo's Babel preset gives every Hermes bundle its Hermes v1 syntax set
+     (babel-preset-expo 56.0.21 `build/index.js:54-56, 81-91`), and the legacy compiler stopped `export:ios` with
+     "private properties are not supported" (exit 2); the preset's `hermes-v0` profile (its set for the legacy
+     engine, `build/configs/hermes-v0.js`, and Jest's set already, `build/index.js:92-97`) compiles both exports
+     (Hermes bytecode version 96, exit 0). `docs/docs-map.json` maps it with the tooling (README).
+  expo-doctor then passes 22 of 22. Test (`app-config`, a new one): the plugin entry, the override and the Babel
+  profile, the plugin applied to this project (its own hermes-compiler check), and its Podfile and Gradle
+  properties read through Expo's mod compiler (`expo.useHermesV1` "false", `ios.buildReactNativeFromSource`
+  "true", `hermesV1Enabled` "false"). Bites (of 16): hermes-compiler read as 250829098.0.10, the plugin throws
+  (1 failed); `useHermesV1` taken out of `app.json`, 2 failed (this test and the 17.4 one, which holds the whole
+  entry); `babel.config.js` moved away, 1 failed, and `export:ios` fails as above; restored, 16 pass.
+  **Not observed:** a native build. React Native built from source with the legacy engine is unproved on EAS's
+  Xcode 26.4 image, and how long it takes there is unmeasured. The whole of it is this one commit: reverting it
+  leaves SDK 56 on Hermes v1, as expo-doctor's check then says.
