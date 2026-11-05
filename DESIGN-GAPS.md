@@ -3323,3 +3323,15 @@ documents is owners and admins."
   `pod` that fails with the licence message, exits 0 with nothing, prints an empty line or "not-a-version" is
   refused before `DRY RUN`; one that prints a warning, then 1.16.2, passes. Bite: the new lines removed, the
   licence case reaches `DRY RUN` with "CocoaPods ," (1 failed of 26); restored, 26 pass.
+- **TestFlight 37** (2026-11-04): build 37 from `main` `96b1dd9` (#94, Expo SDK 55), built in EAS's cloud
+  (`npm run release:ios`; EAS build `5916eb64-2fab-4547-b60b-1318b535c0f0`, Xcode 26.2, Expo's default for SDK
+  55), entitlements checked (`ENTITLEMENTS_OK`), submission `9a0df543-e415-45dc-ad4b-b52326474aba` FINISHED
+  2026-11-04 21:53Z. App Store Connect, read through its API: VALID, and internal testing `IN_BETA_TESTING` by
+  22:15Z, in the app's one TestFlight group (below) with no console step.
+- **The local build on this Mac's Xcode 27.2** (2026-11-04): `npm run release:ios -- --local` failed at
+  archive — Xcode 27.2 supports deployment targets 15.0 to 27.2, and two pods declare older ones:
+  RNSVG-RNSVGFilters `IPHONEOS_DEPLOYMENT_TARGET` 12.4 and SDWebImage 9.0. Nothing was submitted. So builds go
+  to EAS's cloud (Xcode 26.2, Expo's default for SDK 55), and these two pods are re-checked at each SDK step.
+  No Podfile or config-plugin change is made for it: not approved.
+- Its first `--local` attempt that day stopped before building on CocoaPods' unaccepted Xcode licence, after a
+  dry run that printed "CocoaPods ," and passed: item E1 above.
