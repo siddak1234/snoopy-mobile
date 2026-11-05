@@ -11,6 +11,18 @@ module.exports = defineConfig([
     ignores: ['dist/*', '.claude/**', 'scripts/kit/**'],
   },
   {
+    // Expo SDK 56's eslint-config-expo spreads eslint-plugin-react-hooks 7's recommended
+    // rules (its flat/utils/react.js:27), which add the React Compiler's checks as errors;
+    // 25 places written before them fail these four. They warn until that code is changed
+    // on its own (DESIGN-GAPS "Round E step 2").
+    rules: {
+      'react-hooks/purity': 'warn',
+      'react-hooks/refs': 'warn',
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/static-components': 'warn',
+    },
+  },
+  {
     files: ['__tests__/**', 'test/**'],
     languageOptions: {
       globals: {

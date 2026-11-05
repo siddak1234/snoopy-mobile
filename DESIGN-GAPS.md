@@ -3501,3 +3501,10 @@ E's research for this step (its sources S1–S19 and an exposure read at 1d734a4
   testflight skill say so. Tests (`release-and-ci-guards`): 26.3, 26.2, 26.1.1, a bare 26 and an unreadable
   version refused; 27.0 and 27.2 refused; 26.4 and 26.10 pass; the CocoaPods cases run on 26.4. Bite: the
   script as it was (26.2, no cap), the two refusal tests fail (2 failed of 27); restored, 27 pass.
+- **Lint: four new React Compiler rules warn.** eslint-config-expo 56.0.4 asks for eslint-plugin-react-hooks
+  ^7.0.0 (5.2.0 on `main`) and spreads its recommended rules (its flat/utils/react.js:27), which in 7.1.1 add the
+  React Compiler's checks as errors: `npm run lint` failed with 25 errors in 16 files written before them,
+  `react-hooks/refs` 11, `set-state-in-effect` 10, `purity` 2 and `static-components` 2 (the app's own code;
+  nothing this upgrade changed). `eslint.config.js` makes those four warn, so lint passes (0 errors, 25
+  warnings) and each place stays named in every run. **Open:** changing those 25 places is a change of its own,
+  not this upgrade's. Bite: without the block, `npm run lint` exits 1 with the 25 errors; with it, exit 0.
