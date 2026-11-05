@@ -168,7 +168,13 @@ SDK 55 upgrade's, which is no visual change and which the owner authorised on
 2026-11-04 ("A1. approve"): the 2 GlowBackground entries (both palettes), whose `RNSVGSvgView`
 loses `bbWidth`/`bbHeight` and the 100% size react-native-svg gave an
 absolutely placed Svg until 15.13 (its #2752), host props only ("Round E step
-1: Expo SDK 54 → 55").
+1: Expo SDK 54 → 55") — and the Expo SDK 55 → 57 upgrade's, also no visual
+change, which the owner approved on 2026-11-05 ("Approve the 10 updates"): 6
+Nocturne entries (NocToggle on and off and Skeleton, both palettes) and 4 screen
+states (ScreenLoading and ScreenLoading/tiles, both palettes), each updated by
+its own test name, a removed `nativeID` on an Animated view only, which
+Reanimated 4.3 and later set outside Jest alone ("Round E step 2: Expo SDK 55 →
+57").
 
 CI runs lint, typecheck, Jest, all architecture/dependency gates (the docs
 checks among them, on the PR's whole range: `fetch-depth: 0` and

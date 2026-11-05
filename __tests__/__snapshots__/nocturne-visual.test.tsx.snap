@@ -1843,7 +1843,6 @@ exports[`Nocturne set — dark palette NocToggle/off renders unchanged 1`] = `
           },
         ]
       }
-      nativeID="2"
       style={
         [
           {
@@ -1895,7 +1894,6 @@ exports[`Nocturne set — dark palette NocToggle/off renders unchanged 1`] = `
             },
           ]
         }
-        nativeID="3"
         style={
           [
             {
@@ -1997,7 +1995,6 @@ exports[`Nocturne set — dark palette NocToggle/on renders unchanged 1`] = `
           },
         ]
       }
-      nativeID="0"
       style={
         [
           {
@@ -2049,7 +2046,6 @@ exports[`Nocturne set — dark palette NocToggle/on renders unchanged 1`] = `
             },
           ]
         }
-        nativeID="1"
         style={
           [
             {
@@ -2792,7 +2788,6 @@ exports[`Nocturne set — dark palette Skeleton renders unchanged 1`] = `
         false,
       ]
     }
-    nativeID="4"
     style={
       [
         {
@@ -4777,7 +4772,6 @@ exports[`Nocturne set — light palette NocToggle/off renders unchanged 1`] = `
           },
         ]
       }
-      nativeID="7"
       style={
         [
           {
@@ -4829,7 +4823,6 @@ exports[`Nocturne set — light palette NocToggle/off renders unchanged 1`] = `
             },
           ]
         }
-        nativeID="8"
         style={
           [
             {
@@ -4931,7 +4924,6 @@ exports[`Nocturne set — light palette NocToggle/on renders unchanged 1`] = `
           },
         ]
       }
-      nativeID="5"
       style={
         [
           {
@@ -4983,7 +4975,6 @@ exports[`Nocturne set — light palette NocToggle/on renders unchanged 1`] = `
             },
           ]
         }
-        nativeID="6"
         style={
           [
             {
@@ -5726,7 +5717,6 @@ exports[`Nocturne set — light palette Skeleton renders unchanged 1`] = `
         false,
       ]
     }
-    nativeID="9"
     style={
       [
         {

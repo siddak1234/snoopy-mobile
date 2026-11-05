@@ -3560,7 +3560,7 @@ the 55 → 57 upgrade helper).
   `nativeID="<n>"` on an Animated view: react-native-reanimated 4.3.1 sets a `nativeID` only outside Jest
   (src/createAnimatedComponent/AnimatedComponent.tsx:511-522), and the entries, made under 4.2.1, carry it. On a
   device the id is still set: no visual change. `connection-row` and `vendor-logos` (react-native-svg 15.15.4)
-  match. **Open:** the owner's approval to re-pin those 10; until then `npm run verify` is red on them.
+  match. The owner approved them ("Approve the 10 updates"): "Snapshots" under "SDK 56 → 57".
 
 ### SDK 56 → 57
 
@@ -3643,6 +3643,16 @@ the 55 → 57 upgrade helper).
     `hooks/use-workflows.tsx:51`; `refs` at `hooks/use-resource.tsx:210` (2).
   The comment over the list points here and names no count. The two lint tests (`release-and-ci-guards`) pass
   as they are (29 of 29), their name now citing eslint-config-expo 57.
+- **Snapshots: the 10 entries updated, by the owner's decision ("Approve the 10 updates").** The whole Jest run
+  at SDK 57 (137 suites): 2,078 passed, 10 failed, the same 10 entries as at 56 (96 of 106 snapshots match),
+  each differing only by removed `nativeID="<n>"` lines (8, 11, 8 and 11 in the 4 screen states; 2, 2, 1, 2, 2 and
+  1 in the 6 Nocturne entries): react-native-reanimated 4.5.1, like 4.3.1, sets a `nativeID` outside Jest
+  alone. Every changed line of each entry was read as such before it was updated; none differs in another way,
+  so nothing goes back to the owner. Each was updated alone: `npx jest <file> -t "^<its full name>$" -u` (each
+  run: 1 passed, the rest skipped, "1 updated"; no bare `-u`). The committed diff is 48 removed lines, every one
+  `nativeID="<n>"`, nothing else (`__tests__/__snapshots__/screen-state.test.tsx.snap` 38,
+  `__tests__/__snapshots__/nocturne-visual.test.tsx.snap` 10). README's re-pin list names them. Both suites
+  then pass whole (`--ci`).
 - **expo-doctor** (`npx expo-doctor@latest`): 21 of 21 checks pass.
 - **`release:ios --local` takes Xcode 26.4 to 26.x for SDK 57**, as for 56 (S23: Xcode "26.4+", iOS "16.4+",
   both SDK 56's). Xcode 27 is still refused: "Apps built on Xcode 27 images, including `latest`, launch on iOS 27
