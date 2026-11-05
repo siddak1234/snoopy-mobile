@@ -379,7 +379,7 @@ describe("lint: react-hooks 7's four React Compiler rules warn only in the files
     read = JSON.parse(run.stdout);
   }, 130_000);
 
-  it('fails a file not on the list on each of the four (an error, as eslint-config-expo 56 sets them)', () => {
+  it('fails a file not on the list on each of the four (an error, as eslint-config-expo 57 sets them)', () => {
     expect(read.fresh).toEqual({ 'app/probe.tsx': every(2), 'components/probe.tsx': every(2) });
   });
 

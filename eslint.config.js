@@ -11,11 +11,12 @@ module.exports = defineConfig([
     ignores: ['dist/*', '.claude/**', 'scripts/kit/**'],
   },
   {
-    // Expo SDK 56's eslint-config-expo spreads eslint-plugin-react-hooks 7's recommended
-    // rules (its flat/utils/react.js:27), which add the React Compiler's checks as errors.
-    // The files below were written before them and break these four; they warn in those
-    // files alone, so every other file still fails on them. A file leaves the list when its
-    // code is changed on its own: `DESIGN-GAPS.md` "Round E step 2", its "Lint" entry.
+    // eslint-config-expo (since SDK 56; 57.0.2's flat/utils/react.js:27) spreads
+    // eslint-plugin-react-hooks 7's recommended rules, which add the React Compiler's checks
+    // as errors. The files below were written before them and break these four; by the
+    // owner's decision they warn in those files alone, so every other file, new code too,
+    // still fails on them. A file leaves the list when its code is changed on its own; the
+    // places are the debt list in `DESIGN-GAPS.md` "Round E step 2", its "Lint" entries.
     files: [
       'app/(auth)/faceid.tsx',
       'app/(tabs)/activity/index.tsx',

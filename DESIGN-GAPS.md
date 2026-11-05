@@ -3515,8 +3515,9 @@ the 55 → 57 upgrade helper).
   them warn in every file), so lint passes (0 errors, 25 warnings), each place stays named in every run, and
   any other file, a new one too, still fails on them. `expo lint` reads only `src`, `app` and `components`
   (@expo/cli 56.1.27's build/src/lint/lintAsync.js:90-94), so the same rules' 6 places in `hooks/` are outside
-  the gate, as every rule there is. **Open:** the owner's decision on the four rules; changing
-  the 25 places is a change of its own, not this upgrade's, and each file leaves the list with it. Tests
+  the gate, as every rule there is. The owner's decision (above, "Warn only in those 16 files") keeps this,
+  recounted at SDK 57 (its debt list is the "Lint" entry under "SDK 56 → 57"); changing the 25 places is a
+  change of its own, not this upgrade's, and each file leaves the list with it. Tests
   (`release-and-ci-guards`, two new, through ESLint's own API): a component breaking each rule fails all four as
   a new file in `app/` and in `components/`, and warns on all four as each listed file; each listed file still
   breaks one. Bites (of 29): the repository-wide block back, both fail; a file that breaks none listed
@@ -3621,6 +3622,27 @@ the 55 → 57 upgrade helper).
   fails to run ("Cannot read properties of undefined (reading 'loadUnpackers')", from
   `NativeWorklets.native.js:303`); put back, it passes. `@react-native/jest-preset` 0.86.3's fontScale-2 mock is
   still at its jest/mocks/NativeModules.js:41,47.
+- **Lint, recounted at SDK 57 (the owner's decision: "Warn only in those 16 files").** eslint-config-expo 57.0.2
+  still spreads eslint-plugin-react-hooks' recommended rules (its flat/utils/react.js:27), and the plugin is
+  still 7.1.1. Read through ESLint's own API with this repository's config and the four as errors in every file,
+  over `expo lint`'s folders (`src`, `app`, `components`; @expo/cli 57.0.32's build/src/lint/lintAsync.js:90-94)
+  and `hooks/`: the same 15 files break them in the gate, 25 places, so `eslint.config.js`' list is unchanged
+  and exact (16 was a miscount). `npm run lint`: 0 errors, 25 warnings. The debt, each place to change in its
+  own pull request:
+  - `react-hooks/refs` (11): `app/(auth)/faceid.tsx:64`, `app/(tabs)/flows/detail.tsx:206`,
+    `app/(tabs)/settings/billing.tsx:157`, `app/index.tsx:141` (3), `components/blocks/image.tsx:89`,
+    `components/dropdown.tsx:257`, `components/files/file-view.tsx:77` and `:129` (2).
+  - `react-hooks/set-state-in-effect` (10): `app/(tabs)/activity/index.tsx:224`, `:228` and `:290`,
+    `app/(tabs)/activity/package.tsx:103`, `components/automations/webhook-address-dialog.tsx:73`,
+    `components/dropdown.tsx:223`, `components/files/file-view.tsx:118`, `components/items/flow-items.tsx:103`,
+    `components/organization/org-domain-only.tsx:41`, `components/settings/workspace-switcher.tsx:63`.
+  - `react-hooks/purity` (2): `app/(tabs)/activity/index.tsx:295`, `app/index.tsx:61`.
+  - `react-hooks/static-components` (2): `components/connection-row.tsx:50`, `components/setup-field.tsx:610`.
+  - Outside the gate, since `expo lint` does not read `hooks/` (6): `set-state-in-effect` at
+    `hooks/use-push-registration.tsx:457`, `hooks/use-scope.tsx:39`, `hooks/use-solutions.tsx:83` and
+    `hooks/use-workflows.tsx:51`; `refs` at `hooks/use-resource.tsx:210` (2).
+  The comment over the list points here and names no count. The two lint tests (`release-and-ci-guards`) pass
+  as they are (29 of 29), their name now citing eslint-config-expo 57.
 - **expo-doctor** (`npx expo-doctor@latest`): 21 of 21 checks pass.
 - **`release:ios --local` takes Xcode 26.4 to 26.x for SDK 57**, as for 56 (S23: Xcode "26.4+", iOS "16.4+",
   both SDK 56's). Xcode 27 is still refused: "Apps built on Xcode 27 images, including `latest`, launch on iOS 27
