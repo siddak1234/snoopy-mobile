@@ -3432,3 +3432,9 @@ E's research for this step (its sources S1–S19 and an exposure read at 1d734a4
   `Function("write")` on iOS (`ios/FileSystemModule.swift:177`) and Android (`FileSystemModule.kt:141`), and its
   own CHANGELOG names only `copy()` and `move()`; there is no `writeSync`. The mocks' `write` stays synchronous;
   SDK 57's step re-reads it.
+- **Jest's setup at worklets 0.8.3 and React Native 0.85.** react-native-worklets 0.8.3 still ships
+  `lib/module/mock` and still needs it: with `test/jest-setup.js`'s mock line taken out, `brand-mark.test.tsx`
+  fails to run with "Native part of Worklets doesn't seem to be initialized", as at 0.7.4; put back, it passes.
+  React Native 0.85 moved its Jest mocks into `@react-native/jest-preset` (its 0.85 notes), so the fontScale-2
+  mock the setup overrides is now `@react-native/jest-preset/jest/mocks/NativeModules.js:41,47`; the override
+  still applies (`accessibility-text-size` passes).

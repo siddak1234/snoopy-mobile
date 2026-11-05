@@ -1,6 +1,7 @@
 // Worklets' own mock (its "Testing with Jest" guide, the recommended way; the
 // JavaScript form): since react-native-worklets 0.7 (SDK 55) the native part
-// is required at import, which Jest does not have.
+// is required at import, which Jest does not have; 0.8.3 (SDK 56) still ships
+// lib/module/mock and still needs it.
 jest.mock('react-native-worklets', () => require('react-native-worklets/lib/module/mock'));
 
 // Reanimated official test setup (noops animations, provides frame stubs).
@@ -87,7 +88,8 @@ jest.mock('expo-crypto', () => {
   };
 });
 
-// React Native's own mock answers a text size of 2 (`node_modules/react-native/jest/mocks/NativeModules.js`),
+// React Native's own mock answers a text size of 2 (since 0.85 in its Jest preset,
+// `node_modules/@react-native/jest-preset/jest/mocks/NativeModules.js:41,47`),
 // past iOS's first accessibility size, where what sits side by side stacks
 // (`useAccessibilityTextSize`). A phone's standard size is 1; a test that wants
 // another sets it (`setTextSize`, `test/render.tsx`).
