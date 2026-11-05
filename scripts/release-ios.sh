@@ -119,7 +119,8 @@ node scripts/verify-deployed-contracts.mjs --release \
 # SDK's minimum (README "Verification"), or a CocoaPods whose `pod --version`
 # gives no version number (an Xcode licence not yet accepted makes it, 2026-11-04)
 # refuses before anything is built, so a dry run with --local proves the
-# toolchain too.
+# toolchain too, but Xcode 27.2 passes the dry run and cannot archive SDK 55's
+# pods (DESIGN-GAPS "Round 21's close").
 if [ "$LOCAL" = 1 ]; then
   xcodebuild -version >/dev/null 2>&1 || refuse "--local needs Xcode (xcodebuild)"
   XCODE=$(xcodebuild -version 2>/dev/null | head -1 | sed -n 's/^Xcode \([0-9][0-9.]*\).*$/\1/p')
