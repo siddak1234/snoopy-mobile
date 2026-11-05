@@ -2997,9 +2997,10 @@ DESIGN-CONTRACT's, each once; this entry keeps the bites and the findings. Parit
 same items in its own lane, with the same words.
 
 - **S1-G2** (the links block, amendment 5): full-width pill buttons, each its brand's mark and its label
-  (DESIGN-CONTRACT "Block set v2 and the spacing table"). **Finding:** the icon set has no Hugging Face
+  (DESIGN-CONTRACT "Block set v2 and the spacing table"). **Finding:** ~~the icon set has no Hugging Face
   logo and the app bundles none, so `huggingface` draws the globe, as the website's does, until the owner
-  supplies the logo's file.
+  supplies the logo's file~~ Hugging Face's own logo since Round 21's close (the owner's "F3. logo, i said
+  logo.", 2026-11-04; below).
 - **S1-B1** (the setup example, amendment 5; the owner's build 34 F2): a `text` field's `example` is its
   box's placeholder (DESIGN-CONTRACT "Setup/configure"). **The session's default:** it takes a required
   field's "Required" too, as the website's placeholder is the example whatever the field.
@@ -3274,3 +3275,22 @@ documents is owners and admins."
   change. Bite: each old line put back in turn — `too_large`, partial or expired: the new test in
   `data-support-screens` fails (1 failed of 14); ready: 6 failed of 14 (the new test and the five that wait for
   that line); restored, 14 pass.
+- **C: Hugging Face's own logo in place of the globe (the owner's "F3. logo, i said logo.").** A links button
+  whose `brand` is `huggingface` draws Hugging Face's official monochrome logo (`components/blocks/hugging-face-logo.tsx`,
+  in `BRAND_ICONS` beside the icon set's LinkedIn, GitHub and X; DESIGN-CONTRACT "Block set v2 and the spacing
+  table"; S1-G2 above). The file, from Hugging Face's brand assets (revision
+  `233827f481bf0f0f413795f1f3cd1b131f77e55a`, last modified 2026-03-11):
+  https://huggingface.co/datasets/huggingface/brand-assets/resolve/233827f481bf0f0f413795f1f3cd1b131f77e55a/hf-logo-monochrome.svg,
+  7,890 bytes, sha256 `87ac947dc4f0a9146fcd42aad52b657909bef9860eb284c651a6690e935e0595` (the dataset's own
+  LFS oid), kept byte for byte as `assets/vendors/hf-logo-monochrome.svg`. https://huggingface.co/brand links
+  it: "Download the official Hugging Face brand assets to use in your projects."; neither page states a
+  licence or trademark terms. Why the monochrome file: the block's other marks are the icon set's, each drawn
+  by `PillButton` in the button's text colour, and the app's own brand glyphs are one colour too
+  (`ProviderGlyph`), so the logo's five paths are the file's, unchanged and in order (read out of the file by
+  a script), each filled with the colour and drawn at the size PillButton passes, in place of the file's
+  black. The globe stays for `site`, none and any other brand. Parity: the website's lane draws the same file
+  the same way. Tests: `vendor-logos` holds the file's sha256 and the component's paths to the file's (`d`,
+  and `evenodd` where the file has it, at 20 in the colour given); `blocks-render` its mark. Bites (of 38 in
+  the two suites): `huggingface` out of `BRAND_ICONS`, `blocks-render`'s links test fails (1 failed); one
+  character of the third path's `d` changed, `vendor-logos`' paths test (1 failed); one byte of the file
+  changed, its sha256 test (1 failed); restored, 38 pass. **Not observed:** on a device or a simulator.

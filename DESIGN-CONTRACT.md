@@ -417,9 +417,11 @@ a padding, a margin or a gap under app/ and components/ (README
   another `inner` apart, each its `brand`'s mark and its label, opening in the
   system browser as a link does — https only, checked again when drawn
   (`httpsLink`); any other address is its label alone, no press. The marks are
-  the icon set's LinkedIn, GitHub and X logos, bundled with the app; `site`,
-  none, or a brand with no logo there (`huggingface`) the globe — as the
-  website's.
+  the icon set's LinkedIn, GitHub and X logos, bundled with the app, and
+  Hugging Face's own monochrome logo (`components/blocks/hugging-face-logo.tsx`,
+  its official file kept as `assets/vendors/hf-logo-monochrome.svg`; the
+  owner's F3, 2026-11-04), each in the button's colour; `site`, none, or a
+  brand with no logo there, the globe — as the website's.
 
 **Search, sort and pages** (`components/blocks/paged.tsx`: `SearchBox`,
 `SortControl`, `Pager`, `ListTools`, `usePaged`; the rules
