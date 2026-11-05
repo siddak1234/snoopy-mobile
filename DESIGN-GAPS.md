@@ -3350,12 +3350,12 @@ documents is owners and admins."
 
 `snoopy-backend` #269 (`round-21/close-platform`, head `0a09931`; ADR-0049 amendment 1, §12.1 #346) answers
 the Documents list and each signed copy only to the workspace's owner or admin, a member 403 `FORBIDDEN`, and
-`docs/openapi.yaml` says so, which moves its sha256 from `a74379a8…` to `f52521cb…`: both clients re-pin after
-it deploys (§12.1 #347). Run against a checkout of `0a09931` (`SNOOPY_BACKEND_ROOT`; once #269 squash-merges
+`snoopy-backend/docs/openapi.yaml` says so, which moves its sha256 from `a74379a8…` to `f52521cb…`: both
+clients re-pin after it deploys (§12.1 #347). Run against a checkout of `0a09931` (`SNOOPY_BACKEND_ROOT`; once #269 squash-merges
 onto `main` `6a90c9e`, main's tree is that commit's), `npm run generate:platform-contracts` changed
 `platform.d.ts` only — its header, a 403 on `listWorkspaceDocuments` and on `readWorkspaceDocument`, and three
-descriptions (the two operations' and `WorkspaceDocument`'s) — and the copy's `docs/openapi.yaml` with its
-`SHA256SUMS` line. `automations.d.ts` and `block-required.ts` stay `aad4e9b4…`, `connections.d.ts`
+descriptions (the two operations' and `WorkspaceDocument`'s) — and the copy,
+`lib/generated/snoopy-backend/docs/openapi.yaml` with its `SHA256SUMS` line. `automations.d.ts` and `block-required.ts` stay `aad4e9b4…`, `connections.d.ts`
 `cb473c25…`, the block fixtures and rules unchanged. `npm run typecheck` passes with no code change: the app
 reads neither for a member (DESIGN-CONTRACT "Organization", "Organization › a document"; Round 21's close, D,
 above), so no screen changes; `lib/platform/agreements.ts` no longer says "any member", and README "Runtime
