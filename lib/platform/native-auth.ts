@@ -98,13 +98,27 @@ export type AuthSessionOutcome =
  */
 const NO_BROWSER_CODES = new Set(['ERR_NO_MATCHING_ACTIVITY', 'PREFERRED_PACKAGE_NOT_FOUND']);
 
+/**
+ * The sheet must CATCH the HTTPS return (`https://app.autom8x.ai/auth/native/callback`), never load it.
+ * Since expo-web-browser 55 (SDK 55), iOS 17.4+'s `ASWebAuthenticationSession` HTTPS callback
+ * (`.https(host:path:)`) is used only when `preferUniversalLinks` is true
+ * (node_modules/expo-web-browser/ios/WebAuthSession.swift: "Only used when preferUniversalLinks is
+ * true"); without it the module falls back to `callbackURLScheme: "https"`, the sheet loads the
+ * callback page itself (the app host answers it 204), and sign-in never returns. TestFlight 37 and 38
+ * shipped that way (the owner, 2026-11-05: "I cant login"). expo-web-browser 15 (SDK 54) used the HTTPS
+ * callback unconditionally. The app has the Associated Domains entitlement the option requires
+ * (`applinks` and `webcredentials` for the redirect host). `native-auth-https-callback.test.ts` reads
+ * the module's Swift so an Expo upgrade that changes this condition fails the tests.
+ */
+export const AUTH_SESSION_OPTIONS = { preferUniversalLinks: true } as const;
+
 export async function openSystemAuthSession(
   url: string,
   returnTo: string,
 ): Promise<AuthSessionOutcome> {
   let result: WebBrowser.WebBrowserAuthSessionResult;
   try {
-    result = await WebBrowser.openAuthSessionAsync(url, returnTo);
+    result = await WebBrowser.openAuthSessionAsync(url, returnTo, AUTH_SESSION_OPTIONS);
   } catch (error) {
     return { type: 'failed', message: describeBrowserFailure(error) };
   }

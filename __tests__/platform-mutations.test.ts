@@ -229,6 +229,7 @@ describe('connection mutations', () => {
     expect(WebBrowser.openAuthSessionAsync).toHaveBeenCalledWith(
       'https://provider.example.test/authorize',
       'https://app.example.test/auth/native/callback',
+      { preferUniversalLinks: true },
     );
     expect(connectionsPost.mock.calls[1][1].body).toEqual({ code: 'sealed-connection-code' });
   });

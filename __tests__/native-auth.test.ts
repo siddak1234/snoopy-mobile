@@ -133,6 +133,16 @@ describe('signInWithProvider', () => {
     expect(openAuthSessionAsync).not.toHaveBeenCalled();
   });
 
+  it('opens the sheet with the HTTPS callback option, so iOS catches the return instead of loading it', async () => {
+    // TestFlight 37 and 38 omitted it: since expo-web-browser 55 the HTTPS callback is used only with
+    // preferUniversalLinks, and the sheet loaded the 204 callback page ("I cant login", 2026-11-05).
+    openAuthSessionAsync.mockResolvedValue({ type: 'dismiss' });
+    await expect(signInWithProvider('google')).resolves.toEqual({ status: 'cancelled' });
+    const [, returnTo, options] = openAuthSessionAsync.mock.calls[0];
+    expect(new URL(returnTo).protocol).toBe('https:');
+    expect(options).toEqual({ preferUniversalLinks: true });
+  });
+
   it('opens the start leg on the API origin when no browser-leg base is configured', async () => {
     // A single-origin deployment — the local Compose stack — has its callback on
     // the API origin, so that is where the transaction cookie must be set.

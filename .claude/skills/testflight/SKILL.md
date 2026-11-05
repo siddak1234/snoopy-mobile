@@ -36,6 +36,10 @@ description: Ship an iOS build of main to TestFlight with npm run release:ios, a
    ```
    Wait until App Store Connect shows the build as processed (VALID). The app has one TestFlight group, internal, "Team (Expo)", with access to all builds and one tester, the owner (read through the App Store Connect API, 2026-11-04 22:15Z), so a VALID build reaches the owner by itself, as build 37 did: there is no console step to add a build to a group. Give the owner the build number.
 5. The What to Test note is optional. When it helps, write it from `templates/what-to-test.md`: plain words, 5 lines or fewer, what changed on screen, not how.
+   **Sign-in is always the first check.** Every build's test list, written or said, starts with: sign out,
+   then sign in with each provider the login screen shows, from a closed app. TestFlight 37 and 38 could not
+   sign in (expo-web-browser 55 changed when iOS catches the HTTPS return; DESIGN-GAPS "Hotfix: sign-in on
+   iOS"), and the list for 38 did not name it. A build whose sign-in fails is not handed on as working.
 6. Record the build in `DESIGN-GAPS.md` under the round's current section: build number, commit, build or ipa path, submission id, date. Facts only.
 7. The build's feedback: when the owner's testers send it, run the backend's `feedback-intake` skill (`/add-dir ../snoopy-backend`, then `/feedback-intake`). It lists every item verbatim first; nothing is built from feedback until the owner approves the list.
 
