@@ -23,10 +23,8 @@ EXPO_PUBLIC_NATIVE_AUTH_BASE_URL=https://www.example.com/api/platform
 
 The callback must exactly match the Edge's `NATIVE_APP_REDIRECT_URIS` entry.
 `app.config.js` derives the iOS associated domains (`applinks`, and `webcredentials`, which is what `ASWebAuthenticationSession`'s HTTPS callback requires) and the Android verified app link
-from this value. The sign-in sheet catches that HTTPS callback only because
-`lib/platform/native-auth.ts` passes `preferUniversalLinks: true`, which expo-web-browser 55 and later
-require; `__tests__/native-auth-https-callback.test.ts` reads the installed module, so an upgrade cannot
-drop it silently (DESIGN-GAPS "Hotfix: sign-in on iOS"). The auth base must share an origin with the Edge's
+from this value. The sheet catches that HTTPS callback only with `preferUniversalLinks: true` (DESIGN-GAPS
+"Hotfix: sign-in on iOS"). The auth base must share an origin with the Edge's
 `AUTH_CALLBACK_URL`: the OAuth transaction lives in a host-only `__Host-`
 cookie, so the start leg and the callback have to land on one host. Unset, the
 browser opens the start leg on the API origin, which is right only for a
@@ -36,7 +34,8 @@ builds missing any of the three — and pins the release redirect URI and auth
 base to the deployment's exact strings.
 The iOS deployment target is 17.4 because that is the first version whose
 `ASWebAuthenticationSession` can match an HTTPS callback by associated host and
-path; no supported build can fall back to scheme-only matching.
+path; with `preferUniversalLinks: true` (`lib/platform/native-auth.ts`) no supported build falls back to
+scheme-only matching, which TestFlight 37 and 38 did without it (DESIGN-GAPS "Hotfix: sign-in on iOS").
 The JavaScript engine is Hermes v1, Expo's default, which nothing here turns
 off: React Native 0.86.2 and later carry the Hermes V1 that fixes its memory
 bug with Reanimated and Worklets (DESIGN-GAPS "Round E step 2").

@@ -134,8 +134,7 @@ describe('signInWithProvider', () => {
   });
 
   it('opens the sheet with the HTTPS callback option, so iOS catches the return instead of loading it', async () => {
-    // TestFlight 37 and 38 omitted it: since expo-web-browser 55 the HTTPS callback is used only with
-    // preferUniversalLinks, and the sheet loaded the 204 callback page ("I cant login", 2026-11-05).
+    // DESIGN-GAPS "Hotfix: sign-in on iOS".
     openAuthSessionAsync.mockResolvedValue({ type: 'dismiss' });
     await expect(signInWithProvider('google')).resolves.toEqual({ status: 'cancelled' });
     const [, returnTo, options] = openAuthSessionAsync.mock.calls[0];

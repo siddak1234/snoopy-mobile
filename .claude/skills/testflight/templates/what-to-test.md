@@ -1,4 +1,4 @@
-Build <number>: <one line, what is new, in plain words>. First, sign out and sign in again.
+Build <number>: <what is new>. First: sign out, close the app, open it, sign in with each button.
 Try: <the screen to open> → <what to tap>.
 Check: <what should happen>.
 Also new: <second change, or delete this line>.
