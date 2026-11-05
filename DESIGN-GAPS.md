@@ -3371,8 +3371,8 @@ E's research for this step (its sources S1–S19 and an exposure read at 1d734a4
   TypeScript aside. One react-native-worklets (0.8.3). @expo/cli and @expo/ws-tunnel stay under `expo/` as
   `expo install` placed them (@expo/cli was there on `main` too).
 - expo-status-bar 56 and expo-web-browser 56: `expo install` asks to add both plugins to the dynamic config; each
-  returns the config unchanged when given no options (expo-status-bar's `plugin/build/withStatusBar.js:63-67`,
-  expo-web-browser's `plugin/build/withWebBrowser.js`), so neither is added, as SDK 55 did for expo-web-browser.
+  returns the config unchanged when given no options (expo-status-bar's plugin/build/withStatusBar.js:63-67,
+  expo-web-browser's plugin/build/withWebBrowser.js), so neither is added, as SDK 55 did for expo-web-browser.
 - The comments that cited SDK 55 sources are re-read at 56: expo-image-manipulator 56.0.26 still adds
   `ImageFixOrientationTransformer` first (`ios/ImageManipulatorModule.swift:28`) and decodes through
   expo-image-loader's Glide on Android (`lib/platform/run-image.ts`); React Native 0.85.3's
@@ -3384,7 +3384,7 @@ E's research for this step (its sources S1–S19 and an exposure read at 1d734a4
   `hooks`, `lib`, `test` and `__tests__` changed 6 imports (its double quotes made the files' single ones):
   `ThemeProvider`, `DarkTheme`, `DefaultTheme` and `Theme` (`app/_layout.tsx`), `NavigationProp`
   (`app/(tabs)/activity/index.tsx`), `getStateFromPath` (`deep-link-query.test.ts`) and `getActionFromState`
-  (`real-router/app-links.test.tsx`) now come from `expo-router/react-navigation`, and `BottomTabBarProps`
+  (`__tests__/real-router/app-links.test.tsx`) now come from `expo-router/react-navigation`, and `BottomTabBarProps`
   (`components/nocturne/tab-bar.tsx`, `test/tab-bar-props.ts`) from `expo-router/js-tabs`. Nothing imports
   `@react-navigation/*` now, so `@react-navigation/bottom-tabs` and `@react-navigation/native` leave
   `package.json`, as expo-doctor's "@react-navigation packages are not installed alongside expo-router" check
@@ -3397,13 +3397,13 @@ E's research for this step (its sources S1–S19 and an exposure read at 1d734a4
 - **React Native 0.85 removed `StyleSheet.absoluteFillObject`** ("Use `StyleSheet.absoluteFill`", its 0.85 notes):
   the stat tile's pressed tint (`components/stat-tile-button.tsx`) spread it, and under 0.85 it spread as nothing,
   so the tint was a box of no size (and `tsc` said so); it spreads `StyleSheet.absoluteFill`, a plain object at
-  0.85.3 (`Libraries/StyleSheet/StyleSheetExports.js:21-29`). No other use. Test (`tab-screens`, the stat tile
+  0.85.3 (Libraries/StyleSheet/StyleSheetExports.js:21-29). No other use. Test (`tab-screens`, the stat tile
   test): the pressed tint is absolute with all four edges 0. Bite: before the change that test fails (1 failed of
   124); after it, 124 pass.
 - **Jest and expo-router 56's `standard-navigation`.** expo-router 56.2.22 imports `standard-navigation` (0.0.5,
   an ES module), which `package.json`'s `transformIgnorePatterns` left untransformed, so every real-router suite
   failed to run ("Cannot use import statement outside a module"). Both Jest projects' patterns are now jest-expo
-  56's own (`jest-expo/jest-preset.js:113-119`: `standard-navigation` in the transformed list, and
+  56's own (jest-expo/jest-preset.js:113-119: `standard-navigation` in the transformed list, and
   `/node_modules/@react-native/babel-preset/` left alone) plus `phosphor-react-native`, as they were jest-expo 55's
   plus it. Bite: `standard-navigation` taken out, the real-router project fails to run (15 of 15 suites); put
   back, 15 suites and 72 tests pass.
@@ -3415,9 +3415,10 @@ E's research for this step (its sources S1–S19 and an exposure read at 1d734a4
   (`test/mocks/expo-file-system.ts`) copies as a promise that settles after the call returns and rejects where it
   threw; `invoice-processing-screens`' own mock copies as a promise too. The mock's header is re-read at
   expo-file-system 56.0.11, expo-modules-core 56.0.27 and expo-modules-jsi 56.0.14: the picker's and the copy's
-  lines moved (`build/Directory.d.ts:16`, `src/Directory.ts:106-109`, `FilePickingHandler.swift:84-89, :91-95`,
-  `FileSystemModule.swift:343-345, :230-232`, `FileSystemExceptions.swift:100-103`, `FilePickingUtils.swift:42-54,
-  62-68`, `NativeFileSystem.types.d.ts:168-172, :182`, `FileSystemPath.swift:69-79`, `src/File.ts:150`), a refused
+  lines moved (its build/Directory.d.ts:16, src/Directory.ts:106-109, src/File.ts:150,
+  build/internal/NativeFileSystem.types.d.ts:168-172 and :182, ios/FilePickingHandler.swift:84-89 and :91-95,
+  FileSystemModule.swift:343-345 and :230-232, FileSystemExceptions.swift:100-103, FilePickingUtils.swift:42-54 and
+  62-68, FileSystemPath.swift:69-79), a refused
   copy now rejects through `AsyncFunctionDefinition.swift:125-127`, and `ios/JSI/EXJSIUtils.mm` is gone: an iOS
   exception reaches JS through expo-modules-jsi (`JavaScriptPromise.swift:107-108`, `JavaScriptError.swift:21-30`),
   still with its `code`, its message now the exception's name, reason and Swift line around the reason
@@ -3428,7 +3429,7 @@ E's research for this step (its sources S1–S19 and an exposure read at 1d734a4
   with it, 14 pass, and the 18 suites that mock expo-file-system pass (439 tests).
 - **`File.write` is still synchronous at 56.0.11**, so Settings › Data's `file.write(json)` is unchanged. S11
   (the root CHANGELOG on the `sdk-56` branch) says "`File.write()` is now asynchronous", but expo-file-system
-  56.0.11 declares `write(...): void` (`build/internal/NativeFileSystem.types.d.ts:155`), defines it with
+  56.0.11 declares `write(...): void` (build/internal/NativeFileSystem.types.d.ts:155), defines it with
   `Function("write")` on iOS (`ios/FileSystemModule.swift:177`) and Android (`FileSystemModule.kt:141`), and its
   own CHANGELOG names only `copy()` and `move()`; there is no `writeSync`. The mocks' `write` stays synchronous;
   SDK 57's step re-reads it.
@@ -3436,31 +3437,31 @@ E's research for this step (its sources S1–S19 and an exposure read at 1d734a4
   `lib/module/mock` and still needs it: with `test/jest-setup.js`'s mock line taken out, `brand-mark.test.tsx`
   fails to run with "Native part of Worklets doesn't seem to be initialized", as at 0.7.4; put back, it passes.
   React Native 0.85 moved its Jest mocks into `@react-native/jest-preset` (its 0.85 notes), so the fontScale-2
-  mock the setup overrides is now `@react-native/jest-preset/jest/mocks/NativeModules.js:41,47`; the override
+  mock the setup overrides is now @react-native/jest-preset/jest/mocks/NativeModules.js:41,47; the override
   still applies (`accessibility-text-size` passes).
 - **Hermes v1 off (the decision taken before the build, 2026-11-05).** S1: "importing `react-native-worklets` or
   `react-native-reanimated` can increase your app's memory usage drastically, due to a known bug in Hermes v1" and
   "SDK 57 resolves the regression"; the app imports Reanimated (`app/_layout.tsx`). S1 calls Hermes v1 "the
   default", the v56 build-properties page said "Default: `false`", so the decision was an explicit
   `useHermesV1: false`, right either way, for SDK 57's step to remove. Read in node_modules after the install:
-  expo-build-properties 56.0.27 documents "@default true" (`build/pluginConfig.d.ts:25-36`; its CHANGELOG 56.0.15
+  expo-build-properties 56.0.27 documents "@default true" (build/pluginConfig.d.ts:25-36; its CHANGELOG 56.0.15
   corrected the page), and expo-doctor said "This project uses Hermes V1 with expo@56.0.24, which is affected by
   a known memory regression". The key is top-level, for both platforms, or per platform
   (`resolveConfigValue`); the plugin writes `expo.useHermesV1` to iOS's Podfile properties and `hermesV1Enabled`
-  to Android's Gradle properties (`build/ios.js:39-42`, `build/android.js:107-110`). Turning it off took four
+  to Android's Gradle properties (build/ios.js:39-42, build/android.js:107-110). Turning it off took four
   changes, three of which the plugin and the bundle demand, none named by the decision:
   1. `app.json`: `useHermesV1: false`.
   2. `app.json`: `buildReactNativeFromSource: true`, which the plugin requires for it on each platform
-     (`build/pluginConfig.js:325-334`, "`useHermesV1`: false requires `buildReactNativeFromSource` to be `true`");
+     (build/pluginConfig.js:325-334, "`useHermesV1`: false requires `buildReactNativeFromSource` to be `true`");
      its own words: "Turning this on will significantly increase the build times."
   3. `package.json` `overrides`: `hermes-compiler` 0.15.0, the legacy compiler the plugin asks for
-     (`build/pluginConfig.js:314-323`: "requires setting the hermes-compiler version to 0.15.0 through
+     (build/pluginConfig.js:314-323: "requires setting the hermes-compiler version to 0.15.0 through
      resolutions"); npm places it under `node_modules/react-native/`, where the plugin and the export look for it
-     (`@expo/metro-config/build/serializer/exportHermes.js:18-19`); the lockfile's one other change.
+     (@expo/metro-config/build/serializer/exportHermes.js:18-19); the lockfile's one other change.
   4. `babel.config.js` (new): Expo's Babel preset gives every Hermes bundle its Hermes v1 syntax set
      (babel-preset-expo 56.0.21 `build/index.js:54-56, 81-91`), and the legacy compiler stopped `export:ios` with
      "private properties are not supported" (exit 2); the preset's `hermes-v0` profile (its set for the legacy
-     engine, `build/configs/hermes-v0.js`, and Jest's set already, `build/index.js:92-97`) compiles both exports
+     engine, build/configs/hermes-v0.js, and Jest's set already, build/index.js:92-97) compiles both exports
      (Hermes bytecode version 96, exit 0). `docs/docs-map.json` maps it with the tooling (README).
   expo-doctor then passes 22 of 22. Test (`app-config`, a new one): the plugin entry, the override and the Babel
   profile, the plugin applied to this project (its own hermes-compiler check), and its Podfile and Gradle
@@ -3473,12 +3474,12 @@ E's research for this step (its sources S1–S19 and an exposure read at 1d734a4
   leaves SDK 56 on Hermes v1, as expo-doctor's check then says.
 - **The deployment target, 17.4, is `expo.ios.deploymentTarget`** (the decision; S16: expo-build-properties'
   own is "Deprecated: use built-in ios.deploymentTarget property instead (SDK 56 and greater)",
-  `build/ios.d.ts:4`). The value is unchanged (README: the first iOS whose `ASWebAuthenticationSession` matches an
+  build/ios.d.ts:4). The value is unchanged (README: the first iOS whose `ASWebAuthenticationSession` matches an
   HTTPS callback). Expo's prebuild writes the built-in one into the app target's `IPHONEOS_DEPLOYMENT_TARGET`
   and the Podfile properties' `ios.deploymentTarget` (@expo/config-plugins 56.0.17
-  `build/ios/DeploymentTarget.js`, among @expo/prebuild-config's default plugins,
-  `build/plugins/withDefaultPlugins.js:127-128`), where the deprecated one wrote the app target and the Podfile
-  (expo-build-properties `build/ios.js:48-58`). The research's open question, read in node_modules: neither
+  build/ios/DeploymentTarget.js, among @expo/prebuild-config's default plugins,
+  build/plugins/withDefaultPlugins.js:127-128), where the deprecated one wrote the app target and the Podfile
+  (expo-build-properties build/ios.js:48-58). The research's open question, read in node_modules: neither
   sets a third-party pod's own `IPHONEOS_DEPLOYMENT_TARGET`. React Native 0.85.3's post-install raises each pod's
   main target to at least 15.1 (`scripts/cocoapods/utils.rb:358-367`, from `react_native_pods.rb:543`), but not
   a pod's resource-bundle targets, and `RNSVG-RNSVGFilters` is one (react-native-svg 15.15.4's

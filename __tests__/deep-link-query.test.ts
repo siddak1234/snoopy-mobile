@@ -6,9 +6,10 @@ import { getStateFromPath } from 'expo-router/react-navigation';
  * `getPathFromState` requires query-string, which requires the decoder as it
  * loads. The one caller of the decoder is `queryString.parse`, in the
  * react-navigation code expo-router 56 carries, its `getStateFromPath` below
- * (`build/react-navigation/core/getStateFromPath.js:499`); the app's links never
- * reach it, since expo-router's linking uses its own parser
- * (`build/getLinkingConfig.js:90-91`), which reads a query with `URL`.
+ * (`node_modules/expo-router/build/react-navigation/core/getStateFromPath.js:499`);
+ * the app's links never reach it, since expo-router's linking uses its own
+ * parser (`node_modules/expo-router/build/getLinkingConfig.js:90-91`), which
+ * reads a query with `URL`.
  *
  * The decoder's advisory (GHSA-vcc3-ghjq-m6fr) is fixed only in 0.5.0, an ES
  * module, and query-string 7 — pinned by expo-router 56 — calls
