@@ -102,8 +102,8 @@ describe('Home dashboard', () => {
     // The quick action, not the overview's figure of the same name (Gate 24 parity, G6).
     await fireEvent.press(within(screen.getByTestId('home-quick-actions')).getByText('Flows'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows');
-    // A flow the catalog cannot start here opens its flow page (F5).
-    await fireEvent.press(screen.getByTestId('home-flow-invoice'));
+    // A flow the catalog cannot start here: its card's Open, to its flow page (F5; builds 37 and 39).
+    await fireEvent.press(screen.getByTestId('home-flow-invoice-open'));
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'invoice' } });
   });
 
@@ -117,8 +117,8 @@ describe('Home dashboard', () => {
     await fireEvent.press(screen.getByLabelText('Notifications'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/(home)/notifications');
     expect(Haptics.selectionAsync).toHaveBeenCalledTimes(2);
-    // ~~See all, a Text's own handler~~ until F5: a flow's row.
-    await fireEvent.press(screen.getByTestId('home-flow-email'));
+    // ~~See all, a Text's own handler~~ until F5: a flow's row; its card's Open since builds 37 and 39.
+    await fireEvent.press(screen.getByTestId('home-flow-email-open'));
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'email' } });
     expect(Haptics.selectionAsync).toHaveBeenCalledTimes(3);
   });
@@ -131,13 +131,12 @@ describe('Rows draw no border under the last one (the owner, build 13 #7)', () =
     return (StyleSheet.flatten(typeof style === 'function' ? style({ pressed: false }) : style) ?? {}).borderBottomWidth;
   };
 
-  it("Home's flows: every row but the last has its divider (YOUR FLOWS since F5; ~~its recent runs~~)", async () => {
+  it("Home's flows: each its own card, no row dividers (~~every row but the last has its divider~~ until builds 37 and 39, item 8)", async () => {
     await renderWithProviders(<HomeScreen />, signedInSession);
     await screen.findByText('YOUR FLOWS');
-    const rows = screen.getAllByTestId(/^home-flow-[a-z]+$/u).map((row) => row.props.testID as string);
-    expect(rows.length).toBeGreaterThan(1);
-    rows.slice(0, -1).forEach((id) => expect(borderOf(id)).toBe(1));
-    expect(borderOf(rows[rows.length - 1]!)).toBeUndefined();
+    const cards = screen.getAllByTestId(/^home-flow-[a-z]+$/u).map((row) => row.props.testID as string);
+    expect(cards.length).toBeGreaterThan(1);
+    cards.forEach((id) => expect(borderOf(id)).toBeUndefined());
   });
 
   it("Activity: in each day's card, every row but the last has its divider", async () => {
@@ -334,8 +333,8 @@ describe('Run detail', () => {
     expect(screen.queryByText('Run #4820')).toBeNull();
   });
 
-  it('routes to the workflow, which is now ITS workflow', async () => {
-    setMockParams({ runId: 'run-1' });
+  it('routes to the workflow, which is now ITS workflow (View flow: the result face of a run that succeeded, builds 37 and 39)', async () => {
+    setMockParams({ runId: 'run-0' });
     await renderWithProviders(<RunDetailScreen />, signedInSession);
     await fireEvent.press(await screen.findByText('View flow'));
     expect(mockRouter.push).toHaveBeenCalled();
@@ -394,23 +393,24 @@ describe('Workflows search (design v4)', () => {
 });
 
 /* flow screens read the flow catalog */
-describe('Workflow scope (18.6.2; every flow says its team since build 11, D4)', () => {
-  it('labels each flow with its team or the whole workspace, once the workspace has a team', async () => {
+describe('Workflow scope (18.6.2; ~~every flow says its team since build 11, D4~~ — its page only since builds 37 and 39)', () => {
+  it('a card says no team and no runs under its description, with a team in the workspace or none (the owner\'s builds 37 items 1 and 4: "Not meta data under")', async () => {
     routePlatform(platformOperation, { '/automations': flowCatalogPayload(), '/projects': projectsPayload('Finance') });
     await renderWithProviders(<FlowsScreen />, signedInSession);
-    expect(await screen.findByText('Whole workspace · 1,284 runs · 1,272 ok · 12 failed')).toBeTruthy();
-  });
+    expect(await screen.findByText('Invoice triage')).toBeTruthy();
+    expect(screen.queryByText('Whole workspace · 1,284 runs · 1,272 ok · 12 failed')).toBeNull();
+    expect(screen.queryByText(/ runs · /u)).toBeNull();
+    await screen.unmount();
+    resetSnapshot();
 
-  it("says Whole workspace where the workspace has no team at all (the owner's build 10 item 7)", async () => {
-    // Until build 11 the label was drawn only once the workspace had a team, so a
-    // workspace with none could not answer "What team is that flow part of?".
     routePlatform(platformOperation, { '/automations': flowCatalogPayload() });
     await renderWithProviders(<FlowsScreen />, signedInSession);
-    expect(await screen.findByText('Whole workspace · 1,284 runs · 1,272 ok · 12 failed')).toBeTruthy();
+    expect(await screen.findByText('Invoice triage')).toBeTruthy();
+    expect(screen.queryByText(/^Whole workspace · /u)).toBeNull();
     expect(screen.queryByText('1,284 runs · 1,272 ok · 12 failed')).toBeNull();
   });
 
-  it("a flow's page says it under the name, and an archived row says it too, with no team in the workspace", async () => {
+  it("a flow's page says it under the name; an archived row is the flow card — its description and \"Archived {date}\", no team line", async () => {
     setMockParams({ flow: 'invoice' });
     routePlatform(platformOperation, { '/automations': flowCatalogPayload() });
     await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
@@ -421,7 +421,13 @@ describe('Workflow scope (18.6.2; every flow says its team since build 11, D4)',
     resetSnapshot();
     withRemovedFlow();
     const archived = await renderWithProviders(<ArchivedFlowsScreen />, signedInSession);
-    expect(await archived.findByText(/^Whole workspace · /u)).toBeTruthy();
+    const row = (await archived.findAllByTestId(/^archived-flow-[^-]+$/u))[0]!;
+    const key = row.props.testID.replace('archived-flow-', '');
+    const card = within(row);
+    expect(card.getByTestId(`archived-flow-${key}-icon`)).toBeTruthy();
+    expect(card.getByTestId(`archived-flow-${key}-description`).props.children).toBeTruthy();
+    expect(card.getByText(/^Archived /u)).toBeTruthy();
+    expect(archived.queryByText(/^Whole workspace · /u)).toBeNull();
   });
 });
 
@@ -1254,14 +1260,14 @@ describe('Cancelling a run (24.4.2)', () => {
     expect(await screen.findByText('This run has already stopped, so there is nothing to cancel.')).toBeTruthy();
   });
 
-  it("draws Cancel run in red and View flow as it was (the owner's build 12 item 5: \"stop\")", async () => {
+  it("draws Cancel run in red (the owner's build 12 item 5: \"stop\"); while it goes, the steps face holds no View flow (builds 37 and 39)", async () => {
     routeRunningRun(() => Promise.resolve({ run: {} }));
     setMockParams({ runId: 'run-1' });
     await renderWithProviders(<RunDetailScreen />, signedInSession);
     const color = (node: { props: { style?: unknown } }) => (StyleSheet.flatten(node.props.style) as { color?: string }).color;
     expect(color(await screen.findByText('Cancel run'))).toBe(nocturneDark.danger);
     expect(screen.getByTestId('phosphor-react-native-stop-circle-regular').props.color).toBe(nocturneDark.danger);
-    expect(color(screen.getByText('View flow'))).toBe(nocturneDark.text);
+    expect(screen.queryByText('View flow')).toBeNull();
     await fireEvent.press(screen.getByText('Cancel run'));
     expect(color(within(await screen.findByTestId('cancel-run-dialog')).getByText('Cancel run'))).toBe(nocturneDark.danger);
     // Keep it running is the neutral way out.

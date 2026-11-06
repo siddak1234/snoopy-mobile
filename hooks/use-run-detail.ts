@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useResource } from '@/hooks/use-resource';
 import { activeWorkspaceId, useSession } from '@/hooks/use-session';
+import { readItem } from '@/lib/platform/automations';
 import { readCatalog } from '@/lib/platform/catalog';
 import { PlatformNotConfiguredError } from '@/lib/platform/problem';
 import {
@@ -63,9 +64,15 @@ import {
  * rule).
  *
  * The run is read as its page body (`readRun`'s `shape=blocks`): the run's page
- * draws its `blocks`, the file page its files, Run details its steps.
+ * draws its `blocks` and, until it succeeds, its steps (`tracker`); the file
+ * page its files; Run details its tiles and facts.
+ *
+ * With `withItem` (the run's page): a run for a job (`run.itemId`) has that
+ * job read once (`readItem`), for its title under the flow's name on the steps
+ * face (builds 37 and 39, plan 3); it settles alone, and a refusal leaves the
+ * line out (`itemTitle` null).
  */
-export function useRunDetail(runId: string | undefined) {
+export function useRunDetail(runId: string | undefined, { withItem = false }: { withItem?: boolean } = {}) {
   const router = useRouter();
   const session = useSession();
   const [openedIn] = useState(() => activeWorkspaceId(session));
@@ -148,6 +155,24 @@ export function useRunDetail(runId: string | undefined) {
   }, [owed, focused, reads, refresh]);
 
   const liveRun = detail.status === 'ready' ? detail.data : null;
+
+  // The run's job, read once for its title (plan 3); none, or refused, leaves the line out.
+  const itemId = withItem ? liveRun?.detail.run.itemId : undefined;
+  const [item, setItem] = useState<{ id: string; title: string } | null>(null);
+  useEffect(() => {
+    if (!itemId || !openedIn) return;
+    let current = true;
+    readItem(openedIn, itemId).then(
+      (answer) => {
+        if (current) setItem({ id: itemId, title: answer.item.title });
+      },
+      () => undefined,
+    );
+    return () => {
+      current = false;
+    };
+  }, [itemId, openedIn]);
+  const itemTitle = item !== null && item.id === itemId ? item.title : null;
   // A denied step says so (P6); Run details' held step reads it.
   const decided = liveRun ? heldDecision(liveRun.detail.run, liveRun.approvals) : null;
   // Every step from the start, each where the run is (spec A7; the session's
@@ -183,5 +208,5 @@ export function useRunDetail(runId: string | undefined) {
       )
     : [];
 
-  return { openedIn, detail, liveRun, decided, tracker };
+  return { openedIn, detail, liveRun, decided, tracker, itemTitle };
 }

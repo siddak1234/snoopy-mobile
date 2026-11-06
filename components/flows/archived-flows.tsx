@@ -4,13 +4,12 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { IconTile } from '@/components/nocturne/icon-tile';
-import { SurfaceCard } from '@/components/nocturne/surface-card';
+import { FlowCard } from '@/components/flows/flow-card';
 import { ScreenEmpty, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { Text } from '@/components/text';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
-import { fonts, iconSize, inset, space, typeScale } from '@/constants/theme';
+import { fonts, space, typeScale } from '@/constants/theme';
 import { busyBody, useWorkspaceResource } from '@/hooks/use-resource';
 import { useScope } from '@/hooks/use-scope';
 import { useTheme } from '@/hooks/use-theme';
@@ -37,8 +36,10 @@ export type ArchivedFlowPath = '/(tabs)/flows/detail' | '/(tabs)/settings/archiv
  * stays here, read-only, with "Unarchive" on its page ("Add it again" until the
  * owner's build 12 item 4) — or, once the workspace holds it again in any team,
  * "Open the live flow" (build 11, D3; any team since item 9). The scope
- * is the one the person is looking at, as everywhere else; every row says its
- * team, or "Whole workspace" (D4).
+ * is the one the person is looking at, as everywhere else. Each row is the one
+ * flow card (`FlowCard`; the owner's builds 37 items 1 and 4): its icon, name
+ * and description, "Archived {date}" where the pill goes (~~its team, or
+ * "Whole workspace", and its runs, D4~~ until builds 37 and 39).
  *
  * Reached from Flows' Archived button and from Settings, each in its own stack: a
  * flow opened from the Settings copy opens in Settings too, so Back returns to
@@ -103,23 +104,19 @@ export function ArchivedFlows({ detailPath }: { detailPath: ArchivedFlowPath }) 
 
       <View style={styles.cardList}>
         {rows.map((def) => (
-          <SurfaceCard
+          <FlowCard
             key={def.key}
-            onPress={() => router.push({ pathname: detailPath, params: { flow: def.key } })}
-            style={styles.flowCard}>
-            <IconTile icon={def.icon} size={42} iconSize={iconSize.row} borderRadius={12} bordered />
-            <View style={styles.flowBody}>
-              <Text style={[styles.flowName, { color: palette.text }]}>{def.name}</Text>
-              {/* Its team, or "Whole workspace", in every scope — a picked
-                  team's too (D4: every archived row; the build 11 review). */}
-              <Text style={[styles.flowRuns, { color: palette.neutral[500] }]}>
-                {def.scope ? `${def.scope} · ${def.runs}` : def.runs}
+            testID={`archived-flow-${def.key}`}
+            icon={def.icon}
+            name={def.name}
+            description={def.desc}
+            right={
+              <Text style={[styles.archived, { color: palette.neutral[400] }]}>
+                {def.removedOn ? `Archived ${def.removedOn}` : 'Archived'}
               </Text>
-            </View>
-            <Text style={[styles.archived, { color: palette.neutral[400] }]}>
-              {def.removedOn ? `Archived ${def.removedOn}` : 'Archived'}
-            </Text>
-          </SurfaceCard>
+            }
+            onPress={() => router.push({ pathname: detailPath, params: { flow: def.key } })}
+          />
         ))}
       </View>
     </Page>
@@ -128,9 +125,5 @@ export function ArchivedFlows({ detailPath }: { detailPath: ArchivedFlowPath }) 
 
 const styles = StyleSheet.create({
   cardList: { gap: space.inner },
-  flowCard: { flexDirection: 'row', alignItems: 'center', gap: space.inner, padding: space.card },
-  flowBody: { flex: 1, minWidth: 0 },
-  flowName: { fontFamily: fonts.medium, fontSize: typeScale.label.fontSize },
-  flowRuns: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize, marginTop: inset.xxs },
   archived: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
 });

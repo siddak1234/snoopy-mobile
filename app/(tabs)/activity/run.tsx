@@ -9,6 +9,7 @@ import { toneColor, type BlockOf } from '@/components/blocks/look';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { FileActions } from '@/components/files/file-actions';
 import { PillButton } from '@/components/nocturne/pill-button';
+import { SectionTitle } from '@/components/nocturne/section-label';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { OpenRow } from '@/components/open-row';
@@ -17,6 +18,7 @@ import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { DecisionButtons } from '@/components/runs/decision-buttons';
 import { ReviewDecisions } from '@/components/runs/review-decisions';
+import { TrackerStep } from '@/components/runs/tracker-step';
 import { Text } from '@/components/text';
 import { fonts, iconSize, inset, space, status, typeScale } from '@/constants/theme';
 import { useApprovalDecision } from '@/hooks/use-approval-decision';
@@ -32,6 +34,7 @@ import {
   DOWNLOAD_PDF_LABEL,
   REVIEW_MEMBER_NOTE,
   RUN_DETAILS_LABEL,
+  STEPS_LABEL,
   VIEW_PACKAGE_LABEL,
   errorTitleFor,
 } from '@/lib/content/screen-states';
@@ -46,29 +49,39 @@ import {
   jobReviewTally,
   offeredDecisions,
   providerNameIn,
-  runLabel,
+  runFace,
   runOrigin,
   runStack,
 } from '@/lib/view/runs';
 
 /**
  * A run's page — the one, in Activity's stack (round 24 P5; the owner's build 23
- * F4, F5; ~~registered in Home's stack and again in Settings'~~ until round 24).
- * Its header: its name — or its title and score — its flow and status. Then its
- * page body as the platform sent it (backend ADR-0048; `readRun`'s
- * `shape=blocks`, `BlockList`), in its flow's `pages.run` order: a "View {file}"
- * row for each file its job uploaded, each opening it on a page of its own
- * (`/(tabs)/activity/run-file`); the result line, toned by its status, and
- * while the job's approval waits, the approval form — Approve and Deny
- * (`DecisionButtons`) to a role it names, to anyone else who can decide; then
- * what the run read — over it, a job whose approval a disconnect expired says
- * so (`expiredByDisconnect`, S1-8), and offers no decision (S1-8b). Its footer: View package, Download PDF and Download Excel
- * while the platform offers the package (`packageAvailable`); the "Run details"
- * row (`OpenRow`), which opens its steps, tiles and facts on a page of their own
- * (`/(tabs)/activity/run-details`); then Cancel run while it goes, and View
- * flow. ~~The result line, Approve and Deny before the file rows; its sections
- * on one card; its documents' cards~~ until Round 21 (ADR-0048: the web's
- * order, each section on its own card, built once by the platform).
+ * F4, F5; ~~registered in Home's stack and again in Settings'~~ until round 24),
+ * with two faces by the run's status (`runFace`; the owner's build 39 item 10
+ * and his words of 2026-11-06: "run starts shows the steps for that run, run
+ * details in the bottom where the run meta data is shown. all automations
+ * should be the same format"):
+ *
+ * - **Steps** — pending, running, held, failed, cancelled: its flow's name, the
+ *   job it is for (`itemTitle`, one `readItem`), its status; then STEPS, Run
+ *   details' rows as they were (`toTracker`, `TrackerStep`), live while it goes;
+ *   then its page body as the platform sent it (`BlockList`: the file rows, the
+ *   result line, a held job's approval form, a batch's children — blocks carry
+ *   no part marker, so the body is drawn whole, a limit DESIGN-GAPS records);
+ *   then Cancel run while it goes, and the Run details row last.
+ * - **Result** — succeeded: its name and score where its automation gave them
+ *   (else its flow's name), its flow and status; the body; View package,
+ *   Download PDF and Download Excel while the platform offers the package
+ *   (`packageAvailable`); View flow; the Run details row last.
+ *
+ * A run that succeeds while its steps are in front turns into its result in
+ * place — nothing is pushed — so Back goes where the run was opened from. Run
+ * details (`/(tabs)/activity/run-details`) holds its tiles and facts, the run's
+ * id among them. ~~"Run {full id}" over the page, and its steps on Run details
+ * alone~~ until builds 37 and 39. The approval form — Approve and Deny
+ * (`DecisionButtons`) to a role it names, to anyone else who can decide — and,
+ * over the body, a job whose approval a disconnect expired (`expiredByDisconnect`,
+ * S1-8; no decision, S1-8b), on either face.
  *
  * A push from another tab passes `returnTo` (`RUN_ORIGIN_TAB`): Back — the
  * circle or the swipe, a `GO_BACK` or `POP`, never re-tapping Activity's tab
@@ -78,10 +91,11 @@ import {
  * under the run, and a run opened by a notification or a link goes back to
  * Activity.
  *
- * A run opened from one of a flow's items is this page in the Flows stack
+ * A run opened from one of a flow's items, or started on Home or a flow page
+ * (`startedRunStack`; builds 37 and 39), is this page in the Flows stack
  * (`app/(tabs)/flows/run.tsx`; the owner's build 31 G1, `RunStack`): Back comes
- * straight to the item, and its View package, Run details and files open in the
- * stack it is in.
+ * straight to the item or the flow page, and its View package, Run details and
+ * files open in the stack it is in.
  */
 export default function RunDetailScreen() {
   const { palette } = useTheme();
@@ -103,7 +117,7 @@ export default function RunDetailScreen() {
     });
   }, [navigation, origin]);
   const session = useSession();
-  const { openedIn, detail, liveRun } = useRunDetail(runId);
+  const { openedIn, detail, liveRun, tracker, itemTitle } = useRunDetail(runId, { withItem: true });
   const decisions = useApprovalDecision(openedIn);
   // A review saved here, said at once (F2) until the approvals read again say it.
   const [savedReview, setSavedReview] = useState<readonly AnsweredDecision[] | null>(null);
@@ -114,17 +128,18 @@ export default function RunDetailScreen() {
 
   const run = liveRun
     ? {
-        // The run by its FULL id (the owner's D4 and AM2); never the request id.
-        title: runLabel(liveRun.detail.run),
+        // Its face (builds 37 and 39, item 10): its steps until it succeeds, then its result.
+        face: runFace(liveRun.detail.run.status),
         // What its automation named it and scored it (backend ADR-0046; Round 19,
-        // plan §5.4): together they head the page, the id staying in its facts (Run details).
+        // plan §5.4): together they head the result, the id staying in its facts (Run details).
         headline:
           liveRun.detail.run.title !== undefined && liveRun.detail.run.score !== undefined
             ? { title: liveRun.detail.run.title, score: String(liveRun.detail.run.score) }
             : null,
         // Its verdict's colour and word (Round 21, the owner's Q5; F1), named by its flow (`useRunDetail`).
         verdict: liveRun.verdict,
-        // Its flow — the website's subheader.
+        // Its flow: the steps face's title, and the result's unless a name and score head it.
+        // ~~"Run {full id}"~~ until builds 37 and 39: the id is Run details' (its facts).
         sub: liveRun.entry?.name ?? liveRun.detail.run.templateId,
         status: statusLabel(liveRun.detail.run.status) as StatusPillLabel,
         // "{a} accepted · {d} denied" once its review is saved (F2): the job's approval's answers.
@@ -304,20 +319,47 @@ export default function RunDetailScreen() {
     );
   };
 
+  const steps = run.face === 'steps';
+  // Its steps, tiles and facts' page, a tap away (F9) — the last row of either face (builds 37 and 39).
+  const detailsRow = (
+    <SurfaceCard>
+      <OpenRow
+        testID="run-open-details"
+        title={RUN_DETAILS_LABEL}
+        onPress={() => router.push({ pathname: `/(tabs)/${stack}/run-details`, params: { runId: run.id } })}
+      />
+    </SurfaceCard>
+  );
+  // It stops the run, which is not resumed: red (the owner's build 12 item 5, "stop").
+  const cancelButton = run.cancellable ? (
+    <PillButton
+      label="Cancel run"
+      variant="danger"
+      fontSize={typeScale.label.fontSize}
+      icon={StopCircle}
+      iconSize={iconSize.button}
+      style={styles.actionBtn}
+      onPress={() => {
+        setCancelError(null);
+        setCancelOpen(true);
+      }}
+    />
+  ) : null;
+
   return (
     <Page testID="run-screen">
-      {/* The run by its full id, which wraps at its hyphens — or, where its automation named and
-          scored it, that name with the score on the right, green for the flow's positive verdict
-          and red for its negative, the verdict's word beside it (Round 21, the owner's Q5; F1;
-          ~~the text colour, no judgement in it~~); its flow and status under it. */}
+      {/* The steps face: its flow's name, the job it is for, its status. The result face: the name its
+          automation gave it with the score on the right, green for the flow's positive verdict and red
+          for its negative, the verdict's word beside it (Round 21, the owner's Q5; F1), its flow and
+          status under it — or, unnamed, its flow's name. ~~"Run {full id}"~~ until builds 37 and 39. */}
       <PageHeader
         testID="run-header"
         onBack={() => router.back()}
-        title={run.headline ? run.headline.title : run.title}
+        title={!steps && run.headline ? run.headline.title : run.sub}
         titleTestID="run-title"
         selectable
         right={
-          run.headline ? (
+          !steps && run.headline ? (
             <View style={styles.scoreLine}>
               <Text
                 testID="run-score"
@@ -329,9 +371,18 @@ export default function RunDetailScreen() {
           ) : null
         }
         below={
-          <View style={styles.subRow}>
-            <Text style={[styles.subtitle, { color: palette.neutral[400] }]}>{run.sub}</Text>
-            <StatusPill label={run.status} />
+          <View>
+            {steps && itemTitle !== null ? (
+              <Text testID="run-job" style={[styles.subtitle, styles.job, { color: palette.neutral[400] }]}>
+                {itemTitle}
+              </Text>
+            ) : null}
+            <View style={styles.subRow}>
+              {!steps && run.headline ? (
+                <Text style={[styles.subtitle, { color: palette.neutral[400] }]}>{run.sub}</Text>
+              ) : null}
+              <StatusPill label={run.status} />
+            </View>
           </View>
         }
       />
@@ -351,6 +402,20 @@ export default function RunDetailScreen() {
         </View>
       ) : null}
 
+      {/* The steps face's STEPS (the owner's build 39 item 10: "When a run starts i want to see the
+          steps 1-x"): Run details' rows as they were (`toTracker`, `TrackerStep`), live while it goes;
+          a failed or cancelled run keeps them, the step that failed saying why. */}
+      {steps ? (
+        <View testID="run-progress">
+          <SectionTitle>{STEPS_LABEL}</SectionTitle>
+          <SurfaceCard>
+            {tracker.map((row, i) => (
+              <TrackerStep key={row.id} row={row} divider={i < tracker.length - 1} />
+            ))}
+          </SurfaceCard>
+        </View>
+      ) : null}
+
       <BlockList
         testID="run-blocks"
         blocks={run.blocks}
@@ -359,13 +424,13 @@ export default function RunDetailScreen() {
 
       {/*
         The A8X run package (round 24 P12; the owner's build 23 F16: "No more
-        download json"; ~~Download JSON~~): once the job has documents and has
-        stopped going (`packageAvailable`, the platform's word for it) — View
-        package opens the PDF on its own page; Download PDF and Download Excel
-        save the file, and Share hands the PDF to the share sheet
+        download json"; ~~Download JSON~~), on the result face: once the job has
+        documents and has stopped going (`packageAvailable`, the platform's word
+        for it) — View package opens the PDF on its own page; Download PDF and
+        Download Excel save the file, and Share hands the PDF to the share sheet
         (`FileActions`, Round 21; the owner's Q7).
       */}
-      {run.packageAvailable ? (
+      {!steps && run.packageAvailable ? (
         <View style={styles.download}>
           <PillButton
             testID="run-view-package"
@@ -387,46 +452,35 @@ export default function RunDetailScreen() {
         </View>
       ) : null}
 
-      {/* Its steps, tiles and facts, a tap away (F9): the standard for every run. */}
-      <SurfaceCard>
-        <OpenRow
-          testID="run-open-details"
-          title={RUN_DETAILS_LABEL}
-          onPress={() => router.push({ pathname: `/(tabs)/${stack}/run-details`, params: { runId: run.id } })}
-        />
-      </SurfaceCard>
-
-      <View style={styles.actions}>
-        {/* It stops the run, which is not resumed: red (the owner's build 12 item 5, "stop"). */}
-        {run.cancellable ? (
-          <PillButton
-            label="Cancel run"
-            variant="danger"
-            fontSize={typeScale.label.fontSize}
-            icon={StopCircle}
-            iconSize={iconSize.button}
-            style={styles.actionBtn}
-            onPress={() => {
-              setCancelError(null);
-              setCancelOpen(true);
-            }}
-          />
-        ) : null}
-        <PillButton
-          label="View flow"
-          variant="secondary"
-          fontSize={typeScale.label.fontSize}
-          icon={FlowArrow}
-          iconSize={iconSize.button}
-          style={styles.actionBtn}
-          onPress={() =>
-            router.push({
-              pathname: '/(tabs)/flows/detail',
-              params: { flow: run.subscriptionId },
-            })
-          }
-        />
-      </View>
+      {steps ? (
+        // The steps face's footer: Cancel run while it goes, then Run details, last.
+        <>
+          {cancelButton ? <View style={styles.actions}>{cancelButton}</View> : null}
+          {detailsRow}
+        </>
+      ) : (
+        // The result face's footer: View flow, then Run details, last.
+        <>
+          <View style={styles.actions}>
+            {cancelButton}
+            <PillButton
+              label="View flow"
+              variant="secondary"
+              fontSize={typeScale.label.fontSize}
+              icon={FlowArrow}
+              iconSize={iconSize.button}
+              style={styles.actionBtn}
+              onPress={() =>
+                router.push({
+                  pathname: '/(tabs)/flows/detail',
+                  params: { flow: run.subscriptionId },
+                })
+              }
+            />
+          </View>
+          {detailsRow}
+        </>
+      )}
 
       <Dialog
         visible={cancelOpen}
@@ -472,6 +526,10 @@ const styles = StyleSheet.create({
   subtitle: {
     fontFamily: fonts.regular,
     fontSize: typeScale.small.fontSize,
+  },
+  // The job's title under the flow's name, over the status (the steps face).
+  job: {
+    marginTop: inset.xs,
   },
   decision: {
     gap: space.inner,

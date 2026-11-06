@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowClockwise,
@@ -49,6 +49,7 @@ import { localMidnight, readApprovals, readRunStats, readSubscriptions } from '@
 import { toStatTiles, type StatTileView } from '@/lib/view/catalog';
 import { homeFailure, yourFlows } from '@/lib/view/home';
 import { administers } from '@/lib/view/roles';
+import { startedRunState } from '@/lib/view/runs';
 import { scopeStats } from '@/lib/view/scope';
 
 /**
@@ -254,6 +255,8 @@ const OUTCOME_FILTER: Record<StatTileView['tone'], 'All' | 'Success' | 'Failed'>
 
 export default function HomeScreen() {
   const router = useRouter();
+  // The tabs, which a run started here switches to Flows with its stack (`startedRunState`).
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { palette } = useTheme();
   const session = useSession();
@@ -504,32 +507,30 @@ export default function HomeScreen() {
         // No flow yet (the owner's build 13 decision 5): the first run, where the flows go.
         <HomeFirstRun />
       ) : flowSections !== null && flowSections.length === 0 ? null : (
-        // YOUR FLOWS (the owner's build 34 F5): the live flows by department, each a tap from its
-        // run's first step; Start run opens the run's page, and Back comes home. Drawn only while a
-        // flow is live in the scope chosen, as the website's; unread, it says so in its place (G6).
-        <View>
-          <SectionTitle>YOUR FLOWS</SectionTitle>
-          {flowSections !== null ? (
-            <YourFlows
-              sections={flowSections}
-              shownWorkspaceId={dashboard.loadedFor}
-              canManage={administers(roleIn(session, dashboard.loadedFor))}
-              onStarted={(runId) =>
-                router.push(
-                  { pathname: '/(tabs)/activity/run', params: { runId, returnTo: 'home' } },
-                  { withAnchor: true },
-                )
-              }
-              onOpen={(flow) => router.push({ pathname: '/(tabs)/flows/detail', params: { flow } })}
-            />
-          ) : (
+        // YOUR FLOWS (the owner's build 34 F5; build 39 item 8): its title with the department
+        // drop-down, the search, then a card per live flow, by department, each with its start form
+        // inside (`YourFlows`). Start run opens the run's page in the Flows tab over its flow's page —
+        // and its job's, for a flow with items (`startedRunState`; ~~in Activity, Back to Home~~ until
+        // builds 37 and 39). Drawn only while a flow is live in the scope chosen, as the website's;
+        // unread, it says so in its place (G6).
+        flowSections !== null ? (
+          <YourFlows
+            sections={flowSections}
+            shownWorkspaceId={dashboard.loadedFor}
+            canManage={administers(roleIn(session, dashboard.loadedFor))}
+            onStarted={(started) => navigation.getParent()?.navigate('flows', { state: startedRunState(started) })}
+            onOpen={(flow) => router.push({ pathname: '/(tabs)/flows/detail', params: { flow } })}
+          />
+        ) : (
+          <View>
+            <SectionTitle>YOUR FLOWS</SectionTitle>
             <SurfaceCard level="sm">
               <Text testID="home-flows-line" style={lineStyle}>
                 {FIGURE_UNAVAILABLE}
               </Text>
             </SurfaceCard>
-          )}
-        </View>
+          </View>
+        )
       )}
 
     </Page>

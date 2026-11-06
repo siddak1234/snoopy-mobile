@@ -430,7 +430,11 @@ export type FlowView = {
   name: string;
   desc: string;
   status: StatusPillLabel;
-  runs: string;
+  /**
+   * Its run counts, for its own page's tiles. ~~`runs`, the cards' "{n} runs ·
+   * {ok} ok · {failed} failed" line~~ until builds 37 and 39 (the owner's items
+   * 1 and 4: no line under a flow card's description).
+   */
   runCount: string;
   okCount: string;
   failCount: string;
@@ -449,8 +453,8 @@ export type FlowView = {
   /**
    * Where it applies — "Whole workspace" or "Team: …" (18.6.2; teams since
    * 24.11.7), as the website labels each subscription. Present when the
-   * caller hands over the team names, which every flow screen does since
-   * build 11 (D4): a flow always says its team, or that it is the workspace's.
+   * caller hands over the team names. Said on the flow's own page, under its
+   * name; ~~on every card (D4)~~ until builds 37 and 39 (`FlowCard`).
    */
   scope?: string;
   /** The team it is scoped to, `null` for the whole workspace (24.9.2). */
@@ -544,11 +548,7 @@ function flowFrom(
       name: sub.name ?? entry?.name ?? sub.templateId,
       desc: entry?.description ?? '',
       status: statusLabel(sub.status) as StatusPillLabel,
-      // A Draft has never run, and the design writes that as words, not zeroes —
-      // "turned on", as its button says it (~~"Not yet published"~~ until 2026-10-14).
-      runs: isDraft
-        ? 'Not turned on yet'
-        : `${count(c?.total ?? 0)} runs · ${count(c?.succeeded ?? 0)} ok · ${count(c?.failed ?? 0)} failed`,
+      // A Draft has never run: its counts are the em dash, never zeroes.
       runCount: isDraft ? EMPTY : count(c?.total ?? 0),
       okCount: isDraft ? EMPTY : count(c?.succeeded ?? 0),
       failCount: isDraft ? EMPTY : count(c?.failed ?? 0),

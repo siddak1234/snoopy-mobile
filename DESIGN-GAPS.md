@@ -3715,3 +3715,85 @@ the 55 → 57 upgrade helper).
 - `__tests__/native-auth.test.ts` asserts the sheet is opened with `{ preferUniversalLinks: true }`; `__tests__/platform-mutations.test.ts`'s OAuth connect expects the same.
 - Bites: with the option removed, the sign-in test and the guard fail (2 of 40); with the installed module given a new switch (`if options.newSwitch, options.preferUniversalLinks,`), the pinned-hash and option checks fail (2 of 4); restored, both pass.
 - The testflight skill: sign-in from a signed-out, closed app is the first check of every build's test list, and the What to Test template's first line says so.
+
+## Builds 37 and 39: the owner's items (2026-11-06)
+
+The owner's TestFlight items of builds 37 and 39, approved by his "complete all … build all items"
+(2026-11-06). Client-only: no new call, no contract change. The rules are DESIGN-CONTRACT's (Home,
+Flows, Flows/add, Flows/archived, Activity/run detail, Activity/run details), each once; this entry keeps
+the items, the defaults and the bites. Parity: the website builds the same in its own lane. Items 6 and
+7 (sign-in) closed with the hotfix above; item 9 (ICD-10 setup "4 Contract and accept") and a batch
+run's step titles are wave 2, after a platform change.
+
+- **Items 1 and 4** (build 37: "Plan was to remove the department accounting within the flow cards.
+  Basically just the title and the short description, that is all." / "Make a standard for flow cards.
+  It should be a reusable block. Icon, short deacription and live. Not meta data under."): one flow card,
+  `components/flows/flow-card.tsx` — the catalog icon, name, description and, in its right slot, the
+  status pill, "Archived {date}" or Add / "Added ✓" — on Flows, Flows › Archived and Settings › Archived
+  (now with its description), Add a flow and Home. ~~"{department} · {runs}"~~ is gone from every card;
+  `FlowView.runs` went with it.
+- **Item 2** (build 37: "When no jobs are present it should show a configure in the home screen.
+  Basically upload a job or maybe a configure button."): Home's card says "No jobs yet." and "Upload job",
+  the flow page's upload card; the job then reads in the card and, ready, is chosen.
+- **Item 3** (build 37: "Did you not properly render for the flows. Look at how it shows up in resume
+  screening"): the cut-off "Choose" pill went with the rows; the job choice and the run form sit inside
+  the flow's card, held at the largest text size.
+- **Item 5** (build 37: "Rather than choose maybe it should come pre selected with the most recent job
+  the user has uploaded for."): the newest ready, unarchived job is chosen (`newestReadyItem`, over
+  `listItems`' newest-first answer), still changeable; a person's own choice stays across re-reads.
+- **Item 8** (build 39: "Rather than drop downs lets make them Individual cards for the home screen
+  flows … Your flows —- on the right hand side department select drop down / Search bar / Department
+  name in sorted order / Quick access cards"): YOUR FLOWS' title with the department drop-down, "Search
+  flows", then each department A–Z over always-open cards; a flow that cannot start here shows "Open".
+- **Item 10** (build 39: "When a run starts i want to see the steps 1-x. I just dont want to see the meta
+  data in the bottom. That should be through the run details button for a separate page"; and 2026-11-06:
+  "run starts shows the steps for that run, run details in the bottom where the run meta data is shown.
+  all automations should be the same format … once done you are taken to the candidates page with the
+  extracted items and score, when selected back you see all candidates and when pressed back again you
+  see all the jobs"): the run page's steps face and result face (`runFace`); Run details holds only the
+  metadata; a run started on Home opens in the Flows tab over its flow's page and its job's
+  (`startedRunState`), one started on a flow page in the Flows stack over it.
+- **Item 11, the app's part** (build 39: "For number when i click or email it should pop up the call or
+  save contact apple card thing"): a list row's text that is exactly one email or one phone number
+  (`lib/view/contact-value.ts`) is a link to Apple's unknown-contact card (`expo-contacts/legacy`
+  `presentFormAsync`, `allowsActions`); on Android or a failure, a sheet — Call, Message or Email, Copy,
+  Cancel (README "Runtime architecture"). The rest of items 11–13 (bold labels, link pills with logos,
+  usernames) is Resume Screening v4's blocks, drawn by the existing list and links renderers.
+
+**The session's defaults** (no fact said otherwise): the department drop-down is a `ScopePill` with the
+"All departments" icon (`Stack`), read aloud "YOUR FLOWS: {department}" so it is not taken for the
+header's "Department: …"; "Open" is a secondary pill; a job being read shows its title and "Reading…" in
+the card; the Flows list stacks `index` under the flow's page, so Back from the flow page is the list; a
+flow page drawn in Settings (an archived flow's live twin) opens its run in Activity with Back to
+Settings (~~`returnTo: 'flows'`~~); the phone rule takes "+…", three digit groups or ten digits whole, 7
+to 15 digits, so "2019 - 2021" and "2019-2021" stay text; the sheet's buttons are `Dialog`'s, stacked;
+the empty contact label is the native default.
+
+**Gaps and limits.** (1) Blocks carry no part marker, so the steps face draws the platform's body whole
+(files rows, the result line or held form, a batch's children), not "the outcome part" alone. (2) A
+succeeded run's steps are drawn on no page (the result face has none, Run details none); Steps done
+still counts them, and the step rules' tests read them through `test/run-tracker.tsx`. (3) The catalog
+sends "Sparkles" (ICD-10 Code Check's manifest) where Phosphor names `Sparkle`: the icon registry maps the
+alias (~~the fallback icon~~). (4) A batch parent's rows fall back to "Step n" until the catalog publishes
+`batch.pipeline` titles (wave 2). (5) Flows and Archived still read `run-stats` and the teams, which no
+card draws now; left for a later round. (6) Whether Apple's card saves a contact without the Contacts
+permission is undocumented (Apple, Expo): checked on a device with this build. (7) No Nocturne snapshot
+changed; no screen snapshot exists for the cards, so none was re-pinned.
+
+Bites (break, red, restore, green), each in its suite:
+- Cards: the description left out (`build28-flows`, `parity-home`, `tab-screens`, `builds37-39`: 5 red);
+  "Archived {date}" as the date alone (`tab-screens`); a "Whole workspace · … runs" line put back under
+  the description (`tab-screens`, `scope-control`, `build28-flows`: 4 red); the `Sparkles` alias removed
+  (`builds37-39`).
+- Home (`parity-home`, `builds37-39`): the department filter ignored (2 red); the departments unsorted;
+  the search case-sensitive (2 red); `NO_MATCHES` emptied; no newest ready job (5 red); the choice not
+  kept; Upload job not opening the card; the card's Cancel not closing it; "Unavailable" as the dash; Open not opening the flow page
+  (`parity-home`, `tab-screens`: 3 red); a flow with items not read on load (owners treated as members);
+  the form outside its card at the largest text size.
+- Run (`real-router/run-faces`): every run on its result face (6 red); never the result face (the turn
+  in place); the job's page left out under a Home run; the flow's page left out under a run without
+  items; the flow page's Start run back in Activity; STEPS put back on Run details; the job's title not
+  read; Approve not reading the run again.
+- Phone and email (`builds37-39`, `app-config`): the email rule removed (4 red); the row not pressable
+  (4 red); the card's actions off; Call sent as `sms:`; Copy of an empty value (2 red); Email as
+  `https:`; Android asking for the card; the plugin's sentence changed.

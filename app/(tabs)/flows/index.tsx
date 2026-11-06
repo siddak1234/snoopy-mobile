@@ -4,16 +4,15 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Archive, FlowArrow, MagnifyingGlass, Plus, Warning } from 'phosphor-react-native';
 
-import { IconTile } from '@/components/nocturne/icon-tile';
+import { FlowCard } from '@/components/flows/flow-card';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionTitle } from '@/components/nocturne/section-label';
 import { StatusPill } from '@/components/nocturne/status-pill';
-import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { SearchBox } from '@/components/blocks/paged';
 import { CircleButton } from '@/components/scope-control';
 import { Text } from '@/components/text';
 import { TitleRow } from '@/components/title-row';
-import { fonts, iconSize, inset, layout, space, status, typeScale } from '@/constants/theme';
+import { fonts, inset, space, status, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ScreenEmpty, ScreenError, ScreenUnavailable, ScreenLoading, ScreenOffline } from '@/components/screen-state';
 import { Page } from '@/components/page';
@@ -54,8 +53,9 @@ const NEW_LABEL = 'New';
  * alone at every width since round 23 (~~its word where it fit~~).
  * Under the search, the flows by department (the owner's build 28 item F1):
  * each department's name over its cards, the departments A–Z, then the whole
- * workspace's, each in the catalog's order (`groupFlows`); each card still says
- * its department.
+ * workspace's, each in the catalog's order (`groupFlows`); each card the one
+ * flow card (`FlowCard`: icon, name, description, status pill; ~~its department
+ * and runs under the description~~ until builds 37 and 39).
  * With no live flow in the workspace the screen is the empty standard,
  * whatever is archived (D6, item 9: "like this when no flows even if archive"),
  * with the way to the archived ones under it when there are any.
@@ -73,10 +73,11 @@ export default function FlowsScreen() {
    *
    * Three reads because each answers a part nothing else can — `Subscription`
    * has identity and status, the catalog has name/description/icon/pipeline, and
-   * `run-stats` has the totals this row's summary line draws. All-time rather
-   * than windowed: the design's line is a lifetime count, so `since` is omitted,
-   * which the endpoint documents as meaning all time. Every read is served from
-   * the shared snapshot where it is fresh (24.9.1).
+   * `run-stats` the totals (all time: `since` omitted). ~~This row's summary
+   * line draws them~~ until builds 37 and 39 (the owner's items 1 and 4: one
+   * flow card, `FlowCard`, no line under its description); the read stays, a
+   * gap recorded in DESIGN-GAPS.md. Every read is served from the shared
+   * snapshot where it is fresh (24.9.1).
    */
   const flows = useWorkspaceResource(async (workspaceId) => {
     const [subs, catalog, stats, projects, removed] = await Promise.all([
@@ -211,22 +212,15 @@ export default function FlowsScreen() {
             {group.flows.map((def) => {
               const key = def.key;
               return (
-                <SurfaceCard
+                <FlowCard
                   key={key}
+                  testID={`flow-card-${key}`}
+                  icon={def.icon}
+                  name={def.name}
+                  description={def.desc}
+                  right={<StatusPill label={statusOf(key, def.status as FlowStatus)} />}
                   onPress={() => router.push({ pathname: '/(tabs)/flows/detail', params: { flow: key } })}
-                  style={styles.flowCard}>
-                  <IconTile icon={def.icon} size={42} iconSize={iconSize.row} borderRadius={12} bordered />
-                  <View style={styles.flowBody}>
-                    <Text style={[styles.flowName, { color: palette.text }]}>{def.name}</Text>
-                    <Text style={[styles.flowDesc, { color: palette.neutral[400] }]}>{def.desc}</Text>
-                    {/* Its team, or "Whole workspace", in every scope — a picked
-                        team's too (D4: every card; the build 11 review). */}
-                    <Text style={[styles.flowRuns, { color: palette.neutral[500] }]}>
-                      {def.scope ? `${def.scope} · ${def.runs}` : def.runs}
-                    </Text>
-                  </View>
-                  <StatusPill label={statusOf(key, def.status as FlowStatus)} />
-                </SurfaceCard>
+                />
               );
             })}
           </View>
@@ -289,30 +283,6 @@ const styles = StyleSheet.create({
   },
   cardList: {
     gap: space.inner,
-  },
-  flowCard: {
-    padding: layout.cardPad,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.inner,
-  },
-  flowBody: {
-    flex: 1,
-    minWidth: 0,
-  },
-  flowName: {
-    fontFamily: fonts.medium,
-    fontSize: typeScale.lead.fontSize,
-  },
-  flowDesc: {
-    fontFamily: fonts.regular,
-    fontSize: typeScale.small.fontSize,
-    marginTop: inset.xxs,
-  },
-  flowRuns: {
-    fontFamily: fonts.regular,
-    fontSize: typeScale.caption.fontSize,
-    marginTop: inset.xs,
   },
   emptyWrap: {
     paddingVertical: space.bottom,

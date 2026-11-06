@@ -9,9 +9,8 @@ import { answerPlatform, flush, launch, pressTab, signedInOnThisPhone } from '@/
  * running item why does the slider take me to home. Shouldnt it be in activity",
  * F5: "This should be in activity right?"). Under the REAL router: a run opened
  * from Home, from Home's or Settings' inbox, or from a push is Activity's page,
- * with the Activity tab selected, and Back returns where it came from. Home
- * opens a run as its Start run does since the owner's build 34 F5 (YOUR FLOWS;
- * ~~a recent run's row~~): `fromHome`, the push it makes with the run it started.
+ * with the Activity tab selected, and Back returns where it came from: `fromHome`,
+ * the push Home's inbox makes (~~Home's Start run~~ until builds 37 and 39).
  */
 
 jest.setTimeout(90_000);
@@ -40,7 +39,12 @@ async function pressBack() {
   await flush(1000);
 }
 
-/** What Home's Start run does with the run it started (YOUR FLOWS, `app/(tabs)/(home)/index.tsx`): its page in Activity, from Home. */
+/**
+ * A run opened from Home's side of the app into Activity, as Home's inbox opens
+ * one (`components/notifications/inbox.tsx`): its page in Activity, from Home.
+ * ~~Home's Start run~~ until builds 37 and 39, which opens the run in Flows
+ * (`startedRunStack`; `run-faces.test.tsx`).
+ */
 async function fromHome(runId = 'run-0') {
   await act(async () =>
     router.push({ pathname: '/(tabs)/activity/run', params: { runId, returnTo: 'home' } }, { withAnchor: true }),
@@ -58,27 +62,6 @@ async function open(testIDOrText: { testID?: string; text?: string }) {
   await flush(1000);
 }
 
-it("a run started from Home opens in Activity, with Activity selected; Back returns to Home, Home selected", async () => {
-  signedInOnThisPhone();
-  answerPlatform();
-  const view = await launch();
-  expect(view.getPathname()).toBe('/');
-
-  await fromHome();
-  expect(view.getSegments()).toEqual(['(tabs)', 'activity', 'run']);
-  expect(view.getSearchParams()).toMatchObject({ runId: 'run-0', returnTo: 'home' });
-  expect(selectedTab()).toBe('Activity');
-  expect(await screen.findByTestId('run-title')).toBeTruthy();
-
-  await pressBack();
-  expect(view.getPathname()).toBe('/');
-  expect(selectedTab()).toBe('Home');
-
-  // The run left Activity's stack: the tab opens Activity itself, not the run.
-  await pressTab('Activity');
-  expect(view.getPathname()).toBe('/activity');
-});
-
 it("a run's Run details opens in Activity's stack with the run; Back returns to the run, and Back again to Home (build 28, F9)", async () => {
   signedInOnThisPhone();
   answerPlatform();
@@ -91,7 +74,9 @@ it("a run's Run details opens in Activity's stack with the run; Back returns to 
   expect(view.getSearchParams()).toMatchObject({ runId: 'run-0' });
   expect(selectedTab()).toBe('Activity');
   expect((await screen.findByTestId('run-details-name')).props.children).toBe('Run run-0');
-  expect(await screen.findByTestId('run-progress')).toBeTruthy();
+  // Only its metadata since builds 37 and 39: its steps are the run page's steps face.
+  expect(screen.queryByTestId('run-progress')).toBeNull();
+  expect(screen.getByTestId('run-fact-Run ID')).toBeTruthy();
 
   // Back to the run, still Home's: the tab does not switch on the way.
   await pressBack();

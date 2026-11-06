@@ -53,6 +53,12 @@
           "photosPermission": false
         }
       ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Autom8x adds a candidate's phone or email to your contacts when you ask."
+        }
+      ],
       "expo-build-properties"
     ],
     "experiments": {

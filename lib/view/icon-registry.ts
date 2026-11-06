@@ -62,6 +62,9 @@ const ICONS: Record<string, Icon> = {
   Receipt,
   SlackLogo,
   Sparkle,
+  // The catalog sends "Sparkles" (ICD-10 Code Check's manifest); Phosphor names
+  // it `Sparkle`. ~~The fallback drawn for it~~ until builds 37 and 39 (plan 1).
+  Sparkles: Sparkle,
   Table,
   Timer,
   Tray,

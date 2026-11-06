@@ -643,6 +643,49 @@ export function runStack(segments: readonly string[]): RunStack {
 }
 
 /**
+ * Where a run started on Home opens (the owner's builds 37 and 39: "once done
+ * you are taken to the candidates page … when selected back you see all
+ * candidates and when pressed back again you see all the jobs"): the Flows tab
+ * with its stack set to the flow list, the flow's page, the job's page for a
+ * run for a job, and the run's page on top — so Back goes run → job → flow
+ * page, or run → flow page. One navigation (the Flows navigator's `state`):
+ * two pushes in turn lose the first while the Flows tab is not yet drawn.
+ * ~~Activity's run page with `returnTo: 'home'`~~ until builds 37 and 39;
+ * Activity, Needs review, notifications, push and links keep Activity's.
+ */
+export function startedRunState(started: { runId: string; subscriptionId: string; itemId?: string }): {
+  routes: (
+    | { name: 'index' }
+    | { name: 'detail'; params: { flow: string } }
+    | { name: 'item'; params: { item: string } }
+    | { name: 'run'; params: { runId: string } }
+  )[];
+} {
+  return {
+    routes: [
+      { name: 'index' },
+      { name: 'detail', params: { flow: started.subscriptionId } },
+      ...(started.itemId ? [{ name: 'item' as const, params: { item: started.itemId } }] : []),
+      { name: 'run', params: { runId: started.runId } },
+    ],
+  };
+}
+
+/** A run page's two faces (builds 37 and 39, item 10): its steps until it succeeds, then its result. */
+export type RunFace = 'steps' | 'result';
+
+/**
+ * Which face a run's page shows (the owner's build 39 item 10: "When a run
+ * starts i want to see the steps 1-x"; 2026-11-06: "run starts shows the steps
+ * for that run, run details in the bottom"): its steps while it is pending,
+ * running or held, and when it failed or was cancelled — the failed step says
+ * where; its result once it succeeded.
+ */
+export function runFace(status: Run['status']): RunFace {
+  return status === 'succeeded' ? 'result' : 'steps';
+}
+
+/**
  * How long a flow page waits, while a run of the flow is pending or running,
  * before it reads its DASHBOARD again (Build 21, spec A6; the session's S30).
  */

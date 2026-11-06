@@ -100,3 +100,10 @@ jest.mock('expo-crypto', () => {
     screen: { ...Dimensions.get('screen'), fontScale: 1 },
   });
 }
+
+// Apple's contact card for a phone number or email in a list row (builds 37
+// and 39, item 11; `components/blocks/contact-text.tsx`): the legacy
+// `presentFormAsync` it calls, and the clipboard its sheet's Copy writes to.
+// Native modules with no implementation under jest; a test reads the calls.
+jest.mock('expo-contacts/legacy', () => ({ presentFormAsync: jest.fn(async () => undefined) }));
+jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn(async () => true) }));
