@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { InlineBoundary } from '@/components/dialog-boundary';
+import { ContractStep } from '@/components/flows/contract-step';
 import { NONE, VendorChoice } from '@/components/flows/vendor-choice';
 import {
   NumberedSectionLabel,
@@ -31,7 +32,6 @@ import { Text } from '@/components/text';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { fonts, space, typeScale, withAlpha } from '@/constants/theme';
-import { useHealthAgreement } from '@/hooks/use-health-agreement';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { roleIn, useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useSolutions } from '@/hooks/use-solutions';
@@ -52,6 +52,14 @@ import {
   fillIn,
   teamLine,
 } from '@/lib/content/screen-states';
+import {
+  acceptHealthDataAgreement,
+  readHealthDataAgreement,
+  readWorkspaceHealthDataAgreement,
+  type HealthDataAgreement,
+  type WorkspaceDocument,
+  type WorkspaceHealthDataAgreement,
+} from '@/lib/platform/agreements';
 import { createSubscription, noneWhenNotFound, readSubscription, updateSubscription } from '@/lib/platform/automations';
 import { readCatalog, readConnectionProviders, readConnections } from '@/lib/platform/catalog';
 import { newIdempotencyKey } from '@/lib/platform/client';
@@ -67,7 +75,13 @@ import {
   toConnectionRow,
   withoutArchived,
 } from '@/lib/view/catalog';
-import { administers } from '@/lib/view/roles';
+import {
+  acceptanceRefusal,
+  contractStep,
+  fillForDisplay,
+  todayUtc,
+} from '@/lib/view/health-agreement';
+import { administers, type WorkspaceRole } from '@/lib/view/roles';
 
 /**
  * Set up — ONE simple page, once, with everything on it (Build 21; the owner's
@@ -90,6 +104,11 @@ import { administers } from '@/lib/view/roles';
  * 2. … its settings, by the manifest's sections, the title and the input only —
  *    **no help line** (the owner's build 20 items 3 and 9).
  *
+ * Then, for a flow that carries health data (its catalog entry's
+ * `healthData`), **Contract and accept** (builds 37 and 39, wave 2: the
+ * owner's item 9; `components/flows/contract-step.tsx`, its states
+ * `contractStep`).
+ *
  * Then one button: **Turn on** for a flow not added, or a draft — it adds the
  * flow and turns it on with everything on the page, in one press — or **Save**
  * for a flow already on or paused, which keeps its status. What it cannot send
@@ -99,7 +118,16 @@ import { administers } from '@/lib/view/roles';
  * §12.1 #180): to a member every choice and setting is read-only, and "Only an
  * owner or admin can change this flow." stands in the button's place
  * (~~a member's first vendor choice on a flow just added, ADR-0043 §2~~).
- * An add refused for the health data agreement: `useHealthAgreement` (C3).
+ * A health flow's Turn on (backend ADR-0049 amendment 2) is disabled until its
+ * section is `accepted`, or the owner's `sign` has the box and both fields;
+ * then one press accepts (`POST …/agreements`, the text's version and sha256,
+ * one key per text read and answers), then adds if needed and turns the flow
+ * on — never accepting twice on a retry. A text changed since it was read (409
+ * `agreement_changed`) is read again and the box asked again; a turn-on refused
+ * `agreement_required` re-reads the section — no agreement screen opens here
+ * (~~an add refused for it opened `useHealthAgreement`'s screen~~ until wave
+ * 2). Save is never gated. The section's reads are owner's and admin's only,
+ * and their failure says "Unavailable" in it, never blanks the page.
  */
 export default function SetupScreen() {
   const { palette } = useTheme();
@@ -128,13 +156,24 @@ export default function SetupScreen() {
   const addUnanswered = useRef(false);
   const updateKey = useRef(newIdempotencyKey('activate'));
   const hasFocused = useRef(false);
-  const healthAgreement = useHealthAgreement('add');
+  // The "Contract and accept" section's own (wave 2): the box, the two fields,
+  // the acceptance this screen made, and its key — new for each text read and
+  // each change, as the agreement screen's.
+  const [authorized, setAuthorized] = useState(false);
+  const [signerName, setSignerName] = useState('');
+  const [signerTitle, setSignerTitle] = useState('');
+  const [acceptedHere, setAcceptedHere] = useState<WorkspaceDocument | null>(null);
+  const acceptKey = useRef(newIdempotencyKey('agreement'));
+  const newAcceptance = () => {
+    acceptKey.current = newIdempotencyKey('agreement');
+  };
 
   const resource = useWorkspaceResource(
     async (id) => {
       if (!template) throw new PlatformNotConfiguredError();
-      const [catalog, subscriptions, providers, projects, connections, one] = await Promise.all([
-        readCatalog(id),
+      const catalogRead = readCatalog(id);
+      const [catalog, subscriptions, providers, projects, connections, one, agreement] = await Promise.all([
+        catalogRead,
         readSubscriptions(id),
         readConnectionProviders(),
         readProjects(id),
@@ -143,6 +182,14 @@ export default function SetupScreen() {
         // setup is the version it pins, whatever the list carries. One this
         // person cannot see (404) is none named.
         flow ? readSubscription(id, flow).catch(noneWhenNotFound) : null,
+        // A health flow's section (wave 2), beside the rest: its failure is the section's, never the page's.
+        catalogRead.then(
+          (answer) =>
+            answer.automations.find((item) => item.templateId === template)?.healthData === true
+              ? readContract(id, roleIn(session, id))
+              : null,
+          () => null,
+        ),
       ]);
       // The flow named; else where the workspace holds it, in any team (the
       // owner's build 12 item 9), from the list. An archived one is gone:
@@ -155,6 +202,7 @@ export default function SetupScreen() {
         // Every team's name, an archived team's too: a held flow says where it is.
         labels: scopeLabels(projects),
         connections: connections.connections,
+        agreement,
       };
     },
     [template, flow],
@@ -203,7 +251,8 @@ export default function SetupScreen() {
     ...held.filter((connection) => connectionState(connection) === 'connected').map((connection) => connection.providerId),
     ...[...providers.values()].filter(needsNoConnect).map((provider) => provider.providerId),
   ]);
-  const canManage = administers(roleIn(session, resource.loadedFor));
+  const role = roleIn(session, resource.loadedFor);
+  const canManage = administers(role);
   // The copy the workspace holds already (the owner's build 12 item 9), or the
   // one this screen added — held from that moment, a draft still owed an
   // account or one whose activation failed: Set up configures it, where it is.
@@ -243,6 +292,28 @@ export default function SetupScreen() {
   });
   const hasConnect = (!declared && vendorFields.length > 0) || requiredRows.length > 0;
   const sectionOffset = hasConnect ? 1 : 0;
+
+  // The "Contract and accept" section (wave 2): its state, with the acceptance
+  // this screen made over the read's.
+  const contract = resource.data.agreement;
+  const contractRead =
+    contract?.read && acceptedHere ? { ...contract.read, acceptance: acceptedHere } : contract?.read;
+  const contractState = contractStep({
+    role,
+    healthData: entry.healthData,
+    read: contractRead,
+    text: contract?.text,
+    readFailed: contract?.failed ?? false,
+  });
+  const organization =
+    session.status === 'signed-in'
+      ? (session.session.workspaces.find((each) => each.id === resource.loadedFor)?.name ?? '')
+      : '';
+  const signText =
+    contractState === 'sign' && contract?.text && contract.text !== 'unpublished' ? contract.text : null;
+  const signReady = authorized && signerName.trim() !== '' && signerTitle.trim() !== '';
+  // Only Turn on is gated (plan 3): Save keeps the status, and the platform asks nothing of it.
+  const contractHolds = !editing && contractState !== 'hidden' && contractState !== 'accepted' && !(contractState === 'sign' && signReady);
 
   const newIntent = () => {
     updateKey.current = newIdempotencyKey('activate');
@@ -341,6 +412,32 @@ export default function SetupScreen() {
       }
       return;
     }
+    // One press (plan 4): the agreement first, from the text read, then the add
+    // and the turn-on. Accepted once, the section is `accepted`: a retry after
+    // a later failure never accepts again.
+    if (contractState === 'sign' && signText) {
+      try {
+        const accepted = await acceptHealthDataAgreement(
+          workspaceId,
+          signText,
+          { name: signerName.trim(), title: signerTitle.trim() },
+          acceptKey.current,
+        );
+        setAcceptedHere(accepted.document);
+        newAcceptance();
+      } catch (error) {
+        setBusy(false);
+        if (error instanceof PlatformError && error.status === 409 && error.details?.reason === 'agreement_changed') {
+          // Another text is current: read again, and the box asked again; the name and title kept.
+          newAcceptance();
+          setAuthorized(false);
+          refreshResource();
+          return;
+        }
+        setActionError(acceptanceRefusal(error));
+        return;
+      }
+    }
     let adding = false;
     try {
       let current = placed;
@@ -405,10 +502,15 @@ export default function SetupScreen() {
       // No answer to the add (offline, a 5xx): Try again replays it. Any other
       // answer was the platform's word, and the next press checks afresh.
       if (adding) addUnanswered.current = !(error instanceof PlatformError) || error.status >= 500;
-      // A flow that carries health data (C3): the owner accepts the agreement, then the add is sent again, its key the same.
-      const agreement = adding ? await healthAgreement(error, workspaceId) : null;
-      if (agreement?.accepted) await submit();
-      else setActionError(agreement ? agreement.line : turnOnRefusal(error, adding));
+      if (!adding && error instanceof PlatformError && error.status === 403 && error.details?.reason === 'agreement_required') {
+        // The turn-on refused for the agreement (ADR-0049 amendment 2): the
+        // section is read again and says what is owed, and the box is asked
+        // again with a new key (as on a 409); no screen opens here.
+        setAcceptedHere(null);
+        setAuthorized(false);
+        newAcceptance();
+        refreshResource();
+      } else setActionError(turnOnRefusal(error, adding));
     } finally {
       setBusy(false);
     }
@@ -505,6 +607,32 @@ export default function SetupScreen() {
             </View>
           ))}
 
+          {contractState !== 'hidden' ? (
+            <ContractStep
+              position={sectionOffset + sections.length + 1}
+              step={contractState}
+              text={signText ? fillForDisplay(signText.text, organization, todayUtc()) : null}
+              acceptance={contractRead?.acceptance ?? null}
+              organization={organization}
+              authorized={authorized}
+              onAuthorized={(next) => {
+                setAuthorized(next);
+                newAcceptance();
+              }}
+              name={signerName}
+              onName={(value) => {
+                setSignerName(value);
+                newAcceptance();
+              }}
+              title={signerTitle}
+              onTitle={(value) => {
+                setSignerTitle(value);
+                newAcceptance();
+              }}
+              busy={busy}
+            />
+          ) : null}
+
           {actionError ? <ActionFailure message={actionError} retryLabel="Try again" onRetry={submit} /> : null}
 
           {/* A button to a screen reader, as it is to the eye (the Build 21 review); to a member, the line in its place (S1-9). */}
@@ -512,8 +640,8 @@ export default function SetupScreen() {
             <Pressable
               testID="setup-turn-on"
               accessibilityRole="button"
-              accessibilityState={{ disabled: busy, busy }}
-              disabled={busy}
+              accessibilityState={{ disabled: busy || contractHolds, busy }}
+              disabled={busy || contractHolds}
               onPress={submit}
               style={({ pressed }) => [
                 styles.activateBtn,
@@ -532,6 +660,33 @@ export default function SetupScreen() {
     </Page>
   );
 }
+
+/**
+ * A health flow's section's reads (wave 2): the workspace's acceptance, owner's
+ * and admin's only (a member is 403 by contract, and is told to ask the
+ * owner), then the text for the owner while nothing current is accepted — its
+ * 503 `agreement_not_published` is `unpublished`. Any other failure is the
+ * section's "Unavailable".
+ */
+async function readContract(workspaceId: string, role: WorkspaceRole | undefined): Promise<ContractRead> {
+  if (!administers(role)) return { failed: false };
+  try {
+    const read = await readWorkspaceHealthDataAgreement(workspaceId);
+    if (role !== 'owner' || read.current === null || read.acceptance) return { read, failed: false };
+    try {
+      return { read, text: await readHealthDataAgreement(), failed: false };
+    } catch (error) {
+      if (error instanceof PlatformError && error.status === 503 && error.details?.reason === 'agreement_not_published') {
+        return { read, text: 'unpublished', failed: false };
+      }
+      return { read, failed: true };
+    }
+  } catch {
+    return { failed: true };
+  }
+}
+
+type ContractRead = { read?: WorkspaceHealthDataAgreement; text?: HealthDataAgreement | 'unpublished'; failed: boolean };
 
 /** A section's fields as its cards: each vendor choice alone, the rows between them on one card each. */
 function cardRuns<F extends { key: string; control: string }>(fields: readonly F[]): ({ vendor: F; rows?: never } | { vendor?: never; rows: F[] })[] {

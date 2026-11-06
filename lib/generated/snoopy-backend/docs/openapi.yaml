@@ -911,7 +911,7 @@ paths:
         ADR-0049 (C3): the current health data agreement (a Business Associate
         Agreement), for any signed-in person to read before an owner accepts it.
         503 `agreement_not_published` while a lawyer has not approved one — then
-        every health flow's add and run start is refused `agreement_required`.
+        every health flow's turn-on and run start is refused `agreement_required`.
       responses:
         '200':
           description: The text to scroll, its version and its sha256.
@@ -957,6 +957,32 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '502': { $ref: '#/components/responses/DependencyFailure' }
+        '503': { $ref: '#/components/responses/NotConfigured' }
+  /v1/workspaces/{workspaceId}/agreements/health-data:
+    get:
+      tags: [workspaces]
+      operationId: readWorkspaceHealthDataAgreement
+      description: >-
+        ADR-0049 Amendment 2: what the setup's "Contract and accept" step shows —
+        the current health data agreement's version and sha256 (`current`, null
+        while none is published: 200, not 503) and the workspace's newest
+        acceptance of exactly that version and text (`acceptance`, null when
+        none; an acceptance of an older version or another text never counts).
+        Owner or admin only, a member is 403, as the Documents list (ADR-0049
+        amendment 1); a workspace not the session's is 404.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      responses:
+        '200':
+          description: The current version and the workspace's acceptance of it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkspaceHealthDataAgreement' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
         '502': { $ref: '#/components/responses/DependencyFailure' }
         '503': { $ref: '#/components/responses/NotConfigured' }
   /v1/workspaces/{workspaceId}/documents:
@@ -1598,8 +1624,8 @@ paths:
       description: >-
         Adds a flow; owner or admin only, a member is 403
         `flow_change_requires_admin` (§12.1 #180). A flow that carries health
-        data is 403 `agreement_required` (`AgreementRequiredDetails`, ADR-0049)
-        until the workspace's owner accepted the current health data agreement.
+        data is added as a draft without the health data agreement; turning it
+        on is what needs it (`updateSubscription`, ADR-0049 Amendment 2).
         It goes to the workspace's team of the flow's category, which the
         platform makes when there is none (ADR-0036); no client chooses a team.
         The request body is specified in `docs/openapi/automations.yaml`.
@@ -1630,7 +1656,10 @@ paths:
         every flow runs its automation's newest, which the platform moves it to
         on release (ADR-0041). Only an owner or admin changes a flow (§12.1
         #180): a member's change of any kind is 403 `flow_change_requires_admin`.
-        The request body and every refusal are specified in
+        Turning on (to `live` from `draft` or `paused`) a flow that carries
+        health data is 403 `agreement_required` (`AgreementRequiredDetails`)
+        until the workspace's owner accepted the current health data agreement,
+        and nothing is written (ADR-0049 Amendment 2). The request body and every refusal are specified in
         `docs/openapi/automations.yaml`.
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'
@@ -3395,7 +3424,7 @@ components:
             (§12.1 #221, option b′),
             the shape is `OutsideOrgDomainDetails`. The join and link refusals
             with the same reason (decision 8B) carry `reason` alone. On a 403
-            whose `details.reason` is `agreement_required` from adding or
+            whose `details.reason` is `agreement_required` from turning on or
             running a flow that carries health data (ADR-0049), the shape is
             `AgreementRequiredDetails`.
 
@@ -3427,10 +3456,11 @@ components:
       additionalProperties: false
       required: [reason, kind]
       description: >-
-        ADR-0049 (C3): adding a flow whose manifest says `dataProtection:
-        hipaa` (`createSubscription`), or starting a run of one (`createRun`),
-        before the workspace's owner accepted the current health data
-        agreement. Nothing was created. An owner is shown the agreement
+        ADR-0049 (C3): turning on a flow whose manifest says `dataProtection:
+        hipaa` (`updateSubscription` to `live`, since Amendment 2; adding one
+        makes a draft and is not refused), or starting a run of one
+        (`createRun`, `createItem`), before the workspace's owner accepted the
+        current health data agreement. Nothing was written. An owner is shown the agreement
         (`HealthDataAgreement`) to accept, then the request is repeated with
         the same `Idempotency-Key`; anyone else is shown "Ask your workspace
         owner to accept the health data agreement." `version` is absent while
@@ -3504,6 +3534,34 @@ components:
         signerName: { type: string, minLength: 1, maxLength: 120 }
         signerTitle: { type: string, minLength: 1, maxLength: 120 }
         acceptedAt: { type: string, format: date-time }
+
+    WorkspaceHealthDataAgreement:
+      type: object
+      additionalProperties: false
+      required: [kind, current, acceptance]
+      description: >-
+        ADR-0049 Amendment 2: the setup's "Contract and accept" step. `current`
+        is the published version and the sha256 an acceptance must name, null
+        while none is published; `acceptance` is the workspace's newest
+        acceptance of exactly that version and text, null when there is none —
+        then an owner reads `HealthDataAgreement` and accepts it, and anyone
+        else is shown "Ask your workspace owner to accept the health data
+        agreement."
+      properties:
+        kind: { type: string, enum: [health-data] }
+        current:
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [version, sha256]
+              properties:
+                version: { type: integer, minimum: 1 }
+                sha256: { type: string, pattern: '^[0-9a-f]{64}$' }
+            - type: 'null'
+        acceptance:
+          oneOf:
+            - $ref: '#/components/schemas/WorkspaceDocument'
+            - type: 'null'
 
     WorkspaceDocumentListResponse:
       type: object

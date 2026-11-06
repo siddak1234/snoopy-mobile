@@ -11,7 +11,8 @@ import { useTheme } from '@/hooks/use-theme';
  *  build 28, F4). Since Round 21 stage 1 an item's runs too — the run page, its
  *  Run details, its files and its package, Activity's own pages — so Back from
  *  a run comes straight to its item (the owner's build 31 G1). Since Round 21
- *  stage 2 the health data agreement too (C3), which Set up and Start run open. */
+ *  stage 2 the health data agreement too (C3), which Start run, an item's
+ *  Upload and the flow page's Turn on open. */
 export default function FlowsLayout() {
   const { palette } = useTheme();
   return (

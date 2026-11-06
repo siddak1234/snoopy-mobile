@@ -142,15 +142,11 @@ paths:
             A member may not add a flow (`details.reason:
             flow_change_requires_admin`, §12.1 #180), or the workspace is not
             entitled to create this subscription (`details.reason:
-            over_plan_limit` or `entitlements_not_configured`), or the flow
-            carries health data and the workspace's owner has not accepted the
-            current health data agreement (`details.reason:
-            agreement_required`, with `kind` and `version`:
-            `AgreementRequiredDetails` in `docs/openapi.yaml`, ADR-0049) —
-            nothing was written, and the add is repeated with the same
-            `Idempotency-Key` once the owner accepts. Only these four may be
-            exposed for this response; every other authorization refusal is a
-            generic Problem.
+            over_plan_limit` or `entitlements_not_configured`). Only these three
+            may be exposed for this response; every other authorization refusal
+            is a generic Problem. A flow that carries health data is added as a
+            draft without the health data agreement: since ADR-0049 Amendment 2
+            its turn-on (`PATCH` to `live`) is what needs it.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -223,6 +219,18 @@ paths:
         `integration_requires_admin` (a member's change to a stored connection
         choice) is kept for the same rule one level down, and a member no longer
         reaches it.
+
+
+        **Turning on a flow that carries health data needs the agreement
+        (ADR-0049 Amendment 2).** A `status: live` on a `draft` or `paused`
+        flow whose pinned version says `dataProtection: hipaa` is asked of
+        Access first: before the workspace's owner accepted the current health
+        data agreement it is 403 `agreement_required` with `kind` and `version`
+        (`AgreementRequiredDetails` in `docs/openapi.yaml`), and nothing is
+        written; repeated with the same `Idempotency-Key` once the owner
+        accepts. No answer from Access is 502 (503 with no Access hop), nothing
+        written. A save that moves no status, a pause and an archive are not
+        asked.
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'
         - $ref: '#/components/parameters/SubscriptionId'
@@ -1865,8 +1873,8 @@ components:
             `reason: over_plan_limit` and `reason: entitlements_not_configured`
             may be present; on a 403 from a subscription update,
             `flow_change_requires_admin` or `integration_requires_admin`. On a 403 from run creation, the same two reasons, each
-            with the integers `limit` and `live`. On a 403 from subscription or
-            run creation, or item creation, for a flow that carries health data, `reason:
+            with the integers `limit` and `live`. On a 403 from a subscription
+            update that turns on, or run or item creation, for a flow that carries health data, `reason:
             agreement_required` with `kind` and `version`
             (`AgreementRequiredDetails` in `docs/openapi.yaml`, ADR-0049). A 403 for a missing role carries
             `requiredRole`. A 409 or 422 from `createItem`, and one from
@@ -2119,6 +2127,48 @@ components:
             before starting a run with a file on such a flow (ADR-0038).
         # The newest version's items, when it declares them (ADR-0046).
         items: { $ref: '#/components/schemas/AutomationItems' }
+        batch: { $ref: '#/components/schemas/AutomationCatalogBatch' }
+        healthData:
+          type: boolean
+          enum: [true]
+          description: >-
+            Present, true, when the newest live version says `dataProtection:
+            hipaa`: its runs carry health data, and turning it on (`PATCH` to
+            `live`) is refused 403 `agreement_required` until the workspace's
+            owner accepts the current health data agreement. A client shows the
+            setup's "Contract and accept" step for it (ADR-0049 Amendment 2).
+            Absent otherwise.
+
+    AutomationCatalogBatch:
+      type: object
+      additionalProperties: false
+      required: [pipeline]
+      description: >-
+        The newest live version's batch run steps, present when it declares
+        `batch` (ADR-0048 Amendment 6). A batch run's `RunStep.stepId` joins to
+        `id` here, and a client draws its steps by `group`, as it draws a single
+        run's.
+      properties:
+        pipeline:
+          type: array
+          minItems: 1
+          maxItems: 8
+          items: { $ref: '#/components/schemas/AutomationBatchStep' }
+
+    AutomationBatchStep:
+      type: object
+      additionalProperties: false
+      required: [id, title, description]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        description: { type: string }
+        group:
+          type: string
+          description: >-
+            The flow's FIRST group's id — the trigger's group: a batch run turns
+            the upload into units before any unit's run starts. Present exactly
+            when the flow declares `groups` (ADR-0048 Amendment 6).
 
     AutomationCatalogConnection:
       type: object

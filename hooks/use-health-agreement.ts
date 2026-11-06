@@ -6,15 +6,17 @@ import { agreementPath, agreementRefusal, awaitAgreement, type AgreementAction }
 
 /**
  * What a screen does with a refusal for the health data agreement (Round 21
- * stage 2, C3; `lib/view/health-agreement.ts`), on Set up's Turn on (`add`),
- * on Start run (`run`) and on an item's upload, which starts the run that
- * reads it (`run`). Asked only after a refusal: no add or run makes a call for
- * it.
+ * stage 2, C3; `lib/view/health-agreement.ts`), on Start run and on an item's
+ * upload, which starts the run that reads it (`run`), and on the flow page's
+ * Turn on (`turn-on`; backend ADR-0049 amendment 2, since the review of builds
+ * 37 and 39, wave 2). Asked only after a refusal: no run or turn-on makes a
+ * call for it. (~~Set up's Turn on, `add`~~ until builds 37 and 39, wave 2:
+ * Set up asks in its own "Contract and accept" section.)
  *
  * Answers null for any other refusal — the screen says its own words. Else
  * `{ accepted: true }`: the owner accepted on the agreement screen, and the
  * screen sends again what was refused, with the same idempotency key (a
- * refused add or run recorded none). Else `{ accepted: false, line }`: the line
+ * refused run or turn-on recorded none). Else `{ accepted: false, line }`: the line
  * to say — to anyone but the owner, or while none is published — or null when
  * the owner left the agreement screen without accepting.
  *
@@ -26,7 +28,7 @@ import { agreementPath, agreementRefusal, awaitAgreement, type AgreementAction }
  */
 export type AgreementAnswer = { accepted: true } | { accepted: false; line: string | null };
 
-export function useHealthAgreement(action: AgreementAction) {
+export function useHealthAgreement(action: AgreementAction = 'run') {
   const router = useRouter();
   const segments = useSegments();
   const session = useSession();

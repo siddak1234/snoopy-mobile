@@ -170,7 +170,7 @@ const PAGES: {
     page: 'Health data agreement',
     site: 'app/(tabs)/flows/agreement.tsx',
     Screen: AgreementScreen,
-    params: { action: 'add', workspace: TEST_WORKSPACE },
+    params: { workspace: TEST_WORKSPACE },
     routes: [[/^\/v1\/agreements\/health-data$/u, { version: 1, text: 'The agreement.', sha256: 'a'.repeat(64) }]],
     loaded: () => screen.findByTestId('agreement-text'),
   },

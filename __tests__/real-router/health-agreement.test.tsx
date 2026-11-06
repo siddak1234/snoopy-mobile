@@ -13,7 +13,12 @@ import { WORKSPACE, answerPlatform, asInProduction, flush, launch, pressTab, sig
  * accepted, it goes back to that screen. Opened from Home's YOUR FLOWS, it is
  * Home's own copy, so Back stays on Home (the review's finding 7); opened from
  * the live flow page Settings opens, Settings' own copy, so Back stays in
- * Settings (the return pass's finding 2).
+ * Settings (the return pass's finding 2). Set up's Turn on of a health flow
+ * opens no agreement screen (builds 37 and 39, wave 2): it accepts in Set up's
+ * own "Contract and accept" section, then lands on the flow's page. The flow
+ * page's own Turn on, refused, opens it for the turn-on (`action: turn-on`,
+ * the website's review, finding 2), and accepted, goes back to that page, the
+ * flow turned on.
  */
 
 jest.setTimeout(60_000);
@@ -51,11 +56,11 @@ it('opens in the Flows tab with what was refused; accepted, it goes back to the 
   await act(async () => router.push('/(tabs)/flows'));
   await flush(100);
   await flush(1000);
-  await act(async () => router.push({ pathname: '/(tabs)/flows/agreement', params: { action: 'run', workspace: WORKSPACE } }));
+  await act(async () => router.push({ pathname: '/(tabs)/flows/agreement', params: { workspace: WORKSPACE } }));
   await flush(100);
   await flush(1000);
   expect(view.getSegments()).toEqual(['(tabs)', 'flows', 'agreement']);
-  expect(view.getSearchParams()).toMatchObject({ action: 'run', workspace: WORKSPACE });
+  expect(view.getSearchParams()).toMatchObject({ workspace: WORKSPACE });
   expect(selectedTab()).toBe('Flows');
   expect(await screen.findByText('Accept and start run')).toBeTruthy();
   expect(screen.getByText("I'm authorized to sign for Acme")).toBeTruthy();
@@ -111,7 +116,7 @@ it("opened by a Start run on Home's YOUR FLOWS, it is Home's own screen: Back wi
   });
   const back = { pathname: view.getPathname(), segments: view.getSegments(), tab: selectedTab() };
   expect({ opened, back }).toEqual({
-    opened: { segments: ['(tabs)', '(home)', 'agreement'], params: expect.objectContaining({ action: 'run', workspace: WORKSPACE }), tab: 'Home' },
+    opened: { segments: ['(tabs)', '(home)', 'agreement'], params: expect.objectContaining({ workspace: WORKSPACE }), tab: 'Home' },
     back: { pathname: '/', segments: ['(tabs)', '(home)'], tab: 'Home' },
   });
   expect(starts).toEqual(['POST']);
@@ -163,11 +168,141 @@ it("opened by a Start run on the live flow page Settings opens, it is Settings' 
   expect({ opened, back }).toEqual({
     opened: {
       segments: ['(tabs)', 'settings', 'agreement'],
-      params: expect.objectContaining({ action: 'run', workspace: WORKSPACE }),
+      params: expect.objectContaining({ workspace: WORKSPACE }),
       tab: 'Settings',
     },
     back: { pathname: '/settings/archived-flow', segments: ['(tabs)', 'settings', 'archived-flow'], tab: 'Settings' },
   });
   expect(starts).toEqual(['POST']);
   expect(screen.getByTestId('start-run')).toBeTruthy();
+});
+
+it("Set up's Turn on of a health flow: no agreement screen — accepted in its own section, the flow turned on, and the flow's page opens", async () => {
+  signedInOnThisPhone();
+  const catalog = flowCatalogPayload();
+  const base = catalog.automations[0]!;
+  catalog.automations = [
+    ...catalog.automations,
+    { ...base, templateId: 'tplflow.health', name: 'Health check', subscribed: false, setup: [], healthData: true },
+  ];
+  const DRAFT = { ...subscriptionsPayload().subscriptions[0]!, id: 'health-1', templateId: 'tplflow.health', name: 'Health check', status: 'draft' as const, setup: [] };
+  let held: (typeof DRAFT | { status: 'live' })[] = [];
+  const writes: string[] = [];
+  const subscriptions = `/v1/workspaces/${WORKSPACE}/subscriptions`;
+  answerPlatform(
+    {
+      [`/v1/workspaces/${WORKSPACE}/agreements/health-data`]: () => ({
+        kind: 'health-data',
+        current: { version: AGREEMENT.version, sha256: AGREEMENT.sha256 },
+        acceptance: writes.includes('accept') ? DOCUMENT : null,
+      }),
+      '/v1/agreements/health-data': () => AGREEMENT,
+      [`/v1/workspaces/${WORKSPACE}/agreements`]: () => {
+        writes.push('accept');
+        return { document: DOCUMENT };
+      },
+      [subscriptions]: (_path, execute) => {
+        if (methodOf(execute) === 'GET') return { subscriptions: held };
+        writes.push('add');
+        held = [DRAFT];
+        return { subscription: DRAFT };
+      },
+      [`${subscriptions}?status=archived`]: () => ({ subscriptions: [] }),
+      [`${subscriptions}/health-1`]: (_path, execute) => {
+        const live = { ...DRAFT, status: 'live' as const };
+        if (methodOf(execute) === 'PATCH') {
+          writes.push('turn on');
+          held = [live];
+        }
+        return { subscription: held[0] ?? live };
+      },
+    },
+    { '/automations': catalog },
+  );
+  const view = await launch();
+  await pressTab('Flows');
+  await act(async () => router.push({ pathname: '/(tabs)/flows/setup', params: { template: 'tplflow.health' } }));
+  await flush(100);
+  await flush(1000);
+  expect(await screen.findByTestId('setup-contract-text')).toBeTruthy();
+  await fireEvent.press(within(screen.getByTestId('setup-contract-authorized')).getByRole('switch'));
+  await fireEvent.changeText(screen.getByLabelText('Full name'), 'Dana Reyes');
+  await fireEvent.changeText(screen.getByLabelText('Title'), 'Practice manager');
+  await fireEvent.press(screen.getByTestId('setup-turn-on'));
+  await flush(100);
+  await flush(1000);
+  expect(writes).toEqual(['accept', 'add', 'turn on']);
+  expect({ segments: view.getSegments(), params: view.getSearchParams() }).toEqual({
+    segments: ['(tabs)', 'flows', 'detail'],
+    params: expect.objectContaining({ flow: 'health-1' }),
+  });
+  expect(screen.queryByTestId('agreement-screen')).toBeNull();
+});
+
+it("the flow page's Turn on of a health flow, refused for the agreement: the agreement opens in the Flows tab for the turn-on; accepted, it goes back to the flow page, and the turn-on is sent again and the flow is on", async () => {
+  signedInOnThisPhone();
+  const catalog = flowCatalogPayload();
+  catalog.automations = catalog.automations.map((entry) =>
+    entry.templateId === 'tplflow.kpi' ? { ...entry, subscribed: true, healthData: true as const } : entry,
+  );
+  // Weekly KPI report, paused: its page offers Turn on.
+  let status: 'paused' | 'live' = 'paused';
+  const listed = () => ({
+    subscriptions: subscriptionsPayload().subscriptions.map((row) => (row.id === 'kpi' ? { ...row, status } : row)),
+  });
+  const writes: string[] = [];
+  const subscriptions = `/v1/workspaces/${WORKSPACE}/subscriptions`;
+  answerPlatform(
+    {
+      '/v1/agreements/health-data': () => AGREEMENT,
+      [`/v1/workspaces/${WORKSPACE}/agreements`]: () => {
+        writes.push('accept');
+        return { document: DOCUMENT };
+      },
+      [subscriptions]: () => listed(),
+      [`${subscriptions}?status=archived`]: () => ({ subscriptions: [] }),
+      [`${subscriptions}/kpi`]: (_path, execute) => {
+        if (methodOf(execute) === 'PATCH') {
+          writes.push('turn on');
+          // Refused, nothing changed, until the owner accepted (backend ADR-0049 amendment 2).
+          if (!writes.includes('accept')) {
+            throw new PlatformError('Forbidden', 403, 'FORBIDDEN', { reason: 'agreement_required', kind: 'health-data', version: 1 });
+          }
+          status = 'live';
+        }
+        return { subscription: listed().subscriptions.find((row) => row.id === 'kpi')! };
+      },
+    },
+    { '/automations': catalog },
+  );
+  const view = await launch();
+  await pressTab('Flows');
+  await act(async () => router.push({ pathname: '/(tabs)/flows/detail', params: { flow: 'kpi' } }));
+  await flush(100);
+  await flush(1000);
+  await fireEvent.press(await screen.findByTestId('flow-step-turn-on'));
+  await flush(100);
+  await flush(1000);
+  expect(await screen.findByText('Accept and turn on')).toBeTruthy();
+  const opened = { segments: view.getSegments(), params: view.getSearchParams(), tab: selectedTab() };
+
+  await fireEvent.press(within(screen.getByTestId('agreement-authorized')).getByRole('switch'));
+  await fireEvent.changeText(screen.getByLabelText('Full name'), 'Dana Reyes');
+  await fireEvent.changeText(screen.getByLabelText('Title'), 'Practice manager');
+  await fireEvent.press(screen.getByTestId('agreement-accept'));
+  await flush(100);
+  await flush(1000);
+  const back = { segments: view.getSegments(), params: view.getSearchParams(), tab: selectedTab() };
+  expect({ opened, back }).toEqual({
+    opened: {
+      segments: ['(tabs)', 'flows', 'agreement'],
+      params: expect.objectContaining({ action: 'turn-on', workspace: WORKSPACE }),
+      tab: 'Flows',
+    },
+    back: { segments: ['(tabs)', 'flows', 'detail'], params: expect.objectContaining({ flow: 'kpi' }), tab: 'Flows' },
+  });
+  expect(writes).toEqual(['turn on', 'accept', 'turn on']);
+  expect(screen.queryByTestId('agreement-screen')).toBeNull();
+  expect(await screen.findByText('Pause')).toBeTruthy();
+  expect(screen.queryByTestId('flow-step-turn-on')).toBeNull();
 });

@@ -3776,8 +3776,8 @@ the empty contact label is the native default.
 succeeded run's steps are drawn on no page (the result face has none, Run details none); Steps done
 still counts them, and the step rules' tests read them through `test/run-tracker.tsx`. (3) The catalog
 sends "Sparkles" (ICD-10 Code Check's manifest) where Phosphor names `Sparkle`: the icon registry maps the
-alias (~~the fallback icon~~). (4) A batch parent's rows fall back to "Step n" until the catalog publishes
-`batch.pipeline` titles (wave 2). (5) Flows and Archived still read `run-stats` and the teams, which no
+alias (~~the fallback icon~~). (4) ~~A batch parent's rows fall back to "Step n" until the catalog publishes
+`batch.pipeline` titles~~ until wave 2 (below). (5) Flows and Archived still read `run-stats` and the teams, which no
 card draws now; left for a later round. (6) Whether Apple's card saves a contact without the Contacts
 permission is undocumented (Apple, Expo): checked on a device with this build. (7) No Nocturne snapshot
 changed; no screen snapshot exists for the cards, so none was re-pinned.
@@ -3810,3 +3810,57 @@ Bites (break, red, restore, green), each in its suite:
   `https:`; Android asking for the card; the plugin's sentence changed; the shared rule (the review's
   finding 1): the digit runs not looked at (3 red), the last run's 4 digits, the 254 characters, 7 digits
   for 10 (2 red), a looser email pattern, the runs looked at after a "+" (2 red).
+
+## Builds 37 and 39, wave 2 (2026-11-06)
+
+The owner's items 9 and 10, on snoopy-backend #272 (ADR-0049 amendment 2, ADR-0048 amendment 6), approved
+by his "complete all … build all items" (2026-11-06). The rules are DESIGN-CONTRACT's (Setup/configure,
+Flows/agreement, Flows/detail, Activity/run detail), each once; this entry keeps the items, the defaults and the bites.
+Parity: the website's lane builds the same, its `snoopy/test/fb39-wave2.test.mjs` the same rows as
+`__tests__/fb39-wave2.test.ts`.
+
+- **Item 9** (build 39: "Where is the BAA contract to view prefilled and checkmark to accept below it.
+  1. NPI 2. specialty 3. Connections 4. Contract and accept"): a `healthData` flow's Set up ends with
+  "{n} · Contract and accept" (`components/flows/contract-step.tsx`, `contractStep`, `fillForDisplay`);
+  Turn on accepts first, then adds and turns on, in one press. Set up no longer opens the agreement
+  screen; Start run and an item's upload still do.
+- **Item 10** (build 39: "When a run starts i want to see the steps 1-x"): a batch parent's steps face
+  is drawn by the catalog's `batch.pipeline` ("1 · Pages counted" … "4 · Visits queued"), then "5 · Run
+  completed" when the run has `email` (`batchRows`, `batchStepsFor`).
+- **The flow page's Turn on** (the website's review of wave 2, finding 2: "ACCEPT_AND_TURN_ON and
+  TURNING_ON (lib/health-agreement.ts:38-39) exist only on the website. The app's flow page Turn on
+  (snoopy-mobile app/(tabs)/flows/detail.tsx) has no agreement step … Or add the same words and step to
+  the app (app lane)."): a turn-on refused 403 `agreement_required` outside Set up opens the agreement
+  screen with `action: turn-on` — "Accept and turn on", "Turning on…" (`ACCEPT_AND_TURN_ON`,
+  `TURNING_ON`, `acceptLabel`), the website's `purpose: "turn-on"` — and the page sends the turn-on
+  again with its key; anyone else, and none published, today's lines. Rules: DESIGN-CONTRACT
+  Flows/agreement and Flows/detail.
+
+**The session's defaults** (plan decisions 1–8): the date filled for display is today's UTC date, as the
+signed copy writes it; the acceptance's key is new for each text read and each change of the switch,
+name or title (the agreement screen's rule); Set up's turn-on refused `agreement_required` re-reads the
+section and says no line of its own; the accepted line's date is `calendarDate` (the device's zone).
+Removed as unreachable: the agreement's `'add'` action, "Accept and add flow" and "Adding…" (~~with
+`AgreementAction`, the hook's argument and the route's `action` param~~: back for `run` and `turn-on` with
+the flow page's Turn on).
+
+**Gaps.** (1) ~~Resuming a paused health flow from its flow page (`app/(tabs)/flows/detail.tsx` Turn on) routes no
+`agreement_required` refusal: it says the generic refusal (plan 7). Only a new agreement version can
+refuse a paused flow, and the production pin is null.~~ Closed by the flow page's Turn on (above). (2) Nothing is published in production
+(`HEALTH_DATA_AGREEMENT` null): every health flow's Set up says "The agreement is being finalized."
+and cannot be turned on until a version is published.
+
+Bites (break, red, restore, green):
+- Tables (`fb39-wave2`, the website's rows): a failed read not "unavailable" (2 red); only the first
+  placeholder filled (1); the email row without `email` (3); every run drawn as a batch (2).
+- Run (`real-router/run-faces`): the batch rows never chosen (1 red).
+- Set up (`health-agreement`): Turn on not gated (9 red); no acceptance before the turn-on (4, the
+  real-router case with them); the box kept after 409; a 403 on the turn-on not re-read; a member read;
+  a failed read thrown (the page blanked); the acceptance not kept, so a retry accepts again; Save
+  gated (1 red each); the text not filled (2).
+- The flow page's Turn on (`health-agreement-turn-on`, `real-router/health-agreement`): `acceptLabel`
+  ignoring `turn-on` (4 red, the real-router case with them); "Turning on…" changed (3); the hook
+  pushing no `action` (5, Start run's and the upload's with them); no agreement refusal routed (5); a
+  pause asked for it (1); accepted, the turn-on not sent again (1); sent again with a new key (1).
+- The contract box (`android-card-overflow`, found by the land's full gate): `overflow: 'hidden'` on its
+  elevated card, which Android draws empty (1 red).
