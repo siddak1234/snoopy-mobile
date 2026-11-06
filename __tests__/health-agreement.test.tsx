@@ -30,7 +30,8 @@ const { platformOperation, newIdempotencyKey } = jest.requireMock('@/lib/platfor
 /**
  * Round 21 stage 2, C3 (backend ADR-0049): a flow that carries health data is
  * refused 403 `agreement_required` at a run's start (its turn-on: Set up's own
- * section, below; ~~its add~~ until builds 37 and 39, wave 2) until the
+ * section, below, and the flow page's, `health-agreement-turn-on.test.tsx`;
+ * ~~its add~~ until builds 37 and 39, wave 2) until the
  * workspace's owner accepted the health data agreement. The owner gets the
  * agreement's screen, and what was refused is sent again with the same key;
  * anyone else the one line, and nothing more is sent. The platform names the
@@ -373,7 +374,7 @@ describe("Set up's Contract and accept", () => {
 
 const AGREEMENT_SCREEN = {
   pathname: '/(tabs)/flows/agreement',
-  params: { workspace: TEST_WORKSPACE },
+  params: { action: 'run', workspace: TEST_WORKSPACE },
 };
 
 describe('Start run, refused for the agreement', () => {
@@ -484,10 +485,10 @@ describe('the agreement screen', () => {
     expect(screen.getByLabelText('Title').props.maxLength).toBe(120);
   });
 
-  it('on Start run its button says "Accept and start run"', async () => {
+  it('on Start run its button says "Accept and start run" (a turn-on\'s: `health-agreement-turn-on.test.tsx`)', async () => {
     const fake = fakePlatform(platformOperation);
     routeAgreement(fake);
-    setMockParams({ workspace: TEST_WORKSPACE });
+    setMockParams({ action: 'run', workspace: TEST_WORKSPACE });
     await renderWithProviders(<AgreementScreen />, sessionAs('owner'));
     expect(within(await screen.findByTestId('agreement-accept')).getByText('Accept and start run')).toBeTruthy();
   });

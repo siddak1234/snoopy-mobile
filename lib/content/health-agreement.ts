@@ -3,10 +3,10 @@
  * Set up's "Contract and accept" section for a flow that carries health data
  * (builds 37 and 39, wave 2: the owner's item 9, "Where is the BAA contract to
  * view prefilled and checkmark to accept below it"), the acceptance screen an
- * owner meets when such a flow's run is started before the workspace accepted
- * the agreement (~~or its add~~ until wave 2), and the organization's Documents
- * list. The session's NEW WORDS for the owner, the same on the website; the
- * owner may change them.
+ * owner meets when such a flow's run is started, or the flow is turned on from
+ * its own page, before the workspace accepted the agreement (~~or its add~~
+ * until wave 2), and the organization's Documents list. The session's NEW
+ * WORDS for the owner, the same on the website; the owner may change them.
  */
 
 /** Set up's section for the agreement, after the flow's own (wave 2, plan 5). */
@@ -53,6 +53,17 @@ export const ACCEPT_AND_RUN = 'Accept and start run';
  * finding 3; ~~"Adding…" for Turn on's add~~ until wave 2).
  */
 export const ACCEPTING_RUN = 'Starting…';
+
+/**
+ * The button on a flow page's Turn on (outside Set up; backend ADR-0049
+ * amendment 2): it accepts, then sends the refused turn-on again. The
+ * website's words (its `ACCEPT_AND_TURN_ON`), since the review of builds 37
+ * and 39, wave 2.
+ */
+export const ACCEPT_AND_TURN_ON = 'Accept and turn on';
+
+/** Said in its place while the acceptance is sent, and then the turn-on: Turn on's own word (`SETUP_TURNING_ON`), the website's `TURNING_ON`. */
+export const TURNING_ON = 'Turning on…';
 
 /** Said to anyone but the workspace's owner, who alone accepts it; nothing more is sent. */
 export const ASK_OWNER_TO_ACCEPT = 'Ask your workspace owner to accept the health data agreement.';

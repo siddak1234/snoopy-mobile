@@ -15,7 +15,10 @@ import { WORKSPACE, answerPlatform, asInProduction, flush, launch, pressTab, sig
  * the live flow page Settings opens, Settings' own copy, so Back stays in
  * Settings (the return pass's finding 2). Set up's Turn on of a health flow
  * opens no agreement screen (builds 37 and 39, wave 2): it accepts in Set up's
- * own "Contract and accept" section, then lands on the flow's page.
+ * own "Contract and accept" section, then lands on the flow's page. The flow
+ * page's own Turn on, refused, opens it for the turn-on (`action: turn-on`,
+ * the website's review, finding 2), and accepted, goes back to that page, the
+ * flow turned on.
  */
 
 jest.setTimeout(60_000);
@@ -234,4 +237,72 @@ it("Set up's Turn on of a health flow: no agreement screen — accepted in its o
     params: expect.objectContaining({ flow: 'health-1' }),
   });
   expect(screen.queryByTestId('agreement-screen')).toBeNull();
+});
+
+it("the flow page's Turn on of a health flow, refused for the agreement: the agreement opens in the Flows tab for the turn-on; accepted, it goes back to the flow page, and the turn-on is sent again and the flow is on", async () => {
+  signedInOnThisPhone();
+  const catalog = flowCatalogPayload();
+  catalog.automations = catalog.automations.map((entry) =>
+    entry.templateId === 'tplflow.kpi' ? { ...entry, subscribed: true, healthData: true as const } : entry,
+  );
+  // Weekly KPI report, paused: its page offers Turn on.
+  let status: 'paused' | 'live' = 'paused';
+  const listed = () => ({
+    subscriptions: subscriptionsPayload().subscriptions.map((row) => (row.id === 'kpi' ? { ...row, status } : row)),
+  });
+  const writes: string[] = [];
+  const subscriptions = `/v1/workspaces/${WORKSPACE}/subscriptions`;
+  answerPlatform(
+    {
+      '/v1/agreements/health-data': () => AGREEMENT,
+      [`/v1/workspaces/${WORKSPACE}/agreements`]: () => {
+        writes.push('accept');
+        return { document: DOCUMENT };
+      },
+      [subscriptions]: () => listed(),
+      [`${subscriptions}?status=archived`]: () => ({ subscriptions: [] }),
+      [`${subscriptions}/kpi`]: (_path, execute) => {
+        if (methodOf(execute) === 'PATCH') {
+          writes.push('turn on');
+          // Refused, nothing changed, until the owner accepted (backend ADR-0049 amendment 2).
+          if (!writes.includes('accept')) {
+            throw new PlatformError('Forbidden', 403, 'FORBIDDEN', { reason: 'agreement_required', kind: 'health-data', version: 1 });
+          }
+          status = 'live';
+        }
+        return { subscription: listed().subscriptions.find((row) => row.id === 'kpi')! };
+      },
+    },
+    { '/automations': catalog },
+  );
+  const view = await launch();
+  await pressTab('Flows');
+  await act(async () => router.push({ pathname: '/(tabs)/flows/detail', params: { flow: 'kpi' } }));
+  await flush(100);
+  await flush(1000);
+  await fireEvent.press(await screen.findByTestId('flow-step-turn-on'));
+  await flush(100);
+  await flush(1000);
+  expect(await screen.findByText('Accept and turn on')).toBeTruthy();
+  const opened = { segments: view.getSegments(), params: view.getSearchParams(), tab: selectedTab() };
+
+  await fireEvent.press(within(screen.getByTestId('agreement-authorized')).getByRole('switch'));
+  await fireEvent.changeText(screen.getByLabelText('Full name'), 'Dana Reyes');
+  await fireEvent.changeText(screen.getByLabelText('Title'), 'Practice manager');
+  await fireEvent.press(screen.getByTestId('agreement-accept'));
+  await flush(100);
+  await flush(1000);
+  const back = { segments: view.getSegments(), params: view.getSearchParams(), tab: selectedTab() };
+  expect({ opened, back }).toEqual({
+    opened: {
+      segments: ['(tabs)', 'flows', 'agreement'],
+      params: expect.objectContaining({ action: 'turn-on', workspace: WORKSPACE }),
+      tab: 'Flows',
+    },
+    back: { segments: ['(tabs)', 'flows', 'detail'], params: expect.objectContaining({ flow: 'kpi' }), tab: 'Flows' },
+  });
+  expect(writes).toEqual(['turn on', 'accept', 'turn on']);
+  expect(screen.queryByTestId('agreement-screen')).toBeNull();
+  expect(await screen.findByText('Pause')).toBeTruthy();
+  expect(screen.queryByTestId('flow-step-turn-on')).toBeNull();
 });

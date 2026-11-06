@@ -416,8 +416,9 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   (`POST /v1/workspaces/{workspaceId}/agreements`) — in Set up's "Contract and
   accept" section for a `healthData` flow, with the workspace's acceptance
   (`GET …/agreements/health-data`, owner or admin; ADR-0049 amendment 2, builds
-  37 and 39 wave 2), and after a run's start was refused `agreement_required`
-  (~~an add's~~ until wave 2); and the workspace's signed documents
+  37 and 39 wave 2), and after a run's start, or a turn-on on the flow's own
+  page, was refused `agreement_required` (~~an add's~~ until wave 2); and the
+  workspace's signed documents
   (`GET …/documents`, with Organization; one copy, `GET …/documents/{documentId}`,
   only when its row is opened), both the workspace's owner's or admin's only, a
   member answered 403 (backend ADR-0049 amendment 1, `snoopy-backend` #269).

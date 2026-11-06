@@ -1,4 +1,11 @@
-import { AGREEMENT_NOT_PUBLISHED, ASK_OWNER_TO_ACCEPT } from '@/lib/content/health-agreement';
+import {
+  ACCEPTING_RUN,
+  ACCEPT_AND_RUN,
+  ACCEPT_AND_TURN_ON,
+  AGREEMENT_NOT_PUBLISHED,
+  ASK_OWNER_TO_ACCEPT,
+  TURNING_ON,
+} from '@/lib/content/health-agreement';
 import { refusalMessage } from '@/lib/content/refusals';
 import { PlatformError } from '@/lib/platform/problem';
 import type { HealthDataAgreement, WorkspaceHealthDataAgreement } from '@/lib/platform/agreements';
@@ -7,18 +14,39 @@ import type { WorkspaceRole } from '@/lib/view/roles';
 /**
  * A flow that carries health data, refused for the health data agreement
  * (Round 21 stage 2, C3; backend ADR-0049, `AgreementRequiredDetails`): a
- * run's start (`createRun`) or an item's upload (`createItem`, which starts
- * the run that reads it) answered 403 `agreement_required` and nothing was
- * made (~~its add~~ until builds 37 and 39, wave 2: an add makes a draft, and
- * Set up asks in its own section, `contractStep`).
+ * run's start (`createRun`), an item's upload (`createItem`, which starts the
+ * run that reads it) or a turn-on outside Set up (`updateSubscription` to
+ * `live`, the flow page's Turn on; ADR-0049 amendment 2) answered 403
+ * `agreement_required` and nothing was made or changed (~~its add~~ until
+ * builds 37 and 39, wave 2: an add makes a draft, and Set up asks in its own
+ * section, `contractStep`).
  *
  * - The workspace's owner, who alone accepts it, is shown the agreement on its
- *   own screen (`agreementPath`); once accepted, what was refused is sent again
- *   with the same idempotency key.
+ *   own screen (`agreementPath`), its button by what is sent again
+ *   (`acceptLabel`); once accepted, what was refused is sent again with the
+ *   same idempotency key.
  * - Anyone else is told the one line, and nothing more is sent.
  * - No version published (`version` absent): the owner is told it is not
  *   available yet, and no screen opens.
  */
+
+/**
+ * What the agreement screen sends again once the owner accepts, its route's
+ * `action`: the run that was refused (Start run, an item's upload), or the
+ * turn-on (the flow page's Turn on) — the website dialog's `purpose`.
+ * ~~`add`~~ until builds 37 and 39, wave 2.
+ */
+export type AgreementAction = 'run' | 'turn-on';
+
+/**
+ * The agreement screen's button, and its word while it sends: "Accept and
+ * turn on" and "Turning on…" for a turn-on, else "Accept and start run" and
+ * "Starting…" — an `action` this build does not know, or none, is a run's.
+ */
+export function acceptLabel(action: string | undefined, busy: boolean): string {
+  if (action === 'turn-on') return busy ? TURNING_ON : ACCEPT_AND_TURN_ON;
+  return busy ? ACCEPTING_RUN : ACCEPT_AND_RUN;
+}
 
 /**
  * Where the agreement opens: in the tab of the screen that was refused, so
