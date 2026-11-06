@@ -67,10 +67,12 @@ const counts = (over: Partial<RunSubscriptionCounts> = {}): RunSubscriptionCount
   });
 
 describe('toFlows', () => {
-  it('draws the summary line from run-stats, grouped as the design writes it', () => {
+  it('counts its runs from run-stats for its own page, and carries no card summary line (builds 37 and 39, items 1 and 4)', () => {
     const [flow] = toFlows([sub()], [entry()], [counts()]);
-    expect(flow.runs).toBe('1,284 runs · 1,272 ok · 12 failed');
     expect(flow.runCount).toBe('1,284');
+    expect(flow.okCount).toBe('1,272');
+    expect(flow.failCount).toBe('12');
+    expect(flow).not.toHaveProperty('runs');
   });
 
   it('treats a subscription ABSENT from run-stats as zero runs, not as missing', () => {
@@ -78,13 +80,12 @@ describe('toFlows', () => {
     // absent entry means "none in this window" — it does not mean the
     // subscription does not exist.
     const [flow] = toFlows([sub()], [entry()], []);
-    expect(flow.runs).toBe('0 runs · 0 ok · 0 failed');
+    expect([flow.runCount, flow.okCount, flow.failCount]).toEqual(['0', '0', '0']);
     expect(flow.name).toBe('Invoice triage');
   });
 
   it('writes a Draft’s counters as the design’s em dash, never as zeroes', () => {
     const [flow] = toFlows([sub({ status: 'draft' })], [entry()], []);
-    expect(flow.runs).toBe('Not turned on yet');
     expect(flow.runCount).toBe('—');
     expect(flow.okCount).toBe('—');
   });

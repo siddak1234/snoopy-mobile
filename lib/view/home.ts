@@ -72,3 +72,52 @@ export function yourFlows(
     ...(unnamed.length > 0 ? [{ department: null, flows: unnamed }] : []),
   ];
 }
+
+/** A department drop-down's value for every department (the owner's build 39 item 8). */
+export const ALL_DEPARTMENTS = 'all';
+export const ALL_DEPARTMENTS_LABEL = 'All departments';
+
+/**
+ * YOUR FLOWS' department drop-down (the owner's build 39 item 8: "Your flows —
+ * on the right hand side department select drop down"): "All departments"
+ * first, then each department the sections hold, A–Z — the catalog
+ * `category` Home groups by (`yourFlows`).
+ */
+export function homeDepartmentChoices(
+  sections: readonly { department: string | null }[],
+): { value: string; label: string }[] {
+  const named = sections.flatMap((section) => (section.department ? [section.department] : []));
+  const sorted = [...new Set(named)].sort((a, b) => a.localeCompare(b, 'en-US', { sensitivity: 'base' }));
+  return [{ value: ALL_DEPARTMENTS, label: ALL_DEPARTMENTS_LABEL }, ...sorted.map((name) => ({ value: name, label: name }))];
+}
+
+/**
+ * The sections YOUR FLOWS draws for a department chosen and a search typed:
+ * the chosen department's alone (every one for `ALL_DEPARTMENTS`), each holding
+ * only the flows whose name holds the words, any case; a section left with no
+ * flow is not drawn.
+ */
+export function homeFlowsShown<S extends { department: string | null; flows: HomeFlow[] }>(
+  sections: readonly S[],
+  department: string,
+  query: string,
+): S[] {
+  const words = query.trim().toLocaleLowerCase('en-US');
+  return sections
+    .filter((section) => department === ALL_DEPARTMENTS || section.department === department)
+    .map((section) => ({
+      ...section,
+      flows: words ? section.flows.filter((flow) => homeFlowName(flow).toLocaleLowerCase('en-US').includes(words)) : section.flows,
+    }))
+    .filter((section) => section.flows.length > 0);
+}
+
+/**
+ * The job a Home card starts with (the owner's build 37 item 5: "it should come
+ * pre selected with the most recent job the user has uploaded"): the newest
+ * item that is ready and not archived — `listItems` answers newest first — or
+ * none.
+ */
+export function newestReadyItem<T extends { status: string; archivedAt: string | null }>(items: readonly T[]): T | null {
+  return items.find((item) => item.status === 'ready' && item.archivedAt === null) ?? null;
+}

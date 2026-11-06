@@ -20,6 +20,7 @@ import * as ImagePicker from 'expo-image-picker';
 import React from 'react';
 
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
+import SettingsArchivedFlowScreen from '@/app/(tabs)/settings/archived-flow';
 import { StartRun } from '@/components/automations/start-run';
 import type { SessionContextValue } from '@/hooks/use-session';
 import { FLOW_QUEUE_FULL, WORKSPACE_CHANGED } from '@/lib/content/refusals';
@@ -309,7 +310,7 @@ describe("the flow page's start controls (25.8.3; in Step 1 since Build 21)", ()
     expect(screen.getByLabelText('Hold above').props.value).toBe('750.00');
     await fireEvent.press(screen.getByText('Start run'));
     await waitFor(() =>
-      expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/activity/run', params: { runId: 'run-1', returnTo: 'flows' } }, { withAnchor: true }),
+      expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/run', params: { runId: 'run-1' } }),
     );
     expect(writes).toEqual([
       {
@@ -328,7 +329,7 @@ describe("the flow page's start controls (25.8.3; in Step 1 since Build 21)", ()
     await fireEvent.changeText(screen.getByLabelText('Hold above'), '75000');
     await fireEvent.press(screen.getByText('Start run'));
     await waitFor(() =>
-      expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/activity/run', params: { runId: 'run-2', returnTo: 'flows' } }, { withAnchor: true }),
+      expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/run', params: { runId: 'run-2' } }),
     );
     expect(writes[1]!.body).toEqual(writes[0]!.body);
     expect(writes[1]!.key).not.toBe(writes[0]!.key);
@@ -1234,5 +1235,24 @@ describe('a file field that takes several: every file into ONE run (Round 21 pla
       { receipts: ['artifact-1', 'artifact-2'] },
     ]);
     expect(runs[1]!.key).toBe(runs[0]!.key);
+  });
+});
+
+describe("where a run started on a flow page opens (builds 37 and 39; `startedRunState`'s rule)", () => {
+  it('in the Flows stack over the flow page; drawn in Settings (an archived flow\'s live twin), in Activity with Back to Settings', async () => {
+    const NOTE: AutomationRunInputField = { key: 'note', title: 'Note', description: 'A line.', control: 'text', required: false };
+    const subscriptions = subscriptionsPayload().subscriptions.map((row) => (row.id === 'invoice' ? { ...row, runInput: [NOTE] } : row));
+    routePlatform(platformOperation, { '/automations': flowCatalogPayload(), '/subscriptions': { subscriptions } });
+    keepWrites({ [`POST ${WS}/runs`]: () => ({ run: { id: 'run-7' } }) });
+    setMockParams({ flow: 'invoice' });
+    await renderWithProviders(<SettingsArchivedFlowScreen />, signedInSession);
+    expect(await screen.findByText('Invoice triage')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Start run'));
+    await waitFor(() =>
+      expect(mockRouter.push).toHaveBeenCalledWith(
+        { pathname: '/(tabs)/activity/run', params: { runId: 'run-7', returnTo: 'settings' } },
+        { withAnchor: true },
+      ),
+    );
   });
 });

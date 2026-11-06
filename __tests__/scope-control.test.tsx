@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import React from 'react';
 
 import ArchivedFlowsScreen from '@/app/(tabs)/flows/archived';
@@ -59,12 +59,14 @@ describe('the scope control on Flows', () => {
     });
   });
 
-  it('shows every flow for All teams, labelled by scope', async () => {
+  it('shows every flow for All teams, each under its department\'s heading — no scope line on a card (builds 37 and 39, items 1 and 4)', async () => {
     await renderWithProviders(<FlowsScreen />, signedInSession);
     expect(await screen.findByText('Invoice triage')).toBeTruthy();
     expect(screen.getByLabelText('Department: All departments')).toBeTruthy();
-    expect(screen.getByText(/^Department: Finance · /u)).toBeTruthy();
-    expect(screen.getAllByText(/^Whole workspace · /u).length).toBeGreaterThan(0);
+    expect(within(screen.getByTestId('flows-group-0')).getByText('FINANCE')).toBeTruthy();
+    expect(within(screen.getByTestId('flows-group-1')).getByText('WHOLE WORKSPACE')).toBeTruthy();
+    expect(screen.queryByText(/^Department: Finance · /u)).toBeNull();
+    expect(screen.queryByText(/^Whole workspace · /u)).toBeNull();
   });
 
   it('narrows Flows to the chosen team, and keeps the choice', async () => {
@@ -75,13 +77,12 @@ describe('the scope control on Flows', () => {
     expect(await screen.findByLabelText('Department: Finance')).toBeTruthy();
     expect(screen.getByText('Invoice triage')).toBeTruthy();
     expect(screen.queryByText('Email triage')).toBeNull();
-    // Inside a team each card still says its team: D4 is every card, in every
-    // scope (the build 11 review; until then the label was not repeated here).
-    expect(screen.getByText(/^Department: Finance · /u)).toBeTruthy();
+    // Inside a team its heading says the team (~~each card said it, D4~~ until builds 37 and 39).
+    expect(within(screen.getByTestId('flows-group-0')).getByText('FINANCE')).toBeTruthy();
     expect(writeScope).toHaveBeenCalledWith(expect.any(String), 'project-1');
   });
 
-  it('says the team on every card and every archived row inside a picked team too — D4 has no All-teams exception (the build 11 review)', async () => {
+  it('narrows the cards and the archived rows to a picked team; neither card says the team any more (D4 until builds 37 and 39, items 1 and 4)', async () => {
     mockStored.set(TEST_WORKSPACE, 'project-1');
     const rows = subscriptionsPayload().subscriptions.map((row, index) =>
       index === 0 ? { ...row, projectId: 'project-1' } : { ...row, projectId: null },
@@ -102,19 +103,20 @@ describe('the scope control on Flows', () => {
       '/projects': projectsPayload('Finance'),
     });
 
-    // Flows, in the team picked: its card says the team.
+    // Flows, in the team picked: its card, no team line under it.
     const flows = await renderWithProviders(<FlowsScreen />, signedInSession);
     expect(await flows.findByLabelText('Department: Finance')).toBeTruthy();
-    expect(await flows.findByText('Department: Finance · 1,284 runs · 1,272 ok · 12 failed')).toBeTruthy();
+    expect(await flows.findByText('Invoice triage')).toBeTruthy();
+    expect(flows.queryByText('Department: Finance · 1,284 runs · 1,272 ok · 12 failed')).toBeNull();
     expect(flows.queryByText('Email triage')).toBeNull();
     await flows.unmount();
 
-    // Its archived flows, in the same team: the row says it too.
+    // Its archived flows, in the same team: the row, no team line.
     const page = await renderWithProviders(<ArchivedFlowsScreen />, signedInSession);
     expect(await page.findByText('Old intake')).toBeTruthy();
     // The team is the scope: the whole workspace's archived row is not listed.
     await waitFor(() => expect(page.queryByText('Older intake')).toBeNull());
-    expect(page.getByText(/^Department: Finance · /u)).toBeTruthy();
+    expect(page.queryByText(/^Department: Finance/u)).toBeNull();
   });
 
   it('restores the kept choice for the workspace on the next visit', async () => {

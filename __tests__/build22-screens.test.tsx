@@ -2,7 +2,6 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react-nativ
 import React from 'react';
 import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
-import RunDetailsScreen from '@/app/(tabs)/activity/run-details';
 import ActivityScreen from '@/app/(tabs)/activity/index';
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import FlowEmailScreen from '@/app/(tabs)/flows/email';
@@ -26,6 +25,7 @@ import {
   signedInSession,
 } from '@/test/platform';
 import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
+import { RunDetailsWithSteps } from '@/test/run-tracker';
 
 jest.mock('@/lib/platform/client', () => ({
   platformOperation: jest.fn(),
@@ -566,8 +566,9 @@ describe("a v4 run's page: steps 2, 4 and 5 (S23–S25)", () => {
     fake.always('GET /v1/workspaces/{workspaceId}/approvals', { approvals: [] });
     fake.always(`GET ${FLOWS}`, (sent) => ({ subscriptions: sent.query?.status === 'archived' ? [] : [added(vendor)] }));
     setMockParams({ runId: RUN });
-    // Its steps are on its Run details since build 28 (F9).
-    return renderWithProviders(<RunDetailsScreen />, signedInSession);
+    // Its steps: on its Run details from build 28 (F9), on its page's steps face since builds 37
+    // and 39 — read here for every status, its Steps done tile with them (`RunDetailsWithSteps`).
+    return renderWithProviders(<RunDetailsWithSteps />, signedInSession);
   }
   const step = (id: string) =>
     within(screen.getByTestId(`run-step-group:${id}`))

@@ -1,11 +1,11 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import React from 'react';
 import { StyleSheet } from 'react-native';
 
 import HomeScreen from '@/app/(tabs)/(home)/index';
 import { ScreenError } from '@/components/screen-state';
 import { NocturneThemeProvider } from '@/hooks/use-theme';
-import { ERROR_BODY, busyLoadBody } from '@/lib/content/screen-states';
+import { ERROR_BODY, NO_MATCHES, busyLoadBody } from '@/lib/content/screen-states';
 import {
   PlatformError,
   PlatformNotConfiguredError,
@@ -28,7 +28,7 @@ import {
   signedInSession,
   subscriptionsPayload,
 } from '@/test/platform';
-import { mockRouter, renderWithProviders } from '@/test/render';
+import { mockRouter, mockTabs, renderWithProviders, setTextSize } from '@/test/render';
 
 /**
  * Gate 24's parity line, Home's half (BUILD-PLAN 24 Gate 24: "Every signed-in
@@ -58,8 +58,17 @@ import { mockRouter, renderWithProviders } from '@/test/render';
 jest.mock('@/lib/platform/client', () => ({
   platformOperation: jest.fn(),
   newIdempotencyKey: jest.fn((prefix: string) => `${prefix}-key`),
+  putFileToSignedUrl: jest.fn(async () => undefined),
 }));
 const { platformOperation } = jest.requireMock('@/lib/platform/client');
+// The upload card's file: a picked 12-byte PDF, read as such (YOUR FLOWS' Upload job).
+jest.mock('expo-document-picker', () => ({
+  getDocumentAsync: jest.fn(async () => ({
+    canceled: false,
+    assets: [{ uri: 'file:///picked/role.pdf', name: 'role.pdf', mimeType: 'application/pdf', size: 12 }],
+  })),
+}));
+jest.mock('expo-file-system', () => ({ File: jest.fn(() => ({ size: 12, bytes: async () => new Uint8Array(12) })) }));
 
 // The team chosen is kept on the device, per workspace; here, in memory.
 const mockStored = new Map<string, string | null>();
@@ -522,113 +531,220 @@ describe("YOUR FLOWS (the owner's build 34 F5)", () => {
     return fake;
   }
 
-  it("the live flows in sections by department A–Z, each A–Z by name as the website's — a draft left out — under YOUR FLOWS, with no RECENT RUNS", async () => {
-    const fake = routeFlows();
+  it("the live flows by department A–Z, each A–Z by name, under YOUR FLOWS — every flow its own card: icon, name, description, pill; no rows, no carets (build 39 item 8; items 1 and 4)", async () => {
+    routeFlows();
     await renderWithProviders(<HomeScreen />, signedInSession);
     expect(await screen.findByText('YOUR FLOWS')).toBeTruthy();
     expect(screen.queryByText('RECENT RUNS')).toBeNull();
     const section = (at: number) => screen.getByTestId(`home-flows-section-${at}`);
-    expect(within(section(0)).getByRole('header').props.children).toBe('ACCOUNTING');
+    expect(within(section(0)).getByText('ACCOUNTING')).toBeTruthy();
     expect(within(section(0)).getAllByTestId(/^home-flow-[a-z]+$/u).map((row) => row.props.testID)).toEqual(['home-flow-kpi']);
-    expect(within(section(1)).getByRole('header').props.children).toBe('FINANCE');
+    expect(within(section(1)).getByText('FINANCE')).toBeTruthy();
     // Email triage before Invoice triage, though the catalog lists Invoice triage first.
     expect(within(section(1)).getAllByTestId(/^home-flow-[a-z]+$/u).map((row) => row.props.testID)).toEqual(['home-flow-email', 'home-flow-invoice']);
     expect(screen.queryByTestId('home-flows-section-2')).toBeNull();
     expect(screen.queryByTestId('home-flow-lead')).toBeNull();
-    expect(within(screen.getByTestId('home-flow-invoice')).getByText('Invoice triage')).toBeTruthy();
-    // Each row has its divider but the last of its section (G3).
-    const border = (id: string) => {
-      const style = screen.getByTestId(id).props.style;
-      return (StyleSheet.flatten(typeof style === 'function' ? style({ pressed: false }) : style) ?? {}).borderBottomWidth;
-    };
-    expect([border('home-flow-email'), border('home-flow-invoice')]).toEqual([1, undefined]);
-    // Nothing is read for a flow until it is opened.
-    expect(fake.to('GET /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items')).toEqual([]);
+    const card = within(screen.getByTestId('home-flow-invoice'));
+    expect(card.getByTestId('home-flow-invoice-icon')).toBeTruthy();
+    expect(card.getByTestId('home-flow-invoice-name').props.children).toBe('Invoice triage');
+    expect(card.getByTestId('home-flow-invoice-description').props.children).toBe(flowCatalogPayload().automations.find((entry) => entry.templateId === 'tplflow.invoice')!.description);
+    expect(card.getByText('Live')).toBeTruthy();
+    // Always open: the form inside the card, nothing to expand.
+    expect(card.getByTestId('home-flow-invoice-form')).toBeTruthy();
+    expect(screen.getByTestId('home-flow-invoice').props.accessibilityState).toBeUndefined();
   });
 
-  it("a tapped flow opens to its run's first step — the fields of its runInput — and Start run starts the run and opens its page from Home; tapped again, it closes", async () => {
+  it('the department drop-down: "All departments" first, then the departments A–Z; one chosen shows its heading and cards alone', async () => {
+    routeFlows();
+    await renderWithProviders(<HomeScreen />, signedInSession);
+    const pill = await screen.findByTestId('home-flows-department');
+    expect(pill.props.accessibilityLabel).toBe('YOUR FLOWS: All departments');
+    await fireEvent.press(pill);
+    const menu = within(screen.getByTestId('home-flows-department-menu'));
+    expect(menu.getAllByText(/./u).map((node) => node.props.children)).toEqual(['All departments', 'Accounting', 'Finance']);
+    await fireEvent.press(screen.getByTestId('home-flows-department-option-Finance'));
+    expect(screen.getByTestId('home-flows-department').props.accessibilityLabel).toBe('YOUR FLOWS: Finance');
+    expect(screen.queryByText('ACCOUNTING')).toBeNull();
+    expect(screen.queryByTestId('home-flow-kpi')).toBeNull();
+    expect(within(screen.getByTestId('home-flows-section-0')).getByText('FINANCE')).toBeTruthy();
+    expect(screen.getByTestId('home-flow-email')).toBeTruthy();
+    expect(screen.getByTestId('home-flow-invoice')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('home-flows-department'));
+    await fireEvent.press(screen.getByTestId('home-flows-department-option-all'));
+    expect(screen.getByTestId('home-flow-kpi')).toBeTruthy();
+  });
+
+  it('"Search flows" narrows the cards by name, any case; nothing found says so', async () => {
+    routeFlows();
+    await renderWithProviders(<HomeScreen />, signedInSession);
+    const search = await screen.findByTestId('home-flows-search');
+    expect(search.props.placeholder).toBe('Search flows');
+    await fireEvent.changeText(search, 'INVOICE');
+    expect(screen.getByTestId('home-flow-invoice')).toBeTruthy();
+    expect(screen.queryByTestId('home-flow-email')).toBeNull();
+    expect(screen.queryByTestId('home-flow-kpi')).toBeNull();
+    expect(screen.queryByText('ACCOUNTING')).toBeNull();
+    expect(screen.queryByTestId('home-flows-no-match')).toBeNull();
+    await fireEvent.changeText(search, 'nothing like it');
+    expect(screen.getByTestId('home-flows-no-match').props.children).toBe(NO_MATCHES);
+    expect(screen.queryByTestId('home-flows-section-0')).toBeNull();
+  });
+
+  it("a flow without items: its run's fields and Start run inside its card; Start run opens the run in Flows over the flow's page", async () => {
     const fake = routeFlows();
     await renderWithProviders(<HomeScreen />, signedInSession);
-    const row = await screen.findByTestId('home-flow-invoice');
-    expect(row.props.accessibilityState).toEqual({ expanded: false });
-    await fireEvent.press(row);
-    const form = within(screen.getByTestId('home-flow-invoice-form'));
-    expect(screen.getByTestId('home-flow-invoice').props.accessibilityState).toEqual({ expanded: true });
+    const form = within(await screen.findByTestId('home-flow-invoice-form'));
     expect(form.getByText('Note')).toBeTruthy();
     await fireEvent.changeText(form.getByLabelText('Note'), 'From Home');
-    expect(form.getByTestId('start-run-button')).toBeTruthy();
-    expect(form.getByText('Start run')).toBeTruthy();
     await fireEvent.press(form.getByTestId('start-run-button'));
     await waitFor(() => expect(fake.to('POST /v1/workspaces/{workspaceId}/runs')).toHaveLength(1));
     expect(fake.to('POST /v1/workspaces/{workspaceId}/runs')[0]!.body).toEqual({ subscriptionId: 'invoice', input: { note: 'From Home' } });
-    await waitFor(() =>
-      expect(mockRouter.push).toHaveBeenCalledWith(
-        { pathname: '/(tabs)/activity/run', params: { runId: 'run-new', returnTo: 'home' } },
-        { withAnchor: true },
-      ),
-    );
-    await fireEvent.press(screen.getByTestId('home-flow-invoice'));
-    expect(screen.queryByTestId('home-flow-invoice-form')).toBeNull();
+    await waitFor(() => expect(mockTabs.navigate).toHaveBeenCalledTimes(1));
+    expect(mockTabs.navigate).toHaveBeenCalledWith('flows', {
+      state: { routes: [{ name: 'index' }, { name: 'detail', params: { flow: 'invoice' } }, { name: 'run', params: { runId: 'run-new' } }] },
+    });
+    expect(mockRouter.push).not.toHaveBeenCalled();
   });
 
-  it("each opens and closes on its own, as the website's: opening another leaves the first open", async () => {
-    routeFlows();
-    await renderWithProviders(<HomeScreen />, signedInSession);
-    await fireEvent.press(await screen.findByTestId('home-flow-invoice'));
-    expect(screen.getByTestId('home-flow-invoice-form')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('home-flow-email'));
-    expect(screen.getByTestId('home-flow-invoice-form')).toBeTruthy();
-    expect(screen.getByTestId('home-flow-email-form')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('home-flow-invoice'));
-    expect(screen.queryByTestId('home-flow-invoice-form')).toBeNull();
-    expect(screen.getByTestId('home-flow-email-form')).toBeTruthy();
-  });
-
-  it('a flow with items reads them only when opened — its ready ones, by department A–Z — and Start run names the one chosen', async () => {
+  it('a flow with items has them read when Home loads — one read for it — the newest ready job chosen, still changeable, and Start run names it and opens over its flow and job', async () => {
     const fake = routeFlows();
     await renderWithProviders(<HomeScreen />, signedInSession);
-    await fireEvent.press(await screen.findByTestId('home-flow-email'));
     await waitFor(() => expect(fake.to('GET /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items')).toHaveLength(1));
     expect(fake.to('GET /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items')[0]!.values).toMatchObject({ subscriptionId: 'email' });
-    // No run form until a job is chosen.
+    // Newest first: Designer is the newest ready one (Intern is still reading, Old role archived).
     const pill = await screen.findByTestId('home-flow-email-item');
-    expect(pill.props.accessibilityLabel).toBe('Job: Choose');
-    expect(screen.queryByTestId('start-run-button')).toBeNull();
+    expect(pill.props.accessibilityLabel).toBe('Job: Designer');
+    expect(within(screen.getByTestId('home-flow-email-form')).getByTestId('start-run-button')).toBeTruthy();
     await fireEvent.press(pill);
     const menu = within(screen.getByTestId('home-flow-email-item-menu'));
     expect(menu.getAllByText(/./u).map((node) => node.props.children)).toEqual(['JOB', 'FINANCE', 'Accountant', 'PRODUCT', 'Designer']);
-    await fireEvent.press(screen.getByTestId('home-flow-email-item-option-j-designer'));
-    expect(screen.getByTestId('home-flow-email-item').props.accessibilityLabel).toBe('Job: Designer');
-    await fireEvent.press(screen.getByTestId('start-run-button'));
+    await fireEvent.press(screen.getByTestId('home-flow-email-item-option-j-accountant'));
+    expect(screen.getByTestId('home-flow-email-item').props.accessibilityLabel).toBe('Job: Accountant');
+    await fireEvent.press(within(screen.getByTestId('home-flow-email-form')).getByTestId('start-run-button'));
     await waitFor(() => expect(fake.to('POST /v1/workspaces/{workspaceId}/runs')).toHaveLength(1));
-    expect(fake.to('POST /v1/workspaces/{workspaceId}/runs')[0]!.body).toEqual({ subscriptionId: 'email', input: {}, itemId: 'j-designer' });
-    await waitFor(() =>
-      expect(mockRouter.push).toHaveBeenCalledWith(
-        { pathname: '/(tabs)/activity/run', params: { runId: 'run-new', returnTo: 'home' } },
-        { withAnchor: true },
-      ),
-    );
+    expect(fake.to('POST /v1/workspaces/{workspaceId}/runs')[0]!.body).toEqual({ subscriptionId: 'email', input: {}, itemId: 'j-accountant' });
+    await waitFor(() => expect(mockTabs.navigate).toHaveBeenCalledTimes(1));
+    expect(mockTabs.navigate).toHaveBeenCalledWith('flows', {
+      state: {
+        routes: [
+          { name: 'index' },
+          { name: 'detail', params: { flow: 'email' } },
+          { name: 'item', params: { item: 'j-accountant' } },
+          { name: 'run', params: { runId: 'run-new' } },
+        ],
+      },
+    });
   });
 
-  it("a flow that cannot start a run here opens its flow page: one with no run fields, and — as on an item's page — a flow with items to a member", async () => {
+  it('a person\'s own job choice is kept across re-reads while an upload reads', async () => {
+    const fake = routeFlows();
+    await renderWithProviders(<HomeScreen />, signedInSession);
+    await fireEvent.press(await screen.findByTestId('home-flow-email-item'));
+    await fireEvent.press(screen.getByTestId('home-flow-email-item-option-j-accountant'));
+    // Intern is still reading: the list is read again, and the choice stays.
+    await waitFor(() => expect(fake.to('GET /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items').length).toBeGreaterThan(1), { timeout: 4000 });
+    expect(screen.getByTestId('home-flow-email-item').props.accessibilityLabel).toBe('Job: Accountant');
+  });
+
+  it('no ready job: "No jobs yet." and "Upload job", which opens the upload card; the job sent then reads in the card and, ready, is chosen — without leaving Home (build 37 items 2 and 5)', async () => {
+    const fake = routeFlows();
+    const LISTED = 'GET /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items';
+    let listed: Items['items'] = [];
+    fake.always(LISTED, () => ({ items: listed, choices: {} }));
+    const made = job('j-new', 'Analyst', 'Finance', { status: 'reading', createdAt: '2026-11-06T10:00:00Z' });
+    fake.always('POST /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items', { item: made });
+    fake.always('POST /v1/workspaces/{workspaceId}/uploads', {
+      uploadSessionId: 'upload-1',
+      uploadUrl: 'https://store.example.test/put',
+      expiresAt: '2026-11-06T12:00:00Z',
+      maximumSizeBytes: 10_000_000,
+    });
+    fake.always('POST /v1/workspaces/{workspaceId}/uploads/{uploadSessionId}/complete', {
+      artifact: { artifactId: 'artifact-1', filename: 'role.pdf', contentType: 'application/pdf', sizeBytes: 12 },
+    });
+    await renderWithProviders(<HomeScreen />, signedInSession);
+    expect((await screen.findByTestId('home-flow-email-items-line')).props.children).toBe('No jobs yet.');
+    const upload = screen.getByTestId('home-flow-email-upload');
+    expect(within(upload).getByText('Upload job')).toBeTruthy();
+    await fireEvent.press(upload);
+    expect(await screen.findByTestId('item-upload-dialog')).toBeTruthy();
+    expect(mockRouter.push).not.toHaveBeenCalled();
+    // Cancel closes the card, nothing sent; the button is there again.
+    await fireEvent.press(screen.getByTestId('item-upload-cancel'));
+    await waitFor(() => expect(screen.queryByTestId('item-upload-dialog')).toBeNull());
+    expect(fake.to('POST /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items')).toEqual([]);
+
+    // Sent: the card closes, the job reads in its place at once, and the list is read again then.
+    await fireEvent.press(screen.getByTestId('home-flow-email-upload'));
+    await fireEvent.changeText(screen.getByLabelText('Title'), 'Analyst');
+    await fireEvent.changeText(screen.getByLabelText('Department'), 'Finance');
+    await fireEvent.press(screen.getByTestId('run-file-jobFile-upload'));
+    await screen.findByText('Ready: role.pdf (12 bytes)');
+    const before = fake.to(LISTED).length;
+    await fireEvent.press(screen.getByTestId('item-upload-send'));
+    await waitFor(() => expect(screen.queryByTestId('item-upload-dialog')).toBeNull());
+    expect(fake.to('POST /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items')[0]!.body).toEqual({
+      fields: { title: 'Analyst', department: 'Finance' },
+      file: 'artifact-1',
+    });
+    expect(screen.getByTestId('home-flow-email-items-line').props.children).toBe('Reading…');
+    expect(within(screen.getByTestId('home-flow-email-reading')).getByText('Analyst')).toBeTruthy();
+    // Read again on the upload itself, not 2 s later by the reading job's re-read.
+    await waitFor(() => expect(fake.to(LISTED).length).toBe(before + 1), { timeout: 1000 });
+    expect(screen.getByTestId('home-flow-email-items-line').props.children).toBe('Reading…');
+    // Then, read ready, it is the card's job: the same card, still on Home.
+    listed = [{ ...made, status: 'ready' }];
+    expect((await screen.findByTestId('home-flow-email-item', {}, { timeout: 4000 })).props.accessibilityLabel).toBe('Job: Analyst');
+    expect(mockRouter.push).not.toHaveBeenCalled();
+  });
+
+  it('a flow whose items cannot be read says "Unavailable" in its place; the other cards still draw', async () => {
+    const fake = routeFlows();
+    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items', () => {
+      throw new PlatformError('Service Unavailable', 503);
+    });
+    await renderWithProviders(<HomeScreen />, signedInSession);
+    expect((await screen.findByTestId('home-flow-email-items-line')).props.children).toBe('Unavailable');
+    expect(screen.getByTestId('home-flow-invoice-form')).toBeTruthy();
+  });
+
+  it("at the largest text size the job choice and the run form sit inside the flow's card (build 37 item 3: the cut-off \"Choose\")", async () => {
+    const restore = setTextSize(3.571);
+    try {
+      routeFlows();
+      await renderWithProviders(<HomeScreen />, signedInSession);
+      const card = within(await screen.findByTestId('home-flow-email'));
+      expect(await card.findByTestId('home-flow-email-item')).toBeTruthy();
+      expect(card.getByTestId('home-flow-email-form')).toBeTruthy();
+      expect(card.getByTestId('start-run-button')).toBeTruthy();
+      expect(screen.queryByText('Choose')).toBeNull();
+    } finally {
+      // The size goes back while the screen is drawn: inside act, so its re-render is awaited.
+      await act(async () => {
+        restore();
+      });
+    }
+  });
+
+  it("a flow that cannot start a run here — no run fields, or a flow with items to a member — shows Open, to its flow page; nothing is read for it", async () => {
     routeFlows();
     await renderWithProviders(<HomeScreen />, signedInSession);
-    const kpi = await screen.findByTestId('home-flow-kpi');
-    expect(kpi.props.accessibilityState?.expanded).toBeUndefined();
-    await fireEvent.press(kpi);
-    expect(screen.queryByTestId('home-flow-kpi-form')).toBeNull();
+    const kpi = within(await screen.findByTestId('home-flow-kpi'));
+    expect(kpi.queryByTestId('home-flow-kpi-form')).toBeNull();
+    await fireEvent.press(kpi.getByTestId('home-flow-kpi-open'));
     expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'kpi' } });
     await screen.unmount();
     resetSnapshot();
 
     const fake = routeFlows();
     await renderWithProviders(<HomeScreen />, sessionAs('member'));
-    await fireEvent.press(await screen.findByTestId('home-flow-email'));
-    expect(screen.queryByTestId('home-flow-email-form')).toBeNull();
+    const email = within(await screen.findByTestId('home-flow-email'));
+    expect(email.queryByTestId('home-flow-email-form')).toBeNull();
+    expect(within(email.getByTestId('home-flow-email-open')).getByText('Open')).toBeTruthy();
+    await fireEvent.press(email.getByTestId('home-flow-email-open'));
     expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'email' } });
     expect(fake.to('GET /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items')).toEqual([]);
     // A member still starts a flow without items here.
-    await fireEvent.press(screen.getByTestId('home-flow-invoice'));
     expect(screen.getByTestId('home-flow-invoice-form')).toBeTruthy();
   });
 
