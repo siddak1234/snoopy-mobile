@@ -247,7 +247,8 @@ describe("Home's scope: two icons beside the bell (the owner's build 13 decision
     // No words: the pill row is not on Home.
     expect(screen.queryByTestId('scope-control')).toBeNull();
     expect(screen.queryByText('Acme Operations')).toBeNull();
-    expect(screen.queryByText('All departments')).toBeNull();
+    // In the header: YOUR FLOWS' own department drop-down says "All departments" (builds 37 and 39, item 8).
+    expect(within(screen.getByTestId('home-header')).queryByText('All departments')).toBeNull();
   });
 
   it('draws a personal workspace as a person', async () => {

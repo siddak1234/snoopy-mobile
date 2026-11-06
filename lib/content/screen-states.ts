@@ -838,3 +838,13 @@ export function acceptedLine(types: readonly string[] | undefined): string | nul
 export function chooseAccepted(line: string): string {
   return `Choose a ${line}.`;
 }
+/**
+ * A phone number or email in a list row (the owner's build 39 item 11), where
+ * Apple's contact card cannot open (Android, or it failed): the sheet's words
+ * (task D of builds 37 and 39).
+ */
+export const CONTACT_CALL = 'Call';
+export const CONTACT_MESSAGE = 'Message';
+export const CONTACT_EMAIL = 'Email';
+export const CONTACT_COPY = 'Copy';
+export const CONTACT_CANCEL = 'Cancel';

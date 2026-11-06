@@ -3,11 +3,9 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { SectionTitle } from '@/components/nocturne/section-label';
 import { StatCard } from '@/components/nocturne/stat-card';
 import { StatusPill } from '@/components/nocturne/status-pill';
 import { SurfaceCard } from '@/components/nocturne/surface-card';
-import { TrackerStep } from '@/components/runs/tracker-step';
 import { ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { Text } from '@/components/text';
 import { Page } from '@/components/page';
@@ -16,7 +14,7 @@ import { fonts, space, typeScale } from '@/constants/theme';
 import { busyBody } from '@/hooks/use-resource';
 import { useRunDetail } from '@/hooks/use-run-detail';
 import { useTheme } from '@/hooks/use-theme';
-import { RUN_DETAILS_LABEL, STEPS_LABEL, errorTitleFor } from '@/lib/content/screen-states';
+import { RUN_DETAILS_LABEL, errorTitleFor } from '@/lib/content/screen-states';
 import { duration } from '@/lib/view/format';
 import { statusLabel, type StatusPillLabel } from '@/lib/view/status';
 import { runLabel, toRunFacts, toRunStats } from '@/lib/view/runs';
@@ -29,10 +27,11 @@ import { runLabel, toRunFacts, toRunStats } from '@/lib/view/runs';
  * "Run details" row of the run's page, which reads the run the same way
  * (`useRunDetail`: bound to the workspace it was opened in, read again while it
  * goes). Top to bottom: Back, "Run details", the run's name and its status;
- * the tiles — Duration and Steps done; STEPS, every step from the start, live,
- * a held step saying where it stands (its Approve and Deny, and how the run
- * went, stay on the run's page); then its facts — Started, Ended, Trigger, Run
- * ID (the website's, G18).
+ * the tiles — Duration and Steps done; then its facts — Started, Ended,
+ * Trigger, Run ID (the website's, G18). Only the run's metadata (the owner's
+ * build 39 item 10: "I just dont want to see the meta data in the bottom. That
+ * should be through the run details button for a separate page"): ~~STEPS~~
+ * until builds 37 and 39, now the run page's steps face.
  */
 export default function RunDetailsScreen() {
   const { palette } = useTheme();
@@ -85,15 +84,6 @@ export default function RunDetailsScreen() {
         {stats.map((s) => (
           <StatCard key={s.label} value={s.value} label={s.label} size="sm" />
         ))}
-      </View>
-
-      <View testID="run-progress">
-        <SectionTitle>{STEPS_LABEL}</SectionTitle>
-        <SurfaceCard>
-          {tracker.map((row, i) => (
-            <TrackerStep key={row.id} row={row} divider={i < tracker.length - 1} />
-          ))}
-        </SurfaceCard>
       </View>
 
       <SurfaceCard>

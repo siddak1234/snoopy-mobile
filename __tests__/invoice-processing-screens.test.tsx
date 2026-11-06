@@ -3,7 +3,7 @@ import React from 'react';
 import { AccessibilityInfo, Platform, Share, StyleSheet } from 'react-native';
 
 import RunDetailScreen from '@/app/(tabs)/activity/run';
-import RunDetailsScreen from '@/app/(tabs)/activity/run-details';
+import { RunDetailsWithSteps } from '@/test/run-tracker';
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import SetupScreen from '@/app/(tabs)/flows/setup';
 import ConnectionsScreen from '@/app/(tabs)/settings/connections';
@@ -916,10 +916,13 @@ function openRun(
     return path.endsWith(`/runs/${RUN_ID}`) ? Promise.resolve(detail) : routed(path, ...rest);
   });
   setMockParams({ runId: RUN_ID });
-  return renderWithProviders(options.page === 'details' ? <RunDetailsScreen /> : <RunDetailScreen />, signedInSession);
+  return renderWithProviders(options.page === 'details' ? <RunDetailsWithSteps /> : <RunDetailScreen />, signedInSession);
 }
 
-/** The run's Run details page (build 28, F9): where its steps, tiles and facts are. */
+/**
+ * The run's Run details page (build 28, F9): its tiles and facts — with its steps as its page's steps
+ * face draws them (`RunDetailsWithSteps`; on Run details itself until builds 37 and 39).
+ */
 function openRunDetails(detail: RunDetail, options: Omit<Parameters<typeof openRun>[1] & object, 'page'> = {}) {
   return openRun(detail, { ...options, page: 'details' });
 }
@@ -935,8 +938,8 @@ const RUN_793EEF82: Reported[] = [
 ];
 
 describe("a run's Run details — every step from the start, a live tracker (spec A7; the owner's build 20 items 10 and 11)", () => {
-  it('at the start: every group drawn, the first Working… and the rest Waiting; Steps done 0 of them', async () => {
-    await openRunDetails(ipRun('pending', []));
+  it('at the start: every group drawn under STEPS on its page\'s steps face (builds 37 and 39), the first Working… and the rest Waiting', async () => {
+    await openRun(ipRun('pending', []));
     const steps = await screen.findByTestId('run-progress');
     expect(within(steps).getByText('STEPS')).toBeTruthy();
     expect(screen.queryByText('PROGRESS')).toBeNull();
@@ -953,7 +956,6 @@ describe("a run's Run details — every step from the start, a live tracker (spe
     // The working step's icon turns (round 23, A4); no other row's does.
     expect(within(rows[0]!).getByTestId('run-step-spinner')).toBeTruthy();
     expect(within(steps).getAllByTestId('run-step-spinner')).toHaveLength(1);
-    expect(within(screen.getByText('Steps done').parent!).getByText('0 / 4')).toBeTruthy();
     expect(screen.queryByText('No steps reported yet.')).toBeNull();
   });
 

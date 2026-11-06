@@ -430,6 +430,13 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
         {FLOW_CHANGE_ADMIN_ONLY}
       </Text>
     );
+  // A run started here is pushed over this page (builds 37 and 39): in the Flows stack, Back to
+  // this page. Drawn in Settings (an archived flow's live twin), it opens in
+  // Activity, Back to Settings. ~~Activity with `returnTo: 'flows'`~~ until builds 37 and 39.
+  const openStarted = (runId: string) =>
+    detailPath === '/(tabs)/flows/detail'
+      ? router.push({ pathname: '/(tabs)/flows/run', params: { runId } })
+      : router.push({ pathname: '/(tabs)/activity/run', params: { runId, returnTo: 'settings' } }, { withAnchor: true });
   // One key whether the flow is on or off: Turn on keeps the form, and a file
   // given first stays given — as the website's form does (the Build 21 review).
   const stepOne = def.removed ? null : (
@@ -444,7 +451,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
           subscriptionId={subscription.id}
           shownWorkspaceId={flows.loadedFor}
           runInput={subscription.runInput ?? []}
-          onStarted={(runId) => router.push({ pathname: '/(tabs)/activity/run', params: { runId, returnTo: 'flows' } }, { withAnchor: true })}
+          onStarted={openStarted}
         />
       ) : current !== 'Live' ? (
         (subscription.runInput ?? []).length > 0 ? (
@@ -453,7 +460,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
             subscriptionId={subscription.id}
             shownWorkspaceId={flows.loadedFor}
             runInput={subscription.runInput ?? []}
-            onStarted={(runId) => router.push({ pathname: '/(tabs)/activity/run', params: { runId, returnTo: 'flows' } }, { withAnchor: true })}
+            onStarted={openStarted}
             action={turnOn}
           />
         ) : (

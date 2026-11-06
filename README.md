@@ -498,6 +498,21 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   `expo-image-picker` plugin in `app.json` gives the camera the app's own
   sentence and turns the microphone and the photo library off, which
   `__tests__/app-config.test.js` holds through Expo's own mod compiler.
+- A phone number or email in a list row (builds 37 and 39, the owner's item 11;
+  `components/blocks/contact-text.tsx`): `expo-contacts` (~57.0.8) and
+  `expo-clipboard` (~57.0.2), native modules, so they ship in a new TestFlight
+  build, never an update. A tap opens Apple's own unknown-contact card with the
+  value filled — `presentFormAsync(null, contact, { allowsActions: true })`
+  from `expo-contacts/legacy` (SDK 57's `presentFormAsync` from
+  "expo-contacts" throws) — whose call, message, FaceTime and mail buttons and
+  Create New Contact / Add to Existing Contact are Apple's. On Android, or if
+  the card fails, a sheet: Call (`tel:`), Message (`sms:`) or Email
+  (`mailto:`), Copy (`setStringAsync`), Cancel. The `expo-contacts` plugin in
+  `app.json` sets `NSContactsUsageDescription` to "Autom8x adds a candidate's
+  phone or email to your contacts when you ask." (and adds Android's contacts
+  permissions), which `__tests__/app-config.test.js` holds. Neither module
+  makes a request; whether Apple's card saves without the Contacts permission
+  is not documented — a device check (DESIGN-GAPS, builds 37 and 39).
 - `hooks/use-session.tsx` resolves `/v1/session` before routing. Protected tabs
   fail closed unless that response positively establishes `signed-in`. A 401
   clears the local credential; an outage does not.

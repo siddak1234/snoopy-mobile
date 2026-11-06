@@ -5,6 +5,7 @@ import { Platform, StyleSheet } from 'react-native';
 import NotificationsScreen from '@/app/(tabs)/(home)/notifications';
 import RunDetailScreen from '@/app/(tabs)/activity/run';
 import RunDetailsScreen from '@/app/(tabs)/activity/run-details';
+import { RunDetailsWithSteps } from '@/test/run-tracker';
 import BillingScreen from '@/app/(tabs)/settings/billing';
 import { resetPushForTests } from '@/hooks/use-push-registration';
 import type { WorkspaceBilling } from '@/lib/platform/billing';
@@ -112,7 +113,8 @@ const aWhile = () => act(async () => new Promise((resolve) => setTimeout(resolve
 
 const steps = () => screen.getByText('Steps done').parent!;
 
-// Its steps and tiles are on its Run details (build 28, F9), read as its page reads it (`useRunDetail`).
+// Its tiles are on its Run details (build 28, F9), read as its page reads it (`useRunDetail`); its steps
+// on its page's steps face since builds 37 and 39.
 describe('a run that has not ended is read again until it has (feedback #3)', () => {
   it('moves from Running to Success without a hand on it, one read at a time, and stops once it has ended', async () => {
     const second = gated(detail('running', [['receive', 'ok']]));
@@ -121,9 +123,8 @@ describe('a run that has not ended is read again until it has (feedback #3)', ()
     setMockParams({ runId: 'run-1' });
     await renderWithProviders(<RunDetailsScreen />, signedInSession);
     expect(await screen.findByText('Running')).toBeTruthy();
-    // Nothing reported yet: every step drawn, the first working, none done (Build 21, spec A7).
+    // Nothing reported yet: none done (Build 21, spec A7).
     expect(within(steps()).getByText('0 / 4')).toBeTruthy();
-    expect(screen.getByText('Working…')).toBeTruthy();
 
     // Read again; while that read is unanswered, no other is made.
     await waitFor(() => expect(fake.to(RUN)).toHaveLength(2));
@@ -139,7 +140,6 @@ describe('a run that has not ended is read again until it has (feedback #3)', ()
     await act(async () => third.release());
     expect(await screen.findByText('Success')).toBeTruthy();
     expect(within(steps()).getByText('4 / 4')).toBeTruthy();
-    expect(screen.queryByText('Working…')).toBeNull();
     expect(screen.queryByText('Cancel run')).toBeNull();
 
     // Ended: no further read, however long the page stays open.
@@ -168,8 +168,8 @@ describe('a run that has not ended is read again until it has (feedback #3)', ()
   it('reads a finished run once', async () => {
     const fake = routeRun(detail('failed', [['receive', 'failed']]));
     setMockParams({ runId: 'run-1' });
-    await renderWithProviders(<RunDetailsScreen />, signedInSession);
-    // The pill, and the step that failed with no reason given.
+    await renderWithProviders(<RunDetailScreen />, signedInSession);
+    // The pill, and on its steps face the step that failed with no reason given.
     expect(await screen.findAllByText('Failed')).toHaveLength(2);
     await aWhile();
     expect(fake.to(RUN)).toHaveLength(1);
@@ -250,7 +250,8 @@ describe("a run that turns held while its page is open offers Approve and Deny w
     const { HELD_APPROVAL_REREADS } = jest.requireActual('@/lib/view/runs');
     const fake = routeHeld([detail('held', HELD_AT_VALIDATE)], [[]]);
     setMockParams({ runId: 'run-1' });
-    await renderWithProviders(<RunDetailsScreen />, signedInSession);
+    // Its steps face (builds 37 and 39) draws the held step.
+    await renderWithProviders(<RunDetailScreen />, signedInSession);
     expect(await screen.findByText('2 · Check the amount')).toBeTruthy();
     await waitFor(() => expect(fake.to(RUN)).toHaveLength(1 + HELD_APPROVAL_REREADS), { timeout: 3000 });
     await aWhile();
@@ -262,7 +263,8 @@ describe("a run that turns held while its page is open offers Approve and Deny w
   it('a held run whose blocks hold the approval form is read once', async () => {
     const fake = routeHeld([withForm(detail('held', HELD_AT_VALIDATE))], [[approvalFor('pending')]]);
     setMockParams({ runId: 'run-1' });
-    await renderWithProviders(<RunDetailsScreen />, signedInSession);
+    // Its steps face (builds 37 and 39) draws the held step.
+    await renderWithProviders(<RunDetailScreen />, signedInSession);
     expect(await screen.findByText('2 · Check the amount')).toBeTruthy();
     await aWhile();
     expect(fake.to(RUN)).toHaveLength(1);
@@ -273,17 +275,19 @@ describe("a run that turns held while its page is open offers Approve and Deny w
     const fake = routeHeld([detail('succeeded', [['receive', 'ok'], ['validate', 'ok'], ['post', 'ok'], ['notify', 'ok']])], [[]]);
     setMockParams({ runId: 'run-1' });
     await renderWithProviders(<RunDetailsScreen />, signedInSession);
-    expect(await screen.findByText('2 · Check the amount')).toBeTruthy();
+    expect(await screen.findByText('Success')).toBeTruthy();
     await aWhile();
     expect(fake.to(RUN)).toHaveLength(1);
   });
 });
 
+// Its steps with its tiles (`RunDetailsWithSteps`): a held or failed run's page draws them on its steps
+// face, a succeeded one's counts them in Steps done (builds 37 and 39).
 describe('a finished run shows every step and where it ended (Build 21, spec A7; the owner\'s build 20 item 10, over build 19\'s item 6)', () => {
   it('a success with no address set: three steps done, and the email it did not send Skipped — every step counted', async () => {
     routeRun(detail('succeeded', [['receive', 'ok'], ['validate', 'ok'], ['post', 'ok']]));
     setMockParams({ runId: 'run-1' });
-    await renderWithProviders(<RunDetailsScreen />, signedInSession);
+    await renderWithProviders(<RunDetailsWithSteps />, signedInSession);
     expect(await screen.findByText('Success')).toBeTruthy();
     expect(screen.queryByText(/Not run/u)).toBeNull();
     const email = within(screen.getByTestId('run-step-step:notify'));
@@ -298,7 +302,7 @@ describe('a finished run shows every step and where it ended (Build 21, spec A7;
   it('a failure at its first step: that step, failed, and the rest Stopped', async () => {
     routeRun(detail('failed', [['receive', 'failed']]));
     setMockParams({ runId: 'run-1' });
-    await renderWithProviders(<RunDetailsScreen />, signedInSession);
+    await renderWithProviders(<RunDetailsWithSteps />, signedInSession);
     expect(await screen.findByText('1 · Invoice received')).toBeTruthy();
     // No reason given: the step says Failed, as the pill does.
     expect(within(screen.getByTestId('run-step-step:receive')).getByText('Failed')).toBeTruthy();
@@ -313,7 +317,7 @@ describe('a finished run shows every step and where it ended (Build 21, spec A7;
   it('a held run: what it did, the held step with its hand, and what is left Waiting', async () => {
     routeRun(detail('held', [['receive', 'ok'], ['validate', 'held']]));
     setMockParams({ runId: 'run-1' });
-    await renderWithProviders(<RunDetailsScreen />, signedInSession);
+    await renderWithProviders(<RunDetailsWithSteps />, signedInSession);
     expect(await screen.findByText('2 · Check the amount')).toBeTruthy();
     expect(screen.queryByText('Records the invoice once it is within threshold or has been approved.')).toBeNull();
     expect(screen.queryByText(/Not run/u)).toBeNull();

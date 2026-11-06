@@ -252,7 +252,8 @@ describe("a run's page says what the website's says (G18)", () => {
       ),
     );
     setMockParams({ runId: 'run-1' });
-    await renderWithProviders(<RunDetailsScreen />, signedInSession);
+    // On the run's steps face since builds 37 and 39 (~~Run details~~).
+    await renderWithProviders(<RunDetailScreen />, signedInSession);
     const held = await screen.findByText('Waiting for approval: Above the $500 auto-approve threshold.');
     expect(colorOf(held)).toBe(status.warnText);
     expect(screen.queryByText('Checked $730 against $500')).toBeNull();
@@ -264,7 +265,8 @@ describe("a run's page says what the website's says (G18)", () => {
   it('draws every declared step from the start — the first Working…, the rest Waiting — never "No steps reported yet." (Build 21, spec A7)', async () => {
     routeRun(detail({ status: 'running', origin: 'trigger', endedAt: undefined }));
     setMockParams({ runId: 'run-1' });
-    await renderWithProviders(<RunDetailsScreen />, signedInSession);
+    // On the run's steps face since builds 37 and 39 (~~Run details~~).
+    await renderWithProviders(<RunDetailScreen />, signedInSession);
     expect(await screen.findByText('1 · Invoice received')).toBeTruthy();
     expect(within(screen.getByTestId('run-step-step:receive')).getByText('Working…')).toBeTruthy();
     expect(within(screen.getByTestId('run-step-step:validate')).getByText('2 · Check the amount')).toBeTruthy();

@@ -5,16 +5,15 @@ import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Dropdown } from '@/components/dropdown';
-import { IconTile } from '@/components/nocturne/icon-tile';
+import { FlowCard } from '@/components/flows/flow-card';
 import { SectionTitle } from '@/components/nocturne/section-label';
-import { SurfaceCard } from '@/components/nocturne/surface-card';
 import { Pressable } from '@/components/pressable';
 import { ScopePill } from '@/components/scope-control';
 import { ScreenEmpty, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
 import { Text } from '@/components/text';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
-import { em, fonts, iconSize, inset, layout, space, status, typeScale, withAlpha } from '@/constants/theme';
+import { em, fonts, inset, space, status, typeScale, withAlpha } from '@/constants/theme';
 import { useAccessibilityTextSize } from '@/hooks/use-accessibility-text-size';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { roleIn, useSession } from '@/hooks/use-session';
@@ -174,48 +173,54 @@ export default function AddFlowScreen() {
                 ? () => router.push({ pathname: '/(tabs)/flows/detail', params: { flow: here.id } })
                 : undefined;
               return (
-                <SurfaceCard key={sol.templateId} style={[styles.card, stacked && styles.cardStacked]} onPress={openFlow}>
-                  <IconTile icon={sol.icon} size={42} iconSize={iconSize.row} borderRadius={12} bordered />
-                  <View style={stacked ? styles.cardBodyStacked : styles.cardBody}>
-                    <Text style={[styles.cardName, { color: palette.text }]}>{sol.name}</Text>
-                    <Text style={[styles.cardDesc, { color: palette.neutral[400] }]}>{sol.desc}</Text>
-                    {/* The platform probed this automation and it did not answer.
-                        Saying so beats an Add button that fails at the first run —
-                        the same line the web client renders. */}
-                    {!sol.available ? (
+                <FlowCard
+                  key={sol.templateId}
+                  testID={`add-card-${sol.templateId}`}
+                  icon={sol.icon}
+                  name={sol.name}
+                  description={sol.desc}
+                  stacked={stacked}
+                  onPress={openFlow}
+                  note={
+                    // The platform probed this automation and it did not answer.
+                    // Saying so beats an Add button that fails at the first run —
+                    // the same line the web client renders.
+                    !sol.available ? (
                       <Text style={[styles.cardMeta, { color: status.warnText }]}>{UNAVAILABLE_NOTE}</Text>
-                    ) : null}
-                  </View>
-                  {here ? (
-                    <Text testID={`added-${sol.templateId}`} style={[styles.added, { color: palette.neutral[400] }]}>
-                      Added ✓
-                    </Text>
-                  ) : (
-                    <Pressable
-                      testID={`add-${sol.templateId}`}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Add ${sol.name}`}
-                      disabled={!sol.available || !canManage}
-                      accessibilityState={{ disabled: !sol.available || !canManage }}
-                      onPress={() =>
-                        router.push({ pathname: '/(tabs)/flows/setup', params: { template: sol.templateId } })
-                      }
-                      style={({ pressed }) => [
-                        styles.addBtn,
-                        { borderColor: sol.available && canManage ? palette.accent : palette.neutral[700] },
-                        pressed && { backgroundColor: withAlpha(palette.accent, 0.1) },
-                      ]}>
-                      <Text
-                        style={{
-                          fontFamily: fonts.medium,
-                          fontSize: typeScale.body.fontSize,
-                          color: sol.available && canManage ? palette.accent : palette.neutral[400],
-                        }}>
-                        Add
-                      </Text>
-                    </Pressable>
-                  )}
-                </SurfaceCard>
+                    ) : null
+                  }
+                  right={
+                    here ? (
+                        <Text testID={`added-${sol.templateId}`} style={[styles.added, { color: palette.neutral[400] }]}>
+                          Added ✓
+                        </Text>
+                      ) : (
+                        <Pressable
+                          testID={`add-${sol.templateId}`}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Add ${sol.name}`}
+                          disabled={!sol.available || !canManage}
+                          accessibilityState={{ disabled: !sol.available || !canManage }}
+                          onPress={() =>
+                            router.push({ pathname: '/(tabs)/flows/setup', params: { template: sol.templateId } })
+                          }
+                          style={({ pressed }) => [
+                            styles.addBtn,
+                            { borderColor: sol.available && canManage ? palette.accent : palette.neutral[700] },
+                            pressed && { backgroundColor: withAlpha(palette.accent, 0.1) },
+                          ]}>
+                          <Text
+                            style={{
+                              fontFamily: fonts.medium,
+                              fontSize: typeScale.body.fontSize,
+                              color: sol.available && canManage ? palette.accent : palette.neutral[400],
+                            }}>
+                            Add
+                          </Text>
+                        </Pressable>
+                      )
+                  }
+                />
               );
             })}
           </View>
@@ -254,33 +259,6 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: space.inner,
-  },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.inner,
-    padding: layout.cardPad,
-  },
-  cardBody: {
-    flex: 1,
-    minWidth: 0,
-  },
-  // Round 24's simulator audit: beside Add or "Added ✓" at the largest size, "QuickBoo/ks." broke inside the word.
-  cardStacked: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-  },
-  cardBodyStacked: {
-    alignSelf: 'stretch',
-  },
-  cardName: {
-    fontFamily: fonts.medium,
-    fontSize: typeScale.lead.fontSize,
-  },
-  cardDesc: {
-    marginTop: inset.xxs,
-    fontFamily: fonts.regular,
-    fontSize: typeScale.small.fontSize,
   },
   adminOnly: { fontFamily: fonts.regular, ...typeScale.small },
   cardMeta: {

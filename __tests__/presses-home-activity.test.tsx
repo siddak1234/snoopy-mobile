@@ -68,9 +68,9 @@ describe('the run page: its cancel dialog and View flow (24.4.2)', () => {
   const CANCEL = 'POST /v1/workspaces/{workspaceId}/runs/{runId}/cancel';
 
   /** run-1 of the flow `email`, running until the platform takes a cancel; the catalog and approvals its page joins. */
-  function routeRunningRun() {
+  function routeRunningRun(start: Run['status'] = 'running') {
     const fake = fakePlatform(platformOperation);
-    let status: Run['status'] = 'running';
+    let status: Run['status'] = start;
     const detail = (runId: string) => {
       const payload = runDetailPayload(runId);
       return { ...payload, run: { ...payload.run, subscriptionId: 'email', status } };
@@ -121,8 +121,8 @@ describe('the run page: its cancel dialog and View flow (24.4.2)', () => {
     expect(screen.queryByText('Cancel run')).toBeNull();
   });
 
-  it("View flow opens the run's own flow: the flow page with its subscription", async () => {
-    routeRunningRun();
+  it("View flow, on the result face once the run succeeded, opens the run's own flow: the flow page with its subscription (builds 37 and 39: not on the steps face)", async () => {
+    routeRunningRun('succeeded');
     await renderWithProviders(<RunDetailScreen />, signedInSession);
 
     await fireEvent.press(await screen.findByText('View flow'));

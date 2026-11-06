@@ -905,7 +905,7 @@ describe("a run's page headed by its title and score, its body the platform's bl
     return fake;
   }
 
-  it('the title and the score head it; then its blocks — "View resume", "CANDIDATE DETAILS" over its sections, the first open; then Run details and View flow', async () => {
+  it('the title and the score head it; then its blocks — "View resume", "CANDIDATE DETAILS" over its sections, the first open; then View flow and, last, Run details (builds 37 and 39)', async () => {
     const fake = await openRun({ title: 'Northwind lease', score: 91, resultSummary: 'Meets 3 of 3' });
     expect(fake.to('GET /v1/workspaces/{workspaceId}/runs/{runId}')[0]!.query).toEqual({ shape: 'blocks' });
     expect(screen.getByTestId('run-title').props.children).toBe('Northwind lease');
@@ -913,7 +913,9 @@ describe("a run's page headed by its title and score, its body the platform's bl
     // F8: "Then it should be the section candidate details. Instead of strong match 6 of 6." — the platform leaves the line out.
     expect(screen.queryByText('Meets 3 of 3')).toBeNull();
     const words = visibleWords(screen.toJSON());
-    expect(words.slice(words.indexOf('View resume'), words.indexOf('Run details'))).toEqual([
+    expect(words.indexOf('View flow')).toBeLessThan(words.indexOf('Run details'));
+    expect(words[words.length - 1]).toBe('Run details');
+    expect(words.slice(words.indexOf('View resume'), words.indexOf('View flow'))).toEqual([
       'View resume',
       'Candidate details',
       'Experience',
@@ -923,7 +925,7 @@ describe("a run's page headed by its title and score, its body the platform's bl
       'Education',
     ]);
     expect(screen.queryByTestId('run-blocks-3-body')).toBeNull();
-    // Then Run details — its steps, tiles and facts a page away (F9) — then View flow.
+    // Then View flow, then Run details last — its tiles and facts a page away (F9; builds 37 and 39).
     expect(screen.queryByTestId('run-progress')).toBeNull();
     expect(screen.queryByText('Duration')).toBeNull();
     expect(screen.queryByTestId('run-fact-Run ID')).toBeNull();
@@ -972,9 +974,9 @@ describe("a run's page headed by its title and score, its body the platform's bl
     });
   });
 
-  it('a run without both is headed by its id, as before, with no score; Run details still there', async () => {
+  it('a run without both is headed by its flow\'s name (~~its id~~ until builds 37 and 39: the id is Run details\'), with no score; Run details still there', async () => {
     await openRun({ title: 'Northwind lease' }, []);
-    expect(screen.getByTestId('run-title').props.children).toBe('Run r1');
+    expect(screen.getByTestId('run-title').props.children).toBe('Policy Check');
     expect(screen.queryByTestId('run-score')).toBeNull();
     expect(screen.getByTestId('run-open-details')).toBeTruthy();
   });

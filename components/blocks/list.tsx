@@ -9,8 +9,10 @@ import { Text } from '@/components/text';
 import { fonts, inset, space, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { listChoices } from '@/lib/view/block-sort';
+import { contactValue } from '@/lib/view/contact-value';
 
 import { Chip } from './badge';
+import { ContactText } from './contact-text';
 import { httpsLink, openRoute, toneColor, toneOf, type BlockOf, type BlockPlace } from './look';
 import { ListTools, NoMatch, Pager, usePaged } from './paged';
 
@@ -32,19 +34,28 @@ function valueColor(item: ListItem, palette: Parameters<typeof toneColor>[1]): s
 
 /**
  * A row's lines under its title — its subtitle muted, its text, its address —
- * in the block's order. In a row that opens a page, the address is words only:
- * the whole row is the press.
+ * in the block's order. A text that is one phone number or one email, whole,
+ * is a link to Apple's contact card (`ContactText`; builds 37 and 39). In a row
+ * that opens a page, the address and such a text are words only: the whole row
+ * is the press.
  */
 function Lines({ item, link, testID }: { item: ListItem; link: boolean; testID: string }) {
   const { palette } = useTheme();
   const address = link ? httpsLink(item.url) : null;
+  // Not in a row that opens a page: there the whole row is the press.
+  const contact = link ? contactValue(item.text) : null;
   return (
     <>
       {item.subtitle ? <Text style={[styles.small, { color: palette.neutral[400] }]}>{item.subtitle}</Text> : null}
       {item.text ? (
-        <Text selectable style={[styles.text, { color: palette.text }]}>
-          {item.text}
-        </Text>
+        contact ? (
+          // One phone number or one email, whole (build 39 item 11): Apple's card a tap away.
+          <ContactText testID={`${testID}-contact`} contact={contact} style={styles.text} />
+        ) : (
+          <Text selectable style={[styles.text, { color: palette.text }]}>
+            {item.text}
+          </Text>
+        )
       ) : null}
       {item.url ? (
         address ? (

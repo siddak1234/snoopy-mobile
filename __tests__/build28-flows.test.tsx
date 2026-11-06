@@ -100,8 +100,17 @@ describe('the Flows screen (F1)', () => {
       ['WHOLE WORKSPACE', 'Weekly KPI report'],
     ]);
     expect(screen.queryByTestId('flows-group-3')).toBeNull();
-    // Each card still says its department (D4).
-    expect(within(screen.getByTestId('flows-group-1')).getByText(/^Department: Operations · /u)).toBeTruthy();
+    // Each card the one flow card (builds 37 and 39, items 1 and 4): icon, name, description, pill —
+    // the department its section's heading, ~~under each card's description (D4)~~.
+    const card = within(screen.getByTestId('flow-card-invoice'));
+    expect(card.getByTestId('flow-card-invoice-icon')).toBeTruthy();
+    expect(card.getByTestId('flow-card-invoice-name').props.children).toBe('Invoice triage');
+    expect(card.getByTestId('flow-card-invoice-description').props.children).toBe(
+      flowCatalogPayload().automations.find((entry) => entry.templateId === 'tplflow.invoice')!.description,
+    );
+    expect(card.getByText('Live')).toBeTruthy();
+    expect(screen.queryByText(/^Department: /u)).toBeNull();
+    expect(screen.queryByText(/ runs · /u)).toBeNull();
     await fireEvent.press(screen.getByText('Invoice triage'));
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'invoice' } });
   });

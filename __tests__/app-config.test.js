@@ -383,6 +383,26 @@ describe('the real static config, through the factory', () => {
     expect(permissions).toContainEqual({ 'android:name': 'android.permission.RECORD_AUDIO', 'tools:node': 'remove' });
   });
 
+  it("applies the expo-contacts plugin with its sentence in plain words: the Contacts usage text Apple's card needs (builds 37 and 39, item 11)", async () => {
+    const SENTENCE = "Autom8x adds a candidate's phone or email to your contacts when you ask.";
+    const entry = appJson.expo.plugins.find((plugin) => Array.isArray(plugin) && plugin[0] === 'expo-contacts');
+    expect(entry).toEqual(['expo-contacts', { contactsPermission: SENTENCE }]);
+    setEnv({ ...RELEASE, EAS_BUILD_PROFILE: 'production' });
+    expect(configFactory({ config: appJson.expo }).plugins).toContainEqual(entry);
+
+    const { compileModsAsync } = require('expo/config-plugins');
+    const withContacts = require('expo-contacts/app.plugin').default;
+    const configured = withContacts({ name: 'Autom8x', slug: 'snoopy-mobile', ios: {}, android: {} }, entry[1]);
+    const compiled = await compileModsAsync(configured, {
+      // Never created: introspection reads Expo's templates and writes nothing.
+      projectRoot: `${__dirname}/no-native-project`,
+      introspect: true,
+      platforms: ['ios', 'android'],
+      assertMissingModProviders: false,
+    });
+    expect(compiled._internal.modResults.ios.infoPlist.NSContactsUsageDescription).toBe(SENTENCE);
+  });
+
   it('submits to the App Store Connect record by its public identifiers only', () => {
     const eas = require('../eas.json');
     expect(eas.submit).toEqual({
