@@ -44,7 +44,7 @@ const ASK_OWNER = 'Ask your workspace owner to accept the health data agreement.
 const MEMBER_LINE = 'Only an owner or admin can do this.';
 const FLOW = 'pol-1';
 const ITEM = 'POST /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items';
-const AGREEMENT_FOR_A_RUN = { pathname: '/(tabs)/flows/agreement', params: { action: 'run', workspace: TEST_WORKSPACE } };
+const AGREEMENT_FOR_A_RUN = { pathname: '/(tabs)/flows/agreement', params: { workspace: TEST_WORKSPACE } };
 
 const DECLARED: AutomationItems = {
   words: { singular: 'Policy', plural: 'Policies' },

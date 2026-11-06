@@ -1,14 +1,16 @@
 import { AGREEMENT_NOT_PUBLISHED, ASK_OWNER_TO_ACCEPT } from '@/lib/content/health-agreement';
 import { refusalMessage } from '@/lib/content/refusals';
 import { PlatformError } from '@/lib/platform/problem';
+import type { HealthDataAgreement, WorkspaceHealthDataAgreement } from '@/lib/platform/agreements';
 import type { WorkspaceRole } from '@/lib/view/roles';
 
 /**
  * A flow that carries health data, refused for the health data agreement
- * (Round 21 stage 2, C3; backend ADR-0049, `AgreementRequiredDetails`): its
- * add (`createSubscription`), a run's start (`createRun`) or an item's upload
- * (`createItem`, which starts the run that reads it) answered 403
- * `agreement_required` and nothing was made.
+ * (Round 21 stage 2, C3; backend ADR-0049, `AgreementRequiredDetails`): a
+ * run's start (`createRun`) or an item's upload (`createItem`, which starts
+ * the run that reads it) answered 403 `agreement_required` and nothing was
+ * made (~~its add~~ until builds 37 and 39, wave 2: an add makes a draft, and
+ * Set up asks in its own section, `contractStep`).
  *
  * - The workspace's owner, who alone accepts it, is shown the agreement on its
  *   own screen (`agreementPath`); once accepted, what was refused is sent again
@@ -17,7 +19,6 @@ import type { WorkspaceRole } from '@/lib/view/roles';
  * - No version published (`version` absent): the owner is told it is not
  *   available yet, and no screen opens.
  */
-export type AgreementAction = 'add' | 'run';
 
 /**
  * Where the agreement opens: in the tab of the screen that was refused, so
@@ -89,4 +90,61 @@ export function settleAgreement(accepted: boolean): void {
   const resolve = waiting;
   waiting = null;
   resolve?.(accepted);
+}
+
+/**
+ * Set up's "Contract and accept" section (builds 37 and 39, wave 2: the
+ * owner's item 9, "Where is the BAA contract to view prefilled and checkmark
+ * to accept below it … 4. Contract and accept"; backend ADR-0049 amendment 2),
+ * for a flow whose catalog entry says `healthData`:
+ *
+ * - `hidden`: not a health flow — no section, Turn on as today;
+ * - `unavailable`: a read failed — "Unavailable", Turn on disabled;
+ * - `finalizing`: nothing published (`current` null, or the text's 503) —
+ *   "The agreement is being finalized.", Turn on disabled;
+ * - `accepted`: the workspace accepted the current version — its line and
+ *   signer, Turn on enabled;
+ * - `sign`: the owner, not accepted — the text to read, the box and the two
+ *   fields; Turn on accepts first, then turns the flow on;
+ * - `ask-owner`: an admin or member, not accepted — "Ask your workspace owner
+ *   to accept the health data agreement.", Turn on disabled. A member is never
+ *   read (403 by contract).
+ *
+ * In that order after `hidden`: the website's `contractStep`, row for row
+ * (`__tests__/fb39-wave2.test.ts`, its `snoopy/test/fb39-wave2.test.mjs`).
+ */
+export type ContractStep = 'hidden' | 'unavailable' | 'finalizing' | 'accepted' | 'sign' | 'ask-owner';
+
+export function contractStep(input: {
+  role: WorkspaceRole | undefined;
+  healthData: boolean | undefined;
+  /** The workspace's acceptance read (owner or admin only); undefined when not read. */
+  read: WorkspaceHealthDataAgreement | undefined;
+  /** The text (the owner's, while not accepted); `unpublished` for its 503 `agreement_not_published`. */
+  text: HealthDataAgreement | 'unpublished' | undefined;
+  /** Any read refused or unanswered, but the text's 503. */
+  readFailed: boolean;
+}): ContractStep {
+  const { role, healthData, read, text, readFailed } = input;
+  if (healthData !== true) return 'hidden';
+  if (readFailed) return 'unavailable';
+  if ((read && read.current === null) || (role === 'owner' && text === 'unpublished')) return 'finalizing';
+  if (read?.acceptance) return 'accepted';
+  if (role === 'owner') return read && text && text !== 'unpublished' ? 'sign' : 'unavailable';
+  return 'ask-owner';
+}
+
+/** Today's date as the platform writes it in the signed copy: UTC, `YYYY-MM-DD`. */
+export function todayUtc(now: Date = new Date()): string {
+  return now.toISOString().slice(0, 10);
+}
+
+/**
+ * The text as the owner reads it before signing (wave 2, plan 2): every
+ * `{Covered Entity}` the workspace's name, every `{Effective date}` today's
+ * (`todayUtc`). For display only: the sha256 sent is the unfilled text's, and
+ * the platform fills the signed copy itself at acceptance.
+ */
+export function fillForDisplay(text: string, organization: string, todayIso: string): string {
+  return text.replaceAll('{Covered Entity}', organization).replaceAll('{Effective date}', todayIso);
 }

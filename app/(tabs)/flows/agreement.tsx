@@ -19,9 +19,7 @@ import { busyBody, useWorkspaceResource } from '@/hooks/use-resource';
 import { roleIn, useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import {
-  ACCEPTING_ADD,
   ACCEPTING_RUN,
-  ACCEPT_AND_ADD,
   ACCEPT_AND_RUN,
   AGREEMENT_NOT_PUBLISHED,
   AGREEMENT_TITLE,
@@ -43,18 +41,19 @@ import { SIGNER_FIELD_LIMIT, acceptanceRefusal, settleAgreement } from '@/lib/vi
  * (`app/(tabs)/(home)/agreement.tsx`) for Home's YOUR FLOWS, and of Settings'
  * (`app/(tabs)/settings/agreement.tsx`) for the flow page Settings opens. Opened only for
  * the workspace's owner, when a flow that carries health data was refused 403
- * `agreement_required` at its add (`action: add`, from Set up's Turn on) or a
- * run's start (`action: run`, from Start run), for the workspace that refused
- * it (`workspace`).
+ * `agreement_required` at a run's start (Start run, an item's upload), for the
+ * workspace that refused it (`workspace`). ~~At its add, from Set up's Turn
+ * on~~ until builds 37 and 39, wave 2: Set up accepts in its own "Contract and
+ * accept" section (`components/flows/contract-step.tsx`).
  *
  * The title and the version over the text (`GET /v1/agreements/health-data`,
  * read when the screen opens) to scroll; the checkbox "I'm authorized to sign
  * for {organization}" — the app's switch, as every yes or no here is; "Full
- * name" and "Title", each at most 120 characters (the contract's bound); then "Accept and add flow" ("Accept and start run" for a
- * run), pressable once all three are given, "Adding…" ("Starting…") while it
- * sends, the website's words. It accepts (`POST …/agreements`,
+ * name" and "Title", each at most 120 characters (the contract's bound); then "Accept and start run",
+ * pressable once all three are given, "Starting…" while it sends, the
+ * website's words. It accepts (`POST …/agreements`,
  * the version and sha256 read), then goes back, and the screen that was
- * refused sends its add or run again with the same key
+ * refused sends its run again with the same key
  * (`lib/view/health-agreement.ts`). Back without accepting sends nothing.
  *
  * Not published (503 `agreement_not_published`): "The health data agreement
@@ -69,7 +68,7 @@ export default function AgreementScreen() {
   const insets = useSafeAreaInsets();
   const { palette } = useTheme();
   const session = useSession();
-  const { action, workspace } = useLocalSearchParams<{ action?: string; workspace?: string }>();
+  const { workspace } = useLocalSearchParams<{ workspace?: string }>();
   const keys = useIntentKeys('agreement');
   const [authorized, setAuthorized] = useState(false);
   const [name, setName] = useState('');
@@ -199,7 +198,7 @@ export default function AgreementScreen() {
           ) : null}
           <PillButton
             testID="agreement-accept"
-            label={action === 'run' ? (busy ? ACCEPTING_RUN : ACCEPT_AND_RUN) : busy ? ACCEPTING_ADD : ACCEPT_AND_ADD}
+            label={busy ? ACCEPTING_RUN : ACCEPT_AND_RUN}
             variant="primary"
             disabled={busy || !ready}
             onPress={() => void accept(agreement)}

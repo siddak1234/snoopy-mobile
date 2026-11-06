@@ -3,21 +3,36 @@ import { platformOperation } from './client';
 
 /**
  * The health data agreement (Round 21 stage 2, C3; backend ADR-0049): its
- * current text, and a workspace owner accepting it. A flow that carries health
- * data is refused 403 `agreement_required` at its add and at a run's start
- * until the owner accepted the current version; the request is then sent again
- * with the same key (`hooks/use-health-agreement.ts`). Read only on that
- * refusal: no other add or run asks for anything.
+ * current text, a workspace's acceptance of it, and a workspace owner
+ * accepting it. A flow that carries health data (`healthData` on its catalog
+ * entry) is refused 403 `agreement_required` at its turn-on and at a run's
+ * start until the owner accepted the current version (ADR-0049 amendment 2;
+ * ~~at its add~~ until builds 37 and 39, wave 2). Set up reads it for its
+ * "Contract and accept" section (`components/flows/contract-step.tsx`); Start
+ * run and an item's upload read it only on the refusal, then send the request
+ * again with the same key (`hooks/use-health-agreement.ts`).
  */
 
 type Schema = components['schemas'];
 export type HealthDataAgreement = Schema['HealthDataAgreement'];
 export type WorkspaceDocument = Schema['WorkspaceDocument'];
+export type WorkspaceHealthDataAgreement = Schema['WorkspaceHealthDataAgreement'];
 
 /** The current text, its version and its sha256 — any signed-in person; 503 `agreement_not_published` while none is. */
 export function readHealthDataAgreement(): Promise<HealthDataAgreement> {
   return platformOperation('/v1/agreements/health-data', ({ platform }, signal) =>
     platform.GET('/v1/agreements/health-data', { signal }),
+  );
+}
+
+/**
+ * The current version and the workspace's acceptance of exactly it (ADR-0049
+ * amendment 2): `current` null while none is published, `acceptance` null when
+ * none counts. Owner or admin; a member is 403.
+ */
+export function readWorkspaceHealthDataAgreement(workspaceId: string): Promise<WorkspaceHealthDataAgreement> {
+  return platformOperation(`/v1/workspaces/${workspaceId}/agreements/health-data`, ({ platform }, signal) =>
+    platform.GET('/v1/workspaces/{workspaceId}/agreements/health-data', { params: { path: { workspaceId } }, signal }),
   );
 }
 

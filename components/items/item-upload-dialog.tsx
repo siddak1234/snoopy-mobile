@@ -69,7 +69,7 @@ export function ItemUploadDialog({
   const session = useSession();
   const { palette } = useTheme();
   const keys = useIntentKeys('item');
-  const healthAgreement = useHealthAgreement('run');
+  const healthAgreement = useHealthAgreement();
   // The health data agreement is open over the page: the card is off the screen until it closes.
   const [agreeing, setAgreeing] = useState(false);
   // The select whose drop-down is open, by its key.
