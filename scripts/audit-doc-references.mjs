@@ -61,7 +61,7 @@ import { fileURLToPath } from 'node:url';
 // `node scripts/audit-doc-references.mjs [repository] [--all]`, in either order.
 const [target] = process.argv.slice(2).filter((arg) => !arg.startsWith('--'));
 const root = resolve(target ?? resolve(import.meta.dirname, '..'));
-const SIBLINGS = ['snoopy', 'snoopy-backend', 'snoopy-n8n', 'snoopy-automations'];
+const SIBLINGS = ['snoopy', 'snoopy-backend', 'snoopy-automations'];
 const siblingRoot = (name) =>
   resolve(
     root,
