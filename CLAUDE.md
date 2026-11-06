@@ -70,7 +70,7 @@ npm run export:android
 git status --short
 ```
 
-- Work only in a scratch clone outside ~/Desktop and iCloud: jest hangs on evicted files, and `.claude/hooks/guard.mjs` refuses installs and builds there. The guard also asks the owner first before a file is written outside the scratchpad and the repository clones, or an Artifact is published or deleted (`../snoopy-backend/CLAUDE.md` rule 11).
+- Work only in a scratch clone outside ~/Desktop and iCloud: jest hangs on evicted files, and `.claude/hooks/guard.mjs` refuses installs and builds there. The guard also asks the owner first before a Write or Edit outside the scratch root and a project's memory, a Bash write into Downloads, Desktop, Documents or iCloud Drive, or an Artifact publish or delete (`../snoopy-backend/CLAUDE.md` rule 11).
 - One heavy gate at a time across agents (the session's gate lock). Commit, then run `verify` on the committed tree.
 - `npm run hooks:install` once per clone: `.githooks/pre-push` runs `verify`, `audit:dependencies` and the salvage scan before every push. Never `git push --no-verify`.
 - CI's `Deployed contract` job is red by design while the types run ahead of production: say so before pushing (`lib/platform/CLAUDE.md`).
