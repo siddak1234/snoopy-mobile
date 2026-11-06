@@ -142,7 +142,7 @@ const step = (stepId: string, outcome: 'ok' | 'held' | 'failed', runId: string) 
  * The platform: the two flows, the item, and each run as `runs` says it is now
  * (a test moves it on). The start answers `started`.
  */
-function platform(runs: Record<string, () => unknown>, started?: Run) {
+function platform(runs: Record<string, () => unknown>, started?: Run, summaryWriter: Partial<CatalogEntry> = {}) {
   const reads: string[] = [];
   answerPlatform(
     {
@@ -158,7 +158,7 @@ function platform(runs: Record<string, () => unknown>, started?: Run) {
     },
     {
       '/automations': {
-        automations: [entry('policy-check', 'Policy Check', DECLARED), entry('summary-writer', 'Summary Writer')],
+        automations: [entry('policy-check', 'Policy Check', DECLARED), { ...entry('summary-writer', 'Summary Writer'), ...summaryWriter }],
         categories: ['All'],
       },
     },
@@ -351,3 +351,35 @@ function answerPlatformDecision(decisions: string[], onDecide: () => void) {
     return before(path, execute);
   });
 }
+
+it("a batch run's steps by name (builds 37 and 39, wave 2, item 10): its batch steps on its steps face; a batch child keeps the flow's steps", async () => {
+  signedInOnThisPhone();
+  const BATCH = [
+    { id: 'count', title: 'Pages counted', description: 'Made up.' },
+    { id: 'sort', title: 'Pages sorted', description: 'Made up.' },
+    { id: 'find', title: 'Visits found', description: 'Made up.' },
+  ];
+  const PARENT = run('r-6', 'sum-1', 'running', { batch: true });
+  const CHILD = run('r-7', 'sum-1', 'running', { unit: { parentRunId: 'r-6', index: 1, label: 'Visit 1' } });
+  platform(
+    {
+      'r-6': () => detail(PARENT, [step('count', 'ok', 'r-6')]),
+      'r-7': () => detail(CHILD, [step('receive', 'ok', 'r-7')]),
+    },
+    undefined,
+    { batch: { pipeline: BATCH } },
+  );
+  await launch();
+  await act(async () => router.push({ pathname: '/(tabs)/activity/run', params: { runId: 'r-6' } }));
+  await settle();
+  const steps = within(await screen.findByTestId('run-progress'));
+  for (const title of ['1 · Pages counted', '2 · Pages sorted', '3 · Visits found']) expect(steps.getByText(title)).toBeTruthy();
+  expect(steps.getByText('Working…')).toBeTruthy();
+  expect(steps.queryByText('1 · Contract received')).toBeNull();
+
+  await act(async () => router.push({ pathname: '/(tabs)/activity/run', params: { runId: 'r-7' } }));
+  await settle();
+  const child = within((await screen.findAllByTestId('run-progress')).at(-1)!);
+  expect(child.getByText('1 · Contract received')).toBeTruthy();
+  expect(child.queryByText('1 · Pages counted')).toBeNull();
+});

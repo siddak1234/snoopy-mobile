@@ -934,6 +934,49 @@ export function toTracker(
   return pipeline.map((step, index) => row(`step:${step.id}`, `${index + 1} · ${step.title}`, [index]));
 }
 
+/** The batch steps a run is drawn by: a batch parent's (`run.batch`) of a flow that publishes them; else none — its group rows. */
+export function batchStepsFor(
+  run: Pick<Run, 'batch'>,
+  entry: { batch?: { pipeline: readonly { id: string; title: string }[] } } | undefined,
+): readonly { id: string; title: string }[] | undefined {
+  return run.batch === true ? entry?.batch?.pipeline : undefined;
+}
+
+/**
+ * A batch run's STEPS (builds 37 and 39, wave 2: the owner's item 10, "When a
+ * run starts i want to see the steps 1-x"; backend ADR-0048 amendment 6): the
+ * catalog entry's `batch.pipeline`, one row per step in its order — ICD-10
+ * Code Check v4: "1 · Pages counted", "2 · Pages sorted", "3 · Visits found",
+ * "4 · Visits queued" — with every other row's states, icons and lines
+ * (`toTracker` over an ungrouped pipeline: each step's `group`, the flow's
+ * first, is not read). Then the flow's email row ("5 · Run completed",
+ * `emailRow`) only when the run says its `email`. A step the pipeline does not
+ * declare: `toTracker`'s fallback, titled from it. A visit (a batch child) and a
+ * flow without `batch` keep `toTracker`'s group rows — the caller's choice
+ * (`hooks/use-run-detail.ts`). The website's `batchRows`, row for row
+ * (`__tests__/fb39-wave2.test.ts`).
+ */
+export function batchRows(
+  steps: readonly ReportedStep[],
+  batch: readonly { id: string; title: string }[],
+  groups: readonly StepHeading[] | undefined,
+  run: RunState,
+  clock: (iso: string) => string,
+  context: { email?: RunDetail['email']; decision?: HeldDecision | null; review?: string | null } = {},
+): TrackerRow[] {
+  const pipeline = batch.map(({ id, title }) => ({ id, title }));
+  const rows = toTracker(steps, pipeline, undefined, run, clock, pipeline, {
+    decision: context.decision,
+    review: context.review,
+  });
+  const known = new Set(pipeline.map((step) => step.id));
+  const covered = pipeline.length > 0 && steps.every((step) => known.has(step.stepId));
+  const email = groups?.find((group) => group.platform === 'email');
+  if (!covered || !email || context.email === undefined) return rows;
+  const title = `${rows.length + 1} · ${email.title}`;
+  return [...rows, emailRow(`group:${email.id}`, title, run, context.email, clock)];
+}
+
 /** The fallback: the steps a run of another version reported, in order, by state. */
 function reportedRows(
   steps: readonly ReportedStep[],

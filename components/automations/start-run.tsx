@@ -130,7 +130,7 @@ function StartRunForm({
 }: StartRunProps) {
   const session = useSession();
   const keys = useIntentKeys('run');
-  const healthAgreement = useHealthAgreement('run');
+  const healthAgreement = useHealthAgreement();
   const [values, setValues] = useState<Record<string, unknown>>(() => declaredDefaults(runInput));
   const [uploading, setUploading] = useState<ReadonlySet<string>>(() => new Set());
   // Bumped to empty the file fields when the platform will not take a file.

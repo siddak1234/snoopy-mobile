@@ -25,6 +25,7 @@ import { Text } from '@/components/text';
 import { fonts, iconSize, space, status, typeScale } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ActionFailure, ScreenError, ScreenLoading, ScreenOffline, ScreenUnavailable } from '@/components/screen-state';
+import { useHealthAgreement } from '@/hooks/use-health-agreement';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useWorkspaceResource, busyBody } from '@/hooks/use-resource';
 import { roleIn, useSession, workspaceIfShown } from '@/hooks/use-session';
@@ -155,6 +156,7 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
   // One key per target status: a retry of Pause keeps its key, and a Resume
   // after a re-read is a different intent with its own.
   const statusKeys = useIntentKeys('status');
+  const healthAgreement = useHealthAgreement('turn-on');
 
   /**
    * This flow, by subscription id: the subscription for its status, the catalog
@@ -293,8 +295,8 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
     }
     setBusy(true);
     setActionError(null);
+    const target = current === 'Live' ? 'paused' : 'live';
     try {
-      const target = current === 'Live' ? 'paused' : 'live';
       const { subscription: answered } = await updateSubscription(
         workspaceId,
         def.key,
@@ -308,6 +310,16 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
       // and a skeleton here read as the screen going blank (feedback #6).
       flows.refresh();
     } catch (error) {
+      // A flow that carries health data, turned on before the workspace's owner
+      // accepted the agreement (403 `agreement_required`; backend ADR-0049
+      // amendment 2): the owner accepts it, then the turn-on is sent again, its
+      // key the same; anyone else is told the line. A pause is never refused for it.
+      const agreement = target === 'live' ? await healthAgreement(error, workspaceId) : null;
+      if (agreement) {
+        if (agreement.accepted) await changeStatus();
+        else setActionError(agreement.line);
+        return;
+      }
       setActionError(refusalMessage(error, FLOW_CHANGE_REFUSALS, 'The flow status was not changed.'));
     } finally {
       setBusy(false);

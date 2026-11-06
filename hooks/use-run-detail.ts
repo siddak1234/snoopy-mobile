@@ -23,6 +23,8 @@ import {
   providerNameIn,
   rereadForApproval,
   runVerdict,
+  batchRows,
+  batchStepsFor,
   toTracker,
   type TrackerFlow,
 } from '@/lib/view/runs';
@@ -181,7 +183,10 @@ export function useRunDetail(runId: string | undefined, { withItem = false }: { 
   // run is drawn by v4's five steps); a run that reported a step they no longer
   // declare is drawn by the steps it reported. Step 2 says the flow's
   // integration, step 4's title follows it, step 5 is the run's email — the
-  // run's own choices over the flow's now (S1-16), as the website's.
+  // run's own choices over the flow's now (S1-16), as the website's. A batch
+  // run (`run.batch`) of a flow that publishes `batch` is drawn by its batch
+  // steps by name, then the email row (`batchRows`; builds 37 and 39, wave 2,
+  // item 10); its visits keep the group rows.
   const trackerFlow: TrackerFlow | undefined =
     liveRun?.flow !== undefined
       ? {
@@ -190,8 +195,16 @@ export function useRunDetail(runId: string | undefined, { withItem = false }: { 
           providerName: (providerId) => providerNameIn(liveRun.entry, providerId),
         }
       : undefined;
-  const tracker = liveRun
-    ? toTracker(
+  const batch = liveRun ? batchStepsFor(liveRun.detail.run, liveRun.entry) : undefined;
+  const tracker = !liveRun
+    ? []
+    : batch
+      ? batchRows(liveRun.detail.steps, batch, liveRun.entry?.groups, liveRun.detail.run, timeOfDay, {
+          email: liveRun.detail.email,
+          decision: decided,
+          review: jobReviewTally(liveRun.detail.run, liveRun.approvals),
+        })
+      : toTracker(
         liveRun.detail.steps,
         liveRun.entry?.pipeline,
         liveRun.entry?.groups,
@@ -205,8 +218,7 @@ export function useRunDetail(runId: string | undefined, { withItem = false }: { 
           decision: decided,
           review: jobReviewTally(liveRun.detail.run, liveRun.approvals),
         },
-      )
-    : [];
+      );
 
   return { openedIn, detail, liveRun, decided, tracker, itemTitle };
 }

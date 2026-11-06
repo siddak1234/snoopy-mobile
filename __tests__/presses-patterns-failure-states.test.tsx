@@ -94,7 +94,7 @@ const SCREENS = {
   // The health data agreement (Round 21 stage 2, C3), opened on a refusal.
   'Health data agreement': {
     Screen: AgreementScreen,
-    params: { action: 'add', workspace: TEST_WORKSPACE },
+    params: { workspace: TEST_WORKSPACE },
     read: /^\/v1\/agreements\/health-data$/u,
   },
   // One of a flow's items (Round 19, backend ADR-0046).
