@@ -91,8 +91,8 @@ import {
  * under the run, and a run opened by a notification or a link goes back to
  * Activity.
  *
- * A run opened from one of a flow's items, or started on Home or a flow page
- * (`startedRunStack`; builds 37 and 39), is this page in the Flows stack
+ * A run opened from one of a flow's items, or started on Home
+ * (`startedRunState`) or on a flow page (pushed over it; builds 37 and 39), is this page in the Flows stack
  * (`app/(tabs)/flows/run.tsx`; the owner's build 31 G1, `RunStack`): Back comes
  * straight to the item or the flow page, and its View package, Run details and
  * files open in the stack it is in.
@@ -320,7 +320,7 @@ export default function RunDetailScreen() {
   };
 
   const steps = run.face === 'steps';
-  // Its steps, tiles and facts' page, a tap away (F9) — the last row of either face (builds 37 and 39).
+  // Its tiles and facts' page, a tap away (F9) — the last row of either face (builds 37 and 39).
   const detailsRow = (
     <SurfaceCard>
       <OpenRow

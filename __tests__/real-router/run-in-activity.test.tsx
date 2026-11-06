@@ -43,7 +43,7 @@ async function pressBack() {
  * A run opened from Home's side of the app into Activity, as Home's inbox opens
  * one (`components/notifications/inbox.tsx`): its page in Activity, from Home.
  * ~~Home's Start run~~ until builds 37 and 39, which opens the run in Flows
- * (`startedRunStack`; `run-faces.test.tsx`).
+ * (`startedRunState`; `run-faces.test.tsx`).
  */
 async function fromHome(runId = 'run-0') {
   await act(async () =>

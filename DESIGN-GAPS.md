@@ -3765,8 +3765,9 @@ run's step titles are wave 2, after a platform change.
 header's "Department: …"; "Open" is a secondary pill; a job being read shows its title and "Reading…" in
 the card; the Flows list stacks `index` under the flow's page, so Back from the flow page is the list; a
 flow page drawn in Settings (an archived flow's live twin) opens its run in Activity with Back to
-Settings (~~`returnTo: 'flows'`~~); the phone rule takes "+…", three digit groups or ten digits whole, 7
-to 15 digits, so "2019 - 2021" and "2019-2021" stay text; the sheet's buttons are `Dialog`'s, stacked;
+Settings (~~`returnTo: 'flows'`~~); the phone rule takes "+…" or three digit groups, 7
+to 15 digits, so "2019 - 2021", "2019-2021", dates ("2026-11-06"), amounts ("1 000 000") and bare
+digits ("1234567890", an NPI's shape) stay text; the sheet's buttons are `Dialog`'s, stacked;
 the empty contact label is the native default.
 
 **Gaps and limits.** (1) Blocks carry no part marker, so the steps face draws the platform's body whole

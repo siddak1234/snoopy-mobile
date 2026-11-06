@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import React from 'react';
 import { StyleSheet } from 'react-native';
 
@@ -691,7 +691,10 @@ describe("YOUR FLOWS (the owner's build 34 F5)", () => {
       expect(card.getByTestId('start-run-button')).toBeTruthy();
       expect(screen.queryByText('Choose')).toBeNull();
     } finally {
-      restore();
+      // The size goes back while the screen is drawn: inside act, so its re-render is awaited.
+      await act(async () => {
+        restore();
+      });
     }
   });
 

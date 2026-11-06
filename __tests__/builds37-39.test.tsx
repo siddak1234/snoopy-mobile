@@ -38,7 +38,7 @@ describe('contactValue: a row text that is one email or one phone number, whole 
     ['415.555.0134', 'phone'],
     ['+44 20 7946 0958', 'phone'],
     ['(415) 555 0134', 'phone'],
-    ['4155550134', 'phone'],
+    ['+14155550134', 'phone'],
   ])('%s is one %s', (text, kind) => {
     expect(contactValue(text)).toEqual({ kind, value: text.trim() });
   });
@@ -52,6 +52,13 @@ describe('contactValue: a row text that is one email or one phone number, whole 
     '20192021',
     '123456',
     '1234567890123456',
+    '4155550134',
+    '1234567890',
+    '2026-11-06',
+    '2021.01.15',
+    '15/01/2021',
+    '1 000 000',
+    '1.000.000',
     'Fernwood Foods · 2019–2025',
     '',
     '   ',

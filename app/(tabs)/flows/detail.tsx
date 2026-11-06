@@ -430,8 +430,8 @@ export function WorkflowDetail({ detailPath }: { detailPath: ArchivedFlowPath })
         {FLOW_CHANGE_ADMIN_ONLY}
       </Text>
     );
-  // A run started here opens over this page (builds 37 and 39; `startedRunStack`'s rule): in the
-  // Flows stack, Back to this page. Drawn in Settings (an archived flow's live twin), it opens in
+  // A run started here is pushed over this page (builds 37 and 39): in the Flows stack, Back to
+  // this page. Drawn in Settings (an archived flow's live twin), it opens in
   // Activity, Back to Settings. ~~Activity with `returnTo: 'flows'`~~ until builds 37 and 39.
   const openStarted = (runId: string) =>
     detailPath === '/(tabs)/flows/detail'
