@@ -3765,9 +3765,10 @@ run's step titles are wave 2, after a platform change.
 header's "Department: …"; "Open" is a secondary pill; a job being read shows its title and "Reading…" in
 the card; the Flows list stacks `index` under the flow's page, so Back from the flow page is the list; a
 flow page drawn in Settings (an archived flow's live twin) opens its run in Activity with Back to
-Settings (~~`returnTo: 'flows'`~~); the phone rule takes "+…" or three digit groups, 7
-to 15 digits, so "2019 - 2021", "2019-2021", dates ("2026-11-06"), amounts ("1 000 000") and bare
-digits ("1234567890", an NPI's shape) stay text; the sheet's buttons are `Dialog`'s, stacked;
+Settings (~~`returnTo: 'flows'`~~); the phone and email rule is
+`lib/view/contact-value.ts`'s header, the website's `snoopy/lib/contact-value.ts`'s too, one test table in
+both (~~"+…" or three digit groups, 7 to 15 digits~~ until the review's finding 1: "123-45-6789", a
+date with a time and an IP address were numbers); the sheet's buttons are `Dialog`'s, stacked;
 the empty contact label is the native default.
 
 **Gaps and limits.** (1) Blocks carry no part marker, so the steps face draws the platform's body whole
@@ -3788,7 +3789,8 @@ Bites (break, red, restore, green), each in its suite:
   (`builds37-39`).
 - Home (`parity-home`, `builds37-39`): the department filter ignored (2 red); the departments unsorted;
   the search case-sensitive (2 red); `NO_MATCHES` emptied; no newest ready job (5 red); the choice not
-  kept; Upload job not opening the card; the card's Cancel not closing it; "Unavailable" as the dash; Open not opening the flow page
+  kept; Upload job not opening the card; the card's Cancel not closing it; the sent job not shown at once
+  (`setMade` left out) or the list not read again on the upload (`refresh` left out: 1 red each); "Unavailable" as the dash; Open not opening the flow page
   (`parity-home`, `tab-screens`: 3 red); a flow with items not read on load (owners treated as members);
   the form outside its card at the largest text size.
 - Run (`real-router/run-faces`): every run on its result face (6 red); never the result face (the turn
@@ -3797,4 +3799,6 @@ Bites (break, red, restore, green), each in its suite:
   read; Approve not reading the run again.
 - Phone and email (`builds37-39`, `app-config`): the email rule removed (4 red); the row not pressable
   (4 red); the card's actions off; Call sent as `sms:`; Copy of an empty value (2 red); Email as
-  `https:`; Android asking for the card; the plugin's sentence changed.
+  `https:`; Android asking for the card; the plugin's sentence changed; the shared rule (the review's
+  finding 1): the digit runs not looked at (3 red), the last run's 4 digits, the 254 characters, 7 digits
+  for 10 (2 red), a looser email pattern, the runs looked at after a "+" (2 red).

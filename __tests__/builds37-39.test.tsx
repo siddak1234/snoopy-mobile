@@ -30,40 +30,53 @@ const Contacts = jest.requireMock('expo-contacts/legacy') as { presentFormAsync:
 const Clipboard = jest.requireMock('expo-clipboard') as { setStringAsync: jest.Mock };
 
 describe('contactValue: a row text that is one email or one phone number, whole (item 11)', () => {
+  // The shared table: the website's tests of its `snoopy/lib/contact-value.ts` hold the same rows.
   it.each([
-    ['dana@northwind.example', 'email'],
-    ['  dana.whitfield+jobs@mail.example.co  ', 'email'],
-    ['+1 (415) 555-0134', 'phone'],
-    ['415-555-0134', 'phone'],
-    ['415.555.0134', 'phone'],
-    ['+44 20 7946 0958', 'phone'],
-    ['(415) 555 0134', 'phone'],
-    ['+14155550134', 'phone'],
-  ])('%s is one %s', (text, kind) => {
-    expect(contactValue(text)).toEqual({ kind, value: text.trim() });
+    ['(214) 983-2568', 'tel:2149832568'],
+    ['214-983-2568', 'tel:2149832568'],
+    ['214.983.2568', 'tel:2149832568'],
+    ['2149832568', 'tel:2149832568'],
+    ['1-800-555-1234', 'tel:18005551234'],
+    ['+44 20 7946 0958', 'tel:+442079460958'],
+    ['+1 214 983 2568', 'tel:+12149832568'],
+  ])('%s is a phone number, %s', (text, tel) => {
+    expect(contactValue(text)).toEqual({ kind: 'phone', value: text });
+    expect(`tel:${dialable(text)}`).toBe(tel);
   });
 
   it.each([
-    'Email dana@northwind.example',
-    'dana@northwind.example, omar@northwind.example',
-    'Call 415-555-0134 after 5',
-    '2019 - 2021',
-    '2019-2021',
-    '20192021',
-    '123456',
-    '1234567890123456',
-    '4155550134',
-    '1234567890',
-    '2026-11-06',
-    '2021.01.15',
-    '15/01/2021',
-    '1 000 000',
-    '1.000.000',
-    'Fernwood Foods · 2019–2025',
-    '',
-    '   ',
-  ])('%j is not one', (text) => {
+    '555-1234',
+    '2019-2023',
+    '123-45-6789',
+    '10.5.2025 14.30',
+    '2025.11.06 12.00',
+    '12.34.56.78',
+    '192.168.10.100',
+    '555 12 34',
+    '12 34 56 78',
+    'Call 214-983-2568',
+  ])('%j is not a phone number', (text) => {
     expect(contactValue(text)).toBeNull();
+  });
+
+  it('akulaggarwal05@gmail.com is an email', () => {
+    expect(contactValue('akulaggarwal05@gmail.com')).toEqual({ kind: 'email', value: 'akulaggarwal05@gmail.com' });
+  });
+
+  it.each(['a@b', 'mail me at x@y.com'])('%j is not an email', (text) => {
+    expect(contactValue(text)).toBeNull();
+  });
+
+  // Beyond the shared table, two bounds of the rule no row of it reaches.
+  it('without a "+", the last run of digits has at least 4; with one, the runs are not looked at', () => {
+    expect(contactValue('2149 832 568')).toBeNull();
+    expect(contactValue('+2149 832 568')).toEqual({ kind: 'phone', value: '+2149 832 568' });
+  });
+
+  it('the text is trimmed and at most 254 characters', () => {
+    const email = (length: number) => `${'a'.repeat(length - '@example.com'.length)}@example.com`;
+    expect(contactValue(`  ${email(254)}  `)).toEqual({ kind: 'email', value: email(254) });
+    expect(contactValue(email(255))).toBeNull();
   });
 
   it('dials the digits, a leading "+" kept', () => {

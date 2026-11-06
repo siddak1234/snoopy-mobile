@@ -58,8 +58,17 @@ import { mockRouter, mockTabs, renderWithProviders, setTextSize } from '@/test/r
 jest.mock('@/lib/platform/client', () => ({
   platformOperation: jest.fn(),
   newIdempotencyKey: jest.fn((prefix: string) => `${prefix}-key`),
+  putFileToSignedUrl: jest.fn(async () => undefined),
 }));
 const { platformOperation } = jest.requireMock('@/lib/platform/client');
+// The upload card's file: a picked 12-byte PDF, read as such (YOUR FLOWS' Upload job).
+jest.mock('expo-document-picker', () => ({
+  getDocumentAsync: jest.fn(async () => ({
+    canceled: false,
+    assets: [{ uri: 'file:///picked/role.pdf', name: 'role.pdf', mimeType: 'application/pdf', size: 12 }],
+  })),
+}));
+jest.mock('expo-file-system', () => ({ File: jest.fn(() => ({ size: 12, bytes: async () => new Uint8Array(12) })) }));
 
 // The team chosen is kept on the device, per workspace; here, in memory.
 const mockStored = new Map<string, string | null>();
@@ -637,12 +646,22 @@ describe("YOUR FLOWS (the owner's build 34 F5)", () => {
     expect(screen.getByTestId('home-flow-email-item').props.accessibilityLabel).toBe('Job: Accountant');
   });
 
-  it('no ready job: "No jobs yet." and "Upload job", which opens the upload card; the job then reads in the card and, ready, is chosen — without leaving Home (build 37 items 2 and 5)', async () => {
+  it('no ready job: "No jobs yet." and "Upload job", which opens the upload card; the job sent then reads in the card and, ready, is chosen — without leaving Home (build 37 items 2 and 5)', async () => {
     const fake = routeFlows();
+    const LISTED = 'GET /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items';
     let listed: Items['items'] = [];
-    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items', () => ({ items: listed, choices: {} }));
+    fake.always(LISTED, () => ({ items: listed, choices: {} }));
     const made = job('j-new', 'Analyst', 'Finance', { status: 'reading', createdAt: '2026-11-06T10:00:00Z' });
     fake.always('POST /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items', { item: made });
+    fake.always('POST /v1/workspaces/{workspaceId}/uploads', {
+      uploadSessionId: 'upload-1',
+      uploadUrl: 'https://store.example.test/put',
+      expiresAt: '2026-11-06T12:00:00Z',
+      maximumSizeBytes: 10_000_000,
+    });
+    fake.always('POST /v1/workspaces/{workspaceId}/uploads/{uploadSessionId}/complete', {
+      artifact: { artifactId: 'artifact-1', filename: 'role.pdf', contentType: 'application/pdf', sizeBytes: 12 },
+    });
     await renderWithProviders(<HomeScreen />, signedInSession);
     expect((await screen.findByTestId('home-flow-email-items-line')).props.children).toBe('No jobs yet.');
     const upload = screen.getByTestId('home-flow-email-upload');
@@ -654,17 +673,26 @@ describe("YOUR FLOWS (the owner's build 34 F5)", () => {
     await fireEvent.press(screen.getByTestId('item-upload-cancel'));
     await waitFor(() => expect(screen.queryByTestId('item-upload-dialog')).toBeNull());
     expect(fake.to('POST /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items')).toEqual([]);
-    expect(screen.getByTestId('home-flow-email-upload')).toBeTruthy();
-    await screen.unmount();
-    resetSnapshot();
 
-    // The card after the upload: reading, then — read again — ready and chosen.
-    listed = [made];
-    const again = routeFlows();
-    again.always('GET /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items', () => ({ items: listed, choices: {} }));
-    await renderWithProviders(<HomeScreen />, signedInSession);
-    expect((await screen.findByTestId('home-flow-email-items-line')).props.children).toBe('Reading…');
+    // Sent: the card closes, the job reads in its place at once, and the list is read again then.
+    await fireEvent.press(screen.getByTestId('home-flow-email-upload'));
+    await fireEvent.changeText(screen.getByLabelText('Title'), 'Analyst');
+    await fireEvent.changeText(screen.getByLabelText('Department'), 'Finance');
+    await fireEvent.press(screen.getByTestId('run-file-jobFile-upload'));
+    await screen.findByText('Ready: role.pdf (12 bytes)');
+    const before = fake.to(LISTED).length;
+    await fireEvent.press(screen.getByTestId('item-upload-send'));
+    await waitFor(() => expect(screen.queryByTestId('item-upload-dialog')).toBeNull());
+    expect(fake.to('POST /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items')[0]!.body).toEqual({
+      fields: { title: 'Analyst', department: 'Finance' },
+      file: 'artifact-1',
+    });
+    expect(screen.getByTestId('home-flow-email-items-line').props.children).toBe('Reading…');
     expect(within(screen.getByTestId('home-flow-email-reading')).getByText('Analyst')).toBeTruthy();
+    // Read again on the upload itself, not 2 s later by the reading job's re-read.
+    await waitFor(() => expect(fake.to(LISTED).length).toBe(before + 1), { timeout: 1000 });
+    expect(screen.getByTestId('home-flow-email-items-line').props.children).toBe('Reading…');
+    // Then, read ready, it is the card's job: the same card, still on Home.
     listed = [{ ...made, status: 'ready' }];
     expect((await screen.findByTestId('home-flow-email-item', {}, { timeout: 4000 })).props.accessibilityLabel).toBe('Job: Analyst');
     expect(mockRouter.push).not.toHaveBeenCalled();
