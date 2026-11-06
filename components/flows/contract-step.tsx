@@ -119,7 +119,9 @@ export function ContractStep({
 const styles = StyleSheet.create({
   cards: { gap: space.inner },
   // Bounded: the text scrolls inside it, and the box, the fields and Turn on stay in reach under it.
-  box: { maxHeight: 320, overflow: 'hidden' },
+  // No clip: the ScrollView clips its own text, and its padding keeps the text off the round corners;
+  // a clip on the elevated card draws it empty on Android (`__tests__/android-card-overflow.test.js`).
+  box: { maxHeight: 320 },
   note: { padding: space.card },
   text: { fontFamily: fonts.regular, ...typeScale.body },
 });

@@ -3862,3 +3862,5 @@ Bites (break, red, restore, green):
   ignoring `turn-on` (4 red, the real-router case with them); "Turning on…" changed (3); the hook
   pushing no `action` (5, Start run's and the upload's with them); no agreement refusal routed (5); a
   pause asked for it (1); accepted, the turn-on not sent again (1); sent again with a new key (1).
+- The contract box (`android-card-overflow`, found by the land's full gate): `overflow: 'hidden'` on its
+  elevated card, which Android draws empty (1 red).
