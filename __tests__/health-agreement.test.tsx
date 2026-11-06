@@ -13,7 +13,7 @@ import { WORKSPACE_CHANGED } from '@/lib/content/refusals';
 import type { AutomationRunInputField, Subscription } from '@/lib/platform/automations';
 import { PlatformError } from '@/lib/platform/problem';
 import { resetSnapshot } from '@/lib/platform/snapshot';
-import { awaitAgreement, settleAgreement } from '@/lib/view/health-agreement';
+import { awaitAgreement, settleAgreement, todayUtc } from '@/lib/view/health-agreement';
 import { fakePlatform } from '@/test/fake-platform';
 import {
   TEST_WORKSPACE,
@@ -43,7 +43,7 @@ const ADD = 'POST /v1/workspaces/{workspaceId}/subscriptions';
 const RUN = 'POST /v1/workspaces/{workspaceId}/runs';
 const ACCEPT = 'POST /v1/workspaces/{workspaceId}/agreements';
 const TEXT = 'GET /v1/agreements/health-data';
-const AGREEMENT = { version: 1, text: 'This Business Associate Agreement is made between {Covered Entity} and Autom8x.', sha256: 'a'.repeat(64) };
+const AGREEMENT = { version: 1, text: 'This Business Associate Agreement is made between {Covered Entity} and Autom8x, effective {Effective date}.', sha256: 'a'.repeat(64) };
 
 beforeEach(() => {
   resetSnapshot();
@@ -186,11 +186,9 @@ describe("Set up's Contract and accept", () => {
     fake.always(TEXT, AGREEMENT);
     fake.always(ACCEPT, { document: SIGNED });
     await openSetup('owner');
-    const today = new Date().toISOString().slice(0, 10);
     expect(within(screen.getByTestId('setup-contract-text')).getByText(
-      'This Business Associate Agreement is made between Acme Operations and Autom8x.',
+      `This Business Associate Agreement is made between Acme Operations and Autom8x, effective ${todayUtc()}.`,
     )).toBeTruthy();
-    expect(today).toMatch(/^\d{4}-\d{2}-\d{2}$/u);
     expect(screen.getByText("I'm authorized to sign for Acme Operations")).toBeTruthy();
     expect(screen.getByLabelText('Full name').props.maxLength).toBe(120);
     expect(screen.getByLabelText('Title').props.maxLength).toBe(120);
@@ -302,6 +300,28 @@ describe("Set up's Contract and accept", () => {
     expect(fake.to(READ)).toHaveLength(2);
     expect(mockRouter.push).not.toHaveBeenCalled();
     expect(turnOnButton().props.accessibilityState).toEqual(expect.objectContaining({ disabled: true }));
+  });
+
+  it('signed and accepted, then the turn-on refused 403 for a newer version: the box unticked again, Turn on disabled', async () => {
+    const fake = fakePlatform(platformOperation);
+    routeSetup(fake, true);
+    fake.once(READ, { kind: 'health-data', current: CURRENT, acceptance: null });
+    fake.always(READ, { kind: 'health-data', current: { version: 2, sha256: 'b'.repeat(64) }, acceptance: null });
+    fake.once(TEXT, AGREEMENT);
+    fake.always(TEXT, { ...AGREEMENT, version: 2, sha256: 'b'.repeat(64), text: 'Version two for {Covered Entity}.' });
+    fake.always(ACCEPT, { document: SIGNED });
+    fake.once(PATCH, refusedForAgreement(2));
+    await openSetup('owner');
+    await screen.findByTestId('setup-contract-text');
+    await sign();
+    await fireEvent.press(turnOnButton());
+    expect(await screen.findByText('Version two for Acme Operations.')).toBeTruthy();
+    expect(within(screen.getByTestId('setup-contract-authorized')).getByRole('switch').props.accessibilityState).toEqual(
+      expect.objectContaining({ checked: false }),
+    );
+    expect(turnOnButton().props.accessibilityState).toEqual(expect.objectContaining({ disabled: true }));
+    expect(fake.to(ACCEPT)).toHaveLength(1);
+    expect(mockRouter.push).not.toHaveBeenCalled();
   });
 
   it('an admin: the read, then "ask your owner", Turn on disabled; no text read', async () => {

@@ -504,8 +504,11 @@ export default function SetupScreen() {
       if (adding) addUnanswered.current = !(error instanceof PlatformError) || error.status >= 500;
       if (!adding && error instanceof PlatformError && error.status === 403 && error.details?.reason === 'agreement_required') {
         // The turn-on refused for the agreement (ADR-0049 amendment 2): the
-        // section is read again and says what is owed; no screen opens here.
+        // section is read again and says what is owed, and the box is asked
+        // again with a new key (as on a 409); no screen opens here.
         setAcceptedHere(null);
+        setAuthorized(false);
+        newAcceptance();
         refreshResource();
       } else setActionError(turnOnRefusal(error, adding));
     } finally {
