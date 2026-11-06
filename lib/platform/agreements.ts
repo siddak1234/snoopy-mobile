@@ -9,8 +9,9 @@ import { platformOperation } from './client';
  * start until the owner accepted the current version (ADR-0049 amendment 2;
  * ~~at its add~~ until builds 37 and 39, wave 2). Set up reads it for its
  * "Contract and accept" section (`components/flows/contract-step.tsx`); Start
- * run and an item's upload read it only on the refusal, then send the request
- * again with the same key (`hooks/use-health-agreement.ts`).
+ * run, an item's upload and the flow page's Turn on read it only on the
+ * refusal, then send the request again with the same key
+ * (`hooks/use-health-agreement.ts`).
  */
 
 type Schema = components['schemas'];
