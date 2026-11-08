@@ -1,5 +1,5 @@
 import { Buildings, CaretDown, Stack, User, type Icon } from 'phosphor-react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet } from 'react-native';
 
 import { Dropdown } from '@/components/dropdown';
@@ -10,17 +10,25 @@ import { Text } from '@/components/text';
 import { fonts, fontScaleLimit, inset, space, typeScale, withAlpha } from '@/constants/theme';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useScope } from '@/hooks/use-scope';
-import { useSession } from '@/hooks/use-session';
+import { activeWorkspaceId, useSession } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { ALL_TEAMS_ICON, teamTypeIcon } from '@/lib/content/team-types';
 import { readProjects } from '@/lib/platform/projects';
+import { readSubscriptions } from '@/lib/platform/runs';
+import { departmentsWithFlows } from '@/lib/view/scope';
 
 /**
  * What the scope control reads: its two icons, on Home beside the bell and on
  * Flows and Activity in the title row (Build 22).
  *
- * Departments come from the shared snapshot, so every screen drawing a form
- * reads the list once.
+ * Departments and the flows come from the shared snapshot (`readProjects`,
+ * `readSubscriptions`), so every screen drawing the control reads each list
+ * once. Only departments holding a flow not archived are offered
+ * (`departmentsWithFlows`; the owner's build 41 item 15). A stored department
+ * no longer offered falls back to All departments once the lists are read for
+ * this workspace — never while they load or after a failed read. With the
+ * flows refused, every open department is offered, as before build 41, and
+ * the choice is kept.
  */
 function useScopeChoices() {
   const session = useSession();
@@ -31,12 +39,29 @@ function useScopeChoices() {
     currentSession?.workspaces.find((workspace) => workspace.id === currentSession.user.activeWorkspaceId) ??
     currentSession?.workspaces[0];
 
-  const teams = useWorkspaceResource(async (workspaceId) =>
-    (await readProjects(workspaceId)).filter((project) => project.status !== 'archived'),
-  );
-  const openTeams = teams.status === 'ready' ? teams.data : [];
+  const teams = useWorkspaceResource(async (workspaceId) => {
+    const [projects, flows] = await Promise.all([
+      readProjects(workspaceId),
+      // The flows refused: today's list of every open department, and no fallback.
+      readSubscriptions(workspaceId).catch(() => null),
+    ]);
+    return flows
+      ? { departments: departmentsWithFlows(projects, flows.subscriptions), flowsRead: true }
+      : { departments: projects.filter((project) => project.status !== 'archived'), flowsRead: false };
+  });
+  const openTeams = teams.status === 'ready' ? teams.data.departments : [];
   const chosen = openTeams.find((project) => project.id === projectId);
-  // A stored department that is gone (deleted, left, or another workspace's) reads as all.
+  const settledFor =
+    teams.status === 'ready' && teams.data.flowsRead && teams.loadedFor === activeWorkspaceId(session)
+      ? teams.loadedFor
+      : null;
+  const listed = chosen !== undefined;
+  // A stored department that is gone (deleted, left, emptied of flows, or
+  // another workspace's) reads as all, and once the lists are read for this
+  // workspace the choice itself goes back to all, so no screen filters by it.
+  useEffect(() => {
+    if (settledFor !== null && projectId !== null && !listed) setProjectId(null);
+  }, [settledFor, projectId, listed, setProjectId]);
   const teamLabel = chosen ? chosen.type : 'All departments';
   const workspaceLabel = activeWorkspace?.name ?? 'Workspace';
 
@@ -136,7 +161,8 @@ export function CircleButton({
  * it is and what is chosen ("Workspace: Acme", "Department: Legal"), and each
  * opens its drop-down, where the words are (round 23, the owner's build 22
  * items 3–4; ~~its card~~): the workspace's (`WorkspaceSwitcher`), and
- * Department — All departments, then each — with a load error in it. The
+ * Department — All departments, then each holding a flow (build 41) — with a
+ * load error in it. The
  * card's explanatory sentence went with the card (S3: the title says what the
  * menu is). Every press ticks. ~~`ScopeControl`, the labelled pills above
  * Flows' and Activity's titles~~ until Build 22 ("This looks odd").
@@ -191,7 +217,10 @@ export function ScopeIcons({ testIDPrefix = 'home-scope' }: { testIDPrefix?: str
             testID={`${testIDPrefix}-team`}
             icon={TeamIcon}
             accessibilityLabel={`Department: ${teamLabel}`}
-            onPress={() => setTeamOpen(true)}
+            onPress={() => {
+              teams.refresh();
+              setTeamOpen(true);
+            }}
           />
         }
       />

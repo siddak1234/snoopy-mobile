@@ -3864,3 +3864,29 @@ Bites (break, red, restore, green):
   pause asked for it (1); accepted, the turn-on not sent again (1); sent again with a new key (1).
 - The contract box (`android-card-overflow`, found by the land's full gate): `overflow: 'hidden'` on its
   elevated card, which Android draws empty (1 red).
+
+## Build 41: the owner's items 14 and 15 (2026-11-08)
+
+Read through the App Store Connect API, 2026-11-08; approved the same day ("go with recommended").
+
+- **14** (Home, YOUR FLOWS): "The component cards do not need to be this big for the quick access cards. Just the logo, title, then the buttons and items. We do not need the description and live. Just the trigger buttons. No assumptions"
+- **15** (Flows, the title row's DEPARTMENT menu, Compliance holding no flow): "Why am i seeing departments not actively part of active flows for this org"
+
+Built: Home's card is `FlowCard` `compact` — the icon and name in one row, then the start controls;
+no description, no pill; padded `space.rowY`/`space.rowX` instead of `layout.cardPad`. Flows, Archived
+and Add a flow keep the full card. The department menu (Home, Flows, Activity) offers only departments
+holding a flow that is not archived (`departmentsWithFlows`): "active" read as not archived — live,
+paused or draft — the session's recommended reading, approved. A stored department no longer offered
+goes back to All departments once the lists are read; with the flows refused the menu lists every open
+department, as before, and keeps the choice. No new endpoint. The website has no department menu
+(FR-25), so item 15 is the app's alone.
+
+Left: Flows' "No flows in this department yet" line is now reached only before the menu's fallback
+settles; its two tests reach it with the filter stubbed. Whether to keep that line is the owner's call.
+
+Bites (break, red, restore, green):
+- Home's card (`parity-home`): the description passed back (1 red); a pill passed back (1); not
+  `compact` (1). Flows' card (`build28-flows`): `compact` on every card (1).
+- The menu (`scope-control`): the filter dropped (3 red); the flow status check dropped (2); the
+  fallback effect removed (1); no re-read on the circle's press (1); a reset on a failed read (1).
+  `parity-home` G6: the flows' refusal not caught (1). `scope.test`: `!==` → `===` (1).

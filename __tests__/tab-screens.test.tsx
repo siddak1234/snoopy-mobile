@@ -49,6 +49,7 @@ import type { WorkspaceBilling } from '@/lib/platform/billing';
 import { PlatformUnreachableError } from '@/lib/platform/problem';
 import type { Approval } from '@/lib/platform/runs';
 import { resetSnapshot } from '@/lib/platform/snapshot';
+import * as scopeView from '@/lib/view/scope';
 import { resetPushForTests } from '@/hooks/use-push-registration';
 
 jest.mock('@/lib/platform/client', () => ({
@@ -2259,6 +2260,11 @@ describe('Flows with no live flow (build 11, D6)', () => {
   });
 
   it('keeps the inline line for a team with no flow while the workspace has some, so the scope control stays', async () => {
+    // Since build 41 item 15 the menu offers no department without a flow, and a
+    // stored one falls back to All departments once the lists are read; the line
+    // stays for the moment before. Here the menu offers every department, as
+    // before, to reach it.
+    const offered = jest.spyOn(scopeView, 'departmentsWithFlows').mockImplementation((projects) => [...projects]);
     const subscriptions = subscriptionsPayload();
     subscriptions.subscriptions = subscriptions.subscriptions.map((row) => ({ ...row, projectId: null }));
     routePlatform(platformOperation, {
@@ -2275,5 +2281,6 @@ describe('Flows with no live flow (build 11, D6)', () => {
     // The scope stays: its circles beside the title (Build 22, F1; ~~the pills above it~~).
     expect(screen.getByTestId('title-scope-team')).toBeTruthy();
     expect(screen.queryByTestId('scope-control')).toBeNull();
+    offered.mockRestore();
   });
 });
