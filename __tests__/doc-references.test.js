@@ -7,10 +7,12 @@ const { dirname, join, resolve } = require('node:path');
  * `npm run audit:docs` (scripts/audit-doc-references.mjs): no document names a
  * file that does not exist. This repository's documents pass it, and a temp
  * copy of the repository with one broken path planted fails it, naming the
- * document, the line and the path. A broken path in an archive the docs map
- * names (`records.archive`) is history and is not read. And the three docs
- * checks (`check:docs`, `map -- --check`, `audit:docs`) run in `verify`, right
- * after lint, and in CI's Architecture gates job on the PR's whole range.
+ * document, the line and the path. A path under snoopy-n8n's name is missing:
+ * it left the workspace on 2026-11-06, so it is no sibling. A broken path in an
+ * archive the docs map names (`records.archive`) is history and is not read.
+ * And the three docs checks (`check:docs`, `map -- --check`, `audit:docs`) run
+ * in `verify`, right after lint, and in CI's Architecture gates job on the PR's
+ * whole range.
  */
 
 const root = resolve(__dirname, '..');
@@ -63,6 +65,21 @@ describe('audit:docs — every path a document names exists', () => {
       const line = readFileSync(doc, 'utf8').split('\n').length - 1;
       const run = audit(temp.copy);
       expect(run.stdout).toContain(`missing\tREADME.md:${line}\tscripts/planted-missing.mjs`);
+      expect(run.status).toBe(1);
+    } finally {
+      writeFileSync(doc, before);
+    }
+  });
+
+  it("fails on a path under snoopy-n8n's name: it left the workspace (2026-11-06), so it is no sibling", () => {
+    const doc = join(temp.copy, 'README.md');
+    const before = readFileSync(doc, 'utf8');
+    try {
+      appendFileSync(doc, '\nThe planted line names `snoopy-n8n/README.md` and [its README](../snoopy-n8n/README.md).\n');
+      const line = readFileSync(doc, 'utf8').split('\n').length - 1;
+      const run = audit(temp.copy);
+      expect(run.stdout).toContain(`missing\tREADME.md:${line}\tsnoopy-n8n/README.md`);
+      expect(run.stdout).toContain(`missing\tREADME.md:${line}\t../snoopy-n8n/README.md`);
       expect(run.status).toBe(1);
     } finally {
       writeFileSync(doc, before);
