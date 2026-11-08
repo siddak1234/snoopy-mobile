@@ -31,7 +31,7 @@ describe('the common kit', () => {
     const { hooks } = JSON.parse(readFileSync(join(root, '.claude/settings.json'), 'utf8'));
     const command = (file) => `node "$CLAUDE_PROJECT_DIR/.claude/hooks/${file}"`;
     const entries = (event) => (hooks?.[event] ?? []).flatMap((entry) => entry.hooks.map((hook) => ({ ...hook, matcher: entry.matcher })));
-    expect(entries('PreToolUse')).toContainEqual({ type: 'command', command: command('guard.mjs'), timeout: 5, matcher: 'Bash|Write|Edit|NotebookEdit' });
+    expect(entries('PreToolUse')).toContainEqual({ type: 'command', command: command('guard.mjs'), timeout: 5, matcher: 'Bash|Write|Edit|NotebookEdit|Artifact' });
     expect(entries('SessionStart')).toContainEqual(expect.objectContaining({ type: 'command', command: command('session-start.mjs'), timeout: 10 }));
     for (const event of ['Stop', 'SubagentStop']) {
       expect(entries(event)).toContainEqual(expect.objectContaining({ type: 'command', command: command('stop-check.mjs'), timeout: 10 }));
