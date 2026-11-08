@@ -3890,3 +3890,28 @@ Bites (break, red, restore, green):
 - The menu (`scope-control`): the filter dropped (3 red); the flow status check dropped (2); the
   fallback effect removed (1); no re-read on the circle's press (1); a reset on a failed read (1).
   `parity-home` G6: the flows' refusal not caught (1). `scope.test`: `!==` → `===` (1).
+
+## Build 42: the owner's item 16 (2026-11-08)
+
+Read through the App Store Connect API (build 42, 2026-11-08T05:34:49Z); approved the same day ("go for all. let me know hen to test").
+
+- **16** (Home, YOUR FLOWS): "Why is the size of the card so big still. It does not need to be that big at all. Look at the layout of the component. Maybe we dont need the clip icon and document/resume in there. See how this can be re formatted with the same style and buttons to reduce the real estate it takes on the screen. No assumptions audit your work. It looks like big squares for a quick access"
+
+Built: Home's card is two rows. Row 1: icon and name, a flow with jobs' job pill on the right
+(`FlowCard` `right`; `stacked` at the accessibility sizes). Row 2, for a run input of exactly one
+file field: Take photo, Upload and Start on one wrapping row (`StartRun` `compact`; the file
+field's `compact` and `trailing`), no Paperclip, no field title; "Start" shown, "Start run" said
+while idle; the uploading/ready/error line under it only once it has words. Any other input keeps
+its titled fields, then the compact Start. No ready job: "No {jobs} yet." and Upload {job} on one
+wrapping row. No new spacing values. The flow page's Step 1 and the item page's form are as before
+(no `compact`; their tests untouched and green).
+
+Decision taken (no-new-blockers default): the file buttons keep today's spoken names ("Take a photo
+for {title}", "Upload a file for {title}"), which carry the field's title; the item's example
+wording ("Take photo, Resume") would change the flow page, which stays as it is.
+
+Bites (`build42-item16`, break, red, restore, green; 1 red each):
+- (a) the compact frame bypassed, the title line back; (b) Start out of the file's row;
+  (c) the job pill out of the title row; (d) Start not held while uploading; (e) "Start run" not
+  said; (f) the row not stacked at the largest text size; (g) the no-job row's id dropped.
+- Every new press run by a test (`audit:presses` on the touched files: all RUN).

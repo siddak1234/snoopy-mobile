@@ -35,6 +35,8 @@ type StartRunProps = {
   startLabel?: string;
   /** Its file fields say their types under their titles (the item page, as the website's). */
   showTypes?: boolean;
+  /** Home's quick-access card alone (build 42 item 16): see `StartRun`. */
+  compact?: boolean;
 };
 
 /**
@@ -78,6 +80,16 @@ export function canStartRun(subscription: Subscription, entry: CatalogEntry | un
  * run per file and "{n} runs started"~~ until the batch addendum. A flow that
  * declares `batch` splits that run into units on the platform; its page draws
  * them (the run page's `batch` part).
+ *
+ * **`compact`**, Home's quick-access card alone (the owner's build 42 item 16:
+ * "See how this can be re formatted with the same style and buttons to reduce
+ * the real estate"): Start reads "Start" (said "Start run" while idle;
+ * "Starting…" / "Uploading…" as ever while held), and the Start and error rows
+ * lose their padding, the card's own. A run input of exactly one file field
+ * draws that field `compact` with Start at the end of its buttons' row — Take
+ * photo, Upload, Start on one wrapping row, no title line — and no Start row of
+ * its own; any other input keeps its fields as here, then the compact Start.
+ * The flow page's Step 1 and the item page pass no `compact`: unchanged.
  */
 export function StartRun({
   subscriptionId,
@@ -88,6 +100,7 @@ export function StartRun({
   itemId,
   startLabel,
   showTypes,
+  compact,
 }: StartRunProps) {
   const [started, setStarted] = useState(0);
   return (
@@ -102,6 +115,7 @@ export function StartRun({
           itemId={itemId}
           startLabel={startLabel}
           showTypes={showTypes}
+          compact={compact}
           onStarted={(runId) => {
             setStarted((count) => count + 1);
             onStarted(runId);
@@ -127,6 +141,7 @@ function StartRunForm({
   itemId,
   startLabel,
   showTypes,
+  compact = false,
 }: StartRunProps) {
   const session = useSession();
   const keys = useIntentKeys('run');
@@ -191,10 +206,30 @@ function StartRunForm({
     }
   };
 
+  const held = busy || uploading.size > 0;
+  const startButton = action ?? (
+    <PillButton
+      testID="start-run-button"
+      label={busy ? 'Starting…' : uploading.size > 0 ? 'Uploading…' : (startLabel ?? (compact ? 'Start' : 'Start run'))}
+      // Home's shorter "Start" is still said in full while it can be pressed.
+      accessibilityLabel={compact && !held ? 'Start run' : undefined}
+      variant="primary"
+      fontSize={typeScale.label.fontSize}
+      icon={PlayCircle}
+      iconSize={iconSize.button}
+      disabled={held}
+      style={compact ? styles.startGrow : undefined}
+      onPress={start}
+    />
+  );
+  // Home's card with one file field: Start goes at the end of the field's buttons' row.
+  const inRow = compact && runInput.length === 1 && runInput[0]!.control === 'artifact';
+
   return (
     <>
       {runInput.map((field, index) => {
         const divider = index < runInput.length - 1;
+        const trailing = inRow ? startButton : undefined;
         if (field.control === 'artifact' && field.multiple) {
           return (
             <RunFilesField
@@ -206,6 +241,8 @@ function StartRunForm({
               onBusyChange={onBusyChange}
               divider={divider}
               showTypes={showTypes}
+              compact={inRow}
+              trailing={trailing}
             />
           );
         }
@@ -219,6 +256,8 @@ function StartRunForm({
             onBusyChange={onBusyChange}
             divider={divider}
             showTypes={showTypes}
+            compact={inRow}
+            trailing={trailing}
           />
         ) : (
           <SetupFieldRow
@@ -232,24 +271,11 @@ function StartRunForm({
         );
       })}
       {error ? (
-        <Text accessibilityRole="alert" style={[styles.error, { color: status.err }]}>
+        <Text accessibilityRole="alert" style={[compact ? styles.errorFlush : styles.error, { color: status.err }]}>
           {error}
         </Text>
       ) : null}
-      <View style={styles.start}>
-        {action ?? (
-          <PillButton
-            testID="start-run-button"
-            label={busy ? 'Starting…' : uploading.size > 0 ? 'Uploading…' : (startLabel ?? 'Start run')}
-            variant="primary"
-            fontSize={typeScale.label.fontSize}
-            icon={PlayCircle}
-            iconSize={iconSize.button}
-            disabled={busy || uploading.size > 0}
-            onPress={start}
-          />
-        )}
-      </View>
+      {inRow ? null : <View style={compact ? styles.startFlush : styles.start}>{startButton}</View>}
     </>
   );
 }
@@ -272,4 +298,8 @@ function withoutFiles(runInput: AutomationRunInputField[], values: Record<string
 const styles = StyleSheet.create({
   error: { marginTop: space.inner, paddingHorizontal: space.rowX, fontFamily: fonts.regular, ...typeScale.small },
   start: { paddingHorizontal: space.rowX, paddingTop: space.inner, paddingBottom: space.card },
+  // Home's card (build 42 item 16): the card pads; its rows add none.
+  errorFlush: { marginTop: space.inner, fontFamily: fonts.regular, ...typeScale.small },
+  startFlush: { flexDirection: 'row' },
+  startGrow: { flexGrow: 1 },
 });

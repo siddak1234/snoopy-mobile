@@ -28,10 +28,14 @@ import { useTheme } from '@/hooks/use-theme';
  * quick-access card (the owner's build 41 item 14: "Just the logo, title, then
  * the buttons and items. We do not need the description and live."): the
  * table's row steps for padding (`space.rowY` top and bottom, `space.rowX` the
- * sides) instead of `layout.cardPad`; nothing else changes size.
+ * sides) instead of `layout.cardPad`; nothing else changes size. Since the
+ * owner's build 42 item 16 Home's card is two rows: this top row, holding a
+ * flow with jobs' job pill on the right (`right`, `stacked` at the
+ * accessibility sizes), then the buttons (`children`).
  *
- * testIDs: the card `${testID}`, its name `${testID}-name`, its description
- * `${testID}-description`, its icon `${testID}-icon`.
+ * testIDs: the card `${testID}`, its top row `${testID}-top`, its name
+ * `${testID}-name`, its description `${testID}-description`, its icon
+ * `${testID}-icon`.
  */
 export function FlowCard({
   testID,
@@ -64,7 +68,7 @@ export function FlowCard({
 }) {
   const { palette } = useTheme();
   const top = (
-    <View style={[styles.top, stacked && styles.topStacked]}>
+    <View testID={`${testID}-top`} style={[styles.top, stacked && styles.topStacked]}>
       <View testID={`${testID}-icon`}>
         <IconTile icon={icon} size={42} iconSize={iconSize.row} borderRadius={12} bordered />
       </View>

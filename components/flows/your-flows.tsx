@@ -1,6 +1,6 @@
 import { useFocusEffect } from 'expo-router';
-import { ArrowRight, ListBullets, Stack, UploadSimple } from 'phosphor-react-native';
-import React, { useCallback, useEffect, useState } from 'react';
+import { ArrowRight, ListBullets, Stack, UploadSimple, type Icon } from 'phosphor-react-native';
+import React, { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { NoMatch, SearchBox } from '@/components/blocks/paged';
@@ -13,6 +13,7 @@ import { SectionTitle } from '@/components/nocturne/section-label';
 import { ScopePill } from '@/components/scope-control';
 import { Text } from '@/components/text';
 import { fonts, iconSize, space, typeScale } from '@/constants/theme';
+import { useAccessibilityTextSize } from '@/hooks/use-accessibility-text-size';
 import { useWorkspaceResource } from '@/hooks/use-resource';
 import { useTheme } from '@/hooks/use-theme';
 import {
@@ -56,16 +57,23 @@ export type HomeStarted = { runId: string; subscriptionId: string; itemId?: stri
  * 39: every flow is its own card (`FlowCard`, `compact`: icon and name, then
  * the start controls; ~~description and pill~~ until build 41, the owner's
  * item 14: "Just the logo, title, then the buttons and items"), always open,
- * its start form inside it:
+ * its start form inside it. Two rows since the owner's build 42 item 16 ("It
+ * looks like big squares for a quick access"): the icon and name, a flow with
+ * jobs' job pill on their right; then the buttons — for a run input of one
+ * file, Take photo, Upload and Start on one wrapping row, no Paperclip and no
+ * field title (`StartRun` `compact`); ~~the field's title row, its buttons,
+ * then Start run at full width, the job drop-down on a row of its own~~ until
+ * build 42:
  *
  * - a flow that can start a run here (`canStartRun`): its run's fields and
- *   Start run (`StartRun`, the flow page's);
+ *   Start (`StartRun` `compact`; the flow page's draws it in full);
  * - a flow with items (backend ADR-0046), to an owner or admin: the job
- *   drop-down, chosen at once for the newest ready job (`newestReadyItem`; the
- *   owner's build 37 item 5) and still changeable, then the run's fields; with
- *   no ready job, "No {jobs} yet." and "Upload {job}" (build 37 item 2), which
- *   opens the flow page's upload card (`ItemUploadDialog`) — the job then reads
- *   in the card ("Reading…") and, ready, is chosen, without leaving Home;
+ *   drop-down in the title row, chosen at once for the newest ready job
+ *   (`newestReadyItem`; the owner's build 37 item 5) and still changeable, then
+ *   the run's fields; with no ready job, "No {jobs} yet." and "Upload {job}"
+ *   (build 37 item 2) on one wrapping row, Upload opening the flow page's upload
+ *   card (`ItemUploadDialog`) — the job then reads in the card ("Reading…") and,
+ *   ready, is chosen, without leaving Home;
  * - any other (a member on a flow with items, a flow that cannot start here):
  *   "Open", to its flow page (`onOpen`).
  *
@@ -79,9 +87,10 @@ export type HomeStarted = { runId: string; subscriptionId: string; itemId?: stri
  * testIDs: the department drop-down `home-flows-department`, the search
  * `home-flows-search`, nothing found `home-flows-no-match`, a section
  * `home-flows-section-${n}`, a card `home-flow-${id}` (`FlowCard`'s), its form
- * `home-flow-${id}-form`, the job choice `home-flow-${id}-item`, its line
- * `home-flow-${id}-items-line`, Upload `home-flow-${id}-upload`, Open
- * `home-flow-${id}-open`.
+ * `home-flow-${id}-form`, its title row `home-flow-${id}-top`, the job choice
+ * `home-flow-${id}-item`, its line `home-flow-${id}-items-line`, the no-job row
+ * `home-flow-${id}-empty-row`, Upload `home-flow-${id}-upload`, a job reading
+ * `home-flow-${id}-reading`, Open `home-flow-${id}-open`.
  */
 export function YourFlows({
   sections,
@@ -174,30 +183,33 @@ function HomeFlowCard({
   const { subscription, entry } = flow;
   const id = subscription.id;
   const startable = canStartRun(subscription, entry, true) && (!subscription.items || canManage);
+  const icon = iconFor(entry?.icon);
+  const name = homeFlowName(flow);
+  // A flow with jobs draws its own card: its job pill sits in the title row.
+  if (startable && subscription.items) {
+    return (
+      <ItemStart
+        subscription={subscription}
+        items={subscription.items}
+        icon={icon}
+        name={name}
+        shownWorkspaceId={shownWorkspaceId}
+        onStarted={onStarted}
+      />
+    );
+  }
   return (
-    <FlowCard
-      testID={`home-flow-${id}`}
-      icon={iconFor(entry?.icon)}
-      name={homeFlowName(flow)}
-      compact>
+    <FlowCard testID={`home-flow-${id}`} icon={icon} name={name} compact>
       {startable ? (
         <View testID={`home-flow-${id}-form`}>
-          {subscription.items ? (
-            <ItemStart
-              subscription={subscription}
-              items={subscription.items}
-              shownWorkspaceId={shownWorkspaceId}
-              onStarted={onStarted}
-            />
-          ) : (
-            <StartRun
-              key={`${id}:${subscription.templateVersion}`}
-              subscriptionId={id}
-              shownWorkspaceId={shownWorkspaceId}
-              runInput={subscription.runInput ?? []}
-              onStarted={(runId) => onStarted({ runId, subscriptionId: id })}
-            />
-          )}
+          <StartRun
+            key={`${id}:${subscription.templateVersion}`}
+            subscriptionId={id}
+            shownWorkspaceId={shownWorkspaceId}
+            runInput={subscription.runInput ?? []}
+            compact
+            onStarted={(runId) => onStarted({ runId, subscriptionId: id })}
+          />
         </View>
       ) : (
         <PillButton
@@ -207,7 +219,7 @@ function HomeFlowCard({
           fontSize={typeScale.body.fontSize}
           icon={ArrowRight}
           iconSize={iconSize.button}
-          accessibilityLabel={`${OPEN_FLOW_LABEL} ${homeFlowName(flow)}`}
+          accessibilityLabel={`${OPEN_FLOW_LABEL} ${name}`}
           onPress={() => onOpen(id)}
         />
       )}
@@ -216,24 +228,32 @@ function HomeFlowCard({
 }
 
 /**
- * A flow with items on Home: which job the run is for — its ready items in the
- * drop-down by its group field's value A–Z (`groupItems`, as its flow page),
- * the newest ready one chosen until the person chooses (`newestReadyItem`) —
- * then its run's fields and Start run, the run naming it. None ready: "No
- * {jobs} yet." and "Upload {job}"; one being read, "{title}" and "Reading…".
+ * A flow with items on Home, its whole card (`FlowCard` `compact`): which job
+ * the run is for — its ready items in the drop-down by its group field's value
+ * A–Z (`groupItems`, as its flow page), the newest ready one chosen until the
+ * person chooses (`newestReadyItem`), the pill on the right of the title row
+ * (under the name at the accessibility sizes, `stacked`) — then its run's
+ * fields and Start (`StartRun` `compact`), the run naming it. None ready: "No
+ * {jobs} yet." and "Upload {job}" on one wrapping row; one being read,
+ * "{title}" and "Reading…"; the list loading or refused, its line, in the card.
  */
 function ItemStart({
   subscription,
   items: declared,
+  icon,
+  name,
   shownWorkspaceId,
   onStarted,
 }: {
   subscription: Subscription;
   items: AutomationItems;
+  icon: Icon;
+  name: string;
   shownWorkspaceId: string | null;
   onStarted: (started: HomeStarted) => void;
 }) {
   const { palette } = useTheme();
+  const large = useAccessibilityTextSize();
   const [reads, setReads] = useState(0);
   const listed = useWorkspaceResource(
     (workspaceId) => readItems(workspaceId, subscription.id).finally(() => setReads((n) => n + 1)),
@@ -273,22 +293,56 @@ function ItemStart({
   const testID = `home-flow-${subscription.id}`;
   const lineStyle = [styles.line, { color: palette.neutral[500] }];
 
+  /** The card: icon and name, `right` beside them (the job pill), then `body` — the form. */
+  const card = (body: ReactNode, right?: ReactNode) => (
+    <FlowCard testID={testID} icon={icon} name={name} compact right={right} stacked={large && right !== undefined}>
+      <View testID={`${testID}-form`}>{body}</View>
+    </FlowCard>
+  );
+
   if (listed.status === 'loading' && all.length === 0) {
-    return (
+    return card(
       <Text testID={`${testID}-items-line`} style={lineStyle}>
         {EMPTY}
-      </Text>
+      </Text>,
     );
   }
   if (listed.status !== 'ready' && listed.status !== 'loading' && all.length === 0) {
-    return (
+    return card(
       <Text testID={`${testID}-items-line`} style={lineStyle}>
         {FIGURE_UNAVAILABLE}
-      </Text>
+      </Text>,
     );
   }
-  return (
-    <View style={styles.form}>
+  const pill =
+    chosen === null ? undefined : (
+      <View style={large ? undefined : styles.aside}>
+        <Dropdown
+          testID={`${testID}-item`}
+          title={title}
+          options={options}
+          value={chosen}
+          open={choosing}
+          onOpenChange={setChoosing}
+          align="end"
+          onChange={(next) => {
+            setPicked(next);
+            setChoosing(false);
+          }}
+          trigger={
+            <ScopePill
+              testID={`${testID}-item`}
+              icon={ListBullets}
+              label={label}
+              accessibilityLabel={`${title}: ${label}`}
+              onPress={() => setChoosing(true)}
+            />
+          }
+        />
+      </View>
+    );
+  return card(
+    <>
       {chosen === null ? (
         reading ? (
           <View testID={`${testID}-reading`}>
@@ -298,7 +352,7 @@ function ItemStart({
             </Text>
           </View>
         ) : (
-          <View style={styles.form}>
+          <View testID={`${testID}-empty-row`} style={styles.emptyRow}>
             <Text testID={`${testID}-items-line`} style={lineStyle}>
               {noItemsYet(declared.words)}
             </Text>
@@ -314,39 +368,15 @@ function ItemStart({
           </View>
         )
       ) : (
-        <>
-          <View style={styles.choice}>
-            <Dropdown
-              testID={`${testID}-item`}
-              title={title}
-              options={options}
-              value={chosen}
-              open={choosing}
-              onOpenChange={setChoosing}
-              onChange={(next) => {
-                setPicked(next);
-                setChoosing(false);
-              }}
-              trigger={
-                <ScopePill
-                  testID={`${testID}-item`}
-                  icon={ListBullets}
-                  label={label}
-                  accessibilityLabel={`${title}: ${label}`}
-                  onPress={() => setChoosing(true)}
-                />
-              }
-            />
-          </View>
-          <StartRun
-            key={`${subscription.id}:${chosen}`}
-            subscriptionId={subscription.id}
-            shownWorkspaceId={shownWorkspaceId}
-            runInput={subscription.runInput ?? []}
-            itemId={chosen}
-            onStarted={(runId) => onStarted({ runId, subscriptionId: subscription.id, itemId: chosen })}
-          />
-        </>
+        <StartRun
+          key={`${subscription.id}:${chosen}`}
+          subscriptionId={subscription.id}
+          shownWorkspaceId={shownWorkspaceId}
+          runInput={subscription.runInput ?? []}
+          itemId={chosen}
+          compact
+          onStarted={(runId) => onStarted({ runId, subscriptionId: subscription.id, itemId: chosen })}
+        />
       )}
       {uploadOpen ? (
         <ItemUploadDialog
@@ -362,7 +392,8 @@ function ItemStart({
           }}
         />
       ) : null}
-    </View>
+    </>,
+    pill,
   );
 }
 
@@ -372,8 +403,10 @@ const styles = StyleSheet.create({
   title: { flex: 1 },
   body: { gap: space.group },
   section: { gap: space.inner },
-  form: { gap: space.inner },
-  choice: { flexDirection: 'row' },
+  // The job pill beside the name: at most half the title row, so the name keeps room (build 42 item 16).
+  aside: { flexShrink: 1, maxWidth: '50%' },
+  // "No {jobs} yet." and Upload {job} on one row, wrapping when the words are large.
+  emptyRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space.inner },
   reading: { fontFamily: fonts.medium, ...typeScale.body },
   line: { fontFamily: fonts.regular, ...typeScale.body },
 });
