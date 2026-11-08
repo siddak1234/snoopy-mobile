@@ -5,6 +5,7 @@ import ArchivedFlowsScreen from '@/app/(tabs)/flows/archived';
 import FlowsScreen from '@/app/(tabs)/flows/index';
 import { ScopeIcons } from '@/components/scope-control';
 import type { Subscription } from '@/lib/platform/automations';
+import { invalidateShared } from '@/lib/platform/snapshot';
 import { fakePlatform } from '@/test/fake-platform';
 import { renderWithProviders } from '@/test/render';
 import {
@@ -140,6 +141,7 @@ describe('the team circle (24.11.7; a circle since Build 22)', () => {
     async (role) => {
       const fake = fakePlatform(platformOperation);
       fake.always('GET /v1/workspaces/{workspaceId}/projects', { projects: [] });
+      fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', { subscriptions: [] });
       fake.always('GET /v1/workspaces', {
         workspaces: [{ id: TEST_WORKSPACE, name: 'Acme', type: 'organization', role }],
         activeWorkspaceId: TEST_WORKSPACE,
@@ -169,6 +171,10 @@ describe('the team circle (24.11.7; a circle since Build 22)', () => {
         },
       ],
     });
+    // A department is offered only while it holds a flow (build 41 item 15).
+    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', {
+      subscriptions: [{ ...subscriptionsPayload().subscriptions[0]!, projectId: 'p-1' }],
+    });
     await renderWithProviders(<ScopeIcons testIDPrefix="title-scope" />, sessionAs('member'));
     await fireEvent.press(await screen.findByLabelText('Department: All departments'));
     expect(await screen.findByTestId('scope-option-p-1')).toBeTruthy();
@@ -187,6 +193,7 @@ describe('the scope circles with a long name (24.12; circles since Build 22)', (
   it('read the whole name aloud, and the card it opens names it — no word in the row to cut short', async () => {
     const fake = fakePlatform(platformOperation);
     fake.always('GET /v1/workspaces/{workspaceId}/projects', { projects: [] });
+    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', { subscriptions: [] });
     fake.always('GET /v1/workspaces', {
       workspaces: [{ id: TEST_WORKSPACE, name: 'Northwind Traders Operations', type: 'organization', role: 'owner' }],
       activeWorkspaceId: TEST_WORKSPACE,
@@ -203,5 +210,92 @@ describe('the scope circles with a long name (24.12; circles since Build 22)', (
     expect(screen.queryByText(name)).toBeNull();
     await fireEvent.press(workspace);
     expect(await screen.findByText(name)).toBeTruthy();
+  });
+});
+
+/**
+ * The owner's build 41 item 15 (2026-11-08): "Why am i seeing departments not
+ * actively part of active flows for this org". The menu offers only the
+ * departments holding a flow that is not archived (live, paused or draft); a
+ * stored department no longer offered goes back to All departments.
+ */
+describe('the department menu offers only departments that hold flows (build 41 item 15)', () => {
+  // Finance holds none, Compliance only an archived flow, the rest one each.
+  const kinds = ['Finance', 'Compliance', 'Healthcare', 'HR', 'Accounting'];
+  const rows = () => {
+    const [live, paused, draft] = subscriptionsPayload().subscriptions;
+    return [
+      { ...live!, projectId: 'project-5', status: 'live' as const },
+      { ...paused!, projectId: 'project-4', status: 'paused' as const },
+      { ...draft!, projectId: 'project-3', status: 'draft' as const },
+      { ...live!, id: 'gone', name: 'Old intake', projectId: 'project-2', status: 'archived' as const },
+    ];
+  };
+
+  beforeEach(() => {
+    mockStored.clear();
+    platformOperation.mockReset();
+    writeScope.mockClear();
+  });
+
+  it('leaves out a department with no flow and one with only archived flows; offers draft, paused and live', async () => {
+    const fake = fakePlatform(platformOperation);
+    fake.always('GET /v1/workspaces/{workspaceId}/projects', projectsPayload(...kinds));
+    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', { subscriptions: rows() });
+    await renderWithProviders(<ScopeIcons testIDPrefix="title-scope" />, signedInSession);
+    await fireEvent.press(await screen.findByLabelText('Department: All departments'));
+    expect(await screen.findByTestId('scope-option-project-3')).toBeTruthy();
+    expect(screen.getByTestId('scope-option-project-4')).toBeTruthy();
+    expect(screen.getByTestId('scope-option-project-5')).toBeTruthy();
+    expect(screen.getByTestId('scope-option-all')).toBeTruthy();
+    expect(screen.queryByTestId('scope-option-project-1')).toBeNull();
+    expect(screen.queryByTestId('scope-option-project-2')).toBeNull();
+    expect(screen.queryByText('Compliance')).toBeNull();
+  });
+
+  it('re-reads the lists when the circle is pressed, so a department whose last flow was archived goes at once', async () => {
+    const fake = fakePlatform(platformOperation);
+    fake.always('GET /v1/workspaces/{workspaceId}/projects', projectsPayload(...kinds));
+    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', { subscriptions: rows() });
+    await renderWithProviders(<ScopeIcons testIDPrefix="title-scope" />, signedInSession);
+    await fireEvent.press(await screen.findByLabelText('Department: All departments'));
+    expect(await screen.findByTestId('scope-option-project-5')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('scope-option-all'));
+
+    // Accounting's only flow is archived elsewhere; the archive drops the snapshot.
+    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', {
+      subscriptions: rows().map((row) => (row.projectId === 'project-5' ? { ...row, status: 'archived' as const } : row)),
+    });
+    invalidateShared(TEST_WORKSPACE, ['subscriptions']);
+    await fireEvent.press(screen.getByLabelText('Department: All departments'));
+    await waitFor(() => expect(screen.queryByTestId('scope-option-project-5')).toBeNull());
+    expect(screen.getByTestId('scope-option-project-4')).toBeTruthy();
+  });
+
+  it('a stored department whose flows are gone falls back to All departments, and Flows lists every flow', async () => {
+    mockStored.set(TEST_WORKSPACE, 'project-1');
+    routePlatform(platformOperation, {
+      '/automations': flowCatalogPayload(),
+      '/subscriptions': subscriptionsPayload(),
+      '/projects': projectsPayload('Finance'),
+    });
+    await renderWithProviders(<FlowsScreen />, signedInSession);
+    expect(await screen.findByText('Invoice triage')).toBeTruthy();
+    await waitFor(() => expect(writeScope).toHaveBeenCalledWith(TEST_WORKSPACE, null));
+    expect(screen.getByLabelText('Department: All departments')).toBeTruthy();
+    expect(await screen.findByText('Email triage')).toBeTruthy();
+  });
+
+  it('keeps the stored department while the lists cannot be read', async () => {
+    mockStored.set(TEST_WORKSPACE, 'project-1');
+    const fake = fakePlatform(platformOperation);
+    fake.always('GET /v1/workspaces/{workspaceId}/projects', () => {
+      throw new Error('offline');
+    });
+    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', { subscriptions: rows() });
+    await renderWithProviders(<ScopeIcons testIDPrefix="title-scope" />, signedInSession);
+    await fireEvent.press(await screen.findByLabelText('Department: All departments'));
+    expect(await screen.findByTestId('scope-team-error')).toBeTruthy();
+    expect(writeScope).not.toHaveBeenCalled();
   });
 });

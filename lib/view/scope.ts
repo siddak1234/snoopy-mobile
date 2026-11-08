@@ -16,6 +16,26 @@ export function inScope(subscription: { projectId: string | null }, projectId: s
   return projectId === null || subscription.projectId === projectId;
 }
 
+/**
+ * The departments the scope control offers (the owner's build 41 item 15: "Why
+ * am i seeing departments not actively part of active flows for this org"):
+ * each department not archived that holds at least one of the workspace's
+ * flows not archived — live, paused or draft, the session's reading of
+ * "active", approved 2026-11-08. A department with no flow, or only archived
+ * ones, is left out. The projects' own order is kept; this only filters.
+ */
+export function departmentsWithFlows<P extends { id: string; status: string }>(
+  projects: readonly P[],
+  subscriptions: readonly { projectId: string | null; status: string }[],
+): P[] {
+  const holding = new Set(
+    subscriptions
+      .filter((subscription) => subscription.status !== 'archived' && subscription.projectId !== null)
+      .map((subscription) => subscription.projectId),
+  );
+  return projects.filter((project) => project.status !== 'archived' && holding.has(project.id));
+}
+
 export function scopeSubscriptions<T extends { projectId: string | null }>(
   subscriptions: readonly T[],
   projectId: string | null,

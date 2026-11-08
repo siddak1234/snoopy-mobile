@@ -1,11 +1,26 @@
 import { fireEvent, screen, within } from '@testing-library/react-native';
 import React from 'react';
+import { StyleSheet, type ViewStyle } from 'react-native';
 
 import FlowsScreen from '@/app/(tabs)/flows/index';
+import { layout } from '@/constants/theme';
 import { resetSnapshot } from '@/lib/platform/snapshot';
 import { WHOLE_WORKSPACE, groupFlows, type FlowView } from '@/lib/view/catalog';
 import { flowCatalogPayload, projectsPayload, routePlatform, signedInSession, subscriptionsPayload } from '@/test/platform';
 import { mockRouter, renderWithProviders } from '@/test/render';
+
+/** The flow card's own style: the first element under it that spaces its parts (`gap`). */
+type Element = ReturnType<typeof screen.getByTestId>;
+function cardStyle(node: Element): ViewStyle | undefined {
+  const style = StyleSheet.flatten(node.props.style) as ViewStyle | undefined;
+  if (style?.gap !== undefined) return style;
+  for (const child of node.children) {
+    if (typeof child === 'string') continue;
+    const found = cardStyle(child as Element);
+    if (found) return found;
+  }
+  return undefined;
+}
 
 jest.mock('@/lib/platform/client', () => ({
   platformOperation: jest.fn(),
@@ -109,6 +124,9 @@ describe('the Flows screen (F1)', () => {
       flowCatalogPayload().automations.find((entry) => entry.templateId === 'tplflow.invoice')!.description,
     );
     expect(card.getByText('Live')).toBeTruthy();
+    // The full card's own padding: only Home's card is compact (build 41 item 14).
+    const padded = cardStyle(screen.getByTestId('flow-card-invoice'))!;
+    expect([padded.padding, padded.paddingVertical]).toEqual([layout.cardPad, undefined]);
     expect(screen.queryByText(/^Department: /u)).toBeNull();
     expect(screen.queryByText(/ runs · /u)).toBeNull();
     await fireEvent.press(screen.getByText('Invoice triage'));

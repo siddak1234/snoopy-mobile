@@ -24,6 +24,11 @@ import { useTheme } from '@/hooks/use-theme';
  * the flow's start form inside the card under it (`children`). `note` is a
  * line under the description (Add a flow's "unavailable"); `stacked` puts the
  * right slot under the words at iOS's accessibility sizes (Add a flow's rule).
+ * `description` is optional: none (or '') draws no line. `compact` is Home's
+ * quick-access card (the owner's build 41 item 14: "Just the logo, title, then
+ * the buttons and items. We do not need the description and live."): the
+ * table's row steps for padding (`space.rowY` top and bottom, `space.rowX` the
+ * sides) instead of `layout.cardPad`; nothing else changes size.
  *
  * testIDs: the card `${testID}`, its name `${testID}-name`, its description
  * `${testID}-description`, its icon `${testID}-icon`.
@@ -36,6 +41,7 @@ export function FlowCard({
   right,
   note,
   stacked = false,
+  compact = false,
   onPress,
   children,
   style,
@@ -43,11 +49,14 @@ export function FlowCard({
   testID: string;
   icon: Icon;
   name: string;
-  description: string;
+  /** None, or '', draws no line. */
+  description?: string;
   /** The pill, "Archived {date}", or the Add action. */
   right?: React.ReactNode;
   note?: React.ReactNode;
   stacked?: boolean;
+  /** Home's quick-access card: the row steps for padding (build 41 item 14). */
+  compact?: boolean;
   /** The whole card opens the flow; a card holding a form (`children`) takes none. */
   onPress?: () => void;
   children?: React.ReactNode;
@@ -75,7 +84,7 @@ export function FlowCard({
   );
   return (
     <View testID={testID}>
-      <SurfaceCard onPress={onPress} style={[styles.card, style]}>
+      <SurfaceCard onPress={onPress} style={[styles.card, compact && styles.compact, style]}>
         {top}
         {children}
       </SurfaceCard>
@@ -85,6 +94,7 @@ export function FlowCard({
 
 const styles = StyleSheet.create({
   card: { padding: layout.cardPad, gap: space.inner },
+  compact: { paddingVertical: space.rowY, paddingHorizontal: space.rowX },
   top: { flexDirection: 'row', alignItems: 'center', gap: space.inner },
   // At iOS's accessibility sizes the words keep the card's width (round 24's audit on Add a flow).
   topStacked: { flexDirection: 'column', alignItems: 'flex-start' },

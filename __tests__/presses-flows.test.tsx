@@ -21,6 +21,7 @@ import {
   subscriptionsPayload,
 } from '@/test/platform';
 import { mockRouter, renderWithProviders, setMockParams } from '@/test/render';
+import * as scopeView from '@/lib/view/scope';
 
 jest.mock('@/lib/platform/client', () => ({
   platformOperation: jest.fn(),
@@ -184,6 +185,11 @@ async function uploadRefusedWith(error: PlatformError) {
 
 describe("Flows, in a team with no flow while the workspace has some (build 11, D6: the team's own line)", () => {
   it("Add a flow, under the team's line, opens the catalog", async () => {
+    // Since build 41 item 15 the menu offers no department without a flow, and a
+    // stored one falls back to All departments once the lists are read; the line
+    // stays for the moment before. Here the menu offers every department, as
+    // before, to reach it.
+    const offered = jest.spyOn(scopeView, 'departmentsWithFlows').mockImplementation((projects) => [...projects]);
     mockStored.set(TEST_WORKSPACE, 'project-1');
     const subscriptions = subscriptionsPayload().subscriptions.map((row) => ({ ...row, projectId: null }));
     routePlatform(platformOperation, {
@@ -196,6 +202,7 @@ describe("Flows, in a team with no flow while the workspace has some (build 11, 
     expect(screen.queryByTestId('screen-empty')).toBeNull();
     await fireEvent.press(screen.getByText('Add a flow'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/add');
+    offered.mockRestore();
   });
 });
 

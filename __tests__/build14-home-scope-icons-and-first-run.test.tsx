@@ -261,7 +261,12 @@ describe("Home's scope: two icons beside the bell (the owner's build 13 decision
 
   it("draws the chosen team as its kind's icon, and a kind in a person's own words as the team icon", async () => {
     mockStored.set(TEST_WORKSPACE, 'project-1');
-    routeHome({ projects: projectsPayload('Legal', 'Facilities') });
+    // Each holds a flow: a department with none is not offered (build 41 item 15).
+    const subscriptions = subscriptionsPayload();
+    subscriptions.subscriptions = subscriptions.subscriptions.map((row, index) =>
+      index < 2 ? { ...row, projectId: `project-${index + 1}` } : row,
+    );
+    routeHome({ projects: projectsPayload('Legal', 'Facilities'), subscriptions });
     await renderWithProviders(<HomeScreen />, signedInSession);
     const legal = await screen.findByLabelText('Department: Legal');
     expect(within(legal).getByTestId('icon-Gavel')).toBeTruthy();
@@ -274,9 +279,10 @@ describe("Home's scope: two icons beside the bell (the owner's build 13 decision
 
   it('the team icon ticks and opens Show — the team list, in words — and a team chosen there is the scope: kept, the icon and its label follow, and Home narrows to it', async () => {
     const subscriptions = subscriptionsPayload();
-    // `invoice` in Finance; Legal has no flow.
+    // `invoice` in Finance; Legal holds only `lead`, a draft, so no live flow (a
+    // department with no flow at all is not offered: build 41 item 15).
     subscriptions.subscriptions = subscriptions.subscriptions.map((row) =>
-      row.id === 'invoice' ? { ...row, projectId: 'project-1' } : row,
+      row.id === 'invoice' ? { ...row, projectId: 'project-1' } : row.id === 'lead' ? { ...row, projectId: 'project-2' } : row,
     );
     routeHome({ projects: projectsPayload('Finance', 'Legal'), subscriptions });
     await renderWithProviders(<HomeScreen />, signedInSession);

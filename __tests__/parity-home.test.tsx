@@ -1,9 +1,10 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import React from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, type ViewStyle } from 'react-native';
 
 import HomeScreen from '@/app/(tabs)/(home)/index';
 import { ScreenError } from '@/components/screen-state';
+import { space } from '@/constants/theme';
 import { NocturneThemeProvider } from '@/hooks/use-theme';
 import { ERROR_BODY, NO_MATCHES, busyLoadBody } from '@/lib/content/screen-states';
 import {
@@ -29,6 +30,19 @@ import {
   subscriptionsPayload,
 } from '@/test/platform';
 import { mockRouter, mockTabs, renderWithProviders, setTextSize } from '@/test/render';
+
+/** The flow card's own style: the first element under it that spaces its parts (`gap`). */
+type Element = ReturnType<typeof screen.getByTestId>;
+function cardStyle(node: Element): ViewStyle | undefined {
+  const style = StyleSheet.flatten(node.props.style) as ViewStyle | undefined;
+  if (style?.gap !== undefined) return style;
+  for (const child of node.children) {
+    if (typeof child === 'string') continue;
+    const found = cardStyle(child as Element);
+    if (found) return found;
+  }
+  return undefined;
+}
 
 /**
  * Gate 24's parity line, Home's half (BUILD-PLAN 24 Gate 24: "Every signed-in
@@ -531,7 +545,7 @@ describe("YOUR FLOWS (the owner's build 34 F5)", () => {
     return fake;
   }
 
-  it("the live flows by department A–Z, each A–Z by name, under YOUR FLOWS — every flow its own card: icon, name, description, pill; no rows, no carets (build 39 item 8; items 1 and 4)", async () => {
+  it("the live flows by department A–Z, each A–Z by name, under YOUR FLOWS — every flow its own card: icon and name, then its start controls; no description, no pill, no rows, no carets (build 39 item 8; build 41 item 14)", async () => {
     routeFlows();
     await renderWithProviders(<HomeScreen />, signedInSession);
     expect(await screen.findByText('YOUR FLOWS')).toBeTruthy();
@@ -547,8 +561,13 @@ describe("YOUR FLOWS (the owner's build 34 F5)", () => {
     const card = within(screen.getByTestId('home-flow-invoice'));
     expect(card.getByTestId('home-flow-invoice-icon')).toBeTruthy();
     expect(card.getByTestId('home-flow-invoice-name').props.children).toBe('Invoice triage');
-    expect(card.getByTestId('home-flow-invoice-description').props.children).toBe(flowCatalogPayload().automations.find((entry) => entry.templateId === 'tplflow.invoice')!.description);
-    expect(card.getByText('Live')).toBeTruthy();
+    // "Just the logo, title, then the buttons and items. We do not need the description and live." (build 41 item 14)
+    expect(card.queryByTestId('home-flow-invoice-description')).toBeNull();
+    expect(card.queryByText(flowCatalogPayload().automations.find((entry) => entry.templateId === 'tplflow.invoice')!.description)).toBeNull();
+    expect(card.queryByText('Live')).toBeNull();
+    // Compact: the row steps for padding, not the card's own.
+    const padded = cardStyle(screen.getByTestId('home-flow-invoice'))!;
+    expect([padded.paddingVertical, padded.paddingHorizontal]).toEqual([space.rowY, space.rowX]);
     // Always open: the form inside the card, nothing to expand.
     expect(card.getByTestId('home-flow-invoice-form')).toBeTruthy();
     expect(screen.getByTestId('home-flow-invoice').props.accessibilityState).toBeUndefined();
@@ -765,7 +784,10 @@ describe("YOUR FLOWS (the owner's build 34 F5)", () => {
 
     mockStored.set(TEST_WORKSPACE, 'project-2');
     const noneInLegal = subscriptionsPayload();
-    noneInLegal.subscriptions = noneInLegal.subscriptions.map((row) => ({ ...row, projectId: 'project-1' }));
+    // Legal still holds flows, none live (a department with no flow at all is no longer offered: build 41 item 15).
+    noneInLegal.subscriptions = noneInLegal.subscriptions.map((row) =>
+      row.id === 'invoice' ? { ...row, projectId: 'project-1' } : { ...row, projectId: 'project-2', status: 'paused' as const },
+    );
     routeHome({ subscriptions: noneInLegal, teams });
     const again = await renderWithProviders(<HomeScreen />, signedInSession);
     expect(await screen.findByLabelText('Department: Legal')).toBeTruthy();

@@ -10,7 +10,6 @@ import { FlowCard } from '@/components/flows/flow-card';
 import { ItemUploadDialog } from '@/components/items/item-upload-dialog';
 import { PillButton } from '@/components/nocturne/pill-button';
 import { SectionTitle } from '@/components/nocturne/section-label';
-import { StatusPill } from '@/components/nocturne/status-pill';
 import { ScopePill } from '@/components/scope-control';
 import { Text } from '@/components/text';
 import { fonts, iconSize, space, typeScale } from '@/constants/theme';
@@ -37,7 +36,6 @@ import {
 import { iconFor } from '@/lib/view/icon-registry';
 import { groupItems, itemsStillGoing } from '@/lib/view/items';
 import { RUN_REREAD_MS } from '@/lib/view/runs';
-import { statusLabel, type StatusPillLabel } from '@/lib/view/status';
 
 /** The words Home's flow card offers for a flow it cannot start here: its page. */
 export const OPEN_FLOW_LABEL = 'Open';
@@ -55,8 +53,10 @@ export type HomeStarted = { runId: string; subscriptionId: string; itemId?: stri
  * groups by) — then the search box ("Search flows", by name, any case;
  * nothing found says `NO_MATCHES`), then each department's name over its
  * cards. ~~One card of rows, each opening under its caret~~ until builds 37 and
- * 39: every flow is its own card (`FlowCard`: icon, name, description, pill),
- * always open, its start form inside it:
+ * 39: every flow is its own card (`FlowCard`, `compact`: icon and name, then
+ * the start controls; ~~description and pill~~ until build 41, the owner's
+ * item 14: "Just the logo, title, then the buttons and items"), always open,
+ * its start form inside it:
  *
  * - a flow that can start a run here (`canStartRun`): its run's fields and
  *   Start run (`StartRun`, the flow page's);
@@ -179,8 +179,7 @@ function HomeFlowCard({
       testID={`home-flow-${id}`}
       icon={iconFor(entry?.icon)}
       name={homeFlowName(flow)}
-      description={entry?.description ?? ''}
-      right={<StatusPill label={statusLabel(subscription.status) as StatusPillLabel} />}>
+      compact>
       {startable ? (
         <View testID={`home-flow-${id}-form`}>
           {subscription.items ? (
