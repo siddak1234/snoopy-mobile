@@ -3917,4 +3917,7 @@ Bites (`build42-item16`, break, red, restore, green; 1 red each):
 - (a2) a several-file field (`multiple`) drawn without `compact`: its Paperclip and title back,
   Start out of its row; (f) the job pill's title row not stacked at the largest text size, and
   stacked at the default size.
+- (f) the job pill's half-row cap (`aside`) dropped at the default size; its menu's edge fixed to
+  the end (red at the largest size, where the pill sits on the start side) or left out (red at the
+  default size: the test's unmeasured trigger then opens it on the start edge).
 - Every new press run by a test (`audit:presses` on the touched files: all RUN).

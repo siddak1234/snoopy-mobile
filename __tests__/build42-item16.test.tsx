@@ -142,6 +142,19 @@ function hostTexts(node: unknown): Node[] {
   return [...own, ...(host.children ?? []).flatMap(hostTexts)];
 }
 
+type Drawn = ReturnType<typeof screen.getByTestId>;
+/** The styles of `node` and each element above it, up to (not including) the one with testID `stop`, or the root. */
+function stylesUp(node: Drawn | null, stop?: string): ViewStyle[] {
+  const styles: ViewStyle[] = [];
+  for (let at = node; at && (stop === undefined || at.props.testID !== stop); at = at.parent) {
+    const style = StyleSheet.flatten(at.props.style) as ViewStyle | undefined;
+    if (style) styles.push(style);
+  }
+  return styles;
+}
+/** Where the open menu grows from: "top right" opens on the end edge, "top left" on the start. */
+const menuOrigin = (testID: string) => stylesUp(screen.getByTestId(`${testID}-menu`)).find((style) => style.transformOrigin)?.transformOrigin;
+
 async function renderFlows() {
   return renderWithProviders(
     <YourFlows
@@ -230,18 +243,25 @@ describe("Home's compact quick-access card (the owner's build 42 item 16)", () =
     expect(within(lead.getByTestId('home-flow-lead-form')).getByTestId('run-file-resumes-count')).toBeTruthy();
   });
 
-  it('(f) at the default size the title row is a row', async () => {
+  it('(f) at the default size the title row is a row, the job pill at most half of it, its menu on the end edge', async () => {
     await renderFlows();
     const top = await screen.findByTestId('home-flow-email-top');
     expect((StyleSheet.flatten(top.props.style) as ViewStyle).flexDirection).toBe('row');
+    const pill = await within(top).findByTestId('home-flow-email-item');
+    expect(stylesUp(pill, 'home-flow-email-top')).toContainEqual(expect.objectContaining({ maxWidth: '50%', flexShrink: 1 }));
+    await fireEvent.press(pill);
+    expect(menuOrigin('home-flow-email-item')).toMatch(/ right$/u);
   });
 
-  it('(f) at the largest text size the buttons and the title row stack, and no label is cut to one line', async () => {
+  it('(f) at the largest text size the buttons and the title row stack, the job menu on the start edge, and no label is cut to one line', async () => {
     const restore = setTextSize(3.571);
     try {
       await renderFlows();
       const top = await screen.findByTestId('home-flow-email-top');
       expect((StyleSheet.flatten(top.props.style) as ViewStyle).flexDirection).toBe('column');
+      // Stacked under the name, the pill sits on the start side, and so does its menu.
+      await fireEvent.press(await within(top).findByTestId('home-flow-email-item'));
+      expect(menuOrigin('home-flow-email-item')).toMatch(/ left$/u);
       const row = (await screen.findAllByTestId('run-file-resume-actions'))[0]!;
       expect((StyleSheet.flatten(row.props.style) as ViewStyle).flexDirection).toBe('column');
       const labels = hostTexts(row);

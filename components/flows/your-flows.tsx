@@ -314,6 +314,7 @@ function ItemStart({
       </Text>,
     );
   }
+  // The job pill: its menu opens on the edge the pill is nearer — the end beside the name, the start once stacked under it.
   const pill =
     chosen === null ? undefined : (
       <View style={large ? undefined : styles.aside}>
@@ -324,7 +325,7 @@ function ItemStart({
           value={chosen}
           open={choosing}
           onOpenChange={setChoosing}
-          align="end"
+          align={large ? 'start' : 'end'}
           onChange={(next) => {
             setPicked(next);
             setChoosing(false);
