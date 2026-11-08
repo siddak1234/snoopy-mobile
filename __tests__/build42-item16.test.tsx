@@ -80,6 +80,14 @@ beforeEach(() => {
 });
 
 const RESUME: AutomationRunInputField = { key: 'resume', title: 'Resume', description: 'The file.', control: 'artifact', required: true };
+const RESUMES: AutomationRunInputField = {
+  key: 'resumes',
+  title: 'Resumes',
+  description: 'The files.',
+  control: 'artifact',
+  required: true,
+  multiple: true,
+};
 const NOTE: AutomationRunInputField = { key: 'note', title: 'Note', description: 'A line.', control: 'text', required: false };
 const DECLARED = {
   words: { singular: 'Job', plural: 'Jobs' },
@@ -107,7 +115,7 @@ function job(id: string, title: string) {
   };
 }
 
-/** A one-file flow (invoice), a two-field flow (kpi: file + Note) and the jobs flow (email, one file). */
+/** A one-file flow (invoice), a two-field flow (kpi: file + Note), the jobs flow (email, one file) and a several-file flow (lead). */
 function flows(): HomeFlow[] {
   const catalog = flowCatalogPayload().automations;
   const live = subscriptionsPayload().subscriptions;
@@ -119,6 +127,7 @@ function flows(): HomeFlow[] {
     of('email', { runInput: [RESUME], items: DECLARED }),
     of('invoice', { runInput: [RESUME] }),
     of('kpi', { runInput: [RESUME, NOTE] }),
+    of('lead', { runInput: [RESUMES] }),
   ];
 }
 
@@ -205,15 +214,39 @@ describe("Home's compact quick-access card (the owner's build 42 item 16)", () =
     expect(sent.find((request) => request.path === RUNS_PATH)!.body).toEqual({ subscriptionId: 'invoice', input: { resume: 'artifact-1' } });
   });
 
-  it('(f) at the largest text size the buttons stack, and no label is cut to one line', async () => {
+  it('(a2) a several-file card is compact too: no Paperclip, no title, Start in its row, the count line under the row after a pick', async () => {
+    await renderFlows();
+    const lead = within(await screen.findByTestId('home-flow-lead'));
+    expect(lead.queryByTestId('icon-Paperclip')).toBeNull();
+    expect(lead.queryByText('Resumes')).toBeNull();
+    const row = within(lead.getByTestId('run-file-resumes-actions'));
+    expect(row.getByTestId('run-file-resumes-photo')).toBeTruthy();
+    expect(row.getByTestId('run-file-resumes-upload')).toBeTruthy();
+    expect(within(row.getByTestId('start-run-button')).getByText('Start')).toBeTruthy();
+    expect(lead.queryByTestId('run-file-resumes-count')).toBeNull();
+    await fireEvent.press(row.getByTestId('run-file-resumes-upload'));
+    expect((await lead.findByTestId('run-file-resumes-count')).props.children).toBe('Ready: cv.pdf (5 bytes)');
+    expect(row.queryByTestId('run-file-resumes-count')).toBeNull();
+    expect(within(lead.getByTestId('home-flow-lead-form')).getByTestId('run-file-resumes-count')).toBeTruthy();
+  });
+
+  it('(f) at the default size the title row is a row', async () => {
+    await renderFlows();
+    const top = await screen.findByTestId('home-flow-email-top');
+    expect((StyleSheet.flatten(top.props.style) as ViewStyle).flexDirection).toBe('row');
+  });
+
+  it('(f) at the largest text size the buttons and the title row stack, and no label is cut to one line', async () => {
     const restore = setTextSize(3.571);
     try {
       await renderFlows();
+      const top = await screen.findByTestId('home-flow-email-top');
+      expect((StyleSheet.flatten(top.props.style) as ViewStyle).flexDirection).toBe('column');
       const row = (await screen.findAllByTestId('run-file-resume-actions'))[0]!;
       expect((StyleSheet.flatten(row.props.style) as ViewStyle).flexDirection).toBe('column');
       const labels = hostTexts(row);
       expect(labels.length).toBeGreaterThanOrEqual(3);
-      for (const label of labels) expect(label.props.numberOfLines).toBeUndefined();
+      for (const label of labels) expect(label.props?.numberOfLines).toBeUndefined();
     } finally {
       await act(async () => {
         restore();

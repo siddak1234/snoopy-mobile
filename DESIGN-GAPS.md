@@ -3914,4 +3914,7 @@ Bites (`build42-item16`, break, red, restore, green; 1 red each):
 - (a) the compact frame bypassed, the title line back; (b) Start out of the file's row;
   (c) the job pill out of the title row; (d) Start not held while uploading; (e) "Start run" not
   said; (f) the row not stacked at the largest text size; (g) the no-job row's id dropped.
+- (a2) a several-file field (`multiple`) drawn without `compact`: its Paperclip and title back,
+  Start out of its row; (f) the job pill's title row not stacked at the largest text size, and
+  stacked at the default size.
 - Every new press run by a test (`audit:presses` on the touched files: all RUN).
