@@ -2,12 +2,13 @@ import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera, Paperclip, UploadSimple, type Icon } from 'phosphor-react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Pressable } from '@/components/pressable';
 import { Text } from '@/components/text';
 import { fonts, iconSize, inset, space, status, typeScale, withAlpha } from '@/constants/theme';
+import { useAccessibilityTextSize } from '@/hooks/use-accessibility-text-size';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { useTheme } from '@/hooks/use-theme';
 import { UPLOAD_REFUSALS, WORKSPACE_CHANGED, uploadRefusalMessage } from '@/lib/content/refusals';
@@ -71,6 +72,15 @@ type Picked = { uri: string; name: string; image: boolean; mimeType?: string };
  * the field is drawn again — the upload card, a dialog, is taken off the screen
  * while the health data agreement is open, and comes back as it was. `onValue`
  * names the file it took, for that.
+ *
+ * **`compact`**, Home's quick-access card alone (the owner's build 42 item 16:
+ * "Maybe we dont need the clip icon and document/resume in there"): no title
+ * line (no Paperclip, no title), no row padding or divider; Take photo, Upload
+ * and `trailing` (the card's Start) on ONE row (`run-file-${key}-actions`) that
+ * wraps, each pill growing to fill it, stacked at iOS's accessibility sizes;
+ * the uploading, ready and error lines under it, unindented, only once they
+ * have words. The buttons' accessibility labels still name the field ("Take a
+ * photo for Resume"). Without it the field is as above, the flow page's.
  */
 export function RunFileField({
   field,
@@ -81,6 +91,8 @@ export function RunFileField({
   divider,
   showTypes = false,
   held,
+  compact = false,
+  trailing,
 }: {
   field: Pick<AutomationRunInputField, 'key' | 'title' | 'acceptedContentTypes'>;
   /** The workspace the screen loaded; the upload is refused once it is not active. */
@@ -93,6 +105,10 @@ export function RunFileField({
   showTypes?: boolean;
   /** The file the field took before it was drawn again: shown ready, as it was. */
   held?: HeldFile;
+  /** Home's card: no title line, the buttons and `trailing` on one wrapping row (build 42 item 16). */
+  compact?: boolean;
+  /** Drawn at the end of the buttons' row, `compact` only: the card's Start. */
+  trailing?: ReactNode;
 }) {
   const { palette } = useTheme();
   const session = useSession();
@@ -209,42 +225,47 @@ export function RunFileField({
         : null;
 
   // Title line, then the two ways to give the file at full width — the setting
-  // rows' order, so both read alike in one card.
+  // rows' order, so both read alike in one card (`compact`: the row alone, then its lines).
+  const sub = compact ? styles.subFlush : styles.sub;
   return (
-    <View style={[styles.row, divider && { borderBottomWidth: 1, borderBottomColor: palette.divider }]}>
-      <View style={styles.titleLine}>
-        <Paperclip size={iconSize.row} color={palette.accentRamp[300]} />
-        {/* The manifest's title alone: no "(optional)" (spec §3.D) and no line under it (Build 21, A6: titles only). */}
-        <Text style={[styles.title, { color: palette.text }]}>{field.title}</Text>
-      </View>
-      {progress ? <Text style={[styles.sub, { color: palette.neutral[400] }]}>{progress}</Text> : null}
-      {error ? <Text style={[styles.sub, { color: status.err }]}>{error}</Text> : null}
-      {showTypes && typesLine ? (
-        <Text testID={`run-file-${field.key}-types`} style={[styles.sub, { color: palette.neutral[400] }]}>
-          {typesLine}
-        </Text>
-      ) : null}
-      <View style={styles.actions}>
-        {photos ? (
-          <FileAction
-            testID={`run-file-${field.key}-photo`}
-            label={TAKE_PHOTO_LABEL}
-            accessibilityLabel={`Take a photo for ${field.title}`}
-            icon={Camera}
-            busy={busy}
-            onPress={() => void takePhoto()}
-          />
-        ) : null}
+    <FieldFrame
+      fieldKey={field.key}
+      title={field.title}
+      divider={divider}
+      compact={compact}
+      trailing={trailing}
+      lines={
+        <>
+          {progress ? <Text style={[sub, { color: palette.neutral[400] }]}>{progress}</Text> : null}
+          {error ? <Text style={[sub, { color: status.err }]}>{error}</Text> : null}
+          {showTypes && typesLine ? (
+            <Text testID={`run-file-${field.key}-types`} style={[sub, { color: palette.neutral[400] }]}>
+              {typesLine}
+            </Text>
+          ) : null}
+        </>
+      }>
+      {photos ? (
         <FileAction
-          testID={`run-file-${field.key}-upload`}
-          label={UPLOAD_LABEL}
-          accessibilityLabel={`Upload a file for ${field.title}`}
-          icon={UploadSimple}
+          testID={`run-file-${field.key}-photo`}
+          label={TAKE_PHOTO_LABEL}
+          accessibilityLabel={`Take a photo for ${field.title}`}
+          icon={Camera}
           busy={busy}
-          onPress={() => void upload()}
+          compact={compact}
+          onPress={() => void takePhoto()}
         />
-      </View>
-    </View>
+      ) : null}
+      <FileAction
+        testID={`run-file-${field.key}-upload`}
+        label={UPLOAD_LABEL}
+        accessibilityLabel={`Upload a file for ${field.title}`}
+        icon={UploadSimple}
+        busy={busy}
+        compact={compact}
+        onPress={() => void upload()}
+      />
+    </FieldFrame>
   );
 }
 
@@ -265,6 +286,8 @@ export function RunFileField({
  * not take, or one that fails, empties the field and says why, as one alone
  * does. A field without `multiple` is `RunFileField`, unchanged.
  *
+ * `compact` and `trailing`: as `RunFileField`'s (Home's card, build 42 item 16).
+ *
  * testIDs: as `RunFileField`'s, and its line `run-file-${key}-count`.
  */
 export function RunFilesField({
@@ -275,6 +298,8 @@ export function RunFilesField({
   onBusyChange,
   divider,
   showTypes = false,
+  compact = false,
+  trailing,
 }: {
   field: Pick<AutomationRunInputField, 'key' | 'title' | 'acceptedContentTypes' | 'maxFiles'>;
   shownWorkspaceId: string | null;
@@ -283,6 +308,8 @@ export function RunFilesField({
   onBusyChange: (key: string, busy: boolean) => void;
   divider: boolean;
   showTypes?: boolean;
+  compact?: boolean;
+  trailing?: ReactNode;
 }) {
   const { palette } = useTheme();
   const session = useSession();
@@ -423,49 +450,104 @@ export function RunFilesField({
           ? filesSelected(files.length)
           : null;
 
+  const sub = compact ? styles.subFlush : styles.sub;
   return (
-    <View style={[styles.row, divider && { borderBottomWidth: 1, borderBottomColor: palette.divider }]}>
-      <View style={styles.titleLine}>
-        <Paperclip size={iconSize.row} color={palette.accentRamp[300]} />
-        <Text style={[styles.title, { color: palette.text }]}>{field.title}</Text>
-      </View>
-      {line ? (
-        <Text testID={`run-file-${field.key}-count`} style={[styles.sub, { color: palette.neutral[400] }]}>
-          {line}
-        </Text>
-      ) : null}
-      {error ? <Text style={[styles.sub, { color: status.err }]}>{error}</Text> : null}
-      {showTypes && typesLine ? (
-        <Text testID={`run-file-${field.key}-types`} style={[styles.sub, { color: palette.neutral[400] }]}>
-          {typesLine}
-        </Text>
-      ) : null}
-      <View style={styles.actions}>
-        {photos ? (
-          <FileAction
-            testID={`run-file-${field.key}-photo`}
-            label={TAKE_PHOTO_LABEL}
-            accessibilityLabel={`Take a photo for ${field.title}`}
-            icon={Camera}
-            busy={busy}
-            onPress={() => void takePhoto()}
-          />
-        ) : null}
+    <FieldFrame
+      fieldKey={field.key}
+      title={field.title}
+      divider={divider}
+      compact={compact}
+      trailing={trailing}
+      lines={
+        <>
+          {line ? (
+            <Text testID={`run-file-${field.key}-count`} style={[sub, { color: palette.neutral[400] }]}>
+              {line}
+            </Text>
+          ) : null}
+          {error ? <Text style={[sub, { color: status.err }]}>{error}</Text> : null}
+          {showTypes && typesLine ? (
+            <Text testID={`run-file-${field.key}-types`} style={[sub, { color: palette.neutral[400] }]}>
+              {typesLine}
+            </Text>
+          ) : null}
+        </>
+      }>
+      {photos ? (
         <FileAction
-          testID={`run-file-${field.key}-upload`}
-          label={UPLOAD_LABEL}
-          accessibilityLabel={`Upload files for ${field.title}`}
-          icon={UploadSimple}
+          testID={`run-file-${field.key}-photo`}
+          label={TAKE_PHOTO_LABEL}
+          accessibilityLabel={`Take a photo for ${field.title}`}
+          icon={Camera}
           busy={busy}
-          onPress={() => void upload()}
+          compact={compact}
+          onPress={() => void takePhoto()}
         />
-      </View>
-    </View>
+      ) : null}
+      <FileAction
+        testID={`run-file-${field.key}-upload`}
+        label={UPLOAD_LABEL}
+        accessibilityLabel={`Upload files for ${field.title}`}
+        icon={UploadSimple}
+        busy={busy}
+        compact={compact}
+        onPress={() => void upload()}
+      />
+    </FieldFrame>
   );
 }
 
 /** A file sent, as the several-file field holds it. */
 type SentFile = { artifactId: string; name: string; sizeBytes: number };
+
+/**
+ * A file field's frame. Today's: the title line (Paperclip and title), the
+ * lines, then the buttons at full width, in a padded row with its divider.
+ * `compact` (Home's card): the buttons and `trailing` on one wrapping row —
+ * stacked at iOS's accessibility sizes — then the lines; no title, no padding.
+ */
+function FieldFrame({
+  fieldKey,
+  title,
+  divider,
+  compact,
+  trailing,
+  lines,
+  children,
+}: {
+  fieldKey: string;
+  title: string;
+  divider: boolean;
+  compact: boolean;
+  trailing?: ReactNode;
+  lines: ReactNode;
+  children: ReactNode;
+}) {
+  const { palette } = useTheme();
+  const large = useAccessibilityTextSize();
+  if (compact) {
+    return (
+      <View style={styles.compactRow}>
+        <View testID={`run-file-${fieldKey}-actions`} style={[styles.actions, styles.actionsWrap, large && styles.actionsStacked]}>
+          {children}
+          {trailing}
+        </View>
+        {lines}
+      </View>
+    );
+  }
+  return (
+    <View style={[styles.row, divider && { borderBottomWidth: 1, borderBottomColor: palette.divider }]}>
+      <View style={styles.titleLine}>
+        <Paperclip size={iconSize.row} color={palette.accentRamp[300]} />
+        {/* The manifest's title alone: no "(optional)" (spec §3.D) and no line under it (Build 21, A6: titles only). */}
+        <Text style={[styles.title, { color: palette.text }]}>{title}</Text>
+      </View>
+      {lines}
+      <View style={styles.actions}>{children}</View>
+    </View>
+  );
+}
 
 /** One way to give the field its file: an outlined pill, held while an upload is in flight. */
 function FileAction({
@@ -474,6 +556,7 @@ function FileAction({
   accessibilityLabel,
   icon: IconCmp,
   busy,
+  compact,
   onPress,
 }: {
   testID: string;
@@ -481,6 +564,8 @@ function FileAction({
   accessibilityLabel: string;
   icon: Icon;
   busy: boolean;
+  /** Home's card: grows to fill its wrapping row rather than sharing it (`flex: 1` clips). */
+  compact: boolean;
   onPress: () => void;
 }) {
   const { palette } = useTheme();
@@ -495,6 +580,7 @@ function FileAction({
       onPress={onPress}
       style={({ pressed }) => [
         styles.action,
+        compact ? styles.actionGrow : styles.actionShare,
         { borderColor: busy ? palette.neutral[700] : palette.accent },
         pressed && !busy && { backgroundColor: withAlpha(palette.accent, 0.12) },
       ]}>
@@ -537,8 +623,15 @@ const styles = StyleSheet.create({
   title: { flex: 1, minWidth: 0, fontFamily: fonts.medium, fontSize: typeScale.label.fontSize },
   sub: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize, paddingLeft: iconSize.row + space.inner },
   actions: { flexDirection: 'row', gap: space.inner },
+  // Home's card (build 42 item 16): its row alone, the lines under it unindented.
+  compactRow: { gap: space.inner },
+  subFlush: { fontFamily: fonts.regular, fontSize: typeScale.small.fontSize },
+  actionsWrap: { flexWrap: 'wrap' },
+  actionsStacked: { flexDirection: 'column' },
+  // Today's pills share the row; Home's grow to fill a wrapped one instead, so a label never clips.
+  actionShare: { flex: 1 },
+  actionGrow: { flexGrow: 1 },
   action: {
-    flex: 1,
     minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
