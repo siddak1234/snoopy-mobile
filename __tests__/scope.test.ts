@@ -1,5 +1,5 @@
 import type { RunStats, Subscription } from '@/lib/platform/runs';
-import { inScope, scopeApprovals, scopeRuns, scopeStats, scopeSubscriptions } from '@/lib/view/scope';
+import { departmentsWithFlows, inScope, scopeApprovals, scopeRuns, scopeStats, scopeSubscriptions } from '@/lib/view/scope';
 
 /**
  * What a project scope selects (BUILD-PLAN 24.9.2): flows by their own
@@ -61,5 +61,34 @@ describe('a project scope', () => {
     });
     // A project whose flows have not run in the window counts zero, not the workspace.
     expect(scopeStats(stats, subscriptions, 'project-none').total).toBe(0);
+  });
+});
+
+describe('departmentsWithFlows (the owner\'s build 41 item 15)', () => {
+  const project = (id: string, status = 'active') => ({ id, status });
+  const flow = (projectId: string | null, status: Subscription['status']) => ({ projectId, status });
+
+  it('keeps, in the order given, each department not archived that holds a flow not archived', () => {
+    const projects = [
+      project('p-live'),
+      project('p-none'),
+      project('p-archived-flows'),
+      project('p-draft'),
+      project('p-paused'),
+      project('p-gone', 'archived'),
+    ];
+    const flows = [
+      flow('p-live', 'live'),
+      flow('p-archived-flows', 'archived'),
+      flow('p-draft', 'draft'),
+      flow('p-paused', 'paused'),
+      flow('p-gone', 'live'),
+      flow(null, 'live'),
+    ];
+    expect(departmentsWithFlows(projects, flows).map((each) => each.id)).toEqual(['p-live', 'p-draft', 'p-paused']);
+  });
+
+  it('offers none when no flow is filed under a department', () => {
+    expect(departmentsWithFlows([project('p-1')], [flow(null, 'live')])).toEqual([]);
   });
 });
