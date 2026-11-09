@@ -136,16 +136,18 @@
 - [scripts/audit-tokens.mjs](../scripts/audit-tokens.mjs): Fails when a colour is written outside the token sheet.
 - [scripts/audit-type.mjs](../scripts/audit-type.mjs): Fails when a font size is written outside the type scale (24.12).
 - [scripts/audit-vocabulary.mjs](../scripts/audit-vocabulary.mjs): Fails when the app's copy says "project", "automation", "solution",
+- [scripts/change-class.mjs](../scripts/change-class.mjs): The pre-push gate by change class (Round 21, change-aware gates): docs, code or full, and the exact commands each runs.
 - [scripts/generate-platform-contracts.mjs](../scripts/generate-platform-contracts.mjs): Generates TypeScript types from the backend's published OpenAPI contracts.
 - [scripts/no-skipped-tests.mjs](../scripts/no-skipped-tests.mjs): Fails when the suite skipped a test (M4: no silent skips).
 - [scripts/release-ios.sh](../scripts/release-ios.sh): Builds and submits the iOS app from main — and refuses everything else.
 - [scripts/repo-facts.mjs](../scripts/repo-facts.mjs): What this repository reports about itself, in the shape snoopy-backend's
+- [scripts/salvage-scan.sh](../scripts/salvage-scan.sh): ci.yml "No salvaged client data", step for step, for the pre-push gate (scripts/change-class.mjs and .githooks/pre-push).
 - [scripts/verify-deployed-contracts.mjs](../scripts/verify-deployed-contracts.mjs): Are this repository's generated platform types the contract the RUNNING
 - [scripts/verify-platform-contracts.mjs](../scripts/verify-platform-contracts.mjs): Fails when the committed platform types no longer match the backend contracts.
 
 ### Tests
 
-- `__tests__/`: accessibility, account, activity, android, app, audit, auth, automation, billing, block, blocks, brand, build13, build14, build21, build22, build28, build42, builds37, components, connection, connections, cover, data, deep, deletion, dialog, doc, dropdown, ehr, faceid, fb39, flow, flows, gate24, health, identity, image, invoice, kit, native, no, nocturne, notifications, organization, outside, override, package, paging, parity, pipeline, platform, pressable, presses, published, push, release, removed, repo, return, review, round19, round23, run, scope, screen, session, settings, setup, shared, sign, signed, single, snapshot, splash, start, tab, teams, text, theme, timed, upload, use, vendor, verify, view, workspace
+- `__tests__/`: accessibility, account, activity, android, app, audit, auth, automation, billing, block, blocks, brand, build13, build14, build21, build22, build28, build42, builds37, change, components, connection, connections, cover, data, deep, deletion, dialog, doc, dropdown, ehr, faceid, fb39, flow, flows, gate24, health, identity, image, invoice, kit, native, no, nocturne, notifications, organization, outside, override, package, paging, parity, pipeline, platform, pressable, presses, published, push, release, removed, repo, return, review, round19, round23, run, scope, screen, session, settings, setup, shared, sign, signed, single, snapshot, splash, start, tab, teams, text, theme, timed, upload, use, vendor, verify, view, workspace
 - `__tests__/__snapshots__/`: connection, nocturne, screen
 - `__tests__/real-router/`: activity, app, appearance, connect, documents, face, flow, health, held, home, notifications, root, run, session, sign
 
