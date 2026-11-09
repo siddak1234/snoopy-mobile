@@ -1,16 +1,14 @@
 #!/bin/sh
-# The app's full gate before every push, run here as CI runs it (CI plan Wave 2).
+# The app's pre-push gate, by change class (Round 21, change-aware gates).
 #
 # Install once per clone: `npm run hooks:install` (git config core.hooksPath .githooks).
 #
-# What CI's jobs run (.github/workflows/ci.yml), in the same order: Lint, the docs
-# checks (`check:docs`, `map -- --check`, `audit:docs`; the Architecture gates job),
-# Typecheck, every architecture gate, the contract check, the tests with coverage
-# and the press audit — all of them `npm run verify` — then the two checks the
-# Architecture gates job runs beyond verify: `audit:dependencies` and the
-# salvaged-client-data scan. The native bundle exports ("Native bundle export") stay CI-only. The first
-# red gate refuses the push and is named below; nothing is pushed. A by-design red
-# push — the deliberate-failure commit a CI proof needs — bypasses this hook with
+# It runs `node scripts/change-class.mjs --run --worktree`: exit 0 pushes, exit
+# 10 (a red gate, named above it) refuses the push, and any other exit (the
+# classifier itself failed) runs the full set here: verify, audit:dependencies
+# and the salvage scan. The classes and what each runs: README "Verification".
+# A by-design red push — the deliberate-failure commit a CI proof needs —
+# bypasses this hook with
 #
 #   git push --no-verify
 #
@@ -60,34 +58,24 @@ gate() {
   echo "pre-push: $name — green in $(elapsed "$t0") s"
 }
 
-# ci.yml "No salvaged client data", step for step. The identifier pattern is read
-# from ci.yml itself, so this file never names the identifiers (the scan would
-# find them here) and the hook and CI can never search for different ones.
-salvage_scan() {
-  if git ls-files | grep -i '_salvage'; then
-    echo "FAIL: a _salvage path is tracked in this repository."
-    return 1
-  fi
-  pattern=$(sed -n "s/^ *if git grep -Iln -iE '\([^']*\)' -- \. .*/\1/p" .github/workflows/ci.yml)
-  if [ -z "$pattern" ]; then
-    echo "FAIL: the identifier pattern was not found in .github/workflows/ci.yml (the 'No salvaged client data' step)."
-    return 1
-  fi
-  if git grep -Iln -iE "$pattern" -- . ':(exclude).github/workflows/*'; then
-    echo "FAIL: a real client identifier appears in tracked content."
-    return 1
-  fi
-  echo "No salvaged client data: PASS"
-}
-
 dirty=$(git status --porcelain | wc -l | tr -d ' ')
 if [ "$dirty" -ne 0 ]; then
   echo "pre-push: note — $dirty uncommitted path(s); the gate judges the working tree, the push sends the commits."
 fi
 
-gate "verify (lint, docs checks, typecheck, architecture gates, contracts, tests with coverage, presses, facts)" npm run verify
-gate "audit:dependencies" npm run audit:dependencies
-gate "No salvaged client data" salvage_scan
+echo "pre-push: the gate by change class (scripts/change-class.mjs)"
+node scripts/change-class.mjs --run --worktree
+status=$?
+case $status in
+  0) ;;
+  10) red "the change class's set (named above)" "$status" ;;
+  *)
+    echo "pre-push: the classifier failed (exit $status); running the full set"
+    gate "verify (lint, docs checks, typecheck, architecture gates, contracts, tests with coverage, presses, facts)" npm run verify
+    gate "audit:dependencies" npm run audit:dependencies
+    gate "No salvaged client data" sh scripts/salvage-scan.sh
+    ;;
+esac
 
 echo
 echo "pre-push: every gate green in $(elapsed "$started") s — pushing to '$remote'."
