@@ -44,6 +44,7 @@ bug with Reanimated and Worklets (DESIGN-GAPS "Round E step 2").
 
 ```bash
 npm run verify                    # lint, docs checks, types, all architecture gates, contracts, tests
+node scripts/change-class.mjs     # this change's class (docs, code, full) and its pre-push gate
 npm run audit:dependencies        # critical production dependency gate
 npm run export:ios                # production JS/native asset bundle
 npm run export:android
@@ -206,11 +207,28 @@ generated file's sha256 header with the hash the live
 escape for a change that must land before the platform's, and `release:ios`
 refuses any mismatch, escape or not.
 `npm run hooks:install` (once per clone; `git config core.hooksPath
-.githooks`) puts the same gate before every push: `.githooks/pre-push` runs
-`CI=1 npm run verify`, `audit:dependencies` and the salvaged-client-data scan
-— everything CI runs but the exports — and refuses the push at the first red
-gate, naming it (111 s to green, 3 s to refuse a lint error, measured
-2026-10-03); `git push --no-verify` is the bypass for a by-design red push,
+.githooks`) puts a gate before every push, chosen by change class (Round 21):
+`.githooks/pre-push` runs `node scripts/change-class.mjs --run --worktree`,
+which reads the change against the merge base with `origin/main` (the working
+tree included), prints its class, the commands and what it skips, then runs
+them and refuses the push at the first red one, naming it. **docs** (Markdown
+only, outside `.claude/` and `.github/`): `check:docs`, `map -- --check`,
+`audit:docs` and the records tests (the jest tests whose source reads a
+Markdown path, found by a source search). **code** (`app/`, `components/`,
+`constants/`, `hooks/`, `lib/` but `lib/generated/`, `assets/`,
+`__tests__/`): lint, the docs checks, typecheck, every static audit,
+`verify:platform-contracts`, the salvage scan (`scripts/salvage-scan.sh`, ci.yml's
+step for step) and jest's `--findRelatedTests` for the changed files with the
+no-skipped check — the whole `test:coverage` when a code file has no related
+test; `audit:presses` needs the whole suite's coverage, so this class skips it
+and says so; CI's Test job runs it on every pull request. **full** — `CI=1 npm run verify`,
+`audit:dependencies` and the salvage scan, everything CI runs but the exports
+(111 s to green, 3 s to refuse a lint error, measured 2026-10-03) — for a
+dependency file, the contracts, the kit, CI config and hooks, test tooling and
+every script, the classifier itself, a deleted or renamed non-Markdown file, an
+unrecognised path, and any classifier error (the hook then runs the full set
+itself); `--full` forces it. CI runs the whole suite on every pull request
+whatever the class; `git push --no-verify` is the bypass for a by-design red push,
 the owner's by hand: in a Claude Code session `.claude/hooks/guard.mjs`
 refuses it.
 `npm run release:ios` (`scripts/release-ios.sh`; `--dry-run` rehearses the
