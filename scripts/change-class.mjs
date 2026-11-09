@@ -23,8 +23,11 @@
  *   assets and tests: the fast checks and every static audit, then jest's
  *   related tests for the changed files with the no-skipped check. A code file
  *   with no related test, or more than MAX_RELATED files, runs the whole
- *   `test:coverage` instead. `audit:presses` needs the whole suite's coverage,
- *   so this class skips it and says so; CI's Test job runs it on every PR.
+ *   `test:coverage` instead. A screen (app/**) change adds the real-router
+ *   proofs (__tests__/real-router/): the router loads app/ by directory, so
+ *   jest sees no import edge to them. `audit:presses` needs the whole suite's
+ *   coverage, so this class skips it and says so; CI's Test job runs it on
+ *   every PR.
  *
  * GitHub CI (ci.yml) runs the whole suite on every pull request regardless.
  */
@@ -82,6 +85,15 @@ export function parseNameStatus(text) {
       if (!status || paths.length === 0) throw new Error(`unreadable name-status line: ${JSON.stringify(line)}`);
       return { status: status[0], paths };
     });
+}
+
+/** The real-router proofs (__tests__/real-router/), sorted: what a screen change must run. */
+export function realRouterTests(base = root) {
+  const dir = '__tests__/real-router';
+  return readdirSync(join(base, dir))
+    .filter((name) => /\.test\.[jt]sx?$/u.test(name))
+    .map((name) => `${dir}/${name}`)
+    .sort();
 }
 
 /** The jest tests whose source reads a Markdown path (the records tests), sorted. */
@@ -148,7 +160,7 @@ const testOf = (path) => {
  * The plan for a change: { cls, reason, files, commands, skips }.
  * `listRelated(file)` returns the tests jest relates to one file.
  */
-export function plan(changes, { full = false, records = [], recordsTestFiles = [], listRelated } = {}) {
+export function plan(changes, { full = false, records = [], recordsTestFiles = [], routerTestFiles = [], listRelated } = {}) {
   const files = changes.flatMap((c) => c.paths);
   const fullPlan = (reason) => ({ cls: 'full', reason, files, commands: FULL_COMMANDS, skips: [EXPORTS] });
   if (full) return fullPlan('--full');
@@ -179,7 +191,9 @@ export function plan(changes, { full = false, records = [], recordsTestFiles = [
   }
 
   const skips = ['audit:presses (needs the whole suite\'s coverage; CI\'s Test job runs it)', 'repo-facts (verify writes it at the land step)', 'audit:dependencies (no dependency file changed; CI runs it)', EXPORTS];
-  const targets = [...new Set([...code.map(testOf), ...(hasDocs ? recordsTestFiles : [])])];
+  const screens = code.some((p) => p.startsWith('app/'));
+  if (screens && routerTestFiles.length === 0) return fullPlan('a screen changed and no real-router proof was found (fail safe)');
+  const targets = [...new Set([...code.map(testOf), ...(screens ? routerTestFiles : []), ...(hasDocs ? recordsTestFiles : [])])];
   let fallback = null;
   if (code.length > MAX_RELATED) fallback = `${code.length} code files (over ${MAX_RELATED})`;
   else {
@@ -205,14 +219,15 @@ export function plan(changes, { full = false, records = [], recordsTestFiles = [
   };
 }
 
-function git(args) {
-  const run = spawnSync('git', args, { cwd: root, encoding: 'utf8' });
+function gitIn(args, cwd = root) {
+  const run = spawnSync('git', args, { cwd, encoding: 'utf8' });
   if (run.status !== 0) throw new Error(`git ${args.join(' ')}: ${(run.stderr || '').trim() || `exit ${run.status}`}`);
   return run.stdout;
 }
 
-/** The changes the arguments name. */
-export function changesFrom(args) {
+/** The changes the arguments name, read by git in `cwd` (the repository; tests pass a temporary one). */
+export function changesFrom(args, cwd = root) {
+  const git = (a) => gitIn(a, cwd);
   const files = args.indexOf('--files');
   if (files !== -1) {
     return args.slice(files + 1).filter((a) => !a.startsWith('--')).map((p) => ({ status: 'M', paths: [p] }));
@@ -254,6 +269,7 @@ export function decide(args, lookups = {}) {
       full: args.includes('--full'),
       records,
       recordsTestFiles: lookups.recordsTestFiles ?? recordsTests(),
+      routerTestFiles: lookups.routerTestFiles ?? realRouterTests(),
       listRelated: lookups.listRelated ?? jestRelated,
     });
   } catch (error) {
@@ -268,23 +284,36 @@ export function explain(p) {
   return lines.join('\n');
 }
 
+/** The default step runner: one shell command in the repository, with `env` added, output inherited. */
+const shellStep = (cmd, env) => {
+  const run = spawnSync('sh', ['-c', cmd], { cwd: root, stdio: 'inherit', env: { ...process.env, ...env } });
+  return run.status ?? run.signal;
+};
+
+/**
+ * Runs the plan's commands in order; the first red one stops the run.
+ * `runStep(cmd, env)` returns an exit status. Returns 0 when every step is green, else RED.
+ */
+export function runPlan(p, runStep = shellStep, log = console.log) {
+  const started = Date.now();
+  const secs = (t) => Math.round((Date.now() - t) / 1000);
+  for (const c of p.commands) {
+    log(`change-class: ${c.name}`);
+    const t0 = Date.now();
+    const status = runStep(c.cmd, { CI: '1' });
+    if (status !== 0) {
+      log(`change-class: RED — '${c.name}' (exit ${status}) after ${secs(started)} s`);
+      return RED;
+    }
+    log(`change-class: ${c.name} — green in ${secs(t0)} s`);
+  }
+  log(`change-class: every ${p.cls} gate green in ${secs(started)} s`);
+  return 0;
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   const p = decide(args);
   console.log(explain(p));
-  if (args.includes('--run')) {
-    const started = Date.now();
-    const secs = (t) => Math.round((Date.now() - t) / 1000);
-    for (const c of p.commands) {
-      console.log(`change-class: ${c.name}`);
-      const t0 = Date.now();
-      const run = spawnSync('sh', ['-c', c.cmd], { cwd: root, stdio: 'inherit', env: { ...process.env, CI: '1' } });
-      if (run.status !== 0) {
-        console.log(`change-class: RED — '${c.name}' (exit ${run.status ?? run.signal}) after ${secs(started)} s`);
-        process.exit(RED);
-      }
-      console.log(`change-class: ${c.name} — green in ${secs(t0)} s`);
-    }
-    console.log(`change-class: every ${p.cls} gate green in ${secs(started)} s`);
-  }
+  if (args.includes('--run')) process.exit(runPlan(p));
 }

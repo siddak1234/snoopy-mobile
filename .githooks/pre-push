@@ -3,20 +3,12 @@
 #
 # Install once per clone: `npm run hooks:install` (git config core.hooksPath .githooks).
 #
-# `node scripts/change-class.mjs --run --worktree` classifies the change against
-# the merge base with origin/main (the working tree included), prints the class,
-# the commands and what it skips, then runs them; the first red one refuses the
-# push and is named below (exit 10). The classes (the classifier's header):
-# docs (Markdown only: the docs checks and the records tests), code (the fast
-# checks, every static audit, the contract check, the salvaged-client-data scan
-# and jest's related tests; audit:presses needs the whole suite and is CI's) and
-# full — today's whole gate: `npm run verify`, `audit:dependencies` and the
-# salvage scan — for any dependency, contract, kit, CI, hook, tooling or script
-# change, a deleted or renamed source file, an unrecognised path, or a
-# classifier error. A classifier that fails (any exit but 0 or 10) runs the
-# full set here. CI (.github/workflows/ci.yml) still runs everything on every
-# pull request; the native bundle exports stay CI-only. A by-design red
-# push — the deliberate-failure commit a CI proof needs — bypasses this hook with
+# It runs `node scripts/change-class.mjs --run --worktree`: exit 0 pushes, exit
+# 10 (a red gate, named above it) refuses the push, and any other exit (the
+# classifier itself failed) runs the full set here: verify, audit:dependencies
+# and the salvage scan. The classes and what each runs: README "Verification".
+# A by-design red push — the deliberate-failure commit a CI proof needs —
+# bypasses this hook with
 #
 #   git push --no-verify
 #

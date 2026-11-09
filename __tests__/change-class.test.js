@@ -1,5 +1,6 @@
 const { spawnSync } = require('node:child_process');
-const { readFileSync } = require('node:fs');
+const { mkdtempSync, readFileSync, rmSync, writeFileSync } = require('node:fs');
+const { tmpdir } = require('node:os');
 const { join, resolve } = require('node:path');
 const { pathToFileURL } = require('node:url');
 
@@ -77,6 +78,30 @@ describe('the code class', () => {
     expect(cmds(p).join('\n')).not.toContain('--findRelatedTests');
   });
 
+  it('a screen change adds the real-router proofs, which jest cannot relate to a route file', () => {
+    const router = evaluate('m.realRouterTests()');
+    expect(router).toContain('__tests__/real-router/root-boundary.test.tsx');
+    const p = planFor([M('app/(auth)/_layout.tsx')], { 'app/(auth)/_layout.tsx': ['__tests__/tab-layout.test.tsx'] }, { routerTestFiles: router });
+    const related = cmds(p).find((c) => c.includes('--findRelatedTests'));
+    expect(related).toContain("'app/(auth)/_layout.tsx'");
+    router.forEach((t) => expect(related).toContain(`'${t}'`));
+    expect(cmds(planFor([M('components/x.tsx')], undefined, { routerTestFiles: router })).join('\n')).not.toContain('real-router');
+    expect(planFor([M('app/x.tsx')]).cls).toBe('full');
+  });
+
+  it(`more than MAX_RELATED code files run the whole test:coverage without a lookup`, () => {
+    const max = evaluate('m.MAX_RELATED');
+    const many = Array.from({ length: max + 1 }, (_, i) => `components/c${i}.tsx`);
+    const p = evaluate(
+      `m.plan(${JSON.stringify(many.map(M))}, { recordsTestFiles: ['r'], listRelated: () => { throw new Error('looked up'); } })`,
+    );
+    expect(p.cls).toBe('code');
+    expect(p.reason).toContain(`${max + 1} code files (over ${max})`);
+    expect(cmds(p)).toContain('npm run test:coverage');
+    expect(cmds(p).join('\n')).not.toContain('--findRelatedTests');
+    expect(evaluate(`m.plan(${JSON.stringify(many.slice(0, max).map(M))}, { recordsTestFiles: ['r'], listRelated: () => ['t'] }).reason`)).toBe('app code changed');
+  });
+
   it('a snapshot runs its own test, and Markdown beside code adds the records tests', () => {
     const p = planFor([M('__tests__/__snapshots__/x.test.tsx.snap'), M('README.md')]);
     expect(cmds(p)).toContain(
@@ -117,6 +142,72 @@ describe('the full class: every rail', () => {
     expect(evaluate("m.plan([], { recordsTestFiles: ['r'], listRelated: () => ['t'] }).reason")).toBe('no changed file was found (fail safe)');
     expect(planFor([M('components/x.tsx')], { 'components/x.tsx': ['t'] }, { full: true }).reason).toBe('--full');
     expect(cli('--files', 'README.md', '--full').stdout.split('\n')[0]).toBe('change-class: full — --full');
+  });
+});
+
+describe('--run', () => {
+  /** runPlan over three steps with a stub runner whose statuses are `statuses`; returns the exit, the commands run and their env. */
+  const runWith = (statuses) =>
+    evaluate(`(() => {
+      const ran = [];
+      const statuses = ${JSON.stringify(statuses)};
+      const p = { cls: 'code', commands: [{ name: 'a', cmd: 'A' }, { name: 'b', cmd: 'B' }, { name: 'c', cmd: 'C' }] };
+      const exit = m.runPlan(p, (cmd, env) => { ran.push({ cmd, env }); return statuses[ran.length - 1]; }, () => {});
+      return { exit, ran };
+    })()`);
+
+  it('stops at the first red step with exit RED, and passes CI=1 to each step', () => {
+    const { exit, ran } = runWith([0, 2, 0]);
+    expect(exit).toBe(evaluate('m.RED'));
+    expect(exit).toBe(10);
+    expect(ran.map((r) => r.cmd)).toEqual(['A', 'B']);
+    ran.forEach((r) => expect(r.env).toEqual({ CI: '1' }));
+  });
+
+  it('exits 0 when every step is green', () => {
+    const { exit, ran } = runWith([0, 0, 0]);
+    expect(exit).toBe(0);
+    expect(ran.map((r) => r.cmd)).toEqual(['A', 'B', 'C']);
+  });
+});
+
+describe('--worktree', () => {
+  let repo;
+  const git = (...args) => {
+    const run = spawnSync('git', args, { cwd: repo, encoding: 'utf8' });
+    if (run.status !== 0) throw new Error(run.stderr);
+  };
+  beforeAll(() => {
+    repo = mkdtempSync(join(tmpdir(), 'change-class-'));
+    git('init', '-q', '-b', 'main');
+    git('config', 'user.email', 't@example.com');
+    git('config', 'user.name', 't');
+    ['staged.md', 'unstaged.tsx', 'committed.md'].forEach((f) => writeFileSync(join(repo, f), 'one\n'));
+    git('add', '.');
+    git('commit', '-q', '-m', 'base');
+    git('update-ref', 'refs/remotes/origin/main', 'HEAD');
+    writeFileSync(join(repo, 'committed.md'), 'two\n');
+    git('commit', '-q', '-am', 'on the branch');
+    writeFileSync(join(repo, 'staged.md'), 'two\n');
+    git('add', 'staged.md');
+    writeFileSync(join(repo, 'unstaged.tsx'), 'two\n');
+    writeFileSync(join(repo, 'untracked.txt'), 'new\n');
+  });
+  afterAll(() => rmSync(repo, { recursive: true, force: true }));
+
+  const changes = (args) => evaluate(`m.changesFrom(${JSON.stringify(args)}, ${JSON.stringify(repo)})`);
+
+  it('diffs committed, staged and unstaged edits against the merge base, and adds untracked files', () => {
+    expect(changes(['--worktree'])).toEqual([
+      { status: 'M', paths: ['committed.md'] },
+      { status: 'M', paths: ['staged.md'] },
+      { status: 'M', paths: ['unstaged.tsx'] },
+      { status: 'A', paths: ['untracked.txt'] },
+    ]);
+  });
+
+  it('without --worktree, only the commits since the merge base', () => {
+    expect(changes([])).toEqual([{ status: 'M', paths: ['committed.md'] }]);
   });
 });
 

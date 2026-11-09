@@ -220,14 +220,19 @@ Markdown path, found by a source search). **code** (`app/`, `components/`,
 `verify:platform-contracts`, the salvage scan (`scripts/salvage-scan.sh`, ci.yml's
 step for step) and jest's `--findRelatedTests` for the changed files with the
 no-skipped check — the whole `test:coverage` when a code file has no related
-test; `audit:presses` needs the whole suite's coverage, so this class skips it
+test or more than 15 code files change; a screen (`app/`) change adds the
+real-router proofs (`__tests__/real-router/`), which the router loads by
+directory, so jest relates none to a route file; `audit:presses` needs the
+whole suite's coverage, so this class skips it
 and says so; CI's Test job runs it on every pull request. **full** — `CI=1 npm run verify`,
 `audit:dependencies` and the salvage scan, everything CI runs but the exports
 (111 s to green, 3 s to refuse a lint error, measured 2026-10-03) — for a
 dependency file, the contracts, the kit, CI config and hooks, test tooling and
 every script, the classifier itself, a deleted or renamed non-Markdown file, an
-unrecognised path, and any classifier error (the hook then runs the full set
-itself); `--full` forces it. CI runs the whole suite on every pull request
+unrecognised path, an empty change, and any error the classifier catches (it
+plans and runs the full set itself); `--full` forces it. The hook runs the full
+set itself only when the classifier exits with anything but 0 (green) or 10
+(red). CI runs the whole suite on every pull request
 whatever the class; `git push --no-verify` is the bypass for a by-design red push,
 the owner's by hand: in a Claude Code session `.claude/hooks/guard.mjs`
 refuses it.
