@@ -212,9 +212,10 @@ refuses any mismatch, escape or not.
 which reads the change against the merge base with `origin/main` (the working
 tree included), prints its class, the commands and what it skips, then runs
 them and refuses the push at the first red one, naming it. **docs** (Markdown
-only, outside `.claude/` and `.github/`): `check:docs`, `map -- --check`,
+outside the full-class paths below): `check:docs`, `map -- --check`,
 `audit:docs` and the records tests (the jest tests whose source reads a
-Markdown path, found by a source search). **code** (`app/`, `components/`,
+Markdown path, found by a source search; full when that search finds none).
+**code** (`app/`, `components/`,
 `constants/`, `hooks/`, `lib/` but `lib/generated/`, `assets/`,
 `__tests__/`): lint, the docs checks, typecheck, every static audit,
 `verify:platform-contracts`, the salvage scan (`scripts/salvage-scan.sh`, ci.yml's

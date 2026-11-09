@@ -190,7 +190,7 @@ export function plan(changes, { full = false, records = [], recordsTestFiles = [
     };
   }
 
-  const skips = ['audit:presses (needs the whole suite\'s coverage; CI\'s Test job runs it)', 'repo-facts (verify writes it at the land step)', 'audit:dependencies (no dependency file changed; CI runs it)', EXPORTS];
+  const skips = ['audit:presses (needs the whole suite\'s coverage; CI\'s Test job runs it)', 'repo-facts (only `npm run verify` writes it: the full class and the round close)', 'audit:dependencies (no dependency file changed; CI runs it)', EXPORTS];
   const screens = code.some((p) => p.startsWith('app/'));
   if (screens && routerTestFiles.length === 0) return fullPlan('a screen changed and no real-router proof was found (fail safe)');
   const targets = [...new Set([...code.map(testOf), ...(screens ? routerTestFiles : []), ...(hasDocs ? recordsTestFiles : [])])];

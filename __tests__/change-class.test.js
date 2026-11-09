@@ -13,12 +13,23 @@ const { pathToFileURL } = require('node:url');
 const root = resolve(__dirname, '..');
 const classifier = pathToFileURL(join(root, 'scripts/change-class.mjs')).href;
 
+// git's own list of its repository variables, which git exports to a hook: under a linked worktree's pre-push they sent
+// the scratch repo's git into the pushed repository (scripts/kit/kit.test.mjs, snoopy-backend §12.1 #342), so no git
+// child here is given them.
+const GIT_REPO = spawnSync('git', ['rev-parse', '--local-env-vars'], { encoding: 'utf8' }).stdout.trim().split('\n');
+/** This process's environment without git's repository variables. */
+const quietEnv = () => {
+  const env = { ...process.env };
+  for (const key of GIT_REPO) delete env[key];
+  return env;
+};
+
 /** Runs `expression` with the classifier's exports as `m`, and returns its JSON. */
-function evaluate(expression) {
+function evaluate(expression, env = process.env) {
   const run = spawnSync(
     process.execPath,
     ['--input-type=module', '-e', `import * as m from ${JSON.stringify(classifier)};\nprocess.stdout.write(JSON.stringify(${expression}));`],
-    { cwd: root, encoding: 'utf8' },
+    { cwd: root, encoding: 'utf8', env },
   );
   if (run.status !== 0) throw new Error(run.stderr);
   return JSON.parse(run.stdout);
@@ -173,41 +184,76 @@ describe('--run', () => {
 
 describe('--worktree', () => {
   let repo;
-  const git = (...args) => {
-    const run = spawnSync('git', args, { cwd: repo, encoding: 'utf8' });
+  /** git in `cwd` without the inherited repository variables, signing or hooks. */
+  const git = (cwd, ...args) => {
+    const run = spawnSync('git', ['-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=/dev/null', ...args], { cwd, encoding: 'utf8', env: quietEnv() });
     if (run.status !== 0) throw new Error(run.stderr);
+    return run.stdout;
+  };
+  /** A scratch repository with a commit on origin/main, one on the branch, and staged, unstaged and untracked edits. */
+  const scratch = () => {
+    const dir = mkdtempSync(join(tmpdir(), 'change-class-'));
+    git(dir, 'init', '-q', '-b', 'main');
+    git(dir, 'config', 'user.email', 't@example.com');
+    git(dir, 'config', 'user.name', 't');
+    ['staged.md', 'unstaged.tsx', 'committed.md'].forEach((f) => writeFileSync(join(dir, f), 'one\n'));
+    git(dir, 'add', '.');
+    git(dir, 'commit', '-q', '-m', 'base');
+    git(dir, 'update-ref', 'refs/remotes/origin/main', 'HEAD');
+    writeFileSync(join(dir, 'committed.md'), 'two\n');
+    git(dir, 'commit', '-q', '-am', 'on the branch');
+    writeFileSync(join(dir, 'staged.md'), 'two\n');
+    git(dir, 'add', 'staged.md');
+    writeFileSync(join(dir, 'unstaged.tsx'), 'two\n');
+    writeFileSync(join(dir, 'untracked.txt'), 'new\n');
+    return dir;
   };
   beforeAll(() => {
-    repo = mkdtempSync(join(tmpdir(), 'change-class-'));
-    git('init', '-q', '-b', 'main');
-    git('config', 'user.email', 't@example.com');
-    git('config', 'user.name', 't');
-    ['staged.md', 'unstaged.tsx', 'committed.md'].forEach((f) => writeFileSync(join(repo, f), 'one\n'));
-    git('add', '.');
-    git('commit', '-q', '-m', 'base');
-    git('update-ref', 'refs/remotes/origin/main', 'HEAD');
-    writeFileSync(join(repo, 'committed.md'), 'two\n');
-    git('commit', '-q', '-am', 'on the branch');
-    writeFileSync(join(repo, 'staged.md'), 'two\n');
-    git('add', 'staged.md');
-    writeFileSync(join(repo, 'unstaged.tsx'), 'two\n');
-    writeFileSync(join(repo, 'untracked.txt'), 'new\n');
+    repo = scratch();
   });
   afterAll(() => rmSync(repo, { recursive: true, force: true }));
 
-  const changes = (args) => evaluate(`m.changesFrom(${JSON.stringify(args)}, ${JSON.stringify(repo)})`);
+  const changes = (args, dir = repo) => evaluate(`m.changesFrom(${JSON.stringify(args)}, ${JSON.stringify(dir)})`, quietEnv());
+  const worktreeChanges = [
+    { status: 'M', paths: ['committed.md'] },
+    { status: 'M', paths: ['staged.md'] },
+    { status: 'M', paths: ['unstaged.tsx'] },
+    { status: 'A', paths: ['untracked.txt'] },
+  ];
 
   it('diffs committed, staged and unstaged edits against the merge base, and adds untracked files', () => {
-    expect(changes(['--worktree'])).toEqual([
-      { status: 'M', paths: ['committed.md'] },
-      { status: 'M', paths: ['staged.md'] },
-      { status: 'M', paths: ['unstaged.tsx'] },
-      { status: 'A', paths: ['untracked.txt'] },
-    ]);
+    expect(changes(['--worktree'])).toEqual(worktreeChanges);
   });
 
   it('without --worktree, only the commits since the merge base', () => {
     expect(changes([])).toEqual([{ status: 'M', paths: ['committed.md'] }]);
+  });
+
+  it('leaves the repository an inherited GIT_DIR names untouched', () => {
+    const outer = mkdtempSync(join(tmpdir(), 'change-class-outer-'));
+    let inner;
+    const was = process.env.GIT_DIR;
+    try {
+      git(outer, 'init', '-q', '-b', 'main');
+      writeFileSync(join(outer, 'o.txt'), 'o\n');
+      git(outer, 'add', '.');
+      git(outer, '-c', 'user.name=o', '-c', 'user.email=o@example.com', 'commit', '-q', '-m', 'outer');
+      git(outer, 'update-ref', 'refs/remotes/origin/main', 'HEAD');
+      const look = () => [git(outer, 'for-each-ref'), git(outer, 'rev-list', '--all'), git(outer, 'config', '--local', '--list'), readFileSync(join(outer, '.git/index'), 'base64')];
+      const seen = look();
+      process.env.GIT_DIR = join(outer, '.git');
+      try {
+        inner = scratch();
+        expect(changes(['--worktree'], inner)).toEqual(worktreeChanges);
+      } finally {
+        if (was === undefined) delete process.env.GIT_DIR;
+        else process.env.GIT_DIR = was;
+      }
+      expect(look()).toEqual(seen);
+    } finally {
+      rmSync(outer, { recursive: true, force: true });
+      if (inner) rmSync(inner, { recursive: true, force: true });
+    }
   });
 });
 
