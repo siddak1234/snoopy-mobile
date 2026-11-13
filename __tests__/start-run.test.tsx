@@ -495,6 +495,9 @@ describe('the start controls, as the Run dialog was (24.4.1, ADR-0030)', () => {
     answerUpload('invoice.pdf', 'application/pdf', 5);
     await fireEvent.press(screen.getByTestId('run-file-receipt-upload'));
     await waitFor(() => expect(pillNames('receipt')).toEqual(['invoice.pdf']));
+    // One line at a time (D4): the upload clears "Add Receipt first." and the earlier refusal never comes back.
+    expect(screen.queryByText('Add Receipt first.')).toBeNull();
+    expect(screen.queryByText('That file can no longer be used. Choose it again.')).toBeNull();
     await fireEvent.press(screen.getByText('Start run'));
     await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-2'));
     const [refused, next] = sent.filter((s) => s.path === RUNS_PATH);

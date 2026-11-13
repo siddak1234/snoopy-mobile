@@ -78,18 +78,18 @@ type Picked = { uri: string; name: string; image: boolean; mimeType?: string };
  *
  * **`compact`**, Home's quick-access card alone (the owner's build 42 item 16:
  * "Maybe we dont need the clip icon and document/resume in there"): no title
- * line (no Paperclip, no title), no row padding or divider; Take photo, Upload
- * and `trailing` (the card's Start) on ONE row (`run-file-${key}-actions`) that
+ * line (no Paperclip, no title), no row padding or divider; ~~Take photo,
+ * Upload and `trailing` (the card's Start) on ONE row~~ until build 43, now
+ * Upload and `trailing` alone on ONE row (`run-file-${key}-actions`) that
  * wraps, each pill growing to fill it, stacked at iOS's accessibility sizes;
- * the uploading, ready and error lines under it, unindented, only once they
- * have words. The buttons' accessibility labels still name the field ("Take a
- * photo for Resume"). Without it the field is as above, the flow page's.
- * Since the owner's build 43 item 17 ("for the compact card i want two
- * buttons … upload start") the row is Upload and `trailing` alone: where the
- * field takes a photo, Upload opens a menu anchored to it — Take photo, then
- * Choose file (`UploadMenu`), the choice run once the menu is gone — else it
- * opens the picker at once. ~~Take photo, Upload and Start on one row~~ until
- * build 43.
+ * the uploading, ~~ready~~ (until build 43, now the pills) and error lines
+ * under it, unindented, only once they have words. The buttons' accessibility
+ * labels still name the field ("Upload a file for Resume"). Without it the
+ * field is as above, the flow page's. The owner's build 43 item 17 ("for the
+ * compact card i want two buttons … upload start"): where the field takes a
+ * photo, Upload opens a menu anchored to it — Take photo, then Choose file
+ * (`UploadMenu`), the choice run once the menu is gone — else it opens the
+ * picker at once.
  *
  * **`removable`**, the start forms' (build 43 item 17: "the document should
  * dynamically show up in a horizontal pill with the document name and an x on

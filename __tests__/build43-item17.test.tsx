@@ -286,6 +286,23 @@ describe("Home's quick-access card (the owner's build 43 item 17)", () => {
     await waitFor(() => expect(DocumentPicker.getDocumentAsync).toHaveBeenCalledTimes(2));
   });
 
+  it('T7 a choice runs once: after Choose file, a later press outside the menu does nothing (D2)', async () => {
+    await renderHome();
+    const card = within(await screen.findByTestId('home-flow-invoice'));
+    await chooseFromUpload(card, 'resume', 'file');
+    await waitFor(() => expect(DocumentPicker.getDocumentAsync).toHaveBeenCalledTimes(1));
+    // Upload again, then a press outside: gone (iOS's onDismiss) with nothing done.
+    await fireEvent.press(card.getByTestId('run-file-resume-upload'));
+    let modal: Drawn | null = screen.getByTestId('run-file-resume-upload-menu');
+    while (modal && typeof modal.props.onDismiss !== 'function') modal = modal.parent;
+    const dismissed = modal!.props.onDismiss as () => void;
+    await fireEvent.press(screen.getByTestId('run-file-resume-upload-backdrop'));
+    expect(screen.queryByTestId('run-file-resume-upload-menu')).toBeNull();
+    await act(async () => dismissed());
+    expect(DocumentPicker.getDocumentAsync).toHaveBeenCalledTimes(1);
+    expect(ImagePicker.requestCameraPermissionsAsync).not.toHaveBeenCalled();
+  });
+
   it('T8 Start is filled on the card — the accent fill, the label in the page colour, semibold — and said "Start run"', async () => {
     await renderHome();
     const card = within(await screen.findByTestId('home-flow-invoice'));

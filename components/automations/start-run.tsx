@@ -86,15 +86,15 @@ export function canStartRun(subscription: Subscription, entry: CatalogEntry | un
  * the real estate"): Start reads "Start" (said "Start run" while idle;
  * "Starting…" / "Uploading…" as ever while held), and the Start and error rows
  * lose their padding, the card's own. A run input of exactly one file field
- * draws that field `compact` with Start at the end of its buttons' row — Take
- * photo, Upload, Start on one wrapping row, no title line — and no Start row of
- * its own; any other input keeps its fields as here, then the compact Start.
- * The flow page's Step 1 and the item page pass no `compact`: unchanged.
- * Since the owner's build 43 item 17 ("for the compact card i want two
- * buttons … upload start"): that row is Upload and Start — Take photo inside
- * Upload's menu — and Start is `filled`, the one filled button (the owner's
- * decision of 2026-11-13); ~~Take photo, Upload, Start~~ until build 43. The
- * flow page's and the item page's Start stay `primary`, the outline.
+ * draws that field `compact` with Start at the end of its buttons' row —
+ * ~~Take photo, Upload, Start~~ until build 43, now Upload and Start, on one
+ * wrapping row, no title line — and no Start row of its own; any other input
+ * keeps its fields as here, then the compact Start. The flow page's Step 1 and
+ * the item page pass no `compact`: unchanged. The owner's build 43 item 17
+ * ("for the compact card i want two buttons … upload start"): Take photo is
+ * inside Upload's menu, and Start is `filled`, the one filled button (the
+ * owner's decision of 2026-11-13). The flow page's and the item page's Start
+ * stay `primary`, the outline.
  *
  * **A required file missing** (build 43 item 17: "start throws an error rather
  * than starting if nothing was uploaded when required … ensure this is a
