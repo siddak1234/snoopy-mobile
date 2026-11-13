@@ -3921,3 +3921,56 @@ Bites (`build42-item16`, break, red, restore, green; 1 red each):
   the end (red at the largest size, where the pill sits on the start side) or left out (red at the
   default size: the test's unmeasured trigger then opens it on the start edge).
 - Every new press run by a test (`audit:presses` on the touched files: all RUN).
+
+## Build 43: the owner's item 17 (2026-11-13)
+
+The owner's words, 2026-11-13 (TestFlight build 43); then "continue and complete all items. i want status updates along the way and links as needed".
+
+- **17** (Home, YOUR FLOWS): "still open with you. looks good. for the compact card i want two buttons. 
+
+icon name of flow
+upload   start
+
+start should be more bolded and colored so easy to click. start throws an error rather than starting if nothing was uploaded when required. ensure this is a standard for any quick access components that require this. 
+
+when an upload is done, the document should dynamically show up in a horizontal pill with the document name and an x on the right side of the pill in case it needs to be removed. ensure when removed or no documents exist that start does not go. when multiple files are allowed on one run these individual document pills will help as well as the x to remove. now list with the plan and ensure it is proper with the ui ux, backend and ensuring it is properly completed. this means safe, tested. list all items for this round below to complete in parallel. make a case if want more parallel agents than 3 if we can complete it faster. safe robust"
+
+The seven defaults "continue and complete all items" took: 1. Take photo moves inside Upload: Upload
+offers "Take photo" or "Choose file". 2. Start is filled in the accent colour, semibold; this changes
+the "never a fill" rule for Start only; recorded as the owner's decision of 2026-11-13. 3. The error
+says "Add {Resume} first.", using the field's own name (its `title`). 4. Many files: the pills sit in
+one row that scrolls sideways (ICD-10 Code Check allows 50). 5. The same pills and the same error also
+go on the flow page's start form, from one shared part; the two-button layout stays Home-only. 6. The
+x takes the file out of the run only; the stored copy stays on the server until retention. 7.
+ICD-10's file is optional today (`required: false`), so its Start goes with no file — unchanged here.
+
+Built: Home's card with one file field is Upload and Start (`FileActions`, `UploadMenu`): where the
+field takes a photo (`takesPhotos`), Upload opens a `Dropdown` the field holds open — Take photo
+(`Camera`), Choose file (`FileArrowUp`) — the choice run from the new `onClosed`; else the picker at
+once. Start is `PillButton` `filled` on Home's cards only. Every start form: `missingFile` before
+anything is sent, "Add {title} first." in the form's one error line (`addFileFirst`); the files a
+field holds are pills with an x (`FilePills`; `RunFileField` `removable`, passed by `StartRun`;
+`RunFilesField` always), "Remove {name}" (`removeFileLabel`); `filesSelected` removed. The flow
+page and the item page keep their layout and their outline Start.
+
+Decisions this design took (no-new-blockers defaults): D2, "can take a photo" is today's rule
+(`takesPhotos`), and the choice runs once the panel is gone (iOS `onDismiss`, else at once), so
+the camera and the picker never open over the menu. D4, the line replaces any earlier error line,
+goes when an upload starts and comes back at the next press; Start is never disabled for it; Turn
+on is no start. D5, the job upload card (`ItemUploadDialog`) keeps "Ready:" and no x. D3, `filled`:
+accent fill and border, `palette.bg` label, semibold, accent-400 pressed; contrast 5.45:1 dark,
+4.90:1 light (8.55:1 and 5.88:1 pressed).
+
+Open questions for the owner (`plan.md`): whether the flow page's Start run and the item page's
+Start take the filled look; whether the job upload card gains the pill and x; whether Choose file
+on a several-file field keeps replacing what the field held (today's Upload) or adds; ICD-10 v5
+(its file still optional). Owed: a simulator check of the menu's native timing (the choice after
+`onDismiss`), not run here.
+
+Bites (`build43-item17` unless named; break, red, restore, green): the missing-file check gone (5
+red); `removable` not passed (4); the x removing the last file (2); Home's Start `primary` (1); Take
+photo back in the card row, no menu (10, with `build42-item16`); the choice run at once, not on
+`onClosed` (1); `onClosed` never on Android (`dropdown-backing`, 1); the line not cleared when an
+upload starts (1); the x not spoken (1); `filled` not filled (`components`, `nocturne-visual`, 5);
+the pill wider than its row (1); the job upload card drawing pills (1); an optional file treated as
+required (2); the x leaving the run input as it was (1).

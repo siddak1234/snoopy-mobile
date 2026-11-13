@@ -760,7 +760,8 @@ describe("an item's page (plan §5.3; its blocks since Round 21)", () => {
       assets: [{ uri: 'file:///picked/c.pdf', name: 'c.pdf', mimeType: 'application/pdf', size: 12 }],
     });
     await fireEvent.press(screen.getByTestId('run-file-contractFile-upload'));
-    await screen.findByText('Ready: c.pdf (12 bytes)');
+    // The file's pill (~~"Ready: c.pdf (12 bytes)"~~ until the owner's build 43 item 17).
+    expect(within(await screen.findByTestId('run-file-contractFile-pill-0')).getByText('c.pdf')).toBeTruthy();
     await fireEvent.press(screen.getByText('Start'));
     await waitFor(() => expect(fake.to('POST /v1/workspaces/{workspaceId}/runs')).toHaveLength(1));
     // The run names the item the form names.
@@ -804,7 +805,9 @@ describe("an item's page (plan §5.3; its blocks since Round 21)", () => {
     await renderWithProviders(<ItemScreen />, sessionAs('owner'));
     await screen.findByTestId('item-title');
     await fireEvent.press(screen.getByTestId('run-file-contractFile-upload'));
-    await screen.findByText('2 files selected');
+    // One pill per file, in order (~~"2 files selected"~~ until the owner's build 43 item 17).
+    expect(within(await screen.findByTestId('run-file-contractFile-pill-1')).getByText('b.pdf')).toBeTruthy();
+    expect(within(screen.getByTestId('run-file-contractFile-pill-0')).getByText('a.pdf')).toBeTruthy();
     const reads = fake.to(`GET ${ONE}`).length;
     await fireEvent.press(screen.getByText('Start'));
     // The one run is read into the list now; the form is fresh for the next.
@@ -813,7 +816,7 @@ describe("an item's page (plan §5.3; its blocks since Round 21)", () => {
     expect(starts).toHaveLength(1);
     expect((starts[0]!.body as { input: Record<string, unknown> }).input.contractFile).toEqual(['artifact-1', 'artifact-2']);
     expect(screen.queryByText(/runs started/u)).toBeNull();
-    expect(screen.queryByText('2 files selected')).toBeNull();
+    expect(screen.queryByTestId('run-file-contractFile-pills')).toBeNull();
   });
 
   it('Add and Archive are an owner\'s or an admin\'s: a member reads the same page without them', async () => {

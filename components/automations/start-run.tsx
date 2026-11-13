@@ -12,7 +12,7 @@ import { useHealthAgreement } from '@/hooks/use-health-agreement';
 import { useIntentKeys } from '@/hooks/use-intent-keys';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
 import { WORKSPACE_CHANGED, runRefusal } from '@/lib/content/refusals';
-import { RUN_FORM_ERROR_TITLE } from '@/lib/content/screen-states';
+import { RUN_FORM_ERROR_TITLE, addFileFirst } from '@/lib/content/screen-states';
 import { createRun, type AutomationRunInputField, type Subscription } from '@/lib/platform/automations';
 import type { CatalogEntry } from '@/lib/platform/catalog';
 
@@ -90,6 +90,22 @@ export function canStartRun(subscription: Subscription, entry: CatalogEntry | un
  * photo, Upload, Start on one wrapping row, no title line — and no Start row of
  * its own; any other input keeps its fields as here, then the compact Start.
  * The flow page's Step 1 and the item page pass no `compact`: unchanged.
+ * Since the owner's build 43 item 17 ("for the compact card i want two
+ * buttons … upload start"): that row is Upload and Start — Take photo inside
+ * Upload's menu — and Start is `filled`, the one filled button (the owner's
+ * decision of 2026-11-13); ~~Take photo, Upload, Start~~ until build 43. The
+ * flow page's and the item page's Start stay `primary`, the outline.
+ *
+ * **A required file missing** (build 43 item 17: "start throws an error rather
+ * than starting if nothing was uploaded when required … ensure this is a
+ * standard"), in every start form: Start first finds the first `artifact` field
+ * with `required: true` that holds no file (`missingFile`); then the form's one
+ * error line says "Add {title} first." and nothing is sent — Start is never
+ * disabled for it. The line goes when an upload starts and comes back at the
+ * next press while the file is still missing. An optional file left empty, and
+ * every other control, as before; Turn on (`action`) is no start, no check.
+ * Each file a field holds is a pill with an x (`removable`), the x taking it
+ * out of the run — a changed input, so a new key.
  */
 export function StartRun({
   subscriptionId,
@@ -151,6 +167,8 @@ function StartRunForm({
   // Bumped to empty the file fields when the platform will not take a file.
   const [fileRound, setFileRound] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  // "Add {title} first." (build 43 item 17): shown in the error line's place until an upload starts.
+  const [missing, setMissing] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const change = useCallback(
@@ -161,6 +179,7 @@ function StartRunForm({
     [keys],
   );
   const onBusyChange = useCallback((key: string, isBusy: boolean) => {
+    if (isBusy) setMissing(null);
     setUploading((current) => {
       if (isBusy === current.has(key)) return current;
       const next = new Set(current);
@@ -173,6 +192,14 @@ function StartRunForm({
   /** Start run: the run, with what the form holds. */
   const start = async () => {
     if (busy || uploading.size > 0) return;
+    setMissing(null);
+    const lacking = missingFile(runInput, values);
+    if (lacking) {
+      // Nothing is sent; the platform's 422 (`validateRunInput`) stays the backstop.
+      setError(null);
+      setMissing(addFileFirst(lacking.title));
+      return;
+    }
     const workspaceId = workspaceIfShown(session, shownWorkspaceId);
     if (!workspaceId) {
       setError(WORKSPACE_CHANGED);
@@ -213,7 +240,8 @@ function StartRunForm({
       label={busy ? 'Starting…' : uploading.size > 0 ? 'Uploading…' : (startLabel ?? (compact ? 'Start' : 'Start run'))}
       // Home's shorter "Start" is still said in full while it can be pressed.
       accessibilityLabel={compact && !held ? 'Start run' : undefined}
-      variant="primary"
+      // The quick-access card's Start alone is filled (the owner's decision of 2026-11-13).
+      variant={compact ? 'filled' : 'primary'}
       fontSize={typeScale.label.fontSize}
       icon={PlayCircle}
       iconSize={iconSize.button}
@@ -258,6 +286,7 @@ function StartRunForm({
             showTypes={showTypes}
             compact={inRow}
             trailing={trailing}
+            removable
           />
         ) : (
           <SetupFieldRow
@@ -270,14 +299,31 @@ function StartRunForm({
           />
         );
       })}
-      {error ? (
+      {(missing ?? error) ? (
         <Text accessibilityRole="alert" style={[compact ? styles.errorFlush : styles.error, { color: status.err }]}>
-          {error}
+          {missing ?? error}
         </Text>
       ) : null}
       {inRow ? null : <View style={compact ? styles.startFlush : styles.start}>{startButton}</View>}
     </>
   );
+}
+
+/**
+ * The first required file field, in run-input order, that holds no file — no
+ * id, `''` or an empty list — or null (build 43 item 17). Pure, so the rule is
+ * tested on its own; an optional file field is never missing.
+ */
+export function missingFile(
+  runInput: readonly AutomationRunInputField[],
+  values: Record<string, unknown>,
+): AutomationRunInputField | null {
+  for (const field of runInput) {
+    if (field.control !== 'artifact' || field.required !== true) continue;
+    const value = values[field.key];
+    if (value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0)) return field;
+  }
+  return null;
 }
 
 /** Each field starts at the default its manifest declares; a file has none. */

@@ -1,6 +1,6 @@
 import { Check, type Icon } from 'phosphor-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { Modal, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Modal, Platform, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { GlassSurface } from '@/components/glass-surface';
@@ -151,6 +151,12 @@ export function placeDropdown(
  * in the order they first appear (`dropdownLines`). Ten or fewer without groups
  * draw as before.
  *
+ * `onClosed` (the owner's build 43 item 17): called once the panel is gone —
+ * on iOS from the `Modal`'s `onDismiss` (React Native implements it on iOS
+ * only), elsewhere right after it closes — so a choice that opens the camera or
+ * the file picker (Home's Upload: Take photo, Choose file) runs only once the
+ * menu no longer covers the screen.
+ *
  * testIDs: the menu `${testID}-menu`, a row `${testID}-option-${value}` or its
  * own `testID`, the check `${testID}-chosen` (several: `${testID}-chosen-${value}`),
  * the outside `${testID}-backdrop`, the search box `${testID}-search`, its
@@ -172,6 +178,7 @@ export function Dropdown<T extends string>({
   busyLabel,
   locked = false,
   footer,
+  onClosed,
 }: {
   testID: string;
   options: readonly DropdownOption<T>[];
@@ -195,6 +202,8 @@ export function Dropdown<T extends string>({
   locked?: boolean;
   /** A last row in the accent (Reload session); `hidden` while it is not owed, so its press is always written where `audit:presses` reads it; `disabled` while it works. */
   footer?: { label: string; onPress: () => void; testID: string; hidden?: boolean; disabled?: boolean };
+  /** Called once the panel is gone (iOS: the `Modal`'s `onDismiss`; elsewhere right after it closes). */
+  onClosed?: () => void;
 }) {
   const { palette } = useTheme();
   const screen = useWindowDimensions();
@@ -221,6 +230,17 @@ export function Dropdown<T extends string>({
   useEffect(() => {
     if (open) measure();
     else setQuery('');
+  }, [open]);
+
+  // Gone: iOS says so through the Modal's onDismiss (below); elsewhere it is gone once it closes.
+  const closedCall = useRef(onClosed);
+  useEffect(() => {
+    closedCall.current = onClosed;
+  }, [onClosed]);
+  const wasOpen = useRef(open);
+  useEffect(() => {
+    if (wasOpen.current && !open && Platform.OS !== 'ios') closedCall.current?.();
+    wasOpen.current = open;
   }, [open]);
 
   const shown = useSharedValue(0);
@@ -263,7 +283,13 @@ export function Dropdown<T extends string>({
             })
           : trigger}
       </View>
-      <Modal visible={open} transparent animationType="none" onRequestClose={close} statusBarTranslucent>
+      <Modal
+        visible={open}
+        transparent
+        animationType="none"
+        onRequestClose={close}
+        onDismiss={Platform.OS === 'ios' && onClosed ? () => closedCall.current?.() : undefined}
+        statusBarTranslucent>
         <Pressable
           testID={`${testID}-backdrop`}
           accessibilityLabel="Close"

@@ -228,6 +228,19 @@ async function openFlowPage(
   return { writes, view };
 }
 
+/**
+ * The names a file field's pills show, in order (none: an empty list). ~~Its
+ * line, "Ready: {name} ({size})" or "{n} files selected"~~ until the owner's
+ * build 43 item 17, which draws each file a start form holds as a pill with an x.
+ */
+function pillNames(key: string): string[] {
+  const row = screen.queryByTestId(`run-file-${key}-pills`);
+  if (!row) return [];
+  return within(row)
+    .queryAllByTestId(new RegExp(`^run-file-${key}-pill-\\d+$`, 'u'))
+    .map((pill) => String(within(pill).getByText(/./u).props.children));
+}
+
 /** What is on screen in reading order: each test id, and each line of text as `text:<words>`. */
 function readingOrder(tree: unknown): string[] {
   const order: string[] = [];
@@ -466,18 +479,26 @@ describe('the start controls, as the Run dialog was (24.4.1, ADR-0030)', () => {
     await fireEvent.press(screen.getByText('Uploading…'));
     expect(sent.filter((s) => s.path === RUNS_PATH)).toHaveLength(0);
     arrive();
-    expect(await screen.findByText('Ready: invoice.pdf (5 bytes)')).toBeTruthy();
+    await waitFor(() => expect(pillNames('receipt')).toEqual(['invoice.pdf']));
     expect(putFileToSignedUrl.mock.calls[0][1].byteLength).toBe(5);
 
     await fireEvent.press(screen.getByText('Start run'));
     expect(await screen.findByText('That file can no longer be used. Choose it again.')).toBeTruthy();
     expect(sent.find((s) => s.path === RUNS_PATH)!.body).toEqual({ subscriptionId: 'sub-1', input: { receipt: 'artifact-1' } });
     // The file is emptied to choose again, and what is sent next is a new run.
-    expect(screen.queryByText('Ready: invoice.pdf (5 bytes)')).toBeNull();
+    expect(pillNames('receipt')).toEqual([]);
+    // ~~The next Start sent `input: {}`~~ until the owner's build 43 item 17: the required file missing, it says so and sends nothing.
+    await fireEvent.press(screen.getByText('Start run'));
+    expect(await screen.findByText('Add Receipt first.')).toBeTruthy();
+    expect(sent.filter((s) => s.path === RUNS_PATH)).toHaveLength(1);
+    putFileToSignedUrl.mockResolvedValue(undefined);
+    answerUpload('invoice.pdf', 'application/pdf', 5);
+    await fireEvent.press(screen.getByTestId('run-file-receipt-upload'));
+    await waitFor(() => expect(pillNames('receipt')).toEqual(['invoice.pdf']));
     await fireEvent.press(screen.getByText('Start run'));
     await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-2'));
     const [refused, next] = sent.filter((s) => s.path === RUNS_PATH);
-    expect(next!.body).toEqual({ subscriptionId: 'sub-1', input: {} });
+    expect(next!.body).toEqual({ subscriptionId: 'sub-1', input: { receipt: 'artifact-1' } });
     expect(next!.key).not.toBe(refused!.key);
   });
 
@@ -487,14 +508,15 @@ describe('the start controls, as the Run dialog was (24.4.1, ADR-0030)', () => {
     answerUpload('invoice.pdf', 'application/pdf', 5);
     answer(`POST ${RUNS_PATH}`, () => ({ run: { id: 'run-1' } }), () => ({ run: { id: 'run-2' } }));
 
-    await renderBox([NOTE, RECEIPT]);
+    // An optional file, so the second run may go without one (a required one missing says so: build 43 item 17).
+    await renderBox([NOTE, { ...RECEIPT, required: false }]);
     await fireEvent.changeText(screen.getByLabelText('Note'), 'Pay it');
     await fireEvent.press(screen.getByTestId('run-file-receipt-upload'));
-    expect(await screen.findByText('Ready: invoice.pdf (5 bytes)')).toBeTruthy();
+    await waitFor(() => expect(pillNames('receipt')).toEqual(['invoice.pdf']));
     await fireEvent.press(screen.getByText('Start run'));
     await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-1'));
 
-    await waitFor(() => expect(screen.queryByText('Ready: invoice.pdf (5 bytes)')).toBeNull());
+    await waitFor(() => expect(pillNames('receipt')).toEqual([]));
     expect(screen.getByLabelText('Note').props.value).toBe('');
     await fireEvent.changeText(screen.getByLabelText('Note'), 'Pay it');
     await fireEvent.press(screen.getByText('Start run'));
@@ -506,7 +528,8 @@ describe('the start controls, as the Run dialog was (24.4.1, ADR-0030)', () => {
   });
 
   it('are refused in words, and send nothing, once another workspace is active — Start run, Take photo and Upload alike', async () => {
-    await renderBox([NOTE, RECEIPT], 'another-workspace');
+    // An optional file: a required one missing is said first (build 43 item 17), before the workspace is asked.
+    await renderBox([NOTE, { ...RECEIPT, required: false }], 'another-workspace');
     await fireEvent.press(screen.getByText('Start run'));
     expect(await screen.findByText(WORKSPACE_CHANGED)).toBeTruthy();
     for (const action of ['run-file-receipt-photo', 'run-file-receipt-upload']) {
@@ -555,7 +578,7 @@ describe('a run\'s file field: Take photo beside Upload (25.8.3; the owner\'s de
     answerUpload('invoice.pdf', 'application/pdf', 4096);
     await renderBox([RECEIPT]);
     await fireEvent.press(screen.getByTestId('run-file-receipt-upload'));
-    expect(await screen.findByText('Ready: invoice.pdf (4 KB)')).toBeTruthy();
+    await waitFor(() => expect(pillNames('receipt')).toEqual(['invoice.pdf']));
     expect(calls).toEqual([]);
     expect(ImageManipulator.manipulate).not.toHaveBeenCalled();
     expect(File).toHaveBeenCalledWith('file:///cache/DocumentPicker/invoice.pdf');
@@ -622,7 +645,7 @@ describe('a run\'s file field: Take photo beside Upload (25.8.3; the owner\'s de
     await renderBox([RECEIPT]);
     await fireEvent.press(screen.getByTestId('run-file-receipt-upload'));
     expect(await screen.findByText(says)).toBeTruthy();
-    expect(screen.queryByText(/^Ready:/)).toBeNull();
+    expect(pillNames('receipt')).toEqual([]);
     expect(sent.filter((request) => request.path === COMPLETE_PATH)).toHaveLength(1);
   });
 
@@ -662,7 +685,7 @@ describe('a run\'s file field: Take photo beside Upload (25.8.3; the owner\'s de
       expect(screen.getByText('Uploading…')).toBeTruthy();
       expect(screen.queryByText(WAITING)).toBeNull();
       expect(screen.queryByText(/^The platform is busy/u)).toBeNull();
-      expect(screen.queryByText(/^Ready:/u)).toBeNull();
+      expect(pillNames('receipt')).toEqual([]);
     };
 
     beforeEach(() => {
@@ -688,7 +711,7 @@ describe('a run\'s file field: Take photo beside Upload (25.8.3; the owner\'s de
       stillUploading();
       await pass(1);
       expect(completions()).toEqual(['upload-1', 'upload-1']);
-      expect(screen.getByText('Ready: invoice.pdf (4 KB)')).toBeTruthy();
+      expect(pillNames('receipt')).toEqual(['invoice.pdf']);
 
       await fireEvent.press(screen.getByText('Start run'));
       await pass(0);
@@ -718,7 +741,7 @@ describe('a run\'s file field: Take photo beside Upload (25.8.3; the owner\'s de
       expect(screen.getByText(WAITING)).toBeTruthy();
       expect(screen.queryByText(/^The platform is busy/u)).toBeNull();
       expect(screen.queryByText(/^Uploading /u)).toBeNull();
-      expect(screen.queryByText(/^Ready:/u)).toBeNull();
+      expect(pillNames('receipt')).toEqual([]);
 
       // Bounded: no sixth completion, however long the field is left.
       await pass(60_000);
@@ -728,7 +751,7 @@ describe('a run\'s file field: Take photo beside Upload (25.8.3; the owner\'s de
       // Choosing the file again opens a new upload, whose completion is measured.
       await fireEvent.press(screen.getByTestId('run-file-receipt-upload'));
       await pass(0);
-      expect(screen.getByText('Ready: invoice.pdf (4 KB)')).toBeTruthy();
+      expect(pillNames('receipt')).toEqual(['invoice.pdf']);
       expect(screen.queryByText(WAITING)).toBeNull();
       expect(completions()).toEqual(['upload-1', 'upload-1', 'upload-1', 'upload-1', 'upload-1', 'upload-2']);
     });
@@ -774,7 +797,7 @@ describe('a run\'s file field: Take photo beside Upload (25.8.3; the owner\'s de
       await pass(60_000);
       expect(completions()).toEqual(['upload-1']);
       expect(screen.getByText(says)).toBeTruthy();
-      expect(screen.queryByText(/^Ready:/u)).toBeNull();
+      expect(pillNames('receipt')).toEqual([]);
     });
 
     it.each([3, 5])('waits the %i s the answer states before completing again, not the 1.5 s it waits when none is stated', async (seconds) => {
@@ -786,7 +809,7 @@ describe('a run\'s file field: Take photo beside Upload (25.8.3; the owner\'s de
       stillUploading();
       await pass(1);
       expect(completions()).toEqual(['upload-1', 'upload-1']);
-      expect(screen.getByText('Ready: invoice.pdf (4 KB)')).toBeTruthy();
+      expect(pillNames('receipt')).toEqual(['invoice.pdf']);
       expect(screen.queryByText(WAITING)).toBeNull();
     });
 
@@ -798,7 +821,7 @@ describe('a run\'s file field: Take photo beside Upload (25.8.3; the owner\'s de
       expect(screen.queryByText(/^Uploading /u)).toBeNull();
       await pass(60_000);
       expect(completions()).toEqual(['upload-1']);
-      expect(screen.queryByText(/^Ready:/u)).toBeNull();
+      expect(pillNames('receipt')).toEqual([]);
     });
 
     it('sends nothing more once the field goes while its file waits', async () => {
@@ -823,7 +846,7 @@ describe('a run\'s file field: Take photo beside Upload (25.8.3; the owner\'s de
     answerUpload(sentAs, 'image/jpeg', 2048);
     await renderBox([RECEIPT]);
     await fireEvent.press(screen.getByTestId('run-file-receipt-upload'));
-    expect(await screen.findByText(`Ready: ${sentAs} (2 KB)`)).toBeTruthy();
+    await waitFor(() => expect(pillNames('receipt')).toEqual([sentAs]));
     // Within the bound: drawn upright and saved, never resized up.
     expect(calls).toEqual([
       ['manipulate', `file:///cache/DocumentPicker/${name}`],
@@ -845,7 +868,7 @@ describe('a run\'s file field: Take photo beside Upload (25.8.3; the owner\'s de
     answerUpload('ledger.jpg', 'image/jpeg', 2048);
     await renderBox([RECEIPT]);
     await fireEvent.press(screen.getByTestId('run-file-receipt-upload'));
-    expect(await screen.findByText('Ready: ledger.jpg (2 KB)')).toBeTruthy();
+    await waitFor(() => expect(pillNames('receipt')).toEqual(['ledger.jpg']));
     expect(calls).toEqual([
       ['manipulate', 'file:///cache/DocumentPicker/ledger.png'],
       ['renderAsync'],
@@ -866,7 +889,7 @@ describe('a run\'s file field: Take photo beside Upload (25.8.3; the owner\'s de
     answer(`POST ${RUNS_PATH}`, () => ({ run: { id: 'run-1' } }));
     await renderBox([RECEIPT]);
     await fireEvent.press(screen.getByTestId('run-file-receipt-photo'));
-    expect(await screen.findByText('Ready: photo.jpg (812 KB)')).toBeTruthy();
+    await waitFor(() => expect(pillNames('receipt')).toEqual(['photo.jpg']));
 
     // Asked first, then the camera, for images only.
     expect(ImagePicker.requestCameraPermissionsAsync).toHaveBeenCalledTimes(1);
@@ -941,7 +964,7 @@ describe('a run\'s file field: Take photo beside Upload (25.8.3; the owner\'s de
     expect(await screen.findByText(IMAGE_NOT_READ)).toBeTruthy();
     expect(screen.queryByText(/Could not decode/u)).toBeNull();
     expect(sent).toEqual([]);
-    expect(screen.queryByText(/^Ready: /u)).toBeNull();
+    expect(pillNames('receipt')).toEqual([]);
   });
 });
 
@@ -1018,7 +1041,7 @@ describe('a run with a file starts at the press: nothing asked first (Build 21, 
     filesOf(5);
     answerUpload('invoice.pdf', 'application/pdf', 5);
     await fireEvent.press(screen.getByTestId('run-file-receipt-upload'));
-    expect(await screen.findByText('Ready: invoice.pdf (5 bytes)')).toBeTruthy();
+    await waitFor(() => expect(pillNames('receipt')).toEqual(['invoice.pdf']));
     await fireEvent.press(screen.getByText('Start run'));
     await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-1'));
     expect(sent.filter((request) => request.path === RUNS_PATH).map((request) => request.body)).toEqual([
@@ -1058,7 +1081,7 @@ describe('a file field that takes several: every file into ONE run (Round 21 pla
     });
   }
 
-  it('the picker takes several; Start run uploads every file into ONE run with the other inputs, under one key; the box says how many', async () => {
+  it('the picker takes several; Start run uploads every file into ONE run with the other inputs, under one key; the box shows a pill per file', async () => {
     pickerGivesMany(['a.pdf', 'b.pdf', 'c.pdf']);
     filesOf(5);
     answerUploads(['a.pdf', 'b.pdf', 'c.pdf']);
@@ -1072,7 +1095,7 @@ describe('a file field that takes several: every file into ONE run (Round 21 pla
       multiple: true,
     });
     await waitFor(() => expect(screen.getByText('Start run')).toBeTruthy());
-    expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('3 files selected');
+    expect(pillNames('receipts')).toEqual(['a.pdf', 'b.pdf', 'c.pdf']);
 
     await fireEvent.press(screen.getByText('Start run'));
     await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-1'));
@@ -1082,7 +1105,7 @@ describe('a file field that takes several: every file into ONE run (Round 21 pla
     ]);
     // No run per file, and no "{n} runs started": the run opens, as one alone does.
     expect(screen.queryByText(/runs started/u)).toBeNull();
-    expect(screen.queryByTestId('run-file-receipts-count')).toBeNull();
+    expect(pillNames('receipts')).toEqual([]);
   });
 
   it('each Take photo adds one more file', async () => {
@@ -1093,10 +1116,10 @@ describe('a file field that takes several: every file into ONE run (Round 21 pla
     await renderBox([RECEIPTS]);
     await fireEvent.press(screen.getByTestId('run-file-receipts-photo'));
     // One file says what one alone says.
-    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('Ready: photo.jpg (5 bytes)'));
+    await waitFor(() => expect(pillNames('receipts')).toEqual(['photo.jpg']));
     await waitFor(() => expect(screen.getByText('Start run')).toBeTruthy());
     await fireEvent.press(screen.getByTestId('run-file-receipts-photo'));
-    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('2 files selected'));
+    await waitFor(() => expect(pillNames('receipts')).toEqual(['photo.jpg', 'photo.jpg']));
   });
 
   it('past the field\'s maxFiles one choice is refused in words, nothing is sent, and the field is emptied', async () => {
@@ -1106,13 +1129,13 @@ describe('a file field that takes several: every file into ONE run (Round 21 pla
     answerUploads(['a.pdf', 'b.pdf']);
     await renderBox([THREE]);
     await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
-    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('2 files selected'));
+    await waitFor(() => expect(pillNames('receipts')).toEqual(['a.pdf', 'b.pdf']));
     const before = sent.length;
     pickerGivesMany(['a.pdf', 'b.pdf', 'c.pdf', 'd.pdf']);
     await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
     expect(await screen.findByText('Add up to 3 files at a time.')).toBeTruthy();
     expect(sent).toHaveLength(before);
-    expect(screen.queryByTestId('run-file-receipts-count')).toBeNull();
+    expect(pillNames('receipts')).toEqual([]);
   });
 
   it('a photo past the field\'s maxFiles is refused in words, and the files held are kept', async () => {
@@ -1122,11 +1145,11 @@ describe('a file field that takes several: every file into ONE run (Round 21 pla
     answerUploads(['a.pdf', 'b.pdf']);
     await renderBox([TWO]);
     await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
-    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('2 files selected'));
+    await waitFor(() => expect(pillNames('receipts')).toEqual(['a.pdf', 'b.pdf']));
     await fireEvent.press(screen.getByTestId('run-file-receipts-photo'));
     expect(await screen.findByText('Add up to 2 files at a time.')).toBeTruthy();
     expect(ImagePicker.launchCameraAsync).not.toHaveBeenCalled();
-    expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('2 files selected');
+    expect(pillNames('receipts')).toEqual(['a.pdf', 'b.pdf']);
   });
 
   it('a field that declares no maxFiles takes the platform\'s 50: 50 in one choice is taken, 51 refused', async () => {
@@ -1136,7 +1159,7 @@ describe('a file field that takes several: every file into ONE run (Round 21 pla
     answerUploads(fifty);
     await renderBox([RECEIPTS]);
     await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
-    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('50 files selected'));
+    await waitFor(() => expect(pillNames('receipts')).toHaveLength(50));
     expect(screen.queryByText('Add up to 50 files at a time.')).toBeNull();
     const before = sent.length;
     pickerGivesMany([...fifty, 'g.pdf']);
@@ -1154,13 +1177,13 @@ describe('a file field that takes several: every file into ONE run (Round 21 pla
     cameraTakes(1000, 1000);
     await renderBox([RECEIPTS]);
     await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
-    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('2 files selected'));
+    await waitFor(() => expect(pillNames('receipts')).toEqual(['a.pdf', 'b.pdf']));
     pickerGivesMany(['c.pdf', 'd.pdf']);
     await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
     await waitFor(() => expect(screen.getByText('Start run')).toBeTruthy());
-    expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('2 files selected');
+    expect(pillNames('receipts')).toEqual(['c.pdf', 'd.pdf']);
     await fireEvent.press(screen.getByTestId('run-file-receipts-photo'));
-    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('3 files selected'));
+    await waitFor(() => expect(pillNames('receipts')).toEqual(['c.pdf', 'd.pdf', 'photo.jpg']));
     await waitFor(() => expect(screen.getByText('Start run')).toBeTruthy());
     await fireEvent.press(screen.getByText('Start run'));
     await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-1'));
@@ -1175,7 +1198,7 @@ describe('a file field that takes several: every file into ONE run (Round 21 pla
     answerUploads(['a.pdf']);
     await renderBox([PDFS]);
     await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
-    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('Ready: a.pdf (5 bytes)'));
+    await waitFor(() => expect(pillNames('receipts')).toEqual(['a.pdf']));
     const before = sent.length;
     (DocumentPicker.getDocumentAsync as jest.Mock).mockResolvedValue({
       canceled: false,
@@ -1187,7 +1210,7 @@ describe('a file field that takes several: every file into ONE run (Round 21 pla
     await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
     expect(await screen.findByText('Choose a PDF.')).toBeTruthy();
     expect(sent).toHaveLength(before);
-    expect(screen.queryByTestId('run-file-receipts-count')).toBeNull();
+    expect(pillNames('receipts')).toEqual([]);
   });
 
   it('one file in a field that takes several is a list of one: its run opens', async () => {
@@ -1221,12 +1244,12 @@ describe('a file field that takes several: every file into ONE run (Round 21 pla
     );
     await renderBox([RECEIPTS]);
     await fireEvent.press(screen.getByTestId('run-file-receipts-upload'));
-    await waitFor(() => expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('2 files selected'));
+    await waitFor(() => expect(pillNames('receipts')).toEqual(['a.pdf', 'b.pdf']));
     await waitFor(() => expect(screen.getByText('Start run')).toBeTruthy());
     await fireEvent.press(screen.getByText('Start run'));
     expect(await screen.findByText('Your queue is full. Wait for these to finish.')).toBeTruthy();
     expect(onStarted).not.toHaveBeenCalled();
-    expect(screen.getByTestId('run-file-receipts-count').props.children).toBe('2 files selected');
+    expect(pillNames('receipts')).toEqual(['a.pdf', 'b.pdf']);
     await fireEvent.press(screen.getByText('Start run'));
     await waitFor(() => expect(onStarted).toHaveBeenCalledWith('run-1'));
     const runs = sent.filter((request) => request.path === RUNS_PATH);

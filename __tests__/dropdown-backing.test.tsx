@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from '@testing-library/react-native';
+import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import React from 'react';
 import { Platform, StyleSheet, Text } from 'react-native';
 
@@ -26,10 +26,11 @@ function alphaOf(color: string): number {
   return match ? Number(match[1]) : NaN;
 }
 
-function Menu() {
+function Menu({ onClosed }: { onClosed?: () => void } = {}) {
   return (
     <Dropdown
       testID="pick"
+      onClosed={onClosed}
       options={[
         { value: 'a', label: 'Alpha' },
         { value: 'b', label: 'Beta' },
@@ -139,5 +140,62 @@ describe('Dropdown groups', () => {
       'ENDOCRINE',
       'Type 2 diabetes',
     ]);
+  });
+});
+
+/**
+ * `onClosed` (the owner's build 43 item 17): Home's Upload menu runs Take photo
+ * or Choose file only once the panel is gone, so the camera or the picker never
+ * opens over it. iOS says it is gone through the Modal's `onDismiss` (React
+ * Native implements it on iOS only); elsewhere it is gone once it closes.
+ */
+describe('Dropdown onClosed', () => {
+  /** The `onDismiss` the open panel's Modal was given (the test calls it as iOS would). */
+  function modalDismiss(): unknown {
+    let at: ReturnType<typeof screen.getByTestId> | null = screen.getByTestId('pick-menu');
+    while (at && !('onDismiss' in at.props)) at = at.parent;
+    return at?.props.onDismiss;
+  }
+
+  it('on iOS: not while the panel hides, then once from the Modal\'s onDismiss', async () => {
+    const platform = jest.replaceProperty(Platform, 'OS', 'ios');
+    try {
+      const onClosed = jest.fn();
+      await renderWithProviders(<Menu onClosed={onClosed} />);
+      await fireEvent.press(screen.getByTestId('pick-trigger'));
+      const dismissed = modalDismiss() as () => void;
+      expect(typeof dismissed).toBe('function');
+      await fireEvent.press(screen.getByText('Beta'));
+      expect(screen.queryByTestId('pick-menu')).toBeNull();
+      expect(onClosed).not.toHaveBeenCalled();
+      await act(async () => dismissed());
+      expect(onClosed).toHaveBeenCalledTimes(1);
+    } finally {
+      platform.restore();
+    }
+  });
+
+  it('on Android: once, right after it closes — a press outside alike; no onDismiss is given', async () => {
+    const platform = jest.replaceProperty(Platform, 'OS', 'android');
+    try {
+      const onClosed = jest.fn();
+      await renderWithProviders(<Menu onClosed={onClosed} />);
+      await fireEvent.press(screen.getByTestId('pick-trigger'));
+      expect(modalDismiss()).toBeUndefined();
+      expect(onClosed).not.toHaveBeenCalled();
+      await fireEvent.press(screen.getByText('Beta'));
+      expect(onClosed).toHaveBeenCalledTimes(1);
+      await fireEvent.press(screen.getByTestId('pick-trigger'));
+      await fireEvent.press(screen.getByTestId('pick-backdrop'));
+      expect(onClosed).toHaveBeenCalledTimes(2);
+    } finally {
+      platform.restore();
+    }
+  });
+
+  it('without onClosed the Modal is given no onDismiss, as before', async () => {
+    await renderWithProviders(<Menu />);
+    await fireEvent.press(screen.getByTestId('pick-trigger'));
+    expect(modalDismiss()).toBeUndefined();
   });
 });

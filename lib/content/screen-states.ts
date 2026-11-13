@@ -205,6 +205,20 @@ export const FALLBACK = "This part can't be shown here yet.";
  */
 export const TAKE_PHOTO_LABEL = 'Take photo';
 export const UPLOAD_LABEL = 'Upload';
+/**
+ * Home's quick-access card (the owner's build 43 item 17): Upload offers Take
+ * photo or Choose file where the field can take a photo; Choose file is
+ * today's Upload (the picker).
+ */
+export const CHOOSE_FILE_LABEL = 'Choose file';
+/** Start with a required file missing (build 43 item 17): the field's own title, nothing sent. */
+export function addFileFirst(title: string): string {
+  return `Add ${title} first.`;
+}
+/** A file pill's x, spoken (build 43 item 17): it takes that file out of the run. */
+export function removeFileLabel(name: string): string {
+  return `Remove ${name}`;
+}
 export const CAMERA_OFF = 'Camera access for Autom8x is off in Settings. Turn it on there, or use Upload.';
 export const CAMERA_NOT_OPENED = 'The camera could not be opened. Try again.';
 
@@ -792,10 +806,7 @@ export const DEFAULT_MAX_FILES = 50;
 export function tooManyFiles(max: number): string {
   return `Add up to ${max} files at a time.`;
 }
-/** What a several-file field holds. */
-export function filesSelected(n: number): string {
-  return `${n} files selected`;
-}
+// ~~`filesSelected(n)`, "{n} files selected"~~ until build 43 item 17: a several-file field draws one pill per file.
 export const START_LABEL = 'Start';
 export const ARCHIVING_LABEL = 'Archiving…';
 export const ARCHIVE_LABEL = 'Archive';
