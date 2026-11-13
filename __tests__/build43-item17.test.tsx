@@ -29,7 +29,7 @@ import { StartRun, missingFile } from '@/components/automations/start-run';
 import { YourFlows } from '@/components/flows/your-flows';
 import { ItemUploadDialog } from '@/components/items/item-upload-dialog';
 import { PILL_HEIGHT } from '@/components/nocturne/pill-button';
-import { nocturneDark, withAlpha } from '@/constants/theme';
+import { fonts, nocturneDark, space, typeScale, withAlpha } from '@/constants/theme';
 import { CHOOSE_FILE_LABEL, TAKE_PHOTO_LABEL, addFileFirst, removeFileLabel } from '@/lib/content/screen-states';
 import type { AutomationRunInputField } from '@/lib/platform/automations';
 import { PlatformUnreachableError } from '@/lib/platform/problem';
@@ -488,10 +488,20 @@ describe('the start forms on the flow page and the item page (default 5: the sam
       expect(row.props.horizontal).toBe(true);
       await fireEvent(row, 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 280, height: 60 } } });
       const pill = box.getByTestId('run-file-resumes-pill-0');
-      expect(flat(pill)).toMatchObject({ maxWidth: 280, minHeight: PILL_HEIGHT, borderRadius: 999, borderWidth: 1 });
+      // The pill's look (D5), held here as the website's test holds its own: the neutral outline,
+      // the row's left step, the name at the small size in the regular face and the text colour.
+      expect(flat(pill)).toMatchObject({
+        maxWidth: 280,
+        minHeight: PILL_HEIGHT,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: nocturneDark.neutral[700],
+        paddingLeft: space.rowX,
+      });
       const name = within(pill).getByText(long);
       expect(name.props.numberOfLines).toBe(1);
       expect(name.props.ellipsizeMode).toBe('tail');
+      expect(flat(name)).toMatchObject({ fontSize: typeScale.small.fontSize, fontFamily: fonts.regular, color: nocturneDark.text });
       // Let go: the press runs, and that file is out.
       await fireEvent(x, 'responderRelease', touch('onResponderRelease'));
       await waitFor(() => expect(pillNames(box, 'resumes')).toEqual(['b.pdf']));

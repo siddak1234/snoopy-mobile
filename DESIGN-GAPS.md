@@ -3979,4 +3979,7 @@ Parity with the website (a read-only check of both branches, 2026-11-13): the fi
 contrast is asserted from the tokens in `theme.test.ts`, as the website asserts it from its own —
 the page's colour on the accent and on accent-400, 4.5:1 or more in each theme, 5.45 and 4.90
 pinned. Bite: the light accent lightened (2 red there). The website's menu rows lost their hidden
-" for {title}", so both clients say "Take photo" and "Choose file".
+" for {title}", so both clients say "Take photo" and "Choose file". T10 also holds the pill's look,
+as the website's test holds its own: the neutral outline, the row's left step, and the name at the
+small size in the regular face and the text colour. Bites: the outline in the accent (1 red); the
+name at the body size (1 red).
