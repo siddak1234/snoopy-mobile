@@ -3974,3 +3974,9 @@ photo back in the card row, no menu (10, with `build42-item16`); the choice run 
 upload starts (1); the x not spoken (1); `filled` not filled (`components`, `nocturne-visual`, 5);
 the pill wider than its row (1); the job upload card drawing pills (1); an optional file treated as
 required (2); the x leaving the run input as it was (1).
+
+Parity with the website (a read-only check of both branches, 2026-11-13): the filled label's
+contrast is asserted from the tokens in `theme.test.ts`, as the website asserts it from its own —
+the page's colour on the accent and on accent-400, 4.5:1 or more in each theme, 5.45 and 4.90
+pinned. Bite: the light accent lightened (2 red there). The website's menu rows lost their hidden
+" for {title}", so both clients say "Take photo" and "Choose file".
