@@ -3982,4 +3982,16 @@ pinned. Bite: the light accent lightened (2 red there). The website's menu rows 
 " for {title}", so both clients say "Take photo" and "Choose file". T10 also holds the pill's look,
 as the website's test holds its own: the neutral outline, the row's left step, and the name at the
 small size in the regular face and the text colour. Bites: the outline in the accent (1 red); the
-name at the body size (1 red).
+name at the body size (1 red). The third check's test gaps, closed in `build43-item17` with no
+change to the app: the x sends nothing (T3 on Home, T4 on the flow page); the menu's words pinned
+as "Take photo" and "Choose file", and each row's icon, `Camera` then `FileArrowUp`; the inner step
+between pills; the x's icon at 20 in the text colour; the order under Home's row (the row, the
+"Uploading {name}…" line or the pills, the field's error, the form's error); Turn on on a paused
+flow with a required file empty says no "Add … first." and turns it on, and Start run then checks;
+on Home's several-file card Take photo from the menu adds one pill and Choose file replaces them.
+Bites: the x also sending an upload (2 red at the new lines, 2 more from the stand-in itself);
+`CHOOSE_FILE_LABEL` "Choose a file" (1 red); the pills' gap `inset.sm` (1 red); the x at 24 (1
+red); the x in the accent (1 red); Take photo's icon `FileArrowUp` (1 red); Choose file's icon
+`UploadSimple` (1 red); the lines above the row (1 red); the field's error above the pills (1 red);
+Turn on put through the missing-file check (1 red); a photo replacing the files (1 red); a choice
+adding to them (2 red).

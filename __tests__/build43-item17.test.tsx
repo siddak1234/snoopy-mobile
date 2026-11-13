@@ -21,21 +21,35 @@ jest.mock('phosphor-react-native', () => {
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
+import { ImageManipulator } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import React from 'react';
 import { StyleSheet, type ViewStyle } from 'react-native';
 
+import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import { StartRun, missingFile } from '@/components/automations/start-run';
 import { YourFlows } from '@/components/flows/your-flows';
 import { ItemUploadDialog } from '@/components/items/item-upload-dialog';
 import { PILL_HEIGHT } from '@/components/nocturne/pill-button';
 import { fonts, nocturneDark, space, typeScale, withAlpha } from '@/constants/theme';
-import { CHOOSE_FILE_LABEL, TAKE_PHOTO_LABEL, addFileFirst, removeFileLabel } from '@/lib/content/screen-states';
+import { addFileFirst, removeFileLabel } from '@/lib/content/screen-states';
 import type { AutomationRunInputField } from '@/lib/platform/automations';
 import { PlatformUnreachableError } from '@/lib/platform/problem';
+import { resetSnapshot } from '@/lib/platform/snapshot';
 import type { HomeFlow } from '@/lib/view/home';
-import { TEST_WORKSPACE, flowCatalogPayload, sessionAs, subscriptionsPayload } from '@/test/platform';
-import { renderWithProviders, setTextSize } from '@/test/render';
+import { fakePlatform } from '@/test/fake-platform';
+import {
+  TEST_WORKSPACE,
+  flowCatalogPayload,
+  invoiceProcessingV3Entry,
+  planSubscriptionsPayload,
+  providersWithQuickBooks,
+  runStatsPayload,
+  sessionAs,
+  signedInSession,
+  subscriptionsPayload,
+} from '@/test/platform';
+import { renderWithProviders, setMockParams, setTextSize } from '@/test/render';
 import { touch } from '@/test/touch';
 
 const { platformOperation, newIdempotencyKey, putFileToSignedUrl } = jest.requireMock('@/lib/platform/client');
@@ -212,6 +226,44 @@ const buttonsIn = (row: Drawn) =>
 
 const flat = (node: Drawn) => StyleSheet.flatten(node.props.style) as ViewStyle;
 
+/** The camera takes one photo, and the re-encode hands back a small JPEG. */
+function cameraTakes() {
+  (ImagePicker.launchCameraAsync as jest.Mock).mockResolvedValue({
+    canceled: false,
+    assets: [{ uri: 'file:///cache/ImagePicker/camera.jpg', width: 100, height: 100, type: 'image', mimeType: 'image/jpeg', fileName: null }],
+  });
+  const image = { width: 100, height: 100, release: jest.fn(), saveAsync: jest.fn(async () => ({ uri: 'file:///cache/encoded.jpg', width: 100, height: 100 })) };
+  const context: { renderAsync: jest.Mock; resize: jest.Mock; release: jest.Mock } = {
+    renderAsync: jest.fn(async () => image),
+    resize: jest.fn(() => context),
+    release: jest.fn(),
+  };
+  (ImageManipulator.manipulate as jest.Mock).mockReturnValue(context);
+  stored.push('photo.jpg');
+}
+
+/**
+ * What a Home form shows, top to bottom: its row of buttons, the "Uploading {name}…" line,
+ * the pills' row, the field's own error and the form's error line (the one `alert`).
+ */
+function readingOrder(root: Drawn): string[] {
+  const order: string[] = [];
+  const walk = (node: Drawn | string) => {
+    if (typeof node === 'string') return;
+    const testID = typeof node.props.testID === 'string' ? (node.props.testID as string) : '';
+    if (typeof node.type === 'string') {
+      if (testID.endsWith('-actions')) return void order.push('row');
+      if (testID.endsWith('-pills')) return void order.push('pills');
+      if (testID.endsWith('-line')) return void order.push('uploading');
+      if (node.type === 'Text' && node.props.accessibilityRole === 'alert') return void order.push('form error');
+      if (node.type === 'Text') return void order.push('field error');
+    }
+    node.children.forEach(walk);
+  };
+  walk(root);
+  return order;
+}
+
 describe('missingFile (D4: the pure rule)', () => {
   it('the first required file field with no file, in run-input order; an optional one, or one that holds a file, never', () => {
     expect(missingFile([NOTE, RESUME], {})).toBe(RESUME);
@@ -245,9 +297,13 @@ describe("Home's quick-access card (the owner's build 43 item 17)", () => {
     const card = within(await screen.findByTestId('home-flow-invoice'));
     await fireEvent.press(card.getByTestId('run-file-resume-upload'));
     const menu = within(screen.getByTestId('run-file-resume-upload-menu'));
-    expect(menu.getAllByRole('menuitem').map((row) => row.props.testID)).toEqual(['run-file-resume-photo', 'run-file-resume-file']);
-    expect(menu.getByText(TAKE_PHOTO_LABEL)).toBeTruthy();
-    expect(menu.getByText(CHOOSE_FILE_LABEL)).toBeTruthy();
+    const rows = menu.getAllByRole('menuitem');
+    expect(rows.map((row) => row.props.testID)).toEqual(['run-file-resume-photo', 'run-file-resume-file']);
+    // D8's words pinned as words, as the website pins them, and each row's Phosphor icon (D2).
+    expect(menu.getByText('Take photo')).toBeTruthy();
+    expect(menu.getByText('Choose file')).toBeTruthy();
+    expect(within(rows[0]!).getByTestId(/^phosphor-react-native-camera-/u)).toBeTruthy();
+    expect(within(rows[1]!).getByTestId(/^phosphor-react-native-file-arrow-up-/u)).toBeTruthy();
     expect(ImagePicker.requestCameraPermissionsAsync).not.toHaveBeenCalled();
     // A press outside closes it with nothing done.
     await fireEvent.press(screen.getByTestId('run-file-resume-upload-backdrop'));
@@ -342,8 +398,11 @@ describe("Home's quick-access card (the owner's build 43 item 17)", () => {
     const card = within(await screen.findByTestId('home-flow-invoice'));
     await chooseFromUpload(card, 'resume', 'file');
     await waitFor(() => expect(pillNames(card, 'resume')).toEqual(['cv.pdf']));
+    // D6: the x sends nothing; nothing is deleted on the server.
+    const before = sent.length;
     await fireEvent.press(card.getByTestId('run-file-resume-remove-0'));
     expect(pillNames(card, 'resume')).toEqual([]);
+    expect(sent).toHaveLength(before);
     await fireEvent.press(card.getByTestId('start-run-button'));
     expect(await card.findByText('Add Resume first.')).toBeTruthy();
     expect(runs()).toHaveLength(0);
@@ -386,6 +445,89 @@ describe("Home's quick-access card (the owner's build 43 item 17)", () => {
     await waitFor(() => expect(pillNames(lead, 'resumes')).toEqual(['a.pdf', 'b.pdf']));
     expect(lead.getByTestId('run-file-resumes-pills').props.horizontal).toBe(true);
     expect(within(lead.getByTestId('run-file-resumes-actions')).queryByTestId('run-file-resumes-pills')).toBeNull();
+    // D5: the inner step between pills.
+    expect(StyleSheet.flatten(lead.getByTestId('run-file-resumes-pills').props.contentContainerStyle).gap).toBe(space.inner);
+
+    // D2 through the menu on a several-file field: Take photo adds one more file, Choose file replaces them.
+    cameraTakes();
+    await chooseFromUpload(lead, 'resumes', 'photo');
+    await waitFor(() => expect(pillNames(lead, 'resumes')).toEqual(['a.pdf', 'b.pdf', 'photo.jpg']));
+    pickerGives(['c.pdf']);
+    await chooseFromUpload(lead, 'resumes', 'file');
+    await waitFor(() => expect(pillNames(lead, 'resumes')).toEqual(['c.pdf']));
+  });
+
+  it('D5 the order under the row: the "Uploading {name}…" line, the pills, the field\'s error, then the form\'s error', async () => {
+    pickerGives(['a.pdf', 'b.pdf', 'c.pdf']);
+    answers[`POST ${RUNS_PATH}`] = () => {
+      throw new PlatformUnreachableError();
+    };
+    await renderHome();
+    const form = await screen.findByTestId('home-flow-lead-form');
+    const lead = within(form);
+    await chooseFromUpload(lead, 'resumes', 'file');
+    await waitFor(() => expect(pillNames(lead, 'resumes')).toEqual(['a.pdf', 'b.pdf', 'c.pdf']));
+    // The form's error (a refusal), then the field's own (a photo past maxFiles keeps the files).
+    await fireEvent.press(lead.getByTestId('start-run-button'));
+    await waitFor(() => expect(runs()).toHaveLength(1));
+    await chooseFromUpload(lead, 'resumes', 'photo');
+    expect(await lead.findByText('Add up to 3 files at a time.')).toBeTruthy();
+    expect(readingOrder(form)).toEqual(['row', 'pills', 'field error', 'form error']);
+
+    // While it uploads: the line in the pills' place, the form's error still under it.
+    let arrive: () => void = () => undefined;
+    putFileToSignedUrl.mockImplementationOnce(() => new Promise<void>((resolve) => (arrive = resolve)));
+    pickerGives(['d.pdf']);
+    await chooseFromUpload(lead, 'resumes', 'file');
+    expect(await lead.findByText('Uploading d.pdf…')).toBeTruthy();
+    expect(readingOrder(form)).toEqual(['row', 'uploading', 'form error']);
+    await act(async () => arrive());
+    await waitFor(() => expect(pillNames(lead, 'resumes')).toEqual(['d.pdf']));
+  });
+});
+
+describe('Turn on (D4: no start, so no check)', () => {
+  it('a paused flow with a required file empty: Turn on says no "Add … first." and turns it on; Start run then checks', async () => {
+    resetSnapshot();
+    const entry = invoiceProcessingV3Entry();
+    const flow = {
+      ...planSubscriptionsPayload().subscriptions[0]!,
+      id: 'ip-1',
+      templateId: 'invoice-processing',
+      templateVersion: entry.version,
+      config: { vendor: 'none' },
+      unmetConnections: [],
+      setup: entry.setup,
+      runInput: [{ ...RESUME, key: 'invoiceFile', title: 'Document' }],
+      projectId: null,
+    };
+    let live = false;
+    const fake = fakePlatform(platformOperation);
+    fake.always('GET /v1/workspaces/{workspaceId}/subscriptions', () => ({
+      subscriptions: [{ ...flow, status: live ? ('live' as const) : ('paused' as const) }],
+    }));
+    fake.always('GET /v1/workspaces/{workspaceId}/automations', { automations: [entry], categories: ['All'] });
+    fake.always('GET /v1/workspaces/{workspaceId}/run-stats', runStatsPayload());
+    fake.always('GET /v1/connections/providers', providersWithQuickBooks());
+    fake.always('GET /v1/workspaces/{workspaceId}/projects', { projects: [] });
+    fake.always('GET /v1/workspaces/{workspaceId}/connections', { connections: [] });
+    fake.always('PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}', () => {
+      live = true;
+      return { subscription: { ...flow, status: 'live' as const } };
+    });
+    setMockParams({ flow: 'ip-1' });
+    await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
+    expect(await screen.findByTestId('run-file-invoiceFile-upload')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('flow-step-turn-on'));
+    expect(screen.queryByText('Add Document first.')).toBeNull();
+    expect(await screen.findByText('Start run')).toBeTruthy();
+    expect(fake.to('PATCH /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}')).toHaveLength(1);
+    expect(screen.queryByText('Add Document first.')).toBeNull();
+    // Start run is a start: the check.
+    await fireEvent.press(screen.getByText('Start run'));
+    expect(await screen.findByText('Add Document first.')).toBeTruthy();
+    expect(fake.to('POST /v1/workspaces/{workspaceId}/runs')).toHaveLength(0);
   });
 });
 
@@ -445,8 +587,11 @@ describe('the start forms on the flow page and the item page (default 5: the sam
     await fireEvent.press(box.getByText('Start run'));
     await waitFor(() => expect(runs()).toHaveLength(2));
     expect(runs()[1]!.key).toBe(runs()[0]!.key);
+    // D6: the x sends nothing; nothing is deleted on the server.
+    const before = sent.length;
     await fireEvent.press(box.getByTestId('run-file-resumes-remove-1'));
     expect(pillNames(box, 'resumes')).toEqual(['a.pdf', 'c.pdf']);
+    expect(sent).toHaveLength(before);
     await fireEvent.press(box.getByText('Start run'));
     await waitFor(() => expect(runs()).toHaveLength(3));
     expect(runs()[2]!.body).toEqual({ subscriptionId: 'sub-1', input: { resumes: ['artifact-1', 'artifact-3'] } });
@@ -482,6 +627,9 @@ describe('the start forms on the flow page and the item page (default 5: the sam
       expect(flat(x)).toMatchObject({ width: PILL_HEIGHT, height: PILL_HEIGHT });
       expect(PILL_HEIGHT).toBeGreaterThanOrEqual(44);
       expect(flat(x).backgroundColor).toBeUndefined();
+      // D5: the x's icon, Phosphor X at 20 in the text colour.
+      const icon = within(x).getByTestId(/^phosphor-react-native-x-/u);
+      expect(icon.props).toMatchObject({ width: 20, height: 20, color: nocturneDark.text });
       await fireEvent(x, 'responderGrant', touch('onResponderGrant'));
       expect(flat(box.getByTestId('run-file-resumes-remove-0')).backgroundColor).toBe(withAlpha(nocturneDark.text, 0.07));
       const row = box.getByTestId('run-file-resumes-pills');
