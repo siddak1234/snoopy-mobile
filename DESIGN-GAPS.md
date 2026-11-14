@@ -4064,8 +4064,9 @@ What only a device shows: the sheet on an iPhone and anchored on an iPad; the ca
 after the sheet has gone; no photo permission prompt; the picker's JPEG or HEIC re-encoded; VoiceOver speaking the
 three sentences and landing on the next x.
 
-Contract: regenerated from the platform's build-43 branch at `8489f79` (only `lib/generated/**`); the item fixtures'
-muted row is now a cancelled job, so `round19-items` reads "Cancelled". The land step regenerates from the merge.
+Contract: regenerated from the platform's build-43 branch at `8489f79` (only `lib/generated/**`), then from its merge
+`ee72d96` (#285), byte-identical; the item fixtures' muted row is now a cancelled job, so `round19-items` reads
+"Cancelled".
 
 Bites (`build43-feedback` unless named; break, red, restore, green): main's Home with the pair (`parity-home`,
 `tab-screens`: 4 red); `UploadMenu` on iOS again (1); two options swapped (1); `anchor` dropped (1); index 0 to the
