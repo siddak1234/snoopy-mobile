@@ -4046,9 +4046,11 @@ Platform differences (forced, or deliberate). Android has no `ActionSheetIOS`: i
 action sheet (from the bottom; on iPad anchored to Upload), Safari shows Apple's menu at the button: the same three
 choices in the same order and words, plus the sheet's Cancel. The sheet's "Take Photo" and "Choose File" are Safari's casing
 (WebKit `WKFileUploadPanel.mm`; WebCore `LocalizedStrings.cpp:173-181`), beside the app's own "Take photo" and "Choose
-file" on Android and off the card — deliberate. Not a difference: on a several-file field every card choice replaces
-the files held, in both clients (the sheet's Take Photo included, as Safari's); the side-by-side Take photo off the
-card adds, in both.
+file" on Android and off the card — deliberate. On a several-file field every choice of iOS's sheet replaces the files
+held (its Take Photo included, as Safari's menu does); Android's card menu stays item 17's (the design's "Android
+unchanged"): its Choose file replaces, its Take photo adds one more (`takePhoto()` against the sheet's
+`takePhoto(true)`, `components/automations/run-file-field.tsx`). The side-by-side Take photo off the card adds, in both
+clients.
 
 What only a device shows: the sheet on an iPhone and anchored on an iPad; the camera and the photo picker opening
 after the sheet has gone; no photo permission prompt; the picker's JPEG or HEIC re-encoded; VoiceOver speaking the
