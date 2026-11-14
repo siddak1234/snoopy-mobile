@@ -383,7 +383,7 @@ describe('test 6: the screen reader hears an upload end and a file go (the follo
     expect(focusedOn()).toEqual(['run-file-resume-upload focus']);
   });
 
-  it('three in one choice: "Uploaded 3 files."; x on the middle: the new middle x; on the last: the one before; on the only one: Upload', async () => {
+  it('three in one choice: "Uploaded 3 files."; x on the middle: the new middle x; on the last: the one before; on the only one: Upload; then one file: "Uploaded d.pdf."', async () => {
     pickerGives(['a.pdf', 'b.pdf', 'c.pdf']);
     await renderForm([RESUMES]);
     const box = within(screen.getByTestId('start-run'));
@@ -405,6 +405,12 @@ describe('test 6: the screen reader hears an upload end and a file go (the follo
     await fireEvent.press(box.getByTestId('run-file-resumes-remove-0'));
     expect(announced().at(-1)).toBe('Removed a.pdf.');
     expect(focusedOn().at(-1)).toBe('run-file-resumes-upload focus');
+
+    // One file in a choice on this several-file field: its name, never "Uploaded 1 files."
+    pickerGives(['d.pdf']);
+    await fireEvent.press(box.getByTestId('run-file-resumes-upload'));
+    await waitFor(() => expect(pillNames(box, 'resumes')).toEqual(['d.pdf']));
+    expect(announced().at(-1)).toBe('Uploaded d.pdf.');
   });
 
   it('the job upload card announces nothing new', async () => {
