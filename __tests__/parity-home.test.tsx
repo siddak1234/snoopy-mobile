@@ -65,8 +65,9 @@ function cardStyle(node: Element): ViewStyle | undefined {
  *   until the owner's AM5.
  *
  * The website's dashboard matches the app since Build 22 (the session's D5,
- * approved by the owner): TODAY, the banner, Add a flow and Flows, and since the
- * owner's build 34 F5 YOUR FLOWS (~~Recent runs~~).
+ * approved by the owner): TODAY, the banner, ~~Add a flow and Flows~~ (until the
+ * owner's build 43 item 2), and since the owner's build 34 F5 YOUR FLOWS
+ * (~~Recent runs~~).
  */
 
 jest.mock('@/lib/platform/client', () => ({

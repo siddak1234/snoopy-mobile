@@ -590,10 +590,8 @@ complete export (Download file) and workspace summary (Download JSON).
     Round 21's platform round 2 (B2, as the batch addendum amends it):** a
     file field with `multiple` (`RunFilesField`) takes several — a choice in
     the picker replaces what the field held, and each side-by-side Take
-    photo adds one more; since build 43 the Take photo of Home's card —
-    iOS's sheet and Android's menu — replaces, as every choice of the
-    website's one input does (~~the menu's Take photo adding one more~~
-    until build 43) — each sent as one file
+    photo adds one more (Home's card: see "The quick-access card") — each
+    sent as one file
     is, one after another ("Uploading
     {name}…"); ~~the field then says "Ready: {name} ({size})" for one file and
     "{n} files selected" for more~~ until build 43: in every start form (Home,
