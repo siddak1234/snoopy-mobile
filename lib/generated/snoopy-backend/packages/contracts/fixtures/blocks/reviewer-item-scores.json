@@ -1,6 +1,6 @@
 {
   "name": "reviewer-item-scores",
-  "about": "An item whose page lists scores: 3 scored runs, 1 running and 1 failed, as one bar chart",
+  "about": "An item whose page lists scores: 3 scored runs, 1 running and 1 cancelled, as one bar chart",
   "blockSetVersion": 5,
   "blocks": [
     {
@@ -105,7 +105,7 @@
         },
         {
           "lead": "5",
-          "title": "Failed",
+          "title": "Cancelled",
           "muted": true,
           "open": {
             "target": "run",
@@ -162,7 +162,7 @@
     "4",
     "Reading…",
     "5",
-    "Failed",
+    "Cancelled",
     "Candidates by score",
     "Dana Whitfield",
     "88",
