@@ -8,8 +8,19 @@ import { fontScaleLimit, fonts, inset, space, typeScale, withAlpha } from '@/con
 import { useTheme } from '@/hooks/use-theme';
 
 export type PillButtonVariant =
-  /** Accent outline + accent label — the Nocturne primary (never a fill). */
+  /**
+   * Accent outline + accent label — the Nocturne primary, never a fill: every
+   * primary but the quick-access card's Start (`filled`, the owner's decision
+   * of 2026-11-13).
+   */
   | 'primary'
+  /**
+   * Accent fill and 1-px accent border, the label and icon in the page
+   * background colour, semibold; pressed, accent-400 (the owner's decision of
+   * 2026-11-13, build 43 item 17: "start should be more bolded and colored so
+   * easy to click"). The quick-access card's Start alone; disabled as primary.
+   */
+  | 'filled'
   /** Neutral-700 outline + text-color label. */
   | 'secondary'
   /** No outline, text-color label (e.g. the Face ID question → "Not now"). */
@@ -65,15 +76,18 @@ export function PillButton({
   const { palette } = useTheme();
   const size = fontSize ?? typeScale.label.fontSize;
 
+  const filled = variant === 'filled';
   const borderColor =
-    variant === 'primary' ? palette.accent :
+    variant === 'primary' || filled ? palette.accent :
     variant === 'secondary' ? palette.neutral[700] :
     variant === 'danger' ? palette.danger : 'transparent';
   const color =
+    filled ? palette.bg :
     variant === 'primary' ? palette.accent :
     variant === 'accent-ghost' ? palette.accentRamp[300] :
     variant === 'danger' ? palette.danger : palette.text;
   const pressedBg =
+    filled ? palette.accentRamp[400] :
     variant === 'primary' ? withAlpha(palette.accent, 0.12) :
     variant === 'accent-ghost' ? withAlpha(palette.accent, 0.08) :
     variant === 'danger' ? withAlpha(palette.danger, 0.1) :
@@ -95,20 +109,21 @@ export function PillButton({
           // The least height: a label at a large text size grows it (round 24 P3).
           minHeight: PILL_HEIGHT,
           borderRadius: 999,
-          borderWidth: variant === 'primary' || variant === 'secondary' || variant === 'danger' ? 1 : 0,
-          borderColor,
+          borderWidth: variant === 'primary' || filled || variant === 'secondary' || variant === 'danger' ? 1 : 0,
+          // Filled, the border follows the fill: accent, accent-400 while pressed.
+          borderColor: filled && pressed && !disabled ? pressedBg : borderColor,
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
           gap: inset.sm,
           paddingHorizontal: space.rowX,
-          backgroundColor: pressed && !disabled ? pressedBg : 'transparent',
+          backgroundColor: pressed && !disabled ? pressedBg : filled ? palette.accent : 'transparent',
           ...(disabled ? { opacity: 0.5 } : {}),
         },
         style,
       ]}>
       {IconCmp ? <IconCmp size={iconSize ?? size + 1} color={color} weight="regular" /> : null}
-      <Text maxFontSizeMultiplier={fontScaleLimit.chrome} style={{ fontFamily: fonts.medium, fontSize: size, color }}>
+      <Text maxFontSizeMultiplier={fontScaleLimit.chrome} style={{ fontFamily: filled ? fonts.semibold : fonts.medium, fontSize: size, color }}>
         {label}
       </Text>
     </Pressable>

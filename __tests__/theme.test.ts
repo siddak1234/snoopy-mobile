@@ -113,6 +113,24 @@ describe("danger — one red per theme, readable in each (the owner's build 12 i
   });
 });
 
+describe("the filled Start's label: readable on its fill in each theme (the owner's build 43 item 17)", () => {
+  // `PillButton` `filled` (components/nocturne/pill-button.tsx): the label in the page's
+  // colour on the accent, and on accent-400 while pressed. The website holds the same
+  // four ratios from its own tokens (snoopy test/build43-item17.test.mjs), so a token
+  // moved in one client alone turns that client's test red (the parity check, 2026-11-13).
+  it('reads at 4.5:1 or more on the accent and on its pressed tint, dark and light', () => {
+    for (const palette of [nocturneDark, nocturneLight]) {
+      expect(contrast(palette.bg, palette.accent)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(palette.bg, palette.accentRamp[400])).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it('is 5.45:1 on the accent in dark and 4.90:1 in light, as the website measures them', () => {
+    expect(contrast(nocturneDark.bg, nocturneDark.accent).toFixed(2)).toBe('5.45');
+    expect(contrast(nocturneLight.bg, nocturneLight.accent).toFixed(2)).toBe('4.90');
+  });
+});
+
 describe('elevation — ring on dark, ink shadow on light', () => {
   it('dark sm is a hairline neutral-800 ring', () => {
     const e = elevation(nocturneDark);
