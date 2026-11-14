@@ -95,7 +95,7 @@
         },
         {
           "lead": "4",
-          "title": "Failed",
+          "title": "Cancelled",
           "muted": true,
           "open": {
             "target": "run",
@@ -126,6 +126,6 @@
     "3",
     "Reading…",
     "4",
-    "Failed"
+    "Cancelled"
   ]
 }

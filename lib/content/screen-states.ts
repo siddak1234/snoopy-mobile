@@ -207,10 +207,39 @@ export const TAKE_PHOTO_LABEL = 'Take photo';
 export const UPLOAD_LABEL = 'Upload';
 /**
  * Home's quick-access card (the owner's build 43 item 17): Upload offers Take
- * photo or Choose file where the field can take a photo; Choose file is
- * today's Upload (the picker).
+ * photo or Choose file on Android (~~on every phone~~ until build 43 item 3;
+ * iOS: the sheet's words below) where the field can take a photo; Choose file
+ * is today's Upload (the picker).
  */
 export const CHOOSE_FILE_LABEL = 'Choose file';
+/**
+ * Home's card on iOS (the owner's build 43 item 3: Apple's native selection):
+ * Upload opens Apple's action sheet with Safari's own three rows, in Safari's
+ * words and order (WebKit `WKFileUploadPanel.mm`; "Choose File"/"Choose Files"
+ * from WebCore `LocalizedStrings.cpp`), then `CONTACT_CANCEL`. Android keeps
+ * `TAKE_PHOTO_LABEL` and `CHOOSE_FILE_LABEL` (DESIGN-GAPS "Build 43: the
+ * owner's items").
+ */
+export const PHOTO_LIBRARY_LABEL = 'Photo Library';
+export const SHEET_TAKE_PHOTO_LABEL = 'Take Photo';
+export const SHEET_CHOOSE_FILE_LABEL = 'Choose File';
+export const SHEET_CHOOSE_FILES_LABEL = 'Choose Files';
+/** A run file field's picker that would not open (the document picker, Apple's photo picker). */
+export const PICKER_NOT_OPENED = 'The file could not be opened. Try again.';
+/**
+ * Spoken only, in the start forms (the build 43 follow-up, the website's
+ * words): an upload ended — one file, or several in one choice — and an x took
+ * a file out.
+ */
+export function uploadedLine(name: string): string {
+  return `Uploaded ${name}.`;
+}
+export function uploadedCountLine(count: number): string {
+  return `Uploaded ${count} files.`;
+}
+export function removedLine(name: string): string {
+  return `Removed ${name}.`;
+}
 /** Start with a required file missing (build 43 item 17): the field's own title, nothing sent. */
 export function addFileFirst(title: string): string {
   return `Add ${title} first.`;

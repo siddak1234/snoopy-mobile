@@ -525,7 +525,11 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   `createItem`, `readItem`, `archiveItem`, and `createRun`'s `itemId`). The
   `expo-image-picker` plugin in `app.json` gives the camera the app's own
   sentence and turns the microphone and the photo library off, which
-  `__tests__/app-config.test.js` holds through Expo's own mod compiler.
+  `__tests__/app-config.test.js` holds through Expo's own mod compiler. Home's
+  card on iOS also offers Photo Library (build 43 item 3): Apple's photo picker
+  (`launchImageLibraryAsync`, which Expo's SDK 57 presents as
+  `PHPickerViewController`), which needs no photo-library permission, so the
+  library stays off.
 - A phone number or email in a list row (builds 37 and 39, the owner's item 11;
   `components/blocks/contact-text.tsx`): `expo-contacts` (~57.0.8) and
   `expo-clipboard` (~57.0.2), native modules, so they ship in a new TestFlight

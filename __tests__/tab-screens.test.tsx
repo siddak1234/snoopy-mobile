@@ -98,11 +98,9 @@ describe('Home dashboard', () => {
     const { getByText, getAllByText, queryByText } = await renderWithProviders(<HomeScreen />, signedInSession);
     await fireEvent.press(getByText('3 items need your review'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/activity/approvals');
-    await fireEvent.press(getByText('Add a flow'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows/add');
-    // The quick action, not the overview's figure of the same name (Gate 24 parity, G6).
-    await fireEvent.press(within(screen.getByTestId('home-quick-actions')).getByText('Flows'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/flows');
+    // ~~Add a flow and Flows, the quick actions~~ until the owner's build 43 item 2: the tab bar's Flows is the way in.
+    expect(queryByText('Add a flow')).toBeNull();
+    expect(screen.queryByTestId('home-quick-actions')).toBeNull();
     // A flow the catalog cannot start here: its card's Open, to its flow page (F5; builds 37 and 39).
     await fireEvent.press(screen.getByTestId('home-flow-invoice-open'));
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'invoice' } });

@@ -1,12 +1,13 @@
-import { fireEvent, screen, within } from 'expo-router/testing-library';
+import { fireEvent, screen } from 'expo-router/testing-library';
 
-import { WORKSPACE, answerPlatform, asInProduction, flush, launch, signedInOnThisPhone } from '@/test/real-router';
+import { WORKSPACE, answerPlatform, asInProduction, flush, launch, pressTab, signedInOnThisPhone } from '@/test/real-router';
 
 /**
  * Home's ways out, under the REAL router: each crosses from the Home tab into
- * the Flows tab's stack, so each is proved where its address resolves — Add a
+ * the Flows tab's stack, so each is proved where its address resolves. ~~Add a
  * flow and Flows, Home's two pills (Build 22: "Then add a flow and flow
- * buttons", the owner's build 21 item 1). ~~RUN A FLOW's live flow page (Build
+ * buttons", the owner's build 21 item 1)~~ until the owner's build 43 item 2:
+ * the tab bar's Flows, then Flows' own Add a flow, are the ways in. ~~RUN A FLOW's live flow page (Build
  * 21, spec A9), Connect integration and View teams (Gate 24 parity, G5)~~ until
  * Build 22 ("I dont want want flows integrations, connect integrations, view
  * teams, or run a flow"); ~~a team's page from Home's TEAMS list~~ until the
@@ -46,21 +47,23 @@ function oneTeam() {
   );
 }
 
-describe("Home's ways out (Build 22, H1–H4)", () => {
-  it.each([
-    ['Add a flow', ['(tabs)', 'flows', 'add']],
-    ['Flows', ['(tabs)', 'flows']],
-  ])('%s opens the Flows tab where it goes', async (label, segments) => {
+describe("Home's ways out (Build 22, H1–H4; build 43 item 2)", () => {
+  it("Home draws no Add a flow and Flows pair; the tab bar's Flows opens Flows, and Flows' own Add a flow the catalog", async () => {
     signedInOnThisPhone();
     oneTeam();
     const view = await launch();
 
+    expect(await screen.findByTestId('home-stats')).toBeTruthy();
+    expect(screen.queryByTestId('home-quick-actions')).toBeNull();
     await asInProduction(async () => {
-      // The pill, not the tab bar's own "Flows".
-      await fireEvent.press(within(await screen.findByTestId('home-quick-actions')).getByText(label));
+      await pressTab('Flows');
+    });
+    expect(view.getSegments()).toEqual(['(tabs)', 'flows']);
+    await asInProduction(async () => {
+      await fireEvent.press(await screen.findByTestId('flows-new'));
       await flush(100);
       await flush(1000);
     });
-    expect(view.getSegments()).toEqual(segments);
+    expect(view.getSegments()).toEqual(['(tabs)', 'flows', 'add']);
   });
 });

@@ -683,7 +683,7 @@ const RUNS = 'item-blocks-4';
 const colourOf = (node: { props: { style?: unknown } }) => (StyleSheet.flatten(node.props.style as never) as { color?: string }).color;
 
 describe("an item's page (plan §5.3; its blocks since Round 21)", () => {
-  it('its title, its group and state; its runs drawn as sent, numbered, scored — "Score" read first — a failure muted, each row rank, title, score and arrow (build 28, F5)', async () => {
+  it('its title, its group and state; its runs drawn as sent, numbered, scored — "Score" read first — a run with no title muted, each row rank, title, score and arrow (build 28, F5)', async () => {
     await openItem(READ_ITEM());
     expect(screen.getByTestId('item-title').props.children).toBe('Leases');
     expect(screen.getByTestId('item-status').props.children).toBe('South · Ready');
@@ -693,7 +693,8 @@ describe("an item's page (plan §5.3; its blocks since Round 21)", () => {
     expect(row(0)).toEqual(['1', 'Dana Whitfield', 'Advance', '88']);
     expect(row(1)).toEqual(['2', 'Omar Reyes', 'Decline', '41']);
     expect(row(2)).toEqual(['3', 'Reading…']);
-    expect(row(3)).toEqual(['4', 'Failed']);
+    // A cancelled job, muted; ~~a failed one~~ until the owner's build 43 item 5 took failed jobs off the item (the platform's fixture).
+    expect(row(3)).toEqual(['4', 'Cancelled']);
     // NEW on the app (the website's already): the score is read as "Score 88".
     expect(screen.getByTestId(`${RUNS}-row-0-value`).props.accessibilityLabel).toBe('Score 88');
     expect(within(screen.getByTestId(`${RUNS}-row-0`)).getByTestId(/^phosphor-react-native-caret-right-/u)).toBeTruthy();
@@ -706,9 +707,9 @@ describe("an item's page (plan §5.3; its blocks since Round 21)", () => {
     });
     // The score at the row's type, not the heading's.
     expect(StyleSheet.flatten(screen.getByTestId(`${RUNS}-row-0-value`).props.style)).toMatchObject({ fontSize: 16 });
-    // A failure in the muted tone, never faded (AA); the others in the text colour.
+    // A run with no title (here a cancelled one) in the muted tone, never faded (AA); the others in the text colour.
     const color = (node: { props: Record<string, unknown> }) => (StyleSheet.flatten(node.props.style as never) as { color?: string }).color;
-    expect(color(within(screen.getByTestId(`${RUNS}-row-3`)).getByText('Failed'))).toBe(nocturneDark.neutral[400]);
+    expect(color(within(screen.getByTestId(`${RUNS}-row-3`)).getByText('Cancelled'))).toBe(nocturneDark.neutral[400]);
     expect(color(within(screen.getByTestId(`${RUNS}-row-0`)).getByText('Dana Whitfield'))).toBe(nocturneDark.text);
     // Its score in its verdict's tone since block set 2 (`valueTone`; the owner's Q5).
     expect(color(screen.getByTestId(`${RUNS}-row-0-value`))).toBe(status.ok);

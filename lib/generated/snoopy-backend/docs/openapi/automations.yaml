@@ -555,8 +555,9 @@ paths:
         are the item's runs, one per job by its first run's id as `listRuns`
         lists them (ADR-0044): highest `score` first, runs without one after
         them, then newest; at most 500. The run that read the item's file is
-        never among them — its outcome is the item's `status`. An archived item
-        is still read here. The item carries `file`, the file it was made from,
+        never among them — its outcome is the item's `status`. A job whose
+        newest run failed is not among them, nor in `runCount`; it stays in the
+        run list (ADR-0046, 2026-11-14). An archived item is still read here. The item carries `file`, the file it was made from,
         when the file store answers in time, and its tallies `positiveCount`
         and `negativeCount` (Round 19, build 28). 404 for an item of another
         workspace. With `shape=blocks` (ADR-0048) the page body: `blocks` in the
@@ -2375,9 +2376,9 @@ components:
         One value a person supplies when starting a manual run (ADR-0030). The
         setup vocabulary without `section`, `notifies` or `resource-picker`, which
         describe a SETTING rather than one run. **`artifact` is a file the run
-        reads**: never required, never defaulted, sent as the id an upload
-        returned — a client with no upload surface does not render it, and the
-        run starts without a file.
+        reads**: never defaulted, sent as the id an upload returned; a
+        `required` one is refused (422) when the run carries none (ADR-0030,
+        2026-11-14).
       properties:
         key:
           type: string
@@ -2891,7 +2892,9 @@ components:
         runCount:
           type: integer
           minimum: 0
-          description: The item's runs, one per job, whatever their status.
+          description: >-
+            The item's runs, one per job, but never a job whose newest run
+            failed.
         positiveCount:
           type: integer
           minimum: 0

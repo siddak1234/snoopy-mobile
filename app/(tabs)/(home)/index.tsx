@@ -6,7 +6,6 @@ import {
   ArrowClockwise,
   Bell,
   CaretRight,
-  FlowArrow,
   HandPalm,
   Plus,
   Sparkle,
@@ -134,8 +133,9 @@ function HomeHeader({ initials, hasAttention }: { initials: string; hasAttention
  * build 13 decision 5 the dashboard is drawn as it is with flows — the header's
  * buttons, the greeting, TODAY at 0 — and this says there is nothing yet, with
  * its one way in. Until then it was a screen of its own, whose bell and avatar
- * were drawn but were not buttons. The Add a flow and Flows pills are not drawn
- * with it: their Add a flow would sit just over this one. ~~The website's other
+ * were drawn but were not buttons. Its Add a flow is Home's only one since the
+ * owner's build 43 item 2 took ~~the Add a flow and Flows pills under TODAY~~
+ * away (the tab bar's Flows and Flows' own Add a flow are the ways in). ~~The website's other
  * two quick actions, as rows (Gate 24 parity, G5)~~ until Build 22 (the owner's
  * build 21 item 1: "I dont want want flows integrations, connect integrations,
  * view teams, or run a flow").
@@ -404,8 +404,8 @@ export default function HomeScreen() {
       </View>
 
       {/* Top to bottom since Build 22 (the owner's build 21 item 1): the greeting,
-          TODAY, the approvals banner while something waits, Add a flow and Flows,
-          YOUR FLOWS (~~RECENT RUNS~~ until the owner's build 34 F5). ~~The quick-run list~~ ("Remove run a flow section. We did
+          TODAY, the approvals banner while something waits, ~~Add a flow and Flows~~
+          (until the owner's build 43 item 2), YOUR FLOWS (~~RECENT RUNS~~ until the owner's build 34 F5). ~~The quick-run list~~ ("Remove run a flow section. We did
           not add thus."), ~~the overview's figures~~ ("Remove overflow" — the
           overview, the session's D4, approved by the owner) and ~~the
           Connections and Teams rows~~ until Build 22. */}
@@ -476,32 +476,6 @@ export default function HomeScreen() {
           <CaretRight size={16} color={palette.neutral[500]} weight="regular" />
         </Pressable>
       ) : null}
-
-      {/* Add a flow and Flows ("Then add a flow and flow buttons", build 21 item 1).
-          With no flow, the first run below has its own Add a flow, so the pills
-          are not drawn over it. */}
-      {firstRun ? null : (
-        <View style={styles.actionsRow} testID="home-quick-actions">
-          <PillButton
-            label={ADD_FLOW_LABEL}
-            variant="primary"
-            fontSize={typeScale.label.fontSize}
-            icon={Plus}
-            iconSize={16}
-            onPress={() => router.push('/(tabs)/flows/add')}
-            style={{ flex: 1 }}
-          />
-          <PillButton
-            label="Flows"
-            variant="secondary"
-            fontSize={typeScale.label.fontSize}
-            icon={FlowArrow}
-            iconSize={16}
-            onPress={() => router.push('/(tabs)/flows')}
-            style={{ flex: 1 }}
-          />
-        </View>
-      )}
 
       {firstRun ? (
         // No flow yet (the owner's build 13 decision 5): the first run, where the flows go.
@@ -584,10 +558,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingVertical: space.card,
     paddingHorizontal: space.rowX,
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    gap: space.inner,
   },
   // A figure that could not be read, or a list with nothing in it, in its card's place.
   line: {
