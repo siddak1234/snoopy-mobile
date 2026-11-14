@@ -196,6 +196,13 @@ async function sheetChoice(card: Scope, key: string, index: number) {
   await waitFor(async () => choose(index));
 }
 
+/** Upload on a Home card on Android, then item 17's menu row `choice` pressed; the menu gone. */
+async function menuChoice(card: Scope, key: string, choice: 'photo' | 'file') {
+  await fireEvent.press(card.getByTestId(`run-file-${key}-upload`));
+  await fireEvent.press(within(screen.getByTestId(`run-file-${key}-upload-menu`)).getByTestId(`run-file-${key}-${choice}`));
+  expect(screen.queryByTestId(`run-file-${key}-upload-menu`)).toBeNull();
+}
+
 const card = async (id: string) => within(await screen.findByTestId(`home-flow-${id}`));
 const announced = () => (AccessibilityInfo.announceForAccessibility as jest.Mock).mock.calls.map((call) => call[0] as string);
 
@@ -369,6 +376,28 @@ describe('test 5: Android keeps item 17\'s menu', () => {
     expect(menu.getByText('Take photo')).toBeTruthy();
     expect(menu.getByText('Choose file')).toBeTruthy();
     expect(sheet).not.toHaveBeenCalled();
+  });
+
+  it("a several-file field: the menu's Take photo with two pills held leaves one, the photo (every card choice replaces, as the website's one input does); the side-by-side Take photo off the card still adds", async () => {
+    ios.replaceValue('android');
+    pickerGives(['a.pdf', 'b.pdf']);
+    await renderHome();
+    const lead = await card('lead');
+    await menuChoice(lead, 'resumes', 'file');
+    await waitFor(() => expect(pillNames(lead, 'resumes')).toEqual(['a.pdf', 'b.pdf']));
+    cameraTakes();
+    await menuChoice(lead, 'resumes', 'photo');
+    await waitFor(() => expect(pillNames(lead, 'resumes')).toEqual(['photo.jpg']));
+    expect(sheet).not.toHaveBeenCalled();
+
+    pickerGives(['a.pdf', 'b.pdf']);
+    await renderForm([RESUMES]);
+    const box = within(screen.getByTestId('start-run'));
+    await fireEvent.press(box.getByTestId('run-file-resumes-upload'));
+    await waitFor(() => expect(pillNames(box, 'resumes')).toEqual(['a.pdf', 'b.pdf']));
+    cameraTakes();
+    await fireEvent.press(box.getByTestId('run-file-resumes-photo'));
+    await waitFor(() => expect(pillNames(box, 'resumes')).toEqual(['a.pdf', 'b.pdf', 'photo.jpg']));
   });
 });
 

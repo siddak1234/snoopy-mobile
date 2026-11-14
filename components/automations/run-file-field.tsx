@@ -325,7 +325,7 @@ export function RunFileField({
         compact={compact}
         uploadRef={focus.upload}
         onTakePhoto={() => void takePhoto()}
-        onSheetTakePhoto={() => void takePhoto()}
+        onCardTakePhoto={() => void takePhoto()}
         onPhotoLibrary={() => void fromLibrary()}
         onUpload={() => void upload()}
       />
@@ -337,7 +337,8 @@ export function RunFileField({
  * A run's file field that takes several (Round 21 platform round 2, B2: the
  * manifest's `multiple`), the website's several-file `RunFileField` in the
  * same steps: Upload's picker lets several be chosen at once and **replaces**
- * what the field held; each Take photo **adds** one more. Every file is sent
+ * what the field held; each side-by-side Take photo **adds** one more (Home's
+ * card's replaces, below). Every file is sent
  * as `RunFileField` sends one (`sendRunFile`, an image re-encoded), one after
  * another, the line under the title saying "Uploading {name}…"; the field's
  * value is then their ids in the order given, and Start run uploads every one
@@ -354,12 +355,13 @@ export function RunFileField({
  *
  * `compact` and `trailing`: as `RunFileField`'s (Home's card, build 42 item 16;
  * Upload and Start since build 43). On Home's card every choice from Upload
- * **replaces** what the field held (the owner's build 43 item 3, as every row of
- * Safari's menu does on the website): the sheet's Photo Library (Apple's photo
- * picker, several at once up to `maxFiles`, more refused as Choose Files is),
- * its Take Photo (`takePhoto(true)`) and its Choose Files; ~~the menu's Take
- * photo adding one~~ on iOS until then — Android's menu keeps adding, as the
- * side-by-side Take photo off the card does.
+ * **replaces** what the field held, on both platforms (the owner's build 43
+ * item 3, as every choice of the website's one file input does): on iOS the
+ * sheet's Photo Library (Apple's photo picker, several at once up to
+ * `maxFiles`, more refused as Choose Files is), its Take Photo and its Choose
+ * Files; on Android the menu's Take photo and Choose file. Both Take photos
+ * are `takePhoto(true)` (`onCardTakePhoto`); ~~the menu's Take photo adding
+ * one~~ until build 43. Only the side-by-side Take photo off the card adds.
  *
  * Spoken (the build 43 follow-up, the website's words): "Uploaded {name}." when
  * a choice of one file has gone, "Uploaded {n} files." for several, "Removed
@@ -463,7 +465,7 @@ export function RunFilesField({
     }
   };
 
-  /** `replace`: the iOS sheet's Take Photo, which replaces the files held, as Safari's does; else one more. */
+  /** `replace`: the card's Take Photo (iOS's sheet, Android's menu), which replaces the files held, as the website's does; else one more. */
   const takePhoto = async (replace = false) => {
     const workspaceId = workspaceFor();
     if (!workspaceId) return;
@@ -597,7 +599,7 @@ export function RunFilesField({
         compact={compact}
         uploadRef={focus.upload}
         onTakePhoto={() => void takePhoto()}
-        onSheetTakePhoto={() => void takePhoto(true)}
+        onCardTakePhoto={() => void takePhoto(true)}
         onPhotoLibrary={() => void fromLibrary()}
         onUpload={() => void upload()}
       />
@@ -664,8 +666,10 @@ function FieldFrame({
  * card): Take photo, where the field takes one, beside Upload. `compact`
  * (Home's card, build 43 items 17 and 3): Upload alone — where the field takes
  * a photo, Apple's action sheet on iOS (`UploadSheet`) and a menu on Android
- * (`UploadMenu`), else the picker at once. `uploadRef` is Upload's, whichever
- * is drawn: the sheet's iPad anchor and the focus after the last x.
+ * (`UploadMenu`), else the picker at once; the Take photo of either is
+ * `onCardTakePhoto`, the side-by-side one `onTakePhoto`. `uploadRef` is
+ * Upload's, whichever is drawn: the sheet's iPad anchor and the focus after
+ * the last x.
  */
 function FileActions({
   fieldKey,
@@ -677,7 +681,7 @@ function FileActions({
   compact,
   uploadRef,
   onTakePhoto,
-  onSheetTakePhoto,
+  onCardTakePhoto,
   onPhotoLibrary,
   onUpload,
 }: {
@@ -690,9 +694,10 @@ function FileActions({
   busy: boolean;
   compact: boolean;
   uploadRef: RefObject<View | null>;
+  /** The side-by-side Take photo off the card (it adds one more on a several-file field). */
   onTakePhoto: () => void;
-  /** The sheet's Take Photo (it replaces on a several-file field). */
-  onSheetTakePhoto: () => void;
+  /** The card's Take Photo, iOS's sheet and Android's menu: it replaces on a several-file field. */
+  onCardTakePhoto: () => void;
   onPhotoLibrary: () => void;
   onUpload: () => void;
 }) {
@@ -706,7 +711,7 @@ function FileActions({
           several={several}
           uploadRef={uploadRef}
           onPhotoLibrary={onPhotoLibrary}
-          onTakePhoto={onSheetTakePhoto}
+          onTakePhoto={onCardTakePhoto}
           onChooseFile={onUpload}
         />
       );
@@ -717,7 +722,7 @@ function FileActions({
         accessibilityLabel={uploadLabel}
         busy={busy}
         uploadRef={uploadRef}
-        onTakePhoto={onTakePhoto}
+        onTakePhoto={onCardTakePhoto}
         onChooseFile={onUpload}
       />
     );

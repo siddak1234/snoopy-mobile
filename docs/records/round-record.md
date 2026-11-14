@@ -3,10 +3,11 @@
 ## Round 22 — TestFlight build 43's items 2 and 3, and the file pills' screen-reader follow-up (2026-11-14)
 
 Home's pair under TODAY gone (item 2); on iOS Home's card's Upload opens Apple's action sheet — Photo Library, Take
-Photo, Choose File, Cancel — Android keeping item 17's menu (item 3); the start forms speak an upload's end and an x,
-and move the focus after an x (the follow-up, "7. Yes"); the contract regenerated from the platform's build-43 branch
-(`8489f79`), its item fixtures' muted row now "Cancelled". TestFlight 44 waits for it ("9. B"). Findings, defaults
-and bites: `DESIGN-GAPS.md` "Build 43: the owner's items (2026-11-14)".
+Photo, Choose File, Cancel — Android keeping item 17's menu (item 3), whose Take photo now replaces the files of a
+several-file field as every card choice does in both clients (the session's resolution of the design's two lines);
+the start forms speak an upload's end and an x, and move the focus after an x (the follow-up, "7. Yes"); the contract
+regenerated from the platform's build-43 branch (`8489f79`), its item fixtures' muted row now "Cancelled". TestFlight
+44 waits for it ("9. B"). Findings, defaults and bites: `DESIGN-GAPS.md` "Build 43: the owner's items (2026-11-14)".
 
 ## Round 21 — platform round 2's app rows (2026-11-01)
 

@@ -4046,11 +4046,19 @@ Platform differences (forced, or deliberate). Android has no `ActionSheetIOS`: i
 action sheet (from the bottom; on iPad anchored to Upload), Safari shows Apple's menu at the button: the same three
 choices in the same order and words, plus the sheet's Cancel. The sheet's "Take Photo" and "Choose File" are Safari's casing
 (WebKit `WKFileUploadPanel.mm`; WebCore `LocalizedStrings.cpp:173-181`), beside the app's own "Take photo" and "Choose
-file" on Android and off the card — deliberate. On a several-file field every choice of iOS's sheet replaces the files
-held (its Take Photo included, as Safari's menu does); Android's card menu stays item 17's (the design's "Android
-unchanged"): its Choose file replaces, its Take photo adds one more (`takePhoto()` against the sheet's
-`takePhoto(true)`, `components/automations/run-file-field.tsx`). The side-by-side Take photo off the card adds, in both
-clients.
+file" on Android and off the card — deliberate.
+
+Not a difference: on a several-file field every choice from Home's card replaces the files held, in both clients and on
+both platforms — iOS's sheet (its Take Photo included, as Safari's menu does), Android's menu (its Take photo included)
+and the website's one input. Both Take photos are `onCardTakePhoto`, `takePhoto(true)`
+(`components/automations/run-file-field.tsx`); the side-by-side Take photo off the card adds (`takePhoto()`), in both
+clients. The design's two lines disagreed: "Android keeps item 17's menu (`UploadMenu`: "Take photo", "Choose file"),
+unchanged." (plan.md:30-31) against "on a several-file field every choice from the card's Upload **replaces** the files
+held, in both clients" (plan.md:99-102). The session resolved it, never the owner, to match the website, as the task's
+parity rule asks ("a platform difference is allowed only where the platform forces it"): the menu stays — its two rows,
+their words and order, the camera opening once it has closed — and its Take photo replaces. ~~Android's card menu
+stays item 17's: its Choose file replaces, its Take photo adds one more (`takePhoto()` against the sheet's
+`takePhoto(true)`)~~ until build 43 (the round's drift audit, findings 1 and 2).
 
 What only a device shows: the sheet on an iPhone and anchored on an iPad; the camera and the photo picker opening
 after the sheet has gone; no photo permission prompt; the picker's JPEG or HEIC re-encoded; VoiceOver speaking the
@@ -4065,3 +4073,7 @@ camera (1); the library keeping the held files (1); the sheet's Take Photo keepi
 (the Android test, 1); each of the three announcements removed (1 each); the focus call dropped (2); `missingFile`
 skipping required fields (1). Moved to the new truth: `build43-item17`'s Home-card tests run under Android;
 `build42-item16` chooses through the sheet; `real-router/home-links` proves the tab bar's Flows and Flows' Add a flow.
+The drift audit's fix (Android's menu replaces): Android's menu pointed back at the adding `takePhoto()` (2 red: the
+new Android test, and `build43-item17`'s D2, now the menu's Take photo leaving one pill, the photo). `build43-item17`'s
+D5 takes its field error from a picker that will not open (`PICKER_NOT_OPENED`, the pills kept), a card photo being one
+file now; bites: that picker emptying the field (1 red), the field's error above the pills (1 red).

@@ -446,10 +446,11 @@ describe("Home's quick-access card (the owner's build 43 item 17; its menu Andro
     // D5: the inner step between pills.
     expect(StyleSheet.flatten(lead.getByTestId('run-file-resumes-pills').props.contentContainerStyle).gap).toBe(space.inner);
 
-    // D2 through the menu on a several-file field: Take photo adds one more file, Choose file replaces them.
+    // D2 through the menu on a several-file field: every choice from the card replaces the files held, as the
+    // website's one input does — Take photo leaves one file, the photo; Choose file replaces them.
     cameraTakes();
     await chooseFromUpload(lead, 'resumes', 'photo');
-    await waitFor(() => expect(pillNames(lead, 'resumes')).toEqual(['a.pdf', 'b.pdf', 'photo.jpg']));
+    await waitFor(() => expect(pillNames(lead, 'resumes')).toEqual(['photo.jpg']));
     pickerGives(['c.pdf']);
     await chooseFromUpload(lead, 'resumes', 'file');
     await waitFor(() => expect(pillNames(lead, 'resumes')).toEqual(['c.pdf']));
@@ -465,11 +466,14 @@ describe("Home's quick-access card (the owner's build 43 item 17; its menu Andro
     const lead = within(form);
     await chooseFromUpload(lead, 'resumes', 'file');
     await waitFor(() => expect(pillNames(lead, 'resumes')).toEqual(['a.pdf', 'b.pdf', 'c.pdf']));
-    // The form's error (a refusal), then the field's own (a photo past maxFiles keeps the files).
+    // The form's error (a refusal), then the field's own (a picker that will not open keeps the files; the card's
+    // Take photo replaces them, so a photo past maxFiles is never an error here).
     await fireEvent.press(lead.getByTestId('start-run-button'));
     await waitFor(() => expect(runs()).toHaveLength(1));
-    await chooseFromUpload(lead, 'resumes', 'photo');
-    expect(await lead.findByText('Add up to 3 files at a time.')).toBeTruthy();
+    (DocumentPicker.getDocumentAsync as jest.Mock).mockRejectedValueOnce(new Error('no picker'));
+    await chooseFromUpload(lead, 'resumes', 'file');
+    expect(await lead.findByText('The file could not be opened. Try again.')).toBeTruthy();
+    expect(pillNames(lead, 'resumes')).toEqual(['a.pdf', 'b.pdf', 'c.pdf']);
     expect(readingOrder(form)).toEqual(['row', 'pills', 'field error', 'form error']);
 
     // While it uploads: the line in the pills' place, the form's error still under it.
