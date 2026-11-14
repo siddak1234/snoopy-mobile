@@ -4043,8 +4043,8 @@ Upload; the job upload card says nothing new. A picker that will not open says `
 existing sentence, now one constant).
 
 Platform differences (forced, or deliberate). Android has no `ActionSheetIOS`: item 17's menu. The app shows Apple's
-action sheet (from the bottom; on iPad anchored to Upload), Safari Apple's menu at the button: the same three choices
-in the same order and words, plus the sheet's Cancel. The sheet's "Take Photo" and "Choose File" are Safari's casing
+action sheet (from the bottom; on iPad anchored to Upload), Safari shows Apple's menu at the button: the same three
+choices in the same order and words, plus the sheet's Cancel. The sheet's "Take Photo" and "Choose File" are Safari's casing
 (WebKit `WKFileUploadPanel.mm`; WebCore `LocalizedStrings.cpp:173-181`), beside the app's own "Take photo" and "Choose
 file" on Android and off the card — deliberate. Not a difference: on a several-file field every card choice replaces
 the files held, in both clients (the sheet's Take Photo included, as Safari's); the side-by-side Take photo off the
