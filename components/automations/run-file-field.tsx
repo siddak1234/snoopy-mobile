@@ -97,8 +97,8 @@ type Picked = { uri: string; name: string; image: boolean; mimeType?: string };
  * field is as above, the flow page's. The owner's build 43 item 17 ("for the
  * compact card i want two buttons … upload start"): where the field takes a
  * photo, Upload offers a choice, else it opens the picker at once. ~~A menu
- * anchored to it on every phone~~ until the owner's build 43 item 3 ("Apple's
- * native selection"): on iOS Apple's action sheet (`UploadSheet`) — Photo
+ * anchored to it on every phone~~ until the owner's build 43 item 3, Apple's
+ * native selection: on iOS Apple's action sheet (`UploadSheet`) — Photo
  * Library (`fromLibrary`, Apple's photo picker), Take Photo, Choose File, Cancel
  * — and on Android item 17's menu (`UploadMenu`), Take photo then Choose file.
  * Start stays after Upload (the owner's "1. Keep start after upload").
@@ -751,7 +751,7 @@ function FileActions({
 
 /**
  * Home's Upload where the field takes a photo, on iOS (the owner's build 43
- * item 3: "Apple's native selection"): Apple's action sheet
+ * item 3, Apple's native selection): Apple's action sheet
  * (`ActionSheetIOS`), with Safari's three rows in Safari's order and words —
  * Photo Library, Take Photo, Choose File ("Choose Files" on a several-file
  * field) — then Cancel at the bottom (Apple's HIG). On iPad it is anchored to
