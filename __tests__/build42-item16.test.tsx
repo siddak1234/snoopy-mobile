@@ -155,6 +155,20 @@ function stylesUp(node: Drawn | null, stop?: string): ViewStyle[] {
 /** Where the open menu grows from: "top right" opens on the end edge, "top left" on the start. */
 const menuOrigin = (testID: string) => stylesUp(screen.getByTestId(`${testID}-menu`)).find((style) => style.transformOrigin)?.transformOrigin;
 
+/**
+ * Home's Upload, where the field takes a photo, is a menu since the owner's
+ * build 43 item 17: Upload, then Choose file, then the menu gone — iOS says so
+ * through the Modal's `onDismiss`, which the test calls as iOS would.
+ */
+async function chooseFile(card: ReturnType<typeof within>, key: string) {
+  await fireEvent.press(card.getByTestId(`run-file-${key}-upload`));
+  let modal: Drawn | null = screen.getByTestId(`run-file-${key}-upload-menu`);
+  while (modal && typeof modal.props.onDismiss !== 'function') modal = modal.parent;
+  const dismissed = modal!.props.onDismiss as () => void;
+  await fireEvent.press(screen.getByTestId(`run-file-${key}-file`));
+  await act(async () => dismissed());
+}
+
 async function renderFlows() {
   return renderWithProviders(
     <YourFlows
@@ -183,16 +197,16 @@ describe("Home's compact quick-access card (the owner's build 42 item 16)", () =
     expect(within(kpi).queryByTestId('run-file-resume-actions')).toBeNull();
   });
 
-  it('(b) Take photo, Upload and Start sit on one row; (e) Start reads "Start", said "Start run", the file buttons name the field', async () => {
+  it('(b) Upload and Start sit on one row; (e) Start reads "Start", said "Start run", Upload names the field', async () => {
     await renderFlows();
     const invoice = within(await screen.findByTestId('home-flow-invoice'));
     const row = within(invoice.getByTestId('run-file-resume-actions'));
-    const photo = row.getByTestId('run-file-resume-photo');
+    // ~~Take photo, Upload and Start~~ until the owner's build 43 item 17: Take photo is inside Upload's menu.
+    expect(row.queryByTestId('run-file-resume-photo')).toBeNull();
     const upload = row.getByTestId('run-file-resume-upload');
     const start = row.getByTestId('start-run-button');
     expect(within(start).getByText('Start')).toBeTruthy();
     expect(start.props.accessibilityLabel).toBe('Start run');
-    expect(photo.props.accessibilityLabel).toContain('Resume');
     expect(upload.props.accessibilityLabel).toContain('Resume');
     // The row wraps rather than clipping a label.
     expect((StyleSheet.flatten(invoice.getByTestId('run-file-resume-actions').props.style) as ViewStyle).flexWrap).toBe('wrap');
@@ -206,14 +220,14 @@ describe("Home's compact quick-access card (the owner's build 42 item 16)", () =
     expect(within(form.getByTestId('run-file-resume-actions')).getByTestId('start-run-button')).toBeTruthy();
   });
 
-  it('(d) no line before a pick; "Uploading {name}…" with Start held while it uploads; then "Ready: {name} ({size})"', async () => {
+  it('(d) no line before a pick; "Uploading {name}…" with Start held while it uploads; then the file\'s pill', async () => {
     let arrive: () => void = () => undefined;
     putFileToSignedUrl.mockImplementation(() => new Promise<void>((resolve) => (arrive = resolve)));
     await renderFlows();
     const card = within(await screen.findByTestId('home-flow-invoice'));
     expect(card.queryByText(/^Uploading /u)).toBeNull();
-    expect(card.queryByText(/^Ready: /u)).toBeNull();
-    await fireEvent.press(card.getByTestId('run-file-resume-upload'));
+    expect(card.queryByTestId('run-file-resume-pills')).toBeNull();
+    await chooseFile(card, 'resume');
     expect(await card.findByText('Uploading cv.pdf…')).toBeTruthy();
     const held = card.getByTestId('start-run-button');
     expect(within(held).getByText('Uploading…')).toBeTruthy();
@@ -221,26 +235,29 @@ describe("Home's compact quick-access card (the owner's build 42 item 16)", () =
     await fireEvent.press(held);
     expect(sent.filter((request) => request.path === RUNS_PATH)).toHaveLength(0);
     await act(async () => arrive());
-    expect(await card.findByText('Ready: cv.pdf (5 bytes)')).toBeTruthy();
+    // ~~"Ready: cv.pdf (5 bytes)"~~ until the owner's build 43 item 17: the file's pill.
+    expect(within(await card.findByTestId('run-file-resume-pill-0')).getByText('cv.pdf')).toBeTruthy();
     await fireEvent.press(card.getByTestId('start-run-button'));
     await waitFor(() => expect(onStarted).toHaveBeenCalledWith({ runId: 'run-1', subscriptionId: 'invoice' }));
     expect(sent.find((request) => request.path === RUNS_PATH)!.body).toEqual({ subscriptionId: 'invoice', input: { resume: 'artifact-1' } });
   });
 
-  it('(a2) a several-file card is compact too: no Paperclip, no title, Start in its row, the count line under the row after a pick', async () => {
+  it('(a2) a several-file card is compact too: no Paperclip, no title, Start in its row, the pills under the row after a pick', async () => {
     await renderFlows();
     const lead = within(await screen.findByTestId('home-flow-lead'));
     expect(lead.queryByTestId('icon-Paperclip')).toBeNull();
     expect(lead.queryByText('Resumes')).toBeNull();
     const row = within(lead.getByTestId('run-file-resumes-actions'));
-    expect(row.getByTestId('run-file-resumes-photo')).toBeTruthy();
+    // ~~Take photo in the row~~ until build 43 item 17: inside Upload's menu.
+    expect(row.queryByTestId('run-file-resumes-photo')).toBeNull();
     expect(row.getByTestId('run-file-resumes-upload')).toBeTruthy();
     expect(within(row.getByTestId('start-run-button')).getByText('Start')).toBeTruthy();
-    expect(lead.queryByTestId('run-file-resumes-count')).toBeNull();
-    await fireEvent.press(row.getByTestId('run-file-resumes-upload'));
-    expect((await lead.findByTestId('run-file-resumes-count')).props.children).toBe('Ready: cv.pdf (5 bytes)');
-    expect(row.queryByTestId('run-file-resumes-count')).toBeNull();
-    expect(within(lead.getByTestId('home-flow-lead-form')).getByTestId('run-file-resumes-count')).toBeTruthy();
+    expect(lead.queryByTestId('run-file-resumes-pills')).toBeNull();
+    await chooseFile(lead, 'resumes');
+    // ~~The count line `run-file-resumes-count`, "Ready: cv.pdf (5 bytes)"~~ until build 43 item 17: a pill, under the row.
+    expect(within(await lead.findByTestId('run-file-resumes-pill-0')).getByText('cv.pdf')).toBeTruthy();
+    expect(row.queryByTestId('run-file-resumes-pills')).toBeNull();
+    expect(within(lead.getByTestId('home-flow-lead-form')).getByTestId('run-file-resumes-pills')).toBeTruthy();
   });
 
   it('(f) at the default size the title row is a row, the job pill at most half of it, its menu on the end edge', async () => {
@@ -265,7 +282,8 @@ describe("Home's compact quick-access card (the owner's build 42 item 16)", () =
       const row = (await screen.findAllByTestId('run-file-resume-actions'))[0]!;
       expect((StyleSheet.flatten(row.props.style) as ViewStyle).flexDirection).toBe('column');
       const labels = hostTexts(row);
-      expect(labels.length).toBeGreaterThanOrEqual(3);
+      // Upload and Start (~~three, with Take photo~~ until build 43 item 17).
+      expect(labels.length).toBeGreaterThanOrEqual(2);
       for (const label of labels) expect(label.props?.numberOfLines).toBeUndefined();
     } finally {
       await act(async () => {

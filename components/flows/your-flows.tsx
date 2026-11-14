@@ -60,10 +60,13 @@ export type HomeStarted = { runId: string; subscriptionId: string; itemId?: stri
  * its start form inside it. Two rows since the owner's build 42 item 16 ("It
  * looks like big squares for a quick access"): the icon and name, a flow with
  * jobs' job pill on their right; then the buttons — for a run input of one
- * file, Take photo, Upload and Start on one wrapping row, no Paperclip and no
- * field title (`StartRun` `compact`); ~~the field's title row, its buttons,
- * then Start run at full width, the job drop-down on a row of its own~~ until
- * build 42:
+ * file, Upload and Start on one wrapping row, no Paperclip and no field title
+ * (`StartRun` `compact`); ~~the field's title row, its buttons, then Start run
+ * at full width, the job drop-down on a row of its own~~ until build 42;
+ * ~~Take photo, Upload and Start~~ until build 43 (the owner's item 17: "for
+ * the compact card i want two buttons"), Take photo now inside Upload's menu,
+ * Start filled, each file a pill with an x, and a required file missing said
+ * ("Add {title} first.") with nothing sent:
  *
  * - a flow that can start a run here (`canStartRun`): its run's fields and
  *   Start (`StartRun` `compact`; the flow page's draws it in full);

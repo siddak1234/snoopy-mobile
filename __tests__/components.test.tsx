@@ -38,6 +38,33 @@ describe('PillButton', () => {
     expect(textColor(getByText('Log In'))).toBe(nocturneDark.accent);
   });
 
+  it.each(['dark', 'light'] as const)(
+    "draws the filled variant — the accent fill and border, the label and icon in the page's colour, semibold — accent-400 while pressed, half opacity disabled (%s; the owner's decision of 2026-11-13)",
+    async (mode) => {
+      const palette = mode === 'dark' ? nocturneDark : nocturneLight;
+      const { getByTestId, getByText } = await renderWithProviders(
+        <>
+          <PillButton label="Start" variant="filled" icon={Receipt} testID="filled" onPress={() => undefined} />
+          <PillButton label="Held" variant="filled" testID="filled-held" disabled />
+        </>,
+        undefined,
+        mode,
+      );
+      const label = getByText('Start');
+      expect(textColor(label)).toBe(palette.bg);
+      expect((StyleSheet.flatten(label.props.style) as { fontFamily?: string }).fontFamily).toBe('Inter_600SemiBold');
+      expect(getByTestId('phosphor-react-native-receipt-regular').props.color).toBe(palette.bg);
+      const pill = getByTestId('filled');
+      expect(StyleSheet.flatten(pill.props.style)).toMatchObject({ borderWidth: 1, borderColor: palette.accent, backgroundColor: palette.accent });
+      await fireEvent(pill, 'responderGrant', touch('onResponderGrant'));
+      expect(StyleSheet.flatten(pill.props.style)).toMatchObject({
+        borderColor: palette.accentRamp[400],
+        backgroundColor: palette.accentRamp[400],
+      });
+      expect(StyleSheet.flatten(getByTestId('filled-held').props.style)).toMatchObject({ opacity: 0.5, backgroundColor: palette.accent });
+    },
+  );
+
   it('colors accent-ghost labels with accent-300', async () => {
     const { getByText } = await renderWithProviders(
       <PillButton label="Unlock with Face ID" variant="accent-ghost" />,

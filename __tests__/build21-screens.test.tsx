@@ -9,7 +9,7 @@ jest.mock('@/lib/platform/run-file', () => ({
 jest.mock('expo-document-picker', () => ({ getDocumentAsync: jest.fn() }));
 jest.mock('expo-file-system', () => ({ File: jest.fn(), Paths: { cache: {} } }));
 
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { extname, join, relative } from 'node:path';
@@ -93,13 +93,14 @@ describe('Step 1 keeps the file across Turn on (spec A6; the Build 21 review)', 
     setMockParams({ flow: 'ip-1' });
     await renderWithProviders(<WorkflowDetailScreen />, signedInSession);
     await fireEvent.press(await screen.findByTestId('run-file-invoiceFile-upload'));
-    expect(await screen.findByText('Ready: receipts.pdf (5 bytes)')).toBeTruthy();
+    // The file's pill (~~"Ready: receipts.pdf (5 bytes)"~~ until the owner's build 43 item 17).
+    expect(within(await screen.findByTestId('run-file-invoiceFile-pill-0')).getByText('receipts.pdf')).toBeTruthy();
     expect(screen.queryByText('Start run')).toBeNull();
 
     await fireEvent.press(screen.getByTestId('flow-step-turn-on'));
     expect(await screen.findByText('Start run')).toBeTruthy();
     // The file is still given: no second pick.
-    expect(screen.getByText('Ready: receipts.pdf (5 bytes)')).toBeTruthy();
+    expect(within(screen.getByTestId('run-file-invoiceFile-pill-0')).getByText('receipts.pdf')).toBeTruthy();
     await fireEvent.press(screen.getByText('Start run'));
     await waitFor(() => expect(fake.to('POST /v1/workspaces/{workspaceId}/runs')).toHaveLength(1));
     expect(fake.to('POST /v1/workspaces/{workspaceId}/runs')[0]!.body).toEqual({

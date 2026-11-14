@@ -76,6 +76,8 @@ const CASES: { name: string; element: React.ReactElement }[] = [
   { name: 'PillButton/plain', element: <PillButton label="See how it works" variant="plain" /> },
   // The design's red pill (Screen.dc.html:450), added for the owner's build 12 item 5.
   { name: 'PillButton/danger', element: <PillButton label="Delete Account" variant="danger" icon={Trash} /> },
+  // The quick-access card's Start, filled (the owner's decision of 2026-11-13, build 43 item 17).
+  { name: 'PillButton/filled', element: <PillButton label="Start" variant="filled" /> },
   { name: 'SectionLabel', element: <SectionLabel>Recent runs</SectionLabel> },
   { name: 'Skeleton', element: <Skeleton width={214} height={22} /> },
   { name: 'StatCard', element: <StatCard value="1,284" label="Runs today" /> },

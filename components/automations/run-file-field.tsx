@@ -1,10 +1,12 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
-import { Camera, Paperclip, UploadSimple, type Icon } from 'phosphor-react-native';
+import { Camera, FileArrowUp, Paperclip, UploadSimple, X, type Icon } from 'phosphor-react-native';
 import React, { useEffect, useRef, useState, type ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
+import { Dropdown } from '@/components/dropdown';
+import { PILL_HEIGHT } from '@/components/nocturne/pill-button';
 import { Pressable } from '@/components/pressable';
 import { Text } from '@/components/text';
 import { fonts, iconSize, inset, space, status, typeScale, withAlpha } from '@/constants/theme';
@@ -15,12 +17,13 @@ import { UPLOAD_REFUSALS, WORKSPACE_CHANGED, uploadRefusalMessage } from '@/lib/
 import {
   CAMERA_NOT_OPENED,
   CAMERA_OFF,
+  CHOOSE_FILE_LABEL,
   DEFAULT_MAX_FILES,
   TAKE_PHOTO_LABEL,
   UPLOAD_LABEL,
   acceptedLine,
   chooseAccepted,
-  filesSelected,
+  removeFileLabel,
   tooManyFiles,
 } from '@/lib/content/screen-states';
 import type { AutomationRunInputField } from '@/lib/platform/automations';
@@ -75,12 +78,25 @@ type Picked = { uri: string; name: string; image: boolean; mimeType?: string };
  *
  * **`compact`**, Home's quick-access card alone (the owner's build 42 item 16:
  * "Maybe we dont need the clip icon and document/resume in there"): no title
- * line (no Paperclip, no title), no row padding or divider; Take photo, Upload
- * and `trailing` (the card's Start) on ONE row (`run-file-${key}-actions`) that
+ * line (no Paperclip, no title), no row padding or divider; ~~Take photo,
+ * Upload and `trailing` (the card's Start) on ONE row~~ until build 43, now
+ * Upload and `trailing` alone on ONE row (`run-file-${key}-actions`) that
  * wraps, each pill growing to fill it, stacked at iOS's accessibility sizes;
- * the uploading, ready and error lines under it, unindented, only once they
- * have words. The buttons' accessibility labels still name the field ("Take a
- * photo for Resume"). Without it the field is as above, the flow page's.
+ * the uploading, ~~ready~~ (until build 43, now the pills) and error lines
+ * under it, unindented, only once they have words. The buttons' accessibility
+ * labels still name the field ("Upload a file for Resume"). Without it the
+ * field is as above, the flow page's. The owner's build 43 item 17 ("for the
+ * compact card i want two buttons … upload start"): where the field takes a
+ * photo, Upload opens a menu anchored to it — Take photo, then Choose file
+ * (`UploadMenu`), the choice run once the menu is gone — else it opens the
+ * picker at once.
+ *
+ * **`removable`**, the start forms' (build 43 item 17: "the document should
+ * dynamically show up in a horizontal pill with the document name and an x on
+ * the right side"): the file it holds is a pill (`FilePills`), its name and an
+ * x that takes it out of the run (`onValue` with no file), in place of the
+ * "Ready: {name} ({size})" line; nothing is deleted on the server. Without it
+ * (the job upload card, `ItemUploadDialog`) the ready line stays, no x.
  */
 export function RunFileField({
   field,
@@ -93,6 +109,7 @@ export function RunFileField({
   held,
   compact = false,
   trailing,
+  removable = false,
 }: {
   field: Pick<AutomationRunInputField, 'key' | 'title' | 'acceptedContentTypes'>;
   /** The workspace the screen loaded; the upload is refused once it is not active. */
@@ -105,10 +122,12 @@ export function RunFileField({
   showTypes?: boolean;
   /** The file the field took before it was drawn again: shown ready, as it was. */
   held?: HeldFile;
-  /** Home's card: no title line, the buttons and `trailing` on one wrapping row (build 42 item 16). */
+  /** Home's card: no title line, Upload and `trailing` on one wrapping row (build 42 item 16; build 43 item 17). */
   compact?: boolean;
   /** Drawn at the end of the buttons' row, `compact` only: the card's Start. */
   trailing?: ReactNode;
+  /** The start forms': the file a pill with an x, in place of the ready line (build 43 item 17). */
+  removable?: boolean;
 }) {
   const { palette } = useTheme();
   const session = useSession();
@@ -216,11 +235,17 @@ export function RunFileField({
     }
   };
 
+  /** The x: the file out of the run; the stored copy stays until retention. */
+  const remove = () => {
+    setState({ kind: 'empty' });
+    onValue(field.key, undefined);
+  };
+
   const busy = state.kind === 'uploading';
   const progress =
     state.kind === 'uploading'
       ? `Uploading ${state.name}…`
-      : state.kind === 'ready'
+      : state.kind === 'ready' && !removable
         ? `Ready: ${state.name} (${formatSize(state.sizeBytes)})`
         : null;
 
@@ -236,7 +261,12 @@ export function RunFileField({
       trailing={trailing}
       lines={
         <>
-          {progress ? <Text style={[sub, { color: palette.neutral[400] }]}>{progress}</Text> : null}
+          {progress ? (
+            <Text testID={`run-file-${field.key}-line`} style={[sub, { color: palette.neutral[400] }]}>
+              {progress}
+            </Text>
+          ) : null}
+          {removable && state.kind === 'ready' ? <FilePills fieldKey={field.key} names={[state.name]} onRemove={remove} /> : null}
           {error ? <Text style={[sub, { color: status.err }]}>{error}</Text> : null}
           {showTypes && typesLine ? (
             <Text testID={`run-file-${field.key}-types`} style={[sub, { color: palette.neutral[400] }]}>
@@ -245,25 +275,15 @@ export function RunFileField({
           ) : null}
         </>
       }>
-      {photos ? (
-        <FileAction
-          testID={`run-file-${field.key}-photo`}
-          label={TAKE_PHOTO_LABEL}
-          accessibilityLabel={`Take a photo for ${field.title}`}
-          icon={Camera}
-          busy={busy}
-          compact={compact}
-          onPress={() => void takePhoto()}
-        />
-      ) : null}
-      <FileAction
-        testID={`run-file-${field.key}-upload`}
-        label={UPLOAD_LABEL}
-        accessibilityLabel={`Upload a file for ${field.title}`}
-        icon={UploadSimple}
+      <FileActions
+        fieldKey={field.key}
+        photoLabel={`Take a photo for ${field.title}`}
+        uploadLabel={`Upload a file for ${field.title}`}
+        photos={photos}
         busy={busy}
         compact={compact}
-        onPress={() => void upload()}
+        onTakePhoto={() => void takePhoto()}
+        onUpload={() => void upload()}
       />
     </FieldFrame>
   );
@@ -277,18 +297,21 @@ export function RunFileField({
  * as `RunFileField` sends one (`sendRunFile`, an image re-encoded), one after
  * another, the line under the title saying "Uploading {name}…"; the field's
  * value is then their ids in the order given, and Start run uploads every one
- * into ONE run (the batch addendum, which supersedes B2's run per file). The
- * line says "Ready: {name} ({size})" for one file and "{n} files selected" for
- * more. More than the field's `maxFiles` — absent, the platform's 50
+ * into ONE run (the batch addendum, which supersedes B2's run per file).
+ * Every file held is a pill (`FilePills`, build 43 item 17), in the order
+ * given, in one row that scrolls sideways; its x takes that file out, the rest
+ * kept in their order, none left the field empty. ~~"Ready: {name} ({size})"
+ * for one file and "{n} files selected" for more~~ until build 43. More than the field's `maxFiles` — absent, the platform's 50
  * (`DEFAULT_MAX_FILES`) — is refused before anything is sent, "Add up to {max}
  * files at a time.": a choice past it empties the field, a photo past it keeps
  * the files held. A file of a type the field does
  * not take, or one that fails, empties the field and says why, as one alone
  * does. A field without `multiple` is `RunFileField`, unchanged.
  *
- * `compact` and `trailing`: as `RunFileField`'s (Home's card, build 42 item 16).
+ * `compact` and `trailing`: as `RunFileField`'s (Home's card, build 42 item 16;
+ * Upload and Start since build 43).
  *
- * testIDs: as `RunFileField`'s, and its line `run-file-${key}-count`.
+ * testIDs: as `RunFileField`'s. ~~Its line `run-file-${key}-count`~~ until build 43.
  */
 export function RunFilesField({
   field,
@@ -440,15 +463,14 @@ export function RunFilesField({
     );
   };
 
+  /** The x on the file at `index`: the rest kept in their order, none left the field empty. */
+  const remove = (index: number) => {
+    const rest = files.filter((_, at) => at !== index);
+    setFiles(rest);
+    onValue(field.key, rest.length > 0 ? rest.map((file) => file.artifactId) : undefined);
+  };
+
   const busy = uploading !== null;
-  const line =
-    uploading !== null
-      ? `Uploading ${uploading}…`
-      : files.length === 1
-        ? `Ready: ${files[0]!.name} (${formatSize(files[0]!.sizeBytes)})`
-        : files.length > 1
-          ? filesSelected(files.length)
-          : null;
 
   const sub = compact ? styles.subFlush : styles.sub;
   return (
@@ -460,10 +482,12 @@ export function RunFilesField({
       trailing={trailing}
       lines={
         <>
-          {line ? (
-            <Text testID={`run-file-${field.key}-count`} style={[sub, { color: palette.neutral[400] }]}>
-              {line}
+          {uploading !== null ? (
+            <Text testID={`run-file-${field.key}-line`} style={[sub, { color: palette.neutral[400] }]}>
+              {`Uploading ${uploading}…`}
             </Text>
+          ) : files.length > 0 ? (
+            <FilePills fieldKey={field.key} names={files.map((file) => file.name)} onRemove={remove} />
           ) : null}
           {error ? <Text style={[sub, { color: status.err }]}>{error}</Text> : null}
           {showTypes && typesLine ? (
@@ -473,25 +497,15 @@ export function RunFilesField({
           ) : null}
         </>
       }>
-      {photos ? (
-        <FileAction
-          testID={`run-file-${field.key}-photo`}
-          label={TAKE_PHOTO_LABEL}
-          accessibilityLabel={`Take a photo for ${field.title}`}
-          icon={Camera}
-          busy={busy}
-          compact={compact}
-          onPress={() => void takePhoto()}
-        />
-      ) : null}
-      <FileAction
-        testID={`run-file-${field.key}-upload`}
-        label={UPLOAD_LABEL}
-        accessibilityLabel={`Upload files for ${field.title}`}
-        icon={UploadSimple}
+      <FileActions
+        fieldKey={field.key}
+        photoLabel={`Take a photo for ${field.title}`}
+        uploadLabel={`Upload files for ${field.title}`}
+        photos={photos}
         busy={busy}
         compact={compact}
-        onPress={() => void upload()}
+        onTakePhoto={() => void takePhoto()}
+        onUpload={() => void upload()}
       />
     </FieldFrame>
   );
@@ -505,6 +519,8 @@ type SentFile = { artifactId: string; name: string; sizeBytes: number };
  * lines, then the buttons at full width, in a padded row with its divider.
  * `compact` (Home's card): the buttons and `trailing` on one wrapping row —
  * stacked at iOS's accessibility sizes — then the lines; no title, no padding.
+ * Since build 43 item 17 that row is Upload and `trailing` (Start); the lines
+ * are the "Uploading {name}…" line, the pills, then the field's error.
  */
 function FieldFrame({
   fieldKey,
@@ -546,6 +562,168 @@ function FieldFrame({
       {lines}
       <View style={styles.actions}>{children}</View>
     </View>
+  );
+}
+
+/**
+ * The field's buttons. Today's (the flow page, the item page, the job upload
+ * card): Take photo, where the field takes one, beside Upload. `compact`
+ * (Home's card, build 43 item 17): Upload alone — a menu (`UploadMenu`) where
+ * the field takes a photo, else the picker at once.
+ */
+function FileActions({
+  fieldKey,
+  photoLabel,
+  uploadLabel,
+  photos,
+  busy,
+  compact,
+  onTakePhoto,
+  onUpload,
+}: {
+  fieldKey: string;
+  photoLabel: string;
+  uploadLabel: string;
+  photos: boolean;
+  busy: boolean;
+  compact: boolean;
+  onTakePhoto: () => void;
+  onUpload: () => void;
+}) {
+  if (compact && photos) {
+    return <UploadMenu fieldKey={fieldKey} accessibilityLabel={uploadLabel} busy={busy} onTakePhoto={onTakePhoto} onChooseFile={onUpload} />;
+  }
+  return (
+    <>
+      {photos ? (
+        <FileAction
+          testID={`run-file-${fieldKey}-photo`}
+          label={TAKE_PHOTO_LABEL}
+          accessibilityLabel={photoLabel}
+          icon={Camera}
+          busy={busy}
+          compact={compact}
+          onPress={onTakePhoto}
+        />
+      ) : null}
+      <FileAction
+        testID={`run-file-${fieldKey}-upload`}
+        label={UPLOAD_LABEL}
+        accessibilityLabel={uploadLabel}
+        icon={UploadSimple}
+        busy={busy}
+        compact={compact}
+        onPress={onUpload}
+      />
+    </>
+  );
+}
+
+type UploadChoice = 'photo' | 'file';
+
+/**
+ * Home's Upload where the field takes a photo (build 43 item 17): a menu
+ * anchored to it, Take photo (`Camera`) then Choose file (`FileArrowUp`). The
+ * field holds it open itself, so the press is here; a choice closes it and runs
+ * once the panel is gone (`onClosed`: the camera or the picker cannot open over
+ * it); a press outside closes it with nothing done.
+ *
+ * testIDs: Upload `run-file-${key}-upload`, its menu `run-file-${key}-upload-menu`,
+ * Take photo `run-file-${key}-photo`, Choose file `run-file-${key}-file`.
+ */
+function UploadMenu({
+  fieldKey,
+  accessibilityLabel,
+  busy,
+  onTakePhoto,
+  onChooseFile,
+}: {
+  fieldKey: string;
+  accessibilityLabel: string;
+  busy: boolean;
+  onTakePhoto: () => void;
+  onChooseFile: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const chosen = useRef<UploadChoice | null>(null);
+  return (
+    // Grows in the card's row as the other buttons do; the trigger fills it.
+    <View style={styles.actionGrow}>
+      <Dropdown<UploadChoice>
+        testID={`run-file-${fieldKey}-upload`}
+        value={null}
+        options={[
+          { value: 'photo', label: TAKE_PHOTO_LABEL, icon: Camera, testID: `run-file-${fieldKey}-photo` },
+          { value: 'file', label: CHOOSE_FILE_LABEL, icon: FileArrowUp, testID: `run-file-${fieldKey}-file` },
+        ]}
+        open={open}
+        onOpenChange={setOpen}
+        onChange={(choice) => {
+          chosen.current = choice;
+          setOpen(false);
+        }}
+        onClosed={() => {
+          const choice = chosen.current;
+          chosen.current = null;
+          if (choice === 'photo') onTakePhoto();
+          else if (choice === 'file') onChooseFile();
+        }}
+        trigger={
+          <FileAction
+            testID={`run-file-${fieldKey}-upload`}
+            label={UPLOAD_LABEL}
+            accessibilityLabel={accessibilityLabel}
+            icon={UploadSimple}
+            busy={busy}
+            compact
+            onPress={() => setOpen(true)}
+          />
+        }
+      />
+    </View>
+  );
+}
+
+/**
+ * The files a start form's field holds (build 43 item 17): one pill each, in
+ * the order given, in ONE row that scrolls sideways (never wraps). A pill is
+ * the file's name — one line, cut at its end, the pill never wider than the
+ * row — and on its right an x (`X`, a 44 target) that takes that file out,
+ * said "Remove {name}".
+ *
+ * testIDs: the row `run-file-${key}-pills`, a pill `run-file-${key}-pill-${n}`,
+ * its x `run-file-${key}-remove-${n}`.
+ */
+function FilePills({ fieldKey, names, onRemove }: { fieldKey: string; names: readonly string[]; onRemove: (index: number) => void }) {
+  const { palette } = useTheme();
+  // The row's own width, once laid out: no pill is wider (a long name is cut instead).
+  const [width, setWidth] = useState<number | undefined>(undefined);
+  return (
+    <ScrollView
+      testID={`run-file-${fieldKey}-pills`}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
+      contentContainerStyle={styles.pills}>
+      {names.map((name, index) => (
+        <View
+          key={`${index}:${name}`}
+          testID={`run-file-${fieldKey}-pill-${index}`}
+          style={[styles.pill, { borderColor: palette.neutral[700] }, width !== undefined && { maxWidth: width }]}>
+          <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.pillName, { color: palette.text }]}>
+            {name}
+          </Text>
+          <Pressable
+            testID={`run-file-${fieldKey}-remove-${index}`}
+            accessibilityRole="button"
+            accessibilityLabel={removeFileLabel(name)}
+            onPress={() => onRemove(index)}
+            style={({ pressed }) => [styles.pillX, pressed && { backgroundColor: withAlpha(palette.text, 0.07) }]}>
+            <X size={20} color={palette.text} />
+          </Pressable>
+        </View>
+      ))}
+    </ScrollView>
   );
 }
 
@@ -642,4 +820,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.rowX,
   },
   actionLabel: { fontFamily: fonts.medium, fontSize: typeScale.body.fontSize },
+  // The file pills (build 43 item 17).
+  pills: { flexDirection: 'row', gap: space.inner },
+  pill: {
+    minHeight: PILL_HEIGHT,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingLeft: space.rowX,
+  },
+  pillName: { flexShrink: 1, fontFamily: fonts.regular, ...typeScale.small },
+  pillX: { width: PILL_HEIGHT, height: PILL_HEIGHT, alignItems: 'center', justifyContent: 'center', borderRadius: 999 },
 });
