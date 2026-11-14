@@ -207,8 +207,9 @@ export const TAKE_PHOTO_LABEL = 'Take photo';
 export const UPLOAD_LABEL = 'Upload';
 /**
  * Home's quick-access card (the owner's build 43 item 17): Upload offers Take
- * photo or Choose file where the field can take a photo; Choose file is
- * today's Upload (the picker).
+ * photo or Choose file on Android (~~on every phone~~ until build 43 item 3;
+ * iOS: the sheet's words below) where the field can take a photo; Choose file
+ * is today's Upload (the picker).
  */
 export const CHOOSE_FILE_LABEL = 'Choose file';
 /**
