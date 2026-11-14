@@ -2,8 +2,8 @@ import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera, FileArrowUp, Paperclip, UploadSimple, X, type Icon } from 'phosphor-react-native';
-import React, { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import React, { useEffect, useRef, useState, type ReactNode, type Ref, type RefObject } from 'react';
+import { AccessibilityInfo, ActionSheetIOS, Platform, ScrollView, StyleSheet, View, findNodeHandle } from 'react-native';
 
 import { Dropdown } from '@/components/dropdown';
 import { PILL_HEIGHT } from '@/components/nocturne/pill-button';
@@ -18,13 +18,22 @@ import {
   CAMERA_NOT_OPENED,
   CAMERA_OFF,
   CHOOSE_FILE_LABEL,
+  CONTACT_CANCEL,
   DEFAULT_MAX_FILES,
+  PHOTO_LIBRARY_LABEL,
+  PICKER_NOT_OPENED,
+  SHEET_CHOOSE_FILES_LABEL,
+  SHEET_CHOOSE_FILE_LABEL,
+  SHEET_TAKE_PHOTO_LABEL,
   TAKE_PHOTO_LABEL,
   UPLOAD_LABEL,
   acceptedLine,
   chooseAccepted,
   removeFileLabel,
+  removedLine,
   tooManyFiles,
+  uploadedCountLine,
+  uploadedLine,
 } from '@/lib/content/screen-states';
 import type { AutomationRunInputField } from '@/lib/platform/automations';
 import { sendRunFile, type ChosenFile } from '@/lib/platform/run-file';
@@ -87,16 +96,23 @@ type Picked = { uri: string; name: string; image: boolean; mimeType?: string };
  * labels still name the field ("Upload a file for Resume"). Without it the
  * field is as above, the flow page's. The owner's build 43 item 17 ("for the
  * compact card i want two buttons … upload start"): where the field takes a
- * photo, Upload opens a menu anchored to it — Take photo, then Choose file
- * (`UploadMenu`), the choice run once the menu is gone — else it opens the
- * picker at once.
+ * photo, Upload offers a choice, else it opens the picker at once. ~~A menu
+ * anchored to it on every phone~~ until the owner's build 43 item 3 ("Apple's
+ * native selection"): on iOS Apple's action sheet (`UploadSheet`) — Photo
+ * Library (`fromLibrary`, Apple's photo picker), Take Photo, Choose File, Cancel
+ * — and on Android item 17's menu (`UploadMenu`), Take photo then Choose file.
+ * Start stays after Upload (the owner's "1. Keep start after upload").
  *
  * **`removable`**, the start forms' (build 43 item 17: "the document should
  * dynamically show up in a horizontal pill with the document name and an x on
  * the right side"): the file it holds is a pill (`FilePills`), its name and an
  * x that takes it out of the run (`onValue` with no file), in place of the
  * "Ready: {name} ({size})" line; nothing is deleted on the server. Without it
- * (the job upload card, `ItemUploadDialog`) the ready line stays, no x.
+ * (the job upload card, `ItemUploadDialog`) the ready line stays, no x. The
+ * screen reader hears what changed (the build 43 follow-up, the website's
+ * words): "Uploaded {name}." when an upload ends, "Removed {name}." when the x
+ * takes it out, its focus then on Upload (`useFocusAfterRemove`); the job
+ * upload card says nothing new.
  */
 export function RunFileField({
   field,
@@ -136,6 +152,7 @@ export function RunFileField({
   const accepted = field.acceptedContentTypes;
   const photos = takesPhotos(accepted);
   const typesLine = acceptedLine(accepted);
+  const focus = useFocusAfterRemove(removable && state.kind === 'ready' ? 1 : 0);
   const inFlight = useRef<AbortController | null>(null);
   const report = useRef(onBusyChange);
   useEffect(() => {
@@ -183,6 +200,23 @@ export function RunFileField({
     await send(workspaceId, { uri: photo.uri, name: PHOTO_NAME, image: true });
   };
 
+  /** Apple's photo picker (the sheet's Photo Library): one image, sent as a photo is. */
+  const fromLibrary = async () => {
+    const workspaceId = workspaceFor();
+    if (!workspaceId) return;
+    let chosen: ImagePicker.ImagePickerResult;
+    try {
+      chosen = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
+    } catch {
+      setError(PICKER_NOT_OPENED);
+      return;
+    }
+    // Closing the picker keeps whatever the field already held.
+    const image = chosen.canceled ? undefined : chosen.assets[0];
+    if (!image) return;
+    await send(workspaceId, libraryImage(image));
+  };
+
   const upload = async () => {
     const workspaceId = workspaceFor();
     if (!workspaceId) return;
@@ -190,7 +224,7 @@ export function RunFileField({
     try {
       picked = await DocumentPicker.getDocumentAsync({ type: accepted ?? RUN_FILE_TYPES, copyToCacheDirectory: true, multiple: false });
     } catch {
-      setError('The file could not be opened. Try again.');
+      setError(PICKER_NOT_OPENED);
       return;
     }
     // Closing the picker keeps whatever the field already held.
@@ -223,6 +257,8 @@ export function RunFileField({
       if (sending.signal.aborted) return;
       setState({ kind: 'ready', name: uploaded.filename, sizeBytes: uploaded.sizeBytes });
       onValue(field.key, uploaded.artifactId, { name: uploaded.filename, sizeBytes: uploaded.sizeBytes });
+      // Spoken only, in the start forms; the job upload card's "Ready:" line says it there.
+      if (removable) AccessibilityInfo.announceForAccessibility(uploadedLine(uploaded.filename));
     } catch (failure) {
       if (sending.signal.aborted) return;
       setState({ kind: 'empty' });
@@ -235,8 +271,10 @@ export function RunFileField({
     }
   };
 
-  /** The x: the file out of the run; the stored copy stays until retention. */
+  /** The x: the file out of the run; the stored copy stays until retention. Said, the focus then on Upload. */
   const remove = () => {
+    if (state.kind === 'ready') AccessibilityInfo.announceForAccessibility(removedLine(state.name));
+    focus.after(0);
     setState({ kind: 'empty' });
     onValue(field.key, undefined);
   };
@@ -266,7 +304,9 @@ export function RunFileField({
               {progress}
             </Text>
           ) : null}
-          {removable && state.kind === 'ready' ? <FilePills fieldKey={field.key} names={[state.name]} onRemove={remove} /> : null}
+          {removable && state.kind === 'ready' ? (
+            <FilePills fieldKey={field.key} names={[state.name]} xRefs={focus.xs} onRemove={remove} />
+          ) : null}
           {error ? <Text style={[sub, { color: status.err }]}>{error}</Text> : null}
           {showTypes && typesLine ? (
             <Text testID={`run-file-${field.key}-types`} style={[sub, { color: palette.neutral[400] }]}>
@@ -280,9 +320,13 @@ export function RunFileField({
         photoLabel={`Take a photo for ${field.title}`}
         uploadLabel={`Upload a file for ${field.title}`}
         photos={photos}
+        several={false}
         busy={busy}
         compact={compact}
+        uploadRef={focus.upload}
         onTakePhoto={() => void takePhoto()}
+        onSheetTakePhoto={() => void takePhoto()}
+        onPhotoLibrary={() => void fromLibrary()}
         onUpload={() => void upload()}
       />
     </FieldFrame>
@@ -309,7 +353,18 @@ export function RunFileField({
  * does. A field without `multiple` is `RunFileField`, unchanged.
  *
  * `compact` and `trailing`: as `RunFileField`'s (Home's card, build 42 item 16;
- * Upload and Start since build 43).
+ * Upload and Start since build 43). On Home's card every choice from Upload
+ * **replaces** what the field held (the owner's build 43 item 3, as every row of
+ * Safari's menu does on the website): the sheet's Photo Library (Apple's photo
+ * picker, several at once up to `maxFiles`, more refused as Choose Files is),
+ * its Take Photo (`takePhoto(true)`) and its Choose Files; ~~the menu's Take
+ * photo adding one~~ on iOS until then — Android's menu keeps adding, as the
+ * side-by-side Take photo off the card does.
+ *
+ * Spoken (the build 43 follow-up, the website's words): "Uploaded {name}." when
+ * a choice of one file has gone, "Uploaded {n} files." for several, "Removed
+ * {name}." for an x; after an x the focus goes to the x now in its place, else
+ * the one before, else Upload (`useFocusAfterRemove`).
  *
  * testIDs: as `RunFileField`'s. ~~Its line `run-file-${key}-count`~~ until build 43.
  */
@@ -343,6 +398,7 @@ export function RunFilesField({
   const photos = takesPhotos(accepted);
   const typesLine = acceptedLine(accepted);
   const maxFiles = field.maxFiles ?? DEFAULT_MAX_FILES;
+  const focus = useFocusAfterRemove(files.length);
   const inFlight = useRef<AbortController | null>(null);
   const report = useRef(onBusyChange);
   useEffect(() => {
@@ -392,6 +448,9 @@ export function RunFilesField({
       }
       setFiles(sent);
       onValue(field.key, sent.map((file) => file.artifactId));
+      AccessibilityInfo.announceForAccessibility(
+        given.length > 1 ? uploadedCountLine(given.length) : uploadedLine(sent[sent.length - 1]!.name),
+      );
     } catch (failure) {
       if (sending.signal.aborted) return;
       empty(uploadRefusalMessage(failure, 'The file could not be sent.'));
@@ -404,11 +463,13 @@ export function RunFilesField({
     }
   };
 
-  const takePhoto = async () => {
+  /** `replace`: the iOS sheet's Take Photo, which replaces the files held, as Safari's does; else one more. */
+  const takePhoto = async (replace = false) => {
     const workspaceId = workspaceFor();
     if (!workspaceId) return;
+    const kept = replace ? [] : files;
     // A photo past the most the field takes: said, and the files held kept.
-    if (files.length + 1 > maxFiles) {
+    if (kept.length + 1 > maxFiles) {
       setError(tooManyFiles(maxFiles));
       return;
     }
@@ -427,7 +488,33 @@ export function RunFilesField({
     // Closing the camera keeps whatever the field already held.
     const photo = taken.canceled ? undefined : taken.assets[0];
     if (!photo) return;
-    await sendAll(workspaceId, files, [{ uri: photo.uri, name: PHOTO_NAME, image: true }]);
+    await sendAll(workspaceId, kept, [{ uri: photo.uri, name: PHOTO_NAME, image: true }]);
+  };
+
+  /** Apple's photo picker (the sheet's Photo Library): up to `maxFiles` images, replacing what the field held. */
+  const fromLibrary = async () => {
+    const workspaceId = workspaceFor();
+    if (!workspaceId) return;
+    let chosen: ImagePicker.ImagePickerResult;
+    try {
+      chosen = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 1,
+        allowsMultipleSelection: true,
+        selectionLimit: maxFiles,
+      });
+    } catch {
+      setError(PICKER_NOT_OPENED);
+      return;
+    }
+    // Closing the picker keeps whatever the field already held.
+    const images = chosen.canceled ? [] : chosen.assets;
+    if (images.length === 0) return;
+    if (images.length > maxFiles) {
+      empty(tooManyFiles(maxFiles));
+      return;
+    }
+    await sendAll(workspaceId, [], images.map(libraryImage));
   };
 
   const upload = async () => {
@@ -437,7 +524,7 @@ export function RunFilesField({
     try {
       picked = await DocumentPicker.getDocumentAsync({ type: accepted ?? RUN_FILE_TYPES, copyToCacheDirectory: true, multiple: true });
     } catch {
-      setError('The file could not be opened. Try again.');
+      setError(PICKER_NOT_OPENED);
       return;
     }
     // Closing the picker keeps whatever the field already held.
@@ -463,8 +550,11 @@ export function RunFilesField({
     );
   };
 
-  /** The x on the file at `index`: the rest kept in their order, none left the field empty. */
+  /** The x on the file at `index`: the rest kept in their order, none left the field empty. Said, the focus moved. */
   const remove = (index: number) => {
+    const gone = files[index];
+    if (gone) AccessibilityInfo.announceForAccessibility(removedLine(gone.name));
+    focus.after(index);
     const rest = files.filter((_, at) => at !== index);
     setFiles(rest);
     onValue(field.key, rest.length > 0 ? rest.map((file) => file.artifactId) : undefined);
@@ -487,7 +577,7 @@ export function RunFilesField({
               {`Uploading ${uploading}…`}
             </Text>
           ) : files.length > 0 ? (
-            <FilePills fieldKey={field.key} names={files.map((file) => file.name)} onRemove={remove} />
+            <FilePills fieldKey={field.key} names={files.map((file) => file.name)} xRefs={focus.xs} onRemove={remove} />
           ) : null}
           {error ? <Text style={[sub, { color: status.err }]}>{error}</Text> : null}
           {showTypes && typesLine ? (
@@ -502,9 +592,13 @@ export function RunFilesField({
         photoLabel={`Take a photo for ${field.title}`}
         uploadLabel={`Upload files for ${field.title}`}
         photos={photos}
+        several
         busy={busy}
         compact={compact}
+        uploadRef={focus.upload}
         onTakePhoto={() => void takePhoto()}
+        onSheetTakePhoto={() => void takePhoto(true)}
+        onPhotoLibrary={() => void fromLibrary()}
         onUpload={() => void upload()}
       />
     </FieldFrame>
@@ -568,30 +662,65 @@ function FieldFrame({
 /**
  * The field's buttons. Today's (the flow page, the item page, the job upload
  * card): Take photo, where the field takes one, beside Upload. `compact`
- * (Home's card, build 43 item 17): Upload alone — a menu (`UploadMenu`) where
- * the field takes a photo, else the picker at once.
+ * (Home's card, build 43 items 17 and 3): Upload alone — where the field takes
+ * a photo, Apple's action sheet on iOS (`UploadSheet`) and a menu on Android
+ * (`UploadMenu`), else the picker at once. `uploadRef` is Upload's, whichever
+ * is drawn: the sheet's iPad anchor and the focus after the last x.
  */
 function FileActions({
   fieldKey,
   photoLabel,
   uploadLabel,
   photos,
+  several,
   busy,
   compact,
+  uploadRef,
   onTakePhoto,
+  onSheetTakePhoto,
+  onPhotoLibrary,
   onUpload,
 }: {
   fieldKey: string;
   photoLabel: string;
   uploadLabel: string;
   photos: boolean;
+  /** A several-file field: the sheet says "Choose Files". */
+  several: boolean;
   busy: boolean;
   compact: boolean;
+  uploadRef: RefObject<View | null>;
   onTakePhoto: () => void;
+  /** The sheet's Take Photo (it replaces on a several-file field). */
+  onSheetTakePhoto: () => void;
+  onPhotoLibrary: () => void;
   onUpload: () => void;
 }) {
   if (compact && photos) {
-    return <UploadMenu fieldKey={fieldKey} accessibilityLabel={uploadLabel} busy={busy} onTakePhoto={onTakePhoto} onChooseFile={onUpload} />;
+    if (Platform.OS === 'ios') {
+      return (
+        <UploadSheet
+          fieldKey={fieldKey}
+          accessibilityLabel={uploadLabel}
+          busy={busy}
+          several={several}
+          uploadRef={uploadRef}
+          onPhotoLibrary={onPhotoLibrary}
+          onTakePhoto={onSheetTakePhoto}
+          onChooseFile={onUpload}
+        />
+      );
+    }
+    return (
+      <UploadMenu
+        fieldKey={fieldKey}
+        accessibilityLabel={uploadLabel}
+        busy={busy}
+        uploadRef={uploadRef}
+        onTakePhoto={onTakePhoto}
+        onChooseFile={onUpload}
+      />
+    );
   }
   return (
     <>
@@ -613,16 +742,78 @@ function FileActions({
         icon={UploadSimple}
         busy={busy}
         compact={compact}
+        pressRef={uploadRef}
         onPress={onUpload}
       />
     </>
   );
 }
 
+/**
+ * Home's Upload where the field takes a photo, on iOS (the owner's build 43
+ * item 3: "Apple's native selection"): Apple's action sheet
+ * (`ActionSheetIOS`), with Safari's three rows in Safari's order and words —
+ * Photo Library, Take Photo, Choose File ("Choose Files" on a several-file
+ * field) — then Cancel at the bottom (Apple's HIG). On iPad it is anchored to
+ * Upload (`anchor`, React Native's "used for iPad"); whether it lands there is
+ * a device check. Each row calls its picker straight from the sheet's callback:
+ * Apple states no order against the sheet's dismissal, so no timed guard is
+ * guessed (DESIGN-GAPS "Build 43: the owner's items"). The system's appearance,
+ * as Safari's menu.
+ *
+ * testID: Upload `run-file-${key}-upload`.
+ */
+function UploadSheet({
+  fieldKey,
+  accessibilityLabel,
+  busy,
+  several,
+  uploadRef,
+  onPhotoLibrary,
+  onTakePhoto,
+  onChooseFile,
+}: {
+  fieldKey: string;
+  accessibilityLabel: string;
+  busy: boolean;
+  several: boolean;
+  uploadRef: RefObject<View | null>;
+  onPhotoLibrary: () => void;
+  onTakePhoto: () => void;
+  onChooseFile: () => void;
+}) {
+  const open = () =>
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        options: [PHOTO_LIBRARY_LABEL, SHEET_TAKE_PHOTO_LABEL, several ? SHEET_CHOOSE_FILES_LABEL : SHEET_CHOOSE_FILE_LABEL, CONTACT_CANCEL],
+        cancelButtonIndex: 3,
+        anchor: findNodeHandle(uploadRef.current) ?? undefined,
+      },
+      (index) => {
+        if (index === 0) onPhotoLibrary();
+        else if (index === 1) onTakePhoto();
+        else if (index === 2) onChooseFile();
+      },
+    );
+  return (
+    <FileAction
+      testID={`run-file-${fieldKey}-upload`}
+      label={UPLOAD_LABEL}
+      accessibilityLabel={accessibilityLabel}
+      icon={UploadSimple}
+      busy={busy}
+      compact
+      pressRef={uploadRef}
+      onPress={open}
+    />
+  );
+}
+
 type UploadChoice = 'photo' | 'file';
 
 /**
- * Home's Upload where the field takes a photo (build 43 item 17): a menu
+ * Home's Upload where the field takes a photo, on Android (build 43 item 17;
+ * iOS's is `UploadSheet` since item 3): a menu
  * anchored to it, Take photo (`Camera`) then Choose file (`FileArrowUp`). The
  * field holds it open itself, so the press is here; a choice closes it and runs
  * once the panel is gone (`onClosed`: the camera or the picker cannot open over
@@ -635,12 +826,14 @@ function UploadMenu({
   fieldKey,
   accessibilityLabel,
   busy,
+  uploadRef,
   onTakePhoto,
   onChooseFile,
 }: {
   fieldKey: string;
   accessibilityLabel: string;
   busy: boolean;
+  uploadRef: RefObject<View | null>;
   onTakePhoto: () => void;
   onChooseFile: () => void;
 }) {
@@ -676,6 +869,7 @@ function UploadMenu({
             icon={UploadSimple}
             busy={busy}
             compact
+            pressRef={uploadRef}
             onPress={() => setOpen(true)}
           />
         }
@@ -692,9 +886,20 @@ function UploadMenu({
  * said "Remove {name}".
  *
  * testIDs: the row `run-file-${key}-pills`, a pill `run-file-${key}-pill-${n}`,
- * its x `run-file-${key}-remove-${n}`.
+ * its x `run-file-${key}-remove-${n}`. `xRefs` holds each x, by place, for the
+ * focus after an x (`useFocusAfterRemove`).
  */
-function FilePills({ fieldKey, names, onRemove }: { fieldKey: string; names: readonly string[]; onRemove: (index: number) => void }) {
+function FilePills({
+  fieldKey,
+  names,
+  xRefs,
+  onRemove,
+}: {
+  fieldKey: string;
+  names: readonly string[];
+  xRefs: RefObject<(View | null)[]>;
+  onRemove: (index: number) => void;
+}) {
   const { palette } = useTheme();
   // The row's own width, once laid out: no pill is wider (a long name is cut instead).
   const [width, setWidth] = useState<number | undefined>(undefined);
@@ -714,6 +919,9 @@ function FilePills({ fieldKey, names, onRemove }: { fieldKey: string; names: rea
             {name}
           </Text>
           <Pressable
+            ref={(node) => {
+              xRefs.current[index] = node;
+            }}
             testID={`run-file-${fieldKey}-remove-${index}`}
             accessibilityRole="button"
             accessibilityLabel={removeFileLabel(name)}
@@ -735,6 +943,7 @@ function FileAction({
   icon: IconCmp,
   busy,
   compact,
+  pressRef,
   onPress,
 }: {
   testID: string;
@@ -744,12 +953,15 @@ function FileAction({
   busy: boolean;
   /** Home's card: grows to fill its wrapping row rather than sharing it (`flex: 1` clips). */
   compact: boolean;
+  /** Upload's: the sheet's iPad anchor and the focus after the last x. */
+  pressRef?: Ref<View>;
   onPress: () => void;
 }) {
   const { palette } = useTheme();
   const color = busy ? palette.neutral[500] : palette.accentRamp[300];
   return (
     <Pressable
+      ref={pressRef}
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
@@ -766,6 +978,32 @@ function FileAction({
       <Text style={[styles.actionLabel, { color }]}>{label}</Text>
     </Pressable>
   );
+}
+
+/** An image from Apple's photo picker, sent as a photo is: re-encoded, under its own name as a `.jpg`, else `PHOTO_NAME`. */
+function libraryImage(image: ImagePicker.ImagePickerAsset): Picked {
+  return { uri: image.uri, name: image.fileName ? jpegName(image.fileName) : PHOTO_NAME, image: true };
+}
+
+/**
+ * The screen reader's focus after an x (the build 43 follow-up, the website's
+ * order): the x now at the same place (the next file), else the one before,
+ * else the field's Upload — once the pills are drawn again, through
+ * `sendAccessibilityEvent(…, 'focus')` (React Native's replacement for the
+ * deprecated `setAccessibilityFocus`). `count` is how many pills are drawn.
+ */
+function useFocusAfterRemove(count: number) {
+  const upload = useRef<View | null>(null);
+  const xs = useRef<(View | null)[]>([]);
+  const pending = useRef<number | null>(null);
+  useEffect(() => {
+    const at = pending.current;
+    if (at === null) return;
+    pending.current = null;
+    const target = (count > 0 ? xs.current[Math.min(at, count - 1)] : null) ?? upload.current;
+    if (target) AccessibilityInfo.sendAccessibilityEvent(target, 'focus');
+  });
+  return { upload, xs, after: (index: number) => void (pending.current = index) };
 }
 
 /**

@@ -306,15 +306,16 @@ describe("G3 — Home's own failure says what happened, and that nobody was sign
   });
 });
 
-describe("Home's ways out since Build 22 (H3, H4)", () => {
-  it('with flows: Add a flow opens the catalog and Flows the Flows tab — no Connect integration, no View teams', async () => {
+describe("Home's ways out since Build 22 (H3, H4); the pair under TODAY gone since the owner's build 43 item 2", () => {
+  it('with flows: ~~Add a flow and Flows~~ (build 43 item 2: the tab bar\'s Flows and Flows\' own Add a flow are the ways in) — no Connect integration, no View teams', async () => {
     routeHome();
     await renderWithProviders(<HomeScreen />, signedInSession);
-    const pills = await screen.findByTestId('home-quick-actions');
-    await fireEvent.press(within(pills).getByText('Add a flow'));
-    await fireEvent.press(within(pills).getByText('Flows'));
-    expect(mockRouter.push.mock.calls).toEqual([['/(tabs)/flows/add'], ['/(tabs)/flows']]);
-    for (const gone of ['Connect integration', 'View teams']) expect([gone, screen.queryByText(gone) !== null]).toEqual([gone, false]);
+    expect(await screen.findByTestId('home-stats')).toBeTruthy();
+    expect(await screen.findByText('YOUR FLOWS')).toBeTruthy();
+    expect(screen.queryByTestId('home-quick-actions')).toBeNull();
+    for (const gone of ['Add a flow', 'Flows', 'Connect integration', 'View teams']) {
+      expect([gone, screen.queryByText(gone) !== null]).toEqual([gone, false]);
+    }
   });
 
   it('with none set up yet: the first run\'s own Add a flow, no pills, and no Connect integration or View teams', async () => {
@@ -415,19 +416,21 @@ function readingOrder(tree: unknown): string[] {
  * runs. / I dont want want flows integrations, connect integrations, view teams,
  * or run a flow. / Recent runs is fine"; "overflow" is OVERVIEW and the banner
  * stays right after TODAY — the session's D4 and D6, approved by the owner):
- * the header, the greeting, TODAY, the banner while something waits, Add a flow
- * and Flows, YOUR FLOWS (~~RECENT RUNS~~ until the owner's build 34 F5). ~~RUN A
+ * the header, the greeting, TODAY, the banner while something waits, ~~Add a
+ * flow and Flows~~ (until the owner's build 43 item 2), YOUR FLOWS (~~RECENT
+ * RUNS~~ until the owner's build 34 F5). ~~RUN A
  * FLOW (Build 21, spec A9)~~, ~~OVERVIEW (G6)~~, ~~Connect integration and View
  * teams (G5)~~ and ~~TEAMS (the owner's AM5)~~.
  */
 describe('Home, top to bottom (Build 22, H1–H4)', () => {
-  it('the header, the greeting, TODAY, the banner, Add a flow and Flows, then YOUR FLOWS — and nothing else', async () => {
+  it('the header, the greeting, TODAY, the banner, then YOUR FLOWS — and nothing else (no Add a flow and Flows since build 43 item 2)', async () => {
     const pending = [pendingOn('invoice', 0)];
     routeHome({ subscriptions: placedSubscriptions(), pending: { approvals: pending } });
     const view = await renderWithProviders(<HomeScreen />, signedInSession);
     expect(await screen.findByTestId('home-approvals')).toBeTruthy();
     const order = readingOrder(view.toJSON());
-    const sequence = ['home-header', 'text:AUTOMATION × AI', 'text:TODAY', 'home-stats', 'home-approvals', 'home-quick-actions', 'text:YOUR FLOWS'];
+    const sequence = ['home-header', 'text:AUTOMATION × AI', 'text:TODAY', 'home-stats', 'home-approvals', 'text:YOUR FLOWS'];
+    expect(order).not.toContain('home-quick-actions');
     const at = sequence.map((entry) => [entry, order.indexOf(entry)] as const);
     expect(at.filter(([, index]) => index < 0)).toEqual([]);
     expect([...at].sort((a, b) => a[1] - b[1]).map(([entry]) => entry)).toEqual(sequence);
@@ -462,13 +465,15 @@ describe('Home, top to bottom (Build 22, H1–H4)', () => {
     expect(fake.to('GET /v1/workspaces/{workspaceId}/approvals').map((sent) => sent.query?.status)).toEqual(['pending']);
   });
 
-  it('no banner while nothing waits: TODAY is followed by Add a flow and Flows', async () => {
+  it('no banner while nothing waits: TODAY is followed by YOUR FLOWS (~~Add a flow and Flows~~ until build 43 item 2)', async () => {
     routeHome({ pending: { approvals: [] } });
     const view = await renderWithProviders(<HomeScreen />, signedInSession);
     expect(await screen.findByTestId('home-stats')).toBeTruthy();
+    expect(await screen.findByText('YOUR FLOWS')).toBeTruthy();
     expect(screen.queryByTestId('home-approvals')).toBeNull();
     const order = readingOrder(view.toJSON());
-    expect(order.indexOf('home-stats')).toBeLessThan(order.indexOf('home-quick-actions'));
+    const sections = order.filter((entry) => entry === 'home-stats' || entry === 'home-quick-actions' || entry === 'text:YOUR FLOWS');
+    expect(sections).toEqual(['home-stats', 'text:YOUR FLOWS']);
   });
 
 });

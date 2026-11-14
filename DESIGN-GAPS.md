@@ -3995,3 +3995,71 @@ red); the x in the accent (1 red); Take photo's icon `FileArrowUp` (1 red); Choo
 `UploadSimple` (1 red); the lines above the row (1 red); the field's error above the pills (1 red);
 Turn on put through the missing-file check (1 red); a photo replacing the files (1 red); a choice
 adding to them (2 red).
+
+## Build 43: the owner's items (2026-11-14)
+
+The owner's words (TestFlight build 43, App Store Connect; items numbered as the round's task numbers them):
+
+```text
+1. "I pressed start without uploading anything. It took me to activity. If there is no file uploaded then it shouldnt start. This is a basic requirement for a button. "
+2. "We dont need the flows and add flow button on the home screen. "
+3. "Rather than 3 separate buttons on the card is there an easier way? Like when i upload the pdf it either automatically starts that flow or i press start right after uploading. Also do we need two separate buttons for take photo or upload? Can it be one upload button then the native apple select photo, take photo or upload file or soemthing that is apple native.
+
+So it looks like:
+Icon     Name of flow
+Upload     Start
+
+When upload is clicked it gives the apple selection of take photo, photos library, or upload from files native apple selection. The native apple one not ours.
+
+Would it be smart to not even have the user click start and just uploading and pressing done once uploaded starts the flow? That way theres only one button?
+
+The resume screening drop down is fine"
+4. "I believe this spdcific error was because no file existed. Ensure there is differentiation between errors and their types."
+5. "Why are failed added to this list. It shouldn’t be here at all"
+```
+
+The owner's answers: "1. Keep start after upload", "7. Yes" (the follow-up: the website's change audit of item 17 —
+a screen reader hears an upload begin and never that it ended, nor that a file was removed; nothing holds the focus
+after an x), "9. B" (TestFlight 44 waits for these items), and "No assumptions and no deviations." The plan's other
+points are built at **the design's defaults, the session's, never the owner's**: Apple's selection on Home's card only
+(the flow page's and the job page's forms keep Take photo beside Upload); cancelled jobs stay on the item; Apple's
+action sheet, no new dependency (Safari's exact form, a menu at the button, needs `@expo/ui`); the spoken words
+"Uploaded {name}.", "Uploaded {n} files.", "Removed {name}.". Items 1, 4 and 5 are the platform's and the flows'
+(their pull requests); here item 1 is `missingFile`, unchanged, now tested with a required "Document" field.
+
+Built. Item 2: `home-quick-actions` (Add a flow, Flows), its `actionsRow` and `FlowArrow` gone; the first run keeps
+its Add a flow; the tab bar's Flows and Flows' own Add a flow are the ways in. Item 3: on iOS, where the field takes a
+photo, Home's Upload is `UploadSheet` — `ActionSheetIOS.showActionSheetWithOptions` with `PHOTO_LIBRARY_LABEL`,
+`SHEET_TAKE_PHOTO_LABEL`, `SHEET_CHOOSE_FILE_LABEL` (`SHEET_CHOOSE_FILES_LABEL` on a several-file field) and
+`CONTACT_CANCEL`, `cancelButtonIndex` 3, `anchor` `findNodeHandle(Upload)`; Photo Library is `launchImageLibraryAsync`
+(`mediaTypes: ['images']`, `quality: 1`; several: `allowsMultipleSelection`, `selectionLimit` `maxFiles`), no
+permission asked (Expo SDK 57 presents `PHPickerViewController`, which Apple says works without library access;
+`photosPermission: false` stays), each image sent as a photo is under `jpegName(fileName)` or `PHOTO_NAME`. The
+callback calls its picker directly: Apple states no order against the sheet's dismissal, so no timed guard is
+guessed. Android keeps `UploadMenu`. Start stays after Upload. The follow-up: `RunFileField` (`removable`) and
+`RunFilesField` call `announceForAccessibility` (`uploadedLine`, `uploadedCountLine`, `removedLine`), and after an x
+`useFocusAfterRemove` sends `sendAccessibilityEvent(…, 'focus')` to the x now in its place, else the one before, else
+Upload; the job upload card says nothing new. A picker that will not open says `PICKER_NOT_OPENED` (the field's
+existing sentence, now one constant).
+
+Platform differences (forced, or deliberate). Android has no `ActionSheetIOS`: item 17's menu. The app shows Apple's
+action sheet (from the bottom; on iPad anchored to Upload), Safari Apple's menu at the button: the same three choices
+in the same order and words, plus the sheet's Cancel. The sheet's "Take Photo" and "Choose File" are Safari's casing
+(WebKit `WKFileUploadPanel.mm`; WebCore `LocalizedStrings.cpp:173-181`), beside the app's own "Take photo" and "Choose
+file" on Android and off the card — deliberate. Not a difference: on a several-file field every card choice replaces
+the files held, in both clients (the sheet's Take Photo included, as Safari's); the side-by-side Take photo off the
+card adds, in both.
+
+What only a device shows: the sheet on an iPhone and anchored on an iPad; the camera and the photo picker opening
+after the sheet has gone; no photo permission prompt; the picker's JPEG or HEIC re-encoded; VoiceOver speaking the
+three sentences and landing on the next x.
+
+Contract: regenerated from the platform's build-43 branch at `8489f79` (only `lib/generated/**`); the item fixtures'
+muted row is now a cancelled job, so `round19-items` reads "Cancelled". The land step regenerates from the merge.
+
+Bites (`build43-feedback` unless named; break, red, restore, green): main's Home with the pair (`parity-home`,
+`tab-screens`: 4 red); `UploadMenu` on iOS again (1); two options swapped (1); `anchor` dropped (1); index 0 to the
+camera (1); the library keeping the held files (1); the sheet's Take Photo keeping them (1); no `Platform.OS` check
+(the Android test, 1); each of the three announcements removed (1 each); the focus call dropped (2); `missingFile`
+skipping required fields (1). Moved to the new truth: `build43-item17`'s Home-card tests run under Android;
+`build42-item16` chooses through the sheet; `real-router/home-links` proves the tab bar's Flows and Flows' Add a flow.

@@ -5,7 +5,7 @@ jest.mock('@/lib/platform/client', () => ({
 }));
 jest.mock('expo-document-picker', () => ({ getDocumentAsync: jest.fn() }));
 jest.mock('expo-file-system', () => ({ File: jest.fn() }));
-jest.mock('expo-image-picker', () => ({ requestCameraPermissionsAsync: jest.fn(), launchCameraAsync: jest.fn() }));
+jest.mock('expo-image-picker', () => ({ requestCameraPermissionsAsync: jest.fn(), launchCameraAsync: jest.fn(), launchImageLibraryAsync: jest.fn() }));
 jest.mock('expo-image-manipulator', () => ({
   ImageManipulator: { manipulate: jest.fn() },
   SaveFormat: { JPEG: 'jpeg', PNG: 'png', WEBP: 'webp' },
@@ -24,7 +24,7 @@ import { File } from 'expo-file-system';
 import { ImageManipulator } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import React from 'react';
-import { StyleSheet, type ViewStyle } from 'react-native';
+import { Platform, StyleSheet, type ViewStyle } from 'react-native';
 
 import WorkflowDetailScreen from '@/app/(tabs)/flows/detail';
 import { StartRun, missingFile } from '@/components/automations/start-run';
@@ -208,14 +208,14 @@ function pillNames(scope: Scope, key: string): string[] {
     .map((pill) => String(within(pill).getByText(/./u).props.children));
 }
 
-/** Upload's menu (Home): opened, `choice` pressed, then gone — iOS's `onDismiss`, which the test calls as iOS would. */
+/**
+ * Upload's menu (Home, Android since the owner's build 43 item 3 gave iOS Apple's sheet): opened, `choice`
+ * pressed, then gone — on Android once it closes (the Dropdown's own rule).
+ */
 async function chooseFromUpload(card: Scope, key: string, choice: 'photo' | 'file') {
   await fireEvent.press(card.getByTestId(`run-file-${key}-upload`));
-  let modal: Drawn | null = screen.getByTestId(`run-file-${key}-upload-menu`);
-  while (modal && typeof modal.props.onDismiss !== 'function') modal = modal.parent;
-  const dismissed = modal!.props.onDismiss as () => void;
   await fireEvent.press(within(screen.getByTestId(`run-file-${key}-upload-menu`)).getByTestId(`run-file-${key}-${choice}`));
-  await act(async () => dismissed());
+  expect(screen.queryByTestId(`run-file-${key}-upload-menu`)).toBeNull();
 }
 
 /** The buttons in a row, in order: the file's and Start. */
@@ -279,7 +279,14 @@ describe('missingFile (D4: the pure rule)', () => {
   });
 });
 
-describe("Home's quick-access card (the owner's build 43 item 17)", () => {
+describe("Home's quick-access card (the owner's build 43 item 17; its menu Android's since item 3)", () => {
+  // iOS's Upload is Apple's action sheet since item 3 (build43-feedback.test.tsx); the menu is Android's.
+  let android: jest.ReplaceProperty<typeof Platform.OS>;
+  beforeEach(() => {
+    android = jest.replaceProperty(Platform, 'OS', 'android');
+  });
+  afterEach(() => android.restore());
+
   it('T7 one file field: exactly two buttons, Upload then Start; no Take photo on the card', async () => {
     await renderHome();
     const card = within(await screen.findByTestId('home-flow-invoice'));
@@ -311,15 +318,10 @@ describe("Home's quick-access card (the owner's build 43 item 17)", () => {
     expect(DocumentPicker.getDocumentAsync).not.toHaveBeenCalled();
     expect(ImagePicker.requestCameraPermissionsAsync).not.toHaveBeenCalled();
 
-    // Take photo: nothing opens while the menu hides; once it is gone (iOS's onDismiss), the camera.
+    // Take photo: the menu goes, then the camera (on Android once it has closed).
     await fireEvent.press(card.getByTestId('run-file-resume-upload'));
-    let modal: Drawn | null = screen.getByTestId('run-file-resume-upload-menu');
-    while (modal && typeof modal.props.onDismiss !== 'function') modal = modal.parent;
-    const dismissed = modal!.props.onDismiss as () => void;
     await fireEvent.press(within(screen.getByTestId('run-file-resume-upload-menu')).getByTestId('run-file-resume-photo'));
     expect(screen.queryByTestId('run-file-resume-upload-menu')).toBeNull();
-    expect(ImagePicker.requestCameraPermissionsAsync).not.toHaveBeenCalled();
-    await act(async () => dismissed());
     await waitFor(() => expect(ImagePicker.launchCameraAsync).toHaveBeenCalledTimes(1));
     expect(ImagePicker.requestCameraPermissionsAsync).toHaveBeenCalledTimes(1);
     expect(DocumentPicker.getDocumentAsync).not.toHaveBeenCalled();
@@ -347,14 +349,10 @@ describe("Home's quick-access card (the owner's build 43 item 17)", () => {
     const card = within(await screen.findByTestId('home-flow-invoice'));
     await chooseFromUpload(card, 'resume', 'file');
     await waitFor(() => expect(DocumentPicker.getDocumentAsync).toHaveBeenCalledTimes(1));
-    // Upload again, then a press outside: gone (iOS's onDismiss) with nothing done.
+    // Upload again, then a press outside: gone with nothing done.
     await fireEvent.press(card.getByTestId('run-file-resume-upload'));
-    let modal: Drawn | null = screen.getByTestId('run-file-resume-upload-menu');
-    while (modal && typeof modal.props.onDismiss !== 'function') modal = modal.parent;
-    const dismissed = modal!.props.onDismiss as () => void;
     await fireEvent.press(screen.getByTestId('run-file-resume-upload-backdrop'));
     expect(screen.queryByTestId('run-file-resume-upload-menu')).toBeNull();
-    await act(async () => dismissed());
     expect(DocumentPicker.getDocumentAsync).toHaveBeenCalledTimes(1);
     expect(ImagePicker.requestCameraPermissionsAsync).not.toHaveBeenCalled();
   });

@@ -5,7 +5,7 @@ jest.mock('@/lib/platform/client', () => ({
 }));
 jest.mock('expo-document-picker', () => ({ getDocumentAsync: jest.fn() }));
 jest.mock('expo-file-system', () => ({ File: jest.fn() }));
-jest.mock('expo-image-picker', () => ({ requestCameraPermissionsAsync: jest.fn(), launchCameraAsync: jest.fn() }));
+jest.mock('expo-image-picker', () => ({ requestCameraPermissionsAsync: jest.fn(), launchCameraAsync: jest.fn(), launchImageLibraryAsync: jest.fn() }));
 // The field's clip, a stand-in a test can find; every other icon is the real one.
 jest.mock('phosphor-react-native', () => {
   const actual = jest.requireActual('phosphor-react-native');
@@ -18,7 +18,7 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import React from 'react';
-import { StyleSheet, type ViewStyle } from 'react-native';
+import { ActionSheetIOS, StyleSheet, type ViewStyle } from 'react-native';
 
 import { YourFlows } from '@/components/flows/your-flows';
 import type { AutomationRunInputField } from '@/lib/platform/automations';
@@ -156,17 +156,20 @@ function stylesUp(node: Drawn | null, stop?: string): ViewStyle[] {
 const menuOrigin = (testID: string) => stylesUp(screen.getByTestId(`${testID}-menu`)).find((style) => style.transformOrigin)?.transformOrigin;
 
 /**
- * Home's Upload, where the field takes a photo, is a menu since the owner's
- * build 43 item 17: Upload, then Choose file, then the menu gone — iOS says so
- * through the Modal's `onDismiss`, which the test calls as iOS would.
+ * Home's Upload, where the field takes a photo, offers a choice since the
+ * owner's build 43 item 17; on iOS Apple's action sheet since item 3
+ * (build43-feedback.test.tsx): Upload, then its Choose File row (index 2), as
+ * iOS calls the sheet's callback.
  */
 async function chooseFile(card: ReturnType<typeof within>, key: string) {
-  await fireEvent.press(card.getByTestId(`run-file-${key}-upload`));
-  let modal: Drawn | null = screen.getByTestId(`run-file-${key}-upload-menu`);
-  while (modal && typeof modal.props.onDismiss !== 'function') modal = modal.parent;
-  const dismissed = modal!.props.onDismiss as () => void;
-  await fireEvent.press(screen.getByTestId(`run-file-${key}-file`));
-  await act(async () => dismissed());
+  const sheet = jest.spyOn(ActionSheetIOS, 'showActionSheetWithOptions').mockImplementation(() => undefined);
+  try {
+    await fireEvent.press(card.getByTestId(`run-file-${key}-upload`));
+    const choose = sheet.mock.calls[0]![1] as (index: number) => void;
+    await act(async () => choose(2));
+  } finally {
+    sheet.mockRestore();
+  }
 }
 
 async function renderFlows() {
