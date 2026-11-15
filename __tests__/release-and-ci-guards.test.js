@@ -316,6 +316,12 @@ describe("the .github configuration's own rules (the website's structure-contrac
     expect(wrong.map(([file]) => file)).toEqual([]);
   });
 
+  it("names .nvmrc's Node major in package.json's engines, so npm and CI agree on one Node", () => {
+    const major = readFileSync(join(root, '.nvmrc'), 'utf8').match(/^(\d+)\./u)?.[1];
+    expect(major).toBeDefined();
+    expect(JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).engines?.node).toBe(`${major}.x`);
+  });
+
   it('sets timeout-minutes on every job that runs on a runner (a job calling a workflow cannot)', () => {
     const jobs = workflows.flatMap(([file, text]) =>
       text

@@ -187,7 +187,8 @@ Every action is pinned by commit SHA with its `# vX.Y.Z` comment, and every
 job's Node is the exact version in `.nvmrc` (`node-version-file`); a guard test
 (`release-and-ci-guards`) holds both. Nothing updates `.nvmrc`: Node is moved by
 hand with each Node 22.x security release; package.json's `engines` is `22.x`,
-the major every repository's `.nvmrc` pins. `audit:dependencies`
+the major every repository's `.nvmrc` pins, and the same guard test holds
+that they agree. `audit:dependencies`
 (`scripts/audit-dependencies.mjs`) fails on a high or critical advisory in a
 production dependency unless `scripts/audit-allowlist.json` names it with its
 package, a reason and a `reviewBy` date, and on an entry past that date; it
@@ -213,12 +214,17 @@ generated file's sha256 header with the hash the live
 `platform-requirement.json` (`{"aheadOfDeployed": true}`) is the one reviewed
 escape for a change that must land before the platform's, and `release:ios`
 refuses any mismatch, escape or not.
+The private-data scan (the kit's `node scripts/kit/private-data-scan.mjs`;
+what it refuses, CLAUDE.md "Test data") runs on every commit (`--staged`,
+`.githooks/pre-commit`), on every push (`--push`, `.githooks/pre-push`, over
+the pushed commits; a finding or a scanner error refuses the push), and in the
+change class's gate and ci.yml's "No private data" step (`--tree`). A pull
+request from a fork gets no secrets, so its scan is red by design; the owner's
+pull requests and pushes are scanned.
 `npm run hooks:install` (once per clone; `git config core.hooksPath
-.githooks`) puts the private-data scan before every commit (`.githooks/pre-commit`:
-the kit's scanner on what is staged, CLAUDE.md "Test data") and a gate before
-every push, chosen by change class (Round 21): `.githooks/pre-push` first scans
-the pushed commits (`--push`; a finding or a scanner error refuses the push),
-then runs `node scripts/change-class.mjs --run --worktree`,
+.githooks`) installs both hooks. Before every push, after the scan,
+`.githooks/pre-push` runs a gate chosen by change class (Round 21):
+`node scripts/change-class.mjs --run --worktree`,
 which reads the change against the merge base with `origin/main` (the working
 tree included), prints its class, the commands and what it skips, then runs
 them and refuses the push at the first red one, naming it. **docs** (Markdown
@@ -689,13 +695,15 @@ rechecked it and Round 7.5 superseded it with the cloud build.
 
 The current contract and screen-to-operation map are in
 [`DESIGN-CONTRACT.md`](DESIGN-CONTRACT.md). The process records live only in
-the private `snoopy-backend`, under `docs/records/snoopy-mobile/` (CLAUDE.md
-"Records"; moved 2026-11-15): the current findings, with the items carried open
-from earlier rounds, in `DESIGN-GAPS.md`; the Round 6 audit record and its
-deliberate gaps, and Round 16's findings, in `DESIGN-GAPS.archive.md`; each
-round's preamble in `round-record.md`; the Round 7.5 and 7.5M observations,
-findings and the state of 19c in `ROUND-7.5-OBSERVATIONS.md`. This repository's
-documents and comments cite them by name.
+the private `snoopy-backend`, under `docs/records/snoopy-mobile/`, each at the
+path it had here (CLAUDE.md "Records"; moved 2026-11-15): the current findings,
+with the items carried open from earlier rounds, in `DESIGN-GAPS.md`; the
+Round 6 audit record and its deliberate gaps, and Round 16's findings, in
+`DESIGN-GAPS.archive.md`; each round's preamble in
+`snoopy-backend/docs/records/snoopy-mobile/docs/records/round-record.md`; the
+Round 7.5 and 7.5M observations, findings and the state of 19c in
+`ROUND-7.5-OBSERVATIONS.md`. This repository's documents and comments cite
+them by name.
 
 The governing master plan and round playbook live in the sibling private
 `snoopy-backend` repository. This repository may read them and must never edit

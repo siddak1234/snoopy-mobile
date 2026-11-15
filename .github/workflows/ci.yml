@@ -159,8 +159,9 @@ jobs:
       # No private data in this public repository (the owner, 2026-11-15): the kit's
       # scanner (scripts/kit/, canonical in snoopy-backend) over every tracked
       # file. The client-name pattern comes from the CLIENT_DENY_PATTERN secret and
-      # is never written here. The same scanner runs before each commit and push
-      # (.githooks/) and in the change class's gate (scripts/change-class.mjs).
+      # is never written here. A pull request from a fork gets no secrets, so its
+      # scan is red by design; the owner's pull requests and pushes are scanned.
+      # Where else it runs: README "Verification".
       - name: No private data
         env:
           CLIENT_DENY_PATTERN: ${{ secrets.CLIENT_DENY_PATTERN }}

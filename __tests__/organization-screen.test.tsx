@@ -239,9 +239,10 @@ describe('Organization — everyone else', () => {
     };
     route();
     // The case is the domain alone: a mailbox provider's, from lib/view/domain.ts's list. No
-    // address at one is written in this public repository (CLAUDE.md "Test data").
+    // address at one is written in this public repository (CLAUDE.md "Test data"): the name
+    // before the @ has an underscore, which that provider never gives out, so it is nobody's.
     const mailboxProvider = 'gmail.com';
-    const view = await renderWithProviders(<OrganizationScreen />, session(`casey.morgan@${mailboxProvider}`));
+    const view = await renderWithProviders(<OrganizationScreen />, session(`no_one@${mailboxProvider}`));
     // Nothing found and nothing to set up: the whole screen is the empty-state standard (24.12).
     expect(await screen.findByTestId('screen-empty')).toBeTruthy();
     expect(screen.getByText('No organization yet')).toBeTruthy();
