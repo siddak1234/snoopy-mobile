@@ -4146,10 +4146,9 @@ lane's defaults, mine: a choice that empties a several-file field (past `maxFile
 discards the files it held; an upload that ends after its field stopped waiting is discarded; the system's back on the
 job card is its Cancel; a field drawn away (a page left, the card stepping aside for the agreement) discards nothing;
 while Start, or the job card's Upload, is pending the x and the file buttons are held (`starting`), so no file is
-replaced or discarded under the run. Contract: the route is not on the platform's `main`; it is typed in
-`lib/platform/automations.ts` (`DiscardUploadClient`, the generated client's `DELETE` for this one route) as the platform's branch publishes it (`snoopy-backend/docs/openapi/automations.yaml`,
-`discardUpload`); `lib/generated/` is untouched. Owed: once the platform merges, `npm run generate:platform-contracts`
-brings the route in and the local type goes (the session's).
+replaced or discarded under the run. Contract: the route merged with snoopy-backend #289 (`d3e01d0`, 2026-11-15); `npm run generate:platform-contracts`
+from that main brought `discardUpload` into `lib/generated/`, and `lib/platform/automations.ts` calls the generated
+client's own `DELETE` (the hand type it used before the merge is gone).
 
 **Decision 18, option (a): not added — the override breaks query-string.** `decode-uri-component` comes in only through
 `expo-router@57.0.30` → `query-string@7.1.3` → `0.2.2` (`package-lock.json`); `query-string` 7 is CommonJS and calls

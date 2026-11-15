@@ -470,25 +470,13 @@ export async function completeUpload(
  * already gone; 400 an id that is not a UUID; 401; 404 another person's file
  * or one this workspace never held; 409 `file_in_use`, a run holds it; 503 the
  * store could not delete it yet (retention does). No body, no idempotency key.
- *
- * Not yet in the generated contract (the platform's route is unmerged), so the
- * generated client's `DELETE` is typed here for this one route, as the
- * platform's branch publishes it in
- * `snoopy-backend/docs/openapi/automations.yaml`; once it
- * merges, `generate:platform-contracts` brings it in and this local type goes
- * (DESIGN-GAPS "Round 22 phase A"). The call is still the generated client's,
- * through `platformOperation`, so its refusals map as every operation's do.
+ * The generated client's own `DELETE` (the platform's contract, merged as
+ * snoopy-backend #289), through `platformOperation`, so its refusals map as
+ * every operation's do.
  */
-type DiscardUploadClient = {
-  DELETE(
-    path: '/v1/workspaces/{workspaceId}/uploads/{artifactId}',
-    init: { params: { path: { workspaceId: string; artifactId: string } }; signal: AbortSignal },
-  ): Promise<{ data?: null; error?: unknown; response: Response }>;
-};
-
 export async function discardUpload(workspaceId: string, artifactId: string): Promise<void> {
   await platformOperation<null>(`/v1/workspaces/${workspaceId}/uploads/${artifactId}`, ({ automations }, signal) =>
-    (automations as unknown as DiscardUploadClient).DELETE('/v1/workspaces/{workspaceId}/uploads/{artifactId}', {
+    automations.DELETE('/v1/workspaces/{workspaceId}/uploads/{artifactId}', {
       params: { path: { workspaceId, artifactId } },
       signal,
     }),
