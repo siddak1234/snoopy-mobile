@@ -149,9 +149,9 @@ jobs:
       # invariant ADR-0017 amended, and one console call could log a token
       # (one is admitted: components/blocks/not-drawn.ts, a part not drawn).
       - run: npm run audit:platform
-      # Fail the build on critical advisories. High-severity findings that only
-      # Expo 57 resolves remain a documented SDK migration rather than a forced
-      # major upgrade inside Round 6.
+      # Fail the build on a high or critical advisory in a production
+      # dependency, except a named, dated exception in
+      # scripts/audit-allowlist.json (scripts/audit-dependencies.mjs).
       - run: npm run audit:dependencies
       # No backend checkout here: reads the committed, hash-checked copy
       # (lib/generated/snoopy-backend/, SHA256SUMS) and never skips (M1).

@@ -40,7 +40,7 @@
 
 - `npm run android`: `expo run:android`
 - `npm run audit:credentials`: `node scripts/audit-credentials.mjs`
-- `npm run audit:dependencies`: `npm audit --omit=dev --audit-level=critical`
+- `npm run audit:dependencies`: `node scripts/audit-dependencies.mjs`
 - `npm run audit:docs`: `node scripts/audit-doc-references.mjs`
 - `npm run audit:fixtures`: `node scripts/audit-fixtures.mjs`
 - `npm run audit:haptics`: `node scripts/audit-haptics.mjs`
@@ -124,7 +124,9 @@
 ### Scripts
 
 - [scripts/all-green-on-head.mjs](../scripts/all-green-on-head.mjs): The release gate's all-green: the one from ci.yml's PUSH run on HEAD.
+- [scripts/audit-allowlist.json](../scripts/audit-allowlist.json): audit:dependencies' named, dated exceptions: each high or critical advisory in a production dependency it lets through, until its reviewBy …
 - [scripts/audit-credentials.mjs](../scripts/audit-credentials.mjs): Fails when a credential-shaped default appears in an app screen.
+- [scripts/audit-dependencies.mjs](../scripts/audit-dependencies.mjs): Fails when a production dependency has a high or critical advisory that scripts/audit-allowlist.json does not name, or when an entry there …
 - [scripts/audit-doc-references.mjs](../scripts/audit-doc-references.mjs): Every file path this repository's documents name, and whether it exists: no
 - [scripts/audit-fixtures.mjs](../scripts/audit-fixtures.mjs): Fails when a screen starts reading `lib/fixtures` again, or when a file that
 - [scripts/audit-haptics.mjs](../scripts/audit-haptics.mjs): Fails when a press can be silent (build 11, D7).

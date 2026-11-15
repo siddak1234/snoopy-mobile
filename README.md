@@ -45,7 +45,7 @@ bug with Reanimated and Worklets (DESIGN-GAPS "Round E step 2").
 ```bash
 npm run verify                    # lint, docs checks, types, all architecture gates, contracts, tests
 node scripts/change-class.mjs     # this change's class (docs, code, full) and its pre-push gate
-npm run audit:dependencies        # critical production dependency gate
+npm run audit:dependencies        # production dependencies: high or critical fails, but for dated exceptions
 npm run export:ios                # production JS/native asset bundle
 npm run export:android
 ```
@@ -186,7 +186,11 @@ needs every one of them and is red on any failure, cancellation or skip.
 Every action is pinned by commit SHA with its `# vX.Y.Z` comment, and every
 job's Node is the exact version in `.nvmrc` (`node-version-file`); a guard test
 (`release-and-ci-guards`) holds both. Nothing updates `.nvmrc`: Node is moved by
-hand with each Node 22.x security release. `.github/dependabot.yml`
+hand with each Node 22.x security release. `audit:dependencies`
+(`scripts/audit-dependencies.mjs`) fails on a high or critical advisory in a
+production dependency unless `scripts/audit-allowlist.json` names it with its
+package, a reason and a `reviewBy` date, and on an entry past that date; it
+prints advisory ids only. `.github/dependabot.yml`
 opens one grouped pull request a week for the actions, and no npm version updates
 (the app's dependency bumps are each a round of their own, §12.1 #278; Dependabot's
 npm security-fix pull requests still open) (the

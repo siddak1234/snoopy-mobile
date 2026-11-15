@@ -15,7 +15,7 @@
     "audit:credentials": "node scripts/audit-credentials.mjs",
     "audit:fixtures": "node scripts/audit-fixtures.mjs",
     "audit:platform": "node scripts/audit-platform.mjs",
-    "audit:dependencies": "npm audit --omit=dev --audit-level=critical",
+    "audit:dependencies": "node scripts/audit-dependencies.mjs",
     "audit:tokens": "node scripts/audit-tokens.mjs",
     "audit:spacing": "node scripts/audit-spacing.mjs",
     "audit:type": "node scripts/audit-type.mjs",
