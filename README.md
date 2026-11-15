@@ -186,7 +186,8 @@ needs every one of them and is red on any failure, cancellation or skip.
 Every action is pinned by commit SHA with its `# vX.Y.Z` comment, and every
 job's Node is the exact version in `.nvmrc` (`node-version-file`); a guard test
 (`release-and-ci-guards`) holds both. Nothing updates `.nvmrc`: Node is moved by
-hand with each Node 22.x security release. `audit:dependencies`
+hand with each Node 22.x security release; package.json's `engines` is `22.x`,
+the major every repository's `.nvmrc` pins. `audit:dependencies`
 (`scripts/audit-dependencies.mjs`) fails on a high or critical advisory in a
 production dependency unless `scripts/audit-allowlist.json` names it with its
 package, a reason and a `reviewBy` date, and on an entry past that date; it
