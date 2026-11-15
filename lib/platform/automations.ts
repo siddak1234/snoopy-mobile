@@ -463,6 +463,27 @@ export async function completeUpload(
 }
 
 /**
+ * `discardUpload` (`DELETE /v1/workspaces/{workspaceId}/uploads/{artifactId}`,
+ * the platform's BUILD-PLAN 30.18.1; the owner's decision 17 of 2026-11-15,
+ * "delete at once"): the bytes of a file this person uploaded and no run has
+ * been given, deleted now rather than by retention. 204, again for a file
+ * already gone; 400 an id that is not a UUID; 401; 404 another person's file
+ * or one this workspace never held; 409 `file_in_use`, a run holds it; 503 the
+ * store could not delete it yet (retention does). No body, no idempotency key.
+ * The generated client's own `DELETE` (the platform's contract, merged as
+ * snoopy-backend #289), through `platformOperation`, so its refusals map as
+ * every operation's do.
+ */
+export async function discardUpload(workspaceId: string, artifactId: string): Promise<void> {
+  await platformOperation<null>(`/v1/workspaces/${workspaceId}/uploads/${artifactId}`, ({ automations }, signal) =>
+    automations.DELETE('/v1/workspaces/{workspaceId}/uploads/{artifactId}', {
+      params: { path: { workspaceId, artifactId } },
+      signal,
+    }),
+  );
+}
+
+/**
  * Cancel a run that has not ended. The platform cancels only a `pending` or
  * `running` run and answers 404 for any other — already finished, held, or not
  * this workspace's — so a caller says a 404 as "it has already stopped".

@@ -529,7 +529,15 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   card on iOS also offers Photo Library (build 43 item 3): Apple's photo picker
   (`launchImageLibraryAsync`, which Expo's SDK 57 presents as
   `PHPickerViewController`), which needs no photo-library permission, so the
-  library stays off.
+  library stays off; since the owner's decision 19 (a) of 2026-11-15 every file
+  field's Upload on iOS offers it, through the same sheet. A file a field lets
+  go of before a run takes it — its x, a choice that replaces it, the job
+  card's Cancel — is discarded at once (decision 17): `discardUpload`
+  (`lib/platform/automations.ts`, `DELETE
+  /v1/workspaces/{workspaceId}/uploads/{artifactId}`), in the background,
+  saying nothing whatever it answers. Its route is typed in that file until
+  the platform's contract publishes it, then regenerated
+  (`npm run generate:platform-contracts`; DESIGN-GAPS "Round 22 phase A").
 - A phone number or email in a list row (builds 37 and 39, the owner's item 11;
   `components/blocks/contact-text.tsx`): `expo-contacts` (~57.0.8) and
   `expo-clipboard` (~57.0.2), native modules, so they ship in a new TestFlight

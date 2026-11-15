@@ -2,7 +2,7 @@ import { ListBullets } from 'phosphor-react-native';
 import React, { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { RunFileField, type HeldFile } from '@/components/automations/run-file-field';
+import { RunFileField, discardFiles, type HeldFile } from '@/components/automations/run-file-field';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
 import { Dropdown } from '@/components/dropdown';
 import { TextField } from '@/components/nocturne/text-field';
@@ -50,6 +50,13 @@ import {
  * line under the form (`useHealthAgreement`); a member is refused first as a
  * member, "Only an owner or admin can do this." (`itemRefusal`), as the
  * website's.
+ *
+ * Cancel with a file held — or the system's back, which is Cancel — discards
+ * that file on the platform at once, in the background and saying nothing (the
+ * owner's decision 17 of 2026-11-15, as the session read "delete at once":
+ * no item will be made from it; `discardFiles`); a new choice replaces and
+ * discards it as in every file field. While Upload is pending the field is
+ * held (`starting`), so its file is never replaced under the item being made.
  */
 export function ItemUploadDialog({
   items,
@@ -107,6 +114,12 @@ export function ItemUploadDialog({
 
   const ready = itemFieldsComplete(items.fields, values, others) && file !== undefined && !uploading && !busy;
 
+  /** Cancel: the card closes, and the file it held, which no item will be made from, is discarded. */
+  const cancel = () => {
+    if (file) discardFiles(shownWorkspaceId, [file]);
+    onClose();
+  };
+
   const upload = async () => {
     if (!ready || !file) return;
     const workspaceId = workspaceIfShown(session, shownWorkspaceId);
@@ -156,11 +169,11 @@ export function ItemUploadDialog({
     <Dialog
       visible={!agreeing}
       testID="item-upload-dialog"
-      onRequestClose={busy ? () => undefined : onClose}
+      onRequestClose={busy ? () => undefined : cancel}
       title={uploadItemLabel(items.words)}
       actions={
         <>
-          <DialogButton testID="item-upload-cancel" label="Cancel" disabled={busy} onPress={onClose} />
+          <DialogButton testID="item-upload-cancel" label="Cancel" disabled={busy} onPress={cancel} />
           <DialogButton
             testID="item-upload-send"
             tone="accent"
@@ -238,6 +251,7 @@ export function ItemUploadDialog({
             divider={false}
             showTypes
             held={file ? held : undefined}
+            starting={busy}
           />
         </View>
         {error ? (

@@ -1857,6 +1857,26 @@ paths:
         '200': { description: The file, as a reference. }
         '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /v1/workspaces/{workspaceId}/uploads/{artifactId}:
+    delete:
+      tags: [runs]
+      operationId: discardUpload
+      description: >-
+        Deletes the caller's own uploaded file at once, while no run holds it
+        (BUILD-PLAN 30.18.1). Specified in `docs/openapi/automations.yaml`.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: artifactId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204': { description: The file is deleted, now or already. }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '503': { $ref: '#/components/responses/NotConfigured' }
   /v1/workspaces/{workspaceId}/runs:
     get:
       tags: [runs]

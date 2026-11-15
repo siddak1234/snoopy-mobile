@@ -554,8 +554,9 @@ describe('a run\'s file field: Take photo beside Upload (25.8.3; the owner\'s de
     const upload = screen.getByTestId('run-file-receipt-upload');
     expect(within(photo).getByText('Take photo')).toBeTruthy();
     expect(within(upload).getByText('Upload')).toBeTruthy();
-    expect(photo.props.accessibilityLabel).toBe('Take a photo for Receipt');
-    expect(upload.props.accessibilityLabel).toBe('Upload a file for Receipt');
+    // The visible word, then the field (decision 19 (c), the website's words; ~~"Take a photo for", "Upload a file for"~~).
+    expect(photo.props.accessibilityLabel).toBe('Take photo for Receipt');
+    expect(upload.props.accessibilityLabel).toBe('Upload for Receipt');
     expect(screen.queryByText('Choose file')).toBeNull();
   });
 
@@ -888,11 +889,11 @@ describe('a run\'s file field: Take photo beside Upload (25.8.3; the owner\'s de
     const { calls, handed, context } = manipulator(width, height);
     cameraTakes(width, height);
     filesOf(812 * 1024);
-    answerUpload('photo.jpg', 'image/jpeg', 812 * 1024);
+    answerUpload('image.jpg', 'image/jpeg', 812 * 1024);
     answer(`POST ${RUNS_PATH}`, () => ({ run: { id: 'run-1' } }));
     await renderBox([RECEIPT]);
     await fireEvent.press(screen.getByTestId('run-file-receipt-photo'));
-    await waitFor(() => expect(pillNames('receipt')).toEqual(['photo.jpg']));
+    await waitFor(() => expect(pillNames('receipt')).toEqual(['image.jpg']));
 
     // Asked first, then the camera, for images only.
     expect(ImagePicker.requestCameraPermissionsAsync).toHaveBeenCalledTimes(1);
@@ -910,7 +911,8 @@ describe('a run\'s file field: Take photo beside Upload (25.8.3; the owner\'s de
     expect(context.release).toHaveBeenCalled();
     // The re-encoded file is what is measured, read and sent.
     expect(File).toHaveBeenCalledWith('file:///cache/ImageManipulator/encoded.jpg');
-    expect(opened()).toEqual({ subscriptionId: 'sub-1', filename: 'photo.jpg', contentType: 'image/jpeg', sizeBytes: 812 * 1024 });
+    // The camera's name for it, as a .jpg: iOS's camera gives none, so "image.jpg" (decision 19 (b); ~~always photo.jpg~~).
+    expect(opened()).toEqual({ subscriptionId: 'sub-1', filename: 'image.jpg', contentType: 'image/jpeg', sizeBytes: 812 * 1024 });
     expect(putFileToSignedUrl.mock.calls[0][2]).toBe('image/jpeg');
     expect(putFileToSignedUrl.mock.calls[0][1].byteLength).toBe(812 * 1024);
 

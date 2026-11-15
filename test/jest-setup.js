@@ -107,3 +107,26 @@ jest.mock('expo-crypto', () => {
 // Native modules with no implementation under jest; a test reads the calls.
 jest.mock('expo-contacts/legacy', () => ({ presentFormAsync: jest.fn(async () => undefined) }));
 jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn(async () => true) }));
+
+// Apple's action sheet (`ActionSheetIOS`): a file field's Upload on iOS where
+// the field takes a photo — Home's card since build 43 item 3, every file field
+// since the owner's decision 19 (a) of 2026-11-15. A native module with no
+// implementation under jest. By default the person chooses its Choose File row,
+// once the rows are Safari's, in Safari's order, with Cancel last — so a test
+// that presses Upload reaches the document picker, as a person choosing a file
+// does. A test of the sheet itself replaces it
+// (`jest.spyOn(ActionSheetIOS, 'showActionSheetWithOptions')`).
+jest.mock('react-native/Libraries/ActionSheetIOS/ActionSheetIOS', () => ({
+  __esModule: true,
+  default: {
+    showActionSheetWithOptions: jest.fn((options, choose) => {
+      const rows = options.options.join(', ');
+      if (!/^Photo Library, Take Photo, Choose Files?, Cancel$/u.test(rows) || options.cancelButtonIndex !== 3) {
+        throw new Error(`Not Safari's sheet: ${rows}`);
+      }
+      choose(2);
+    }),
+    showShareActionSheetWithOptions: jest.fn(),
+    dismissActionSheet: jest.fn(),
+  },
+}));
