@@ -12,11 +12,14 @@ export const RUN_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
 /**
  * Whether a field takes a photo — Take photo, and an image re-encoded as a
  * JPEG: every field that names no types (`RUN_FILE_TYPES`), and one whose
- * `acceptedContentTypes` (backend ADR-0046) include a JPEG. Any other image is
- * sent as it is.
+ * `acceptedContentTypes` (backend ADR-0046) include a JPEG, in any case, as the
+ * platform compares a type (`matchesContentType`). An empty list accepts
+ * nothing on the platform (its upload route refuses every type; a manifest
+ * cannot declare one), so it takes no photo — the website's rule too since the
+ * owner's decision 19 (d) of 2026-11-15. Any other image is sent as it is.
  */
 export function takesPhotos(accepted: readonly string[] | undefined): boolean {
-  return !accepted || accepted.includes('image/jpeg');
+  return !accepted || accepted.some((type) => type.toLowerCase() === 'image/jpeg');
 }
 
 /** The most an image's long side is sent at, in pixels (the owner's decision 1 of 2026-10-10). */
@@ -24,9 +27,6 @@ export const LONG_SIDE_MAX = 2576;
 
 /** The quality an image is saved at as a JPEG: high, and once. */
 export const JPEG_QUALITY = 0.9;
-
-/** What a photo taken for a run is called: a label, never a path, and the same every time. */
-export const PHOTO_NAME = 'photo.jpg';
 
 /** Said when an image could not be re-encoded: it is not sent at all. */
 export const IMAGE_NOT_READ = 'The image could not be read. Try another.';
@@ -40,7 +40,14 @@ export function isImage(file: { name: string; mimeType?: string | null }): boole
   return /\.(?:jpe?g|png)$/iu.test(file.name);
 }
 
-/** An image's name once it is a JPEG: its own, with `.jpg` for its extension. */
+/**
+ * An image's name once it is a JPEG: its own, with `.jpg` for its extension;
+ * one given with no name is `image.jpg`. Every image keeps the name its picker
+ * or camera gives (the owner's decision 19 (b) of 2026-11-15, the website's
+ * rule; its `jpegName` names a file the same): iOS's camera gives none, so its photo is
+ * `image.jpg`; Android's camera, expo-image-picker's cache file. ~~A photo taken
+ * for a run is always `photo.jpg`~~ (`PHOTO_NAME`) until then.
+ */
 export function jpegName(name: string): string {
   const stem = name.replace(/\.[^./\\]*$/u, '');
   return `${stem || 'image'}.jpg`;

@@ -65,7 +65,7 @@ const { platformOperation, newIdempotencyKey, putFileToSignedUrl } = jest.requir
  */
 
 type Init = { params?: { path?: Record<string, string>; header?: Record<string, string> }; body?: unknown };
-let sent: { method: string; path: string; body?: unknown; key?: string }[];
+let sent: { method: string; path: string; body?: unknown; key?: string; values?: Record<string, string> }[];
 let answers: Record<string, () => unknown>;
 /** The names the store gives the files sent, in order (each upload takes the next). */
 let stored: string[];
@@ -73,6 +73,7 @@ let stored: string[];
 const ITEMS_PATH = '/v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}/items';
 const RUNS_PATH = '/v1/workspaces/{workspaceId}/runs';
 const runs = () => sent.filter((request) => request.path === RUNS_PATH);
+const DISCARD_PATH = '/v1/workspaces/{workspaceId}/uploads/{artifactId}';
 
 beforeEach(() => {
   sent = [];
@@ -97,11 +98,11 @@ beforeEach(() => {
     [`POST ${RUNS_PATH}`]: () => ({ run: { id: 'run-1' } }),
   };
   const call = (method: string) => async (path: string, init: Init) => {
-    sent.push({ method, path, body: init.body, key: init.params?.header?.['Idempotency-Key'] });
+    sent.push({ method, path, body: init.body, key: init.params?.header?.['Idempotency-Key'], values: init.params?.path });
     return { data: answers[`${method} ${path}`]?.() ?? {} };
   };
   const clients = {
-    automations: { GET: call('GET'), POST: call('POST'), PATCH: call('PATCH') },
+    automations: { GET: call('GET'), POST: call('POST'), PATCH: call('PATCH'), DELETE: call('DELETE') },
     platform: { PUT: call('PUT') },
   };
   platformOperation.mockImplementation(async (_key: string, execute: Function) => (await execute(clients)).data);
@@ -396,11 +397,13 @@ describe("Home's quick-access card (the owner's build 43 item 17; its menu Andro
     const card = within(await screen.findByTestId('home-flow-invoice'));
     await chooseFromUpload(card, 'resume', 'file');
     await waitFor(() => expect(pillNames(card, 'resume')).toEqual(['cv.pdf']));
-    // D6: the x sends nothing; nothing is deleted on the server.
+    // Decision 17 ("delete at once"; ~~D6: the x sends nothing~~): the pill goes at once and the file is discarded, that request alone.
     const before = sent.length;
     await fireEvent.press(card.getByTestId('run-file-resume-remove-0'));
     expect(pillNames(card, 'resume')).toEqual([]);
-    expect(sent).toHaveLength(before);
+    expect(sent.slice(before)).toEqual([
+      { method: 'DELETE', path: DISCARD_PATH, body: undefined, key: undefined, values: { workspaceId: TEST_WORKSPACE, artifactId: 'artifact-1' } },
+    ]);
     await fireEvent.press(card.getByTestId('start-run-button'));
     expect(await card.findByText('Add Resume first.')).toBeTruthy();
     expect(runs()).toHaveLength(0);
@@ -589,11 +592,11 @@ describe('the start forms on the flow page and the item page (default 5: the sam
     await fireEvent.press(box.getByText('Start run'));
     await waitFor(() => expect(runs()).toHaveLength(2));
     expect(runs()[1]!.key).toBe(runs()[0]!.key);
-    // D6: the x sends nothing; nothing is deleted on the server.
+    // Decision 17 (~~D6: the x sends nothing~~): that one file discarded, the others kept.
     const before = sent.length;
     await fireEvent.press(box.getByTestId('run-file-resumes-remove-1'));
     expect(pillNames(box, 'resumes')).toEqual(['a.pdf', 'c.pdf']);
-    expect(sent).toHaveLength(before);
+    expect(sent.slice(before).map((request) => [request.method, request.values?.artifactId])).toEqual([['DELETE', 'artifact-2']]);
     await fireEvent.press(box.getByText('Start run'));
     await waitFor(() => expect(runs()).toHaveLength(3));
     expect(runs()[2]!.body).toEqual({ subscriptionId: 'sub-1', input: { resumes: ['artifact-1', 'artifact-3'] } });

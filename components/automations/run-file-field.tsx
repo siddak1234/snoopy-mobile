@@ -31,21 +31,37 @@ import {
   chooseAccepted,
   removeFileLabel,
   removedLine,
+  takePhotoForLabel,
   tooManyFiles,
+  uploadForLabel,
   uploadedCountLine,
   uploadedLine,
 } from '@/lib/content/screen-states';
-import type { AutomationRunInputField } from '@/lib/platform/automations';
+import { discardUpload, type AutomationRunInputField } from '@/lib/platform/automations';
 import { sendRunFile, type ChosenFile } from '@/lib/platform/run-file';
-import { PHOTO_NAME, RUN_FILE_TYPES, isImage, jpegName, reencodeImage, takesPhotos } from '@/lib/platform/run-image';
+import { RUN_FILE_TYPES, isImage, jpegName, reencodeImage, takesPhotos } from '@/lib/platform/run-image';
 
 type FileState =
   | { kind: 'empty' }
   | { kind: 'uploading'; name: string }
-  | { kind: 'ready'; name: string; sizeBytes: number };
+  | { kind: 'ready'; artifactId: string; name: string; sizeBytes: number };
 
-/** A file a field took: its name and size, as its ready line says them. */
-export type HeldFile = { name: string; sizeBytes: number };
+/** A file a field took: its id (to discard it), and its name and size, as its ready line says them. */
+export type HeldFile = { artifactId: string; name: string; sizeBytes: number };
+
+/**
+ * The files a field let go of before any run was given them, deleted at once
+ * (the owner's decision 17 of 2026-11-15, "delete at once"; `discardUpload`):
+ * sent in the background into the workspace the field is drawn for — every
+ * upload from it went there — and nothing said whatever the platform answers
+ * (404 not this person's, 409 a run holds it, 503 the store could not yet, or
+ * no answer): the file is already out of the run, and retention deletes what a
+ * discard could not.
+ */
+export function discardFiles(workspaceId: string | null, artifactIds: readonly string[]): void {
+  if (!workspaceId) return;
+  for (const artifactId of artifactIds) void discardUpload(workspaceId, artifactId).catch(() => undefined);
+}
 
 /** What the field was given: an image, sent re-encoded as a JPEG, or a file sent as it is. */
 type Picked = { uri: string; name: string; image: boolean; mimeType?: string };
@@ -58,10 +74,16 @@ type Picked = { uri: string; name: string; image: boolean; mimeType?: string };
  * decision 1 of 2026-10-10): **Take photo**, the camera through
  * expo-image-picker, its permission asked first and a refusal said in a
  * sentence here; and **Upload**, the document picker, limited to a PDF, a JPEG
- * or a PNG (`RUN_FILE_TYPES`) where the field names no types (below). Every
+ * or a PNG (`RUN_FILE_TYPES`) where the field names no types (below). On iOS,
+ * where the field takes a photo, Upload opens Apple's action sheet first
+ * (`UploadSheet`, below), as Safari's menu opens off the website's Upload (the
+ * owner's decision 19 (a) of 2026-11-15). Every
  * image — a photo, or a JPEG or PNG uploaded — is re-encoded once
  * (`reencodeImage`: upright, its long side at most 2,576 px, a JPEG at 0.9) and
- * sent as `image/jpeg` under a `.jpg` name; a PDF is sent as it is.
+ * sent as `image/jpeg` under its own name as a `.jpg` (`jpegName`; the camera's
+ * on iOS has none, so `image.jpg`); a PDF is sent as it is. A screen reader
+ * hears each button's word and the field's title: "Take photo for Resume",
+ * "Upload for Resume" (`takePhotoForLabel`, `uploadForLabel`; decision 19 (c)).
  *
  * Giving a file uploads it at once (`sendRunFile`), and the field's value is
  * then only the file's id, which is all a run's input carries. An upload belongs
@@ -93,7 +115,7 @@ type Picked = { uri: string; name: string; image: boolean; mimeType?: string };
  * wraps, each pill growing to fill it, stacked at iOS's accessibility sizes;
  * the uploading, ~~ready~~ (until build 43, now the pills) and error lines
  * under it, unindented, only once they have words. The buttons' accessibility
- * labels still name the field ("Upload a file for Resume"). Without it the
+ * labels still name the field ("Upload for Resume"). Without it the
  * field is as above, the flow page's. The owner's build 43 item 17 ("for the
  * compact card i want two buttons … upload start"): where the field takes a
  * photo, Upload offers a choice, else it opens the picker at once. ~~A menu
@@ -107,12 +129,21 @@ type Picked = { uri: string; name: string; image: boolean; mimeType?: string };
  * dynamically show up in a horizontal pill with the document name and an x on
  * the right side"): the file it holds is a pill (`FilePills`), its name and an
  * x that takes it out of the run (`onValue` with no file), in place of the
- * "Ready: {name} ({size})" line; nothing is deleted on the server. Without it
+ * "Ready: {name} ({size})" line. Without it
  * (the job upload card, `ItemUploadDialog`) the ready line stays, no x. The
  * screen reader hears what changed (the build 43 follow-up, the website's
  * words): "Uploaded {name}." when an upload ends, "Removed {name}." when the x
  * takes it out, its focus then on Upload (`useFocusAfterRemove`); the job
  * upload card says nothing new.
+ *
+ * **Deleted at once** (the owner's decision 17 of 2026-11-15; `discardFiles`):
+ * the file the x takes out, a held file a new choice replaces, and one whose
+ * upload ends after the field stopped waiting for it are discarded on the
+ * platform in the background, nothing said; ~~nothing is deleted on the server,
+ * the stored copy kept until retention~~ until then. A field drawn away (a page
+ * left, the job card stepping aside for the agreement) discards nothing.
+ * **`starting`**: Start is pending, so the x and the buttons are held — a run
+ * being given the file is never raced by its discard.
  */
 export function RunFileField({
   field,
@@ -126,6 +157,7 @@ export function RunFileField({
   compact = false,
   trailing,
   removable = false,
+  starting = false,
 }: {
   field: Pick<AutomationRunInputField, 'key' | 'title' | 'acceptedContentTypes'>;
   /** The workspace the screen loaded; the upload is refused once it is not active. */
@@ -144,6 +176,8 @@ export function RunFileField({
   trailing?: ReactNode;
   /** The start forms': the file a pill with an x, in place of the ready line (build 43 item 17). */
   removable?: boolean;
+  /** The form's Start (or the job card's Upload) is pending: the x and the buttons held (decision 17). */
+  starting?: boolean;
 }) {
   const { palette } = useTheme();
   const session = useSession();
@@ -197,7 +231,7 @@ export function RunFileField({
     // Closing the camera keeps whatever the field already held.
     const photo = taken.canceled ? undefined : taken.assets[0];
     if (!photo) return;
-    await send(workspaceId, { uri: photo.uri, name: PHOTO_NAME, image: true });
+    await send(workspaceId, cameraPhoto(photo));
   };
 
   /** Apple's photo picker (the sheet's Photo Library): one image, sent as a photo is. */
@@ -247,6 +281,8 @@ export function RunFileField({
     inFlight.current?.abort();
     const sending = new AbortController();
     inFlight.current = sending;
+    // A new choice replaces the file held: that one is discarded at once (decision 17).
+    if (state.kind === 'ready') discardFiles(shownWorkspaceId, [state.artifactId]);
     setState({ kind: 'uploading', name: picked.name });
     onValue(field.key, undefined);
     onBusyChange(field.key, true);
@@ -254,9 +290,11 @@ export function RunFileField({
       const chosen = await prepare(picked);
       if (sending.signal.aborted) return;
       const uploaded = await sendRunFile(workspaceId, subscriptionId, chosen, sending.signal);
-      if (sending.signal.aborted) return;
-      setState({ kind: 'ready', name: uploaded.filename, sizeBytes: uploaded.sizeBytes });
-      onValue(field.key, uploaded.artifactId, { name: uploaded.filename, sizeBytes: uploaded.sizeBytes });
+      // Arrived after the field stopped waiting for it (a newer choice, or the field gone): never held, so discarded.
+      if (sending.signal.aborted) return discardFiles(shownWorkspaceId, [uploaded.artifactId]);
+      const file = { artifactId: uploaded.artifactId, name: uploaded.filename, sizeBytes: uploaded.sizeBytes };
+      setState({ kind: 'ready', ...file });
+      onValue(field.key, uploaded.artifactId, file);
       // Spoken only, in the start forms; the job upload card's "Ready:" line says it there.
       if (removable) AccessibilityInfo.announceForAccessibility(uploadedLine(uploaded.filename));
     } catch (failure) {
@@ -271,15 +309,18 @@ export function RunFileField({
     }
   };
 
-  /** The x: the file out of the run; the stored copy stays until retention. Said, the focus then on Upload. */
+  /** The x: the file out of the run, and discarded at once (decision 17). Said, the focus then on Upload. */
   const remove = () => {
-    if (state.kind === 'ready') AccessibilityInfo.announceForAccessibility(removedLine(state.name));
+    if (state.kind === 'ready') {
+      AccessibilityInfo.announceForAccessibility(removedLine(state.name));
+      discardFiles(shownWorkspaceId, [state.artifactId]);
+    }
     focus.after(0);
     setState({ kind: 'empty' });
     onValue(field.key, undefined);
   };
 
-  const busy = state.kind === 'uploading';
+  const busy = state.kind === 'uploading' || starting;
   const progress =
     state.kind === 'uploading'
       ? `Uploading ${state.name}…`
@@ -305,7 +346,7 @@ export function RunFileField({
             </Text>
           ) : null}
           {removable && state.kind === 'ready' ? (
-            <FilePills fieldKey={field.key} names={[state.name]} xRefs={focus.xs} onRemove={remove} />
+            <FilePills fieldKey={field.key} names={[state.name]} xRefs={focus.xs} disabled={starting} onRemove={remove} />
           ) : null}
           {error ? <Text style={[sub, { color: status.err }]}>{error}</Text> : null}
           {showTypes && typesLine ? (
@@ -317,15 +358,15 @@ export function RunFileField({
       }>
       <FileActions
         fieldKey={field.key}
-        photoLabel={`Take a photo for ${field.title}`}
-        uploadLabel={`Upload a file for ${field.title}`}
+        photoLabel={takePhotoForLabel(field.title)}
+        uploadLabel={uploadForLabel(field.title)}
         photos={photos}
         several={false}
         busy={busy}
         compact={compact}
         uploadRef={focus.upload}
         onTakePhoto={() => void takePhoto()}
-        onCardTakePhoto={() => void takePhoto()}
+        onUploadTakePhoto={() => void takePhoto()}
         onPhotoLibrary={() => void fromLibrary()}
         onUpload={() => void upload()}
       />
@@ -360,13 +401,23 @@ export function RunFileField({
  * sheet's Photo Library (Apple's photo picker, several at once up to
  * `maxFiles`, more refused as Choose Files is), its Take Photo and its Choose
  * Files; on Android the menu's Take photo and Choose file. Both Take photos
- * are `takePhoto(true)` (`onCardTakePhoto`); ~~the menu's Take photo adding
+ * are `takePhoto(true)` (`onUploadTakePhoto`); ~~the menu's Take photo adding
  * one~~ until build 43. Only the side-by-side Take photo off the card adds.
+ *
+ * Off the card on iOS, where the field takes a photo, Upload opens the same
+ * sheet (decision 19 (a)), its choices replacing as the card's do; the
+ * side-by-side Take photo still adds.
  *
  * Spoken (the build 43 follow-up, the website's words): "Uploaded {name}." when
  * a choice of one file has gone, "Uploaded {n} files." for several, "Removed
  * {name}." for an x; after an x the focus goes to the x now in its place, else
  * the one before, else Upload (`useFocusAfterRemove`).
+ *
+ * Deleted at once (decision 17; `discardFiles`), as `RunFileField`'s: the file
+ * an x takes out; the files a choice replaces — one refused, past `maxFiles`
+ * or of another type, or one that fails, which empties the field, included;
+ * and the files of a choice that ended after the field stopped waiting for it.
+ * A photo that adds discards nothing. `starting` holds the x and the buttons.
  *
  * testIDs: as `RunFileField`'s. ~~Its line `run-file-${key}-count`~~ until build 43.
  */
@@ -380,6 +431,7 @@ export function RunFilesField({
   showTypes = false,
   compact = false,
   trailing,
+  starting = false,
 }: {
   field: Pick<AutomationRunInputField, 'key' | 'title' | 'acceptedContentTypes' | 'maxFiles'>;
   shownWorkspaceId: string | null;
@@ -390,6 +442,7 @@ export function RunFilesField({
   showTypes?: boolean;
   compact?: boolean;
   trailing?: ReactNode;
+  starting?: boolean;
 }) {
   const { palette } = useTheme();
   const session = useSession();
@@ -424,8 +477,9 @@ export function RunFilesField({
     return workspaceId;
   };
 
-  /** Nothing held, and why. */
-  const empty = (message: string) => {
+  /** Nothing held, and why; the files let go of (those held, unless named) discarded at once. */
+  const empty = (message: string, letGo: readonly SentFile[] = files) => {
+    discardFiles(shownWorkspaceId, letGo.map((file) => file.artifactId));
     setFiles([]);
     onValue(field.key, undefined);
     setError(message);
@@ -436,17 +490,24 @@ export function RunFilesField({
     inFlight.current?.abort();
     const sending = new AbortController();
     inFlight.current = sending;
+    // The files held and not kept are replaced: discarded at once.
+    discardFiles(
+      shownWorkspaceId,
+      files.filter((file) => !kept.includes(file)).map((file) => file.artifactId),
+    );
     onValue(field.key, undefined);
     onBusyChange(field.key, true);
     const sent: SentFile[] = [...kept];
+    // This choice's own files, sent before the field stopped waiting for it: never held, so discarded.
+    const abandon = () => discardFiles(shownWorkspaceId, sent.slice(kept.length).map((file) => file.artifactId));
     try {
       for (const picked of given) {
         setUploading(picked.name);
         const chosen = await prepare(picked);
-        if (sending.signal.aborted) return;
+        if (sending.signal.aborted) return abandon();
         const uploaded = await sendRunFile(workspaceId, subscriptionId, chosen, sending.signal);
-        if (sending.signal.aborted) return;
         sent.push({ artifactId: uploaded.artifactId, name: uploaded.filename, sizeBytes: uploaded.sizeBytes });
+        if (sending.signal.aborted) return abandon();
       }
       setFiles(sent);
       onValue(field.key, sent.map((file) => file.artifactId));
@@ -454,8 +515,9 @@ export function RunFilesField({
         given.length > 1 ? uploadedCountLine(given.length) : uploadedLine(sent[sent.length - 1]!.name),
       );
     } catch (failure) {
-      if (sending.signal.aborted) return;
-      empty(uploadRefusalMessage(failure, 'The file could not be sent.'));
+      if (sending.signal.aborted) return abandon();
+      // The field empties: the files kept and this choice's sent ones go with it.
+      empty(uploadRefusalMessage(failure, 'The file could not be sent.'), sent);
     } finally {
       if (!sending.signal.aborted) setUploading(null);
       if (inFlight.current === sending) {
@@ -465,7 +527,7 @@ export function RunFilesField({
     }
   };
 
-  /** `replace`: the card's Take Photo (iOS's sheet, Android's menu), which replaces the files held, as the website's does; else one more. */
+  /** `replace`: Upload's own Take Photo (iOS's sheet, Android's card menu), which replaces the files held, as the website's does; else one more. */
   const takePhoto = async (replace = false) => {
     const workspaceId = workspaceFor();
     if (!workspaceId) return;
@@ -490,7 +552,7 @@ export function RunFilesField({
     // Closing the camera keeps whatever the field already held.
     const photo = taken.canceled ? undefined : taken.assets[0];
     if (!photo) return;
-    await sendAll(workspaceId, kept, [{ uri: photo.uri, name: PHOTO_NAME, image: true }]);
+    await sendAll(workspaceId, kept, [cameraPhoto(photo)]);
   };
 
   /** Apple's photo picker (the sheet's Photo Library): up to `maxFiles` images, replacing what the field held. */
@@ -552,17 +614,20 @@ export function RunFilesField({
     );
   };
 
-  /** The x on the file at `index`: the rest kept in their order, none left the field empty. Said, the focus moved. */
+  /** The x on the file at `index`: the rest kept in their order, none left the field empty; that one discarded. Said, the focus moved. */
   const remove = (index: number) => {
     const gone = files[index];
-    if (gone) AccessibilityInfo.announceForAccessibility(removedLine(gone.name));
+    if (gone) {
+      AccessibilityInfo.announceForAccessibility(removedLine(gone.name));
+      discardFiles(shownWorkspaceId, [gone.artifactId]);
+    }
     focus.after(index);
     const rest = files.filter((_, at) => at !== index);
     setFiles(rest);
     onValue(field.key, rest.length > 0 ? rest.map((file) => file.artifactId) : undefined);
   };
 
-  const busy = uploading !== null;
+  const busy = uploading !== null || starting;
 
   const sub = compact ? styles.subFlush : styles.sub;
   return (
@@ -579,7 +644,13 @@ export function RunFilesField({
               {`Uploading ${uploading}…`}
             </Text>
           ) : files.length > 0 ? (
-            <FilePills fieldKey={field.key} names={files.map((file) => file.name)} xRefs={focus.xs} onRemove={remove} />
+            <FilePills
+              fieldKey={field.key}
+              names={files.map((file) => file.name)}
+              xRefs={focus.xs}
+              disabled={starting}
+              onRemove={remove}
+            />
           ) : null}
           {error ? <Text style={[sub, { color: status.err }]}>{error}</Text> : null}
           {showTypes && typesLine ? (
@@ -591,15 +662,15 @@ export function RunFilesField({
       }>
       <FileActions
         fieldKey={field.key}
-        photoLabel={`Take a photo for ${field.title}`}
-        uploadLabel={`Upload files for ${field.title}`}
+        photoLabel={takePhotoForLabel(field.title)}
+        uploadLabel={uploadForLabel(field.title)}
         photos={photos}
         several
         busy={busy}
         compact={compact}
         uploadRef={focus.upload}
         onTakePhoto={() => void takePhoto()}
-        onCardTakePhoto={() => void takePhoto(true)}
+        onUploadTakePhoto={() => void takePhoto(true)}
         onPhotoLibrary={() => void fromLibrary()}
         onUpload={() => void upload()}
       />
@@ -663,13 +734,16 @@ function FieldFrame({
 
 /**
  * The field's buttons. Today's (the flow page, the item page, the job upload
- * card): Take photo, where the field takes one, beside Upload. `compact`
- * (Home's card, build 43 items 17 and 3): Upload alone — where the field takes
- * a photo, Apple's action sheet on iOS (`UploadSheet`) and a menu on Android
- * (`UploadMenu`), else the picker at once; the Take photo of either is
- * `onCardTakePhoto`, the side-by-side one `onTakePhoto`. `uploadRef` is
- * Upload's, whichever is drawn: the sheet's iPad anchor and the focus after
- * the last x.
+ * card): Take photo, where the field takes one, beside Upload — on iOS, where
+ * the field takes a photo, Upload opening Apple's action sheet (`UploadSheet`;
+ * the owner's decision 19 (a) of 2026-11-15, as Safari's menu opens off the
+ * website's Upload, its Take photo beside it too), else the picker at once.
+ * `compact` (Home's card, build 43 items 17 and 3): Upload alone — where the
+ * field takes a photo, the sheet on iOS and a menu on Android (`UploadMenu`),
+ * else the picker at once. The Take photo inside Upload (the sheet's or the
+ * card menu's) is `onUploadTakePhoto`, the side-by-side one `onTakePhoto`.
+ * `uploadRef` is Upload's, whichever is drawn: the sheet's iPad anchor and the
+ * focus after the last x.
  */
 function FileActions({
   fieldKey,
@@ -681,7 +755,7 @@ function FileActions({
   compact,
   uploadRef,
   onTakePhoto,
-  onCardTakePhoto,
+  onUploadTakePhoto,
   onPhotoLibrary,
   onUpload,
 }: {
@@ -696,40 +770,26 @@ function FileActions({
   uploadRef: RefObject<View | null>;
   /** The side-by-side Take photo off the card (it adds one more on a several-file field). */
   onTakePhoto: () => void;
-  /** The card's Take Photo, iOS's sheet and Android's menu: it replaces on a several-file field. */
-  onCardTakePhoto: () => void;
+  /** The Take Photo inside Upload, iOS's sheet and Android's card menu: it replaces on a several-file field. */
+  onUploadTakePhoto: () => void;
   onPhotoLibrary: () => void;
   onUpload: () => void;
 }) {
-  if (compact && photos) {
-    if (Platform.OS === 'ios') {
-      return (
-        <UploadSheet
-          fieldKey={fieldKey}
-          accessibilityLabel={uploadLabel}
-          busy={busy}
-          several={several}
-          uploadRef={uploadRef}
-          onPhotoLibrary={onPhotoLibrary}
-          onTakePhoto={onCardTakePhoto}
-          onChooseFile={onUpload}
-        />
-      );
-    }
+  if (compact && photos && Platform.OS !== 'ios') {
     return (
       <UploadMenu
         fieldKey={fieldKey}
         accessibilityLabel={uploadLabel}
         busy={busy}
         uploadRef={uploadRef}
-        onTakePhoto={onCardTakePhoto}
+        onTakePhoto={onUploadTakePhoto}
         onChooseFile={onUpload}
       />
     );
   }
   return (
     <>
-      {photos ? (
+      {photos && !compact ? (
         <FileAction
           testID={`run-file-${fieldKey}-photo`}
           label={TAKE_PHOTO_LABEL}
@@ -740,31 +800,48 @@ function FileActions({
           onPress={onTakePhoto}
         />
       ) : null}
-      <FileAction
-        testID={`run-file-${fieldKey}-upload`}
-        label={UPLOAD_LABEL}
-        accessibilityLabel={uploadLabel}
-        icon={UploadSimple}
-        busy={busy}
-        compact={compact}
-        pressRef={uploadRef}
-        onPress={onUpload}
-      />
+      {photos && Platform.OS === 'ios' ? (
+        <UploadSheet
+          fieldKey={fieldKey}
+          accessibilityLabel={uploadLabel}
+          busy={busy}
+          several={several}
+          compact={compact}
+          uploadRef={uploadRef}
+          onPhotoLibrary={onPhotoLibrary}
+          onTakePhoto={onUploadTakePhoto}
+          onChooseFile={onUpload}
+        />
+      ) : (
+        <FileAction
+          testID={`run-file-${fieldKey}-upload`}
+          label={UPLOAD_LABEL}
+          accessibilityLabel={uploadLabel}
+          icon={UploadSimple}
+          busy={busy}
+          compact={compact}
+          pressRef={uploadRef}
+          onPress={onUpload}
+        />
+      )}
     </>
   );
 }
 
 /**
- * Home's Upload where the field takes a photo, on iOS (the owner's build 43
- * item 3, Apple's native selection): Apple's action sheet
- * (`ActionSheetIOS`), with Safari's three rows in Safari's order and words —
- * Photo Library, Take Photo, Choose File ("Choose Files" on a several-file
- * field) — then Cancel at the bottom (Apple's HIG). On iPad it is anchored to
- * Upload (`anchor`, React Native's "used for iPad"); whether it lands there is
- * a device check. Each row calls its picker straight from the sheet's callback:
- * Apple states no order against the sheet's dismissal, so no timed guard is
- * guessed (DESIGN-GAPS "Build 43: the owner's items"). The system's appearance,
- * as Safari's menu.
+ * Upload where the field takes a photo, on iOS — Home's card (the owner's
+ * build 43 item 3, Apple's native selection) and, since the owner's decision 19
+ * (a) of 2026-11-15, the flow page, the item page and the job upload card, as
+ * the website's Upload opens Safari's own menu on every one: Apple's action
+ * sheet (`ActionSheetIOS`), with Safari's three rows in Safari's order and
+ * words — Photo Library, Take Photo, Choose File ("Choose Files" on a
+ * several-file field) — then Cancel at the bottom (Apple's HIG). On iPad it is
+ * anchored to Upload (`anchor`, React Native's "used for iPad"); whether it
+ * lands there is a device check. Each row calls its picker straight from the
+ * sheet's callback: Apple states no order against the sheet's dismissal, so no
+ * timed guard is guessed (DESIGN-GAPS "Build 43: the owner's items"). The
+ * system's appearance, as Safari's menu. `compact`: the button grows in the
+ * card's row; off the card it shares its row with Take photo.
  *
  * testID: Upload `run-file-${key}-upload`.
  */
@@ -773,6 +850,7 @@ function UploadSheet({
   accessibilityLabel,
   busy,
   several,
+  compact,
   uploadRef,
   onPhotoLibrary,
   onTakePhoto,
@@ -782,6 +860,7 @@ function UploadSheet({
   accessibilityLabel: string;
   busy: boolean;
   several: boolean;
+  compact: boolean;
   uploadRef: RefObject<View | null>;
   onPhotoLibrary: () => void;
   onTakePhoto: () => void;
@@ -807,7 +886,7 @@ function UploadSheet({
       accessibilityLabel={accessibilityLabel}
       icon={UploadSimple}
       busy={busy}
-      compact
+      compact={compact}
       pressRef={uploadRef}
       onPress={open}
     />
@@ -898,11 +977,14 @@ function FilePills({
   fieldKey,
   names,
   xRefs,
+  disabled,
   onRemove,
 }: {
   fieldKey: string;
   names: readonly string[];
   xRefs: RefObject<(View | null)[]>;
+  /** Start is pending: no x takes a file out (or discards it) under the run being started. */
+  disabled: boolean;
   onRemove: (index: number) => void;
 }) {
   const { palette } = useTheme();
@@ -930,9 +1012,11 @@ function FilePills({
             testID={`run-file-${fieldKey}-remove-${index}`}
             accessibilityRole="button"
             accessibilityLabel={removeFileLabel(name)}
+            accessibilityState={disabled ? { disabled: true } : undefined}
+            disabled={disabled}
             onPress={() => onRemove(index)}
-            style={({ pressed }) => [styles.pillX, pressed && { backgroundColor: withAlpha(palette.text, 0.07) }]}>
-            <X size={20} color={palette.text} />
+            style={({ pressed }) => [styles.pillX, pressed && !disabled && { backgroundColor: withAlpha(palette.text, 0.07) }]}>
+            <X size={20} color={disabled ? palette.neutral[500] : palette.text} />
           </Pressable>
         </View>
       ))}
@@ -985,9 +1069,22 @@ function FileAction({
   );
 }
 
-/** An image from Apple's photo picker, sent as a photo is: re-encoded, under its own name as a `.jpg`, else `PHOTO_NAME`. */
+/**
+ * An image from Apple's photo picker, sent as a photo is: re-encoded, under the
+ * name the picker gives as a `.jpg` (`jpegName`; none, `image.jpg`).
+ */
 function libraryImage(image: ImagePicker.ImagePickerAsset): Picked {
-  return { uri: image.uri, name: image.fileName ? jpegName(image.fileName) : PHOTO_NAME, image: true };
+  return { uri: image.uri, name: jpegName(image.fileName ?? ''), image: true };
+}
+
+/**
+ * A photo the camera took, re-encoded under the name expo-image-picker gives
+ * as a `.jpg` (the owner's decision 19 (b) of 2026-11-15, the website's rule):
+ * iOS's camera gives none (no library asset), so `image.jpg`; Android's names
+ * its cache file. ~~Always `photo.jpg`~~ until then.
+ */
+function cameraPhoto(photo: ImagePicker.ImagePickerAsset): Picked {
+  return { uri: photo.uri, name: jpegName(photo.fileName ?? ''), image: true };
 }
 
 /**

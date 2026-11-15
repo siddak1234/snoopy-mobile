@@ -463,6 +463,39 @@ export async function completeUpload(
 }
 
 /**
+ * `discardUpload` (`DELETE /v1/workspaces/{workspaceId}/uploads/{artifactId}`,
+ * the platform's BUILD-PLAN 30.18.1; the owner's decision 17 of 2026-11-15,
+ * "delete at once"): the bytes of a file this person uploaded and no run has
+ * been given, deleted now rather than by retention. 204, again for a file
+ * already gone; 400 an id that is not a UUID; 401; 404 another person's file
+ * or one this workspace never held; 409 `file_in_use`, a run holds it; 503 the
+ * store could not delete it yet (retention does). No body, no idempotency key.
+ *
+ * Not yet in the generated contract (the platform's route is unmerged), so the
+ * generated client's `DELETE` is typed here for this one route, as the
+ * platform's branch publishes it in
+ * `snoopy-backend/docs/openapi/automations.yaml`; once it
+ * merges, `generate:platform-contracts` brings it in and this local type goes
+ * (DESIGN-GAPS "Round 22 phase A"). The call is still the generated client's,
+ * through `platformOperation`, so its refusals map as every operation's do.
+ */
+type DiscardUploadClient = {
+  DELETE(
+    path: '/v1/workspaces/{workspaceId}/uploads/{artifactId}',
+    init: { params: { path: { workspaceId: string; artifactId: string } }; signal: AbortSignal },
+  ): Promise<{ data?: null; error?: unknown; response: Response }>;
+};
+
+export async function discardUpload(workspaceId: string, artifactId: string): Promise<void> {
+  await platformOperation<null>(`/v1/workspaces/${workspaceId}/uploads/${artifactId}`, ({ automations }, signal) =>
+    (automations as unknown as DiscardUploadClient).DELETE('/v1/workspaces/{workspaceId}/uploads/{artifactId}', {
+      params: { path: { workspaceId, artifactId } },
+      signal,
+    }),
+  );
+}
+
+/**
  * Cancel a run that has not ended. The platform cancels only a `pending` or
  * `running` run and answers 404 for any other — already finished, held, or not
  * this workspace's — so a caller says a 404 as "it has already stopped".

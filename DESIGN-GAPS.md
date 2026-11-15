@@ -3906,9 +3906,10 @@ its titled fields, then the compact Start. No ready job: "No {jobs} yet." and Up
 wrapping row. No new spacing values. The flow page's Step 1 and the item page's form are as before
 (no `compact`; their tests untouched and green).
 
-Decision taken (no-new-blockers default): the file buttons keep today's spoken names ("Take a photo
+Decision taken (no-new-blockers default): ~~the file buttons keep today's spoken names ("Take a photo
 for {title}", "Upload a file for {title}"), which carry the field's title; the item's example
-wording ("Take photo, Resume") would change the flow page, which stays as it is.
+wording ("Take photo, Resume") would change the flow page, which stays as it is~~ until the owner's
+decision 19 (c) of 2026-11-15: "Take photo for {title}", "Upload for {title}" ("Round 22 phase A", below).
 
 Bites (`build42-item16`, break, red, restore, green; 1 red each):
 - (a) the compact frame bypassed, the title line back; (b) Start out of the file's row;
@@ -3941,7 +3942,8 @@ the "never a fill" rule for Start only; recorded as the owner's decision of 2026
 says "Add {Resume} first.", using the field's own name (its `title`). 4. Many files: the pills sit in
 one row that scrolls sideways (ICD-10 Code Check allows 50). 5. The same pills and the same error also
 go on the flow page's start form, from one shared part; the two-button layout stays Home-only. 6. The
-x takes the file out of the run only; the stored copy stays on the server until retention. 7.
+x takes the file out of the run only; ~~the stored copy stays on the server until retention~~ (until the owner's
+decision 17 of 2026-11-15, "delete at once": the x discards it, "Round 22 phase A", below). 7.
 ICD-10's file is optional today (`required: false`), so its Start goes with no file — unchanged here.
 
 Built: Home's card with one file field is Upload and Start (`FileActions`, `UploadMenu`): where the
@@ -3983,7 +3985,8 @@ pinned. Bite: the light accent lightened (2 red there). The website's menu rows 
 as the website's test holds its own: the neutral outline, the row's left step, and the name at the
 small size in the regular face and the text colour. Bites: the outline in the accent (1 red); the
 name at the body size (1 red). The third check's test gaps, closed in `build43-item17` with no
-change to the app: the x sends nothing (T3 on Home, T4 on the flow page); the menu's words pinned
+change to the app: ~~the x sends nothing (T3 on Home, T4 on the flow page)~~ (since decision 17, T3 and T4 assert its
+one discard, "Round 22 phase A"); the menu's words pinned
 as "Take photo" and "Choose file", and each row's icon, `Camera` then `FileArrowUp`; the inner step
 between pills; the x's icon at 20 in the text colour; the order under Home's row (the row, the
 "Uploading {name}…" line or the pills, the field's error, the form's error); Turn on on a paused
@@ -4021,8 +4024,9 @@ The resume screening drop down is fine"
 The owner's answers: "1. Keep start after upload", "7. Yes" (the follow-up: the website's change audit of item 17 —
 a screen reader hears an upload begin and never that it ended, nor that a file was removed; nothing holds the focus
 after an x), "9. B" (TestFlight 44 waits for these items), and "No assumptions and no deviations." The plan's other
-points are built at **the design's defaults, the session's, never the owner's**: Apple's selection on Home's card only
-(the flow page's and the job page's forms keep Take photo beside Upload); cancelled jobs stay on the item; Apple's
+points are built at **the design's defaults, the session's, never the owner's**: ~~Apple's selection on Home's card only
+(the flow page's and the job page's forms keep Take photo beside Upload)~~ (until the owner's decision 19 (a) of
+2026-11-15: the sheet on every file field's Upload on iOS, Take photo still beside it off the card); cancelled jobs stay on the item; Apple's
 action sheet, no new dependency (Safari's exact form, a menu at the button, needs `@expo/ui`); the spoken words
 "Uploaded {name}.", "Uploaded {n} files.", "Removed {name}.". Items 1, 4 and 5 are the platform's and the flows'
 (their pull requests); here item 1 is `missingFile`, unchanged, now tested with a required "Document" field.
@@ -4078,3 +4082,105 @@ The drift audit's fix (Android's menu replaces): Android's menu pointed back at 
 new Android test, and `build43-item17`'s D2, now the menu's Take photo leaving one pill, the photo). `build43-item17`'s
 D5 takes its field error from a picker that will not open (`PICKER_NOT_OPENED`, the pills kept), a card photo being one
 file now; bites: that picker emptying the field (1 red), the field's error above the pills (1 red).
+
+- **TestFlight 44** (2026-11-14): build 44 from `main` `7cc471e` (#109, these items), EAS build
+  `b249798a-f381-4e44-baf1-83e458df8843`, submission `14f946fb-e931-4484-8653-78b0d0ea5988`, VALID in App Store Connect
+  2026-11-14T16:45:50Z. The owner tested it ~16:51Z: "App looks good, tested microsoft sign in. What is next?"
+
+## Round 22 phase A: the owner's decisions 17, 18 and 19 (2026-11-15)
+
+The owner's words, 2026-11-15 (verbatim): "go with recommended. delete at once. apps high security alert, a / 19. align
+a-d no assumptions and no laziness. / 20. yes / 21. recommended / 22. remove them". This repository's part: 17 (delete
+at once), 18 (the high Dependabot alert, option a) and 19 (the app and the website aligned on (a)–(d) of the session's
+parity check, app `7cc471e` against website `6973352`, and (e)). Each of (a)–(d) was decided from the code and the
+records first; the website's side is its own lane's.
+
+**Decision 19, as decided** (evidence by path:line; website at `6973352`, platform at `1c9ee34`):
+
+- (a) **Upload off Home's card on iOS opens Apple's sheet where the field takes a photo** — the flow page, the item page
+  and the job upload card: "Photo Library", "Take Photo", "Choose File" ("Choose Files" on a several-file field),
+  "Cancel" (`UploadSheet`, the card's), Take photo still beside it; a field that takes no photo, the picker at once; on
+  a several-file field every choice from the sheet replaces, the side-by-side Take photo adds. Android unchanged in both
+  clients. App changes, website none. Why: the website's Upload is `<input type="file" accept=…>` with no `capture`
+  (`snoopy/app/account/flows/RunFileField.tsx:466-482`), Take photo `capture="environment"` beside it on a phone off the card
+  (`:163-166`, `:488-519`), and WebKit draws its own menu for it (`snoopy/docs/ARCHITECTURE.md:99-121`) — the website cannot
+  open Files alone for a field that takes images; the app's page Upload was `DocumentPicker` alone
+  (`components/automations/run-file-field.tsx`, `FileActions`), the sheet the card's only as the session's default,
+  never the owner's (build 43's items, above). On Android the app's Upload is Android's document picker
+  (`ACTION_OPEN_DOCUMENT`, expo-document-picker `DocumentPickerModule.kt:42`), the website's Chrome's own chooser,
+  whose entries neither repository records.
+- (b) **A photo keeps the name its camera or picker gives, as a `.jpg`; none, `image.jpg`** (`jpegName`, the
+  website's rule, `run-file-image.ts:139-142`; `RunFileField.tsx:275`, `:361`). App changes (`PHOTO_NAME` "photo.jpg" gone; only the camera's photo
+  had it always, a library image already kept its own); website none. What each gives: iOS's camera none
+  (expo-image-picker `MediaHandler.swift:84-86`, a PHAsset's filename, which a camera photo has not); iOS's library
+  its `suggestedName` and extension (`:155`); Android's camera expo's cache file, a random UUID
+  (`MediaHandler.kt:72`, expo-modules-core `FileUtilities.java:18`); the website the browser's `File.name`. Why this
+  way: the website cannot tell a photo Safari's menu took from a chosen file (both arrive through one input), so a
+  fixed photo name cannot hold there; the app can follow the website's rule exactly.
+- (c) **"Take photo for {title}" and "Upload for {title}"**, one file or several, every form (`takePhotoForLabel`,
+  `uploadForLabel`). App changes; website none (`RunFileField.tsx:417-423`, `:436`: the visible word, then an sr-only
+  " for {title}"). Why: the app's words were build 42's no-new-blockers default (above), and "Take a photo for …" does
+  not hold the visible "Take photo", which Voice Control matches (WCAG 2.5.3, Label in Name).
+- (d) **An empty accept list takes no photo; a JPEG in any case does** (`takesPhotos`). Both change: the website drops
+  `accepted.length === 0 ||` (`run-file-image.ts:34-40`, the line at `:37`), the app compares in any case (it was case-sensitive). Why:
+  on the platform an empty list accepts nothing — `wire-schema.ts:845-849` (`minItems: 1`), `manifest-validation.ts:776-783`
+  (refused: "omit `artifacts` entirely to accept no files"), the upload route refusing every type for it
+  (`snoopy-backend/apps/artifacts/src/routes-upload.ts:72-79`) — and is never published by a valid manifest (`items.ts:261`'s `?? []`
+  only behind a block `manifest-validation.ts:1210-1211` requires); a type is compared in either case
+  (`manifest-validation.ts:290-296`, `artifacts.ts:33-39`).
+- (e) `components/automations/start-run.tsx:93-95` said Take photo is "inside Upload's menu", stale since build 43 item 3
+  (iOS: the sheet): now the sheet on iOS, the card's menu on Android.
+
+Found, not in a–d and not changed (for the session): neither client treats `image/*` or `*/*` as taking a JPEG, though
+the platform's matcher does (`artifacts.ts:34-36`); both check a chosen file's type by exact match (the app's
+case-sensitive), so such an entry refuses a file the platform takes. What WebKit and Chrome name a photo is not recorded
+in either repository.
+
+**Decision 17, the app's part, built.** The x on a pill — one file or several, Home's card, the flow page, the item page
+— takes it out at once, as before, and discards it on the platform in the background (`discardFiles` →
+`discardUpload`, `DELETE /v1/workspaces/{workspaceId}/uploads/{artifactId}`, in the workspace the field is drawn for),
+nothing said whatever the answer (204; 400, 404, 409 `file_in_use`, 503, no answer). The single-file field now holds
+the file's id (`FileState` ready, `HeldFile`). The session's reading of "delete at once" (not the owner's words): a
+held file a new choice replaces is discarded, and so is the job upload card's file when its Cancel closes it. This
+lane's defaults, mine: a choice that empties a several-file field (past `maxFiles`, a type refused, a failed upload)
+discards the files it held; an upload that ends after its field stopped waiting is discarded; the system's back on the
+job card is its Cancel; a field drawn away (a page left, the card stepping aside for the agreement) discards nothing;
+while Start, or the job card's Upload, is pending the x and the file buttons are held (`starting`), so no file is
+replaced or discarded under the run. Contract: the route is not on the platform's `main`; it is typed in
+`lib/platform/automations.ts` (`DiscardUploadClient`, the generated client's `DELETE` for this one route) as the platform's branch publishes it (`snoopy-backend/docs/openapi/automations.yaml`,
+`discardUpload`); `lib/generated/` is untouched. Owed: once the platform merges, `npm run generate:platform-contracts`
+brings the route in and the local type goes (the session's).
+
+**Decision 18, option (a): not added — the override breaks query-string.** `decode-uri-component` comes in only through
+`expo-router@57.0.30` → `query-string@7.1.3` → `0.2.2` (`package-lock.json`); `query-string` 7 is CommonJS and calls
+`require('decode-uri-component')` as a function (`index.js:3`, `:233`), while 0.5.1 — the first fixed release, and the newest — is
+ES-module only (`"type": "module"`, `exports` `{types, default}`, `export default function`). Tried in this clone
+(`overrides` `"decode-uri-component": "0.5.1"`, `npm install`): Node's `require` gave `{ __esModule, default }`;
+`stringify` worked, `parse('a=b%20c&d=%C3%A9%2F%3F')` and `parse('flag')` threw "decodeComponent is not a function" —
+`expo-router` parses every incoming URL's query with it (`node_modules/expo-router/build/react-navigation/core/getStateFromPath.js:499`); the
+real-router suites all failed to load ("SyntaxError: Unexpected token 'export'"). Reverted (`package.json` and the
+lockfile as on `main`, `npm ci`). The other alerts, from the lockfile's flags and dependents: #85 minimatch 10.2.6 and
+#82 glob 13.0.7 are `@expo/fingerprint`'s (`expo` → `@expo/fingerprint@0.20.15`, the native-fingerprint tool behind
+`expo/fingerprint` and `expo/bin/fingerprint`, imported by no app code — not `dev`-flagged, yet build tooling); #85's
+other copy, minimatch 10.2.5, is `@typescript-eslint/typescript-estree`'s (`dev`); #69 deepmerge 4.3.1 is
+`jest-config`'s (`devOptional`, the test runner). None is in the shipped bundle's imports.
+
+Tests: `round22-phase-a` (new, 23), and moved to the new truth — `build43-item17` T3 and T4 (the x's one discard, in
+place of "the x sends nothing"), `build43-feedback` (the page's Upload chooses through the sheet on iOS; a library image
+with no name is `image.jpg`), `start-run` (the spoken names; the camera's photo `image.jpg`). The harness answers
+Apple's sheet as a person choosing Choose File once its rows are Safari's (`test/jest-setup.js`), so a test that presses
+Upload on iOS reaches the picker; a test of the sheet replaces it.
+
+Bites (break, red, restore the same bytes — sha256 checked — green; counts over the files named): (a) the sheet back to
+the card only (8 red, `round22-phase-a` and `build43-feedback`); Android's card menu off the card too (1); the sheet's
+Take Photo adding off the card (3); (b) the camera's photo `photo.jpg` again (5, with `start-run`); a library image with
+no name `photo.jpg` (1, `build43-feedback`); (c) "Upload a file for" (2) and "Take a photo for" (2, with `start-run`);
+(d) a case-sensitive JPEG (2); an empty list taking photos (1); 17: the x's discard dropped, one file (3, with
+`build43-item17`) and several (2); a replaced file kept, one (2) and several (1); a refused choice keeping the held
+files (2); a failed add keeping them (1); a late upload kept, one (1) and several (1); `starting` not passed (1); the x
+not disabled (1); the job card's Cancel discarding nothing (2); its system back not Cancel (1); its field not held while
+Upload is pending (1); `discardUpload` naming the wrong id (10).
+
+What only a device shows: the sheet over the flow page, the item page and the job upload card (a dialog); the
+names iOS's and Android's cameras give; VoiceOver and Voice Control on the new names; the discard on the platform once
+its route is deployed.
