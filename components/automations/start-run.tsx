@@ -92,7 +92,10 @@ export function canStartRun(subscription: Subscription, entry: CatalogEntry | un
  * keeps its fields as here, then the compact Start. The flow page's Step 1 and
  * the item page pass no `compact`: unchanged. The owner's build 43 item 17
  * ("for the compact card i want two buttons … upload start"): Take photo is
- * inside Upload's menu, and Start is `filled`, the one filled button (the
+ * inside Upload — on iOS Apple's action sheet (Photo Library, Take Photo,
+ * Choose File; build 43 item 3), on Android the card's menu (Take photo,
+ * Choose file) — ~~inside Upload's menu~~ on every phone until item 3; and
+ * Start is `filled`, the one filled button (the
  * owner's decision of 2026-11-13). The flow page's and the item page's Start
  * stay `primary`, the outline.
  *
@@ -105,7 +108,10 @@ export function canStartRun(subscription: Subscription, entry: CatalogEntry | un
  * next press while the file is still missing. An optional file left empty, and
  * every other control, as before; Turn on (`action`) is no start, no check.
  * Each file a field holds is a pill with an x (`removable`), the x taking it
- * out of the run — a changed input, so a new key.
+ * out of the run — a changed input, so a new key — and discarding it on the
+ * platform at once (the owner's decision 17 of 2026-11-15, `discardFiles`).
+ * While Start is pending the fields are `starting`: the x and the file buttons
+ * held, so no file is discarded or replaced under the run being started.
  */
 export function StartRun({
   subscriptionId,
@@ -271,6 +277,7 @@ function StartRunForm({
               showTypes={showTypes}
               compact={inRow}
               trailing={trailing}
+              starting={busy}
             />
           );
         }
@@ -287,6 +294,7 @@ function StartRunForm({
             compact={inRow}
             trailing={trailing}
             removable
+            starting={busy}
           />
         ) : (
           <SetupFieldRow

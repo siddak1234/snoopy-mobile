@@ -187,7 +187,7 @@ function pillNames(scope: Scope, key: string): string[] {
     .map((pill) => String(within(pill).getByText(/./u).props.children));
 }
 
-/** Upload on a Home card on iOS, then the sheet's row `index` chosen (its callback, as iOS calls it). */
+/** Upload on iOS (a Home card, or since decision 19 (a) any file field), then the sheet's row `index` chosen (its callback, as iOS calls it). */
 async function sheetChoice(card: Scope, key: string, index: number) {
   sheet.mockClear();
   await fireEvent.press(card.getByTestId(`run-file-${key}-upload`));
@@ -262,11 +262,11 @@ describe("item 3: Upload on Home's card opens Apple's action sheet on iOS", () =
       filename: 'IMG_0001.jpg',
       contentType: 'image/jpeg',
     });
-    // An image with no name: PHOTO_NAME.
-    libraryGives([null], ['photo.jpg']);
+    // An image with no name: `jpegName`'s own, "image.jpg", as the website's (decision 19 (b); ~~PHOTO_NAME~~).
+    libraryGives([null], ['image.jpg']);
     await sheetChoice(invoice, 'resume', 0);
     await waitFor(() => expect(uploadsDone()).toHaveLength(2));
-    expect(sent.filter((request) => request.path === '/v1/workspaces/{workspaceId}/uploads')[1]?.body).toMatchObject({ filename: 'photo.jpg' });
+    expect(sent.filter((request) => request.path === '/v1/workspaces/{workspaceId}/uploads')[1]?.body).toMatchObject({ filename: 'image.jpg' });
   });
 
   it('test 3: a cancelled library keeps what the field held', async () => {
@@ -357,11 +357,13 @@ describe('test 4: a several-file field on iOS — every choice from the card rep
     pickerGives(['a.pdf', 'b.pdf']);
     await renderForm([RESUMES]);
     const box = within(screen.getByTestId('start-run'));
-    await fireEvent.press(box.getByTestId('run-file-resumes-upload'));
+    // Off the card, Upload opens the same sheet on iOS (decision 19 (a)); its Choose Files.
+    await sheetChoice(box, 'resumes', 2);
     await waitFor(() => expect(pillNames(box, 'resumes')).toEqual(['a.pdf', 'b.pdf']));
     cameraTakes();
     await fireEvent.press(box.getByTestId('run-file-resumes-photo'));
     await waitFor(() => expect(pillNames(box, 'resumes')).toEqual(['a.pdf', 'b.pdf', 'photo.jpg']));
+    // The side-by-side Take photo opens no sheet.
     expect(sheet).toHaveBeenCalledTimes(1);
   });
 });
@@ -405,7 +407,7 @@ describe('test 6: the screen reader hears an upload end and a file go (the follo
   it('one file: "Uploaded resume.pdf."; its x: "Removed resume.pdf.", the focus then on Upload', async () => {
     pickerGives(['resume.pdf']);
     await renderForm([RESUME]);
-    await fireEvent.press(screen.getByTestId('run-file-resume-upload'));
+    await sheetChoice(within(screen.getByTestId('start-run')), 'resume', 2);
     await waitFor(() => expect(announced()).toEqual(['Uploaded resume.pdf.']));
     await fireEvent.press(screen.getByTestId('run-file-resume-remove-0'));
     expect(announced()).toEqual(['Uploaded resume.pdf.', 'Removed resume.pdf.']);
@@ -416,7 +418,7 @@ describe('test 6: the screen reader hears an upload end and a file go (the follo
     pickerGives(['a.pdf', 'b.pdf', 'c.pdf']);
     await renderForm([RESUMES]);
     const box = within(screen.getByTestId('start-run'));
-    await fireEvent.press(box.getByTestId('run-file-resumes-upload'));
+    await sheetChoice(box, 'resumes', 2);
     await waitFor(() => expect(pillNames(box, 'resumes')).toEqual(['a.pdf', 'b.pdf', 'c.pdf']));
     expect(announced()).toEqual(['Uploaded 3 files.']);
 
@@ -437,7 +439,7 @@ describe('test 6: the screen reader hears an upload end and a file go (the follo
 
     // One file in a choice on this several-file field: its name, never "Uploaded 1 files."
     pickerGives(['d.pdf']);
-    await fireEvent.press(box.getByTestId('run-file-resumes-upload'));
+    await sheetChoice(box, 'resumes', 2);
     await waitFor(() => expect(pillNames(box, 'resumes')).toEqual(['d.pdf']));
     expect(announced().at(-1)).toBe('Uploaded d.pdf.');
   });

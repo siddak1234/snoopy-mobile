@@ -206,6 +206,19 @@ export const FALLBACK = "This part can't be shown here yet.";
 export const TAKE_PHOTO_LABEL = 'Take photo';
 export const UPLOAD_LABEL = 'Upload';
 /**
+ * What a screen reader hears for a file field's two buttons, one field or
+ * several (the owner's decision 19 (c) of 2026-11-15, the website's words):
+ * the visible word, then " for {title}" — so the spoken name holds the visible
+ * one, as Voice Control needs. ~~"Take a photo for {title}", "Upload a file
+ * for {title}", "Upload files for {title}"~~ until then.
+ */
+export function takePhotoForLabel(title: string): string {
+  return `${TAKE_PHOTO_LABEL} for ${title}`;
+}
+export function uploadForLabel(title: string): string {
+  return `${UPLOAD_LABEL} for ${title}`;
+}
+/**
  * Home's quick-access card (the owner's build 43 item 17): Upload offers Take
  * photo or Choose file on Android (~~on every phone~~ until build 43 item 3;
  * iOS: the sheet's words below) where the field can take a photo; Choose file
@@ -213,7 +226,9 @@ export const UPLOAD_LABEL = 'Upload';
  */
 export const CHOOSE_FILE_LABEL = 'Choose file';
 /**
- * Home's card on iOS (the owner's build 43 item 3: Apple's native selection):
+ * Upload on iOS where the field can take a photo — Home's card (the owner's
+ * build 43 item 3: Apple's native selection) and, since the owner's decision 19
+ * (a) of 2026-11-15, every other start form and the job upload card too:
  * Upload opens Apple's action sheet with Safari's own three rows, in Safari's
  * words and order (WebKit `WKFileUploadPanel.mm`; "Choose File"/"Choose Files"
  * from WebCore `LocalizedStrings.cpp`), then `CONTACT_CANCEL`. Android keeps

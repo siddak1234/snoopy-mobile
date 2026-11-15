@@ -949,7 +949,8 @@ paths:
       description: >-
         The store measures what arrived — the size and digest are the store's,
         never the request's. The answer's `artifactId` is what a run's file field
-        carries. A file no run is given within a day is collected. 400 with
+        carries. A file no run is given within a day is collected, or at once
+        when its uploader discards it (`discardUpload`). 400 with
         `details.reason` `session_expired`, `no_object` (nothing was PUT) or
         `too_large`; 404 for a session this workspace does not hold or that was
         already completed.
@@ -1003,6 +1004,43 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+
+  /v1/workspaces/{workspaceId}/uploads/{artifactId}:
+    delete:
+      operationId: discardUpload
+      summary: Delete a file you uploaded, at once.
+      description: >-
+        BUILD-PLAN 30.18.1 (the owner's decision of 2026-11-15, "delete at
+        once"). Deletes the bytes of a file the caller uploaded and no run has
+        been given, now — not a day later, when retention would. `artifactId`
+        is the one `completeUpload` answered. Only the person who uploaded it:
+        another member's file, another workspace's, or an id this workspace
+        never held is 404, as a read is. A file a run has been given is 409
+        with `details.reason` `file_in_use` — the run keeps it to its end, and
+        retention takes it after. A file already deleted, by an earlier
+        discard or by retention, is 204 again. A file being deleted is given
+        to no run: a run naming it is refused 422 `artifact_unavailable`.
+
+
+        503 when the store could not delete the bytes yet: nothing is recorded
+        as deleted, the file is given to no run, and the same request again —
+        or the next retention pass — deletes it. Same-origin applies to a
+        cookie caller, as on every change. No `Idempotency-Key`: a repeat is
+        the same success.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: artifactId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: The file is deleted, now or already.
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
 
   /v1/workspaces/{workspaceId}/run-stats:
     get:
