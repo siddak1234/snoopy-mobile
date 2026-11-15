@@ -473,7 +473,7 @@ describe('a team’s requests to join say the address under a name, as the websi
     expect(within(erin).getByText('Erin')).toBeTruthy();
     expect(within(erin).getByText('erin@example.com · Asked 2d ago')).toBeTruthy();
     const fay = screen.getByTestId('team-request-r2');
-    expect(within(fay).getAllByText(/fay@acme\.co/u)).toHaveLength(1);
+    expect(within(fay).getAllByText(/fay@example\.com/u)).toHaveLength(1);
     expect(within(fay).getByText('Asked 1d ago')).toBeTruthy();
   });
 });

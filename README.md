@@ -45,7 +45,7 @@ bug with Reanimated and Worklets (DESIGN-GAPS "Round E step 2").
 ```bash
 npm run verify                    # lint, docs checks, types, all architecture gates, contracts, tests
 node scripts/change-class.mjs     # this change's class (docs, code, full) and its pre-push gate
-npm run audit:dependencies        # critical production dependency gate
+npm run audit:dependencies        # production dependencies: high or critical fails, but for dated exceptions
 npm run export:ios                # production JS/native asset bundle
 npm run export:android
 ```
@@ -183,10 +183,21 @@ CI runs lint, typecheck, Jest, all architecture/dependency gates (the docs
 checks among them, on the PR's whole range: `fetch-depth: 0` and
 `DOCS_BASE`), contract verification, and both platform exports; `all-green` is the one check that
 needs every one of them and is red on any failure, cancellation or skip.
-Every action is pinned by commit SHA with its `# vX.Y.Z` comment, and every
+Every action is pinned by commit SHA with its `# vX.Y.Z` comment (nightly.yml
+calls ci.yml as `$/.github/workflows/ci.yml`, GitHub's self-repository form:
+this repository at the running commit), every checkout drops its token
+(`persist-credentials: false`: no step fetches or pushes with git), and every
 job's Node is the exact version in `.nvmrc` (`node-version-file`); a guard test
-(`release-and-ci-guards`) holds both. Nothing updates `.nvmrc`: Node is moved by
-hand with each Node 22.x security release. `.github/dependabot.yml`
+(`release-and-ci-guards`) holds all three. Nothing updates `.nvmrc`: Node is moved by
+hand with each Node 22.x security release; package.json's `engines` is `22.x`,
+the major every repository's `.nvmrc` pins, and the same guard test holds
+that they agree. `audit:dependencies`
+(`scripts/audit-dependencies.mjs`) fails on a high or critical advisory in a
+production dependency unless `scripts/audit-allowlist.json` names it with its
+package, a reason and a `reviewBy` date, and on an entry past that date; it
+prints advisory ids only. A vulnerability is reported privately by email,
+never in a public issue ([SECURITY.md](SECURITY.md)); `.github/CODEOWNERS`
+names the owner, whose review the ruleset does not require. `.github/dependabot.yml`
 opens one grouped pull request a week for the actions, and no npm version updates
 (the app's dependency bumps are each a round of their own, §12.1 #278; Dependabot's
 npm security-fix pull requests still open) (the
@@ -206,9 +217,22 @@ generated file's sha256 header with the hash the live
 `platform-requirement.json` (`{"aheadOfDeployed": true}`) is the one reviewed
 escape for a change that must land before the platform's, and `release:ios`
 refuses any mismatch, escape or not.
+The private-data scan (the kit's `node scripts/kit/private-data-scan.mjs`;
+what it refuses, CLAUDE.md "Test data") runs on every commit (`--staged`,
+`.githooks/pre-commit`), on every push (`--push`, `.githooks/pre-push`, over
+the pushed commits; a finding or a scanner error refuses the push), and in the
+change class's gate and ci.yml's "No private data" step (`--tree`). A pull
+request from a fork gets no secrets, so its scan is red by design; the owner's
+pull requests and pushes are scanned.
+The kit's workflow lint (`node scripts/kit/workflow-lint.mjs`: zizmor 1.32.0,
+pinned by sha256, offline and with no token, over `.github/workflows/`) runs on
+every push (`.githooks/pre-push`, after the scan), in the full class, and in
+ci.yml's "Workflow lint" step; a finding is fixed by its rule, or ignored with
+its reason in zizmor's config file beside the workflows (none yet).
 `npm run hooks:install` (once per clone; `git config core.hooksPath
-.githooks`) puts a gate before every push, chosen by change class (Round 21):
-`.githooks/pre-push` runs `node scripts/change-class.mjs --run --worktree`,
+.githooks`) installs both hooks. Before every push, after the scan and the
+workflow lint, `.githooks/pre-push` runs a gate chosen by change class (Round 21):
+`node scripts/change-class.mjs --run --worktree`,
 which reads the change against the merge base with `origin/main` (the working
 tree included), prints its class, the commands and what it skips, then runs
 them and refuses the push at the first red one, naming it. **docs** (Markdown
@@ -218,15 +242,15 @@ Markdown path, found by a source search; full when that search finds none).
 **code** (`app/`, `components/`,
 `constants/`, `hooks/`, `lib/` but `lib/generated/`, `assets/`,
 `__tests__/`): lint, the docs checks, typecheck, every static audit,
-`verify:platform-contracts`, the salvage scan (`scripts/salvage-scan.sh`, ci.yml's
-step for step) and jest's `--findRelatedTests` for the changed files with the
+`verify:platform-contracts`, the private-data scan (ci.yml's "No private data"
+step, the same command: `node scripts/kit/private-data-scan.mjs --tree`) and jest's `--findRelatedTests` for the changed files with the
 no-skipped check — the whole `test:coverage` when a code file has no related
 test or more than 15 code files change; a screen (`app/`) change adds the
 real-router proofs (`__tests__/real-router/`), which the router loads by
 directory, so jest relates none to a route file; `audit:presses` needs the
 whole suite's coverage, so this class skips it
 and says so; CI's Test job runs it on every pull request. **full** — `CI=1 npm run verify`,
-`audit:dependencies` and the salvage scan, everything CI runs but the exports
+`audit:dependencies`, the private-data scan and the workflow lint, everything CI runs but the exports
 (111 s to green, 3 s to refuse a lint error, measured 2026-10-03) — for a
 dependency file, the contracts, the kit, CI config and hooks, test tooling and
 every script, the classifier itself, a deleted or renamed non-Markdown file, an
@@ -678,13 +702,16 @@ rechecked it and Round 7.5 superseded it with the cloud build.
 ## Scope and handoff
 
 The current contract and screen-to-operation map are in
-[`DESIGN-CONTRACT.md`](DESIGN-CONTRACT.md). The current findings, with the
-items carried open from earlier rounds, are in [`DESIGN-GAPS.md`](DESIGN-GAPS.md);
-the Round 6 audit record and its deliberate gaps, and Round 16's findings, are
-in [`DESIGN-GAPS.archive.md`](DESIGN-GAPS.archive.md); each round's preamble
-is in [`docs/records/round-record.md`](docs/records/round-record.md); the
-Round 7.5 and 7.5M observations, findings and the state of 19c are in
-[`ROUND-7.5-OBSERVATIONS.md`](ROUND-7.5-OBSERVATIONS.md).
+[`DESIGN-CONTRACT.md`](DESIGN-CONTRACT.md). The process records live only in
+the private `snoopy-backend`, under `docs/records/snoopy-mobile/`, each at the
+path it had here (CLAUDE.md "Records"; moved 2026-11-15): the current findings,
+with the items carried open from earlier rounds, in `DESIGN-GAPS.md`; the
+Round 6 audit record and its deliberate gaps, and Round 16's findings, in
+`DESIGN-GAPS.archive.md`; each round's preamble in
+`snoopy-backend/docs/records/snoopy-mobile/docs/records/round-record.md`; the
+Round 7.5 and 7.5M observations, findings and the state of 19c in
+`ROUND-7.5-OBSERVATIONS.md`. This repository's documents and comments cite
+them by name.
 
 The governing master plan and round playbook live in the sibling private
 `snoopy-backend` repository. This repository may read them and must never edit

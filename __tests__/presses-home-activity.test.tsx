@@ -375,7 +375,7 @@ describe('Notifications: read and dismissed on the platform (the owner\'s build 
     // Gone before the platform answers.
     expect(screen.queryAllByText(TITLES)).toHaveLength(0);
     expect(fake.to(CLEAR)).toEqual([
-      { method: 'POST', path: '/v1/workspaces/{workspaceId}/notifications/clear', values: { workspaceId: TEST_WORKSPACE }, key: 'notifications-clear-1' },
+      { method: 'POST', path: '/v1/workspaces/{workspaceId}/notifications/clear', values: { workspaceId: TEST_WORKSPACE }, key: 'notifications-clear-1' }, // gitleaks:allow — a request key name, not a secret
     ]);
     await act(async () => answer());
     // The inbox read again: empty.

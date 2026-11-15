@@ -1,5 +1,5 @@
 const { spawnSync } = require('node:child_process');
-const { mkdtempSync, readFileSync, rmSync, writeFileSync } = require('node:fs');
+const { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join, resolve } = require('node:path');
 const { pathToFileURL } = require('node:url');
@@ -43,6 +43,10 @@ const planFor = (changes, related = { '__tests__/x.test.tsx': ['__tests__/x.test
     )}), ...${JSON.stringify(options)} })`,
   );
 const cli = (...args) => spawnSync(process.execPath, ['scripts/change-class.mjs', ...args], { cwd: root, encoding: 'utf8' });
+/** CI's "No private data" step: the kit's scanner over every tracked file. */
+const SCAN = 'node scripts/kit/private-data-scan.mjs --tree';
+/** CI's "Workflow lint" step: the kit's zizmor over .github/workflows/. */
+const LINT = 'node scripts/kit/workflow-lint.mjs';
 const M = (path) => ({ status: 'M', paths: [path] });
 const cmds = (p) => p.commands.map((c) => c.cmd);
 
@@ -71,7 +75,7 @@ describe('the code class', () => {
     const p = planFor([M('components/x.tsx')], { 'components/x.tsx': ['__tests__/x.test.tsx'] });
     expect(p.cls).toBe('code');
     expect(cmds(p)).toEqual(
-      expect.arrayContaining(['npm run lint', 'npm run typecheck', 'npm run audit:platform', 'npm run verify:platform-contracts', 'sh scripts/salvage-scan.sh']),
+      expect.arrayContaining(['npm run lint', 'npm run typecheck', 'npm run audit:platform', 'npm run verify:platform-contracts', SCAN]),
     );
     expect(cmds(p)).toContain("mkdir -p coverage && npx jest --ci --findRelatedTests 'components/x.tsx' --json --outputFile=coverage/jest-related.json");
     expect(cmds(p)).toContain('node scripts/no-skipped-tests.mjs coverage/jest-related.json');
@@ -137,7 +141,8 @@ describe('the full class: every rail', () => {
     expect(run.stdout.split('\n')[0]).toBe(`change-class: full — ${path}: ${why}`);
     expect(run.stdout).toContain('npm run verify');
     expect(run.stdout).toContain('npm run audit:dependencies');
-    expect(run.stdout).toContain('sh scripts/salvage-scan.sh');
+    expect(run.stdout).toContain(SCAN);
+    expect(run.stdout).toContain(LINT);
   });
 
   it('a deleted or renamed non-Markdown file is full; a deleted Markdown file is not', () => {
@@ -270,7 +275,7 @@ describe('what stays unchanged, and the hook', () => {
   });
 
   it('nightly.yml still calls the whole of ci.yml', () => {
-    expect(readFileSync(join(root, '.github/workflows/nightly.yml'), 'utf8')).toContain('uses: ./.github/workflows/ci.yml');
+    expect(readFileSync(join(root, '.github/workflows/nightly.yml'), 'utf8')).toContain('uses: $/.github/workflows/ci.yml');
   });
 
   it(".githooks/pre-push runs the classifier's set, and the full set when the classifier fails", () => {
@@ -279,7 +284,134 @@ describe('what stays unchanged, and the hook', () => {
     const fallback = hook.slice(hook.indexOf('  *)\n    echo "pre-push: the classifier failed'));
     expect(fallback).toContain(' npm run verify\n');
     expect(fallback).toContain('gate "audit:dependencies" npm run audit:dependencies\n');
-    expect(fallback).toContain(' sh scripts/salvage-scan.sh\n');
+    expect(fallback).toContain('gate "No private data" node scripts/kit/private-data-scan.mjs --tree\n');
     expect(hook).toContain('\nexport CI=1\n');
+  });
+});
+
+describe('no private data: CI, the classes and both hooks run the kit scanner (the owner, 2026-11-15)', () => {
+  const ci = readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8');
+  const nightly = readFileSync(join(root, '.github/workflows/nightly.yml'), 'utf8');
+
+  it("ci.yml's step runs the classes' command with the pattern from the secret, and the nightly passes it", () => {
+    expect(evaluate('m.PRIVATE_DATA_SCAN')).toBe(SCAN);
+    expect(ci).toContain(`      - name: No private data\n        env:\n          CLIENT_DENY_PATTERN: \${{ secrets.CLIENT_DENY_PATTERN }}\n        run: ${SCAN}\n`);
+    expect(nightly).toContain('    uses: $/.github/workflows/ci.yml\n');
+    expect(nightly).toContain('    secrets:\n      CLIENT_DENY_PATTERN: ${{ secrets.CLIENT_DENY_PATTERN }}\n');
+    // The pattern lives in the secret and the kit, never in a file here.
+    expect(ci).not.toMatch(/git grep[^\n]*-[a-zA-Z]*E/u);
+    expect(existsSync(join(root, 'scripts/salvage-scan.sh'))).toBe(false);
+  });
+
+  it("ci.yml's gates job runs the full class's workflow lint after the scan (the prevention plan's zizmor)", () => {
+    expect(evaluate('m.WORKFLOW_LINT')).toBe(LINT);
+    expect(evaluate("m.FULL_COMMANDS.map((c) => c.cmd)")).toContain(LINT);
+    const gates = ci.slice(ci.indexOf('    name: Architecture gates\n'), ci.indexOf('    name: Native bundle export\n'));
+    const scan = gates.indexOf(`        run: ${SCAN}\n`);
+    expect(scan).toBeGreaterThan(0);
+    expect(gates.indexOf(`      - name: Workflow lint\n        run: ${LINT}\n`)).toBeGreaterThan(scan);
+  });
+
+  it('both hooks are executable in the index', () => {
+    const modes = spawnSync('git', ['ls-files', '-s', '.githooks'], { cwd: root, encoding: 'utf8', env: quietEnv() }).stdout;
+    expect(modes).toMatch(/^100755 \S+ 0\t\.githooks\/pre-commit$/mu);
+    expect(modes).toMatch(/^100755 \S+ 0\t\.githooks\/pre-push$/mu);
+  });
+
+  /** The kit scanner's stand-in: logs its arguments, then exits STUB_EXIT. */
+  const STUB = [
+    "import { appendFileSync } from 'node:fs';",
+    "appendFileSync('scan.log', `${JSON.stringify(process.argv.slice(2))}\\n`);",
+    'process.exit(Number(process.env.STUB_EXIT));',
+    '',
+  ].join('\n');
+  /** The workflow lint's stand-in: logs its arguments, then exits LINT_EXIT (0 when unset). */
+  const LINT_STUB = [
+    "import { appendFileSync } from 'node:fs';",
+    "appendFileSync('lint.log', `${JSON.stringify(process.argv.slice(2))}\\n`);",
+    'process.exit(Number(process.env.LINT_EXIT ?? 0));',
+    '',
+  ].join('\n');
+  const dirs = [];
+  afterAll(() => dirs.forEach((dir) => rmSync(dir, { recursive: true, force: true })));
+  /** A scratch repository with `hook`, the stub scanner and a green classifier. */
+  const hookRepo = (hook) => {
+    const dir = mkdtempSync(join(tmpdir(), 'private-data-hook-'));
+    dirs.push(dir);
+    const init = spawnSync('git', ['init', '-q', '-b', 'main'], { cwd: dir, encoding: 'utf8', env: quietEnv() });
+    if (init.status !== 0) throw new Error(init.stderr);
+    mkdirSync(join(dir, '.githooks'));
+    mkdirSync(join(dir, 'scripts/kit'), { recursive: true });
+    copyFileSync(join(root, hook), join(dir, hook));
+    writeFileSync(join(dir, 'scripts/kit/private-data-scan.mjs'), STUB);
+    writeFileSync(join(dir, 'scripts/kit/workflow-lint.mjs'), LINT_STUB);
+    writeFileSync(join(dir, 'scripts/change-class.mjs'), 'process.exit(0);\n');
+    return dir;
+  };
+  const runHook = (dir, hook, input, exit, lintExit = 0) =>
+    spawnSync('sh', [hook, 'origin', 'https://example.com/r.git'], {
+      cwd: dir,
+      encoding: 'utf8',
+      input,
+      env: { ...quietEnv(), STUB_EXIT: String(exit), LINT_EXIT: String(lintExit) },
+    });
+  const logged = (name) => (dir) =>
+    existsSync(join(dir, name)) ? readFileSync(join(dir, name), 'utf8').trim().split('\n').map((line) => JSON.parse(line)) : [];
+  const scans = logged('scan.log');
+  const lints = logged('lint.log');
+  const PUSH = 'refs/heads/main 1111111111111111111111111111111111111111 refs/heads/main 0000000000000000000000000000000000000000\n';
+
+  it.each([
+    [1, 'is red (exit 1)'],
+    [2, 'is red (exit 2)'],
+  ])('pre-push runs the scanner with --push first, and a scanner exit %i refuses the push', (exit, said) => {
+    const dir = hookRepo('.githooks/pre-push');
+    const run = runHook(dir, '.githooks/pre-push', PUSH, exit);
+    expect(run.status).toBe(1);
+    expect(run.stdout).toContain(`pre-push: REFUSED — the gate 'No private data (the pushed commits)' ${said}`);
+    expect(run.stdout).not.toContain('the gate by change class');
+    expect(scans(dir)).toEqual([['--push']]);
+    expect(lints(dir)).toEqual([]);
+  });
+
+  it.each([
+    [1, 'is red (exit 1)'],
+    [2, 'is red (exit 2)'],
+  ])('pre-push runs the workflow lint after a clean scan, and a lint exit %i refuses the push before the change class', (exit, said) => {
+    const dir = hookRepo('.githooks/pre-push');
+    const run = runHook(dir, '.githooks/pre-push', PUSH, 0, exit);
+    expect(run.status).toBe(1);
+    expect(run.stdout).toContain(`pre-push: REFUSED — the gate 'Workflow lint' ${said}`);
+    expect(run.stdout).not.toContain('the gate by change class');
+    expect(scans(dir)).toEqual([['--push']]);
+    expect(lints(dir)).toEqual([[]]);
+  });
+
+  it('pre-push goes on to the change class when the scan is clean, and scans nothing for a delete or an empty push', () => {
+    const dir = hookRepo('.githooks/pre-push');
+    const run = runHook(dir, '.githooks/pre-push', PUSH, 0);
+    expect(run.status).toBe(0);
+    expect(run.stdout).toContain('pre-push: No private data (the pushed commits) — green');
+    expect(run.stdout).toContain('pre-push: Workflow lint — green');
+    expect(run.stdout).toContain('pre-push: the gate by change class');
+    expect(lints(dir)).toEqual([[]]);
+    for (const input of ['(delete) 0000000000000000000000000000000000000000 refs/heads/old 1111111111111111111111111111111111111111\n', '']) {
+      const quiet = hookRepo('.githooks/pre-push');
+      expect(runHook(quiet, '.githooks/pre-push', input, 1, 1).status).toBe(0);
+      expect(scans(quiet)).toEqual([]);
+      expect(lints(quiet)).toEqual([]);
+    }
+  });
+
+  it.each([
+    [0, 0, ''],
+    [1, 1, 'pre-commit: REFUSED — private data in the staged changes (named above). Nothing was committed.'],
+    [2, 1, 'pre-commit: REFUSED — the private-data scanner failed (exit 2). Nothing was committed.'],
+  ])('pre-commit runs the scanner on what is staged: scanner exit %i, hook exit %i', (exit, status, said) => {
+    const dir = hookRepo('.githooks/pre-commit');
+    const run = runHook(dir, '.githooks/pre-commit', '', exit);
+    expect(run.status).toBe(status);
+    expect(run.stdout.trim()).toBe(said);
+    expect(scans(dir)).toEqual([['--staged']]);
   });
 });

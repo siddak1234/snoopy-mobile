@@ -129,7 +129,7 @@ describe('architecture audit scripts', () => {
   });
 
   it('fails a credential pinned inside an object literal', () => {
-    writeFileSync(join(root, 'app/bad.ts'), "export const D = { token: 'eyJhbGciOiJIUzI1' };");
+    writeFileSync(join(root, 'app/bad.ts'), "export const D = { token: 'eyJhbGciOiJIUzI1' };"); // gitleaks:allow — a fake token the credential audit must catch
     expect(run(credentialAudit).status).toBe(1);
   });
 
@@ -678,7 +678,7 @@ describe("the gates' reach: constants/, and every module Metro bundles (backend 
     ['audit:tokens', 'hooks/tint.mjs', tokenAudit, "export const tint = { tintColor: 'rgba(0, 0, 0, 0.5)' };"],
     ['audit:tokens', 'lib/shade.cjs', tokenAudit, "module.exports = { shadowColor: '#000000' };"],
     ['audit:credentials', 'constants/demo.ts', credentialAudit, "export const DEMO_PASSWORD = 'hunter2x';"],
-    ['audit:credentials', 'app/login.js', credentialAudit, "export const D = { token: 'eyJhbGciOiJIUzI1' };"],
+    ['audit:credentials', 'app/login.js', credentialAudit, "export const D = { token: 'eyJhbGciOiJIUzI1' };"], // gitleaks:allow — a fake token the credential audit must catch
     ['audit:credentials', 'components/form.jsx', credentialAudit, "const [password, setPassword] = useState('prototype-secret');"],
     ['audit:credentials', 'hooks/seed.mjs', credentialAudit, "export const API_SECRET = 'not-a-real-secret';"],
     ['audit:credentials', 'lib/seed.cjs', credentialAudit, "const DEMO_PASSWORD = 'hunter2x';\nmodule.exports = { DEMO_PASSWORD };"],

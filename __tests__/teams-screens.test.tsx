@@ -152,7 +152,7 @@ describe('Teams (24.11.7)', () => {
 
   it('asks to join a team and reads the directory again; withdraws a request it made', async () => {
     const fake = routeList();
-    const mine: AccessRequest = { id: 'r5', projectId: 'p5', workspaceId: TEST_WORKSPACE, userId: 'u1', status: 'pending', email: 'alex@acme.co', createdAt: '2026-10-02T00:00:00Z' };
+    const mine: AccessRequest = { id: 'r5', projectId: 'p5', workspaceId: TEST_WORKSPACE, userId: 'u1', status: 'pending', email: 'alex@example.com', createdAt: '2026-10-02T00:00:00Z' };
     fake.always('POST /v1/workspaces/{workspaceId}/projects/{projectId}/access-requests', { request: mine });
     fake.always('GET /v1/workspaces/{workspaceId}/projects/{projectId}/access-requests', { requests: [mine] });
     fake.always('DELETE /v1/workspaces/{workspaceId}/projects/{projectId}/access-requests/{requestId}', {
@@ -257,7 +257,7 @@ describe('One team (24.11.7)', () => {
         { projectId: 'p1', workspaceId, userId: 'u2', role: 'owner', displayName: 'Ben', email: 'ben@example.com', createdAt: '2026-09-01T00:00:00Z' },
         ...(options.onTeam === false
           ? []
-          : [{ projectId: 'p1', workspaceId, userId: 'u1', role: viewerRole === 'owner' ? 'admin' : viewerRole, displayName: 'Alex', email: 'alex@acme.co', createdAt: '2026-09-01T00:00:00Z' }]),
+          : [{ projectId: 'p1', workspaceId, userId: 'u1', role: viewerRole === 'owner' ? 'admin' : viewerRole, displayName: 'Alex', email: 'alex@example.com', createdAt: '2026-09-01T00:00:00Z' }]),
         { projectId: 'p1', workspaceId, userId: 'u3', role: 'member', displayName: 'Carol', email: 'carol@example.com', createdAt: '2026-09-01T00:00:00Z' },
       ],
     });

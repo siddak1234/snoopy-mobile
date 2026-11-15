@@ -20,7 +20,7 @@ Copy into the PR body and tick each line; a line that does not apply says why.
 
 ## Parity
 - [ ] The website's page it matches: <path>, with the same words for the same thing.
-- [ ] Recorded in `DESIGN-GAPS.md` under the round's current section.
+- [ ] Recorded in the private `DESIGN-GAPS.md` (root `CLAUDE.md` "Records") under the round's current section.
 
 ## Map and docs
 - [ ] `npm run map` run and `docs/MAP.md` committed; `npm run check:docs` green.

@@ -18,7 +18,12 @@ permissions:
 jobs:
   ci:
     name: CI
-    uses: ./.github/workflows/ci.yml
+    uses: $/.github/workflows/ci.yml
+    # `$/` is this repository at the running commit, never the workspace's files
+    # (GitHub's self-repository form). The one secret ci.yml asks for: the
+    # private-data scan's client-name pattern.
+    secrets:
+      CLIENT_DENY_PATTERN: ${{ secrets.CLIENT_DENY_PATTERN }}
 
   # A red nightly leaves an open "Nightly red" issue (one, commented on each
   # further red night), not only GitHub's email (NIGHT-9). The one job with

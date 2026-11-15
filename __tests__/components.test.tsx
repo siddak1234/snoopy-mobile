@@ -279,8 +279,8 @@ describe('TextField', () => {
         placeholder="you@company.com"
       />,
     );
-    await fireEvent.changeText(getByPlaceholderText('you@company.com'), 'alex@acme.co');
-    expect(onChangeText).toHaveBeenCalledWith('alex@acme.co');
+    await fireEvent.changeText(getByPlaceholderText('you@company.com'), 'alex@example.com');
+    expect(onChangeText).toHaveBeenCalledWith('alex@example.com');
   });
 });
 

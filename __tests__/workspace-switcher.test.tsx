@@ -44,7 +44,7 @@ function sessionWith(
     status: 'signed-in',
     session: {
       authenticated: true,
-      user: { userId: 'u1', email: 'alex@acme.co', activeWorkspaceId: ORG },
+      user: { userId: 'u1', email: 'alex@example.com', activeWorkspaceId: ORG },
       workspaces,
       ...(options.truncated ? { workspacesTruncated: true } : {}),
     },

@@ -1,0 +1,11 @@
+{
+  "description": "audit:dependencies' named, dated exceptions: each high or critical advisory in a production dependency it lets through, until its reviewBy date (scripts/audit-dependencies.mjs).",
+  "advisories": [
+    {
+      "id": "GHSA-qr28-fpjm-wq7f",
+      "package": "decode-uri-component",
+      "reason": "Reached only through expo-router 57's query-string 7. Expo SDK 58's expo-router (58.0.13 and later) no longer depends on query-string; the SDK move is a round of its own, and no SDK 57 version avoids it.",
+      "reviewBy": "2026-12-31"
+    }
+  ]
+}

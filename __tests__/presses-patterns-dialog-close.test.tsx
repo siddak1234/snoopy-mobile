@@ -73,7 +73,7 @@ const person = (userId: string, role: string, displayName: string) => ({
   userId,
   role,
   displayName,
-  email: `${displayName.toLowerCase()}@acme.co`,
+  email: `${displayName.toLowerCase()}@example.com`,
   createdAt: '2026-09-01T00:00:00Z',
 });
 const finance = (viewerRole: 'owner' | 'admin' | 'member') => ({
@@ -98,12 +98,12 @@ async function organization() {
           {
             id: 'domain-1',
             workspaceId: TEST_WORKSPACE,
-            domain: 'acme.co',
-            registrableDomain: 'acme.co',
+            domain: 'example.com',
+            registrableDomain: 'example.com',
             status: 'verified',
             joinPolicy: 'approval',
             discoveryEnabled: true,
-            verificationRecordName: '_autom8x.acme.co',
+            verificationRecordName: '_autom8x.example.com',
             createdAt: '2026-09-01T00:00:00Z',
           },
         ],
@@ -197,7 +197,7 @@ const GMAIL_CONNECTED = {
       id: 'c1',
       providerId: 'gmail',
       workspaceId: TEST_WORKSPACE,
-      externalAccount: { displayName: 'alex@acme.co' },
+      externalAccount: { displayName: 'alex@example.com' },
       status: 'connected',
       requiredScopes: [],
       grantedScopes: [],
@@ -256,7 +256,7 @@ const CASES: DialogCase[] = [
     site: 'components/organization/org-domains.tsx:101',
     open: async () => {
       await organization();
-      await pressId('domain-acme.co');
+      await pressId('domain-example.com');
     },
     dialog: 'domain-dialog',
     close: 'Close',

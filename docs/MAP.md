@@ -7,14 +7,13 @@
 - [CLAUDE.md](../CLAUDE.md)
 - `snoopy-backend/docs/platform/ENGINEERING-STANDARD.md`
 - [DESIGN-CONTRACT.md](../DESIGN-CONTRACT.md)
-- [DESIGN-GAPS.md](../DESIGN-GAPS.md)
-- [docs/records/round-record.md](records/round-record.md)
+- `snoopy-backend/docs/records/snoopy-mobile/DESIGN-GAPS.md`
 
 ## Where to look by task
 
-- **screens**: `app/**`, `components/**`, `constants/**`, `assets/**`, `hooks/**` → [DESIGN-CONTRACT.md](../DESIGN-CONTRACT.md), [DESIGN-GAPS.md](../DESIGN-GAPS.md)
-- **view**: `lib/view/**` → [DESIGN-GAPS.md](../DESIGN-GAPS.md)
-- **content**: `lib/content/**` → [DESIGN-CONTRACT.md](../DESIGN-CONTRACT.md), [DESIGN-GAPS.md](../DESIGN-GAPS.md)
+- **screens**: `app/**`, `components/**`, `constants/**`, `assets/**`, `hooks/**` → [DESIGN-CONTRACT.md](../DESIGN-CONTRACT.md)
+- **view**: `lib/view/**` → [DESIGN-CONTRACT.md](../DESIGN-CONTRACT.md)
+- **content**: `lib/content/**` → [DESIGN-CONTRACT.md](../DESIGN-CONTRACT.md)
 - **platform**: `lib/platform/**` → [README.md](../README.md), [lib/platform/CLAUDE.md](../lib/platform/CLAUDE.md)
 - **tooling**: `scripts/**`, `.github/**`, `.githooks/**`, `app.config.js`, `app.json`, `eas.json` → [README.md](../README.md)
 - **claude**: `.claude/**` → [CLAUDE.md](../CLAUDE.md)
@@ -30,7 +29,6 @@
 - `assets/`: no description
 - `components/`: no description
 - `constants/`: no description
-- `design-gaps/`: no description
 - `design-source/`: no description
 - `docs/`: no description
 - `hooks/`: no description
@@ -42,7 +40,7 @@
 
 - `npm run android`: `expo run:android`
 - `npm run audit:credentials`: `node scripts/audit-credentials.mjs`
-- `npm run audit:dependencies`: `npm audit --omit=dev --audit-level=critical`
+- `npm run audit:dependencies`: `node scripts/audit-dependencies.mjs`
 - `npm run audit:docs`: `node scripts/audit-doc-references.mjs`
 - `npm run audit:fixtures`: `node scripts/audit-fixtures.mjs`
 - `npm run audit:haptics`: `node scripts/audit-haptics.mjs`
@@ -126,7 +124,9 @@
 ### Scripts
 
 - [scripts/all-green-on-head.mjs](../scripts/all-green-on-head.mjs): The release gate's all-green: the one from ci.yml's PUSH run on HEAD.
+- [scripts/audit-allowlist.json](../scripts/audit-allowlist.json): audit:dependencies' named, dated exceptions: each high or critical advisory in a production dependency it lets through, until its reviewBy …
 - [scripts/audit-credentials.mjs](../scripts/audit-credentials.mjs): Fails when a credential-shaped default appears in an app screen.
+- [scripts/audit-dependencies.mjs](../scripts/audit-dependencies.mjs): Fails when a production dependency has a high or critical advisory that scripts/audit-allowlist.json does not name, or when an entry there …
 - [scripts/audit-doc-references.mjs](../scripts/audit-doc-references.mjs): Every file path this repository's documents name, and whether it exists: no
 - [scripts/audit-fixtures.mjs](../scripts/audit-fixtures.mjs): Fails when a screen starts reading `lib/fixtures` again, or when a file that
 - [scripts/audit-haptics.mjs](../scripts/audit-haptics.mjs): Fails when a press can be silent (build 11, D7).
@@ -141,7 +141,6 @@
 - [scripts/no-skipped-tests.mjs](../scripts/no-skipped-tests.mjs): Fails when the suite skipped a test (M4: no silent skips).
 - [scripts/release-ios.sh](../scripts/release-ios.sh): Builds and submits the iOS app from main — and refuses everything else.
 - [scripts/repo-facts.mjs](../scripts/repo-facts.mjs): What this repository reports about itself, in the shape snoopy-backend's
-- [scripts/salvage-scan.sh](../scripts/salvage-scan.sh): ci.yml "No salvaged client data", step for step, for the pre-push gate (scripts/change-class.mjs and .githooks/pre-push).
 - [scripts/verify-deployed-contracts.mjs](../scripts/verify-deployed-contracts.mjs): Are this repository's generated platform types the contract the RUNNING
 - [scripts/verify-platform-contracts.mjs](../scripts/verify-platform-contracts.mjs): Fails when the committed platform types no longer match the backend contracts.
 
@@ -170,15 +169,11 @@
 
 - [CLAUDE.md](../CLAUDE.md) (doc)
 - [README.md](../README.md) (doc)
-- [ROUND-7.5-OBSERVATIONS.md](../ROUND-7.5-OBSERVATIONS.md) (archive)
-- [docs/records/round-record.md](records/round-record.md) (current)
 - [lib/platform/CLAUDE.md](../lib/platform/CLAUDE.md) (doc)
 
 ### 100 KB to 1 MB
 
 - [DESIGN-CONTRACT.md](../DESIGN-CONTRACT.md) (doc)
-- [DESIGN-GAPS.archive.md](../DESIGN-GAPS.archive.md) (archive)
-- [DESIGN-GAPS.md](../DESIGN-GAPS.md) (current)
 
 ### Over 1 MB: grep only
 

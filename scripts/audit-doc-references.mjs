@@ -9,7 +9,7 @@
 // What changed here: this repository is `snoopy-mobile` and the backend is a
 // sibling, so `snoopy-backend/…` and `../snoopy-backend/…` are not checked
 // unless the run opts in; `*.tmpl` (a skill's template) is a file type; and the
-// documents are every `*.md` git sees — the root records, the folder CLAUDE.md
+// documents are every `*.md` git sees — the root documents, the folder CLAUDE.md
 // files, `docs/` and `.claude/**/*.md` (the skills) — less the archives and the
 // unmapped folders `docs/docs-map.json` names (`skipped()`, below).
 //
@@ -288,7 +288,8 @@ function blocks(text) {
 /**
  * What this repository's docs map (`docs/docs-map.json`) says the audit does not
  * read: the archives, `records.archive` — moved verbatim and never edited, so a
- * path one names is history, true when it was written — and the folders the map
+ * path one names is history, true when it was written (none since 2026-11-15:
+ * the process records moved to the private backend, CLAUDE.md "Records") — and the folders the map
  * leaves `unmapped`, which hold no prose of this repository's (`design-source/`,
  * the design tool's export). No map, or one that does not parse: nothing is
  * skipped, so a broken map can only make the audit stricter.

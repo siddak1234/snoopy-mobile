@@ -315,12 +315,12 @@ describe('Support (24.6.4)', () => {
     expect(fake.to('POST /v1/contact-requests')).toHaveLength(0);
 
     await fireEvent.changeText(screen.getByPlaceholderText('Invoices arrive by email, keyed into the ERP'), 'Invoices by email');
-    await fireEvent.changeText(screen.getByPlaceholderText('you@company.com'), ' alex@acme.co ');
+    await fireEvent.changeText(screen.getByPlaceholderText('you@company.com'), ' alex@example.com ');
     await fireEvent.press(screen.getByText('Send'));
     expect(
       await screen.findByText("Thanks — we've got it. We review every workflow and reply within two business days."),
     ).toBeTruthy();
-    expect(fake.to('POST /v1/contact-requests')[0]!.body).toEqual({ email: 'alex@acme.co', workflow: 'Invoices by email' });
+    expect(fake.to('POST /v1/contact-requests')[0]!.body).toEqual({ email: 'alex@example.com', workflow: 'Invoices by email' });
   });
 
   it('opens Privacy and Terms on the website', async () => {

@@ -73,7 +73,7 @@ describe('Linked accounts (24.6.2, on 24.2.1)', () => {
     const fake = fakePlatform(platformOperation);
     fake.always('GET /v1/auth/identities', {
       identities: [
-        { provider: 'google', primary: true, email: 'alex@acme.co' },
+        { provider: 'google', primary: true, email: 'alex@example.com' },
         { provider: 'microsoft', primary: false },
       ],
     });
@@ -88,7 +88,7 @@ describe('Linked accounts (24.6.2, on 24.2.1)', () => {
     });
     await renderWithProviders(<AccountScreen />, session());
     const google = await screen.findByTestId('identity-google');
-    const address = within(google).getByText('alex@acme.co');
+    const address = within(google).getByText('alex@example.com');
     expect((StyleSheet.flatten(address.props.style) as { color?: string }).color).toBe(nocturneDark.neutral[400]);
     // Linked, but its provider reported no address; and not linked at all.
     expect(within(screen.getByTestId('identity-microsoft')).queryByText(/@/u)).toBeNull();

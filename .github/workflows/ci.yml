@@ -9,8 +9,14 @@ on:
   push:
     branches: [main]
   workflow_call:
+    # The nightly passes the private-data scan its pattern (.github/workflows/nightly.yml).
+    secrets:
+      CLIENT_DENY_PATTERN:
+        required: true
 
-# Every job reads the repository and nothing else.
+# Every job reads the repository and nothing else. Every checkout drops its
+# token (`persist-credentials: false`, zizmor's artipacked): no later step
+# fetches or pushes with git.
 permissions:
   contents: read
 
@@ -24,6 +30,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
@@ -37,6 +45,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
@@ -50,6 +60,8 @@ jobs:
     timeout-minutes: 14
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
@@ -100,6 +112,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
@@ -145,32 +158,29 @@ jobs:
       # invariant ADR-0017 amended, and one console call could log a token
       # (one is admitted: components/blocks/not-drawn.ts, a part not drawn).
       - run: npm run audit:platform
-      # Fail the build on critical advisories. High-severity findings that only
-      # Expo 57 resolves remain a documented SDK migration rather than a forced
-      # major upgrade inside Round 6.
+      # Fail the build on a high or critical advisory in a production
+      # dependency, except a named, dated exception in
+      # scripts/audit-allowlist.json (scripts/audit-dependencies.mjs).
       - run: npm run audit:dependencies
       # No backend checkout here: reads the committed, hash-checked copy
       # (lib/generated/snoopy-backend/, SHA256SUMS) and never skips (M1).
       - run: npm run verify:platform-contracts
-      - name: No salvaged client data
-        run: |
-          # `_salvage/` lives in the workspace folder, outside every repository. It
-          # holds the recovered n8n workflows and the legacy database archive: real
-          # customer email addresses, vendor names, and dollar amounts. This
-          # repository is public and git history is permanent, so deleting such a
-          # file in a later commit does not remove it — the only workable control is
-          # to never let it land.
-          if git ls-files | grep -i '_salvage'; then
-            echo "FAIL: a _salvage path is tracked in this repository."
-            exit 1
-          fi
-          # Excludes .github/workflows: this file necessarily names the identifiers
-          # it searches for.
-          if git grep -Iln -iE 'client-a|client-b' -- . ':(exclude).github/workflows/*'; then
-            echo "FAIL: a real client identifier appears in tracked content."
-            exit 1
-          fi
-          echo "No salvaged client data: PASS"
+      # No private data in this public repository (the owner, 2026-11-15): the kit's
+      # scanner (scripts/kit/, canonical in snoopy-backend) over every tracked
+      # file. The client-name pattern comes from the CLIENT_DENY_PATTERN secret and
+      # is never written here. A pull request from a fork gets no secrets, so its
+      # scan is red by design; the owner's pull requests and pushes are scanned.
+      # Where else it runs: README "Verification".
+      - name: No private data
+        env:
+          CLIENT_DENY_PATTERN: ${{ secrets.CLIENT_DENY_PATTERN }}
+        run: node scripts/kit/private-data-scan.mjs --tree
+      # The kit's workflow lint (the prevention plan's "zizmor in CI: every
+      # workflow declares its permissions"): zizmor 1.32.0, pinned by sha256,
+      # offline and with no token, over .github/workflows/. The pre-push hook and
+      # the full change class run the same command.
+      - name: Workflow lint
+        run: node scripts/kit/workflow-lint.mjs
 
   export:
     name: Native bundle export
@@ -178,6 +188,8 @@ jobs:
     timeout-minutes: 6
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
@@ -200,6 +212,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc

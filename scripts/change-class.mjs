@@ -10,8 +10,9 @@
  * class skips are printed FIRST; `--run` then runs the commands in order and the
  * first red one stops the run (exit 10). `--full` forces the full class.
  *
- * - full: today's whole gate — `CI=1 npm run verify`, `audit:dependencies` and
- *   the salvaged-client-data scan. Every rail lands here: a dependency file,
+ * - full: today's whole gate — `CI=1 npm run verify`, `audit:dependencies`, the
+ *   private-data scan (PRIVATE_DATA_SCAN) and the workflow lint (WORKFLOW_LINT), CI's own
+ *   steps. Every rail lands here: a dependency file,
  *   the contracts, the kit, CI config and hooks, test tooling and every
  *   script, this classifier and its test, a deleted or renamed non-Markdown
  *   file, an unrecognised path, an empty change, and any classifier error (it
@@ -115,10 +116,16 @@ export function recordsTests(base = root) {
 const q = (s) => `'${s.replaceAll("'", "'\\''")}'`;
 const step = (name, cmd) => ({ name, cmd });
 
+/** CI's "No private data" step, the same command: the kit's scanner over every tracked file. */
+export const PRIVATE_DATA_SCAN = 'node scripts/kit/private-data-scan.mjs --tree';
+/** CI's "Workflow lint" step, the same command: zizmor over .github/workflows/ (the pre-push hook runs it on every push). */
+export const WORKFLOW_LINT = 'node scripts/kit/workflow-lint.mjs';
+
 export const FULL_COMMANDS = [
   step('verify (lint, docs checks, typecheck, architecture gates, contracts, tests with coverage, presses, facts)', 'npm run verify'),
   step('audit:dependencies', 'npm run audit:dependencies'),
-  step('No salvaged client data', 'sh scripts/salvage-scan.sh'),
+  step('No private data', PRIVATE_DATA_SCAN),
+  step('Workflow lint', WORKFLOW_LINT),
 ];
 const DOCS_CHECKS = [
   step('check:docs', 'npm run check:docs'),
@@ -133,7 +140,7 @@ const FAST = [
     step(`audit:${a}`, `npm run audit:${a}`),
   ),
   step('verify:platform-contracts', 'npm run verify:platform-contracts'),
-  step('No salvaged client data', 'sh scripts/salvage-scan.sh'),
+  step('No private data', PRIVATE_DATA_SCAN),
 ];
 // jest writes its --outputFile into an existing folder only: a fresh clone has no coverage/.
 const RELATED_REPORT = 'coverage/jest-related.json';
