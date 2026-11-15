@@ -14,7 +14,9 @@ on:
       CLIENT_DENY_PATTERN:
         required: true
 
-# Every job reads the repository and nothing else.
+# Every job reads the repository and nothing else. Every checkout drops its
+# token (`persist-credentials: false`, zizmor's artipacked): no later step
+# fetches or pushes with git.
 permissions:
   contents: read
 
@@ -28,6 +30,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
@@ -41,6 +45,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
@@ -54,6 +60,8 @@ jobs:
     timeout-minutes: 14
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
@@ -104,6 +112,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
@@ -166,6 +175,12 @@ jobs:
         env:
           CLIENT_DENY_PATTERN: ${{ secrets.CLIENT_DENY_PATTERN }}
         run: node scripts/kit/private-data-scan.mjs --tree
+      # The kit's workflow lint (the prevention plan's "zizmor in CI: every
+      # workflow declares its permissions"): zizmor 1.32.0, pinned by sha256,
+      # offline and with no token, over .github/workflows/. The pre-push hook and
+      # the full change class run the same command.
+      - name: Workflow lint
+        run: node scripts/kit/workflow-lint.mjs
 
   export:
     name: Native bundle export
@@ -173,6 +188,8 @@ jobs:
     timeout-minutes: 6
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
@@ -195,6 +212,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc

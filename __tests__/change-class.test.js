@@ -45,6 +45,8 @@ const planFor = (changes, related = { '__tests__/x.test.tsx': ['__tests__/x.test
 const cli = (...args) => spawnSync(process.execPath, ['scripts/change-class.mjs', ...args], { cwd: root, encoding: 'utf8' });
 /** CI's "No private data" step: the kit's scanner over every tracked file. */
 const SCAN = 'node scripts/kit/private-data-scan.mjs --tree';
+/** CI's "Workflow lint" step: the kit's zizmor over .github/workflows/. */
+const LINT = 'node scripts/kit/workflow-lint.mjs';
 const M = (path) => ({ status: 'M', paths: [path] });
 const cmds = (p) => p.commands.map((c) => c.cmd);
 
@@ -140,6 +142,7 @@ describe('the full class: every rail', () => {
     expect(run.stdout).toContain('npm run verify');
     expect(run.stdout).toContain('npm run audit:dependencies');
     expect(run.stdout).toContain(SCAN);
+    expect(run.stdout).toContain(LINT);
   });
 
   it('a deleted or renamed non-Markdown file is full; a deleted Markdown file is not', () => {
@@ -272,7 +275,7 @@ describe('what stays unchanged, and the hook', () => {
   });
 
   it('nightly.yml still calls the whole of ci.yml', () => {
-    expect(readFileSync(join(root, '.github/workflows/nightly.yml'), 'utf8')).toContain('uses: ./.github/workflows/ci.yml');
+    expect(readFileSync(join(root, '.github/workflows/nightly.yml'), 'utf8')).toContain('uses: $/.github/workflows/ci.yml');
   });
 
   it(".githooks/pre-push runs the classifier's set, and the full set when the classifier fails", () => {
@@ -293,11 +296,20 @@ describe('no private data: CI, the classes and both hooks run the kit scanner (t
   it("ci.yml's step runs the classes' command with the pattern from the secret, and the nightly passes it", () => {
     expect(evaluate('m.PRIVATE_DATA_SCAN')).toBe(SCAN);
     expect(ci).toContain(`      - name: No private data\n        env:\n          CLIENT_DENY_PATTERN: \${{ secrets.CLIENT_DENY_PATTERN }}\n        run: ${SCAN}\n`);
-    expect(nightly).toContain('    uses: ./.github/workflows/ci.yml\n');
+    expect(nightly).toContain('    uses: $/.github/workflows/ci.yml\n');
     expect(nightly).toContain('    secrets:\n      CLIENT_DENY_PATTERN: ${{ secrets.CLIENT_DENY_PATTERN }}\n');
     // The pattern lives in the secret and the kit, never in a file here.
     expect(ci).not.toMatch(/git grep[^\n]*-[a-zA-Z]*E/u);
     expect(existsSync(join(root, 'scripts/salvage-scan.sh'))).toBe(false);
+  });
+
+  it("ci.yml's gates job runs the full class's workflow lint after the scan (the prevention plan's zizmor)", () => {
+    expect(evaluate('m.WORKFLOW_LINT')).toBe(LINT);
+    expect(evaluate("m.FULL_COMMANDS.map((c) => c.cmd)")).toContain(LINT);
+    const gates = ci.slice(ci.indexOf('    name: Architecture gates\n'), ci.indexOf('    name: Native bundle export\n'));
+    const scan = gates.indexOf(`        run: ${SCAN}\n`);
+    expect(scan).toBeGreaterThan(0);
+    expect(gates.indexOf(`      - name: Workflow lint\n        run: ${LINT}\n`)).toBeGreaterThan(scan);
   });
 
   it('both hooks are executable in the index', () => {
@@ -313,6 +325,13 @@ describe('no private data: CI, the classes and both hooks run the kit scanner (t
     'process.exit(Number(process.env.STUB_EXIT));',
     '',
   ].join('\n');
+  /** The workflow lint's stand-in: logs its arguments, then exits LINT_EXIT (0 when unset). */
+  const LINT_STUB = [
+    "import { appendFileSync } from 'node:fs';",
+    "appendFileSync('lint.log', `${JSON.stringify(process.argv.slice(2))}\\n`);",
+    'process.exit(Number(process.env.LINT_EXIT ?? 0));',
+    '',
+  ].join('\n');
   const dirs = [];
   afterAll(() => dirs.forEach((dir) => rmSync(dir, { recursive: true, force: true })));
   /** A scratch repository with `hook`, the stub scanner and a green classifier. */
@@ -325,13 +344,21 @@ describe('no private data: CI, the classes and both hooks run the kit scanner (t
     mkdirSync(join(dir, 'scripts/kit'), { recursive: true });
     copyFileSync(join(root, hook), join(dir, hook));
     writeFileSync(join(dir, 'scripts/kit/private-data-scan.mjs'), STUB);
+    writeFileSync(join(dir, 'scripts/kit/workflow-lint.mjs'), LINT_STUB);
     writeFileSync(join(dir, 'scripts/change-class.mjs'), 'process.exit(0);\n');
     return dir;
   };
-  const runHook = (dir, hook, input, exit) =>
-    spawnSync('sh', [hook, 'origin', 'https://example.com/r.git'], { cwd: dir, encoding: 'utf8', input, env: { ...quietEnv(), STUB_EXIT: String(exit) } });
-  const scans = (dir) =>
-    existsSync(join(dir, 'scan.log')) ? readFileSync(join(dir, 'scan.log'), 'utf8').trim().split('\n').map((line) => JSON.parse(line)) : [];
+  const runHook = (dir, hook, input, exit, lintExit = 0) =>
+    spawnSync('sh', [hook, 'origin', 'https://example.com/r.git'], {
+      cwd: dir,
+      encoding: 'utf8',
+      input,
+      env: { ...quietEnv(), STUB_EXIT: String(exit), LINT_EXIT: String(lintExit) },
+    });
+  const logged = (name) => (dir) =>
+    existsSync(join(dir, name)) ? readFileSync(join(dir, name), 'utf8').trim().split('\n').map((line) => JSON.parse(line)) : [];
+  const scans = logged('scan.log');
+  const lints = logged('lint.log');
   const PUSH = 'refs/heads/main 1111111111111111111111111111111111111111 refs/heads/main 0000000000000000000000000000000000000000\n';
 
   it.each([
@@ -344,6 +371,20 @@ describe('no private data: CI, the classes and both hooks run the kit scanner (t
     expect(run.stdout).toContain(`pre-push: REFUSED — the gate 'No private data (the pushed commits)' ${said}`);
     expect(run.stdout).not.toContain('the gate by change class');
     expect(scans(dir)).toEqual([['--push']]);
+    expect(lints(dir)).toEqual([]);
+  });
+
+  it.each([
+    [1, 'is red (exit 1)'],
+    [2, 'is red (exit 2)'],
+  ])('pre-push runs the workflow lint after a clean scan, and a lint exit %i refuses the push before the change class', (exit, said) => {
+    const dir = hookRepo('.githooks/pre-push');
+    const run = runHook(dir, '.githooks/pre-push', PUSH, 0, exit);
+    expect(run.status).toBe(1);
+    expect(run.stdout).toContain(`pre-push: REFUSED — the gate 'Workflow lint' ${said}`);
+    expect(run.stdout).not.toContain('the gate by change class');
+    expect(scans(dir)).toEqual([['--push']]);
+    expect(lints(dir)).toEqual([[]]);
   });
 
   it('pre-push goes on to the change class when the scan is clean, and scans nothing for a delete or an empty push', () => {
@@ -351,11 +392,14 @@ describe('no private data: CI, the classes and both hooks run the kit scanner (t
     const run = runHook(dir, '.githooks/pre-push', PUSH, 0);
     expect(run.status).toBe(0);
     expect(run.stdout).toContain('pre-push: No private data (the pushed commits) — green');
+    expect(run.stdout).toContain('pre-push: Workflow lint — green');
     expect(run.stdout).toContain('pre-push: the gate by change class');
+    expect(lints(dir)).toEqual([[]]);
     for (const input of ['(delete) 0000000000000000000000000000000000000000 refs/heads/old 1111111111111111111111111111111111111111\n', '']) {
       const quiet = hookRepo('.githooks/pre-push');
-      expect(runHook(quiet, '.githooks/pre-push', input, 1).status).toBe(0);
+      expect(runHook(quiet, '.githooks/pre-push', input, 1, 1).status).toBe(0);
       expect(scans(quiet)).toEqual([]);
+      expect(lints(quiet)).toEqual([]);
     }
   });
 

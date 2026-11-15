@@ -183,9 +183,12 @@ CI runs lint, typecheck, Jest, all architecture/dependency gates (the docs
 checks among them, on the PR's whole range: `fetch-depth: 0` and
 `DOCS_BASE`), contract verification, and both platform exports; `all-green` is the one check that
 needs every one of them and is red on any failure, cancellation or skip.
-Every action is pinned by commit SHA with its `# vX.Y.Z` comment, and every
+Every action is pinned by commit SHA with its `# vX.Y.Z` comment (nightly.yml
+calls ci.yml as `$/.github/workflows/ci.yml`, GitHub's self-repository form:
+this repository at the running commit), every checkout drops its token
+(`persist-credentials: false`: no step fetches or pushes with git), and every
 job's Node is the exact version in `.nvmrc` (`node-version-file`); a guard test
-(`release-and-ci-guards`) holds both. Nothing updates `.nvmrc`: Node is moved by
+(`release-and-ci-guards`) holds all three. Nothing updates `.nvmrc`: Node is moved by
 hand with each Node 22.x security release; package.json's `engines` is `22.x`,
 the major every repository's `.nvmrc` pins, and the same guard test holds
 that they agree. `audit:dependencies`
@@ -221,9 +224,14 @@ the pushed commits; a finding or a scanner error refuses the push), and in the
 change class's gate and ci.yml's "No private data" step (`--tree`). A pull
 request from a fork gets no secrets, so its scan is red by design; the owner's
 pull requests and pushes are scanned.
+The kit's workflow lint (`node scripts/kit/workflow-lint.mjs`: zizmor 1.32.0,
+pinned by sha256, offline and with no token, over `.github/workflows/`) runs on
+every push (`.githooks/pre-push`, after the scan), in the full class, and in
+ci.yml's "Workflow lint" step; a finding is fixed by its rule, or ignored with
+its reason in zizmor's config file beside the workflows (none yet).
 `npm run hooks:install` (once per clone; `git config core.hooksPath
-.githooks`) installs both hooks. Before every push, after the scan,
-`.githooks/pre-push` runs a gate chosen by change class (Round 21):
+.githooks`) installs both hooks. Before every push, after the scan and the
+workflow lint, `.githooks/pre-push` runs a gate chosen by change class (Round 21):
 `node scripts/change-class.mjs --run --worktree`,
 which reads the change against the merge base with `origin/main` (the working
 tree included), prints its class, the commands and what it skips, then runs
@@ -242,7 +250,7 @@ real-router proofs (`__tests__/real-router/`), which the router loads by
 directory, so jest relates none to a route file; `audit:presses` needs the
 whole suite's coverage, so this class skips it
 and says so; CI's Test job runs it on every pull request. **full** — `CI=1 npm run verify`,
-`audit:dependencies` and the private-data scan, everything CI runs but the exports
+`audit:dependencies`, the private-data scan and the workflow lint, everything CI runs but the exports
 (111 s to green, 3 s to refuse a lint error, measured 2026-10-03) — for a
 dependency file, the contracts, the kit, CI config and hooks, test tooling and
 every script, the classifier itself, a deleted or renamed non-Markdown file, an

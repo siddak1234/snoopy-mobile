@@ -75,7 +75,7 @@ git status --short
 
 - Work only in a scratch clone outside ~/Desktop and iCloud: jest hangs on evicted files, and `.claude/hooks/guard.mjs` refuses installs and builds there. The guard also asks the owner first before a Write or Edit outside the scratch root and a project's memory, a Bash write into Downloads, Desktop, Documents or iCloud Drive, or an Artifact publish or delete (`../snoopy-backend/CLAUDE.md` rule 11); inside the scratch root it refuses any write outside a repository copy and a session's `docker-config` (row 10, the owner's "Strict one place", BUILD-PLAN 30.17), and the Stop hook shows the owner the loose files a turn left.
 - One heavy gate at a time across agents (the session's gate lock); the land step is rule 8.
-- `npm run hooks:install` once per clone: the private-data scan on every commit and push, then the change class's gate (`scripts/change-class.mjs`) before every push — README "Verification". Never `git push --no-verify`.
+- `npm run hooks:install` once per clone: the private-data scan on every commit and push, then the workflow lint and the change class's gate (`scripts/change-class.mjs`) before every push — README "Verification". Never `git push --no-verify`.
 - CI's `Deployed contract` job is red by design while the types run ahead of production: say so before pushing (`lib/platform/CLAUDE.md`).
 - A PR is ready only when it is pushed, `all-green` passed on its head, and its body is final.
 

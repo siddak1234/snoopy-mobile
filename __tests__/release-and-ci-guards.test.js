@@ -269,7 +269,7 @@ describe('the nightly (NIGHT-7) is its own workflow calling ci.yml, and reports 
 
   it('schedules nightly.yml alone, which calls the whole of ci.yml from its job named CI', () => {
     expect(nightly).toMatch(/^on:\n {2}schedule:\n {4}- cron: '\d+ \d+ \* \* \*'\n\n/mu);
-    expect(nightly).toContain('\n  ci:\n    name: CI\n    uses: ./.github/workflows/ci.yml\n');
+    expect(nightly).toContain('\n  ci:\n    name: CI\n    uses: $/.github/workflows/ci.yml\n');
     // The one secret a call passes: the private-data scan's pattern (change-class.test.js holds the step).
     expect(ci).toMatch(
       /^on:\n {2}pull_request:\n {2}push:\n {4}branches: \[main\]\n {2}workflow_call:\n {4}# [^\n]*\n {4}secrets:\n {6}CLIENT_DENY_PATTERN:\n {8}required: true\n\n/mu,
@@ -298,12 +298,23 @@ describe('the nightly (NIGHT-7) is its own workflow calling ci.yml, and reports 
 });
 
 describe("the .github configuration's own rules (the website's structure-contract holds the same)", () => {
-  it('pins every action by a 40-hex commit with its # vX.Y.Z comment (a ./ workflow is this commit)', () => {
+  it('pins every action by a 40-hex commit with its # vX.Y.Z comment (a $/ workflow is this commit; a ./ one is not, and fails)', () => {
     const refs = workflows.flatMap(([file, text]) =>
-      [...text.matchAll(/^\s+(?:- )?uses: (\S+.*)$/gmu)].map(([, ref]) => [file, ref]).filter(([, ref]) => !ref.startsWith('./')),
+      [...text.matchAll(/^\s+(?:- )?uses: (\S+.*)$/gmu)].map(([, ref]) => [file, ref]).filter(([, ref]) => !ref.startsWith('$/')),
     );
     expect(refs.length).toBeGreaterThan(0);
     expect(refs.filter(([, ref]) => !/^[\w.-]+\/[\w.-]+@[0-9a-f]{40} # v\d+\.\d+\.\d+$/u.test(ref))).toEqual([]);
+  });
+
+  it("drops every checkout's token and calls this repository's own workflow as $/ (zizmor's artipacked and self-repository; the kit's workflow lint)", () => {
+    // No step fetches or pushes with git, so no checkout leaves the token in .git/config.
+    const checkouts = workflows.flatMap(([file, text]) =>
+      [...text.matchAll(/^( +)- uses: actions\/checkout@.*\n((?:\1 {2}.*\n)*)/gmu)].map(([, , rest]) => [file, /^ +persist-credentials: false$/mu.test(rest)]),
+    );
+    expect(checkouts.length).toBeGreaterThan(0);
+    expect(checkouts.filter(([, dropped]) => !dropped).map(([file]) => file)).toEqual([]);
+    // GitHub's self-repository form: this repository at the running commit, never the workspace's files.
+    expect(workflows.filter(([, text]) => /^\s+(?:- )?uses: \.\//mu.test(text)).map(([file]) => file)).toEqual([]);
   });
 
   it("gives every setup-node .nvmrc's Node, one exact version, and names no Node of its own", () => {
