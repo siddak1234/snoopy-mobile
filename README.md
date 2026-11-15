@@ -190,7 +190,9 @@ hand with each Node 22.x security release. `audit:dependencies`
 (`scripts/audit-dependencies.mjs`) fails on a high or critical advisory in a
 production dependency unless `scripts/audit-allowlist.json` names it with its
 package, a reason and a `reviewBy` date, and on an entry past that date; it
-prints advisory ids only. `.github/dependabot.yml`
+prints advisory ids only. A vulnerability is reported privately by email,
+never in a public issue ([SECURITY.md](SECURITY.md)); `.github/CODEOWNERS`
+names the owner, whose review the ruleset does not require. `.github/dependabot.yml`
 opens one grouped pull request a week for the actions, and no npm version updates
 (the app's dependency bumps are each a round of their own, §12.1 #278; Dependabot's
 npm security-fix pull requests still open) (the
