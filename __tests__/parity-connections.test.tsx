@@ -48,7 +48,7 @@ const CONNECTED_GMAIL: Connection = {
   id: 'c1',
   providerId: 'gmail',
   workspaceId: TEST_WORKSPACE,
-  externalAccount: { displayName: 'alex@acme.co' },
+  externalAccount: { displayName: 'alex@example.com' },
   status: 'connected',
   requiredScopes: [],
   grantedScopes: [],
@@ -102,7 +102,7 @@ describe('G12 — a row says the account, else its state; one that needs attenti
     route([[CONNECTED_GMAIL]]);
     await renderWithProviders(<ConnectionsScreen />, sessionAs('owner'));
     const gmail = within(await screen.findByTestId('connection-row-gmail'));
-    expect(gmail.getByText('alex@acme.co')).toBeTruthy();
+    expect(gmail.getByText('alex@example.com')).toBeTruthy();
     expect(screen.queryByText(/used by/u)).toBeNull();
     expect(screen.queryByText(/ · Connected/u)).toBeNull();
     expect(within(screen.getByTestId('connection-row-twilio')).getByText('Not connected')).toBeTruthy();
@@ -177,7 +177,7 @@ describe('G14 — Connect, or Reconnect: a connection that needs attention is re
     await pressRow('gmail');
 
     expect(
-      await screen.findByText('Gmail is already connected as alex@acme.co, with everything it needs — there is nothing to authorize.'),
+      await screen.findByText('Gmail is already connected as alex@example.com, with everything it needs — there is nothing to authorize.'),
     ).toBeTruthy();
     expect(screen.queryByText('Connection completed successfully.')).toBeNull();
     await waitFor(() => expect(connectionReads()).toBe(before + 1));
@@ -319,7 +319,7 @@ describe('G16 — what a connect came back with is said, as the website’s page
     await renderWithProviders(<ConnectionsScreen />, sessionAs('owner'));
     await pressRow('gmail');
     expect(await screen.findByText('Connection completed successfully.')).toBeTruthy();
-    expect(await within(screen.getByTestId('connection-row-gmail')).findByText('alex@acme.co')).toBeTruthy();
+    expect(await within(screen.getByTestId('connection-row-gmail')).findByText('alex@example.com')).toBeTruthy();
   });
 
   it.each([

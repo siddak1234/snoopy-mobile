@@ -14,7 +14,7 @@ description: Add a screen to the app - the route file under app/, its view model
 
 ## Steps
 
-0. Read `app/CLAUDE.md` and the screen's rows in `DESIGN-CONTRACT.md`. No published operation for it: stop, and record the gap in `DESIGN-GAPS.md`.
+0. Read `app/CLAUDE.md` and the screen's rows in `DESIGN-CONTRACT.md`. No published operation for it: stop, and record the gap in the private `DESIGN-GAPS.md` (root `CLAUDE.md` "Records").
 1. Create the route file under `app/` and its view model in `lib/view/` from the templates:
    ```bash
    T=.claude/skills/new-screen/templates
@@ -46,11 +46,11 @@ description: Add a screen to the app - the route file under app/, its view model
 
 ## Stop conditions
 
-- An operation, field or refusal the contract does not publish: stop and record it in `DESIGN-GAPS.md` (root `CLAUDE.md` rule 7).
+- An operation, field or refusal the contract does not publish: stop and record it in the private `DESIGN-GAPS.md` (root `CLAUDE.md` rule 7 and "Records").
 - A primitive none of `components/nocturne/` fits: stop and ask; a new one is snapshot-pinned in both palettes (ADR-0032).
 - Any audit red: fix the screen, never the audit's allowlist.
 
 ## Output
 
 - `app/<route>.tsx`, `lib/view/<kebab>.ts`, `__tests__/<kebab>.test.tsx`, the regenerated `docs/MAP.md`, and the checklist in the PR body.
-- Docs-map rule: `app/**` updates `DESIGN-CONTRACT.md` or `DESIGN-GAPS.md`; `lib/view/**` updates `DESIGN-GAPS.md`.
+- Docs-map rule: `app/**` and `lib/view/**` update `DESIGN-CONTRACT.md`.

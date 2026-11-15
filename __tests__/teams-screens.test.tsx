@@ -152,7 +152,7 @@ describe('Teams (24.11.7)', () => {
 
   it('asks to join a team and reads the directory again; withdraws a request it made', async () => {
     const fake = routeList();
-    const mine: AccessRequest = { id: 'r5', projectId: 'p5', workspaceId: TEST_WORKSPACE, userId: 'u1', status: 'pending', email: 'alex@acme.co', createdAt: '2026-10-02T00:00:00Z' };
+    const mine: AccessRequest = { id: 'r5', projectId: 'p5', workspaceId: TEST_WORKSPACE, userId: 'u1', status: 'pending', email: 'alex@example.com', createdAt: '2026-10-02T00:00:00Z' };
     fake.always('POST /v1/workspaces/{workspaceId}/projects/{projectId}/access-requests', { request: mine });
     fake.always('GET /v1/workspaces/{workspaceId}/projects/{projectId}/access-requests', { requests: [mine] });
     fake.always('DELETE /v1/workspaces/{workspaceId}/projects/{projectId}/access-requests/{requestId}', {
@@ -254,20 +254,20 @@ describe('One team (24.11.7)', () => {
     fake.always('GET /v1/workspaces/{workspaceId}/projects/{projectId}', { project: team('p1', workspaceId, 'Finance', { viewerRole }) });
     fake.always('GET /v1/workspaces/{workspaceId}/projects/{projectId}/memberships', {
       memberships: [
-        { projectId: 'p1', workspaceId, userId: 'u2', role: 'owner', displayName: 'Ben', email: 'ben@acme.co', createdAt: '2026-09-01T00:00:00Z' },
+        { projectId: 'p1', workspaceId, userId: 'u2', role: 'owner', displayName: 'Ben', email: 'ben@example.com', createdAt: '2026-09-01T00:00:00Z' },
         ...(options.onTeam === false
           ? []
-          : [{ projectId: 'p1', workspaceId, userId: 'u1', role: viewerRole === 'owner' ? 'admin' : viewerRole, displayName: 'Alex', email: 'alex@acme.co', createdAt: '2026-09-01T00:00:00Z' }]),
-        { projectId: 'p1', workspaceId, userId: 'u3', role: 'member', displayName: 'Carol', email: 'carol@acme.co', createdAt: '2026-09-01T00:00:00Z' },
+          : [{ projectId: 'p1', workspaceId, userId: 'u1', role: viewerRole === 'owner' ? 'admin' : viewerRole, displayName: 'Alex', email: 'alex@example.com', createdAt: '2026-09-01T00:00:00Z' }]),
+        { projectId: 'p1', workspaceId, userId: 'u3', role: 'member', displayName: 'Carol', email: 'carol@example.com', createdAt: '2026-09-01T00:00:00Z' },
       ],
     });
     fake.always('GET /v1/workspaces/{workspaceId}/members', {
-      members: [{ workspaceId, userId: 'u4', role: 'member', displayName: 'Dana', email: 'dana@acme.co', createdAt: '2026-09-01T00:00:00Z' }],
+      members: [{ workspaceId, userId: 'u4', role: 'member', displayName: 'Dana', email: 'dana@example.com', createdAt: '2026-09-01T00:00:00Z' }],
     });
     fake.always('GET /v1/workspaces/{workspaceId}/projects/{projectId}/access-requests', {
       requests: [
-        { id: 'r1', projectId: 'p1', workspaceId, userId: 'u5', status: 'pending', displayName: 'Erin', email: 'erin@acme.co', createdAt: '2026-10-02T00:00:00Z' },
-        { id: 'r2', projectId: 'p1', workspaceId, userId: 'u6', status: 'denied', email: 'fay@acme.co', createdAt: '2026-10-01T00:00:00Z' },
+        { id: 'r1', projectId: 'p1', workspaceId, userId: 'u5', status: 'pending', displayName: 'Erin', email: 'erin@example.com', createdAt: '2026-10-02T00:00:00Z' },
+        { id: 'r2', projectId: 'p1', workspaceId, userId: 'u6', status: 'denied', email: 'fay@example.com', createdAt: '2026-10-01T00:00:00Z' },
       ],
     });
     setMockParams({ projectId: 'p1', workspaceId });
@@ -330,7 +330,7 @@ describe('One team (24.11.7)', () => {
   it("changes a member's role and adds someone; an owner's row is not changed", async () => {
     const fake = routeTeam('owner');
     fake.always('POST /v1/workspaces/{workspaceId}/projects/{projectId}/memberships', {
-      membership: { projectId: 'p1', workspaceId: TEST_WORKSPACE, userId: 'u3', role: 'admin', displayName: 'Carol', email: 'carol@acme.co', createdAt: '2026-09-01T00:00:00Z' },
+      membership: { projectId: 'p1', workspaceId: TEST_WORKSPACE, userId: 'u3', role: 'admin', displayName: 'Carol', email: 'carol@example.com', createdAt: '2026-09-01T00:00:00Z' },
     });
     await renderWithProviders(<TeamScreen />, signedInSession);
 
@@ -352,12 +352,12 @@ describe('One team (24.11.7)', () => {
   it('shows a manager who is asking to join, and approves or denies them', async () => {
     const fake = routeTeam('admin');
     fake.always('PATCH /v1/workspaces/{workspaceId}/projects/{projectId}/access-requests/{requestId}', {
-      request: { id: 'r1', projectId: 'p1', workspaceId: TEST_WORKSPACE, userId: 'u5', status: 'approved', displayName: 'Erin', email: 'erin@acme.co', createdAt: '2026-10-02T00:00:00Z' },
+      request: { id: 'r1', projectId: 'p1', workspaceId: TEST_WORKSPACE, userId: 'u5', status: 'approved', displayName: 'Erin', email: 'erin@example.com', createdAt: '2026-10-02T00:00:00Z' },
     });
     await renderWithProviders(<TeamScreen />, signedInSession);
     expect(await screen.findByText('ASKING TO JOIN · 1')).toBeTruthy();
     // Only what is still waiting: a denied request is not a decision to make.
-    expect(screen.queryByText('fay@acme.co')).toBeNull();
+    expect(screen.queryByText('fay@example.com')).toBeNull();
     await fireEvent.press(screen.getByTestId('team-request-r1'));
     expect(await screen.findByText('Request to join')).toBeTruthy();
     await pressLast('Approve');

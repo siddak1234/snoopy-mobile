@@ -81,7 +81,7 @@ function expectHome(view: Awaited<ReturnType<typeof launch>>) {
 /** The session another person's sign-in reads: theirs, not the one before. */
 const SOMEONE_ELSE: Answer<'GET /v1/session'> = {
   ...SESSION,
-  user: { ...SESSION.user, userId: 'u2', email: 'sam@acme.co' },
+  user: { ...SESSION.user, userId: 'u2', email: 'sam@example.com' },
 };
 
 /** The platform: the person on this phone until a sign-in names someone else (`answers['/v1/session']`). */

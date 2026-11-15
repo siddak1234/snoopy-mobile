@@ -270,7 +270,10 @@ describe('the nightly (NIGHT-7) is its own workflow calling ci.yml, and reports 
   it('schedules nightly.yml alone, which calls the whole of ci.yml from its job named CI', () => {
     expect(nightly).toMatch(/^on:\n {2}schedule:\n {4}- cron: '\d+ \d+ \* \* \*'\n\n/mu);
     expect(nightly).toContain('\n  ci:\n    name: CI\n    uses: ./.github/workflows/ci.yml\n');
-    expect(ci).toMatch(/^on:\n {2}pull_request:\n {2}push:\n {4}branches: \[main\]\n {2}workflow_call:\n\n/mu);
+    // The one secret a call passes: the private-data scan's pattern (change-class.test.js holds the step).
+    expect(ci).toMatch(
+      /^on:\n {2}pull_request:\n {2}push:\n {4}branches: \[main\]\n {2}workflow_call:\n {4}# [^\n]*\n {4}secrets:\n {6}CLIENT_DENY_PATTERN:\n {8}required: true\n\n/mu,
+    );
     expect(ci).not.toMatch(/^\s+schedule:/mu);
   });
 

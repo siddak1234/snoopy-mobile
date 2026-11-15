@@ -9,6 +9,10 @@ on:
   push:
     branches: [main]
   workflow_call:
+    # The nightly passes the private-data scan its pattern (.github/workflows/nightly.yml).
+    secrets:
+      CLIENT_DENY_PATTERN:
+        required: true
 
 # Every job reads the repository and nothing else.
 permissions:
@@ -152,25 +156,15 @@ jobs:
       # No backend checkout here: reads the committed, hash-checked copy
       # (lib/generated/snoopy-backend/, SHA256SUMS) and never skips (M1).
       - run: npm run verify:platform-contracts
-      - name: No salvaged client data
-        run: |
-          # `_salvage/` lives in the workspace folder, outside every repository. It
-          # holds the recovered n8n workflows and the legacy database archive: real
-          # customer email addresses, vendor names, and dollar amounts. This
-          # repository is public and git history is permanent, so deleting such a
-          # file in a later commit does not remove it — the only workable control is
-          # to never let it land.
-          if git ls-files | grep -i '_salvage'; then
-            echo "FAIL: a _salvage path is tracked in this repository."
-            exit 1
-          fi
-          # Excludes .github/workflows: this file necessarily names the identifiers
-          # it searches for.
-          if git grep -Iln -iE 'gideontoal|clarossolutions' -- . ':(exclude).github/workflows/*'; then
-            echo "FAIL: a real client identifier appears in tracked content."
-            exit 1
-          fi
-          echo "No salvaged client data: PASS"
+      # No private data in this public repository (the owner, 2026-11-15): the kit's
+      # scanner (scripts/kit/, canonical in snoopy-backend) over every tracked
+      # file. The client-name pattern comes from the CLIENT_DENY_PATTERN secret and
+      # is never written here. The same scanner runs before each commit and push
+      # (.githooks/) and in the change class's gate (scripts/change-class.mjs).
+      - name: No private data
+        env:
+          CLIENT_DENY_PATTERN: ${{ secrets.CLIENT_DENY_PATTERN }}
+        run: node scripts/kit/private-data-scan.mjs --tree
 
   export:
     name: Native bundle export

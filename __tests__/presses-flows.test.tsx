@@ -227,7 +227,7 @@ describe('Setup — Turn on (24.4: create, then patch its settings; the Invoice 
     });
     setMockParams({ template: 'tpl.0' });
     await renderWithProviders(<SetupScreen />, signedInSession);
-    await fireEvent.changeText(await screen.findByLabelText('Watch inbox'), 'ap@acme.co');
+    await fireEvent.changeText(await screen.findByLabelText('Watch inbox'), 'ap@example.com');
     await fireEvent.press(screen.getByText('Turn on'));
     await waitFor(() =>
       expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/(tabs)/flows/detail', params: { flow: 'new-0' } }),
@@ -244,7 +244,7 @@ describe('Setup — Turn on (24.4: create, then patch its settings; the Invoice 
         method: 'PATCH',
         path: `${WS}/subscriptions/new-0`,
         key: expect.stringMatching(/^activate-/u),
-        body: { config: { inbox: 'ap@acme.co', holdAboveAmount: 500 }, status: 'live' },
+        body: { config: { inbox: 'ap@example.com', holdAboveAmount: 500 }, status: 'live' },
       },
     ]);
   });
@@ -281,7 +281,7 @@ describe("Setup — each request's key (DESIGN-CONTRACT: a retry keeps it; a cha
   const inboxCatalog = () =>
     bareCatalog(() => ({
       setup: [
-        { section: 'source', key: 'inbox', title: 'Watch inbox', description: 'Where invoices arrive', control: 'text', required: true, defaultValue: 'ap@acme.co' },
+        { section: 'source', key: 'inbox', title: 'Watch inbox', description: 'Where invoices arrive', control: 'text', required: true, defaultValue: 'ap@example.com' },
       ],
     }));
 
@@ -388,12 +388,12 @@ describe("Setup — each request's key (DESIGN-CONTRACT: a retry keeps it; a cha
     await fireEvent.press(await screen.findByText('Turn on'));
     const failure = await screen.findByTestId('action-failure');
 
-    await fireEvent.changeText(screen.getByLabelText('Watch inbox'), 'billing@acme.co');
+    await fireEvent.changeText(screen.getByLabelText('Watch inbox'), 'billing@example.com');
     await fireEvent.press(within(failure).getByText('Try again'));
     await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith(opened('held-0')));
     expect(writes.map((write) => write.body)).toEqual([
-      { config: { inbox: 'ap@acme.co' }, status: 'live' },
-      { config: { inbox: 'billing@acme.co' }, status: 'live' },
+      { config: { inbox: 'ap@example.com' }, status: 'live' },
+      { config: { inbox: 'billing@example.com' }, status: 'live' },
     ]);
     expect(writes[1]!.key).not.toBe(writes[0]!.key);
   });

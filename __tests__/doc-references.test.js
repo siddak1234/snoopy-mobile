@@ -86,16 +86,24 @@ describe('audit:docs — every path a document names exists', () => {
     }
   });
 
+  // This repository keeps no archive since the records moved to the private backend
+  // (2026-11-15), so the test plants one: read while the map does not name it, skipped once it does.
   it('does not read an archive the docs map names', () => {
-    const doc = join(temp.copy, 'DESIGN-GAPS.archive.md');
-    const before = readFileSync(doc, 'utf8');
+    const mapFile = join(temp.copy, 'docs/docs-map.json');
+    const doc = join(temp.copy, 'docs/planted.archive.md');
+    const before = readFileSync(mapFile, 'utf8');
     try {
-      appendFileSync(doc, '\nThe planted line names `scripts/planted-missing.mjs`.\n');
+      writeFileSync(doc, 'The planted line names `scripts/planted-missing.mjs`.\n');
+      expect(audit(temp.copy).stdout).toContain('missing\tdocs/planted.archive.md:1\tscripts/planted-missing.mjs');
+      const map = JSON.parse(before);
+      map.records.archive = [...(map.records.archive ?? []), 'docs/planted.archive.md'];
+      writeFileSync(mapFile, JSON.stringify(map, null, 2));
       const run = audit(temp.copy);
       expect(run.stdout).not.toContain('planted-missing');
       expect(run.status).toBe(0);
     } finally {
-      writeFileSync(doc, before);
+      writeFileSync(mapFile, before);
+      rmSync(doc, { force: true });
     }
   });
 });

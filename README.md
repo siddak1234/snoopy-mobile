@@ -207,8 +207,11 @@ generated file's sha256 header with the hash the live
 escape for a change that must land before the platform's, and `release:ios`
 refuses any mismatch, escape or not.
 `npm run hooks:install` (once per clone; `git config core.hooksPath
-.githooks`) puts a gate before every push, chosen by change class (Round 21):
-`.githooks/pre-push` runs `node scripts/change-class.mjs --run --worktree`,
+.githooks`) puts the private-data scan before every commit (`.githooks/pre-commit`:
+the kit's scanner on what is staged, CLAUDE.md "Test data") and a gate before
+every push, chosen by change class (Round 21): `.githooks/pre-push` first scans
+the pushed commits (`--push`; a finding or a scanner error refuses the push),
+then runs `node scripts/change-class.mjs --run --worktree`,
 which reads the change against the merge base with `origin/main` (the working
 tree included), prints its class, the commands and what it skips, then runs
 them and refuses the push at the first red one, naming it. **docs** (Markdown
@@ -218,15 +221,15 @@ Markdown path, found by a source search; full when that search finds none).
 **code** (`app/`, `components/`,
 `constants/`, `hooks/`, `lib/` but `lib/generated/`, `assets/`,
 `__tests__/`): lint, the docs checks, typecheck, every static audit,
-`verify:platform-contracts`, the salvage scan (`scripts/salvage-scan.sh`, ci.yml's
-step for step) and jest's `--findRelatedTests` for the changed files with the
+`verify:platform-contracts`, the private-data scan (ci.yml's "No private data"
+step, the same command: `node scripts/kit/private-data-scan.mjs --tree`) and jest's `--findRelatedTests` for the changed files with the
 no-skipped check — the whole `test:coverage` when a code file has no related
 test or more than 15 code files change; a screen (`app/`) change adds the
 real-router proofs (`__tests__/real-router/`), which the router loads by
 directory, so jest relates none to a route file; `audit:presses` needs the
 whole suite's coverage, so this class skips it
 and says so; CI's Test job runs it on every pull request. **full** — `CI=1 npm run verify`,
-`audit:dependencies` and the salvage scan, everything CI runs but the exports
+`audit:dependencies` and the private-data scan, everything CI runs but the exports
 (111 s to green, 3 s to refuse a lint error, measured 2026-10-03) — for a
 dependency file, the contracts, the kit, CI config and hooks, test tooling and
 every script, the classifier itself, a deleted or renamed non-Markdown file, an
@@ -678,13 +681,14 @@ rechecked it and Round 7.5 superseded it with the cloud build.
 ## Scope and handoff
 
 The current contract and screen-to-operation map are in
-[`DESIGN-CONTRACT.md`](DESIGN-CONTRACT.md). The current findings, with the
-items carried open from earlier rounds, are in [`DESIGN-GAPS.md`](DESIGN-GAPS.md);
-the Round 6 audit record and its deliberate gaps, and Round 16's findings, are
-in [`DESIGN-GAPS.archive.md`](DESIGN-GAPS.archive.md); each round's preamble
-is in [`docs/records/round-record.md`](docs/records/round-record.md); the
-Round 7.5 and 7.5M observations, findings and the state of 19c are in
-[`ROUND-7.5-OBSERVATIONS.md`](ROUND-7.5-OBSERVATIONS.md).
+[`DESIGN-CONTRACT.md`](DESIGN-CONTRACT.md). The process records live only in
+the private `snoopy-backend`, under `docs/records/snoopy-mobile/` (CLAUDE.md
+"Records"; moved 2026-11-15): the current findings, with the items carried open
+from earlier rounds, in `DESIGN-GAPS.md`; the Round 6 audit record and its
+deliberate gaps, and Round 16's findings, in `DESIGN-GAPS.archive.md`; each
+round's preamble in `round-record.md`; the Round 7.5 and 7.5M observations,
+findings and the state of 19c in `ROUND-7.5-OBSERVATIONS.md`. This repository's
+documents and comments cite them by name.
 
 The governing master plan and round playbook live in the sibling private
 `snoopy-backend` repository. This repository may read them and must never edit

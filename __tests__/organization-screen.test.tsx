@@ -39,7 +39,7 @@ beforeEach(() => {
   mockExtra.nativeAuthBaseUrl = 'https://www.example.test/api/platform';
 });
 
-function session(email = 'alex@acme.co'): SessionContextValue {
+function session(email = 'alex@example.com'): SessionContextValue {
   if (signedInSession.status !== 'signed-in') throw new Error('fixture');
   return { ...signedInSession, session: { ...signedInSession.session, user: { ...signedInSession.session.user, email } } };
 }
@@ -50,18 +50,18 @@ const member = (userId: string, role: WorkspaceMember['role'], displayName: stri
   userId,
   role,
   displayName,
-  email: `${displayName.toLowerCase()}@acme.co`,
+  email: `${displayName.toLowerCase()}@example.com`,
   createdAt: '2026-09-01T00:00:00Z',
 });
 const DOMAIN: OrganizationDomain = {
   id: 'domain-1',
   workspaceId: TEST_WORKSPACE,
-  domain: 'acme.co',
-  registrableDomain: 'acme.co',
+  domain: 'example.com',
+  registrableDomain: 'example.com',
   status: 'verified',
   joinPolicy: 'approval',
   discoveryEnabled: true,
-  verificationRecordName: '_autom8x.acme.co',
+  verificationRecordName: '_autom8x.example.com',
   createdAt: '2026-09-01T00:00:00Z',
 };
 
@@ -90,7 +90,7 @@ describe('Organization — an owner or admin of the active organization manages 
     routeManage('admin');
     await renderWithProviders(<OrganizationScreen />, session());
     expect(await screen.findByText('Acme Operations')).toBeTruthy();
-    expect(screen.getByText('acme.co')).toBeTruthy();
+    expect(screen.getByText('example.com')).toBeTruthy();
     expect(screen.getByText('Carol')).toBeTruthy();
     expect(screen.getByText('Alex (you)')).toBeTruthy();
     expect(screen.getByText('u9')).toBeTruthy();
@@ -154,17 +154,17 @@ describe('Organization — an owner or admin of the active organization manages 
     });
     fake.always('GET /v1/workspaces/{workspaceId}/join-requests', {
       requests: [
-        asked('jr-1', 'u9', { displayName: 'Dana Reyes', email: 'dana@acme.co' }),
-        asked('jr-2', 'u8', { email: 'eli@acme.co' }),
+        asked('jr-1', 'u9', { displayName: 'Dana Reyes', email: 'dana@example.com' }),
+        asked('jr-2', 'u8', { email: 'eli@example.com' }),
         asked('jr-3', 'u7', {}),
       ],
     });
     await renderWithProviders(<OrganizationScreen />, session());
     const named = await screen.findByTestId('join-request-jr-1');
     expect(within(named).getByText('Dana Reyes')).toBeTruthy();
-    expect(within(named).getByText(/^dana@acme\.co · Asked /u)).toBeTruthy();
+    expect(within(named).getByText(/^dana@example\.com · Asked /u)).toBeTruthy();
     expect(within(named).queryByText('u9')).toBeNull();
-    expect(within(screen.getByTestId('join-request-jr-2')).getByText('eli@acme.co')).toBeTruthy();
+    expect(within(screen.getByTestId('join-request-jr-2')).getByText('eli@example.com')).toBeTruthy();
     expect(within(screen.getByTestId('join-request-jr-2')).queryByText('u8')).toBeNull();
     expect(within(screen.getByTestId('join-request-jr-3')).getByText('u7')).toBeTruthy();
     // The decision names the person too.
@@ -206,7 +206,7 @@ describe('Organization — everyone else', () => {
       activeWorkspaceId: TEST_WORKSPACE,
     });
     fake.always('GET /v1/organization-discovery', {
-      organizations: [{ workspaceId: 'org-9', name: 'Acme', domain: 'acme.co', joinPolicy: 'approval', membershipState: 'none' }],
+      organizations: [{ workspaceId: 'org-9', name: 'Acme', domain: 'example.com', joinPolicy: 'approval', membershipState: 'none' }],
     });
     fake.always('POST /v1/organizations/{workspaceId}/join', {
       outcome: 'requested',
@@ -238,7 +238,10 @@ describe('Organization — everyone else', () => {
       fake.always('GET /v1/organization-discovery', { organizations: [] });
     };
     route();
-    const view = await renderWithProviders(<OrganizationScreen />, session('alex@gmail.com'));
+    // The case is the domain alone: a mailbox provider's, from lib/view/domain.ts's list. No
+    // address at one is written in this public repository (CLAUDE.md "Test data").
+    const mailboxProvider = 'gmail.com';
+    const view = await renderWithProviders(<OrganizationScreen />, session(`casey.morgan@${mailboxProvider}`));
     // Nothing found and nothing to set up: the whole screen is the empty-state standard (24.12).
     expect(await screen.findByTestId('screen-empty')).toBeTruthy();
     expect(screen.getByText('No organization yet')).toBeTruthy();
@@ -251,7 +254,7 @@ describe('Organization — everyone else', () => {
     await view.unmount();
 
     route();
-    await renderWithProviders(<OrganizationScreen />, session('alex@acme.co'));
+    await renderWithProviders(<OrganizationScreen />, session('alex@example.com'));
     expect(await screen.findByText('SET UP AN ORGANIZATION')).toBeTruthy();
   });
 
@@ -273,14 +276,14 @@ describe('Organization — everyone else', () => {
     await fireEvent.changeText(nameField, 'Acme');
     await fireEvent.press(screen.getByText('Create organization'));
     expect(await screen.findByText('That domain is already claimed.')).toBeTruthy();
-    await fireEvent.press(screen.getByText('Claim acme.co again'));
+    await fireEvent.press(screen.getByText('Claim example.com again'));
     await waitFor(() => expect(fake.to('POST /v1/workspaces/{workspaceId}/domains')).toHaveLength(2));
 
     expect(fake.to('POST /v1/workspaces')).toHaveLength(1);
     expect(fake.to('POST /v1/workspaces')[0]!.body).toEqual({ name: 'Acme', type: 'organization', activate: true });
     for (const claim of fake.to('POST /v1/workspaces/{workspaceId}/domains')) {
       expect(claim.values).toEqual({ workspaceId: 'org-new' });
-      expect(claim.body).toEqual({ domain: 'acme.co', joinPolicy: 'approval' });
+      expect(claim.body).toEqual({ domain: 'example.com', joinPolicy: 'approval' });
     }
   });
 });
@@ -319,7 +322,7 @@ describe('Organization — the join link (24.12, the owner\'s decision 5)', () =
     routeManage('owner');
     await renderWithProviders(<OrganizationScreen />, session());
     expect(await screen.findByText('Share join link')).toBeTruthy();
-    expect(screen.getByText('People at acme.co can ask to join. You approve them here.')).toBeTruthy();
+    expect(screen.getByText('People at example.com can ask to join. You approve them here.')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('organization-join-link'));
     expect(share).toHaveBeenCalledWith({ url: LINK });
     ios.restore();
@@ -345,13 +348,13 @@ describe('Organization — the join link (24.12, the owner\'s decision 5)', () =
   const domain = (change: Partial<OrganizationDomain> = {}): OrganizationDomain => ({ ...DOMAIN, ...change });
 
   it.each<[string, Partial<OrganizationDomain>, string]>([
-    ['approval', {}, 'People at acme.co can ask to join. You approve them here.'],
-    ['automatic', { joinPolicy: 'automatic' }, 'People at acme.co join as soon as they open it.'],
-    ['invite only', { joinPolicy: 'invite_only' }, 'Joining at acme.co is invite only, so the link lets no one in.'],
+    ['approval', {}, 'People at example.com can ask to join. You approve them here.'],
+    ['automatic', { joinPolicy: 'automatic' }, 'People at example.com join as soon as they open it.'],
+    ['invite only', { joinPolicy: 'invite_only' }, 'Joining at example.com is invite only, so the link lets no one in.'],
     [
       'verified, not shown for matching emails',
       { discoveryEnabled: false },
-      'People at acme.co cannot find it until "Show for matching verified email domains" is on.',
+      'People at example.com cannot find it until "Show for matching verified email domains" is on.',
     ],
     ['none verified', { status: 'pending' }, 'Verify your email domain first — only people at it can ask to join.'],
   ])('words the line by the joining policy — %s (joinLinkLine, 24.12)', (_case, change, line) => {
@@ -361,7 +364,7 @@ describe('Organization — the join link (24.12, the owner\'s decision 5)', () =
   it('takes a domain shown for matching emails over a hidden one, whatever the order', () => {
     const hidden = domain({ domain: 'acme.io', discoveryEnabled: false, joinPolicy: 'automatic' });
     const shown = domain();
-    const line = 'People at acme.co can ask to join. You approve them here.';
+    const line = 'People at example.com can ask to join. You approve them here.';
     expect(joinLinkLine([hidden, shown])).toBe(line);
     expect(joinLinkLine([shown, hidden])).toBe(line);
   });
@@ -514,7 +517,7 @@ describe('Organization — verified domains only (the owner\'s build 13 decision
       activeWorkspaceId: TEST_WORKSPACE,
     });
     fake.always('GET /v1/organization-discovery', {
-      organizations: [{ workspaceId: 'org-9', name: 'Acme', domain: 'acme.co', joinPolicy: 'approval', membershipState: 'none' }],
+      organizations: [{ workspaceId: 'org-9', name: 'Acme', domain: 'example.com', joinPolicy: 'approval', membershipState: 'none' }],
     });
     fake.always('POST /v1/organizations/{workspaceId}/join', () => {
       throw new PlatformError("This account signs in with an address outside the organization's verified domains", 403, 'FORBIDDEN', {

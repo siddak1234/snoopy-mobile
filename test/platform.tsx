@@ -54,7 +54,7 @@ export const signedInSession: SessionContextValue = {
   session: {
     authenticated: true,
     // The account answered "AI reads your documents" (backend ADR-0038): no card over the screens under test.
-    user: { userId: 'u1', email: 'alex@acme.co', activeWorkspaceId: TEST_WORKSPACE, aiDocumentReading: 'allowed' },
+    user: { userId: 'u1', email: 'alex@example.com', activeWorkspaceId: TEST_WORKSPACE, aiDocumentReading: 'allowed' },
     workspaces: [{ id: TEST_WORKSPACE, name: 'Acme Operations', type: 'organization', role: 'owner' }],
   } satisfies Answer<'GET /v1/session'>,
   // Past the Face ID lock: a session that is open.
@@ -119,7 +119,7 @@ export function catalogPayload(): Catalog {
         section: 'source',
         key: 'inbox',
         title: 'Watch inbox',
-        description: 'ap@acme.co · label "AP-Invoices"',
+        description: 'ap@example.com · label "AP-Invoices"',
         control: 'resource-picker',
         required: true,
       },
@@ -420,7 +420,7 @@ export function runDetailPayload(runId: string): Answer<'GET /v1/workspaces/{wor
         workspaceId: TEST_WORKSPACE,
         stepId: 'step-0',
         outcome: 'ok',
-        summary: 'Gmail · ap@acme.co',
+        summary: 'Gmail · ap@example.com',
         occurredAt: run.createdAt,
       },
     ],

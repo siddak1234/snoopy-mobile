@@ -32,13 +32,13 @@ const Clipboard = jest.requireMock('expo-clipboard') as { setStringAsync: jest.M
 describe('contactValue: a row text that is one email or one phone number, whole (item 11)', () => {
   // The shared table: the website's tests of its `snoopy/lib/contact-value.ts` hold the same rows.
   it.each([
-    ['(214) 983-2568', 'tel:2149832568'],
-    ['214-983-2568', 'tel:2149832568'],
-    ['214.983.2568', 'tel:2149832568'],
-    ['2149832568', 'tel:2149832568'],
-    ['1-800-555-1234', 'tel:18005551234'],
+    ['(415) 555-0142', 'tel:4155550142'],
+    ['415-555-0142', 'tel:4155550142'],
+    ['415.555.0142', 'tel:4155550142'],
+    ['4155550142', 'tel:4155550142'],
+    ['1-800-555-0199', 'tel:18005550199'],
     ['+44 20 7946 0958', 'tel:+442079460958'],
-    ['+1 214 983 2568', 'tel:+12149832568'],
+    ['+1 415 555 0142', 'tel:+14155550142'],
   ])('%s is a phone number, %s', (text, tel) => {
     expect(contactValue(text)).toEqual({ kind: 'phone', value: text });
     expect(`tel:${dialable(text)}`).toBe(tel);
@@ -50,17 +50,17 @@ describe('contactValue: a row text that is one email or one phone number, whole 
     '123-45-6789',
     '10.5.2025 14.30',
     '2025.11.06 12.00',
-    '12.34.56.78',
+    '10.20.30.40',
     '192.168.10.100',
     '555 12 34',
-    '12 34 56 78',
-    'Call 214-983-2568',
+    '10 20 30 40',
+    'Call 415-555-0142',
   ])('%j is not a phone number', (text) => {
     expect(contactValue(text)).toBeNull();
   });
 
-  it('akulaggarwal05@gmail.com is an email', () => {
-    expect(contactValue('akulaggarwal05@gmail.com')).toEqual({ kind: 'email', value: 'akulaggarwal05@gmail.com' });
+  it('casey.morgan@example.com is an email', () => {
+    expect(contactValue('casey.morgan@example.com')).toEqual({ kind: 'email', value: 'casey.morgan@example.com' });
   });
 
   it.each(['a@b', 'mail me at x@y.com'])('%j is not an email', (text) => {
@@ -69,8 +69,8 @@ describe('contactValue: a row text that is one email or one phone number, whole 
 
   // Beyond the shared table, two bounds of the rule no row of it reaches.
   it('without a "+", the last run of digits has at least 4; with one, the runs are not looked at', () => {
-    expect(contactValue('2149 832 568')).toBeNull();
-    expect(contactValue('+2149 832 568')).toEqual({ kind: 'phone', value: '+2149 832 568' });
+    expect(contactValue('4155 550 142')).toBeNull();
+    expect(contactValue('+4155 550 142')).toEqual({ kind: 'phone', value: '+4155 550 142' });
   });
 
   it('the text is trimmed and at most 254 characters', () => {

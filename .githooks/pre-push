@@ -6,7 +6,10 @@
 # It runs `node scripts/change-class.mjs --run --worktree`: exit 0 pushes, exit
 # 10 (a red gate, named above it) refuses the push, and any other exit (the
 # classifier itself failed) runs the full set here: verify, audit:dependencies
-# and the salvage scan. The classes and what each runs: README "Verification".
+# and the private-data scan. The classes and what each runs: README "Verification".
+# Before either, the kit's private-data scanner reads the commits being pushed
+# (node scripts/kit/private-data-scan.mjs --push): a finding (exit 1) or a
+# scanner error (exit 2) refuses the push.
 # A by-design red push — the deliberate-failure commit a CI proof needs —
 # bypasses this hook with
 #
@@ -63,6 +66,8 @@ if [ "$dirty" -ne 0 ]; then
   echo "pre-push: note — $dirty uncommitted path(s); the gate judges the working tree, the push sends the commits."
 fi
 
+gate "No private data (the pushed commits)" node scripts/kit/private-data-scan.mjs --push
+
 echo "pre-push: the gate by change class (scripts/change-class.mjs)"
 node scripts/change-class.mjs --run --worktree
 status=$?
@@ -73,7 +78,7 @@ case $status in
     echo "pre-push: the classifier failed (exit $status); running the full set"
     gate "verify (lint, docs checks, typecheck, architecture gates, contracts, tests with coverage, presses, facts)" npm run verify
     gate "audit:dependencies" npm run audit:dependencies
-    gate "No salvaged client data" sh scripts/salvage-scan.sh
+    gate "No private data" node scripts/kit/private-data-scan.mjs --tree
     ;;
 esac
 

@@ -65,7 +65,7 @@ describe('an OAuth connect that comes back cancelled', () => {
       id: 'c1',
       providerId: 'gmail',
       workspaceId: signedInSession.status === 'signed-in' ? signedInSession.session.user.activeWorkspaceId : '',
-      externalAccount: { displayName: 'alex@acme.co' },
+      externalAccount: { displayName: 'alex@example.com' },
       status: 'connected',
       requiredScopes: [],
       grantedScopes: [],
@@ -88,7 +88,7 @@ describe('an OAuth connect that comes back cancelled', () => {
       expect(reads.filter((path) => path.endsWith('/connections')).length).toBe(readsBefore + 1),
     );
     // The truth the re-read established, from the published fields: the account's email (spec A4).
-    expect(await screen.findByText('alex@acme.co')).toBeTruthy();
+    expect(await screen.findByText('alex@example.com')).toBeTruthy();
     expect(screen.queryByText('Not connected')).toBeNull();
     expect(screen.queryByText(/used by/u)).toBeNull();
   });
@@ -119,7 +119,7 @@ const CONNECTED_GMAIL = {
   id: 'c1',
   providerId: 'gmail',
   workspaceId: signedInSession.status === 'signed-in' ? signedInSession.session.user.activeWorkspaceId : '',
-  externalAccount: { displayName: 'alex@acme.co' },
+  externalAccount: { displayName: 'alex@example.com' },
   status: 'connected',
   requiredScopes: [],
   grantedScopes: [],

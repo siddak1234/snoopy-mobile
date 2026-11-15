@@ -111,12 +111,12 @@ const ORG: Omit<WorkspaceSummary, 'role'> = { id: TEST_WORKSPACE, name: 'Acme Op
 const DOMAIN: OrganizationDomain = {
   id: 'domain-1',
   workspaceId: TEST_WORKSPACE,
-  domain: 'acme.co',
-  registrableDomain: 'acme.co',
+  domain: 'example.com',
+  registrableDomain: 'example.com',
   status: 'verified',
   joinPolicy: 'approval',
   discoveryEnabled: true,
-  verificationRecordName: '_autom8x.acme.co',
+  verificationRecordName: '_autom8x.example.com',
   createdAt: '2026-09-01T00:00:00Z',
 };
 const DOMAINS_READ = 'GET /v1/workspaces/{workspaceId}/domains';
@@ -137,7 +137,7 @@ function routeOrganization(domains: OrganizationDomain[] = [DOMAIN]) {
         userId: 'u9',
         status: 'pending',
         displayName: 'Dana Reyes',
-        email: 'dana@acme.co',
+        email: 'dana@example.com',
         createdAt: '2026-09-29T00:00:00Z',
       },
     ],
@@ -161,7 +161,7 @@ describe("Organization › a domain: its row, Revoke, Verify DNS, Save settings 
     {
       action: 'Verify DNS',
       domain: { ...DOMAIN, status: 'pending' } satisfies OrganizationDomain,
-      said: 'Pending. Add the DNS record named _autom8x.acme.co, then verify this domain.',
+      said: 'Pending. Add the DNS record named _autom8x.example.com, then verify this domain.',
       offered: ['Close', 'Revoke', 'Verify DNS', 'Save settings'],
       change: undefined,
       route: 'POST /v1/workspaces/{workspaceId}/domains/{domainId}/verification' as const,
@@ -191,9 +191,9 @@ describe("Organization › a domain: its row, Revoke, Verify DNS, Save settings 
       await renderWithProviders(<OrganizationScreen />, signedInSession);
 
       // The row: the domain's own dialog, its state in words, and only the actions that state allows.
-      await fireEvent.press(await screen.findByTestId('domain-acme.co'));
+      await fireEvent.press(await screen.findByTestId('domain-example.com'));
       const dialog = within(await screen.findByTestId('domain-dialog'));
-      expect(dialog.getByText('acme.co')).toBeTruthy();
+      expect(dialog.getByText('example.com')).toBeTruthy();
       expect(dialog.getByText(said)).toBeTruthy();
       expect(actionsOf('domain-dialog')).toEqual(offered);
       await change?.(dialog);
@@ -294,7 +294,7 @@ const membership = (userId: string, role: ProjectMembership['role'], displayName
   userId,
   role,
   displayName,
-  email: `${displayName.toLowerCase()}@acme.co`,
+  email: `${displayName.toLowerCase()}@example.com`,
   createdAt: '2026-09-01T00:00:00Z',
 });
 
@@ -307,7 +307,7 @@ function routeTeam(viewerRole: 'admin' | 'member') {
     memberships: [membership('u2', 'owner', 'Ben'), membership('u1', viewerRole, 'Alex'), membership('u3', 'member', 'Carol')],
   });
   fake.always('GET /v1/workspaces/{workspaceId}/members', {
-    members: [{ workspaceId: TEST_WORKSPACE, userId: 'u4', role: 'member', displayName: 'Dana', email: 'dana@acme.co', createdAt: '2026-09-01T00:00:00Z' }],
+    members: [{ workspaceId: TEST_WORKSPACE, userId: 'u4', role: 'member', displayName: 'Dana', email: 'dana@example.com', createdAt: '2026-09-01T00:00:00Z' }],
   });
   fake.always('GET /v1/workspaces/{workspaceId}/projects/{projectId}/access-requests', { requests: [] });
   setMockParams({ projectId: 'p1', workspaceId: TEST_WORKSPACE });
@@ -526,7 +526,7 @@ describe('Settings › Connections › the row\'s button, then its dialog\'s: Di
     id: 'c1',
     providerId: 'gmail',
     workspaceId: TEST_WORKSPACE,
-    externalAccount: { displayName: 'alex@acme.co' },
+    externalAccount: { displayName: 'alex@example.com' },
     status: 'connected',
     requiredScopes: [],
     grantedScopes: [],

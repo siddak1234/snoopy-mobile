@@ -69,7 +69,7 @@ function subscription(overrides: Partial<Subscription> = {}): Subscription {
     templateId: 'tpl.invoice',
     templateVersion: 1,
     status: 'live',
-    config: { inbox: 'ap@acme.co' },
+    config: { inbox: 'ap@example.com' },
     unmetConnections: [],
     runInput: [NOTE],
     // The pinned version's settings (backend §12.1 #185): what Set up draws.

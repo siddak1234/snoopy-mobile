@@ -985,7 +985,7 @@ describe('Settings — one grouped page (build 11, D1)', () => {
       'Billing',
       'Plus',
     ]);
-    expect(within(screen.getByTestId('settings-account')).getByText('alex@acme.co')).toBeTruthy();
+    expect(within(screen.getByTestId('settings-account')).getByText('alex@example.com')).toBeTruthy();
     // The one request: the workspace's billing — not the workspace list, not the plans, nothing for any other row.
     expect(platformOperation.mock.calls.map(([path]: [string]) => path)).toEqual([BILLING]);
   });
@@ -1021,7 +1021,7 @@ describe('Settings — one grouped page (build 11, D1)', () => {
     return {
       ...signedInSession,
       session: {
-        user: { userId: 'u1', email: 'alex@acme.co', activeWorkspaceId: options.active ?? workspaces[0]!.id },
+        user: { userId: 'u1', email: 'alex@example.com', activeWorkspaceId: options.active ?? workspaces[0]!.id },
         workspaces,
         ...(options.truncated ? { workspacesTruncated: true } : {}),
       },

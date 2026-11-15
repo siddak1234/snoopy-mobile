@@ -7,14 +7,13 @@
 - [CLAUDE.md](../CLAUDE.md)
 - `snoopy-backend/docs/platform/ENGINEERING-STANDARD.md`
 - [DESIGN-CONTRACT.md](../DESIGN-CONTRACT.md)
-- [DESIGN-GAPS.md](../DESIGN-GAPS.md)
-- [docs/records/round-record.md](records/round-record.md)
+- `snoopy-backend/docs/records/snoopy-mobile/DESIGN-GAPS.md`
 
 ## Where to look by task
 
-- **screens**: `app/**`, `components/**`, `constants/**`, `assets/**`, `hooks/**` → [DESIGN-CONTRACT.md](../DESIGN-CONTRACT.md), [DESIGN-GAPS.md](../DESIGN-GAPS.md)
-- **view**: `lib/view/**` → [DESIGN-GAPS.md](../DESIGN-GAPS.md)
-- **content**: `lib/content/**` → [DESIGN-CONTRACT.md](../DESIGN-CONTRACT.md), [DESIGN-GAPS.md](../DESIGN-GAPS.md)
+- **screens**: `app/**`, `components/**`, `constants/**`, `assets/**`, `hooks/**` → [DESIGN-CONTRACT.md](../DESIGN-CONTRACT.md)
+- **view**: `lib/view/**` → [DESIGN-CONTRACT.md](../DESIGN-CONTRACT.md)
+- **content**: `lib/content/**` → [DESIGN-CONTRACT.md](../DESIGN-CONTRACT.md)
 - **platform**: `lib/platform/**` → [README.md](../README.md), [lib/platform/CLAUDE.md](../lib/platform/CLAUDE.md)
 - **tooling**: `scripts/**`, `.github/**`, `.githooks/**`, `app.config.js`, `app.json`, `eas.json` → [README.md](../README.md)
 - **claude**: `.claude/**` → [CLAUDE.md](../CLAUDE.md)
@@ -30,7 +29,6 @@
 - `assets/`: no description
 - `components/`: no description
 - `constants/`: no description
-- `design-gaps/`: no description
 - `design-source/`: no description
 - `docs/`: no description
 - `hooks/`: no description
@@ -141,7 +139,6 @@
 - [scripts/no-skipped-tests.mjs](../scripts/no-skipped-tests.mjs): Fails when the suite skipped a test (M4: no silent skips).
 - [scripts/release-ios.sh](../scripts/release-ios.sh): Builds and submits the iOS app from main — and refuses everything else.
 - [scripts/repo-facts.mjs](../scripts/repo-facts.mjs): What this repository reports about itself, in the shape snoopy-backend's
-- [scripts/salvage-scan.sh](../scripts/salvage-scan.sh): ci.yml "No salvaged client data", step for step, for the pre-push gate (scripts/change-class.mjs and .githooks/pre-push).
 - [scripts/verify-deployed-contracts.mjs](../scripts/verify-deployed-contracts.mjs): Are this repository's generated platform types the contract the RUNNING
 - [scripts/verify-platform-contracts.mjs](../scripts/verify-platform-contracts.mjs): Fails when the committed platform types no longer match the backend contracts.
 
@@ -170,15 +167,11 @@
 
 - [CLAUDE.md](../CLAUDE.md) (doc)
 - [README.md](../README.md) (doc)
-- [ROUND-7.5-OBSERVATIONS.md](../ROUND-7.5-OBSERVATIONS.md) (archive)
-- [docs/records/round-record.md](records/round-record.md) (current)
 - [lib/platform/CLAUDE.md](../lib/platform/CLAUDE.md) (doc)
 
 ### 100 KB to 1 MB
 
 - [DESIGN-CONTRACT.md](../DESIGN-CONTRACT.md) (doc)
-- [DESIGN-GAPS.archive.md](../DESIGN-GAPS.archive.md) (archive)
-- [DESIGN-GAPS.md](../DESIGN-GAPS.md) (current)
 
 ### Over 1 MB: grep only
 

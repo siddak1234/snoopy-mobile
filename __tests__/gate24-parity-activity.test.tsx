@@ -433,15 +433,15 @@ describe("a team's members say the day they joined, as the website's list does (
         projectId="p1"
         viewerUserId="u1"
         viewerRole="member"
-        members={[membership('u2', 'ben@acme.co', noon(8, 1), 'Ben'), membership('u7', 'dana@acme.co', noon(8, 15))]}
+        members={[membership('u2', 'ben@example.com', noon(8, 1), 'Ben'), membership('u7', 'dana@example.com', noon(8, 15))]}
         available={[]}
         onChanged={jest.fn()}
         onLeft={jest.fn()}
       />,
       signedInSession,
     );
-    expect(within(screen.getByTestId('team-member-u2')).getByText('ben@acme.co · Joined Sep 1, 2026')).toBeTruthy();
-    expect(within(screen.getByTestId('team-member-u7')).getByText('dana@acme.co')).toBeTruthy();
+    expect(within(screen.getByTestId('team-member-u2')).getByText('ben@example.com · Joined Sep 1, 2026')).toBeTruthy();
+    expect(within(screen.getByTestId('team-member-u7')).getByText('dana@example.com')).toBeTruthy();
     expect(within(screen.getByTestId('team-member-u7')).getByText('Joined Sep 15, 2026')).toBeTruthy();
   });
 });
@@ -464,16 +464,16 @@ describe('a team’s requests to join say the address under a name, as the websi
         workspaceId={TEST_WORKSPACE}
         projectId="p1"
         teamName="Finance"
-        requests={[request('r1', 'erin@acme.co', 2 * DAY + 60_000, 'Erin'), request('r2', 'fay@acme.co', DAY + 60_000)]}
+        requests={[request('r1', 'erin@example.com', 2 * DAY + 60_000, 'Erin'), request('r2', 'fay@example.com', DAY + 60_000)]}
         onChanged={jest.fn()}
       />,
       signedInSession,
     );
     const erin = screen.getByTestId('team-request-r1');
     expect(within(erin).getByText('Erin')).toBeTruthy();
-    expect(within(erin).getByText('erin@acme.co · Asked 2d ago')).toBeTruthy();
+    expect(within(erin).getByText('erin@example.com · Asked 2d ago')).toBeTruthy();
     const fay = screen.getByTestId('team-request-r2');
-    expect(within(fay).getAllByText(/fay@acme\.co/u)).toHaveLength(1);
+    expect(within(fay).getAllByText(/fay@example\.com/u)).toHaveLength(1);
     expect(within(fay).getByText('Asked 1d ago')).toBeTruthy();
   });
 });
@@ -492,14 +492,14 @@ describe("Organization's members say the day they joined, as the website's list 
       <OrgPeople
         orgName="Acme Operations"
         viewerUserId="u1"
-        members={[member('u2', 'ben@acme.co', noon(7, 20), 'Ben'), member('u8', 'gus@acme.co', noon(9, 2))]}
+        members={[member('u2', 'ben@example.com', noon(7, 20), 'Ben'), member('u8', 'gus@example.com', noon(9, 2))]}
         requests={[]}
         shownWorkspaceId={TEST_WORKSPACE}
         onChanged={jest.fn()}
       />,
       signedInSession,
     );
-    expect(within(screen.getByTestId('member-u2')).getByText('ben@acme.co · Joined Aug 20, 2026')).toBeTruthy();
+    expect(within(screen.getByTestId('member-u2')).getByText('ben@example.com · Joined Aug 20, 2026')).toBeTruthy();
     expect(within(screen.getByTestId('member-u8')).getByText('Joined Oct 2, 2026')).toBeTruthy();
   });
 });

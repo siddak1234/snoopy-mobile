@@ -37,8 +37,9 @@
  * `/api/platform` rewrite because the web session cookie lives there (manifest
  * §12.1 #79). A start leg opened on `api.autom8x.ai` therefore sets a cookie the
  * callback on `www.autom8x.ai` never receives, and every native login ends at
- * the website with `exchange_failed`. Measured 2026-09-03, recorded in
- * `ROUND-7.5-OBSERVATIONS.md`. The bearer API calls stay on the API origin;
+ * the website with `exchange_failed`. Measured 2026-09-03, recorded in the
+ * private backend's `snoopy-backend/docs/records/snoopy-mobile/ROUND-7.5-OBSERVATIONS.md`.
+ * The bearer API calls stay on the API origin;
  * only the browser-carried start leg goes through the public web origin.
  */
 const RELEASE_NATIVE_REDIRECT_URI = 'https://app.autom8x.ai/auth/native/callback';
