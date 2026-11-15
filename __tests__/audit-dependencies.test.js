@@ -94,7 +94,7 @@ describe('audit:dependencies, the decision', () => {
 
 describe('audit:dependencies, the command', () => {
   const cli = (input) =>
-    spawnSync(process.execPath, [script, '--report', '/dev/stdin', '--today', '2026-11-15'], { cwd: root, encoding: 'utf8', input: JSON.stringify(input), timeout: 60_000 });
+    spawnSync(process.execPath, [script, '--report', '-', '--today', '2026-11-15'], { cwd: root, encoding: 'utf8', input: JSON.stringify(input), timeout: 60_000 });
   const critical = { 'some-package': { severity: 'critical', via: [advisory('GHSA-2222-3333-4444', 'critical', 'some-package')] } };
 
   it('exits 1 on an advisory the committed allowlist does not name, and prints advisory ids, never package names or titles', () => {

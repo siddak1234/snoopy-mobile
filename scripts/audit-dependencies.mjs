@@ -144,7 +144,9 @@ function main(args) {
   let allowlist;
   try {
     allowlist = JSON.parse(readFileSync(resolve(root, ALLOWLIST), 'utf8'));
-    report = value('--report') ? JSON.parse(readFileSync(resolve(value('--report')), 'utf8')) : npmAudit();
+    // `--report -` reads standard input by its descriptor: `/dev/stdin` fails on Linux when it is a socket.
+    const from = value('--report');
+    report = from ? JSON.parse(readFileSync(from === '-' ? 0 : resolve(from), 'utf8')) : npmAudit();
   } catch (error) {
     console.log(`audit:dependencies: RED, nothing judged: ${error.message}`);
     return 1;
