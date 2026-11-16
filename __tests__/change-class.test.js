@@ -325,10 +325,10 @@ describe('no private data: CI, the classes and both hooks run the kit scanner (t
     'process.exit(Number(process.env.STUB_EXIT));',
     '',
   ].join('\n');
-  /** The workflow lint's stand-in: logs its arguments, then exits LINT_EXIT (0 when unset). */
+  /** The workflow lint's stand-in: logs its arguments and stdin, then exits LINT_EXIT (0 when unset). */
   const LINT_STUB = [
-    "import { appendFileSync } from 'node:fs';",
-    "appendFileSync('lint.log', `${JSON.stringify(process.argv.slice(2))}\\n`);",
+    "import { appendFileSync, readFileSync } from 'node:fs';",
+    "appendFileSync('lint.log', `${JSON.stringify({ args: process.argv.slice(2), input: readFileSync(0, 'utf8') })}\\n`);",
     'process.exit(Number(process.env.LINT_EXIT ?? 0));',
     '',
   ].join('\n');
@@ -384,7 +384,7 @@ describe('no private data: CI, the classes and both hooks run the kit scanner (t
     expect(run.stdout).toContain(`pre-push: REFUSED — the gate 'Workflow lint' ${said}`);
     expect(run.stdout).not.toContain('the gate by change class');
     expect(scans(dir)).toEqual([['--push']]);
-    expect(lints(dir)).toEqual([[]]);
+    expect(lints(dir)).toEqual([{ args: ['--pre-push'], input: PUSH }]);
   });
 
   it('pre-push goes on to the change class when the scan is clean, and scans nothing for a delete or an empty push', () => {
@@ -394,7 +394,7 @@ describe('no private data: CI, the classes and both hooks run the kit scanner (t
     expect(run.stdout).toContain('pre-push: No private data (the pushed commits) — green');
     expect(run.stdout).toContain('pre-push: Workflow lint — green');
     expect(run.stdout).toContain('pre-push: the gate by change class');
-    expect(lints(dir)).toEqual([[]]);
+    expect(lints(dir)).toEqual([{ args: ['--pre-push'], input: PUSH }]);
     for (const input of ['(delete) 0000000000000000000000000000000000000000 refs/heads/old 1111111111111111111111111111111111111111\n', '']) {
       const quiet = hookRepo('.githooks/pre-push');
       expect(runHook(quiet, '.githooks/pre-push', input, 1, 1).status).toBe(0);

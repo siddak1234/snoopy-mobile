@@ -225,8 +225,10 @@ change class's gate and ci.yml's "No private data" step (`--tree`). A pull
 request from a fork gets no secrets, so its scan is red by design; the owner's
 pull requests and pushes are scanned.
 The kit's workflow lint (`node scripts/kit/workflow-lint.mjs`: zizmor 1.32.0,
-pinned by sha256, offline and with no token, over `.github/workflows/`) runs on
-every push (`.githooks/pre-push`, after the scan), in the full class, and in
+pinned by sha256, offline and with no token, over `.github/workflows/`; it fails
+closed, `--strict-collection`: a workflow zizmor cannot load is a failure) runs on
+every push (`.githooks/pre-push`, after the scan, as `--pre-push` with git's ref
+lines: the `.github/` of each commit the push names, each ref's tip, never the working tree), in the full class, and in
 ci.yml's "Workflow lint" step; a finding is fixed by its rule, or ignored with
 its reason in zizmor's config file beside the workflows (none yet).
 `npm run hooks:install` (once per clone; `git config core.hooksPath

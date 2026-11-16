@@ -10,8 +10,11 @@
 # each runs: README "Verification".
 # Before either, the kit's private-data scanner reads the commits being pushed
 # (node scripts/kit/private-data-scan.mjs --push), then the kit's workflow lint
-# (node scripts/kit/workflow-lint.mjs: zizmor, offline, over .github/workflows/,
-# a few seconds): a finding (exit 1) or an error (exit 2) refuses the push.
+# (node scripts/kit/workflow-lint.mjs --pre-push: zizmor, offline, over the
+# .github/workflows/ of each commit the push names, each ref's tip, never the
+# working tree; BUILD-PLAN
+# 30.19.15, snoopy-backend; a few seconds a commit): a finding (exit 1) or an
+# error (exit 2) refuses the push.
 # A by-design red push — the deliberate-failure commit a CI proof needs —
 # bypasses this hook with
 #
@@ -25,14 +28,19 @@ set -u
 
 remote=${1:-origin}
 
+# git's ref lines, read once: the workflow lint lints each ref's tip.
+refs=$(cat)
+
 # Nothing to gate when the push only deletes refs.
 pushing=0
 while read -r _local_ref local_sha _remote_ref _remote_sha; do
   case $local_sha in
-    0000000000000000000000000000000000000000) ;;
+    0000000000000000000000000000000000000000 | '') ;;
     *) pushing=1 ;;
   esac
-done
+done <<EOF
+$refs
+EOF
 [ "$pushing" -eq 1 ] || exit 0
 
 cd "$(git rev-parse --show-toplevel)" || exit 1
@@ -69,7 +77,8 @@ if [ "$dirty" -ne 0 ]; then
 fi
 
 gate "No private data (the pushed commits)" node scripts/kit/private-data-scan.mjs --push
-gate "Workflow lint" node scripts/kit/workflow-lint.mjs
+lint_pushed() { printf '%s\n' "$refs" | node scripts/kit/workflow-lint.mjs --pre-push; }
+gate "Workflow lint" lint_pushed
 
 echo "pre-push: the gate by change class (scripts/change-class.mjs)"
 node scripts/change-class.mjs --run --worktree
