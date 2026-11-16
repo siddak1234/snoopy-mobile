@@ -1,0 +1,11 @@
+# The private-data scan's reviewed history findings (BUILD-PLAN 30.19.3 and 30.19.16, 2026-11-16):
+# each line is one finding's exact gitleaks fingerprint (commit:file:rule:line) in a commit
+# before the 2026-11-16 history rewrite, never its value. These 6 are a fictional 555 number (two rules), a fake test IP and three test tokens:
+# no client, test-user or outside person's data (the owner, 2026-11-15: "what is not fine is
+# external users or test user or client info"). Any finding not listed here still fails.
+2d683ff1dc8ed9f3dd05951f3d6ee4f48ca761cf:__tests__/audit-gates.test.js:generic-api-key:128
+418fe0cdc8a90a26d0791c85d4644c6d6a21d3a0:__tests__/presses-home-activity.test.tsx:generic-api-key:375
+4a06022fee498dfdacfc4a145edb44273c9bd41a:__tests__/builds37-39.test.tsx:autom8x-phone-bare:39
+4a06022fee498dfdacfc4a145edb44273c9bd41a:__tests__/builds37-39.test.tsx:autom8x-phone:39
+4a06022fee498dfdacfc4a145edb44273c9bd41a:__tests__/builds37-39.test.tsx:autom8x-public-ipv4:53
+ac1c30c75d933299c7e747c5714f93762e7f98b2:__tests__/audit-gates.test.js:generic-api-key:379
