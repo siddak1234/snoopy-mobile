@@ -1817,6 +1817,159 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '503': { $ref: '#/components/responses/Problem' }
 
+  /v1/cds-hooks/{clinicId}/cds-services:
+    get:
+      operationId: discoverCdsServices
+      summary: A clinic's CDS Hooks discovery (BUILD-PLAN 30.4.1).
+      security: []
+      description: >-
+        CDS Hooks 2.0 discovery, which "SHALL always be available at
+        {baseUrl}/cds-services": the clinic's `baseUrl` is
+        `/v1/cds-hooks/{clinicId}`, one address per clinic (BUILD-PLAN Phase 30
+        decision (e)). Public and without a session, as the webhook ingress is:
+        the caller is the clinic's EHR and its analysts. Lists each service's
+        `hook`, `id`, `title` and `description` — never a workspace, a flow's
+        name or a version. The clinic's settings are written only by a reviewed
+        migration (ADR-0051 Amendment 1). Rate-limited as `callCdsService` is.
+        Not consumed by the web or mobile clients.
+      parameters:
+        - name: clinicId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The clinic's services.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [services]
+                properties:
+                  services:
+                    type: array
+                    items:
+                      type: object
+                      required: [hook, id, title, description]
+                      properties:
+                        hook: { type: string, enum: [patient-view, order-select, order-sign] }
+                        id: { type: string, pattern: '^[a-z0-9][a-z0-9-]{0,62}$' }
+                        title: { type: string }
+                        description: { type: string }
+        '404':
+          description: No clinic has this address.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+        '502':
+          description: The Runs service is unreachable.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /v1/cds-hooks/{clinicId}/cds-services/{serviceId}:
+    post:
+      operationId: callCdsService
+      summary: A clinic's CDS Hooks call, which starts a run (BUILD-PLAN 30.4.1 to 30.4.3).
+      security: []
+      description: >-
+        CDS Hooks 2.0's service call, at `{baseUrl}/cds-services/{service.id}`.
+        Public and without a session: the caller is the clinic's EHR, and what
+        protects the route is its signed JWT, checked by the Runs service and never
+        by the Edge (`apps/runs/src/cds-hooks-token.ts`) — RS384 only; the header's
+        `jku` exactly one of the clinic's allowlist before any key set is read, and
+        read only through Connections' guarded transport; `iss` the clinic's FHIR
+        endpoint, `sub` its configured CDS client id, `aud` this very address; `exp`,
+        `nbf` and `iat` within 60 s of skew, `iat` at most five minutes old; and a
+        `jti` taken once. A call the clinic signed starts the run of the flow its
+        service names, once for each `hookInstance`. Only the hook's `context`
+        enters the run; `fhirAuthorization`, `fhirServer` and `prefetch` are never
+        stored (ADR-0051 decision 7). Rate-limited in buckets of its own, not the
+        per-address one every other public route shares: 300 calls a minute for
+        each clinic and 1,200 for each sending address on these paths (the
+        session's figures until measured), a 429 past either. Not consumed by the
+        web or mobile clients.
+      parameters:
+        - name: clinicId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: serviceId
+          in: path
+          required: true
+          schema: { type: string, pattern: '^[a-z0-9][a-z0-9-]{0,62}$' }
+        - name: Authorization
+          in: header
+          required: true
+          description: "`Bearer` and the clinic's signed JWT, at most 8 KiB."
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [hook, hookInstance, context]
+              properties:
+                hook: { type: string, enum: [patient-view, order-select, order-sign] }
+                hookInstance: { type: string, format: uuid }
+                context: { type: object, additionalProperties: true }
+              additionalProperties: true
+      responses:
+        '200':
+          description: >-
+            `{cards: []}`, CDS Hooks' answer with nothing to show: a run was
+            started or already had been for this `hookInstance`, or the platform
+            declined — a subscription not live, a version not started by the EHR's
+            event, a workspace over its plan's flow limit, or no accepted health
+            data agreement (ADR-0049 Amendment 4) — with the reason recorded on the
+            service and no run. The card is BUILD-PLAN 30.4.4's.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [cards]
+                properties:
+                  cards: { type: array, maxItems: 0, items: { type: object } }
+        '400':
+          description: >-
+            A call the clinic signed whose `hook` is not its service's
+            (`hook_mismatch`), whose `hookInstance` is not a UUID
+            (`hook_instance_invalid`) or whose `context` is not an object
+            (`context_invalid`).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '404':
+          description: >-
+            No such clinic or service, or the JWT is missing, refused by any rule
+            above, or replayed. One answer for all, as the webhook ingress's, so
+            the address is no oracle beyond discovery, which CDS Hooks makes
+            public: whether a clinic exists, and its services' ids, are
+            discovery's answer to anyone holding its id, a random version 4
+            UUID.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: The same `hookInstance` arrived with a different body.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '413':
+          description: The body exceeds 256 KiB, refused before the clinic is looked up.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+        '502':
+          description: The Runs service, or the clinic's key set, could not be reached; retry.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+
 components:
   securitySchemes:
     sessionCookie:

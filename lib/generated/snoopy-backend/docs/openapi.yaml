@@ -2124,6 +2124,51 @@ paths:
             `deliverWebhook` in `docs/openapi/automations.yaml`.
         '404': { $ref: '#/components/responses/NotFound' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
+  /v1/cds-hooks/{clinicId}/cds-services:
+    get:
+      tags: [runs]
+      operationId: discoverCdsServices
+      security: []
+      description: >-
+        A clinic's CDS Hooks discovery (BUILD-PLAN 30.4.1): its `baseUrl` is
+        `/v1/cds-hooks/{clinicId}`, one address per clinic. Public: the caller is
+        the clinic's EHR. The full contract is `discoverCdsServices` in
+        `docs/openapi/automations.yaml`.
+      parameters:
+        - name: clinicId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: The clinic's services, each its hook and id. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /v1/cds-hooks/{clinicId}/cds-services/{serviceId}:
+    post:
+      tags: [runs]
+      operationId: callCdsService
+      security: []
+      description: >-
+        A clinic's CDS Hooks call (BUILD-PLAN 30.4.1 to 30.4.3), which starts the
+        run of the flow its service names. Public: the caller is the clinic's EHR,
+        holding a signed JWT that Runs checks. The full contract is
+        `callCdsService` in `docs/openapi/automations.yaml`.
+      parameters:
+        - name: clinicId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: serviceId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          {
+            description: '`{cards: []}`: the run started, or the call was declined with its reason recorded.',
+          }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
   /v1/plans:
     get:
       tags: [billing]
