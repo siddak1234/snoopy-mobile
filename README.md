@@ -228,7 +228,7 @@ The kit's workflow lint (`node scripts/kit/workflow-lint.mjs`: zizmor 1.32.0,
 pinned by sha256, offline and with no token, over `.github/workflows/`; it fails
 closed, `--strict-collection`: a workflow zizmor cannot load is a failure) runs on
 every push (`.githooks/pre-push`, after the scan, as `--pre-push` with git's ref
-lines: the `.github/` of each commit the push names, each ref's tip, never the working tree; a tip with no `.github/workflows` is clean, a symlink or submodule there is named, not linted, and a `.github/workflows` of only those fails), in the full class, and in
+lines: the `.github/` of each commit the push names, each ref's tip, never the working tree; a tip with no `.github/workflows` is clean, a symlink or submodule there is named, not linted, and a `.github/workflows` that is one, or holds only those, fails), in the full class, and in
 ci.yml's "Workflow lint" step; a finding is fixed by its rule, or ignored with
 its reason in zizmor's config file beside the workflows (none yet).
 `npm run hooks:install` (once per clone; `git config core.hooksPath
