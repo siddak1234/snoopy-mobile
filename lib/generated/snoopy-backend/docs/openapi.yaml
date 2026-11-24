@@ -2165,8 +2165,31 @@ paths:
       responses:
         '200':
           {
-            description: '`{cards: []}`: the run started, or the call was declined with its reason recorded.',
+            description: "`{cards: []}`: the visit's run started, or the call was declined with its reason recorded; or, since BUILD-PLAN 30.4.4, the visit's one card.",
           }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /v1/cds-hooks/{clinicId}/cds-services/{serviceId}/feedback:
+    post:
+      tags: [runs]
+      operationId: sendCdsFeedback
+      security: []
+      description: >-
+        A clinic's CDS Hooks feedback (BUILD-PLAN 30.4.4): what the clinician did
+        with the card a service answered. Public: the caller is the clinic's EHR,
+        holding a signed JWT that Runs checks. The full contract is
+        `sendCdsFeedback` in `docs/openapi/automations.yaml`.
+      parameters:
+        - name: clinicId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: serviceId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: The report was kept, or its card had been acted on already. }
         '404': { $ref: '#/components/responses/NotFound' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
   /v1/plans:
