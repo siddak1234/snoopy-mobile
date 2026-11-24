@@ -1871,7 +1871,9 @@ paths:
   /v1/cds-hooks/{clinicId}/cds-services/{serviceId}:
     post:
       operationId: callCdsService
-      summary: A clinic's CDS Hooks call, which starts a run (BUILD-PLAN 30.4.1 to 30.4.3).
+      summary: >-
+        A clinic's CDS Hooks call, which starts a visit's run and later shows its card
+        (BUILD-PLAN 30.4.1 to 30.4.4).
       security: []
       description: >-
         CDS Hooks 2.0's service call, at `{baseUrl}/cds-services/{service.id}`.
@@ -1883,9 +1885,14 @@ paths:
         endpoint, `sub` its configured CDS client id, `aud` this very address; `exp`,
         `nbf` and `iat` within 60 s of skew, `iat` at most five minutes old; and a
         `jti` taken once. A call the clinic signed starts the run of the flow its
-        service names, once for each `hookInstance`. Only the hook's `context`
-        enters the run; `fhirAuthorization`, `fhirServer` and `prefetch` are never
-        stored (ADR-0051 decision 7). Rate-limited in buckets of its own, not the
+        service names, once for each visit (`context.encounterId`, of its
+        `context.patientId`; since BUILD-PLAN 30.4.4, ADR-0051 Amendment 2) and
+        never for a call without one; a later call for the visit finds that run
+        and, once it has succeeded with codes, answers the visit's one card, the
+        same card on each call until Epic reports it acted on or a day has passed
+        since the run ended. Only the hook's `context` enters the run;
+        `fhirAuthorization`, `fhirServer` and `prefetch` are never stored (ADR-0051
+        decision 7). Rate-limited in buckets of its own, not the
         per-address one every other public route shares: 300 calls a minute for
         each clinic and 1,200 for each sending address on these paths (the
         session's figures until measured), a 429 past either. Not consumed by the
@@ -1919,25 +1926,81 @@ paths:
       responses:
         '200':
           description: >-
-            `{cards: []}`, CDS Hooks' answer with nothing to show: a run was
-            started or already had been for this `hookInstance`, or the platform
-            declined — a subscription not live, a version not started by the EHR's
-            event, a workspace over its plan's flow limit, or no accepted health
-            data agreement (ADR-0049 Amendment 4) — with the reason recorded on the
-            service and no run. The card is BUILD-PLAN 30.4.4's.
+            The visit's card, or `{cards: []}`, CDS Hooks' answer with nothing to
+            show: the visit's run was just started, or is not yet succeeded, or gave
+            no codes in the one shape a card reads (`output.diagnosisCodes`); the
+            visit's card was acted on or is past its day; the call names no visit;
+            or the platform declined — a subscription not live, a version not
+            started by the EHR's event, a workspace over its plan's flow limit, or
+            no accepted health data agreement (ADR-0049 Amendment 4). Each with its
+            reason recorded on the service. The card (BUILD-PLAN 30.4.4):
+            "N diagnosis codes suggested from this visit's note", its `detail` each
+            code with its name and its one line on why (Markdown), one suggestion a
+            code, none recommended, each one `create` action of a FHIR R4
+            `Condition` (category `encounter-diagnosis`, the ICD-10-CM code, the
+            call's patient and encounter) whose description is the one line on why.
           content:
             application/json:
               schema:
                 type: object
                 required: [cards]
                 properties:
-                  cards: { type: array, maxItems: 0, items: { type: object } }
+                  cards:
+                    type: array
+                    maxItems: 1
+                    items:
+                      type: object
+                      required:
+                        [uuid, summary, detail, indicator, source, selectionBehavior, suggestions]
+                      properties:
+                        uuid: { type: string, format: uuid }
+                        summary: { type: string, maxLength: 139 }
+                        detail:
+                          type: string
+                          description: >-
+                            GitHub-flavoured Markdown, one line a code: `- **{code}** {name}:
+                            {why}`, Markdown's own characters in the name and the why escaped.
+                        indicator: { type: string, description: '`info`.' }
+                        source:
+                          type: object
+                          required: [label]
+                          properties:
+                            label: { type: string, description: '`Autom8x`.' }
+                        selectionBehavior: { type: string, description: '`any`.' }
+                        suggestions:
+                          type: array
+                          minItems: 1
+                          maxItems: 12
+                          items:
+                            type: object
+                            required: [label, uuid, isRecommended, actions]
+                            properties:
+                              label: { type: string, description: The code and its name. }
+                              uuid: { type: string, format: uuid }
+                              isRecommended: { type: boolean, description: Always false. }
+                              actions:
+                                type: array
+                                minItems: 1
+                                maxItems: 1
+                                items:
+                                  type: object
+                                  required: [type, description, resource]
+                                  properties:
+                                    type: { type: string, description: '`create`.' }
+                                    description: { type: string, maxLength: 200 }
+                                    resource:
+                                      type: object
+                                      description: A FHIR R4 Condition.
+                                      additionalProperties: true
         '400':
           description: >-
             A call the clinic signed whose `hook` is not its service's
             (`hook_mismatch`), whose `hookInstance` is not a UUID
             (`hook_instance_invalid`) or whose `context` is not an object
-            (`context_invalid`).
+            (`context_invalid`); since BUILD-PLAN 30.4.4, whose
+            `context.encounterId` is present but not a FHIR id
+            (`encounter_invalid`), or, with one, whose `context.patientId` is not
+            (`patient_invalid`).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -1953,12 +2016,138 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '409':
-          description: The same `hookInstance` arrived with a different body.
+          description: >-
+            Not answered since BUILD-PLAN 30.4.4, kept so the contract does not
+            shrink: a call is keyed by its visit, and a second call for a visit,
+            whatever its body, finds the first's run. It was the same
+            `hookInstance` arriving with a different body.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '413':
           description: The body exceeds 256 KiB, refused before the clinic is looked up.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+        '502':
+          description: The Runs service, or the clinic's key set, could not be reached; retry.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+
+  /v1/cds-hooks/{clinicId}/cds-services/{serviceId}/feedback:
+    post:
+      operationId: sendCdsFeedback
+      summary: What the clinician did with a service's card (BUILD-PLAN 30.4.4).
+      security: []
+      description: >-
+        CDS Hooks 2.0's feedback, at the service's address with `/feedback`.
+        Checked as `callCdsService` is, by the Runs service: the same JWT rules,
+        its `aud` this very address, its `jti` taken once, and the same buckets.
+        Each report names a card this service answered (`card`, its `uuid`),
+        `accepted` with the suggestions ticked (`acceptedSuggestions`, each a
+        suggestion's `uuid` on that card) or `overridden`, and when
+        (`outcomeTimestamp`). Kept: the outcome, the codes accepted, the override
+        reason's `code` and `system`, and the time — never `userComment`, nor
+        the reason's `display`, which are free text that may name a patient
+        (ADR-0051 Amendment 2). The first report on a card is the one kept; a
+        card acted on is never shown again. Not consumed by the web or mobile
+        clients.
+      parameters:
+        - name: clinicId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: serviceId
+          in: path
+          required: true
+          schema: { type: string, pattern: '^[a-z0-9][a-z0-9-]{0,62}$' }
+        - name: Authorization
+          in: header
+          required: true
+          description: "`Bearer` and the clinic's signed JWT, at most 8 KiB."
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [feedback]
+              properties:
+                feedback:
+                  type: array
+                  minItems: 1
+                  maxItems: 16
+                  items:
+                    type: object
+                    required: [card, outcome, outcomeTimestamp]
+                    properties:
+                      card: { type: string, format: uuid }
+                      outcome: { type: string, enum: [accepted, overridden] }
+                      acceptedSuggestions:
+                        type: array
+                        minItems: 1
+                        maxItems: 12
+                        description: Required when `outcome` is `accepted`; not kept otherwise.
+                        items:
+                          type: object
+                          required: [id]
+                          properties:
+                            id: { type: string }
+                      overrideReason:
+                        type: object
+                        description: Read only when `outcome` is `overridden`.
+                        properties:
+                          reason:
+                            type: object
+                            properties:
+                              system:
+                                type: string
+                                maxLength: 2048
+                                description: Kept only with a kept `code`, and only when an absolute URI with no space.
+                              code:
+                                type: string
+                                description: >-
+                                  Kept only when it is a code, `^[A-Za-z0-9._:-]{1,64}$`; anything
+                                  else, a sentence a clinician typed among them, is kept as no
+                                  reason.
+                              display: { type: string, description: Never kept. }
+                          userComment: { type: string, description: Never kept or logged. }
+                      outcomeTimestamp: { type: string, format: date-time }
+                    additionalProperties: true
+              additionalProperties: true
+      responses:
+        '200':
+          description: >-
+            Every report was kept, or its card had been acted on already. An empty
+            object.
+          content:
+            application/json:
+              schema: { type: object }
+        '400':
+          description: >-
+            A report the clinic signed that is malformed, its reason in the
+            problem's details: `feedback_invalid` (not one to 16 reports),
+            `card_invalid`, `outcome_invalid`, `outcome_timestamp_invalid` (not RFC
+            3339), `accepted_suggestions_invalid` (an acceptance without one to 12
+            ids) or `override_reason_invalid`. Nothing is kept.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '404':
+          description: >-
+            As `callCdsService`'s 404 — no such clinic or service, or the JWT
+            missing, refused or replayed — and also a report naming a card this
+            service did not answer, or a suggestion not on its card. One answer for
+            all; nothing is kept.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '413':
+          description: The body exceeds 64 KiB, refused before the clinic is looked up.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
