@@ -14,6 +14,7 @@ import {
   CONNECT_LABEL,
   DISCONNECT_LABEL,
   RECONNECT_LABEL,
+  SIGN_IN_AGAIN_LABEL,
   disconnectedIn,
   disconnectedName,
 } from '@/lib/content/screen-states';
@@ -124,9 +125,10 @@ export function providerConnected(provider: Pick<ConnectionProvider, 'authType'>
  * disconnected at the provider says "Disconnected in {provider}" in the warning
  * colour (S1-8, `disconnectedName`), its button Reconnect, when the provider's
  * name is given. An EHR (`authType` `smart-backend`, Round 21 stage 2, D1;
- * backend ADR-0050), connected, says the clinic's host — the platform keeps it
- * as the account's name — on Connections' row and on Set up's integration row
- * alike, as the website's `connectionLine`.
+ * backend ADR-0050; or `smart-launch`, a person's sign-in, Round 22, ADR-0054),
+ * connected, says the clinic's host — the platform keeps it as the account's
+ * name — on Connections' row and on Set up's integration row alike, as the
+ * website's `connectionLine`.
  */
 export function connectionLine(
   connection: Connection | undefined,
@@ -139,17 +141,30 @@ export function connectionLine(
   const state = connectionState(connection);
   const name = connection?.externalAccount.displayName ?? '';
   if (state !== 'not-connected' && name.includes('@')) return { text: name, tone: 'muted' };
-  if (state === 'connected' && authType === 'smart-backend' && name) return { text: name, tone: 'muted' };
+  if (state === 'connected' && (authType === 'smart-backend' || authType === 'smart-launch') && name) {
+    return { text: name, tone: 'muted' };
+  }
   if (state === 'connected' && connection?.companyName) return { text: connection.companyName, tone: 'muted' };
   if (state === 'connected') return { text: CONNECTION_CONNECTED, tone: 'muted' };
   if (state === 'attention') return { text: CONNECTION_ATTENTION, tone: 'warn' };
   return { text: CONNECTION_NOT_CONNECTED, tone: 'muted' };
 }
 
-/** The row's one button, for an owner or admin: Connect, Reconnect, or Disconnect (spec A4). */
-export function connectionAction(state: ConnectionRowState): 'Connect' | 'Reconnect' | 'Disconnect' {
+/**
+ * The row's one button, for an owner or admin: Connect, Reconnect, or
+ * Disconnect (spec A4) — an EHR sign-in's Reconnect (`authType`
+ * `smart-launch`, Round 22, backend ADR-0054) is "Sign in again", since that
+ * is what it asks of the person: a connection the platform asks to be signed
+ * in again (`reauthorization-required` — every EHR connection made before the
+ * sign-in, the backend's migration 0015), or one with an `errorCode`. The
+ * website's words.
+ */
+export function connectionAction(
+  state: ConnectionRowState,
+  authType?: ConnectionProvider['authType'],
+): 'Connect' | 'Reconnect' | 'Sign in again' | 'Disconnect' {
   if (state === 'connected') return DISCONNECT_LABEL;
-  if (state === 'attention') return RECONNECT_LABEL;
+  if (state === 'attention') return authType === 'smart-launch' ? SIGN_IN_AGAIN_LABEL : RECONNECT_LABEL;
   return CONNECT_LABEL;
 }
 

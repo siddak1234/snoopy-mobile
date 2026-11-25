@@ -21,13 +21,19 @@ import {
   connectionIncomplete,
   refusalMessage,
 } from '@/lib/content/refusals';
-import { EHR_CONNECT_REFUSALS } from '@/lib/content/ehr-connect';
+import {
+  EHR_ACCOUNT_MISMATCH,
+  EHR_CONNECT_REFUSALS,
+  EHR_REPLACE,
+  EHR_SIGNING_IN,
+  EHR_SIGN_IN_REFUSALS,
+} from '@/lib/content/ehr-connect';
 import { DISCONNECTING_LABEL, DISCONNECT_LABEL, disconnectBody, disconnectTitle } from '@/lib/content/screen-states';
 import { connectOAuthProvider, connectProviderWithKey, disconnectConnection } from '@/lib/platform/connections';
 import { PlatformError } from '@/lib/platform/problem';
 import { invalidateShared } from '@/lib/platform/snapshot';
 import { connectionAction, type ConnectionView } from '@/lib/view/catalog';
-import { smartVendors } from '@/lib/view/ehr-connection';
+import { opensSignInForm, signInLabel, smartVendors } from '@/lib/view/ehr-connection';
 
 /**
  * The connections a screen lists, each the one row (Build 21, spec A4): Settings
@@ -59,6 +65,16 @@ import { smartVendors } from '@/lib/view/ehr-connection';
  *   the same key form, its field the clinic's FHIR address, and a vendor
  *   picker above it only when the platform lists two or more `vendors`; the
  *   chosen one — or the one listed — is sent as `vendor` beside it.
+ * - **An EHR a person signs in to** (`smart-launch`, Round 22; backend
+ *   ADR-0054 — the EHR since then) opens the same form, its button "Sign in
+ *   with {vendor}" (`signInLabel`): the two fields go to `authorize` as
+ *   `credentials`, and the EHR's own sign-in page opens in the system auth
+ *   session, as an OAuth provider's consent page does, the connection then
+ *   completed the same way (`connectOAuthProvider`). Every refusal is said in
+ *   the form, by its reason (`EHR_SIGN_IN_REFUSALS`); another address than
+ *   the workspace's (409 `account_mismatch`) asks "Replace it?" and Replace
+ *   begins again naming the workspace's connection. Its Reconnect is "Sign in
+ *   again" (`connectionAction`).
  */
 export function ConnectionsCard({
   rows,
@@ -85,12 +101,15 @@ export function ConnectionsCard({
   // A key provider's Connect or Reconnect: its key fields, in a dialog.
   const [keying, setKeying] = useState<ConnectionView | null>(null);
   const [disconnecting, setDisconnecting] = useState<ConnectionView | null>(null);
-  // A pasted key answered 409: its first request may still be verifying.
+  // A pasted key answered 409: its first request may still be verifying. An EHR
+  // sign-in answered 409 but for a Replace it can send: the rows must be read again.
   const [keyPending, setKeyPending] = useState(false);
   const [credentials, setCredentials] = useState<Record<string, string>>({});
   const [keyError, setKeyError] = useState<string | null>(null);
   // An EHR's vendor, by id: the first listed until another is picked.
   const [vendor, setVendor] = useState<string | null>(null);
+  // An EHR sign-in answered 409 `account_mismatch`: its button is Replace until the form changes.
+  const [mismatch, setMismatch] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   // What a connect came back with, under its row.
   const [rowError, setRowError] = useState<{ providerId: string; message: string } | null>(null);
@@ -115,11 +134,13 @@ export function ConnectionsCard({
     setCredentials({});
     setKeyError(null);
     setVendor(null);
+    setMismatch(false);
     keys.settle();
   };
 
   const updateCredential = (name: string, value: string) => {
     setCredentials((previous) => ({ ...previous, [name]: value }));
+    setMismatch(false);
     keys.settle();
   };
 
@@ -168,7 +189,7 @@ export function ConnectionsCard({
       setDisconnecting(row);
       return;
     }
-    if (row.authType === 'api-key' || row.authType === 'smart-backend') {
+    if (row.authType === 'api-key' || row.authType === 'smart-backend' || opensSignInForm(row.authType)) {
       setKeyError(null);
       setKeying(row);
       return;
@@ -213,6 +234,69 @@ export function ConnectionsCard({
     }
   };
 
+  /**
+   * An EHR sign-in's button (Round 22, ADR-0054): its vendor and address to
+   * `authorize`, then the EHR's sign-in page, and back as an OAuth connect
+   * comes back — or Replace, after another address was refused. The row is
+   * read from the rows as they are now, so Replace names the connection the
+   * last read holds.
+   */
+  const signIn = async () => {
+    const row = keying ? (rows.find((each) => each.providerId === keying.providerId) ?? keying) : null;
+    if (!row || busy) return;
+    const workspaceId = workspaceIfShown(session, loadedFor);
+    if (!workspaceId) {
+      setKeyError(WORKSPACE_CHANGED);
+      return;
+    }
+    const values = Object.fromEntries(
+      row.credentialFields.map((field) => [field.name, credentials[field.name]?.trim() ?? '']),
+    );
+    if (Object.values(values).some((value) => !value)) {
+      setKeyError('Complete every credential field before connecting.');
+      return;
+    }
+    const chosen = vendor ?? smartVendors(row.provider)[0]?.id ?? '';
+    setBusy(row.providerId);
+    setKeyError(null);
+    setKeyPending(false);
+    try {
+      const outcome = await connectOAuthProvider(workspaceId, row.provider, {
+        credentials: { vendor: chosen, fhirBaseUrl: values.fhirBaseUrl ?? '' },
+        ...(mismatch && row.connectionId ? { replaceConnectionId: row.connectionId } : {}),
+      });
+      setMismatch(false);
+      if (outcome.status === 'failed') {
+        setKeyError(outcome.message);
+        return;
+      }
+      if (outcome.status === 'incomplete') {
+        setKeyError(connectionIncomplete(row.active));
+        return;
+      }
+      closeKey();
+      if (outcome.status === 'connected') {
+        onNotice(
+          outcome.reused ? alreadyConnected(row.name, outcome.connection.externalAccount.displayName) : CONNECTION_COMPLETED,
+        );
+      }
+      // `cancelled` is not proof nothing happened, as an OAuth connect's (`authorize`).
+      reread();
+    } catch (caught) {
+      const conflict = caught instanceof PlatformError && caught.status === 409;
+      const mismatched = conflict && caught.details?.reason === 'account_mismatch';
+      const replaceable = mismatched && row.connectionId !== undefined;
+      setMismatch(replaceable);
+      // Another 409 — the connection Replace named changed since the read — or a
+      // mismatch whose connection these rows do not hold: Refresh connections
+      // reads them as the platform holds them now, as a pasted key's 409 does.
+      setKeyPending(conflict && !replaceable);
+      setKeyError(mismatched ? EHR_ACCOUNT_MISMATCH : refusalMessage(caught, EHR_SIGN_IN_REFUSALS, 'The connection was not changed.'));
+    } finally {
+      setBusy(null);
+    }
+  };
+
   /** After a 409 on a pasted key: the rows as the platform holds them now, so a connect that did finish shows. */
   const refreshAfterConflict = () => {
     closeKey();
@@ -241,8 +325,8 @@ export function ConnectionsCard({
                 canManage && !row.noConnect ? (
                   <ConnectionButton
                     testID={`connection-action-${row.providerId}`}
-                    label={busy === row.providerId && row.state !== 'connected' ? 'Working…' : connectionAction(row.state)}
-                    accessibilityLabel={`${connectionAction(row.state)} ${row.name}`}
+                    label={busy === row.providerId && row.state !== 'connected' ? 'Working…' : connectionAction(row.state, row.authType)}
+                    accessibilityLabel={`${connectionAction(row.state, row.authType)} ${row.name}`}
                     disabled={busy !== null}
                     onPress={() => press(row)}
                   />
@@ -277,12 +361,27 @@ export function ConnectionsCard({
           actions={
             <>
               <DialogButton label="Cancel" disabled={busy !== null} onPress={closeKey} />
-              <DialogButton
-                tone="accent"
-                disabled={busy !== null}
-                onPress={() => void submitKey()}
-                label={busy !== null ? 'Verifying…' : keyPending ? 'Retry verification' : 'Verify and connect'}
-              />
+              {opensSignInForm(keying.authType) ? (
+                <DialogButton
+                  tone="accent"
+                  disabled={busy !== null}
+                  onPress={() => void signIn()}
+                  label={
+                    busy !== null
+                      ? EHR_SIGNING_IN
+                      : mismatch
+                        ? EHR_REPLACE
+                        : signInLabel(keying.provider, vendor ?? smartVendors(keying.provider)[0]?.id)
+                  }
+                />
+              ) : (
+                <DialogButton
+                  tone="accent"
+                  disabled={busy !== null}
+                  onPress={() => void submitKey()}
+                  label={busy !== null ? 'Verifying…' : keyPending ? 'Retry verification' : 'Verify and connect'}
+                />
+              )}
               {keyPending ? (
                 <DialogButton label="Refresh connections" disabled={busy !== null} onPress={refreshAfterConflict} />
               ) : null}
@@ -294,6 +393,7 @@ export function ConnectionsCard({
               value={vendor ?? smartVendors(keying.provider)[0]!.id}
               onChange={(next) => {
                 setVendor(next);
+                setMismatch(false);
                 keys.settle();
               }}
             />
@@ -309,7 +409,7 @@ export function ConnectionsCard({
             />
           ))}
           {keyError ? <DialogText tone="error">{keyError}</DialogText> : null}
-          {keyPending ? <DialogText>{KEY_REQUEST_IN_PROGRESS}</DialogText> : null}
+          {keyPending && !opensSignInForm(keying.authType) ? <DialogText>{KEY_REQUEST_IN_PROGRESS}</DialogText> : null}
         </Dialog>
       ) : null}
 

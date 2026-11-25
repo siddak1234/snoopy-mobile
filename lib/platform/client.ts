@@ -86,11 +86,28 @@ function clientsForConfiguredOrigin(): PlatformClients {
 const CREDENTIAL_ROUTES = ['/v1/auth/native/token', '/v1/auth/native/refresh', '/v1/auth/logout'];
 
 /**
+ * A 401 that is an answer about the attempt, not the credential.
+ *
+ * `/v1/connections/native/complete` checks the bearer first — a dead one is a
+ * plain 401, renewed below like any other — and only then completes the
+ * connection; a completion it refuses is a 401 too, naming its `reason` in
+ * `details` (an EHR sign-in's `no_refresh_token`, backend ADR-0054, or an
+ * attempt already spent). That session was good: renewing it would rotate a
+ * refresh token for nothing, and sending the sealed code again finds its
+ * attempt claimed, so the reason a person can act on would be replaced by the
+ * second answer's (Round 22).
+ */
+function answersTheAttempt(operationKey: string, error: PlatformError): boolean {
+  return operationKey === '/v1/connections/native/complete' && typeof error.details?.reason === 'string';
+}
+
+/**
  * Run one schema-typed operation and project its error into the shared client
  * vocabulary. `operationKey` is the concrete public path and gives tests one
  * stable seam without replacing the generated request itself.
  *
- * A 401 on any non-credential route is renewed once and retried once. Before
+ * A 401 on any non-credential route is renewed once and retried once, but for
+ * a completion's refusal (`answersTheAttempt`). Before
  * this, an access token that expired while the app was open produced a 401 that
  * nothing handled: `hooks/use-resource.tsx` turned it into an error state and
  * `hooks/use-session.tsx` only ever refreshed at mount, so every screen showed
@@ -108,6 +125,7 @@ export async function platformOperation<T>(
     return await sendOnce(execute);
   } catch (error) {
     if (!renewable || !(error instanceof PlatformError) || error.status !== 401) throw error;
+    if (answersTheAttempt(operationKey, error)) throw error;
     // Only a 401 reaches here, and only 401 proves the credential dead. An
     // outage is a 502 and never gets this far, so an unreachable platform can
     // never cost a person their session.

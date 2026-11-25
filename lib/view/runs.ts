@@ -14,6 +14,7 @@ import {
   NONE_LABEL,
   RUN_ID_LABEL,
   RUN_WORKING,
+  STARTED_FROM_EHR,
   STEP_DONE,
   STEP_FAILED,
   STEP_SKIPPED,
@@ -63,7 +64,9 @@ export type RunRowView = {
    * When the run was made, in full, and the run itself: `{when} · Run {id}`,
    * the full id (Build 21, spec A8; the owner's D4: "run number is the run ID",
    * and AM2: "runs should have the full ID"), which Activity draws under the row's own line (Gate 24's
-   * parity pass, G17). ~~`· v{templateVersion}`~~ until Build 21.
+   * parity pass, G17). ~~`· v{templateVersion}`~~ until Build 21. A run a
+   * clinic's EHR started says so between the two (`startedFromEhr`, Round 22):
+   * `{when} · Started from your EHR · Run {id}`.
    */
   stamp: string;
   tone: StatusTone;
@@ -264,6 +267,16 @@ export function needsReview(run: Run, approvals: readonly Approval[]): boolean {
   return decision === 'pending' || decision === 'unknown';
 }
 
+/**
+ * Whether a clinic's EHR started the run (Round 22; backend ADR-0053):
+ * `startedBy` `provider-event`, a CDS Hooks call. Absent on a run made before
+ * the platform kept it, and every other way to start — a person's, a schedule,
+ * a webhook — adds nothing to what a run says (the session's design).
+ */
+export function startedFromEhr(run: Pick<Run, 'startedBy'>): boolean {
+  return run.startedBy === 'provider-event';
+}
+
 export function toRunRow(
   run: Run,
   catalog: Map<string, CatalogEntry>,
@@ -275,7 +288,7 @@ export function toRunRow(
     name: nameFor(run, catalog),
     meta: metaFor(run, approvals),
     time: relativeTime(run.createdAt, now),
-    stamp: `${dateTime(run.createdAt)} · ${runLabel(run)}`,
+    stamp: [dateTime(run.createdAt), ...(startedFromEhr(run) ? [STARTED_FROM_EHR] : []), runLabel(run)].join(' · '),
     tone: statusTone(run.status),
     status: statusLabel(run.status) as StatusPillLabel,
   };
@@ -1034,16 +1047,17 @@ export function toRunStats(
  * The run's facts, as the website's run page lists them under its title
  * (Gate 24's parity pass, G18): when it started and ended — the design's em
  * dash for either it has not reached — how it started, its Trigger, in the
- * website's words (`runOriginLabel`), and since Build 21 its Run ID, the full
- * id (spec A7; the owner's D4 and AM2).
+ * website's words (`runOriginLabel`) — "Started from your EHR" for a run a
+ * clinic's EHR started (`startedFromEhr`, Round 22) — and since Build 21 its
+ * Run ID, the full id (spec A7; the owner's D4 and AM2).
  */
 export function toRunFacts(
-  run: Pick<Run, 'id' | 'startedAt' | 'endedAt' | 'origin'>,
+  run: Pick<Run, 'id' | 'startedAt' | 'endedAt' | 'origin' | 'startedBy'>,
 ): { label: 'Started' | 'Ended' | 'Trigger' | 'Run ID'; value: string }[] {
   return [
     { label: 'Started', value: dateTime(run.startedAt) },
     { label: 'Ended', value: dateTime(run.endedAt) },
-    { label: 'Trigger', value: runOriginLabel(run.origin) },
+    { label: 'Trigger', value: startedFromEhr(run) ? STARTED_FROM_EHR : runOriginLabel(run.origin) },
     { label: RUN_ID_LABEL, value: run.id },
   ];
 }

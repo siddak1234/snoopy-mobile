@@ -22,17 +22,31 @@ export type ConnectionOutcome =
   | { status: 'incomplete' }
   | { status: 'failed'; message: string };
 
+/** An EHR sign-in's two fields (backend ADR-0054): the vendor picked and the clinic's FHIR address. */
+export type EhrSignIn = { vendor: string; fhirBaseUrl: string };
+
 /**
  * Connect, reconnect or extend a provider — or, with `replaceConnectionId`,
  * replace the account a live connection holds (ADR-0019 §4, ADR-0026, BUILD-PLAN
  * 24.4.3). Replacing names the exact connection it replaces; one that changed
  * since the screen read it is refused with 409 and nothing is started.
+ *
+ * An EHR a person signs in to (`authType` `smart-launch`, backend ADR-0054,
+ * Round 22) begins here too, with `credentials` — its vendor and FHIR address —
+ * and goes on as OAuth does: the EHR's own sign-in page in the system auth
+ * session, back to the app's claimed callback, the sealed hand-off traded at
+ * `/v1/connections/native/complete` (BUILD-PLAN 7.7.6's split callback). Its
+ * refusals are thrown with their `details.reason`: `authorize`'s 400 and its
+ * 409 `account_mismatch` (another address than the workspace's, answered by
+ * `replaceConnectionId`), and the completion's 401 naming `no_refresh_token`
+ * or an address refusal — which the transport hands back as it came, never
+ * renewed and sent again (`lib/platform/client.ts`).
  */
 export async function connectOAuthProvider(
   workspaceId: string,
   // A row of the one provider list (`readConnectionProviders`) as it is; only its id and scopes are read.
   provider: OfferedProvider,
-  options: { replaceConnectionId?: string } = {},
+  options: { replaceConnectionId?: string; credentials?: EhrSignIn } = {},
 ): Promise<ConnectionOutcome> {
   const returnTo = nativeRedirectUri();
   if (!returnTo) throw new PlatformNotConfiguredError();
@@ -46,6 +60,7 @@ export async function connectOAuthProvider(
           providerId: provider.providerId,
           ...(provider.scopes.length > 0 ? { scopes: provider.scopes } : {}),
           ...(options.replaceConnectionId ? { replaceConnectionId: options.replaceConnectionId } : {}),
+          ...(options.credentials ? { credentials: options.credentials } : {}),
           returnTo,
         },
         signal,

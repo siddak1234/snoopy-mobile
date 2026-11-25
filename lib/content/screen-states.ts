@@ -436,6 +436,8 @@ export function expiredByDisconnectNext(provider: string): string {
 }
 export const CONNECT_LABEL = 'Connect';
 export const RECONNECT_LABEL = 'Reconnect';
+/** An EHR sign-in's Reconnect (Round 22; backend ADR-0054, `smart-launch`): its sign-in again, the website's words. */
+export const SIGN_IN_AGAIN_LABEL = 'Sign in again';
 export const DISCONNECT_LABEL = 'Disconnect';
 export const DISCONNECTING_LABEL = 'Disconnecting…';
 export function disconnectTitle(name: string): string {
@@ -590,6 +592,13 @@ export const FILE_GONE = 'This file is no longer kept.';
 /** A file of a type not drawn in place (only a PDF, a JPEG or a PNG is), the website's words. */
 export const DOWNLOAD_TO_OPEN = 'Download it to open it.';
 export const RUN_ID_LABEL = 'Run ID';
+/**
+ * A run a clinic's EHR started (Round 22; backend ADR-0053: `startedBy`
+ * `provider-event`, a CDS Hooks call), on its Activity row and as its Trigger
+ * on Run details (the session's words). A run any other way started says
+ * nothing new.
+ */
+export const STARTED_FROM_EHR = 'Started from your EHR';
 
 /**
  * `notifsEmpty` — and note it is not an apology.
