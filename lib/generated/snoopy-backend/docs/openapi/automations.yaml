@@ -1817,29 +1817,24 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '503': { $ref: '#/components/responses/Problem' }
 
-  /v1/cds-hooks/{clinicId}/cds-services:
+  /v1/cds-hooks/cds-services:
     get:
       operationId: discoverCdsServices
-      summary: A clinic's CDS Hooks discovery (BUILD-PLAN 30.4.1).
+      summary: CDS Hooks discovery, the same for every clinic (BUILD-PLAN 30.4.1, ADR-0053).
       security: []
       description: >-
         CDS Hooks 2.0 discovery, which "SHALL always be available at
-        {baseUrl}/cds-services": the clinic's `baseUrl` is
-        `/v1/cds-hooks/{clinicId}`, one address per clinic (BUILD-PLAN Phase 30
-        decision (e)). Public and without a session, as the webhook ingress is:
-        the caller is the clinic's EHR and its analysts. Lists each service's
-        `hook`, `id`, `title` and `description` — never a workspace, a flow's
-        name or a version. The clinic's settings are written only by a reviewed
-        migration (ADR-0051 Amendment 1). Rate-limited as `callCdsService` is.
-        Not consumed by the web or mobile clients.
-      parameters:
-        - name: clinicId
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
+        {baseUrl}/cds-services": the `baseUrl` is `/v1/cds-hooks`, one address per
+        hook shared by every clinic and every flow (ADR-0053; it was one address
+        per clinic). Public and without a session, as the webhook ingress is: the
+        caller is a clinic's EHR and its analysts. Lists one service a hook —
+        `patient-view`, `order-select` and `order-sign`, each its `id` the hook's
+        name — with a `title` and `description`, never a workspace, a flow or a
+        version. Rate-limited as `callCdsService` is. Not consumed by the web or
+        mobile clients.
       responses:
         '200':
-          description: The clinic's services.
+          description: One service a hook.
           content:
             application/json:
               schema:
@@ -1853,11 +1848,14 @@ paths:
                       required: [hook, id, title, description]
                       properties:
                         hook: { type: string, enum: [patient-view, order-select, order-sign] }
-                        id: { type: string, pattern: '^[a-z0-9][a-z0-9-]{0,62}$' }
+                        id:
+                          type: string
+                          enum: [patient-view, order-select, order-sign]
+                          description: The hook's name.
                         title: { type: string }
                         description: { type: string }
         '404':
-          description: No clinic has this address.
+          description: The caller is not the Edge's relay.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -1868,44 +1866,45 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
-  /v1/cds-hooks/{clinicId}/cds-services/{serviceId}:
+  /v1/cds-hooks/cds-services/{hook}:
     post:
       operationId: callCdsService
       summary: >-
-        A clinic's CDS Hooks call, which starts a visit's run and later shows its card
-        (BUILD-PLAN 30.4.1 to 30.4.4).
+        A clinic's CDS Hooks call, which starts each of its flows' visit run and later
+        shows their cards (BUILD-PLAN 30.4.1 to 30.4.4, ADR-0053).
       security: []
       description: >-
-        CDS Hooks 2.0's service call, at `{baseUrl}/cds-services/{service.id}`.
-        Public and without a session: the caller is the clinic's EHR, and what
-        protects the route is its signed JWT, checked by the Runs service and never
-        by the Edge (`apps/runs/src/cds-hooks-token.ts`) — RS384 only; the header's
-        `jku` exactly one of the clinic's allowlist before any key set is read, and
-        read only through Connections' guarded transport; `iss` the clinic's FHIR
-        endpoint, `sub` its configured CDS client id, `aud` this very address; `exp`,
-        `nbf` and `iat` within 60 s of skew, `iat` at most five minutes old; and a
-        `jti` taken once. A call the clinic signed starts the run of the flow its
-        service names, once for each visit (`context.encounterId`, of its
+        CDS Hooks 2.0's service call, at `{baseUrl}/cds-services/{service.id}`,
+        one address per hook shared by every clinic (ADR-0053). Public and without
+        a session: the caller is a clinic's EHR, and what protects the route is its
+        signed JWT, by which the Runs service finds the clinic and which it checks,
+        never the Edge (`apps/runs/src/cds-hooks-token.ts`) — RS384 only; the
+        token's `iss`, read before anything is trusted, only to choose the clinic
+        whose settings the rest is checked against; the header's `jku` exactly one
+        of that clinic's allowlist before any key set is read, and read only through
+        Connections' guarded transport; `iss` the clinic's FHIR endpoint, `sub` its
+        configured CDS client id, `aud` this very address; `exp`, `nbf` and `iat`
+        within 60 s of skew, `iat` at most five minutes old; and a `jti` taken once.
+        A call the clinic signed starts every live flow of the clinic's workspace
+        whose version has a `provider-event` way to start on `ehr-fhir` at this hook
+        — at most 8, and one whose EHR connection is optional only when its setup
+        chose it — each once for each visit (`context.encounterId`, of its
         `context.patientId`; since BUILD-PLAN 30.4.4, ADR-0051 Amendment 2) and
-        never for a call without one; a later call for the visit finds that run
-        and, once it has succeeded with codes, answers the visit's one card, the
-        same card on each call until Epic reports it acted on or a day has passed
-        since the run ended. Only the hook's `context` enters the run;
+        never for a call without one; a later call for the visit finds each flow's
+        run and, once it has succeeded with codes, answers that flow's one card,
+        the same card on each call until Epic reports it acted on or a day has
+        passed since the run ended. Only the hook's `context` enters a run;
         `fhirAuthorization`, `fhirServer` and `prefetch` are never stored (ADR-0051
-        decision 7). Rate-limited in buckets of its own, not the
-        per-address one every other public route shares: 300 calls a minute for
-        each clinic and 1,200 for each sending address on these paths (the
-        session's figures until measured), a 429 past either. Not consumed by the
-        web or mobile clients.
+        decision 7). Rate-limited in buckets of its own, not the per-address one
+        every other public route shares: 1,200 calls a minute for each sending
+        address on these paths at the Edge, and 300 for each clinic once its token
+        holds, at the Runs service (the session's figures until measured), a 429
+        past either. Not consumed by the web or mobile clients.
       parameters:
-        - name: clinicId
+        - name: hook
           in: path
           required: true
-          schema: { type: string, format: uuid }
-        - name: serviceId
-          in: path
-          required: true
-          schema: { type: string, pattern: '^[a-z0-9][a-z0-9-]{0,62}$' }
+          schema: { type: string, enum: [patient-view, order-select, order-sign] }
         - name: Authorization
           in: header
           required: true
@@ -1926,14 +1925,20 @@ paths:
       responses:
         '200':
           description: >-
-            The visit's card, or `{cards: []}`, CDS Hooks' answer with nothing to
-            show: the visit's run was just started, or is not yet succeeded, or gave
-            no codes in the one shape a card reads (`output.diagnosisCodes`); the
-            visit's card was acted on or is past its day; the call names no visit;
-            or the platform declined — a subscription not live, a version not
-            started by the EHR's event, a workspace over its plan's flow limit, or
-            no accepted health data agreement (ADR-0049 Amendment 4). Each with its
-            reason recorded on the service. The card (BUILD-PLAN 30.4.4):
+            Each flow's card for the visit, or for a flow with none nothing — and
+            `{cards: []}`, CDS Hooks' answer with nothing to show, when no flow has
+            one: a flow's visit run was just started, or is not yet succeeded, or
+            gave no codes in the one shape a card reads (`output.diagnosisCodes`);
+            its card was acted on or is past its day; the call names no visit; the
+            clinic has no flow at this hook; or the platform declined — a flow not
+            live, a version not started by this hook, an optional EHR connection
+            the flow's setup did not choose (`connection_not_chosen`), a workspace
+            over its plan's flow limit, or no accepted health data agreement
+            (ADR-0049 Amendment 4); or a flow's start failed — its queue full
+            (`queue_full`), its start contended (`creation_contended`), a service
+            it needs down — which is that flow's alone: the others are still
+            answered (ADR-0053). Each flow's reason recorded at the clinic's
+            hook. A card (BUILD-PLAN 30.4.4):
             "N diagnosis codes suggested from this visit's note", its `detail` each
             code with its name and its one line on why (Markdown), one suggestion a
             code, none recommended, each one `create` action of a FHIR R4
@@ -1947,7 +1952,7 @@ paths:
                 properties:
                   cards:
                     type: array
-                    maxItems: 1
+                    maxItems: 8
                     items:
                       type: object
                       required:
@@ -1994,7 +1999,7 @@ paths:
                                       additionalProperties: true
         '400':
           description: >-
-            A call the clinic signed whose `hook` is not its service's
+            A call the clinic signed whose `hook` is not this address's
             (`hook_mismatch`), whose `hookInstance` is not a UUID
             (`hook_instance_invalid`) or whose `context` is not an object
             (`context_invalid`); since BUILD-PLAN 30.4.4, whose
@@ -2006,12 +2011,12 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '404':
           description: >-
-            No such clinic or service, or the JWT is missing, refused by any rule
-            above, or replayed. One answer for all, as the webhook ingress's, so
-            the address is no oracle beyond discovery, which CDS Hooks makes
-            public: whether a clinic exists, and its services' ids, are
-            discovery's answer to anyone holding its id, a random version 4
-            UUID.
+            No such hook, no clinic has the JWT's `iss`, or the JWT is missing,
+            refused by any rule above, or replayed — or the clinic's key set
+            could not be read now, since the JWT is not yet verified (ADR-0053).
+            One answer for all, as the webhook ingress's, so the address is no
+            oracle: discovery, which CDS Hooks makes public, is the same for every
+            clinic and names none.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -2025,28 +2030,37 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '413':
-          description: The body exceeds 256 KiB, refused before the clinic is looked up.
+          description: The body exceeds 256 KiB, refused before the token is read.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
-        '429': { $ref: '#/components/responses/Problem' }
+        '429':
+          description: >-
+            Past the sending address's bucket at the Edge, or the clinic's at the
+            Runs service (`clinic_rate_limited`), counted once its token holds.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '502':
-          description: The Runs service, or the clinic's key set, could not be reached; retry.
+          description: >-
+            The Runs service could not be reached; retry. A key set that cannot be
+            read now is the 404 (ADR-0053).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '503': { $ref: '#/components/responses/Problem' }
 
-  /v1/cds-hooks/{clinicId}/cds-services/{serviceId}/feedback:
+  /v1/cds-hooks/cds-services/{hook}/feedback:
     post:
       operationId: sendCdsFeedback
-      summary: What the clinician did with a service's card (BUILD-PLAN 30.4.4).
+      summary: What the clinician did with a card at a hook (BUILD-PLAN 30.4.4, ADR-0053).
       security: []
       description: >-
-        CDS Hooks 2.0's feedback, at the service's address with `/feedback`.
-        Checked as `callCdsService` is, by the Runs service: the same JWT rules,
-        its `aud` this very address, its `jti` taken once, and the same buckets.
-        Each report names a card this service answered (`card`, its `uuid`),
+        CDS Hooks 2.0's feedback, at the hook's address with `/feedback`.
+        Checked as `callCdsService` is, by the Runs service: the clinic found by
+        the JWT's `iss`, the same JWT rules, its `aud` this very address, its `jti`
+        taken once, and the same buckets. Each report names a card answered to
+        that clinic at this hook (`card`, its `uuid`),
         `accepted` with the suggestions ticked (`acceptedSuggestions`, each a
         suggestion's `uuid` on that card) or `overridden`, and when
         (`outcomeTimestamp`). Kept: the outcome, the codes accepted, the override
@@ -2056,14 +2070,10 @@ paths:
         card acted on is never shown again. Not consumed by the web or mobile
         clients.
       parameters:
-        - name: clinicId
+        - name: hook
           in: path
           required: true
-          schema: { type: string, format: uuid }
-        - name: serviceId
-          in: path
-          required: true
-          schema: { type: string, pattern: '^[a-z0-9][a-z0-9-]{0,62}$' }
+          schema: { type: string, enum: [patient-view, order-select, order-sign] }
         - name: Authorization
           in: header
           required: true
@@ -2139,21 +2149,24 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '404':
           description: >-
-            As `callCdsService`'s 404 — no such clinic or service, or the JWT
-            missing, refused or replayed — and also a report naming a card this
-            service did not answer, or a suggestion not on its card. One answer for
-            all; nothing is kept.
+            As `callCdsService`'s 404 — no such hook, no clinic with the JWT's
+            `iss`, the JWT missing, refused or replayed, or the clinic's key set
+            not readable now — and also a report
+            naming a card not answered to that clinic at this hook, or a suggestion
+            not on its card. One answer for all; nothing is kept.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '413':
-          description: The body exceeds 64 KiB, refused before the clinic is looked up.
+          description: The body exceeds 64 KiB, refused before the token is read.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '429': { $ref: '#/components/responses/Problem' }
         '502':
-          description: The Runs service, or the clinic's key set, could not be reached; retry.
+          description: >-
+            The Runs service could not be reached; retry. A key set that cannot be
+            read now is the 404 (ADR-0053).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -2948,8 +2961,9 @@ components:
             What a person supplies to START a run of this subscription (ADR-0030),
             read from the manifest version it PINS — never the newest — because
             that is the version that runs and the one `createRun` checks input
-            against. Present only when the pinned version is `manual` and declares
-            input; absent means no form a client could honestly render. A client
+            against. Present only when the pinned version's manual way to start
+            (ADR-0053: whatever else starts it) declares input; absent means no form
+            a client could honestly render. A client
             renders it in order, and `createRun` refuses an undeclared key or a
             value of the wrong type with 422.
         setup:
@@ -2977,8 +2991,9 @@ components:
           enum: [schedule, webhook, manual, provider-event]
           description: >-
             What starts this subscription's runs, read from the version it PINS
-            (§12.1 #91). A client offers a webhook address only when this is
-            `webhook`; a move to another version can change it.
+            (§12.1 #91): since ADR-0053 its first way to start, which for a version
+            declaring one trigger is that one. A client offers a webhook address
+            only when this is `webhook`; a move to another version can change it.
         # The PINNED version's items, when it declares them (ADR-0046): the flow
         # page lists them (`listItems`) in place of the run start form.
         items: { $ref: '#/components/schemas/AutomationItems' }
@@ -3204,6 +3219,15 @@ components:
             parentRunId: { type: string, format: uuid }
             index: { type: integer, minimum: 0, maximum: 499 }
             label: { type: string, minLength: 1, maxLength: 120 }
+        startedBy:
+          type: string
+          enum: [schedule, webhook, manual, provider-event]
+          description: >-
+            Which of its flow's ways to start started the job (ADR-0053): `manual`
+            a person's start (an item's run and a batch's units too), `schedule`,
+            `webhook`, or `provider-event` a clinic's CDS Hooks call. A job's
+            continuation carries its first run's. Absent on a run made before it
+            was kept.
         startedAt: { type: string, format: date-time }
         endedAt: { type: string, format: date-time }
         createdAt: { type: string, format: date-time }
@@ -3531,7 +3555,7 @@ components:
         title: { type: string, minLength: 1 }
         subtitle: { type: string }
         text: { type: string, description: Line breaks kept. }
-        url: { type: string, description: https only, checked again when drawn. }
+        url: { type: string, description: 'https only, checked again when drawn.' }
         badge: { $ref: '#/components/schemas/BlockBadge' }
         lead: { type: string, description: Before the title — a rank. }
         value: { type: string, description: After the title — a score. }
