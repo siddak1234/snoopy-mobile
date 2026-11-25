@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 
 import { ChoiceChips } from '@/components/choice-chips';
 import { Dialog, DialogButton, DialogText } from '@/components/dialog';
@@ -72,6 +72,15 @@ export function EhrSignInDialog({
   // Another 409, or a mismatch whose connection the row does not hold: the rows must be read again.
   const [refreshOwed, setRefreshOwed] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Counts every change to the form, so a 409 that arrives after one answers values the form no
+  // longer holds and offers no Replace (the session's D3, as the website's form).
+  const edits = useRef(0);
+  /** A change takes back the 409's question, and its words, as the website's form does. */
+  const changed = () => {
+    edits.current += 1;
+    setReplacing(false);
+    setError((shown) => (shown === EHR_ACCOUNT_MISMATCH || shown === EHR_ACCOUNT_MISMATCH_REFUSAL ? null : shown));
+  };
 
   const signIn = async () => {
     if (busy) return;
@@ -86,6 +95,7 @@ export function EhrSignInDialog({
       return;
     }
     const replaceConnectionId = replacing ? row.connectionId : undefined;
+    const asked = edits.current;
     setBusy(true);
     setError(null);
     setRefreshOwed(false);
@@ -102,6 +112,7 @@ export function EhrSignInDialog({
     } catch (caught) {
       const conflict = caught instanceof PlatformError && caught.status === 409;
       const mismatched = conflict && caught.details?.reason === 'account_mismatch';
+      if (mismatched && edits.current !== asked) return;
       const replaceable = mismatched && row.connectionId !== undefined;
       setReplacing(replaceable);
       // Another 409 — the connection Replace named changed since the read — or a
@@ -145,7 +156,7 @@ export function EhrSignInDialog({
           value={vendor ?? ''}
           onChange={(next) => {
             setVendor(next);
-            setReplacing(false);
+            changed();
           }}
         />
       ) : null}
@@ -156,7 +167,7 @@ export function EhrSignInDialog({
           value={values[field.name] ?? ''}
           onChangeText={(value) => {
             setValues((previous) => ({ ...previous, [field.name]: value }));
-            setReplacing(false);
+            changed();
           }}
           secure={field.secret}
           placeholder={field.help}

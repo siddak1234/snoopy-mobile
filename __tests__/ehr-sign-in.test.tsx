@@ -252,11 +252,27 @@ describe("an EHR's sign-in form (smart-launch)", () => {
     await screen.findByText('Replace');
     await fireEvent.changeText(form().getByLabelText('FHIR address'), ADDRESS);
     expect(form().queryByText('Replace')).toBeNull();
+    // Its words go with it, as on the website: no question is left with nothing to answer it.
+    expect(form().queryByText(/Replace it\?/u)).toBeNull();
     await fireEvent.press(form().getByText('Sign in with Epic (test system)'));
     await waitFor(() => expect(connectOAuthProvider).toHaveBeenCalledTimes(2));
     expect(connectOAuthProvider.mock.calls[1][2]).toEqual({ credentials: { vendor: 'epic-test', fhirBaseUrl: ADDRESS } });
     // The same address answered `reused`: said as the website says it.
     expect(await screen.findByText('EHR is already connected as fhir.clinic.example, with everything it needs — there is nothing to authorize.')).toBeTruthy();
+  });
+
+  it('a 409 that arrives after the address changed offers no Replace: the form no longer holds what was refused (the session\'s D3)', async () => {
+    let refuse: (error: unknown) => void = () => undefined;
+    connectOAuthProvider.mockImplementationOnce(() => new Promise((_, reject) => (refuse = reject)));
+    const { dialog } = await openForm([[SIGN_IN_AGAIN]]);
+    await fill(dialog, OTHER_ADDRESS);
+    await fireEvent.press(dialog.getByText('Sign in with Epic (test system)'));
+    await waitFor(() => expect(connectOAuthProvider).toHaveBeenCalledTimes(1));
+    await fireEvent.changeText(form().getByLabelText('FHIR address'), ADDRESS);
+    refuse(new PlatformError('Conflict', 409, 'CONFLICT', { reason: 'account_mismatch' }));
+    await waitFor(() => expect(form().getByText('Sign in with Epic (test system)')).toBeTruthy());
+    expect(form().queryByText('Replace')).toBeNull();
+    expect(form().queryByText(/another EHR address/u)).toBeNull();
   });
 
   it('a Replace refused because the connection changed (another 409): its words, and Refresh connections reads the rows again', async () => {
