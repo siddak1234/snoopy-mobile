@@ -1047,17 +1047,20 @@ export function toRunStats(
  * The run's facts, as the website's run page lists them under its title
  * (Gate 24's parity pass, G18): when it started and ended — the design's em
  * dash for either it has not reached — how it started, its Trigger, in the
- * website's words (`runOriginLabel`) — "Started from your EHR" for a run a
- * clinic's EHR started (`startedFromEhr`, Round 22) — and since Build 21 its
- * Run ID, the full id (spec A7; the owner's D4 and AM2).
+ * website's words (`runOriginLabel`), whoever started it — a follow-on run an
+ * EHR started is still "After approval"; that the EHR started it is its run
+ * page's own line (`startedFromEhr`; the session's parity decision D5, the
+ * website's) — and since Build 21 its Run ID, the full id (spec A7; the
+ * owner's D4 and AM2). ~~"Started from your EHR" as its Trigger~~ until the
+ * review of Round 22's app lane.
  */
 export function toRunFacts(
-  run: Pick<Run, 'id' | 'startedAt' | 'endedAt' | 'origin' | 'startedBy'>,
+  run: Pick<Run, 'id' | 'startedAt' | 'endedAt' | 'origin'>,
 ): { label: 'Started' | 'Ended' | 'Trigger' | 'Run ID'; value: string }[] {
   return [
     { label: 'Started', value: dateTime(run.startedAt) },
     { label: 'Ended', value: dateTime(run.endedAt) },
-    { label: 'Trigger', value: startedFromEhr(run) ? STARTED_FROM_EHR : runOriginLabel(run.origin) },
+    { label: 'Trigger', value: runOriginLabel(run.origin) },
     { label: RUN_ID_LABEL, value: run.id },
   ];
 }

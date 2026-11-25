@@ -31,12 +31,23 @@ export const EHR_SIGN_IN_REFUSALS: Readonly<Record<string, string>> = {
 
 /**
  * `authorize`'s 409 `account_mismatch` (ADR-0054): another FHIR address than
- * the one the workspace is signed in to. Nothing was started; Replace
- * (`EHR_REPLACE`, the session's word, as the website's) begins again naming
- * the workspace's connection.
+ * the one the workspace is signed in to. Nothing was started. connections.yaml
+ * says it as one line, the refusal and its question; the form asks the
+ * question — its button Replace (`EHR_REPLACE`, the session's word, as the
+ * website's), which begins again with the form's values naming the
+ * workspace's connection — only when it holds that connection's id, and says
+ * the refusal alone when it does not (the session's parity decision D3).
  */
-export const EHR_ACCOUNT_MISMATCH = 'This workspace is signed in to another EHR address. Replace it?';
+export const EHR_ACCOUNT_MISMATCH_REFUSAL = 'This workspace is signed in to another EHR address.';
+export const EHR_ACCOUNT_MISMATCH = `${EHR_ACCOUNT_MISMATCH_REFUSAL} Replace it?`;
 export const EHR_REPLACE = 'Replace';
 
-/** The sign-in form's button while it goes (the session's words). */
-export const EHR_SIGNING_IN = 'Signing in…';
+/** The sign-in form's button before a vendor is chosen (`signInLabel`; D1), the website's `SIGN_IN`. */
+export const EHR_SIGN_IN = 'Sign in';
+
+/**
+ * The sign-in form's button while it goes: "Working…", the website's word
+ * (the session's parity decision D2). ~~"Signing in…"~~ until the review of
+ * Round 22's app lane.
+ */
+export const EHR_WORKING = 'Working…';

@@ -1,3 +1,4 @@
+import { EHR_SIGN_IN } from '@/lib/content/ehr-connect';
 import type { ConnectionProvider } from '@/lib/platform/catalog';
 
 /**
@@ -5,7 +6,7 @@ import type { ConnectionProvider } from '@/lib/platform/catalog';
  * Two SMART kinds, one form: `smart-backend` sends its fields to `key`, as a
  * pasted key does; `smart-launch` — the EHR since ADR-0054 — sends the same
  * fields to `authorize` as `credentials` and signs the person in at the EHR's
- * own page (`components/settings/connections-card.tsx`). Its row's line — the
+ * own page (`components/settings/ehr-sign-in-dialog.tsx`). Its row's line — the
  * clinic's host once connected — is `connectionLine`'s (`lib/view/catalog.ts`),
  * by the provider's `authType`, on Connections and on Set up alike
  * (~~hostLine, on Connections only~~ until the review's finding 4).
@@ -24,14 +25,26 @@ export function smartVendors(provider: SmartProvider): { id: string; label: stri
 }
 
 /**
- * The sign-in form's button, named by the vendor chosen (the session's
- * wording, Round 22): "Sign in with {vendor}", the vendor as the platform
- * labels it without a closing parenthetical — so Epic's two, "Epic (test
- * system)" and "Epic", both say "Sign in with Epic", and another EHR's says
- * its own name; "Sign in" for a vendor not listed.
+ * The vendor an EHR's form starts with (the session's parity decision D1, the
+ * same on the website): the one listed when the platform lists exactly one,
+ * else none until the person picks one — so a clinic never signs in to a
+ * system it did not choose. ~~The first listed until another is picked~~
+ * until the review of Round 22's app lane.
+ */
+export function preChosenVendor(provider: SmartProvider): string | null {
+  const vendors = smartVendors(provider);
+  return vendors.length === 1 ? vendors[0]!.id : null;
+}
+
+/**
+ * The sign-in form's button, named by the vendor chosen (D1, the website's
+ * `signInLabel`): "Sign in with {vendor}", the vendor's full label as the
+ * platform gives it — "Sign in with Epic (test system)", "Sign in with Epic" —
+ * so the clinic sees which system it signs in to; "Sign in" until one is
+ * chosen. ~~Its label without a closing parenthetical~~ until the review of
+ * Round 22's app lane.
  */
 export function signInLabel(provider: SmartProvider, vendorId: string | null | undefined): string {
   const vendor = smartVendors(provider).find((each) => each.id === vendorId);
-  const name = vendor?.label.replace(/\s*\([^)]*\)\s*$/u, '').trim();
-  return name ? `Sign in with ${name}` : 'Sign in';
+  return vendor ? `${EHR_SIGN_IN} with ${vendor.label}` : EHR_SIGN_IN;
 }

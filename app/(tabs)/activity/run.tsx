@@ -34,6 +34,7 @@ import {
   DOWNLOAD_PDF_LABEL,
   REVIEW_MEMBER_NOTE,
   RUN_DETAILS_LABEL,
+  STARTED_FROM_EHR,
   STEPS_LABEL,
   VIEW_PACKAGE_LABEL,
   errorTitleFor,
@@ -52,6 +53,7 @@ import {
   runFace,
   runOrigin,
   runStack,
+  startedFromEhr,
 } from '@/lib/view/runs';
 
 /**
@@ -80,8 +82,10 @@ import {
  * id among them. ~~"Run {full id}" over the page, and its steps on Run details
  * alone~~ until builds 37 and 39. The approval form — Approve and Deny
  * (`DecisionButtons`) to a role it names, to anyone else who can decide — and,
- * over the body, a job whose approval a disconnect expired (`expiredByDisconnect`,
- * S1-8; no decision, S1-8b), on either face.
+ * over the body, a run a clinic's EHR started (`startedFromEhr`, Round 22: its
+ * own line, the website's `run-started-by`; D5) and a job whose approval a
+ * disconnect expired (`expiredByDisconnect`, S1-8; no decision, S1-8b), on
+ * either face.
  *
  * A push from another tab passes `returnTo` (`RUN_ORIGIN_TAB`): Back — the
  * circle or the swipe, a `GO_BACK` or `POP`, never re-tapping Activity's tab
@@ -144,6 +148,8 @@ export default function RunDetailScreen() {
         status: statusLabel(liveRun.detail.run.status) as StatusPillLabel,
         // "{a} accepted · {d} denied" once its review is saved (F2): the job's approval's answers.
         reviewTally: jobReviewTally(liveRun.detail.run, liveRun.approvals, savedReview),
+        // A run a clinic's EHR started (backend ADR-0053), said over the body; its Trigger stays its origin's (D5).
+        startedFromEhr: startedFromEhr(liveRun.detail.run),
         // The job's approval, expired because its connection was disconnected at the provider
         // (S1-8; backend §12.1 #252): why, and what to do, in the catalog's name for it (`disconnectedName`).
         expired: expiredByDisconnect(jobApproval(liveRun.detail.run, liveRun.approvals), (providerId) =>
@@ -386,6 +392,13 @@ export default function RunDetailScreen() {
           </View>
         }
       />
+
+      {/* Over its body, a run a clinic's EHR started says so, its own line (D5), as the website's. */}
+      {run.startedFromEhr ? (
+        <Text testID="run-started-by" style={[styles.decisionNote, { color: palette.neutral[400] }]}>
+          {STARTED_FROM_EHR}
+        </Text>
+      ) : null}
 
       {/* Its review, once saved (F2): how many changes were accepted and denied. */}
       {run.reviewTally ? (

@@ -594,9 +594,10 @@ export const DOWNLOAD_TO_OPEN = 'Download it to open it.';
 export const RUN_ID_LABEL = 'Run ID';
 /**
  * A run a clinic's EHR started (Round 22; backend ADR-0053: `startedBy`
- * `provider-event`, a CDS Hooks call), on its Activity row and as its Trigger
- * on Run details (the session's words). A run any other way started says
- * nothing new.
+ * `provider-event`, a CDS Hooks call), on its Activity row and as its run
+ * page's own line over the body (the session's words; D5, the website's) —
+ * Run details' Trigger keeps its origin's words. A run any other way started
+ * says nothing new.
  */
 export const STARTED_FROM_EHR = 'Started from your EHR';
 
