@@ -95,9 +95,9 @@ describe('a run its EHR started', () => {
   });
 
   it("its EHR's start leaves Trigger its origin's: Triggered, or After approval", () => {
-    expect(toRunFacts({ ...base, startedBy: 'provider-event' }).find((fact) => fact.label === 'Trigger')?.value).toBe('Triggered');
-    expect(
-      toRunFacts({ ...base, startedBy: 'provider-event', origin: 'approval-continuation' }).find((fact) => fact.label === 'Trigger')?.value,
-    ).toBe('After approval');
+    const started: Run = { ...base, startedBy: 'provider-event' };
+    const followOn: Run = { ...started, origin: 'approval-continuation' };
+    expect(toRunFacts(started).find((fact) => fact.label === 'Trigger')?.value).toBe('Triggered');
+    expect(toRunFacts(followOn).find((fact) => fact.label === 'Trigger')?.value).toBe('After approval');
   });
 });
