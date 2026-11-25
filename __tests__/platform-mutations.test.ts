@@ -24,6 +24,7 @@ import {
   connectProviderWithKey,
   disconnectConnection,
 } from '@/lib/platform/connections';
+import { PlatformError } from '@/lib/platform/problem';
 import { readWorkspaces, selectActiveWorkspace } from '@/lib/platform/workspaces';
 
 const { platformOperation } = jest.requireMock('@/lib/platform/client');
@@ -312,6 +313,115 @@ describe('connection mutations', () => {
       }),
     ).resolves.toEqual({ status: 'incomplete' });
     expect(connectionsPost).toHaveBeenCalledTimes(1);
+  });
+
+  /** The EHR as the platform lists it since ADR-0054 (Round 22): a clinic user's sign-in. */
+  const EHR_SIGN_IN = {
+    providerId: 'ehr-fhir',
+    displayName: 'EHR',
+    description: 'Reads and writes visit notes in your EHR, once someone at your clinic signs in.',
+    authType: 'smart-launch' as const,
+    scopes: ['openid', 'fhirUser', 'offline_access'],
+    icon: 'FirstAid',
+    vendors: [{ id: 'epic-test', label: 'Epic (test system)' }],
+  };
+  const EHR_CREDENTIALS = { vendor: 'epic-test', fhirBaseUrl: 'https://fhir.clinic.example/api/FHIR/R4' };
+
+  it("an EHR sign-in (smart-launch, ADR-0054) sends its vendor and address as authorize's credentials, opens the EHR's sign-in page in the system auth session, and completes through the claimed return's sealed hand-off", async () => {
+    connectionsPost
+      .mockResolvedValueOnce({
+        data: { outcome: 'authorization-required', authorizationUrl: 'https://fhir.clinic.example/oauth2/authorize?aud=x' },
+        response: { ok: true },
+      })
+      .mockResolvedValueOnce({ data: { connection: { id: 'c-ehr' } }, response: { ok: true } });
+    (WebBrowser.openAuthSessionAsync as jest.Mock).mockResolvedValue({
+      type: 'success',
+      url: 'https://app.example.test/auth/native/callback?code=sealed-ehr-code',
+    });
+
+    await expect(
+      connectOAuthProvider('workspace-1', EHR_SIGN_IN, { credentials: EHR_CREDENTIALS }),
+    ).resolves.toEqual({ status: 'connected', connection: { id: 'c-ehr' } });
+
+    expect(connectionsPost.mock.calls[0]).toEqual([
+      '/v1/workspaces/{workspaceId}/connections/authorize',
+      expect.objectContaining({
+        params: { path: { workspaceId: 'workspace-1' } },
+        body: {
+          providerId: 'ehr-fhir',
+          scopes: ['openid', 'fhirUser', 'offline_access'],
+          credentials: EHR_CREDENTIALS,
+          returnTo: 'https://app.example.test/auth/native/callback',
+        },
+      }),
+    ]);
+    // The EHR's own page, in the same system session an OAuth consent opens in, back to the app's claimed callback.
+    expect(WebBrowser.openAuthSessionAsync).toHaveBeenCalledWith(
+      'https://fhir.clinic.example/oauth2/authorize?aud=x',
+      'https://app.example.test/auth/native/callback',
+      { preferUniversalLinks: true },
+    );
+    expect(connectionsPost.mock.calls[1]).toEqual([
+      '/v1/connections/native/complete',
+      expect.objectContaining({ body: { code: 'sealed-ehr-code' } }),
+    ]);
+  });
+
+  it('an EHR sign-in that replaces the workspace\'s other address names the connection it replaces, beside its credentials', async () => {
+    connectionsPost.mockResolvedValueOnce({
+      data: { outcome: 'reused', connection: { id: 'c-ehr', providerId: 'ehr-fhir', status: 'connected' } },
+      response: { ok: true },
+    });
+    await connectOAuthProvider('workspace-1', EHR_SIGN_IN, { credentials: EHR_CREDENTIALS, replaceConnectionId: 'c-old' });
+    expect(connectionsPost.mock.calls[0][1].body).toEqual({
+      providerId: 'ehr-fhir',
+      scopes: ['openid', 'fhirUser', 'offline_access'],
+      replaceConnectionId: 'c-old',
+      credentials: EHR_CREDENTIALS,
+      returnTo: 'https://app.example.test/auth/native/callback',
+    });
+    expect(WebBrowser.openAuthSessionAsync).not.toHaveBeenCalled();
+  });
+
+  it('an OAuth connect sends no credentials', async () => {
+    connectionsPost.mockResolvedValueOnce({
+      data: { outcome: 'reused', connection: { id: 'c1', providerId: 'quickbooks', status: 'connected' } },
+      response: { ok: true },
+    });
+    await connectOAuthProvider('workspace-1', {
+      providerId: 'quickbooks',
+      displayName: 'QuickBooks',
+      description: 'Accounting',
+      authType: 'oauth2',
+      scopes: [],
+      icon: 'plugs',
+    });
+    expect(connectionsPost.mock.calls[0][1].body).not.toHaveProperty('credentials');
+  });
+
+  it("a sign-in the completion refuses (401 no_refresh_token) reaches the caller with its reason, so the form can say it", async () => {
+    connectionsPost
+      .mockResolvedValueOnce({
+        data: { outcome: 'authorization-required', authorizationUrl: 'https://fhir.clinic.example/oauth2/authorize' },
+        response: { ok: true },
+      })
+      .mockResolvedValueOnce({
+        error: { title: 'That authorization could not be completed', code: 'UNAUTHENTICATED', details: { reason: 'no_refresh_token' } },
+        response: { ok: false, status: 401 },
+      });
+    platformOperation.mockImplementation(async (_key: string, execute: Function) => {
+      const result = await execute({ connections: { POST: connectionsPost } }, signal);
+      if (!result.response.ok) throw new PlatformError(result.error.title, result.response.status, result.error.code, result.error.details);
+      return result.data;
+    });
+    (WebBrowser.openAuthSessionAsync as jest.Mock).mockResolvedValue({
+      type: 'success',
+      url: 'https://app.example.test/auth/native/callback?code=sealed-ehr-code',
+    });
+    await expect(connectOAuthProvider('workspace-1', EHR_SIGN_IN, { credentials: EHR_CREDENTIALS })).rejects.toMatchObject({
+      status: 401,
+      details: { reason: 'no_refresh_token' },
+    });
   });
 
   it('sends pasted credentials once with idempotency and can disconnect by connection id', async () => {

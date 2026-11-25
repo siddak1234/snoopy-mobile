@@ -450,7 +450,14 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   queue (`queue_full`) is said in the owner's words. A 403 naming
   `outside_org_domain` is told to the tabs' layout once, here, through
   `lib/platform/session-recovery.ts` (`onOutsideSignIn`; S1-11), whichever
-  read it answers. Its one raw `fetch` is `putFileToSignedUrl`, the credential-less
+  read it answers. A 401 is renewed once and sent once more, but for one
+  that is an answer about the attempt: `/v1/connections/native/complete`'s
+  401 naming a `details.reason` — the completion refused after the bearer was
+  accepted, such as an EHR sign-in's `no_refresh_token` (backend ADR-0054,
+  Round 22) — goes back to its caller as it came, so the reason is said and
+  the spent code is not sent again (`answersTheAttempt`). An EHR sign-in
+  (`smart-launch`) goes through `connectOAuthProvider` with its `credentials`
+  (DESIGN-CONTRACT "Settings › Connections"). Its one raw `fetch` is `putFileToSignedUrl`, the credential-less
   PUT of a file's bytes to the URL the platform signed; `audit:platform` admits
   exactly that one. Since 24.12 its one native download is
   `downloadSignedFile`, the credential-less save of a signed file's link into

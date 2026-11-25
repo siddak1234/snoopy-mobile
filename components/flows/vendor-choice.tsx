@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { ConnectionMark, ConnectionRow, NoneMark } from '@/components/connection-row';
+import { EhrSignInDialog } from '@/components/settings/ehr-sign-in-dialog';
 import { Text } from '@/components/text';
 import { fonts, iconSize, space, status, typeScale } from '@/constants/theme';
 import { useSession, workspaceIfShown } from '@/hooks/use-session';
@@ -13,7 +14,8 @@ import { CONNECTION_CONNECTED, VENDOR_ADMIN_ONLY, VENDOR_ASK_ADMIN, VENDOR_NONE_
 import type { Connection, ConnectionProvider } from '@/lib/platform/catalog';
 import { connectOAuthProvider } from '@/lib/platform/connections';
 import { invalidateShared } from '@/lib/platform/snapshot';
-import { connectionLine, needsNoConnect, providerConnected } from '@/lib/view/catalog';
+import { connectionLine, needsNoConnect, providerConnected, toConnectionRow } from '@/lib/view/catalog';
+import { opensSignInForm } from '@/lib/view/ehr-connection';
 
 /** The choice that saves the details only: no vendor (backend `CONNECTION_NONE`). */
 export const NONE = 'none';
@@ -33,9 +35,15 @@ export const NONE = 'none';
  * once — then chosen; cancelled or not completed, it stays unchosen and says
  * so under its row, in the existing words (the owner's build 20 item 2: "If i
  * need to connect then after i click and connection happens then it shoukd
- * take me back"). A vendor that takes a pasted key is connected where its key
- * is pasted, Settings › Connections. For a member a vendor not connected is no
- * choice: "Ask an owner or admin to connect it."
+ * take me back"). An EHR a person signs in to (`smart-launch`, Round 22;
+ * backend ADR-0054) is signed in to the same way, here: its sign-in form
+ * (`EhrSignInDialog`) opens over this screen, and signed in it is chosen —
+ * the sign-in comes back to the Set up or Connect integration it started on,
+ * as Settings › Connections' comes back to Connections (the session's parity
+ * decision D4); the form closed, or the EHR's page, it stays unchosen and the
+ * connections are read again. A vendor that takes a pasted key is connected
+ * where its key is pasted, Settings › Connections. For a member a vendor not
+ * connected is no choice: "Ask an owner or admin to connect it."
  *
  * `readOnly` (round 23, B3 — only an organization's owners and admins change a
  * flow's integration; backend ADR-0043): no row is a choice, None and connected
@@ -76,6 +84,8 @@ export function VendorChoice({
   const router = useRouter();
   const session = useSession();
   const [connecting, setConnecting] = useState<string | null>(null);
+  // An EHR's sign-in form, open over the choice, by its provider id.
+  const [signingIn, setSigningIn] = useState<string | null>(null);
   const [rowError, setRowError] = useState<{ providerId: string; message: string } | null>(null);
   const busy = saving ?? connecting;
   const connectionOf = (providerId: string) => connections.find((connection) => connection.providerId === providerId);
@@ -89,6 +99,10 @@ export function VendorChoice({
       return;
     }
     if (!provider) return;
+    if (opensSignInForm(provider.authType)) {
+      setSigningIn(choice);
+      return;
+    }
     if (provider.authType !== 'oauth2') {
       router.push('/(tabs)/settings/connections');
       return;
@@ -119,6 +133,14 @@ export function VendorChoice({
     if (outcome.status === 'failed') setRowError({ providerId: choice, message: outcome.message });
     else if (outcome.status === 'incomplete') setRowError({ providerId: choice, message: connectionIncomplete(false) });
   };
+
+  /** A sign-in that ended, or a Refresh connections: what changed is read again, past the snapshot. */
+  const signedInOrNot = () => {
+    setSigningIn(null);
+    if (shownWorkspaceId) invalidateShared(shownWorkspaceId, ['connections', 'subscriptions']);
+    onConnectionsChanged?.();
+  };
+  const signInProvider = signingIn ? providers.get(signingIn) : undefined;
 
   const check = (on: boolean, testID: string) =>
     on ? <CheckCircle testID={testID} size={iconSize.row} weight="fill" color={palette.accent} /> : null;
@@ -179,6 +201,18 @@ export function VendorChoice({
         <Text testID="vendor-read-only" style={[styles.readOnly, { color: palette.neutral[400] }]}>
           {VENDOR_ADMIN_ONLY}
         </Text>
+      ) : null}
+      {signInProvider ? (
+        <EhrSignInDialog
+          row={toConnectionRow(signInProvider, connectionOf(signInProvider.providerId))}
+          loadedFor={shownWorkspaceId}
+          onClose={() => setSigningIn(null)}
+          onEnded={(outcome) => {
+            signedInOrNot();
+            if (outcome.status === 'connected') onChoose(signInProvider.providerId);
+          }}
+          onRefresh={() => signedInOrNot()}
+        />
       ) : null}
     </View>
   );

@@ -27,7 +27,9 @@ import { connectOAuthProvider, connectProviderWithKey, disconnectConnection } fr
 import { PlatformError } from '@/lib/platform/problem';
 import { invalidateShared } from '@/lib/platform/snapshot';
 import { connectionAction, type ConnectionView } from '@/lib/view/catalog';
-import { smartVendors } from '@/lib/view/ehr-connection';
+import { opensSignInForm, smartVendors } from '@/lib/view/ehr-connection';
+
+import { EhrSignInDialog } from './ehr-sign-in-dialog';
 
 /**
  * The connections a screen lists, each the one row (Build 21, spec A4): Settings
@@ -59,6 +61,12 @@ import { smartVendors } from '@/lib/view/ehr-connection';
  *   the same key form, its field the clinic's FHIR address, and a vendor
  *   picker above it only when the platform lists two or more `vendors`; the
  *   chosen one — or the one listed — is sent as `vendor` beside it.
+ * - **An EHR a person signs in to** (`smart-launch`, Round 22; backend
+ *   ADR-0054 — the EHR since then) opens its sign-in form
+ *   (`EhrSignInDialog`), here, with the row as the last read holds it, so
+ *   Replace names the connection that read holds; signed in, it says so as
+ *   an OAuth connect does and the rows are read again. Its Reconnect is "Sign
+ *   in again" (`connectionAction`).
  */
 export function ConnectionsCard({
   rows,
@@ -91,6 +99,8 @@ export function ConnectionsCard({
   const [keyError, setKeyError] = useState<string | null>(null);
   // An EHR's vendor, by id: the first listed until another is picked.
   const [vendor, setVendor] = useState<string | null>(null);
+  // An EHR a person signs in to (`smart-launch`): its sign-in form, by its row.
+  const [signingIn, setSigningIn] = useState<ConnectionView | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   // What a connect came back with, under its row.
   const [rowError, setRowError] = useState<{ providerId: string; message: string } | null>(null);
@@ -168,6 +178,10 @@ export function ConnectionsCard({
       setDisconnecting(row);
       return;
     }
+    if (opensSignInForm(row.authType)) {
+      setSigningIn(row);
+      return;
+    }
     if (row.authType === 'api-key' || row.authType === 'smart-backend') {
       setKeyError(null);
       setKeying(row);
@@ -241,8 +255,8 @@ export function ConnectionsCard({
                 canManage && !row.noConnect ? (
                   <ConnectionButton
                     testID={`connection-action-${row.providerId}`}
-                    label={busy === row.providerId && row.state !== 'connected' ? 'Working…' : connectionAction(row.state)}
-                    accessibilityLabel={`${connectionAction(row.state)} ${row.name}`}
+                    label={busy === row.providerId && row.state !== 'connected' ? 'Working…' : connectionAction(row.state, row.authType)}
+                    accessibilityLabel={`${connectionAction(row.state, row.authType)} ${row.name}`}
                     disabled={busy !== null}
                     onPress={() => press(row)}
                   />
@@ -311,6 +325,29 @@ export function ConnectionsCard({
           {keyError ? <DialogText tone="error">{keyError}</DialogText> : null}
           {keyPending ? <DialogText>{KEY_REQUEST_IN_PROGRESS}</DialogText> : null}
         </Dialog>
+      ) : null}
+
+      {signingIn ? (
+        <EhrSignInDialog
+          row={rows.find((each) => each.providerId === signingIn.providerId) ?? signingIn}
+          loadedFor={loadedFor}
+          onClose={() => setSigningIn(null)}
+          onEnded={(outcome) => {
+            setSigningIn(null);
+            if (outcome.status === 'connected') {
+              onNotice(
+                outcome.reused
+                  ? alreadyConnected(signingIn.name, outcome.connection.externalAccount.displayName)
+                  : CONNECTION_COMPLETED,
+              );
+            }
+            reread();
+          }}
+          onRefresh={() => {
+            setSigningIn(null);
+            reread();
+          }}
+        />
       ) : null}
 
       {disconnecting ? (

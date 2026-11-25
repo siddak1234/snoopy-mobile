@@ -48,6 +48,9 @@ paths:
         offered: the customer supplies the credential, so there is nothing for an
         operator to register and nothing that could be missing.
 
+        A **SMART** provider (`smart-backend`, ADR-0050; `smart-launch`, ADR-0054)
+        appears once this deployment holds a key for one of its vendors.
+
         A **public** provider (`auth.type: 'none'` in its spec, ADR-0048
         Amendment 3) needs no key and has no connect step: it is connected for
         every workspace. It is never in `providers` — a client built before it
@@ -81,11 +84,12 @@ paths:
   /v1/connections/jwks.json:
     get:
       operationId: getConnectionsJsonWebKeySet
-      summary: The platform's public keys for SMART Backend Services.
+      summary: The platform's public keys for its SMART clients.
       description: >-
-        ADR-0050 (D1). One RSA key per EHR vendor this deployment holds a key
-        for, public members only, which an EHR's server reads to check the
-        platform's signed token requests — or which is given to a vendor that
+        ADR-0050 (D1), and since ADR-0054 an EHR sign-in's too. One RSA key per
+        EHR vendor this deployment holds a key for, public members only, which an
+        EHR's server reads to check the platform's signed token requests — or
+        which is given to a vendor that
         takes an uploaded key. **Public**: no session, as an EHR's server has
         none. Answered with `Cache-Control: public, max-age=3600` (EHR-W23), and
         kept an hour at the Edge, so reading it makes no call behind it more
@@ -101,6 +105,41 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/JsonWebKeySet' }
+        '503': { $ref: '#/components/responses/Problem' }
+
+  /v1/connections/jwks/{vendor}.json:
+    get:
+      operationId: getConnectionsVendorJsonWebKeySet
+      summary: One EHR vendor's public key alone, for its own environment.
+      description: >-
+        ADR-0054 decision 7. The one public key this deployment holds for
+        `vendor` — `{keys: [it]}`, public members only — so an EHR that takes one
+        key set address per environment is given its own: Epic's app names
+        `https://api.autom8x.ai/v1/connections/jwks/epic-test.json` as its
+        Non-Production JWK Set URL and `…/jwks/epic.json` as its Production one,
+        and a production EHR never trusts the test key. **Public**, cached and
+        kept at the Edge an hour, as `/v1/connections/jwks.json` is, which still
+        serves every key. 404 for a vendor no SMART provider lists or this
+        deployment holds no key for; never a private member.
+      security: []
+      parameters:
+        - name: vendor
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-z][a-z0-9-]{0,62}[a-z0-9]$'
+          description: A SMART provider's `vendors[].id`, such as `epic-test` or `epic`.
+      responses:
+        '200':
+          description: The vendor's key set, its one key.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: 'public, max-age=3600' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JsonWebKeySet' }
+        '404': { $ref: '#/components/responses/Problem' }
         '503': { $ref: '#/components/responses/Problem' }
 
   /v1/connections/callback:
@@ -154,6 +193,14 @@ paths:
             `provider` on success; `status=error` with a `reason` token otherwise.
             The destination is a fixed path with fixed parameters — never anything
             the provider supplied.
+
+            An EHR sign-in (ADR-0054) may end with one of three reasons a person can
+            act on: `no_refresh_token` — the EHR signed in without a lasting
+            sign-in, so the connection would end within the hour ("Your EHR team
+            needs to allow a lasting sign-in for Autom8x. Ask them, then sign in
+            again."); `fhir_address_refused` ("Use the https address your EHR team
+            gave you."); or `fhir_not_answering` ("That address didn't answer as a
+            FHIR server."). A native client's sealed hand-off carries the same.
           headers:
             location:
               schema: { type: string, format: uri }
@@ -227,6 +274,11 @@ paths:
         EHR hasn't turned on Autom8x yet. Ask your EHR team to activate it.").
         Only a vendor listed in `vendors` is accepted (`credential_invalid`
         otherwise).
+
+
+        **An EHR sign-in provider (`authType: smart-launch`, ADR-0054)** is
+        refused here with 400: it is connected by a person at the clinic signing
+        in, through `authorize`, and never by the platform's key alone.
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -387,6 +439,33 @@ paths:
         declares. It can never widen it: a scope the spec does not declare is
         refused, so a caller cannot have the platform ask a provider for
         permissions nobody reviewed.
+
+
+        **An EHR sign-in (`authType: smart-launch`, ADR-0054)** begins here too,
+        with `credentials: {vendor, fhirBaseUrl}` — the vendor picker and the
+        address field the provider list's `vendors` and `credentialFields`
+        describe. Connections takes only an https address on the public
+        internet and reads its SMART configuration; the browser is then sent to
+        that server's own sign-in page, and the callback completes the
+        connection once the EHR answers with a refresh token. One sign-in
+        serves every flow in the workspace (ADR-0019); the live connection is
+        reused only for the same address, and another address over it needs
+        `replaceConnectionId` — without it, 409 with `details.reason`
+        `account_mismatch` ("This workspace is signed in to another EHR
+        address. Replace it?"), nothing started and no one signed in. Where
+        the server's SMART configuration lists a `revocation_endpoint`, a
+        disconnect, a workspace's deletion or a replacing sign-in offers the
+        refresh token back there. Each sign-in is its own grant: it is
+        offered back even while another workspace is signed in to the same
+        address, and that workspace's sign-in stays connected. Holding a grant
+        back while another workspace holds the same account is for OAuth
+        grants only. A refusal is 400 with `details.reason`:
+        `fhir_address_refused` ("Use the https address your EHR team gave
+        you."), `fhir_not_answering` ("That address didn't answer as a FHIR
+        server."), `ehr_sign_in_unsupported` ("That EHR doesn't offer the
+        sign-in Autom8x uses. Ask your EHR team.") or `credential_invalid` (a
+        vendor not in `vendors`, or no address). `credentials` on any other
+        provider is refused with 400.
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'
       requestBody:
@@ -434,6 +513,26 @@ paths:
                     on the allowlist is refused with 400 and is **not echoed
                     back** — reflecting a rejected redirect target is how a
                     refusal becomes a reflection gadget.
+                credentials:
+                  type: object
+                  description: >-
+                    **An EHR sign-in only** (ADR-0054): `{vendor, fhirBaseUrl}`,
+                    relayed by the Edge without reading it, as a key connect's
+                    `credentials` are. Nothing secret: the platform signs with its
+                    own key for that vendor.
+                  required: [vendor, fhirBaseUrl]
+                  additionalProperties: false
+                  properties:
+                    vendor:
+                      type: string
+                      minLength: 1
+                      maxLength: 64
+                      description: One of the provider's `vendors[].id`.
+                    fhirBaseUrl:
+                      type: string
+                      minLength: 1
+                      maxLength: 2048
+                      description: The clinic's FHIR address, which its EHR team gives it.
       responses:
         '200':
           description: >-
@@ -459,6 +558,8 @@ paths:
           description: >-
             `replaceConnectionId` is not the workspace's live connection — it changed
             since the caller read it. Nothing was started; read the connections again.
+            For an EHR sign-in, also another address over the workspace's live one
+            without `replaceConnectionId`: `details.reason` `account_mismatch`.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -596,20 +697,24 @@ components:
             `api-key` provider — scopes are granted, not pasted.
         authType:
           type: string
-          enum: [oauth2, api-key, smart-backend]
+          enum: [oauth2, api-key, smart-backend, smart-launch]
           description: >-
             Which door this provider connects through: `oauth2` sends the browser
             to the vendor's consent page, `api-key` collects pasted values
-            (BUILD-PLAN 5.14, ADR-0015), and `smart-backend` collects a record
+            (BUILD-PLAN 5.14, ADR-0015), `smart-backend` collects a record
             system's vendor and FHIR address, then the platform signs its own
-            short-lived token (SMART Backend Services, ADR-0050). Listed only
-            once a vendor key is configured. A client renders the right form from
-            this rather than assuming every provider redirects.
+            short-lived token (SMART Backend Services, ADR-0050), and
+            `smart-launch` collects the same two, posts them to `authorize` as
+            `credentials`, and sends the browser to the EHR's own sign-in page —
+            one sign-in per workspace, kept with a refresh token and reused by
+            every flow (SMART App Launch, ADR-0054). Each SMART kind is listed
+            only once a vendor key is configured. A client renders the right form
+            from this rather than assuming every provider redirects.
         credentialFields:
           type: array
           description: >-
-            Present only when `authType` is `api-key`, and on a SMART Backend
-            Services provider (`vendors`, ADR-0050). **The form is generated
+            Present only when `authType` is `api-key`, and on a SMART provider
+            (`vendors`, ADR-0050, ADR-0054). **The form is generated
             from this**, the way an automation's setup form is generated from
             `manifest.setup[]` — so a new key-based vendor is a reviewed file and
             no client change.
@@ -636,12 +741,13 @@ components:
           type: array
           maxItems: 8
           description: >-
-            Present only on a SMART Backend Services provider (ADR-0050, D1),
-            such as the EHR's: the vendors this deployment holds a key for, in
-            the spec's order. Its form is the pasted-key form, generated from
+            Present only on a SMART provider (ADR-0050, D1; ADR-0054), such as
+            the EHR's: the vendors this deployment holds a key for, in the spec's
+            order. Its form is the pasted-key form, generated from
             `credentialFields` (one field, the clinic's FHIR address), plus a
             vendor picker drawn only when two or more are listed; `credentials`
-            then carries `vendor` (an `id` here) beside `fhirBaseUrl`.
+            then carries `vendor` (an `id` here) beside `fhirBaseUrl` — to `key`
+            for `smart-backend`, to `authorize` for `smart-launch`.
           items:
             type: object
             required: [id, label]
@@ -741,10 +847,12 @@ components:
       additionalProperties: false
       required: [keys]
       description: >-
-        ADR-0050 (D1): the platform's public keys for SMART Backend Services,
-        one per vendor it holds a key for, served at `GET
+        ADR-0050 (D1): the platform's public keys for its SMART clients — Backend
+        Services and, since ADR-0054, an EHR sign-in — one per vendor it holds a
+        key for, served at `GET
         /v1/connections/jwks.json` — public, with `Cache-Control: max-age=3600`
-        (EHR-W23) — and given to a vendor that takes an uploaded key. Never a
+        (EHR-W23) — and given to a vendor that takes an uploaded key; one
+        vendor's key alone at `GET /v1/connections/jwks/{vendor}.json`. Never a
         private member (`d`, `p`, `q`, `dp`, `dq`, `qi`).
       properties:
         keys:

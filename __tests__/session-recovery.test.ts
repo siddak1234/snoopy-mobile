@@ -153,6 +153,52 @@ describe('401 renewal in the transport', () => {
     expect(renew).not.toHaveBeenCalled();
   });
 
+  /** The app's half of the split callback (BUILD-PLAN 7.7.6): a sealed code traded for a connection. */
+  const completeConnection = () =>
+    platformOperation('/v1/connections/native/complete', ({ connections }, signal) =>
+      connections.POST('/v1/connections/native/complete', { body: { code: 'sealed' }, signal }),
+    );
+
+  it("hands back a completion's own refusal — a 401 naming its reason (an EHR's no_refresh_token, ADR-0054) — without renewing the session or sending the spent code again (Round 22)", async () => {
+    const renew = jest.fn(async () => ({ status: 'renewed' as const }));
+    setSessionRecovery(renew);
+    fetchMock.mockImplementation(async () =>
+      jsonResponse(401, {
+        title: 'That authorization could not be completed',
+        code: 'UNAUTHENTICATED',
+        details: { reason: 'no_refresh_token' },
+      }),
+    );
+
+    await expect(completeConnection()).rejects.toMatchObject({ status: 401, details: { reason: 'no_refresh_token' } });
+    expect(renew).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('still renews a plain 401 on that route — the bearer itself refused — and sends it once more', async () => {
+    const renew = jest.fn(async () => {
+      readAccessToken.mockResolvedValue('fresh-token');
+      return { status: 'renewed' as const };
+    });
+    setSessionRecovery(renew);
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(401, { title: 'Authentication is required', code: 'UNAUTHENTICATED' }))
+      .mockResolvedValueOnce(jsonResponse(200, { connection: { id: 'c-ehr' } }));
+
+    await expect(completeConnection()).resolves.toEqual({ connection: { id: 'c-ehr' } });
+    expect(renew).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('renews a 401 naming a reason on any other route, as before', async () => {
+    const renew = jest.fn(async () => ({ status: 'refused' as const }));
+    setSessionRecovery(renew);
+    fetchMock.mockResolvedValue(jsonResponse(401, { title: 'Authentication Required', details: { reason: 'expired' } }));
+
+    await expect(readCurrentSession()).rejects.toMatchObject({ status: 401 });
+    expect(renew).toHaveBeenCalledTimes(1);
+  });
+
   it('is a no-op when nothing has registered, so the 401 passes through unchanged', async () => {
     fetchMock.mockResolvedValue(jsonResponse(401, { title: 'Authentication Required' }));
 

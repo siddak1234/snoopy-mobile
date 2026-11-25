@@ -1602,7 +1602,7 @@ paths:
       security: []
       description: The service's own name and API version. No tenant data.
       responses:
-        '200': { description: Service name, API version, and status. }
+        '200': { description: 'Service name, API version, and status.' }
   /v1/workspaces/{workspaceId}/subscriptions:
     get:
       tags: [automations]
@@ -1630,7 +1630,7 @@ paths:
         platform makes when there is none (ADR-0036); no client chooses a team.
         The request body is specified in `docs/openapi/automations.yaml`.
       responses:
-        '200': { description: The subscription, with its unmet connections. }
+        '200': { description: 'The subscription, with its unmet connections.' }
         '403': { $ref: '#/components/responses/Forbidden' }
   /v1/workspaces/{workspaceId}/subscriptions/{subscriptionId}:
     get:
@@ -1685,7 +1685,7 @@ paths:
           required: true
           schema: { type: string, format: uuid }
       responses:
-        '200': { description: The address, without its secret. }
+        '200': { description: 'The address, without its secret.' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
     post:
@@ -1701,7 +1701,7 @@ paths:
           required: true
           schema: { type: string, format: uuid }
       responses:
-        '200': { description: The address and its secret, shown this once. }
+        '200': { description: 'The address and its secret, shown this once.' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
@@ -1735,7 +1735,7 @@ paths:
           required: true
           schema: { type: string, format: uuid }
       responses:
-        '200': { description: The people and addresses, after the change. }
+        '200': { description: 'The people and addresses, after the change.' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -1770,7 +1770,7 @@ paths:
           schema: { type: string, format: uuid }
         - $ref: '#/components/parameters/IdempotencyKey'
       responses:
-        '201': { description: The item, reading its file. }
+        '201': { description: 'The item, reading its file.' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
@@ -1854,7 +1854,7 @@ paths:
           required: true
           schema: { type: string, format: uuid }
       responses:
-        '200': { description: The file, as a reference. }
+        '200': { description: 'The file, as a reference.' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/NotFound' }
   /v1/workspaces/{workspaceId}/uploads/{artifactId}:
@@ -1871,7 +1871,7 @@ paths:
           required: true
           schema: { type: string, format: uuid }
       responses:
-        '204': { description: The file is deleted, now or already. }
+        '204': { description: 'The file is deleted, now or already.' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -1974,7 +1974,7 @@ paths:
         - $ref: '#/components/parameters/WorkspaceId'
         - $ref: '#/components/parameters/RunId'
       responses:
-        '200': { description: The run's documents, as an attachment. }
+        '200': { description: "The run's documents, as an attachment." }
   /v1/workspaces/{workspaceId}/runs/{runId}/files/{fileId}:
     get:
       tags: [runs]
@@ -2124,72 +2124,61 @@ paths:
             `deliverWebhook` in `docs/openapi/automations.yaml`.
         '404': { $ref: '#/components/responses/NotFound' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
-  /v1/cds-hooks/{clinicId}/cds-services:
+  /v1/cds-hooks/cds-services:
     get:
       tags: [runs]
       operationId: discoverCdsServices
       security: []
       description: >-
-        A clinic's CDS Hooks discovery (BUILD-PLAN 30.4.1): its `baseUrl` is
-        `/v1/cds-hooks/{clinicId}`, one address per clinic. Public: the caller is
-        the clinic's EHR. The full contract is `discoverCdsServices` in
-        `docs/openapi/automations.yaml`.
-      parameters:
-        - name: clinicId
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
+        CDS Hooks discovery (BUILD-PLAN 30.4.1): the `baseUrl` is `/v1/cds-hooks`,
+        one address per hook shared by every clinic and every flow (ADR-0053).
+        Public: the caller is a clinic's EHR. The full contract is
+        `discoverCdsServices` in `docs/openapi/automations.yaml`.
       responses:
-        '200': { description: The clinic's services, each its hook and id. }
+        '200': { description: "One service a hook, each its id the hook's name." }
         '404': { $ref: '#/components/responses/NotFound' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
-  /v1/cds-hooks/{clinicId}/cds-services/{serviceId}:
+  /v1/cds-hooks/cds-services/{hook}:
     post:
       tags: [runs]
       operationId: callCdsService
       security: []
       description: >-
-        A clinic's CDS Hooks call (BUILD-PLAN 30.4.1 to 30.4.3), which starts the
-        run of the flow its service names. Public: the caller is the clinic's EHR,
-        holding a signed JWT that Runs checks. The full contract is
-        `callCdsService` in `docs/openapi/automations.yaml`.
+        A clinic's CDS Hooks call (BUILD-PLAN 30.4.1 to 30.4.4, ADR-0053), which
+        starts each of the clinic's flows on this hook. Public: the caller is the
+        clinic's EHR, holding a signed JWT by which Runs finds the clinic and that
+        Runs checks. The full contract is `callCdsService` in
+        `docs/openapi/automations.yaml`.
       parameters:
-        - name: clinicId
+        - name: hook
           in: path
           required: true
-          schema: { type: string, format: uuid }
-        - name: serviceId
-          in: path
-          required: true
-          schema: { type: string }
+          schema: { type: string, enum: [patient-view, order-select, order-sign] }
       responses:
         '200':
           {
-            description: "`{cards: []}`: the visit's run started, or the call was declined with its reason recorded; or, since BUILD-PLAN 30.4.4, the visit's one card.",
+            description: "`{cards: []}`: each flow's visit run started, or the call was declined with its reason recorded; or, since BUILD-PLAN 30.4.4, each flow's card for the visit.",
           }
         '404': { $ref: '#/components/responses/NotFound' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
-  /v1/cds-hooks/{clinicId}/cds-services/{serviceId}/feedback:
+  /v1/cds-hooks/cds-services/{hook}/feedback:
     post:
       tags: [runs]
       operationId: sendCdsFeedback
       security: []
       description: >-
-        A clinic's CDS Hooks feedback (BUILD-PLAN 30.4.4): what the clinician did
-        with the card a service answered. Public: the caller is the clinic's EHR,
-        holding a signed JWT that Runs checks. The full contract is
-        `sendCdsFeedback` in `docs/openapi/automations.yaml`.
+        A clinic's CDS Hooks feedback (BUILD-PLAN 30.4.4, ADR-0053): what the
+        clinician did with a card answered at this hook. Public: the caller is the
+        clinic's EHR, holding a signed JWT by which Runs finds the clinic and that
+        Runs checks. The full contract is `sendCdsFeedback` in
+        `docs/openapi/automations.yaml`.
       parameters:
-        - name: clinicId
+        - name: hook
           in: path
           required: true
-          schema: { type: string, format: uuid }
-        - name: serviceId
-          in: path
-          required: true
-          schema: { type: string }
+          schema: { type: string, enum: [patient-view, order-select, order-sign] }
       responses:
-        '200': { description: The report was kept, or its card had been acted on already. }
+        '200': { description: 'The report was kept, or its card had been acted on already.' }
         '404': { $ref: '#/components/responses/NotFound' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
   /v1/plans:
