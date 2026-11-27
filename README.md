@@ -621,7 +621,7 @@ SDK is among `package.json`'s dependencies, and nothing is shared with a data br
   the platform's contract publishes it, then regenerated
   (`npm run generate:platform-contracts`; DESIGN-GAPS "Round 22 phase A").
 - A phone number or email in a list row (builds 37 and 39, the owner's item 11;
-  `components/blocks/contact-text.tsx`): `expo-contacts` (~57.0.8) and
+  `components/blocks/contact-text.tsx`): `expo-contacts` (~57.0.9) and
   `expo-clipboard` (~57.0.2), native modules, so they ship in a new TestFlight
   build, never an update. A tap opens Apple's own unknown-contact card with the
   value filled — `presentFormAsync(null, contact, { allowsActions: true })`
