@@ -70,7 +70,7 @@ export function boundedResize(width: number, height: number): { width: number } 
  * never comes here.
  *
  * Upright is the manipulator's own loading, as SDK 57's expo-image-manipulator
- * (57.0.21) is written: on iOS `manipulate` adds `ImageFixOrientationTransformer`
+ * (57.0.23) is written: on iOS `manipulate` adds `ImageFixOrientationTransformer`
  * before anything else, which draws the pixels the way the photo is displayed
  * and drops its orientation flag; on Android the image is decoded by Glide
  * (`expo-image-loader`), which applies the EXIF orientation, and
