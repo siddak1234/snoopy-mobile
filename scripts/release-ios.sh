@@ -23,16 +23,26 @@
 # nightly's all-green on the same commit is not the release's verdict); the live
 # AASA names this app in both applinks and webcredentials; and the deployed
 # platform's contract hashes (/health/live) equal the generated types' headers
-# (scripts/verify-deployed-contracts.mjs --release). After `eas build`:
-# the build's gitCommitHash is HEAD and the ipa carries the release's
-# entitlements. Only then does it submit. Any doubt refuses.
+# (scripts/verify-deployed-contracts.mjs --release); and expo-doctor, one exact
+# version (EXPO_DOCTOR_VERSION below), passes on this tree, the dry run's too: a
+# failed check refuses, and the one escape is a reviewed expo.install.exclude
+# entry README "Verification" names. After `eas build`: EAS's own log of the
+# build (scripts/eas-build-findings.mjs) prints the build image and Xcode, every
+# phase that did not end in success and EAS's doctor, and refuses when it cannot
+# be read or EAS's doctor phase did not end in success (the build is kept, not
+# cancelled); the build's gitCommitHash is HEAD; and the ipa carries the
+# release's entitlements. Only then does it submit; the submission's own log is
+# printed (its warnings, errors and ITMS- codes) and never refuses. Any doubt
+# refuses.
 #
 # Runs with the caller's PATH: node 22, gh, python3, curl, unzip, codesign,
 # plutil. eas-cli is not a dependency of the app (Expo's version policy: run it
 # with npx, enforce it with eas.json `cli.version`): every call is `npx --yes
 # eas-cli@<cli.version>`, the one exact version read from eas.json once below,
 # so a release never runs whatever eas-cli is newest. That version is printed
-# beside the tree line and checked against what ran. Working files go under .autom8x/release-ios/
+# beside the tree line and checked against what ran. expo-doctor runs the same
+# way, `npx --yes expo-doctor@$EXPO_DOCTOR_VERSION`. EAS's log files are signed
+# URLs: downloaded, never printed. Working files go under .autom8x/release-ios/
 # (gitignored). The Expo session is read from ~/.expo/state.json at the moment
 # the submission is polled and is never written anywhere.
 set -u
@@ -68,6 +78,10 @@ print(f"{team}.{bundle}")') || refuse "cannot read the Team ID and bundle identi
 EAS_VERSION=$(python3 -c 'import json; print(json.load(open("eas.json"))["cli"]["version"])') \
   || refuse "cannot read eas.json cli.version"
 [[ "$EAS_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || refuse "eas.json cli.version '$EAS_VERSION' is not one exact version"
+# expo-doctor's one exact version, pinned as eas-cli's is: bumped by hand in a
+# reviewed pull request, never whatever is newest; a range refuses.
+EXPO_DOCTOR_VERSION=1.21.9
+[[ "$EXPO_DOCTOR_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || refuse "EXPO_DOCTOR_VERSION '$EXPO_DOCTOR_VERSION' is not one exact version"
 EAS_CLI=$(npx --yes "eas-cli@$EAS_VERSION" --version 2>/dev/null | grep -oE 'eas-cli/[0-9.]+' | head -1 | tr / ' ')
 [ "$EAS_CLI" = "eas-cli $EAS_VERSION" ] || refuse "eas-cli $EAS_VERSION (eas.json cli.version) did not run: got '${EAS_CLI:-nothing}'"
 echo "tree: $(git rev-parse --short HEAD) dirty=$(git status --short | wc -l | tr -d ' ') app: $APP_ID $EAS_CLI"
@@ -115,6 +129,20 @@ sys.exit(0 if want in applinks and want in web else 1)
 node scripts/verify-deployed-contracts.mjs --release \
   || refuse "the committed platform types are not the contract the deployed platform serves"
 
+# expo-doctor on this tree, both paths and the dry run. EAS's cloud build runs
+# the doctor too (its RUN_EXPO_DOCTOR phase) but ends a failed check as a
+# warning, never a failed build. Its version check asks Expo's server for the
+# SDK's newest patches, so it can go red with no commit: that is why it runs here
+# and not in verify or CI (README "Verification"). No flag skips it.
+npx --yes "expo-doctor@$EXPO_DOCTOR_VERSION" > "$WORK/expo-doctor.log" 2>&1
+DOCTOR=$?
+DOCTOR_OUT=$(sed 's/\x1b\[[0-9;]*[A-Za-z]//g' "$WORK/expo-doctor.log")
+DOCTOR_LINE=$(printf '%s\n' "$DOCTOR_OUT" | grep -E '[0-9]+/[0-9]+ checks passed' | head -1)
+DOCTOR_SUMMARY=$(printf '%s\n' "$DOCTOR_LINE" | grep -oE '[0-9]+/[0-9]+ checks passed')
+echo "expo-doctor $EXPO_DOCTOR_VERSION: ${DOCTOR_LINE:-no checks-passed line (full output in $WORK/expo-doctor.log)}"
+printf '%s\n' "$DOCTOR_OUT" | grep -E '^[[:space:]]*✖' | sed 's/^[[:space:]]*✖[[:space:]]*/  failed check: /'
+[ "$DOCTOR" = 0 ] || refuse "expo-doctor failed: ${DOCTOR_SUMMARY:-exit $DOCTOR}; fix with a reviewed pull request (npx expo install --fix) or a reviewed expo.install.exclude entry named in README \"Verification\""
+
 # --local: the Mac must be able to build. A missing tool, an Xcode below the
 # SDK's minimum or at or past 27 (README "Verification"), or a CocoaPods whose
 # `pod --version` gives no version number (an Xcode licence not yet accepted
@@ -124,7 +152,10 @@ node scripts/verify-deployed-contracts.mjs --release \
 # scene life cycle, which SDK 57 has only as expo-build-properties'
 # `ios.enableSceneSupport` (expo/fyi ios-scene-lifecycle.md) and this app does
 # not set, and Xcode 27.2 could not archive SDK 55's pods (DESIGN-GAPS "Round
-# 21's close"), so it refuses.
+# 21's close"), so it refuses. Apple's ITMS-90725 on build 46 (Xcode 26.6's iOS
+# 26.5 SDK): from April 2027 every upload, TestFlight's too, must be built with
+# the iOS 27 SDK. The plan is Expo SDK 58, scenes on by default, before then
+# (BUILD-PLAN 29.4.9 (6)), not the opt-in; until it lands this window stands.
 if [ "$LOCAL" = 1 ]; then
   xcodebuild -version >/dev/null 2>&1 || refuse "--local needs Xcode (xcodebuild)"
   XCODE=$(xcodebuild -version 2>/dev/null | head -1 | sed -n 's/^Xcode \([0-9][0-9.]*\).*$/\1/p')
@@ -170,7 +201,30 @@ for i in $(seq 1 60); do
   case "$st" in FINISHED|ERRORED|CANCELED) break;; esac
   sleep 45
 done
-[ "$st" = "FINISHED" ] || { echo "BUILD DID NOT FINISH: $st"; view | python3 -c 'import sys,json; print(json.load(sys.stdin).get("error"))'; exit 1; }
+
+# EAS's own log of the build, from the final build:view (saved, then read for the
+# commit and the archive below too): each `logFiles` URL is downloaded into
+# build-logs/, never printed, and scripts/eas-build-findings.mjs prints the
+# build image and Xcode, each phase that did not end in success and EAS's
+# doctor, and fails when the logs cannot be read or EAS's doctor phase did not
+# end in success.
+build_findings() {
+  view > "$WORK/build-final.json" || { echo "cannot read build $BID's final state"; return 1; }
+  rm -rf "$WORK/build-logs" && mkdir -p "$WORK/build-logs" || return 1
+  local n=0 log_url
+  while IFS= read -r log_url; do
+    n=$((n + 1))
+    curl -fsS -m 120 -o "$WORK/build-logs/log-$n.txt" "$log_url" 2>/dev/null \
+      || { echo "cannot download EAS's build log $n"; return 1; }
+  done < <(python3 -c 'import sys,json; [print(u) for u in json.load(open(sys.argv[1])).get("logFiles") or []]' "$WORK/build-final.json" 2>/dev/null)
+  node scripts/eas-build-findings.mjs build "$WORK/build-logs"
+}
+if [ "$st" != "FINISHED" ]; then
+  echo "BUILD DID NOT FINISH: $st"; view | python3 -c 'import sys,json; print(json.load(sys.stdin).get("error"))'
+  [ "$st" = "ERRORED" ] && build_findings
+  exit 1
+fi
+build_findings || refuse "EAS's log of build $BID did not pass (above); the build is kept, not cancelled, and nothing is downloaded or submitted"
 fi
 
 # --- build on this Mac -----------------------------------------------------------
@@ -192,7 +246,7 @@ rm -rf "$WORK/ipa" && mkdir -p "$WORK/ipa" || exit 1
 if [ "$LOCAL" = 1 ]; then
   cp "$WORK/local/app.ipa" "$WORK/ipa/app.ipa" && (cd "$WORK/ipa" && unzip -q -o app.ipa 'Payload/*')
 else
-  FINISHED=$(view)
+  FINISHED=$(cat "$WORK/build-final.json")
   BUILD_SHA=$(printf '%s' "$FINISHED" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("gitCommitHash") or "")')
   [ "$BUILD_SHA" = "$HEAD_SHA" ] || refuse "finished build $BID reports commit '${BUILD_SHA:-unknown}', not HEAD $HEAD_SHA"
   URL=$(printf '%s' "$FINISHED" | python3 -c 'import sys,json; print(json.load(sys.stdin)["artifacts"]["applicationArchiveUrl"])')
@@ -230,9 +284,20 @@ if [ -z "$TOKEN" ]; then
 fi
 st=""
 for i in $(seq 1 80); do
-  st=$(curl -s https://api.expo.dev/graphql -H "content-type: application/json" -H "expo-session: $TOKEN" --data "{\"query\":\"{ submissions { byId(submissionId: \\\"$SID\\\") { status error { message errorCode } } } }\"}" | python3 -c 'import sys,json; d=json.load(sys.stdin)["data"]["submissions"]["byId"]; print(d["status"], d["error"] or "")')
+  curl -s https://api.expo.dev/graphql -H "content-type: application/json" -H "expo-session: $TOKEN" --data "{\"query\":\"{ submissions { byId(submissionId: \\\"$SID\\\") { status error { message errorCode } logFiles } } }\"}" > "$WORK/submission.json"
+  st=$(python3 -c 'import sys,json; d=json.load(sys.stdin)["data"]["submissions"]["byId"]; print(d["status"], d["error"] or "")' < "$WORK/submission.json")
   echo "$(date -u +%H:%M:%SZ) submission $st"
   case "$st" in FINISHED*|ERRORED*|CANCELED*) break;; esac
   sleep 60
 done
+# The submission's own log, read as the build's: its warnings, errors and any
+# ITMS- code (scripts/eas-build-findings.mjs submission). It never refuses: the
+# upload is done.
+rm -rf "$WORK/submission-logs"; mkdir -p "$WORK/submission-logs"
+n=0
+while IFS= read -r log_url; do
+  n=$((n + 1))
+  curl -fsS -m 120 -o "$WORK/submission-logs/log-$n.txt" "$log_url" 2>/dev/null || echo "cannot download EAS's submission log $n"
+done < <(python3 -c 'import sys,json; [print(u) for u in json.load(open(sys.argv[1]))["data"]["submissions"]["byId"].get("logFiles") or []]' "$WORK/submission.json" 2>/dev/null)
+node scripts/eas-build-findings.mjs submission "$WORK/submission-logs"
 echo "DONE: build ${BID:-local} submission $SID -> $st"

@@ -1,8 +1,9 @@
 const { spawnSync } = require('node:child_process');
 const { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } = require('node:fs');
 const { tmpdir } = require('node:os');
-const { join, resolve } = require('node:path');
+const { dirname, join, resolve } = require('node:path');
 const { pathToFileURL } = require('node:url');
+const { brotliCompressSync, gzipSync } = require('node:zlib');
 
 /**
  * Round 21 hardening: the release gate reads only the PUSH run's all-green
@@ -36,6 +37,62 @@ function evaluate(module, expression, env = {}) {
   if (run.status !== 0) throw new Error(run.stderr);
   return JSON.parse(run.stdout);
 }
+
+const easJson = JSON.parse(readFileSync(join(root, 'eas.json'), 'utf8'));
+const appJson = JSON.parse(readFileSync(join(root, 'app.json'), 'utf8'));
+const APP_ID = `${easJson.submit.production.ios.appleTeamId}.${appJson.expo.ios.bundleIdentifier}`;
+/** npx answering as eas.json's eas-cli does to `--version`. */
+const EAS_LINE = `echo 'eas-cli/${easJson.cli.version} darwin-arm64 node-v22'`;
+
+/**
+ * release-ios.sh with `args` in a temporary copy whose every gate passes — git on
+ * origin/main and clean, gh and node green, curl the AASA naming the app, npx
+ * answering as eas.json's eas-cli (and exiting 0, the doctor's call too), and an
+ * Xcode 26.6, CocoaPods and fastlane that pass. `stubs` replace or add commands,
+ * each a sh body that finds the copy in $STUB_DIR; `files` are written into the
+ * copy first. Returns the exit status, the output and what `read(dir)` reads
+ * from the copy before it is removed.
+ */
+function stubbedRelease(args, { stubs = {}, files = {}, read = () => ({}) } = {}) {
+  const dir = mkdtempSync(join(tmpdir(), 'mobile-release-stubbed-'));
+  try {
+    mkdirSync(join(dir, 'scripts'));
+    mkdirSync(join(dir, 'bin'));
+    for (const file of ['scripts/release-ios.sh', 'scripts/eas-build-findings.mjs', 'app.json', 'eas.json']) {
+      cpSync(join(root, file), join(dir, file));
+    }
+    const aasa = { applinks: { details: [{ appID: APP_ID }] }, webcredentials: { apps: [APP_ID] } };
+    writeFileSync(join(dir, 'aasa.json'), JSON.stringify(aasa));
+    for (const [path, body] of Object.entries(files)) {
+      mkdirSync(dirname(join(dir, path)), { recursive: true });
+      writeFileSync(join(dir, path), body);
+    }
+    const all = {
+      npx: EAS_LINE,
+      git: 'case "$1" in rev-parse) echo 0000000 ;; esac',
+      gh: 'case "$1" in repo) echo autom8x/snoopy-mobile ;; api) echo "{}" ;; esac',
+      node: 'echo green',
+      curl: 'cat "$STUB_DIR/aasa.json"',
+      xcodebuild: "printf '%s\\n' 'Xcode 26.6' 'Build version 17B100'",
+      pod: 'echo 1.16.2',
+      fastlane: 'echo fastlane 2.228.0',
+      ...stubs,
+    };
+    for (const [name, body] of Object.entries(all)) {
+      writeFileSync(join(dir, 'bin', name), `#!/bin/sh\n${body}\n`, { mode: 0o755 });
+    }
+    const run = spawnSync('bash', [join(dir, 'scripts/release-ios.sh'), ...args], {
+      encoding: 'utf8',
+      timeout: 60_000,
+      env: { ...process.env, STUB_DIR: dir, PATH: `${join(dir, 'bin')}:${process.env.PATH}` },
+    });
+    return { status: run.status, out: run.stdout, ...read(dir) };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+/** A file the stubs wrote into the copy, or '' when none did. */
+const readIn = (dir, path) => (existsSync(join(dir, path)) ? readFileSync(join(dir, path), 'utf8') : '');
 
 describe("the release gate's all-green: the push run's only", () => {
   const APP = 15368;
@@ -116,8 +173,15 @@ describe("eas-cli is eas.json's one exact cli.version, run with npx (Expo's vers
     expect(Object.keys(lock.packages).filter((path) => /(^|\/)node_modules\/eas-cli$/u.test(path))).toEqual([]);
   });
 
-  it('runs that exact version at every call in release-ios.sh, never the deprecated --no-install', () => {
-    const calls = script.split('\n').filter((line) => /\bnpx\b/u.test(line) && !line.trimStart().startsWith('#'));
+  it('runs that exact version at every eas-cli call in release-ios.sh, and one pinned expo-doctor, never the deprecated --no-install', () => {
+    const lines = script.split('\n').filter((line) => /\bnpx\b/u.test(line) && !line.trimStart().startsWith('#'));
+    const doctor = lines.filter((line) => line.includes('expo-doctor@'));
+    expect(doctor).toEqual(['npx --yes "expo-doctor@$EXPO_DOCTOR_VERSION" > "$WORK/expo-doctor.log" 2>&1']);
+    // The doctor's refusal names the fix, the project's own `npx expo install --fix`: words, not a call.
+    const advice = lines.filter((line) => line.includes('(npx expo install --fix)'));
+    expect(advice).toHaveLength(1);
+    expect(advice[0].match(/\bnpx\b/gu)).toHaveLength(1);
+    const calls = lines.filter((line) => !doctor.includes(line) && !advice.includes(line));
     expect(calls.length).toBeGreaterThanOrEqual(7);
     for (const line of calls) expect(line).toMatch(/\bnpx --yes "?eas-cli@\$EAS_VERSION"? /u);
     expect(script).not.toContain('--no-install');
@@ -128,12 +192,12 @@ describe("eas-cli is eas.json's one exact cli.version, run with npx (Expo's vers
    * `cliVersion`: npx records its arguments and answers as eas-cli `reported`
    * would, and git refuses the fetch, the first gate after the version's.
    */
-  function release(cliVersion, reported) {
+  function release(cliVersion, reported, edit = (text) => text) {
     const dir = mkdtempSync(join(tmpdir(), 'mobile-release-'));
     try {
       mkdirSync(join(dir, 'scripts'));
       mkdirSync(join(dir, 'bin'));
-      cpSync(join(root, 'scripts/release-ios.sh'), join(dir, 'scripts/release-ios.sh'));
+      writeFileSync(join(dir, 'scripts/release-ios.sh'), edit(script));
       cpSync(join(root, 'app.json'), join(dir, 'app.json'));
       writeFileSync(join(dir, 'eas.json'), JSON.stringify({ ...eas, cli: { ...eas.cli, version: cliVersion } }));
       const log = join(dir, 'npx.log');
@@ -169,50 +233,29 @@ describe("eas-cli is eas.json's one exact cli.version, run with npx (Expo's vers
     expect(run.out).toContain("REFUSED: eas.json cli.version '>= 22.0.0' is not one exact version");
     expect(run.npx).toBe('');
   });
+
+  it('release-ios.sh refuses a range in EXPO_DOCTOR_VERSION and never runs npx', () => {
+    const pin = '\nEXPO_DOCTOR_VERSION=1.21.9\n';
+    expect(script).toContain(pin);
+    const run = release('9.8.7', '9.8.7', (text) => text.replace(pin, "\nEXPO_DOCTOR_VERSION='>= 1.21.0'\n"));
+    expect(run.status).toBe(1);
+    expect(run.out).toContain("REFUSED: EXPO_DOCTOR_VERSION '>= 1.21.0' is not one exact version");
+    expect(run.npx).toBe('');
+  });
 });
 
 describe("--local refuses an Xcode below 26.4, SDK 57's minimum, and Xcode 27 and later", () => {
-  const eas = JSON.parse(readFileSync(join(root, 'eas.json'), 'utf8'));
-  const app = JSON.parse(readFileSync(join(root, 'app.json'), 'utf8'));
-  const appId = `${eas.submit.production.ios.appleTeamId}.${app.expo.ios.bundleIdentifier}`;
+  const appId = APP_ID;
 
   /**
-   * `--local --dry-run` in a temporary copy whose every gate passes — git on
-   * origin/main and clean, gh and node green, curl the AASA naming the app —
+   * `--local --dry-run` in a temporary copy whose every gate passes (stubbedRelease)
    * and whose xcodebuild prints `xcodeLine` first, as `xcodebuild -version` does,
    * and whose pod runs `podBody`.
    */
   function localDryRun(xcodeLine, podBody = 'echo 1.16.2') {
-    const dir = mkdtempSync(join(tmpdir(), 'mobile-release-local-'));
-    try {
-      mkdirSync(join(dir, 'scripts'));
-      mkdirSync(join(dir, 'bin'));
-      cpSync(join(root, 'scripts/release-ios.sh'), join(dir, 'scripts/release-ios.sh'));
-      cpSync(join(root, 'app.json'), join(dir, 'app.json'));
-      cpSync(join(root, 'eas.json'), join(dir, 'eas.json'));
-      const aasa = { applinks: { details: [{ appID: appId }] }, webcredentials: { apps: [appId] } };
-      writeFileSync(join(dir, 'aasa.json'), JSON.stringify(aasa));
-      const stubs = {
-        npx: `echo 'eas-cli/${eas.cli.version} darwin-arm64 node-v22'`,
-        git: 'case "$1" in rev-parse) echo 0000000 ;; esac',
-        gh: 'case "$1" in repo) echo autom8x/snoopy-mobile ;; api) echo "{}" ;; esac',
-        node: 'echo green',
-        curl: `cat '${join(dir, 'aasa.json')}'`,
-        xcodebuild: `printf '%s\\n' '${xcodeLine}' 'Build version 17B100'`,
-        pod: podBody,
-        fastlane: 'echo fastlane 2.228.0',
-      };
-      for (const [name, body] of Object.entries(stubs)) {
-        writeFileSync(join(dir, 'bin', name), `#!/bin/sh\n${body}\n`, { mode: 0o755 });
-      }
-      const run = spawnSync('bash', [join(dir, 'scripts/release-ios.sh'), '--local', '--dry-run'], {
-        encoding: 'utf8',
-        env: { ...process.env, PATH: `${join(dir, 'bin')}:${process.env.PATH}` },
-      });
-      return { status: run.status, out: run.stdout };
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
+    return stubbedRelease(['--local', '--dry-run'], {
+      stubs: { xcodebuild: `printf '%s\\n' '${xcodeLine}' 'Build version 17B100'`, pod: podBody },
+    });
   }
 
   it("refuses Xcode 26.3, 26.2 (SDK 55's floor), 26.1.1, a bare 26 and an unreadable version, after every other gate passed", () => {
@@ -259,6 +302,292 @@ describe("--local refuses an Xcode below 26.4, SDK 57's minimum, and Xcode 27 an
     expect(run.out).toContain('local toolchain: Xcode 26.4, CocoaPods 1.16.2, fastlane 2.228.0');
     expect(run.out).toContain('DRY RUN');
     expect(run.status).toBe(0);
+  });
+});
+
+describe('release-ios.sh runs expo-doctor, pinned, before either path builds, the dry runs included', () => {
+  const npxLog = 'echo "$*" >> "$STUB_DIR/npx.log"';
+  // The doctor's own lines, as expo-doctor 1.21.9 printed them for build 46's tree.
+  const DOCTOR_RED = [
+    npxLog,
+    "case \"$2\" in expo-doctor@*) printf '%s\\n' 'Running 21 checks on your project...' '20/21 checks passed. 1 checks failed. Possible issues detected:' '' '✖ Check that packages match versions required by installed Expo SDK'; exit 1 ;; esac",
+    EAS_LINE,
+  ].join('\n');
+  const DOCTOR_GREEN = [
+    npxLog,
+    "case \"$2\" in expo-doctor@*) printf '%s\\n' 'Running 21 checks on your project...' '21/21 checks passed.'; exit 0 ;; esac",
+    EAS_LINE,
+  ].join('\n');
+  const PATHS = [['--dry-run'], ['--local', '--dry-run']];
+
+  it('refuses a failed doctor on both dry runs, naming its summary and each failed check, before the Mac toolchain', () => {
+    for (const args of PATHS) {
+      const run = stubbedRelease(args, { stubs: { npx: DOCTOR_RED } });
+      expect(run.out).toContain(`live AASA applinks: ['${APP_ID}']`);
+      expect(run.out).toContain('expo-doctor 1.21.9: 20/21 checks passed. 1 checks failed. Possible issues detected:');
+      expect(run.out).toContain('  failed check: Check that packages match versions required by installed Expo SDK');
+      expect(run.out).toContain(
+        'REFUSED: expo-doctor failed: 20/21 checks passed; fix with a reviewed pull request (npx expo install --fix) or a reviewed expo.install.exclude entry named in README "Verification"',
+      );
+      expect(run.out).not.toContain('local toolchain:');
+      expect(run.out).not.toContain('DRY RUN');
+      expect(run.status).toBe(1);
+    }
+  });
+
+  it('runs expo-doctor@1.21.9 once, prints its summary, then goes on to the dry run', () => {
+    for (const args of PATHS) {
+      const run = stubbedRelease(args, { stubs: { npx: DOCTOR_GREEN }, read: (dir) => ({ npx: readIn(dir, 'npx.log') }) });
+      expect(run.npx.split('\n').filter((line) => line.includes('expo-doctor'))).toEqual(['--yes expo-doctor@1.21.9']);
+      const summary = run.out.indexOf('expo-doctor 1.21.9: 21/21 checks passed.');
+      expect(summary).toBeGreaterThan(-1);
+      expect(run.out.indexOf('DRY RUN: every gate passed on 0000000')).toBeGreaterThan(summary);
+      expect(run.status).toBe(0);
+    }
+  });
+});
+
+/** One line of an EAS build log, in @expo/eas-build-job's logger's shape; reserved values only. */
+const BUILD_ID = '00000000-0000-4000-8000-000000000046';
+const logLine = (phase, msg, extra = {}) =>
+  JSON.stringify({ name: 'worker', phase, pid: 100, buildId: BUILD_ID, level: 30, msg, time: '2026-01-01T00:00:00.000Z', v: 0, ...extra });
+/** A phase's lines: its START_PHASE marker, `body`, its END_PHASE marker with `result`. */
+const phaseLines = (phase, result, body = []) => [
+  logLine(phase, `Start phase: ${phase}`, { marker: 'START_PHASE' }),
+  ...body.map((line) => (typeof line === 'string' ? logLine(phase, line) : logLine(phase, line.msg, line))),
+  logLine(phase, `End phase: ${phase}`, { marker: 'END_PHASE', result, durationMs: 1000 }),
+];
+/** A build's JSON log, shaped as build 46's: the environment, EAS's doctor, then the build. */
+function buildLog({ doctor = 'success', fastlane = 'success', withDoctor = true, extra = [] } = {}) {
+  const checks =
+    doctor === 'success'
+      ? ['Running 21 checks on your project...', '21/21 checks passed.']
+      : [
+          'Running 21 checks on your project...',
+          '20/21 checks passed. 1 checks failed. Possible issues detected:',
+          '✖ Check that packages match versions required by installed Expo SDK',
+          { msg: 'Command "expo doctor" failed.', level: 50 },
+        ];
+  return `${[
+    ...phaseLines('SPIN_UP_BUILDER', 'success', [
+      'Using VM template "macos-tahoe-26.5-xcode-26.6" running macOS Tahoe 26.5.2',
+      'Installed software:',
+      '- Xcode 26.6 (17F113)',
+      '- Node.js 22.23.1',
+      '  EXPO_TOKEN=********',
+    ]),
+    ...(withDoctor ? phaseLines('RUN_EXPO_DOCTOR', doctor, checks) : []),
+    ...phaseLines('INSTALL_PODS', 'success'),
+    ...phaseLines('RUN_FASTLANE', fastlane),
+    ...extra,
+  ].join('\n')}\n`;
+}
+/** The plain-text Xcode log EAS lists beside the JSON one. */
+const XCODE_LOG = 'Command line invocation:\n    xcodebuild -workspace ./Example.xcworkspace\n\n** ARCHIVE SUCCEEDED **\n';
+const ENVIRONMENT = [
+  'EAS build environment: Using VM template "macos-tahoe-26.5-xcode-26.6" running macOS Tahoe 26.5.2',
+  'EAS build environment: Xcode 26.6 (17F113)',
+];
+
+describe("EAS's own verdicts, read from its logs (scripts/eas-build-findings.mjs)", () => {
+  const verdict = (texts) => evaluate('scripts/eas-build-findings.mjs', `m.buildVerdict(${JSON.stringify(texts)})`);
+  const submission = (texts) => evaluate('scripts/eas-build-findings.mjs', `m.submissionLines(${JSON.stringify(texts)})`);
+
+  it("refuses a doctor phase that ended warning, as build 46's did, listing its failed check and the build environment", () => {
+    expect(verdict([buildLog({ doctor: 'warning' }), XCODE_LOG])).toEqual({
+      ok: false,
+      lines: [
+        ...ENVIRONMENT,
+        'EAS phase RUN_EXPO_DOCTOR: warning',
+        'EAS doctor: 20/21 checks passed. 1 checks failed. Possible issues detected:',
+        'EAS doctor failed check: Check that packages match versions required by installed Expo SDK',
+      ],
+      reason: "EAS's expo doctor phase (RUN_EXPO_DOCTOR) ended warning, not success",
+    });
+  });
+
+  it('passes a doctor phase that ended success, and still lists every other phase that did not', () => {
+    expect(verdict([buildLog({ fastlane: 'warning', extra: phaseLines('SAVE_CACHE', 'skipped') }), XCODE_LOG])).toEqual({
+      ok: true,
+      lines: [...ENVIRONMENT, 'EAS phase RUN_FASTLANE: warning', 'EAS phase SAVE_CACHE: skipped', 'EAS doctor: 21/21 checks passed.'],
+    });
+  });
+
+  it('refuses a log with no doctor phase, or a doctor phase that never ended', () => {
+    expect(verdict([buildLog({ withDoctor: false })])).toEqual({
+      ok: false,
+      lines: ENVIRONMENT,
+      reason: "EAS's build logs have no end of the RUN_EXPO_DOCTOR phase: EAS's doctor verdict is unknown",
+    });
+    const cut = buildLog()
+      .split('\n')
+      .filter((line) => !(line.includes('"END_PHASE"') && line.includes('"RUN_EXPO_DOCTOR"')))
+      .join('\n');
+    const run = verdict([cut]);
+    expect(run.ok).toBe(false);
+    expect(run.lines).toContain('EAS phase RUN_EXPO_DOCTOR: started, never ended');
+  });
+
+  it('refuses logs that are empty, plain text only, or broken', () => {
+    const empty = { ok: false, lines: [], reason: "EAS's build logs are empty" };
+    expect(verdict([])).toEqual(empty);
+    expect(verdict(['', '\n\n'])).toEqual(empty);
+    expect(verdict([XCODE_LOG]).reason).toBe("EAS's build logs cannot be read: none of the 1 files is a JSON log");
+    for (const bad of ['{"phase":"SPIN_UP_BUILDER","msg":"cut', '"a string"', '[1]', 'null']) {
+      const lines = buildLog().split('\n');
+      lines.splice(3, 0, bad);
+      expect(verdict([lines.join('\n')]).reason).toBe("EAS's build logs cannot be read: log 1 line 4 is not a JSON object");
+    }
+  });
+
+  it("lists the submission's warn and error lines and each line naming an ITMS- code, never a signed URL, and never refuses", () => {
+    const log = [
+      logLine('SUBMIT_TO_APP_STORE', 'Uploading the build'),
+      logLine('SUBMIT_TO_APP_STORE', 'The upload carried a warning', { level: 40 }),
+      logLine('SUBMIT_TO_APP_STORE', 'ITMS-90725: SDK version issue (example)'),
+      logLine('SUBMIT_TO_APP_STORE', 'Apple answered', { err: { message: 'ITMS-90000: example' } }),
+      logLine('FAIL_SUBMISSION', 'See https://logs.example.com/0001/submission.txt?X-Goog-Signature=00ff', { level: 50 }),
+    ].join('\n');
+    expect(submission([log, 'a plain line\nITMS-90725 named in plain text\n'])).toEqual([
+      'EAS submission warn: The upload carried a warning',
+      'EAS submission info: ITMS-90725: SDK version issue (example)',
+      'EAS submission info: Apple answered (ITMS-90000)',
+      'EAS submission error: See https://logs.example.com/0001/submission.txt?…',
+      'EAS submission: ITMS-90725 named in plain text',
+    ]);
+    expect(submission([])).toEqual(['EAS submission logs: none']);
+    expect(submission([logLine('SUBMIT_TO_APP_STORE', 'Uploaded')])).toEqual(['EAS submission logs: no warning, error or ITMS- line']);
+  });
+
+  it('reads a folder as release-ios.sh saves it: brotli as EAS serves it, gzip or plain; a refusal exits 1, a submission never does', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'mobile-eas-logs-'));
+    const cli = (mode, folder) =>
+      spawnSync(process.execPath, ['scripts/eas-build-findings.mjs', mode, join(dir, folder)], { cwd: root, encoding: 'utf8', timeout: 30_000 });
+    try {
+      const write = (folder, files) => {
+        mkdirSync(join(dir, folder));
+        files.forEach((bytes, index) => writeFileSync(join(dir, folder, `log-${index + 1}.txt`), bytes));
+      };
+      write('brotli', [brotliCompressSync(buildLog()), brotliCompressSync(XCODE_LOG)]);
+      write('gzip', [gzipSync(buildLog({ doctor: 'warning' }))]);
+      write('plain', [buildLog(), XCODE_LOG]);
+      for (const folder of ['brotli', 'plain']) {
+        const pass = cli('build', folder);
+        expect(pass.stdout).toBe(`${[...ENVIRONMENT, 'EAS doctor: 21/21 checks passed.'].join('\n')}\n`);
+        expect(pass.status).toBe(0);
+      }
+      const refused = cli('build', 'gzip');
+      expect(refused.stdout).toContain("\nREFUSED: EAS's expo doctor phase (RUN_EXPO_DOCTOR) ended warning, not success\n");
+      expect(refused.status).toBe(1);
+      const none = cli('build', 'missing');
+      expect(none.stdout).toBe("REFUSED: EAS's build logs are empty\n");
+      expect(none.status).toBe(1);
+      const quiet = cli('submission', 'missing');
+      expect(quiet.stdout).toBe('EAS submission logs: none\n');
+      expect(quiet.status).toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("the cloud path reads EAS's log of the build before the ipa and the submit", () => {
+  const SHA = '0123456789abcdef0123456789abcdef01234567';
+  // Signed, as EAS's are: a query the output must never show.
+  const LOG_URLS = ['https://logs.example.com/0001/build.txt?X-Goog-Signature=00ff', 'https://logs.example.com/0001/build-xcode.txt?X-Goog-Signature=00ff'];
+  const ARCHIVE = 'https://artifacts.example.com/0001/app.ipa';
+
+  /**
+   * `npm run release:ios` (the cloud path) through every gate: npx answers the
+   * doctor green, `build --json` with a build id and `build:view` with `status`,
+   * HEAD's commit and the two log files; curl serves the AASA, and the logs
+   * brotli-encoded as EAS's storage does, and fails the archive's download.
+   */
+  function cloudRelease(status, log) {
+    const view = {
+      id: BUILD_ID,
+      status,
+      gitCommitHash: SHA,
+      error: status === 'ERRORED' ? { errorCode: 'EXAMPLE_ERROR', message: 'An example failure' } : null,
+      logFiles: LOG_URLS,
+      artifacts: { applicationArchiveUrl: ARCHIVE },
+    };
+    return stubbedRelease([], {
+      files: {
+        'view.json': JSON.stringify(view),
+        'logs/build.txt': brotliCompressSync(log),
+        'logs/build-xcode.txt': brotliCompressSync(XCODE_LOG),
+      },
+      stubs: {
+        git: `case "$1" in rev-parse) echo ${SHA} ;; esac`,
+        node: `case "$1" in scripts/eas-build-findings.mjs) exec '${process.execPath}' "$@" ;; *) echo green ;; esac`,
+        npx: [
+          'echo "$*" >> "$STUB_DIR/npx.log"',
+          'case "$2" in expo-doctor@*) echo "21/21 checks passed."; exit 0 ;; esac',
+          `case "$3" in --version) ${EAS_LINE} ;; build) echo '{"id":"${BUILD_ID}"}' ;; build:view) cat "$STUB_DIR/view.json" ;; esac`,
+        ].join('\n'),
+        curl: [
+          'echo "$*" >> "$STUB_DIR/curl.log"',
+          'out=""; url=""',
+          'while [ $# -gt 0 ]; do case "$1" in -o) out="$2"; shift 2 ;; -m) shift 2 ;; -*) shift ;; *) url="$1"; shift ;; esac; done',
+          '[ -z "$out" ] && exec cat "$STUB_DIR/aasa.json"',
+          'case "$url" in https://logs.example.com/*) name=${url%%\\?*}; cp "$STUB_DIR/logs/${name##*/}" "$out" ;; *) exit 22 ;; esac',
+        ].join('\n'),
+      },
+      read: (dir) => ({ npx: readIn(dir, 'npx.log'), curl: readIn(dir, 'curl.log'), ipa: existsSync(join(dir, '.autom8x/release-ios/ipa')) }),
+    });
+  }
+
+  it("refuses a FINISHED build whose doctor phase ended warning: no ipa fetched, nothing submitted, the build kept", () => {
+    const run = cloudRelease('FINISHED', buildLog({ doctor: 'warning' }));
+    expect(run.out).toContain(`build ${BUILD_ID} is of HEAD 0123456`);
+    for (const line of ENVIRONMENT) expect(run.out).toContain(`\n${line}\n`);
+    expect(run.out).toContain('\nEAS phase RUN_EXPO_DOCTOR: warning\n');
+    expect(run.out).toContain('\nEAS doctor failed check: Check that packages match versions required by installed Expo SDK\n');
+    expect(run.out).toContain(
+      `REFUSED: EAS's log of build ${BUILD_ID} did not pass (above); the build is kept, not cancelled, and nothing is downloaded or submitted`,
+    );
+    expect(run.status).toBe(1);
+    expect(run.npx).not.toMatch(/\bsubmit\b|build:cancel/u);
+    expect(run.curl).toContain('https://logs.example.com/0001/build.txt');
+    expect(run.curl).not.toContain(ARCHIVE);
+    expect(run.ipa).toBe(false);
+    expect(run.out).not.toContain('X-Goog-Signature');
+  });
+
+  it('goes on to the ipa when the doctor phase ended success', () => {
+    const run = cloudRelease('FINISHED', buildLog());
+    expect(run.out).toContain('\nEAS doctor: 21/21 checks passed.\n');
+    expect(run.out).not.toContain('EAS phase ');
+    expect(run.out).toContain("=== verify the ipa's entitlements before submitting ===");
+    expect(run.curl).toContain(ARCHIVE);
+    expect(run.out).toContain('REFUSED: no .app in the downloaded archive');
+    expect(run.npx).not.toMatch(/\bsubmit\b/u);
+    expect(run.out).not.toContain('X-Goog-Signature');
+  });
+
+  it('prints the findings of an ERRORED build before it exits', () => {
+    const run = cloudRelease('ERRORED', buildLog({ fastlane: 'failed' }));
+    expect(run.out).toContain('BUILD DID NOT FINISH: ERRORED');
+    expect(run.out).toContain('\nEAS phase RUN_FASTLANE: failed\n');
+    expect(run.status).toBe(1);
+    expect(run.curl).not.toContain(ARCHIVE);
+    expect(run.npx).not.toMatch(/\bsubmit\b/u);
+  });
+});
+
+describe('the doctor\'s one escape, expo.install.exclude, is named in README "Verification" with its reason', () => {
+  it('names every entry package.json excludes, and only those, each with its reason', () => {
+    const exclude = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).expo?.install?.exclude ?? [];
+    const readme = readFileSync(join(root, 'README.md'), 'utf8');
+    const from = readme.indexOf('\n## Verification\n');
+    const section = readme.slice(from, readme.indexOf('\n## ', from + 1));
+    const lead = "Excluded from the doctor's version check (`expo.install.exclude`), each with its reason:\n\n";
+    expect(section).toContain(lead);
+    const items = section.slice(section.indexOf(lead) + lead.length).split('\n\n')[0].split(/\n(?=- )/u);
+    const named = items.map((item) => item.match(/^- `([^`]+)`: (\S[\s\S]{40,})$/u));
+    expect(named.filter((match) => !match)).toEqual([]);
+    expect(named.map(([, name]) => name).sort()).toEqual([...exclude].sort());
   });
 });
 

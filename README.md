@@ -275,6 +275,50 @@ the app (Expo's version policy discourages one): its one exact version is
 every call as `npx --yes eas-cli@<that version>`, so a release never runs a
 newer one, prints it beside the tree line and refuses when eas-cli reports
 another. Bump it by hand there; a guard test refuses a range.
+Both paths, each dry run included, then run expo-doctor on the tree, after the
+contract check and before the Mac's toolchain: `npx --yes
+expo-doctor@<EXPO_DOCTOR_VERSION>`, one exact version pinned in the script as
+eas-cli's is (a guard test refuses a range), its output in
+`.autom8x/release-ios/expo-doctor.log`. The script prints the doctor's "checks
+passed" line and each failed check, and any non-zero exit refuses (`REFUSED:
+expo-doctor failed: …`). EAS's cloud build runs the same doctor in its
+`RUN_EXPO_DOCTOR` phase but ends a failed check as a warning, never a failed
+build: build 46 shipped "20/21 checks passed", read by no one. By rule the
+doctor is in neither `verify` nor CI: its version check asks Expo's server for
+the SDK's newest patches, so a tree no commit has touched goes red whenever Expo
+publishes one, and every pull request would go red on Expo's patch calendar,
+against one round per dependency bump (`.github/dependabot.yml`, §12.1 #278). A
+failed check is fixed by a reviewed pull request (`npx expo install --fix`, a
+round of its own). The one escape is `package.json` `expo.install.exclude`,
+Expo's own skip, which the doctor's version check honours: an entry lands only
+through a reviewed pull request, and the release builds only clean `main`, so an
+escape is reviewed and recorded by construction, as `platform-requirement.json`
+is. No flag skips the doctor. A guard test holds the list below to `package.json`.
+
+Excluded from the doctor's version check (`expo.install.exclude`), each with its reason:
+
+- `typescript`: stays on 5.9 (Round E step 2, 0a98110): under 6.0.3 `tsc` gave
+  9,113 errors outside the upgrade (TypeScript 6 no longer loads `@types/jest`
+  and `@types/node` unasked), and npm refuses it (openapi-typescript 7.13.0, the
+  latest then, asks for typescript ^5.x: `npm install` stops with ERESOLVE).
+
+After a cloud build the script reads EAS's own logs of it
+(`scripts/eas-build-findings.mjs`). The final `build:view --json`, saved as
+`.autom8x/release-ios/build-final.json`, lists them in `logFiles`: signed URLs,
+downloaded into `build-logs/` there and never printed. EAS's storage serves them
+brotli-encoded, which macOS's curl cannot decode, so the reader decodes them;
+the JSON log has one object a line, each phase's last line carrying its result.
+The script prints the build environment (`EAS build environment:`, the VM image
+and its Xcode), `EAS phase <NAME>: <result>` for each phase that did not end in
+success, and EAS's doctor summary and failed checks. It refuses, before the ipa
+is downloaded or anything is submitted, when the logs are empty or cannot be
+read, or EAS's doctor phase is missing or did not end in success; the build is
+kept, not cancelled. An ERRORED build prints the same findings before the script
+exits. After the submit, the submission's own `logFiles` are read the same way:
+its warn and error lines and any line naming an `ITMS-` code are printed, and
+this never refuses, the upload being done. EAS listed no submission log for the
+last three submissions (read 2026-11-27), so an ITMS code reaches us through
+Apple's delivery email (the `testflight` skill's step 4).
 `npm run release:ios -- --local` (Round 17, 2026-10-08) builds the same release on
 this Mac instead of EAS's cloud — `eas build --local`, with Xcode (26.4 or later
 for SDK 57, Expo's SDK 57 table, and before 27), CocoaPods and fastlane, which it
@@ -288,9 +332,14 @@ refuses Xcode 27 and later: an app Xcode 27 builds launches on iOS 27 only with
 the scene life cycle, which SDK 57 has only as an opt-in
 (`expo-build-properties`' `ios.enableSceneSupport`) this app does not set, and
 Xcode 27.2 could not archive SDK 55's pods (DESIGN-GAPS "Round 21's close").
-`eas.json` names no build image, so the cloud path takes EAS's `auto` one,
-read as the `sdk-57` image, Xcode 26.6 (DESIGN-GAPS "Round E step 2"; not yet
-observed). Preview and production EAS values are
+`eas.json` names no build image, so the cloud path takes EAS's `auto` one:
+build 46's log names it, `Using VM template "macos-tahoe-26.5-xcode-26.6"`, with
+Xcode 26.6 (17F113), and each cloud build now prints its own (`EAS build
+environment:`, above). Apple's ITMS-90725 on that build (Xcode 26.6's iOS 26.5
+SDK): from April 2027 every upload, TestFlight's included, must be built with
+the iOS 27 SDK. SDK 57 reaches Xcode 27 only through the scene opt-in above, so
+the plan is Expo SDK 58, scenes on by default, before then (BUILD-PLAN 29.4.9
+(6)), a round of its own. Preview and production EAS values are
 supplied by the build environment; they are intentionally not committed to
 `eas.json`. Since Round 7.5 that means the EAS-hosted `preview` and
 `production` environments on the linked project (`@autom8x.ai/snoopy-mobile`):
