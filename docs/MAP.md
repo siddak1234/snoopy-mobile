@@ -137,6 +137,7 @@
 - [scripts/audit-type.mjs](../scripts/audit-type.mjs): Fails when a font size is written outside the type scale (24.12).
 - [scripts/audit-vocabulary.mjs](../scripts/audit-vocabulary.mjs): Fails when the app's copy says "project", "automation", "solution",
 - [scripts/change-class.mjs](../scripts/change-class.mjs): The pre-push gate by change class (Round 21, change-aware gates): docs, code or full, and the exact commands each runs.
+- [scripts/eas-build-findings.mjs](../scripts/eas-build-findings.mjs): EAS's own verdicts on a release: the cloud build's and the submission's server logs.
 - [scripts/generate-platform-contracts.mjs](../scripts/generate-platform-contracts.mjs): Generates TypeScript types from the backend's published OpenAPI contracts.
 - [scripts/no-skipped-tests.mjs](../scripts/no-skipped-tests.mjs): Fails when the suite skipped a test (M4: no silent skips).
 - [scripts/release-ios.sh](../scripts/release-ios.sh): Builds and submits the iOS app from main — and refuses everything else.
@@ -153,7 +154,7 @@
 ## Skills, agents and hooks
 
 - skill `new-screen`: Add a screen to the app - the route file under app/, its view model in lib/view/, its test, the DESIGN-CONTRACT checklist and audits, web parity and plain word… ([.claude/skills/new-screen/SKILL.md](../.claude/skills/new-screen/SKILL.md))
-- skill `testflight`: Ship an iOS build of main to TestFlight with npm run release:ios, after the owner says go - the dry run, the build (on this Mac or EAS's cloud), the submit, pr… ([.claude/skills/testflight/SKILL.md](../.claude/skills/testflight/SKILL.md))
+- skill `testflight`: Ship an iOS build of main to TestFlight with npm run release:ios, after the owner says go - both dry runs, then where it builds (only a path whose dry run pass… ([.claude/skills/testflight/SKILL.md](../.claude/skills/testflight/SKILL.md))
 - agent `builder`: Builds one lane from its brief in a scratch clone, heavy steps under the gate lock, docs in the same commit. Returns its summary (2 KB or less) and leftovers l… ([.claude/agents/builder.md](../.claude/agents/builder.md))
 - agent `explorer`: Read-only search. Use to find where something lives or is described before reading or editing; returns path:line findings and what was not found. Never edits. ([.claude/agents/explorer.md](../.claude/agents/explorer.md))
 - agent `researcher`: Researches one lens of a flow idea on the web and in the given clones, read-only. Every finding is a URL, an exact quote and a source tier; "not found" is a va… ([.claude/agents/researcher.md](../.claude/agents/researcher.md))
